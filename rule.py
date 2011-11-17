@@ -5,11 +5,12 @@ Parameter = parameter.Parameter
 class Rule(object):
     # Something like this...
 
-    def __get_params(self):
+    @classmethod
+    def get_params(cls):
         # Extract all Argument instances from the class
         params = []
-        for param_name in dir(self.__class__):
-            param = getattr(self.__class__, param_name)
+        for param_name in dir(cls):
+            param = getattr(cls, param_name)
             if not isinstance(param, Parameter): continue
             
             params.append((param_name, param))
@@ -18,7 +19,7 @@ class Rule(object):
         return params
     
     def __init__(self, *args, **kwargs):
-        params = self.__get_params()
+        params = self.get_params()
         
         result = {}
 
@@ -49,7 +50,10 @@ class Rule(object):
         return '%s(%s)' % (self.__class__.__name__, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in self.__params]))
 
     def exists(self):
-        for output in flatten(self.output()):
+        outputs = flatten(self.output())
+        if len(outputs) == 0: return False
+        
+        for output in outputs:
             if not output.exists():
                 return False
         else:

@@ -12,3 +12,5 @@ class Parameter(object):
     def default(self):
         assert self.__default != _no_default # TODO: exception
         return self.__default
+
+    def parse(self, x): return x

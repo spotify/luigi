@@ -10,7 +10,6 @@ class Scheduler(object):
         if rule in self.__scheduled: return
 
         for rule_2 in flatten(rule.requires()):
-            print 'rule_2:', rule_2
             self.add(rule_2)
 
         self.__schedule.append(rule)
