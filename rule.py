@@ -47,8 +47,7 @@ class Rule(object):
 
     def exists(self):
         outputs = self.output()
-        if not isinstance(outputs, list): outputs = [outputs]
-        for output in outputs:
+        for output in self._flatten(outputs):
             if not output.exists(): return False
         else:
             return True
@@ -63,26 +62,26 @@ class Rule(object):
         pass # default impl
 
     @classmethod
-    def _flatten_results(cls, struct):
+    def _flatten(cls, struct):
         """Cleates a flat list of all all items in structured output (dicts, lists, items)
         Examples:
-        > _flatten_results({'a': foo, b: bar})
+        > _flatten({'a': foo, b: bar})
         [foo, bar]
-        > _flatten_results([foo, [bar, troll]])
+        > _flatten([foo, [bar, troll]])
         [foo, bar, troll]
-        > _flatten_results(foo)
+        > _flatten(foo)
         [foo]
         """
         flat = []
         try:
             for key, result in struct:
-                flat += cls._flatten_results(result)
+                flat += cls._flatten(result)
             return flat
         except TypeError:
             pass
         try:
             for result in struct:
-                flat += cls._flatten_results(result)
+                flat += cls._flatten(result)
             return flat
         except TypeError:
             pass
