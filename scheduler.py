@@ -1,29 +1,27 @@
+from rule import flatten
+
 class Scheduler(object):
     def __init__(self):
         self.__scheduled = set()
         self.__schedule = []
 
-    def add_target(self, target):
-        if target.exists(): return
-        if target in self.__scheduled: return
+    def add(self, rule):
+        if rule.exists(): return
+        if rule in self.__scheduled: return
 
-        task = target.get_task()
+        for rule_2 in flatten(rule.input()):
+            print 'rule_2:', rule_2
+            self.add(rule_2)
 
-        self.__scheduled.add(target)
-
-        self.add_task(task)
-
-    def add_task(self, task):
-        if task in self.__scheduled: return
-
-        self.__scheduled.add(task)
-
-        for target in task.get_input():
-            self.add_target(target)
-
-        self.__schedule.append(task)
+        self.__schedule.append(rule)
 
     def run(self):
         print 'will run', self.__schedule
-        for task in self.__schedule:
-            task.run()
+        for rule in self.__schedule:
+            # check inputs again
+            for rule_2 in flatten(rule.input()):
+                if not rule_2.exists():
+                    print 'dependency', rule_2, 'does not exist for', rule
+                    break
+            else:
+                rule.run()

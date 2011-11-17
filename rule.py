@@ -35,55 +35,57 @@ class Rule(object):
 
         for param_name, param in params:
             if param_name not in result:
-                result[param_name] = result.default
+                result[param_name] = param.default
 
         for key, value in result.iteritems():
             setattr(self, key, value)
 
-        self.__params = tuple(result.iteritems())
+        self.__params = list(result.iteritems())
 
     def __hash__(self):
-        return hash(self.__params)
+        return hash(tuple(self.__params))
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in self.__params]))
 
     def exists(self):
-        outputs = self.output()
-        for output in self._flatten(outputs):
-            if not output.exists(): return False
+        for output in flatten(self.output()):
+            if not output.exists():
+                return False
         else:
             return True
         
     def output(self):
-        pass # default impl
-
+        return [] # default impl
+    
     def input(self):
-        pass # default impl
+        return [] # default impl
 
     def run(self):
         pass # default impl
 
-    @classmethod
-    def _flatten(cls, struct):
-        """Cleates a flat list of all all items in structured output (dicts, lists, items)
-        Examples:
-        > _flatten({'a': foo, b: bar})
-        [foo, bar]
-        > _flatten([foo, [bar, troll]])
-        [foo, bar, troll]
-        > _flatten(foo)
-        [foo]
-        """
-        flat = []
-        try:
-            for key, result in struct:
-                flat += cls._flatten(result)
-            return flat
-        except TypeError:
-            pass
-        try:
-            for result in struct:
-                flat += cls._flatten(result)
-            return flat
-        except TypeError:
-            pass
-        if isinstance(struct, Result):
-            return [struct]
+def flatten(struct):
+    """Cleates a flat list of all all items in structured output (dicts, lists, items)
+    Examples:
+    > _flatten({'a': foo, b: bar})
+    [foo, bar]
+    > _flatten([foo, [bar, troll]])
+    [foo, bar, troll]
+    > _flatten(foo)
+    [foo]
+    """
+    flat = []
+    if isinstance(struct, dict):
+        for key, result in struct.iteritems():
+            flat += flatten(result)
+        return flat
+
+    try:
+        # if iterable
+        for result in struct:
+            flat += flatten(result)
+        return flat
+    except TypeError:
+        pass
+
+    return [struct]
