@@ -58,11 +58,33 @@ class Rule(object):
     def output(self):
         return [] # default impl
     
-    def input(self):
+    def requires(self):
         return [] # default impl
 
+    def input(self):
+        return getpaths(self.requires())
+    
     def run(self):
         pass # default impl
+
+def getpaths(struct):
+    """ Maps all Rules in a structured data object to their .output()"""
+    if isinstance(struct, Rule):
+        return struct.output()
+    elif isinstance(struct, dict):
+        r = {}
+        for k, v in struct.iteritems():
+            r[k] = getpaths(v)
+        return r
+    try:
+        # if iterable
+        r = []
+        for s in struct:
+            r.append(getpaths(s))
+        return r
+    except TypeError:
+        pass
+    return struct
 
 def flatten(struct):
     """Cleates a flat list of all all items in structured output (dicts, lists, items)
