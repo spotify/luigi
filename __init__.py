@@ -1,7 +1,7 @@
-import target, rule, file, scheduler
+import target, rule, file, scheduler, parameter
 
 Target = target.Target
 Rule = rule.Rule
 File = file.File
 Scheduler = scheduler.Scheduler
-Argument = argument.Argument
+Parameter = parameter.Parameter

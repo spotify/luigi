@@ -1,42 +1,63 @@
-import target, task
+import target, task, parameter
+
+Parameter = parameter.Parameter
 
 class Rule(object):
     # Something like this...
 
-    __insts = {}
-    
-    def __init__(self, args, kwargs):
-        for arg in dir(self.__class__):
-            if isinstance(Argument, arg):
-                
-        self.__task = task.Task(self, args, kwargs)
-        self.__task.get_output()
-
-    def add_input(self, input):
-        return self.__task.add_input(input)
-
-    def add_output(self, output):
-        return self.__task.add_output(output)
-
-    def get_task(self):
-        return self.__task
-
-    def get_output(self, *args, **kwargs):
-        pass # default impl
-
-    def get_input(self, *args, **kwargs):
-        pass # default impl
-
-    def run(self, *args, **kwargs):
-        pass # default impl
-
-    @classmethod
-    def make(cls, *args, **kwargs):
-        # Lookup in cache and return if existing...
-
-        k = (cls, tuple(args), tuple(kwargs.iteritems()))
-
-        if k not in cls.__insts:
-            cls.__insts[k] = cls(args, kwargs)
+    def __get_params(self):
+        # Extract all Argument instances from the class
+        params = []
+        for param_name in dir(self.__class__):
+            param = getattr(self.__class__, param_name)
+            if not isinstance(param, Parameter): continue
             
-        return cls.__insts[k]
+            params.append((param_name, param))
+
+        params.sort(key = lambda t: t[1].counter)
+        return params
+    
+    def __init__(self, *args, **kwargs):
+        params = self.__get_params()
+        
+        result = {}
+
+        params_dict = dict(params)
+
+        for i, arg in enumerate(args):
+            param_name, param = params[i]
+            result[param_name] = arg
+
+        for param_name, arg in kwargs.iteritems():
+            assert param_name not in result
+            assert param_name in params_dict
+            result[param_name] = arg
+
+        for param_name, param in params:
+            if param_name not in result:
+                result[param_name] = result.default
+
+        for key, value in result.iteritems():
+            setattr(self, key, value)
+
+        self.__params = tuple(result.iteritems())
+
+    def __hash__(self):
+        return hash(self.__params)
+
+    def exists(self):
+        outputs = self.output()
+        if not isinstance(outputs, list): outputs = [outputs]
+        for output in outputs:
+            if not output.exists(): return False
+        else:
+            return True
+
+    def output(self):
+        pass # default impl
+
+    def input(self):
+        pass # default impl
+
+    def run(self):
+        pass # default impl
