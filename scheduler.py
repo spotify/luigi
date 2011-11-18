@@ -28,9 +28,9 @@ class LocalScheduler(object):
                 task.run()
 
 class RemoteScheduler(object):
-    def __init__(self):
+    def __init__(self, client = "test"):
         self.__scheduled = {}
-        self.__client = 'test'
+        self.__client = client
 
     def request(self, url, data):
         import urllib2, json, urllib
@@ -47,7 +47,8 @@ class RemoteScheduler(object):
         if s in self.__scheduled: return True
         self.__scheduled[s] = task
 
-        self.request('/api/product', {'client': self.__client, 'product': s})
+        if task.run != NotImplemented:
+            self.request('/api/product', {'client': self.__client, 'product': s})
 
         for task_2 in flatten(task.requires()):
             s_2 = str(task_2)

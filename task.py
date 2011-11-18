@@ -71,6 +71,10 @@ class Task(object):
     def run(self):
         pass # default impl
 
+class ExternalTask(Task):
+    """Subclass for references to external dependencies"""
+    run = NotImplemented
+
 def getpaths(struct):
     """ Maps all Tasks in a structured data object to their .output()"""
     if isinstance(struct, Task):
