@@ -1,5 +1,5 @@
 import argparse
-from scheduler import RemoteScheduler
+import scheduler
 
 _reg = []
 
@@ -9,10 +9,11 @@ def expose(cls):
 
 def run():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--local-scheduler', help = 'Use local scheduling', action='store_true')
     
     subparsers = parser.add_subparsers()
 
-    s = RemoteScheduler()
+    rules = []
 
     def add_obj(cls, params, args):
         kwargs = {}
@@ -21,7 +22,7 @@ def run():
             kwargs[param_name] = param.parse(args[param_name])
 
         rule = cls(**kwargs)
-        s.add(rule)
+        rules.append(rule)
 
     for cls in _reg:
         subparser = subparsers.add_parser(cls.__name__)
@@ -34,5 +35,11 @@ def run():
 
     args = parser.parse_args()
     args.func(args)
+
+    if args.local_scheduler: s = scheduler.LocalScheduler()
+    else: s = scheduler.RemoteScheduler()
+
+    for rule in rules:
+        s.add(rule)
     
     s.run()

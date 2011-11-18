@@ -1,6 +1,6 @@
 from rule import flatten
 
-class Scheduler(object):
+class LocalScheduler(object):
     def __init__(self):
         self.__scheduled = set()
         self.__schedule = []
