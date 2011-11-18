@@ -68,6 +68,29 @@ class Graph:
 
         return {}
 
+    def draw(self, data):
+        import pygraphviz
+        graphviz = pygraphviz.AGraph(directed = True)
+        n_nodes = 0
+        for product, p in self.__products.iteritems():
+            color = {'PENDING': 'white', 
+                     'OK': 'green',
+                     'FAILED': 'red',
+                     'RUNNING': 'blue',
+                     }[p.status]
+            shape = 'diamond'
+            graphviz.add_node(product, label = product, style = 'filled', fillcolor = color, shape = shape)
+            n_nodes += 1
+
+            for dep in p.deps:
+                graphviz.add_edge(product, dep)
+
+        if n_nodes > 0: # Don't draw the graph if it's empty
+            graphviz.layout('dot')
+            graphviz.draw('test.png')
+
+        return 'hej'
+
 class Server:
     def __init__(self):
         self.__urls = []
@@ -78,7 +101,8 @@ class Server:
         handlers = {'/api/product': self.__graph.product,
                     '/api/dep': self.__graph.dep,
                     '/api/work': self.__graph.work,
-                    '/api/status': self.__graph.status}
+                    '/api/status': self.__graph.status,
+                    '/draw': self.__graph.draw}
 
         for uri, handler in handlers.iteritems():
             if cmd == uri: return handler(data)
@@ -90,15 +114,15 @@ class Server:
                 p = self.path
 
                 d = p.split('?')
-                args = {}
                 if len(d) == 2:
                     cmd, tmp = d
+                    args = {}
                     for k, v in cgi.parse_qs(tmp).iteritems():
                         args[k] = v[0]
-                else:
-                    cmd = p
 
-                data = json.loads(args['data'])
+                    data = json.loads(args['data'])
+                else:
+                    cmd, data = p, {}
 
                 page = server.process(cmd, data)
                 page = json.dumps(page)
