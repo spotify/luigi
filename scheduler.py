@@ -1,3 +1,6 @@
+import urllib
+import urllib2
+import json
 from task import flatten
 
 class LocalScheduler(object):
@@ -33,8 +36,7 @@ class RemoteScheduler(object):
         self.__client = client
 
     def request(self, url, data):
-        import urllib2, json, urllib
-        print url, data
+        data = {'data': json.dumps(data)}
         req = urllib2.Request('http://localhost:8081' + url + '?' + urllib.urlencode(data))
         response = urllib2.urlopen(req)
         page = response.read()
@@ -53,7 +55,7 @@ class RemoteScheduler(object):
         for task_2 in flatten(task.requires()):
             s_2 = str(task_2)
             if self.add(task_2):
-                self.request('/api/dep', {'client': self.__client, 'product': s, 'dep_product': s_2})
+                self.request('/api/dep', {'client': self.__client, 'product': s, 'dep-product': s_2})
 
         return True # Will be done
 
@@ -62,8 +64,23 @@ class RemoteScheduler(object):
             import time
             time.sleep(1.0)
             result = self.request('/api/work', {'client': self.__client})
+            print result
             s = result['product']
             if not s: continue
+            s = str(s) # unicode -> str
 
-            self.__scheduled[s].run()            
-            self.request('/api/status', {'client': self.__client, 'product': s, 'status': 'OK'})
+            # TODO: we should verify that all dependencies exist (can't trust the server all the time)
+            try:
+                self.__scheduled[s].run()            
+                status = 'OK'
+            except KeyboardInterrupt:
+                raise
+            except:
+                import sys, traceback
+                
+                print sys.exc_info()[0], sys.exc_info()[1]
+                print traceback.format_exc(sys.exc_info()[2])
+
+                status = 'FAILED'
+                
+            self.request('/api/status', {'client': self.__client, 'product': s, 'status': status})

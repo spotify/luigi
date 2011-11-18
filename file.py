@@ -9,3 +9,6 @@ class File(object):
 
     def open(self, mode):
         return open(self.__path, mode)
+    
+    def remove(self):
+    	os.remove(self.__path)
