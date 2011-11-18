@@ -1,31 +1,31 @@
-from rule import flatten
+from task import flatten
 
 class LocalScheduler(object):
     def __init__(self):
         self.__scheduled = set()
         self.__schedule = []
 
-    def add(self, rule):
-        if rule.exists(): return
-        if rule in self.__scheduled: return
+    def add(self, task):
+        if task.exists(): return
+        if task in self.__scheduled: return
 
-        self.__scheduled.add(rule)
+        self.__scheduled.add(task)
 
-        for rule_2 in flatten(rule.requires()):
-            self.add(rule_2)
+        for task_2 in flatten(task.requires()):
+            self.add(task_2)
 
-        self.__schedule.append(rule)
+        self.__schedule.append(task)
 
     def run(self):
         print 'will run', self.__schedule
-        for rule in self.__schedule:
+        for task in self.__schedule:
             # check inputs again
-            for rule_2 in flatten(rule.requires()):
-                if not rule_2.exists():
-                    print 'dependency', rule_2, 'does not exist for', rule
+            for task_2 in flatten(task.requires()):
+                if not task_2.exists():
+                    print 'dependency', task_2, 'does not exist for', task
                     break
             else:
-                rule.run()
+                task.run()
 
 class RemoteScheduler(object):
     def __init__(self):
@@ -35,23 +35,23 @@ class RemoteScheduler(object):
     def request(self, url, data):
         import urllib2, json, urllib
         print url, data
-        req = urllib2.Request('http://localhost:8080' + url + '?' + urllib.urlencode(data))
+        req = urllib2.Request('http://localhost:8081' + url + '?' + urllib.urlencode(data))
         response = urllib2.urlopen(req)
         page = response.read()
         result = json.loads(page)
         return result
 
-    def add(self, rule):
-        if rule.exists(): return False
-        s = str(rule)
+    def add(self, task):
+        if task.exists(): return False
+        s = str(task)
         if s in self.__scheduled: return True
-        self.__scheduled[s] = rule
+        self.__scheduled[s] = task
 
         self.request('/api/product', {'client': self.__client, 'product': s})
 
-        for rule_2 in flatten(rule.requires()):
-            s_2 = str(rule_2)
-            if self.add(rule_2):
+        for task_2 in flatten(task.requires()):
+            s_2 = str(task_2)
+            if self.add(task_2):
                 self.request('/api/dep', {'client': self.__client, 'product': s, 'dep_product': s_2})
 
         return True # Will be done

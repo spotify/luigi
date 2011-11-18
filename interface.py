@@ -13,7 +13,7 @@ def run():
     
     subparsers = parser.add_subparsers()
 
-    rules = []
+    tasks = []
 
     def add_obj(cls, params, args):
         kwargs = {}
@@ -24,8 +24,8 @@ def run():
 
             kwargs[param_name] = arg
 
-        rule = cls(**kwargs)
-        rules.append(rule)
+        task = cls(**kwargs)
+        tasks.append(task)
 
     for cls in _reg:
         subparser = subparsers.add_parser(cls.__name__)
@@ -42,7 +42,7 @@ def run():
     if args.local_scheduler: s = scheduler.LocalScheduler()
     else: s = scheduler.RemoteScheduler()
 
-    for rule in rules:
-        s.add(rule)
+    for task in tasks:
+        s.add(task)
     
     s.run()

@@ -84,7 +84,7 @@ class Server:
                 self.end_headers()
                 self.wfile.write(page)
 
-        httpd = BaseHTTPServer.HTTPServer(('', 8080), Handler)
+        httpd = BaseHTTPServer.HTTPServer(('', 8081), Handler)
         httpd.serve_forever()
         
 if __name__ == "__main__":

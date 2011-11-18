@@ -2,7 +2,7 @@ import target, task, parameter
 
 Parameter = parameter.Parameter
 
-class Rule(object):
+class Task(object):
     # Something like this...
 
     @classmethod
@@ -72,8 +72,8 @@ class Rule(object):
         pass # default impl
 
 def getpaths(struct):
-    """ Maps all Rules in a structured data object to their .output()"""
-    if isinstance(struct, Rule):
+    """ Maps all Tasks in a structured data object to their .output()"""
+    if isinstance(struct, Task):
         return struct.output()
     elif isinstance(struct, dict):
         r = {}

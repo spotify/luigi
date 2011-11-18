@@ -1,7 +1,7 @@
-import target, rule, file, scheduler, parameter, interface
+import target, task, file, scheduler, parameter, interface
 
 Target = target.Target
-Rule = rule.Rule
+Task = task.Task
 File = file.File
 Parameter = parameter.Parameter
 
