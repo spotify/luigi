@@ -16,17 +16,19 @@ class Graph:
         self.__timeout = 10.0 # seconds - should be much higher later
 
     def product(self, data):
-        product = data['product']
-        client = data['client']
+        product = str(data['product'])
+        client = str(data['client'])
         self.__products.setdefault(product, Product())
         if data.get('can-build'): self.__products[product].clients.add(client)
         return {}
 
     def dep(self, data):
-        self.__products.setdefault(data['product'], Product()).deps.add(data['dep-product'])
+        product = str(data['product'])
+        dep_product = str(data['dep-product'])
+        self.__products.setdefault(product, Product()).deps.add(dep_product)
 
     def work(self, data):
-        client = data['client']
+        client = str(data['client'])
 
         # TODO: remove any expired nodes
 
@@ -60,8 +62,8 @@ class Graph:
         return {'product': best_product}
 
     def status(self, data):
-        product = data['product']
-        status = data['status']
+        product = str(data['product'])
+        status = str(data['status'])
         self.__products[product].status = status
         if status == 'FAILED':
             self.__products[product].retry = time.time() + self.__timeout
@@ -83,13 +85,16 @@ class Graph:
             n_nodes += 1
 
             for dep in p.deps:
-                graphviz.add_edge(product, dep)
+                graphviz.add_edge(dep, product)
 
-        if n_nodes > 0: # Don't draw the graph if it's empty
-            graphviz.layout('dot')
-            graphviz.draw('test.png')
+        #if n_nodes > 0: # Don't draw the graph if it's empty
+        graphviz.layout('dot')
+        fn = '/tmp/graph.png'
+        graphviz.draw(fn)
 
-        return 'hej'
+        data = ''.join([line for line in open(fn)])
+
+        return data
 
 class Server:
     def __init__(self):
@@ -97,15 +102,34 @@ class Server:
         self.__handlers = {}
         self.__graph = Graph()
 
-    def process(self, cmd, data):
-        handlers = {'/api/product': self.__graph.product,
-                    '/api/dep': self.__graph.dep,
-                    '/api/work': self.__graph.work,
-                    '/api/status': self.__graph.status,
-                    '/draw': self.__graph.draw}
+    def process(self, cmd, args, handler):
+        def json_input(args):
+            return json.loads(args.get('data', '{}'))
 
-        for uri, handler in handlers.iteritems():
-            if cmd == uri: return handler(data)
+        def json_output(result):
+            page = json.dumps(result)
+
+            handler.send_response(200)
+            handler.send_header('content-type', 'text/html')
+            handler.end_headers()
+            handler.wfile.write(page)
+
+        def png_output(result):
+            handler.send_response(200)
+            handler.send_header('content-type', 'image/png')
+            handler.end_headers()
+            handler.wfile.write(result)
+
+        handlers = {'/api/product': (self.__graph.product, json_input, json_output),
+                    '/api/dep': (self.__graph.dep, json_input, json_output),
+                    '/api/work': (self.__graph.work, json_input, json_output),
+                    '/api/status': (self.__graph.status, json_input, json_output),
+                    '/draw': (self.__graph.draw, json_input, png_output)}
+
+        for uri, k in handlers.iteritems():
+            if cmd == uri:
+                f, input_reader, output_writer = k
+                return output_writer(f(input_reader(args)))
 
     def run(self):
         server = self
@@ -120,17 +144,10 @@ class Server:
                     for k, v in cgi.parse_qs(tmp).iteritems():
                         args[k] = v[0]
 
-                    data = json.loads(args['data'])
                 else:
-                    cmd, data = p, {}
+                    cmd, args = p, {}
 
-                page = server.process(cmd, data)
-                page = json.dumps(page)
-
-                self.send_response(200)
-                self.send_header('content-type', 'text/html')
-                self.end_headers()
-                self.wfile.write(page)
+                server.process(cmd, args, self)
 
         httpd = BaseHTTPServer.HTTPServer(('', 8080), Handler)
         httpd.serve_forever()

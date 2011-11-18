@@ -1,4 +1,5 @@
 from rule import flatten
+import json
 
 class LocalScheduler(object):
     def __init__(self):
@@ -61,8 +62,10 @@ class RemoteScheduler(object):
             import time
             time.sleep(1.0)
             result = self.request('/api/work', {'client': self.__client})
+            print result
             s = result['product']
             if not s: continue
+            s = str(s) # unicode -> str
 
             # TODO: we should verify that all dependencies exist (can't trust the server all the time)
             try:

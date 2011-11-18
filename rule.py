@@ -1,4 +1,4 @@
-import task, parameter
+import parameter
 
 Parameter = parameter.Parameter
 
