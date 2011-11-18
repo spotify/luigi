@@ -6,7 +6,7 @@ class LocalScheduler(object):
         self.__schedule = []
 
     def add(self, task):
-        if task.exists(): return
+        if task.complete(): return
         if task in self.__scheduled: return
 
         self.__scheduled.add(task)
@@ -21,8 +21,8 @@ class LocalScheduler(object):
         for task in self.__schedule:
             # check inputs again
             for task_2 in flatten(task.requires()):
-                if not task_2.exists():
-                    print 'dependency', task_2, 'does not exist for', task
+                if not task_2.complete():
+                    print task,'has dependency', task_2, 'which is not complete', 
                     break
             else:
                 task.run()
@@ -42,7 +42,7 @@ class RemoteScheduler(object):
         return result
 
     def add(self, task):
-        if task.exists(): return False
+        if task.complete(): return False
         s = str(task)
         if s in self.__scheduled: return True
         self.__scheduled[s] = task

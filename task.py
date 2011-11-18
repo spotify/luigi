@@ -49,7 +49,7 @@ class Task(object):
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in self.__params]))
 
-    def exists(self):
+    def complete(self):
         outputs = flatten(self.output())
         if len(outputs) == 0: return False
         
