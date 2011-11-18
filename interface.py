@@ -1,5 +1,5 @@
 import argparse
-from scheduler import Scheduler
+from scheduler import RemoteScheduler
 
 _reg = []
 
@@ -12,7 +12,7 @@ def run():
     
     subparsers = parser.add_subparsers()
 
-    s = Scheduler()
+    s = RemoteScheduler()
 
     def add_obj(cls, params, args):
         kwargs = {}
