@@ -13,14 +13,18 @@ class Graph:
     def __init__(self):
         self.__products = {}
 
-    def product(self, client, product):
-        self.__products.setdefault(product, Product()).clients.add(client)
+    def product(self, data):
+        product = data['product']
+        client = data['client']
+        self.__products.setdefault(product, Product())
+        if data.get('can-build'): self.__products[product].clients.add(client)
         return {}
 
-    def dep(self, client, product, dep_product):
-        self.__products.setdefault(product, Product()).deps.add(dep_product)
+    def dep(self, data):
+        self.__products.setdefault(data['product'], Product()).deps.add(data['dep-product'])
 
-    def work(self, client):
+    def work(self, data):
+        client = data['client']
         # Algo: iterate over all nodes, find first node with no dependencies
         best_t = float('inf')
         best_product = None
@@ -33,6 +37,8 @@ class Graph:
                 if dep not in self.__products: ok = False
                 elif self.__products[dep].status != 'OK': ok = False
 
+            print product, ok
+
             if ok:
                 if p.time < best_t:
                     best_t = p.time
@@ -43,8 +49,11 @@ class Graph:
 
         return {'product': best_product}
 
-    def status(self, client, product, status):
+    def status(self, data):
+        product = data['product']
+        status = data['status']
         self.__products[product].status = status
+        return {}
 
 class Server:
     def __init__(self):
@@ -52,15 +61,14 @@ class Server:
         self.__handlers = {}
         self.__graph = Graph()
 
-    def process(self, cmd, args):
+    def process(self, cmd, data):
         handlers = {'/api/product': self.__graph.product,
                     '/api/dep': self.__graph.dep,
                     '/api/work': self.__graph.work,
                     '/api/status': self.__graph.status}
 
         for uri, handler in handlers.iteritems():
-            if cmd == uri:
-                return json.dumps(handler(**args))
+            if cmd == uri: return handler(data)
 
     def run(self):
         server = self
@@ -77,7 +85,11 @@ class Server:
                 else:
                     cmd = p
 
-                page = server.process(cmd, args)
+                data = json.loads(args['data'])
+                print cmd, data
+
+                page = server.process(cmd, data)
+                page = json.dumps(page)
 
                 self.send_response(200)
                 self.send_header('content-type', 'text/html')

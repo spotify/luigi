@@ -34,7 +34,7 @@ class RemoteScheduler(object):
 
     def request(self, url, data):
         import urllib2, json, urllib
-        print url, data
+        data = {'data': json.dumps(data)}
         req = urllib2.Request('http://localhost:8080' + url + '?' + urllib.urlencode(data))
         response = urllib2.urlopen(req)
         page = response.read()
@@ -47,12 +47,12 @@ class RemoteScheduler(object):
         if s in self.__scheduled: return True
         self.__scheduled[s] = rule
 
-        self.request('/api/product', {'client': self.__client, 'product': s})
+        self.request('/api/product', {'client': self.__client, 'product': s, 'can-build': True})
 
         for rule_2 in flatten(rule.requires()):
             s_2 = str(rule_2)
             if self.add(rule_2):
-                self.request('/api/dep', {'client': self.__client, 'product': s, 'dep_product': s_2})
+                self.request('/api/dep', {'client': self.__client, 'product': s, 'dep-product': s_2})
 
         return True # Will be done
 
