@@ -19,7 +19,10 @@ def run():
         kwargs = {}
         args = vars(args)
         for param_name, param in params:
-            kwargs[param_name] = param.parse(args[param_name])
+            if args[param_name] == None: arg = param.default
+            else: arg = param.parse(args[param_name])
+
+            kwargs[param_name] = arg
 
         rule = cls(**kwargs)
         rules.append(rule)
