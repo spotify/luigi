@@ -1,4 +1,4 @@
-# THE WORLD'S UGLIEST WEB SERVER BUT ALL WEB FRAMEWORK SUCK!!!
+# Just a super ugly prototype at this stage - lots of work remaining
 
 import cgi, json, BaseHTTPServer, time
 
@@ -8,10 +8,12 @@ class Product:
         self.deps = set()
         self.status = 'PENDING'
         self.time = time.time()
+        self.retry = None
 
 class Graph:
     def __init__(self):
         self.__products = {}
+        self.__timeout = 10.0 # seconds - should be much higher later
 
     def product(self, data):
         product = data['product']
@@ -25,19 +27,27 @@ class Graph:
 
     def work(self, data):
         client = data['client']
+
+        # TODO: remove any expired nodes
+
         # Algo: iterate over all nodes, find first node with no dependencies
+        # TODO: remove tasks that can't be done, figure out if the client has absolutely
+        # nothing it can wait for
+
         best_t = float('inf')
         best_product = None
         for product, p in self.__products.iteritems():
-            if p.status != 'PENDING': continue
+            if p.status == 'FAILED':
+                if time.time() < p.retry:
+                    continue
+            elif p.status != 'PENDING':
+                continue
             if client not in p.clients: continue
 
             ok = True
             for dep in p.deps:
                 if dep not in self.__products: ok = False
                 elif self.__products[dep].status != 'OK': ok = False
-
-            print product, ok
 
             if ok:
                 if p.time < best_t:
@@ -53,6 +63,9 @@ class Graph:
         product = data['product']
         status = data['status']
         self.__products[product].status = status
+        if status == 'FAILED':
+            self.__products[product].retry = time.time() + self.__timeout
+
         return {}
 
 class Server:
@@ -86,7 +99,6 @@ class Server:
                     cmd = p
 
                 data = json.loads(args['data'])
-                print cmd, data
 
                 page = server.process(cmd, data)
                 page = json.dumps(page)

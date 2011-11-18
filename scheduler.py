@@ -64,5 +64,18 @@ class RemoteScheduler(object):
             s = result['product']
             if not s: continue
 
-            self.__scheduled[s].run()            
-            self.request('/api/status', {'client': self.__client, 'product': s, 'status': 'OK'})
+            # TODO: we should verify that all dependencies exist (can't trust the server all the time)
+            try:
+                self.__scheduled[s].run()            
+                status = 'OK'
+            except KeyboardInterrupt:
+                raise
+            except:
+                import sys, traceback
+                
+                print sys.exc_info()[0], sys.exc_info()[1]
+                print traceback.format_exc(sys.exc_info()[2])
+
+                status = 'FAILED'
+                
+            self.request('/api/status', {'client': self.__client, 'product': s, 'status': status})
