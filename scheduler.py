@@ -10,9 +10,9 @@ class LocalScheduler(object):
 
     def add(self, task):
         if task.complete(): return
-        if task in self.__scheduled: return
+        if str(task) in self.__scheduled: return
 
-        self.__scheduled.add(task)
+        self.__scheduled.add(str(task))
 
         for task_2 in flatten(task.requires()):
             self.add(task_2)

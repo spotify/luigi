@@ -8,6 +8,7 @@ class Task(object):
     @classmethod
     def get_params(cls):
         # Extract all Argument instances from the class
+        # TODO: not really necessary to do multiple times, can we make it run once when the class is created?
         params = []
         for param_name in dir(cls):
             param = getattr(cls, param_name)
@@ -15,6 +16,7 @@ class Task(object):
             
             params.append((param_name, param))
 
+        # The order the parameters are created matters. See Parameter class
         params.sort(key = lambda t: t[1].counter)
         return params
     
@@ -41,13 +43,14 @@ class Task(object):
         for key, value in result.iteritems():
             setattr(self, key, value)
 
-        self.__params = list(result.iteritems())
+        self.__hash = hash(tuple(result.iteritems()))
+        self.__repr = '%s(%s)' % (self.__class__.__name__, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in result.iteritems()]))
 
     def __hash__(self):
-        return hash(tuple(self.__params))
+        return self.__hash
 
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in self.__params]))
+        return self.__repr
 
     def complete(self):
         outputs = flatten(self.output())
