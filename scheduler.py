@@ -50,12 +50,12 @@ class RemoteScheduler(object):
         self.__scheduled[s] = task
 
         if task.run != NotImplemented:
-            self.request('/api/product', {'client': self.__client, 'product': s})
+            self.request('/api/task', {'client': self.__client, 'task': s})
 
         for task_2 in flatten(task.requires()):
             s_2 = str(task_2)
             if self.add(task_2):
-                self.request('/api/dep', {'client': self.__client, 'product': s, 'dep-product': s_2})
+                self.request('/api/dep', {'client': self.__client, 'task': s, 'dep-task': s_2})
 
         return True # Will be done
 
@@ -65,7 +65,7 @@ class RemoteScheduler(object):
             time.sleep(1.0)
             result = self.request('/api/work', {'client': self.__client})
             print result
-            s = result['product']
+            s = result['task']
             if not s: continue
             s = str(s) # unicode -> str
 
@@ -83,4 +83,4 @@ class RemoteScheduler(object):
 
                 status = 'FAILED'
                 
-            self.request('/api/status', {'client': self.__client, 'product': s, 'status': status})
+            self.request('/api/status', {'client': self.__client, 'task': s, 'status': status})

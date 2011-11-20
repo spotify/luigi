@@ -2,7 +2,7 @@
 
 import cgi, json, BaseHTTPServer, time
 
-class Product(object):
+class Task(object):
     def __init__(self):
         self.clients = set()
         self.deps = set()
@@ -12,20 +12,20 @@ class Product(object):
 
 class Graph(object):
     def __init__(self):
-        self.__products = {}
+        self.__tasks = {}
         self.__timeout = 10.0 # seconds - should be much higher later
 
-    def product(self, data):
-        product = str(data['product'])
+    def task(self, data):
+        task = str(data['task'])
         client = str(data['client'])
-        self.__products.setdefault(product, Product())
-        self.__products[product].clients.add(client)
+        self.__tasks.setdefault(task, Task())
+        self.__tasks[task].clients.add(client)
         return {}
 
     def dep(self, data):
-        product = str(data['product'])
-        dep_product = str(data['dep-product'])
-        self.__products.setdefault(product, Product()).deps.add(dep_product)
+        task = str(data['task'])
+        dep_task = str(data['dep-task'])
+        self.__tasks.setdefault(task, Task()).deps.add(dep_task)
 
     def work(self, data):
         client = str(data['client'])
@@ -37,8 +37,8 @@ class Graph(object):
         # nothing it can wait for
 
         best_t = float('inf')
-        best_product = None
-        for product, p in self.__products.iteritems():
+        best_task = None
+        for task, p in self.__tasks.iteritems():
             if p.status == 'FAILED':
                 if time.time() < p.retry:
                     continue
@@ -48,25 +48,25 @@ class Graph(object):
 
             ok = True
             for dep in p.deps:
-                if dep not in self.__products: ok = False
-                elif self.__products[dep].status != 'OK': ok = False
+                if dep not in self.__tasks: ok = False
+                elif self.__tasks[dep].status != 'OK': ok = False
 
             if ok:
                 if p.time < best_t:
                     best_t = p.time
-                    best_product = product
+                    best_task = task
 
-        if best_product:
-            self.__products[best_product].status = 'RUNNING'
+        if best_task:
+            self.__tasks[best_task].status = 'RUNNING'
 
-        return {'product': best_product}
+        return {'task': best_task}
 
     def status(self, data):
-        product = str(data['product'])
+        task = str(data['task'])
         status = str(data['status'])
-        self.__products[product].status = status
+        self.__tasks[task].status = status
         if status == 'FAILED':
-            self.__products[product].retry = time.time() + self.__timeout
+            self.__tasks[task].retry = time.time() + self.__timeout
 
         return {}
 
@@ -74,18 +74,19 @@ class Graph(object):
         import pygraphviz
         graphviz = pygraphviz.AGraph(directed = True)
         n_nodes = 0
-        for product, p in self.__products.iteritems():
+        for task, p in self.__tasks.iteritems():
             color = {'PENDING': 'white', 
                      'OK': 'green',
                      'FAILED': 'red',
                      'RUNNING': 'blue',
                      }[p.status]
             shape = 'diamond'
-            graphviz.add_node(product, label = product, style = 'filled', fillcolor = color, shape = shape)
+            graphviz.add_node(task, label = task, style = 'filled', fillcolor = color, shape = shape)
             n_nodes += 1
 
+        for task, p in self.__tasks.iteritems():
             for dep in p.deps:
-                graphviz.add_edge(dep, product)
+                graphviz.add_edge(dep, task)
 
         #if n_nodes > 0: # Don't draw the graph if it's empty
         graphviz.layout('dot')
@@ -120,7 +121,7 @@ class Server:
             handler.end_headers()
             handler.wfile.write(result)
 
-        handlers = {'/api/product': (self.__graph.product, json_input, json_output),
+        handlers = {'/api/task': (self.__graph.task, json_input, json_output),
                     '/api/dep': (self.__graph.dep, json_input, json_output),
                     '/api/work': (self.__graph.work, json_input, json_output),
                     '/api/status': (self.__graph.status, json_input, json_output),
