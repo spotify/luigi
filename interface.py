@@ -3,8 +3,8 @@ import scheduler
 
 _reg = []
 
-def expose(cls):
-    _reg.append(cls)
+def expose(cls, main = False):
+    _reg.append((cls, main))
     return cls
 
 def run():
@@ -27,8 +27,9 @@ def run():
         task = cls(**kwargs)
         tasks.append(task)
 
-    for cls in _reg:
-        subparser = subparsers.add_parser(cls.__name__)
+    for cls, main in _reg:
+        if main: subparser = parser
+        else: subparser = subparsers.add_parser(cls.__name__)
 
         params = cls.get_params()
         for param_name, param in params:
