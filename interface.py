@@ -1,49 +1,32 @@
 import argparse
 import scheduler
 
-_reg = []
+_reg = {}
 
 def expose(cls, main = False):
-    _reg.append((cls, main))
+    name = cls.__name__
+    assert name not in _reg
+    _reg[name] = cls
     return cls
 
 def run():
     parser = argparse.ArgumentParser()
     parser.add_argument('--local-scheduler', help = 'Use local scheduling', action='store_true')
     
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest = 'command')
 
-    tasks = []
-
-    def add_obj(cls, params, args):
-        kwargs = {}
-        args = vars(args)
-        for param_name, param in params:
-            if args[param_name] == None: arg = param.default
-            else: arg = param.parse(args[param_name])
-
-            kwargs[param_name] = arg
-
-        task = cls(**kwargs)
-        tasks.append(task)
-
-    for cls, main in _reg:
-        if main: subparser = parser
-        else: subparser = subparsers.add_parser(cls.__name__)
+    for name, cls in _reg.iteritems():
+        subparser = subparsers.add_parser(name)
 
         params = cls.get_params()
         for param_name, param in params:
             subparser.add_argument('--' + param_name.replace('_', '-'))
 
-        subparser.set_defaults(func = lambda args: add_obj(cls, params, args))
-
     args = parser.parse_args()
-    args.func(args)
-
+    task = _reg[args.command].from_input(args)
+        
     if args.local_scheduler: s = scheduler.LocalScheduler()
     else: s = scheduler.RemoteScheduler()
-
-    for task in tasks:
-        s.add(task)
     
+    s.add(task)
     s.run()

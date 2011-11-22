@@ -46,6 +46,19 @@ class Task(object):
         self.__hash = hash(tuple(result.iteritems()))
         self.__repr = '%s(%s)' % (self.__class__.__name__, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in result.iteritems()]))
 
+    @classmethod
+    def from_input(cls, args):
+        # Creates an instance from a str->str hash (to be used for cmd line interaction etc)
+        kwargs = {}
+        args = vars(args)
+        for param_name, param in cls.get_params():
+            if args[param_name] == None: arg = param.default
+            else: arg = param.parse(args[param_name])
+
+            kwargs[param_name] = arg
+
+        return cls(**kwargs)
+
     def __hash__(self):
         return self.__hash
 
