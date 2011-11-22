@@ -23,7 +23,8 @@ def run():
             subparser.add_argument('--' + param_name.replace('_', '-'))
 
     args = parser.parse_args()
-    task = _reg[args.command].from_input(args)
+    parames = vars(args) # convert to a str -> str hash
+    task = _reg[args.command].from_input(params)
         
     if args.local_scheduler: s = scheduler.LocalScheduler()
     else: s = scheduler.RemoteScheduler()
