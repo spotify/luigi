@@ -1,18 +1,18 @@
 import datetime, os
-from spotify import luigi
+from spotify import builder3
 
 # Calculates Fibonacci numbers :)
 
-@luigi.expose
-class Fib(luigi.Task):
-    n = luigi.IntParameter(default = 100)
+@builder3.expose
+class Fib(builder3.Task):
+    n = builder3.IntParameter(default = 100)
 
     def requires(self):
         if self.n > 2: return [Fib(self.n - 1), Fib(self.n - 2)]
         else: return []
 
     def output(self):
-        return luigi.File('/tmp/fib_%d' % self.n)
+        return builder3.File('/tmp/fib_%d' % self.n)
 
     def run(self):
         if self.n == 0:
@@ -31,4 +31,4 @@ class Fib(luigi.Task):
         time.sleep(1)
 
 if __name__ == '__main__':
-    luigi.run()
+    builder3.run()

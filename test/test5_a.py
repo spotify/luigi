@@ -1,5 +1,5 @@
 import os
-from spotify.luigi import * 
+from spotify.builder3 import * 
 
 class A(ExternalTask):
 	def output(self):

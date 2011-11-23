@@ -1,4 +1,4 @@
-from spotify.luigi import * 
+from spotify.builder3 import * 
 
 class A(Task):
 	def output(self):

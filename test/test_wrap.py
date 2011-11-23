@@ -1,18 +1,18 @@
 import datetime, os
-from spotify import luigi
+from spotify import builder3
 
-class A(luigi.Task):
+class A(builder3.Task):
     def output(self):
-        return luigi.File('/tmp/a.txt')
+        return builder3.File('/tmp/a.txt')
 
     def run(self):
         f = self.output().open('w')
         print >>f, 'hello, world'
         f.close()
 
-class B(luigi.Task):
+class B(builder3.Task):
     def output(self):
-        return luigi.File('/tmp/b.txt')
+        return builder3.File('/tmp/b.txt')
 
     def run(self):
         f = self.output().open('w')
@@ -20,9 +20,9 @@ class B(luigi.Task):
         f.close()
 
 def make_xml_wrapper(dep_class, output_filename):
-    class XMLWrapper(luigi.Task):
+    class XMLWrapper(builder3.Task):
         def output(self):
-            return luigi.File(output_filename)
+            return builder3.File(output_filename)
 
         def requires(self):
             return dep_class()
@@ -37,13 +37,13 @@ def make_xml_wrapper(dep_class, output_filename):
 
     return XMLWrapper
 
-@luigi.expose
+@builder3.expose
 class AXML(make_xml_wrapper(A, '/tmp/a.xml')):
     pass
 
-@luigi.expose
+@builder3.expose
 class BXML(make_xml_wrapper(B, '/tmp/b.xml')):
     pass
 
 if __name__ == '__main__':
-    luigi.run()
+    builder3.run()
