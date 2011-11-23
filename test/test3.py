@@ -1,40 +1,40 @@
 import datetime, os
-from spotify import builder3
+from spotify import luigi
 
-class EndSongSource(builder3.Task):
-    date = builder3.Parameter()
+class EndSongSource(luigi.Task):
+    date = luigi.Parameter()
 
     def output(self):
-        return builder3.File('/var/endsongsource/%s.txt' % self.date)
+        return luigi.File('/var/endsongsource/%s.txt' % self.date)
 
     def run(self):
         pass
 
-class TrackMap(builder3.Task):
-    item_type = builder3.Parameter()
+class TrackMap(luigi.Task):
+    item_type = luigi.Parameter()
 
     def output(self):
-        return builder3.File('/var/xyz/%s.txt' % self.item_type) # NOTE: this attribute must be public!
+        return luigi.File('/var/xyz/%s.txt' % self.item_type) # NOTE: this attribute must be public!
 
     def run(self):
         pass # create metadata by reading from a DB or whatever
 
-class AggregatedPlays(builder3.Task):
-    date = builder3.Parameter()
+class AggregatedPlays(luigi.Task):
+    date = luigi.Parameter()
 
     def requires(self):
         return EndSongSource(self.date)
 
     def output(self):
-        return builder3.File('/aggregatedplays/%s' % self.date.strftime('%Y-%m-%d'))
+        return luigi.File('/aggregatedplays/%s' % self.date.strftime('%Y-%m-%d'))
 
     def run(self):
         input = EndSongSource(self.date).output()
         pass # Hadoop job...
 
-class TopList(builder3.Task):
-    date = builder3.Parameter()
-    item_type = builder3.Parameter(default = 'artist')
+class TopList(luigi.Task):
+    date = luigi.Parameter()
+    item_type = luigi.Parameter(default = 'artist')
 
     def requires(self):
         self.__input = TrackMap(self.item_type)
@@ -45,7 +45,7 @@ class TopList(builder3.Task):
         self.outputs = {} # Outputs can be indexed in any way...
 
         for top in [100, 1000]:
-            self.outputs[top] = builder3.File('/var/xyz/top_%d_%s_%s.txt' % (top, self.item_type, self.date.strftime('%Y-%m-%d')))
+            self.outputs[top] = luigi.File('/var/xyz/top_%d_%s_%s.txt' % (top, self.item_type, self.date.strftime('%Y-%m-%d')))
 
         return self.outputs
 
@@ -59,10 +59,10 @@ class TopList(builder3.Task):
                 f.write(self.__line_format % item)
             f.close()
 
-@builder3.expose
-class TestTask(builder3.Task):
-    item_type = builder3.Parameter()
-    date = builder3.DateParameter()
+@luigi.expose
+class TestTask(luigi.Task):
+    item_type = luigi.Parameter()
+    date = luigi.DateParameter()
 
     def requires(self):
         # Just trying something that depends on everything
@@ -73,7 +73,7 @@ class TestTask(builder3.Task):
                 TopList(self.date)]
 
     def output(self):
-        return [builder3.File('')]
+        return [luigi.File('')]
 
 if __name__ == '__main__':
-    builder3.run()
+    luigi.run()

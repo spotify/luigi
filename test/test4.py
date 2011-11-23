@@ -1,12 +1,12 @@
 import datetime, os
-from spotify import builder3
+from spotify import luigi
 
-@builder3.expose
-class Popularity(builder3.Task):
-    date = builder3.DateParameter(default = datetime.date.today() - datetime.timedelta(1))
+@luigi.expose
+class Popularity(luigi.Task):
+    date = luigi.DateParameter(default = datetime.date.today() - datetime.timedelta(1))
 
     def output(self):
-        return builder3.File('/tmp/popularity/%s.txt' % self.date.strftime('%Y-%m-%d'))
+        return luigi.File('/tmp/popularity/%s.txt' % self.date.strftime('%Y-%m-%d'))
 
     def requires(self):
         return Popularity(self.date - datetime.timedelta(1))
@@ -26,4 +26,4 @@ class Popularity(builder3.Task):
         f.close()
 
 if __name__ == '__main__':
-    builder3.run()
+    luigi.run()
