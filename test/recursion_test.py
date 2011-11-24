@@ -1,29 +1,30 @@
 import datetime, os
 from spotify import luigi
+from spotify.luigi.mock import MockFile
+from spotify.util.test import *
+
+File = MockFile
 
 @luigi.expose
 class Popularity(luigi.Task):
     date = luigi.DateParameter(default = datetime.date.today() - datetime.timedelta(1))
 
     def output(self):
-        return luigi.File('/tmp/popularity/%s.txt' % self.date.strftime('%Y-%m-%d'))
+        return File('/tmp/popularity/%s.txt' % self.date.strftime('%Y-%m-%d'))
 
     def requires(self):
         return Popularity(self.date - datetime.timedelta(1))
 
     def run(self):
-        print 'transforming', self.input(), 'into', self.output()
-
-        import random
-        if random.random() > 0.5:
-            raise # crash with 50% prob
-
         f = self.output().open('w')
         for line in self.input().open('r'):
-            f.write(line)
-        f.write('extra line for ' + self.date.strftime('%Y-%m-%d'))
+            print >> f, int(line.strip()) + 1
         
         f.close()
 
-if __name__ == '__main__':
-    luigi.run()
+class RecursionTest(TestCase):
+    def test_recursion(self):
+        MockFile._file_contents['/tmp/popularity/2009-01-01.txt'] = '0\n'
+        luigi.run(['--local-scheduler', 'Popularity', '--date', '2010-01-01'])
+
+        self.assertEquals(MockFile._file_contents['/tmp/popularity/2010-01-01.txt'], '365\n')
