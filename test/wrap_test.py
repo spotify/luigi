@@ -1,9 +1,12 @@
-import datetime, os
 from spotify import luigi
+from spotify.luigi.mock import MockFile
+from spotify.util.test import *
+
+File = MockFile
 
 class A(luigi.Task):
     def output(self):
-        return luigi.File('/tmp/a.txt')
+        return File('/tmp/a.txt')
 
     def run(self):
         f = self.output().open('w')
@@ -12,7 +15,7 @@ class A(luigi.Task):
 
 class B(luigi.Task):
     def output(self):
-        return luigi.File('/tmp/b.txt')
+        return File('/tmp/b.txt')
 
     def run(self):
         f = self.output().open('w')
@@ -22,7 +25,7 @@ class B(luigi.Task):
 def make_xml_wrapper(dep_class, output_filename):
     class XMLWrapper(luigi.Task):
         def output(self):
-            return luigi.File(output_filename)
+            return File(output_filename)
 
         def requires(self):
             return dep_class()
@@ -44,6 +47,16 @@ class AXML(make_xml_wrapper(A, '/tmp/a.xml')):
 @luigi.expose
 class BXML(make_xml_wrapper(B, '/tmp/b.xml')):
     pass
+
+class WrapperTest(TestCase):
+    def test_a(self):
+        luigi.run(['--local-scheduler', 'AXML'])
+        self.assertEqual(MockFile._file_contents['/tmp/a.xml'], '<?xml version="1.0" ?>\n<dummy-xml>hello, world</dummy-xml>\n')
+
+    def test_b(self):
+        luigi.run(['--local-scheduler', 'BXML'])
+        self.assertEqual(MockFile._file_contents['/tmp/b.xml'], '<?xml version="1.0" ?>\n<dummy-xml>goodbye, space</dummy-xml>\n')
+
 
 if __name__ == '__main__':
     luigi.run()
