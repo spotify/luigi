@@ -1,6 +1,7 @@
 import datetime, os
 from spotify import luigi
 from spotify.util.test import *
+from spotify.luigi.mock import MockFile
 
 File = luigi.File
 
@@ -33,12 +34,21 @@ class Fib(luigi.Task):
         f.close()
 
 class FibTest(TestCase):
-    def test_100(self):
-        from spotify.luigi.mock import MockFile
+    def setUp(self):
         global File
         File = MockFile
+        MockFile._file_contents.clear()
         
-        luigi.run(['--local-scheduler', 'Fib', '--n', '100']) # TODO: test command line separately
+    def test_invoke(self):
+        s = luigi.scheduler.LocalScheduler()
+        s.add(Fib(100))
+        s.run()
+
+        self.assertEqual(MockFile._file_contents['/tmp/fib_10'], '55\n')
+        self.assertEqual(MockFile._file_contents['/tmp/fib_100'], '354224848179261915075\n')
+
+    def test_cmdline(self):
+        luigi.run(['--local-scheduler', 'Fib', '--n', '100'])
 
         self.assertEqual(MockFile._file_contents['/tmp/fib_10'], '55\n')
         self.assertEqual(MockFile._file_contents['/tmp/fib_100'], '354224848179261915075\n')

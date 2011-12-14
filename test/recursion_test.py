@@ -23,8 +23,17 @@ class Popularity(luigi.Task):
         f.close()
 
 class RecursionTest(TestCase):
-    def test_recursion(self):
+    def setUp(self):
         MockFile._file_contents['/tmp/popularity/2009-01-01.txt'] = '0\n'
+
+    def test_invoke(self):
+        s = luigi.scheduler.LocalScheduler()
+        s.add(Popularity(datetime.date(2010, 1, 1)))
+        s.run()
+
+        self.assertEquals(MockFile._file_contents['/tmp/popularity/2010-01-01.txt'], '365\n')
+
+    def test_cmdline(self):
         luigi.run(['--local-scheduler', 'Popularity', '--date', '2010-01-01'])
 
         self.assertEquals(MockFile._file_contents['/tmp/popularity/2010-01-01.txt'], '365\n')
