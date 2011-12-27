@@ -33,12 +33,13 @@ class Fib(luigi.Task):
         f.write('%d\n' % s)
         f.close()
 
-class FibTest(TestCase):
+class FibTestBase(TestCase):
     def setUp(self):
         global File
         File = MockFile
         MockFile._file_contents.clear()
-        
+
+class FibTest(FibTestBase):
     def test_invoke(self):
         s = luigi.scheduler.LocalScheduler()
         s.add(Fib(100))
@@ -52,6 +53,7 @@ class FibTest(TestCase):
 
         self.assertEqual(MockFile._file_contents['/tmp/fib_10'], '55\n')
         self.assertEqual(MockFile._file_contents['/tmp/fib_100'], '354224848179261915075\n')
+
 
 if __name__ == '__main__':
     luigi.run()
