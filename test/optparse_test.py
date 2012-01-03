@@ -1,5 +1,5 @@
-from spotify import luigi
-from spotify.luigi.mock import MockFile
+import luigi
+from luigi.mock import MockFile
 from fib_test import FibTestBase
 
 class OptParseTest(FibTestBase):

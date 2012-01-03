@@ -1,7 +1,7 @@
 import datetime, os
-from spotify import luigi
+import luigi
 from spotify.util.test import *
-from spotify.luigi.mock import MockFile
+from luigi.mock import MockFile
 
 File = luigi.File
 

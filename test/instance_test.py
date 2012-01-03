@@ -1,5 +1,5 @@
 import datetime, os
-from spotify import luigi
+import luigi
 from spotify.util.test import *
 
 class InstanceTest(TestCase):

@@ -1,5 +1,5 @@
-from spotify import luigi
-from spotify.luigi.mock import MockFile
+import luigi
+from luigi.mock import MockFile
 from spotify.util.test import *
 
 File = MockFile
