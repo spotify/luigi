@@ -2,6 +2,7 @@ import task, file, scheduler, parameter, interface, target
 
 Task = task.Task
 ExternalTask = task.ExternalTask
+Target = target.Target
 
 File = file.File
 LocalTarget = File # Can't decide what we should call it...
