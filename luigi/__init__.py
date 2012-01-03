@@ -16,13 +16,3 @@ run = interface.run
 DateParameter = parameter.DateParameter
 IntParameter = parameter.IntParameter
 
-# TODO: this is just ugly glue code right now, until we've fully ported the paths from builder2
-try:
-    from spotify.builder2.paths import HdfsPath, S3Path, DynamicPath
-    
-    class HdfsTarget(HdfsPath, target.Target): pass
-    class S3Target(S3Path, target.Target): pass
-    class DynamicTarget(DynamicPath, target.Target): pass
-except ImportError:
-    import warnings
-    warnings.warn('No S3/HDFS functionality')
