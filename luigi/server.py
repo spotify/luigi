@@ -21,7 +21,7 @@ class Graph(object):
         self.__tasks = {}
         self.__retry_delay = 60.0 # seconds - should be much higher later
         self.__remove_delay = 600.0
-        self.__client_disconnect_delay = 10.0
+        self.__client_disconnect_delay = 60.0
         # TODO: we have different timeouts:
         # - Retry timeout (when to retry a failed task)
         # - Client keep alive timeout
@@ -85,16 +85,15 @@ class Graph(object):
         task = str(data['task'])
         p = self.__tasks.setdefault(task, Task(status=data.get('status', 'PENDING')))
 
-        allowed_state_changes = set([('RUNNING', 'DONE'), ('RUNNING', 'FAILED'),
-                                     ('RUNNING', 'PENDING'), # TODO: Disallow!
-                                     ('DONE', 'PENDING'),
-                                     ('FAILED', 'PENDING')])
+        # allowed_state_changes = set([('RUNNING', 'DONE'), ('RUNNING', 'FAILED'),
+        #                             ('RUNNING', 'PENDING'), # TODO: Disallow!
+        #                             ('DONE', 'PENDING'),
+        #                             ('FAILED', 'PENDING')])
 
         new_status = str(data.get('status', 'PENDING'))
-
         print p.status, '->', new_status
 
-        assert p.status == new_status or (p.status, new_status) in allowed_state_changes
+        # assert p.status == new_status or (p.status, new_status) in allowed_state_changes
 
         p.status = new_status
 
@@ -183,7 +182,7 @@ class Graph(object):
 
         #if n_nodes > 0: # Don't draw the graph if it's empty
         graphviz.layout('dot')
-        fn = '/tmp/graph.png'
+        fn = '/tmp/graph.svg'
         graphviz.draw(fn)
 
         data = ''.join([line for line in open(fn)])
@@ -212,7 +211,7 @@ class Server:
 
         def png_output(result):
             handler.send_response(200)
-            handler.send_header('content-type', 'image/png')
+            handler.send_header('content-type', 'image/svg+xml')
             handler.end_headers()
             handler.wfile.write(result)
 

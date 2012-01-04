@@ -57,7 +57,10 @@ class RemoteScheduler(object):
             def run(self):
                 while True:
                     time.sleep(1.0)
-                    scheduler.ping()
+                    try:
+                        scheduler.ping()
+                    except httplib.BadStatusLine:
+                        print 'WARNING: could not ping!'
 
         k = KeepAliveThread()
         k.daemon = True
