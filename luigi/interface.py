@@ -62,9 +62,11 @@ class ArgParseInterface(Interface):
 
         if args.local_scheduler: s = scheduler.LocalScheduler()
         else: s = scheduler.RemoteScheduler()
+
+        w = scheduler.Worker(s)
     
-        s.add(task)
-        s.run()
+        w.add(task)
+        w.run()
 
 class OptParseInterface(Interface):
     ''' Supported for legacy reasons where it's necessary to interact with an existing parser.
@@ -117,8 +119,10 @@ class OptParseInterface(Interface):
         if args.local_scheduler: s = scheduler.LocalScheduler()
         else: s = scheduler.RemoteScheduler()
 
-        s.add(task)
-        s.run()
+        w = scheduler.Worker(s)
+
+        w.add(task)
+        w.run()
 
 def run(cmdline_args=None, existing_optparse=None, use_optparse=False):
     ''' Run from cmdline.

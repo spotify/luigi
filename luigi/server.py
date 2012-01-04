@@ -3,6 +3,7 @@
 #       use some other web framework (Tornado?)
 #       move all client HTTP code away from scheduler.py into rpc.py
 #       move the Graph class into scheduler.py and rename it RemoteSchedulerServer (or something)
+#       -> it should inherit the Scheduler interface
 #       what do do with Graph.draw?
 
 import cgi, json, BaseHTTPServer, time

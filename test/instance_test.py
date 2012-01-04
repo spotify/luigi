@@ -30,9 +30,9 @@ class InstanceTest(TestCase):
             def requires(self): return A() # This will end up referring to the same object
             def run(self): test.assertTrue(self.input().has_run)
         
-        s = luigi.scheduler.LocalScheduler()
-        s.add(B(1))
-        s.add(B(2))
+        w = luigi.scheduler.Worker(luigi.scheduler.LocalScheduler())
+        w.add(B(1))
+        w.add(B(2))
         
 
 if __name__ == '__main__':

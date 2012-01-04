@@ -41,9 +41,9 @@ class FibTestBase(TestCase):
 
 class FibTest(FibTestBase):
     def test_invoke(self):
-        s = luigi.scheduler.LocalScheduler()
-        s.add(Fib(100))
-        s.run()
+        w = luigi.scheduler.Worker(luigi.scheduler.LocalScheduler())
+        w.add(Fib(100))
+        w.run()
 
         self.assertEqual(MockFile._file_contents['/tmp/fib_10'], '55\n')
         self.assertEqual(MockFile._file_contents['/tmp/fib_100'], '354224848179261915075\n')
