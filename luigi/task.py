@@ -2,10 +2,28 @@ import parameter
 
 Parameter = parameter.Parameter
 
+class InstanceCache(type):
+    # If we already have an instance of this class, then just return it from the cache
+    # The idea is that a Task object X should be able to set up heavy data structures that
+    # can be accessed from other Task objects (with dependencies on X). But we need to make
+    # sure that X is not instantiated many times.
+    __instance_cache = {}
+    def __call__(cls, *args, **kwargs):
+        params = cls.get_params()
+        param_values = cls.get_param_values(params, args, kwargs)
+
+        k = (cls, tuple(param_values.iteritems()))
+        h = InstanceCache.__instance_cache
+
+        if k not in h:
+            h[k] = super(InstanceCache, cls).__call__(*args, **kwargs)
+
+        return h[k]
+
 class Task(object):
     # Something like this...
 
-    __instance_cache = {}
+    __metaclass__ = InstanceCache
 
     @classmethod
     def get_params(cls):
@@ -43,22 +61,6 @@ class Task(object):
 
         return result
 
-    def __new__(cls, *args, **kwargs):
-        # If we already have an instance of this class, then just return it from the cache
-        # The idea is that a Task object X should be able to set up heavy data structures that
-        # can be accessed from other Task objects (with dependencies on X). But we need to make
-        # sure that X is not instantiated many times.
-
-        params = cls.get_params()
-        param_values = cls.get_param_values(params, args, kwargs)
-
-        k = (cls, tuple(param_values.iteritems()))
-        if k not in Task.__instance_cache:
-            Task.__instance_cache[k] = super(Task, cls).__new__(cls)
-            Task.__instance_cache[k].__init__(*args, **kwargs)
-
-        return Task.__instance_cache[k]
-    
     def __init__(self, *args, **kwargs):
         params = self.get_params()
         param_values = self.get_param_values(params, args, kwargs)
