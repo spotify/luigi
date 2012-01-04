@@ -41,7 +41,7 @@ class FibTestBase(TestCase):
 
 class FibTest(FibTestBase):
     def test_invoke(self):
-        w = luigi.scheduler.Worker(luigi.scheduler.LocalScheduler())
+        w = luigi.worker.Worker(locally=True)
         w.add(Fib(100))
         w.run()
 
