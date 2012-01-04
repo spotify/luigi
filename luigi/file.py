@@ -12,3 +12,7 @@ class File(object):
     
     def remove(self):
     	os.remove(self.__path)
+
+    @property
+    def fn(self):
+        return self.__path

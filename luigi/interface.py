@@ -1,4 +1,4 @@
-import scheduler
+import worker
 
 class Register:
     def __init__(self):
@@ -60,10 +60,7 @@ class ArgParseInterface(Interface):
 
         task = task_cls.from_input(params)
 
-        if args.local_scheduler: s = scheduler.LocalScheduler()
-        else: s = scheduler.RemoteScheduler()
-
-        w = scheduler.Worker(s)
+        w = worker.Worker(locally=args.local_scheduler)
     
         w.add(task)
         w.run()
@@ -116,10 +113,7 @@ class OptParseInterface(Interface):
         task = task_cls.from_input(params)
 
         # Run
-        if args.local_scheduler: s = scheduler.LocalScheduler()
-        else: s = scheduler.RemoteScheduler()
-
-        w = scheduler.Worker(s)
+        w = worker.Worker(locally=args.local_scheduler)
 
         w.add(task)
         w.run()

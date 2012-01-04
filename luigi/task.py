@@ -104,6 +104,9 @@ class Task(object):
         return [] # default impl
 
     def input(self):
+        requires = self.requires()
+        data = getpaths(requires)
+        print 'requires:', requires, 'result:', data
         return getpaths(self.requires())
 
     def deps(self):

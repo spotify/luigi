@@ -1,34 +1,43 @@
 class Scheduler(object):
+    ''' Abstract base class
+
+    Note that the methods all take string arguments, not Task objects...
+    '''
+
     add_task = NotImplemented
     add_dep = NotImplemented
     get_work = NotImplemented
     ping = NotImplemented # TODO: remove?
     status = NotImplemented # merge with add_task?
 
-class LocalScheduler(object):
+class DummyScheduler(object):
+    ''' DEPRECATED
+
+    TODO: use CentralPlanner but with no RPC in between!
+    '''
     def __init__(self):
         import collections
-        self.__schedule = collections.deque()
+        self.__schedule = []
 
-    def add_task(self, task, status):
+    def add_task(self, task, status, client=None):
         if status == 'PENDING':
             self.__schedule.append(task)
 
-    def add_dep(self, task, status):
+    def add_dep(self, task, status, client=None):
         pass
 
-    def get_work(self):
+    def get_work(self, client=None):
         if len(self.__schedule):
             # TODO: check for dependencies:
             #for task_2 in task.deps():
             #    if not task_2.complete():
             #        print task,'has dependency', task_2, 'which is not complete',
             #        break
-            return False, self.__schedule.popleft()
+            return False, self.__schedule.pop()
         else:
             return True, None
 
-    def status(self, task, status, expl=None):
+    def status(self, task, status, expl=None, client=None):
         pass
 
 class RemoteScheduler(Scheduler):
@@ -38,7 +47,6 @@ class RemoteScheduler(Scheduler):
     '''
 
     def __init__(self, client=None, host='localhost', port=8081):
-        self.__tasks = {}
         import random
         if not client: client = 'client-%09d' % random.randrange(0, 999999999)
         self.__client = client
@@ -77,68 +85,19 @@ class RemoteScheduler(Scheduler):
         self.request('/api/ping', {'client': self.__client}) # Keep-alive
 
     def add_task(self, task, status):
-        s = str(task)
-        self.request('/api/task', {'client': self.__client, 'task': s, 'status': status})        
-        self.__tasks[s] = task
+        self.request('/api/task', {'client': self.__client, 'task': task, 'status': status})        
 
     def add_dep(self, task, task_2):
-        s = str(task)
-        s_2 = str(task_2)
-        self.request('/api/dep', {'client': self.__client, 'task': s, 'dep-task': s_2})
+        self.request('/api/dep', {'client': self.__client, 'task': task, 'dep_task': task_2})
 
     def get_work(self):
         import time
         time.sleep(1.0)
-        result = self.request('/api/work', {'client': self.__client})
-        if result['done']:
+        done, task = self.request('/api/work', {'client': self.__client})
+        if done:
             return True, None
         else:
-            s = result['task']
-            s = str(s) # unicode -> str
-            task = self.__tasks[s]
             return False, task
 
-class Worker(object):
-    """ Simple class that talks to a scheduler and:
-        - Tells the scheduler what it has to do
-        - Asks for stuff to do
-    """
-    def __init__(self, scheduler):
-        self.__scheduler = scheduler
-        self.__scheduled_tasks = set()
-    
-    def add(self, task):
-        if task in self.__scheduled_tasks: return
-        self.__scheduled_tasks.add(task)
-
-        if task.complete():
-            self.__scheduler.add_task(task, status='DONE')
-            return
-
-        for task_2 in task.deps():
-            self.add(task_2) # Schedule it recursively
-            self.__scheduler.add_dep(task, task_2)
-
-        self.__scheduler.add_task(task, status='PENDING')
-
-    def run(self):
-        while True:
-            done, task = self.__scheduler.get_work()
-            if done: break
-
-            # TODO: we should verify that all dependencies exist (can't trust the scheduler all the time)
-            try:
-                task.run()            
-                status, expl = 'DONE', None
-            except KeyboardInterrupt:
-                raise
-            except:
-                import sys, traceback
-                
-                status = 'FAILED'
-                d = [sys.exc_info()[0], sys.exc_info()[1], traceback.format_exc(sys.exc_info()[2])]
-                expl = '\n'.join(map(str, d))
-                print expl
-                
-            self.__scheduler.status(task, status=status, expl=expl)
-
+    def status(self, task, status, expl):        
+        self.request('/api/status', {'client': self.__client, 'task': task, 'status': status, 'expl': expl})

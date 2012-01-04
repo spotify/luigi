@@ -1,4 +1,4 @@
-import task, file, scheduler, parameter, interface, target
+import task, file, scheduler, parameter, interface, target, worker
 
 Task = task.Task
 ExternalTask = task.ExternalTask
