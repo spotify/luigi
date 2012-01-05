@@ -1,8 +1,8 @@
 import datetime, os
 import luigi
-from spotify.util.test import *
+import unittest
 
-class InstanceTest(TestCase):
+class InstanceTest(unittest.TestCase):
     def test_simple(self):
         class DummyTask(luigi.Task):
             x = luigi.Parameter()

@@ -1,8 +1,8 @@
 import datetime, os
 from luigi.central_planner import CentralPlannerScheduler
-from spotify.util.test import *
+import unittest
 
-class CentralPlannerTest(TestCase):
+class CentralPlannerTest(unittest.TestCase):
     def setUp(self):
         self.sch = CentralPlannerScheduler()
 

@@ -1,7 +1,7 @@
 import datetime, os
 import luigi
 from luigi.mock import MockFile
-from spotify.util.test import *
+import unittest
 
 File = MockFile
 
@@ -22,7 +22,7 @@ class Popularity(luigi.Task):
         
         f.close()
 
-class RecursionTest(TestCase):
+class RecursionTest(unittest.TestCase):
     def setUp(self):
         MockFile._file_contents['/tmp/popularity/2009-01-01.txt'] = '0\n'
 

@@ -2,9 +2,9 @@
 # Copyright (c) 2011 Spotify Ltd
 
 from luigi.mock import MockFile
-from spotify.util.test import *
+import unittest
 
-class MockFileTest(TestCase):
+class MockFileTest(unittest.TestCase):
     def test_1(self):
         t = MockFile('test')
         p = t.open('w')

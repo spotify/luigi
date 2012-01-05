@@ -1,6 +1,6 @@
 import luigi
 from luigi.mock import MockFile
-from spotify.util.test import *
+import unittest
 
 File = MockFile
 
@@ -48,7 +48,7 @@ class AXML(make_xml_wrapper(A, '/tmp/a.xml')):
 class BXML(make_xml_wrapper(B, '/tmp/b.xml')):
     pass
 
-class WrapperTest(TestCase):
+class WrapperTest(unittest.TestCase):
     def test_a(self):
         luigi.run(['--local-scheduler', 'AXML'])
         self.assertEqual(MockFile._file_contents['/tmp/a.xml'], '<?xml version="1.0" ?>\n<dummy-xml>hello, world</dummy-xml>\n')
