@@ -13,14 +13,15 @@ class Task(object):
         self.remove = None
 
 class CentralPlannerScheduler(scheduler.Scheduler):
+    ''' Async scheduler that can handle multiple clients etc
+
+    Can be run locally or on a server (using RemoteScheduler + server.Server).
+    '''
     def __init__(self):
         self.__tasks = {}
         self.__retry_delay = 60.0 # seconds - should be much higher later
         self.__remove_delay = 600.0
         self.__client_disconnect_delay = 60.0
-        # TODO: we have different timeouts:
-        # - Retry timeout (when to retry a failed task)
-        # - Client keep alive timeout
         self.__clients = {} # map from id to timestamp (last updated)
         # TODO: have a Client object instead, add more data to it
 
@@ -44,7 +45,7 @@ class CentralPlannerScheduler(scheduler.Scheduler):
             # TODO: don't remove finished tasks in something like 1h, would be interesting to see...
             #       probably we should have the same limit for all tasks - don't remove them within 1h after first update
             if not t.clients.intersection(remaining_clients):
-                # print 'task', task, 'has clients', self.__tasks[task].clients, 'but only', remaining_clients, 'remain'
+                print 'task', task, 'has clients', self.__tasks[task].clients, 'but only', remaining_clients, 'remain -> will remove task in', self.__remove_delay, 'seconds'
                 if t.remove == None:
                     t.remove = time.time() + self.__remove_delay # TODO: configure!!
                     
@@ -55,6 +56,7 @@ class CentralPlannerScheduler(scheduler.Scheduler):
         remove_tasks = []
         for task, t in self.__tasks.iteritems():
             if t.remove and time.time() > t.remove:
+                print 'Removing task', task
                 remove_tasks.append(task)
 
         for task in remove_tasks:
@@ -132,7 +134,6 @@ class CentralPlannerScheduler(scheduler.Scheduler):
         if best_task:
             self.__tasks[best_task].status = 'RUNNING'
 
-        done = {True: 'done', False: ''}[n_can_do == 0] # stupid conversion to a string with the same boolean value
         return done, best_task
 
     @autoupdate
@@ -143,7 +144,8 @@ class CentralPlannerScheduler(scheduler.Scheduler):
 
     @autoupdate
     def ping(self, client=None):
-        pass
+        # TODO: if run locally, there is no need to ping this scheduler obviously!
+        pass # autoupdate will take care of it
 
     @autoupdate
     def draw(self):

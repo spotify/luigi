@@ -13,7 +13,9 @@ class Scheduler(object):
 class DummyScheduler(object):
     ''' DEPRECATED
 
-    TODO: use CentralPlanner but with no RPC in between!
+    For local scheduling, now we are using CentralPlanner but with no RPC in between.
+    However, this class is left as an example of a super small Schedule implementation
+    that actually works fairly well.
     '''
     def __init__(self):
         import collections

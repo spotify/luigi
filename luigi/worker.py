@@ -1,9 +1,11 @@
 import scheduler, central_planner
 
 class Worker(object):
-    """ Simple class that talks to a scheduler and:
-        - Tells the scheduler what it has to do + its dependencies
-        - Asks for stuff to do
+    """ Worker object communicates with a scheduler.
+
+    Simple class that talks to a scheduler and:
+    - Tells the scheduler what it has to do + its dependencies
+    - Asks for stuff to do (pulls it in a loop and runs it)
     """
     def __init__(self, locally=False):
         if locally:
@@ -45,7 +47,7 @@ class Worker(object):
             except KeyboardInterrupt:
                 raise
             except:
-                if self.__pass_exceptions: raise
+                if self.__pass_exceptions: raise # TODO: not necessarily true that we want to break on the first exception
 
                 import sys, traceback
                 
@@ -53,8 +55,6 @@ class Worker(object):
                 d = [sys.exc_info()[0], sys.exc_info()[1], traceback.format_exc(sys.exc_info()[2])]
                 expl = '\n'.join(map(str, d))
                 print expl
-
-                # TODO: if running locally, should we raise these exceptions at some point?
 
             self.__scheduler.status(s, status=status, expl=expl)
 
