@@ -69,11 +69,10 @@ class CentralPlannerScheduler(scheduler.Scheduler):
 
     def autoupdate(f):
         def g(self, *args, **kwargs):
-            if 'client' in kwargs:
-                # update timestamp so that we keep track
-                # of whenever the client was last active
-                client = str(kwargs['client'])
-                self.__clients[client] = time.time()
+            # update timestamp so that we keep track
+            # of whenever the client was last active
+            client = kwargs.get('client', None)
+            self.__clients[client] = time.time()
             self.prune()
             return f(self, *args, **kwargs)
         return g
@@ -134,7 +133,7 @@ class CentralPlannerScheduler(scheduler.Scheduler):
         if best_task:
             self.__tasks[best_task].status = 'RUNNING'
 
-        return done, best_task
+        return (n_can_do == 0), best_task
 
     @autoupdate
     def status(self, task, status, client=None, expl=None):
