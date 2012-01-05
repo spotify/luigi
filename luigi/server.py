@@ -1,3 +1,4 @@
+# Simple REST server that takes commands in JSON
 # TODO: use some other web framework (Tornado?)
 
 import cgi, json, BaseHTTPServer
@@ -17,7 +18,7 @@ class Server:
             data = json.loads(args.get('data', '{}'))
             kv = {}
             for k, v in data.iteritems():
-                kv[str(k)] = str(v)
+                kv[str(k)] = str(v) # The problem is that otherwise we have problem with unicode casting
 
             return kv
 
