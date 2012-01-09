@@ -7,9 +7,9 @@ class Worker(object):
     - Tells the scheduler what it has to do + its dependencies
     - Asks for stuff to do (pulls it in a loop and runs it)
     """
-    def __init__(self, scheduler=None, locally=False):
-        if scheduler:
-            self.__scheduler = scheduler
+    def __init__(self, sch=None, locally=False):
+        if sch:
+            self.__scheduler = sch
             self.__pass_exceptions = True
         elif locally:
             self.__scheduler = central_planner.CentralPlannerScheduler()
