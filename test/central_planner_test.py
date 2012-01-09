@@ -26,6 +26,19 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.status('B', 'DONE')
         self.assertEqual(self.sch.get_work(), (True, None))
 
+    def test_broken_dep(self):
+        self.sch.add_task('B')
+        self.sch.add_task('A')
+        self.sch.add_dep('B', 'A')
+
+        self.assertEqual(self.sch.get_work(), (False, 'A'))
+        self.sch.status('A', 'FAILED')
+        self.assertEqual(self.sch.get_work(), (False, None)) # can still wait and retry: TODO: do we want this?
+        self.sch.status('A', 'DONE')
+        self.assertEqual(self.sch.get_work(), (False, 'B'))
+        self.sch.status('B', 'DONE')
+        self.assertEqual(self.sch.get_work(), (True, None))
+
     def test_two_clients(self):
         # Client X wants to build A -> B
         # Client Y wants to build A -> C
@@ -69,3 +82,6 @@ class CentralPlannerTest(unittest.TestCase):
             self.sch.ping(client='Y')
 
         self.assertEqual(self.sch.get_work(client='Y'), (False, 'A'))
+
+if __name__ == '__main__':
+    unittest.main()
