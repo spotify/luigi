@@ -50,7 +50,7 @@ class CentralPlannerScheduler(scheduler.Scheduler):
                 if t.remove == None:
                     t.remove = time.time() + self.__remove_delay # TODO: configure!!
 
-            if t.client_running and t.client_running not in remaining_clients:
+            if t.status == 'RUNNING' and t.client_running and t.client_running not in remaining_clients:
                 # If a running client disconnects, tag all its jobs as FAILED and subject it to the same retry logic
                 print 'task', task, 'is running by client', t.client_running, 'but only', remaining_clients, 'remain -> will reset task'
                 t.client_running = None
@@ -156,7 +156,7 @@ class CentralPlannerScheduler(scheduler.Scheduler):
     @autoupdate
     def draw(self):
         import pygraphviz
-        graphviz = pygraphviz.AGraph(directed = True)
+        graphviz = pygraphviz.AGraph(directed=True)
         n_nodes = 0
         for task, p in self.__tasks.iteritems():
             color = {'PENDING': 'white', 
@@ -165,7 +165,8 @@ class CentralPlannerScheduler(scheduler.Scheduler):
                      'RUNNING': 'blue',
                      }[p.status]
             shape = 'box'
-            graphviz.add_node(task, label = task, style = 'filled', fillcolor = color, shape = shape)
+            label = task.replace('(', '(\n').replace(',', ',\n') # force GraphViz to break lines
+            graphviz.add_node(task, label=task, style='filled', fillcolor=color, shape=shape)
             n_nodes += 1
 
         for task, p in self.__tasks.iteritems():
