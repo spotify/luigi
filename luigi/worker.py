@@ -7,8 +7,11 @@ class Worker(object):
     - Tells the scheduler what it has to do + its dependencies
     - Asks for stuff to do (pulls it in a loop and runs it)
     """
-    def __init__(self, locally=False):
-        if locally:
+    def __init__(self, scheduler=None, locally=False):
+        if scheduler:
+            self.__scheduler = scheduler
+            self.__pass_exceptions = True
+        elif locally:
             self.__scheduler = central_planner.CentralPlannerScheduler()
             self.__pass_exceptions = True
         else:
@@ -26,17 +29,24 @@ class Worker(object):
             self.__scheduler.add_task(s, status='DONE')
             return
 
-        self.__scheduler.add_task(s, status='PENDING')
+        elif task.run == NotImplemented:
+            self.__scheduler.add_task(s, status='BROKEN')
+            return
 
-        for task_2 in task.deps():
-            s2 = str(task_2)
-            self.add(task_2) # Schedule it recursively
-            self.__scheduler.add_dep(s, s2)
+        else:
+            self.__scheduler.add_task(s, status='PENDING')
+
+            for task_2 in task.deps():
+                s2 = str(task_2)
+                self.add(task_2) # Schedule it recursively
+                self.__scheduler.add_dep(s, s2)
 
     def run(self):
         while True:
             done, s = self.__scheduler.get_work()
             if done: break
+
+            if s == None: break
 
             task = self.__scheduled_tasks[s]
 

@@ -20,6 +20,10 @@ class InstanceCache(type):
 
         return h[k]
 
+    @classmethod
+    def clear(self):
+        __instance_cache = {}
+
 class Task(object):
     # Something like this...
 
@@ -108,7 +112,6 @@ class Task(object):
     def input(self):
         requires = self.requires()
         data = getpaths(requires)
-        print 'requires:', requires, 'result:', data
         return getpaths(self.requires())
 
     def deps(self):

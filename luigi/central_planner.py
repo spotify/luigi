@@ -46,8 +46,8 @@ class CentralPlannerScheduler(scheduler.Scheduler):
         # Remove tasks corresponding to disconnected clients
         for task, t in self.__tasks.iteritems():
             if not t.clients.intersection(remaining_clients):
-                print 'task', task, 'has clients', self.__tasks[task].clients, 'but only', remaining_clients, 'remain -> will remove task in', self.__remove_delay, 'seconds'
                 if t.remove == None:
+                    print 'task', task, 'has clients', self.__tasks[task].clients, 'but only', remaining_clients, 'remain -> will remove task in', self.__remove_delay, 'seconds'
                     t.remove = time.time() + self.__remove_delay # TODO: configure!!
 
             if t.status == 'RUNNING' and t.client_running and t.client_running not in remaining_clients:
@@ -91,7 +91,7 @@ class CentralPlannerScheduler(scheduler.Scheduler):
         #                             ('DONE', 'PENDING'),
         #                             ('FAILED', 'PENDING')])
 
-        print 'task', task, ':', p.status, '->', status
+        # print 'task', task, ':', p.status, '->', status
 
         # assert p.status == status or (p.status, status) in allowed_state_changes
 
@@ -101,7 +101,7 @@ class CentralPlannerScheduler(scheduler.Scheduler):
 
     @autoupdate
     def add_dep(self, task, dep_task, client=_default_client):
-        print task, '->', dep_task
+        # print task, '->', dep_task
         # print self.__tasks
         # self.__tasks.setdefault(task, Task()).deps.add(dep_task)
         self.__tasks[task].deps.add(dep_task)
@@ -163,6 +163,7 @@ class CentralPlannerScheduler(scheduler.Scheduler):
                      'DONE': 'green',
                      'FAILED': 'red',
                      'RUNNING': 'blue',
+                     'BROKEN': 'orange', # external task, can't run
                      }[p.status]
             shape = 'box'
             label = task.replace('(', '\\n(').replace(',', ',\\n') # force GraphViz to break lines
