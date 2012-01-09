@@ -9,7 +9,7 @@ class WorkerTest(unittest.TestCase):
     def setUp(self):
         InstanceCache.clear()
         self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, client_disconnect_delay=10)
-        self.w = Worker(scheduler=self.sch)
+        self.w = Worker(sch=self.sch)
         self.time = time.time
 
     def tearDown(self):
