@@ -156,7 +156,7 @@ class CentralPlannerScheduler(scheduler.Scheduler):
     @autoupdate
     def draw(self):
         import pygraphviz
-        graphviz = pygraphviz.AGraph(directed=True)
+        graphviz = pygraphviz.AGraph(directed=True, size=12)
         n_nodes = 0
         for task, p in self.__tasks.iteritems():
             color = {'PENDING': 'white', 
@@ -165,8 +165,9 @@ class CentralPlannerScheduler(scheduler.Scheduler):
                      'RUNNING': 'blue',
                      }[p.status]
             shape = 'box'
-            label = task.replace('(', '(\n').replace(',', ',\n') # force GraphViz to break lines
-            graphviz.add_node(task, label=task, style='filled', fillcolor=color, shape=shape)
+            label = task.replace('(', '\\n(').replace(',', ',\\n') # force GraphViz to break lines
+            # TODO: if the ( or , is a part of the argument we shouldn't really break it
+            graphviz.add_node(task, label=label, style='filled', fillcolor=color, shape=shape, fontname='Helvetica', fontsize=11)
             n_nodes += 1
 
         for task, p in self.__tasks.iteritems():
