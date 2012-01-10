@@ -1,4 +1,4 @@
-import worker
+import worker, daemon
 
 class Register:
     def __init__(self):
@@ -32,6 +32,8 @@ class ArgParseInterface(Interface):
         import argparse
         parser = argparse.ArgumentParser()
         parser.add_argument('--local-scheduler', help='Use local scheduling', action='store_true')
+        parser.add_argument('--daemon', help='Do not run if the task is already running', action='store_true')
+        parser.add_argument('--daemon-pid-dir', help='Directory to store the pid file [default: %default]', default='/var/tmp/luigi')
 
         def _add_task_parameters(parser, cls):
             params = cls.get_params()
@@ -51,6 +53,7 @@ class ArgParseInterface(Interface):
                 _add_task_parameters(subparser, cls)
 
         args = parser.parse_args(args=cmdline_args)
+        if args.daemon: daemon.run_once(args.daemon_pid_dir)
         params = vars(args) # convert to a str -> str hash
 
         if register.get_main():
@@ -80,6 +83,8 @@ class OptParseInterface(Interface):
         else: parser = optparse.OptionParser()
 
         parser.add_option('--local-scheduler', help='Use local scheduling', action='store_true')
+        parser.add_option('--daemon', help='Do not run if the task is already running', action='store_true')
+        parser.add_option('--daemon-pid-dir', help='Directory to store the pid file [default: %(default)]', default='/var/tmp/luigi')
 
         tasks_str = '/'.join([name for name in register.get_reg()])
         
@@ -105,6 +110,7 @@ class OptParseInterface(Interface):
 
         # Parse and run
         args, _ = parser.parse_args(args=cmdline_args)
+        if args.daemon: daemon.run_once(args.daemon_pid_dir)
         task_cls = register.get_reg()[args.task]
         params = {}
         for k, v in vars(args).iteritems():
