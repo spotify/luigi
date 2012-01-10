@@ -52,23 +52,6 @@ class RemoteScheduler(Scheduler):
         self.__host = host
         self.__port = port
 
-        import threading, time
-        scheduler = self
-
-        class KeepAliveThread(threading.Thread):
-            def run(self):
-                while True:
-                    time.sleep(1.0)
-                    try:
-                        scheduler.ping()
-                    except httplib.BadStatusLine:
-                        print 'WARNING: could not ping!'
-
-        k = KeepAliveThread()
-        k.daemon = True
-        k.start()
-        
-
     def request(self, url, data):
         import urllib, urllib2, json
         # TODO(erikbern): do POST requests instead

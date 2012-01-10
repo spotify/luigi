@@ -28,6 +28,24 @@ class Worker(object):
             self.__pass_exceptions = pass_exceptions
 
         self.__scheduled_tasks = {}
+
+        import threading, time
+
+        sch = self.__scheduler
+
+        class KeepAliveThread(threading.Thread):
+            def run(self):
+                while True:
+                    time.sleep(1.0)
+                    try:
+                        sch.ping(worker=worker_id)
+                    except: # httplib.BadStatusLine:
+                        print 'WARNING: could not ping!'
+                        raise
+
+        k = KeepAliveThread()
+        k.daemon = True
+        k.start()
     
     def add(self, task):
         s = str(task)
