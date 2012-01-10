@@ -7,7 +7,7 @@ class Worker(object):
     - Tells the scheduler what it has to do + its dependencies
     - Asks for stuff to do (pulls it in a loop and runs it)
     """
-    def __init__(self, sch=None, locally=False):
+    def __init__(self, sch=None, locally=False, pass_exceptions=None):
         if sch:
             self.__scheduler = sch
             self.__pass_exceptions = True
@@ -17,6 +17,9 @@ class Worker(object):
         else:
             self.__scheduler = scheduler.RemoteScheduler()
             self.__pass_exceptions = False
+
+        if pass_exceptions != None:
+            self.__pass_exceptions = pass_exceptions
 
         self.__scheduled_tasks = {}
     

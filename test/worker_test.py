@@ -9,7 +9,7 @@ class WorkerTest(unittest.TestCase):
     def setUp(self):
         InstanceCache.clear()
         self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, client_disconnect_delay=10)
-        self.w = Worker(sch=self.sch)
+        self.w = Worker(sch=self.sch, pass_exceptions=False)
         self.time = time.time
 
     def tearDown(self):
@@ -22,32 +22,59 @@ class WorkerTest(unittest.TestCase):
     def test_dep(self):
         class A(Task):
             def run(self): self.has_run = True
+        a = A()
 
         class B(Task):
-            def requires(self): return A()
+            def requires(self): return a
             def run(self): self.has_run = True
+        b = B()
 
-        self.w.add(B())
+        a.has_run = False
+        b.has_run = False
+
+        self.w.add(b)
         self.w.run()
-        self.assertTrue(A().has_run)
-        self.assertTrue(B().has_run)
+        self.assertTrue(a.has_run)
+        self.assertTrue(b.has_run)
 
     def test_external_dep(self):
-        class A(ExternalTask):
-            pass
+        class A(ExternalTask): pass
+        a = A()
 
         class B(Task):
-            def requires(self): return A()
+            def requires(self): return a
             def run(self): self.has_run = True
+        b = B()
 
-        A().has_run = False
-        B().has_run = False
+        a.has_run = False
+        b.has_run = False
 
-        self.w.add(B())
+        self.w.add(b)
         self.w.run()
 
-        self.assertFalse(A().has_run)
-        self.assertFalse(B().has_run)
+        self.assertFalse(a.has_run)
+        self.assertFalse(b.has_run)
+
+    def test_fail(self):
+        class A(Task):
+            def run(self):
+                self.has_run = True
+                raise Exception()
+        a = A()
+
+        class B(Task):
+            def requires(self): return a
+            def run(self): self.has_run = True
+        b = B()
+
+        a.has_run = False
+        b.has_run = False
+
+        self.w.add(b)
+        self.w.run()
+
+        self.assertTrue(a.has_run)
+        self.assertFalse(b.has_run)
 
 if __name__ == '__main__':
     unittest.main()
