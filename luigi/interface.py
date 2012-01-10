@@ -33,7 +33,7 @@ class ArgParseInterface(Interface):
         parser = argparse.ArgumentParser()
         parser.add_argument('--local-scheduler', help='Use local scheduling', action='store_true')
         parser.add_argument('--lock', help='Do not run if the task is already running', action='store_true')
-        parser.add_argument('--lock-pid-dir', help='Directory to store the pid file [default: %default]', default='/var/tmp/luigi')
+        parser.add_argument('--lock-pid-dir', help='Directory to store the pid file [default: %(default)]', default='/var/tmp/luigi')
 
         def _add_task_parameters(parser, cls):
             params = cls.get_params()
@@ -84,7 +84,7 @@ class OptParseInterface(Interface):
 
         parser.add_option('--local-scheduler', help='Use local scheduling', action='store_true')
         parser.add_option('--lock', help='Do not run if the task is already running', action='store_true')
-        parser.add_option('--lock-pid-dir', help='Directory to store the pid file [default: %(default)]', default='/var/tmp/luigi')
+        parser.add_option('--lock-pid-dir', help='Directory to store the pid file [default: %default]', default='/var/tmp/luigi')
 
         tasks_str = '/'.join([name for name in register.get_reg()])
         
