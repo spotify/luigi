@@ -7,9 +7,10 @@ import unittest
 
 class WorkerTest(unittest.TestCase):
     def setUp(self):
-        InstanceCache.clear()
-        self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, client_disconnect_delay=10)
-        self.w = Worker(sch=self.sch, pass_exceptions=False)
+        # InstanceCache.disable()
+        self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        self.w = Worker(sch=self.sch, pass_exceptions=False, worker_id='X')
+        self.w2 = Worker(sch=self.sch, pass_exceptions=False, worker_id='Y')
         self.time = time.time
 
     def tearDown(self):
@@ -22,6 +23,7 @@ class WorkerTest(unittest.TestCase):
     def test_dep(self):
         class A(Task):
             def run(self): self.has_run = True
+            def complete(self): return self.has_run
         a = A()
 
         class B(Task):
@@ -75,6 +77,35 @@ class WorkerTest(unittest.TestCase):
 
         self.assertTrue(a.has_run)
         self.assertFalse(b.has_run)
+
+    def test_unknown_dep(self):
+        # see central_planner_test.CentralPlannerTest.test_remove_dep
+        class A(ExternalTask): pass
+        class C(Task):
+            def complete(self): return True
+
+        def get_b(dep):
+            class B(Task):
+                def requires(self): return dep
+                def run(self): self.has_run = True
+            b = B()
+            b.has_run = False
+            return b
+
+        b_a = get_b(A())
+        b_c = get_b(C())
+
+        self.w.add(b_a)
+        # So now another worker goes in and schedules C -> B
+        # This should remove the dep A -> B but will screw up the first worker
+        self.w2.add(b_c)
+
+        self.w.run() # should not run anything - the worker should detect that A is broken
+        self.assertFalse(b_a.has_run)
+
+        # not sure what should happen??
+        # self.w2.run() # should run B since C is fulfilled
+        # self.assertTrue(b_c.has_run)
 
 if __name__ == '__main__':
     unittest.main()

@@ -9,20 +9,31 @@ class InstanceCache(type):
     # sure that X is not instantiated many times.
     __instance_cache = {}
     def __call__(cls, *args, **kwargs):
+        def instantiate():
+            return super(InstanceCache, cls).__call__(*args, **kwargs)
+
+        h = InstanceCache.__instance_cache
+
+        if h == None: #disabled
+            return instantiate()
+
         params = cls.get_params()
         param_values = cls.get_param_values(params, args, kwargs)
 
         k = (cls, tuple(param_values.iteritems()))
-        h = InstanceCache.__instance_cache
 
         if k not in h:
-            h[k] = super(InstanceCache, cls).__call__(*args, **kwargs)
+            h[k] = instantiate()
 
         return h[k]
 
     @classmethod
     def clear(self):
-        __instance_cache = {}
+        InstanceCache.__instance_cache = {}
+
+    @classmethod
+    def disable(self):
+        InstanceCache.__instance_cache = None
 
 class Task(object):
     # Something like this...

@@ -5,55 +5,55 @@ import scheduler
 
 class Task(object):
     def __init__(self, status):
-        self.clients = set()
+        self.workers = set()
         self.deps = set()
         self.status = status
         self.time = time.time()
         self.retry = None
         self.remove = None
-        self.client_running = None
+        self.worker_running = None
 
-_default_client = 'default-client'
+_default_worker = 'default-worker' # for testing
 
 class CentralPlannerScheduler(scheduler.Scheduler):
-    ''' Async scheduler that can handle multiple clients etc
+    ''' Async scheduler that can handle multiple workers etc
 
     Can be run locally or on a server (using RemoteScheduler + server.Server).
     '''
-    def __init__(self, retry_delay=60.0, remove_delay=600.0, client_disconnect_delay=60.0): # seconds
+    def __init__(self, retry_delay=60.0, remove_delay=600.0, worker_disconnect_delay=60.0): # seconds
         self.__tasks = {}
         self.__retry_delay = retry_delay
         self.__remove_delay = remove_delay
-        self.__client_disconnect_delay = client_disconnect_delay
-        self.__clients = {} # map from id to timestamp (last updated)
-        # TODO: have a Client object instead, add more data to it
+        self.__worker_disconnect_delay = worker_disconnect_delay
+        self.__workers = {} # map from id to timestamp (last updated)
+        # TODO: have a Worker object instead, add more data to it
 
     def prune(self):
-        # Remove clients that disconnected, together with their corresponding tasks
-        # TODO: remove dependencies? (But they should always have the same client right? So it's unnecessary)
+        # Remove workers that disconnected, together with their corresponding tasks
+        # TODO: remove dependencies? (But they should always have the same worker right? So it's unnecessary)
 
-        delete_clients = []
-        for client in self.__clients:
-            if self.__clients[client] < time.time() - self.__client_disconnect_delay:
-                print 'client', client, 'updated at', self.__clients[client], 'timed out at', time.time(), '-', self.__client_disconnect_delay
-                delete_clients.append(client)
+        delete_workers = []
+        for worker in self.__workers:
+            if self.__workers[worker] < time.time() - self.__worker_disconnect_delay:
+                print 'worker', worker, 'updated at', self.__workers[worker], 'timed out at', time.time(), '-', self.__worker_disconnect_delay
+                delete_workers.append(worker)
 
-        for client in delete_clients:
-            self.__clients.pop(client)
+        for worker in delete_workers:
+            self.__workers.pop(worker)
 
-        remaining_clients = set(list(self.__clients.keys()))
+        remaining_workers = set(list(self.__workers.keys()))
 
-        # Remove tasks corresponding to disconnected clients
+        # Remove tasks corresponding to disconnected workers
         for task, t in self.__tasks.iteritems():
-            if not t.clients.intersection(remaining_clients):
+            if not t.workers.intersection(remaining_workers):
                 if t.remove == None:
-                    print 'task', task, 'has clients', self.__tasks[task].clients, 'but only', remaining_clients, 'remain -> will remove task in', self.__remove_delay, 'seconds'
+                    print 'task', task, 'has workers', self.__tasks[task].workers, 'but only', remaining_workers, 'remain -> will remove task in', self.__remove_delay, 'seconds'
                     t.remove = time.time() + self.__remove_delay # TODO: configure!!
 
-            if t.status == 'RUNNING' and t.client_running and t.client_running not in remaining_clients:
-                # If a running client disconnects, tag all its jobs as FAILED and subject it to the same retry logic
-                print 'task', task, 'is running by client', t.client_running, 'but only', remaining_clients, 'remain -> will reset task'
-                t.client_running = None
+            if t.status == 'RUNNING' and t.worker_running and t.worker_running not in remaining_workers:
+                # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
+                print 'task', task, 'is running by worker', t.worker_running, 'but only', remaining_workers, 'remain -> will reset task'
+                t.worker_running = None
                 t.status = 'FAILED'
                 t.retry = time.time() + self.__retry_delay
 
@@ -75,15 +75,15 @@ class CentralPlannerScheduler(scheduler.Scheduler):
     def autoupdate(f):
         def g(self, *args, **kwargs):
             # update timestamp so that we keep track
-            # of whenever the client was last active
-            client = kwargs.get('client', _default_client)
-            self.__clients[client] = time.time()
+            # of whenever the worker was last active
+            worker = kwargs.get('worker', _default_worker)
+            self.__workers[worker] = time.time()
             self.prune()
             return f(self, *args, **kwargs)
         return g
 
     @autoupdate
-    def add_task(self, task, status='PENDING', client=_default_client):
+    def add_task(self, task, worker=_default_worker, status='PENDING'):
         p = self.__tasks.setdefault(task, Task(status=status))
 
         # allowed_state_changes = set([('RUNNING', 'DONE'), ('RUNNING', 'FAILED'),
@@ -97,28 +97,29 @@ class CentralPlannerScheduler(scheduler.Scheduler):
 
         p.status = status
 
-        p.clients.add(client)
+        p.workers.add(worker)
+        p.deps.clear()
 
     @autoupdate
-    def add_dep(self, task, dep_task, client=_default_client):
+    def add_dep(self, task, dep_task, worker=_default_worker):
         # print task, '->', dep_task
         # print self.__tasks
         # self.__tasks.setdefault(task, Task()).deps.add(dep_task)
         self.__tasks[task].deps.add(dep_task)
 
     @autoupdate
-    def get_work(self, client=_default_client):
+    def get_work(self, worker=_default_worker):
         # TODO: remove any expired nodes
 
         # Algo: iterate over all nodes, find first node with no dependencies
-        # TODO: remove tasks that can't be done, figure out if the client has absolutely
+        # TODO: remove tasks that can't be done, figure out if the worker has absolutely
         # nothing it can wait for
 
         best_t = float('inf')
         best_task = None
         n_can_do = 0 # stupid thingie
         for task, p in self.__tasks.iteritems():
-            if client not in p.clients:
+            if worker not in p.workers:
                 continue
 
             if p.status != 'PENDING': continue
@@ -138,18 +139,18 @@ class CentralPlannerScheduler(scheduler.Scheduler):
         if best_task:
             t = self.__tasks[best_task]
             t.status = 'RUNNING'
-            t.client_running = client
+            t.worker_running = worker
 
         return (n_can_do == 0), best_task
 
     @autoupdate
-    def status(self, task, status, client=_default_client, expl=None):
+    def status(self, task, status, worker=_default_worker, expl=None):
         self.__tasks[task].status = status
         if status == 'FAILED':
             self.__tasks[task].retry = time.time() + self.__retry_delay
 
     @autoupdate
-    def ping(self, client=_default_client):
+    def ping(self, worker=_default_worker):
         # TODO: if run locally, there is no need to ping this scheduler obviously!
         pass # autoupdate will take care of it
 

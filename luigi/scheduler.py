@@ -21,14 +21,14 @@ class DummyScheduler(object):
         import collections
         self.__schedule = []
 
-    def add_task(self, task, status, client=None):
+    def add_task(self, task, status, worker):
         if status == 'PENDING':
             self.__schedule.append(task)
 
-    def add_dep(self, task, status, client=None):
+    def add_dep(self, task, status, worker):
         pass
 
-    def get_work(self, client=None):
+    def get_work(self, worker):
         if len(self.__schedule):
             # TODO: check for dependencies:
             #for task_2 in task.deps():
@@ -39,7 +39,7 @@ class DummyScheduler(object):
         else:
             return True, None
 
-    def status(self, task, status, expl=None, client=None):
+    def status(self, task, status, expl, worker):
         pass
 
 class RemoteScheduler(Scheduler):
@@ -48,10 +48,7 @@ class RemoteScheduler(Scheduler):
         TODO: Move this to rpc.py?
     '''
 
-    def __init__(self, client=None, host='localhost', port=8081):
-        import random
-        if not client: client = 'client-%09d' % random.randrange(0, 999999999)
-        self.__client = client
+    def __init__(self, host='localhost', port=8081):
         self.__host = host
         self.__port = port
 
@@ -83,23 +80,23 @@ class RemoteScheduler(Scheduler):
         result = json.loads(page)
         return result
 
-    def ping(self):
-        self.request('/api/ping', {'client': self.__client}) # Keep-alive
+    def ping(self, worker):
+        self.request('/api/ping', {'worker': worker}) # Keep-alive
 
-    def add_task(self, task, status):
-        self.request('/api/task', {'client': self.__client, 'task': task, 'status': status})        
+    def add_task(self, task, status, worker):
+        self.request('/api/task', {'worker': worker, 'task': task, 'status': status})        
 
-    def add_dep(self, task, task_2):
-        self.request('/api/dep', {'client': self.__client, 'task': task, 'dep_task': task_2})
+    def add_dep(self, task, task_2, worker):
+        self.request('/api/dep', {'worker': worker, 'task': task, 'dep_task': task_2})
 
-    def get_work(self):
+    def get_work(self, worker):
         import time
         time.sleep(1.0)
-        done, task = self.request('/api/work', {'client': self.__client})
+        done, task = self.request('/api/work', {'worker': worker})
         if done:
             return True, None
         else:
             return False, task
 
-    def status(self, task, status, expl):        
-        self.request('/api/status', {'client': self.__client, 'task': task, 'status': status, 'expl': expl})
+    def status(self, task, status, expl, worker):
+        self.request('/api/status', {'worker': worker, 'task': task, 'status': status, 'expl': expl})
