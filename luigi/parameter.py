@@ -34,3 +34,11 @@ class DateParameter(Parameter):
 class IntParameter(Parameter):
     def parse(self, s):
         return int(s)
+
+class BooleanParameter(Parameter):
+    # TODO: the command line interaction is not perfect here.
+    # Ideally we want this to be exposed using a store_true attribute so that
+    # default is False and flag presence sets it to True
+    def parse(self, s):
+        return {'true': True, 'false': False}[s.lower()]
+

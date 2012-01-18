@@ -99,8 +99,9 @@ class Worker(object):
                 import sys, traceback
                 
                 status = 'FAILED'
-                d = [sys.exc_info()[0], sys.exc_info()[1], traceback.format_exc(sys.exc_info()[2])]
-                expl = '\n'.join(map(str, d))
+                expl = traceback.format_exc(sys.exc_info()[2])
+
+                print expl
 
             self.__scheduler.status(s, status=status, expl=expl, worker=self.__id)
 

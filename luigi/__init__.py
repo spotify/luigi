@@ -16,4 +16,4 @@ run = interface.run
 # TODO: how can we get rid of these?
 DateParameter = parameter.DateParameter
 IntParameter = parameter.IntParameter
-
+BooleanParameter = parameter.BooleanParameter

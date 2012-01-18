@@ -30,7 +30,7 @@ class Server:
             handler.end_headers()
             handler.wfile.write(page)
 
-        def png_output(result, handler):
+        def svg_output(result, handler):
             handler.send_response(200)
             handler.send_header('content-type', 'image/svg+xml')
             handler.end_headers()
@@ -41,7 +41,8 @@ class Server:
                            '/api/work': (self.__scheduler.get_work, json_input, json_output),
                            '/api/status': (self.__scheduler.status, json_input, json_output),
                            '/api/ping': (self.__scheduler.ping, json_input, json_output),
-                           '/draw': (self.__scheduler.draw, json_input, png_output)} # TODO: duck typing, assumes a Central Planner
+                           '/draw': (self.__scheduler.draw, json_input, svg_output), # TODO: duck typing, assumes a Central Planner
+                           '/': (self.__scheduler.draw, json_input, svg_output)} # just an alias
 
     def process(self, cmd, args, handler):
         f, input_reader, output_writer = self.__handlers[str(cmd)]
