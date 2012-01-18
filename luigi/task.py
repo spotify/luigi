@@ -20,7 +20,7 @@ class InstanceCache(type):
         params = cls.get_params()
         param_values = cls.get_param_values(params, args, kwargs)
 
-        k = (cls, tuple(param_values.iteritems()))
+        k = (cls, tuple(param_values))
 
         if k not in h:
             h[k] = instantiate()
@@ -46,10 +46,10 @@ class Task(object):
         # TODO: not really necessary to do multiple times, can we make it run once when the class is created?
         params = []
         for param_name in dir(cls):
-            param = getattr(cls, param_name)
-            if not isinstance(param, Parameter): continue
+            param_obj = getattr(cls, param_name)
+            if not isinstance(param_obj, Parameter): continue
             
-            params.append((param_name, param))
+            params.append((param_name, param_obj))
 
         # The order the parameters are created matters. See Parameter class
         params.sort(key = lambda t: t[1].counter)
@@ -61,32 +61,35 @@ class Task(object):
 
         params_dict = dict(params)
 
+        # Fill in the positional arguments
         for i, arg in enumerate(args):
-            param_name, param = params[i]
+            param_name, param_obj = params[i]
             result[param_name] = arg
 
+        # Then the optional arguments
         for param_name, arg in kwargs.iteritems():
             assert param_name not in result
             assert param_name in params_dict
             result[param_name] = arg
 
-        for param_name, param in params:
+        # Then use the defaults for anything not filled in
+        for param_name, param_obj in params:
             if param_name not in result:
-                result[param_name] = param.default
+                result[param_name] = param_obj.default
 
-        return result
+        # Sort it by the correct order and make a list
+        return [(param_name, result[param_name]) for param_name, param_obj in params]
 
     def __init__(self, *args, **kwargs):
         params = self.get_params()
         param_values = self.get_param_values(params, args, kwargs)
 
         # Set all values on class instance
-
-        for key, value in param_values.iteritems():
+        for key, value in param_values:
             setattr(self, key, value)
 
-        self.__hash = hash(tuple(param_values.iteritems()))
-        self.__repr = '%s(%s)' % (self.__class__.__name__, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in param_values.iteritems()]))
+        self.__hash = hash(tuple(param_values))
+        self.__repr = '%s(%s)' % (self.__class__.__name__, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in param_values]))
 
     @classmethod
     def from_input(cls, params):
