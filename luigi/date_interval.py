@@ -7,7 +7,6 @@ class DateInterval(object):
         self.date_b = date_b
 
     def dates(self):
-        import datetime
         dates = []
         d = self.date_a
         while d < self.date_b:
@@ -25,7 +24,7 @@ class DateInterval(object):
     def prev(self): return self.from_date(self.date_a - datetime.timedelta(1))
     def next(self): return self.from_date(self.date_b)
 
-    def to_stringe(self): raise NotImplementedError
+    def to_string(self): raise NotImplementedError
 
     @classmethod
     def from_date(self, d): raise NotImplementedError
