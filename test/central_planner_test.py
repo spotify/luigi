@@ -12,7 +12,6 @@ class CentralPlannerTest(unittest.TestCase):
             time.time = self.time
 
     def setTime(self, t):
-        print 'setting time to', t
         time.time = lambda: t
 
     def test_dep(self):
@@ -109,6 +108,18 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_dep('B', 'C')
 
         self.assertEqual(self.sch.get_work(worker='Y'), (False, 'B'))
+
+    def test_timeout(self):
+        # A bug that was earlier present when restarting the same flow
+        self.setTime(0)
+        self.sch.add_task('A', worker='X')
+        self.assertEqual(self.sch.get_work(worker='X'), (False, 'A'))
+        self.setTime(10000)
+        self.sch.add_task('A', worker='Y') # Will timeout X but not schedule A for removal
+        for i in xrange(2000):
+            self.setTime(10000 + i)
+            self.sch.ping(worker='Y')
+        self.sch.status('A', 'DONE', worker='Y') # This used to raise an exception since A was removed
 
 if __name__ == '__main__':
     unittest.main()
