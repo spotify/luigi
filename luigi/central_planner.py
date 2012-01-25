@@ -96,8 +96,8 @@ class CentralPlannerScheduler(scheduler.Scheduler):
         # assert p.status == status or (p.status, status) in allowed_state_changes
 
         p.status = status
-
         p.workers.add(worker)
+        p.remove = None
         p.deps.clear()
 
     @autoupdate
