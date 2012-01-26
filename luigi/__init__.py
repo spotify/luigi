@@ -17,3 +17,4 @@ run = interface.run
 DateParameter = parameter.DateParameter
 IntParameter = parameter.IntParameter
 BooleanParameter = parameter.BooleanParameter
+DateIntervalParameter = parameter.DateIntervalParameter
