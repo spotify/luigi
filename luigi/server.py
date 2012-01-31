@@ -1,6 +1,6 @@
 # Simple REST server that takes commands in JSON
 
-import cherrypy, json
+import cherrypy, json, os
 import central_planner
 
 def json_wrapped(f):
@@ -30,9 +30,20 @@ class Server(object):
         self.draw = cherrypy.expose(lambda: sch.draw())
         self.index = self.draw
 
-if __name__ == "__main__":
+def run(background=False, pidfile=None):
+    if background:
+        from cherrypy.process.plugins import Daemonizer
+        d = Daemonizer(cherrypy.engine)
+        d.subscribe()
+
+    if pidfile:
+        from cherrypy.process.plugins import PIDFile
+        PIDFile(cherrypy.engine, pidfile).subscribe()
+
     s = Server()
     cherrypy.config.update({'server.socket_host': '0.0.0.0',
                             'server.socket_port': 8081,})
     cherrypy.quickstart(s)
 
+if __name__ == "__main__":
+    run()
