@@ -157,6 +157,11 @@ class CentralPlannerScheduler(scheduler.Scheduler):
     @autoupdate
     def draw(self):
         import pygraphviz
+
+        # TODO: if there are too many nodes, we need to prune the view
+        # One idea: do a Dijkstra from all running nodes. Hide all nodes
+        # with distance >= 50.
+
         graphviz = pygraphviz.AGraph(directed=True, size=12)
         n_nodes = 0
         for task, p in self.__tasks.iteritems():
@@ -176,8 +181,11 @@ class CentralPlannerScheduler(scheduler.Scheduler):
             for dep in p.deps:
                 graphviz.add_edge(dep, task)
 
-        #if n_nodes > 0: # Don't draw the graph if it's empty
-        graphviz.layout('dot')
+        if n_nodes < 100:
+            graphviz.layout('dot')
+        else:
+            # stupid workaround...
+            graphviz.layout('fdp')
         fn = '/tmp/graph.svg'
         graphviz.draw(fn)
 
