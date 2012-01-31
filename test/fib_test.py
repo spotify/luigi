@@ -1,6 +1,6 @@
 import datetime, os
 import luigi
-from spotify.util.test import *
+import unittest
 from luigi.mock import MockFile
 
 File = luigi.File
@@ -33,7 +33,7 @@ class Fib(luigi.Task):
         f.write('%d\n' % s)
         f.close()
 
-class FibTestBase(TestCase):
+class FibTestBase(unittest.TestCase):
     def setUp(self):
         global File
         File = MockFile
@@ -53,7 +53,6 @@ class FibTest(FibTestBase):
 
         self.assertEqual(MockFile._file_contents['/tmp/fib_10'], '55\n')
         self.assertEqual(MockFile._file_contents['/tmp/fib_100'], '354224848179261915075\n')
-
 
 if __name__ == '__main__':
     luigi.run()
