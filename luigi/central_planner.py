@@ -1,6 +1,8 @@
 # Just a super ugly prototype at this stage - lots of work remaining
 
 import time
+import re
+import pkg_resources
 import scheduler
 
 class Task(object):
@@ -188,8 +190,19 @@ class CentralPlannerScheduler(scheduler.Scheduler):
             graphviz.layout('fdp')
         fn = '/tmp/graph.svg'
         graphviz.draw(fn)
+        
+        html_header = pkg_resources.resource_string(__name__, 'static/header.html')
 
-        data = ''.join([line for line in open(fn)])
-
-        return data
+        svg = ''.join([line for line in open(fn)])
+        
+        pattern = r'(<svg.*?)(<g id="graph1".*?)(</svg>)'
+        mo = re.search(pattern, svg, re.S)
+        
+        return ''.join([html_header,
+         mo.group(1),
+         '<g id="viewport">',
+         mo.group(2),
+        '</g>',
+         mo.group(3),
+         "</body></html>"])
 
