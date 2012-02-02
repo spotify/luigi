@@ -158,6 +158,8 @@ class CentralPlannerScheduler(scheduler.Scheduler):
 
     @autoupdate
     def draw(self):
+        # TODO: figure out the interface for this
+
         import pygraphviz
 
         # TODO: if there are too many nodes, we need to prune the view
@@ -190,7 +192,8 @@ class CentralPlannerScheduler(scheduler.Scheduler):
             graphviz.layout('fdp')
         fn = '/tmp/graph.svg'
         graphviz.draw(fn)
-        
+
+        # TODO: this code definitely should not live here:        
         html_header = pkg_resources.resource_string(__name__, 'static/header.html')
 
         svg = ''.join([line for line in open(fn)])

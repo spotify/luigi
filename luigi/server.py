@@ -16,11 +16,6 @@ def json_wrapped(f):
         return json.dumps(result)
     return f_wrapped
 
-def staticfile(name):
-    def _staticfile():
-        return pkg_resources.resource_string(__name__, os.path.join('static', name))
-    return _staticfile
-
 class Server(object):
     def __init__(self):
         sch = central_planner.CentralPlannerScheduler()
@@ -32,16 +27,13 @@ class Server(object):
         self.api.work = cherrypy.expose(json_wrapped(sch.get_work))
         self.api.ping = cherrypy.expose(json_wrapped(sch.ping))
         self.api.status = cherrypy.expose(json_wrapped(sch.status))
-        self.draw = cherrypy.expose(lambda: sch.draw())
+        self.draw = cherrypy.expose(lambda: sch.draw()) # TODO: interface
         self.index = self.draw
-        self.jquery = cherrypy.expose(staticfile('jquery-1.7.1.min.js'))
-        self.svgpan = cherrypy.expose(staticfile('SVGPan.js'))
 
 def run(background=False, pidfile=None, port=8081):
     if background:
         from cherrypy.process.plugins import Daemonizer
-        d = Daemonizer(cherrypy.engine)
-        d.subscribe()
+        Daemonizer(cherrypy.engine).subscribe()
 
     if pidfile:
         from cherrypy.process.plugins import PIDFile
@@ -49,8 +41,13 @@ def run(background=False, pidfile=None, port=8081):
 
     s = Server()
     cherrypy.config.update({'server.socket_host': '0.0.0.0',
-                            'server.socket_port': port,})
-    cherrypy.quickstart(s)
+                            'server.socket_port': port
+                            })
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    conf = {'/static': {'tools.staticdir.on': True,
+                        'tools.staticdir.dir': os.path.join(current_dir, 'static')}}
+    cherrypy.quickstart(s, config = conf)
 
 if __name__ == "__main__":
     run()
