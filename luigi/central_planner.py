@@ -1,6 +1,8 @@
 # Just a super ugly prototype at this stage - lots of work remaining
 
 import time
+import re
+import pkg_resources
 import scheduler
 
 class Task(object):
@@ -156,7 +158,14 @@ class CentralPlannerScheduler(scheduler.Scheduler):
 
     @autoupdate
     def draw(self):
+        # TODO: figure out the interface for this
+
         import pygraphviz
+
+        # TODO: if there are too many nodes, we need to prune the view
+        # One idea: do a Dijkstra from all running nodes. Hide all nodes
+        # with distance >= 50.
+
         graphviz = pygraphviz.AGraph(directed=True, size=12)
         n_nodes = 0
         for task, p in self.__tasks.iteritems():
@@ -176,12 +185,27 @@ class CentralPlannerScheduler(scheduler.Scheduler):
             for dep in p.deps:
                 graphviz.add_edge(dep, task)
 
-        #if n_nodes > 0: # Don't draw the graph if it's empty
-        graphviz.layout('dot')
+        if n_nodes < 100:
+            graphviz.layout('dot')
+        else:
+            # stupid workaround...
+            graphviz.layout('fdp')
         fn = '/tmp/graph.svg'
         graphviz.draw(fn)
 
-        data = ''.join([line for line in open(fn)])
+        # TODO: this code definitely should not live here:        
+        html_header = pkg_resources.resource_string(__name__, 'static/header.html')
 
-        return data
+        svg = ''.join([line for line in open(fn)])
+        
+        pattern = r'(<svg.*?)(<g id="graph1".*?)(</svg>)'
+        mo = re.search(pattern, svg, re.S)
+        
+        return ''.join([html_header,
+         mo.group(1),
+         '<g id="viewport">',
+         mo.group(2),
+        '</g>',
+         mo.group(3),
+         "</body></html>"])
 

@@ -2,6 +2,7 @@
 
 import cherrypy, json, os
 import central_planner
+import pkg_resources
 
 def json_wrapped(f):
     def f_wrapped(data):
@@ -21,20 +22,18 @@ class Server(object):
 
         class API(object): pass
         self.api = API()
-
         self.api.task = cherrypy.expose(json_wrapped(sch.add_task))
         self.api.dep  = cherrypy.expose(json_wrapped(sch.add_dep))
         self.api.work = cherrypy.expose(json_wrapped(sch.get_work))
         self.api.ping = cherrypy.expose(json_wrapped(sch.ping))
         self.api.status = cherrypy.expose(json_wrapped(sch.status))
-        self.draw = cherrypy.expose(lambda: sch.draw())
+        self.draw = cherrypy.expose(lambda: sch.draw()) # TODO: interface
         self.index = self.draw
 
-def run(background=False, pidfile=None):
+def run(background=False, pidfile=None, port=8081):
     if background:
         from cherrypy.process.plugins import Daemonizer
-        d = Daemonizer(cherrypy.engine)
-        d.subscribe()
+        Daemonizer(cherrypy.engine).subscribe()
 
     if pidfile:
         from cherrypy.process.plugins import PIDFile
@@ -42,8 +41,13 @@ def run(background=False, pidfile=None):
 
     s = Server()
     cherrypy.config.update({'server.socket_host': '0.0.0.0',
-                            'server.socket_port': 8081,})
-    cherrypy.quickstart(s)
+                            'server.socket_port': port
+                            })
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    conf = {'/static': {'tools.staticdir.on': True,
+                        'tools.staticdir.dir': os.path.join(current_dir, 'static')}}
+    cherrypy.quickstart(s, config = conf)
 
 if __name__ == "__main__":
     run()
