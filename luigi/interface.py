@@ -1,4 +1,4 @@
-import worker, lock
+import worker, lock, scheduler
 
 class Register:
     def __init__(self):
@@ -32,6 +32,7 @@ class ArgParseInterface(Interface):
         import argparse
         parser = argparse.ArgumentParser()
         parser.add_argument('--local-scheduler', help='Use local scheduling', action='store_true')
+        parser.add_argument('--scheduler-host', help='Hostname of machine running remote scheduler [default: %(default)s]', default='localhost')
         parser.add_argument('--lock', help='Do not run if the task is already running', action='store_true')
         parser.add_argument('--lock-pid-dir', help='Directory to store the pid file [default: %(default)s]', default='/var/tmp/luigi')
 
@@ -63,7 +64,12 @@ class ArgParseInterface(Interface):
 
         task = task_cls.from_input(params)
 
-        w = worker.Worker(locally=args.local_scheduler)
+        if not args.local_scheduler:
+            sch = scheduler.RemoteScheduler(host=args.scheduler_host)
+        else:
+            sch = None
+        
+        w = worker.Worker(sch=sch, locally=args.local_scheduler)
     
         w.add(task)
         w.run()
