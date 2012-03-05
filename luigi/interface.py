@@ -1,6 +1,9 @@
-import worker, lock, scheduler
+import worker
+import lock
+import scheduler
 
-class Register:
+
+class Register(object):
     def __init__(self):
         self.__reg = {}
         self.__main = None
@@ -10,20 +13,31 @@ class Register:
         if main:
             assert self.__main == None
             self.__main = cls
-        assert name not in self.__reg # TODO: raise better exception
+        assert name not in self.__reg  # TODO: raise better exception
         self.__reg[name] = cls
         return cls
 
-    def get_reg(self): return self.__reg
-    def get_main(self): return self.__main
+    def get_reg(self):
+        return self.__reg
+
+    def get_main(self):
+        return self.__main
 
 register = Register()
 
-def expose(cls): return register.expose(cls)
-def expose_main(cls): return register.expose(cls, True)
+
+def expose(cls):
+    return register.expose(cls)
+
+
+def expose_main(cls):
+    return register.expose(cls, True)
+
 
 class Interface(object):
-    def run(self): raise NotImplementedError
+    def run(self):
+        raise NotImplementedError
+
 
 class ArgParseInterface(Interface):
     ''' Takes the task as the command, with parameters specific to it
@@ -39,23 +53,27 @@ class ArgParseInterface(Interface):
         def _add_task_parameters(parser, cls):
             params = cls.get_params()
             for param_name, param in params:
-                if param.has_default: default = param.default
-                else: default = None
-                parser.add_argument('--' + param_name.replace('_', '-'), help='%s.%s [default: %%(default)s]' % (cls.__name__, param_name), default=default)
-                
+                if param.has_default:
+                    defaulthelp = "[default: %s]" % param.default
+                else:
+                    defaulthelp = ""
+
+                parser.add_argument('--' + param_name.replace('_', '-'), help='%s.%s%s' % (cls.__name__, param_name, defaulthelp), default=None)
+
         if register.get_main():
             _add_task_parameters(parser, register.get_main())
-        
+
         else:
             subparsers = parser.add_subparsers(dest='command')
-        
+
             for name, cls in register.get_reg().iteritems():
                 subparser = subparsers.add_parser(name)
                 _add_task_parameters(subparser, cls)
 
         args = parser.parse_args(args=cmdline_args)
-        if args.lock: lock.run_once(args.lock_pid_dir)
-        params = vars(args) # convert to a str -> str hash
+        if args.lock:
+            lock.run_once(args.lock_pid_dir)
+        params = vars(args)  # convert to a str -> str hash
 
         if register.get_main():
             task_cls = register.get_main()
@@ -68,11 +86,12 @@ class ArgParseInterface(Interface):
             sch = scheduler.RemoteScheduler(host=args.scheduler_host)
         else:
             sch = None
-        
+
         w = worker.Worker(sch=sch, locally=args.local_scheduler)
-    
+
         w.add(task)
         w.run()
+
 
 class OptParseInterface(Interface):
     ''' Supported for legacy reasons where it's necessary to interact with an existing parser.
@@ -85,15 +104,17 @@ class OptParseInterface(Interface):
 
     def run(self, cmdline_args=None):
         import optparse
-        if self.__existing_optparse: parser = self.__existing_optparse
-        else: parser = optparse.OptionParser()
+        if self.__existing_optparse:
+            parser = self.__existing_optparse
+        else:
+            parser = optparse.OptionParser()
 
         parser.add_option('--local-scheduler', help='Use local scheduling', action='store_true')
         parser.add_option('--lock', help='Do not run if the task is already running', action='store_true')
         parser.add_option('--lock-pid-dir', help='Directory to store the pid file [default: %default]', default='/var/tmp/luigi')
 
         tasks_str = '/'.join([name for name in register.get_reg()])
-        
+
         if register.get_main():
             parser.add_option('--task', help='Task to run (' + tasks_str + ') [default: %default]', default=register.get_main().__name__)
         else:
@@ -106,8 +127,9 @@ class OptParseInterface(Interface):
             params = cls.get_params()
             for param_name, param in params:
                 parameter_clses.setdefault(param_name, []).append(cls)
-                if param.has_default: parameter_defaults[param_name] = param.default # Will override with whatever: TODO: do more sensibly!
-                
+                if param.has_default:
+                    parameter_defaults[param_name] = param.default  # Will override with whatever: TODO: do more sensibly!
+
         for param_name, clses in parameter_clses.iteritems():
             tasks_str = ','.join([cls.__name__ for cls in clses])
             parser.add_option('--' + param_name.replace('_', '-'),
@@ -116,7 +138,8 @@ class OptParseInterface(Interface):
 
         # Parse and run
         args, _ = parser.parse_args(args=cmdline_args)
-        if args.lock: lock.run_once(args.lock_pid_dir)
+        if args.lock:
+            lock.run_once(args.lock_pid_dir)
         task_cls = register.get_reg()[args.task]
         params = {}
         for k, v in vars(args).iteritems():
@@ -130,6 +153,7 @@ class OptParseInterface(Interface):
         w.add(task)
         w.run()
 
+
 def run(cmdline_args=None, existing_optparse=None, use_optparse=False):
     ''' Run from cmdline.
 
@@ -137,8 +161,9 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False):
     However for legacy reasons we support optparse that optinally allows for
     overriding an existing option parser with new args.
     '''
-    if use_optparse: interface = OptParseInterface(existing_optparse)
-    else: interface = ArgParseInterface()
+    if use_optparse:
+        interface = OptParseInterface(existing_optparse)
+    else:
+        interface = ArgParseInterface()
 
     interface.run(cmdline_args)
-        

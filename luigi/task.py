@@ -2,19 +2,21 @@ import parameter
 
 Parameter = parameter.Parameter
 
+
 class InstanceCache(type):
     # If we already have an instance of this class, then just return it from the cache
     # The idea is that a Task object X should be able to set up heavy data structures that
     # can be accessed from other Task objects (with dependencies on X). But we need to make
     # sure that X is not instantiated many times.
     __instance_cache = {}
+
     def __call__(cls, *args, **kwargs):
         def instantiate():
             return super(InstanceCache, cls).__call__(*args, **kwargs)
 
         h = InstanceCache.__instance_cache
 
-        if h == None: #disabled
+        if h == None:  # disabled
             return instantiate()
 
         params = cls.get_params()
@@ -35,6 +37,11 @@ class InstanceCache(type):
     def disable(self):
         InstanceCache.__instance_cache = None
 
+
+class MissingParameterException(Exception):
+    pass
+
+
 class Task(object):
     # Something like this...
 
@@ -47,12 +54,13 @@ class Task(object):
         params = []
         for param_name in dir(cls):
             param_obj = getattr(cls, param_name)
-            if not isinstance(param_obj, Parameter): continue
-            
+            if not isinstance(param_obj, Parameter):
+                continue
+
             params.append((param_name, param_obj))
 
         # The order the parameters are created matters. See Parameter class
-        params.sort(key = lambda t: t[1].counter)
+        params.sort(key=lambda t: t[1].counter)
         return params
 
     @classmethod
@@ -98,6 +106,11 @@ class Task(object):
         for param_name, param in cls.get_params():
             if params[param_name] != None:
                 kwargs[param_name] = param.parse(params[param_name])
+            else:
+                if param.has_default:
+                    kwargs[param_name] = param.default
+                else:
+                    raise MissingParameterException("No value for '%s' submitted and no default value has been assigned." % param_name)
 
         return cls(**kwargs)
 
@@ -109,19 +122,20 @@ class Task(object):
 
     def complete(self):
         outputs = flatten(self.output())
-        if len(outputs) == 0: return False
-        
+        if len(outputs) == 0:
+            return False
+
         for output in outputs:
             if not output.exists():
                 return False
         else:
             return True
-        
+
     def output(self):
-        return [] # default impl
-    
+        return []  # default impl
+
     def requires(self):
-        return [] # default impl
+        return []  # default impl
 
     def input(self):
         return getpaths(self.requires())
@@ -129,13 +143,15 @@ class Task(object):
     def deps(self):
         # used by scheduler
         return flatten(self.requires())
-    
+
     def run(self):
-        pass # default impl
+        pass  # default impl
+
 
 class ExternalTask(Task):
     """Subclass for references to external dependencies"""
     run = NotImplemented
+
 
 def getpaths(struct):
     """ Maps all Tasks in a structured data object to their .output()"""
@@ -152,8 +168,9 @@ def getpaths(struct):
             s = list(struct)
         except TypeError:
             raise Exception('Cannot map %s to Task/dict/list' % str(struct))
-            
+
         return [getpaths(r) for r in s]
+
 
 def flatten(struct):
     """Cleates a flat list of all all items in structured output (dicts, lists, items)
@@ -165,6 +182,8 @@ def flatten(struct):
     > _flatten(foo)
     [foo]
     """
+    if struct is None:
+        return []
     flat = []
     if isinstance(struct, dict):
         for key, result in struct.iteritems():

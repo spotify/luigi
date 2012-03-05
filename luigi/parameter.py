@@ -1,11 +1,10 @@
-import re, datetime
-
 _no_default = object()
+
 
 class Parameter(object):
     counter = 0
 
-    def __init__(self, default = _no_default, parser = None):
+    def __init__(self, default=_no_default, parser=None):
         # The default default is no default
         self.__default = default
 
@@ -22,20 +21,23 @@ class Parameter(object):
 
     @property
     def default(self):
-        assert self.__default != _no_default # TODO: exception
+        assert self.__default != _no_default  # TODO: exception
         return self.__default
 
     def parse(self, x):
-        return x # default impl
+        return x  # default impl
+
 
 class DateParameter(Parameter):
     def parse(self, s):
         import datetime
         return datetime.date(*map(int, s.split('-')))
-    
+
+
 class IntParameter(Parameter):
     def parse(self, s):
         return int(s)
+
 
 class BooleanParameter(Parameter):
     # TODO: the command line interaction is not perfect here.
@@ -43,6 +45,7 @@ class BooleanParameter(Parameter):
     # default is False and flag presence sets it to True
     def parse(self, s):
         return {'true': True, 'false': False}[s.lower()]
+
 
 class DateIntervalParameter(Parameter):
     # Class that maps to/from dates using ISO 8601 standard
@@ -55,6 +58,7 @@ class DateIntervalParameter(Parameter):
 
         for cls in [d.Year, d.Month, d.Week, d.Date, d.Custom]:
             i = cls.parse(s)
-            if i: return i
+            if i:
+                return i
         else:
             raise ValueError('Invalid date interval - could not be parsed')
