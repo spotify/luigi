@@ -14,6 +14,7 @@ expose_main = interface.expose_main
 run = interface.run
 
 # TODO: how can we get rid of these?
+DateHourParameter = parameter.DateHourParameter
 DateParameter = parameter.DateParameter
 IntParameter = parameter.IntParameter
 BooleanParameter = parameter.BooleanParameter

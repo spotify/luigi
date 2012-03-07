@@ -1,5 +1,11 @@
 import random
-import scheduler, central_planner
+import scheduler
+import central_planner
+import threading
+import time
+import sys
+import traceback
+
 
 class Worker(object):
     """ Worker object communicates with a scheduler.
@@ -10,7 +16,8 @@ class Worker(object):
     """
 
     def __init__(self, sch=None, locally=False, pass_exceptions=None, worker_id=None):
-        if not worker_id: worker_id = 'worker-%09d' % random.randrange(0, 999999999)
+        if not worker_id:
+            worker_id = 'worker-%09d' % random.randrange(0, 999999999)
 
         self.__id = worker_id
 
@@ -29,8 +36,6 @@ class Worker(object):
 
         self.__scheduled_tasks = {}
 
-        import threading, time
-
         sch = self.__scheduler
 
         class KeepAliveThread(threading.Thread):
@@ -39,17 +44,18 @@ class Worker(object):
                     time.sleep(1.0)
                     try:
                         sch.ping(worker=worker_id)
-                    except: # httplib.BadStatusLine:
+                    except:  # httplib.BadStatusLine:
                         print 'WARNING: could not ping!'
                         raise
 
         k = KeepAliveThread()
         k.daemon = True
         k.start()
-    
+
     def add(self, task):
         s = str(task)
-        if s in self.__scheduled_tasks: return
+        if s in self.__scheduled_tasks:
+            return
         self.__scheduled_tasks[s] = task
 
         if task.complete():
@@ -65,15 +71,17 @@ class Worker(object):
 
             for task_2 in task.deps():
                 s2 = str(task_2)
-                self.add(task_2) # Schedule it recursively
+                self.add(task_2)  # Schedule it recursively
                 self.__scheduler.add_dep(s, s2, worker=self.__id)
 
     def run(self):
         while True:
             done, s = self.__scheduler.get_work(worker=self.__id)
-            if done: break
+            if done:
+                break
 
-            if s == None: break
+            if s == None:
+                break
 
             task = self.__scheduled_tasks[s]
 
@@ -89,19 +97,16 @@ class Worker(object):
                 break
 
             try:
-                task.run()            
+                task.run()
                 status, expl = 'DONE', None
             except KeyboardInterrupt:
                 raise
             except:
-                if self.__pass_exceptions: raise # TODO: not necessarily true that we want to break on the first exception
-
-                import sys, traceback
-                
+                if not self.__pass_exceptions:
+                    raise  # TODO: not necessarily true that we want to break on the first exception
                 status = 'FAILED'
                 expl = traceback.format_exc(sys.exc_info()[2])
 
                 print expl
 
             self.__scheduler.status(s, status=status, expl=expl, worker=self.__id)
-
