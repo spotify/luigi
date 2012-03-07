@@ -15,6 +15,11 @@ class DateInterval(object):
 
         return dates
 
+    def hours(self):
+        for date in self.dates():
+            for hour in xrange(24):
+                yield datetime.datetime.combine(date, datetime.time(hour))
+
     def __str__(self):
         return self.to_string()
 
