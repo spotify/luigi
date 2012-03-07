@@ -123,6 +123,12 @@ class Task(object):
     def complete(self):
         outputs = flatten(self.output())
         if len(outputs) == 0:
+            # TODO(erikbern): This will lead to problems for tasks that require
+            # a whole bunch of other tasks but do not produce any output. There
+            # will be "Unfulfilled deps in run time" exceptions.
+            # We should just make sure that all its inputs exist. This should be
+            # cached on the object. Alternatively we should make sure that the
+            # Task has been run.
             return False
 
         for output in outputs:
