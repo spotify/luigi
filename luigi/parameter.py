@@ -1,3 +1,5 @@
+import datetime
+
 _no_default = object()
 
 
@@ -28,9 +30,13 @@ class Parameter(object):
         return x  # default impl
 
 
+class DateHourParameter(Parameter):
+    def parse(self, s):
+        return datetime.datetime.strptime(s, "%Y-%m-%d/%H")
+
+
 class DateParameter(Parameter):
     def parse(self, s):
-        import datetime
         return datetime.date(*map(int, s.split('-')))
 
 
