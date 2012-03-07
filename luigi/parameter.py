@@ -32,7 +32,9 @@ class Parameter(object):
 
 class DateHourParameter(Parameter):
     def parse(self, s):
-        return datetime.datetime.strptime(s, "%Y-%m-%d/%H")
+        # TODO(erikbern): we should probably use an internal class for arbitary
+        # time intervals (similar to date_interval). Or what do you think?
+        return datetime.datetime.strptime(s, "%Y-%m-%dT%H")  # ISO 8601 is to use 'T'
 
 
 class DateParameter(Parameter):
