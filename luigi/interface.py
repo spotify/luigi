@@ -110,6 +110,7 @@ class OptParseInterface(Interface):
             parser = optparse.OptionParser()
 
         parser.add_option('--local-scheduler', help='Use local scheduling', action='store_true')
+        parser.add_option('--scheduler-host', help='Hostname of machine running remote scheduler [default: %default]', default='localhost')
         parser.add_option('--lock', help='Do not run if the task is already running', action='store_true')
         parser.add_option('--lock-pid-dir', help='Directory to store the pid file [default: %default]', default='/var/tmp/luigi')
 
@@ -147,8 +148,13 @@ class OptParseInterface(Interface):
                 params[k] = str(v)
         task = task_cls.from_input(params)
 
+        if not args.local_scheduler:
+            sch = scheduler.RemoteScheduler(host=args.scheduler_host)
+        else:
+            sch = None
+
         # Run
-        w = worker.Worker(locally=args.local_scheduler)
+        w = worker.Worker(sch=sch, locally=args.local_scheduler)
 
         w.add(task)
         w.run()
