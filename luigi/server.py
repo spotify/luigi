@@ -41,7 +41,9 @@ def run(background=False, pidfile=None, port=8081):
 
     s = Server()
     cherrypy.config.update({'server.socket_host': '0.0.0.0',
-                            'server.socket_port': port
+                            'server.socket_port': port,
+                            'server.thread_pool': 1,
+                            'server.thread_pool_max': 1,
                             })
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
