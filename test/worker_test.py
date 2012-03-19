@@ -9,8 +9,8 @@ class WorkerTest(unittest.TestCase):
     def setUp(self):
         # InstanceCache.disable()
         self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        self.w = Worker(sch=self.sch, pass_exceptions=False, worker_id='X')
-        self.w2 = Worker(sch=self.sch, pass_exceptions=False, worker_id='Y')
+        self.w = Worker(sch=self.sch, pass_exceptions=True, worker_id='X')
+        self.w2 = Worker(sch=self.sch, pass_exceptions=True, worker_id='Y')
         self.time = time.time
 
     def tearDown(self):
