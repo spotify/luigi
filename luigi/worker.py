@@ -71,7 +71,7 @@ class Worker(object):
 
         else:
             self.__scheduler.add_task(s, status='PENDING', worker=self.__id)
-
+            logger.info('Scheduled task %s' % s)
             for task_2 in task.deps():
                 s2 = str(task_2)
                 self.add(task_2)  # Schedule it recursively

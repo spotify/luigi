@@ -181,16 +181,12 @@ def setup_interface_logging():
     logger.setLevel(logging.DEBUG)
 
     streamHandler = logging.StreamHandler()
-    streamHandler.setLevel(logging.WARNING)
-    fileHandler = logging.FileHandler('luigi.log')
-    fileHandler.setLevel(logging.DEBUG)
+    streamHandler.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter('%(levelname)s: %(message)s')
-    fileHandler.setFormatter(formatter)
     streamHandler.setFormatter(formatter)
 
     logger.addHandler(streamHandler)
-    logger.addHandler(fileHandler)
     
 
     
