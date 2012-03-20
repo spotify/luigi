@@ -5,7 +5,9 @@ import threading
 import time
 import sys
 import traceback
+import logging
 
+logger = logging.getLogger('luigi-interface')
 
 class Worker(object):
     """ Worker object communicates with a scheduler.
@@ -64,6 +66,7 @@ class Worker(object):
 
         elif task.run == NotImplemented:
             self.__scheduler.add_task(s, status='BROKEN', worker=self.__id)
+            logger.warning('Task %s is is not complete and run() is not implemented' % s)
             return
 
         else:

@@ -1,7 +1,7 @@
 import worker
 import lock
 import scheduler
-
+import logging
 
 class Register(object):
     def __init__(self):
@@ -167,9 +167,32 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False):
     However for legacy reasons we support optparse that optinally allows for
     overriding an existing option parser with new args.
     '''
+    setup_interface_logging()
+    
     if use_optparse:
         interface = OptParseInterface(existing_optparse)
     else:
         interface = ArgParseInterface()
 
     interface.run(cmdline_args)
+
+def setup_interface_logging():
+    logger = logging.getLogger('luigi-interface')
+    logger.setLevel(logging.DEBUG)
+
+    streamHandler = logging.StreamHandler()
+    streamHandler.setLevel(logging.WARNING)
+    fileHandler = logging.FileHandler('luigi.log')
+    fileHandler.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter('%(levelname)s: %(message)s')
+    fileHandler.setFormatter(formatter)
+    streamHandler.setFormatter(formatter)
+
+    logger.addHandler(streamHandler)
+    logger.addHandler(fileHandler)
+    
+
+    
+if __name__ == '__main__':
+    setup_interface_logging()
