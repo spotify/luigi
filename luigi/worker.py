@@ -71,7 +71,7 @@ class Worker(object):
 
         else:
             self.__scheduler.add_task(s, status='PENDING', worker=self.__id)
-            logger.info('Scheduled task %s' % s)
+            logger.info('Scheduled %s' % s)
             for task_2 in task.deps():
                 s2 = str(task_2)
                 self.add(task_2)  # Schedule it recursively
@@ -95,12 +95,13 @@ class Worker(object):
                     ok = False
 
             if not ok:
-                print 'Unfulfilled deps in run time!'
-                # TODO: not sure what to do really...
+                logger.error('Unfulfilled dependencies at run time!')
                 break
 
             try:
+                logger.info('Running   %s' % s)
                 task.run()
+                logger.info('Done      %s' % s)
                 status, expl = 'DONE', None
             except KeyboardInterrupt:
                 raise
