@@ -88,19 +88,13 @@ class CentralPlannerScheduler(scheduler.Scheduler):
     def add_task(self, task, worker=_default_worker, status='PENDING'):
         p = self.__tasks.setdefault(task, Task(status=status))
 
-        # allowed_state_changes = set([('RUNNING', 'DONE'), ('RUNNING', 'FAILED'),
-        #                             ('RUNNING', 'PENDING'), # TODO: Disallow!
-        #                             ('DONE', 'PENDING'),
-        #                             ('FAILED', 'PENDING')])
+        disallowed_state_changes = set([('RUNNING', 'PENDING')])
 
-        # print 'task', task, ':', p.status, '->', status
-
-        # assert p.status == status or (p.status, status) in allowed_state_changes
-
-        p.status = status
-        p.workers.add(worker)
-        p.remove = None
-        p.deps.clear()
+        if (p.status, status) not in disallowed_state_changes:
+            p.status = status
+            p.workers.add(worker)
+            p.remove = None
+            p.deps.clear()
 
     @autoupdate
     def add_dep(self, task, dep_task, worker=_default_worker):

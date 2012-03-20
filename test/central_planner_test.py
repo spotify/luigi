@@ -121,5 +121,13 @@ class CentralPlannerTest(unittest.TestCase):
             self.sch.ping(worker='Y')
         self.sch.status('A', 'DONE', worker='Y') # This used to raise an exception since A was removed
 
+    def test_disallowed_state_changes(self):
+        # Test that we can not schedule an already running task
+        t = 'A'
+        self.sch.add_task(t, worker='X')
+        self.assertEqual(self.sch.get_work(worker='X'), (False, t))
+        self.sch.add_task(t, worker='Y')
+        self.assertEqual(self.sch.get_work(worker='Y'), (True, None))
+
 if __name__ == '__main__':
     unittest.main()
