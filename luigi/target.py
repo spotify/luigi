@@ -1,4 +1,5 @@
 class Target(object):  # interface
+
     def exists(self):
         raise NotImplementedError
 
