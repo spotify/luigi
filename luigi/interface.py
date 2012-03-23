@@ -2,6 +2,7 @@ import worker
 import lock
 import scheduler
 import logging
+import ConfigParser
 
 class Register(object):
     def __init__(self):
@@ -42,7 +43,7 @@ class Interface(object):
 class ArgParseInterface(Interface):
     ''' Takes the task as the command, with parameters specific to it
     '''
-    def run(self, cmdline_args=None):
+    def run(self, cmdline_args=None, config=None):
         import argparse
         parser = argparse.ArgumentParser()
         parser.add_argument('--local-scheduler', help='Use local scheduling', action='store_true')
@@ -102,15 +103,18 @@ class OptParseInterface(Interface):
     def __init__(self, existing_optparse):
         self.__existing_optparse = existing_optparse
 
-    def run(self, cmdline_args=None):
+    def run(self, cmdline_args=None, config=None):
         import optparse
         if self.__existing_optparse:
             parser = self.__existing_optparse
         else:
             parser = optparse.OptionParser()
-
+        if config:
+            default_scheduler = config.get('luigi', 'scheduler-host')
+        else:
+            default_scheduler = 'localhost'
         parser.add_option('--local-scheduler', help='Use local scheduling', action='store_true')
-        parser.add_option('--scheduler-host', help='Hostname of machine running remote scheduler [default: %default]', default='localhost')
+        parser.add_option('--scheduler-host', help='Hostname of machine running remote scheduler [default: %default]', default=default_scheduler)
         parser.add_option('--lock', help='Do not run if the task is already running', action='store_true')
         parser.add_option('--lock-pid-dir', help='Directory to store the pid file [default: %default]', default='/var/tmp/luigi')
 
@@ -168,13 +172,13 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False):
     overriding an existing option parser with new args.
     '''
     setup_interface_logging()
-    
+    config = load_config()
     if use_optparse:
         interface = OptParseInterface(existing_optparse)
     else:
         interface = ArgParseInterface()
 
-    interface.run(cmdline_args)
+    interface.run(cmdline_args, config)
 
 def setup_interface_logging():
     logger = logging.getLogger('luigi-interface')
@@ -189,6 +193,11 @@ def setup_interface_logging():
     logger.addHandler(streamHandler)
     
 
-    
+def load_config():
+    config = ConfigParser.ConfigParser()
+    config.read('/etc/luigi/client.cfg')
+    return config
+
 if __name__ == '__main__':
-    setup_interface_logging()
+    config = load_config()
+    print config.get('luigi', 'scheduler-host')
