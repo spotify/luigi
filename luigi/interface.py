@@ -195,8 +195,11 @@ def setup_interface_logging():
 
 def load_config():
     config = ConfigParser.ConfigParser()
-    config.read('/etc/luigi/client.cfg')
-    return config
+    result = config.read('/etc/luigi/client.cfg')
+    if result == []:
+        return None
+    else:
+        return config
 
 if __name__ == '__main__':
     config = load_config()
