@@ -66,7 +66,7 @@ class Worker(object):
 
         elif task.run == NotImplemented:
             self.__scheduler.add_task(s, status='BROKEN', worker=self.__id)
-            logger.warning('Task %s is is not complete and run() is not implemented' % s)
+            logger.warning('Task %s is is not complete and run() is not implemented. Probably a missing external dependency.' % s)
             return
 
         else:
