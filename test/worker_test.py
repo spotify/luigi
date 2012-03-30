@@ -1,9 +1,10 @@
-import datetime, os, time
-from luigi.central_planner import CentralPlannerScheduler
+import time
+from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
 from luigi import *
 from luigi.task import InstanceCache
 import unittest
+
 
 class WorkerTest(unittest.TestCase):
     def setUp(self):

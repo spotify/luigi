@@ -1,6 +1,5 @@
 import random
 import scheduler
-import central_planner
 import threading
 import time
 import sys
@@ -8,6 +7,7 @@ import traceback
 import logging
 
 logger = logging.getLogger('luigi-interface')
+
 
 class Worker(object):
     """ Worker object communicates with a scheduler.
@@ -27,7 +27,7 @@ class Worker(object):
             self.__scheduler = sch
             self.__pass_exceptions = True
         elif locally:
-            self.__scheduler = central_planner.CentralPlannerScheduler()
+            self.__scheduler = scheduler.CentralPlannerScheduler()
             self.__pass_exceptions = True
         else:
             self.__scheduler = scheduler.RemoteScheduler()
@@ -65,8 +65,9 @@ class Worker(object):
             return
 
         elif task.run == NotImplemented:
+            logger.warning('Task %s is is not complete and run() is not implemented. Probably a missing external dependency.', s)
             self.__scheduler.add_task(s, status='BROKEN', worker=self.__id)
-            logger.warning('Task %s is is not complete and run() is not implemented. Probably a missing external dependency.' % s)
+            logger.debug("Done marking task %s as broken", s)
             return
 
         else:
@@ -79,7 +80,9 @@ class Worker(object):
 
     def run(self):
         while True:
+            logger.debug("Asking scheduler for work...")
             done, s = self.__scheduler.get_work(worker=self.__id)
+            logger.debug("Got response from scheduler!", done, s)
             if done:
                 break
 

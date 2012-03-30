@@ -1,13 +1,18 @@
-import task, file, scheduler, parameter, interface, target, worker
+import task
+import file  # wtf @ naming
+import rpc
+import parameter
+import interface
+import target
 
 Task = task.Task
 ExternalTask = task.ExternalTask
 Target = target.Target
 
 File = file.File
-LocalTarget = File # Can't decide what we should call it...
+LocalTarget = File  # Can't decide what we should call it...
 Parameter = parameter.Parameter
-RemoteScheduler = scheduler.RemoteScheduler
+RemoteScheduler = rpc.RemoteScheduler
 
 expose = interface.expose
 expose_main = interface.expose_main

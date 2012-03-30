@@ -1,6 +1,7 @@
-import datetime, os, time
-from luigi.central_planner import CentralPlannerScheduler
+import time
+from luigi.scheduler import CentralPlannerScheduler
 import unittest
+
 
 class CentralPlannerTest(unittest.TestCase):
     def setUp(self):
@@ -32,7 +33,7 @@ class CentralPlannerTest(unittest.TestCase):
 
         self.assertEqual(self.sch.get_work(), (False, 'A'))
         self.sch.status('A', 'FAILED')
-        self.assertEqual(self.sch.get_work(), (False, None)) # can still wait and retry: TODO: do we want this?
+        self.assertEqual(self.sch.get_work(), (False, None))  # can still wait and retry: TODO: do we want this?
         self.sch.status('A', 'DONE')
         self.assertEqual(self.sch.get_work(), (False, 'B'))
         self.sch.status('B', 'DONE')
@@ -43,7 +44,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task('A', status='BROKEN')
         self.sch.add_dep('B', 'A')
 
-        self.assertEqual(self.sch.get_work(), (False, None)) # can still wait and retry: TODO: do we want this?
+        self.assertEqual(self.sch.get_work(), (False, None))  # can still wait and retry: TODO: do we want this?
         self.sch.status('A', 'DONE')
         self.assertEqual(self.sch.get_work(), (False, 'B'))
         self.sch.status('B', 'DONE')
@@ -60,7 +61,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_dep('C', 'A')
 
         self.assertEqual(self.sch.get_work(worker='X'), (False, 'A'))
-        self.assertEqual(self.sch.get_work(worker='Y'), (False, None)) # Worker Y is pending on A to be done
+        self.assertEqual(self.sch.get_work(worker='Y'), (False, None))  # Worker Y is pending on A to be done
         self.sch.status('A', 'DONE')
         self.assertEqual(self.sch.get_work(worker='Y'), (False, 'C'))
         self.assertEqual(self.sch.get_work(worker='X'), (False, 'B'))
@@ -99,11 +100,11 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task('A', worker='X', status='BROKEN')
         self.sch.add_task('B', worker='X')
         self.sch.add_dep('B', 'A')
-        
+
         # X can't build anything
         self.assertEqual(self.sch.get_work(worker='X'), (False, None))
 
-        self.sch.add_task('B', worker='Y') # should reset dependencies for A
+        self.sch.add_task('B', worker='Y')  # should reset dependencies for A
         self.sch.add_task('C', worker='Y', status='DONE')
         self.sch.add_dep('B', 'C')
 
@@ -115,11 +116,11 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task('A', worker='X')
         self.assertEqual(self.sch.get_work(worker='X'), (False, 'A'))
         self.setTime(10000)
-        self.sch.add_task('A', worker='Y') # Will timeout X but not schedule A for removal
+        self.sch.add_task('A', worker='Y')  # Will timeout X but not schedule A for removal
         for i in xrange(2000):
             self.setTime(10000 + i)
             self.sch.ping(worker='Y')
-        self.sch.status('A', 'DONE', worker='Y') # This used to raise an exception since A was removed
+        self.sch.status('A', 'DONE', worker='Y')  # This used to raise an exception since A was removed
 
     def test_disallowed_state_changes(self):
         # Test that we can not schedule an already running task
