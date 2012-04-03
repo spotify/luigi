@@ -118,16 +118,12 @@ def apps(debug):
     return api_app, visualizer_app
 
 
-def run(visualizer_processes=-1):
-    """ Runs one instance of the API server and a number of visualizer servers
-
-    If visualizer_processes is -1, the number of remaining cores will be used (i.e. total number of cores minus one)
+def run(visualizer_processes=1):
+    """ Runs one instance of the API server and <visualizer_processes> visualizer servers
     """
     import daemonizer
 
     api_app, visualizer_app = apps(debug=False)
-    if visualizer_processes == -1:
-        visualizer_processes = tornado.process.cpu_count() - 1
 
     visualizer_sockets = tornado.netutil.bind_sockets(8081)
 

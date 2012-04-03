@@ -2,7 +2,7 @@ import os
 import daemon
 import signal
 import atexit
-import tornado.process
+
 
 def check_pid(pidfile):
     if pidfile and os.path.exists(pidfile):
