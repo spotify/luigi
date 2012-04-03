@@ -30,7 +30,7 @@ class Worker(object):
             self.__scheduler = scheduler.CentralPlannerScheduler()
             self.__pass_exceptions = True
         else:
-            self.__scheduler = scheduler.RemoteScheduler()
+            self.__scheduler = rpc.RemoteScheduler()
             self.__pass_exceptions = False
 
         if pass_exceptions != None:
