@@ -118,18 +118,14 @@ class CentralPlannerScheduler(Scheduler):
             if task.status == 'FAILED' and task.retry < time.time():
                 task.status = 'PENDING'
 
-    def autoupdate(f):
-        def g(self, *args, **kwargs):
-            # update timestamp so that we keep track
-            # of whenever the worker was last active
-            worker = kwargs.get('worker', _default_worker)
-            self.__workers[worker] = time.time()
-            self.prune()
-            return f(self, *args, **kwargs)
-        return g
+    def update(self, worker):
+        # update timestamp so that we keep track
+        # of whenever the worker was last active
+        self.__workers[worker] = time.time()
+        self.prune()
 
-    @autoupdate
     def add_task(self, task, worker=_default_worker, status='PENDING'):
+        self.update(worker)
         p = self.__tasks.setdefault(task, Task(status=status))
 
         disallowed_state_changes = set([('RUNNING', 'PENDING')])
@@ -140,21 +136,20 @@ class CentralPlannerScheduler(Scheduler):
             p.remove = None
             p.deps.clear()
 
-    @autoupdate
     def add_dep(self, task, dep_task, worker=_default_worker):
+        self.update(worker)
         # print task, '->', dep_task
         # print self.__tasks
         # self.__tasks.setdefault(task, Task()).deps.add(dep_task)
         self.__tasks[task].deps.add(dep_task)
 
-    @autoupdate
     def get_work(self, worker=_default_worker):
         # TODO: remove any expired nodes
 
         # Algo: iterate over all nodes, find first node with no dependencies
         # TODO: remove tasks that can't be done, figure out if the worker has absolutely
         # nothing it can wait for
-
+        self.update(worker)
         best_t = float('inf')
         best_task = None
         n_can_do = 0  # stupid thingie
@@ -186,14 +181,14 @@ class CentralPlannerScheduler(Scheduler):
 
         return (n_can_do == 0), best_task
 
-    @autoupdate
     def status(self, task, status, worker=_default_worker, expl=None):
+        self.update(worker)
         self.__tasks[task].status = status
         if status == 'FAILED':
             self.__tasks[task].retry = time.time() + self.__retry_delay
 
-    @autoupdate
     def ping(self, worker=_default_worker):
+        self.update(worker)
         # TODO: if run locally, there is no need to ping this scheduler obviously!
         pass  # autoupdate will take care of it
 
