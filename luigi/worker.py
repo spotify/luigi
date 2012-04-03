@@ -55,28 +55,28 @@ class Worker(object):
         k.start()
 
     def add(self, task):
+        """ Returns True if the added task is being submitted to the scheduler"""
         s = str(task)
         if s in self.__scheduled_tasks:
-            return
+            return False
         self.__scheduled_tasks[s] = task
 
         if task.complete():
-            self.__scheduler.add_task(s, status='DONE', worker=self.__id)
-            return
-
+            # Not submitting finished tasks to reduce size of output tree
+            # self.__scheduler.add_task(s, status='DONE', worker=self.__id)
+            return False
         elif task.run == NotImplemented:
             logger.warning('Task %s is is not complete and run() is not implemented. Probably a missing external dependency.', s)
             self.__scheduler.add_task(s, status='BROKEN', worker=self.__id)
             logger.debug("Done marking task %s as broken", s)
-            return
-
         else:
             self.__scheduler.add_task(s, status='PENDING', worker=self.__id)
             logger.info('Scheduled %s' % s)
             for task_2 in task.deps():
                 s2 = str(task_2)
-                self.add(task_2)  # Schedule it recursively
-                self.__scheduler.add_dep(s, s2, worker=self.__id)
+                if self.add(task_2):  # Schedule it recursively
+                    self.__scheduler.add_dep(s, s2, worker=self.__id)
+        return True
 
     def run(self):
         while True:
