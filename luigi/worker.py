@@ -30,7 +30,7 @@ class Worker(object):
             self.__scheduler = scheduler.CentralPlannerScheduler()
             self.__pass_exceptions = True
         else:
-            self.__scheduler = rpc.RemoteScheduler()
+            self.__scheduler = rpc.RemoteScheduler()  # local RPC
             self.__pass_exceptions = False
 
         if pass_exceptions != None:
@@ -41,6 +41,7 @@ class Worker(object):
         sch = self.__scheduler
 
         class KeepAliveThread(threading.Thread):
+            """ Peridiacally tell the scheduler that the worker still lives """
             def run(self):
                 while True:
                     time.sleep(1.0)
@@ -55,28 +56,30 @@ class Worker(object):
         k.start()
 
     def add(self, task):
-        """ Returns True if the added task is being submitted to the scheduler"""
+        """ Returns True if the task is already complete"""
         s = str(task)
         if s in self.__scheduled_tasks:
-            return False
-        self.__scheduled_tasks[s] = task
+            return False  # will never put a complete task in __scheduled_tasks
 
         if task.complete():
             # Not submitting finished tasks to reduce size of output tree
             # self.__scheduler.add_task(s, status='DONE', worker=self.__id)
-            return False
+            return True
         elif task.run == NotImplemented:
+            self.__scheduled_tasks[s] = task
             logger.warning('Task %s is is not complete and run() is not implemented. Probably a missing external dependency.', s)
             self.__scheduler.add_task(s, status='BROKEN', worker=self.__id)
             logger.debug("Done marking task %s as broken", s)
         else:
+            self.__scheduled_tasks[s] = task
             self.__scheduler.add_task(s, status='PENDING', worker=self.__id)
             logger.info('Scheduled %s' % s)
             for task_2 in task.deps():
                 s2 = str(task_2)
-                if self.add(task_2):  # Schedule it recursively
+                 # Schedule stuff recursively
+                if not self.add(task_2):  # Not submitting dependencies to things that are complete
                     self.__scheduler.add_dep(s, s2, worker=self.__id)
-        return True
+        return False
 
     def run(self):
         while True:

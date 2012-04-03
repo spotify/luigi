@@ -197,7 +197,6 @@ class CentralPlannerScheduler(Scheduler):
         # TODO: if run locally, there is no need to ping this scheduler obviously!
         pass  # autoupdate will take care of it
 
-    @autoupdate
     def graph(self):
         serialized = {}
         for taskname, task in self.__tasks.iteritems():

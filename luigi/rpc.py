@@ -22,9 +22,9 @@ class RemoteScheduler(Scheduler):
             (self.__host, self.__port, url, urllib.urlencode(data))
 
         req = urllib2.Request(url)
-        logger.debug("Waiting for response: %s", url)
+        #logger.debug("Waiting for response: %s", url)
         response = urllib2.urlopen(req)
-        logger.debug("Got reponse")
+        #logger.debug("Got reponse")
         page = response.read()
         result = json.loads(page)
         return result["response"]
@@ -41,7 +41,7 @@ class RemoteScheduler(Scheduler):
             {'worker': worker, 'task': task, 'dep_task': task_2})
 
     def get_work(self, worker):
-        time.sleep(1.0)
+        #time.sleep(1.0)
         done, task = self._request('/api/work', {'worker': worker})
         if done:
             return True, None
