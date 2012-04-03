@@ -66,17 +66,15 @@ class VisualizeHandler(tornado.web.RequestHandler):
             label = task.replace('(', '\\n(').replace(',', ',\\n')  # force GraphViz to break lines
             # TODO: if the ( or , is a part of the argument we shouldn't really break it
 
-            try:  # for compatibility with both new and old pygraphviz (unicode vs. encoded strings)
-                graphviz.add_node(task, label=label, style='filled', fillcolor=color, shape=shape, fontname='Helvetica', fontsize=11)
-            except TypeError:
-                graphviz.add_node(task.encode('utf-8'), label=label.encode('utf-8'), style='filled', fillcolor=color, shape=shape, fontname='Helvetica', fontsize=11)
+            # TODO: FIXME: encoding strings is not compatible with newer pygraphviz
+            graphviz.add_node(task.encode('utf-8'), label=label.encode('utf-8'), style='filled', fillcolor=color, shape=shape, fontname='Helvetica', fontsize=11)
             n_nodes += 1
 
         for task, p in tasks.iteritems():
             for dep in p['deps']:
                 graphviz.add_edge(dep, task)
 
-        if n_nodes < 100:
+        if n_nodes < 200:
             graphviz.layout('dot')
         else:
             # stupid workaround...
