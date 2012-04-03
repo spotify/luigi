@@ -5,7 +5,7 @@ import time
 import sys
 import traceback
 import logging
-
+import rpc
 logger = logging.getLogger('luigi-interface')
 
 
@@ -82,7 +82,7 @@ class Worker(object):
         while True:
             logger.debug("Asking scheduler for work...")
             done, s = self.__scheduler.get_work(worker=self.__id)
-            logger.debug("Got response from scheduler!", done, s)
+            logger.debug("Got response from scheduler! (%s, %s)", done, s)
             if done:
                 break
 

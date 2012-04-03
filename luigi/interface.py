@@ -3,6 +3,7 @@ import lock
 import scheduler
 import logging
 import ConfigParser
+import rpc
 
 class Register(object):
     def __init__(self):
