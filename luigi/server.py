@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import sys
 import tornado.ioloop
 import tornado.web
 import tornado.httpclient
@@ -64,7 +65,11 @@ class VisualizeHandler(tornado.web.RequestHandler):
             shape = 'box'
             label = task.replace('(', '\\n(').replace(',', ',\\n')  # force GraphViz to break lines
             # TODO: if the ( or , is a part of the argument we shouldn't really break it
-            graphviz.add_node(task, label=label, style='filled', fillcolor=color, shape=shape, fontname='Helvetica', fontsize=11)
+
+            try:  # for compatibility with both new and old pygraphviz
+                graphviz.add_node(task, label=label, style='filled', fillcolor=color, shape=shape, fontname='Helvetica', fontsize=11)
+            except TypeError:
+                graphviz.add_node(task.encode('utf-8'), label=label.encode('utf-8'), style='filled', fillcolor=color, shape=shape, fontname='Helvetica', fontsize=11)
             n_nodes += 1
 
         for task, p in tasks.iteritems():
@@ -141,5 +146,11 @@ def run(visualizer_processes=1):
 
     tornado.ioloop.IOLoop.instance().start()
 
+
+def run_visualizer(port):
+    api_app, visualizer_app = apps(debug=True)
+    visualizer_app.listen(port)
+    tornado.ioloop.IOLoop.instance().start()
+
 if __name__ == "__main__":
-    run()
+    run_visualizer(8083)
