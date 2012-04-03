@@ -84,7 +84,7 @@ class ArgParseInterface(Interface):
         task = task_cls.from_input(params)
 
         if not args.local_scheduler:
-            sch = scheduler.RemoteScheduler(host=args.scheduler_host)
+            sch = rpc.RemoteScheduler(host=args.scheduler_host)
         else:
             sch = None
 
@@ -153,7 +153,7 @@ class OptParseInterface(Interface):
         task = task_cls.from_input(params)
 
         if not args.local_scheduler:
-            sch = scheduler.RemoteScheduler(host=args.scheduler_host)
+            sch = rpc.RemoteScheduler(host=args.scheduler_host)
         else:
             sch = None
 
