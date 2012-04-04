@@ -2,7 +2,7 @@
 import json
 import os
 import re
-import sys
+import mimetypes
 import tornado.ioloop
 import tornado.web
 import tornado.httpclient
@@ -105,6 +105,9 @@ class StaticFileHandler(tornado.web.RequestHandler):
     def get(self, path):
         # TODO: this is probably not the right way to do it...
         # TODO: security
+        extension = os.path.splitext(path)[1]
+        if extension in mimetypes.types_map:
+            self.set_header("Content-Type", mimetypes.types_map[extension])
         data = pkg_resources.resource_string(__name__, os.path.join("static", path))
         self.write(data)
 
