@@ -27,7 +27,7 @@ def run(cmd, pidfile=None):
     if pidfile and existing_pid:
         print "Server already running (pid=%s)" % (existing_pid,)
         return
-    log = open('luigi-server.log', 'a+')  # TODO: better log location...
+    log = open('/var/log/luigi/luigi-server.log', 'a+')  # TODO: better log location...
     ctx = daemon.DaemonContext(stdout=log, stderr=log, working_directory='.')
     with ctx:
         if pidfile:
