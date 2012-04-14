@@ -56,18 +56,20 @@ class VisualizeHandler(tornado.web.RequestHandler):
         graphviz = pygraphviz.AGraph(directed=True, size=12)
         n_nodes = 0
         for task, p in tasks.iteritems():
-            color = {'PENDING': 'white',
-                     'DONE': 'green',
-                     'FAILED': 'red',
-                     'RUNNING': 'blue',
-                     'BROKEN': 'orange',  # external task, can't run
-                     }[p['status']]
+            colors = {'PENDING': ('white', 'black'),
+                     'DONE': ('green', 'white'),
+                     'FAILED': ('red', 'white'),
+                     'RUNNING': ('blue', 'white'),
+                     'BROKEN': ('orange', 'black'),  # external task, can't run
+                     }
+            fillcolor = colors[p['status']][0]
+            fontcolor = colors[p['status']][1]
             shape = 'box'
             label = task.replace('(', '\\n(').replace(',', ',\\n')  # force GraphViz to break lines
             # TODO: if the ( or , is a part of the argument we shouldn't really break it
 
             # TODO: FIXME: encoding strings is not compatible with newer pygraphviz
-            graphviz.add_node(task.encode('utf-8'), label=label.encode('utf-8'), style='filled', fillcolor=color, shape=shape, fontname='Helvetica', fontsize=11)
+            graphviz.add_node(task.encode('utf-8'), label=label.encode('utf-8'), style='filled', fillcolor=fillcolor, fontcolor=fontcolor, shape=shape, fontname='Helvetica', fontsize=11)
             n_nodes += 1
 
         for task, p in tasks.iteritems():
