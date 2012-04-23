@@ -96,5 +96,27 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertRaises(RuntimeError, foo)
         self.assertFalse(target.exists())
 
+    def test_dir_atomicity(self):
+        target = hdfs.HdfsTarget("luigi_hdfs_testdir", is_dir=True)
+        if target.exists():
+            target.remove()
+        self.assertFalse(target.exists())
+        with target.open('w') as fobj:
+            fobj.write('hej\n')
+            self.assertFalse(target.exists())
+        self.assertTrue(target.exists())
+
+    def test_create_parents(self):
+        parent = "luigi_hdfs_testdir"
+        target = hdfs.HdfsTarget("%s/testfile" % parent)
+        if hdfs.exists(parent):
+            hdfs.remove(parent)
+        self.assertFalse(hdfs.exists(parent))
+        fobj = target.open('w')
+        fobj.write('lol\n')
+        fobj.close()
+        self.assertTrue(hdfs.exists(parent))
+        self.assertTrue(target.exists())
+
 if __name__ == "__main__":
     unittest.main()
