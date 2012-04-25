@@ -1,8 +1,10 @@
 import unittest
 from spotify.luigi import hdfs
 
+
 class TestException(Exception):
     pass
+
 
 class AtomicHdfsOutputPipeTests(unittest.TestCase):
     def test_atomicity(self):
@@ -86,7 +88,7 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertFalse(target.exists())
 
     def test_with_subprocess_error(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile", format=hdfs.AVRO)
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.AVRO)
         if target.exists():
             target.remove()
 
@@ -97,7 +99,7 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertFalse(target.exists())
 
     def test_dir_atomicity(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testdir", is_dir=True)
+        target = hdfs.HdfsTarget("luigi_hdfs_testdir", format=hdfs.AVRODIR)
         if target.exists():
             target.remove()
         self.assertFalse(target.exists())
@@ -117,6 +119,31 @@ class HdfsTargetTests(unittest.TestCase):
         fobj.close()
         self.assertTrue(hdfs.exists(parent))
         self.assertTrue(target.exists())
+
+    def test_avro_iteration(self):
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile", format=hdfs.AVRO)
+        if target.exists():
+            target.remove()
+        with target.open('w') as fobj:
+            print >> fobj, "lol"
+        for line in target.open('r'):
+            self.assertEqual(line, "lol\n")
+
+    def test_avro_multifile_read(self):
+        target = hdfs.HdfsTarget("luigi_hdfs_testdir", format=hdfs.AVRODIR)
+        if target.exists():
+            target.remove()
+        hdfs.mkdir(target.path)
+        t1 = hdfs.HdfsTarget(target.path + "/part-00001.avro", format=hdfs.AVRO)
+        t2 = hdfs.HdfsTarget(target.path + "/part-00002.avro", format=hdfs.AVRO)
+
+        with t1.open('w') as f:
+            f.write('foo\n')
+        with t2.open('w') as f:
+            f.write('bar\n')
+
+        with target.open('r') as f:
+            self.assertEqual(list(f), ['foo\n', 'bar\n'])
 
 if __name__ == "__main__":
     unittest.main()
