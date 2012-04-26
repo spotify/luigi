@@ -42,7 +42,7 @@ class AtomicHdfsOutputPipeTests(unittest.TestCase):
 
 class HdfsTargetTests(unittest.TestCase):
     def test_atomicity(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile")
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
         if target.exists():
             target.remove()
 
@@ -51,8 +51,18 @@ class HdfsTargetTests(unittest.TestCase):
         fobj.close()
         self.assertTrue(target.exists())
 
+    def test_dir_atomicity(self):
+        target = hdfs.HdfsTarget("luigi_hdfs_testdir", format=hdfs.AvroDir)
+        if target.exists():
+            target.remove()
+        self.assertFalse(target.exists())
+        with target.open('w') as fobj:
+            fobj.write('hej\n')
+            self.assertFalse(target.exists())
+        self.assertTrue(target.exists())
+
     def test_readback(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile")
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
         if target.exists():
             target.remove()
 
@@ -66,7 +76,7 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertEqual(origdata, data)
 
     def test_with_close(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile")
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
         if target.exists():
             target.remove()
 
@@ -76,7 +86,7 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertTrue(target.exists())
 
     def test_with_exception(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile")
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
         if target.exists():
             target.remove()
 
@@ -88,7 +98,7 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertFalse(target.exists())
 
     def test_with_subprocess_error(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.AVRO)
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
         if target.exists():
             target.remove()
 
@@ -98,19 +108,9 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertRaises(RuntimeError, foo)
         self.assertFalse(target.exists())
 
-    def test_dir_atomicity(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testdir", format=hdfs.AVRODIR)
-        if target.exists():
-            target.remove()
-        self.assertFalse(target.exists())
-        with target.open('w') as fobj:
-            fobj.write('hej\n')
-            self.assertFalse(target.exists())
-        self.assertTrue(target.exists())
-
     def test_create_parents(self):
         parent = "luigi_hdfs_testdir"
-        target = hdfs.HdfsTarget("%s/testfile" % parent)
+        target = hdfs.HdfsTarget("%s/testfile" % parent, format=hdfs.Avro)
         if hdfs.exists(parent):
             hdfs.remove(parent)
         self.assertFalse(hdfs.exists(parent))
@@ -121,7 +121,7 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertTrue(target.exists())
 
     def test_avro_iteration(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile", format=hdfs.AVRO)
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
         if target.exists():
             target.remove()
         with target.open('w') as fobj:
@@ -130,12 +130,12 @@ class HdfsTargetTests(unittest.TestCase):
             self.assertEqual(line, "lol\n")
 
     def test_avro_multifile_read(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testdir", format=hdfs.AVRODIR)
+        target = hdfs.HdfsTarget("luigi_hdfs_testdir", format=hdfs.AvroDir)
         if target.exists():
             target.remove()
         hdfs.mkdir(target.path)
-        t1 = hdfs.HdfsTarget(target.path + "/part-00001.avro", format=hdfs.AVRO)
-        t2 = hdfs.HdfsTarget(target.path + "/part-00002.avro", format=hdfs.AVRO)
+        t1 = hdfs.HdfsTarget(target.path + "/part-00001.avro", format=hdfs.Avro)
+        t2 = hdfs.HdfsTarget(target.path + "/part-00002.avro", format=hdfs.Avro)
 
         with t1.open('w') as f:
             f.write('foo\n')
