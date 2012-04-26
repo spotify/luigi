@@ -165,5 +165,18 @@ class HdfsTargetTests(unittest.TestCase):
             pass
         self.assertTrue(target.exists())
 
+    def test_tmp_move(self):
+        target = hdfs.HdfsTarget(is_tmp=True)
+        target2 = hdfs.HdfsTarget("luigi_hdfs_testdir")
+        if target2.exists():
+            target2.remove()
+        with target.open('w'):
+            pass
+        self.assertTrue(target.exists())
+        target.move(target2.path)
+        self.assertFalse(target.exists())
+        self.assertTrue(target2.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
