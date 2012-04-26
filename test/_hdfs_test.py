@@ -158,6 +158,12 @@ class HdfsTargetTests(unittest.TestCase):
         gc.collect()
         self.assertFalse(hdfs.exists(path))
 
+    def test_luigi_tmp(self):
+        target = hdfs.HdfsTarget(is_tmp=True)
+        self.assertFalse(target.exists())
+        with target.open('w'):
+            pass
+        self.assertTrue(target.exists())
 
 if __name__ == "__main__":
     unittest.main()
