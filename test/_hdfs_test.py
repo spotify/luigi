@@ -145,5 +145,19 @@ class HdfsTargetTests(unittest.TestCase):
         with target.open('r') as f:
             self.assertEqual(list(f), ['foo\n', 'bar\n'])
 
+    def test_tmp_cleanup(self):
+        path = "luigi_hdfs_testfile.avro"
+        target = hdfs.HdfsTarget(path, format=hdfs.Avro, is_tmp=True)
+        if target.exists():
+            target.remove()
+        with target.open('w') as fobj:
+            fobj.write('lol\n')
+        self.assertTrue(target.exists())
+        del target
+        import gc
+        gc.collect()
+        self.assertFalse(hdfs.exists(path))
+
+
 if __name__ == "__main__":
     unittest.main()
