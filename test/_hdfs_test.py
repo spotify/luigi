@@ -12,7 +12,7 @@ class AtomicHdfsOutputPipeTests(unittest.TestCase):
         if hdfs.exists(testpath):
             hdfs.remove(testpath)
 
-        pipe = hdfs.AtomicHdfsOutputPipe(testpath)
+        pipe = hdfs.HdfsAtomicWritePipe(testpath)
         self.assertFalse(hdfs.exists(testpath))
         pipe.close()
         self.assertTrue(hdfs.exists(testpath))
@@ -22,7 +22,7 @@ class AtomicHdfsOutputPipeTests(unittest.TestCase):
         if hdfs.exists(testpath):
             hdfs.remove(testpath)
 
-        with hdfs.AtomicHdfsOutputPipe(testpath) as fobj:
+        with hdfs.HdfsAtomicWritePipe(testpath) as fobj:
             fobj.write('hej')
 
         self.assertTrue(hdfs.exists(testpath))
@@ -33,7 +33,7 @@ class AtomicHdfsOutputPipeTests(unittest.TestCase):
             hdfs.remove(testpath)
 
         def foo():
-            with hdfs.AtomicHdfsOutputPipe(testpath) as fobj:
+            with hdfs.HdfsAtomicWritePipe(testpath) as fobj:
                 fobj.write('hej')
                 raise TestException('Test triggered exception')
         self.assertRaises(TestException, foo)
