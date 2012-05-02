@@ -177,6 +177,18 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertFalse(target.exists())
         self.assertTrue(target2.exists())
 
+    def test_rename_no_parent(self):
+        if hdfs.exists("foo"):
+            hdfs.remove("foo")
+            
+        target1 = hdfs.HdfsTarget(is_tmp=True)
+        target2 = hdfs.HdfsTarget("foo/bar")
+        with target1.open('w'):
+            pass
+        self.assertTrue(target1.exists())
+        target1.move(target2.path)
+        self.assertFalse(target1.exists())
+        self.assertTrue(target2.exists())
 
 if __name__ == "__main__":
     unittest.main()
