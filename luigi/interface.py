@@ -5,6 +5,7 @@ import ConfigParser
 import rpc
 import optparse
 import scheduler
+import sys
 
 
 class Register(object):
@@ -41,6 +42,29 @@ def expose_main(cls):
 class Interface(object):
     def run(self):
         raise NotImplementedError
+
+# BEGIN ABOMINATION
+# TODO: below is the ugliest piece of code ever, we HAVE TO refactor and improve global options asap
+
+_global_options = {}
+
+
+def add_global_option(option_name, default):
+    for i, arg in enumerate(sys.argv):
+        if arg == '--%s' % option_name:
+            _global_options[option_name] = sys.argv[i + 1]
+            break
+    else:
+        _global_options[option_name] = default
+        return
+
+    del sys.argv[i:i + 2]
+
+
+def get_global_option(option_name):
+    return _global_options[option_name]
+
+# END ABOMINATION
 
 
 class ArgParseInterface(Interface):
@@ -136,6 +160,7 @@ class OptParseInterface(Interface):
     def run(self, cmdline_args=None, config=None):
         parser = PassThroughOptionParser()
         tasks_str = '/'.join(sorted([name for name in register.get_reg()]))
+
         def add_task_option(p):
             if register.get_main():
                 # INTERNAL: While changing configuration here, please update documentation in spluigi

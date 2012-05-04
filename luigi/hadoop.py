@@ -1,0 +1,473 @@
+import random
+import sys
+import os
+import datetime
+import subprocess
+from itertools import groupby
+from operator import itemgetter
+import pickle
+import logging
+import StringIO
+
+import luigi
+import luigi.hdfs
+
+import mrrunner
+
+logger = logging.getLogger('luigi-interface')
+
+_attached_packages = []
+
+luigi.interface.add_global_option('pool', None)
+
+
+def attach(*packages):
+    """ Attach a python package to hadoop map reduce tarballs to make those packages available on the hadoop cluster"""
+    _attached_packages.extend(packages)
+
+
+def repr_reader(inputs):
+    """Reader which uses python eval on each part of a tab separated string.
+       Yields a tuple of python objects."""
+    for input in inputs:
+        yield map(eval, input.split("\t"))
+
+
+def repr_writer(outputs, stdout):
+    """Writer which outpus the python repr for each item"""
+    for output in outputs:
+        print >> stdout, "\t".join(map(repr, output))
+
+
+def dereference(file):
+    if os.path.islink(file):
+        #by joining with the dirname we are certain to get the absolute path
+        return dereference(os.path.join(os.path.dirname(file), os.readlink(file)))
+    else:
+        return file
+
+
+def create_packages_archive(packages, filename):
+    """Create a tar archive which will contain the files for the packages listed in packages. """
+    import tarfile
+    tar = tarfile.open(filename, "w")
+
+    def add(src, dst):
+        logger.debug('adding to tar: %s -> %s', src, dst)
+        tar.add(src, dst)
+    for package in packages:
+        if package.__package__ and package.__package__ != package.__name__:
+            # Replace with package instead of submodule
+            package = __import__(package.__package__, None, None, 'non_empty')
+
+        n = package.__name__.replace(".", "/")
+
+        if hasattr(package, "__path__"):
+            p = package.__path__[0]
+
+            if p.find('.egg') != -1:
+                raise 'egg files not supported!!!'
+                # Add the entire egg file
+                # p = p[:p.find('.egg') + 4]
+                # add(dereference(p), os.path.basename(p))
+
+            else:
+                # include __init__ files from parent projects
+                root = []
+                for parent in package.__name__.split('.')[0:-1]:
+                    root.append(parent)
+                    module_name = '.'.join(root)
+                    directory = '/'.join(root)
+
+                    add(dereference(__import__(module_name, None, None, 'non_empty').__path__[0] + "/__init__.py"),
+                            directory + "/__init__.py")
+
+                for root, dirs, files in os.walk(p):
+                    if '.svn' in dirs:
+                        dirs.remove('.svn')
+                    for f in files:
+                        if not f.endswith(".pyc") and not f.startswith("."):
+                            add(dereference(root + "/" + f), root.replace(p, n) + "/" + f)
+        else:
+            f = package.__file__
+            if f.endswith("pyc"):
+                f = f[:-3] + "py"
+            if n.find(".") == -1:
+                add(dereference(f), os.path.basename(f))
+            else:
+                add(dereference(f), n + ".py")
+    tar.close()
+
+
+def flatten(sequence):
+    """A simple generator which flattens a sequence.
+
+    Only one level is flattned.
+
+    (1, (2, 3), 4) -> (1, 2, 3, 4)
+    """
+    for item in sequence:
+        if hasattr(item, "__iter__"):
+            for i in item:
+                yield i
+        else:
+            yield item
+
+
+class JobRunner(object):
+    run_job = NotImplemented
+
+
+class HadoopJobRunner(JobRunner):
+    ''' Takes care of uploading & executing a Hadoop job using Hadoop streaming
+
+    TODO: add code to support Elastic Mapreduce (using boto) and local execution.
+    '''
+    def __init__(self, streaming_jar, modules=[], streaming_args=[], libjars=[], libjars_in_hdfs=[], jobconfs={}, input_format=None, output_format=None):
+        self.streaming_jar = streaming_jar
+        self.modules = modules
+        self.streaming_args = streaming_args
+        self.libjars = libjars
+        self.libjars_in_hdfs = libjars_in_hdfs
+        self.jobconfs = jobconfs
+        self.input_format = input_format
+        self.output_format = output_format
+
+    def run_job(self, job):
+        packages = [luigi] + self.modules + job.extra_modules() + list(_attached_packages)
+
+        # find the module containing the job
+        packages.append(__import__(job.__module__, None, None, 'dummy'))
+
+        # find the path to out runner.py
+        runner_path = mrrunner.__file__
+        # assume source is next to compiled
+        if runner_path.endswith("pyc"):
+            runner_path = runner_path[:-3] + "py"
+
+        tmp_dir = '/tmp/luigi_hadoop_job_%016x' % random.getrandbits(64)
+        # self._cleanup_tmp_dirs.append(tmp_dir)
+        logger.debug("Tmp dir: %s", tmp_dir)
+        os.mkdir(tmp_dir)
+        job._dump(tmp_dir)
+
+        # build arguments
+        map_cmd = 'python mrrunner.py map'
+        cmb_cmd = 'python mrrunner.py combiner'
+        red_cmd = 'python mrrunner.py reduce'
+
+        # replace output with a temporary work directory
+        output_final = job.output().path
+        output_tmp_fn = output_final + '-temp-' + datetime.datetime.now().isoformat().replace(':', '-')
+        tmp_target = luigi.hdfs.HdfsTarget(output_tmp_fn, is_tmp=True)
+
+        arglist = ['hadoop', 'jar', self.streaming_jar] + self.streaming_args
+
+        # 'libjars' is a generic option, so place it first
+        libjars = [libjar for libjar in self.libjars]
+
+        for libjar in self.libjars_in_hdfs:
+            subprocess.call(['hadoop', 'fs', '-get', libjar, tmp_dir])
+            libjars.append(os.path.join(tmp_dir, os.path.basename(libjar)))
+
+        if libjars:
+            arglist += ['-libjars', ','.join(libjars)]
+
+        jobconfs = []
+
+        jobconfs.append('mapred.job.name=%s' % job.task_id)
+        jobconfs.append('mapred.reduce.tasks=%s' % job.n_reduce_tasks)
+        pool = luigi.interface.get_global_option('pool')
+        if pool is not None:
+            jobconfs.append('mapred.fairscheduler.pool=%s' % pool)
+
+        for k, v in self.jobconfs.iteritems():
+            jobconfs.append('%s=%s' % (k, v))
+
+        for conf in jobconfs:
+            arglist += ['-jobconf', conf]
+
+        arglist += ['-mapper', map_cmd, '-reducer', red_cmd]
+        if job.combiner != NotImplemented:
+            arglist += ['-combiner', cmb_cmd]
+        files = [runner_path, tmp_dir + '/packages.tar', tmp_dir + '/job-instance.pickle']
+
+        for f in files:
+            arglist += ['-file', f]
+
+        if self.output_format:
+            arglist += ['-outputformat', self.output_format]
+        if self.input_format:
+            arglist += ['-inputformat', self.input_format]
+
+        for target in luigi.task.flatten(job.input_hadoop()):
+            assert isinstance(target, luigi.hdfs.HdfsTarget)
+            arglist += ['-input', target.path]
+
+        assert isinstance(job.output(), luigi.hdfs.HdfsTarget)
+        arglist += ['-output', output_tmp_fn]
+
+        # submit job
+        create_packages_archive(packages, tmp_dir + '/packages.tar')
+
+        logger.info(' '.join(arglist))
+
+        proc = subprocess.Popen(arglist, stderr=subprocess.PIPE)
+
+        # We parse the output to try to find the tracking URL.
+        # This URL is useful for fetching the logs of the job.
+        tracking_url = None
+        while True:
+            line = proc.stderr.readline()
+            if not line:
+                break
+            print line.strip()
+            if line.find('Tracking URL') != -1:
+                tracking_url = line.strip().split('Tracking URL: ')[-1]
+        proc.wait()
+
+        if proc.returncode != 0:
+            # Try to fetch error logs if possible
+            if tracking_url:
+                try:
+                    self.fetch_raise_failures(tracking_url)
+                except Exception, e:
+                    raise RuntimeError('Streaming job failed with exit code %d. Additionally, an error occurred when fetching data from %s: %s' % (proc.returncode, tracking_url, e))
+
+            raise RuntimeError('Streaming job failed with exit code %d' % proc.returncode)
+
+        # rename temporary work directory to given output
+        tmp_target.move(output_final)
+
+    def fetch_raise_failures(self, tracking_url):
+        ''' Uses mechanize to fetch the actual task logs from the task tracker.
+
+        This is highly opportunistic, and we might not succeed. So we set a low timeout and hope it works.
+        If it does not, it's not the end of the world.
+        '''
+        import mechanize
+        import BeautifulSoup  # so they don't have to be installed on the nodes
+
+        failures_url = tracking_url.replace('jobdetails.jsp', 'jobfailures.jsp')
+        b = mechanize.Browser()
+        b.open(failures_url, timeout=2.0)
+        for link in b.links(text_regex='Last 4KB'):
+            b2 = mechanize.Browser()
+            r = b2.open(link.url, timeout=1.0)
+            output = BeautifulSoup.BeautifulSoup(r.read(),
+                                                 convertEntities=BeautifulSoup.BeautifulStoneSoup.HTML_ENTITIES).findAll(text=True)
+            # Try to find the relevant slice of info
+            p, q = output.index('stderr logs'), output.index('syslog logs')
+            try:
+                print '---------- %s:' % link.url
+                print ''.join(output[(p + 1):q]).strip()
+                print '----------'
+            except:
+                continue
+
+
+class DefaultHadoopJobRunner(HadoopJobRunner):
+    ''' The default job runner just reads from config and sets stuff '''
+    def __init__(self):
+        import interface
+        config = interface.load_config()
+        super(DefaultHadoopJobRunner, self).__init__(jar=config.get('hadoop', 'jar'))
+        # TODO: add more configurable options
+
+
+class LocalJobRunner(JobRunner):
+    ''' Will run the job locally
+
+    This is useful for debugging and also unit testing. Tries to mimic Hadoop Streaming.
+
+    TODO: integrate with JobTask
+    '''
+    def __init__(self, samplelines=None):
+        self.samplelines = samplelines
+
+    def sample(self, input, n, output):
+        for i, line in enumerate(input):
+            if n is not None and i >= n:
+                break
+            output.write(line)
+
+    def group(self, input):
+        output = StringIO.StringIO()
+        lines = []
+        for line in input:
+            k, v = line.strip().split('\t')
+            lines.append((k, line))
+        for k, line in sorted(lines):
+            output.write(line)
+        output.seek(0)
+        return output
+
+    def run_job(self, job):
+        map_input = StringIO.StringIO()
+
+        for i in luigi.task.flatten(job.input_hadoop()):
+            print i
+            self.sample(i.open('r'), self.samplelines, map_input)
+        print 'map input:', map_input.getvalue()
+        map_input.seek(0)
+
+        # run job now...
+        map_output = StringIO.StringIO()
+        job._run_mapper(map_input, map_output)
+        map_output.seek(0)
+
+        if job.combiner == NotImplemented:
+            reduce_input = self.group(map_output)
+        else:
+            combine_input = self.group(map_output)
+            combine_output = StringIO.StringIO()
+            job._run_combiner(combine_input, combine_output)
+            combine_output.seek(0)
+            reduce_input = self.group(combine_output)
+
+        reduce_output = job.output().open('w')
+        job._run_reducer(reduce_input, reduce_output)
+        reduce_output.close()
+
+
+class JobTask(luigi.Task):
+    n_reduce_tasks = 25
+
+    def init_local(self):
+        ''' Implement any work to setup any internal datastructure etc here.
+
+        You can add extra input using the requires_local/input_local methods.
+
+        Anything you set on the object will be pickled and available on the Hadoop nodes.
+        '''
+        pass
+
+    def init_hadoop(self):
+        pass
+
+    def init_mapper(self):
+        pass
+
+    def init_combiner(self):
+        pass
+
+    def init_reducer(self):
+        pass
+
+    def run(self):
+        self.init_local()
+        self.job_runner().run_job(self)
+
+    def requires_local(self):
+        ''' Default impl - override this method if you need any local input to be accessible in init() '''
+        return []
+
+    def requires_hadoop(self):
+        return self.requires()  # default impl
+
+    def input_local(self):
+        return luigi.task.getpaths(self.requires_local())
+
+    def input_hadoop(self):
+        return luigi.task.getpaths(self.requires_hadoop())
+
+    def deps(self):
+        # Overrides the default implementation
+        return luigi.task.flatten(self.requires_hadoop()) + luigi.task.flatten(self.requires_local())
+
+    def job_runner(self):
+        # We recommend that you define a subclass, override this method and set up your own config
+        return DefaultHadoopJobRunner()
+
+    def reader(self, input_stream):
+        """Reader is a method which iterates over input lines and outputs records.
+           The default implementation yields one argument containing the line for each line in the input."""
+        for line in input_stream:
+            yield line,
+
+    def writer(self, outputs, stdout, stderr=sys.stderr):
+        """Writer format is a method which iterates over the output records from the reducer and formats
+           them for output.
+           The default implementation outputs tab separated items"""
+        for output in outputs:
+            try:
+                print >> stdout, "\t".join(map(str, flatten(output)))
+            except:
+                print >> stderr, output
+                raise
+
+    def mapper(self, item):
+        """Re-define to process an input item (usually a line of input data)
+
+        Defaults to identity mapper that sends all lines to the same reducer"""
+        yield None, item
+
+    combiner = NotImplemented
+
+    def reducer(self, key, values):
+        for v in values:
+            yield key, v
+
+    def incr_counter(self, *args):
+        """ Increments a Hadoop counter
+
+        Note that this seems to be a bit slow, ~1 ms. Don't overuse this function by updating very frequently.
+        """
+        if len(args) == 2:
+            # backwards compatibility with existing hadoop jobs
+            group_name, count = args
+            print >> sys.stderr, 'reporter:counter:%s,%s' % (group_name, count)
+        else:
+            group, name, count = args
+            print >> sys.stderr, 'reporter:counter:%s,%s,%s' % (group, name, count)
+
+    def extra_modules(self):
+        return []  # can be overridden in subclass
+
+    def _dump(self, dir=''):
+        """Dump instance to file."""
+        file_name = os.path.join(dir, 'job-instance.pickle')
+        if self.__module__ == '__main__':
+            d = pickle.dumps(self)
+            module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
+            d = d.replace('(c__main__', "(c" + module_name)
+            open(file_name, "w").write(d)
+
+        else:
+            pickle.dump(self, open(file_name, "w"))
+
+    def _map_input(self, input_stream):
+        """Iterate over input and call the mapper for each item.
+           If the job has a parser defined, the return values from the parser will
+           be passed as arguments to the mapper.
+
+           If the input is coded output from a previous run, the arguments will be splitted in key and value."""
+        for record in self.reader(input_stream):
+            for output in self.mapper(*record):
+                yield output
+
+    def _reduce_input(self, inputs, reducer):
+        """Iterate over input, collect values with the same key, and call the reducer for each uniqe key."""
+        for key, values in groupby(inputs, itemgetter(0)):
+            for output in reducer(key, (v[1] for v in values)):
+                yield output
+
+    def _run_mapper(self, stdin=sys.stdin, stdout=sys.stdout):
+        """Run the mapper on the hadoop node."""
+        self.init_hadoop()
+        self.init_mapper()
+        outputs = self._map_input((line[:-1] for line in stdin))
+        repr_writer(outputs, stdout)
+
+    def _run_reducer(self, stdin=sys.stdin, stdout=sys.stdout):
+        """Run the reducer on the hadoop node."""
+        self.init_hadoop()
+        self.init_reducer()
+        outputs = self._reduce_input(repr_reader((line[:-1] for line in stdin)), reducer=self.reducer)
+        self.writer(outputs, stdout)
+
+    def _run_combiner(self, stdin=sys.stdin, stdout=sys.stdout):
+        self.init_hadoop()
+        self.init_combiner()
+        outputs = self._reduce_input(repr_reader((line[:-1] for line in stdin)), reducer=self.combiner)
+        repr_writer(outputs, stdout)

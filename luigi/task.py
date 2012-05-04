@@ -214,7 +214,6 @@ class Task(object):
         Default behavior is to send an None value"""
         return None
 
-
 def externalize(task):
     task.run = NotImplemented
     return task

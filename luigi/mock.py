@@ -5,11 +5,15 @@ import target
 class MockFile(target.Target):
     _file_contents = {}
 
-    def __init__(self, fn):
+    def __init__(self, fn, is_tmp=None):
         self.__fn = fn
 
     def exists(self,):
         return self.__fn in MockFile._file_contents
+
+    @property
+    def path(self):
+        return self.__fn
 
     def open(self, mode):
         fn = self.__fn
@@ -25,3 +29,4 @@ class MockFile(target.Target):
             return StringBuffer()
         else:
             return StringBuffer(MockFile._file_contents[fn])
+
