@@ -1,4 +1,3 @@
-import datetime, os
 import luigi
 import unittest
 from luigi.mock import MockFile
@@ -7,13 +6,16 @@ File = luigi.File
 
 # Calculates Fibonacci numbers :)
 
+
 @luigi.expose
 class Fib(luigi.Task):
-    n = luigi.IntParameter(default = 100)
+    n = luigi.IntParameter(default=100)
 
     def requires(self):
-        if self.n >= 2: return [Fib(self.n - 1), Fib(self.n - 2)]
-        else: return []
+        if self.n >= 2:
+            return [Fib(self.n - 1), Fib(self.n - 2)]
+        else:
+            return []
 
     def output(self):
         return File('/tmp/fib_%d' % self.n)
@@ -33,11 +35,13 @@ class Fib(luigi.Task):
         f.write('%d\n' % s)
         f.close()
 
+
 class FibTestBase(unittest.TestCase):
     def setUp(self):
         global File
         File = MockFile
         MockFile._file_contents.clear()
+
 
 class FibTest(FibTestBase):
     def test_invoke(self):

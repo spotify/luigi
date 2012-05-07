@@ -1,13 +1,14 @@
-import datetime, os
+import datetime
 import luigi
 from luigi.mock import MockFile
 import unittest
 
 File = MockFile
 
+
 @luigi.expose
 class Popularity(luigi.Task):
-    date = luigi.DateParameter(default = datetime.date.today() - datetime.timedelta(1))
+    date = luigi.DateParameter(default=datetime.date.today() - datetime.timedelta(1))
 
     def output(self):
         return File('/tmp/popularity/%s.txt' % self.date.strftime('%Y-%m-%d'))
@@ -19,8 +20,9 @@ class Popularity(luigi.Task):
         f = self.output().open('w')
         for line in self.input().open('r'):
             print >> f, int(line.strip()) + 1
-        
+
         f.close()
+
 
 class RecursionTest(unittest.TestCase):
     def setUp(self):

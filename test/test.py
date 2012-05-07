@@ -2,7 +2,11 @@
 # Copyright (c) 2011 Spotify Ltd
 # -*- coding: utf-8 -*-
 
-import sys, os, glob, unittest
+import sys
+import os
+import glob
+import unittest
+
 
 # Code below was ruthlessly stolen from spotify.util.test
 # in order to remove all dependencies on spotify.*
@@ -12,17 +16,19 @@ def suite():
     for filename in glob.glob('test/*_test.py') + glob.glob('python/test/*_test.py'):
         f = os.path.splitext(os.path.basename(filename))[0]
         module = __import__(f)
-        suite.addTest( unittest.defaultTestLoader.loadTestsFromModule(module) )
+        suite.addTest(unittest.defaultTestLoader.loadTestsFromModule(module))
     return suite
+
 
 class run(unittest.TestProgram):
     """Runs tests and counts errors."""
     def __init__(self):
-        #sys.path.append(test)                                                                                                                                                                                                               
+        #sys.path.append(test)
         unittest.TestProgram.__init__(self, '__main__', 'suite')
 
     def usageExit(self, msg=None):
-        if msg: print msg
+        if msg:
+            print msg
         print self.USAGE % self.__dict__
         sys.exit(-2)
 

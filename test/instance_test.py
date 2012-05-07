@@ -1,6 +1,6 @@
-import datetime, os
 import luigi
 import unittest
+
 
 class InstanceTest(unittest.TestCase):
     def test_simple(self):
@@ -27,17 +27,18 @@ class InstanceTest(unittest.TestCase):
 
         class B(luigi.Task):
             x = luigi.Parameter()
+
             def requires(self):
-                return A() # This will end up referring to the same object
+                return A()  # This will end up referring to the same object
 
             def run(self):
                 test.assertTrue(self.requires().has_run)
-        
+
         w = luigi.worker.Worker(locally=True)
         w.add(B(1))
         w.add(B(2))
         w.run()
-        
+
 
 if __name__ == '__main__':
     unittest.main()

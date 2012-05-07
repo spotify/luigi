@@ -4,6 +4,7 @@ import unittest
 
 File = MockFile
 
+
 class A(luigi.Task):
     def output(self):
         return File('/tmp/a.txt')
@@ -13,6 +14,7 @@ class A(luigi.Task):
         print >>f, 'hello, world'
         f.close()
 
+
 class B(luigi.Task):
     def output(self):
         return File('/tmp/b.txt')
@@ -21,6 +23,7 @@ class B(luigi.Task):
         f = self.output().open('w')
         print >>f, 'goodbye, space'
         f.close()
+
 
 def make_xml_wrapper(dep_class, output_filename):
     class XMLWrapper(luigi.Task):
@@ -40,13 +43,16 @@ def make_xml_wrapper(dep_class, output_filename):
 
     return XMLWrapper
 
+
 @luigi.expose
 class AXML(make_xml_wrapper(A, '/tmp/a.xml')):
     pass
 
+
 @luigi.expose
 class BXML(make_xml_wrapper(B, '/tmp/b.xml')):
     pass
+
 
 class WrapperTest(unittest.TestCase):
     def test_a(self):

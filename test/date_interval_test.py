@@ -2,7 +2,9 @@
 # Copyright (c) 2011 Spotify Ltd
 
 from luigi.parameter import DateIntervalParameter as DI
-import unittest, datetime
+import unittest
+import datetime
+
 
 class DateIntervalTest(unittest.TestCase):
     def test_date(self):

@@ -180,7 +180,7 @@ class HdfsTargetTests(unittest.TestCase):
     def test_rename_no_parent(self):
         if hdfs.exists("foo"):
             hdfs.remove("foo")
-            
+
         target1 = hdfs.HdfsTarget(is_tmp=True)
         target2 = hdfs.HdfsTarget("foo/bar")
         with target1.open('w'):

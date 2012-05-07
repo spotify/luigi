@@ -2,7 +2,6 @@ import time
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
 from luigi import *
-from luigi.task import InstanceCache
 import unittest
 
 
@@ -23,13 +22,20 @@ class WorkerTest(unittest.TestCase):
 
     def test_dep(self):
         class A(Task):
-            def run(self): self.has_run = True
-            def complete(self): return self.has_run
+            def run(self):
+                self.has_run = True
+
+            def complete(self):
+                return self.has_run
         a = A()
 
         class B(Task):
-            def requires(self): return a
-            def run(self): self.has_run = True
+            def requires(self):
+                return a
+
+            def run(self):
+                self.has_run = True
+
         b = B()
 
         a.has_run = False
@@ -41,12 +47,16 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(b.has_run)
 
     def test_external_dep(self):
-        class A(ExternalTask): pass
+        class A(ExternalTask):
+            pass
         a = A()
 
         class B(Task):
-            def requires(self): return a
-            def run(self): self.has_run = True
+            def requires(self):
+                return a
+
+            def run(self):
+                self.has_run = True
         b = B()
 
         a.has_run = False
@@ -66,8 +76,11 @@ class WorkerTest(unittest.TestCase):
         a = A()
 
         class B(Task):
-            def requires(self): return a
-            def run(self): self.has_run = True
+            def requires(self):
+                return a
+
+            def run(self):
+                self.has_run = True
         b = B()
 
         a.has_run = False
@@ -81,14 +94,20 @@ class WorkerTest(unittest.TestCase):
 
     def test_unknown_dep(self):
         # see central_planner_test.CentralPlannerTest.test_remove_dep
-        class A(ExternalTask): pass
+        class A(ExternalTask):
+            pass
+
         class C(Task):
-            def complete(self): return True
+            def complete(self):
+                return True
 
         def get_b(dep):
             class B(Task):
-                def requires(self): return dep
-                def run(self): self.has_run = True
+                def requires(self):
+                    return dep
+
+                def run(self):
+                    self.has_run = True
             b = B()
             b.has_run = False
             return b
@@ -101,7 +120,7 @@ class WorkerTest(unittest.TestCase):
         # This should remove the dep A -> B but will screw up the first worker
         self.w2.add(b_c)
 
-        self.w.run() # should not run anything - the worker should detect that A is broken
+        self.w.run()  # should not run anything - the worker should detect that A is broken
         self.assertFalse(b_a.has_run)
 
         # not sure what should happen??

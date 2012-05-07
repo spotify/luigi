@@ -4,6 +4,7 @@
 from luigi.mock import MockFile
 import unittest
 
+
 class MockFileTest(unittest.TestCase):
     def test_1(self):
         t = MockFile('test')
