@@ -4,6 +4,7 @@ import scheduler
 import logging
 import ConfigParser
 import rpc
+import optparse
 
 class Register(object):
     def __init__(self):
@@ -94,6 +95,23 @@ class ArgParseInterface(Interface):
         w.add(task)
         w.run()
 
+class PassThroughOptionParser(optparse.OptionParser):
+    '''
+    An unknown option pass-through implementation of OptionParser.
+
+    When unknown arguments are encountered, bundle with largs and try again,
+    until rargs is depleted.
+
+    sys.exit(status) will still be called if a known argument is passed
+    incorrectly (e.g. missing arguments or bad argument types, etc.)
+    '''
+    def _process_args(self, largs, rargs, values):
+        while rargs:
+            try:
+                optparse.OptionParser._process_args(self,largs,rargs,values)
+            except (optparse.BadOptionError,optparse.AmbiguousOptionError), e:
+                largs.append(e.opt_str)
+
 
 class OptParseInterface(Interface):
     ''' Supported for legacy reasons where it's necessary to interact with an existing parser.
@@ -105,11 +123,22 @@ class OptParseInterface(Interface):
         self.__existing_optparse = existing_optparse
 
     def run(self, cmdline_args=None, config=None):
-        import optparse
+        parser = PassThroughOptionParser()
+        tasks_str = '/'.join([name for name in register.get_reg()])
+        def add_task_option(p):
+            if register.get_main():
+                p.add_option('--task', help='Task to run (' + tasks_str + ') [default: %default]', default=register.get_main().__name__)
+            else:
+                p.add_option('--task', help='Task to run (%s)' % tasks_str)
+        add_task_option(parser)
+        options, args = parser.parse_args(args=cmdline_args)
+
+        task_cls_name = options.task
         if self.__existing_optparse:
             parser = self.__existing_optparse
         else:
             parser = optparse.OptionParser()
+        add_task_option(parser)
         if config:
             default_scheduler = config.get('luigi', 'scheduler-host')
         else:
@@ -119,47 +148,42 @@ class OptParseInterface(Interface):
         parser.add_option('--lock', help='Do not run if the task is already running', action='store_true')
         parser.add_option('--lock-pid-dir', help='Directory to store the pid file [default: %default]', default='/var/tmp/luigi')
 
-        tasks_str = '/'.join([name for name in register.get_reg()])
-
-        if register.get_main():
-            parser.add_option('--task', help='Task to run (' + tasks_str + ') [default: %default]', default=register.get_main().__name__)
-        else:
-            parser.add_option('--task', help='Task to run (%s)' % tasks_str)
 
         # Register all parameters as a big mess
-        parameter_clses = {}
         parameter_defaults = {}
-        for name, cls in register.get_reg().iteritems():
-            params = cls.get_params()
-            for param_name, param in params:
-                parameter_clses.setdefault(param_name, []).append(cls)
-                if param.has_default:
-                    parameter_defaults[param_name] = param.default  # Will override with whatever: TODO: do more sensibly!
+        task_cls = register.get_reg()[task_cls_name]
+        params = task_cls.get_params()
+        for param_name, param in params:
+            if param.has_default:
+                parameter_defaults[param_name] = param.default  # Will override with whatever: TODO: do more sensibly!
 
-        for param_name, clses in parameter_clses.iteritems():
-            tasks_str = ','.join([cls.__name__ for cls in clses])
+        for param_name, param in params:
+            if param.has_default:
+                help_text = '%s [default: %s]' % (param_name, parameter_defaults)
+            else:
+                help_text = param_name
             parser.add_option('--' + param_name.replace('_', '-'),
-                              help='{%s}.%s [default: %%default]' % (tasks_str, param_name),
-                              default=parameter_defaults.get(param_name, None))
+                              help=help_text,
+                              default=None)
+                
 
         # Parse and run
-        args, _ = parser.parse_args(args=cmdline_args)
-        if args.lock:
-            lock.run_once(args.lock_pid_dir)
-        task_cls = register.get_reg()[args.task]
+        options, args = parser.parse_args(args=cmdline_args)
+        if options.lock:
+            lock.run_once(options.lock_pid_dir)
         params = {}
-        for k, v in vars(args).iteritems():
+        for k, v in vars(options).iteritems():
             if k not in ['task', 'local_scheduler']:
-                params[k] = str(v)
+                params[k] = v
         task = task_cls.from_input(params)
 
-        if not args.local_scheduler:
-            sch = rpc.RemoteScheduler(host=args.scheduler_host)
+        if not options.local_scheduler:
+            sch = rpc.RemoteScheduler(host=options.scheduler_host)
         else:
             sch = None
 
         # Run
-        w = worker.Worker(sch=sch, locally=args.local_scheduler)
+        w = worker.Worker(sch=sch, locally=options.local_scheduler)
 
         w.add(task)
         w.run()
