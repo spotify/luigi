@@ -155,10 +155,24 @@ class Task(object):
     def run(self):
         pass  # default impl
 
+    def on_failure(self, exception, traceback):
+        """ Override for custom error handling
+
+        This method gets called if an exception is raised in :py:meth:`run`.
+        Default behavior is to email the error email address in the .conf
+        """
+
+
 
 class ExternalTask(Task):
     """Subclass for references to external dependencies"""
     run = NotImplemented
+
+
+class WrapperTask(Task):
+    """Use for tasks that only wrap other tasks and that by definition are done if all their requirements exist. """
+    def complete(self):
+        return all(r.complete() for r in self.requires())
 
 
 def getpaths(struct):

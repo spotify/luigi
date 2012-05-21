@@ -8,6 +8,33 @@ import logging
 import rpc
 logger = logging.getLogger('luigi-interface')
 
+def send_email(subject, message, recipients, image_png = None):
+    import smtplib, email, email.mime, email.mime.multipart, email.mime.text, email.mime.image
+    
+    smtp = smtplib.SMTP('localhost')
+    sender = 'no-reply@spotify.com'
+    # raw_message = "From: Spotify Cronutil <%s>\r\n" % sender + \
+        # "To: %s\r\n\r\n" % ', '.join(recipients) + \
+        # message
+
+    msg_root = email.mime.multipart.MIMEMultipart('related')
+
+    msg_text = email.mime.text.MIMEText(message, 'plain')
+    msg_text.set_charset('utf-8')
+    msg_root.attach(msg_text)
+
+    if image_png:
+        fp = open(image_png, 'rb')
+        msg_image = email.mime.image.MIMEImage(fp.read(), 'png')
+        fp.close()
+        msg_root.attach(msg_image)
+
+    msg_root['Subject'] = subject
+    msg_root['From'] = 'Spotify Builder'
+    msg_root['To'] = ','.join(recipients)
+
+    smtp.sendmail(sender, recipients, msg_root.as_string())
+
 
 class Worker(object):
     """ Worker object communicates with a scheduler.
@@ -116,7 +143,9 @@ class Worker(object):
                     raise  # TODO: not necessarily true that we want to break on the first exception
                 status = 'FAILED'
                 expl = traceback.format_exc(sys.exc_info()[2])
-
-                print expl
+                if True: #TODO: check if running in background mode
+                    logging.error("Error while running %s. Sending error email", task)
+                    send_email("Luigi: %s FAILED" % task, expl, ("freider@spotify.com",))
+                logging.error(expl)
 
             self.__scheduler.status(s, status=status, expl=expl, worker=self.__id)

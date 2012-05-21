@@ -1,10 +1,10 @@
 import worker
 import lock
-import scheduler
 import logging
 import ConfigParser
 import rpc
 import optparse
+
 
 class Register(object):
     def __init__(self):
@@ -216,7 +216,7 @@ def setup_interface_logging():
     streamHandler.setFormatter(formatter)
 
     logger.addHandler(streamHandler)
-    
+
 
 def load_config():
     config = ConfigParser.ConfigParser()
