@@ -156,6 +156,11 @@ class Task(object):
         pass  # default impl
 
 
+def externalize(task):
+    task.run = NotImplemented
+    return task
+
+
 class ExternalTask(Task):
     """Subclass for references to external dependencies"""
     run = NotImplemented
