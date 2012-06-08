@@ -44,11 +44,12 @@ class Worker(object):
     - Asks for stuff to do (pulls it in a loop and runs it)
     """
 
-    def __init__(self, sch=None, locally=False, pass_exceptions=None, worker_id=None):
+    def __init__(self, sch=None, locally=False, pass_exceptions=None, worker_id=None, erroremail=None):
         if not worker_id:
             worker_id = 'worker-%09d' % random.randrange(0, 999999999)
 
         self.__id = worker_id
+        self.__erroremail = erroremail
 
         if sch:
             self.__scheduler = sch
@@ -143,9 +144,10 @@ class Worker(object):
                     raise  # TODO: not necessarily true that we want to break on the first exception
                 status = 'FAILED'
                 expl = traceback.format_exc(sys.exc_info()[2])
-                if True: #TODO: check if running in background mode
+                if self.__erroremail: #TODO: check if running in background mode
                     logging.error("Error while running %s. Sending error email", task)
-                    send_email("Luigi: %s FAILED" % task, expl, ("freider@spotify.com",))
+                    send_email("Luigi: %s FAILED" % task, expl,
+                               (self.__erroremail,))
                 logging.error(expl)
 
             self.__scheduler.status(s, status=status, expl=expl, worker=self.__id)

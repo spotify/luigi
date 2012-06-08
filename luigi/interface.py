@@ -90,7 +90,10 @@ class ArgParseInterface(Interface):
         else:
             sch = None
 
-        w = worker.Worker(sch=sch, locally=args.local_scheduler)
+        erroremail = config.get('luigi', 'erroremail') if config else None
+
+        w = worker.Worker(sch=sch, locally=args.local_scheduler,
+                          erroremail=erroremail)
 
         w.add(task)
         w.run()
@@ -182,14 +185,18 @@ class OptParseInterface(Interface):
         else:
             sch = None
 
+        erroremail = config.get('luigi', 'erroremail') if config else None
+
         # Run
-        w = worker.Worker(sch=sch, locally=options.local_scheduler)
+        w = worker.Worker(sch=sch, locally=options.local_scheduler,
+                          erroremail=erroremail)
 
         w.add(task)
         w.run()
 
 
-def run(cmdline_args=None, existing_optparse=None, use_optparse=False):
+def run(cmdline_args=None, existing_optparse=None, use_optparse=False,
+        task_config=None):
     ''' Run from cmdline.
 
     The default parser uses argparse.
@@ -202,7 +209,9 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False):
         interface = OptParseInterface(existing_optparse)
     else:
         interface = ArgParseInterface()
-
+    if config and task_config:
+        for key, value in task_config.iteritems():
+            config.set('luigi', key, value)
     interface.run(cmdline_args, config)
 
 def setup_interface_logging():
