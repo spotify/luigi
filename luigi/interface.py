@@ -48,6 +48,7 @@ class ArgParseInterface(Interface):
     def run(self, cmdline_args=None, config=None):
         import argparse
         parser = argparse.ArgumentParser()
+        # INTERNAL: While changing configuration here, please update documentation in spluigi
         parser.add_argument('--local-scheduler', help='Use local scheduling', action='store_true')
         parser.add_argument('--scheduler-host', help='Hostname of machine running remote scheduler [default: %(default)s]', default='localhost')
         parser.add_argument('--lock', help='Do not run if the task is already running', action='store_true')
@@ -127,6 +128,7 @@ class OptParseInterface(Interface):
         tasks_str = '/'.join([name for name in register.get_reg()])
         def add_task_option(p):
             if register.get_main():
+                # INTERNAL: While changing configuration here, please update documentation in spluigi
                 p.add_option('--task', help='Task to run (' + tasks_str + ') [default: %default]', default=register.get_main().__name__)
             else:
                 p.add_option('--task', help='Task to run (%s)' % tasks_str)
@@ -143,6 +145,7 @@ class OptParseInterface(Interface):
             default_scheduler = config.get('luigi', 'scheduler-host')
         else:
             default_scheduler = 'localhost'
+        # INTERNAL: While changing configuration here, please update documentation in spluigi
         parser.add_option('--local-scheduler', help='Use local scheduling', action='store_true')
         parser.add_option('--scheduler-host', help='Hostname of machine running remote scheduler [default: %default]', default=default_scheduler)
         parser.add_option('--lock', help='Do not run if the task is already running', action='store_true')
@@ -165,7 +168,7 @@ class OptParseInterface(Interface):
             parser.add_option('--' + param_name.replace('_', '-'),
                               help=help_text,
                               default=None)
-                
+
 
         # Parse and run
         options, args = parser.parse_args(args=cmdline_args)
@@ -216,7 +219,7 @@ def setup_interface_logging():
     streamHandler.setFormatter(formatter)
 
     logger.addHandler(streamHandler)
-    
+
 
 def load_config():
     config = ConfigParser.ConfigParser()
