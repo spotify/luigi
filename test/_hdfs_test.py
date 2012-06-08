@@ -190,5 +190,28 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertFalse(target1.exists())
         self.assertTrue(target2.exists())
 
+    def test_glob_exists(self):
+        target = hdfs.HdfsTarget("luigi_hdfs_testdir", format=hdfs.AvroDir)
+        if target.exists():
+            target.remove()
+        hdfs.mkdir(target.path)
+        t1 = hdfs.HdfsTarget(target.path + "/part-00001.avro", format=hdfs.Avro)
+        t2 = hdfs.HdfsTarget(target.path + "/part-00002.avro", format=hdfs.Avro)
+        t3 = hdfs.HdfsTarget(target.path + "/another", format=hdfs.Avro)
+
+        with t1.open('w') as f:
+            f.write('foo\n')
+        with t2.open('w') as f:
+            f.write('bar\n')
+        with t3.open('w') as f:
+            f.write('biz\n')
+
+        files = hdfs.HdfsTarget("luigi_hdfs_testdir/part-0000*", format=hdfs.AvroDir)
+
+        self.assertEqual(files.glob_exists(2), True)
+        self.assertEqual(files.glob_exists(3), False)
+        self.assertEqual(files.glob_exists(1), False)
+
+
 if __name__ == "__main__":
     unittest.main()
