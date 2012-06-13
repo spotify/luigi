@@ -1,10 +1,10 @@
 import worker
 import lock
-import scheduler
 import logging
 import ConfigParser
 import rpc
 import optparse
+
 
 class Register(object):
     def __init__(self):
