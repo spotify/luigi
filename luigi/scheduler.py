@@ -66,7 +66,7 @@ class CentralPlannerScheduler(Scheduler):
 
     Can be run locally or on a server (using RemoteScheduler + server.Server).
     '''
-    def __init__(self, retry_delay=60.0, remove_delay=600.0, worker_disconnect_delay=60.0):  # seconds
+    def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0):  # seconds
         self.__tasks = {}
         self.__retry_delay = retry_delay
         self.__remove_delay = remove_delay
