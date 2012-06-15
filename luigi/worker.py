@@ -144,7 +144,7 @@ class Worker(object):
                     raise  # TODO: not necessarily true that we want to break on the first exception
                 status = 'FAILED'
                 expl = traceback.format_exc(sys.exc_info()[2])
-                if self.__erroremail: #TODO: check if running in background mode
+                if self.__erroremail and not sys.stdout.isatty():
                     logging.error("Error while running %s. Sending error email", task)
                     send_email("Luigi: %s FAILED" % task, expl,
                                (self.__erroremail,))
