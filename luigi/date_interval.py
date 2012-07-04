@@ -45,6 +45,9 @@ class DateInterval(object):
     def parse(self, s):
         raise NotImplementedError
 
+    def __contains__(self, date):
+        return date in self.dates()
+
 
 class Date(DateInterval):
     def __init__(self, y, m, d):
