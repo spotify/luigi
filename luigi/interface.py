@@ -155,6 +155,9 @@ class OptParseInterface(Interface):
         parser.add_option('--lock-pid-dir', help='Directory to store the pid file [default: %default]', default='/var/tmp/luigi')
 
 
+        if task_cls_name not in register.get_reg():
+            raise Exception('Error: %s is not a valid tasks (must be %s)' % (task_cls_name, tasks_str))
+
         # Register all parameters as a big mess
         parameter_defaults = {}
         task_cls = register.get_reg()[task_cls_name]
