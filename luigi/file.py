@@ -1,4 +1,6 @@
-import os, random
+import os
+import random
+
 
 class atomic_file(file):
     # Simple class that writes to a temp file and moves it on close()
@@ -20,9 +22,11 @@ class atomic_file(file):
     def tmp_path(self):
         return self.__tmp_path
 
+
 class File(object):
-    def __init__(self, path):
+    def __init__(self, path, format=None):
         self.path = path
+        self.format = format
 
     def exists(self):
         return os.path.exists(self.path)
@@ -35,10 +39,16 @@ class File(object):
             if not os.path.exists(parentfolder):
                 os.makedirs(parentfolder)
 
-            return atomic_file(self.path)
+            if self.format:
+                return self.format.pipe_writer(atomic_file(self.path))
+            else:
+                return atomic_file(self.path)
 
         elif mode == 'r':
-            return open(self.path, mode)
+            if self.format:
+                return self.format.pipe_reader(file(self.path))
+            else:
+                return open(self.path, mode)
         else:
             raise Exception('mode must be r/w')
 
