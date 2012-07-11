@@ -9,8 +9,8 @@ class WorkerTest(unittest.TestCase):
     def setUp(self):
         # InstanceCache.disable()
         self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        self.w = Worker(sch=self.sch, pass_exceptions=True, worker_id='X')
-        self.w2 = Worker(sch=self.sch, pass_exceptions=True, worker_id='Y')
+        self.w = Worker(scheduler=self.sch, worker_id='X')
+        self.w2 = Worker(scheduler=self.sch, worker_id='Y')
         self.time = time.time
 
     def tearDown(self):
@@ -95,7 +95,8 @@ class WorkerTest(unittest.TestCase):
     def test_unknown_dep(self):
         # see central_planner_test.CentralPlannerTest.test_remove_dep
         class A(ExternalTask):
-            pass
+            def complete(self):
+                return False
 
         class C(Task):
             def complete(self):
@@ -108,6 +109,10 @@ class WorkerTest(unittest.TestCase):
 
                 def run(self):
                     self.has_run = True
+
+                def complete(self):
+                    return False
+
             b = B()
             b.has_run = False
             return b
@@ -122,7 +127,6 @@ class WorkerTest(unittest.TestCase):
 
         self.w.run()  # should not run anything - the worker should detect that A is broken
         self.assertFalse(b_a.has_run)
-
         # not sure what should happen??
         # self.w2.run() # should run B since C is fulfilled
         # self.assertTrue(b_c.has_run)

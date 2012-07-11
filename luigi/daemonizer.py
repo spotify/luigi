@@ -1,6 +1,5 @@
 from __future__ import with_statement
 import os
-import daemon
 import signal
 import atexit
 
@@ -23,6 +22,7 @@ def write_pid(pidfile):
 
 
 def run(cmd, pidfile=None):
+    import daemon
     existing_pid = check_pid(pidfile)
     if pidfile and existing_pid:
         print "Server already running (pid=%s)" % (existing_pid,)
@@ -46,15 +46,14 @@ def run(cmd, pidfile=None):
 def fork_linked_workers(num_processes):
     """ Forks num_processes child processes.
 
-    Returns a tuple (parent_pid, children) where parent_pid is None in the parent process and
-    children is None in the children.
+    Returns an id between 0 and num_processes - 1 for each child process.
+    Will consume the parent process and kill it 
 
     The child processes will be killed when the parent dies
     If a child dies, the parent shuts down and kills all other children
     TODO: If the parent is force-terminated (kill -9) the child processes will terminate after a while when they notice it.
     """
     children = {}  # keep child indices
-    parent_pid = os.getpid()
 
     for i in xrange(num_processes):
         child_id = len(children)
@@ -66,7 +65,7 @@ def fork_linked_workers(num_processes):
         children[child_pid] = child_id
 
     if len(children) == num_processes:
-        # in parent process
+        # kill all children if parent process exits any other way than all child processes finishing
         def shutdown_handler(signum=None, frame=None):
             print "Shutting down parent. Killing ALL THE children"
             if not signum:
@@ -86,8 +85,11 @@ def fork_linked_workers(num_processes):
         signal.signal(signal.SIGQUIT, shutdown_handler)
         atexit.register(shutdown_handler)
 
-        os.wait()  # TODO: relaunch dead children?
-        exit(1)
+        # while children:
+        #     pid, status = os.wait()
+        #     del children[pid]
+        os.wait()
+        os.exit(1)  # exit parent without running shutdown_handler
     else:
         # in child process
         # TODO: add periodic check to see if parent is alive and die if parent is dead

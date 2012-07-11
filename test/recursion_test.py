@@ -29,7 +29,7 @@ class RecursionTest(unittest.TestCase):
         MockFile._file_contents['/tmp/popularity/2009-01-01.txt'] = '0\n'
 
     def test_invoke(self):
-        w = luigi.worker.Worker(locally=True)
+        w = luigi.worker.Worker()
         w.add(Popularity(datetime.date(2010, 1, 1)))
         w.run()
 

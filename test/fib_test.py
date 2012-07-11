@@ -45,7 +45,7 @@ class FibTestBase(unittest.TestCase):
 
 class FibTest(FibTestBase):
     def test_invoke(self):
-        w = luigi.worker.Worker(locally=True)
+        w = luigi.worker.Worker()
         w.add(Fib(100))
         w.run()
 

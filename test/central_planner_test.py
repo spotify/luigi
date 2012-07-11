@@ -20,35 +20,35 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task('A')
         self.sch.add_dep('B', 'A')
 
-        self.assertEqual(self.sch.get_work(), (False, 'A'))
+        self.assertEqual(self.sch.get_work()[1], 'A')
         self.sch.status('A', 'DONE')
-        self.assertEqual(self.sch.get_work(), (False, 'B'))
+        self.assertEqual(self.sch.get_work()[1], 'B')
         self.sch.status('B', 'DONE')
-        self.assertEqual(self.sch.get_work(), (True, None))
+        self.assertEqual(self.sch.get_work(), (0, None))
 
     def test_failed_dep(self):
         self.sch.add_task('B')
         self.sch.add_task('A')
         self.sch.add_dep('B', 'A')
 
-        self.assertEqual(self.sch.get_work(), (False, 'A'))
+        self.assertEqual(self.sch.get_work()[1], 'A')
         self.sch.status('A', 'FAILED')
-        self.assertEqual(self.sch.get_work(), (False, None))  # can still wait and retry: TODO: do we want this?
+        self.assertEqual(self.sch.get_work()[1], None)  # can still wait and retry: TODO: do we want this?
         self.sch.status('A', 'DONE')
-        self.assertEqual(self.sch.get_work(), (False, 'B'))
+        self.assertEqual(self.sch.get_work()[1], 'B')
         self.sch.status('B', 'DONE')
-        self.assertEqual(self.sch.get_work(), (True, None))
+        self.assertEqual(self.sch.get_work(), (0, None))
 
     def test_broken_dep(self):
         self.sch.add_task('B')
         self.sch.add_task('A', status='BROKEN')
         self.sch.add_dep('B', 'A')
 
-        self.assertEqual(self.sch.get_work(), (False, None))  # can still wait and retry: TODO: do we want this?
+        self.assertEqual(self.sch.get_work()[1], None)  # can still wait and retry: TODO: do we want this?
         self.sch.status('A', 'DONE')
-        self.assertEqual(self.sch.get_work(), (False, 'B'))
+        self.assertEqual(self.sch.get_work()[1], 'B')
         self.sch.status('B', 'DONE')
-        self.assertEqual(self.sch.get_work(), (True, None))
+        self.assertEqual(self.sch.get_work(), (0, None))
 
     def test_two_workers(self):
         # Worker X wants to build A -> B
@@ -60,25 +60,25 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_dep('B', 'A')
         self.sch.add_dep('C', 'A')
 
-        self.assertEqual(self.sch.get_work(worker='X'), (False, 'A'))
-        self.assertEqual(self.sch.get_work(worker='Y'), (False, None))  # Worker Y is pending on A to be done
+        self.assertEqual(self.sch.get_work(worker='X')[1], 'A')
+        self.assertEqual(self.sch.get_work(worker='Y')[1], None)  # Worker Y is pending on A to be done
         self.sch.status('A', 'DONE')
-        self.assertEqual(self.sch.get_work(worker='Y'), (False, 'C'))
-        self.assertEqual(self.sch.get_work(worker='X'), (False, 'B'))
+        self.assertEqual(self.sch.get_work(worker='Y')[1], 'C')
+        self.assertEqual(self.sch.get_work(worker='X')[1], 'B')
 
     def test_retry(self):
         # Try to build A but fails, will retry after 100s
         self.setTime(0)
         self.sch.add_task('A')
-        self.assertEqual(self.sch.get_work(), (False, 'A'))
+        self.assertEqual(self.sch.get_work()[1], 'A')
         self.sch.status('A', 'FAILED')
         for t in xrange(100):
             self.setTime(t)
-            self.assertEqual(self.sch.get_work(), (True, None))
+            self.assertEqual(self.sch.get_work()[1], None)
             self.sch.ping()
 
         self.setTime(101)
-        self.assertEqual(self.sch.get_work(), (False, 'A'))
+        self.assertEqual(self.sch.get_work()[1], 'A')
 
     def test_disconnect_running(self):
         # X and Y wants to run A.
@@ -87,12 +87,12 @@ class CentralPlannerTest(unittest.TestCase):
         self.setTime(0)
         self.sch.add_task('A', worker='X')
         self.sch.add_task('A', worker='Y')
-        self.assertEqual(self.sch.get_work(worker='X'), (False, 'A'))
+        self.assertEqual(self.sch.get_work(worker='X')[1], 'A')
         for t in xrange(200):
             self.setTime(t)
             self.sch.ping(worker='Y')
 
-        self.assertEqual(self.sch.get_work(worker='Y'), (False, 'A'))
+        self.assertEqual(self.sch.get_work(worker='Y')[1], 'A')
 
     def test_remove_dep(self):
         # X schedules A -> B, A is broken
@@ -102,19 +102,19 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_dep('B', 'A')
 
         # X can't build anything
-        self.assertEqual(self.sch.get_work(worker='X'), (False, None))
+        self.assertEqual(self.sch.get_work(worker='X')[1], None)
 
         self.sch.add_task('B', worker='Y')  # should reset dependencies for A
         self.sch.add_task('C', worker='Y', status='DONE')
         self.sch.add_dep('B', 'C')
 
-        self.assertEqual(self.sch.get_work(worker='Y'), (False, 'B'))
+        self.assertEqual(self.sch.get_work(worker='Y')[1], 'B')
 
     def test_timeout(self):
         # A bug that was earlier present when restarting the same flow
         self.setTime(0)
         self.sch.add_task('A', worker='X')
-        self.assertEqual(self.sch.get_work(worker='X'), (False, 'A'))
+        self.assertEqual(self.sch.get_work(worker='X')[1], 'A')
         self.setTime(10000)
         self.sch.add_task('A', worker='Y')  # Will timeout X but not schedule A for removal
         for i in xrange(2000):
@@ -126,9 +126,9 @@ class CentralPlannerTest(unittest.TestCase):
         # Test that we can not schedule an already running task
         t = 'A'
         self.sch.add_task(t, worker='X')
-        self.assertEqual(self.sch.get_work(worker='X'), (False, t))
+        self.assertEqual(self.sch.get_work(worker='X')[1], t)
         self.sch.add_task(t, worker='Y')
-        self.assertEqual(self.sch.get_work(worker='Y'), (True, None))
+        self.assertEqual(self.sch.get_work(worker='Y')[1], None)
 
 if __name__ == '__main__':
     unittest.main()

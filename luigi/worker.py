@@ -1,16 +1,24 @@
 import random
-import scheduler
+from scheduler import CentralPlannerScheduler
 import threading
 import time
 import sys
+import os
 import traceback
 import logging
-import rpc
+import warnings
+
 logger = logging.getLogger('luigi-interface')
 
-def send_email(subject, message, recipients, image_png = None):
-    import smtplib, email, email.mime, email.mime.multipart, email.mime.text, email.mime.image
-    
+
+def send_email(subject, message, recipients, image_png=None):
+    import smtplib
+    import email
+    import email.mime
+    import email.mime.multipart
+    import email.mime.text
+    import email.mime.image
+
     smtp = smtplib.SMTP('localhost')
     sender = 'no-reply@spotify.com'
     # raw_message = "From: Spotify Cronutil <%s>\r\n" % sender + \
@@ -44,29 +52,19 @@ class Worker(object):
     - Asks for stuff to do (pulls it in a loop and runs it)
     """
 
-    def __init__(self, sch=None, locally=False, pass_exceptions=None, worker_id=None, erroremail=None):
+    def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None, erroremail=None, worker_processes=1):
         if not worker_id:
             worker_id = 'worker-%09d' % random.randrange(0, 999999999)
 
         self.__id = worker_id
         self.__erroremail = erroremail
 
-        if sch:
-            self.__scheduler = sch
-            self.__pass_exceptions = True
-        elif locally:
-            self.__scheduler = scheduler.CentralPlannerScheduler()
-            self.__pass_exceptions = True
-        else:
-            self.__scheduler = rpc.RemoteScheduler()  # local RPC
-            self.__pass_exceptions = False
-
-        if pass_exceptions != None:
-            self.__pass_exceptions = pass_exceptions
-
+        self.__scheduler = scheduler
+        if isinstance(scheduler, CentralPlannerScheduler) and worker_processes != 1:
+            warnings.warn("Will only use one process when running with local in-process scheduler")
+            worker_processes = 1
+        self.worker_processes = worker_processes
         self.__scheduled_tasks = {}
-
-        sch = self.__scheduler
 
         class KeepAliveThread(threading.Thread):
             """ Peridiacally tell the scheduler that the worker still lives """
@@ -74,7 +72,7 @@ class Worker(object):
                 while True:
                     time.sleep(1.0)
                     try:
-                        sch.ping(worker=worker_id)
+                        scheduler.ping(worker=worker_id)
                     except:  # httplib.BadStatusLine:
                         print 'WARNING: could not ping!'
                         raise
@@ -109,19 +107,11 @@ class Worker(object):
                     self.__scheduler.add_dep(s, s2, worker=self.__id)
         return False
 
-    def run(self):
-        while True:
-            logger.debug("Asking scheduler for work...")
-            done, s = self.__scheduler.get_work(worker=self.__id)
-            logger.debug("Got response from scheduler! (%s, %s)", done, s)
-            if done:
-                break
+    def _run_task(self, task_id):
+        task = self.__scheduled_tasks[task_id]
 
-            if s == None:
-                break
-
-            task = self.__scheduled_tasks[s]
-
+        logger.info('[pid %s] Running   %s', os.getpid(), task_id)
+        try:
             # Verify that all the tasks are fulfilled!
             ok = True
             for task_2 in task.deps():
@@ -129,25 +119,55 @@ class Worker(object):
                     ok = False
 
             if not ok:
-                logger.error('Unfulfilled dependencies at run time!')
-                break
+                raise RuntimeError('Unfulfilled dependencies at run time!')
 
-            try:
-                logger.info('Running   %s' % s)
-                task.run()
-                logger.info('Done      %s' % s)
-                status, expl = 'DONE', None
-            except KeyboardInterrupt:
-                raise
-            except:
-                if not self.__pass_exceptions:
-                    raise  # TODO: not necessarily true that we want to break on the first exception
-                status = 'FAILED'
-                expl = traceback.format_exc(sys.exc_info()[2])
-                if self.__erroremail and not sys.stdout.isatty():
-                    logger.error("Error while running %s. Sending error email", task)
-                    send_email("Luigi: %s FAILED" % task, expl,
-                               (self.__erroremail,))
-                logger.error(expl)
+            task.run()
+            logger.info('[pid %s] Done      %s', os.getpid(), task_id)
+            status, expl = 'DONE', None
 
-            self.__scheduler.status(s, status=status, expl=expl, worker=self.__id)
+        except KeyboardInterrupt:
+            raise
+        except:
+            status = 'FAILED'
+            expl = traceback.format_exc(sys.exc_info()[2])
+            if self.__erroremail and not sys.stdout.isatty():
+                logger.error("[pid %s] Error while running %s. Sending error email", os.getpid(), task)
+                send_email("Luigi: %s FAILED" % task, expl,
+                           (self.__erroremail,))
+            logger.error(expl)
+
+        self.__scheduler.status(task_id, status=status, expl=expl, worker=self.__id)
+
+    def run(self):
+        children = set()
+
+        while True:
+            if len(children) >= self.worker_processes:
+                died_pid, status = os.wait()
+                children.remove(died_pid)
+
+            logger.debug("Asking scheduler for work...")
+            pending_tasks, task_id = self.__scheduler.get_work(worker=self.__id)
+            logger.debug("Got response from scheduler! (%s, %s)", pending_tasks, task_id)
+
+            if task_id == None:
+                # TODO: sleep for a bit and query server again if there are pending tasks in the future we might be able to run
+                if not children:
+                    break
+                else:
+                    died_pid, status = os.wait()
+                    children.remove(died_pid)
+                    continue
+            if self.worker_processes > 1:
+                child_pid = os.fork()
+                if child_pid:
+                    children.add(child_pid)
+                else:
+                    self._run_task(task_id)
+                    os._exit(0)
+            else:
+                self._run_task(task_id)
+
+        while children:
+            died_pid, status = os.wait()
+            children.remove(died_pid)

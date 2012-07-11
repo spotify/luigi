@@ -41,12 +41,7 @@ class RemoteScheduler(Scheduler):
             {'worker': worker, 'task': task, 'dep_task': task_2})
 
     def get_work(self, worker):
-        #time.sleep(1.0)
-        done, task = self._request('/api/work', {'worker': worker})
-        if done:
-            return True, None
-        else:
-            return False, task
+        return self._request('/api/work', {'worker': worker})
 
     def status(self, task, status, expl, worker):
         self._request('/api/status', \

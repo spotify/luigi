@@ -4,6 +4,7 @@ import logging
 import ConfigParser
 import rpc
 import optparse
+import scheduler
 
 
 class Register(object):
@@ -53,6 +54,7 @@ class ArgParseInterface(Interface):
         parser.add_argument('--scheduler-host', help='Hostname of machine running remote scheduler [default: %(default)s]', default='localhost')
         parser.add_argument('--lock', help='Do not run if the task is already running', action='store_true')
         parser.add_argument('--lock-pid-dir', help='Directory to store the pid file [default: %(default)s]', default='/var/tmp/luigi')
+        parser.add_argument('--workers', help='Maximum number of parallel tasks to run [default: %(default)s]', default=1, type=int)
 
         def _add_task_parameters(parser, cls):
             params = cls.get_params()
@@ -86,18 +88,18 @@ class ArgParseInterface(Interface):
 
         task = task_cls.from_input(params)
 
-        if not args.local_scheduler:
-            sch = rpc.RemoteScheduler(host=args.scheduler_host)
+        if args.local_scheduler:
+            sch = scheduler.CentralPlannerScheduler()
         else:
-            sch = None
+            sch = rpc.RemoteScheduler(host=args.scheduler_host)
 
         erroremail = config.get('luigi', 'erroremail') if config else None
 
-        w = worker.Worker(sch=sch, locally=args.local_scheduler,
-                          erroremail=erroremail)
+        w = worker.Worker(scheduler=sch, erroremail=erroremail, worker_processes=args.workers)
 
         w.add(task)
         w.run()
+
 
 class PassThroughOptionParser(optparse.OptionParser):
     '''
@@ -112,8 +114,8 @@ class PassThroughOptionParser(optparse.OptionParser):
     def _process_args(self, largs, rargs, values):
         while rargs:
             try:
-                optparse.OptionParser._process_args(self,largs,rargs,values)
-            except (optparse.BadOptionError,optparse.AmbiguousOptionError), e:
+                optparse.OptionParser._process_args(self, largs, rargs, values)
+            except (optparse.BadOptionError, optparse.AmbiguousOptionError), e:
                 largs.append(e.opt_str)
 
 
@@ -153,7 +155,7 @@ class OptParseInterface(Interface):
         parser.add_option('--scheduler-host', help='Hostname of machine running remote scheduler [default: %default]', default=default_scheduler)
         parser.add_option('--lock', help='Do not run if the task is already running', action='store_true')
         parser.add_option('--lock-pid-dir', help='Directory to store the pid file [default: %default]', default='/var/tmp/luigi')
-
+        parser.add_option('--workers', help='Maximum number of parallel tasks to run [default: %default]', default=1, type=int)
 
         if task_cls_name not in register.get_reg():
             raise Exception('Error: %s is not a valid tasks (must be %s)' % (task_cls_name, tasks_str))
@@ -186,16 +188,15 @@ class OptParseInterface(Interface):
                 params[k] = v
         task = task_cls.from_input(params)
 
-        if not options.local_scheduler:
-            sch = rpc.RemoteScheduler(host=options.scheduler_host)
+        if options.local_scheduler:
+            sch = scheduler.CentralPlannerScheduler()
         else:
-            sch = None
+            sch = rpc.RemoteScheduler(host=options.scheduler_host)
 
         erroremail = config.get('luigi', 'erroremail') if config else None
 
         # Run
-        w = worker.Worker(sch=sch, locally=options.local_scheduler,
-                          erroremail=erroremail)
+        w = worker.Worker(scheduler=sch, erroremail=erroremail, worker_processes=options.workers)
 
         w.add(task)
         w.run()

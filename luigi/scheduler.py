@@ -40,9 +40,9 @@ class DummyScheduler(Scheduler):
             #    if not task_2.complete():
             #        print task,'has dependency', task_2, 'which is not complete',
             #        break
-            return False, self.__schedule.pop()
+            return 1, self.__schedule.pop()
         else:
-            return True, None
+            return 0, None
 
     def status(self, task, status, expl, worker):
         pass
@@ -147,39 +147,43 @@ class CentralPlannerScheduler(Scheduler):
         # TODO: remove any expired nodes
 
         # Algo: iterate over all nodes, find first node with no dependencies
+
         # TODO: remove tasks that can't be done, figure out if the worker has absolutely
         # nothing it can wait for
+
+        # Return remaining tasks that have no FAILED descendents
+
         self.update(worker)
         best_t = float('inf')
         best_task = None
-        n_can_do = 0  # stupid thingie
-        for task, p in self.__tasks.iteritems():
-            if worker not in p.workers:
+        locally_pending_tasks = 0
+
+        for task_id, task in self.__tasks.iteritems():
+            if worker not in task.workers:
                 continue
 
-            if p.status != 'PENDING':
+            if task.status != 'PENDING':
                 continue
 
-            n_can_do += 1
-
+            locally_pending_tasks += 1
             ok = True
-            for dep in p.deps:
+            for dep in task.deps:
                 if dep not in self.__tasks:
                     ok = False
                 elif self.__tasks[dep].status != 'DONE':
                     ok = False
 
             if ok:
-                if p.time < best_t:
-                    best_t = p.time
-                    best_task = task
+                if task.time < best_t:
+                    best_t = task.time
+                    best_task = task_id
 
         if best_task:
             t = self.__tasks[best_task]
             t.status = 'RUNNING'
             t.worker_running = worker
 
-        return (n_can_do == 0), best_task
+        return locally_pending_tasks, best_task
 
     def status(self, task, status, worker=_default_worker, expl=None):
         self.update(worker)

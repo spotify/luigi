@@ -1,4 +1,5 @@
 import parameter
+import warnings
 
 Parameter = parameter.Parameter
 
@@ -100,6 +101,7 @@ class Task(object):
 
         self.__hash = hash(tuple(param_values))
         self.__repr = '%s(%s)' % (self.__class__.__name__, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in param_values]))
+        self._run_completed = False
 
     @classmethod
     def from_input(cls, params):
@@ -123,14 +125,14 @@ class Task(object):
         return self.__repr
 
     def complete(self):
+        """
+            If the task has any outputs, return true if all outputs exists.
+            Otherwise, return whether or not the task has run or not
+        """
         outputs = flatten(self.output())
         if len(outputs) == 0:
-            # TODO(erikbern): This will lead to problems for tasks that require
-            # a whole bunch of other tasks but do not produce any output. There
-            # will be "Unfulfilled deps in run time" exceptions.
-            # We should just make sure that all its inputs exist. This should be
-            # cached on the object. Alternatively we should make sure that the
-            # Task has been run.
+            # TODO: unclear if tasks without outputs should always run or never run
+            warnings.warn("Task %r without outputs has no custom complete() method" % self)
             return False
 
         for output in outputs:
@@ -161,7 +163,6 @@ class Task(object):
         This method gets called if an exception is raised in :py:meth:`run`.
         Default behavior is to email the error email address in the .conf
         """
-
 
 
 def externalize(task):

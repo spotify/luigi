@@ -34,7 +34,7 @@ class InstanceTest(unittest.TestCase):
             def run(self):
                 test.assertTrue(self.requires().has_run)
 
-        w = luigi.worker.Worker(locally=True)
+        w = luigi.worker.Worker()
         w.add(B(1))
         w.add(B(2))
         w.run()
