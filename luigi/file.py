@@ -6,7 +6,8 @@ class atomic_file(file):
     # Simple class that writes to a temp file and moves it on close()
     # Also cleans up the temp file if close is not invoked
     def __init__(self, path):
-        self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 999999999)
+        # Extra slash to support relative paths.
+        self.__tmp_path = '/tmp/' + path + '-luigi-tmp-%09d' % random.randrange(0, 999999999)
         self.path = path
         super(atomic_file, self).__init__(self.__tmp_path, 'w')
 
