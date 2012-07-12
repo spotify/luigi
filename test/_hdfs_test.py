@@ -212,6 +212,18 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertEqual(files.glob_exists(3), False)
         self.assertEqual(files.glob_exists(1), False)
 
+    def test_proxy_exists(self):
+        target = hdfs.HdfsTarget("/tmp/luigi_hdfs_testdir", format=hdfs.AvroDir)
+        if target.exists():
+            target.remove()
+        self.assertEqual(target.exists(use_proxy=True), False)
+        hdfs.mkdir(target.path)
+        t1 = hdfs.HdfsTarget(target.path + "/part-00001.avro", format=hdfs.Avro)
+
+        with t1.open('w') as f:
+            f.write('foo\n')
+
+        self.assertEqual(target.exists(use_proxy=True), True)
 
 if __name__ == "__main__":
     unittest.main()
