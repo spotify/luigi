@@ -142,9 +142,12 @@ class Worker(object):
         children = set()
 
         while True:
-            if len(children) >= self.worker_processes:
+            while len(children) >= self.worker_processes:
                 died_pid, status = os.wait()
-                children.remove(died_pid)
+                if died_pid in children:
+                    children.remove(died_pid)
+                else:
+                    logger.warning("Some random process %s died" % died_pid)
 
             logger.debug("Asking scheduler for work...")
             pending_tasks, task_id = self.__scheduler.get_work(worker=self.__id)
@@ -156,7 +159,10 @@ class Worker(object):
                     break
                 else:
                     died_pid, status = os.wait()
-                    children.remove(died_pid)
+                    if died_pid in children:
+                        children.remove(died_pid)
+                    else:
+                        logger.warning("Some random process %s died" % died_pid)
                     continue
             if self.worker_processes > 1:
                 child_pid = os.fork()
@@ -171,4 +177,7 @@ class Worker(object):
 
         while children:
             died_pid, status = os.wait()
-            children.remove(died_pid)
+            if died_pid in children:
+                children.remove(died_pid)
+            else:
+                logger.warning("Some random process %s died" % died_pid)

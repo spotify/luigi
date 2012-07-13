@@ -2,6 +2,7 @@ from __future__ import with_statement
 import os
 import signal
 import atexit
+import random
 
 
 def check_pid(pidfile):
