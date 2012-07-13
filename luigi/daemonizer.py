@@ -48,50 +48,62 @@ def fork_linked_workers(num_processes):
     """ Forks num_processes child processes.
 
     Returns an id between 0 and num_processes - 1 for each child process.
-    Will consume the parent process and kill it 
+    Will consume the parent process and kill it and all child processes as soon as one child exits with status 0
 
-    The child processes will be killed when the parent dies
-    If a child dies, the parent shuts down and kills all other children
+    If a child dies with exist status != 0 it will be restarted.
     TODO: If the parent is force-terminated (kill -9) the child processes will terminate after a while when they notice it.
     """
+
     children = {}  # keep child indices
 
-    for i in xrange(num_processes):
-        child_id = len(children)
+    def shutdown_handler(signum=None, frame=None):
+        print "Parent shutting down. Killing ALL THE children"
+        if not signum:
+            signum = signal.SIGTERM
+        for c in children:
+            print "Killing child %d" % c
+            try:
+                os.kill(c, signum)
+                os.waitpid(c, 0)
+            except OSError:
+                print "Child %d is already dead" % c
+                pass
+        os._exit(0)  # exit without calling exit handler again...
+
+    sigs = [signal.SIGINT, signal.SIGTERM, signal.SIGQUIT]
+    for s in sigs:
+        signal.signal(s, shutdown_handler)
+        signal.signal(s, shutdown_handler)
+        signal.signal(s, shutdown_handler)
+    #atexit.register(shutdown_handler)
+
+    def fork_child(child_id, attempt):
         child_pid = os.fork()
 
         if not child_pid:
-            break
+            random.seed(os.getpid())
+            for s in sigs:
+                signal.signal(s, signal.SIG_DFL)
+            return True  # in child
 
-        children[child_pid] = child_id
+        children[child_pid] = (child_id, attempt)
+        return False  # in parent
 
-    if len(children) == num_processes:
-        # kill all children if parent process exits any other way than all child processes finishing
-        def shutdown_handler(signum=None, frame=None):
-            print "Shutting down parent. Killing ALL THE children"
-            if not signum:
-                signum = signal.SIGTERM
-            for c in children:
-                print "Killing child %d" % c
-                try:
-                    os.kill(c, signum)
-                    os.waitpid(c, 0)
-                except OSError:
-                    print "Child %d is already dead" % c
-                    pass
-            os._exit(0)  # exit without calling exit handler
+    for i in xrange(num_processes):
+        child_id = len(children)
+        if fork_child(child_id, 0):
+            return child_id, 0
 
-        signal.signal(signal.SIGINT, shutdown_handler)
-        signal.signal(signal.SIGTERM, shutdown_handler)
-        signal.signal(signal.SIGQUIT, shutdown_handler)
-        atexit.register(shutdown_handler)
+    assert len(children) == num_processes
 
-        # while children:
-        #     pid, status = os.wait()
-        #     del children[pid]
-        os.wait()
-        os.exit(1)  # exit parent without running shutdown_handler
-    else:
-        # in child process
-        # TODO: add periodic check to see if parent is alive and die if parent is dead
-        return child_id
+    while 1:
+        pid, status = os.wait()
+        if status != 0:
+            # unclean exit, restart process
+            child_id, last_attempt = children.pop(pid)
+            attempt = last_attempt + 1
+            if fork_child(child_id, attempt):
+                return child_id, attempt
+        else:
+            shutdown_handler()
+            exit(0)

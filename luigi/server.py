@@ -134,16 +134,22 @@ def run(visualizer_processes=1):
     api_app, visualizer_app = apps(debug=False)
 
     visualizer_sockets = tornado.netutil.bind_sockets(8081)
+    api_sockets = tornado.netutil.bind_sockets(8082)
 
-    proc = daemonizer.fork_linked_workers(1 + visualizer_processes)
+    proc, attempt = daemonizer.fork_linked_workers(1 + visualizer_processes)
 
-    if proc == 0:  # first process is API server
+    if proc == 0:
+        # first process is API server
+        if attempt != 0:
+            print "API instance died. Will not restart."
+            exit(0)  # will not be restarted if it dies, as it indicates an issue that should be fixed
+
         print "Launching API instance"
-        api_sockets = tornado.netutil.bind_sockets(8082)
         server = tornado.httpserver.HTTPServer(api_app)
         server.add_sockets(api_sockets)
-    else:
-        print "Launching Visualizer instance (%d)" % proc
+    elif proc != 0:
+        # visualizers can die and will be restarted
+        print "Launching Visualizer instance %d (attempt %d)" % (proc, attempt)
         server = tornado.httpserver.HTTPServer(visualizer_app)
         server.add_sockets(visualizer_sockets)
 
