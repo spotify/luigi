@@ -11,6 +11,9 @@ class InputPipeProcessWrapper(object):
         self._process = subprocess.Popen(command,
             stdin=input_pipe,
             stdout=subprocess.PIPE)
+        # we want to keep a circular reference to avoid garbage collection
+        # when the object is used in, e.g., pipe.read()
+        self._process._selfref = self
 
     def _finish(self):
         if self._input_pipe is not None:
