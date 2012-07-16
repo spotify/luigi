@@ -132,14 +132,14 @@ def apps(debug):
 def run(visualizer_processes=1):
     """ Runs one instance of the API server and <visualizer_processes> visualizer servers
     """
-    import daemonizer
+    import process
 
     api_app, visualizer_app = apps(debug=False)
 
     visualizer_sockets = tornado.netutil.bind_sockets(8081)
     api_sockets = tornado.netutil.bind_sockets(8082)
 
-    proc, attempt = daemonizer.fork_linked_workers(1 + visualizer_processes)
+    proc, attempt = process.fork_linked_workers(1 + visualizer_processes)
 
     if proc == 0:
         # first process is API server
