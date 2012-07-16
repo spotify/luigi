@@ -1,7 +1,6 @@
 from __future__ import with_statement
 import os
 import signal
-import atexit
 import random
 
 
@@ -22,7 +21,7 @@ def write_pid(pidfile):
         fobj.write(str(os.getpid()))
 
 
-def run(cmd, pidfile=None):
+def daemonize(cmd, pidfile=None):
     import daemon
     existing_pid = check_pid(pidfile)
     if pidfile and existing_pid:
@@ -75,7 +74,7 @@ def fork_linked_workers(num_processes):
         signal.signal(s, shutdown_handler)
         signal.signal(s, shutdown_handler)
         signal.signal(s, shutdown_handler)
-    #atexit.register(shutdown_handler)
+    #haven't found a way to unregister: atexit.register(shutdown_handler) #
 
     def fork_child(child_id, attempt):
         child_pid = os.fork()
@@ -83,7 +82,7 @@ def fork_linked_workers(num_processes):
         if not child_pid:
             random.seed(os.getpid())
             for s in sigs:
-                signal.signal(s, signal.SIG_DFL)
+                signal.signal(s, signal.SIG_DFL)  # only want these signal handlers in the parent process
             return True  # in child
 
         children[child_pid] = (child_id, attempt)

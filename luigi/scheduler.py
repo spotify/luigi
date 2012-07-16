@@ -1,5 +1,7 @@
+import os
 import logging
 import time
+import cPickle as pickle
 logger = logging.getLogger("luigi-interface")
 
 
@@ -66,13 +68,30 @@ class CentralPlannerScheduler(Scheduler):
 
     Can be run locally or on a server (using RemoteScheduler + server.Server).
     '''
+
     def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0):  # seconds
+        self._state_path = '/var/lib/luigi-server/state.pickle'
         self.__tasks = {}
         self.__retry_delay = retry_delay
         self.__remove_delay = remove_delay
         self.__worker_disconnect_delay = worker_disconnect_delay
         self.__workers = {}  # map from id to timestamp (last updated)
         # TODO: have a Worker object instead, add more data to it
+
+    def dump(self):
+        print "saving state..."
+        state = (self.__tasks, self.__workers)
+        with open(self._state_path, 'w') as fobj:
+            pickle.dump(state, fobj)
+
+    def load(self):
+        if os.path.exists(self._state_path):
+            print "loading state..."
+            with open(self._state_path) as fobj:
+                state = pickle.load(fobj)
+            self.__tasks, self.__workers = state
+        else:
+            print "not loading state, %s doesn't exist" % self._state_path
 
     def prune(self):
         # Remove workers that disconnected, together with their corresponding tasks

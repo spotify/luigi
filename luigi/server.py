@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import atexit
 import mimetypes
 import tornado.ioloop
 import tornado.web
@@ -10,13 +11,15 @@ import tornado.httpserver
 import scheduler
 import pkg_resources
 import pygraphviz
+import signal
 from cStringIO import StringIO
 from rpc import RemoteSchedulerResponder
 
 
 class RPCHandler(tornado.web.RequestHandler):
     """ Handle remote scheduling calls using rpc.RemoteSchedulerResponder"""
-    api = RemoteSchedulerResponder(scheduler.CentralPlannerScheduler())
+    scheduler = scheduler.CentralPlannerScheduler()
+    api = RemoteSchedulerResponder(scheduler)
 
     def get(self, method):
         payload = self.get_argument('data', default="{}")
@@ -143,10 +146,22 @@ def run(visualizer_processes=1):
         if attempt != 0:
             print "API instance died. Will not restart."
             exit(0)  # will not be restarted if it dies, as it indicates an issue that should be fixed
-
         print "Launching API instance"
+        RPCHandler.scheduler.load()
+
+        def shutdown_handler(foo=None, bar=None):
+            print "api instance shutting down..."
+            RPCHandler.scheduler.dump()
+            os._exit(0)
+
         server = tornado.httpserver.HTTPServer(api_app)
         server.add_sockets(api_sockets)
+
+        signal.signal(signal.SIGINT, shutdown_handler)
+        signal.signal(signal.SIGTERM, shutdown_handler)
+        signal.signal(signal.SIGQUIT, shutdown_handler)
+        atexit.register(shutdown_handler)
+
     elif proc != 0:
         # visualizers can die and will be restarted
         print "Launching Visualizer instance %d (attempt %d)" % (proc, attempt)
@@ -156,10 +171,5 @@ def run(visualizer_processes=1):
     tornado.ioloop.IOLoop.instance().start()
 
 
-def run_visualizer(port):
-    api_app, visualizer_app = apps(debug=True)
-    visualizer_app.listen(port)
-    tornado.ioloop.IOLoop.instance().start()
-
 if __name__ == "__main__":
-    run_visualizer(8083)
+    run()
