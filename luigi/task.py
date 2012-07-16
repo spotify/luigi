@@ -44,9 +44,8 @@ class MissingParameterException(Exception):
 
 
 class Task(object):
-    # Something like this...
-
     __metaclass__ = InstanceCache
+    task_namespace = "default"
 
     @classmethod
     def get_params(cls):
@@ -99,9 +98,12 @@ class Task(object):
         for key, value in param_values:
             setattr(self, key, value)
 
-        self.__hash = hash(tuple(param_values))
-        self.__repr = '%s(%s)' % (self.__class__.__name__, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in param_values]))
-        self._run_completed = False
+        if self.task_namespace == "default":
+            self.task_family = self.__class__.__name__
+        else:
+            self.task_family = "%s.%s" % (self.task_namespace, self.__class__.__name__)
+        self.task_id = '%s(%s)' % (self.task_family, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in param_values]))
+        self.__hash = hash(self.task_id)
 
     @classmethod
     def from_input(cls, params):
@@ -122,7 +124,7 @@ class Task(object):
         return self.__hash
 
     def __repr__(self):
-        return self.__repr
+        return self.task_id
 
     def complete(self):
         """
@@ -161,8 +163,19 @@ class Task(object):
         """ Override for custom error handling
 
         This method gets called if an exception is raised in :py:meth:`run`.
-        Default behavior is to email the error email address in the .conf
+        Return value of this method is json encoded and sent to the scheduler as the `expl` argument.
+        Default behavior is to return a string representation of the exception and traceback.
         """
+        return {"exception": str(exception),
+                "traceback": str(traceback)}
+
+    def on_success(self):
+        """ Override for doing custom completion handling for a larger class of tasks
+
+        This method gets called when :py:meth:`run` completes without raising any exceptions.
+        The returned value is json encoded and sent to the scheduler as the `expl` argument.
+        Default behavior is to send an None value"""
+        return None
 
 
 def externalize(task):

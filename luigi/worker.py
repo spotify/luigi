@@ -117,9 +117,10 @@ class Worker(object):
             for task_2 in task.deps():
                 if not task_2.complete():
                     ok = False
+                    missing_dep = task_2
 
             if not ok:
-                raise RuntimeError('Unfulfilled dependencies at run time!')
+                raise RuntimeError('Unfulfilled dependency %r at run time!' % missing_dep.task_id)
 
             task.run()
             logger.info('[pid %s] Done      %s', os.getpid(), task_id)
