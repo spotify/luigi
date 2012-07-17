@@ -191,7 +191,7 @@ class ExternalTask(Task):
 class WrapperTask(Task):
     """Use for tasks that only wrap other tasks and that by definition are done if all their requirements exist. """
     def complete(self):
-        return all(r.complete() for r in self.requires())
+        return all(r.complete() for r in flatten(self.requires()))
 
 
 def getpaths(struct):
