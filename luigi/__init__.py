@@ -7,10 +7,11 @@ import target
 
 Task = task.Task
 ExternalTask = task.ExternalTask
+WrapperTask = task.WrapperTask
 Target = target.Target
 
-File = file.File
-LocalTarget = File  # Can't decide what we should call it...
+File = file.File  # TODO: remove, should be LocalTarget
+LocalTarget = File
 Parameter = parameter.Parameter
 RemoteScheduler = rpc.RemoteScheduler
 
