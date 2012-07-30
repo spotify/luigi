@@ -130,7 +130,7 @@ class OptParseInterface(Interface):
 
     def run(self, cmdline_args=None, config=None):
         parser = PassThroughOptionParser()
-        tasks_str = '/'.join([name for name in register.get_reg()])
+        tasks_str = '/'.join(sorted([name for name in register.get_reg()]))
         def add_task_option(p):
             if register.get_main():
                 # INTERNAL: While changing configuration here, please update documentation in spluigi
