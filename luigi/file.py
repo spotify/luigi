@@ -28,9 +28,6 @@ class File(object):
         self.path = path
         self.format = format
 
-    def complete(self):
-        return self.exists()
-
     def exists(self):
         return os.path.exists(self.path)
 
