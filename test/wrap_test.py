@@ -1,6 +1,7 @@
 import luigi
 from luigi.mock import MockFile
 import unittest
+from luigi.util import Delegate
 
 File = MockFile
 
@@ -16,22 +17,20 @@ class A(luigi.Task):
 
 
 class B(luigi.Task):
+    date = luigi.DateParameter()
+
     def output(self):
-        return File('/tmp/b.txt')
+        return File(self.date.strftime('/tmp/b-%Y-%m-%d.txt'))
 
     def run(self):
         f = self.output().open('w')
         print >>f, 'goodbye, space'
         f.close()
 
-
-def make_xml_wrapper(dep_class, output_filename):
-    class XMLWrapper(luigi.Task):
-        def output(self):
-            return File(output_filename)
-
+def XMLWrapper(cls):
+    class XMLWrapperCls(Delegate(cls)):
         def requires(self):
-            return dep_class()
+            return self.parent_obj
 
         def run(self):
             f = self.input().open('r')
@@ -41,18 +40,18 @@ def make_xml_wrapper(dep_class, output_filename):
                 print >>g, '<dummy-xml>' + line.strip() + '</dummy-xml>'
             g.close()
 
-    return XMLWrapper
+    return XMLWrapperCls
+
+@luigi.expose
+class AXML(XMLWrapper(A)):
+    def output(self):
+        return File('/tmp/a.xml')
 
 
 @luigi.expose
-class AXML(make_xml_wrapper(A, '/tmp/a.xml')):
-    pass
-
-
-@luigi.expose
-class BXML(make_xml_wrapper(B, '/tmp/b.xml')):
-    pass
-
+class BXML(XMLWrapper(B)):
+    def output(self):
+        return File(self.date.strftime('/tmp/b-%Y-%m-%d.xml'))
 
 class WrapperTest(unittest.TestCase):
     def test_a(self):
@@ -60,8 +59,8 @@ class WrapperTest(unittest.TestCase):
         self.assertEqual(MockFile._file_contents['/tmp/a.xml'], '<?xml version="1.0" ?>\n<dummy-xml>hello, world</dummy-xml>\n')
 
     def test_b(self):
-        luigi.run(['--local-scheduler', 'BXML'])
-        self.assertEqual(MockFile._file_contents['/tmp/b.xml'], '<?xml version="1.0" ?>\n<dummy-xml>goodbye, space</dummy-xml>\n')
+        luigi.run(['--local-scheduler', 'BXML', '--date', '2012-01-01'])
+        self.assertEqual(MockFile._file_contents['/tmp/b-2012-01-01.xml'], '<?xml version="1.0" ?>\n<dummy-xml>goodbye, space</dummy-xml>\n')
 
 
 if __name__ == '__main__':
