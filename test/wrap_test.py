@@ -1,7 +1,7 @@
 import luigi
 from luigi.mock import MockFile
 import unittest
-from luigi.util import Delegate
+from luigi.util import Derived
 
 File = MockFile
 
@@ -28,7 +28,7 @@ class B(luigi.Task):
         f.close()
 
 def XMLWrapper(cls):
-    class XMLWrapperCls(Delegate(cls)):
+    class XMLWrapperCls(Derived(cls)):
         def requires(self):
             return self.parent_obj
 

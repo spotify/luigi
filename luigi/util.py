@@ -1,25 +1,32 @@
 import task
 
-def Delegate(parent_cls):
+def Derived(parent_cls):
     ''' This is a class factory function. It returns a new class with same parameters as
     the parent class, sets the internal value self.parent_obj to an instance of it, and 
-    lets you override the rest of it.
+    lets you override the rest of it. Useful if you have a class that's an immediate result
+    of a previous class and you don't want to reimplement everything. Also useful if you
+    want to wrap a class (see wrap_test.py for an example).
 
     Usage:
-    class MyTask(Delegate(AnotherTask)):
+    class AnotherTask(luigi.Task):
+        n = luigi.IntParameter()
+        # ...
+
+    class MyTask(luigi.uti.Derived(AnotherTask)):
         def requires(self):
            return self.parent_obj
         def run(self):
+           print self.n # this will be defined
            # ...
     '''
-    class DelegateCls(task.Task):
+    class DerivedCls(task.Task):
         def __init__(self, *args, **kwargs):
             self.parent_obj = parent_cls(*args, **kwargs)
-            super(DelegateCls, self).__init__(*args, **kwargs)
+            super(DerivedCls, self).__init__(*args, **kwargs)
     
     for param_name, param_obj in parent_cls.get_params():
-        setattr(DelegateCls, param_name, param_obj)
-    return DelegateCls
+        setattr(DerivedCls, param_name, param_obj)
+    return DerivedCls
 
 def Copy(parent_cls):
     ''' Creates a new Task that copies the old task. Usage:
@@ -29,7 +36,7 @@ def Copy(parent_cls):
            return LocalTarget(self.date.strftime('/var/xyz/report-%Y-%m-%d'))
     '''
 
-    class CopyCls(Delegate(parent_cls)):
+    class CopyCls(Derived(parent_cls)):
         def requires(self):
             return self.parent_obj
 
