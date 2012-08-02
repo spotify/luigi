@@ -13,7 +13,7 @@ class A(luigi.Task):
 
     def run(self):
         f = self.output().open('w')
-        print >>f, 'hello, world\n'
+        print >>f, 'hello, world'
         f.close()
 
 @luigi.expose
@@ -24,7 +24,7 @@ class ACopy(Copy(A)):
 class UtilTest(unittest.TestCase):
     def test_a(self):
         luigi.run(['--local-scheduler', 'ACopy', '--date', '2012-01-01'])
-        self.assertEqual(MockFile._file_contents['/tmp/data-2012-01-01.txt'], 'hello, world')
+        self.assertEqual(MockFile._file_contents['/tmp/data-2012-01-01.txt'], 'hello, world\n')
 
 if __name__ == '__main__':
     luigi.run()
