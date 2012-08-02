@@ -1,5 +1,5 @@
 import unittest
-from spotify.luigi import hdfs
+from luigi import hdfs
 
 
 class TestException(Exception):
@@ -42,7 +42,7 @@ class AtomicHdfsOutputPipeTests(unittest.TestCase):
 
 class HdfsTargetTests(unittest.TestCase):
     def test_atomicity(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile")
         if target.exists():
             target.remove()
 
@@ -51,18 +51,8 @@ class HdfsTargetTests(unittest.TestCase):
         fobj.close()
         self.assertTrue(target.exists())
 
-    def test_dir_atomicity(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testdir", format=hdfs.AvroDir)
-        if target.exists():
-            target.remove()
-        self.assertFalse(target.exists())
-        with target.open('w') as fobj:
-            fobj.write('hej\n')
-            self.assertFalse(target.exists())
-        self.assertTrue(target.exists())
-
     def test_readback(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile")
         if target.exists():
             target.remove()
 
@@ -76,7 +66,7 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertEqual(origdata, data)
 
     def test_with_close(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile")
         if target.exists():
             target.remove()
 
@@ -86,7 +76,7 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertTrue(target.exists())
 
     def test_with_exception(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile")
         if target.exists():
             target.remove()
 
@@ -97,20 +87,9 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertRaises(TestException, foo)
         self.assertFalse(target.exists())
 
-    def test_with_subprocess_error(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
-        if target.exists():
-            target.remove()
-
-        def foo():
-            with target.open('w') as fobj:
-                fobj.write('hej')  # writing avro without line ending should break avro-write
-        self.assertRaises(RuntimeError, foo)
-        self.assertFalse(target.exists())
-
     def test_create_parents(self):
         parent = "luigi_hdfs_testdir"
-        target = hdfs.HdfsTarget("%s/testfile" % parent, format=hdfs.Avro)
+        target = hdfs.HdfsTarget("%s/testfile" % parent)
         if hdfs.exists(parent):
             hdfs.remove(parent)
         self.assertFalse(hdfs.exists(parent))
@@ -120,34 +99,9 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertTrue(hdfs.exists(parent))
         self.assertTrue(target.exists())
 
-    def test_avro_iteration(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testfile.avro", format=hdfs.Avro)
-        if target.exists():
-            target.remove()
-        with target.open('w') as fobj:
-            print >> fobj, "lol"
-        for line in target.open('r'):
-            self.assertEqual(line, "lol\n")
-
-    def test_avro_multifile_read(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testdir", format=hdfs.AvroDir)
-        if target.exists():
-            target.remove()
-        hdfs.mkdir(target.path)
-        t1 = hdfs.HdfsTarget(target.path + "/part-00001.avro", format=hdfs.Avro)
-        t2 = hdfs.HdfsTarget(target.path + "/part-00002.avro", format=hdfs.Avro)
-
-        with t1.open('w') as f:
-            f.write('foo\n')
-        with t2.open('w') as f:
-            f.write('bar\n')
-
-        with target.open('r') as f:
-            self.assertEqual(list(f), ['foo\n', 'bar\n'])
-
     def test_tmp_cleanup(self):
-        path = "luigi_hdfs_testfile.avro"
-        target = hdfs.HdfsTarget(path, format=hdfs.Avro, is_tmp=True)
+        path = "luigi_hdfs_testfile"
+        target = hdfs.HdfsTarget(path, is_tmp=True)
         if target.exists():
             target.remove()
         with target.open('w') as fobj:
@@ -191,13 +145,13 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertTrue(target2.exists())
 
     def test_glob_exists(self):
-        target = hdfs.HdfsTarget("luigi_hdfs_testdir", format=hdfs.AvroDir)
+        target = hdfs.HdfsTarget("luigi_hdfs_testdir")
         if target.exists():
             target.remove()
         hdfs.mkdir(target.path)
-        t1 = hdfs.HdfsTarget(target.path + "/part-00001.avro", format=hdfs.Avro)
-        t2 = hdfs.HdfsTarget(target.path + "/part-00002.avro", format=hdfs.Avro)
-        t3 = hdfs.HdfsTarget(target.path + "/another", format=hdfs.Avro)
+        t1 = hdfs.HdfsTarget(target.path + "/part-00001")
+        t2 = hdfs.HdfsTarget(target.path + "/part-00002")
+        t3 = hdfs.HdfsTarget(target.path + "/another")
 
         with t1.open('w') as f:
             f.write('foo\n')
@@ -206,24 +160,11 @@ class HdfsTargetTests(unittest.TestCase):
         with t3.open('w') as f:
             f.write('biz\n')
 
-        files = hdfs.HdfsTarget("luigi_hdfs_testdir/part-0000*", format=hdfs.AvroDir)
+        files = hdfs.HdfsTarget("luigi_hdfs_testdir/part-0000*")
 
         self.assertEqual(files.glob_exists(2), True)
         self.assertEqual(files.glob_exists(3), False)
         self.assertEqual(files.glob_exists(1), False)
-
-    def test_proxy_exists(self):
-        target = hdfs.HdfsTarget("/tmp/luigi_hdfs_testdir", format=hdfs.AvroDir)
-        if target.exists():
-            target.remove()
-        self.assertEqual(target.exists(use_proxy=True), False)
-        hdfs.mkdir(target.path)
-        t1 = hdfs.HdfsTarget(target.path + "/part-00001.avro", format=hdfs.Avro)
-
-        with t1.open('w') as f:
-            f.write('foo\n')
-
-        self.assertEqual(target.exists(use_proxy=True), True)
 
 if __name__ == "__main__":
     unittest.main()
