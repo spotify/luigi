@@ -4,18 +4,55 @@ import warnings
 Parameter = parameter.Parameter
 
 
-class InstanceCache(type):
+def namespace(namespace=None):
+    """ Call to set namespace of tasks declared after the call.
+
+    If called without arguments or with None as the namespace, the namespace is reset, which is recommended to do at the end of any file where the namespace is set to avoid unintentionally setting namespace on tasks outside of the scope of the current file."""
+    TaskMetaclass._default_namespace = namespace
+
+
+class TaskMetaclass(type):
     # If we already have an instance of this class, then just return it from the cache
     # The idea is that a Task object X should be able to set up heavy data structures that
     # can be accessed from other Task objects (with dependencies on X). But we need to make
     # sure that X is not instantiated many times.
     __instance_cache = {}
+    _default_namespace = None
+
+    def __new__(metacls, classname, bases, classdict):
+        """ Custom class creation for namespacing
+
+        Set the task namespace to whatever the currently declared namespace is"""
+
+        if "task_namespace" not in classdict:
+            classdict["task_namespace"] = metacls._default_namespace
+
+        params = []
+        for b in bases:  # transfer parameters from base classes first
+            if isinstance(b, TaskMetaclass):
+                params.extend(b._parameters)
+
+        for ivar_name, ivar in classdict.iteritems():
+            if not isinstance(ivar, Parameter):
+                continue
+
+            params.append((ivar_name, ivar))
+
+        # The order the parameters are created matters. See Parameter class
+        params.sort(key=lambda t: t[1].counter)
+        classdict["_parameters"] = params
+
+        return type.__new__(metacls, classname, bases, classdict)
 
     def __call__(cls, *args, **kwargs):
-        def instantiate():
-            return super(InstanceCache, cls).__call__(*args, **kwargs)
+        """ Custom class instantiation utilizing instance cache.
 
-        h = InstanceCache.__instance_cache
+        If a Task has already been instantiated with the same parameters,
+        the previous instance is returned to reduce number of object instances."""
+        def instantiate():
+            return super(TaskMetaclass, cls).__call__(*args, **kwargs)
+
+        h = TaskMetaclass.__instance_cache
 
         if h == None:  # disabled
             return instantiate()
@@ -31,12 +68,19 @@ class InstanceCache(type):
         return h[k]
 
     @classmethod
-    def clear(self):
-        InstanceCache.__instance_cache = {}
+    def clear_instance_cache(self):
+        TaskMetaclass.__instance_cache = {}
 
     @classmethod
-    def disable(self):
-        InstanceCache.__instance_cache = None
+    def disable_instance_cache(self):
+        TaskMetaclass.__instance_cache = None
+
+    @property
+    def task_family(cls):
+        if cls.task_namespace is None:
+            return cls.__name__
+        else:
+            return "%s.%s" % (cls.task_namespace, cls.__name__)
 
 
 class MissingParameterException(Exception):
@@ -44,24 +88,26 @@ class MissingParameterException(Exception):
 
 
 class Task(object):
-    __metaclass__ = InstanceCache
-    task_namespace = "default"
+    __metaclass__ = TaskMetaclass
+
+    """
+    non-declared properties: (created in metaclass):
+
+    `Task.task_namespace` - optional string which is prepended to the task name for the sake of scheduling.
+    If it isn't overridden in a Task, whatever was last declared using `luigi.namespace` will be used.
+
+    `Task._parameters` - list of (parameter_name, parameter) tuples for this task class
+    """
+
+    @property
+    def task_family(self):
+        """ Convenience method since a property on the metaclass isn't directly accessible through the class instances"""
+        return self.__class__.task_family
 
     @classmethod
     def get_params(cls):
         # Extract all Argument instances from the class
-        # TODO: not really necessary to do multiple times, can we make it run once when the class is created?
-        params = []
-        for param_name in dir(cls):
-            param_obj = getattr(cls, param_name)
-            if not isinstance(param_obj, Parameter):
-                continue
-
-            params.append((param_name, param_obj))
-
-        # The order the parameters are created matters. See Parameter class
-        params.sort(key=lambda t: t[1].counter)
-        return params
+        return cls._parameters
 
     @classmethod
     def get_param_values(cls, params, args, kwargs):
@@ -87,8 +133,14 @@ class Task(object):
                     raise MissingParameterException("'%s' tasks requires the '%s' parameter to be set" % (cls.__name__, param_name))
                 result[param_name] = param_obj.default
 
+        def list_to_tuple(x):
+            """ Make tuples out of lists to allow hashing """
+            if isinstance(x, list):
+                return tuple(x)
+            else:
+                return x
         # Sort it by the correct order and make a list
-        return [(param_name, result[param_name]) for param_name, param_obj in params]
+        return [(param_name, list_to_tuple(result[param_name])) for param_name, param_obj in params]
 
     def __init__(self, *args, **kwargs):
         params = self.get_params()
@@ -98,10 +150,6 @@ class Task(object):
         for key, value in param_values:
             setattr(self, key, value)
 
-        if self.task_namespace == "default":
-            self.task_family = self.__class__.__name__
-        else:
-            self.task_family = "%s.%s" % (self.task_namespace, self.__class__.__name__)
         self.task_id = '%s(%s)' % (self.task_family, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in param_values]))
         self.__hash = hash(self.task_id)
 

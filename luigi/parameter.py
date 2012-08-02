@@ -6,16 +6,13 @@ _no_default = object()
 class Parameter(object):
     counter = 0
 
-    def __init__(self, default=_no_default, parser=None):
+    def __init__(self, default=_no_default, is_list=False):
         # The default default is no default
         self.__default = default
-
+        self.is_list = is_list
         # We need to keep track of this to get the order right (see Task class)
         self.counter = Parameter.counter
         Parameter.counter += 1
-
-        # Handles input/output
-        self.__parser = parser
 
     @property
     def has_default(self):

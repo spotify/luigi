@@ -25,3 +25,5 @@ DateParameter = parameter.DateParameter
 IntParameter = parameter.IntParameter
 BooleanParameter = parameter.BooleanParameter
 DateIntervalParameter = parameter.DateIntervalParameter
+
+namespace = task.namespace

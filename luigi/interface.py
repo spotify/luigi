@@ -13,7 +13,7 @@ class Register(object):
         self.__main = None
 
     def expose(self, cls, main=False):
-        name = cls.__name__
+        name = cls.task_family
         if main:
             assert self.__main == None
             self.__main = cls
@@ -60,11 +60,14 @@ class ArgParseInterface(Interface):
             params = cls.get_params()
             for param_name, param in params:
                 if param.has_default:
-                    defaulthelp = "[default: %s]" % param.default
+                    defaulthelp = "[default: %s]" % (param.default,)
                 else:
                     defaulthelp = ""
-
-                parser.add_argument('--' + param_name.replace('_', '-'), help='%s.%s%s' % (cls.__name__, param_name, defaulthelp), default=None)
+                if param.is_list:
+                    action = "append"
+                else:
+                    action = "store"
+                parser.add_argument('--' + param_name.replace('_', '-'), help='%s.%s%s' % (cls.task_family, param_name, defaulthelp), default=None, action=action)
 
         if register.get_main():
             _add_task_parameters(parser, register.get_main())
@@ -134,7 +137,7 @@ class OptParseInterface(Interface):
         def add_task_option(p):
             if register.get_main():
                 # INTERNAL: While changing configuration here, please update documentation in spluigi
-                p.add_option('--task', help='Task to run (' + tasks_str + ') [default: %default]', default=register.get_main().__name__)
+                p.add_option('--task', help='Task to run (' + tasks_str + ') [default: %default]', default=register.get_main().task_family)
             else:
                 p.add_option('--task', help='Task to run (%s)' % tasks_str)
         add_task_option(parser)
@@ -173,9 +176,14 @@ class OptParseInterface(Interface):
                 help_text = '%s [default: %s]' % (param_name, parameter_defaults)
             else:
                 help_text = param_name
+            if param.is_list:
+                action = "append"
+            else:
+                action = "store"
             parser.add_option('--' + param_name.replace('_', '-'),
                               help=help_text,
-                              default=None)
+                              default=None,
+                              action=action)
 
 
         # Parse and run
@@ -241,7 +249,3 @@ def load_config():
         return None
     else:
         return config
-
-if __name__ == '__main__':
-    config = load_config()
-    print config.get('luigi', 'scheduler-host')
