@@ -13,7 +13,7 @@ class A(luigi.Task):
 
     def run(self):
         f = self.output().open('w')
-        print >>f, 'hello, world'
+        print >>f, 'hello, world\n'
         f.close()
 
 @luigi.expose
