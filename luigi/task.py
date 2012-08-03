@@ -27,21 +27,6 @@ class TaskMetaclass(type):
         if "task_namespace" not in classdict:
             classdict["task_namespace"] = metacls._default_namespace
 
-        params = []
-        for b in bases:  # transfer parameters from base classes first
-            if isinstance(b, TaskMetaclass):
-                params.extend(b._parameters)
-
-        for ivar_name, ivar in classdict.iteritems():
-            if not isinstance(ivar, Parameter):
-                continue
-
-            params.append((ivar_name, ivar))
-
-        # The order the parameters are created matters. See Parameter class
-        params.sort(key=lambda t: t[1].counter)
-        classdict["_parameters"] = params
-
         return type.__new__(metacls, classname, bases, classdict)
 
     def __call__(cls, *args, **kwargs):
@@ -106,8 +91,18 @@ class Task(object):
 
     @classmethod
     def get_params(cls):
-        # Extract all Argument instances from the class
-        return cls._parameters
+        # We want to do this here and not at class instantiation, or else there is no room to extend classes dynamically
+        params = []
+        for param_name in dir(cls):
+            param_obj = getattr(cls, param_name)
+            if not isinstance(param_obj, Parameter):
+                continue
+
+            params.append((param_name, param_obj))
+
+        # The order the parameters are created matters. See Parameter class
+        params.sort(key=lambda t: t[1].counter)
+        return params
 
     @classmethod
     def get_param_values(cls, params, args, kwargs):
