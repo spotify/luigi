@@ -16,6 +16,13 @@ class Bar(luigi.Task):
     def run(self):
         Bar._val = self.multibool
 
+@luigi.expose
+class Baz(luigi.Task):
+    bool = luigi.BooleanParameter()
+
+    def run(self):
+        Baz._val = self.bool
+
 
 class ParameterTest(unittest.TestCase):
 
@@ -33,3 +40,18 @@ class ParameterTest(unittest.TestCase):
     def test_multibool(self):
         luigi.run(['--local-scheduler', 'Bar', '--multibool', 'true', '--multibool', 'false'])
         self.assertEquals(Bar._val, (True, False))
+
+    def test_multibool_empty(self):
+        luigi.run(['--local-scheduler', 'Bar'])
+        self.assertEquals(Bar._val, tuple())
+
+    def test_bool_false(self):
+        luigi.run(['--local-scheduler', 'Baz'])
+        self.assertEquals(Baz._val, False)
+
+    def test_bool_true(self):
+        luigi.run(['--local-scheduler', 'Baz', '--bool'])
+        self.assertEquals(Baz._val, True)
+
+if __name__ == '__main__':
+    luigi.run()

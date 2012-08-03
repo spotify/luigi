@@ -153,16 +153,7 @@ class Task(object):
         # Creates an instance from a str->str hash (to be used for cmd line interaction etc)
         kwargs = {}
         for param_name, param in cls.get_params():
-            if params[param_name] != None:
-                if param.is_list:
-                    kwargs[param_name] = tuple(param.parse(p) for p in params[param_name])
-                else:
-                    kwargs[param_name] = param.parse(params[param_name])
-            else:
-                if param.has_default:
-                    kwargs[param_name] = param.default
-                else:
-                    raise MissingParameterException("No value for '%s' submitted and no default value has been assigned." % param_name)
+            kwargs[param_name] = param.parse_from_input(param_name, params[param_name])
 
         return cls(**kwargs)
 

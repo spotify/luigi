@@ -65,6 +65,8 @@ class ArgParseInterface(Interface):
                     defaulthelp = ""
                 if param.is_list:
                     action = "append"
+                elif param.is_boolean:
+                    action = "store_true"
                 else:
                     action = "store"
                 parser.add_argument('--' + param_name.replace('_', '-'), help='%s.%s%s' % (cls.task_family, param_name, defaulthelp), default=None, action=action)
@@ -178,6 +180,8 @@ class OptParseInterface(Interface):
                 help_text = param_name
             if param.is_list:
                 action = "append"
+            elif param.is_boolean:
+                action = "store_true"
             else:
                 action = "store"
             parser.add_option('--' + param_name.replace('_', '-'),

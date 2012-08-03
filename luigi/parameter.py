@@ -6,10 +6,11 @@ _no_default = object()
 class Parameter(object):
     counter = 0
 
-    def __init__(self, default=_no_default, is_list=False):
+    def __init__(self, default=_no_default, is_list=False, is_boolean=False):
         # The default default is no default
         self.__default = default
         self.is_list = is_list
+        self.is_boolean = is_boolean and not is_list # Only BooleanParameter should ever use this
         # We need to keep track of this to get the order right (see Task class)
         self.counter = Parameter.counter
         Parameter.counter += 1
@@ -26,6 +27,20 @@ class Parameter(object):
     def parse(self, x):
         return x  # default impl
 
+    def parse_from_input(self, param_name, x):
+        if not x:
+            if self.has_default:
+                return self.default
+            elif self.is_boolean:
+                return False
+            elif self.is_list:
+                return []
+            else:
+                raise MissingParameterException("No value for '%s' submitted and no default value has been assigned." % param_name)
+        elif self.is_list:
+            return tuple(self.parse(p) for p in x)
+        else:
+            return self.parse(x)
 
 class DateHourParameter(Parameter):
     def parse(self, s):
@@ -45,11 +60,12 @@ class IntParameter(Parameter):
 
 
 class BooleanParameter(Parameter):
-    # TODO: the command line interaction is not perfect here.
-    # Ideally we want this to be exposed using a store_true attribute so that
-    # default is False and flag presence sets it to True
+    def __init__(self, *args, **kwargs):
+        super(BooleanParameter, self).__init__(*args, is_boolean=True, **kwargs)
+
     def parse(self, s):
-        return {'true': True, 'false': False}[s.lower()]
+        
+        return {'true': True, 'false': False}[str(s).lower()]
 
 
 class DateIntervalParameter(Parameter):
