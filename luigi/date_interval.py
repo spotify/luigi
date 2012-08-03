@@ -48,6 +48,10 @@ class DateInterval(object):
     def __contains__(self, date):
         return date in self.dates()
 
+    def __iter__(self):
+        for d in self.dates():
+            yield d
+
 
 class Date(DateInterval):
     def __init__(self, y, m, d):
