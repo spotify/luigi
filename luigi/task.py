@@ -159,7 +159,10 @@ class Task(object):
         kwargs = {}
         for param_name, param in cls.get_params():
             if params[param_name] != None:
-                kwargs[param_name] = param.parse(params[param_name])
+                if param.is_list:
+                    kwargs[param_name] = tuple(param.parse(p) for p in params[param_name])
+                else:
+                    kwargs[param_name] = param.parse(params[param_name])
             else:
                 if param.has_default:
                     kwargs[param_name] = param.default
