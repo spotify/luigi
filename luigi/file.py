@@ -52,6 +52,14 @@ class File(object):
         else:
             raise Exception('mode must be r/w')
 
+    def move(self, new_path, fail_if_exists=False):
+        if fail_if_exists and os.path.exists(new_path):
+            raise RuntimeError('Destination exists: %s' % new_path)
+        d = os.path.dirname(new_path)
+        if not os.path.exists(d):
+            os.makedirs(d)
+        os.rename(self.path, new_path)
+
     def remove(self):
         os.remove(self.path)
 
