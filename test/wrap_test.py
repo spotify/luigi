@@ -47,13 +47,16 @@ class AXML(XMLWrapper(A)):
     def output(self):
         return File('/tmp/a.xml')
 
-
 @luigi.expose
 class BXML(XMLWrapper(B)):
     def output(self):
         return File(self.date.strftime('/tmp/b-%Y-%m-%d.xml'))
 
 class WrapperTest(unittest.TestCase):
+    ''' This test illustrates how a task class can wrap another task class by modifying its behavior.
+
+    See instance_wrap_test.py for an example of how instances can wrap each other. '''
+
     def test_a(self):
         luigi.run(['--local-scheduler', 'AXML'])
         self.assertEqual(MockFile._file_contents['/tmp/a.xml'], '<?xml version="1.0" ?>\n<dummy-xml>hello, world</dummy-xml>\n')
