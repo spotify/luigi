@@ -68,10 +68,6 @@ class TaskMetaclass(type):
             return "%s.%s" % (cls.task_namespace, cls.__name__)
 
 
-class MissingParameterException(Exception):
-    pass
-
-
 class Task(object):
     __metaclass__ = TaskMetaclass
 

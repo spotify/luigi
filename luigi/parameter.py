@@ -2,6 +2,8 @@ import datetime
 
 _no_default = object()
 
+class MissingParameterException(Exception):
+    pass
 
 class Parameter(object):
     counter = 0
