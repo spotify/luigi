@@ -111,8 +111,9 @@ class Task(object):
         params_dict = dict(params)
 
         # Fill in the positional arguments
+        positional_params = [p for p in params if not p[1].keyword_only]
         for i, arg in enumerate(args):
-            param_name, param_obj = params[i]
+            param_name, param_obj = positional_params[i]
             result[param_name] = arg
 
         # Then the optional arguments

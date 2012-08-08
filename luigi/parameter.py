@@ -6,11 +6,12 @@ _no_default = object()
 class Parameter(object):
     counter = 0
 
-    def __init__(self, default=_no_default, is_list=False, is_boolean=False):
+    def __init__(self, default=_no_default, is_list=False, is_boolean=False, keyword_only=False):
         # The default default is no default
         self.__default = default
         self.is_list = is_list
         self.is_boolean = is_boolean and not is_list # Only BooleanParameter should ever use this
+        self.keyword_only = keyword_only
         # We need to keep track of this to get the order right (see Task class)
         self.counter = Parameter.counter
         Parameter.counter += 1
