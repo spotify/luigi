@@ -182,6 +182,7 @@ in luigi. Use target.path instead", stacklevel=2)
         remove(self.path)
 
     def rename(self, path, fail_if_exists=False):
+        # rename does not change self.path, so be careful with assumptions
         if isinstance(path, HdfsTarget):
             path = path.path
         if fail_if_exists and exists(path):
@@ -190,6 +191,14 @@ in luigi. Use target.path instead", stacklevel=2)
 
     def move(self, path, fail_if_exists=False):
         self.rename(path, fail_if_exists=fail_if_exists)
+
+    def move_dir(self, path):
+        # mkdir will fail if directory already exists, thereby ensuring atomicity
+        if isinstance(path, HdfsTarget):
+            path = path.path
+        mkdir(path)
+        rename(self.path + '/*', path)
+        self.remove()
 
     def has_write_access(self):
         test_path = self.path + '.test_write_access-%09d' % random.randrange(1e10)
