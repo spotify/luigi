@@ -23,6 +23,10 @@ class Baz(luigi.Task):
     def run(self):
         Baz._val = self.bool
 
+@luigi.expose
+class ForgotParam(luigi.Task):
+    param = luigi.Parameter()
+    def run(self): pass
 
 class ParameterTest(unittest.TestCase):
 
@@ -52,6 +56,9 @@ class ParameterTest(unittest.TestCase):
     def test_bool_true(self):
         luigi.run(['--local-scheduler', 'Baz', '--bool'])
         self.assertEquals(Baz._val, True)
+
+    def test_forgot_param(self):
+        self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', 'ForgotParam'],)
 
 if __name__ == '__main__':
     luigi.run()
