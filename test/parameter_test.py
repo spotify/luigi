@@ -28,6 +28,12 @@ class ForgotParam(luigi.Task):
     param = luigi.Parameter()
     def run(self): pass
 
+@luigi.expose
+class ForgotParamDep(luigi.Task):
+    def requires(self):
+        return ForgotParam()
+    def run(self): pass
+
 class ParameterTest(unittest.TestCase):
 
     def test_parameter_registration(self):
@@ -59,6 +65,9 @@ class ParameterTest(unittest.TestCase):
 
     def test_forgot_param(self):
         self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', 'ForgotParam'],)
+
+    def test_forgot_param_in_dep(self):
+        self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', 'ForgotParamDep'],)
 
 if __name__ == '__main__':
     luigi.run()

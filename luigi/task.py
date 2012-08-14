@@ -122,7 +122,7 @@ class Task(object):
         for param_name, param_obj in params:
             if param_name not in result:
                 if not param_obj.has_default:
-                    raise MissingParameterException("'%s' tasks requires the '%s' parameter to be set" % (cls.__name__, param_name))
+                    raise parameter.MissingParameterException("'%s' tasks requires the '%s' parameter to be set" % (cls.__name__, param_name))
                 result[param_name] = param_obj.default
 
         def list_to_tuple(x):
