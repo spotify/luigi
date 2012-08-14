@@ -65,6 +65,9 @@ class File(object):
             os.makedirs(d)
         os.rename(self.path, new_path)
 
+    def move_dir(self, new_path):
+        self.move(new_path)
+
     def remove(self):
         os.remove(self.path)
 
