@@ -35,6 +35,20 @@ class FileTest(unittest.TestCase):
         self.assertFalse(os.path.exists(tp))
         self.assertFalse(os.path.exists(self.path))
 
+    def test_tmp(self):
+        t = File(is_tmp=True)
+        p = t.open('w')
+        print >> p, 'test'
+        p.close()
+
+        path = t.path
+        self.assertTrue(os.path.exists(path))
+        q = t.open('r')
+        self.assertEqual(q.readline(), 'test\n')
+        q.close()
+        del t # should remove the underlying file
+        self.assertFalse(os.path.exists(path))
+
     def test_gzip(self):
         t = File(self.path, luigi.format.Gzip)
         p = t.open('w')

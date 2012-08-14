@@ -1,6 +1,6 @@
 import os
 import random
-
+import tempfile
 
 class atomic_file(file):
     # Simple class that writes to a temp file and moves it on close()
@@ -24,9 +24,14 @@ class atomic_file(file):
 
 
 class File(object):
-    def __init__(self, path, format=None):
+    def __init__(self, path=None, format=None, is_tmp=False):
+        if not path:
+            if not is_tmp:
+                raise Exception('path or is_tmp must be set')
+            _, path = tempfile.mkstemp()
         self.path = path
         self.format = format
+        self.is_tmp = is_tmp
 
     def exists(self):
         return os.path.exists(self.path)
@@ -66,3 +71,7 @@ class File(object):
     @property
     def fn(self):
         return self.path
+
+    def __del__(self):
+        if self.is_tmp and os.path.exists(self.path):
+            self.remove()
