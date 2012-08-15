@@ -41,6 +41,26 @@ class AtomicHdfsOutputPipeTests(unittest.TestCase):
 
 
 class HdfsTargetTests(unittest.TestCase):
+
+    def test_slow_exists(self):
+        target = hdfs.HdfsTarget("luigi_hdfs_testfile")
+        try:
+            target.remove()
+        except:
+            pass
+
+        self.assertFalse(hdfs.exists(target.path))
+        target.open("w").close()
+        self.assertTrue(hdfs.exists(target.path))
+
+        def should_raise():
+            hdfs.exists("hdfs://doesnotexist/foo")
+        self.assertRaises(RuntimeError, should_raise)
+
+        def should_raise_2():
+            hdfs.exists("hdfs://_doesnotexist_/foo")
+        self.assertRaises(RuntimeError, should_raise_2)
+
     def test_atomicity(self):
         target = hdfs.HdfsTarget("luigi_hdfs_testfile")
         if target.exists():

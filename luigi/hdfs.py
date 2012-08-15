@@ -3,8 +3,21 @@ import os
 import random
 import luigi.format
 
+
 def exists(path):
-    return not subprocess.call(['hadoop', 'fs', '-test', '-e', path])
+    cmd = ['hadoop', 'fs', '-test', '-e', path]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    stdout, _ = p.communicate()
+
+    if stdout or p.returncode not in (0, 1):
+        raise RuntimeError("Command %s failed with return code %s.\n---Output---\n%s\n------------" % (repr(cmd), p.returncode, stdout))
+
+    if p.returncode == 0:
+        return True
+    elif p.returncode == 1:
+        return False
+    assert False
+
 
 def rename(path, dest):
     parent_dir = os.path.dirname(dest)
