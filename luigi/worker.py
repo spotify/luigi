@@ -66,6 +66,8 @@ class Worker(object):
         self.worker_processes = worker_processes
         self.__scheduled_tasks = {}
 
+        self._previous_tasks = []  # store the previous tasks executed by the same worker for debugging reasons
+
         class KeepAliveThread(threading.Thread):
             """ Peridiacally tell the scheduler that the worker still lives """
             def run(self):
@@ -120,7 +122,7 @@ class Worker(object):
                     missing_dep = task_2
 
             if not ok:
-                raise RuntimeError('Unfulfilled dependency %r at run time!' % missing_dep.task_id)
+                raise RuntimeError('Unfulfilled dependency %r at run time!\nPrevious tasks: %r' % (missing_dep.task_id, self._previous_tasks))
 
             task.run()
             logger.info('[pid %s] Done      %s', os.getpid(), task_id)
@@ -175,6 +177,8 @@ class Worker(object):
                     os._exit(0)
             else:
                 self._run_task(task_id)
+
+            self._previous_tasks.append(task_id)
 
         while children:
             died_pid, status = os.wait()
