@@ -14,7 +14,7 @@ import pygraphviz
 import signal
 from cStringIO import StringIO
 from rpc import RemoteSchedulerResponder
-
+from scheduler import PENDING, DONE, FAILED, RUNNING
 
 class RPCHandler(tornado.web.RequestHandler):
     """ Handle remote scheduling calls using rpc.RemoteSchedulerResponder"""
@@ -59,14 +59,18 @@ class VisualizeHandler(tornado.web.RequestHandler):
         graphviz = pygraphviz.AGraph(directed=True, size=12)
         n_nodes = 0
         for task, p in tasks.iteritems():
-            colors = {'PENDING': ('white', 'black'),
-                     'DONE': ('green', 'white'),
-                     'FAILED': ('red', 'white'),
-                     'RUNNING': ('blue', 'white'),
+            selector = p['status']
+            if not p['workers']:
+                selector = 'BROKEN'
+
+            colors = {PENDING: ('white', 'black'),
+                     DONE: ('green', 'white'),
+                     FAILED: ('red', 'white'),
+                     RUNNING: ('blue', 'white'),
                      'BROKEN': ('orange', 'black'),  # external task, can't run
                      }
-            fillcolor = colors[p['status']][0]
-            fontcolor = colors[p['status']][1]
+            fillcolor = colors[selector][0]
+            fontcolor = colors[selector][1]
             shape = 'box'
             label = task.replace('(', '\\n(').replace(',', ',\\n')  # force GraphViz to break lines
             # TODO: if the ( or , is a part of the argument we shouldn't really break it

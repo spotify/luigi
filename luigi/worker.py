@@ -1,5 +1,5 @@
 import random
-from scheduler import CentralPlannerScheduler
+from scheduler import CentralPlannerScheduler, PENDING, FAILED, DONE
 import threading
 import time
 import sys
@@ -84,30 +84,26 @@ class Worker(object):
         k.start()
 
     def add(self, task):
-        """ Returns True if the task is already complete"""
-        s = str(task)
-        if s in self.__scheduled_tasks:
-            return False  # will never put a complete task in __scheduled_tasks
+        task_id = task.task_id
+
+        if task_id in self.__scheduled_tasks:
+            return  # already scheduled
 
         if task.complete():
-            # Not submitting finished tasks to reduce size of output tree
-            # self.__scheduler.add_task(s, status='DONE', worker=self.__id)
-            return True
+            # Not submitting dependencies of finished tasks
+            self.__scheduler.add_task(self.__id, task_id, status=DONE, runnable=False)
+
         elif task.run == NotImplemented:
-            self.__scheduled_tasks[s] = task
-            logger.warning('Task %s is is not complete and run() is not implemented. Probably a missing external dependency.', s)
-            self.__scheduler.add_task(s, status='BROKEN', worker=self.__id)
-            logger.debug("Done marking task %s as broken", s)
+            self.__scheduled_tasks[task_id] = task
+            self.__scheduler.add_task(self.__id, task_id, status=PENDING, runnable=False)
+            logger.warning('Task %s is is not complete and run() is not implemented. Probably a missing external dependency.', task_id)
         else:
-            self.__scheduled_tasks[s] = task
-            self.__scheduler.add_task(s, status='PENDING', worker=self.__id)
-            logger.info('Scheduled %s' % s)
+            self.__scheduled_tasks[task_id] = task
+            deps = [d.task_id for d in task.deps()]
+            self.__scheduler.add_task(self.__id, task_id, status=PENDING, deps=deps, runnable=True)
+            logger.info('Scheduled %s' % task_id)
             for task_2 in task.deps():
-                s2 = str(task_2)
-                 # Schedule stuff recursively
-                if not self.add(task_2):  # Not submitting dependencies to things that are complete
-                    self.__scheduler.add_dep(s, s2, worker=self.__id)
-        return False
+                self.add(task_2)  # Schedule stuff recursively
 
     def _run_task(self, task_id):
         task = self.__scheduled_tasks[task_id]
@@ -122,11 +118,12 @@ class Worker(object):
                     missing_dep = task_2
 
             if not ok:
+                # TODO: possibly tru to re-add task again ad pending
                 raise RuntimeError('Unfulfilled dependency %r at run time!\nPrevious tasks: %r' % (missing_dep.task_id, self._previous_tasks))
 
             task.run()
             logger.info('[pid %s] Done      %s', os.getpid(), task_id)
-            status, expl = 'DONE', None
+            status, expl = 'DONE', ''
 
         except KeyboardInterrupt:
             raise
@@ -139,7 +136,7 @@ class Worker(object):
                            (self.__erroremail,))
             logger.error(expl)
 
-        self.__scheduler.status(task_id, status=status, expl=expl, worker=self.__id)
+        self.__scheduler.add_task(self.__id, task_id, status=status, expl=expl, runnable=None)
 
     def run(self):
         children = set()

@@ -39,6 +39,16 @@ class InstanceTest(unittest.TestCase):
         w.add(B(2))
         w.run()
 
+    def test_external_instance_cache(self):
+        class A(luigi.Task):
+            pass
+
+        class OtherA(luigi.ExternalTask):
+            task_family = "A"
+
+        oa = OtherA()
+        a = A()
+        self.assertNotEqual(oa, a)
 
 if __name__ == '__main__':
     unittest.main()

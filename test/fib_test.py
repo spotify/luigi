@@ -2,7 +2,7 @@ import luigi
 import unittest
 from luigi.mock import MockFile
 
-File = luigi.File
+File = MockFile
 
 # Calculates Fibonacci numbers :)
 

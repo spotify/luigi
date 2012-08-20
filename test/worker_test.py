@@ -3,6 +3,20 @@ from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
 from luigi import *
 import unittest
+import logging
+
+
+class DummyTask(Task):
+    def __init__(self, *args, **kwargs):
+        super(DummyTask, self).__init__(*args, **kwargs)
+        self.has_run = False
+
+    def complete(self):
+        return self.has_run
+
+    def run(self):
+        logging.debug("%s - setting has_run" % self.task_id)
+        self.has_run = True
 
 
 class WorkerTest(unittest.TestCase):
@@ -36,8 +50,10 @@ class WorkerTest(unittest.TestCase):
             def run(self):
                 self.has_run = True
 
-        b = B()
+            def complete(self):
+                return self.has_run
 
+        b = B()
         a.has_run = False
         b.has_run = False
 
@@ -48,7 +64,8 @@ class WorkerTest(unittest.TestCase):
 
     def test_external_dep(self):
         class A(ExternalTask):
-            pass
+            def complete(self):
+                return False
         a = A()
 
         class B(Task):
@@ -57,6 +74,10 @@ class WorkerTest(unittest.TestCase):
 
             def run(self):
                 self.has_run = True
+
+            def complete(self):
+                return self.has_run
+
         b = B()
 
         a.has_run = False
@@ -73,6 +94,10 @@ class WorkerTest(unittest.TestCase):
             def run(self):
                 self.has_run = True
                 raise Exception()
+
+            def complete(self):
+                return self.has_run
+
         a = A()
 
         class B(Task):
@@ -81,6 +106,10 @@ class WorkerTest(unittest.TestCase):
 
             def run(self):
                 self.has_run = True
+
+            def complete(self):
+                return self.has_run
+
         b = B()
 
         a.has_run = False
@@ -130,6 +159,69 @@ class WorkerTest(unittest.TestCase):
         # not sure what should happen??
         # self.w2.run() # should run B since C is fulfilled
         # self.assertTrue(b_c.has_run)
+
+    def test_interleaved_workers(self):
+        class A(DummyTask):
+            pass
+
+        a = A()
+
+        class B(DummyTask):
+            def requires(self):
+                return a
+
+        class ExternalB(ExternalTask):
+            task_family = "B"
+
+            def complete(self):
+                return False
+
+        b = B()
+        eb = ExternalB()
+        self.assertEquals(eb.task_id, "B()")
+
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        w = Worker(scheduler=sch, worker_id='X')
+        w2 = Worker(scheduler=sch, worker_id='Y')
+
+        w.add(b)
+        w2.add(eb)
+        logging.debug("RUNNING BROKEN WORKER")
+        w2.run()
+        self.assertFalse(a.complete())
+        self.assertFalse(b.complete())
+        logging.debug("RUNNING FUNCTIONAL WORKER")
+        w.run()
+        self.assertTrue(a.complete())
+        self.assertTrue(b.complete())
+
+    def test_interleaved_workers2(self):
+        # two tasks without dependencies, one external, one not
+        class B(DummyTask):
+            pass
+
+        class ExternalB(ExternalTask):
+            task_family = "B"
+
+            def complete(self):
+                return False
+
+        b = B()
+        eb = ExternalB()
+
+        self.assertEquals(eb.task_id, "B()")
+
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        w = Worker(scheduler=sch, worker_id='X')
+        w2 = Worker(scheduler=sch, worker_id='Y')
+
+        w2.add(eb)
+        w.add(b)
+
+        w2.run()
+        self.assertFalse(b.complete())
+        w.run()
+        self.assertTrue(b.complete())
 
 if __name__ == '__main__':
     unittest.main()

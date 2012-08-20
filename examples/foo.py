@@ -4,13 +4,20 @@ import os
 import shutil
 
 
+class MyExternal(luigi.ExternalTask):
+    def complete(self):
+        return False
+
+
 @luigi.expose
 class Foo(luigi.Task):
     def run(self):
         print "Running Foo"
 
     def requires(self):
-        return (Bar(i) for i in xrange(10))
+#        yield MyExternal()
+        for i in xrange(10):
+            yield Bar(i)
 
 
 @luigi.expose
@@ -22,6 +29,7 @@ class Bar(luigi.Task):
         self.output().open('w').close()
 
     def output(self):
+        time.sleep(1)
         return luigi.LocalTarget('/tmp/bar/%d' % self.num)
 
 
@@ -29,4 +37,4 @@ if __name__ == "__main__":
     if os.path.exists('/tmp/bar'):
         shutil.rmtree('/tmp/bar')
 
-    luigi.run(['--task', 'Foo', '--workers', '5'], use_optparse=True)
+    luigi.run(['--task', 'Foo', '--workers', '2'], use_optparse=True)

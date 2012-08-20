@@ -1,9 +1,8 @@
 import urllib
 import urllib2
 import logging
-import time
 import json
-from scheduler import Scheduler
+from scheduler import Scheduler, PENDING
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 
@@ -32,20 +31,18 @@ class RemoteScheduler(Scheduler):
     def ping(self, worker):
         self._request('/api/ping', {'worker': worker})  # Keep-alive
 
-    def add_task(self, task, status, worker):
-        self._request('/api/task', \
-            {'worker': worker, 'task': task, 'status': status})
-
-    def add_dep(self, task, task_2, worker):
-        self._request('/api/dep', \
-            {'worker': worker, 'task': task, 'dep_task': task_2})
+    def add_task(self, worker, task_id, status=PENDING, runnable=False, deps=None, expl=None):
+        self._request('/api/add_task', \
+            {'task_id': task_id,
+             'worker': worker,
+             'status': status,
+             'runnable': runnable,
+             'deps': deps,
+             'expl': expl,
+             })
 
     def get_work(self, worker):
-        return self._request('/api/work', {'worker': worker})
-
-    def status(self, task, status, expl, worker):
-        self._request('/api/status', \
-            {'worker': worker, 'task': task, 'status': status, 'expl': expl})
+        return self._request('/api/get_work', {'worker': worker})
 
 
 class RemoteSchedulerResponder(object):
@@ -54,20 +51,14 @@ class RemoteSchedulerResponder(object):
     def __init__(self, scheduler):
         self._scheduler = scheduler
 
-    def task(self, task, worker, status='PENDING'):
-        return self._scheduler.add_task(task, worker, status)
+    def add_task(self, worker, task_id, status, runnable, deps, expl):
+        return self._scheduler.add_task(worker, task_id, status, runnable, deps, expl)
 
-    def dep(self, task, dep_task, worker):
-        return self._scheduler.add_dep(task, dep_task, worker)
-
-    def work(self, worker):
+    def get_work(self, worker):
         return self._scheduler.get_work(worker)
 
     def ping(self, worker):
         return self._scheduler.ping(worker)
-
-    def status(self, task, status, worker, expl=None):
-        return self._scheduler.status(task, status, worker, expl)
 
     def graph(self):
         return self._scheduler.graph()
