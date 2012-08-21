@@ -60,7 +60,8 @@ class VisualizeHandler(tornado.web.RequestHandler):
         n_nodes = 0
         for task, p in tasks.iteritems():
             selector = p['status']
-            if not p['workers']:
+
+            if selector == PENDING and not p['workers']:
                 selector = 'BROKEN'
 
             colors = {PENDING: ('white', 'black'),
