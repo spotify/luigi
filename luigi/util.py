@@ -7,6 +7,9 @@ def Derived(parent_cls):
     of a previous class and you don't want to reimplement everything. Also useful if you
     want to wrap a class (see wrap_test.py for an example).
 
+    Note 1: The derived class does not inherit from the parent class
+    Note 2: You can add more parameters in the derived class
+
     Usage:
     class AnotherTask(luigi.Task):
         n = luigi.IntParameter()
@@ -21,9 +24,19 @@ def Derived(parent_cls):
     '''
     class DerivedCls(task.Task):
         def __init__(self, *args, **kwargs):
-            self.parent_obj = parent_cls(*args, **kwargs)
+            param_values = {}
+            for k, v in self.get_param_values(self.get_params(), args, kwargs):
+                param_values[k] = v
+
+            # Figure out which params the parent need (it's always a subset)
+            parent_param_values = {}
+            for k, v in parent_cls.get_params():
+                parent_param_values[k] = param_values[k]
+
+            self.parent_obj = parent_cls(**parent_param_values)
             super(DerivedCls, self).__init__(*args, **kwargs)
     
+    # Copy parent's params to child
     for param_name, param_obj in parent_cls.get_params():
         setattr(DerivedCls, param_name, param_obj)
     return DerivedCls
