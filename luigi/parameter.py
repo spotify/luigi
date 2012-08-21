@@ -2,7 +2,16 @@ import datetime
 
 _no_default = object()
 
-class MissingParameterException(Exception):
+class ParameterException(Exception):
+    pass
+
+class MissingParameterException(ParameterException):
+    pass
+
+class UnknownParameterException(ParameterException):
+    pass
+
+class DuplicateParameterException(ParameterException):
     pass
 
 class Parameter(object):

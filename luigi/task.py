@@ -10,7 +10,6 @@ def namespace(namespace=None):
     If called without arguments or with None as the namespace, the namespace is reset, which is recommended to do at the end of any file where the namespace is set to avoid unintentionally setting namespace on tasks outside of the scope of the current file."""
     TaskMetaclass._default_namespace = namespace
 
-
 class TaskMetaclass(type):
     # If we already have an instance of this class, then just return it from the cache
     # The idea is that a Task object X should be able to set up heavy data structures that
@@ -109,13 +108,17 @@ class Task(object):
         # Fill in the positional arguments
         positional_params = [p for p in params if not p[1].keyword_only]
         for i, arg in enumerate(args):
+            if i >= len(positional_params):
+                raise parameter.UnknownParameterException('Class %s: takes at most %d parameters (%d given)' % (cls.__name__, len(positional_params), len(args)))
             param_name, param_obj = positional_params[i]
             result[param_name] = arg
 
         # Then the optional arguments
         for param_name, arg in kwargs.iteritems():
-            assert param_name not in result
-            assert param_name in params_dict
+            if param_name in result:
+                raise parameter.DuplicateParameterException('Class %s: parameter %s was already set as a positional parameter' % (cls.__name__, param_name))
+            if param_name not in params_dict:
+                raise parameter.UnknownParameterException('Class %s: unknown parameter %s' % (cls.__name__, param_name))
             result[param_name] = arg
 
         # Then use the defaults for anything not filled in
