@@ -8,6 +8,7 @@ from operator import itemgetter
 import pickle
 import logging
 import StringIO
+import re
 
 import luigi
 import luigi.hdfs
@@ -239,14 +240,14 @@ class HadoopJobRunner(JobRunner):
         # rename temporary work directory to given output
         tmp_target.move(output_final)
 
-    def fetch_raise_failures(self, tracking_url):
+    @staticmethod
+    def fetch_raise_failures(tracking_url):
         ''' Uses mechanize to fetch the actual task logs from the task tracker.
 
         This is highly opportunistic, and we might not succeed. So we set a low timeout and hope it works.
         If it does not, it's not the end of the world.
         '''
         import mechanize
-        import BeautifulSoup  # so they don't have to be installed on the nodes
 
         failures_url = tracking_url.replace('jobdetails.jsp', 'jobfailures.jsp')
         b = mechanize.Browser()
@@ -254,17 +255,11 @@ class HadoopJobRunner(JobRunner):
         for link in b.links(text_regex='Last 4KB'):
             b2 = mechanize.Browser()
             r = b2.open(link.url, timeout=1.0)
-            output = BeautifulSoup.BeautifulSoup(r.read(),
-                                                 convertEntities=BeautifulSoup.BeautifulStoneSoup.HTML_ENTITIES).findAll(text=True)
-            # Try to find the relevant slice of info
-            p, q = output.index('stderr logs'), output.index('syslog logs')
-            try:
+            data = r.read()
+            # Try to get the hex-encoded traceback back from the output
+            for exc in re.findall(r'luigi-exc-hex=[0-9a-f]+', data):
                 print '---------- %s:' % link.url
-                print ''.join(output[(p + 1):q]).strip()
-                print '----------'
-            except:
-                continue
-
+                print exc.split('=')[-1].decode('hex')
 
 class DefaultHadoopJobRunner(HadoopJobRunner):
     ''' The default job runner just reads from config and sets stuff '''
@@ -471,3 +466,6 @@ class JobTask(luigi.Task):
         self.init_combiner()
         outputs = self._reduce_input(repr_reader((line[:-1] for line in stdin)), reducer=self.combiner)
         repr_writer(outputs, stdout)
+
+    def _print_exception(self, exc):
+        print >> sys.stderr, 'luigi-exc-hex=%s' % exc.encode('hex')

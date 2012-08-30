@@ -13,7 +13,7 @@ import sys
 import tarfile
 import cPickle as pickle
 import logging
-
+import traceback
 
 # these methods needs to be available before the rest of spotify.rambo is unpacked
 def repr_reader(inputs):
@@ -37,12 +37,18 @@ class Runner(object):
         self.job = job or pickle.load(open("job-instance.pickle"))
 
     def run(self, kind):
-        if kind == "map":
-            self.job._run_mapper()
-        if kind == "combiner":
-            self.job._run_combiner()
-        elif kind == "reduce":
-            self.job._run_reducer()
+        try:
+            if kind == "map":
+                self.job._run_mapper()
+            if kind == "combiner":
+                self.job._run_combiner()
+            elif kind == "reduce":
+                self.job._run_reducer()
+        except:
+            # Dump encoded data that we will try to fetch using mechanize
+            exc = traceback.format_exc()
+            self.job._print_exception(exc)
+            raise
 
     def extract_packages_archive(self):
         if not os.path.exists("packages.tar"):
