@@ -127,6 +127,10 @@ class CentralPlannerScheduler(Scheduler):
         self.update(worker)
 
         task = self._tasks.setdefault(task_id, Task(status=PENDING, deps=deps))
+
+        if task.remove is not None:
+            task.remove = None  # unmark task for removal so it isn't removed after being added
+
         if not (task.status == RUNNING and status == PENDING):
             # don't allow re-scheduling of task while it is running, it must either fail or succeed first
             task.status = status
