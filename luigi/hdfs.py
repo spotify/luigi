@@ -138,6 +138,7 @@ class Plain(luigi.format.Format):
     def pipe_writer(cls, output_pipe):
         return output_pipe
 
+
 class HdfsTarget(luigi.Target):
     def __init__(self, path=None, format=Plain, is_tmp=False):
         if path is None:
@@ -146,6 +147,7 @@ class HdfsTarget(luigi.Target):
         self.path = path
         self.format = format
         self.is_tmp = is_tmp
+        assert ":" not in self.path  # colon is not allowed in hdfs filenames
 
     def __del__(self):
         #TODO: not sure is_tmp belongs in Targets construction arguments
