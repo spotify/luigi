@@ -19,8 +19,6 @@ logger = logging.getLogger('luigi-interface')
 
 _attached_packages = []
 
-luigi.interface.add_global_option('pool', None)
-
 
 def attach(*packages):
     """ Attach a python package to hadoop map reduce tarballs to make those packages available on the hadoop cluster"""
@@ -178,7 +176,7 @@ class HadoopJobRunner(JobRunner):
 
         jobconfs.append('mapred.job.name=%s' % job.task_id)
         jobconfs.append('mapred.reduce.tasks=%s' % job.n_reduce_tasks)
-        pool = luigi.interface.get_global_option('pool')
+        pool = job.pool
         if pool is not None:
             jobconfs.append('mapred.fairscheduler.pool=%s' % pool)
 
@@ -327,6 +325,7 @@ class LocalJobRunner(JobRunner):
 
 class JobTask(luigi.Task):
     n_reduce_tasks = 25
+    pool = luigi.Parameter(is_global=True, default=None)
 
     def init_local(self):
         ''' Implement any work to setup any internal datastructure etc here.

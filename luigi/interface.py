@@ -12,6 +12,7 @@ class Register(object):
     def __init__(self):
         self.__reg = {}
         self.__main = None
+        self.__global_params = {}
 
     def expose(self, cls, main=False):
         name = cls.task_family
@@ -20,6 +21,11 @@ class Register(object):
             self.__main = cls
         assert name not in self.__reg  # TODO: raise better exception
         self.__reg[name] = cls
+        for param_name, param_obj in cls.get_global_params():
+            if param_name in self.__global_params and self.__global_params[param_name] != param_obj:
+                # Could be registered multiple times in case there's subclasses
+                raise Exception('Global parameter %s registered by multiple classes' % name)
+            self.__global_params[param_name] = param_obj
         return cls
 
     def get_reg(self):
@@ -27,6 +33,9 @@ class Register(object):
 
     def get_main(self):
         return self.__main
+
+    def get_global_params(self):
+        return self.__global_params.iteritems()
 
 register = Register()
 
@@ -43,30 +52,6 @@ class Interface(object):
     def run(self):
         raise NotImplementedError
 
-# BEGIN ABOMINATION
-# TODO: below is the ugliest piece of code ever, we HAVE TO refactor and improve global options asap
-
-_global_options = {}
-
-
-def add_global_option(option_name, default):
-    for i, arg in enumerate(sys.argv):
-        if arg == '--%s' % option_name:
-            _global_options[option_name] = sys.argv[i + 1]
-            break
-    else:
-        _global_options[option_name] = default
-        return
-
-    del sys.argv[i:i + 2]
-
-
-def get_global_option(option_name):
-    return _global_options[option_name]
-
-# END ABOMINATION
-
-
 class ArgParseInterface(Interface):
     ''' Takes the task as the command, with parameters specific to it
     '''
@@ -80,23 +65,31 @@ class ArgParseInterface(Interface):
         parser.add_argument('--lock-pid-dir', help='Directory to store the pid file [default: %(default)s]', default='/var/tmp/luigi')
         parser.add_argument('--workers', help='Maximum number of parallel tasks to run [default: %(default)s]', default=1, type=int)
 
+        def _add_parameter(parser, param_name, param, prefix=''):
+            if param.has_default:
+                defaulthelp = "[default: %s]" % (param.default,)
+            else:
+                defaulthelp = ""
+                
+            if param.is_list:
+                action = "append"
+            elif param.is_boolean:
+                action = "store_true"
+            else:
+                action = "store"
+            parser.add_argument('--' + param_name.replace('_', '-'), help='%s%s%s' % (prefix, param_name, defaulthelp), default=None, action=action)
+
         def _add_task_parameters(parser, cls):
-            params = cls.get_params()
-            for param_name, param in params:
-                if param.has_default:
-                    defaulthelp = "[default: %s]" % (param.default,)
-                else:
-                    defaulthelp = ""
-                if param.is_list:
-                    action = "append"
-                elif param.is_boolean:
-                    action = "store_true"
-                else:
-                    action = "store"
-                parser.add_argument('--' + param_name.replace('_', '-'), help='%s.%s%s' % (cls.task_family, param_name, defaulthelp), default=None, action=action)
+            for param_name, param in cls.get_nonglobal_params():
+                _add_parameter(parser, param_name, param, cls.task_family + '.')
+
+        def _add_global_parameters(parser):
+            for param_name, param in register.get_global_params():
+                _add_parameter(parser, param_name, param)
 
         if register.get_main():
             _add_task_parameters(parser, register.get_main())
+            _add_global_parameters(parser)
 
         else:
             subparsers = parser.add_subparsers(dest='command')
@@ -104,6 +97,7 @@ class ArgParseInterface(Interface):
             for name, cls in register.get_reg().iteritems():
                 subparser = subparsers.add_parser(name)
                 _add_task_parameters(subparser, cls)
+                _add_global_parameters(subparser)
 
         args = parser.parse_args(args=cmdline_args)
         if args.lock:
@@ -115,7 +109,7 @@ class ArgParseInterface(Interface):
         else:
             task_cls = register.get_reg()[args.command]
 
-        task = task_cls.from_input(params)
+        task = task_cls.from_input(params, register.get_global_params())
 
         if args.local_scheduler:
             sch = scheduler.CentralPlannerScheduler()
@@ -194,11 +188,16 @@ class OptParseInterface(Interface):
         parameter_defaults = {}
         task_cls = register.get_reg()[task_cls_name]
         params = task_cls.get_params()
+        global_params = list(register.get_global_params())
+
+        for param_name, param in global_params:
+            parameter_defaults[param_name] = param.default
+
         for param_name, param in params:
             if param.has_default:
                 parameter_defaults[param_name] = param.default  # Will override with whatever: TODO: do more sensibly!
 
-        for param_name, param in params:
+        def _add_parameter(parser, param_name, param, parameter_defaults):
             if param.has_default:
                 help_text = '%s [default: %s]' % (param_name, parameter_defaults)
             else:
@@ -214,6 +213,11 @@ class OptParseInterface(Interface):
                               default=None,
                               action=action)
 
+        for param_name, param in global_params:
+            _add_parameter(parser, param_name, param, parameter_defaults)
+
+        for param_name, param in params:
+            _add_parameter(parser, param_name, param, parameter_defaults)
 
         # Parse and run
         options, args = parser.parse_args(args=cmdline_args)
@@ -223,7 +227,7 @@ class OptParseInterface(Interface):
         for k, v in vars(options).iteritems():
             if k not in ['task', 'local_scheduler']:
                 params[k] = v
-        task = task_cls.from_input(params)
+        task = task_cls.from_input(params, global_params)
 
         if options.local_scheduler:
             sch = scheduler.CentralPlannerScheduler()

@@ -100,13 +100,21 @@ class Task(object):
         return params
 
     @classmethod
+    def get_global_params(cls):
+        return [(param_name, param_obj) for param_name, param_obj in cls.get_params() if param_obj.is_global]
+
+    @classmethod
+    def get_nonglobal_params(cls):
+        return [(param_name, param_obj) for param_name, param_obj in cls.get_params() if not param_obj.is_global]
+
+    @classmethod
     def get_param_values(cls, params, args, kwargs):
         result = {}
 
         params_dict = dict(params)
 
         # Fill in the positional arguments
-        positional_params = [p for p in params if not p[1].keyword_only]
+        positional_params = [(n, p) for n, p in params if not p.is_global]
         for i, arg in enumerate(args):
             if i >= len(positional_params):
                 raise parameter.UnknownParameterException('Class %s: takes at most %d parameters (%d given)' % (cls.__name__, len(positional_params), len(args)))
@@ -119,6 +127,8 @@ class Task(object):
                 raise parameter.DuplicateParameterException('Class %s: parameter %s was already set as a positional parameter' % (cls.__name__, param_name))
             if param_name not in params_dict:
                 raise parameter.UnknownParameterException('Class %s: unknown parameter %s' % (cls.__name__, param_name))
+            if params_dict[param_name].is_global:
+                raise parameter.ParameterException('Class %s: can not override global parameter %s' % (cls.__name__, param_name))
             result[param_name] = arg
 
         # Then use the defaults for anything not filled in
@@ -149,11 +159,16 @@ class Task(object):
         self.__hash = hash(self.task_id)
 
     @classmethod
-    def from_input(cls, params):
+    def from_input(cls, params, global_params):
         # Creates an instance from a str->str hash (to be used for cmd line interaction etc)
+        for param_name, param in global_params:
+            value = param.parse_from_input(param_name, params[param_name])
+            param.set_default(value)
+
         kwargs = {}
-        for param_name, param in cls.get_params():
-            kwargs[param_name] = param.parse_from_input(param_name, params[param_name])
+        for param_name, param in cls.get_nonglobal_params():
+            value = param.parse_from_input(param_name, params[param_name])
+            kwargs[param_name] = value
 
         return cls(**kwargs)
 
