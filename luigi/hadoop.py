@@ -146,10 +146,10 @@ class HadoopJobRunner(JobRunner):
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
 
-        tmp_dir = '/tmp/luigi_hadoop_job_%016x' % random.getrandbits(64)
+        tmp_dir = '/tmp/luigi/hadoop_job_%016x' % random.getrandbits(64)
         # self._cleanup_tmp_dirs.append(tmp_dir)
         logger.debug("Tmp dir: %s", tmp_dir)
-        os.mkdir(tmp_dir)
+        os.makedirs(tmp_dir)
         job._dump(tmp_dir)
 
         # build arguments
