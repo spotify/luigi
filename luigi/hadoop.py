@@ -264,7 +264,8 @@ class DefaultHadoopJobRunner(HadoopJobRunner):
     def __init__(self):
         import interface
         config = interface.load_config()
-        super(DefaultHadoopJobRunner, self).__init__(jar=config.get('hadoop', 'jar'))
+        streaming_jar=config.get('hadoop', 'jar')
+        super(DefaultHadoopJobRunner, self).__init__(streaming_jar=streaming_jar)
         # TODO: add more configurable options
 
 
