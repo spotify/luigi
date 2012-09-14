@@ -187,7 +187,7 @@ class OptParseInterface(Interface):
         # Register all parameters as a big mess
         parameter_defaults = {}
         task_cls = register.get_reg()[task_cls_name]
-        params = task_cls.get_params()
+        params = task_cls.get_nonglobal_params()
         global_params = list(register.get_global_params())
 
         for param_name, param in global_params:
