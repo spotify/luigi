@@ -99,9 +99,9 @@ Running the command again will do nothing because the output file is already cre
 
 ### Using the central planner
 
-The --local-scheduler flag tells Luigi not to connect to a central scheduler. This is recommended in order to get started and or for development purposes. At the point where you start putting things in production we strongly recommend running the central scheduler server. In addition to provide locking so that no two tasks can be run at the same time, this server also provides a pretty nice visualization of your current work flow.
+The --local-scheduler flag tells Luigi not to connect to a central scheduler. This is recommended in order to get started and or for development purposes. At the point where you start putting things in production we strongly recommend running the central scheduler server. In addition to provide locking so the same task is not run by multiple processes at the same time, this server also provides a pretty nice visualization of your current work flow.
 
-If you drop the *--local-scheduler* flag, your script will try to connect to the central planner, by default at localhost port 8000 (TODO: verify). If you run
+If you drop the *--local-scheduler* flag, your script will try to connect to the central planner, by default at localhost port 8081. If you run
 
     ./bin/spluigid
     
@@ -109,11 +109,17 @@ in the background and then run
 
     $ python wordcount.py --date 2012-W03
 
-then in fact your script will now do the scheduling through a centralized server. Launching *http://localhost:8081* should show something like this:
+then in fact your script will now do the scheduling through a centralized server. You need [Tornado](http://www.tornadoweb.org/) and [Pygraphviz](http://networkx.lanl.gov/pygraphviz/) for this to work. These are available in Debian as *python-tornado* and *python-pygraphviz*, respectively.
+
+Launching *http://localhost:8081* should show something like this:
 
 ![Wordcount](doc/wordcount.png)
 
-The green boxes mean that the job is already done.
+The green boxes mean that the job is already done. If you keep invoking the script with a bunch of different date intervals it might look like this after a while:
+
+![Wordcount](doc/wordcount_more.png)
+
+You can drag and scroll to re-center and zoom. The visualizer will automatically prune all done tasks after a while.
 
 ### Example 2 - Hadoop WordCount
 
@@ -162,9 +168,11 @@ This will yield a familiar overview
 
 ![Wordcount](doc/wordcount_hadoop.png)
 
-The blue box means that the job is currently running. It takes a while for the Hadoop job to finish. If it fails, it will become red:
+The blue box means that the job is currently running. If it fails, it will become red:
 
 ![Wordcount](doc/wordcount_hadoop_failed.png)
+
+In case your job crashes remotely due to any Python exception, Luigi will fetch the traceback and print it on standard output. You need [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) for it to work and you also need connectivity to your tasktrackers.
 
 ## Conceptual overview
 
@@ -283,7 +291,7 @@ In addition to the stuff mentioned above, Luigi also does some metaclass logic s
 
 #### But I just want to run a Hadoop job?
 
-The Hadoop code is integrated in the rest of the Luigi code because we really believe almost all Hadoop jobs benefit from being part of some sort of workflow. However, in theory, nothing stops you from using the primitives hadoop.JobTask (and also hdfs.HdfsTarget) without using the rest of Luigi. You can simply run it manually using
+The Hadoop code is integrated in the rest of the Luigi code because we really believe almost all Hadoop jobs benefit from being part of some sort of workflow. However, in theory, nothing stops you from using the hadoop.JobTask class (and also hdfs.HdfsTarget) without using the rest of Luigi. You can simply run it manually using
 
     MyJobTask('abc', 123).run()
 
@@ -299,13 +307,13 @@ Running the *test/fib_test.py* with *--n 200* yields a complex graph (albeit sli
 
 ![Wordcount](doc/fib.png)
 
-Scroll and drag to zoom in:
+Actually the resemblance with a G-clef is coincidental. Scroll and drag to zoom in:
 
 ![Wordcount](doc/fib_zoomed.png)
 
 ## More info
 
-Some design decisions include:
+Luigi is the sucessors to a couple of attempts that we weren't fully happy with. We learned a lot from our mistakes and some design decisions include:
 
 * Straightforward command line integration.
 * As little boiler plate as possible.
@@ -336,3 +344,7 @@ Also it should be mentioned that Luigi is named after the pipeline-running frien
 * Better visualization tool - the layout gets pretty messy as the number of tasks grows.
 * Integration with existing Hadoop frameworks like mrjob would be cool and probably pretty easy.
 * Better support (without much boiler plate) for unittesting specific Tasks
+
+## Want to contribute?
+
+Awesome! Let us know if you have any ideas. Feel free to contact x@y.com where x = erikbern and y = spotify.
