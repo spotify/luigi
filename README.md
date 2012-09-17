@@ -107,11 +107,13 @@ If you drop the *--local-scheduler* flag, your script will try to connect to the
     
 in the background and then run
 
-    $ python wordcount.py --date 2012-08-01
+    $ python wordcount.py --date 2012-W03
 
-then in fact your script will now do the scheduling through a centralized server. Launching *http://localhost:8000* should show something like this:
+then in fact your script will now do the scheduling through a centralized server. Launching *http://localhost:8081* should show something like this:
 
-TODO: show graphviz visualization
+![Wordcount](doc/wordcount.png)
+
+The green boxes mean that the job is already done.
 
 ### Example 2 - Hadoop WordCount
 
@@ -151,8 +153,18 @@ EC2 is unfortunately not supported at this point. We have some old code for this
 
     if __name__ == '__main__':
         luigi.run()
+        
+Run this using
 
-TODO: show graphviz visualization
+    $ python wordcount_hadoop.py WordCount --date 2012-W03
+
+This will yield a familiar overview
+
+![Wordcount](doc/wordcount_hadoop.png)
+
+The blue box means that the job is currently running. It takes a while for the Hadoop job to finish. If it fails, it will become red:
+
+![Wordcount](doc/wordcount_hadoop_failed.png)
 
 ## Conceptual overview
 
@@ -280,6 +292,16 @@ You can use the hdfs.HdfsTarget class anywhere by just instantiating it:
     f = luigi.hdfs.HdfsTarget('/tmp/test').open('w')
     ...
     f.close() # needed
+
+## More graph porn
+
+Running the *test/fib_test.py* with *--n 200* yields a complex graph (albeit slightly artificial):
+
+![Wordcount](doc/fib.png)
+
+Scroll and drag to zoom in:
+
+![Wordcount](doc/fib_zoomed.png)
 
 ## More info
 
