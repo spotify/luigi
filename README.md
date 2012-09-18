@@ -12,11 +12,11 @@ Luigi was conceived and implemented at [Spotify](http://www.spotify.com) mostly 
 
 You probably should check out Luigi if you use Python and:
 
-* There is a bunch of tasks you have to run.
+* There are a bunch of tasks you have to run.
 * This tasks are generally batch processing stuff.
-* These tasks form have dependencies on other tasks or input coming from somewhere else.
+* These tasks have dependencies on other tasks or input coming from somewhere else.
 * You want things to be triggered at specific points and/or by data availablity.
-* You use Hadoop (though by no means it's necessary)
+* You use Hadoop (though by no means is it necessary)
 * Your stuff takes a sizeable amount of time to run (anything from minutes to months).
 * You want to automate a complex pipeline of tasks.
 * Occasional failures are expected. Retry later.
@@ -37,7 +37,7 @@ Assume you have a bunch of text files dumped onto disk every night by some exter
 
     import luigi
     import datetime
-   
+
     class InputText(luigi.ExternalTask):
         ''' This class represents something that was created elsewhere by an external process, so all we want to do is to implement the output method.
         '''
@@ -54,7 +54,7 @@ Assume you have a bunch of text files dumped onto disk every night by some exter
 
        def output(self):
            return luigi.LocalTarget('/var/tmp/text-count/%s' % (self.date_interval))
-     
+
        def run(self):
            count = {}
            for file in self.input(): # The input() method is a wrapper around requires() that returns Target objects
@@ -71,7 +71,7 @@ Assume you have a bunch of text files dumped onto disk every night by some exter
     if __name__ == '__main__':
         luigi.run()
 
-Now, provided you have a bunch of input files in /var/tmp/text/ (you can generate them using examples/generate_input.py), try running this using eg
+Now, provided you have a bunch of input files in /var/tmp/text/ (you can generate them using examples/generate\_input.py), try running this using eg
 
     $ python wordcount.py --local-scheduler --date 2012-08-01
 
@@ -80,7 +80,7 @@ You can also try to view the manual using --help which will give you an overview
     usage: wordcount.py [-h] [--local-scheduler] [--scheduler-host SCHEDULER_HOST]
                         [--lock] [--lock-pid-dir LOCK_PID_DIR] [--workers WORKERS]
                         [--date-interval DATE_INTERVAL]
-    
+
     optional arguments:
       -h, --help            show this help message and exit
       --local-scheduler     Use local scheduling
@@ -104,7 +104,7 @@ The --local-scheduler flag tells Luigi not to connect to a central scheduler. Th
 If you drop the *--local-scheduler* flag, your script will try to connect to the central planner, by default at localhost port 8081. If you run
 
     ./bin/spluigid
-    
+
 in the background and then run
 
     $ python wordcount.py --date 2012-W03
@@ -129,17 +129,17 @@ EC2 is unfortunately not supported at this point. We have some old code for this
 
     import luigi, luigi.hadoop, luigi.hdfs
     import datetime
-    
+
     # To make this run, you probably want to edit /etc/luigi/client.cfg and add something like:
     #
     # [hadoop]
     # jar: /usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
-    
+
     class InputText(luigi.ExternalTask):
         date = luigi.DateParameter()
         def output(self):
             return luigi.hdfs.HdfsTarget(self.date.strftime('/tmp/text/%Y-%m-%d.txt'))
-    
+
     @luigi.expose
     class WordCount(luigi.hadoop.JobTask):
         date_interval = luigi.DateIntervalParameter()
@@ -159,7 +159,7 @@ EC2 is unfortunately not supported at this point. We have some old code for this
 
     if __name__ == '__main__':
         luigi.run()
-        
+
 Run this using
 
     $ python wordcount_hadoop.py WordCount --date 2012-W03
@@ -236,21 +236,21 @@ The *run* method now contains the actual code that is run. Note that Luigi break
     class TaskA(luigi.Task):
         def output(self):
             return luigi.LocalTarget('xyz')
-            
+
     class FlipLinesBackwards(luigi.Task):
         def requires(self):
         	 return TaskA()
-        	 
+
         def output(self):
              return luigi.LocalTarget('abc')
-        	 
+
         def run(self):
             f = self.input().open('r') # this will return a file stream that reads from "xyz"
             g = self.output().open('w')
             for line in f:
                 g.write('%s\n', ''.join(reversed(line.strip().split()))
             g.close() # needed because files are atomic
-            
+
 #### expose
 
 By using the class decorator *luigi.expose* or *luigi.expose_main* you can expose any Task class so that it's available on the command line. This way you can invoke it using luigi.run()
@@ -261,12 +261,12 @@ By using the class decorator *luigi.expose* or *luigi.expose_main* you can expos
         y = IntParameter(default=45)
         def run(self):
             print self.x + self.y
-        
+
 You can run this task from the command line like this:
 
     python my_task.py MyTask --x 123 --y 456
 
-If you use expose_main, you can omit MyTask. However at most one class can use this decorator.
+If you use expose\_main, you can omit MyTask. However at most one class can use this decorator.
 
 #### Executing a Luigi workflow
 
@@ -348,3 +348,4 @@ Also it should be mentioned that Luigi is named after the pipeline-running frien
 ## Want to contribute?
 
 Awesome! Let us know if you have any ideas. Feel free to contact x@y.com where x = erikbern and y = spotify.
+
