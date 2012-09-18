@@ -262,6 +262,9 @@ By using the class decorator *luigi.expose* or *luigi.expose_main* you can expos
         def run(self):
             print self.x + self.y
 
+    if __name__ == '__main__':
+       luigi.run()
+
 You can run this task from the command line like this:
 
     python my_task.py MyTask --x 123 --y 456
@@ -313,7 +316,7 @@ Actually the resemblance with a G-clef is coincidental. Scroll and drag to zoom 
 
 ## More info
 
-Luigi is the sucessors to a couple of attempts that we weren't fully happy with. We learned a lot from our mistakes and some design decisions include:
+Luigi is the sucessor to a couple of attempts that we weren't fully happy with. We learned a lot from our mistakes and some design decisions include:
 
 * Straightforward command line integration.
 * As little boiler plate as possible.
