@@ -102,7 +102,7 @@ class Worker(object):
 
         if task_id in self.__scheduled_tasks:
             return  # already scheduled
-
+        logger.debug("Checking %s" % task_id)
         if task.complete():
             # Not submitting dependencies of finished tasks
             self.__scheduler.add_task(self.__id, task_id, status=DONE, runnable=False)
@@ -116,6 +116,7 @@ class Worker(object):
             deps = [d.task_id for d in task.deps()]
             self.__scheduler.add_task(self.__id, task_id, status=PENDING, deps=deps, runnable=True)
             logger.info('Scheduled %s' % task_id)
+
             for task_2 in task.deps():
                 self.add(task_2)  # Schedule stuff recursively
 
@@ -137,12 +138,12 @@ class Worker(object):
 
             task.run()
             logger.info('[pid %s] Done      %s', os.getpid(), task_id)
-            status, expl = 'DONE', ''
+            status, expl = DONE, ''
 
         except KeyboardInterrupt:
             raise
         except:
-            status = 'FAILED'
+            status = FAILED
             expl = traceback.format_exc(sys.exc_info()[2])
             if self.__erroremail and not sys.stdout.isatty():
                 logger.error("[pid %s] Error while running %s. Sending error email", os.getpid(), task)
