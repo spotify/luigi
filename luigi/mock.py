@@ -14,33 +14,43 @@
 
 import StringIO
 import target
+import sys
+import os
 
 
 class MockFile(target.Target):
     _file_contents = {}
 
-    def __init__(self, fn, is_tmp=None):
-        self.__fn = fn
+    def __init__(self, fn, is_tmp=None, mirror_on_stderr=False):
+        self._mirror_on_stderr = mirror_on_stderr
+        self._fn = fn
 
     def exists(self,):
-        return self.__fn in MockFile._file_contents
+        return self._fn in MockFile._file_contents
 
     @property
     def path(self):
-        return self.__fn
+        return self._fn
 
     def open(self, mode):
-        fn = self.__fn
+        fn = self._fn
 
         class StringBuffer(StringIO.StringIO):
             # Just to be able to do writing + reading from the same buffer
-            def close(self):
+            def write(self2, data):
+                if self._mirror_on_stderr:
+                    self2.seek(-1, os.SEEK_END)
+                    if self2.tell() <= 0 or self2.read(1) == '\n':
+                        sys.stderr.write(fn + ": ")
+                    sys.stderr.write(data)
+                StringIO.StringIO.write(self2, data)
+
+            def close(self2):
                 if mode == 'w':
-                    MockFile._file_contents[fn] = self.getvalue()
-                StringIO.StringIO.close(self)
+                    MockFile._file_contents[fn] = self2.getvalue()
+                StringIO.StringIO.close(self2)
 
         if mode == 'w':
             return StringBuffer()
         else:
             return StringBuffer(MockFile._file_contents[fn])
-
