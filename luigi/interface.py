@@ -19,7 +19,6 @@ import ConfigParser
 import rpc
 import optparse
 import scheduler
-import sys
 
 
 class Register(object):
@@ -38,7 +37,7 @@ class Register(object):
         for param_name, param_obj in cls.get_global_params():
             if param_name in self.__global_params and self.__global_params[param_name] != param_obj:
                 # Could be registered multiple times in case there's subclasses
-                raise Exception('Global parameter %s registered by multiple classes' % name)
+                raise Exception('Global parameter %r registered by multiple classes' % param_name)
             self.__global_params[param_name] = param_obj
         return cls
 

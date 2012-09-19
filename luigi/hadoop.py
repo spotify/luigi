@@ -314,9 +314,8 @@ class LocalJobRunner(JobRunner):
         map_input = StringIO.StringIO()
 
         for i in luigi.task.flatten(job.input_hadoop()):
-            print i
             self.sample(i.open('r'), self.samplelines, map_input)
-        print 'map input:', map_input.getvalue()
+
         map_input.seek(0)
 
         # run job now...
