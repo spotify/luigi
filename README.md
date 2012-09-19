@@ -1,5 +1,3 @@
-# Luigi
-
 ![Luigi](doc/luigi.png)
 
 ## What is it?
@@ -26,6 +24,13 @@ We use Luigi internally at Spotify to run 1000s of tasks every day, organized in
 Note that Luigi is still in a slightly immature state so future changes might very well not be backwards compatible.
 
 A code example says more than 1000 bullet lists, so enough said - let's look at some examples. Though by all means feel free to scroll down and [read more](#readmore) about some design decisions Luigi.
+
+## Installing
+
+Downloading and running *python setup.py install* should be enough. Note that you probably want [Tornado](http://www.tornadoweb.org/) and [Pygraphviz](http://networkx.lanl.gov/pygraphviz/). Also [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) is optional if you want to run Hadoop jobs since it makes debugging easier. If you want to run Hadoop you should also make sure to edit /etc/luigi/client.cfg and add something like this
+
+    [hadoop]
+    jar: /usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
 
 ## Examples
 
