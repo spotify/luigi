@@ -357,5 +357,5 @@ Also it should be mentioned that Luigi is named after the pipeline-running frien
 
 ## Want to contribute?
 
-Awesome! Let us know if you have any ideas. Feel free to contact x@y.com where x = erikbern and y = spotify.
+Awesome! Let us know if you have any ideas. Feel free to contact x@y.com where x = luigi and y = spotify.
 
