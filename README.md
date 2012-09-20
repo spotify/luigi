@@ -13,7 +13,6 @@ You probably should check out Luigi if you use Python and:
 * There are a bunch of tasks you have to run.
 * This tasks are generally batch processing stuff.
 * These tasks have dependencies on other tasks or input coming from somewhere else.
-* You want things to be triggered at specific points and/or by data availablity.
 * You use Hadoop (though by no means is it necessary)
 * Your stuff takes a sizeable amount of time to run (anything from minutes to months).
 * You want to automate a complex pipeline of tasks.
@@ -21,7 +20,7 @@ You probably should check out Luigi if you use Python and:
 
 We use Luigi internally at Spotify to run 1000s of tasks every day, organized in complex dependency graphs. Most of these tasks are Hadoop job. Luigi provides an infrastructure that powers all kinds of stuff including recommendations, toplists, A/B test analysis, external reports, internal dashboards, etc.
 
-Note that Luigi is still in a slightly immature state so future changes might very well not be backwards compatible.
+Note that Luigi is still in a slightly immature state so you might see occasional weirdness. Future changes might not be backwards compatible.
 
 A code example says more than 1000 bullet lists, so enough said - let's look at some examples. Though by all means feel free to scroll down and [read more](#readmore) about some design decisions Luigi.
 
@@ -165,7 +164,9 @@ EC2 is unfortunately not supported at this point. We have some old code for this
     if __name__ == '__main__':
         luigi.run()
 
-Run this using
+Luigi also has support for combiners and counters. If you want to bundle modules with your job, you can use that either by overriding the *extra_packages* method, or by invoking the *luigi.hadoop.attach* function anywhere in your code.
+
+Run the example using
 
     $ python wordcount_hadoop.py WordCount --date 2012-W03
 
@@ -177,7 +178,7 @@ The blue box means that the job is currently running. If it fails, it will becom
 
 ![Wordcount](doc/wordcount_hadoop_failed.png)
 
-In case your job crashes remotely due to any Python exception, Luigi will fetch the traceback and print it on standard output. You need [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) for it to work and you also need connectivity to your tasktrackers.
+In case your job crashes remotely due to any Python exception, Luigi will try to fetch the traceback and print it on standard output. You need [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) for it to work and you also need connectivity to your tasktrackers.
 
 ## Conceptual overview
 
@@ -187,7 +188,7 @@ There are two fundamental building blocks of Luigi - the *Task* class and the *T
 
 Broadly speaking, the Target class corresponds to a file on a disk. Or a file on HDFS. Or some kind of a checkpoint, like an entry in a database. Actually, the only method that Targets have to implement is the *exists* method which returns True if and only if the Target exists.
 
-In practice, implementing Target subclasses is rarely needed. You can probably get pretty far with the *LocalTarget* and *hdfs.HdfsTarget* classes that are available out of the box. These directly map to a file on the local drive, or a file in HDFS, respectively. In addition these also wrap the underlying operations to make them atomic. They both implement the *open(flag)* method which returns a stream object that could be read (flag = 'r') from or written to (flag = 'w').
+In practice, implementing Target subclasses is rarely needed. You can probably get pretty far with the *LocalTarget* and *hdfs.HdfsTarget* classes that are available out of the box. These directly map to a file on the local drive, or a file in HDFS, respectively. In addition these also wrap the underlying operations to make them atomic. They both implement the *open(flag)* method which returns a stream object that could be read (flag = 'r') from or written to (flag = 'w'). Both LocalTarget and hdfs.HdfsTarget also optionally take a format parameter. Luigi comes with Gzip support by providing *format=format.Gzip* . Adding support for other formats is pretty simple.
 
 ### Task
 
@@ -203,7 +204,7 @@ Now, in Python this is generally done by adding arguments to the constructor. Lu
         date = luigi.DateParameter(default=datetime.date.today())
         # ...
 
-By doing this, Luigi can do take care of all the boiler plate code that would normally be needed in the constructor. Internally, the DailyReport object can now be constructed by running *DailyReport(datetime.date(2012, 5, 10))*. Luigi also creates a command line parser that automatically handles the conversion from strings to Python types. This way you can invoke the job on the command line eg. by passing *--date 2012-15-10*.
+By doing this, Luigi can do take care of all the boiler plate code that would normally be needed in the constructor. Internally, the DailyReport object can now be constructed by running *DailyReport(datetime.date(2012, 5, 10))* or just *DailyReport()*. Luigi also creates a command line parser that automatically handles the conversion from strings to Python types. This way you can invoke the job on the command line eg. by passing *--date 2012-15-10*.
 
 The parameters are all set to their values on the Task object instance, i.e.
 
@@ -305,7 +306,8 @@ The Hadoop code is integrated in the rest of the Luigi code because we really be
 
 You can use the hdfs.HdfsTarget class anywhere by just instantiating it:
 
-    f = luigi.hdfs.HdfsTarget('/tmp/test').open('w')
+    t = luigi.hdfs.HdfsTarget('/tmp/test.gz', format=format.Gzip)
+    f = t.open('w')
     ...
     f.close() # needed
 
