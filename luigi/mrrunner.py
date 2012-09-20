@@ -27,7 +27,6 @@ import cPickle as pickle
 import logging
 import traceback
 
-# these methods needs to be available before the rest of spotify.rambo is unpacked
 def repr_reader(inputs):
     """Reader which uses python eval on each part of a tab separated string.
        Yields a tuple of python objects."""

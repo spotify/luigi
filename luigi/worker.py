@@ -33,11 +33,10 @@ def send_email(subject, message, recipients, image_png=None):
     import email.mime.text
     import email.mime.image
 
+    import interface
+    config = interface.load_config()
+    sender = config.get('email')
     smtp = smtplib.SMTP('localhost')
-    sender = 'no-reply@spotify.com'
-    # raw_message = "From: Spotify Cronutil <%s>\r\n" % sender + \
-        # "To: %s\r\n\r\n" % ', '.join(recipients) + \
-        # message
 
     msg_root = email.mime.multipart.MIMEMultipart('related')
 
@@ -52,7 +51,7 @@ def send_email(subject, message, recipients, image_png=None):
         msg_root.attach(msg_image)
 
     msg_root['Subject'] = subject
-    msg_root['From'] = 'Spotify Builder'
+    msg_root['From'] = 'Luigi'
     msg_root['To'] = ','.join(recipients)
 
     smtp.sendmail(sender, recipients, msg_root.as_string())

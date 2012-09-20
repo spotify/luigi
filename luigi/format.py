@@ -110,7 +110,7 @@ class OutputPipeProcessWrapper(object):
 class Format(object):
     """ Interface for format specifications """
 
-    # TODO Move this to spotify.luigi.hdfs
+    # TODO Move this to somewhere else?
     @classmethod
     def hdfs_reader(cls, path):
         raise NotImplementedError()
@@ -119,7 +119,7 @@ class Format(object):
     def pipe_reader(cls, input_pipe):
         raise NotImplementedError()
 
-    # TODO Move this to spotify.luigi.hdfs
+    # TODO Move this to somewhere else?
     @classmethod
     def hdfs_writer(cls, path):
         raise NotImplementedError()
