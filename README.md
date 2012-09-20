@@ -134,38 +134,40 @@ Luigi also provides support for Hadoop jobs straight out of the box. The interfa
 
 EC2 is unfortunately not supported at this point. We have some old code for this (using Python [boto](http://github.com/boto/boto)) and would love to help anyone interested in getting it running.
 
-    import luigi, luigi.hadoop, luigi.hdfs
-    import datetime
+```python
+import luigi, luigi.hadoop, luigi.hdfs
+import datetime
 
-    # To make this run, you probably want to edit /etc/luigi/client.cfg and add something like:
-    #
-    # [hadoop]
-    # jar: /usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
+# To make this run, you probably want to edit /etc/luigi/client.cfg and add something like:
+#
+# [hadoop]
+# jar: /usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
 
-    class InputText(luigi.ExternalTask):
-        date = luigi.DateParameter()
-        def output(self):
-            return luigi.hdfs.HdfsTarget(self.date.strftime('/tmp/text/%Y-%m-%d.txt'))
+class InputText(luigi.ExternalTask):
+    date = luigi.DateParameter()
+    def output(self):
+        return luigi.hdfs.HdfsTarget(self.date.strftime('/tmp/text/%Y-%m-%d.txt'))
 
-    @luigi.expose
-    class WordCount(luigi.hadoop.JobTask):
-        date_interval = luigi.DateIntervalParameter()
+@luigi.expose
+class WordCount(luigi.hadoop.JobTask):
+    date_interval = luigi.DateIntervalParameter()
 
-        def requires(self):
-            return [InputText(date) for date in self.date_interval.dates()]
+    def requires(self):
+        return [InputText(date) for date in self.date_interval.dates()]
 
-        def output(self):
-            return luigi.hdfs.HdfsTarget('/tmp/text-count/%s' % self.date_interval)
+    def output(self):
+        return luigi.hdfs.HdfsTarget('/tmp/text-count/%s' % self.date_interval)
 
-        def mapper(self, line):
-            for word in line.strip().split():
-                yield word, 1
+    def mapper(self, line):
+        for word in line.strip().split():
+            yield word, 1
 
-        def reducer(self, key, values):
-            yield key, sum(values)
+    def reducer(self, key, values):
+        yield key, sum(values)
 
-    if __name__ == '__main__':
-        luigi.run()
+if __name__ == '__main__':
+    luigi.run()
+```
 
 Luigi also has support for combiners and counters. If you want to bundle modules with your job, you can use that either by overriding the *extra_packages* method, or by invoking the *luigi.hadoop.attach* function anywhere in your code.
 
@@ -203,16 +205,20 @@ The Task class corresponds to some type of job that is run, but in general you w
 
 Now, in Python this is generally done by adding arguments to the constructor. Luigi requires you to declare these parameters instantiating Parameter objects on the class scope:
 
-    class DailyReport(luigi.hadoop.JobTask):
-        date = luigi.DateParameter(default=datetime.date.today())
-        # ...
+```python
+class DailyReport(luigi.hadoop.JobTask):
+    date = luigi.DateParameter(default=datetime.date.today())
+    # ...
+```
 
 By doing this, Luigi can do take care of all the boiler plate code that would normally be needed in the constructor. Internally, the DailyReport object can now be constructed by running *DailyReport(datetime.date(2012, 5, 10))* or just *DailyReport()*. Luigi also creates a command line parser that automatically handles the conversion from strings to Python types. This way you can invoke the job on the command line eg. by passing *--date 2012-15-10*.
 
 The parameters are all set to their values on the Task object instance, i.e.
 
-    d = DailyReport(datetime.date(2012, 5, 10))
-    print d.date
+```python
+d = DailyReport(datetime.date(2012, 5, 10))
+print d.date
+```
 
 will return the same date that the object was constructed with. Same goes if you invoke Luigi on the command line.
 
@@ -222,8 +228,10 @@ Python is not a typed language and you don't have to specify the types of any of
 
 The *requires* method is used to specify dependencies on other Task object, which might even be of the same class. For instance, an example implementation could be
 
-    def requires(self):
-        return OtherTask(self.date), DailyReport(self.date - datetime.timedelta(1))
+```python
+def requires(self):
+    return OtherTask(self.date), DailyReport(self.date - datetime.timedelta(1))
+```
 
 In this case, the DailyReport task depends on two inputs created earlier, one of which is the same class. requires can return other Tasks in any way wrapped up within dicts/lists/tuples etc
 
@@ -231,48 +239,54 @@ In this case, the DailyReport task depends on two inputs created earlier, one of
 
 The *output* method returns one or more Target objects. Similarly to requires, can return wrap them up in any way that's convenient for you. However we strongly recommend that any Task only returns one single Target in output.
 
-    class DailyReport(luigi.Task):
-        date = luigi.DateParameter()
-        def output(self):
-            return luigi.hdfs.HdfsTarget(self.date.strftime('/reports/%Y-%m-%d'))
-        # ...
+```python
+class DailyReport(luigi.Task):
+    date = luigi.DateParameter()
+    def output(self):
+        return luigi.hdfs.HdfsTarget(self.date.strftime('/reports/%Y-%m-%d'))
+    # ...
+```
 
 
 #### Task.run
 
 The *run* method now contains the actual code that is run. Note that Luigi breaks down everything into two stages. First it figures out all dependencies between tasks, then it runs everything. The *input()* method is an internal helper method that just replaces all Task objects in requires with their corresponding output. For instance, in this example
 
-    class TaskA(luigi.Task):
-        def output(self):
-            return luigi.LocalTarget('xyz')
+```python
+class TaskA(luigi.Task):
+    def output(self):
+        return luigi.LocalTarget('xyz')
 
-    class FlipLinesBackwards(luigi.Task):
-        def requires(self):
-        	 return TaskA()
+class FlipLinesBackwards(luigi.Task):
+    def requires(self):
+        return TaskA()
 
-        def output(self):
-             return luigi.LocalTarget('abc')
+    def output(self):
+        return luigi.LocalTarget('abc')
 
-        def run(self):
-            f = self.input().open('r') # this will return a file stream that reads from "xyz"
-            g = self.output().open('w')
-            for line in f:
-                g.write('%s\n', ''.join(reversed(line.strip().split()))
-            g.close() # needed because files are atomic
+    def run(self):
+        f = self.input().open('r') # this will return a file stream that reads from "xyz"
+        g = self.output().open('w')
+        for line in f:
+            g.write('%s\n', ''.join(reversed(line.strip().split()))
+        g.close() # needed because files are atomic
+```
 
 #### expose
 
 By using the class decorator *luigi.expose* or *luigi.expose_main* you can expose any Task class so that it's available on the command line. This way you can invoke it using luigi.run()
 
-    @luigi.expose
-    class MyTask(luigi.Task):
-        x = IntParameter()
-        y = IntParameter(default=45)
-        def run(self):
-            print self.x + self.y
+```python
+@luigi.expose
+class MyTask(luigi.Task):
+    x = IntParameter()
+    y = IntParameter(default=45)
+    def run(self):
+        print self.x + self.y
 
-    if __name__ == '__main__':
+if __name__ == '__main__':
        luigi.run()
+```
 
 You can run this task from the command line like this:
 
@@ -284,18 +298,22 @@ If you use expose\_main, you can omit MyTask. However at most one class can use 
 
 As seen above, command line integration is achieved by simply adding
 
-    if __name__ == '__main__':
-       luigi.run()
+```python
+if __name__ == '__main__':
+    luigi.run()
+```
 
 This will read the args from the command line (using argparse) and invoke everything.
 
 In case you just want to run a Luigi chain from a Python script, you can do that internally without the command line integration. The code will look something like
 
-    task = MyTask(123, 'xyz')
-    sch = scheduler.CentralPlannerScheduler()
-    w = worker.Worker(scheduler=sch)
-    w.add(task)
-    w.run()
+```python
+task = MyTask(123, 'xyz')
+sch = scheduler.CentralPlannerScheduler()
+w = worker.Worker(scheduler=sch)
+w.add(task)
+w.run()
+```
 
 #### Instance caching
 
@@ -305,14 +323,18 @@ In addition to the stuff mentioned above, Luigi also does some metaclass logic s
 
 The Hadoop code is integrated in the rest of the Luigi code because we really believe almost all Hadoop jobs benefit from being part of some sort of workflow. However, in theory, nothing stops you from using the hadoop.JobTask class (and also hdfs.HdfsTarget) without using the rest of Luigi. You can simply run it manually using
 
-    MyJobTask('abc', 123).run()
+```python
+MyJobTask('abc', 123).run()
+```
 
 You can use the hdfs.HdfsTarget class anywhere by just instantiating it:
 
-    t = luigi.hdfs.HdfsTarget('/tmp/test.gz', format=format.Gzip)
-    f = t.open('w')
-    ...
-    f.close() # needed
+```python
+t = luigi.hdfs.HdfsTarget('/tmp/test.gz', format=format.Gzip)
+f = t.open('w')
+# ...
+f.close() # needed
+```
 
 ## More graph porn
 
