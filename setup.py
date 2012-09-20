@@ -22,4 +22,7 @@ setup(name='luigi',
       packages=[
         'luigi'
         ],
+      package_data={
+        'luigi': ['static/*']
+        },
       )
