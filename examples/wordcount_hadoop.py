@@ -19,7 +19,7 @@ class WordCount(luigi.hadoop.JobTask):
         return [InputText(date) for date in self.date_interval.dates()]
 
     def output(self):
-        return luigi.hdfs.HdfsTarget('/tmp/text-count/%s-%d' % (self.date.strftime('%Y-%m-%d'), self.lookback))
+        return luigi.hdfs.HdfsTarget('/tmp/text-count/%s' % self.date_interval)
 
     def mapper(self, line):
         for word in line.strip().split():
