@@ -1,4 +1,4 @@
-![Luigi](doc/luigi.png)
+![Luigi](/spotify/luigi/blob/open-source/doc/luigi.png)
 
 ## What is it?
 
@@ -117,11 +117,11 @@ then in fact your script will now do the scheduling through a centralized server
 
 Launching *http://localhost:8081* should show something like this:
 
-![Wordcount](doc/wordcount.png)
+![Wordcount](/spotify/luigi/blob/open-source/doc/wordcount.png)
 
 The green boxes mean that the job is already done. If you keep invoking the script with a bunch of different date intervals it might look like this after a while:
 
-![Wordcount](doc/wordcount_more.png)
+![Wordcount](/spotify/luigi/blob/open-source/doc/wordcount_more.png)
 
 You can drag and scroll to re-center and zoom. The visualizer will automatically prune all done tasks after a while.
 
@@ -172,11 +172,11 @@ Run the example using
 
 This will yield a familiar overview
 
-![Wordcount](doc/wordcount_hadoop.png)
+![Wordcount](/spotify/luigi/blob/open-source/doc/wordcount_hadoop.png)
 
 The blue box means that the job is currently running. If it fails, it will become red:
 
-![Wordcount](doc/wordcount_hadoop_failed.png)
+![Wordcount](/spotify/luigi/blob/open-source/doc/wordcount_hadoop_failed.png)
 
 In case your job crashes remotely due to any Python exception, Luigi will try to fetch the traceback and print it on standard output. You need [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) for it to work and you also need connectivity to your tasktrackers.
 
@@ -315,11 +315,11 @@ You can use the hdfs.HdfsTarget class anywhere by just instantiating it:
 
 Running the *test/fib_test.py* with *--n 200* yields a complex graph (albeit slightly artificial):
 
-![Wordcount](doc/fib.png)
+![Wordcount](/spotify/luigi/blob/open-source/doc/fib.png)
 
 Actually the resemblance with a G-clef is coincidental. Scroll and drag to zoom in:
 
-![Wordcount](doc/fib_zoomed.png)
+![Wordcount](/spotify/luigi/blob/open-source/doc/fib_zoomed.png)
 
 ## More info
 
