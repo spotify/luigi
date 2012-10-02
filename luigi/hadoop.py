@@ -136,12 +136,14 @@ class HadoopJobRunner(JobRunner):
 
     TODO: add code to support Elastic Mapreduce (using boto) and local execution.
     '''
-    def __init__(self, streaming_jar, modules=[], streaming_args=[], libjars=[], libjars_in_hdfs=[], jobconfs={}, input_format=None, output_format=None):
+    def __init__(self, streaming_jar, modules=[], streaming_args=[], libjars=[], cache_files = [], cache_archives = [], libjars_in_hdfs=[], jobconfs={}, input_format=None, output_format=None):
         self.streaming_jar = streaming_jar
         self.modules = modules
         self.streaming_args = streaming_args
         self.libjars = libjars
         self.libjars_in_hdfs = libjars_in_hdfs
+        self.cache_files = cache_files
+        self.cache_archives = cache_archives
         self.jobconfs = jobconfs
         self.input_format = input_format
         self.output_format = output_format
@@ -207,6 +209,12 @@ class HadoopJobRunner(JobRunner):
 
         for f in files:
             arglist += ['-file', f]
+
+        for f in self.cache_files:
+            arglist += ['-cacheFile', f]
+
+        for f in self.cache_archives:
+            arglist += ['-cacheArchive', f]
 
         if self.output_format:
             arglist += ['-outputformat', self.output_format]
