@@ -59,6 +59,28 @@ def dereference(file):
     else:
         return file
 
+def get_extra_files(extra_files):
+    result = []
+    for f in extra_files:
+        if isinstance(f, str):
+            src, dst = f, os.path.basename(f)
+        elif isinstance(f, tuple):
+            src, dst = f
+        else:
+            raise Exception()
+
+        if os.path.isdir(src):
+            src_prefix = os.path.join(src, '')
+            for base, dirs, files in os.walk(src):
+                for file in files:
+                    f_src = os.path.join(base, file)
+                    f_src_stripped = f_src[len(src_prefix):]
+                    f_dst = os.path.join(dst, f_src_stripped)
+                    result.append((f_src, f_dst))
+        else:
+            result.append((src, dst))
+
+    return result
 
 def create_packages_archive(packages, filename):
     """Create a tar archive which will contain the files for the packages listed in packages. """
@@ -136,14 +158,12 @@ class HadoopJobRunner(JobRunner):
 
     TODO: add code to support Elastic Mapreduce (using boto) and local execution.
     '''
-    def __init__(self, streaming_jar, modules=[], streaming_args=[], libjars=[], cache_files = [], cache_archives = [], libjars_in_hdfs=[], jobconfs={}, input_format=None, output_format=None):
+    def __init__(self, streaming_jar, modules=[], streaming_args=[], libjars=[], libjars_in_hdfs=[], jobconfs={}, input_format=None, output_format=None):
         self.streaming_jar = streaming_jar
         self.modules = modules
         self.streaming_args = streaming_args
         self.libjars = libjars
         self.libjars_in_hdfs = libjars_in_hdfs
-        self.cache_files = cache_files
-        self.cache_archives = cache_archives
         self.jobconfs = jobconfs
         self.input_format = input_format
         self.output_format = output_format
@@ -164,7 +184,6 @@ class HadoopJobRunner(JobRunner):
         # self._cleanup_tmp_dirs.append(tmp_dir)
         logger.debug("Tmp dir: %s", tmp_dir)
         os.makedirs(tmp_dir)
-        job._dump(tmp_dir)
 
         # build arguments
         map_cmd = 'python mrrunner.py map'
@@ -188,6 +207,15 @@ class HadoopJobRunner(JobRunner):
         if libjars:
             arglist += ['-libjars', ','.join(libjars)]
 
+        # Add static files and directories
+        extra_files = get_extra_files(job.extra_files())
+
+        for src, dst in extra_files:
+            dst_tmp = '%s_%09d' % (dst.replace('/', '_'), random.randint(0, 999999999))
+            arglist += ['-files', '%s#%s' % (src, dst_tmp)]
+            # -files doesn't support subdirectories, so we need to create the dst_tmp -> dst manually
+            job._add_symlink(dst_tmp, dst)
+
         jobconfs = []
 
         jobconfs.append('mapred.job.name=%s' % job.task_id)
@@ -210,12 +238,6 @@ class HadoopJobRunner(JobRunner):
         for f in files:
             arglist += ['-file', f]
 
-        for f in self.cache_files:
-            arglist += ['-cacheFile', f]
-
-        for f in self.cache_archives:
-            arglist += ['-cacheArchive', f]
-
         if self.output_format:
             arglist += ['-outputformat', self.output_format]
         if self.input_format:
@@ -232,6 +254,8 @@ class HadoopJobRunner(JobRunner):
         create_packages_archive(packages, tmp_dir + '/packages.tar')
 
         logger.info(' '.join(arglist))
+
+        job._dump(tmp_dir)
 
         proc = subprocess.Popen(arglist, stderr=subprocess.PIPE)
 
@@ -374,6 +398,9 @@ class JobTask(luigi.Task):
         self.init_local()
         self.job_runner().run_job(self)
 
+    def _setup_remote(self):
+        self._setup_symlinks()
+
     def requires_local(self):
         ''' Default impl - override this method if you need any local input to be accessible in init() '''
         return []
@@ -439,6 +466,28 @@ class JobTask(luigi.Task):
 
     def extra_modules(self):
         return []  # can be overridden in subclass
+
+    def extra_files(self):
+        '''
+        Can be overriden in subclass. Each element is either a string, or a pair of two strings (src, dst).
+        src can be a directory (in which case everything will be copied recursively).
+        dst can include subdirectories (foo/bar/baz.txt etc)
+        Uses Hadoop's -files option so that the same file is reused across tasks.
+        '''
+        return []
+
+    def _add_symlink(self, src, dst):
+        if not hasattr(self, '_symlinks'):
+            self._symlinks = []
+        self._symlinks.append((src, dst))
+
+    def _setup_symlinks(self):
+        if hasattr(self, '_symlinks'):
+            for src, dst in self._symlinks:
+                d = os.path.dirname(dst)
+                if d and not os.path.exists(d):
+                    os.makedirs(d)
+                os.symlink(src, dst)
 
     def _dump(self, dir=''):
         """Dump instance to file."""

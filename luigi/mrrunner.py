@@ -46,6 +46,7 @@ class Runner(object):
     def __init__(self, job=None):
         self.extract_packages_archive()
         self.job = job or pickle.load(open("job-instance.pickle"))
+        self.job._setup_remote()
 
     def run(self, kind):
         try:
