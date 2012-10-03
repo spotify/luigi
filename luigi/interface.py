@@ -15,10 +15,40 @@
 import worker
 import lock
 import logging
-import ConfigParser
 import rpc
 import optparse
 import scheduler
+
+from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
+
+
+class LuigiConfigParser(RawConfigParser):
+    NO_DEFAULT = object()
+    _instance = None
+
+    @classmethod
+    def instance(cls, *args, **kwargs):
+        """ Singleton getter """
+        if cls._instance is None:
+            config = cls(*args, **kwargs)
+
+            config.read(['/etc/luigi/client.cfg', 'client.cfg'])
+            cls._instance = config
+
+        return cls._instance
+
+    def get(self, section, option, default=NO_DEFAULT):
+        try:
+            return RawConfigParser.get(self, section, option)
+        except (NoOptionError, NoSectionError):
+            if default is LuigiConfigParser.NO_DEFAULT:
+                raise
+            return default
+
+
+def get_config():
+    """ Convenience method (for backwards compatibility) for accessing config singleton """
+    return LuigiConfigParser.instance()
 
 
 class Register(object):
@@ -65,15 +95,18 @@ class Interface(object):
     def run(self):
         raise NotImplementedError
 
+
 class ArgParseInterface(Interface):
     ''' Takes the task as the command, with parameters specific to it
     '''
-    def run(self, cmdline_args=None, config=None):
+    def run(self, cmdline_args=None):
         import argparse
         parser = argparse.ArgumentParser()
-        # INTERNAL: While changing configuration here, please update documentation in spluigi
+        config = get_config()
+        default_scheduler_host = config.get('core', 'default-scheduler-host', default='localhost')
+
         parser.add_argument('--local-scheduler', help='Use local scheduling', action='store_true')
-        parser.add_argument('--scheduler-host', help='Hostname of machine running remote scheduler [default: %(default)s]', default='localhost')
+        parser.add_argument('--scheduler-host', help='Hostname of machine running remote scheduler [default: %(default)s]', default=default_scheduler_host)
         parser.add_argument('--lock', help='Do not run if the task is already running', action='store_true')
         parser.add_argument('--lock-pid-dir', help='Directory to store the pid file [default: %(default)s]', default='/var/tmp/luigi')
         parser.add_argument('--workers', help='Maximum number of parallel tasks to run [default: %(default)s]', default=1, type=int)
@@ -83,7 +116,7 @@ class ArgParseInterface(Interface):
                 defaulthelp = "[default: %s]" % (param.default,)
             else:
                 defaulthelp = ""
-                
+
             if param.is_list:
                 action = "append"
             elif param.is_boolean:
@@ -129,9 +162,7 @@ class ArgParseInterface(Interface):
         else:
             sch = rpc.RemoteScheduler(host=args.scheduler_host)
 
-        erroremail = config.get('luigi', 'erroremail') if config else None
-
-        w = worker.Worker(scheduler=sch, erroremail=erroremail, worker_processes=args.workers)
+        w = worker.Worker(scheduler=sch, worker_processes=args.workers)
 
         w.add(task)
         w.run()
@@ -164,13 +195,13 @@ class OptParseInterface(Interface):
     def __init__(self, existing_optparse):
         self.__existing_optparse = existing_optparse
 
-    def run(self, cmdline_args=None, config=None):
+    def run(self, cmdline_args=None):
+        config = get_config()
         parser = PassThroughOptionParser()
         tasks_str = '/'.join(sorted([name for name in register.get_reg()]))
 
         def add_task_option(p):
             if register.get_main():
-                # INTERNAL: While changing configuration here, please update documentation in spluigi
                 p.add_option('--task', help='Task to run (' + tasks_str + ') [default: %default]', default=register.get_main().task_family)
             else:
                 p.add_option('--task', help='Task to run (%s)' % tasks_str)
@@ -183,13 +214,10 @@ class OptParseInterface(Interface):
         else:
             parser = optparse.OptionParser()
         add_task_option(parser)
-        if config:
-            default_scheduler = config.get('luigi', 'scheduler-host')
-        else:
-            default_scheduler = 'localhost'
-        # INTERNAL: While changing configuration here, please update documentation in spluigi
+        default_scheduler_host = config.get('core', 'default-scheduler-host', default='localhost')
+
         parser.add_option('--local-scheduler', help='Use local scheduling', action='store_true')
-        parser.add_option('--scheduler-host', help='Hostname of machine running remote scheduler [default: %default]', default=default_scheduler)
+        parser.add_option('--scheduler-host', help='Hostname of machine running remote scheduler [default: %default]', default=default_scheduler_host)
         parser.add_option('--lock', help='Do not run if the task is already running', action='store_true')
         parser.add_option('--lock-pid-dir', help='Directory to store the pid file [default: %default]', default='/var/tmp/luigi')
         parser.add_option('--workers', help='Maximum number of parallel tasks to run [default: %default]', default=1, type=int)
@@ -247,17 +275,14 @@ class OptParseInterface(Interface):
         else:
             sch = rpc.RemoteScheduler(host=options.scheduler_host)
 
-        erroremail = config.get('luigi', 'erroremail') if config else None
-
         # Run
-        w = worker.Worker(scheduler=sch, erroremail=erroremail, worker_processes=options.workers)
+        w = worker.Worker(scheduler=sch, worker_processes=options.workers)
 
         w.add(task)
         w.run()
 
 
-def run(cmdline_args=None, existing_optparse=None, use_optparse=False,
-        task_config=None):
+def run(cmdline_args=None, existing_optparse=None, use_optparse=False):
     ''' Run from cmdline.
 
     The default parser uses argparse.
@@ -265,15 +290,12 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False,
     overriding an existing option parser with new args.
     '''
     setup_interface_logging()
-    config = load_config()
     if use_optparse:
         interface = OptParseInterface(existing_optparse)
     else:
         interface = ArgParseInterface()
-    if config and task_config:
-        for key, value in task_config.iteritems():
-            config.set('luigi', key, value)
-    interface.run(cmdline_args, config)
+    interface.run(cmdline_args)
+
 
 def setup_interface_logging():
     logger = logging.getLogger('luigi-interface')
@@ -286,12 +308,3 @@ def setup_interface_logging():
     streamHandler.setFormatter(formatter)
 
     logger.addHandler(streamHandler)
-
-
-def load_config():
-    config = ConfigParser.ConfigParser()
-    result = config.read('/etc/luigi/client.cfg')
-    if result == []:
-        return None
-    else:
-        return config

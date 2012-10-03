@@ -17,6 +17,7 @@ import os
 import glob
 import unittest
 
+
 def suite():
     suite = unittest.TestSuite()
     for filename in glob.glob('test/*_test.py') + glob.glob('python/test/*_test.py'):

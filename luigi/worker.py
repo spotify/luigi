@@ -18,14 +18,16 @@ import threading
 import time
 import sys
 import os
+import interface
 import traceback
 import logging
 import warnings
+import socket
 
 logger = logging.getLogger('luigi-interface')
 
 
-def send_email(subject, message, recipients, image_png=None):
+def send_email(subject, message, sender, recipients, image_png=None):
     import smtplib
     import email
     import email.mime
@@ -33,9 +35,6 @@ def send_email(subject, message, recipients, image_png=None):
     import email.mime.text
     import email.mime.image
 
-    import interface
-    config = interface.load_config()
-    sender = config.get('email')
     smtp = smtplib.SMTP('localhost')
 
     msg_root = email.mime.multipart.MIMEMultipart('related')
@@ -65,17 +64,16 @@ class Worker(object):
     - Asks for stuff to do (pulls it in a loop and runs it)
     """
 
-    def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None, erroremail=None, worker_processes=1):
+    def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None, worker_processes=1):
         if not worker_id:
             worker_id = 'worker-%09d' % random.randrange(0, 999999999)
 
         self.__id = worker_id
-        self.__erroremail = erroremail
-
         self.__scheduler = scheduler
         if isinstance(scheduler, CentralPlannerScheduler) and worker_processes != 1:
             warnings.warn("Will only use one process when running with local in-process scheduler")
             worker_processes = 1
+
         self.worker_processes = worker_processes
         self.__scheduled_tasks = {}
 
@@ -97,27 +95,43 @@ class Worker(object):
         k.start()
 
     def add(self, task):
-        task_id = task.task_id
+        try:
+            task_id = task.task_id
 
-        if task_id in self.__scheduled_tasks:
-            return  # already scheduled
-        logger.debug("Checking %s" % task_id)
-        if task.complete():
-            # Not submitting dependencies of finished tasks
-            self.__scheduler.add_task(self.__id, task_id, status=DONE, runnable=False)
+            if task_id in self.__scheduled_tasks:
+                return  # already scheduled
+            logger.debug("Checking %s" % task_id)
+            if task.complete():
+                # Not submitting dependencies of finished tasks
+                self.__scheduler.add_task(self.__id, task_id, status=DONE, runnable=False)
 
-        elif task.run == NotImplemented:
-            self.__scheduled_tasks[task_id] = task
-            self.__scheduler.add_task(self.__id, task_id, status=PENDING, runnable=False)
-            logger.warning('Task %s is is not complete and run() is not implemented. Probably a missing external dependency.', task_id)
-        else:
-            self.__scheduled_tasks[task_id] = task
-            deps = [d.task_id for d in task.deps()]
-            self.__scheduler.add_task(self.__id, task_id, status=PENDING, deps=deps, runnable=True)
-            logger.info('Scheduled %s' % task_id)
+            elif task.run == NotImplemented:
+                self.__scheduled_tasks[task_id] = task
+                self.__scheduler.add_task(self.__id, task_id, status=PENDING, runnable=False)
+                logger.warning('Task %s is is not complete and run() is not implemented. Probably a missing external dependency.', task_id)
+            else:
+                self.__scheduled_tasks[task_id] = task
+                deps = [d.task_id for d in task.deps()]
+                self.__scheduler.add_task(self.__id, task_id, status=PENDING, deps=deps, runnable=True)
+                logger.info('Scheduled %s' % task_id)
 
-            for task_2 in task.deps():
-                self.add(task_2)  # Schedule stuff recursively
+                for task_2 in task.deps():
+                    self.add(task_2)  # Schedule stuff recursively
+        except KeyboardInterrupt:
+            raise
+        except:
+            expl = traceback.format_exc(sys.exc_info()[2])
+
+            logger.error(expl)
+            logger.error("Error while trying to schedule %s" % task)
+
+            if not sys.stdout.isatty():
+                receiver = interface.get_config().get('core', 'error-email', None)
+                if receiver is not None:
+                    sender = interface.get_config().get('core', 'email-sender', 'luigi-client@%s' % socket.getfqdn())
+                    logger.info("Sending error email to %r" % receiver)
+                    send_email("Luigi: %s FAILED SCHEDULING" % task, expl, sender, (receiver,))
+            exit(1)  # can't allow task to run without its dependencies resolved
 
     def _run_task(self, task_id):
         task = self.__scheduled_tasks[task_id]
@@ -144,11 +158,15 @@ class Worker(object):
         except:
             status = FAILED
             expl = traceback.format_exc(sys.exc_info()[2])
-            if self.__erroremail and not sys.stdout.isatty():
-                logger.error("[pid %s] Error while running %s. Sending error email", os.getpid(), task)
-                send_email("Luigi: %s FAILED" % task, expl,
-                           (self.__erroremail,))
             logger.error(expl)
+            logger.error("[pid %s] Error while running %s" % (os.getpid(), task))
+
+            if not sys.stdout.isatty():
+                receiver = interface.get_config().get('core', 'error-email', None)
+                if receiver is not None:
+                    sender = interface.get_config().get('core', 'email-sender', 'luigi-client@%s' % socket.getfqdn())
+                    logger.info("[pid %s] Sending error email to %r", os.getpid(), receiver)
+                    send_email("Luigi: %s FAILED" % task, expl, sender, (receiver,))
 
         self.__scheduler.add_task(self.__id, task_id, status=status, expl=expl, runnable=None)
 

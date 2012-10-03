@@ -14,6 +14,7 @@
 
 import task
 
+
 def Derived(parent_cls):
     ''' This is a class factory function. It returns a new class with same parameters as
     the parent class, sets the internal value self.parent_obj to an instance of it, and 
@@ -49,11 +50,12 @@ def Derived(parent_cls):
 
             self.parent_obj = parent_cls(**parent_param_values)
             super(DerivedCls, self).__init__(*args, **kwargs)
-    
+
     # Copy parent's params to child
     for param_name, param_obj in parent_cls.get_params():
         setattr(DerivedCls, param_name, param_obj)
     return DerivedCls
+
 
 def Copy(parent_cls):
     ''' Creates a new Task that copies the old task. Usage:
@@ -68,10 +70,10 @@ def Copy(parent_cls):
             return self.parent_obj
 
         output = NotImplemented
-    
+
         def run(self):
             i, o = self.input(), self.output()
-            f = o.open('w') # TODO: assert that i, o are Target objects and not complex datastructures
+            f = o.open('w')  # TODO: assert that i, o are Target objects and not complex datastructures
             for line in i.open('r'):
                 f.write(line)
             f.close()

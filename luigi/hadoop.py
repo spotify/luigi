@@ -305,12 +305,13 @@ class HadoopJobRunner(JobRunner):
                 print '---------- %s:' % link.url
                 print exc.split('=')[-1].decode('hex')
 
+
 class DefaultHadoopJobRunner(HadoopJobRunner):
     ''' The default job runner just reads from config and sets stuff '''
     def __init__(self):
         import interface
-        config = interface.load_config()
-        streaming_jar=config.get('hadoop', 'jar')
+        config = interface.get_config()
+        streaming_jar = config.get('hadoop', 'streaming-jar')
         super(DefaultHadoopJobRunner, self).__init__(streaming_jar=streaming_jar)
         # TODO: add more configurable options
 

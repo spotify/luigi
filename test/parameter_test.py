@@ -15,12 +15,15 @@
 import unittest
 import luigi
 
+
 class A(luigi.Task):
     p = luigi.IntParameter()
+
 
 @luigi.expose
 class WithDefault(luigi.Task):
     x = luigi.Parameter(default='xyz')
+
 
 class Foo(luigi.Task):
     bar = luigi.Parameter()
@@ -36,6 +39,7 @@ class Bar(luigi.Task):
     def run(self):
         Bar._val = self.multibool
 
+
 @luigi.expose
 class Baz(luigi.Task):
     bool = luigi.BooleanParameter()
@@ -43,39 +47,56 @@ class Baz(luigi.Task):
     def run(self):
         Baz._val = self.bool
 
+
 @luigi.expose
 class ForgotParam(luigi.Task):
     param = luigi.Parameter()
-    def run(self): pass
+
+    def run(self):
+        pass
+
 
 @luigi.expose
 class ForgotParamDep(luigi.Task):
     def requires(self):
         return ForgotParam()
-    def run(self): pass
+
+    def run(self):
+        pass
+
 
 @luigi.expose
 class HasGlobalParam(luigi.Task):
     x = luigi.Parameter()
-    global_param = luigi.IntParameter(is_global=True, default=123) # global parameters need default values
+    global_param = luigi.IntParameter(is_global=True, default=123)  # global parameters need default values
     global_bool_param = luigi.BooleanParameter(is_global=True, default=False)
-    def run(self): self.complete = lambda: True
-    def complete(self): return False
+
+    def run(self):
+        self.complete = lambda: True
+
+    def complete(self):
+        return False
+
 
 @luigi.expose
 class HasGlobalParamDep(luigi.Task):
     x = luigi.Parameter()
-    def requires(self): return HasGlobalParam(self.x)
+
+    def requires(self):
+        return HasGlobalParam(self.x)
 
 _shared_global_param = luigi.Parameter(is_global=True, default='123')
+
 
 @luigi.expose
 class SharedGlobalParamA(luigi.Task):
     shared_global_param = _shared_global_param
 
+
 @luigi.expose
 class SharedGlobalParamB(luigi.Task):
     shared_global_param = _shared_global_param
+
 
 class ParameterTest(unittest.TestCase):
     def setUp(self):
@@ -137,7 +158,8 @@ class ParameterTest(unittest.TestCase):
         self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', 'ForgotParam'],)
 
     def test_forgot_param_in_dep(self):
-        self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', 'ForgotParamDep'],)
+        # A programmatic missing parameter will cause a system exit
+        self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', 'ForgotParamDep'],)
 
     def test_default_param_cmdline(self):
         luigi.run(['--local-scheduler', 'WithDefault'])
@@ -155,8 +177,9 @@ class ParameterTest(unittest.TestCase):
         self.assertEquals(h.global_bool_param, False)
 
     def test_global_param_override(self):
-        def f(): return HasGlobalParam(x='xyz', global_param=124)
-        self.assertRaises(luigi.parameter.ParameterException, f) # can't override a global parameter
+        def f():
+            return HasGlobalParam(x='xyz', global_param=124)
+        self.assertRaises(luigi.parameter.ParameterException, f)  # can't override a global parameter
 
     def test_global_param_dep_cmdline(self):
         luigi.run(['--local-scheduler', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'])
