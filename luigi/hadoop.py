@@ -210,11 +210,15 @@ class HadoopJobRunner(JobRunner):
         # Add static files and directories
         extra_files = get_extra_files(job.extra_files())
 
+        files = []
         for src, dst in extra_files:
             dst_tmp = '%s_%09d' % (dst.replace('/', '_'), random.randint(0, 999999999))
-            arglist += ['-files', '%s#%s' % (src, dst_tmp)]
+            files += ['%s#%s' % (src, dst_tmp)]
             # -files doesn't support subdirectories, so we need to create the dst_tmp -> dst manually
-            job._add_symlink(dst_tmp, dst)
+            job._add_link(dst_tmp, dst)
+
+        if files:
+            arglist += ['-files', ','.join(files)]
 
         jobconfs = []
 
@@ -400,7 +404,7 @@ class JobTask(luigi.Task):
         self.job_runner().run_job(self)
 
     def _setup_remote(self):
-        self._setup_symlinks()
+        self._setup_links()
 
     def requires_local(self):
         ''' Default impl - override this method if you need any local input to be accessible in init() '''
@@ -477,18 +481,18 @@ class JobTask(luigi.Task):
         '''
         return []
 
-    def _add_symlink(self, src, dst):
-        if not hasattr(self, '_symlinks'):
-            self._symlinks = []
-        self._symlinks.append((src, dst))
+    def _add_link(self, src, dst):
+        if not hasattr(self, '_links'):
+            self._links = []
+        self._links.append((src, dst))
 
-    def _setup_symlinks(self):
-        if hasattr(self, '_symlinks'):
-            for src, dst in self._symlinks:
+    def _setup_links(self):
+        if hasattr(self, '_links'):
+            for src, dst in self._links:
                 d = os.path.dirname(dst)
                 if d and not os.path.exists(d):
                     os.makedirs(d)
-                os.symlink(src, dst)
+                os.link(src, dst)
 
     def _dump(self, dir=''):
         """Dump instance to file."""
