@@ -204,5 +204,13 @@ class ParameterTest(unittest.TestCase):
         b = SharedGlobalParamB()
         self.assertEquals(b.shared_global_param, 'abc')
 
+    def test_insignificant_parameter(self):
+        class InsignificantParameterTask(luigi.Task):
+            foo = luigi.Parameter(significant=False)
+            bar = luigi.Parameter()
+
+        t = InsignificantParameterTask(foo='x', bar='y')
+        self.assertEquals(t.task_id, 'InsignificantParameterTask(bar=y)')
+
 if __name__ == '__main__':
     luigi.run(use_optparse=True)

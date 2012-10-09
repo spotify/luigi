@@ -24,6 +24,7 @@ def namespace(namespace=None):
     If called without arguments or with None as the namespace, the namespace is reset, which is recommended to do at the end of any file where the namespace is set to avoid unintentionally setting namespace on tasks outside of the scope of the current file."""
     TaskMetaclass._default_namespace = namespace
 
+
 class TaskMetaclass(type):
     # If we already have an instance of this class, then just return it from the cache
     # The idea is that a Task object X should be able to set up heavy data structures that
@@ -169,7 +170,12 @@ class Task(object):
         for key, value in param_values:
             setattr(self, key, value)
 
-        self.task_id = '%s(%s)' % (self.task_family, ', '.join(['%s=%s' % (str(k), str(v)) for k, v in param_values]))
+        task_id_parts = []
+        for param_name, param_value in param_values:
+            if dict(params)[param_name].significant:
+                task_id_parts.append('%s=%s' % (str(param_name), str(param_value)))
+
+        self.task_id = '%s(%s)' % (self.task_family, ', '.join(task_id_parts))
         self.__hash = hash(self.task_id)
 
     @classmethod
@@ -242,6 +248,7 @@ class Task(object):
         The returned value is json encoded and sent to the scheduler as the `expl` argument.
         Default behavior is to send an None value"""
         return None
+
 
 def externalize(task):
     task.run = NotImplemented

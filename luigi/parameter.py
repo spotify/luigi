@@ -16,31 +16,36 @@ import datetime
 
 _no_default = object()
 
+
 class ParameterException(Exception):
     pass
+
 
 class MissingParameterException(ParameterException):
     pass
 
+
 class UnknownParameterException(ParameterException):
     pass
+
 
 class DuplicateParameterException(ParameterException):
     pass
 
+
 class Parameter(object):
     counter = 0
 
-    def __init__(self, default=_no_default, is_list=False, is_boolean=False, is_global=False):
+    def __init__(self, default=_no_default, is_list=False, is_boolean=False, is_global=False, significant=True):
         # The default default is no default
-        self.__default = default # We also use this to store global values
+        self.__default = default  # We also use this to store global values
         self.is_list = is_list
-        self.is_boolean = is_boolean and not is_list # Only BooleanParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
-        # We need to keep track of this to get the order right (see Task class)
-        self.is_global = is_global # It just means that the default value is exposed and you can override it
+        self.is_boolean = is_boolean and not is_list  # Only BooleanParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
+        self.is_global = is_global  # It just means that the default value is exposed and you can override it
+        self.significant = significant
         if is_global and default == _no_default:
             raise ParameterException('Global parameters need default values')
-        self.counter = Parameter.counter
+        self.counter = Parameter.counter  # We need to keep track of this to get the order right (see Task class)
         Parameter.counter += 1
 
     @property
@@ -73,6 +78,7 @@ class Parameter(object):
         else:
             return self.parse(x)
 
+
 class DateHourParameter(Parameter):
     def parse(self, s):
         # TODO(erikbern): we should probably use an internal class for arbitary
@@ -94,7 +100,7 @@ class BooleanParameter(Parameter):
     def __init__(self, *args, **kwargs):
         super(BooleanParameter, self).__init__(*args, is_boolean=True, **kwargs)
 
-    def parse(self, s):        
+    def parse(self, s):
         return {'true': True, 'false': False}[str(s).lower()]
 
 

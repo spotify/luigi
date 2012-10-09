@@ -376,7 +376,7 @@ class LocalJobRunner(JobRunner):
 
 class JobTask(luigi.Task):
     n_reduce_tasks = 25
-    pool = luigi.Parameter(is_global=True, default=None)
+    pool = luigi.Parameter(is_global=True, default=None, significant=False)
 
     def init_local(self):
         ''' Implement any work to setup any internal datastructure etc here.
