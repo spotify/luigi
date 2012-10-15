@@ -23,6 +23,7 @@ import traceback
 import logging
 import warnings
 import socket
+import simplejson as json
 
 logger = logging.getLogger('luigi-interface')
 
@@ -150,14 +151,15 @@ class Worker(object):
                 raise RuntimeError('Unfulfilled dependency %r at run time!\nPrevious tasks: %r' % (missing_dep.task_id, self._previous_tasks))
 
             task.run()
+            expl = json.dumps(task.on_success())
             logger.info('[pid %s] Done      %s', os.getpid(), task_id)
-            status, expl = DONE, ''
+            status = DONE
 
         except KeyboardInterrupt:
             raise
-        except:
+        except Exception as ex:
             status = FAILED
-            expl = traceback.format_exc(sys.exc_info()[2])
+            expl = json.dumps(task.on_failure(ex, traceback.format_exc(sys.exc_info()[2])))
             logger.error(expl)
             logger.error("[pid %s] Error while running %s" % (os.getpid(), task))
 
