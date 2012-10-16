@@ -93,7 +93,7 @@ class HadoopJobTest(unittest.TestCase):
             k, v = line.strip().split()
             count[k] = v
         return count
-        
+
     def test_run(self):
         luigi.run(['--local-scheduler', 'WordCountJob'])
         c = self.read_output(File('luigitest'))
@@ -116,9 +116,9 @@ class HadoopJobTest(unittest.TestCase):
             p.stderr = StringIO.StringIO()
             return p
 
-        h, p = luigi.hdfs.HdfsTarget, subprocess.Popen            
+        h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
         luigi.hdfs.HdfsTarget, subprocess.Popen = MockFile, Popen_fake
-        MockFile.move = lambda *args: None
+        MockFile.move = lambda *args, **kwargs: None
 
         WordCountJobReal().run()
 

@@ -286,7 +286,7 @@ class HadoopJobRunner(JobRunner):
             raise RuntimeError('Streaming job failed with exit code %d' % proc.returncode)
 
         # rename temporary work directory to given output
-        tmp_target.move(output_final)
+        tmp_target.move(output_final, fail_if_exists=True)
 
     @staticmethod
     def fetch_raise_failures(tracking_url):
