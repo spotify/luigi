@@ -17,8 +17,16 @@ from distutils.core import setup
 setup(name='luigi',
       version='1.0',
       description='Workflow mgmgt + task scheduling + dependency resolution',
+      long_description='''
+Luigi is a Python module that helps you build complex pipelines of batch jobs. It handles dependency resolution, workflow management, visualization etc. It also comes with Hadoop support built in.
+
+Conceptually, it's similar to GNU Make where you have certain tasks and these tasks in turn may have dependencies on other tasks. There are also some similarities to Oozie, and maybe also Azkaban.
+
+See https://github.com/spotify/luigi for more info
+''',
       author='Erik Bernhardsson',
       author_email='erikbern@spotify.com',
+      url='https://github.com/spotify/luigi',
       packages=[
         'luigi'
         ],
