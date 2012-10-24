@@ -161,7 +161,7 @@ class Worker(object):
             status = FAILED
             expl = json.dumps(task.on_failure(ex, traceback.format_exc(sys.exc_info()[2])))
             logger.error(expl)
-            logger.error("[pid %s] Error while running %s" % (os.getpid(), task))
+            logger.exception("[pid %s] Error while running %s" % (os.getpid(), task))
 
             if not sys.stdout.isatty():
                 receiver = interface.get_config().get('core', 'error-email', None)
