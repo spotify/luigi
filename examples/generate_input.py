@@ -28,7 +28,7 @@ class InputText(luigi.Task):
 
         f.close()
 
-@luigi.expose_main
+@luigi.expose
 class MultipleInputText(luigi.Task):
     date_interval = luigi.DateIntervalParameter()
     hdfs = luigi.BooleanParameter(default=False)

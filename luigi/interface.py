@@ -18,6 +18,7 @@ import logging
 import rpc
 import optparse
 import scheduler
+import warnings
 
 from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
 
@@ -54,14 +55,10 @@ def get_config():
 class Register(object):
     def __init__(self):
         self.__reg = {}
-        self.__main = None
         self.__global_params = {}
 
-    def expose(self, cls, main=False):
+    def expose(self, cls):
         name = cls.task_family
-        if main:
-            assert self.__main == None
-            self.__main = cls
         assert name not in self.__reg  # TODO: raise better exception
         self.__reg[name] = cls
         for param_name, param_obj in cls.get_global_params():
@@ -74,22 +71,18 @@ class Register(object):
     def get_reg(self):
         return self.__reg
 
-    def get_main(self):
-        return self.__main
-
     def get_global_params(self):
         return self.__global_params.iteritems()
 
-register = Register()
 
+register = Register()
 
 def expose(cls):
     return register.expose(cls)
 
-
 def expose_main(cls):
-    return register.expose(cls, True)
-
+    warnings.warn('expose_main is no longer supported, use luigi.run(..., main_task_cls=cls) instead', DeprecationWarning)
+    return register.expose(cls)
 
 class Interface(object):
     def run(self):
@@ -99,7 +92,7 @@ class Interface(object):
 class ArgParseInterface(Interface):
     ''' Takes the task as the command, with parameters specific to it
     '''
-    def run(self, cmdline_args=None):
+    def run(self, cmdline_args=None, main_task_cls=None):
         import argparse
         parser = argparse.ArgumentParser()
         config = get_config()
@@ -133,8 +126,8 @@ class ArgParseInterface(Interface):
             for param_name, param in register.get_global_params():
                 _add_parameter(parser, param_name, param)
 
-        if register.get_main():
-            _add_task_parameters(parser, register.get_main())
+        if main_task_cls:
+            _add_task_parameters(parser, main_task_cls)
             _add_global_parameters(parser)
 
         else:
@@ -150,8 +143,8 @@ class ArgParseInterface(Interface):
             lock.run_once(args.lock_pid_dir)
         params = vars(args)  # convert to a str -> str hash
 
-        if register.get_main():
-            task_cls = register.get_main()
+        if main_task_cls:
+            task_cls = main_task_cls
         else:
             task_cls = register.get_reg()[args.command]
 
@@ -195,14 +188,14 @@ class OptParseInterface(Interface):
     def __init__(self, existing_optparse):
         self.__existing_optparse = existing_optparse
 
-    def run(self, cmdline_args=None):
+    def run(self, cmdline_args=None, main_task_cls=None):
         config = get_config()
         parser = PassThroughOptionParser()
         tasks_str = '/'.join(sorted([name for name in register.get_reg()]))
 
         def add_task_option(p):
-            if register.get_main():
-                p.add_option('--task', help='Task to run (' + tasks_str + ') [default: %default]', default=register.get_main().task_family)
+            if main_task_cls:
+                p.add_option('--task', help='Task to run (' + tasks_str + ') [default: %default]', default=main_task_cls.task_family)
             else:
                 p.add_option('--task', help='Task to run (%s)' % tasks_str)
         add_task_option(parser)
@@ -282,7 +275,7 @@ class OptParseInterface(Interface):
         w.run()
 
 
-def run(cmdline_args=None, existing_optparse=None, use_optparse=False):
+def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None):
     ''' Run from cmdline.
 
     The default parser uses argparse.
@@ -294,7 +287,7 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False):
         interface = OptParseInterface(existing_optparse)
     else:
         interface = ArgParseInterface()
-    interface.run(cmdline_args)
+    interface.run(cmdline_args, main_task_cls=main_task_cls)
 
 
 def setup_interface_logging():

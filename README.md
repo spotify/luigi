@@ -51,7 +51,7 @@ class InputText(luigi.ExternalTask):
     def output(self):
         return luigi.LocalTarget(self.date.strftime('/var/tmp/text/%Y-%m-%d.txt'))
 
-@luigi.expose_main
+@luigi.expose
 class WordCount(luigi.Task):
     date_interval = luigi.DateIntervalParameter()
 
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
 Now, provided you have a bunch of input files in /var/tmp/text/ (you can generate them using examples/generate\_input.py), try running this using eg
 
-    $ python wordcount.py --local-scheduler --date 2012-08-01
+    $ python wordcount.py WordCount --local-scheduler --date 2012-08-01
 
 You can also try to view the manual using --help which will give you an overview of the options:
 
@@ -274,7 +274,7 @@ class FlipLinesBackwards(luigi.Task):
 
 #### expose
 
-By using the class decorator *luigi.expose* or *luigi.expose_main* you can expose any Task class so that it's available on the command line. This way you can invoke it using luigi.run()
+By using the class decorator *luigi.expose* you can expose any Task class so that it's available on the command line. This way you can invoke it using luigi.run()
 
 ```python
 @luigi.expose
