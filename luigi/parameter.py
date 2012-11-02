@@ -36,7 +36,7 @@ class DuplicateParameterException(ParameterException):
 class Parameter(object):
     counter = 0
 
-    def __init__(self, default=_no_default, is_list=False, is_boolean=False, is_global=False, significant=True):
+    def __init__(self, default=_no_default, is_list=False, is_boolean=False, is_global=False, significant=True, description=None):
         # The default default is no default
         self.__default = default  # We also use this to store global values
         self.is_list = is_list
@@ -45,6 +45,7 @@ class Parameter(object):
         self.significant = significant
         if is_global and default == _no_default:
             raise ParameterException('Global parameters need default values')
+        self.description = description
         self.counter = Parameter.counter  # We need to keep track of this to get the order right (see Task class)
         Parameter.counter += 1
 
@@ -97,6 +98,9 @@ class IntParameter(Parameter):
 
 
 class BooleanParameter(Parameter):
+    # TODO(erikbern): why do we call this "boolean" instead of "bool"? 
+    # The integer parameter is called "int" so calling this "bool" would be
+    # more consistent, especially given the Python type names.
     def __init__(self, *args, **kwargs):
         super(BooleanParameter, self).__init__(*args, is_boolean=True, **kwargs)
 

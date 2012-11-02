@@ -72,5 +72,11 @@ class FibTest(FibTestBase):
         self.assertEqual(MockFile._file_contents['/tmp/fib_10'], '55\n')
         self.assertEqual(MockFile._file_contents['/tmp/fib_100'], '354224848179261915075\n')
 
+    def test_build_internal(self):
+        luigi.build([Fib(100)], local_scheduler=True)
+
+        self.assertEqual(MockFile._file_contents['/tmp/fib_10'], '55\n')
+        self.assertEqual(MockFile._file_contents['/tmp/fib_100'], '354224848179261915075\n')
+
 if __name__ == '__main__':
     luigi.run()

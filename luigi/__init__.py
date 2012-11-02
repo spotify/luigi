@@ -32,6 +32,7 @@ RemoteScheduler = rpc.RemoteScheduler
 expose = interface.expose
 expose_main = interface.expose_main
 run = interface.run
+build = interface.build
 
 # TODO: how can we get rid of these?
 DateHourParameter = parameter.DateHourParameter
