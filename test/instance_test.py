@@ -12,7 +12,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi
+import luigi, luigi.date_interval
 import unittest
 
 
@@ -63,6 +63,18 @@ class InstanceTest(unittest.TestCase):
         oa = OtherA()
         a = A()
         self.assertNotEqual(oa, a)
+
+    def test_date(self):
+        ''' Adding unit test because we had a problem with this '''
+        class DummyTask(luigi.Task):
+            x = luigi.DateIntervalParameter()
+
+        dummy_1 = DummyTask(luigi.date_interval.Year(2012))
+        dummy_2 = DummyTask(luigi.date_interval.Year(2013))
+        dummy_1b = DummyTask(luigi.date_interval.Year(2012))
+
+        self.assertNotEqual(dummy_1, dummy_2)
+        self.assertEqual(dummy_1, dummy_1b)
 
 if __name__ == '__main__':
     unittest.main()

@@ -63,3 +63,20 @@ class DateIntervalTest(unittest.TestCase):
 
     def test_exception(self):
         self.assertRaises(ValueError, DI().parse, 'xyz')
+
+    def test_comparison(self):
+        a = DI().parse('2011')
+        b = DI().parse('2013')
+        c = DI().parse('2012')
+        self.assertTrue(a < b)
+        self.assertTrue(a < c)
+        self.assertTrue(b > c)
+        d = DI().parse('2012')
+        self.assertTrue(d == c)
+        self.assertEquals(d, min(c, b))
+        self.assertEquals(3, len(set([a, b, c, d])))
+
+    def test_comparison_different_types(self):
+        x = DI().parse('2012')
+        y = DI().parse('2012-01-01-2013-01-01')
+        self.assertRaises(TypeError, lambda: x == y)
