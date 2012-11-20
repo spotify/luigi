@@ -21,7 +21,9 @@ import scheduler
 import warnings
 
 from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
-import task, parameter
+import task
+import parameter
+
 
 class LuigiConfigParser(RawConfigParser):
     NO_DEFAULT = object()
@@ -51,6 +53,7 @@ def get_config():
     """ Convenience method (for backwards compatibility) for accessing config singleton """
     return LuigiConfigParser.instance()
 
+
 class EnvironmentParamsContainer(task.Task):
     ''' Keeps track of a bunch of environment params.
 
@@ -68,6 +71,7 @@ class EnvironmentParamsContainer(task.Task):
     workers = parameter.IntParameter(is_global=True, default=1,
                                      description='Maximum number of parallel tasks to run')
 
+
 class Register(object):
     def __init__(self):
         self.__reg = {}
@@ -80,7 +84,7 @@ class Register(object):
             if param_name in override_defaults:
                 param_obj.set_default(override_defaults[param_name])
 
-        return EnvironmentParamsContainer() # instantiate an object with the global params set on it
+        return EnvironmentParamsContainer()  # instantiate an object with the global params set on it
 
     def expose(self, cls):
         name = cls.task_family
@@ -104,12 +108,15 @@ class Register(object):
 
 register = Register()
 
+
 def expose(cls):
     return register.expose(cls)
+
 
 def expose_main(cls):
     warnings.warn('expose_main is no longer supported, use luigi.run(..., main_task_cls=cls) instead', DeprecationWarning)
     return register.expose(cls)
+
 
 class Interface(object):
     def parse(self):
@@ -118,7 +125,7 @@ class Interface(object):
     @staticmethod
     def run(tasks, override_defaults={}):
         env_params = register.env_params(override_defaults)
-        
+
         if env_params.lock:
             lock.run_once(env_params.lock_pid_dir)
 
@@ -132,6 +139,7 @@ class Interface(object):
         for task in tasks:
             w.add(task)
         w.run()
+
 
 class ArgParseInterface(Interface):
     ''' Takes the task as the command, with parameters specific to it
@@ -196,6 +204,7 @@ class ArgParseInterface(Interface):
         task = task_cls.from_input(params, register.get_global_params())
 
         return [task]
+
 
 class PassThroughOptionParser(optparse.OptionParser):
     '''
@@ -271,7 +280,6 @@ class OptParseInterface(Interface):
             raise Exception('Error: %s is not a valid tasks (must be %s)' % (task_cls_name, tasks_str))
 
         # Register all parameters as a big mess
-        parameter_defaults = {}
         task_cls = register.get_reg()[task_cls_name]
         params = task_cls.get_nonglobal_params()
 
@@ -293,6 +301,7 @@ class OptParseInterface(Interface):
 
         return [task]
 
+
 def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None):
     ''' Run from cmdline.
 
@@ -308,6 +317,7 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task
     tasks = interface.parse(cmdline_args, main_task_cls=main_task_cls)
     interface.run(tasks)
 
+
 def build(tasks, **env_params):
     ''' Run internally, bypassing the cmdline parsing.
 
@@ -317,6 +327,7 @@ def build(tasks, **env_params):
     '''
     setup_interface_logging()
     Interface.run(tasks, env_params)
+
 
 def setup_interface_logging():
     logger = logging.getLogger('luigi-interface')

@@ -14,6 +14,7 @@
 
 import parameter
 import warnings
+import traceback
 
 Parameter = parameter.Parameter
 
@@ -231,15 +232,17 @@ class Task(object):
     def run(self):
         pass  # default impl
 
-    def on_failure(self, exception, traceback):
+    def on_failure(self, exception):
         """ Override for custom error handling
 
         This method gets called if an exception is raised in :py:meth:`run`.
-        Return value of this method is json encoded and sent to the scheduler as the `expl` argument.
-        Default behavior is to return a string representation of the exception and traceback.
+        Return value of this method is json encoded and sent to the scheduler as the `expl` argument. Its string representation will be used as the body of the error email sent out if any.
+
+        Default behavior is to return a string representation of the stack trace.
         """
-        return {"exception": str(exception),
-                "traceback": str(traceback)}
+
+        traceback_string = traceback.format_exc()
+        return "Runtime error:\n%s" % traceback_string
 
     def on_success(self):
         """ Override for doing custom completion handling for a larger class of tasks

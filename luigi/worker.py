@@ -121,17 +121,15 @@ class Worker(object):
         except KeyboardInterrupt:
             raise
         except:
-            expl = traceback.format_exc(sys.exc_info()[2])
-
-            logger.error(expl)
-            logger.error("Error while trying to schedule %s" % task)
+            logger.exception("Error while trying to schedule %s" % task)
 
             if not sys.stdout.isatty():
                 receiver = interface.get_config().get('core', 'error-email', None)
                 if receiver is not None:
+                    email_body = "Scheduling error:\n%s" % traceback.format_exc()
                     sender = interface.get_config().get('core', 'email-sender', 'luigi-client@%s' % socket.getfqdn())
                     logger.info("Sending error email to %r" % receiver)
-                    send_email("Luigi: %s FAILED SCHEDULING" % task, expl, sender, (receiver,))
+                    send_email("Luigi: %s FAILED SCHEDULING" % task, email_body, sender, (receiver,))
             exit(1)  # can't allow task to run without its dependencies resolved
 
     def _run_task(self, task_id):
@@ -159,10 +157,8 @@ class Worker(object):
             raise
         except Exception as ex:
             status = FAILED
-            expl = json.dumps(task.on_failure(ex, traceback.format_exc(sys.exc_info()[2])))
-            logger.error(expl)
             logger.exception("[pid %s] Error while running %s" % (os.getpid(), task))
-
+            expl = task.on_failure(ex)
             if not sys.stdout.isatty():
                 receiver = interface.get_config().get('core', 'error-email', None)
                 if receiver is not None:
