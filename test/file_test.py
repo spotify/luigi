@@ -17,6 +17,7 @@ import unittest
 import os
 import gzip
 import luigi.format
+import random
 
 class FileTest(unittest.TestCase):
     path = '/tmp/test.txt'
@@ -79,3 +80,10 @@ class FileTest(unittest.TestCase):
         f = File(self.path, luigi.format.Gzip).open('r')
         self.assertTrue(test_data == f.read())
         f.close()
+
+class FileCreateDirectoriesTest(FileTest):
+    path = '/tmp/%s/xyz/test.txt' % random.randint(0, 999999999)
+
+class FileRelativeTest(FileTest):
+    # We had a bug that caused relative file paths to fail, adding test for it
+    path = 'test.txt'

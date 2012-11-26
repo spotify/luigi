@@ -55,7 +55,7 @@ class File(object):
             # Create folder if it does not exist
             normpath = os.path.normpath(self.path)
             parentfolder = os.path.dirname(normpath)
-            if not os.path.exists(parentfolder):
+            if parentfolder and not os.path.exists(parentfolder):
                 os.makedirs(parentfolder)
 
             if self.format:
