@@ -23,7 +23,10 @@ import traceback
 import logging
 import warnings
 import socket
-import simplejson as json
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 logger = logging.getLogger('luigi-interface')
 
