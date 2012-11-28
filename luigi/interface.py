@@ -66,8 +66,8 @@ class EnvironmentParamsContainer(task.Task):
                                          description='Hostname of machine running remote scheduler')
     lock = parameter.BooleanParameter(is_global=True, default=False,
                                       description='Do not run if the task is already running')
-    lock_pid_dir = parameter.BooleanParameter(is_global=True, default='/var/tmp/luigi',
-                                              description='Directory to store the pid file')
+    lock_pid_dir = parameter.Parameter(is_global=True, default='/var/tmp/luigi',
+                                       description='Directory to store the pid file')
     workers = parameter.IntParameter(is_global=True, default=1,
                                      description='Maximum number of parallel tasks to run')
 
