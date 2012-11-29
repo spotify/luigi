@@ -87,8 +87,11 @@ class CentralPlannerTest(unittest.TestCase):
             self.setTime(t)
             self.assertEqual(self.sch.get_work(WORKER)[1], None)
             self.sch.ping(WORKER)
+            if t % 10 == 0:
+                self.sch.prune()
 
         self.setTime(101)
+        self.sch.prune()
         self.assertEqual(self.sch.get_work(WORKER)[1], 'A')
 
     def test_disconnect_running(self):
@@ -102,6 +105,8 @@ class CentralPlannerTest(unittest.TestCase):
         for t in xrange(200):
             self.setTime(t)
             self.sch.ping(worker='Y')
+            if t % 10 == 0:
+                self.sch.prune()
 
         self.assertEqual(self.sch.get_work(worker='Y')[1], 'A')
 
