@@ -84,6 +84,7 @@ class CentralPlannerScheduler(Scheduler):
             print "not loading state, %s doesn't exist" % self._state_path
 
     def prune(self):
+        print "Pruning..."
         # Delete workers that haven't said anything for a while (probably killed)
         delete_workers = []
         for worker in self._active_workers:
@@ -129,7 +130,6 @@ class CentralPlannerScheduler(Scheduler):
         # update timestamp so that we keep track
         # of whenever the worker was last active
         self._active_workers[worker] = time.time()
-        self.prune()
 
     def add_task(self, worker, task_id, status=PENDING, runnable=True, deps=None, expl=None):
         """

@@ -30,6 +30,7 @@ from cStringIO import StringIO
 from rpc import RemoteSchedulerResponder
 from scheduler import PENDING, DONE, FAILED, RUNNING
 
+
 class RPCHandler(tornado.web.RequestHandler):
     """ Handle remote scheduling calls using rpc.RemoteSchedulerResponder"""
     scheduler = scheduler.CentralPlannerScheduler()
@@ -166,7 +167,13 @@ def run(visualizer_processes=1):
             print "API instance died. Will not restart."
             exit(0)  # will not be restarted if it dies, as it indicates an issue that should be fixed
         print "Launching API instance"
+
+        # load scheduler state
         RPCHandler.scheduler.load()
+
+        # prune work DAG every 10 seconds
+        pruner = tornado.ioloop.PeriodicCallback(RPCHandler.scheduler.prune, 10000)
+        pruner.start()
 
         def shutdown_handler(foo=None, bar=None):
             print "api instance shutting down..."
