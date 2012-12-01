@@ -28,7 +28,7 @@ class InputPipeProcessWrapper(object):
     def _finish(self):
         if self._input_pipe is not None:
             self._input_pipe.close()
-        for line in self:  # exhaust all output...
+        for line in self._process.stdout:  # exhaust all output...
             pass
         self._process.wait()  # deadlock?
         if self._process.returncode != 0:
@@ -49,6 +49,7 @@ class InputPipeProcessWrapper(object):
     def __iter__(self):
         for line in self._process.stdout:
             yield line
+        self._finish()
 
 
 class OutputPipeProcessWrapper(object):
