@@ -23,6 +23,7 @@ import pickle
 import logging
 import StringIO
 import re
+import shutil
 
 import luigi
 import luigi.hdfs
@@ -167,6 +168,7 @@ class HadoopJobRunner(JobRunner):
         self.jobconfs = jobconfs
         self.input_format = input_format
         self.output_format = output_format
+        self.tmp_dir = False
 
     def run_job(self, job):
         packages = [luigi] + self.modules + job.extra_modules() + list(_attached_packages)
@@ -180,10 +182,9 @@ class HadoopJobRunner(JobRunner):
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
 
-        tmp_dir = '/tmp/luigi/hadoop_job_%016x' % random.getrandbits(64)
-        # self._cleanup_tmp_dirs.append(tmp_dir)
-        logger.debug("Tmp dir: %s", tmp_dir)
-        os.makedirs(tmp_dir)
+        self.tmp_dir = '/tmp/luigi/hadoop_job_%016x' % random.getrandbits(64)
+        logger.debug("Tmp dir: %s", self.tmp_dir)
+        os.makedirs(self.tmp_dir)
 
         # build arguments
         map_cmd = 'python mrrunner.py map'
@@ -201,8 +202,8 @@ class HadoopJobRunner(JobRunner):
         libjars = [libjar for libjar in self.libjars]
 
         for libjar in self.libjars_in_hdfs:
-            subprocess.call(['hadoop', 'fs', '-get', libjar, tmp_dir])
-            libjars.append(os.path.join(tmp_dir, os.path.basename(libjar)))
+            subprocess.call(['hadoop', 'fs', '-get', libjar, self.tmp_dir])
+            libjars.append(os.path.join(self.tmp_dir, os.path.basename(libjar)))
 
         if libjars:
             arglist += ['-libjars', ','.join(libjars)]
@@ -237,7 +238,7 @@ class HadoopJobRunner(JobRunner):
         arglist += ['-mapper', map_cmd, '-reducer', red_cmd]
         if job.combiner != NotImplemented:
             arglist += ['-combiner', cmb_cmd]
-        files = [runner_path, tmp_dir + '/packages.tar', tmp_dir + '/job-instance.pickle']
+        files = [runner_path, self.tmp_dir + '/packages.tar', self.tmp_dir + '/job-instance.pickle']
 
         for f in files:
             arglist += ['-file', f]
@@ -255,11 +256,11 @@ class HadoopJobRunner(JobRunner):
         arglist += ['-output', output_tmp_fn]
 
         # submit job
-        create_packages_archive(packages, tmp_dir + '/packages.tar')
+        create_packages_archive(packages, self.tmp_dir + '/packages.tar')
 
         logger.info(' '.join(arglist))
 
-        job._dump(tmp_dir)
+        job._dump(self.tmp_dir)
 
         proc = subprocess.Popen(arglist, stderr=subprocess.PIPE)
 
@@ -287,6 +288,7 @@ class HadoopJobRunner(JobRunner):
 
         # rename temporary work directory to given output
         tmp_target.move(output_final, fail_if_exists=True)
+        self.finish()
 
     @staticmethod
     def fetch_raise_failures(tracking_url):
@@ -297,18 +299,30 @@ class HadoopJobRunner(JobRunner):
         '''
         import mechanize
 
-        failures_url = tracking_url.replace('jobdetails.jsp', 'jobfailures.jsp')
+        failures_url = tracking_url.replace('jobdetails.jsp', 'jobfailures.jsp') + '&cause=failed'
+        logger.debug('Fetching data from %s' % failures_url)
         b = mechanize.Browser()
         b.open(failures_url, timeout=2.0)
-        for link in b.links(text_regex='Last 4KB'):
+        links = list(b.links(text_regex='Last 4KB')) # For some reason text_regex='All' doesn't work... no idea why
+        for link in random.sample(list(links), 10): # Fetch in random order so not to be biased towards the early fails
+            task_url = link.url.replace('&start=-4097', '&start=-100000') # Increase the offset
+            logger.debug('Fetching data from %s', task_url)
+            # TODO: we shouldn't raise an exception in this scope, should just keep trying
             b2 = mechanize.Browser()
-            r = b2.open(link.url, timeout=1.0)
+            r = b2.open(task_url, timeout=1.0)
             data = r.read()
             # Try to get the hex-encoded traceback back from the output
             for exc in re.findall(r'luigi-exc-hex=[0-9a-f]+', data):
-                print '---------- %s:' % link.url
+                print '---------- %s:' % task_url
                 print exc.split('=')[-1].decode('hex')
+    
+    def finish(self):
+        if self.tmp_dir and os.path.exists(self.tmp_dir):
+            logger.debug('Removing directory %s' % self.tmp_dir)
+            shutil.rmtree(self.tmp_dir)
 
+    def __del__(self):
+        self.finish()
 
 class DefaultHadoopJobRunner(HadoopJobRunner):
     ''' The default job runner just reads from config and sets stuff '''
