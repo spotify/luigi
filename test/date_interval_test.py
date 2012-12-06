@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import luigi
 from luigi.parameter import DateIntervalParameter as DI
 import unittest
 import datetime
@@ -80,3 +81,37 @@ class DateIntervalTest(unittest.TestCase):
         x = DI().parse('2012')
         y = DI().parse('2012-01-01-2013-01-01')
         self.assertRaises(TypeError, lambda: x == y)
+
+    def test_parameter_parse_and_default(self):
+        month = luigi.date_interval.Month(2012, 11)
+        other = luigi.date_interval.Month(2012, 10)
+
+        @luigi.expose
+        class MyTask(luigi.Task):
+            di = DI(default=month)
+
+        @luigi.expose
+        class MyTaskNoDefault(luigi.Task):
+            di = DI()
+
+        task = luigi.interface.OptParseInterface(None).parse(["--task", "MyTask"])[0]
+        self.assertEquals(task.di, month)
+        task = luigi.interface.OptParseInterface(None).parse(["--task", "MyTask", "--di", "2012-10"])[0]
+        self.assertEquals(task.di, other)
+        task = luigi.interface.ArgParseInterface().parse(["MyTask"])[0]
+        self.assertEquals(task.di, month)
+        task = luigi.interface.ArgParseInterface().parse(["MyTask", "--di", "2012-10"])[0]
+        self.assertEquals(task.di, other)
+        task = MyTask(month)
+        self.assertEquals(task.di, month)
+        task = MyTask(di=month)
+        self.assertEquals(task.di, month)
+        task = MyTask(other)
+        self.assertNotEquals(task.di, month)
+
+        def fail1():
+            luigi.interface.ArgParseInterface().parse(["MyTaskNoDefault"])[0]
+        self.assertRaises(luigi.parameter.MissingParameterException, fail1)
+
+        task = luigi.interface.ArgParseInterface().parse(["MyTaskNoDefault", "--di", "2012-10"])[0]
+        self.assertEquals(task.di, other)

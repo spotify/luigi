@@ -75,6 +75,16 @@ class DateInterval(object):
             raise TypeError('Date interval type mismatch')
         return cmp((self.date_a, self.date_b), (other.date_a, other.date_b))
 
+    def __eq__(self, other):
+        if not isinstance(other, DateInterval):
+            return False
+        else:
+            return self.__cmp__(other) == 0
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class Date(DateInterval):
     def __init__(self, y, m, d):
         a = datetime.date(y, m, d)
