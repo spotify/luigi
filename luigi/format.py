@@ -44,6 +44,8 @@ class InputPipeProcessWrapper(object):
         self._finish()
 
     def __getattr__(self, name):
+        if name == '_process':
+            raise AttributeError, name
         return getattr(self._process.stdout, name)
 
     def __iter__(self):
@@ -105,6 +107,8 @@ class OutputPipeProcessWrapper(object):
         self._finish()
 
     def __getattr__(self, name):
+        if name == '_process':
+            raise AttributeError, name
         return getattr(self._process.stdin, name)
 
 
