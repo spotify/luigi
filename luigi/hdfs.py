@@ -15,6 +15,7 @@
 import subprocess
 import os
 import random
+import urlparse
 import luigi.format
 
 
@@ -161,7 +162,8 @@ class HdfsTarget(luigi.Target):
         self.path = path
         self.format = format
         self.is_tmp = is_tmp
-        assert ":" not in self.path  # colon is not allowed in hdfs filenames
+        (scheme, netloc, path, query, fragment) = urlparse.urlsplit(path)
+        assert ":" not in path  # colon is not allowed in hdfs filenames
 
     def __del__(self):
         #TODO: not sure is_tmp belongs in Targets construction arguments
