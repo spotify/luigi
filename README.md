@@ -110,7 +110,7 @@ The --local-scheduler flag tells Luigi not to connect to a central scheduler. Th
 
 If you drop the *--local-scheduler* flag, your script will try to connect to the central planner, by default at localhost port 8081. If you run
 
-    ./bin/spluigid
+    PYTHONPATH=. python bin/luigid
 
 in the background and then run
 
@@ -292,7 +292,9 @@ You can run this task from the command line like this:
 
     python my_task.py MyTask --x 123 --y 456
 
-If you use expose\_main, you can omit MyTask. However at most one class can use this decorator.
+You can also pass *main_task_cls=MyTask* to luigi.run() and that way you can invoke it simply using
+
+    python my_task.py --x 123 --y 456
 
 #### Executing a Luigi workflow
 

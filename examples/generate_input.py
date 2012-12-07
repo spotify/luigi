@@ -28,7 +28,6 @@ class InputText(luigi.Task):
 
         f.close()
 
-@luigi.expose
 class MultipleInputText(luigi.Task):
     date_interval = luigi.DateIntervalParameter()
     hdfs = luigi.BooleanParameter(default=False)
@@ -37,4 +36,4 @@ class MultipleInputText(luigi.Task):
         return [InputText(date, self.hdfs) for date in self.date_interval.dates()]
 
 if __name__ == '__main__':
-    luigi.run()
+    luigi.run(main_task_cls=MultipleInputText)
