@@ -35,7 +35,6 @@ class TestJobTask(luigi.hadoop.JobTask):
     def job_runner(self):
         return luigi.hadoop.LocalJobRunner()
 
-@luigi.expose
 class WordCountJob(TestJobTask):
     def mapper(self, line):
         for word in line.strip().split():
@@ -51,12 +50,10 @@ class WordCountJob(TestJobTask):
     def output(self):
         return File("luigitest")
 
-@luigi.expose
 class WordCountJobReal(WordCountJob):
     def job_runner(self):
         return luigi.hadoop.HadoopJobRunner(streaming_jar='test.jar')
 
-@luigi.expose
 class WordFreqJob(TestJobTask):
     def init_local(self):
         self.n = 0
@@ -95,12 +92,12 @@ class HadoopJobTest(unittest.TestCase):
         return count
 
     def test_run(self):
-        luigi.run(['--local-scheduler', 'WordCountJob'])
+        luigi.build([WordCountJob()], local_scheduler=True)
         c = self.read_output(File('luigitest'))
         self.assertEquals(int(c['jk']), 6)
 
     def test_run_2(self):
-        luigi.run(['--local-scheduler', 'WordFreqJob'])
+        luigi.build([WordFreqJob()], local_scheduler=True)
         c = self.read_output(File('luigitest-2'))
         self.assertAlmostEquals(float(c['jk']), 6.0 / 33.0)
 

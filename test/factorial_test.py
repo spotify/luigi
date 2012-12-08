@@ -15,7 +15,6 @@
 import luigi
 import unittest
 
-@luigi.expose
 class Factorial(luigi.Task):
     ''' This calculates factorials *online* and does not write its results anywhere
 
@@ -37,12 +36,9 @@ class Factorial(luigi.Task):
     def complete(self):
         return False
 
-class FibTest(unittest.TestCase):
+class FactorialTest(unittest.TestCase):
     def test_invoke(self):
-        w = luigi.worker.Worker()
-        w.add(Factorial(100))
-        w.run()
-
+        luigi.build([Factorial(100)], local_scheduler=True)
         self.assertEqual(Factorial(42).value, 1405006117752879898543142606244511569936384000000000)
 
 if __name__ == '__main__':

@@ -12,7 +12,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi
+import luigi, luigi.interface
 import unittest
 from luigi.mock import MockFile
 
@@ -21,7 +21,7 @@ File = MockFile
 # Calculates Fibonacci numbers :)
 
 
-@luigi.expose
+# @luigi.expose
 class Fib(luigi.Task):
     n = luigi.IntParameter(default=100)
 
@@ -56,6 +56,8 @@ class FibTestBase(unittest.TestCase):
         File = MockFile
         MockFile._file_contents.clear()
 
+        luigi.interface.reset()
+        luigi.expose(Fib)
 
 class FibTest(FibTestBase):
     def test_invoke(self):

@@ -16,6 +16,7 @@ import luigi
 from luigi.mock import MockFile
 import unittest
 from luigi.util import Derived
+import datetime
 
 File = MockFile
 
@@ -68,17 +69,12 @@ class WrapperTest(unittest.TestCase):
     ''' This test illustrates how a task class can wrap another task class by modifying its behavior.
 
     See instance_wrap_test.py for an example of how instances can wrap each other. '''
-    def setUp(self):
-        luigi.interface.register = luigi.interface.Register()
-        luigi.expose(AXML)
-        luigi.expose(BXML)
-
     def test_a(self):
-        luigi.run(['--local-scheduler', 'AXML'])
+        luigi.build([AXML()], local_scheduler=True)
         self.assertEqual(MockFile._file_contents['/tmp/a.xml'], '<?xml version="1.0" ?>\n<dummy-xml>hello, world</dummy-xml>\n')
 
     def test_b(self):
-        luigi.run(['--local-scheduler', 'BXML', '--date', '2012-01-01'])
+        luigi.build([BXML(datetime.date(2012, 1, 1))], local_scheduler=True)
         self.assertEqual(MockFile._file_contents['/tmp/b-2012-01-01.xml'], '<?xml version="1.0" ?>\n<dummy-xml>goodbye, space</dummy-xml>\n')
 
 

@@ -117,6 +117,10 @@ def expose_main(cls):
     warnings.warn('expose_main is no longer supported, use luigi.run(..., main_task_cls=cls) instead', DeprecationWarning)
     return register.expose(cls)
 
+def reset():
+    # Resets the global state
+    global register
+    register = Register()
 
 class Interface(object):
     def parse(self):

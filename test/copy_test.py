@@ -15,6 +15,7 @@
 import luigi
 from luigi.mock import MockFile
 import unittest
+import datetime
 from luigi.util import Copy
 
 File = MockFile
@@ -30,14 +31,13 @@ class A(luigi.Task):
         print >>f, 'hello, world'
         f.close()
 
-@luigi.expose
 class ACopy(Copy(A)):
     def output(self):
         return File(self.date.strftime('/tmp/copy-data-%Y-%m-%d.txt'))
 
 class UtilTest(unittest.TestCase):
     def test_a(self):
-        luigi.run(['--local-scheduler', 'ACopy', '--date', '2012-01-01'])
+        luigi.build([ACopy(date=datetime.date(2012, 1, 1))], local_scheduler=True)
         self.assertEqual(MockFile._file_contents['/tmp/data-2012-01-01.txt'], 'hello, world\n')
 
 if __name__ == '__main__':

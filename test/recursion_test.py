@@ -13,14 +13,14 @@
 # the License.
 
 import datetime
-import luigi
+import luigi, luigi.interface
 from luigi.mock import MockFile
 import unittest
 
 File = MockFile
 
 
-@luigi.expose
+# @luigi.expose
 class Popularity(luigi.Task):
     date = luigi.DateParameter(default=datetime.date.today() - datetime.timedelta(1))
 
@@ -50,6 +50,8 @@ class RecursionTest(unittest.TestCase):
         self.assertEquals(MockFile._file_contents['/tmp/popularity/2010-01-01.txt'], '365\n')
 
     def test_cmdline(self):
+        luigi.interface.reset()
+        luigi.expose(Popularity)
         luigi.run(['--local-scheduler', 'Popularity', '--date', '2010-01-01'])
 
         self.assertEquals(MockFile._file_contents['/tmp/popularity/2010-01-01.txt'], '365\n')
