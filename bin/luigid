@@ -11,6 +11,6 @@ parser.add_option('--pidfile', help='Write pidfile')
 opts, args = parser.parse_args()
 
 if opts.background:
-    luigi.process.daemonize(lambda: luigi.server.run(0), pidfile=opts.pidfile)
+    luigi.process.daemonize(luigi.server.run, pidfile=opts.pidfile)
 else:
     luigi.server.run()
