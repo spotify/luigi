@@ -24,8 +24,17 @@ def exists(path):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     stdout, _ = p.communicate()
 
-    if stdout or p.returncode not in (0, 1):
-        raise RuntimeError("Command %s failed with return code %s.\n---Output---\n%s\n------------" % (repr(cmd), p.returncode, stdout))
+    if stdout:
+        # TODO: Having certain stuff on the classpath might trigger this case. Ideally we should be
+        # able to  ignore it, because apparently there is also some case where data on stdout
+        # signals an error. From freider:
+        # If I remember correctly there are some cases where hadoop fs -test exits with exit status
+        # 0 (which would mean the file exists) although the file doesn't exist, if there is some
+        # special error. We ran into this, that's why we added detection of output of the command.
+        # Afaicr this is a known bug but it hadn't been fixed in our version of hadoop.
+        raise RuntimeError("Command %s failed [exit code %d] because it wrote data on stdout.\n---Output---\n%s\n------------" % (repr(cmd), p.returncode, stdout))
+    elif p.returncode not in (0, 1):
+        raise RuntimeError("Command %s failed with return code %s" % (repr(cmd), p.returncode))
 
     if p.returncode == 0:
         return True
