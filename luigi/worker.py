@@ -202,7 +202,7 @@ class Worker(object):
                 if child_pid:
                     children.add(child_pid)
                 else:
-                    random.seed(os.getpid())  # need to have different random seeds...
+                    random.seed((os.getpid(), time.time()))  # need to have different random seeds...
                     self._run_task(task_id)
                     os._exit(0)
             else:
