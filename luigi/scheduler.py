@@ -34,6 +34,12 @@ DONE = 'DONE'
 RUNNING = 'RUNNING'
 
 
+class SchedulingError(Exception):
+    def __init__(self, message, sub_exception=None):
+        super(SchedulingError, self).__init__(message)
+        self.sub_exception = sub_exception
+
+
 class Task(object):
     def __init__(self, status, deps):
         self.stakeholders = set()  # workers that are somehow related to this task (i.e. don't prune while any of these workers are still active)

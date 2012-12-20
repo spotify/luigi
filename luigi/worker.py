@@ -16,13 +16,14 @@ import random
 from scheduler import CentralPlannerScheduler, PENDING, FAILED, DONE
 import threading
 import time
-import sys
 import os
 import interface
 import traceback
 import logging
 import warnings
 import socket
+import notifications
+
 try:
     import simplejson as json
 except ImportError:
@@ -31,33 +32,7 @@ except ImportError:
 logger = logging.getLogger('luigi-interface')
 
 
-def send_email(subject, message, sender, recipients, image_png=None):
-    import smtplib
-    import email
-    import email.mime
-    import email.mime.multipart
-    import email.mime.text
-    import email.mime.image
-
-    smtp = smtplib.SMTP('localhost')
-
-    msg_root = email.mime.multipart.MIMEMultipart('related')
-
-    msg_text = email.mime.text.MIMEText(message, 'plain')
-    msg_text.set_charset('utf-8')
-    msg_root.attach(msg_text)
-
-    if image_png:
-        fp = open(image_png, 'rb')
-        msg_image = email.mime.image.MIMEImage(fp.read(), 'png')
-        fp.close()
-        msg_root.attach(msg_image)
-
-    msg_root['Subject'] = subject
-    msg_root['From'] = 'Luigi'
-    msg_root['To'] = ','.join(recipients)
-
-    smtp.sendmail(sender, recipients, msg_root.as_string())
+DEFAULT_EMAIL = 'luigi-client@%s' % socket.getfqdn()
 
 
 class Worker(object):
@@ -84,7 +59,7 @@ class Worker(object):
         self._previous_tasks = []  # store the previous tasks executed by the same worker for debugging reasons
 
         class KeepAliveThread(threading.Thread):
-            """ Peridiacally tell the scheduler that the worker still lives """
+            """ Periodically tell the scheduler that the worker still lives """
             def run(self):
                 while True:
                     time.sleep(1.0)
@@ -104,8 +79,30 @@ class Worker(object):
 
             if task_id in self.__scheduled_tasks:
                 return  # already scheduled
-            logger.debug("Checking %s" % task_id)
-            if task.complete():
+            logger.debug("Checking if %s is complete" % task_id)
+            is_complete = False
+            try:
+                is_complete = task.complete()
+                if is_complete not in (True, False):
+                    raise Exception("%s.complete() returned non-boolean %r" % (task, is_complete))
+            except:
+                msg = "Will not schedule %s or any dependencies due to error in complete() method:" % (task,)
+                logger.warning(msg, exc_info=1)  # like logger.exception but with WARNING level
+                receiver = interface.get_config().get('core', 'error-email', None)
+                sender = interface.get_config().get('core', 'email-sender', DEFAULT_EMAIL)
+                logger.info("Sending warning email to %r" % receiver)
+                notifications.send_email(
+                    subject="Luigi: %s failed scheduling" % (task,),
+                    message="%s:\n%s" % (msg, traceback.format_exc()),
+                    sender=sender,
+                    recipients=(receiver,))
+                return
+                # abort, i.e. don't schedule any subtasks of a task with
+                # failing complete()-method since we don't know if the task
+                # is complete and subtasks might not be desirable to run if
+                # they have already ran before
+
+            if is_complete:
                 # Not submitting dependencies of finished tasks
                 self.__scheduler.add_task(self.__id, task_id, status=DONE, runnable=False)
 
@@ -121,19 +118,17 @@ class Worker(object):
 
                 for task_2 in task.deps():
                     self.add(task_2)  # Schedule stuff recursively
-        except KeyboardInterrupt:
-            raise
         except:
-            logger.exception("Error while trying to schedule %s" % task)
+            logger.exception("Luigi unexpected framework error while scheduling %s" % task)
+            receiver = interface.get_config().get('core', 'error-email', None)
+            sender = interface.get_config().get('core', 'email-sender', DEFAULT_EMAIL)
 
-            if not sys.stdout.isatty():
-                receiver = interface.get_config().get('core', 'error-email', None)
-                if receiver is not None:
-                    email_body = "Scheduling error:\n%s" % traceback.format_exc()
-                    sender = interface.get_config().get('core', 'email-sender', 'luigi-client@%s' % socket.getfqdn())
-                    logger.info("Sending error email to %r" % receiver)
-                    send_email("Luigi: %s FAILED SCHEDULING" % task, email_body, sender, (receiver,))
-            exit(1)  # can't allow task to run without its dependencies resolved
+            notifications.send_email(
+                subject="Luigi: Framework error while scheduling %s" % (task,),
+                message="Luigi framework error:\n%s" % traceback.format_exc(),
+                recipients=(receiver,),
+                sender=sender)
+            exit(1)  # error in luigi framework, bail out!
 
     def _run_task(self, task_id):
         task = self.__scheduled_tasks[task_id]
@@ -162,12 +157,10 @@ class Worker(object):
             status = FAILED
             logger.exception("[pid %s] Error while running %s" % (os.getpid(), task))
             expl = task.on_failure(ex)
-            if not sys.stdout.isatty():
-                receiver = interface.get_config().get('core', 'error-email', None)
-                if receiver is not None:
-                    sender = interface.get_config().get('core', 'email-sender', 'luigi-client@%s' % socket.getfqdn())
-                    logger.info("[pid %s] Sending error email to %r", os.getpid(), receiver)
-                    send_email("Luigi: %s FAILED" % task, expl, sender, (receiver,))
+            receiver = interface.get_config().get('core', 'error-email', None)
+            sender = interface.get_config().get('core', 'email-sender', DEFAULT_EMAIL)
+            logger.info("[pid %s] Sending error email to %r", os.getpid(), receiver)
+            notifications.send_email("Luigi: %s FAILED" % task, expl, sender, (receiver,))
 
         self.__scheduler.add_task(self.__id, task_id, status=status, expl=expl, runnable=None)
 

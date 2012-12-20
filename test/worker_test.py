@@ -14,10 +14,12 @@
 
 import time
 from luigi.scheduler import CentralPlannerScheduler
+import luigi.worker
 from luigi.worker import Worker
 from luigi import *
 import unittest
 import logging
+import luigi.notifications
 
 
 class DummyTask(Task):
@@ -236,6 +238,114 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(b.complete())
         w.run()
         self.assertTrue(b.complete())
+
+    def test_complete_exception(self):
+        "Tests that a task is still scheduled if its sister task crashes in the complete() method"
+        class A(DummyTask):
+            def complete(self):
+                raise Exception("doh")
+
+        a = A()
+
+        class C(DummyTask):
+            pass
+
+        c = C()
+
+        class B(DummyTask):
+            def requires(self):
+                return a, c
+
+        b = B()
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        w = Worker(scheduler=sch, worker_id="foo")
+        w.add(b)
+        w.run()
+        self.assertFalse(b.has_run)
+        self.assertTrue(c.has_run)
+        self.assertFalse(a.has_run)
+
+
+class NotificationEmailTest(unittest.TestCase):
+    def setUp(self):
+        self.send_email = luigi.notifications.send_email
+        self.last_email = None
+
+        def mock_send_email(subject, message, sender, recipients, image_png=None):
+            self.last_email = (subject, message, sender, recipients, image_png)
+        luigi.notifications.send_email = mock_send_email
+
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        self.worker = Worker(scheduler=sch, worker_id="foo")
+
+    def tearDown(self):
+        luigi.notifications.send_email = self.send_email
+
+    def test_luigi_error(self):
+        worker = Worker(
+            scheduler=RemoteScheduler(host="doesnt_exist", port=1337)
+        )
+
+        class A(DummyTask):
+            pass
+        a = A()
+        self.assertEquals(self.last_email, None)
+
+        def exits():
+            worker.add(a)
+        self.assertRaises(SystemExit, exits)
+        self.assertEquals(self.last_email[0], "Luigi: Framework error while scheduling %s" % (a,))
+
+    def test_complete_error(self):
+        class A(DummyTask):
+            def complete(self):
+                raise Exception("b0rk")
+
+        a = A()
+        self.assertEquals(self.last_email, None)
+        self.worker.add(a)
+        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.worker.run()
+        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertFalse(a.has_run)
+
+    def test_complete_return_value(self):
+        class A(DummyTask):
+            def complete(self):
+                return
+
+        a = A()
+        self.assertEquals(self.last_email, None)
+        self.worker.add(a)
+        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.worker.run()
+        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertFalse(a.has_run)
+
+    def test_run_error(self):
+        class A(luigi.Task):
+            def complete(self):
+                return False
+
+            def run(self):
+                raise Exception("b0rk")
+
+        a = A()
+        self.worker.add(a)
+        self.assertEquals(self.last_email, None)
+        self.worker.run()
+        self.assertEquals(("Luigi: %s FAILED" % (a,)), self.last_email[0])
+
+    def test_no_error(self):
+        class A(DummyTask):
+            pass
+        a = A()
+        self.assertEquals(self.last_email, None)
+        self.worker.add(a)
+        self.assertEquals(self.last_email, None)
+        self.worker.run()
+        self.assertEquals(self.last_email, None)
+        self.assertTrue(a.complete())
 
 if __name__ == '__main__':
     unittest.main()

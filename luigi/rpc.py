@@ -16,7 +16,7 @@ import urllib
 import urllib2
 import logging
 import json
-from scheduler import Scheduler, PENDING
+from scheduler import Scheduler, SchedulingError, PENDING
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 
@@ -36,7 +36,11 @@ class RemoteScheduler(Scheduler):
 
         req = urllib2.Request(url)
         #logger.debug("Waiting for response: %s", url)
-        response = urllib2.urlopen(req)
+        try:
+            response = urllib2.urlopen(req)
+        except urllib2.URLError, ex:
+            raise SchedulingError("Error when connecting to remote scheduler %r" % self.__host, ex)
+
         #logger.debug("Got reponse")
         page = response.read()
         result = json.loads(page)

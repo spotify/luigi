@@ -17,7 +17,7 @@ import task
 
 def Derived(parent_cls):
     ''' This is a class factory function. It returns a new class with same parameters as
-    the parent class, sets the internal value self.parent_obj to an instance of it, and 
+    the parent class, sets the internal value self.parent_obj to an instance of it, and
     lets you override the rest of it. Useful if you have a class that's an immediate result
     of a previous class and you don't want to reimplement everything. Also useful if you
     want to wrap a class (see wrap_test.py for an example).
