@@ -309,18 +309,19 @@ class NotificationEmailTest(unittest.TestCase):
         self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
         self.assertFalse(a.has_run)
 
-    def test_complete_return_value(self):
-        class A(DummyTask):
-            def complete(self):
-                return
-
-        a = A()
-        self.assertEquals(self.last_email, None)
-        self.worker.add(a)
-        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
-        self.worker.run()
-        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
-        self.assertFalse(a.has_run)
+# We removed the non-boolean check due to bug, this should be brought back in after Christmas /nyman
+#    def test_complete_return_value(self):
+#        class A(DummyTask):
+#            def complete(self):
+#                return
+#
+#        a = A()
+#        self.assertEquals(self.last_email, None)
+#        self.worker.add(a)
+#        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+#        self.worker.run()
+#        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+#        self.assertFalse(a.has_run)
 
     def test_run_error(self):
         class A(luigi.Task):
