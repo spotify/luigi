@@ -51,7 +51,6 @@ class InputText(luigi.ExternalTask):
     def output(self):
         return luigi.LocalTarget(self.date.strftime('/var/tmp/text/%Y-%m-%d.txt'))
 
-@luigi.expose
 class WordCount(luigi.Task):
     date_interval = luigi.DateIntervalParameter()
 
@@ -148,7 +147,6 @@ class InputText(luigi.ExternalTask):
     def output(self):
         return luigi.hdfs.HdfsTarget(self.date.strftime('/tmp/text/%Y-%m-%d.txt'))
 
-@luigi.expose
 class WordCount(luigi.hadoop.JobTask):
     date_interval = luigi.DateIntervalParameter()
 
@@ -272,12 +270,11 @@ class FlipLinesBackwards(luigi.Task):
         g.close() # needed because files are atomic
 ```
 
-#### expose
+#### Running from the command line
 
-By using the class decorator *luigi.expose* you can expose any Task class so that it's available on the command line. This way you can invoke it using luigi.run()
+Any task can be instantiated and run from the command line
 
 ```python
-@luigi.expose
 class MyTask(luigi.Task):
     x = IntParameter()
     y = IntParameter(default=45)
@@ -377,7 +374,6 @@ Also it should be mentioned that Luigi is named after the pipeline-running frien
 
 * S3/EC2 - We have some old ugly code based on Boto that could be integrated in a day or two.
 * Built in support for Pig/Hive.
-* The @luigi.expose decorator is probably a bit superfluous and should be the default mode.
 * Better visualization tool - the layout gets pretty messy as the number of tasks grows.
 * Integration with existing Hadoop frameworks like mrjob would be cool and probably pretty easy.
 * Better support (without much boiler plate) for unittesting specific Tasks

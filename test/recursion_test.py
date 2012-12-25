@@ -20,7 +20,6 @@ import unittest
 File = MockFile
 
 
-# @luigi.expose
 class Popularity(luigi.Task):
     date = luigi.DateParameter(default=datetime.date.today() - datetime.timedelta(1))
 
@@ -51,7 +50,6 @@ class RecursionTest(unittest.TestCase):
 
     def test_cmdline(self):
         luigi.interface.reset()
-        luigi.expose(Popularity)
         luigi.run(['--local-scheduler', 'Popularity', '--date', '2010-01-01'])
 
         self.assertEquals(MockFile._file_contents['/tmp/popularity/2010-01-01.txt'], '365\n')

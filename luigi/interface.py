@@ -23,7 +23,7 @@ import warnings
 from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
 import task
 import parameter
-
+from task import Register
 
 class LuigiConfigParser(RawConfigParser):
     NO_DEFAULT = object()
@@ -71,56 +71,25 @@ class EnvironmentParamsContainer(task.Task):
     workers = parameter.IntParameter(is_global=True, default=1,
                                      description='Maximum number of parallel tasks to run')
 
-
-class Register(object):
-    def __init__(self):
-        self.__reg = {}
-        self.__global_params = {}
-        self.expose_global_params(EnvironmentParamsContainer)
-
-    def env_params(self, override_defaults):
+    @classmethod
+    def env_params(cls, override_defaults):
         # Override any global parameter with whatever is in override_defaults
-        for param_name, param_obj in EnvironmentParamsContainer.get_global_params():
+        for param_name, param_obj in cls.get_global_params():
             if param_name in override_defaults:
                 param_obj.set_default(override_defaults[param_name])
 
-        return EnvironmentParamsContainer()  # instantiate an object with the global params set on it
-
-    def expose(self, cls):
-        name = cls.task_family
-        assert name not in self.__reg  # TODO: raise better exception
-        self.__reg[name] = cls
-        self.expose_global_params(cls)
-        return cls
-
-    def expose_global_params(self, cls):
-        for param_name, param_obj in cls.get_global_params():
-            if param_name in self.__global_params and self.__global_params[param_name] != param_obj:
-                # Could be registered multiple times in case there's subclasses
-                raise Exception('Global parameter %r registered by multiple classes' % param_name)
-            self.__global_params[param_name] = param_obj
-
-    def get_reg(self):
-        return self.__reg
-
-    def get_global_params(self):
-        return self.__global_params.iteritems()
-
-register = Register()
-
+        return cls()  # instantiate an object with the global params set on it
 
 def expose(cls):
-    return register.expose(cls)
-
+    warnings.warn('expose is no longer used, everything is autoexposed', DeprecationWarning)
+    return cls
 
 def expose_main(cls):
     warnings.warn('expose_main is no longer supported, use luigi.run(..., main_task_cls=cls) instead', DeprecationWarning)
-    return register.expose(cls)
+    return cls
 
 def reset():
-    # Resets the global state
-    global register
-    register = Register()
+    warnings.warn('reset is no longer supported')
 
 class Interface(object):
     def parse(self):
@@ -128,7 +97,7 @@ class Interface(object):
 
     @staticmethod
     def run(tasks, override_defaults={}):
-        env_params = register.env_params(override_defaults)
+        env_params = EnvironmentParamsContainer.env_params(override_defaults)
 
         if env_params.lock:
             lock.run_once(env_params.lock_pid_dir)
@@ -176,7 +145,7 @@ class ArgParseInterface(Interface):
                 _add_parameter(parser, param_name, param, cls.task_family)
 
         def _add_global_parameters(parser):
-            for param_name, param in register.get_global_params():
+            for param_name, param in Register.get_global_params():
                 _add_parameter(parser, param_name, param)
 
         _add_global_parameters(parser)
@@ -187,8 +156,10 @@ class ArgParseInterface(Interface):
         else:
             subparsers = parser.add_subparsers(dest='command')
 
-            for name, cls in register.get_reg().iteritems():
+            for name, cls in Register.get_reg().iteritems():
                 subparser = subparsers.add_parser(name)
+                if cls == Register.AMBIGUOUS_CLASS:
+                    continue
                 _add_task_parameters(subparser, cls)
 
                 # Add global params here as well so that we can support both:
@@ -202,10 +173,13 @@ class ArgParseInterface(Interface):
         if main_task_cls:
             task_cls = main_task_cls
         else:
-            task_cls = register.get_reg()[args.command]
+            task_cls = Register.get_reg()[args.command]
+
+        if task_cls == Register.AMBIGUOUS_CLASS:
+            raise Exception('%s is ambigiuous' % args.command)
 
         # Notice that this is not side effect free because it might set global params
-        task = task_cls.from_input(params, register.get_global_params())
+        task = task_cls.from_input(params, Register.get_global_params())
 
         return [task]
 
@@ -238,10 +212,10 @@ class OptParseInterface(Interface):
         self.__existing_optparse = existing_optparse
 
     def parse(self, cmdline_args=None, main_task_cls=None):
-        global_params = list(register.get_global_params())
+        global_params = list(Register.get_global_params())
 
         parser = PassThroughOptionParser()
-        tasks_str = '/'.join(sorted([name for name in register.get_reg()]))
+        tasks_str = '/'.join(sorted([name for name in Register.get_reg()]))
 
         def add_task_option(p):
             if main_task_cls:
@@ -280,11 +254,14 @@ class OptParseInterface(Interface):
             parser = optparse.OptionParser()
         add_task_option(parser)
 
-        if task_cls_name not in register.get_reg():
+        if task_cls_name not in Register.get_reg():
             raise Exception('Error: %s is not a valid tasks (must be %s)' % (task_cls_name, tasks_str))
 
         # Register all parameters as a big mess
-        task_cls = register.get_reg()[task_cls_name]
+        task_cls = Register.get_reg()[task_cls_name]
+        if task_cls == Register.AMBIGUOUS_CLASS:
+            raise Exception('%s is ambiguous' % task_cls_name)
+
         params = task_cls.get_nonglobal_params()
 
         for param_name, param in global_params:

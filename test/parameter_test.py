@@ -20,7 +20,6 @@ class A(luigi.Task):
     p = luigi.IntParameter()
 
 
-# @luigi.expose
 class WithDefault(luigi.Task):
     x = luigi.Parameter(default='xyz')
 
@@ -32,7 +31,6 @@ class Foo(luigi.Task):
     not_a_param = "lol"
 
 
-# @luigi.expose
 class Bar(luigi.Task):
     multibool = luigi.BooleanParameter(is_list=True)
 
@@ -40,7 +38,6 @@ class Bar(luigi.Task):
         Bar._val = self.multibool
 
 
-# @luigi.expose
 class Baz(luigi.Task):
     bool = luigi.BooleanParameter()
 
@@ -48,7 +45,6 @@ class Baz(luigi.Task):
         Baz._val = self.bool
 
 
-# @luigi.expose
 class ForgotParam(luigi.Task):
     param = luigi.Parameter()
 
@@ -56,7 +52,6 @@ class ForgotParam(luigi.Task):
         pass
 
 
-# @luigi.expose
 class ForgotParamDep(luigi.Task):
     def requires(self):
         return ForgotParam()
@@ -65,7 +60,6 @@ class ForgotParamDep(luigi.Task):
         pass
 
 
-# @luigi.expose
 class HasGlobalParam(luigi.Task):
     x = luigi.Parameter()
     global_param = luigi.IntParameter(is_global=True, default=123)  # global parameters need default values
@@ -78,7 +72,6 @@ class HasGlobalParam(luigi.Task):
         return False
 
 
-# @luigi.expose
 class HasGlobalParamDep(luigi.Task):
     x = luigi.Parameter()
 
@@ -88,22 +81,16 @@ class HasGlobalParamDep(luigi.Task):
 _shared_global_param = luigi.Parameter(is_global=True, default='123')
 
 
-# @luigi.expose
 class SharedGlobalParamA(luigi.Task):
     shared_global_param = _shared_global_param
 
 
-# @luigi.expose
 class SharedGlobalParamB(luigi.Task):
     shared_global_param = _shared_global_param
 
 
 class ParameterTest(unittest.TestCase):
     def setUp(self):
-        # Reset global register
-        luigi.interface.reset()
-        for cls in [WithDefault, Bar, Baz, ForgotParam, ForgotParamDep, HasGlobalParam, HasGlobalParamDep, SharedGlobalParamA, SharedGlobalParamB]:
-            luigi.expose(cls)
         # Need to restore some defaults for the global params since they are overriden
         HasGlobalParam.global_param.set_default(123)
         HasGlobalParam.global_bool_param.set_default(False)

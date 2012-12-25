@@ -11,7 +11,6 @@ class InputText(luigi.ExternalTask):
     def output(self):
         return luigi.hdfs.HdfsTarget(self.date.strftime('/tmp/text/%Y-%m-%d.txt'))
 
-@luigi.expose
 class WordCount(luigi.hadoop.JobTask):
     date_interval = luigi.DateIntervalParameter()
 

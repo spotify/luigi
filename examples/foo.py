@@ -9,7 +9,6 @@ class MyExternal(luigi.ExternalTask):
         return False
 
 
-@luigi.expose
 class Foo(luigi.Task):
     def run(self):
         print "Running Foo"
@@ -20,7 +19,6 @@ class Foo(luigi.Task):
             yield Bar(i)
 
 
-@luigi.expose
 class Bar(luigi.Task):
     num = luigi.IntParameter()
 

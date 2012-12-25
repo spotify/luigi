@@ -86,11 +86,9 @@ class DateIntervalTest(unittest.TestCase):
         month = luigi.date_interval.Month(2012, 11)
         other = luigi.date_interval.Month(2012, 10)
 
-        @luigi.expose
         class MyTask(luigi.Task):
             di = DI(default=month)
 
-        @luigi.expose
         class MyTaskNoDefault(luigi.Task):
             di = DI()
 

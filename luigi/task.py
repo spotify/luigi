@@ -18,31 +18,33 @@ import traceback
 
 Parameter = parameter.Parameter
 
-
 def namespace(namespace=None):
     """ Call to set namespace of tasks declared after the call.
 
     If called without arguments or with None as the namespace, the namespace is reset, which is recommended to do at the end of any file where the namespace is set to avoid unintentionally setting namespace on tasks outside of the scope of the current file."""
-    TaskMetaclass._default_namespace = namespace
+    Register._default_namespace = namespace
 
 
-class TaskMetaclass(type):
-    # If we already have an instance of this class, then just return it from the cache
-    # The idea is that a Task object X should be able to set up heavy data structures that
-    # can be accessed from other Task objects (with dependencies on X). But we need to make
-    # sure that X is not instantiated many times.
+class Register(type):
+    # 1. Cache instances of objects so that eg. X(1, 2, 3) always returns the same object
+    # 2. Keep track of all subclasses of Task and expose them
     __instance_cache = {}
     _default_namespace = None
+    _reg = []
+    AMBIGUOUS_CLASS = object() # Placeholder denoting an error
 
     def __new__(metacls, classname, bases, classdict):
-        """ Custom class creation for namespacing
+        """ Custom class creation for namespacing. Also register all subclasses
 
-        Set the task namespace to whatever the currently declared namespace is"""
+        Set the task namespace to whatever the currently declared namespace is
+        """
 
         if "task_namespace" not in classdict:
             classdict["task_namespace"] = metacls._default_namespace
 
-        return type.__new__(metacls, classname, bases, classdict)
+        cls = type.__new__(metacls, classname, bases, classdict)
+        metacls._reg.append(cls)
+        return cls
 
     def __call__(cls, *args, **kwargs):
         """ Custom class instantiation utilizing instance cache.
@@ -50,9 +52,9 @@ class TaskMetaclass(type):
         If a Task has already been instantiated with the same parameters,
         the previous instance is returned to reduce number of object instances."""
         def instantiate():
-            return super(TaskMetaclass, cls).__call__(*args, **kwargs)
+            return super(Register, cls).__call__(*args, **kwargs)
 
-        h = TaskMetaclass.__instance_cache
+        h = Register.__instance_cache
 
         if h == None:  # disabled
             return instantiate()
@@ -69,11 +71,11 @@ class TaskMetaclass(type):
 
     @classmethod
     def clear_instance_cache(self):
-        TaskMetaclass.__instance_cache = {}
+        Register.__instance_cache = {}
 
     @classmethod
     def disable_instance_cache(self):
-        TaskMetaclass.__instance_cache = None
+        Register.__instance_cache = None
 
     @property
     def task_family(cls):
@@ -82,9 +84,32 @@ class TaskMetaclass(type):
         else:
             return "%s.%s" % (cls.task_namespace, cls.__name__)
 
+    @classmethod
+    def get_reg(cls):
+        reg = {}
+        for cls in cls._reg:
+            name = cls.task_family
+            if name in reg and reg[name] != cls:
+                # Registering two different classes - this means we can't instantiate them by name
+                reg[name] = cls.AMBIGUOUS_CLASS
+            else:
+                reg[name] = cls
+
+        return reg
+
+    @classmethod
+    def get_global_params(cls):
+        global_params = {}
+        for cls in cls._reg:
+            for param_name, param_obj in cls.get_global_params():
+                if param_name in global_params and global_params[param_name] != param_obj:
+                    # Could be registered multiple times in case there's subclasses
+                    raise Exception('Global parameter %r registered by multiple classes' % param_name)
+                global_params[param_name] = param_obj
+        return global_params.iteritems()
 
 class Task(object):
-    __metaclass__ = TaskMetaclass
+    __metaclass__ = Register
 
     """
     non-declared properties: (created in metaclass):

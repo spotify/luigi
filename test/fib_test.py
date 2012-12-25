@@ -21,7 +21,6 @@ File = MockFile
 # Calculates Fibonacci numbers :)
 
 
-# @luigi.expose
 class Fib(luigi.Task):
     n = luigi.IntParameter(default=100)
 
@@ -55,9 +54,6 @@ class FibTestBase(unittest.TestCase):
         global File
         File = MockFile
         MockFile._file_contents.clear()
-
-        luigi.interface.reset()
-        luigi.expose(Fib)
 
 class FibTest(FibTestBase):
     def test_invoke(self):

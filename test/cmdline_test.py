@@ -29,28 +29,34 @@ class SomeTask(luigi.Task):
         f.write('done')
         f.close()
 
-class MainTaskClsTest(unittest.TestCase):
+class AmbiguousClass(luigi.Task):
+    pass
+
+class AmbiguousClass(luigi.Task):
+    pass
+
+class CmdlineTest(unittest.TestCase):
     def setUp(self):
         global File
         File = MockFile
         MockFile._file_contents.clear()
 
-    def expose(self):
-        luigi.interface.register = luigi.interface.Register()
+    def test_expose_deprecated(self):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            luigi.expose_main(SomeTask)
+            luigi.expose(SomeTask)
             self.assertEqual(w[-1].category, DeprecationWarning)
 
     def test_cmdline_main_task_cls(self):
-        self.expose()
         luigi.run(['--local-scheduler', '--n', '100'], main_task_cls=SomeTask)
         self.assertEqual(MockFile._file_contents, {'/tmp/test_100': 'done'})
 
     def test_cmdline_other_task(self):
-        self.expose()
         luigi.run(['--local-scheduler', 'SomeTask', '--n', '1000'])
         self.assertEqual(MockFile._file_contents, {'/tmp/test_1000': 'done'})
+
+    def test_cmdline_ambiguous_class(self):
+        self.assertRaises(Exception, luigi.run, ['--local-scheduler', 'AmbiguousClass'])
 
 if __name__ == '__main__':
     luigi.run()
