@@ -54,7 +54,7 @@ def rename(path, dest):
 
 def remove(path, recursive=True):
     if recursive:
-        cmd = ['hadoop', 'fs', '-rm', '-r', path]
+        cmd = ['hadoop', 'fs', '-rmr', path]
     else:
         cmd = ['hadoop', 'fs', '-rm', path]
     if subprocess.call(cmd):
@@ -122,7 +122,7 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         self.path = path
         self.tmppath = '/tmp/' + self.path + "-luigitemp-%08d" % random.randrange(1e9)
         tmpdir = os.path.dirname(self.tmppath)
-        if subprocess.Popen(['hadoop', 'fs', '-mkdir', '-p', tmpdir]).wait():
+        if not exists(tmpdir) and subprocess.Popen(['hadoop', 'fs', '-mkdir', tmpdir]).wait():
             raise RuntimeError("Could not create directory: %s" % tmpdir)
         super(HdfsAtomicWritePipe, self).__init__(['hadoop', 'fs', '-put', '-', self.tmppath])
 
@@ -134,6 +134,7 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
     def close(self):
         super(HdfsAtomicWritePipe, self).close()
         rename(self.tmppath, self.path)
+
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
     """ Writes a data<data_extension> file to a directory at <path> """
