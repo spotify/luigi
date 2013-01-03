@@ -41,7 +41,7 @@ class InputPipeProcessWrapper(object):
         self._finish()
 
     def __enter__(self):
-        pass
+        return self
 
     def __exit__(self, type, value, traceback):
         self._finish()
@@ -99,7 +99,7 @@ class OutputPipeProcessWrapper(object):
             self.abort()
 
     def __enter__(self):
-        pass
+        return self
 
     def close(self):
         self._finish()
