@@ -15,6 +15,7 @@
 import subprocess
 import os
 import random
+import tempfile
 import urlparse
 import luigi.format
 
@@ -41,6 +42,10 @@ def exists(path):
     elif p.returncode == 1:
         return False
     assert False
+
+
+def tmppath(path=None):
+    return tempfile.gettempdir() + '/' + (path + "-" if path else "") + "luigitemp-%08d" % random.randrange(1e9)
 
 
 def rename(path, dest):
@@ -120,7 +125,7 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
 
     def __init__(self, path):
         self.path = path
-        self.tmppath = '/tmp/' + self.path + "-luigitemp-%08d" % random.randrange(1e9)
+        self.tmppath = tmppath(self.path)
         tmpdir = os.path.dirname(self.tmppath)
         if subprocess.Popen(['hadoop', 'fs', '-mkdir', '-p', tmpdir]).wait():
             raise RuntimeError("Could not create directory: %s" % tmpdir)
@@ -139,7 +144,7 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
     """ Writes a data<data_extension> file to a directory at <path> """
     def __init__(self, path, data_extension):
         self.path = path
-        self.tmppath = '/tmp/' + self.path + "-luigitemp-%08d" % random.randrange(1e9)
+        self.tmppath = tmppath(self.path)
         self.datapath = self.tmppath + ("/data%s" % data_extension)
         super(HdfsAtomicWriteDirPipe, self).__init__(['hadoop', 'fs', '-put', '-', self.datapath])
 
@@ -167,7 +172,7 @@ class HdfsTarget(luigi.Target):
     def __init__(self, path=None, format=Plain, is_tmp=False):
         if path is None:
             assert is_tmp
-            path = "/tmp/luigi-temp-%08d" % random.randrange(1e9)
+            path = tmppath()
         self.path = path
         self.format = format
         self.is_tmp = is_tmp
