@@ -40,6 +40,9 @@ class InputPipeProcessWrapper(object):
     def __del__(self):
         self._finish()
 
+    def __enter__(self):
+        pass
+
     def __exit__(self, type, value, traceback):
         self._finish()
 
@@ -94,6 +97,9 @@ class OutputPipeProcessWrapper(object):
             self.close()
         else:
             self.abort()
+
+    def __enter__(self):
+        pass
 
     def close(self):
         self._finish()
