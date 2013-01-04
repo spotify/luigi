@@ -18,6 +18,15 @@ import random
 import urlparse
 import luigi.format
 
+def use_cdh4_syntax():
+    """
+    CDH4 (hadoop 2+) has a slightly different syntax for interacting with
+    hdfs via the command line. The default version is CDH4, but one can
+    override this setting with "cdh3" in the hadoop section of the config in
+    order to use the old syntax
+    """
+    import interface
+    return interface.get_config().get("hadoop", "version", "cdh4").lower() == "cdh4"
 
 def exists(path):
     cmd = ['hadoop', 'fs', '-test', '-e', path]
@@ -54,7 +63,10 @@ def rename(path, dest):
 
 def remove(path, recursive=True):
     if recursive:
-        cmd = ['hadoop', 'fs', '-rmr', path]
+        if use_cdh4_syntax():
+            cmd = ['hadoop', 'fs', '-rm', '-r', path]
+        else:
+            cmd = ['hadoop', 'fs', '-rmr', path]
     else:
         cmd = ['hadoop', 'fs', '-rm', path]
     if subprocess.call(cmd):
@@ -122,8 +134,12 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         self.path = path
         self.tmppath = '/tmp/' + self.path + "-luigitemp-%08d" % random.randrange(1e9)
         tmpdir = os.path.dirname(self.tmppath)
-        if not exists(tmpdir) and subprocess.Popen(['hadoop', 'fs', '-mkdir', tmpdir]).wait():
-            raise RuntimeError("Could not create directory: %s" % tmpdir)
+        if use_cdh4_syntax():
+            if subprocess.Popen(['hadoop', 'fs', '-mkdir', '-p', tmpdir]).wait():
+                raise RuntimeError("Could not create directory: %s" % tmpdir)
+        else:
+            if not exists(tmpdir) and subprocess.Popen(['hadoop', 'fs', '-mkdir', tmpdir]).wait():
+                raise RuntimeError("Could not create directory: %s" % tmpdir)
         super(HdfsAtomicWritePipe, self).__init__(['hadoop', 'fs', '-put', '-', self.tmppath])
 
     def abort(self):
