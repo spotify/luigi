@@ -19,6 +19,15 @@ import tempfile
 import urlparse
 import luigi.format
 
+def use_cdh4_syntax():
+    """
+    CDH4 (hadoop 2+) has a slightly different syntax for interacting with
+    hdfs via the command line. The default version is CDH4, but one can
+    override this setting with "cdh3" in the hadoop section of the config in
+    order to use the old syntax
+    """
+    import interface
+    return interface.get_config().get("hadoop", "version", "cdh4").lower() == "cdh4"
 
 def exists(path):
     cmd = ['hadoop', 'fs', '-test', '-e', path]
@@ -59,7 +68,10 @@ def rename(path, dest):
 
 def remove(path, recursive=True):
     if recursive:
-        cmd = ['hadoop', 'fs', '-rm', '-r', path]
+        if use_cdh4_syntax():
+            cmd = ['hadoop', 'fs', '-rm', '-r', path]
+        else:
+            cmd = ['hadoop', 'fs', '-rmr', path]
     else:
         cmd = ['hadoop', 'fs', '-rm', path]
     if subprocess.call(cmd):
@@ -127,8 +139,12 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         self.path = path
         self.tmppath = tmppath(self.path)
         tmpdir = os.path.dirname(self.tmppath)
-        if subprocess.Popen(['hadoop', 'fs', '-mkdir', '-p', tmpdir]).wait():
-            raise RuntimeError("Could not create directory: %s" % tmpdir)
+        if use_cdh4_syntax():
+            if subprocess.Popen(['hadoop', 'fs', '-mkdir', '-p', tmpdir]).wait():
+                raise RuntimeError("Could not create directory: %s" % tmpdir)
+        else:
+            if not exists(tmpdir) and subprocess.Popen(['hadoop', 'fs', '-mkdir', tmpdir]).wait():
+                raise RuntimeError("Could not create directory: %s" % tmpdir)
         super(HdfsAtomicWritePipe, self).__init__(['hadoop', 'fs', '-put', '-', self.tmppath])
 
     def abort(self):
@@ -139,6 +155,7 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
     def close(self):
         super(HdfsAtomicWritePipe, self).close()
         rename(self.tmppath, self.path)
+
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
     """ Writes a data<data_extension> file to a directory at <path> """
