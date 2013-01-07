@@ -270,10 +270,3 @@ in luigi. Use target.path instead", stacklevel=2)
         else:
             remove(test_path, recursive=False)
             return True
-
-
-class NamedHdfsTarget(HdfsTarget):
-
-    def __init__(self, name, path=None, format=Plain, is_tmp=False):
-        super(NamedHdfsTarget, self).__init__(path, format, is_tmp)
-        self.name = name

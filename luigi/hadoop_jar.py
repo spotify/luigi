@@ -2,14 +2,12 @@
 import logging
 import os
 
-import luigi
-import luigi.hdfs
 from luigi.hadoop import BaseHadoopJobTask, HadoopJobRunner, JobRunner
 
 logger = logging.getLogger('luigi-interface')
 
 
-class JvmHadoopJobRunner(JobRunner):
+class HadoopJarJobRunner(JobRunner):
 
     def __init__(self):
         pass
@@ -17,11 +15,13 @@ class JvmHadoopJobRunner(JobRunner):
     def run_job(self, job):
         # TODO(jcrobak): libjars, files, etc. Can refactor out of
         # hadoop.HadoopJobRunner
-        if not os.path.exists(job.jar()):
+        if not job.jar() or not os.path.exists(job.jar()):
             logger.error("Can't find jar: {0}, full path {1}".format(job.jar(),
                 os.path.abspath(job.jar())))
             raise Exception("job jar does not exist")
-        arglist = ['hadoop', 'jar', job.jar(), job.main()]
+        arglist = ['hadoop', 'jar', job.jar()]
+        if job.main():
+            arglist.append(job.main())
 
         jobconfs = job.jobconfs()
 
@@ -42,7 +42,7 @@ class JvmHadoopJobRunner(JobRunner):
         self.finish()
 
 
-class JvmHadoopJobTask(BaseHadoopJobTask):
+class HadoopJarJobTask(BaseHadoopJobTask):
 
     def jar(self):
         return None
@@ -52,7 +52,7 @@ class JvmHadoopJobTask(BaseHadoopJobTask):
 
     def job_runner(self):
         # We recommend that you define a subclass, override this method and set up your own config
-        return JvmHadoopJobRunner()
+        return HadoopJarJobRunner()
 
     def args(self):
         """returns an array of args to pass to the job (after hadoop jar <jar> <main>)."""
