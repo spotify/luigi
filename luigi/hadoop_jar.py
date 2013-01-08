@@ -1,16 +1,43 @@
 
 import logging
 import os
+import random
 
 from luigi.hadoop import BaseHadoopJobTask, HadoopJobRunner, JobRunner
+import luigi.hdfs
 
 logger = logging.getLogger('luigi-interface')
 
 
 class HadoopJarJobRunner(JobRunner):
+    """JobRunner for `hadoop jar` commands. Used to run a HadoopJarJobTask"""
 
     def __init__(self):
         pass
+
+    @staticmethod
+    def _fix_paths(job):
+        """Coerce input arguments to use temporary files when used for output.
+        Return a list of temporary file pairs (tmpfile, destination path) and
+        a list of arguments. Converts each HdfsTarget to a string for the
+        path."""
+        if job.atomic_output():
+            tmp_files = []
+            args = []
+            for x in job.args():
+                if isinstance(x, luigi.hdfs.HdfsTarget):  # input/output
+                    if x.exists():  # input
+                        args.append(x.path)
+                    else:  # output
+                        y = luigi.hdfs.HdfsTarget(x.path + \
+                            '-luigi-tmp-%09d' % random.randrange(0, 1e10))
+                        tmp_files.append((y, x))
+                        logger.info("Using temp path: {0} for path {1}".format(y.path, x.path))
+                        args.append(y.path)
+                else:
+                    args.append(str(x))
+            return (tmp_files, args)
+        return ([], job.args())
 
     def run_job(self, job):
         # TODO(jcrobak): libjars, files, etc. Can refactor out of
@@ -28,31 +55,36 @@ class HadoopJarJobRunner(JobRunner):
         for jc in jobconfs:
             arglist += ['-D' + jc]
 
-        arglist += job.args()
+        (tmp_files, job_args) = HadoopJarJobRunner._fix_paths(job)
+
+        arglist += job_args
 
         HadoopJobRunner.run_and_track_hadoop_job(arglist)
 
-        # TODO support temp output locations?
-        self.finish()
-
-    def finish(self):
-        pass
-
-    def __del__(self):
-        self.finish()
+        for a, b in tmp_files:
+            a.move(b)
 
 
 class HadoopJarJobTask(BaseHadoopJobTask):
+    """A job task for `hadoop jar` commands that define a jar and (optional)
+    main method"""
 
     def jar(self):
+        """Path to the jar for this Hadoop Job"""
         return None
 
     def main(self):
+        """optional main method for this Hadoop Job"""
         return None
 
     def job_runner(self):
         # We recommend that you define a subclass, override this method and set up your own config
         return HadoopJarJobRunner()
+
+    def atomic_output(self):
+        """If True, then rewrite output arguments to be temp locations and
+        atomically move them into place after the job finishes"""
+        return True
 
     def args(self):
         """returns an array of args to pass to the job (after hadoop jar <jar> <main>)."""

@@ -43,7 +43,7 @@ class TeraGen(luigi.hadoop_jar.HadoopJarJobTask):
 
     def args(self):
         # First arg is 10B -- each record is 100bytes
-        return [self.records, self.output().path]
+        return [self.records, self.output()]
 
 
 @luigi.expose
@@ -68,7 +68,7 @@ class TeraSort(luigi.hadoop_jar.HadoopJarJobTask):
         return "terasort"
 
     def args(self):
-        return [self.requires().output().path, self.output().path]
+        return [self.input(), self.output()]
 
 
 if __name__ == '__main__':
