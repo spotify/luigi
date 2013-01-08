@@ -221,13 +221,7 @@ class HadoopJobRunner(JobRunner):
         if files:
             arglist += ['-files', ','.join(files)]
 
-        jobconfs = []
-
-        jobconfs.append('mapred.job.name=%s' % job.task_id)
-        jobconfs.append('mapred.reduce.tasks=%s' % job.n_reduce_tasks)
-        pool = job.pool
-        if pool is not None:
-            jobconfs.append('mapred.fairscheduler.pool=%s' % pool)
+        jobconfs = job.jobconfs()
 
         for k, v in self.jobconfs.iteritems():
             jobconfs.append('%s=%s' % (k, v))
@@ -258,10 +252,17 @@ class HadoopJobRunner(JobRunner):
         # submit job
         create_packages_archive(packages, self.tmp_dir + '/packages.tar')
 
-        logger.info(' '.join(arglist))
-
         job._dump(self.tmp_dir)
 
+        self.run_and_track_hadoop_job(arglist)
+
+        # rename temporary work directory to given output
+        tmp_target.move(output_final, fail_if_exists=True)
+        self.finish()
+
+    @staticmethod
+    def run_and_track_hadoop_job(arglist):
+        logger.info(' '.join(arglist))
         proc = subprocess.Popen(arglist, stderr=subprocess.PIPE)
 
         # We parse the output to try to find the tracking URL.
@@ -280,15 +281,11 @@ class HadoopJobRunner(JobRunner):
             # Try to fetch error logs if possible
             if tracking_url:
                 try:
-                    self.fetch_raise_failures(tracking_url)
+                    HadoopJobRunner.fetch_raise_failures(tracking_url)
                 except Exception, e:
                     raise RuntimeError('Streaming job failed with exit code %d. Additionally, an error occurred when fetching data from %s: %s' % (proc.returncode, tracking_url, e))
 
             raise RuntimeError('Streaming job failed with exit code %d' % proc.returncode)
-
-        # rename temporary work directory to given output
-        tmp_target.move(output_final, fail_if_exists=True)
-        self.finish()
 
     @staticmethod
     def fetch_raise_failures(tracking_url):
@@ -315,7 +312,7 @@ class HadoopJobRunner(JobRunner):
             for exc in re.findall(r'luigi-exc-hex=[0-9a-f]+', data):
                 print '---------- %s:' % task_url
                 print exc.split('=')[-1].decode('hex')
-    
+
     def finish(self):
         if self.tmp_dir and os.path.exists(self.tmp_dir):
             logger.debug('Removing directory %s' % self.tmp_dir)
@@ -388,9 +385,20 @@ class LocalJobRunner(JobRunner):
         reduce_output.close()
 
 
-class JobTask(luigi.Task):
+class BaseHadoopJobTask(luigi.Task):
     n_reduce_tasks = 25
     pool = luigi.Parameter(is_global=True, default=None, significant=False)
+    task_id = None
+
+    def jobconfs(self):
+        jcs = []
+        jcs.append('mapred.job.name=%s' % self.task_id)
+        jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
+        pool = self.pool
+        if pool is not None:
+            jcs.append('mapred.fairscheduler.pool=%s' % pool)
+        return jcs
+
 
     def init_local(self):
         ''' Implement any work to setup any internal datastructure etc here.
@@ -404,21 +412,9 @@ class JobTask(luigi.Task):
     def init_hadoop(self):
         pass
 
-    def init_mapper(self):
-        pass
-
-    def init_combiner(self):
-        pass
-
-    def init_reducer(self):
-        pass
-
     def run(self):
         self.init_local()
         self.job_runner().run_job(self)
-
-    def _setup_remote(self):
-        self._setup_links()
 
     def requires_local(self):
         ''' Default impl - override this method if you need any local input to be accessible in init() '''
@@ -436,6 +432,20 @@ class JobTask(luigi.Task):
     def deps(self):
         # Overrides the default implementation
         return luigi.task.flatten(self.requires_hadoop()) + luigi.task.flatten(self.requires_local())
+
+class JobTask(BaseHadoopJobTask):
+
+    def init_mapper(self):
+        pass
+
+    def init_combiner(self):
+        pass
+
+    def init_reducer(self):
+        pass
+
+    def _setup_remote(self):
+        self._setup_links()
 
     def job_runner(self):
         # We recommend that you define a subclass, override this method and set up your own config
