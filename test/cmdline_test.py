@@ -18,6 +18,7 @@ from luigi.mock import MockFile
 import warnings
 import luigi.interface
 
+
 class SomeTask(luigi.Task):
     n = luigi.IntParameter()
 
@@ -29,11 +30,23 @@ class SomeTask(luigi.Task):
         f.write('done')
         f.close()
 
-class AmbiguousClass(luigi.Task):
-    pass
 
 class AmbiguousClass(luigi.Task):
     pass
+
+
+class AmbiguousClass(luigi.Task):
+    pass
+
+
+class NonAmbiguousClass(luigi.ExternalTask):
+    pass
+
+
+class NonAmbiguousClass(luigi.Task):
+    def run(self):
+        NonAmbiguousClass.has_run = True
+
 
 class CmdlineTest(unittest.TestCase):
     def setUp(self):
@@ -57,6 +70,10 @@ class CmdlineTest(unittest.TestCase):
 
     def test_cmdline_ambiguous_class(self):
         self.assertRaises(Exception, luigi.run, ['--local-scheduler', 'AmbiguousClass'])
+
+    def test_cmdline_non_ambiguous_class(self):
+        luigi.run(['--local-scheduler', 'NonAmbiguousClass'])
+        self.assertTrue(NonAmbiguousClass.has_run)
 
 if __name__ == '__main__':
     luigi.run()

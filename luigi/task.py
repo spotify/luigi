@@ -18,6 +18,7 @@ import traceback
 
 Parameter = parameter.Parameter
 
+
 def namespace(namespace=None):
     """ Call to set namespace of tasks declared after the call.
 
@@ -31,7 +32,7 @@ class Register(type):
     __instance_cache = {}
     _default_namespace = None
     _reg = []
-    AMBIGUOUS_CLASS = object() # Placeholder denoting an error
+    AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
 
     def __new__(metacls, classname, bases, classdict):
         """ Custom class creation for namespacing. Also register all subclasses
@@ -43,7 +44,8 @@ class Register(type):
             classdict["task_namespace"] = metacls._default_namespace
 
         cls = type.__new__(metacls, classname, bases, classdict)
-        metacls._reg.append(cls)
+        if cls.run != NotImplemented:
+            metacls._reg.append(cls)
         return cls
 
     def __call__(cls, *args, **kwargs):
@@ -107,6 +109,7 @@ class Register(type):
                     raise Exception('Global parameter %r registered by multiple classes' % param_name)
                 global_params[param_name] = param_obj
         return global_params.iteritems()
+
 
 class Task(object):
     __metaclass__ = Register
