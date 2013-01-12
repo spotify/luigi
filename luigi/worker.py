@@ -21,7 +21,6 @@ import interface
 import traceback
 import logging
 import warnings
-import socket
 import notifications
 
 try:
@@ -30,9 +29,6 @@ except ImportError:
     import json
 
 logger = logging.getLogger('luigi-interface')
-
-
-DEFAULT_EMAIL = 'luigi-client@%s' % socket.getfqdn()
 
 
 class Worker(object):
@@ -87,7 +83,7 @@ class Worker(object):
                 msg = "Will not schedule %s or any dependencies due to error in complete() method:" % (task,)
                 logger.warning(msg, exc_info=1)  # like logger.exception but with WARNING level
                 receiver = interface.get_config().get('core', 'error-email', None)
-                sender = interface.get_config().get('core', 'email-sender', DEFAULT_EMAIL)
+                sender = interface.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
                 logger.info("Sending warning email to %r" % receiver)
                 notifications.send_email(
                     subject="Luigi: %s failed scheduling" % (task,),
@@ -116,17 +112,17 @@ class Worker(object):
 
                 for task_2 in task.deps():
                     self.add(task_2)  # Schedule stuff recursively
+        except KeyboardInterrupt:
+            raise
         except:
             logger.exception("Luigi unexpected framework error while scheduling %s" % task)
             receiver = interface.get_config().get('core', 'error-email', None)
-            sender = interface.get_config().get('core', 'email-sender', DEFAULT_EMAIL)
-
+            sender = interface.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
             notifications.send_email(
                 subject="Luigi: Framework error while scheduling %s" % (task,),
                 message="Luigi framework error:\n%s" % traceback.format_exc(),
                 recipients=(receiver,),
                 sender=sender)
-            exit(1)  # error in luigi framework, bail out!
 
     def _run_task(self, task_id):
         task = self.__scheduled_tasks[task_id]
@@ -141,7 +137,7 @@ class Worker(object):
                     missing_dep = task_2
 
             if not ok:
-                # TODO: possibly tru to re-add task again ad pending
+                # TODO: possibly try to re-add task again ad pending
                 raise RuntimeError('Unfulfilled dependency %r at run time!\nPrevious tasks: %r' % (missing_dep.task_id, self._previous_tasks))
 
             task.run()
@@ -156,7 +152,7 @@ class Worker(object):
             logger.exception("[pid %s] Error while running %s" % (os.getpid(), task))
             expl = task.on_failure(ex)
             receiver = interface.get_config().get('core', 'error-email', None)
-            sender = interface.get_config().get('core', 'email-sender', DEFAULT_EMAIL)
+            sender = interface.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
             logger.info("[pid %s] Sending error email to %r", os.getpid(), receiver)
             notifications.send_email("Luigi: %s FAILED" % task, expl, sender, (receiver,))
 

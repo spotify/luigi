@@ -16,32 +16,50 @@ import urllib
 import urllib2
 import logging
 import json
-from scheduler import Scheduler, SchedulingError, PENDING
+import time
+from scheduler import Scheduler, PENDING
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
+
+
+class RPCError(Exception):
+    def __init__(self, message, sub_exception=None):
+        super(RPCError, self).__init__(message)
+        self.sub_exception = sub_exception
 
 
 class RemoteScheduler(Scheduler):
     ''' Scheduler proxy object. Talks to a RemoteSchedulerResponder '''
 
     def __init__(self, host='localhost', port=8082):
-        self.__host = host
-        self.__port = port
+        self._host = host
+        self._port = port
+        self._attempts = 3
+
+    def _wait(self):
+        time.sleep(30)
 
     def _request(self, url, data):
         # TODO(erikbern): do POST requests instead
         data = {'data': json.dumps(data)}
         url = 'http://%s:%d%s?%s' % \
-            (self.__host, self.__port, url, urllib.urlencode(data))
+            (self._host, self._port, url, urllib.urlencode(data))
 
         req = urllib2.Request(url)
-        #logger.debug("Waiting for response: %s", url)
-        try:
-            response = urllib2.urlopen(req)
-        except urllib2.URLError, ex:
-            raise SchedulingError("Error when connecting to remote scheduler %r" % self.__host, ex)
-
-        #logger.debug("Got reponse")
+        last_exception = None
+        for attempt in xrange(self._attempts):
+            if last_exception:
+                logger.info("Retrying...")
+                self._wait()  # wait for a bit and retry
+            try:
+                response = urllib2.urlopen(req)
+                break
+            except urllib2.URLError, last_exception:
+                logger.exception("Failed connecting to remote scheduler %r" % (self._host,))
+                continue
+        else:
+            raise RPCError("Errors (%d attempts) when connecting to remote scheduler %r" % (
+                            self._attempts, self._host), last_exception)
         page = response.read()
         result = json.loads(page)
         return result["response"]
@@ -50,7 +68,7 @@ class RemoteScheduler(Scheduler):
         self._request('/api/ping', {'worker': worker})  # Keep-alive
 
     def add_task(self, worker, task_id, status=PENDING, runnable=False, deps=None, expl=None):
-        self._request('/api/add_task', \
+        self._request('/api/add_task',
             {'task_id': task_id,
              'worker': worker,
              'status': status,

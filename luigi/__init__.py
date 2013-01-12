@@ -28,6 +28,7 @@ File = file.File  # TODO: remove, should be LocalTarget
 LocalTarget = File
 Parameter = parameter.Parameter
 RemoteScheduler = rpc.RemoteScheduler
+RPCError = rpc.RPCError
 
 expose = interface.expose
 expose_main = interface.expose_main

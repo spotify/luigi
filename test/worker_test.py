@@ -16,7 +16,7 @@ import time
 from luigi.scheduler import CentralPlannerScheduler
 import luigi.worker
 from luigi.worker import Worker
-from luigi import *
+from luigi import Task, ExternalTask, RemoteScheduler, RPCError
 import unittest
 import logging
 import luigi.notifications
@@ -266,8 +266,10 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(a.has_run)
 
 
-class NotificationEmailTest(unittest.TestCase):
+class EmailTest(unittest.TestCase):
     def setUp(self):
+        super(EmailTest, self).setUp()
+
         self.send_email = luigi.notifications.send_email
         self.last_email = None
 
@@ -275,25 +277,35 @@ class NotificationEmailTest(unittest.TestCase):
             self.last_email = (subject, message, sender, recipients, image_png)
         luigi.notifications.send_email = mock_send_email
 
-        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        self.worker = Worker(scheduler=sch, worker_id="foo")
-
     def tearDown(self):
         luigi.notifications.send_email = self.send_email
 
-    def test_luigi_error(self):
-        worker = Worker(
-            scheduler=RemoteScheduler(host="doesnt_exist", port=1337)
-        )
+
+class WorkerEmailTest(EmailTest):
+    def setUp(self):
+        super(WorkerEmailTest, self).setUp()
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        self.worker = Worker(scheduler=sch, worker_id="foo")
+
+    def test_connection_error(self):
+        sch = RemoteScheduler(host="this_host_doesnt_exist", port=1337)
+        worker = Worker(scheduler=sch)
+
+        self.waits = 0
+
+        def dummy_wait():
+            self.waits += 1
+
+        sch._wait = dummy_wait
 
         class A(DummyTask):
             pass
+
         a = A()
         self.assertEquals(self.last_email, None)
-
-        def exits():
-            worker.add(a)
-        self.assertRaises(SystemExit, exits)
+        worker.add(a)
+        self.assertEquals(self.waits, sch._attempts - 1)
+        self.assertNotEquals(self.last_email, None)
         self.assertEquals(self.last_email[0], "Luigi: Framework error while scheduling %s" % (a,))
 
     def test_complete_error(self):

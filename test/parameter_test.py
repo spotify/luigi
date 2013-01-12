@@ -12,8 +12,9 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import unittest
-import luigi, luigi.interface
+import luigi
+import luigi.interface
+from worker_test import EmailTest
 
 
 class A(luigi.Task):
@@ -89,8 +90,9 @@ class SharedGlobalParamB(luigi.Task):
     shared_global_param = _shared_global_param
 
 
-class ParameterTest(unittest.TestCase):
+class ParameterTest(EmailTest):
     def setUp(self):
+        super(ParameterTest, self).setUp()
         # Need to restore some defaults for the global params since they are overriden
         HasGlobalParam.global_param.set_default(123)
         HasGlobalParam.global_bool_param.set_default(False)
@@ -149,8 +151,9 @@ class ParameterTest(unittest.TestCase):
         self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', 'ForgotParam'],)
 
     def test_forgot_param_in_dep(self):
-        # A programmatic missing parameter will cause a system exit
-        self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', 'ForgotParamDep'],)
+        # A programmatic missing parameter will cause an error email to be sent
+        luigi.run(['--local-scheduler', 'ForgotParamDep'])
+        self.assertNotEquals(self.last_email, None)
 
     def test_default_param_cmdline(self):
         luigi.run(['--local-scheduler', 'WithDefault'])

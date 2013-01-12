@@ -1,6 +1,10 @@
 import sys
 import logging
+import socket
 logger = logging.getLogger("luigi-interface")
+
+
+DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.getfqdn()
 
 
 def send_email(subject, message, sender, recipients, image_png=None):

@@ -25,6 +25,7 @@ import task
 import parameter
 from task import Register
 
+
 class LuigiConfigParser(RawConfigParser):
     NO_DEFAULT = object()
     _instance = None
@@ -80,16 +81,20 @@ class EnvironmentParamsContainer(task.Task):
 
         return cls()  # instantiate an object with the global params set on it
 
+
 def expose(cls):
     warnings.warn('expose is no longer used, everything is autoexposed', DeprecationWarning)
     return cls
+
 
 def expose_main(cls):
     warnings.warn('expose_main is no longer supported, use luigi.run(..., main_task_cls=cls) instead', DeprecationWarning)
     return cls
 
+
 def reset():
     warnings.warn('reset is no longer supported')
+
 
 class Interface(object):
     def parse(self):
@@ -108,7 +113,6 @@ class Interface(object):
             sch = rpc.RemoteScheduler(host=env_params.scheduler_host)
 
         w = worker.Worker(scheduler=sch, worker_processes=env_params.workers)
-
         for task in tasks:
             w.add(task)
         w.run()
