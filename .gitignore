@@ -1,3 +1,6 @@
 *.pyc
 *~
 client.cfg
+build
+dist
+luigi.egg-info
