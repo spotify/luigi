@@ -12,7 +12,10 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-from distutils.core import setup
+try:
+  from setuptools import setup
+except:
+  from distutils.core import setup
 
 long_description = []
 for line in open('README.md'):
