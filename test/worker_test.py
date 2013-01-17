@@ -16,10 +16,11 @@ import time
 from luigi.scheduler import CentralPlannerScheduler
 import luigi.worker
 from luigi.worker import Worker
-from luigi import Task, ExternalTask, RemoteScheduler, RPCError
+from luigi import Task, ExternalTask, RemoteScheduler
 import unittest
 import logging
 import luigi.notifications
+luigi.notifications.DEBUG = True
 
 
 class DummyTask(Task):
@@ -321,19 +322,18 @@ class WorkerEmailTest(EmailTest):
         self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
         self.assertFalse(a.has_run)
 
-# We removed the non-boolean check due to bug, this should be brought back in after Christmas /nyman
-#    def test_complete_return_value(self):
-#        class A(DummyTask):
-#            def complete(self):
-#                return
-#
-#        a = A()
-#        self.assertEquals(self.last_email, None)
-#        self.worker.add(a)
-#        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
-#        self.worker.run()
-#        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
-#        self.assertFalse(a.has_run)
+    def test_complete_return_value(self):
+        class A(DummyTask):
+            def complete(self):
+                pass  # no return value should be an error
+
+        a = A()
+        self.assertEquals(self.last_email, None)
+        self.worker.add(a)
+        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.worker.run()
+        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertFalse(a.has_run)
 
     def test_run_error(self):
         class A(luigi.Task):

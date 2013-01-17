@@ -79,6 +79,8 @@ class Worker(object):
             is_complete = False
             try:
                 is_complete = task.complete()
+                if is_complete not in (True, False):
+                    raise Exception("Return value of Task.complete() must be boolean (was %r)" % is_complete)
             except:
                 msg = "Will not schedule %s or any dependencies due to error in complete() method:" % (task,)
                 logger.warning(msg, exc_info=1)  # like logger.exception but with WARNING level

@@ -15,11 +15,14 @@
 import unittest
 import subprocess
 import luigi
-import luigi.hadoop, luigi.hdfs
+import luigi.hadoop
+import luigi.hdfs
 from luigi.mock import MockFile
 import StringIO
-
+import luigi.notifications
+luigi.notifications.DEBUG = True
 File = MockFile
+
 
 class Words(luigi.Task):
     def output(self):
@@ -31,9 +34,11 @@ class Words(luigi.Task):
         f.write('kjsfsdfkj sdjkf kljslkj flskjdfj jkkd jjfk jk jk jk jk jk jklkjf kj lkj lkj\n')
         f.close()
 
+
 class TestJobTask(luigi.hadoop.JobTask):
     def job_runner(self):
         return luigi.hadoop.LocalJobRunner()
+
 
 class WordCountJob(TestJobTask):
     def mapper(self, line):
@@ -50,9 +55,11 @@ class WordCountJob(TestJobTask):
     def output(self):
         return File("luigitest")
 
+
 class WordCountJobReal(WordCountJob):
     def job_runner(self):
         return luigi.hadoop.HadoopJobRunner(streaming_jar='test.jar')
+
 
 class WordFreqJob(TestJobTask):
     def init_local(self):
@@ -80,6 +87,7 @@ class WordFreqJob(TestJobTask):
     def output(self):
         return File("luigitest-2")
 
+
 class HadoopJobTest(unittest.TestCase):
     def setUp(self):
         MockFile._file_contents = {}
@@ -104,10 +112,13 @@ class HadoopJobTest(unittest.TestCase):
     def test_run_real(self):
         # Will attempt to run a real hadoop job, but we will secretly mock subprocess.Popen
         arglist_result = []
+
         def Popen_fake(arglist, stderr=None):
             arglist_result.append(arglist)
+
             class P(object):
-                def wait(self): pass
+                def wait(self):
+                    pass
             p = P()
             p.returncode = 0
             p.stderr = StringIO.StringIO()
@@ -119,7 +130,7 @@ class HadoopJobTest(unittest.TestCase):
 
         WordCountJobReal().run()
 
-        luigi.hdfs.HdfsTarget, subprocess.Popen = h, p # restore
+        luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
 
         self.assertEquals(len(arglist_result), 1)
         self.assertEquals(arglist_result[0][0:3], ['hadoop', 'jar', 'test.jar'])

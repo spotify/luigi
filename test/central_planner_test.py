@@ -15,7 +15,8 @@
 import time
 from luigi.scheduler import CentralPlannerScheduler, DONE, FAILED
 import unittest
-
+import luigi.notifications
+luigi.notifications.DEBUG = True
 WORKER = 'myworker'
 
 

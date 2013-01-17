@@ -12,8 +12,11 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi, luigi.date_interval
+import luigi
+import luigi.date_interval
 import unittest
+import luigi.notifications
+luigi.notifications.DEBUG = True
 
 
 class InstanceTest(unittest.TestCase):

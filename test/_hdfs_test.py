@@ -54,6 +54,94 @@ class AtomicHdfsOutputPipeTests(unittest.TestCase):
         self.assertFalse(hdfs.exists(testpath))
 
 
+class HdfsAtomicWriteDirPipeTests(unittest.TestCase):
+    def setUp(self):
+        self.path = "luigi_hdfs_testfile"
+        if hdfs.exists(self.path):
+            hdfs.remove(self.path)
+
+    def test_atomicity(self):
+        pipe = hdfs.HdfsAtomicWriteDirPipe(self.path)
+        self.assertFalse(hdfs.exists(self.path))
+        pipe.close()
+        self.assertTrue(hdfs.exists(self.path))
+
+    def test_readback(self):
+        pipe = hdfs.HdfsAtomicWriteDirPipe(self.path)
+        self.assertFalse(hdfs.exists(self.path))
+        pipe.write("foo\nbar")
+        pipe.close()
+        self.assertTrue(hdfs.exists(self.path))
+        dirlist = tuple(hdfs.listdir(self.path))
+        datapath = '%s/data' % self.path
+        self.assertEquals(dirlist, (datapath,))
+        pipe = hdfs.HdfsReadPipe(datapath)
+        self.assertEqual(pipe.read(), "foo\nbar")
+
+    def test_with_close(self):
+        with hdfs.HdfsAtomicWritePipe(self.path) as fobj:
+            fobj.write('hej')
+
+        self.assertTrue(hdfs.exists(self.path))
+
+    def test_with_noclose(self):
+        def foo():
+            with hdfs.HdfsAtomicWritePipe(self.path) as fobj:
+                fobj.write('hej')
+                raise TestException('Test triggered exception')
+        self.assertRaises(TestException, foo)
+        self.assertFalse(hdfs.exists(self.path))
+
+
+class _HdfsFormatTest(unittest.TestCase):
+    format = None  # override with luigi.format.Format subclass
+
+    def setUp(self):
+        self.target = hdfs.HdfsTarget("luigi_hdfs_testfile", format=self.format)
+        if self.target.exists():
+            self.target.remove()
+
+    def test_with_write_success(self):
+        with self.target.open('w') as fobj:
+            fobj.write('foo')
+        self.assertTrue(self.target.exists())
+
+    def test_with_write_failure(self):
+        def dummy():
+            with self.target.open('w') as fobj:
+                fobj.write('foo')
+                raise TestException()
+
+        self.assertRaises(TestException, dummy)
+        self.assertFalse(self.target.exists())
+
+
+class PlainFormatTest(_HdfsFormatTest):
+    format = hdfs.Plain
+
+
+class PlainDirFormatTest(_HdfsFormatTest):
+    format = hdfs.PlainDir
+
+    def test_multifile(self):
+        with self.target.open('w') as fobj:
+            fobj.write('foo\n')
+        second = hdfs.HdfsTarget(self.target.path + '/data2', format=hdfs.Plain)
+
+        with second.open('w') as fobj:
+            fobj.write('bar\n')
+        invisible = hdfs.HdfsTarget(self.target.path + '/_SUCCESS', format=hdfs.Plain)
+        with invisible.open('w') as fobj:
+            fobj.write('b0rk\n')
+        self.assertTrue(second.exists())
+        self.assertTrue(invisible.exists())
+        self.assertTrue(self.target.exists())
+        with self.target.open('r') as fobj:
+            parts = fobj.read().strip('\n').split('\n')
+            parts.sort()
+        self.assertEqual(tuple(parts), ('bar', 'foo'))
+
+
 class HdfsTargetTests(unittest.TestCase):
 
     def test_slow_exists(self):

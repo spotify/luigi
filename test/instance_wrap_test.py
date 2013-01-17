@@ -15,12 +15,16 @@
 import luigi
 from luigi.mock import MockFile
 import unittest
-import decimal, datetime
-
+import decimal
+import datetime
+import luigi.notifications
+luigi.notifications.DEBUG = True
 File = MockFile
+
 
 class Report(luigi.Task):
     date = luigi.DateParameter()
+
     def run(self):
         f = self.output().open('w')
         f.write('10.0 USD\n')
@@ -30,6 +34,7 @@ class Report(luigi.Task):
 
     def output(self):
         return File(self.date.strftime('/tmp/report-%Y-%m-%d'))
+
 
 class ReportReader(luigi.Task):
     date = luigi.DateParameter()
@@ -47,6 +52,7 @@ class ReportReader(luigi.Task):
     def complete(self):
         return False
 
+
 class CurrencyExchanger(luigi.Task):
     task = luigi.Parameter()
     currency_to = luigi.Parameter()
@@ -55,7 +61,7 @@ class CurrencyExchanger(luigi.Task):
                       ('EUR', 'USD'): decimal.Decimal('1.25')}
 
     def requires(self):
-        return self.task # Note that you still need to state this explicitly
+        return self.task  # Note that you still need to state this explicitly
 
     def get_line(self, line):
         amount, currency_from = self.task.get_line(line)
@@ -63,7 +69,8 @@ class CurrencyExchanger(luigi.Task):
 
     def complete(self):
         return False
-        
+
+
 class InstanceWrapperTest(unittest.TestCase):
     ''' This test illustrates that tasks can have tasks as parameters
 

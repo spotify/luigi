@@ -314,7 +314,13 @@ def build(tasks, **env_params):
     Interface.run(tasks, env_params)
 
 
+_logging_is_setup = False
+
+
 def setup_interface_logging():
+    global _logging_is_setup
+    if _logging_is_setup:
+        return
     logger = logging.getLogger('luigi-interface')
     logger.setLevel(logging.DEBUG)
 
@@ -325,3 +331,4 @@ def setup_interface_logging():
     streamHandler.setFormatter(formatter)
 
     logger.addHandler(streamHandler)
+    _logging_is_setup = True

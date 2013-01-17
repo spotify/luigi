@@ -13,20 +13,28 @@
 # the License.
 
 import unittest
-import luigi, luigi.util
+import luigi
+import luigi.util
+import luigi.notifications
+luigi.notifications.DEBUG = True
+
 
 class A(luigi.Task):
     x = luigi.IntParameter(default=3)
 
+
 class B(luigi.util.Derived(A)):
     y = luigi.IntParameter(default=4)
+
 
 class A2(luigi.Task):
     x = luigi.IntParameter(default=3)
     g = luigi.IntParameter(is_global=True, default=42)
 
+
 class B2(luigi.util.Derived(A2)):
     pass
+
 
 class UtilTest(unittest.TestCase):
     def test_derived_extended(self):

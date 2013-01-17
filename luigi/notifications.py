@@ -5,6 +5,7 @@ logger = logging.getLogger("luigi-interface")
 
 
 DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.getfqdn()
+DEBUG = False
 
 
 def send_email(subject, message, sender, recipients, image_png=None):
@@ -18,8 +19,8 @@ def send_email(subject, message, sender, recipients, image_png=None):
                 "-------------" % (recipients, sender, subject, message))
     if not recipients or recipients == (None,):
         return
-    if sys.stdout.isatty():
-        logger.info("Not sending email when running from a tty")
+    if sys.stdout.isatty() or DEBUG:
+        logger.info("Not sending email when running from a tty or in debug mode")
         return
 
     import smtplib

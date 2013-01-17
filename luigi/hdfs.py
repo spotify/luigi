@@ -35,16 +35,20 @@ def exists(path):
     stdout, _ = p.communicate()
 
     if stdout:
-        # TODO: Having certain stuff on the classpath might trigger this case. Ideally we should be
-        # able to  ignore it, because apparently there is also some case where data on stdout
-        # signals an error. From freider:
-        # If I remember correctly there are some cases where hadoop fs -test exits with exit status
-        # 0 (which would mean the file exists) although the file doesn't exist, if there is some
-        # special error. We ran into this, that's why we added detection of output of the command.
-        # Afaicr this is a known bug but it hadn't been fixed in our version of hadoop.
-        raise RuntimeError("Command %s failed [exit code %d] because it wrote data on stdout.\n---Output---\n%s\n------------" % (repr(cmd), p.returncode, stdout))
+        # TODO: Having certain stuff on the classpath might trigger this case.
+        # Ideally we should be able to ignore it, because apparently there is
+        # also some case where data on stdout signals an error.
+        # From @freider:
+        # If I remember correctly there are some cases where
+        # `hadoop fs -test` exits with exit status 0 (which would mean
+        # the file exists) although the file doesn't exist, if there is some
+        # special error. We ran into this, that's why we added detection of
+        # output of the command.
+        # Afaicr this is a known bug but it hadn't been fixed in our version
+        # of hadoop.
+        raise RuntimeError("Command %r failed [exit code %d] because it wrote output.\n---Output---\n%s\n------------" % (cmd, p.returncode, stdout))
     elif p.returncode not in (0, 1):
-        raise RuntimeError("Command %s failed with return code %s" % (repr(cmd), p.returncode))
+        raise RuntimeError("Command %r failed with return code %s" % (cmd, p.returncode))
 
     if p.returncode == 0:
         return True
@@ -159,7 +163,7 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
     """ Writes a data<data_extension> file to a directory at <path> """
-    def __init__(self, path, data_extension):
+    def __init__(self, path, data_extension=""):
         self.path = path
         self.tmppath = tmppath(self.path)
         self.datapath = self.tmppath + ("/data%s" % data_extension)
@@ -183,6 +187,17 @@ class Plain(luigi.format.Format):
     @classmethod
     def pipe_writer(cls, output_pipe):
         return output_pipe
+
+
+class PlainDir(luigi.format.Format):
+    @classmethod
+    def hdfs_reader(cls, path):
+        # exclude underscore-prefixedfiles/folders (created by MapReduce)
+        return HdfsReadPipe("%s/[^_]*" % path)
+
+    @classmethod
+    def hdfs_writer(cls, path):
+        return HdfsAtomicWriteDirPipe(path)
 
 
 class HdfsTarget(luigi.Target):

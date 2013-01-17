@@ -14,6 +14,7 @@
 
 import subprocess
 
+
 class InputPipeProcessWrapper(object):
     def __init__(self, command, input_pipe=None):
         self._command = command
@@ -48,7 +49,7 @@ class InputPipeProcessWrapper(object):
 
     def __getattr__(self, name):
         if name == '_process':
-            raise AttributeError, name
+            raise AttributeError(name)
         return getattr(self._process.stdout, name)
 
     def __iter__(self):
@@ -114,7 +115,7 @@ class OutputPipeProcessWrapper(object):
 
     def __getattr__(self, name):
         if name == '_process':
-            raise AttributeError, name
+            raise AttributeError(name)
         return getattr(self._process.stdin, name)
 
 

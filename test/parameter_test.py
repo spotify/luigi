@@ -15,6 +15,8 @@
 import luigi
 import luigi.interface
 from worker_test import EmailTest
+import luigi.notifications
+luigi.notifications.DEBUG = True
 
 
 class A(luigi.Task):
