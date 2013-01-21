@@ -26,20 +26,46 @@ import parameter
 from task import Register
 
 
+def setup_interface_logging():
+    # use a variable in the function object to determine if it has run before
+    if getattr(setup_interface_logging, "has_run", False):
+        return
+
+    logger = logging.getLogger('luigi-interface')
+    logger.setLevel(logging.DEBUG)
+
+    streamHandler = logging.StreamHandler()
+    streamHandler.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter('%(levelname)s: %(message)s')
+    streamHandler.setFormatter(formatter)
+
+    logger.addHandler(streamHandler)
+    setup_interface_logging.has_run = True
+
+
 class LuigiConfigParser(RawConfigParser):
     NO_DEFAULT = object()
     _instance = None
+    _config_paths = ['/etc/luigi/client.cfg', 'client.cfg']
+
+    @classmethod
+    def add_config_path(cls, path):
+        cls._config_paths.append(path)
+        cls._instance.reload()
 
     @classmethod
     def instance(cls, *args, **kwargs):
         """ Singleton getter """
         if cls._instance is None:
-            config = cls(*args, **kwargs)
-
-            config.read(['/etc/luigi/client.cfg', 'client.cfg'])
-            cls._instance = config
+            cls._instance = cls(*args, **kwargs)
+            loaded = cls._instance.reload()
+            logging.getLogger('luigi-interface').info('Loaded %r' % loaded)
 
         return cls._instance
+
+    def reload(self):
+        return self._instance.read(self._config_paths)
 
     def get(self, section, option, default=NO_DEFAULT):
         try:
@@ -312,23 +338,3 @@ def build(tasks, **env_params):
     '''
     setup_interface_logging()
     Interface.run(tasks, env_params)
-
-
-_logging_is_setup = False
-
-
-def setup_interface_logging():
-    global _logging_is_setup
-    if _logging_is_setup:
-        return
-    logger = logging.getLogger('luigi-interface')
-    logger.setLevel(logging.DEBUG)
-
-    streamHandler = logging.StreamHandler()
-    streamHandler.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter('%(levelname)s: %(message)s')
-    streamHandler.setFormatter(formatter)
-
-    logger.addHandler(streamHandler)
-    _logging_is_setup = True
