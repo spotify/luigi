@@ -277,8 +277,27 @@ in luigi. Use target.path instead", stacklevel=2)
         rename(self.path + '/*', path)
         self.remove()
 
-    def has_write_access(self):
-        test_path = self.path + '.test_write_access-%09d' % random.randrange(1e10)
+    def is_writable(self):
+        if "/" in self.path:
+            # example path: /log/ap/2013-01-17/00
+            parts = self.path.split("/")
+            # start with the full path and then up the tree until we can check
+            length = len(parts)
+            for part in xrange(length):
+                path = "/".join(parts[0:length - part])+"/"
+                if exists(path):
+                    # if the path exists and we can write there, great!
+                    if self._is_writable(path):
+                        return True
+                    # if it exists and we can't =( sad panda
+                    else:
+                        return False
+            # We went through all parts of the path and we still couldn't find
+            # one that exists.
+            return False
+
+    def _is_writable(self, path):
+        test_path = path + '.test_write_access-%09d' % random.randrange(1e10)
         return_value = subprocess.call(['hadoop', 'fs', '-touchz', test_path])
         if return_value != 0:
             return False
