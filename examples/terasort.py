@@ -24,7 +24,6 @@ DEFAULT_TERASORT_IN = '/tmp/terasort-in'
 DEFAULT_TERASORT_OUT = '/tmp/terasort-out'
 
 
-@luigi.expose
 class TeraGen(luigi.hadoop_jar.HadoopJarJobTask):
     """Runs TeraGen, by default with 1TB of data (10B records)"""
     records = luigi.Parameter(default="10000000000",
@@ -46,7 +45,6 @@ class TeraGen(luigi.hadoop_jar.HadoopJarJobTask):
         return [self.records, self.output()]
 
 
-@luigi.expose
 class TeraSort(luigi.hadoop_jar.HadoopJarJobTask):
     """Runs TeraGent, by default using """
 
