@@ -21,23 +21,22 @@ class HadoopJarJobRunner(JobRunner):
         Return a list of temporary file pairs (tmpfile, destination path) and
         a list of arguments. Converts each HdfsTarget to a string for the
         path."""
-        if job.atomic_output():
-            tmp_files = []
-            args = []
-            for x in job.args():
-                if isinstance(x, luigi.hdfs.HdfsTarget):  # input/output
-                    if x.exists():  # input
-                        args.append(x.path)
-                    else:  # output
-                        y = luigi.hdfs.HdfsTarget(x.path + \
-                            '-luigi-tmp-%09d' % random.randrange(0, 1e10))
-                        tmp_files.append((y, x))
-                        logger.info("Using temp path: {0} for path {1}".format(y.path, x.path))
-                        args.append(y.path)
-                else:
-                    args.append(str(x))
-            return (tmp_files, args)
-        return ([], job.args())
+        tmp_files = []
+        args = []
+        for x in job.args():
+            if isinstance(x, luigi.hdfs.HdfsTarget):  # input/output
+                if x.exists() or not job.atomic_output():  # input
+                    args.append(x.path)
+                else:  # output
+                    y = luigi.hdfs.HdfsTarget(x.path + \
+                        '-luigi-tmp-%09d' % random.randrange(0, 1e10))
+                    tmp_files.append((y, x))
+                    logger.info("Using temp path: {0} for path {1}".format(y.path, x.path))
+                    args.append(y.path)
+            else:
+                args.append(str(x))
+
+        return (tmp_files, args)
 
     def run_job(self, job):
         # TODO(jcrobak): libjars, files, etc. Can refactor out of
