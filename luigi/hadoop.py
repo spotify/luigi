@@ -270,39 +270,54 @@ class HadoopJobRunner(JobRunner):
 
         if proc.returncode != 0:
             # Try to fetch error logs if possible
-            if tracking_url:
-                try:
-                    HadoopJobRunner.fetch_raise_failures(tracking_url)
-                except Exception, e:
-                    raise RuntimeError('Streaming job failed with exit code %d. Additionally, an error occurred when fetching data from %s: %s' % (proc.returncode, tracking_url, e))
+            if not tracking_url:
+                raise RuntimeError('Streaming job failed with exit code %d. Also, no tracking url found.' % proc.returncode)
 
-            raise RuntimeError('Streaming job failed with exit code %d' % proc.returncode)
+            try:
+                task_failures = self.fetch_task_failures(tracking_url)
+            except Exception, e:
+                raise RuntimeError('Streaming job failed with exit code %d. Additionally, an error occurred when fetching data from %s: %s' % (proc.returncode, tracking_url, e))
+
+            if not task_failures:
+                raise RuntimeError('Streaming job failed with exit code %d. Also, could not fetch output from tasks.' % proc.returncode)
+            else:
+                raise RuntimeError('Streaming job failed with exit code %d. Output from tasks below:\n%s' % (proc.returncode, task_failures))
 
     @staticmethod
-    def fetch_raise_failures(tracking_url):
+    def fetch_task_failures(tracking_url):
         ''' Uses mechanize to fetch the actual task logs from the task tracker.
 
         This is highly opportunistic, and we might not succeed. So we set a low timeout and hope it works.
         If it does not, it's not the end of the world.
+
+        TODO: Yarn has a REST API that we should probably use instead:
+        http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html
         '''
         import mechanize
-
+        timeout = 3.0
         failures_url = tracking_url.replace('jobdetails.jsp', 'jobfailures.jsp') + '&cause=failed'
         logger.debug('Fetching data from %s' % failures_url)
         b = mechanize.Browser()
-        b.open(failures_url, timeout=2.0)
-        links = list(b.links(text_regex='Last 4KB'))  # For some reason text_regex='All' doesn't work... no idea why
-        for link in random.sample(list(links), 10):  # Fetch in random order so not to be biased towards the early fails
-            task_url = link.url.replace('&start=-4097', '&start=-100000')  # Increase the offset
+        b.open(failures_url, timeout=timeout)
+        links = list(b.links(text_regex='Last 4KB')) # For some reason text_regex='All' doesn't work... no idea why
+        links = random.sample(links, min(10, len(links))) # Fetch a random subset of all failed tasks, so not to be biased towards the early fails
+        error_text = []
+        for link in links:
+            task_url = link.url.replace('&start=-4097', '&start=-100000') # Increase the offset
             logger.debug('Fetching data from %s', task_url)
-            # TODO: we shouldn't raise an exception in this scope, should just keep trying
             b2 = mechanize.Browser()
-            r = b2.open(task_url, timeout=1.0)
-            data = r.read()
+            try:
+                r = b2.open(task_url, timeout=timeout)
+                data = r.read()
+            except Exception, e:
+                logger.debug('Error fetching data from %s: %s' % (task_url, e))
+                continue
             # Try to get the hex-encoded traceback back from the output
             for exc in re.findall(r'luigi-exc-hex=[0-9a-f]+', data):
-                print '---------- %s:' % task_url
-                print exc.split('=')[-1].decode('hex')
+                error_text.append('---------- %s:' % task_url)
+                error_text.append(exc.split('=')[-1].decode('hex'))
+
+        return '\n'.join(error_text)
 
     def finish(self):
         if self.tmp_dir and os.path.exists(self.tmp_dir):
