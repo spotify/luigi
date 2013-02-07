@@ -297,10 +297,12 @@ class CopyToTable(luigi.Task):
                 cursor = connection.cursor()
                 if self.clear_table:
                     cursor.execute('TRUNCATE TABLE {table}'.format(table=self.table))
-                if len(self.columns[0]) == 1:
+                if isinstance(self.columns[0], basestring):
                     column_names = self.columns
                 elif len(self.columns[0]) == 2:
                     column_names = zip(*self.columns)[0]
+                else:
+                    raise Exception('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
                 cursor.copy_from(tmp_file, self.table, null='\N', columns=column_names)
             except psycopg2.ProgrammingError, e:
                 if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
