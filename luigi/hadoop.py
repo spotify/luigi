@@ -24,7 +24,7 @@ import logging
 import StringIO
 import re
 import shutil
-
+from hashlib import md5
 import luigi
 import luigi.hdfs
 
@@ -357,10 +357,11 @@ class LocalJobRunner(JobRunner):
     def group(self, input):
         output = StringIO.StringIO()
         lines = []
-        for line in input:
+        for i, line in enumerate(input):
             parts = line.rstrip('\n').split('\t')
-            lines.append((parts[:-1], line))
-        for k, line in sorted(lines):
+            blob = md5(str(i)).hexdigest()  # pseudo-random blob to make sure the input isn't sorted
+            lines.append((parts[:-1], blob, line))
+        for k, _, line in sorted(lines):
             output.write(line)
         output.seek(0)
         return output
