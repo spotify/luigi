@@ -40,25 +40,13 @@ def attach(*packages):
     _attached_packages.extend(packages)
 
 
-def repr_reader(inputs):
-    """Reader which uses python eval on each part of a tab separated string.
-       Yields a tuple of python objects."""
-    for input in inputs:
-        yield map(eval, input.split("\t"))
-
-
-def repr_writer(outputs, stdout):
-    """Writer which outpus the python repr for each item"""
-    for output in outputs:
-        print >> stdout, "\t".join(map(repr, output))
-
-
 def dereference(file):
     if os.path.islink(file):
         #by joining with the dirname we are certain to get the absolute path
         return dereference(os.path.join(os.path.dirname(file), os.readlink(file)))
     else:
         return file
+
 
 def get_extra_files(extra_files):
     result = []
@@ -82,6 +70,7 @@ def get_extra_files(extra_files):
             result.append((src, dst))
 
     return result
+
 
 def create_packages_archive(packages, filename):
     """Create a tar archive which will contain the files for the packages listed in packages. """
@@ -196,7 +185,7 @@ class HadoopJobRunner(JobRunner):
         output_tmp_fn = output_final + '-temp-' + datetime.datetime.now().isoformat().replace(':', '-')
         tmp_target = luigi.hdfs.HdfsTarget(output_tmp_fn, is_tmp=True)
 
-        arglist = ['hadoop', 'jar', self.streaming_jar] + self.streaming_args
+        arglist = ['hadoop', 'jar', self.streaming_jar]
 
         # 'libjars' is a generic option, so place it first
         libjars = [libjar for libjar in self.libjars]
@@ -227,7 +216,9 @@ class HadoopJobRunner(JobRunner):
             jobconfs.append('%s=%s' % (k, v))
 
         for conf in jobconfs:
-            arglist += ['-jobconf', conf]
+            arglist += ['-D', conf]
+
+        arglist += self.streaming_args
 
         arglist += ['-mapper', map_cmd, '-reducer', red_cmd]
         if job.combiner != NotImplemented:
@@ -300,9 +291,9 @@ class HadoopJobRunner(JobRunner):
         logger.debug('Fetching data from %s' % failures_url)
         b = mechanize.Browser()
         b.open(failures_url, timeout=2.0)
-        links = list(b.links(text_regex='Last 4KB')) # For some reason text_regex='All' doesn't work... no idea why
-        for link in random.sample(list(links), 10): # Fetch in random order so not to be biased towards the early fails
-            task_url = link.url.replace('&start=-4097', '&start=-100000') # Increase the offset
+        links = list(b.links(text_regex='Last 4KB'))  # For some reason text_regex='All' doesn't work... no idea why
+        for link in random.sample(list(links), 10):  # Fetch in random order so not to be biased towards the early fails
+            task_url = link.url.replace('&start=-4097', '&start=-100000')  # Increase the offset
             logger.debug('Fetching data from %s', task_url)
             # TODO: we shouldn't raise an exception in this scope, should just keep trying
             b2 = mechanize.Browser()
@@ -320,6 +311,7 @@ class HadoopJobRunner(JobRunner):
 
     def __del__(self):
         self.finish()
+
 
 class DefaultHadoopJobRunner(HadoopJobRunner):
     ''' The default job runner just reads from config and sets stuff '''
@@ -351,8 +343,8 @@ class LocalJobRunner(JobRunner):
         output = StringIO.StringIO()
         lines = []
         for line in input:
-            k, v = line.strip().split('\t')
-            lines.append((k, line))
+            parts = line.rstrip('\n').split('\t')
+            lines.append((parts[:-1], line))
         for k, line in sorted(lines):
             output.write(line)
         output.seek(0)
@@ -551,20 +543,31 @@ class JobTask(BaseHadoopJobTask):
         self.init_hadoop()
         self.init_mapper()
         outputs = self._map_input((line[:-1] for line in stdin))
-        repr_writer(outputs, stdout)
+        self._repr_writer(outputs, stdout)
 
     def _run_reducer(self, stdin=sys.stdin, stdout=sys.stdout):
         """Run the reducer on the hadoop node."""
         self.init_hadoop()
         self.init_reducer()
-        outputs = self._reduce_input(repr_reader((line[:-1] for line in stdin)), reducer=self.reducer)
+        outputs = self._reduce_input(self._repr_reader((line[:-1] for line in stdin)), reducer=self.reducer)
         self.writer(outputs, stdout)
 
     def _run_combiner(self, stdin=sys.stdin, stdout=sys.stdout):
         self.init_hadoop()
         self.init_combiner()
-        outputs = self._reduce_input(repr_reader((line[:-1] for line in stdin)), reducer=self.combiner)
-        repr_writer(outputs, stdout)
+        outputs = self._reduce_input(self._repr_reader((line[:-1] for line in stdin)), reducer=self.combiner)
+        self._repr_writer(outputs, stdout)
 
     def _print_exception(self, exc):
         print >> sys.stderr, 'luigi-exc-hex=%s' % exc.encode('hex')
+
+    def _repr_reader(self, inputs):
+        """Reader which uses python eval on each part of a tab separated string.
+        Yields a tuple of python objects."""
+        for input in inputs:
+            yield map(eval, input.split("\t"))
+
+    def _repr_writer(self, outputs, stdout):
+        """Writer which outputs the python repr for each item"""
+        for output in outputs:
+            print >> stdout, "\t".join(map(repr, output))

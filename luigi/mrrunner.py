@@ -27,18 +27,6 @@ import cPickle as pickle
 import logging
 import traceback
 
-def repr_reader(inputs):
-    """Reader which uses python eval on each part of a tab separated string.
-       Yields a tuple of python objects."""
-    for input in inputs:
-        yield map(eval, input.split("\t"))
-
-
-def repr_writer(outputs):
-    """Writer which outpus the python repr for each item"""
-    for output in outputs:
-        print "\t".join(map(repr, output))
-
 
 class Runner(object):
     """Run the mapper or reducer on hadoop nodes."""
