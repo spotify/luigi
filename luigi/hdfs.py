@@ -18,6 +18,7 @@ import random
 import tempfile
 import urlparse
 import luigi.format
+import datetime
 
 def use_cdh4_syntax():
     """
@@ -88,7 +89,8 @@ def mkdir(path):
         raise RuntimeError('Command %s failed' % repr(cmd))
 
 
-def listdir(path, ignore_directories=False, ignore_files=False, include_size=False, include_type=False):
+def listdir(path, ignore_directories=False, ignore_files=False,
+            include_size=False, include_type=False, include_time=False):
     if not path:
         path = "."  # default to current/home catalog
 
@@ -115,6 +117,11 @@ def listdir(path, ignore_directories=False, ignore_files=False, include_size=Fal
             extra_data += (size,)
         if include_type:
             extra_data += (line_type,)
+        if include_time:
+            time_str = '%sT%s' % (data[-3], data[-2])
+            modification_time = datetime.datetime.strptime(time_str,
+                                                           '%Y-%m-%dT%H:%M')
+            extra_data += (modification_time,)
 
         if len(extra_data) > 0:
             yield (file,) + extra_data
