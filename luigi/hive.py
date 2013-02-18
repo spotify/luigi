@@ -25,6 +25,13 @@ def load_hive_cmd():
   return luigi.interface.get_config().get('hive', 'command', 'hive')
 
 
+def run_hive_cmd(hivecmd):
+  cmd = [load_hive_cmd(), '-e', hivecmd]
+  p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  stdout, _ = p.communicate()
+  return stdout
+
+
 class HiveQueryTask(BaseHadoopJobTask):
   ''' Task to run a hive query
   '''
@@ -69,11 +76,19 @@ class HiveTableTarget(luigi.Target):
     self.hive_cmd = load_hive_cmd()
 
   def exists(self):
-    cmd = [self.hive_cmd, '-e', 'use {0}; describe {1}'.format(self.db, self.table)]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, _ = p.communicate()
+    stdout = run_hive_cmd('use {0}; describe {1}'.format(self.db, self.table))
 
     return not "does not exist" in stdout
+
+  def path(self):
+    """Returns the path to this table in HDFS"""
+    stdout = run_hive_cmd("use {self.db}; describe formatted {self.table}".format(self=self))
+
+    for line in stdout.split("\n"):
+      if "Location:" in line:
+        return line.split("\t")[1]
+
+    raise Exception("Couldn't find location for table: {0}".format(str(self)))
 
 
 class HiveTablePartitionTarget(luigi.Target):
@@ -85,19 +100,25 @@ class HiveTablePartitionTarget(luigi.Target):
     self.table = table
     # change partitions to the way hive expects them
     self.partition_str = ','.join(["{0}='{1}'".format(k, v) for (k, v) in partitions.items()])
-    self.hive_cmd = load_hive_cmd()
 
   def exists(self):
-    cmd = [self.hive_cmd, '-e', """use {self.db}; show partitions {self.table} partition
-({self.partition_str})""".format(self=self)]
-
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, _ = p.communicate()
+    stdout = run_hive_cmd("""use {self.db}; show partitions {self.table} partition
+({self.partition_str})""".format(self=self))
 
     if stdout:
-      True
+      return True
     else:
-      False
+      return False
+
+  def path(self):
+    """Returns the path for this HiveTablePartitionTarget's data"""
+    stdout = run_hive_cmd("use {self.db}; describe formatted {self.table} PARTITION ({self.partition_str})".format(self=self))
+
+    for line in stdout.split("\n"):
+      if "Location:" in line:
+        return line.split("\t")[1]
+
+    raise Exception("Couldn't find location for table: {0}".format(str(self)))
 
 
 class HiveTableTask(luigi.ExternalTask):
@@ -118,7 +139,7 @@ class HiveTableTask(luigi.ExternalTask):
     elif self.partitions:
       splitByEquals = lambda a: a.split('=')
       arr = map(splitByEquals, self.partitions.split(';'))
-      partitions = dict(a[0]: a[1] for a in arr)
+      partitions = dict((a[0], a[1]) for a in arr)
       return HiveTablePartitionTarget(self.db, self.table, partitions)
     else:
       return HiveTableTarget(self.db, self.table)
