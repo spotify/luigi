@@ -27,6 +27,7 @@ import shutil
 from hashlib import md5
 import luigi
 import luigi.hdfs
+import interface
 
 import mrrunner
 
@@ -171,7 +172,8 @@ class HadoopJobRunner(JobRunner):
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
 
-        self.tmp_dir = '/tmp/luigi/hadoop_job_%016x' % random.getrandbits(64)
+        base_tmp_dir = interface.get_config().get('core', 'tmp-dir', '/tmp/luigi')
+        self.tmp_dir = os.path.join(base_tmp_dir, 'hadoop_job_%016x' % random.getrandbits(64))
         logger.debug("Tmp dir: %s", self.tmp_dir)
         os.makedirs(self.tmp_dir)
 
