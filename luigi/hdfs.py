@@ -19,6 +19,26 @@ import tempfile
 import urlparse
 import luigi.format
 import datetime
+import re
+
+
+class HDFSCliError(Exception):
+    def __init__(self, command, returncode, stdout, stderr):
+        msg = ("Command %r failed [exit code %d]\n" +
+                "---stdout---\n" +
+                "%s\n" +
+                "---stderr---\n" +
+                "%s" +
+                "------------") % (command, returncode, stdout, stderr)
+        super(HDFSCliError, self).__init__(msg)
+
+
+def call_check(command):
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate()
+    if p.returncode != 0:
+        raise HDFSCliError(command, p.returncode, stdout, stderr)
+
 
 def use_cdh4_syntax():
     """
@@ -37,42 +57,31 @@ def tmppath(path=None):
 
 class HdfsClient(object):
     def exists(self, path):
-        cmd = ['hadoop', 'fs', '-test', '-e', path]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        stdout, _ = p.communicate()
-        if stdout and 'No such file or directory' not in stdout:
-            # TODO2: Using globs with -test -e will print 'No such file or directory'
-            # when no files exists
-            # TODO: Having certain stuff on the classpath might trigger this case.
-            # Ideally we should be able to ignore it, because apparently there is
-            # also some case where data on stdout signals an error.
-            # From @freider:
-            # If I remember correctly there are some cases where
-            # `hadoop fs -test` exits with exit status 0 (which would mean
-            # the file exists) although the file doesn't exist, if there is some
-            # special error. We ran into this, that's why we added detection of
-            # output of the command.
-            # Afaicr this is a known bug but it hadn't been fixed in our version
-            # of hadoop.
-            raise RuntimeError("Command %r failed [exit code %d] because it wrote output.\n---Output---\n%s\n------------" % (cmd, p.returncode, stdout))
-        elif p.returncode not in (0, 1):
-            raise RuntimeError("Command %r failed with return code %s" % (cmd, p.returncode))
+        """ Use `hadoop fs -ls -d` to check file existence
 
+        `hadoop fs -test -e` can't be (reliably) used at this time since there
+        is no good way of distinguishing file non-existence of files
+        from errors when running the comman (same return code)
+        """
+
+        cmd = ['hadoop', 'fs', '-ls', '-d', path]
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
         if p.returncode == 0:
             return True
-        elif p.returncode == 1:
-            return False
-        assert False
-
+        else:
+            not_found_pattern = "^ls: `.*': No such file or directory$"
+            not_found_re = re.compile(not_found_pattern)
+            for line in stderr.split('\n'):
+                if not_found_re.match(line):
+                    return False
+            raise HDFSCliError(cmd, p.returncode, stdout, stderr)
 
     def rename(self, path, dest):
         parent_dir = os.path.dirname(dest)
-        if parent_dir != '' and not exists(parent_dir):
-            mkdir(parent_dir)
-        cmd = ['hadoop', 'fs', '-mv', path, dest]
-        if subprocess.call(cmd):
-            raise RuntimeError('Command %s failed' % repr(cmd))
-
+        if parent_dir != '' and not self.exists(parent_dir):
+            self.mkdir(parent_dir)
+        call_check(['hadoop', 'fs', '-mv', path, dest])
 
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
@@ -85,15 +94,10 @@ class HdfsClient(object):
         if skip_trash:
             cmd.append("-skipTrash")
         cmd.append(path)
-        if subprocess.call(cmd):
-            raise RuntimeError('Command %s failed' % repr(cmd))
-
+        call_check(cmd)
 
     def mkdir(self, path):
-        cmd = ['hadoop', 'fs', '-mkdir', path]
-        if subprocess.call(cmd):
-            raise RuntimeError('Command %s failed' % repr(cmd))
-
+        call_check(['hadoop', 'fs', '-mkdir', path])
 
     def listdir(self, path, ignore_directories=False, ignore_files=False,
                 include_size=False, include_type=False, include_time=False):
@@ -141,6 +145,7 @@ rename = client.rename
 remove = client.remove
 mkdir = client.mkdir
 listdir = client.listdir
+
 
 class HdfsReadPipe(luigi.format.InputPipeProcessWrapper):
     def __init__(self, path):
@@ -304,7 +309,7 @@ in luigi. Use target.path instead", stacklevel=2)
             # start with the full path and then up the tree until we can check
             length = len(parts)
             for part in xrange(length):
-                path = "/".join(parts[0:length - part])+"/"
+                path = "/".join(parts[0:length - part]) + "/"
                 if exists(path):
                     # if the path exists and we can write there, great!
                     if self._is_writable(path):

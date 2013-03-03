@@ -20,6 +20,20 @@ class TestException(Exception):
     pass
 
 
+class ErrorHandling(unittest.TestCase):
+    def test_connection_refused(self):
+        """ The point of this test is to see if file existence checks
+        can distinguish file non-existence from errors
+
+        this test would fail if hdfs would run locally on port 0
+        """
+        self.assertRaises(
+            hdfs.HDFSCliError,
+            hdfs.exists,
+            'hdfs://127.0.0.1:0/foo'
+            )
+
+
 class AtomicHdfsOutputPipeTests(unittest.TestCase):
     def test_atomicity(self):
         testpath = "luigi_hdfs_testfile"
@@ -157,11 +171,11 @@ class HdfsTargetTests(unittest.TestCase):
 
         def should_raise():
             hdfs.exists("hdfs://doesnotexist/foo")
-        self.assertRaises(RuntimeError, should_raise)
+        self.assertRaises(hdfs.HDFSCliError, should_raise)
 
         def should_raise_2():
             hdfs.exists("hdfs://_doesnotexist_/foo")
-        self.assertRaises(RuntimeError, should_raise_2)
+        self.assertRaises(hdfs.HDFSCliError, should_raise_2)
 
     def test_atomicity(self):
         target = hdfs.HdfsTarget("luigi_hdfs_testfile")
@@ -287,6 +301,7 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertEqual(files.glob_exists(2), True)
         self.assertEqual(files.glob_exists(3), False)
         self.assertEqual(files.glob_exists(1), False)
+
 
 if __name__ == "__main__":
     unittest.main()
