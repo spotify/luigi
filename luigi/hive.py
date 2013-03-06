@@ -22,124 +22,136 @@ logger = logging.getLogger('luigi-interface')
 
 
 def load_hive_cmd():
-  return luigi.interface.get_config().get('hive', 'command', 'hive')
+    return luigi.interface.get_config().get('hive', 'command', 'hive')
 
 
 def run_hive_cmd(hivecmd):
-  cmd = [load_hive_cmd(), '-e', hivecmd]
-  p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  stdout, _ = p.communicate()
-  return stdout
+    cmd = [load_hive_cmd(), '-e', hivecmd]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, _ = p.communicate()
+    return stdout
+
+
+def table_location(db, table, partition_spec=None):
+    """
+    Returns the location of a Hive table/partitions, or None.
+    partition_spec should be a string returned by partition_spec()
+    """
+    cmd = "use {0}; describe formatted {1}".format(db, table)
+    if partition_spec:
+        cmd += " PARTITION ({0})".format(partition_spec)
+
+    stdout = run_hive_cmd(cmd)
+
+    for line in stdout.split("\n"):
+        if "Location:" in line:
+            return line.split("\t")[1]
+
+
+def partition_spec(partition):
+    """
+    Turns a dict into the a Hive partition specification string
+    """
+    return ','.join(["{0}='{1}'".format(k, v) for (k, v) in partition.items()])
 
 
 class HiveQueryTask(BaseHadoopJobTask):
-  ''' Task to run a hive query
-  '''
-
-  def query(self):
-    ''' Text of query to run in hive
+    ''' Task to run a hive query
     '''
-    raise RuntimeError("Must implement query!")
 
-  def hiverc(self):
-    ''' Location of an rc file to run before the query
+    def query(self):
+        ''' Text of query to run in hive
+        '''
+        raise RuntimeError("Must implement query!")
+
+    def hiverc(self):
+        ''' Location of an rc file to run before the query
+        '''
+        return None
+
+    def job_runner(self):
+        return HiveQueryRunner()
+
+
+class HiveQueryRunner(JobRunner):
+    ''' Runs a HiveQueryTask by shelling out to hive
     '''
-    None
 
-  def job_runner(self):
-    return LocalHiveQueryRunner()
+    def run_job(self, job):
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(job.query())
+            f.flush()
+            arglist = [load_hive_cmd(), '-f', f.name]
+            if job.hiverc():
+                arglist += ['-i', job.hiverc()]
 
-
-class LocalHiveQueryRunner(JobRunner):
-  ''' Runs a HiveQueryTask by shelling out to hive
-  '''
-
-  def run_job(self, job):
-    with tempfile.NamedTemporaryFile() as f:
-      f.write(job.query())
-      f.flush()
-      arglist = [load_hive_cmd(), '-f', f.name]
-      if job.hiverc():
-        arglist += ['-i', job.hiverc()]
-
-      logger.info(arglist)
-      HadoopJobRunner.run_and_track_hadoop_job(arglist)
+        logger.info(arglist)
+        HadoopJobRunner.run_and_track_hadoop_job(arglist)
 
 
 class HiveTableTarget(luigi.Target):
-  ''' exists returns true if the table exists
-  '''
+    ''' exists returns true if the table exists
+    '''
 
-  def __init__(self, db, table):
-    self.db = db
-    self.table = table
-    self.hive_cmd = load_hive_cmd()
+    def __init__(self, table, database='default'):
+        self.database = database
+        self.table = table
+        self.hive_cmd = load_hive_cmd()
 
-  def exists(self):
-    stdout = run_hive_cmd('use {0}; describe {1}'.format(self.db, self.table))
+    def exists(self):
+        stdout = run_hive_cmd('use {0}; describe {1}'.format(self.database, self.table))
 
-    return not "does not exist" in stdout
+        return not "does not exist" in stdout
 
-  def path(self):
-    """Returns the path to this table in HDFS"""
-    stdout = run_hive_cmd("use {self.db}; describe formatted {self.table}".format(self=self))
-
-    for line in stdout.split("\n"):
-      if "Location:" in line:
-        return line.split("\t")[1]
-
-    raise Exception("Couldn't find location for table: {0}".format(str(self)))
+    @property
+    def path(self):
+        """Returns the path to this table in HDFS"""
+        location = table_location(self.database, self.table)
+        if not location:
+            raise Exception("Couldn't find location for table: {0}".format(str(self)))
+        return location
 
 
-class HiveTablePartitionTarget(luigi.Target):
-  ''' exists returns true if the table's partition exists
-  '''
+class HivePartitionTarget(luigi.Target):
+    ''' exists returns true if the table's partition exists
+    '''
 
-  def __init__(self, db, table, partitions):
-    self.db = db
-    self.table = table
-    # change partitions to the way hive expects them
-    self.partition_str = ','.join(["{0}='{1}'".format(k, v) for (k, v) in partitions.items()])
+    def __init__(self, table, partition, database='default'):
+        self.database = database
+        self.table = table
+        # change partitions to the way hive expects them
+        self.partition_str = partition_spec(partition)
 
-  def exists(self):
-    stdout = run_hive_cmd("""use {self.db}; show partitions {self.table} partition
-({self.partition_str})""".format(self=self))
+    def exists(self):
+        stdout = run_hive_cmd("""use {self.database}; show partitions {self.table} partition
+                            ({self.partition_str})""".format(self=self))
 
-    if stdout:
-      return True
-    else:
-      return False
+        if stdout:
+            return True
+        else:
+            return False
 
-  def path(self):
-    """Returns the path for this HiveTablePartitionTarget's data"""
-    stdout = run_hive_cmd("use {self.db}; describe formatted {self.table} PARTITION ({self.partition_str})".format(self=self))
-
-    for line in stdout.split("\n"):
-      if "Location:" in line:
-        return line.split("\t")[1]
-
-    raise Exception("Couldn't find location for table: {0}".format(str(self)))
+    @property
+    def path(self):
+        """Returns the path for this HiveTablePartitionTarget's data"""
+        location = table_location(self.database, self.table, self.partition_str)
+        if not location:
+            raise Exception("Couldn't find location for table: {0}".format(str(self)))
+        return location
 
 
-class HiveTableTask(luigi.ExternalTask):
-  ''' External task that depends on a Hive table/partition.
-  '''
+class ExternalHiveTask(luigi.ExternalTask):
+    ''' External task that depends on a Hive table/partition.
+    '''
 
-  db = luigi.Parameter()
-  table = luigi.Parameter()
-  partitions = luigi.Parameter(default=None, description='Key value list of partitions: key1=value1;key2=value2;...')
-  partition_name = luigi.Parameter(default=None, description='Single partition name. Cannot be used with partitions')
-  partition = luigi.Parameter(default=None, description='Single partition value')
+    database = luigi.Parameter(default='default')
+    table = luigi.Parameter()
+    # since this is an external task and will never be initialized from the CLI, partition can be any python object, in this case a dictionary
+    partition = luigi.Parameter(default=None, description='Python dictionary specifying the target partition e.g. {"date": "2013-01-25"}')
 
-  def output(self):
-    if self.partition_name:
-      assert self.partition, "partition required"
-      assert not self.partitions, 'cannot have partitions and partition options'
-      return HiveTablePartitionTarget(self.db, self.table, {self.partition_name: self.partition})
-    elif self.partitions:
-      splitByEquals = lambda a: a.split('=')
-      arr = map(splitByEquals, self.partitions.split(';'))
-      partitions = dict((a[0], a[1]) for a in arr)
-      return HiveTablePartitionTarget(self.db, self.table, partitions)
-    else:
-      return HiveTableTarget(self.db, self.table)
+    def output(self):
+        if self.partition is not None:
+            assert self.partition, "partition required"
+            return HivePartitionTarget(self.database, self.table, self.partition)
+        else:
+            return HiveTableTarget(self.database, self.table)
