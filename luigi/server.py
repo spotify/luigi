@@ -24,7 +24,6 @@ import tornado.httpclient
 import tornado.httpserver
 import scheduler
 import pkg_resources
-import pygraphviz
 import signal
 from cStringIO import StringIO
 from rpc import RemoteSchedulerResponder
@@ -71,6 +70,7 @@ class VisualizeHandler(tornado.web.RequestHandler):
         # with distance >= 50.
         tasks = json.loads(graph_response.body)["response"]
 
+        import pygraphviz
         graphviz = pygraphviz.AGraph(directed=True, size=12)
         n_nodes = 0
         for task, p in tasks.iteritems():
@@ -149,15 +149,15 @@ def apps(debug):
     return api_app, visualizer_app
 
 
-def run(visualizer_processes=1):
+def run(visualizer_processes=1, visualizer_port=8081, api_port=8082):
     """ Runs one instance of the API server and <visualizer_processes> visualizer servers
     """
     import process
 
     api_app, visualizer_app = apps(debug=False)
 
-    visualizer_sockets = tornado.netutil.bind_sockets(8081)
-    api_sockets = tornado.netutil.bind_sockets(8082)
+    visualizer_sockets = tornado.netutil.bind_sockets(visualizer_port)
+    api_sockets = tornado.netutil.bind_sockets(api_port)
 
     proc, attempt = process.fork_linked_workers(1 + visualizer_processes)
 
@@ -195,6 +195,27 @@ def run(visualizer_processes=1):
         server.add_sockets(visualizer_sockets)
 
     tornado.ioloop.IOLoop.instance().start()
+
+
+def run_api_threaded(api_port=8082):
+    ''' For unit tests'''
+
+    api_app, visualizer_app = apps(debug=False)
+
+    api_sockets = tornado.netutil.bind_sockets(api_port)
+
+    server = tornado.httpserver.HTTPServer(api_app)
+    server.add_sockets(api_sockets)
+
+    def run_tornado():
+        tornado.ioloop.IOLoop.instance().start()
+
+    import threading
+    threading.Thread(target=run_tornado).start()
+
+
+def stop():
+    tornado.ioloop.IOLoop.instance().stop()
 
 
 if __name__ == "__main__":
