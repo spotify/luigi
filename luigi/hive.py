@@ -85,8 +85,8 @@ class HiveQueryRunner(JobRunner):
             if job.hiverc():
                 arglist += ['-i', job.hiverc()]
 
-        logger.info(arglist)
-        HadoopJobRunner.run_and_track_hadoop_job(arglist)
+            logger.info(arglist)
+            HadoopJobRunner.run_and_track_hadoop_job(arglist)
 
 
 class HiveTableTarget(luigi.Target):
