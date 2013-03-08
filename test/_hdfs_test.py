@@ -288,5 +288,23 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertEqual(files.glob_exists(3), False)
         self.assertEqual(files.glob_exists(1), False)
 
+
+class TouchTests(unittest.TestCase):
+    def setUp(self):
+        target_dir = hdfs.HdfsTarget(is_tmp=True)
+        self.touch_file = target_dir.path + "/touchz"
+
+    def testUnsafe(self):
+        hdfs.touch(self.touch_file)
+
+        def shouldRaise():
+            hdfs.touch(self.touch_file)
+        self.assertRaises(RuntimeError, shouldRaise)
+
+    def testSafe(self):
+        hdfs.touch(self.touch_file)
+        hdfs.touch(self.touch_file, True)
+
+
 if __name__ == "__main__":
     unittest.main()
