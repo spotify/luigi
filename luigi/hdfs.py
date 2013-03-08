@@ -20,6 +20,7 @@ import urlparse
 import luigi.format
 import datetime
 
+
 def use_cdh4_syntax():
     """
     CDH4 (hadoop 2+) has a slightly different syntax for interacting with
@@ -29,6 +30,13 @@ def use_cdh4_syntax():
     """
     import interface
     return interface.get_config().get("hadoop", "version", "cdh4").lower() == "cdh4"
+
+
+def check_call(cmd):
+    """Runs the given cmd using subprocess.call and raises if call returns True"""
+    if subprocess.call(cmd):
+        raise RuntimeError('Command {0} failed'.format(repr(cmd)))
+
 
 def exists(path):
     cmd = ['hadoop', 'fs', '-test', '-e', path]
@@ -66,9 +74,7 @@ def rename(path, dest):
     parent_dir = os.path.dirname(dest)
     if parent_dir != '' and not exists(parent_dir):
         mkdir(parent_dir)
-    cmd = ['hadoop', 'fs', '-mv', path, dest]
-    if subprocess.call(cmd):
-        raise RuntimeError('Command %s failed' % repr(cmd))
+    check_call(['hadoop', 'fs', '-mv', path, dest])
 
 
 def remove(path, recursive=True):
@@ -79,14 +85,11 @@ def remove(path, recursive=True):
             cmd = ['hadoop', 'fs', '-rmr', path]
     else:
         cmd = ['hadoop', 'fs', '-rm', path]
-    if subprocess.call(cmd):
-        raise RuntimeError('Command %s failed' % repr(cmd))
+    check_call(cmd)
 
 
 def mkdir(path):
-    cmd = ['hadoop', 'fs', '-mkdir', path]
-    if subprocess.call(cmd):
-        raise RuntimeError('Command %s failed' % repr(cmd))
+    check_call(['hadoop', 'fs', '-mkdir', path])
 
 
 def listdir(path, ignore_directories=False, ignore_files=False,
@@ -127,6 +130,16 @@ def listdir(path, ignore_directories=False, ignore_files=False,
             yield (file,) + extra_data
         else:
             yield file
+
+
+def touch(path, safely=False):
+    """ generates a file at the given path or errors unless safely is True """
+    call_fn = subprocess.call if safely else check_call
+    if use_cdh4_syntax():
+        call_fn(['hadoop', 'fs', '-mkdir', '-p', os.path.split(path)[0]])
+    else:
+        call_fn(['hadoop', 'fs', '-mkdir', os.path.split(path)[0]])
+    call_fn(['hadoop', 'fs', '-touchz', path])
 
 
 class HdfsReadPipe(luigi.format.InputPipeProcessWrapper):
