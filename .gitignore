@@ -1,6 +1,12 @@
 *.pyc
 *~
+<<<<<<< HEAD
 client.cfg
 build
 dist
 luigi.egg-info
+=======
+.nicesetup
+*.rej
+*.orig
+>>>>>>> 388cc0f... Add final execution hooks to luigi, as well as batched counter increments

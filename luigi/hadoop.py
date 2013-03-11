@@ -106,7 +106,7 @@ def create_packages_archive(packages, filename):
                     directory = '/'.join(root)
 
                     add(dereference(__import__(module_name, None, None, 'non_empty').__path__[0] + "/__init__.py"),
-                            directory + "/__init__.py")
+                        directory + "/__init__.py")
 
                 for root, dirs, files in os.walk(p):
                     if '.svn' in dirs:
@@ -301,11 +301,11 @@ class HadoopJobRunner(JobRunner):
         logger.debug('Fetching data from %s' % failures_url)
         b = mechanize.Browser()
         b.open(failures_url, timeout=timeout)
-        links = list(b.links(text_regex='Last 4KB')) # For some reason text_regex='All' doesn't work... no idea why
-        links = random.sample(links, min(10, len(links))) # Fetch a random subset of all failed tasks, so not to be biased towards the early fails
+        links = list(b.links(text_regex='Last 4KB'))  # For some reason text_regex='All' doesn't work... no idea why
+        links = random.sample(links, min(10, len(links)))  # Fetch a random subset of all failed tasks, so not to be biased towards the early fails
         error_text = []
         for link in links:
-            task_url = link.url.replace('&start=-4097', '&start=-100000') # Increase the offset
+            task_url = link.url.replace('&start=-4097', '&start=-100000')  # Increase the offset
             logger.debug('Fetching data from %s', task_url)
             b2 = mechanize.Browser()
             try:
@@ -398,6 +398,14 @@ class LocalJobRunner(JobRunner):
 class BaseHadoopJobTask(luigi.Task):
     n_reduce_tasks = 25
     pool = luigi.Parameter(is_global=True, default=None, significant=False)
+    # This value can be set to change the default batching increment. Default is 1 for backwards compatibility.
+    batch_counter_default = 1
+
+    final_mapper = NotImplemented
+    final_combiner = NotImplemented
+    final_reducer = NotImplemented
+
+    _counter_dict = {}
     task_id = None
 
     def jobconfs(self):
@@ -490,7 +498,38 @@ class JobTask(BaseHadoopJobTask):
         for v in values:
             yield key, v
 
-    def incr_counter(self, *args):
+    def incr_counter(self, *args, **kwargs):
+        """ Increments a Hadoop counter
+
+        Since counters can be a bit slow to update, this batches the updates.
+        """
+        threshold = kwargs.get("threshold", self.batch_counter_default)
+        if len(args) == 2:
+            # backwards compatibility with existing hadoop jobs
+            group_name, count = args
+            key = (group_name,)
+        else:
+            group, name, count = args
+            key = (group, name)
+
+        ct = self._counter_dict.get(key, 0)
+        ct += count
+        if ct >= threshold:
+            new_arg = list(key)+[ct]
+            self._incr_counter(*new_arg)
+            ct = 0
+        self._counter_dict[key] = ct
+
+    def _flush_batch_incr_counter(self):
+        """ Increments any unflushed counter values
+        """
+        for key, count in self._counter_dict.iteritems():
+            if count == 0:
+                continue
+            args = list(key) + [count]
+            self._incr_counter(*args)
+
+    def _incr_counter(self, *args):
         """ Increments a Hadoop counter
 
         Note that this seems to be a bit slow, ~1 ms. Don't overuse this function by updating very frequently.
@@ -549,12 +588,20 @@ class JobTask(BaseHadoopJobTask):
         for record in self.reader(input_stream):
             for output in self.mapper(*record):
                 yield output
+        if self.final_mapper != NotImplemented:
+            for output in self.final_mapper():
+                yield output
+        self._flush_batch_incr_counter()
 
-    def _reduce_input(self, inputs, reducer):
+    def _reduce_input(self, inputs, reducer, final=NotImplemented):
         """Iterate over input, collect values with the same key, and call the reducer for each uniqe key."""
         for key, values in groupby(inputs, itemgetter(0)):
             for output in reducer(key, (v[1] for v in values)):
                 yield output
+        if final != NotImplemented:
+            for output in final():
+                yield output
+        self._flush_batch_incr_counter()
 
     def _run_mapper(self, stdin=sys.stdin, stdout=sys.stdout):
         """Run the mapper on the hadoop node."""
@@ -567,13 +614,13 @@ class JobTask(BaseHadoopJobTask):
         """Run the reducer on the hadoop node."""
         self.init_hadoop()
         self.init_reducer()
-        outputs = self._reduce_input(self._repr_reader((line[:-1] for line in stdin)), reducer=self.reducer)
+        outputs = self._reduce_input(self._repr_reader((line[:-1] for line in stdin)), self.reducer, self.final_reducer)
         self.writer(outputs, stdout)
 
     def _run_combiner(self, stdin=sys.stdin, stdout=sys.stdout):
         self.init_hadoop()
         self.init_combiner()
-        outputs = self._reduce_input(self._repr_reader((line[:-1] for line in stdin)), reducer=self.combiner)
+        outputs = self._reduce_input(self._repr_reader((line[:-1] for line in stdin)), self.combiner, self.final_combiner)
         self._repr_writer(outputs, stdout)
 
     def _print_exception(self, exc):
