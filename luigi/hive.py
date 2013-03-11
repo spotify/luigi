@@ -13,6 +13,7 @@
 import logging
 import luigi
 import luigi.interface
+import os
 import subprocess
 import tempfile
 
@@ -25,11 +26,25 @@ def load_hive_cmd():
     return luigi.interface.get_config().get('hive', 'command', 'hive')
 
 
-def run_hive_cmd(hivecmd):
-    cmd = [load_hive_cmd(), '-e', hivecmd]
+def run_hive(args):
+    """runs the `hive` from the command line, passing in the given args, and
+       returning stdout"""
+    cmd = [load_hive_cmd()] + args
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, _ = p.communicate()
     return stdout
+
+
+def run_hive_cmd(hivecmd):
+    """Runs the given hive query and returns stdout"""
+    run_hive(['-e', hivecmd])
+
+
+def run_hive_script(script):
+    """Runs the contents of the given script in hive and returns stdout"""
+    if not os.path.isfile(script):
+        raise RuntimeError("Hive script: {0} does not exist.".format(script))
+    run_hive(['-f', script])
 
 
 def table_location(db, table, partition_spec=None):
