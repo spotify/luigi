@@ -15,6 +15,7 @@
 import os
 import random
 import tempfile
+from target import Target
 
 class atomic_file(file):
     # Simple class that writes to a temp file and moves it on close()
@@ -37,7 +38,7 @@ class atomic_file(file):
         return self.__tmp_path
 
 
-class File(object):
+class File(Target):
     def __init__(self, path=None, format=None, is_tmp=False):
         if not path:
             if not is_tmp:

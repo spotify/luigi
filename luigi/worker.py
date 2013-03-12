@@ -22,6 +22,8 @@ import traceback
 import logging
 import warnings
 import notifications
+from target import Target
+from task import Task
 
 try:
     import simplejson as json
@@ -110,6 +112,12 @@ class Worker(object):
                 logger.warning('Task %s is is not complete and run() is not implemented. Probably a missing external dependency.', task_id)
             else:
                 self.__scheduled_tasks[task_id] = task
+                deps = task.deps()
+                for d in deps:
+                    if isinstance(d, Target):
+                        raise Exception('requires() can not return Target objects. Wrap it in an ExternalTask class')
+                    elif not isinstance(d, Task):
+                        raise Exception('requires() must return Task objects')
                 deps = [d.task_id for d in task.deps()]
                 self.__scheduler.add_task(self.__id, task_id, status=PENDING, deps=deps, runnable=True)
                 logger.info('Scheduled %s' % task_id)
