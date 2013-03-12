@@ -66,6 +66,11 @@ class Register(type):
 
         k = (cls, tuple(param_values))
 
+        try:
+            hash(k)
+        except TypeError:
+            return instantiate()  # unhashable types in parameters
+
         if k not in h:
             h[k] = instantiate()
 
