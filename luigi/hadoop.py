@@ -28,7 +28,7 @@ from hashlib import md5
 import luigi
 import luigi.hdfs
 import interface
-
+import warnings
 import mrrunner
 
 logger = logging.getLogger('luigi-interface')
@@ -455,6 +455,7 @@ class BaseHadoopJobTask(luigi.Task):
         # Overrides the default implementation
         return luigi.task.flatten(self.requires_hadoop()) + luigi.task.flatten(self.requires_local())
 
+
 class JobTask(BaseHadoopJobTask):
 
     def init_mapper(self):
@@ -471,7 +472,18 @@ class JobTask(BaseHadoopJobTask):
 
     def job_runner(self):
         # We recommend that you define a subclass, override this method and set up your own config
-        return DefaultHadoopJobRunner()
+        """ Get the MapReduce runner for this job
+
+        If all outputs are HdfsTargets, the DefaultHadoopJobRunner will be used. Otherwise, the LocalJobRunner which streams all data through the local machine will be used (great for testing).
+        """
+        outputs = luigi.task.flatten(self.output())
+        for output in outputs:
+            if not isinstance(output, luigi.hdfs.HdfsTarget):
+                warnings.warn("Job is using one or more non-HdfsTarget outputs" +
+                              " so it will be run in local mode")
+                return LocalJobRunner()
+        else:
+            return DefaultHadoopJobRunner()
 
     def reader(self, input_stream):
         """Reader is a method which iterates over input lines and outputs records.
