@@ -110,6 +110,8 @@ class EnvironmentParamsContainer(task.Task):
                                                  description='Use local scheduling')
     scheduler_host = parameter.Parameter(is_global=True, default=get_config().get('core', 'default-scheduler-host', default='localhost'),
                                          description='Hostname of machine running remote scheduler')
+    scheduler_port = parameter.IntParameter(is_global=True, default=8082,
+                                            description='Port of remote scheduler api process')
     lock = parameter.BooleanParameter(is_global=True, default=False,
                                       description='Do not run if the task is already running')
     lock_pid_dir = parameter.Parameter(is_global=True, default='/var/tmp/luigi',
@@ -155,7 +157,7 @@ class Interface(object):
         if env_params.local_scheduler:
             sch = scheduler.CentralPlannerScheduler()
         else:
-            sch = rpc.RemoteScheduler(host=env_params.scheduler_host)
+            sch = rpc.RemoteScheduler(host=env_params.scheduler_host, port=env_params.scheduler_port)
 
         w = worker.Worker(scheduler=sch, worker_processes=env_params.workers)
         for task in tasks:
