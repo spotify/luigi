@@ -162,6 +162,8 @@ class Interface(object):
         w = worker.Worker(scheduler=sch, worker_processes=env_params.workers)
         for task in tasks:
             w.add(task)
+        logger = logging.getLogger('luigi-interface')
+        logger.info('Done scheduling tasks')
         w.run()
 
 

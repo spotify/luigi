@@ -183,7 +183,14 @@ class Worker(object):
 
             logger.debug("Asking scheduler for work...")
             pending_tasks, task_id = self.__scheduler.get_work(worker=self.__id)
-            logger.debug("Got response from scheduler! (%s, %s)", pending_tasks, task_id)
+
+            if task_id is None:
+                logger.info("Done")
+                logger.info("There are no more tasks to run at this time")
+                if pending_tasks:
+                    logger.info("There are %s pending tasks possibly being run by other workers", pending_tasks)
+            else:
+                logger.debug("Pending tasks: %s", pending_tasks)
 
             if task_id == None:
                 # TODO: sleep for a bit and query server again if there are pending tasks in the future we might be able to run
