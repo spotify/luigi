@@ -17,6 +17,7 @@ import random
 import tempfile
 from target import Target
 
+
 class atomic_file(file):
     # Simple class that writes to a temp file and moves it on close()
     # Also cleans up the temp file if close is not invoked
@@ -36,6 +37,12 @@ class atomic_file(file):
     @property
     def tmp_path(self):
         return self.__tmp_path
+
+    def __exit__(self, exc_type, exc, traceback):
+        " Close/commit the file if there are no exception "
+        if exc_type:
+            return
+        return file.__exit__(self, exc_type, exc, traceback)
 
 
 class File(Target):

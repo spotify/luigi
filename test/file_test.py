@@ -18,9 +18,12 @@ import os
 import gzip
 import luigi.format
 import random
+import gc
+
 
 class FileTest(unittest.TestCase):
     path = '/tmp/test.txt'
+
     def setUp(self):
         if os.path.exists(self.path):
             os.remove(self.path)
@@ -46,6 +49,25 @@ class FileTest(unittest.TestCase):
 
         self.assertFalse(os.path.exists(tp))
         self.assertFalse(os.path.exists(self.path))
+
+    def test_write_cleanup_no_close(self):
+        t = File(self.path)
+
+        def context():
+            f = t.open('w')
+            f.write('stuff')
+        context()
+        gc.collect()  # force garbage collection of f variable
+        self.assertFalse(t.exists())
+
+    def test_write_cleanup_with_error(self):
+        t = File(self.path)
+        try:
+            with t.open('w'):
+                raise Exception('something broke')
+        except:
+            pass
+        self.assertFalse(t.exists())
 
     def test_tmp(self):
         t = File(is_tmp=True)
