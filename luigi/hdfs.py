@@ -74,14 +74,17 @@ class HdfsClient(object):
             raise RuntimeError('Command %s failed' % repr(cmd))
 
 
-    def remove(self, path, recursive=True):
+    def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
             if use_cdh4_syntax():
-                cmd = ['hadoop', 'fs', '-rm', '-r', path]
+                cmd = ['hadoop', 'fs', '-rm', '-r']
             else:
-                cmd = ['hadoop', 'fs', '-rmr', path]
+                cmd = ['hadoop', 'fs', '-rmr']
         else:
-            cmd = ['hadoop', 'fs', '-rm', path]
+            cmd = ['hadoop', 'fs', '-rm']
+        if skip_trash:
+            cmd.append("-skipTrash")
+        cmd.append(path)
         if subprocess.call(cmd):
             raise RuntimeError('Command %s failed' % repr(cmd))
 
