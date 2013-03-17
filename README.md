@@ -1,28 +1,26 @@
 ![Luigi](https://raw.github.com/spotify/luigi/master/doc/luigi.png)
 
-## What is it?
+Luigi is a Python package that helps you build complex pipelines of batch jobs. It handles dependency resolution, workflow management, visualization, handling failures, command line integration, and much more.
 
-Luigi is a Python module that helps you build complex pipelines of batch jobs. It handles dependency resolution, workflow management, visualization etc. It also comes with [Hadoop](http://hadoop.apache.org) support built in.
+The purpose of Luigi is to address all the plumbing typically associated with long-running batch processes. You want to chain many tasks, automate them, and failures *will* happen. These tasks can be anything, but typically long running things like [Hadoop](http://hadoop.apache.org/) jobs, dumping data to/from databases, running machine learning algorithms, or anything else. 
 
-Conceptually, it's similar to [GNU Make](http://www.gnu.org/software/make/) where you have certain tasks and these tasks in turn may have dependencies on other tasks. There are also some similarities to [Oozie](http://incubator.apache.org/oozie/), and maybe also [Azkaban](http://data.linkedin.com/opensource/azkaban).
+There are other software packages that focus on lower level aspects of data processing, like [Hive](http://hive.apache.org/), [Pig](http://pig.apache.org/), [Cascading](http://www.cascading.org/). Luigi is not a framework to replace these. Instead it helps you stitch many tasks together into long-running pipelines that can comprise thousands of tasks and take weeks to complete. Luigi takes care of a lot of the workflow management so that you can focus on the concrete tasks and their dependencies.
 
-Luigi was conceived and implemented at [Spotify](http://www.spotify.com) mostly by Erik Bernhardsson and Elias Freider.
+Luigi comes with a toolbox of several common tasks that you use. It includes native Python support for running mapreduce jobs in Hadoop. It also comes with file system abstractions for HDFS and local files that also ensures all file system operations are atomic. This is important because it means your data pipeline will not crash in a state containing partial data.
 
-You probably should check out Luigi if you use Python and:
+## Dependency graph example
 
-* There are a bunch of tasks you have to run.
-* This tasks are generally batch processing stuff.
-* These tasks have dependencies on other tasks or input coming from somewhere else.
-* You use Hadoop (though by no means is it necessary)
-* Your stuff takes a sizeable amount of time to run (anything from minutes to months).
-* You want to automate a complex pipeline of tasks.
-* Occasional failures are expected. Retry later.
+Just to give you an idea of what Luigi does, this is a screen shot from something we are running in production. Using Luigi's visualizer, we get a nice visual overview of the dependency graph of the workflow. At the top of the graph are two data sets containing external data dumps. Each node represents a task which has to be run. Green tasks are already completed whereas white tasks are yet to be run. Most of these tasks are Hadoop job, but at the end of the graph is a task ingesting data from HDFS into Cassandra.
 
-We use Luigi internally at Spotify to run 1000s of tasks every day, organized in complex dependency graphs. Most of these tasks are Hadoop job. Luigi provides an infrastructure that powers all kinds of stuff including recommendations, toplists, A/B test analysis, external reports, internal dashboards, etc.
+![Dependency graph](https://raw.github.com/erikbern/luigi/master/doc/user_recs_graph.png)
 
-Note that Luigi is still in a slightly immature state so you might see occasional weirdness. Future changes might not be backwards compatible.
+## Background
 
-A code example says more than 1000 bullet lists, so enough said - let's look at some examples. Though by all means feel free to scroll down and [read more](#readmore) about some design decisions Luigi.
+We use Luigi internally at [Spotify](http://www.spotify.com/) to run 1000s of tasks every day, organized in complex dependency graphs. Most of these tasks are Hadoop job. Luigi provides an infrastructure that powers all kinds of stuff including recommendations, toplists, A/B test analysis, external reports, internal dashboards, etc. Luigi grew out of the realization that powerful abstractions for the batch processing can help programmers focus on the most important bits and leave the rest (the boilerplate) to the framework.
+
+Conceptually, Luigi similar to [GNU Make](http://www.gnu.org/software/make/) where you have certain tasks and these tasks in turn may have dependencies on other tasks. There are also some similarities to [Oozie](http://incubator.apache.org/oozie/) and [Azkaban](http://data.linkedin.com/opensource/azkaban). One major difference is that Luigi is not just built specifically for Hadoop, and it's easy to extend it with other kinds of tasks.
+
+Everything in Luigi is in Python. Instead of XML configuration or similar external data files, the dependency graph is specified *within Python*. This makes it easy to build up complex dependency graphs of tasks, where the dependencies can involve date algebra or recursive references to other versions of the same task.
 
 ## Installing
 
