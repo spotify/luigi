@@ -112,7 +112,7 @@ class VisualizeHandler(tornado.web.RequestHandler):
         # TODO: this code definitely should not live here:
         html_header = pkg_resources.resource_string(__name__, 'static/header.html')
 
-        pattern = r'(<svg.*?)(<g id="graph1".*?)(</svg>)'
+        pattern = r'(<svg.*?)(<g id="graph[01]".*?)(</svg>)'
         mo = re.search(pattern, svg, re.S)
 
         self.write(''.join([html_header,
