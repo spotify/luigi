@@ -78,3 +78,30 @@ def Copy(parent_cls):
                 f.write(line)
             f.close()
     return CopyCls
+
+
+class CompositionTask(task.Task):
+    # Experimental support for composition task. This is useful if you have two tasks where
+    # X has a dependency on Y and X wants to invoke methods on Y. The problem with a normal
+    # requires() style dependency is that if X and Y are run in different processes then
+    # X can not access Y. To solve this, you can let X own a reference to an Y and have it
+    # run it as a part of its own run method.
+
+    def subtasks(self):
+        # This method can (optionally) define a couple of delegate tasks that
+        # will be accessible as interfaces, meaning that the task can access
+        # those tasks and run methods defined on them, etc
+        return []  # default impl
+
+    def deps(self):
+        # Overrides method in base class
+        return task.flatten(self.requires()) + task.flatten([t.deps() for t in task.flatten(self.subtasks())])
+
+    def run_subtasks(self):
+        for t in task.flatten(self.subtasks()):
+            t.run()
+
+    # Note that your run method must also initialize subtasks
+    # def run(self):
+    #    self.run_subtasks()
+    #    ...
