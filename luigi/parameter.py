@@ -73,7 +73,8 @@ class Parameter(object):
             elif self.is_list:
                 return []
             else:
-                raise MissingParameterException("No value for '%s' submitted and no default value has been assigned." % param_name)
+                raise MissingParameterException("No value for '%s' (%s) submitted and no default value has been assigned." % \
+                    (param_name, "--" + param_name.replace('_', '-')))
         elif self.is_list:
             return tuple(self.parse(p) for p in x)
         else:
