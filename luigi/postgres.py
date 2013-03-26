@@ -221,7 +221,7 @@ class CopyToTable(luigi.Task):
 
     # options
     null_values = (None,)  # container of values that should be inserted as NULL values
-    clear_table = False
+
     column_separator = "\t"  # how columns are separated in the file copied into postgres
 
     def rows(self):
@@ -279,7 +279,18 @@ class CopyToTable(luigi.Task):
             password=self.password,
             table=self.table,
             update_id=self.update_id()
-        )
+         )
+
+    def init_copy(self, connection):
+        """ Override to perform custom queries.
+
+            Any code here will be formed in the same transaction as the main copy, just prior to copying data. Example use cases include truncating the table or removing all data older than X in the database to keep a rolling window of data available in the table.
+        """
+
+        # TODO: remove this after sufficient time so most people using the 
+        # clear_table attribtue will have noticed it doesn't work anymore
+        if hasattr(self, "clear_table"):
+            raise Exception("The clear_table attribute has been removed. Override init_copy instead!")
 
     def copy(self, cursor, file):
         if isinstance(self.columns[0], basestring):
@@ -317,13 +328,12 @@ class CopyToTable(luigi.Task):
         tmp_file.seek(0)
 
         # attempt to copy the data into postgres
-        # if it fails because the target table doesn't exist, try to create it by running
-        # self.create_table
+        # if it fails because the target table doesn't exist
+        # try to create it by running self.create_table
         for attempt in xrange(2):
             try:
                 cursor = connection.cursor()
-                if self.clear_table:
-                    cursor.execute('TRUNCATE TABLE {table}'.format(table=self.table))
+                self.init_copy(connection)
                 self.copy(cursor, tmp_file)
             except psycopg2.ProgrammingError, e:
                 if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:

@@ -110,8 +110,12 @@ class TestPostgresImportTask(TestCase):
         self.assertEquals(tuple(cursor), ((9,),))
 
     def test_clear(self):
-        clearer = Metric2(21)
-        clearer.clear_table = True
+        class Metric2Copy(Metric2):
+            def init_copy(self, connection):
+                query = "TRUNCATE {0}".format(self.table)
+                connection.cursor().execute(query)
+
+        clearer = Metric2Copy(21)
         conn = clearer.output().connect()
         conn.autocommit = True
         conn.cursor().execute('DROP TABLE IF EXISTS {table}'.format(table=clearer.table))
