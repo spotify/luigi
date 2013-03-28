@@ -69,20 +69,6 @@ class FileTest(unittest.TestCase):
             pass
         self.assertFalse(t.exists())
 
-    def test_tmp(self):
-        t = File(is_tmp=True)
-        p = t.open('w')
-        print >> p, 'test'
-        p.close()
-
-        path = t.path
-        self.assertTrue(os.path.exists(path))
-        q = t.open('r')
-        self.assertEqual(q.readline(), 'test\n')
-        q.close()
-        del t # should remove the underlying file
-        self.assertFalse(os.path.exists(path))
-
     def test_gzip(self):
         t = File(self.path, luigi.format.Gzip)
         p = t.open('w')
@@ -109,3 +95,23 @@ class FileCreateDirectoriesTest(FileTest):
 class FileRelativeTest(FileTest):
     # We had a bug that caused relative file paths to fail, adding test for it
     path = 'test.txt'
+
+class TmpFileTest(unittest.TestCase):
+    def test_tmp(self):
+        t = File(is_tmp=True)
+        self.assertFalse(t.exists())
+        self.assertFalse(os.path.exists(t.path))
+        p = t.open('w')
+        print >> p, 'test'
+        self.assertFalse(t.exists())
+        self.assertFalse(os.path.exists(t.path))
+        p.close()
+        self.assertTrue(t.exists())
+        self.assertTrue(os.path.exists(t.path))
+
+        q = t.open('r')
+        self.assertEqual(q.readline(), 'test\n')
+        q.close()
+        path = t.path
+        del t # should remove the underlying file
+        self.assertFalse(os.path.exists(path))

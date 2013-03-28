@@ -50,7 +50,7 @@ class File(Target):
         if not path:
             if not is_tmp:
                 raise Exception('path or is_tmp must be set')
-            _, path = tempfile.mkstemp()
+            path = os.path.join(tempfile.gettempdir(), 'luigi-tmp-%09d' % random.randint(0, 999999999))
         self.path = path
         self.format = format
         self.is_tmp = is_tmp
