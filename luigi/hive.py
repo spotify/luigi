@@ -12,12 +12,11 @@
 
 import logging
 import luigi
+import luigi.hadoop
 import luigi.interface
 import os
 import subprocess
 import tempfile
-
-from luigi.hadoop import JobRunner, HadoopJobRunner, BaseHadoopJobTask
 
 logger = logging.getLogger('luigi-interface')
 
@@ -70,7 +69,7 @@ def partition_spec(partition):
     return ','.join(["{0}='{1}'".format(k, v) for (k, v) in partition.items()])
 
 
-class HiveQueryTask(BaseHadoopJobTask):
+class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
     ''' Task to run a hive query
     '''
 
@@ -88,7 +87,7 @@ class HiveQueryTask(BaseHadoopJobTask):
         return HiveQueryRunner()
 
 
-class HiveQueryRunner(JobRunner):
+class HiveQueryRunner(luigi.hadoop.JobRunner):
     ''' Runs a HiveQueryTask by shelling out to hive
     '''
 
@@ -101,7 +100,7 @@ class HiveQueryRunner(JobRunner):
                 arglist += ['-i', job.hiverc()]
 
             logger.info(arglist)
-            HadoopJobRunner.run_and_track_hadoop_job(arglist)
+            luigi.hadoop.run_and_track_hadoop_job(arglist)
 
 
 class HiveTableTarget(luigi.Target):
@@ -168,7 +167,7 @@ class ExternalHiveTask(luigi.ExternalTask):
         if self.partition is not None:
             assert self.partition, "partition required"
             return HivePartitionTarget(database=self.database,
-                table=self.table,
-                partition=self.partition)
+                                       table=self.table,
+                                       partition=self.partition)
         else:
             return HiveTableTarget(self.database, self.table)
