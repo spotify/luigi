@@ -3,47 +3,46 @@ import logging
 import os
 import random
 
-from luigi.hadoop import BaseHadoopJobTask, HadoopJobRunner, JobRunner
+import luigi.hadoop
 import luigi.hdfs
 
 logger = logging.getLogger('luigi-interface')
 
 
-class HadoopJarJobRunner(JobRunner):
+def fix_paths(job):
+    """Coerce input arguments to use temporary files when used for output.
+    Return a list of temporary file pairs (tmpfile, destination path) and
+    a list of arguments. Converts each HdfsTarget to a string for the
+    path."""
+    tmp_files = []
+    args = []
+    for x in job.args():
+        if isinstance(x, luigi.hdfs.HdfsTarget):  # input/output
+            if x.exists() or not job.atomic_output():  # input
+                args.append(x.path)
+            else:  # output
+                y = luigi.hdfs.HdfsTarget(x.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10))
+                tmp_files.append((y, x))
+                logger.info("Using temp path: {0} for path {1}".format(y.path, x.path))
+                args.append(y.path)
+        else:
+            args.append(str(x))
+
+    return (tmp_files, args)
+
+
+class HadoopJarJobRunner(luigi.hadoop.JobRunner):
     """JobRunner for `hadoop jar` commands. Used to run a HadoopJarJobTask"""
 
     def __init__(self):
         pass
-
-    @staticmethod
-    def _fix_paths(job):
-        """Coerce input arguments to use temporary files when used for output.
-        Return a list of temporary file pairs (tmpfile, destination path) and
-        a list of arguments. Converts each HdfsTarget to a string for the
-        path."""
-        tmp_files = []
-        args = []
-        for x in job.args():
-            if isinstance(x, luigi.hdfs.HdfsTarget):  # input/output
-                if x.exists() or not job.atomic_output():  # input
-                    args.append(x.path)
-                else:  # output
-                    y = luigi.hdfs.HdfsTarget(x.path + \
-                        '-luigi-tmp-%09d' % random.randrange(0, 1e10))
-                    tmp_files.append((y, x))
-                    logger.info("Using temp path: {0} for path {1}".format(y.path, x.path))
-                    args.append(y.path)
-            else:
-                args.append(str(x))
-
-        return (tmp_files, args)
 
     def run_job(self, job):
         # TODO(jcrobak): libjars, files, etc. Can refactor out of
         # hadoop.HadoopJobRunner
         if not job.jar() or not os.path.exists(job.jar()):
             logger.error("Can't find jar: {0}, full path {1}".format(job.jar(),
-                os.path.abspath(job.jar())))
+                         os.path.abspath(job.jar())))
             raise Exception("job jar does not exist")
         arglist = ['hadoop', 'jar', job.jar()]
         if job.main():
@@ -54,17 +53,17 @@ class HadoopJarJobRunner(JobRunner):
         for jc in jobconfs:
             arglist += ['-D' + jc]
 
-        (tmp_files, job_args) = HadoopJarJobRunner._fix_paths(job)
+        (tmp_files, job_args) = fix_paths(job)
 
         arglist += job_args
 
-        HadoopJobRunner.run_and_track_hadoop_job(arglist)
+        luigi.hadoop.run_and_track_hadoop_job(arglist)
 
         for a, b in tmp_files:
             a.move(b)
 
 
-class HadoopJarJobTask(BaseHadoopJobTask):
+class HadoopJarJobTask(luigi.hadoop.BaseHadoopJobTask):
     """A job task for `hadoop jar` commands that define a jar and (optional)
     main method"""
 
