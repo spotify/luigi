@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import abc
 import parameter
 import warnings
 import traceback
@@ -26,7 +27,7 @@ def namespace(namespace=None):
     Register._default_namespace = namespace
 
 
-class Register(type):
+class Register(abc.ABCMeta):
     # 1. Cache instances of objects so that eg. X(1, 2, 3) always returns the same object
     # 2. Keep track of all subclasses of Task and expose them
     __instance_cache = {}
@@ -39,11 +40,10 @@ class Register(type):
 
         Set the task namespace to whatever the currently declared namespace is
         """
-
         if "task_namespace" not in classdict:
             classdict["task_namespace"] = metacls._default_namespace
 
-        cls = type.__new__(metacls, classname, bases, classdict)
+        cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
         if cls.run != NotImplemented:
             metacls._reg.append(cls)
         return cls

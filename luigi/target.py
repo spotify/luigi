@@ -12,10 +12,16 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-class Target(object):  # interface
+import abc
 
+
+class Target(object):  # interface
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
     def exists(self):
         raise NotImplementedError
 
+    @abc.abstractmethod
     def open(self, mode):
         raise NotImplementedError

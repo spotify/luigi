@@ -12,7 +12,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-
+import abc
 import datetime
 import logging
 import tempfile
@@ -175,6 +175,9 @@ class PostgresTarget(luigi.Target):
                 raise
         connection.close()
 
+    def open(self, mode):
+        raise NotImplementedError("Cannot open() PostgresTarget")
+
 
 class CopyToTable(luigi.Task):
     """
@@ -189,11 +192,25 @@ class CopyToTable(luigi.Task):
 
     """
 
-    host = None
-    database = None
-    user = None
-    password = None
-    table = None
+    @abc.abstractproperty
+    def host(self):
+        return None
+
+    @abc.abstractproperty
+    def database(self):
+        return None
+
+    @abc.abstractproperty
+    def user(self):
+        return None
+
+    @abc.abstractproperty
+    def password(self):
+        return None
+
+    @abc.abstractproperty
+    def table(self):
+        return None
 
     # specify the columns that are to be inserted (same as are returned by columns)
     # overload this in subclasses with the either column names of columns to import:
@@ -262,8 +279,7 @@ class CopyToTable(luigi.Task):
             password=self.password,
             table=self.table,
             update_id=self.update_id()
-         )
-
+        )
 
     def copy(self, cursor, file):
         if isinstance(self.columns[0], basestring):

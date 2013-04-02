@@ -10,6 +10,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import abc
 import logging
 import luigi
 import luigi.interface
@@ -74,6 +75,7 @@ class HiveQueryTask(BaseHadoopJobTask):
     ''' Task to run a hive query
     '''
 
+    @abc.abstractmethod
     def query(self):
         ''' Text of query to run in hive
         '''
@@ -126,6 +128,9 @@ class HiveTableTarget(luigi.Target):
             raise Exception("Couldn't find location for table: {0}".format(str(self)))
         return location
 
+    def open(self, mode):
+        return NotImplementedError("open() is not supported for HiveTableTarget")
+
 
 class HivePartitionTarget(luigi.Target):
     ''' exists returns true if the table's partition exists
@@ -154,6 +159,9 @@ class HivePartitionTarget(luigi.Target):
             raise Exception("Couldn't find location for table: {0}".format(str(self)))
         return location
 
+    def open(self, mode):
+        return NotImplementedError("open() is not supported for HivePartitionTarget")
+
 
 class ExternalHiveTask(luigi.ExternalTask):
     ''' External task that depends on a Hive table/partition.
@@ -168,7 +176,7 @@ class ExternalHiveTask(luigi.ExternalTask):
         if self.partition is not None:
             assert self.partition, "partition required"
             return HivePartitionTarget(database=self.database,
-                table=self.table,
-                partition=self.partition)
+                                       table=self.table,
+                                       partition=self.partition)
         else:
             return HiveTableTarget(self.database, self.table)
