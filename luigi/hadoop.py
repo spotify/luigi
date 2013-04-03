@@ -20,6 +20,7 @@ import subprocess
 from itertools import groupby
 from operator import itemgetter
 import pickle
+import binascii
 import logging
 import StringIO
 import re
@@ -624,31 +625,46 @@ class JobTask(BaseHadoopJobTask):
         self.init_hadoop()
         self.init_mapper()
         outputs = self._map_input((line[:-1] for line in stdin))
-        self._repr_writer(outputs, stdout)
+        self.internal_writer(outputs, stdout)
 
     def _run_reducer(self, stdin=sys.stdin, stdout=sys.stdout):
         """Run the reducer on the hadoop node."""
         self.init_hadoop()
         self.init_reducer()
-        outputs = self._reduce_input(self._repr_reader((line[:-1] for line in stdin)), self.reducer, self.final_reducer)
+        outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.reducer, self.final_reducer)
         self.writer(outputs, stdout)
 
     def _run_combiner(self, stdin=sys.stdin, stdout=sys.stdout):
         self.init_hadoop()
         self.init_combiner()
-        outputs = self._reduce_input(self._repr_reader((line[:-1] for line in stdin)), self.combiner, self.final_combiner)
-        self._repr_writer(outputs, stdout)
+        outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.combiner, self.final_combiner)
+        self.internal_writer(outputs, stdout)
 
     def _print_exception(self, exc):
         print >> sys.stderr, 'luigi-exc-hex=%s' % exc.encode('hex')
 
-    def _repr_reader(self, inputs):
+    def internal_reader(self, input_stream):
         """Reader which uses python eval on each part of a tab separated string.
         Yields a tuple of python objects."""
-        for input in inputs:
+        for input in input_stream:
             yield map(eval, input.split("\t"))
 
-    def _repr_writer(self, outputs, stdout):
+    def internal_writer(self, outputs, stdout):
         """Writer which outputs the python repr for each item"""
         for output in outputs:
             print >> stdout, "\t".join(map(repr, output))
+
+
+def pickle_reader(job, input_stream):
+    def decode(item):
+        return pickle.loads(binascii.a2b_base64(item))
+    for line in input_stream:
+        items = line.split('\t')
+        yield map(decode, items)
+
+
+def pickle_writer(job, outputs, stdout):
+    def encode(item):
+        return binascii.b2a_base64(pickle.dumps(item))[:-1]  # remove trailing newline
+    for keyval in outputs:
+        print >> stdout, "\t".join(map(encode, keyval))
