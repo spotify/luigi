@@ -96,6 +96,20 @@ class HdfsClient(object):
         cmd.append(path)
         call_check(cmd)
 
+    def count(self, path):
+        cmd = ['hadoop', 'fs', '-count', path]
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if p.returncode == 0:
+            (dir_count, file_count, content_size, ppath) = stdout.split()
+            results = {'content_size': content_size, 'dir_count': dir_count, 'file_count': file_count}
+            return results
+        else:
+            raise HDFSCliError(cmd, p.returncode, stdout, stderr)
+
+    def copy(self, path, destination):
+        call_check(['hadoop', 'fs', '-cp', path, destination])
+
     def mkdir(self, path):
         call_check(['hadoop', 'fs', '-mkdir', path])
 
