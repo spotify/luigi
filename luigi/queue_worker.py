@@ -1,4 +1,4 @@
-import luigi
+import json
 import luigi.interface
 import os
 
@@ -11,9 +11,23 @@ class QueueWorker(luigi.WrapperTask):
     complete_callback = luigi.Parameter(default=None, description="Callback for when task completes")
     metadata = luigi.Parameter(default=None, description="Allows QueueSchedulers to attach data to a worker")
 
-    def requires(self):
-        interface = luigi.interface.ArgParseInterface()
-        return interface.parse(cmdline_args=self.args)
+    @property
+    def task(self):
+        try:
+            return luigi.interface.ArgParseInterface().parse(cmdline_args=self.args)[0]
+        except SystemExit as exc:
+            # if parsing the task fails, remove from queue
+            self.on_failure(exc)
+            raise
+
+    def complete(self):
+        is_complete = self.task.complete()
+        if is_complete:
+            self.complete_callback(worker=self, success=True)
+        return is_complete
+
+    def run(self):
+        luigi.interface.ArgParseInterface().run([self.task], {"workers": 1})
 
     def on_success(self):
         if self.complete_callback:
@@ -32,8 +46,8 @@ class QueueScheduler(luigi.WrapperTask):
     '''
     def fetch_queue_tasks(self):
         ''' Return a list/generator of [string], or ([string], metadata):
-                    [string] - commandline arguments to invoke a luigi Task
-                    metadata - will be available on worker.metadata passed to worker_complete
+                [string] - commandline arguments to invoke a luigi Task
+                metadata - will be available on worker.metadata passed to worker_complete
         '''
         raise NotImplementedError
 
@@ -63,7 +77,7 @@ class HdfsFileQueueScheduler(QueueScheduler):
     ''' Queue scheduler that reads files starting with 'luigi-work'. Work is done in
         sorted order of the file names.
     '''
-    workers = luigi.interface.EnvironmentParamsContainer.workers
+    queue_workers = luigi.IntParameter(default=1)
     work_directory = luigi.Parameter()
     done_directory = luigi.Parameter(default=None, description="Defaults to work_directory/done")
     failed_directory = luigi.Parameter(default=None, description="Defaults to work_directory/failed")
@@ -72,19 +86,19 @@ class HdfsFileQueueScheduler(QueueScheduler):
         files = luigi.hdfs.listdir(self.work_directory)
         work_files = [f for f in files if os.path.basename(f).startswith('luigi-work')]
         work_files.sort()
-        for filename in work_files[0:self.workers]:
-            with luigi.hdfs.HdfsTarget(filename).open('r') as file:
-                yield (file.read().strip().split(' '), filename)
+        for filename in work_files[0:self.queue_workers]:
+            with luigi.hdfs.HdfsTarget(filename).open('r') as work_file:
+                work_json = json.loads(work_file.read().strip())
+                args = [work_json['task_name']] + work_json['task_args']
+                yield (args, filename)
 
     def worker_complete(self, worker, success):
         if not self.done_directory:
             self.done_directory = os.path.join(self.work_directory, "done")
-            luigi.hdfs.mkdir(self.done_directory)
         if not self.failed_directory:
             self.failed_directory = os.path.join(self.work_directory, "failed")
-            luigi.hdfs.mkdir(self.failed_directory)
 
         if success:
-            luigi.hdfs.move(worker.metadata, self.done_directory)
+            luigi.hdfs.rename(worker.metadata, self.done_directory)
         else:
-            luigi.hdfs.move(worker.metadata, self.failed_directory)
+            luigi.hdfs.rename(worker.metadata, self.failed_directory)

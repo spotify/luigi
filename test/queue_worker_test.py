@@ -15,12 +15,13 @@ class QueueWorkerTest(unittest.TestCase):
 
     def test_queue_worker_requires(self):
         queue_worker = luigi.queue_worker.QueueWorker(args=['ExampleTask'])
-        self.assertEquals(queue_worker.requires(), [ExampleTask()])
+        self.assertEquals(queue_worker.task, ExampleTask())
 
     def test_queue_worker_missing_args(self):
         queue_worker = luigi.queue_worker.QueueWorker(args=['TaskWithArgs'])
-        self.assertRaises(Exception, queue_worker.requires)
+        should_raise = lambda: queue_worker.task
+        self.assertRaises(Exception, should_raise)
 
     def test_queue_worker_with_args(self):
         queue_worker = luigi.queue_worker.QueueWorker(args=['TaskWithArgs', '--string-arg', 'foo'])
-        self.assertEquals(queue_worker.requires(), [TaskWithArgs(string_arg='foo')])
+        self.assertEquals(queue_worker.task, TaskWithArgs(string_arg='foo'))
