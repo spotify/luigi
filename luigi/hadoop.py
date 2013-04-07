@@ -582,7 +582,10 @@ class JobTask(BaseHadoopJobTask):
                 d = os.path.dirname(dst)
                 if d and not os.path.exists(d):
                     os.makedirs(d)
-                os.link(src, dst)
+                if not os.path.exists(dst):
+                    # If the combiner runs, the file might already exist,
+                    # so no reason to create the link again
+                    os.link(src, dst)
 
     def _dump(self, dir=''):
         """Dump instance to file."""
