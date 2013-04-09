@@ -22,6 +22,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.httpclient
 import tornado.httpserver
+import interface
 import scheduler
 import pkg_resources
 import signal
@@ -30,9 +31,17 @@ from rpc import RemoteSchedulerResponder
 from scheduler import PENDING, DONE, FAILED, RUNNING
 
 
+def _create_scheduler():
+    config = interface.get_config()
+    retry_delay = config.getfloat('scheduler', 'retry-delay', 900.0)
+    remove_delay = config.getfloat('scheduler', 'remove-delay', 600.0)
+    worker_disconnect_delay = config.getfloat('scheduler', 'worker-disconnect-delay', 60.0)
+    return scheduler.CentralPlannerScheduler(retry_delay, remove_delay, worker_disconnect_delay)
+
+
 class RPCHandler(tornado.web.RequestHandler):
     """ Handle remote scheduling calls using rpc.RemoteSchedulerResponder"""
-    scheduler = scheduler.CentralPlannerScheduler()
+    scheduler = _create_scheduler()
     api = RemoteSchedulerResponder(scheduler)
 
     def get(self, method):

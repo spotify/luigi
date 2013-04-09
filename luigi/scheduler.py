@@ -59,7 +59,14 @@ class CentralPlannerScheduler(Scheduler):
     Can be run locally or on a server (using RemoteScheduler + server.Server).
     '''
 
-    def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0):  # seconds
+    def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0):
+        '''
+        (all arguments are in seconds)
+        Keyword Arguments:
+        retry_delay -- How long after a Task fails to try it again, or -1 to never retry
+        remove_delay -- How long after a Task finishes to remove it from the scheduler
+        worker_disconnect_delay -- If a worker hasn't communicated for this long, remove it from active workers
+        '''
         self._state_path = '/var/lib/luigi-server/state.pickle'
         self._tasks = {}
         self._retry_delay = retry_delay
@@ -121,9 +128,9 @@ class CentralPlannerScheduler(Scheduler):
         for task_id in remove_tasks:
             self._tasks.pop(task_id)
 
-        # Reset FAILED tasks to PENDING if max timeout is reached
+        # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
         for task in self._tasks.values():
-            if task.status == FAILED and task.retry < time.time():
+            if task.status == FAILED and self._retry_delay >= 0 and task.retry < time.time():
                 task.status = PENDING
 
     def update(self, worker):
