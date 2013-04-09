@@ -3,22 +3,35 @@ import luigi.interface
 import os
 
 
+class TaskDeserializer(object):
+    ''' Return a luigi.Task from a name, arguments, and module. Raise a DeserializerException on failure
+    '''
+    def deserialize(self, task_name, task_args, module_name=None):
+        pass
+
+
+class DeserializerException(Exception):
+    pass
+
+
+class ArgParseTaskDeserializer(TaskDeserializer):
+    def deserialize(self, task_name, task_args, module_name=None):
+        if module_name:
+            __import__(module_name)
+        try:
+            return luigi.interface.ArgParseInterface().parse([task_name] + task_args)[0]
+        except (SystemExit, Exception):  # convert SystemExit to regular Exception
+            raise DeserializerException("Failed to deserialize (task_name=%s, task_args=%s, module_name=%s"
+                            % (task_name, task_args, module_name))
+
+
 class QueueWorker(luigi.WrapperTask):
     ''' Parses args to create a luigi Task, and returns it as requires. Calls complete_callback
         when it finishes.
     '''
-    args = luigi.Parameter(description="Task name and command line args for the task to run")
+    task = luigi.Parameter(description="Task instance for the QueueWorker to run")
     complete_callback = luigi.Parameter(default=None, description="Callback for when task completes")
     metadata = luigi.Parameter(default=None, description="Allows QueueSchedulers to attach data to a worker")
-
-    @property
-    def task(self):
-        try:
-            return luigi.interface.ArgParseInterface().parse(cmdline_args=self.args)[0]
-        except SystemExit as exc:
-            # if parsing the task fails, remove from queue
-            self.on_failure(exc)
-            raise
 
     def complete(self):
         is_complete = self.task.complete()
@@ -40,14 +53,20 @@ class QueueWorker(luigi.WrapperTask):
         return super(QueueWorker, self).on_failure(exception)
 
 
+class TaskDescriptor(object):
+    def __init__(self, task_name, task_args, metadata, module_name=None):
+        self.task_name = task_name
+        self.task_args = task_args
+        self.metadata = metadata
+        self.module_name = module_name
+
+
 class QueueScheduler(luigi.WrapperTask):
     ''' Luigi 'daemon' for scheduling Tasks. Should return the same tasks on repeated invocation
         of fetch_queue_tasks, as long as they haven't been completed.
     '''
     def fetch_queue_tasks(self):
-        ''' Return a list/generator of [string], or ([string], metadata):
-                [string] - commandline arguments to invoke a luigi Task
-                metadata - will be available on worker.metadata passed to worker_complete
+        ''' Return a list/generator of TaskDescriptors
         '''
         raise NotImplementedError
 
@@ -56,21 +75,24 @@ class QueueScheduler(luigi.WrapperTask):
         '''
         pass
 
-    def complete(self):
-        ''' Always run '''
-        return False
+    @property
+    def task_deserializer(self):
+        ''' Return a TaskDeserializer
+        '''
+        return ArgParseTaskDeserializer()
 
     def requires(self):
         tasks = list(self.fetch_queue_tasks())
+        required = []
+        for task in tasks:
+            worker = QueueWorker(task=None, complete_callback=self.worker_complete, metadata=task.metadata)
+            try:
+                worker.task = self.task_deserializer.deserialize(task.task_name, task.task_name, task.module_name)
+                required.append(worker)
+            except DeserializerException:
+                worker.complete_callback(worker, success=False)
 
-        if not tasks:
-            return None
-
-        if not isinstance(tasks[0], tuple):
-            tasks = [(task, None) for task in tasks]
-
-        return [QueueWorker(args=task_args, complete_callback=self.worker_complete, metadata=metadata)
-                for (task_args, metadata) in tasks]
+        return required
 
 
 class HdfsFileQueueScheduler(QueueScheduler):
@@ -89,8 +111,12 @@ class HdfsFileQueueScheduler(QueueScheduler):
         for filename in work_files[0:self.queue_workers]:
             with luigi.hdfs.HdfsTarget(filename).open('r') as work_file:
                 work_json = json.loads(work_file.read().strip())
-                args = [work_json['task_name']] + work_json['task_args']
-                yield (args, filename)
+                module_name = work_json.get('module_name')
+                yield TaskDescriptor(
+                    work_json['task_name'],
+                    work_json['task_args'],
+                    metadata=filename,
+                    module_name=module_name)
 
     def worker_complete(self, worker, success):
         if not self.done_directory:

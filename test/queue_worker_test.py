@@ -1,27 +1,21 @@
 import luigi
+import luigi.hdfs
 import luigi.queue_worker
+import tempfile
 import unittest
-
-
-class ExampleTask(luigi.Task):
-    pass
 
 
 class TaskWithArgs(luigi.Task):
     string_arg = luigi.Parameter()
 
 
-class QueueWorkerTest(unittest.TestCase):
+class ArgParseTaskDeserializerTest(unittest.TestCase):
+    def test_task_with_args(self):
+        deserializer = luigi.queue_worker.ArgParseTaskDeserializer()
+        task = deserializer.deserialize('TaskWithArgs', ['--string-arg', 'foo'])
+        self.assertEquals(task, TaskWithArgs(string_arg='foo'))
 
-    def test_queue_worker_requires(self):
-        queue_worker = luigi.queue_worker.QueueWorker(args=['ExampleTask'])
-        self.assertEquals(queue_worker.task, ExampleTask())
-
-    def test_queue_worker_missing_args(self):
-        queue_worker = luigi.queue_worker.QueueWorker(args=['TaskWithArgs'])
-        should_raise = lambda: queue_worker.task
-        self.assertRaises(Exception, should_raise)
-
-    def test_queue_worker_with_args(self):
-        queue_worker = luigi.queue_worker.QueueWorker(args=['TaskWithArgs', '--string-arg', 'foo'])
-        self.assertEquals(queue_worker.task, TaskWithArgs(string_arg='foo'))
+    def test_task_missing_args(self):
+        deserializer = luigi.queue_worker.ArgParseTaskDeserializer()
+        should_raise = lambda: deserializer.deserialize('TaskWithArgs', [])
+        self.assertRaises(luigi.queue_worker.DeserializerException, should_raise)
