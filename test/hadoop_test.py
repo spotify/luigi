@@ -113,15 +113,18 @@ class HadoopJobTest(unittest.TestCase):
         # Will attempt to run a real hadoop job, but we will secretly mock subprocess.Popen
         arglist_result = []
 
-        def Popen_fake(arglist, stderr=None):
+        def Popen_fake(arglist, stdout=None, stderr=None):
             arglist_result.append(arglist)
 
             class P(object):
                 def wait(self):
                     pass
+                def poll(self):
+                    return 0
             p = P()
             p.returncode = 0
             p.stderr = StringIO.StringIO()
+            p.stdout = StringIO.StringIO()
             return p
 
         h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
