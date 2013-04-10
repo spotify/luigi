@@ -13,8 +13,9 @@
 # the License.
 
 import unittest
+import luigi
 from luigi import hdfs
-
+from luigi.hdfs import client
 
 class TestException(Exception):
     pass
@@ -302,6 +303,87 @@ class HdfsTargetTests(unittest.TestCase):
         self.assertEqual(files.glob_exists(3), False)
         self.assertEqual(files.glob_exists(1), False)
 
+
+class _HdfsClientTest(unittest.TestCase):
+
+    def create_file(self, target):
+        fobj = target.open("w")
+        fobj.close()
+
+    def put_file(self, local_target, local_filename, target_path):
+        if local_target.exists():
+            local_target.remove()
+        self.create_file(local_target)
+
+        target = hdfs.HdfsTarget(target_path)
+        if target.exists():
+            target.remove()
+        hdfs.mkdir(target.path)
+
+        client.put(local_target.path, target_path)
+        target_file_path = target_path + "/" + local_filename
+        return hdfs.HdfsTarget(target_file_path)
+
+    def test_put(self):
+        local_dir = "test/data"
+        local_filename = "file1.dat"
+        local_path = "%s/%s" % (local_dir, local_filename)
+        target_path = "luigi_hdfs_testdir"
+
+        local_target = luigi.LocalTarget(local_path)
+        target = self.put_file(local_target, local_filename, target_path)
+        self.assertTrue(target.exists())
+        local_target.remove()
+
+    def test_get(self):
+        local_dir = "test/data"
+        local_filename = "file1.dat"
+        local_path = "%s/%s" % (local_dir, local_filename)
+        target_path = "luigi_hdfs_testdir"
+
+        local_target = luigi.LocalTarget(local_path)
+        target = self.put_file(local_target, local_filename, target_path)
+        self.assertTrue(target.exists())
+        local_target.remove()
+
+        local_copy_path = "%s/file1.dat.cp" % local_dir
+        local_copy = luigi.LocalTarget(local_copy_path)
+        if local_copy.exists():
+            local_copy.remove()
+        client.get(target.path, local_copy_path)
+        self.assertTrue(local_copy.exists())
+        local_copy.remove()
+
+    def test_getmerge(self):
+        local_dir = "test/data"
+        local_filename1 = "file1.dat"
+        local_path1 = "%s/%s" % (local_dir, local_filename1)
+        local_filename2 = "file2.dat"
+        local_path2 = "%s/%s" % (local_dir, local_filename2)
+        target_dir = "luigi_hdfs_testdir"
+
+        local_target1 = luigi.LocalTarget(local_path1)
+        target1 = self.put_file(local_target1, local_filename1, target_dir)
+        self.assertTrue(target1.exists())
+        local_target1.remove()
+
+        local_target2 = luigi.LocalTarget(local_path2)
+        target2 = self.put_file(local_target2, local_filename2, target_dir)
+        self.assertTrue(target2.exists())
+        local_target2.remove()
+
+        local_copy_path = "%s/file.dat.cp" % (local_dir)
+        local_copy = luigi.LocalTarget(local_copy_path)
+        if local_copy.exists():
+            local_copy.remove()
+        client.getmerge(target_dir, local_copy_path)
+        self.assertTrue(local_copy.exists())
+        local_copy.remove()
+
+        local_copy_crc_path = "%s/.file.dat.cp.crc" % (local_dir)
+        local_copy_crc = luigi.LocalTarget(local_copy_crc_path)
+        self.assertTrue(local_copy_crc.exists())
+        local_copy_crc.remove()
 
 if __name__ == "__main__":
     unittest.main()
