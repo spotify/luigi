@@ -17,6 +17,7 @@ import sys
 import os
 import datetime
 import subprocess
+import tempfile
 from itertools import groupby
 from operator import itemgetter
 import pickle
@@ -141,40 +142,83 @@ def flatten(sequence):
             yield item
 
 
+class HadoopJobError(RuntimeError):
+    def __init__(self, message, out=None, err=None):
+        super(HadoopJobError, self).__init__(message, out, err)
+        self.message = message
+        self.out = out
+        self.err = err
+
+
 def run_and_track_hadoop_job(arglist):
     ''' Runs the job by invoking the command from the given arglist. Finds tracking urls from the output and attempts to fetch
-    errors using those urls if the job fails. Throws runtime error with information about the error on failure and returns
-    normally otherwise.
+    errors using those urls if the job fails. Throws HadoopJobError with information about the error (including stdout and stderr
+    from the process) on failure and returns normally otherwise.
     '''
     logger.info(' '.join(arglist))
-    proc = subprocess.Popen(arglist, stderr=subprocess.PIPE)
+    proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     # We parse the output to try to find the tracking URL.
     # This URL is useful for fetching the logs of the job.
     tracking_url = None
-    while True:
-        line = proc.stderr.readline()
-        if not line:
-            break
-        print line.strip()
-        if line.find('Tracking URL') != -1:
-            tracking_url = line.strip().split('Tracking URL: ')[-1]
-    proc.wait()
+    with tempfile.TemporaryFile(mode='w+r') as out_file:
+        with tempfile.TemporaryFile(mode='w+r') as err_file:
+            while proc.poll() is None:
+                err = proc.stderr.readline()
+                print err.strip()
+                out_file.write(err)
 
-    if proc.returncode != 0:
-        # Try to fetch error logs if possible
-        if not tracking_url:
-            raise RuntimeError('Streaming job failed with exit code %d. Also, no tracking url found.' % proc.returncode)
+                out = proc.stdout.readline()
+                print out.strip()
+                err_file.write(out)
 
-        try:
-            task_failures = fetch_task_failures(tracking_url)
-        except Exception, e:
-            raise RuntimeError('Streaming job failed with exit code %d. Additionally, an error occurred when fetching data from %s: %s' % (proc.returncode, tracking_url, e))
+                if err.find('Tracking URL') != -1:
+                    tracking_url = err.strip().split('Tracking URL: ')[-1]
 
-        if not task_failures:
-            raise RuntimeError('Streaming job failed with exit code %d. Also, could not fetch output from tasks.' % proc.returncode)
+            proc.wait()
+            out_file.write(proc.stdout.read())
+            err_file.write(proc.stderr.read())
+            if proc.returncode != 0:
+                # Try to fetch error logs if possible
+                out_file.seek(0)
+                err_file.seek(0)
+                out = out_file.read()
+                err = err_file.read()
+                message = 'Streaming job failed with exit code %d. ' % proc.returncode
+                if not tracking_url:
+                    raise HadoopJobError(message + 'Also, no tracking url found.', out, err)
+
+                try:
+                    task_failures = fetch_task_failures(tracking_url)
+                except Exception, e:
+                    raise HadoopJobError(message + 'Additionally, an error occurred when fetching data from %s: %s' %
+                                         (tracking_url, e), out, err)
+
+                if not task_failures:
+                    raise HadoopJobError(message + 'Also, could not fetch output from tasks.', out, err)
+                else:
+                    raise HadoopJobError(message + 'Output from tasks below:\n%s' % task_failures, out, err)
+
+
+class HadoopFailureEmailMixin():
+    ''' Mixin to capture fields from a HadoopJobError
+    '''
+
+    def on_failure(self, exception):
+        if isinstance(exception, HadoopJobError):
+            return """Hadoop job failed with message: {message}
+
+    stdout:
+    {stdout}
+
+
+    stderr:
+    {stderr}
+      """.format(message=exception.message, stdout=exception.out, stderr=exception.err)
         else:
-            raise RuntimeError('Streaming job failed with exit code %d. Output from tasks below:\n%s' % (proc.returncode, task_failures))
+            import traceback
+            traceback_str = traceback.format_exc()
+            return "Runtime error:\n%s" % traceback_str
 
 
 def fetch_task_failures(tracking_url):
