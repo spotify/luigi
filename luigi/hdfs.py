@@ -106,6 +106,19 @@ class HdfsClient(object):
     def copy(self, path, destination):
         call_check(['hadoop', 'fs', '-cp', path, destination])
 
+    def put(self, local_path, destination):
+        call_check(['hadoop', 'fs', '-put', local_path, destination])
+
+    def get(self, path, local_destination):
+        call_check(['hadoop', 'fs', '-get', path, local_destination])
+
+    def getmerge(self, path, local_destination, new_line=False):
+        if new_line:
+            cmd = ['hadoop', 'fs', '-getmerge', '-nl', path, local_destination]
+        else:
+            cmd = ['hadoop', 'fs', '-getmerge', path, local_destination]
+        call_check(cmd)
+
     def mkdir(self, path):
         call_check(['hadoop', 'fs', '-mkdir', path])
 
