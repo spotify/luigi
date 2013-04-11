@@ -109,6 +109,35 @@ class HadoopJobTest(unittest.TestCase):
         c = self.read_output(File('luigitest-2'))
         self.assertAlmostEquals(float(c['jk']), 6.0 / 33.0)
 
+    def test_run_hadoop_job_failure(self):
+        def Popen_fake(arglist, stdout=None, stderr=None):
+            class P(object):
+                def wait(self):
+                    pass
+
+                def poll(self):
+                    return 1
+
+
+            p = P()
+            p.returncode = 1
+            stdout.write('stdout')
+            stderr.write('stderr')
+            return p
+
+        p = subprocess.Popen
+        subprocess.Popen = Popen_fake
+        try:
+            luigi.hadoop.run_and_track_hadoop_job([])
+        except luigi.hadoop.HadoopJobError as e:
+            self.assertEquals(e.out, 'stdout')
+            self.assertEquals(e.err, 'stderr')
+        else:
+            self.fail("Should have thrown HadoopJobError")
+        finally:
+            subprocess.Popen = p
+
+
     def test_run_real(self):
         # Will attempt to run a real hadoop job, but we will secretly mock subprocess.Popen
         arglist_result = []
