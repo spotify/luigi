@@ -109,7 +109,7 @@ class Worker(object):
             elif task.run == NotImplemented:
                 self.__scheduled_tasks[task_id] = task
                 self.__scheduler.add_task(self.__id, task_id, status=PENDING, runnable=False)
-                logger.warning('Task %s is is not complete and run() is not implemented. Probably a missing external dependency.', task_id)
+                logger.warning('Task %s is not complete and run() is not implemented. Probably a missing external dependency.', task_id)
             else:
                 self.__scheduled_tasks[task_id] = task
                 deps = task.deps()
