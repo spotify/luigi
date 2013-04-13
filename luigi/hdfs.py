@@ -90,10 +90,29 @@ class HdfsClient(object):
             else:
                 cmd = ['hadoop', 'fs', '-rmr']
         else:
-            cmd = ['hadoop', 'fs', '-rm']
+            cmd =  ['hadoop', 'fs', '-rm']
         if skip_trash:
-            cmd.append("-skipTrash")
-        cmd.append(path)
+             cmd = cmd + ['-skipTrash']
+        cmd = cmd + [path]
+        call_check(cmd)
+
+    def chmod(self, path, permissions, recursive=False):
+        if recursive:
+            cmd = ['hadoop', 'fs', '-chmod', '-R', permissions, path]
+        else:
+            cmd = ['hadoop', 'fs', '-chmod', permissions, path]
+        call_check(cmd)
+
+    def chown(self, path, owner, group, recursive=False):
+        if owner is None:
+            owner = ''
+        if group is None:
+            group = ''
+        ownership = "%s:%s" % (owner, group)
+        if recursive:
+            cmd = ['hadoop', 'fs', '-chown', '-R', ownership, path]
+        else:
+            cmd = ['hadoop', 'fs', '-chown', ownership, path]
         call_check(cmd)
 
     def count(self, path):
@@ -123,11 +142,14 @@ class HdfsClient(object):
         call_check(['hadoop', 'fs', '-mkdir', path])
 
     def listdir(self, path, ignore_directories=False, ignore_files=False,
-                include_size=False, include_type=False, include_time=False):
+                include_size=False, include_type=False, include_time=False, recursive=False):
         if not path:
             path = "."  # default to current/home catalog
 
-        cmd = ['hadoop', 'fs', '-ls', path]
+        if recursive:
+            cmd = ['hadoop', 'fs', '-ls', '-R', path]
+        else:
+            cmd = ['hadoop', 'fs', '-ls', path]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         lines = proc.stdout
 
@@ -303,8 +325,8 @@ in luigi. Use target.path instead", stacklevel=2)
             except NotImplementedError:
                 return self.format.pipe_writer(HdfsAtomicWritePipe(self.path))
 
-    def remove(self):
-        remove(self.path)
+    def remove(self, skip_trash=False):
+        remove(self.path, skip_trash=skip_trash)
 
     def rename(self, path, fail_if_exists=False):
         # rename does not change self.path, so be careful with assumptions

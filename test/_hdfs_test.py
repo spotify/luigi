@@ -39,7 +39,7 @@ class AtomicHdfsOutputPipeTests(unittest.TestCase):
     def test_atomicity(self):
         testpath = "luigi_hdfs_testfile"
         if hdfs.exists(testpath):
-            hdfs.remove(testpath)
+            hdfs.remove(testpath, skip_trash=True)
 
         pipe = hdfs.HdfsAtomicWritePipe(testpath)
         self.assertFalse(hdfs.exists(testpath))
@@ -49,7 +49,7 @@ class AtomicHdfsOutputPipeTests(unittest.TestCase):
     def test_with_close(self):
         testpath = "luigi_hdfs_testfile"
         if hdfs.exists(testpath):
-            hdfs.remove(testpath)
+            hdfs.remove(testpath, skip_trash=True)
 
         with hdfs.HdfsAtomicWritePipe(testpath) as fobj:
             fobj.write('hej')
@@ -59,7 +59,7 @@ class AtomicHdfsOutputPipeTests(unittest.TestCase):
     def test_with_noclose(self):
         testpath = "luigi_hdfs_testfile"
         if hdfs.exists(testpath):
-            hdfs.remove(testpath)
+            hdfs.remove(testpath, skip_trash=True)
 
         def foo():
             with hdfs.HdfsAtomicWritePipe(testpath) as fobj:
@@ -73,7 +73,7 @@ class HdfsAtomicWriteDirPipeTests(unittest.TestCase):
     def setUp(self):
         self.path = "luigi_hdfs_testfile"
         if hdfs.exists(self.path):
-            hdfs.remove(self.path)
+            hdfs.remove(self.path, skip_trash=True)
 
     def test_atomicity(self):
         pipe = hdfs.HdfsAtomicWriteDirPipe(self.path)
@@ -114,7 +114,7 @@ class _HdfsFormatTest(unittest.TestCase):
     def setUp(self):
         self.target = hdfs.HdfsTarget("luigi_hdfs_testfile", format=self.format)
         if self.target.exists():
-            self.target.remove()
+            self.target.remove(skip_trash=True)
 
     def test_with_write_success(self):
         with self.target.open('w') as fobj:
@@ -162,7 +162,7 @@ class HdfsTargetTests(unittest.TestCase):
     def test_slow_exists(self):
         target = hdfs.HdfsTarget("luigi_hdfs_testfile")
         try:
-            target.remove()
+            target.remove(skip_trash=True)
         except:
             pass
 
@@ -181,7 +181,7 @@ class HdfsTargetTests(unittest.TestCase):
     def test_atomicity(self):
         target = hdfs.HdfsTarget("luigi_hdfs_testfile")
         if target.exists():
-            target.remove()
+            target.remove(skip_trash=True)
 
         fobj = target.open("w")
         self.assertFalse(target.exists())
@@ -191,7 +191,7 @@ class HdfsTargetTests(unittest.TestCase):
     def test_readback(self):
         target = hdfs.HdfsTarget("luigi_hdfs_testfile")
         if target.exists():
-            target.remove()
+            target.remove(skip_trash=True)
 
         origdata = 'lol\n'
         fobj = target.open("w")
@@ -205,7 +205,7 @@ class HdfsTargetTests(unittest.TestCase):
     def test_with_close(self):
         target = hdfs.HdfsTarget("luigi_hdfs_testfile")
         if target.exists():
-            target.remove()
+            target.remove(skip_trash=True)
 
         with target.open('w') as fobj:
             fobj.write('hej\n')
@@ -215,7 +215,7 @@ class HdfsTargetTests(unittest.TestCase):
     def test_with_exception(self):
         target = hdfs.HdfsTarget("luigi_hdfs_testfile")
         if target.exists():
-            target.remove()
+            target.remove(skip_trash=True)
 
         def foo():
             with target.open('w') as fobj:
@@ -228,7 +228,7 @@ class HdfsTargetTests(unittest.TestCase):
         parent = "luigi_hdfs_testdir"
         target = hdfs.HdfsTarget("%s/testfile" % parent)
         if hdfs.exists(parent):
-            hdfs.remove(parent)
+            hdfs.remove(parent, skip_trash=True)
         self.assertFalse(hdfs.exists(parent))
         fobj = target.open('w')
         fobj.write('lol\n')
@@ -240,7 +240,7 @@ class HdfsTargetTests(unittest.TestCase):
         path = "luigi_hdfs_testfile"
         target = hdfs.HdfsTarget(path, is_tmp=True)
         if target.exists():
-            target.remove()
+            target.remove(skip_trash=True)
         with target.open('w') as fobj:
             fobj.write('lol\n')
         self.assertTrue(target.exists())
@@ -260,7 +260,7 @@ class HdfsTargetTests(unittest.TestCase):
         target = hdfs.HdfsTarget(is_tmp=True)
         target2 = hdfs.HdfsTarget("luigi_hdfs_testdir")
         if target2.exists():
-            target2.remove()
+            target2.remove(skip_trash=True)
         with target.open('w'):
             pass
         self.assertTrue(target.exists())
@@ -270,7 +270,7 @@ class HdfsTargetTests(unittest.TestCase):
 
     def test_rename_no_parent(self):
         if hdfs.exists("foo"):
-            hdfs.remove("foo")
+            hdfs.remove("foo", skip_trash=True)
 
         target1 = hdfs.HdfsTarget(is_tmp=True)
         target2 = hdfs.HdfsTarget("foo/bar")
@@ -284,7 +284,7 @@ class HdfsTargetTests(unittest.TestCase):
     def test_glob_exists(self):
         target = hdfs.HdfsTarget("luigi_hdfs_testdir")
         if target.exists():
-            target.remove()
+            target.remove(skip_trash=True)
         hdfs.mkdir(target.path)
         t1 = hdfs.HdfsTarget(target.path + "/part-00001")
         t2 = hdfs.HdfsTarget(target.path + "/part-00002")
@@ -312,12 +312,12 @@ class _HdfsClientTest(unittest.TestCase):
 
     def put_file(self, local_target, local_filename, target_path):
         if local_target.exists():
-            local_target.remove()
+            local_target.remove(skip_trash=True)
         self.create_file(local_target)
 
         target = hdfs.HdfsTarget(target_path)
         if target.exists():
-            target.remove()
+            target.remove(skip_trash=True)
         hdfs.mkdir(target.path)
 
         client.put(local_target.path, target_path)
@@ -333,7 +333,7 @@ class _HdfsClientTest(unittest.TestCase):
         local_target = luigi.LocalTarget(local_path)
         target = self.put_file(local_target, local_filename, target_path)
         self.assertTrue(target.exists())
-        local_target.remove()
+        local_target.remove(skip_trash=True)
 
     def test_get(self):
         local_dir = "test/data"
@@ -344,15 +344,15 @@ class _HdfsClientTest(unittest.TestCase):
         local_target = luigi.LocalTarget(local_path)
         target = self.put_file(local_target, local_filename, target_path)
         self.assertTrue(target.exists())
-        local_target.remove()
+        local_target.remove(skip_trash=True)
 
         local_copy_path = "%s/file1.dat.cp" % local_dir
         local_copy = luigi.LocalTarget(local_copy_path)
         if local_copy.exists():
-            local_copy.remove()
+            local_copy.remove(skip_trash=True)
         client.get(target.path, local_copy_path)
         self.assertTrue(local_copy.exists())
-        local_copy.remove()
+        local_copy.remove(skip_trash=True)
 
     def test_getmerge(self):
         local_dir = "test/data"
@@ -365,25 +365,25 @@ class _HdfsClientTest(unittest.TestCase):
         local_target1 = luigi.LocalTarget(local_path1)
         target1 = self.put_file(local_target1, local_filename1, target_dir)
         self.assertTrue(target1.exists())
-        local_target1.remove()
+        local_target1.remove(skip_trash=True)
 
         local_target2 = luigi.LocalTarget(local_path2)
         target2 = self.put_file(local_target2, local_filename2, target_dir)
         self.assertTrue(target2.exists())
-        local_target2.remove()
+        local_target2.remove(skip_trash=True)
 
         local_copy_path = "%s/file.dat.cp" % (local_dir)
         local_copy = luigi.LocalTarget(local_copy_path)
         if local_copy.exists():
-            local_copy.remove()
+            local_copy.remove(skip_trash=True)
         client.getmerge(target_dir, local_copy_path)
         self.assertTrue(local_copy.exists())
-        local_copy.remove()
+        local_copy.remove(skip_trash=True)
 
         local_copy_crc_path = "%s/.file.dat.cp.crc" % (local_dir)
         local_copy_crc = luigi.LocalTarget(local_copy_crc_path)
         self.assertTrue(local_copy_crc.exists())
-        local_copy_crc.remove()
+        local_copy_crc.remove(skip_trash=True)
 
 if __name__ == "__main__":
     unittest.main()
