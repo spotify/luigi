@@ -47,27 +47,140 @@ def run_hive_script(script):
     run_hive(['-f', script])
 
 
-def table_location(db, table, partition_spec=None):
-    """
-    Returns the location of a Hive table/partitions, or None.
-    partition_spec should be a string returned by partition_spec()
-    """
-    cmd = "use {0}; describe formatted {1}".format(db, table)
-    if partition_spec:
-        cmd += " PARTITION ({0})".format(partition_spec)
+class HiveClient(object): # interface
+    __metaclass__ = abc.ABCMeta
 
-    stdout = run_hive_cmd(cmd)
+    @abc.abstractmethod
+    def table_location(self, table, database='default', partition={}):
+        """
+        Returns location of db.table (or db.table.partition). partition is a dict of partition key to
+        value.
+        """
+        pass
 
-    for line in stdout.split("\n"):
-        if "Location:" in line:
-            return line.split("\t")[1]
+    @abc.abstractmethod
+    def table_schema(self, table, database='default'):
+        """
+        Returns list of [(name, type)] for each column in database.table
+        """
+        pass
+
+    @abc.abstractmethod
+    def table_exists(self, table, database='default', partition={}):
+        """
+        Returns true iff db.table (or db.table.partition) exists. partition is a dict of partition key to
+        value.
+        """
+        pass
+
+    @abc.abstractmethod
+    def partition_spec(self, partition):
+        """
+        Turn a dict into a string partition specification
+        """
+        pass
 
 
-def partition_spec(partition):
-    """
-    Turns a dict into the a Hive partition specification string
-    """
-    return ','.join(["{0}='{1}'".format(k, v) for (k, v) in partition.items()])
+class HiveCommandClient(HiveClient):
+    '''
+    Uses `hive` invocations to find information
+    '''
+    def table_location(self, table, database='default', partition={}):
+        cmd = "use {0}; describe formatted {1}".format(database, table)
+        if partition:
+            cmd += " PARTITION ({0})".format(self.partition_spec(partition))
+
+        stdout = run_hive_cmd(cmd)
+
+        for line in stdout.split("\n"):
+            if "Location:" in line:
+                return line.split("\t")[1]
+
+    def table_exists(self, table, database='default', partition={}):
+        if not partition:
+            stdout = run_hive_cmd('use {0}; describe {1}'.format(database, table))
+
+            return not "does not exist" in stdout
+        else:
+            stdout = run_hive_cmd("""use %s; show partitions %s partition
+                                (%s)""" % (database, table, self.partition_spec(partition)))
+
+            if stdout:
+                return True
+            else:
+                return False
+
+    def table_schema(self, table, database='default'):
+        describe = run_hive_cmd("use {0}; describe {1}".format(database, table))
+        if not describe or "does not exist" in describe:
+            return None
+        return [tuple(line.strip().split("\t")) for line in describe.strip().split("\n")]
+
+    def partition_spec(self, partition):
+        """
+        Turns a dict into the a Hive partition specification string
+        """
+        return ','.join(["{0}='{1}'".format(k, v) for (k, v) in partition.items()])
+
+
+class MetastoreClient(HiveClient):
+    def table_location(self, table, database='default', partition={}):
+        with HiveThriftContext() as client:
+            if partition:
+                partition_str = self.partition_spec(partition)
+                thrift_table = client.get_partition_by_name(database, table, partition_str)
+            else:
+                thrift_table = client.get_table(database, table)
+            return thrift_table.sd.location
+
+    def table_exists(self, table, database='default', partition={}):
+        with HiveThriftContext() as client:
+            if not partition:
+                return table in client.get_all_tables(database)
+            else:
+                partition_str = self.partition_spec(partition)
+                return partition_str in client.get_partition_names(database, table, partition_str)
+
+    def table_schema(self, table, database='default'):
+        with HiveThriftContext() as client:
+            return [(field_schema.name, field_schema.type) for field_schema in client.get_schema(database, table)]
+
+    def partition_spec(self, partition):
+        return "/".join("%s=%s" % (k, v) for (k, v) in partition.items())
+
+
+class HiveThriftContext(object):
+    '''
+    Context manager for hive metastore client
+    '''
+    def __enter__(self):
+        try:
+            from thrift import Thrift
+            from thrift.transport import TSocket
+            from thrift.transport import TTransport
+            from thrift.protocol import TBinaryProtocol
+            from hive_metastore import ThriftHiveMetastore
+            config = luigi.interface.get_config()
+            host = config.get('hive', 'metastore_host')
+            port = config.getint('hive', 'metastore_port')
+            transport = TSocket.TSocket(host, port)
+            transport = TTransport.TBufferedTransport(transport)
+            protocol = TBinaryProtocol.TBinaryProtocol(transport)
+            transport.open()
+            self.transport = transport
+            return ThriftHiveMetastore.Client(protocol)
+        except ImportError:
+          raise Exception('Could not import Hive thrift library')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.transport.close()
+
+
+client = HiveCommandClient()
+table_location = client.table_location
+table_exists = client.table_exists
+table_schema = client.table_schema
+partition_spec = client.partition_spec
 
 
 class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
@@ -115,9 +228,7 @@ class HiveTableTarget(luigi.Target):
         self.hive_cmd = load_hive_cmd()
 
     def exists(self):
-        stdout = run_hive_cmd('use {0}; describe {1}'.format(self.database, self.table))
-
-        return not "does not exist" in stdout
+        return table_exists(self.table, self.database)
 
     @property
     def path(self):
@@ -138,22 +249,15 @@ class HivePartitionTarget(luigi.Target):
     def __init__(self, table, partition, database='default'):
         self.database = database
         self.table = table
-        # change partitions to the way hive expects them
-        self.partition_str = partition_spec(partition)
+        self.partition = partition
 
     def exists(self):
-        stdout = run_hive_cmd("""use {self.database}; show partitions {self.table} partition
-                            ({self.partition_str})""".format(self=self))
-
-        if stdout:
-            return True
-        else:
-            return False
+        return table_exists(self.table, self.database, self.partition)
 
     @property
     def path(self):
         """Returns the path for this HiveTablePartitionTarget's data"""
-        location = table_location(self.database, self.table, self.partition_str)
+        location = table_location(self.database, self.table, self.partition)
         if not location:
             raise Exception("Couldn't find location for table: {0}".format(str(self)))
         return location
