@@ -37,14 +37,14 @@ def run_hive(args):
 
 def run_hive_cmd(hivecmd):
     """Runs the given hive query and returns stdout"""
-    run_hive(['-e', hivecmd])
+    return run_hive(['-e', hivecmd])
 
 
 def run_hive_script(script):
     """Runs the contents of the given script in hive and returns stdout"""
     if not os.path.isfile(script):
         raise RuntimeError("Hive script: {0} does not exist.".format(script))
-    run_hive(['-f', script])
+    return run_hive(['-f', script])
 
 
 def table_location(db, table, partition_spec=None):

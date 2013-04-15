@@ -5,9 +5,12 @@ import luigi.hive
 
 
 class HiveTest(unittest.TestCase):
+    count = 0
 
     def mock_hive_cmd(self, args):
         self.last_hive_cmd = args
+        self.count += 1
+        return "statement{0}".format(self.count)
 
     def setUp(self):
         self.run_hive_cmd_saved = luigi.hive.run_hive
@@ -17,8 +20,10 @@ class HiveTest(unittest.TestCase):
         luigi.hive.run_hive = self.run_hive_cmd_saved
 
     def testRunHiveCommand(self):
-        luigi.hive.run_hive_cmd("foo")
+        pre_count = self.count
+        res = luigi.hive.run_hive_cmd("foo")
         self.assertEquals(["-e", "foo"], self.last_hive_cmd)
+        self.assertEquals("statement{0}".format(pre_count+1), res)
 
     def testRunHiveScriptNotExists(self):
         def test():
@@ -27,5 +32,8 @@ class HiveTest(unittest.TestCase):
 
     def testRunHiveScriptExists(self):
         with tempfile.NamedTemporaryFile(delete=True) as f:
-            luigi.hive.run_hive_script(f.name)
+            pre_count = self.count
+            res = luigi.hive.run_hive_script(f.name)
             self.assertEquals(["-f", f.name], self.last_hive_cmd)
+            self.assertEquals("statement{0}".format(pre_count+1), res)
+
