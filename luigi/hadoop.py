@@ -17,6 +17,7 @@ import sys
 import os
 import datetime
 import subprocess
+import tempfile
 from itertools import groupby
 from operator import itemgetter
 import pickle
@@ -141,40 +142,61 @@ def flatten(sequence):
             yield item
 
 
+class HadoopJobError(RuntimeError):
+    def __init__(self, message, out=None, err=None):
+        super(HadoopJobError, self).__init__(message, out, err)
+        self.message = message
+        self.out = out
+        self.err = err
+
+
 def run_and_track_hadoop_job(arglist):
     ''' Runs the job by invoking the command from the given arglist. Finds tracking urls from the output and attempts to fetch
-    errors using those urls if the job fails. Throws runtime error with information about the error on failure and returns
-    normally otherwise.
+    errors using those urls if the job fails. Throws HadoopJobError with information about the error (including stdout and stderr
+    from the process) on failure and returns normally otherwise.
     '''
     logger.info(' '.join(arglist))
-    proc = subprocess.Popen(arglist, stderr=subprocess.PIPE)
 
-    # We parse the output to try to find the tracking URL.
-    # This URL is useful for fetching the logs of the job.
-    tracking_url = None
-    while True:
-        line = proc.stderr.readline()
-        if not line:
-            break
-        print line.strip()
-        if line.find('Tracking URL') != -1:
-            tracking_url = line.strip().split('Tracking URL: ')[-1]
-    proc.wait()
+    def track_process(arglist, out_file, err_file):
+        proc = subprocess.Popen(arglist, stdout=out_file, stderr=err_file)
+        logger.info("Hadoop process output can be found at [%s] and [%s]" % (out_file.name, err_file.name))
+        proc.wait()
+        # We parse the output to try to find the tracking URL.
+        # This URL is useful for fetching the logs of the job.
+        out_file.seek(0)
+        err_file.seek(0)
+        out = out_file.read()
+        err = err_file.read()
+        tracking_url = None
+        for err_line in err.split('\n'):
+          print err_line
+          if err_line.find('Tracking URL') != -1:
+            tracking_url = err.strip().split('Tracking URL: ')[-1]
+        for out_line in out.split('\n'):
+          print out_line
 
-    if proc.returncode != 0:
+        if proc.returncode == 0:
+            return
+
         # Try to fetch error logs if possible
+        message = 'Streaming job failed with exit code %d. ' % proc.returncode
         if not tracking_url:
-            raise RuntimeError('Streaming job failed with exit code %d. Also, no tracking url found.' % proc.returncode)
+            raise HadoopJobError(message + 'Also, no tracking url found.', out, err)
 
         try:
             task_failures = fetch_task_failures(tracking_url)
         except Exception, e:
-            raise RuntimeError('Streaming job failed with exit code %d. Additionally, an error occurred when fetching data from %s: %s' % (proc.returncode, tracking_url, e))
+            raise HadoopJobError(message + 'Additionally, an error occurred when fetching data from %s: %s' %
+                                 (tracking_url, e), out, err)
 
         if not task_failures:
-            raise RuntimeError('Streaming job failed with exit code %d. Also, could not fetch output from tasks.' % proc.returncode)
+            raise HadoopJobError(message + 'Also, could not fetch output from tasks.', out, err)
         else:
-            raise RuntimeError('Streaming job failed with exit code %d. Output from tasks below:\n%s' % (proc.returncode, task_failures))
+            raise HadoopJobError(message + 'Output from tasks below:\n%s' % task_failures, out, err)
+
+    with tempfile.NamedTemporaryFile(mode='w+r', prefix="stdout") as out_file:
+        with tempfile.NamedTemporaryFile(mode='w+r', prefix="stderr") as err_file:
+            track_process(arglist, out_file, err_file)
 
 
 def fetch_task_failures(tracking_url):
@@ -455,6 +477,21 @@ class BaseHadoopJobTask(luigi.Task):
     def deps(self):
         # Overrides the default implementation
         return luigi.task.flatten(self.requires_hadoop()) + luigi.task.flatten(self.requires_local())
+
+    def on_failure(self, exception):
+        if isinstance(exception, HadoopJobError):
+            return """Hadoop job failed with message: {message}
+
+    stdout:
+    {stdout}
+
+
+    stderr:
+    {stderr}
+      """.format(message=exception.message, stdout=exception.out, stderr=exception.err)
+        else:
+            return super(BaseHadoopJobTask, self).on_failure()
+
 
 
 class JobTask(BaseHadoopJobTask):
