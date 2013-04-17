@@ -28,6 +28,12 @@ class MockFile(target.Target):
     def exists(self,):
         return self._fn in MockFile._file_contents
 
+    def rename(self, path, fail_if_exists=False):
+        if fail_if_exists and path in MockFile._file_contents:
+            raise RuntimeError('Destination exists: %s' % path)
+        contents = MockFile._file_contents.pop(self._fn)
+        MockFile._file_contents[path] = contents
+
     @property
     def path(self):
         return self._fn
