@@ -212,6 +212,9 @@ class Task(object):
         self.task_id = '%s(%s)' % (self.task_family, ', '.join(task_id_parts))
         self.__hash = hash(self.task_id)
 
+    def initialized(self):
+        return hasattr(self, 'task_id')
+
     @classmethod
     def from_input(cls, params, global_params):
         # Creates an instance from a str->str hash (to be used for cmd line interaction etc)
