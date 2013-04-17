@@ -32,6 +32,8 @@ except ImportError:
 
 logger = logging.getLogger('luigi-interface')
 
+class TaskException(Exception):
+    pass
 
 class Worker(object):
     """ Worker object communicates with a scheduler.
@@ -72,6 +74,13 @@ class Worker(object):
         k.start()
 
     def add(self, task):
+        if not isinstance(task, Task):
+            raise TaskException('Can not schedule non-task %s' % task)
+
+        if not task.initialized():
+            # we can't get the repr of it since it's not initialized...
+            raise TaskException('Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__)
+
         try:
             task_id = task.task_id
 
