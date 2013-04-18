@@ -162,29 +162,33 @@ class Task(object):
 
         params_dict = dict(params)
 
+        # In case any exceptions are thrown, create a helpful description of how the Task was invoked
+        # TODO: should we detect non-reprable arguments? These will lead to mysterious errors
+        exc_desc = '%s[args=%s, kwargs=%s]' % (cls.__name__, args, kwargs)
+
         # Fill in the positional arguments
         positional_params = [(n, p) for n, p in params if not p.is_global]
         for i, arg in enumerate(args):
             if i >= len(positional_params):
-                raise parameter.UnknownParameterException('Class %s: takes at most %d parameters (%d given)' % (cls.__name__, len(positional_params), len(args)))
+                raise parameter.UnknownParameterException('%s: takes at most %d parameters (%d given)' % (exc_desc, len(positional_params), len(args)))
             param_name, param_obj = positional_params[i]
             result[param_name] = arg
 
         # Then the optional arguments
         for param_name, arg in kwargs.iteritems():
             if param_name in result:
-                raise parameter.DuplicateParameterException('Class %s: parameter %s was already set as a positional parameter' % (cls.__name__, param_name))
+                raise parameter.DuplicateParameterException('%s: parameter %s was already set as a positional parameter' % (exc_desc, param_name))
             if param_name not in params_dict:
-                raise parameter.UnknownParameterException('Class %s: unknown parameter %s' % (cls.__name__, param_name))
+                raise parameter.UnknownParameterException('%s: unknown parameter %s' % (exc_desc, param_name))
             if params_dict[param_name].is_global:
-                raise parameter.ParameterException('Class %s: can not override global parameter %s' % (cls.__name__, param_name))
+                raise parameter.ParameterException('%s: can not override global parameter %s' % (exc_desc, param_name))
             result[param_name] = arg
 
         # Then use the defaults for anything not filled in
         for param_name, param_obj in params:
             if param_name not in result:
                 if not param_obj.has_default:
-                    raise parameter.MissingParameterException("'%s' tasks requires the '%s' parameter to be set" % (cls.__name__, param_name))
+                    raise parameter.MissingParameterException("%s: requires the '%s' parameter to be set" % (exc_desc, param_name))
                 result[param_name] = param_obj.default
 
         def list_to_tuple(x):
