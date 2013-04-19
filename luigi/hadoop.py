@@ -490,7 +490,7 @@ class BaseHadoopJobTask(luigi.Task):
     {stderr}
       """.format(message=exception.message, stdout=exception.out, stderr=exception.err)
         else:
-            return super(BaseHadoopJobTask, self).on_failure()
+            return super(BaseHadoopJobTask, self).on_failure(exception)
 
 
 
