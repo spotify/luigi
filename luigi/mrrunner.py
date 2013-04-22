@@ -36,19 +36,15 @@ class Runner(object):
         self.job = job or pickle.load(open("job-instance.pickle"))
         self.job._setup_remote()
 
-    def run(self, kind):
-        try:
-            if kind == "map":
-                self.job._run_mapper()
-            if kind == "combiner":
-                self.job._run_combiner()
-            elif kind == "reduce":
-                self.job._run_reducer()
-        except:
-            # Dump encoded data that we will try to fetch using mechanize
-            exc = traceback.format_exc()
-            self.job._print_exception(exc)
-            raise
+    def run(self, kind, stdin=sys.stdin, stdout=sys.stdout):
+        if kind == "map":
+            self.job._run_mapper(stdin, stdout)
+        elif kind == "combiner":
+            self.job._run_combiner(stdin, stdout)
+        elif kind == "reduce":
+            self.job._run_reducer(stdin, stdout)
+        else:
+            raise Exception('weird command: %s' % kind)
 
     def extract_packages_archive(self):
         if not os.path.exists("packages.tar"):
@@ -62,18 +58,28 @@ class Runner(object):
             sys.path.insert(0, '')
 
 
-def main():
+def print_exception(exc):
+    tb = traceback.format_exc(exc)
+    print >> sys.stderr, 'luigi-exc-hex=%s' % tb.encode('hex')
+
+
+def main(args=sys.argv, stdin=sys.stdin, stdout=sys.stdout, print_exception=print_exception):
     """Run either the mapper or the reducer from the class instance in the file "job-instance.pickle".
 
     Arguments:
 
     kind -- is either map or reduce
     """
-    # Set up logging.
-    logging.basicConfig(level=logging.WARN)
-
-    kind = sys.argv[1]
-    Runner().run(kind)
+    try:
+        # Set up logging.
+        logging.basicConfig(level=logging.WARN)
+    
+        kind = args[1]
+        Runner().run(kind, stdin=stdin, stdout=stdout)
+    except Exception, exc:
+        # Dump encoded data that we will try to fetch using mechanize
+        print_exception(exc)
+        raise
 
 if __name__ == '__main__':
     main()
