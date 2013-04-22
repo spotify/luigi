@@ -185,7 +185,8 @@ class MrrunnerTest(unittest.TestCase):
         # We should abstract these things out into helper methods in luigi.hadoop so
         # that we don't have to recreate all steps
         job = WordCountJob()
-        luigi.hadoop.create_packages_archive([], 'packages.tar')
+        packages = [__import__(job.__module__, None, None, 'dummy')]
+        luigi.hadoop.create_packages_archive(packages, 'packages.tar')
         job._dump()
         input = StringIO.StringIO('xyz fdklslkjsdf kjfdk jfdkj kdjf kjdkfj dkjf fdj j j k k l l')
         output = StringIO.StringIO()
@@ -193,7 +194,8 @@ class MrrunnerTest(unittest.TestCase):
 
     def test_mrrunner_failure(self):
         job = FailingJob()
-        luigi.hadoop.create_packages_archive([], 'packages.tar')
+        packages = [__import__(job.__module__, None, None, 'dummy')]
+        luigi.hadoop.create_packages_archive(packages, 'packages.tar')
         job._dump()
         excs = []
         def print_exception(traceback):
