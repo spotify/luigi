@@ -680,9 +680,6 @@ class JobTask(BaseHadoopJobTask):
         outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.combiner, self.final_combiner)
         self.internal_writer(outputs, stdout)
 
-    def _print_exception(self, exc):
-        print >> sys.stderr, 'luigi-exc-hex=%s' % exc.encode('hex')
-
     def internal_reader(self, input_stream):
         """Reader which uses python eval on each part of a tab separated string.
         Yields a tuple of python objects."""

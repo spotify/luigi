@@ -17,6 +17,7 @@ import subprocess
 import luigi
 import luigi.hadoop
 import luigi.hdfs
+import luigi.mrrunner
 from luigi.mock import MockFile
 import StringIO
 import luigi.notifications
@@ -166,6 +167,45 @@ class HadoopJobTest(unittest.TestCase):
 
         self.assertEquals(len(arglist_result), 1)
         self.assertEquals(arglist_result[0][0:3], ['hadoop', 'jar', 'test.jar'])
+
+
+class FailingJobException(Exception):
+    pass
+
+
+class FailingJob(TestJobTask):
+    def init_hadoop(self):
+        raise FailingJobException('failure')
+
+
+class MrrunnerTest(unittest.TestCase):
+    def test_mrrunner(self):
+        # TODO: we're doing a lot of stuff here that depends on the internals of how
+        # we run Hadoop streaming job (in particular the create_packages_archive).
+        # We should abstract these things out into helper methods in luigi.hadoop so
+        # that we don't have to recreate all steps
+        job = WordCountJob()
+        luigi.hadoop.create_packages_archive([], 'packages.tar')
+        job._dump()
+        input = StringIO.StringIO('xyz fdklslkjsdf kjfdk jfdkj kdjf kjdkfj dkjf fdj j j k k l l')
+        output = StringIO.StringIO()
+        luigi.mrrunner.main(args=['mrrunner.py', 'map'], stdin=input, stdout=output)
+
+    def test_mrrunner_failure(self):
+        job = FailingJob()
+        luigi.hadoop.create_packages_archive([], 'packages.tar')
+        job._dump()
+        excs = []
+        def print_exception(traceback):
+            excs.append(traceback)
+
+        def run():
+            input = StringIO.StringIO()
+            output = StringIO.StringIO()
+            luigi.mrrunner.main(args=['mrrunner.py', 'map'], stdin=input, stdout=output, print_exception=print_exception)
+        self.assertRaises(FailingJobException, run)        
+        self.assertEquals(len(excs), 1) # should have been set
+        self.assertTrue(type(excs[0]), FailingJobException)
 
 if __name__ == '__main__':
     HadoopJobTest.test_run_real()
