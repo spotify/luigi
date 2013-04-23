@@ -157,23 +157,24 @@ def run_and_track_hadoop_job(arglist):
     '''
     logger.info(' '.join(arglist))
 
-    def track_process(arglist, out_file, err_file):
-        proc = subprocess.Popen(arglist, stdout=out_file, stderr=err_file)
-        logger.info("Hadoop process output can be found at [%s] and [%s]" % (out_file.name, err_file.name))
-        proc.wait()
+    def track_process(arglist):
+        proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
         # We parse the output to try to find the tracking URL.
         # This URL is useful for fetching the logs of the job.
-        out_file.seek(0)
-        err_file.seek(0)
-        out = out_file.read()
-        err = err_file.read()
         tracking_url = None
-        for err_line in err.split('\n'):
-          print err_line
-          if err_line.find('Tracking URL') != -1:
-            tracking_url = err.strip().split('Tracking URL: ')[-1]
-        for out_line in out.split('\n'):
-          print out_line
+        err_lines = []
+        while proc.poll() is None:
+            err_line = proc.stderr.readline()
+            err_lines.append(err_line)
+            if err_line.strip():
+                logger.info(err_line.strip())
+            if err_line.find('Tracking URL') != -1:
+                tracking_url = err_line.strip().split('Tracking URL: ')[-1]
+
+        # Read the rest + stdout
+        err = ''.join(err_lines + [err_line for err_line in proc.stderr])
+        out = ''.join([out_line for out_line in proc.stdout])
 
         if proc.returncode == 0:
             return
@@ -194,9 +195,7 @@ def run_and_track_hadoop_job(arglist):
         else:
             raise HadoopJobError(message + 'Output from tasks below:\n%s' % task_failures, out, err)
 
-    with tempfile.NamedTemporaryFile(mode='w+r', prefix="stdout") as out_file:
-        with tempfile.NamedTemporaryFile(mode='w+r', prefix="stderr") as err_file:
-            track_process(arglist, out_file, err_file)
+    track_process(arglist)
 
 
 def fetch_task_failures(tracking_url):

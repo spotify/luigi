@@ -122,8 +122,14 @@ class HadoopJobTest(unittest.TestCase):
 
             p = P()
             p.returncode = 1
-            stdout.write('stdout')
-            stderr.write('stderr')
+            if stdout == subprocess.PIPE:
+                p.stdout = StringIO.StringIO('stdout')
+            else:
+                stdout.write('stdout')
+            if stderr == subprocess.PIPE:
+                p.stderr = StringIO.StringIO('stderr')
+            else:
+                stderr.write('stderr')
             return p
 
         p = subprocess.Popen
