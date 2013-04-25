@@ -13,18 +13,23 @@
 # the License.
 
 try:
-  from setuptools import setup
+    from setuptools import setup
 except:
-  from distutils.core import setup
+    from distutils.core import setup
 
-long_description = []
-for line in open('README.md'):
-    # Strip all images from the pypi description
-    if not line.startswith('!') and not line.startswith('```'):
-        long_description.append(line)
+try:
+    long_description = []
+    for line in open('README.md'):
+        # Strip all images from the pypi description
+        if not line.startswith('!') and not line.startswith('```'):
+            long_description.append(line)
+except IOError:
+    # Temporary workaround for pip install
+    # See https:/x/github.com/spotify/luigi/issues/46
+    long_description = ''
 
 setup(name='luigi',
-      version='1.0',
+      version='1.0.3',
       description='Workflow mgmgt + task scheduling + dependency resolution',
       long_description=''.join(long_description),
       author='Erik Bernhardsson',
