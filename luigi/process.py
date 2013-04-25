@@ -39,7 +39,7 @@ def write_pid(pidfile):
         fobj.write(str(os.getpid()))
 
 
-def daemonize(cmd, pidfile=None):
+def daemonize(cmd, logfile, pidfile=None):
     import daemon
     existing_pid = check_pid(pidfile)
     if pidfile and existing_pid:
