@@ -41,4 +41,9 @@ setup(name='luigi',
       package_data={
         'luigi': ['static/*']
         },
+      entry_points={
+        'console_scripts': [
+           'luigid = luigi.cli:luigid',
+          ],
+        },
       )
