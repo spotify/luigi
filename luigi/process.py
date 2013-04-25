@@ -35,13 +35,13 @@ def write_pid(pidfile):
         fobj.write(str(os.getpid()))
 
 
-def daemonize(cmd, pidfile=None):
+def daemonize(cmd, logfile, pidfile=None):
     import daemon
     existing_pid = check_pid(pidfile)
     if pidfile and existing_pid:
         print "Server already running (pid=%s)" % (existing_pid,)
         return
-    log = open('/var/log/luigi/luigi-server.log', 'a+')  # TODO: better log location...
+    log = open(logfile, 'a+')  # TODO: better log location...
     ctx = daemon.DaemonContext(stdout=log, stderr=log, working_directory='.')
     with ctx:
         if pidfile:
