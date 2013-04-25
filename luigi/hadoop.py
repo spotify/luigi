@@ -158,7 +158,9 @@ def run_and_track_hadoop_job(arglist):
     logger.info(' '.join(arglist))
 
     def track_process(arglist):
-        proc = subprocess.Popen(arglist, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Dump stdout to a temp file, poll stderr and log it
+        temp_stdout = tempfile.TemporaryFile()
+        proc = subprocess.Popen(arglist, stdout=temp_stdout, stderr=subprocess.PIPE)
 
         # We parse the output to try to find the tracking URL.
         # This URL is useful for fetching the logs of the job.
@@ -174,7 +176,8 @@ def run_and_track_hadoop_job(arglist):
 
         # Read the rest + stdout
         err = ''.join(err_lines + [err_line for err_line in proc.stderr])
-        out = ''.join([out_line for out_line in proc.stdout])
+        temp_stdout.seek(0)
+        out = ''.join(temp_stdout.readlines())
 
         if proc.returncode == 0:
             return
