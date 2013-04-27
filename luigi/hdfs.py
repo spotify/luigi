@@ -122,12 +122,15 @@ class HdfsClient(object):
     def mkdir(self, path):
         call_check(['hadoop', 'fs', '-mkdir', path])
 
-    def listdir(self, path, ignore_directories=False, ignore_files=False,
+    def listdir(self, path, recursive=False, ignore_directories=False, ignore_files=False,
                 include_size=False, include_type=False, include_time=False):
         if not path:
             path = "."  # default to current/home catalog
 
-        cmd = ['hadoop', 'fs', '-ls', path]
+        if recursive:
+            cmd = ['hadoop', 'fs', '-ls', '-R', path]
+        else:
+            cmd = ['hadoop', 'fs', '-ls', path]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         lines = proc.stdout
 
@@ -303,8 +306,8 @@ in luigi. Use target.path instead", stacklevel=2)
             except NotImplementedError:
                 return self.format.pipe_writer(HdfsAtomicWritePipe(self.path))
 
-    def remove(self):
-        remove(self.path)
+    def remove(self, skip_trash=False):
+        remove(self.path, skip_trash=skip_trash)
 
     def rename(self, path, fail_if_exists=False):
         # rename does not change self.path, so be careful with assumptions
