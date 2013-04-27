@@ -43,7 +43,7 @@ class Worker(object):
     - Asks for stuff to do (pulls it in a loop and runs it)
     """
 
-    def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None, worker_processes=1):
+    def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None, worker_processes=1, mock=False):
         if not worker_id:
             worker_id = 'worker-%09d' % random.randrange(0, 999999999)
 
@@ -57,6 +57,8 @@ class Worker(object):
         self.__scheduled_tasks = {}
 
         self._previous_tasks = []  # store the previous tasks executed by the same worker for debugging reasons
+
+        self.__mock = mock
 
         class KeepAliveThread(threading.Thread):
             """ Periodically tell the scheduler that the worker still lives """
@@ -82,6 +84,9 @@ class Worker(object):
             raise TaskException('Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__)
 
         try:
+            if self.__mock:
+                task.mockify()
+
             task_id = task.task_id
 
             if task_id in self.__scheduled_tasks:

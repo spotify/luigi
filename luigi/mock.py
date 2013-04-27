@@ -25,6 +25,9 @@ class MockFile(target.Target):
         self._mirror_on_stderr = mirror_on_stderr
         self._fn = fn
 
+    def mock(self):
+        raise Exception('can not mock a MockFile!')
+
     def exists(self,):
         return self._fn in MockFile._file_contents
 

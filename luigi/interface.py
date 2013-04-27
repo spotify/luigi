@@ -103,8 +103,7 @@ def get_config():
 class EnvironmentParamsContainer(task.Task):
     ''' Keeps track of a bunch of environment params.
 
-    Uses the internal luigi parameter mechanism. The nice thing is that we can instantiate this class
-    and get an object with all the environment variables set. This is arguably a bit of a hack.'''
+    Uses the internal luigi parameter mechanism. This is arguably a bit of a hack.'''
     # TODO(erikbern): would be cleaner if we don't have to read config in global scope
     local_scheduler = parameter.BooleanParameter(is_global=True, default=False,
                                                  description='Use local scheduling')
@@ -118,15 +117,19 @@ class EnvironmentParamsContainer(task.Task):
                                        description='Directory to store the pid file')
     workers = parameter.IntParameter(is_global=True, default=1,
                                      description='Maximum number of parallel tasks to run')
+    mock = parameter.BooleanParameter(is_global=True, default=False, description='Mock all Target objects')
 
     @classmethod
     def env_params(cls, override_defaults):
+        params = {}
         # Override any global parameter with whatever is in override_defaults
         for param_name, param_obj in cls.get_global_params():
             if param_name in override_defaults:
-                param_obj.set_default(override_defaults[param_name])
+                params[param_name] = override_defaults[param_name]
+            else:
+                params[param_name] = param_obj.default
 
-        return cls()  # instantiate an object with the global params set on it
+        return params
 
 
 def expose(cls):
@@ -151,15 +154,15 @@ class Interface(object):
     def run(tasks, override_defaults={}):
         env_params = EnvironmentParamsContainer.env_params(override_defaults)
 
-        if env_params.lock:
-            lock.run_once(env_params.lock_pid_dir)
+        if env_params['lock']:
+            lock.run_once(env_params['lock_pid_dir'])
 
-        if env_params.local_scheduler:
+        if env_params['local_scheduler']:
             sch = scheduler.CentralPlannerScheduler()
         else:
-            sch = rpc.RemoteScheduler(host=env_params.scheduler_host, port=env_params.scheduler_port)
+            sch = rpc.RemoteScheduler(host=env_params['scheduler_host'], port=env_params['scheduler_port'])
 
-        w = worker.Worker(scheduler=sch, worker_processes=env_params.workers)
+        w = worker.Worker(scheduler=sch, worker_processes=env_params['workers'], mock=env_params['mock'])
         for task in tasks:
             w.add(task)
         logger = logging.getLogger('luigi-interface')
