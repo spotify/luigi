@@ -21,7 +21,8 @@ def fix_paths(job):
             if x.exists() or not job.atomic_output():  # input
                 args.append(x.path)
             else:  # output
-                y = luigi.hdfs.HdfsTarget(x.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10))
+                x_path_no_slash = x.path[:-1] if x.path[-1] == '/' else x.path
+                y = luigi.hdfs.HdfsTarget(x_path_no_slash + '-luigi-tmp-%09d' % random.randrange(0, 1e10))
                 tmp_files.append((y, x))
                 logger.info("Using temp path: {0} for path {1}".format(y.path, x.path))
                 args.append(y.path)
