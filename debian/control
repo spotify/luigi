@@ -1,0 +1,21 @@
+Source: luigi
+Section: libs
+Priority: extra
+Maintainer: Elias Freider <freider@spotify.com>
+Build-Depends:	debhelper (>= 7),
+		python-all (>= 2.6.6-3~),
+		python-argparse,
+		python-pip,
+		python-simplejson,
+		python-tornado (>= 2.3)
+Standards-Version: 3.7.3
+X-Python-Version: >= 2.6
+
+Package: luigi
+Architecture: all
+Depends: ${shlibs:Depends},
+	 ${misc:Depends},
+	 ${python:Depends},
+	 python-argparse,
+	 python-mechanize,
+Description: Workflow mgmgt + task scheduling + dependency resolution
