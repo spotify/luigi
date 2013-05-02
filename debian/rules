@@ -2,10 +2,3 @@
 
 %:
 	dh $@ --with python2
-
-binary: build
-	dh $@ --until dh_fixperms --with python2
-	find $(DESTDIR) -name top_level.txt -delete
-	dh $@ --remaining --with python2
-
-.PHONY: binary
