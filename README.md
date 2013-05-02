@@ -376,6 +376,11 @@ Also it should be mentioned that Luigi is named after the pipeline-running frien
 * Integration with existing Hadoop frameworks like mrjob would be cool and probably pretty easy.
 * Better support (without much boiler plate) for unittesting specific Tasks
 
+## Getting help
+
+* Find us on #luigi on freenode.
+* Subscribe to the [luigi-user](http://groups.google.com/group/luigi-user/) group and ask a question.
+
 ## Want to contribute?
 
 Awesome! Let us know if you have any ideas. Feel free to contact x@y.com where x = luigi and y = spotify.
