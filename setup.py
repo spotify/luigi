@@ -41,4 +41,7 @@ setup(name='luigi',
       package_data={
         'luigi': ['static/*']
         },
+      scripts=[
+        'bin/luigid'
+        ]
       )

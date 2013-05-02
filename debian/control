@@ -19,3 +19,14 @@ Depends: ${shlibs:Depends},
 	 python-argparse,
 	 python-mechanize,
 Description: Workflow mgmgt + task scheduling + dependency resolution
+
+Package: luigi-server
+Architecture: all
+Depends:	${shlibs:Depends},
+		${misc:Depends},
+		${python:Depends},
+		python-daemon,
+		python-pip,
+		python-pygraphviz,
+		python-tornado (>= 2.3)
+Description: Luigi central planner server
