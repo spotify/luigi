@@ -22,6 +22,14 @@ import tempfile
 logger = logging.getLogger('luigi-interface')
 
 
+class HiveCommandError(RuntimeError):
+    def __init__(self, message, out=None, err=None):
+        super(HiveCommandError, self).__init__(message, out, err)
+        self.message = message
+        self.out = out
+        self.err = err
+
+
 def load_hive_cmd():
     return luigi.interface.get_config().get('hive', 'command', 'hive')
 
@@ -31,7 +39,10 @@ def run_hive(args):
        returning stdout"""
     cmd = [load_hive_cmd()] + args
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, _ = p.communicate()
+    stdout, stderr = p.communicate()
+    if (p.returncode != 0):
+        raise HiveCommandError("Hive command: {0} failed with error code: {1}".format(" ".join(cmd), p.returncode),
+                               stdout, stderr)
     return stdout
 
 
