@@ -84,6 +84,10 @@ def partition_spec(partition):
 class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
     ''' Task to run a hive query
     '''
+    # by default, we let hive figure these out.
+    n_reduce_tasks = None
+    bytes_per_reducer = None
+    reducers_max = None
 
     @abc.abstractmethod
     def query(self):
@@ -95,6 +99,28 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
         ''' Location of an rc file to run before the query
         '''
         return None
+
+    def hiveconfs(self):
+        '''
+        Returns an dict of key=value settings to be passed along
+        to the hive command line via --hiveconf. By default, sets
+        mapred.job.name to task_id and if not None, sets:
+        * mapred.reduce.tasks (n_reduce_tasks)
+        * mapred.fairscheduler.pool (pool)
+        * hive.exec.reducers.bytes.per.reducer (bytes_per_reducer)
+        * hive.exec.reducers.max (reducers_max)
+        '''
+        jcs = {}
+        jcs['mapred.job.name'] = self.task_id
+        if self.n_reduce_tasks is not None:
+            jcs['mapred.reduce.tasks'] = self.n_reduce_tasks
+        if self.pool is not None:
+            jcs['mapred.fairscheduler.pool'] = self.pool
+        if self.bytes_per_reducer is not None:
+            jcs['hive.exec.reducers.bytes.per.reducer'] = self.bytes_per_reducer
+        if self.reducers_max is not None:
+            jcs['hive.exec.reducers.max'] = self.reducers_max
+        return jcs
 
     def job_runner(self):
         return HiveQueryRunner()
@@ -111,6 +137,9 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
             arglist = [load_hive_cmd(), '-f', f.name]
             if job.hiverc():
                 arglist += ['-i', job.hiverc()]
+            if job.hiveconfs():
+                for k, v in job.hiveconfs().iteritems():
+                    arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
 
             logger.info(arglist)
             luigi.hadoop.run_and_track_hadoop_job(arglist)
