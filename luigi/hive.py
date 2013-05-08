@@ -286,13 +286,26 @@ class HivePartitionTarget(luigi.Target):
     ''' exists returns true if the table's partition exists
     '''
 
-    def __init__(self, table, partition, database='default'):
+    def __init__(self, table, partition, database='default', fail_missing_table=True):
         self.database = database
         self.table = table
         self.partition = partition
 
+        self.fail_missing_table = fail_missing_table
+
     def exists(self):
-        return table_exists(self.table, self.database, self.partition)
+        try:
+            return table_exists(self.table, self.database, self.partition)
+        except HiveCommandError, e:
+            if self.fail_missing_table:
+                raise
+            else:
+                if table_exists(self.table, self.database)
+                    # a real error occured
+                    raise
+                else:
+                    # oh the table just doesn't exist
+                    return False
 
     @property
     def path(self):
