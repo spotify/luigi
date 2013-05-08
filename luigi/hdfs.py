@@ -13,6 +13,7 @@
 # the License.
 
 import subprocess
+import re
 import os
 import random
 import tempfile
@@ -20,6 +21,7 @@ import urlparse
 import luigi.format
 import datetime
 import snakebite.client
+import luigi.interface
 
 
 class HDFSCliError(Exception):
@@ -56,28 +58,204 @@ def tmppath(path=None):
     return tempfile.gettempdir() + '/' + (path + "-" if path else "") + "luigitemp-%08d" % random.randrange(1e9)
 
 
-def convert_permission_to_string(file_type, permission):
-    def number_to_permission_string(permission_number):
-        x = 'x' if permission_number % 2 else '-'
-        permission_number /= 2
-        w = 'w' if permission_number % 2 else '-'
-        permission_number /= 2
-        r = 'r' if permission_number % 2 else '-'
-        return r + w + x
-    permission = int(oct(permission))
-    file_flag = file_type if file_type == 'd' else '-'
-    everyone = number_to_permission_string(permission % 10)
-    permission /= 10
-    group = number_to_permission_string(permission % 10)
-    permission /= 10
-    owner = number_to_permission_string(permission % 10)
-    return file_flag + owner + group + everyone
+luigi_config = luigi.interface.LuigiConfigParser.instance()
+
+
+def get_config_property(config_filename, property):
+    """Get a hadoop config property value from xml config file
+
+    Args:
+        config_name (str): Filename of the config to read, e.g 'hdfs-site.xml'
+        property (str): The name of the property to get
+    """
+    hadoop_conf_dir = luigi_config.get('hadoop', 'confdir', None)
+    if hadoop_conf_dir is None:
+        hadoop_conf_dir = os.path.join(os.environ.get('HADOOP_HOME'), 'conf')
+    if hadoop_conf_dir is None:
+        hadoop_conf_dir = '/etc/hadoop/conf'
+    hdfs_conf = os.path.join(hadoop_conf_dir, config_filename)
+    if not os.path.exists(hdfs_conf):
+        return None
+
+    from xml.etree import ElementTree
+    tree = ElementTree.parse(hdfs_conf)
+    root = tree.getroot()
+    for prop in root.findall('property'):
+        name_element = prop.find('name')
+        if name_element is None:
+            return None
+        if name_element.text == property:
+            value_element = prop.find('value')
+            if value_element is not None:
+                return value_element.text
+    return None
+
+
+hdfs_re = re.compile('hdfs://([^:]+):(\d+)')
+
+
+def get_namenode_details():
+    namenode = luigi_config.get('hdfs', 'namenode_host', None)
+    port = luigi_config.get('hdfs', 'namenode_port', None)
+    if namenode is None or port is None:
+        path = get_config_property('core-site.xml', 'fs.defaultFS')
+        match = hdfs_re.match(path)
+        return match.group(1), match.group(2)
+    else:
+        return (namenode, port)
 
 
 class HdfsClient(object):
-    # TODO needs to pick up the HADOOP_HOME conf and do it from there
+    def exists(self, path):
+        """ Use `hadoop fs -ls -d` to check file existence
+
+        `hadoop fs -test -e` can't be (reliably) used at this time since there
+        is no good way of distinguishing file non-existence of files
+        from errors when running the comman (same return code)
+        """
+
+        cmd = ['hadoop', 'fs', '-ls', '-d', path]
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if p.returncode == 0:
+            return True
+        else:
+            not_found_pattern = "^ls: `.*': No such file or directory$"
+            not_found_re = re.compile(not_found_pattern)
+            for line in stderr.split('\n'):
+                if not_found_re.match(line):
+                    return False
+            raise HDFSCliError(cmd, p.returncode, stdout, stderr)
+
+    def rename(self, path, dest):
+        parent_dir = os.path.dirname(dest)
+        if parent_dir != '' and not self.exists(parent_dir):
+            self.mkdir(parent_dir)
+        call_check(['hadoop', 'fs', '-mv', path, dest])
+
+    def remove(self, path, recursive=True, skip_trash=False):
+        if recursive:
+            if use_cdh4_syntax():
+                cmd = ['hadoop', 'fs', '-rm', '-r']
+            else:
+                cmd = ['hadoop', 'fs', '-rmr']
+        else:
+            cmd =  ['hadoop', 'fs', '-rm']
+        if skip_trash:
+             cmd = cmd + ['-skipTrash']
+        cmd = cmd + [path]
+        call_check(cmd)
+
+    def chmod(self, path, permissions, recursive=False):
+        if recursive:
+            cmd = ['hadoop', 'fs', '-chmod', '-R', permissions, path]
+        else:
+            cmd = ['hadoop', 'fs', '-chmod', permissions, path]
+        call_check(cmd)
+
+    def chown(self, path, owner, group, recursive=False):
+        if owner is None:
+            owner = ''
+        if group is None:
+            group = ''
+        ownership = "%s:%s" % (owner, group)
+        if recursive:
+            cmd = ['hadoop', 'fs', '-chown', '-R', ownership, path]
+        else:
+            cmd = ['hadoop', 'fs', '-chown', ownership, path]
+        call_check(cmd)
+
+    def count(self, path):
+        cmd = ['hadoop', 'fs', '-count', path]
+        stdout = call_check(cmd)
+        (dir_count, file_count, content_size, ppath) = stdout.split()
+        results = {'content_size': content_size, 'dir_count': dir_count, 'file_count': file_count}
+        return results
+
+    def copy(self, path, destination):
+        call_check(['hadoop', 'fs', '-cp', path, destination])
+
+    def put(self, local_path, destination):
+        call_check(['hadoop', 'fs', '-put', local_path, destination])
+
+    def get(self, path, local_destination):
+        call_check(['hadoop', 'fs', '-get', path, local_destination])
+
+    def getmerge(self, path, local_destination, new_line=False):
+        if new_line:
+            cmd = ['hadoop', 'fs', '-getmerge', '-nl', path, local_destination]
+        else:
+            cmd = ['hadoop', 'fs', '-getmerge', path, local_destination]
+        call_check(cmd)
+
+    def mkdir(self, path):
+        call_check(['hadoop', 'fs', '-mkdir', path])
+
+    def listdir(self, path, ignore_directories=False, ignore_files=False,
+                include_size=False, include_type=False, include_time=False, recursive=False):
+        if not path:
+            path = "."  # default to current/home catalog
+
+        if recursive:
+            cmd = ['hadoop', 'fs', '-ls', '-R', path]
+        else:
+            cmd = ['hadoop', 'fs', '-ls', path]
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        lines = proc.stdout
+
+        for line in lines:
+            if line.startswith('Found'):
+                continue  # "hadoop fs -ls" outputs "Found %d items" as its first line
+            line = line.rstrip("\n")
+            if ignore_directories and line[0] == 'd':
+                continue
+            if ignore_files and line[0] == '-':
+                continue
+            data = line.split(' ')
+
+            file = data[-1]
+            size = int(data[-4])
+            line_type = line[0]
+            extra_data = ()
+
+            if include_size:
+                extra_data += (size,)
+            if include_type:
+                extra_data += (line_type,)
+            if include_time:
+                time_str = '%sT%s' % (data[-3], data[-2])
+                modification_time = datetime.datetime.strptime(time_str,
+                                                               '%Y-%m-%dT%H:%M')
+                extra_data += (modification_time,)
+
+            if len(extra_data) > 0:
+                yield (file,) + extra_data
+            else:
+                yield file
+
+
+class SnakebiteHdfsClient(object):
+    @staticmethod
+    def convert_permission_to_string(file_type, permission):
+        def number_to_permission_string(permission_number):
+            x = 'x' if permission_number % 2 else '-'
+            permission_number /= 2
+            w = 'w' if permission_number % 2 else '-'
+            permission_number /= 2
+            r = 'r' if permission_number % 2 else '-'
+            return r + w + x
+        permission = int(oct(permission))
+        file_flag = file_type if file_type == 'd' else '-'
+        everyone = number_to_permission_string(permission % 10)
+        permission /= 10
+        group = number_to_permission_string(permission % 10)
+        permission /= 10
+        owner = number_to_permission_string(permission % 10)
+        return file_flag + owner + group + everyone
+
     def __init__(self):
-        self.client = snakebite.client.Client("namenode.c.lon.spotify.net", 54310)
+        namenode, port = get_namenode_details()
+        self.client = snakebite.client.Client(namenode, port)
 
     def exists(self, path):
         """ Use `hadoop fs -ls -d` to check file existence
@@ -161,7 +339,7 @@ class HdfsClient(object):
             if include_size:
                 extra_data += (result['length'],)
             if include_type:
-                extra_data += (convert_permission_to_string(file_type, result['permission']),)
+                extra_data += (SnakebiteHdfsClient.convert_permission_to_string(file_type, result['permission']),)
             if include_time:
                 extra_data += (result['modification_time'],)
             if len(extra_data) > 0:
@@ -169,8 +347,14 @@ class HdfsClient(object):
             else:
                 yield file
 
+HDFS_CLIENT_MAP = {
+    'default': HdfsClient,
+    'snakebite': SnakebiteHdfsClient,
+    'hdfsclient': HdfsClient,
+}
 
-client = HdfsClient()
+hdfs_client_value = luigi_config.get('hdfs', 'client', default='default')
+client = HDFS_CLIENT_MAP[hdfs_client_value]()
 
 exists = client.exists
 rename = client.rename
