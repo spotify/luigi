@@ -273,7 +273,7 @@ class HiveTableTarget(luigi.Target):
     @property
     def path(self):
         """Returns the path to this table in HDFS"""
-        location = table_location(self.database, self.table)
+        location = table_location(self.table, self.database)
         if not location:
             raise Exception("Couldn't find location for table: {0}".format(str(self)))
         return location
@@ -297,7 +297,7 @@ class HivePartitionTarget(luigi.Target):
     @property
     def path(self):
         """Returns the path for this HiveTablePartitionTarget's data"""
-        location = table_location(self.database, self.table, self.partition)
+        location = table_location(self.table, self.database, self.partition)
         if not location:
             raise Exception("Couldn't find location for table: {0}".format(str(self)))
         return location
