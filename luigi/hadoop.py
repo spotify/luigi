@@ -165,14 +165,25 @@ def run_and_track_hadoop_job(arglist):
         # We parse the output to try to find the tracking URL.
         # This URL is useful for fetching the logs of the job.
         tracking_url = None
+        job_id = None
         err_lines = []
-        while proc.poll() is None:
-            err_line = proc.stderr.readline()
+        while True:
+            try:
+                if proc.poll() is not None:
+                    break
+                err_line = proc.stderr.readline()
+            except KeyboardInterrupt:
+                if job_id:
+                    logger.info('Job interrupted by user, killing job %s', job_id)
+                    kill_job(job_id)
+                raise
             err_lines.append(err_line)
             if err_line.strip():
                 logger.info(err_line.strip())
             if err_line.find('Tracking URL') != -1:
                 tracking_url = err_line.strip().split('Tracking URL: ')[-1]
+            if err_line.find('Running job') != -1:
+                job_id = err_line.strip().split('Running job: ')[-1]
 
         # Read the rest + stdout
         err = ''.join(err_lines + [err_line for err_line in proc.stderr])
@@ -200,6 +211,10 @@ def run_and_track_hadoop_job(arglist):
 
     track_process(arglist)
 
+
+def kill_job(job_id):
+    subprocess.call(['mapred', 'job', '-kill', job_id])
+    
 
 def fetch_task_failures(tracking_url):
     ''' Uses mechanize to fetch the actual task logs from the task tracker.
