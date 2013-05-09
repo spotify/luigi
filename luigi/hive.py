@@ -300,7 +300,7 @@ class HivePartitionTarget(luigi.Target):
             if self.fail_missing_table:
                 raise
             else:
-                if table_exists(self.table, self.database)
+                if table_exists(self.table, self.database):
                     # a real error occured
                     raise
                 else:
