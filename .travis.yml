@@ -1,0 +1,8 @@
+language: python
+python:
+  - "2.7"
+  - "2.6"
+install: 
+  - pip install tornado --use-mirrors
+  - pip install argparse --use-mirrors
+script: nosetests
