@@ -77,8 +77,8 @@ class RemoteScheduler(Scheduler):
              'expl': expl,
              })
 
-    def get_work(self, worker):
-        return self._request('/api/get_work', {'worker': worker})
+    def get_work(self, worker, host):
+        return self._request('/api/get_work', {'worker': worker, 'host': host})
 
     def graph(self):
         return self._request('/api/graph', {})
@@ -102,8 +102,8 @@ class RemoteSchedulerResponder(object):
     def add_task(self, worker, task_id, status, runnable, deps, expl):
         return self._scheduler.add_task(worker, task_id, status, runnable, deps, expl)
 
-    def get_work(self, worker):
-        return self._scheduler.get_work(worker)
+    def get_work(self, worker, host):
+        return self._scheduler.get_work(worker, host)
 
     def ping(self, worker):
         return self._scheduler.ping(worker)

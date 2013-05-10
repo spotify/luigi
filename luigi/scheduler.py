@@ -15,6 +15,7 @@
 import os
 import logging
 import time
+import traceback
 import cPickle as pickle
 logger = logging.getLogger("luigi-interface")
 
@@ -64,7 +65,7 @@ class CentralPlannerScheduler(Scheduler):
     Can be run locally or on a server (using RemoteScheduler + server.Server).
     '''
 
-    def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0):
+    def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0, task_history=None):
         '''
         (all arguments are in seconds)
         Keyword Arguments:
@@ -78,6 +79,8 @@ class CentralPlannerScheduler(Scheduler):
         self._remove_delay = remove_delay
         self._worker_disconnect_delay = worker_disconnect_delay
         self._active_workers = {}  # map from id to timestamp (last updated)
+        import task_history as history  # import here to avoid circular imports
+        self._task_history = task_history or history.NopHistory()
         # TODO: have a Worker object instead, add more data to it
 
     def dump(self):
@@ -173,8 +176,9 @@ class CentralPlannerScheduler(Scheduler):
 
         if expl is not None:
             task.expl = expl
+        self._update_task_history(task_id, status)
 
-    def get_work(self, worker):
+    def get_work(self, worker, host):
         # TODO: remove any expired nodes
 
         # Algo: iterate over all nodes, find first node with no dependencies
@@ -212,6 +216,7 @@ class CentralPlannerScheduler(Scheduler):
             t = self._tasks[best_task]
             t.status = RUNNING
             t.worker_running = worker
+            self._update_task_history(best_task, RUNNING, host=host)
 
         return locally_pending_tasks, best_task
 
@@ -296,3 +301,16 @@ class CentralPlannerScheduler(Scheduler):
             return {"taskId": task_id, "error": self._tasks[task_id].expl}
         else:
             return {"taskId": task_id, "error": ""}
+
+    def _update_task_history(self, task_id, status, host=None):
+        try:
+            if status == DONE or status == FAILED:
+                successful = (status == DONE)
+                self._task_history.task_finished(task_id, successful)
+            elif status == PENDING:
+                self._task_history.task_scheduled(task_id)
+            elif status == RUNNING:
+                self._task_history.task_started(task_id, host)
+        except:
+            print 'Error saving Task history'
+            print traceback.format_exc()
