@@ -41,8 +41,8 @@ class CustomizedScheduler(luigi.scheduler.CentralPlannerScheduler):
         super(CustomizedScheduler, self).__init__(*args, **kwargs)
         self.has_run = False
 
-    def get_work(self, worker):
-        locally_pending_tasks, best_task = super(CustomizedScheduler, self).get_work(worker)
+    def get_work(self, worker, host=None):
+        locally_pending_tasks, best_task = super(CustomizedScheduler, self).get_work(worker, host)
         self.has_run = True
         return locally_pending_tasks, best_task
 
