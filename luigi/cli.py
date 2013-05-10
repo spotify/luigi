@@ -7,7 +7,7 @@ def luigid():
     parser = optparse.OptionParser()
     parser.add_option('--background', help='Run in background mode', action='store_true')
     parser.add_option('--pidfile', default='luigid.pid', help='Write pidfile')
-    parser.add_option('--logfile', default='luigi-server.log',
+    parser.add_option('--logfile', default='/var/log/luigi/luigi-server.log',
                       help='Server log file')
 
     opts, args = parser.parse_args()
