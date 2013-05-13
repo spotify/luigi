@@ -3,6 +3,9 @@ import unittest
 
 import luigi.hive
 
+from luigi import LocalTarget
+import os
+
 
 class HiveTest(unittest.TestCase):
     count = 0
@@ -37,3 +40,13 @@ class HiveTest(unittest.TestCase):
             self.assertEquals(["-f", f.name], self.last_hive_cmd)
             self.assertEquals("statement{0}".format(pre_count+1), res)
 
+    def test_create_parent_dirs(self):
+        dirname = "/tmp/hive_task_test_dir"
+
+        class FooHiveTask(object):
+            def output(self):
+                return LocalTarget(os.path.join(dirname, "foo"))
+
+        runner = luigi.hive.HiveQueryRunner()
+        runner.prepare_outputs(FooHiveTask())
+        self.assertTrue(os.path.exists(dirname))

@@ -15,7 +15,8 @@
 import os
 import random
 import tempfile
-from target import Target
+import shutil
+from target import FileSystem, FileSystemTarget
 
 
 class atomic_file(file):
@@ -45,18 +46,38 @@ class atomic_file(file):
         return file.__exit__(self, exc_type, exc, traceback)
 
 
-class File(Target):
+class LocalFileSystem(FileSystem):
+    """ Wrapper for access to file system operations
+
+    Work in progress - add things as needed
+    """
+    def exists(self, path):
+        return os.path.exists(path)
+
+    def mkdir(self, path):
+        os.makedirs(path)
+
+    def isdir(self, path):
+        os.path.isdir(path)
+
+    def remove(self, path, recursive=True):
+        if recursive and self.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+
+
+class File(FileSystemTarget):
+    fs = LocalFileSystem()
+
     def __init__(self, path=None, format=None, is_tmp=False):
         if not path:
             if not is_tmp:
                 raise Exception('path or is_tmp must be set')
             path = os.path.join(tempfile.gettempdir(), 'luigi-tmp-%09d' % random.randint(0, 999999999))
-        self.path = path
+        super(File, self).__init__(path)
         self.format = format
         self.is_tmp = is_tmp
-
-    def exists(self):
-        return os.path.exists(self.path)
 
     def open(self, mode='r'):
         if mode == 'w':
@@ -84,19 +105,19 @@ class File(Target):
             raise RuntimeError('Destination exists: %s' % new_path)
         d = os.path.dirname(new_path)
         if not os.path.exists(d):
-            os.makedirs(d)
+            self.fs.mkdir(d)
         os.rename(self.path, new_path)
 
     def move_dir(self, new_path):
         self.move(new_path)
 
     def remove(self):
-        os.remove(self.path)
+        self.fs.remove(self.path)
 
     @property
     def fn(self):
         return self.path
 
     def __del__(self):
-        if self.is_tmp and os.path.exists(self.path):
+        if self.is_tmp and self.exists():
             self.remove()

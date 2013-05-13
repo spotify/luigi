@@ -20,16 +20,20 @@ import urlparse
 import luigi.format
 import datetime
 import re
+from luigi.target import FileSystem, FileSystemTarget
 
 
 class HDFSCliError(Exception):
     def __init__(self, command, returncode, stdout, stderr):
+        self.returncode = returncode
+        self.stdout = stdout
+        self.sterr = stderr
         msg = ("Command %r failed [exit code %d]\n" +
-                "---stdout---\n" +
-                "%s\n" +
-                "---stderr---\n" +
-                "%s" +
-                "------------") % (command, returncode, stdout, stderr)
+               "---stdout---\n" +
+               "%s\n" +
+               "---stderr---\n" +
+               "%s" +
+               "------------") % (command, returncode, stdout, stderr)
         super(HDFSCliError, self).__init__(msg)
 
 
@@ -39,6 +43,7 @@ def call_check(command):
     if p.returncode != 0:
         raise HDFSCliError(command, p.returncode, stdout, stderr)
     return stdout
+
 
 def use_cdh4_syntax():
     """
@@ -55,7 +60,7 @@ def tmppath(path=None):
     return tempfile.gettempdir() + '/' + (path + "-" if path else "") + "luigitemp-%08d" % random.randrange(1e9)
 
 
-class HdfsClient(object):
+class HdfsClient(FileSystem):
     def exists(self, path):
         """ Use `hadoop fs -ls -d` to check file existence
 
@@ -90,9 +95,9 @@ class HdfsClient(object):
             else:
                 cmd = ['hadoop', 'fs', '-rmr']
         else:
-            cmd =  ['hadoop', 'fs', '-rm']
+            cmd = ['hadoop', 'fs', '-rm']
         if skip_trash:
-             cmd = cmd + ['-skipTrash']
+            cmd = cmd + ['-skipTrash']
         cmd = cmd + [path]
         call_check(cmd)
 
@@ -139,7 +144,13 @@ class HdfsClient(object):
         call_check(cmd)
 
     def mkdir(self, path):
-        call_check(['hadoop', 'fs', '-mkdir', path])
+        try:
+            call_check(['hadoop', 'fs', '-mkdir', path])
+        except HDFSCliError, ex:
+            if "File exists" in ex.stderr:
+                raise FileExists(ex.stderr)
+            else:
+                raise
 
     def listdir(self, path, ignore_directories=False, ignore_files=False,
                 include_size=False, include_type=False, include_time=False, recursive=False):
@@ -270,12 +281,14 @@ class PlainDir(luigi.format.Format):
         return HdfsAtomicWriteDirPipe(path)
 
 
-class HdfsTarget(luigi.Target):
+class HdfsTarget(FileSystemTarget):
+    fs = client  # underlying file system
+
     def __init__(self, path=None, format=Plain, is_tmp=False):
         if path is None:
             assert is_tmp
             path = tmppath()
-        self.path = path
+        super(HdfsTarget, self).__init__(path)
         self.format = format
         self.is_tmp = is_tmp
         (scheme, netloc, path, query, fragment) = urlparse.urlsplit(path)
@@ -300,9 +313,6 @@ in luigi. Use target.path instead", stacklevel=2)
         warnings.warn("target.get_fn() is deprecated and will be removed soon\
 in luigi. Use target.path instead", stacklevel=2)
         return self.path
-
-    def exists(self):
-        return exists(self.path)
 
     def glob_exists(self, expected_files):
         ls = list(listdir(self.path))
