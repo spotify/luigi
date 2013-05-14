@@ -55,6 +55,10 @@ class File(Target):
         self.format = format
         self.is_tmp = is_tmp
 
+    def mock(self):
+        import mock
+        return mock.MockFile(self.path)
+
     def exists(self):
         return os.path.exists(self.path)
 

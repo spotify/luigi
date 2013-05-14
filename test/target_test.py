@@ -28,4 +28,7 @@ class TargetTest(unittest.TestCase):
             def open(self, mode):
                 return None
 
+            def mock(self):
+                return None
+
         GoodTarget()

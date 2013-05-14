@@ -16,6 +16,7 @@ import abc
 import parameter
 import warnings
 import traceback
+import target
 
 Parameter = parameter.Parameter
 
@@ -215,6 +216,13 @@ class Task(object):
 
         self.task_id = '%s(%s)' % (self.task_family, ', '.join(task_id_parts))
         self.__hash = hash(self.task_id)
+        self.__mocked = False
+
+    def mockify(self):
+        if not self.__mocked:
+            outputs = mock(self.output())
+            self.output = lambda: outputs
+            self.__mocked = True
 
     def initialized(self):
         return hasattr(self, 'task_id')
@@ -309,10 +317,9 @@ class WrapperTask(Task):
         return all(r.complete() for r in flatten(self.requires()))
 
 
-def getpaths(struct):
-    """ Maps all Tasks in a structured data object to their .output()"""
-    if isinstance(struct, Task):
-        return struct.output()
+def map_nested(struct, t, f):
+    if isinstance(struct, t):
+        return f(struct)
     elif isinstance(struct, dict):
         r = {}
         for k, v in struct.iteritems():
@@ -326,6 +333,16 @@ def getpaths(struct):
             raise Exception('Cannot map %s to Task/dict/list' % str(struct))
 
         return [getpaths(r) for r in s]
+
+
+def getpaths(struct):
+    """ Maps all Tasks in a structured data object to their .output()"""
+    return map_nested(struct, Task, lambda t: t.output())
+
+
+def mock(struct):
+    """ Changes all Target objects into their respective mocked variants """
+    return map_nested(struct, target.Target, lambda t: t.mock())
 
 
 def flatten(struct):

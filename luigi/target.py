@@ -25,3 +25,8 @@ class Target(object):  # interface
     @abc.abstractmethod
     def open(self, mode):
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def mock(self):
+        raise NotImplementedError
+

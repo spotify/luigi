@@ -286,6 +286,10 @@ class HdfsTarget(luigi.Target):
         if self.is_tmp and self.exists():
             self.remove()
 
+    def mock(self):
+        import mock
+        return mock.MockFile(self.path)
+
     @property
     def fn(self):
         """ Deprecated. Use path property instead """
