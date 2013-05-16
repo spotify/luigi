@@ -150,14 +150,14 @@ class HadoopJobError(RuntimeError):
         self.err = err
 
 
-def run_and_track_hadoop_job(arglist):
+def run_and_track_hadoop_job(arglist, tracking_url_callback=None):
     ''' Runs the job by invoking the command from the given arglist. Finds tracking urls from the output and attempts to fetch
     errors using those urls if the job fails. Throws HadoopJobError with information about the error (including stdout and stderr
     from the process) on failure and returns normally otherwise.
     '''
     logger.info(' '.join(arglist))
 
-    def track_process(arglist):
+    def track_process(arglist, tracking_url_callback):
         # Dump stdout to a temp file, poll stderr and log it
         temp_stdout = tempfile.TemporaryFile()
         proc = subprocess.Popen(arglist, stdout=temp_stdout, stderr=subprocess.PIPE)
@@ -182,6 +182,11 @@ def run_and_track_hadoop_job(arglist):
                 logger.info(err_line.strip())
             if err_line.find('Tracking URL') != -1:
                 tracking_url = err_line.strip().split('Tracking URL: ')[-1]
+                try:
+                    tracking_url_callback(tracking_url)
+                except Exception as e:
+                    logger.error("Error in tracking_url_callback, disabling! %s" % e)
+                    tracking_url_callback = lambda x: None
             if err_line.find('Running job') != -1:
                 job_id = err_line.strip().split('Running job: ')[-1]
 
@@ -209,12 +214,15 @@ def run_and_track_hadoop_job(arglist):
         else:
             raise HadoopJobError(message + 'Output from tasks below:\n%s' % task_failures, out, err)
 
-    track_process(arglist)
+    if tracking_url_callback is None:
+        tracking_url_callback = lambda x: None
+
+    track_process(arglist, tracking_url_callback)
 
 
 def kill_job(job_id):
     subprocess.call(['mapred', 'job', '-kill', job_id])
-    
+
 
 def fetch_task_failures(tracking_url):
     ''' Uses mechanize to fetch the actual task logs from the task tracker.
