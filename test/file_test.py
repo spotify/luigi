@@ -13,12 +13,14 @@
 # the License.
 
 from luigi import File
+from luigi.file import LocalFileSystem 
 import unittest
 import os
 import gzip
 import luigi.format
 import random
 import gc
+import shutil
 
 
 class FileTest(unittest.TestCase):
@@ -89,12 +91,15 @@ class FileTest(unittest.TestCase):
         self.assertTrue(test_data == f.read())
         f.close()
 
+
 class FileCreateDirectoriesTest(FileTest):
     path = '/tmp/%s/xyz/test.txt' % random.randint(0, 999999999)
+
 
 class FileRelativeTest(FileTest):
     # We had a bug that caused relative file paths to fail, adding test for it
     path = 'test.txt'
+
 
 class TmpFileTest(unittest.TestCase):
     def test_tmp(self):
@@ -113,5 +118,27 @@ class TmpFileTest(unittest.TestCase):
         self.assertEqual(q.readline(), 'test\n')
         q.close()
         path = t.path
-        del t # should remove the underlying file
+        del t  # should remove the underlying file
         self.assertFalse(os.path.exists(path))
+
+
+class TestFileSystem(unittest.TestCase):
+    path = '/tmp/luigi-test-dir'
+    fs = LocalFileSystem()
+
+    def setUp(self):
+        if os.path.exists(self.path):
+            shutil.rmtree(self.path)
+
+    def tearDown(self):
+        self.setUp()
+
+    def test_mkdir(self):
+        testpath = os.path.join(self.path, 'foo/bar')
+        self.fs.mkdir(testpath)
+        self.assertTrue(os.path.exists(testpath))
+
+    def test_exists(self):
+        self.assertFalse(self.fs.exists(self.path))
+        os.mkdir(self.path)
+        self.assertTrue(self.fs.exists(self.path))

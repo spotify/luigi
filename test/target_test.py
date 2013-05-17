@@ -11,12 +11,11 @@ class TargetTest(unittest.TestCase):
         self.assertRaises(TypeError, instantiate_target)
 
     def test_abstract_subclass(self):
-        class ExistsTarget(luigi.target.Target):
-            def exists(self):
-                return True
+        class ExistsLessTarget(luigi.target.Target):
+            pass
 
         def instantiate_target():
-            ExistsTarget()
+            ExistsLessTarget()
 
         self.assertRaises(TypeError, instantiate_target)
 

@@ -15,9 +15,11 @@ import logging
 import luigi
 import luigi.hadoop
 import luigi.interface
+from luigi.target import FileSystemTarget
 import os
 import subprocess
 import tempfile
+from luigi.task import flatten
 
 logger = logging.getLogger('luigi-interface')
 
@@ -58,7 +60,7 @@ def run_hive_script(script):
     return run_hive(['-f', script])
 
 
-class HiveClient(object): # interface
+class HiveClient(object):  # interface
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -180,8 +182,8 @@ class HiveThriftContext(object):
             transport.open()
             self.transport = transport
             return ThriftHiveMetastore.Client(protocol)
-        except ImportError:
-          raise Exception('Could not import Hive thrift library')
+        except ImportError, e:
+            raise Exception('Could not import Hive thrift library:' + str(e))
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.transport.close()
@@ -243,7 +245,26 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
     ''' Runs a HiveQueryTask by shelling out to hive
     '''
 
+    def prepare_outputs(self, job):
+        """ Called before job is started
+
+        If output is a `FileSystemTarget`, create parent directories so the hive command won't fail
+        """
+        outputs = flatten(job.output())
+        for o in outputs:
+            if isinstance(o, FileSystemTarget):
+                parent_dir = os.path.dirname(o.path)
+                if not o.fs.exists(parent_dir):
+                    logger.info("Creating parent directory %r" % (parent_dir,))
+                    try:
+                        # there is a possible race condition
+                        # which needs to be handled here
+                        o.fs.mkdir(parent_dir)
+                    except luigi.hdfs.FileExists:
+                        pass
+
     def run_job(self, job):
+        self.prepare_outputs(job)
         with tempfile.NamedTemporaryFile() as f:
             f.write(job.query())
             f.flush()
