@@ -20,8 +20,62 @@ class Target(object):  # interface
 
     @abc.abstractmethod
     def exists(self):
-        raise NotImplementedError
+        pass
+
+
+class FileSystemException(Exception):
+    """Base class for generic file system exceptions """
+    pass
+
+
+class FileExists(FileSystemException):
+    """ Raised when a file system operation can't be performed because a direcoty exists but is required to not exist
+    """
+    pass
+
+
+class FileSystem(object):
+    """ File system abstraction class """
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def exists(self, path):
+        """ Return `True` if file or directory at `path` exist, False otherwise """
+        pass
+
+    @abc.abstractmethod
+    def remove(self, path, recursive=True):
+        """ Remove file or directory at location `path` """
+        pass
+
+    def mkdir(self, path):
+        """ Create directory at location `path`
+        Create parent catalogs if they don't exist
+
+        Not an abstract method, since not all File System-like storage systems support mkdir
+        """
+        raise NotImplementedError("mkdir() not implemented on {0}".format(self.__class__.__name__))
+
+    def isdir(self, path):
+        raise NotImplementedError("isdir() not implemented on {0}".format(self.__class__.__name__))
+
+
+class FileSystemTarget(Target):
+    """Common target abstract base class for file system targets like LocalTarget and HdfsTarget
+    """
+    def __init__(self, path):
+        self.path = path
+
+    @abc.abstractproperty
+    def fs(self):
+        raise
 
     @abc.abstractmethod
     def open(self, mode):
-        raise NotImplementedError
+        pass
+
+    def exists(self):
+        return self.fs.exists(self.path)
+
+    def remove(self):
+        self.fs.remove(self.path)
