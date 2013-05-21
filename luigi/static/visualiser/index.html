@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Luigi Task Visualiser</title>
+        <script src="//code.jquery.com/jquery-1.9.1.js"></script>
+        <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/mustache.js/0.7.2/mustache.min.js"></script>
+        <script src="http://d3js.org/d3.v3.js" charset="utf-8"></script>
+        <script src="js/luigi.js"></script>
+        <script src="js/graph.js"></script>
+        <script src="js/tasklist.js"></script>
+        <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <style type="text/css">
+            .custom-header {
+                background-color:#eeeeee;
+                margin:0;
+                padding:10px;
+                border-radius: 6px;
+            }
+        </style>
+
+        <style>
+        .nodeCircle {
+          stroke: #fff;
+          stroke-width: 1.5px;
+        }
+        text {
+            font-size:8pt;
+        }
+
+        .link {
+          stroke: #999;
+          stroke-opacity: .4;
+        }
+
+        svg {
+            border:1px solid #DDDDDD;
+        }
+        </style>
+        <script type="text/template" name="rowTemplate">
+            {{#tasks}}
+            <div class="well well-small taskFamily">
+                <h4>
+                    <button class="btn btn-mini btn-inverse" data-action="expandTaskRows">
+                        <span class="icon-plus icon-white"></span>
+                    </button>
+                    <span class="badge badge-important">
+                        {{value.length}}
+                    </span>
+                    {{key}} 
+                </h4>
+                <div class="taskRows" style="display:none">
+                    {{#value}}
+                    <div class="taskRow row-fluid" data-task-id="{{taskId}}">
+                        <div class="span4"><strong>{{taskName}}</strong><em> ({{taskParams}})</em></div>
+                        <div class="span2">{{verdict}}</div>
+                        <div class="span3">{{displayTime}}</div>
+                        <div class="span3">
+                            {{#graph}}<a href="#{{taskId}}" class="btn btn-info btn-small" data-action="drawGraph">Dependency Graph</a>{{/graph}}
+                            {{^graph}}<a href="{{trackingUrl}}" class="btn btn-primary btn-small">Show Error Trace</a>{{/graph}}
+                        </div>
+                    </div>
+                    {{/value}}
+                </div>
+            </div>
+            {{/tasks}}
+        </script>
+    </head>
+    <body>
+        <div class="page-header custom-header">
+            <h1>Luigi Task Status <small>Active tasks</small></h1>
+        </div>
+        
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#" data-tab="taskList" class="tabButton">Task List</a></li>
+            <li><a href="#g" data-tab="dependencyGraph" class="tabButton">Dependency Graph</a></li>
+        </ul>
+        <div class="tab-content">
+            <section id="taskList" class="container-fluid tab-pane active">
+                <h3>Failed</h3>
+                <div id="failedTasks" class="taskList"></div>
+                <h3>Upstream Failure</h3>
+                <div id="upstreamFailedTasks" class="taskList"></div>
+            </section>
+            <section id="dependencyGraph" class="tab-pane">
+                <div class="navbar">
+                  <div class="navbar-inner">
+                    <form class="navbar-form pull-left" id="loadTaskForm">
+                      <input type="text" class="search-query" placeholder="TaskId(param1=val1,param2=val2)">
+                      <button type="submit" class="btn">Show task details</button>
+                    </form>
+                  </div>
+                </div>
+                <div id="graphContainer" class="container-fluid">
+                    <h4 id="dependencyTitle"></h4>
+                    <h5>Dependency Graph</h5>
+                    <div id="d3Container">
+                    </div>
+                </div>
+            </section>
+        </div>
+    </body>
+</html>

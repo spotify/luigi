@@ -4,7 +4,10 @@ client.cfg
 build
 dist
 luigi.egg-info
+packages.tar
+test/data
 .nicesetup
+*.pickle
 *.rej
 *.orig
 .DS_Store

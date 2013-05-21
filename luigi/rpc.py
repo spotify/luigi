@@ -80,6 +80,15 @@ class RemoteScheduler(Scheduler):
     def get_work(self, worker):
         return self._request('/api/get_work', {'worker': worker})
 
+    def graph(self):
+        return self._request('/api/graph', {})
+
+    def dep_graph(self, task_id):
+        return self._request('/api/dep_graph', {'task_id': task_id})
+
+    def task_list(self, status, upstream_status):
+        return self._request('/api/task_list', {'status': status, 'upstream_status': upstream_status})
+
 
 class RemoteSchedulerResponder(object):
     """ Use on the server side for responding to requests"""
@@ -100,3 +109,9 @@ class RemoteSchedulerResponder(object):
         return self._scheduler.graph()
 
     index = graph
+
+    def dep_graph(self, task_id):
+        return self._scheduler.dep_graph(task_id)
+
+    def task_list(self, status, upstream_status):
+        return self._scheduler.task_list(status, upstream_status)

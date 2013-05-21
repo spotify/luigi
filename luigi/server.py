@@ -149,6 +149,7 @@ class StaticFileHandler(tornado.web.RequestHandler):
 def apps(debug):
     api_app = tornado.web.Application([
         (r'/api/(.*)', RPCHandler),
+        (r'/static/(.*)', StaticFileHandler)
     ], debug=debug)
 
     visualizer_app = tornado.web.Application([
