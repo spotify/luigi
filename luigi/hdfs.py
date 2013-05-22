@@ -20,14 +20,14 @@ import urlparse
 import luigi.format
 import datetime
 import re
-from luigi.target import FileSystem, FileSystemTarget
+from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
 
 
 class HDFSCliError(Exception):
     def __init__(self, command, returncode, stdout, stderr):
         self.returncode = returncode
         self.stdout = stdout
-        self.sterr = stderr
+        self.stderr = stderr
         msg = ("Command %r failed [exit code %d]\n" +
                "---stdout---\n" +
                "%s\n" +
@@ -148,7 +148,7 @@ class HdfsClient(FileSystem):
             call_check(['hadoop', 'fs', '-mkdir', path])
         except HDFSCliError, ex:
             if "File exists" in ex.stderr:
-                raise FileExists(ex.stderr)
+                raise FileAlreadyExists(ex.stderr)
             else:
                 raise
 
