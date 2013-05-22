@@ -289,6 +289,7 @@ class HiveTableTarget(luigi.Target):
         self.hive_cmd = load_hive_cmd()
 
     def exists(self):
+        logger.debug("Checking Hive table '{d}.{t}' exists".format(d=self.database, t=self.table))
         return table_exists(self.table, self.database)
 
     @property
@@ -316,6 +317,7 @@ class HivePartitionTarget(luigi.Target):
 
     def exists(self):
         try:
+            logger.debug("Checking Hive table '{d}.{t}' for partition {p}".format(d=self.database, t=self.table, p=str(self.partition)))
             return table_exists(self.table, self.database, self.partition)
         except HiveCommandError, e:
             if self.fail_missing_table:
