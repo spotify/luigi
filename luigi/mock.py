@@ -56,6 +56,13 @@ class MockFile(target.Target):
                     MockFile._file_contents[fn] = self2.getvalue()
                 StringIO.StringIO.close(self2)
 
+            def __exit__(self, type, value, traceback):
+                if not type:
+                    self.close()
+
+            def __enter__(self):
+                return self
+
         if mode == 'w':
             return StringBuffer()
         else:

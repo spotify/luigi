@@ -26,3 +26,11 @@ class MockFileTest(unittest.TestCase):
         q = t.open('r')
         self.assertEqual(list(q), ['test\n'])
         q.close()
+
+    def test_with(self):
+        t = MockFile("foo")
+        with t.open('w') as b:
+            b.write("bar")
+
+        with t.open('r') as b:
+            self.assertEquals(list(b), ['bar'])
