@@ -152,7 +152,8 @@ class MetastoreClient(HiveClient):
                 return table in client.get_all_tables(database)
             else:
                 partition_str = self.partition_spec(partition)
-                return partition_str in client.get_partition_names(database, table, partition_str)
+                # -1 is max_parts, the # of partition names to return (-1 = unlimited)
+                return partition_str in client.get_partition_names(database, table, -1)
 
     def table_schema(self, table, database='default'):
         with HiveThriftContext() as client:
