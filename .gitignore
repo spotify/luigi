@@ -7,3 +7,4 @@ luigi.egg-info
 .nicesetup
 *.rej
 *.orig
+.DS_Store
