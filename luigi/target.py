@@ -28,7 +28,7 @@ class FileSystemException(Exception):
     pass
 
 
-class FileExists(FileSystemException):
+class FileAlreadyExists(FileSystemException):
     """ Raised when a file system operation can't be performed because a direcoty exists but is required to not exist
     """
     pass

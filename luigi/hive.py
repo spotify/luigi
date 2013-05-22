@@ -15,7 +15,7 @@ import logging
 import luigi
 import luigi.hadoop
 import luigi.interface
-from luigi.target import FileSystemTarget
+from luigi.target import FileSystemTarget, FileAlreadyExists
 import os
 import subprocess
 import tempfile
@@ -260,7 +260,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
                         # there is a possible race condition
                         # which needs to be handled here
                         o.fs.mkdir(parent_dir)
-                    except luigi.hdfs.FileExists:
+                    except FileAlreadyExists:
                         pass
 
     def run_job(self, job):
