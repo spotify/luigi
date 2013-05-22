@@ -16,6 +16,8 @@ import unittest
 import luigi
 from luigi import hdfs
 from luigi.hdfs import client
+import luigi.target
+
 
 class TestException(Exception):
     pass
@@ -32,7 +34,19 @@ class ErrorHandling(unittest.TestCase):
             hdfs.HDFSCliError,
             hdfs.exists,
             'hdfs://127.0.0.1:0/foo'
-            )
+        )
+
+    def test_mkdir_exists(self):
+        path = "/tmp/luigi_hdfs_testdir"
+        if not hdfs.exists(path):
+            hdfs.mkdir(path)
+        self.assertTrue(hdfs.exists(path))
+        self.assertRaises(
+            luigi.target.FileAlreadyExists,
+            hdfs.mkdir,
+            path
+        )
+        hdfs.remove(path, skip_trash=True)
 
 
 class AtomicHdfsOutputPipeTests(unittest.TestCase):
