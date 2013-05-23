@@ -1,7 +1,6 @@
 import datetime
 import os
 import posixpath
-import tempfile
 import time
 import unittest
 import luigi.hdfs
@@ -132,3 +131,13 @@ class TestWebHDFSClient(unittest.TestCase):
                                         include_size=True, include_type=True)
         self.assertEquals(set([(foobar, 0, 'd'), (foobaz.path, 7, '-')]),
                           set(results))
+
+    def test_relativepath(self):
+        rel_test_dir = "." + os.path.split(self.testDir)[1]
+        try:
+            self.assertFalse(luigi.webhdfs.exists(rel_test_dir))
+            luigi.webhdfs.mkdir(rel_test_dir)
+            self.assertTrue(luigi.webhdfs.exists(rel_test_dir))
+        finally:
+            if luigi.webhdfs.exists(rel_test_dir):
+                luigi.webhdfs.remove(rel_test_dir, True)
