@@ -56,10 +56,29 @@ def get_whoops(path, config=None):
 
 
 class WebHdfsClient(object):
+    """Hdfs Client that uses the `whoops` python library to communicate with webhdfs. In order to
+    use the client, you must specify `namenode_host` and `namenode_port` in the `hdfs` section of
+    your luigi configuration."""
+
+    def __init__(self):
+        "Configures _homedir so that we can handle relative paths"
+        self._homedir = get_whoops("/").home()
+
+    def _make_absolute(self, inpath):
+        """Makes the given path absolute if it's not already. It is assumed that the path is
+        relative to self._homedir"""
+        (scheme, netloc, path, query, fragment) = urlparse.urlsplit(inpath)
+
+        if scheme or posixpath.isabs(path):
+            # if a scheme is specified, assume it's absolute.
+            return path
+        return posixpath.join(self._homedir, path)
+
     def exists(self, path):
+        """Returns true if the path exists and false otherwise"""
         whdfs = get_whoops(path)
         try:
-            whdfs.stat(path)
+            whdfs.stat(self._make_absolute(path))
             return True
         except whoops.WebHDFSError, e:
             if e.args[0] == "Not Found":
@@ -72,14 +91,14 @@ class WebHdfsClient(object):
         if scheme != dest_scheme or netloc != dest_netloc:
             raise RuntimeError("Filesystems don't match. source: %s dest: %s".format(path, dest))
 
-        return get_whoops(path).rename(path, dest)
+        return get_whoops(path).rename(self._make_absolute(path), self._make_absolute(dest))
 
     def remove(self, path, recursive=True):
         """Note that skip trash option doesn't exist -- trash is always skipped"""
-        return get_whoops(path).delete(path, recursive)
+        return get_whoops(path).delete(self._make_absolute(path), recursive)
 
     def mkdir(self, path):
-        return get_whoops(path).mkdir(path)
+        return get_whoops(path).mkdir(self._make_absolute(path))
 
     def listdir(self, path, ignore_directories=False, ignore_files=False,
                 include_size=False, include_type=False, include_time=False):
