@@ -5,9 +5,8 @@ var LuigiAPI = (function() {
 
     function flatten(response, rootId) {
         var flattened = [];
-        // Dirty hack to make the requested task indexed as 0
-        // TODO: push downstream to graph.js
-        if (rootId) {
+        // Make the requested taskId the first in the list
+        if (rootId && response[rootId]) {
             var rootNode = response[rootId];
             rootNode.taskId=rootId;
             flattened.push(rootNode);

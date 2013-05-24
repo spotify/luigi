@@ -2,14 +2,12 @@
 <html lang="en">
     <head>
         <title>Luigi Task Visualiser</title>
-        <script src="//code.jquery.com/jquery-1.9.1.js"></script>
-        <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
-        <script src="//cdnjs.cloudflare.com/ajax/libs/mustache.js/0.7.2/mustache.min.js"></script>
-        <script src="http://d3js.org/d3.v3.js" charset="utf-8"></script>
+        <script src="lib/jquery-1.10.0.min.js"></script>
+        <script src="lib/mustache.js"></script>
         <script src="js/luigi.js"></script>
         <script src="js/graph.js"></script>
-        <script src="js/tasklist.js"></script>
-        <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <script src="js/visualiserApp.js"></script>
+        <link href="lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
         <style type="text/css">
@@ -32,16 +30,17 @@
 
         .link {
           stroke: #999;
-          stroke-opacity: .4;
+          stroke-opacity: .6;
         }
 
         svg {
             border:1px solid #DDDDDD;
+            overflow:scroll;
         }
         </style>
         <script type="text/template" name="rowTemplate">
             {{#tasks}}
-            <div class="well well-small taskFamily">
+            <div class="taskFamily">
                 <h4>
                     <button class="btn btn-mini btn-inverse" data-action="expandTaskRows">
                         <span class="icon-plus icon-white"></span>
@@ -79,10 +78,10 @@
         </ul>
         <div class="tab-content">
             <section id="taskList" class="container-fluid tab-pane active">
-                <h3>Failed</h3>
-                <div id="failedTasks" class="taskList"></div>
                 <h3>Upstream Failure</h3>
                 <div id="upstreamFailedTasks" class="taskList"></div>
+                <h3>Failed Tasks</h3>
+                <div id="failedTasks" class="taskList"></div>
             </section>
             <section id="dependencyGraph" class="tab-pane">
                 <div class="navbar">
@@ -96,10 +95,13 @@
                 <div id="graphContainer" class="container-fluid">
                     <h4 id="dependencyTitle"></h4>
                     <h5>Dependency Graph</h5>
-                    <div id="d3Container">
+                    <div id="graphPlaceholder">
                     </div>
                 </div>
             </section>
         </div>
+        <script>
+            visualiserApp(new LuigiAPI("/api"));
+        </script>
     </body>
 </html>

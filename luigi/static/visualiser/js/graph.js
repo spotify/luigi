@@ -7,21 +7,15 @@ Graph = (function() {
     };
 
     function nodeFromTask(task) {
+        var deps = task.deps;
+        deps.sort();
         return {
             taskId: task.taskId,
             status: task.status,
             trackingUrl: "#"+task.taskId,
-            x: graphWidth/2+Math.random()*10,
-            y: graphHeight/2+Math.random()*10,
-            deps: task.deps
+            deps: deps,
+            depth: -1
         };
-    }
-
-    /* Fix root node to a specific point on the graph */
-    function pinRootNode(node) {
-        node.fixed = true;
-        node.x = graphWidth/2;
-        node.y = 50;
     }
 
     /* Convert array to dict by indexing on propertyName */
@@ -38,38 +32,69 @@ Graph = (function() {
         var edges = [];
         $.each(nodes, function(i, task) {
             $.each(task.deps, function(j, dep) {
-                edges.push({
-                    source: nodeIndex[task.taskId],
-                    target: nodeIndex[dep]
-                });
+                if (nodeIndex[dep]) {
+                    edges.push({
+                        source: nodes[nodeIndex[task.taskId]],
+                        target: nodes[nodeIndex[dep]]
+                    });
+                }
             });
         });
         return edges;
     }
 
-    /* Compute the maximum depth of each node for layout purposes (output not currently used) */
+    /* Compute the maximum depth of each node for layout purposes, returns the number
+       of nodes at each depth level (for layout purposes) */
     function computeDepth(nodes, nodeIndex) {
+        var rowSizes = [];
         function descend(n, depth) {
             n.depth = depth;
+            if (rowSizes[depth] === undefined) {
+                rowSizes[depth] = 0;
+            }
+            n.xOrder = rowSizes[depth];
+            rowSizes[depth]++;
             $.each(n.deps, function(i, dep) {
-                descend(nodes[nodeIndex[dep]], depth + 1);
+                if (nodeIndex[dep]) {
+                    descend(nodes[nodeIndex[dep]], depth + 1);
+                }
             });
         }
         descend(nodes[0], 0);
-        console.log(nodes);
+        return rowSizes;
     }
 
-    /* Parses a list of tasks to a graph format suitable for d3 force-directed layout */
-    function parseToGraph(tasks) {
-        var nodes = $.map(tasks, nodeFromTask);
-        console.log(nodes);
-        var nodeIndex = uniqueIndexByProperty(nodes, "taskId");
-        var edges = createDependencyEdges(nodes, nodeIndex);
-
-        if (nodes.length > 0) {
-            pinRootNode(nodes[0]);
-            computeDepth(nodes, nodeIndex);
+    /* Format nodes according to their depth and horizontal sort order.
+       Algorithm: evenly distribute nodes along each depth level, offsetting each
+       by the text line height to prevent overlapping text. The height of each
+       depth level is therefore determined by the number of nodes at that depth. */
+    function layoutNodes(nodes, rowSizes) {
+        function rowStartPosition(depth) {
+            if (depth === 0) return 20;
+            return rowStartPosition(depth-1)+Math.max(rowSizes[depth-1]*10+10,100);
         }
+        $.each(nodes, function(i, node) {
+            node.x = ((node.xOrder+1)/(rowSizes[node.depth]+1))*(graphWidth-200)+100;
+            node.y = rowStartPosition(node.depth) + (node.xOrder*10);
+        });
+    }
+
+    /* Parses a list of tasks to a graph format */
+    function createGraph(tasks) {
+        if (tasks.length === 0) return {nodes: [], links: []};
+
+        var nodes = $.map(tasks, nodeFromTask);
+        var nodeIndex = uniqueIndexByProperty(nodes, "taskId");
+
+        var rowSizes = computeDepth(nodes, nodeIndex);
+
+        nodes = $.map(nodes, function(node) { return node.depth >= 0 ? node: null; });
+
+        layoutNodes(nodes, rowSizes);
+
+        // We need to re-index nodes after filtering
+        nodeIndex = uniqueIndexByProperty(nodes, "taskId");
+        var edges = createDependencyEdges(nodes, nodeIndex);
 
         return {
             nodes: nodes,
@@ -77,60 +102,86 @@ Graph = (function() {
         };
     }
 
+    function findBounds(nodes) {
+        var maxX = 0;
+        var maxY = 0;
+        $.each(nodes, function(i, node) {
+            if (node.x>maxX) maxX = node.x;
+            if (node.y>maxY) maxY = node.y;
+        });
+        return {
+            x:maxX,
+            y:maxY
+        };
+    }
+
     var graphWidth = 1110;
-    var graphHeight = 800;
 
     function DependencyGraph(containerElement) {
-        this.svg = d3.select(containerElement).append("svg");
-        this.force = d3.layout.force().charge(-1000).linkDistance(30).size([graphWidth,graphHeight*2]).gravity(0.5);
-        this.graph = parseToGraph([]);
+        this.svg = $(svgElement("svg")).appendTo($(containerElement));
+    }
 
-        this.force.nodes(this.graph.nodes).links(this.graph.links).start();
 
-        this.renderGraph();
+    /* We need custom element creators for svg nodes and xlink attributes because jQuery doesn't support
+       namespaces properly */
+    function svgElement(name) {
+        return document.createElementNS("http://www.w3.org/2000/svg", name);
+    }
 
-        var self = this;
-        this.force.on("tick", function() {
-            self.svg.selectAll(".link").attr("x1", function(d) { return d.source.x; })
-                .attr("y1", function(d) { return d.source.y; })
-                .attr("x2", function(d) { return d.target.x; })
-                .attr("y2", function(d) { return d.target.y; });
-
-            self.svg.selectAll(".node").attr("transform", function(d) { return "translate(" + d.x +","+ d.y +")"; });
-          });
+    function svgLink(url) {
+        var element = svgElement("a");
+        element.setAttributeNS("http://www.w3.org/1999/xlink", "href", url);
+        return element;
     }
 
     DependencyGraph.prototype.renderGraph = function() {
-        var link = this.svg.selectAll(".link")
-                      .data(this.graph.links)
-                    .enter().append("line")
-                      .attr("class", "link");
+        var self = this;
 
-        var node = this.svg.selectAll(".node")
-                      .data(this.graph.nodes)
-                    .enter().append("g")
-                      .attr("class", "node");
+        $.each(this.graph.links, function(i, link) {
+            var line = $(svgElement("line"))
+                        .attr("class","link")
+                        .attr("x1", link.source.x)
+                        .attr("y1", link.source.y)
+                        .attr("x2", link.target.x)
+                        .attr("y2", link.target.y)
+                        .appendTo(self.svg);
+        });
 
-        node.append("circle")
-            .attr("r", 7)
-            .attr("class", "nodeCircle")
-            .attr("fill", function(d) { return statusColors[d.status]; } );
-
-        node.append("a").attr("xlink:href", function(d) { console.log(d); return d.trackingUrl; })
-            .append("text").text(function(d) { return d.taskId; }).attr("y", -7);
+        $.each(this.graph.nodes, function(i, node) {
+            var g = $(svgElement("g"))
+                .addClass("node")
+                .attr("transform", "translate(" + node.x + "," + node.y +")")
+                .appendTo(self.svg);
+            $(svgElement("circle"))
+                .addClass("nodeCircle")
+                .attr("r", 7)
+                .attr("fill", statusColors[node.status])
+                .appendTo(g);
+            $(svgLink(node.trackingUrl))
+                .append(
+                    $(svgElement("text"))
+                    .text(node.taskId)
+                    .attr("y", 3))
+                .appendTo(g);
+        });
     };
 
     DependencyGraph.prototype.updateData = function(taskList) {
-        var newGraph = parseToGraph(taskList);
-        this.graph.links = newGraph.links;
-        this.graph.nodes = newGraph.nodes;
-
-        this.force.nodes(this.graph.nodes).links(this.graph.links).start();
-        
+        this.graph = createGraph(taskList);
+        bounds = findBounds(this.graph.nodes);
         this.renderGraph();
+        this.svg.attr("height", bounds.y+10);
     };
 
     return {
-        DependencyGraph: DependencyGraph
+        DependencyGraph: DependencyGraph,
+        testableMethods: {
+            nodeFromTask: nodeFromTask,
+            uniqueIndexByProperty: uniqueIndexByProperty,
+            createDependencyEdges: createDependencyEdges,
+            computeDepth: computeDepth,
+            createGraph: createGraph,
+            findBounds: findBounds
+        }
     };
 })();

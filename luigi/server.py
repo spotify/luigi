@@ -89,10 +89,10 @@ class VisualizeHandler(tornado.web.RequestHandler):
                 selector = 'BROKEN'
 
             colors = {PENDING: ('white', 'black'),
-                     DONE: ('green', 'white'),
-                     FAILED: ('red', 'white'),
-                     RUNNING: ('blue', 'white'),
-                     'BROKEN': ('orange', 'black'),  # external task, can't run
+                      DONE: ('green', 'white'),
+                      FAILED: ('red', 'white'),
+                      RUNNING: ('blue', 'white'),
+                      'BROKEN': ('orange', 'black'),  # external task, can't run
                      }
             fillcolor = colors[selector][0]
             fontcolor = colors[selector][1]

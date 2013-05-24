@@ -12,8 +12,12 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import time, random, tempfile, os
-import luigi, luigi.server
+import time
+import tempfile
+import os
+import luigi
+import luigi.server
+import luigi.worker
 import unittest
 import luigi.notifications
 
@@ -58,39 +62,31 @@ class FailingTask(luigi.Task):
         raise Exception()
 
 
-class RemoteSchedulerTest(unittest.TestCase):
+class SchedulerVisualisationTest(unittest.TestCase):
+
     def setUp(self):
-        self.api_port = random.randrange(7000, 10000)
-        luigi.server.run_api_threaded(api_port=self.api_port)
+        self.scheduler = luigi.server._create_scheduler()
 
     def tearDown(self):
-        luigi.server.stop()
-        # scheduler and api are class variables on the RemoteHandler
-        # We need to reset them to have a clean scheduler
-        new_scheduler = luigi.server._create_scheduler()
-        luigi.server.RPCHandler.scheduler = new_scheduler
-        luigi.server.RPCHandler.api = luigi.rpc.RemoteSchedulerResponder(new_scheduler)
+        pass
 
     def _assert_complete(self, tasks):
         for t in tasks:
             self.assert_(t.complete())
 
-    def _build(self, tasks, workers=2):
-        luigi.build(tasks, scheduler_host='localhost', scheduler_port=self.api_port, workers=workers)
+    def _build(self, tasks):
+        w = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1)
+        for t in tasks:
+            w.add(t)
+        w.run()
+
+    def _remote(self):
+        return self.scheduler
 
     def _test_run(self, workers):
         tasks = [DummyTask(i) for i in xrange(20)]
         self._build(tasks, workers=workers)
         self._assert_complete(tasks)
-
-    def test_single_worker(self):
-        self._test_run(workers=1)
-
-    def test_multiple_workers(self):
-        self._test_run(workers=10)
-
-    def _remote(self):
-        return luigi.rpc.RemoteScheduler(port=self.api_port)
 
     def test_graph(self):
         start = time.time()

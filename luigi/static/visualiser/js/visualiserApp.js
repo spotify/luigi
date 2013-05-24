@@ -1,4 +1,4 @@
-(function(luigi) {
+function visualiserApp(luigi) {
     var templates = {};
 
     function loadTemplates() {
@@ -55,7 +55,9 @@
 
     function renderTasks(tasks) {
         var displayTasks = $.map(tasks, taskToDisplayTask);
+        displayTasks.sort(function(a,b) { return a.taskId.localeCompare(b.taskId); });
         var tasksByFamily = entryList(indexByProperty(displayTasks, "taskName"));
+        tasksByFamily.sort(function(a,b) { return a.key.localeCompare(b.key); });
         return renderTemplate("rowTemplate", {tasks: tasksByFamily});
     }
 
@@ -69,12 +71,13 @@
     function processHashChange() {
         var hash = location.hash;
         if (hash) {
-            taskId = hash.substr(1);
+            var taskId = hash.substr(1);
             $("#graphContainer").hide();
             if (taskId != "g") {
                 luigi.getDependencyGraph(taskId, function(dependencyGraph) {
                     $("#dependencyTitle").text(taskId);
-                    $("#d3Container").get(0).graph.updateData(dependencyGraph);
+                    $("#graphPlaceholder svg").empty();
+                    $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
                     $("#graphContainer").show();
                 });
             }
@@ -115,8 +118,8 @@
                 bindUserEvents();
             });
         });
-        var graph = new Graph.DependencyGraph($("#d3Container")[0]);
-        $("#d3Container")[0].graph = graph;
+        var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
+        $("#graphPlaceholder")[0].graph = graph;
         processHashChange();
     });
-})(new LuigiAPI("/api"));
+}
