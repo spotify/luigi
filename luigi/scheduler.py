@@ -290,3 +290,9 @@ class CentralPlannerScheduler(Scheduler):
                 if task.status != PENDING or not upstream_status or upstream_status == serialized['upstream_status']:
                     result[task_id] = serialized
         return result
+
+    def fetch_error(self, task_id):
+        if self._tasks[task_id].expl is not None:
+            return {"taskId": task_id, "error": self._tasks[task_id].expl}
+        else:
+            return {"taskId": task_id, "error": ""}

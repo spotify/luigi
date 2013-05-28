@@ -59,7 +59,7 @@ class FailingTask(luigi.Task):
     task_id = luigi.Parameter()
 
     def run(self):
-        raise Exception()
+        raise Exception("Error Message")
 
 
 class SchedulerVisualisationTest(unittest.TestCase):
@@ -272,6 +272,14 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(remote.task_list('', ''), all)
         self.assertEqual(remote.task_list('RUNNING', ''), {})
 
+    def test_fetch_error(self):
+        self._build([FailingTask(8)])
+        remote = self._remote()
+        error = remote.fetch_error("FailingTask(task_id=8)")
+        self.assertEqual(error["taskId"], "FailingTask(task_id=8)")
+        self.assertTrue("Error Message" in error["error"])
+        self.assertTrue("Runtime error" in error["error"])
+        self.assertTrue("Traceback" in error["error"])
 
 if __name__ == '__main__':
     unittest.main()

@@ -162,6 +162,9 @@ Graph = (function() {
                     $(svgElement("text"))
                     .text(node.taskId)
                     .attr("y", 3))
+                .attr("class","graph-node-a")
+                .attr("data-task-status", node.status)
+                .attr("data-task-id", node.taskId)
                 .appendTo(g);
         });
     };

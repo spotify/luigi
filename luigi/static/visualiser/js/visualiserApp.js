@@ -68,6 +68,11 @@ function visualiserApp(luigi) {
         $(".tabButton[data-tab="+tabId+"]").parent().addClass("active");
     }
 
+    function showErrorTrace(error) {
+        $("#errorModal").empty().append(renderTemplate("errorTemplate", error));
+        $("#errorModal").modal({});
+    }
+
     function processHashChange() {
         var hash = location.hash;
         if (hash) {
@@ -79,6 +84,7 @@ function visualiserApp(luigi) {
                     $("#graphPlaceholder svg").empty();
                     $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
                     $("#graphContainer").show();
+                    bindGraphEvents();
                 });
             }
             switchTab("dependencyGraph");
@@ -87,7 +93,20 @@ function visualiserApp(luigi) {
         }
     }
 
-    function bindUserEvents() {
+    function bindGraphEvents() {
+        $(".graph-node-a").click(function(event) {
+            var taskId = $(this).attr("data-task-id");
+            var status = $(this).attr("data-task-status");
+            if (status=="FAILED") {
+                event.preventDefault();
+                luigi.getErrorTrace(taskId, function(error) {
+                   showErrorTrace(error);
+                });
+            }
+        });
+    }
+
+    function bindListEvents() {
         $("[data-action=expandTaskRows]").click(function(event) {
             event.preventDefault();
             var icon = $(this).find("span");
@@ -106,7 +125,11 @@ function visualiserApp(luigi) {
             event.preventDefault();
             location.hash = $(this).find("input").val();
         });
-
+        $(".error-trace-button").click(function() {
+            luigi.getErrorTrace($(this).attr("data-task-id"), function(error) {
+               showErrorTrace(error);
+            });
+        });
     }
 
     $(document).ready(function() {
@@ -115,7 +138,7 @@ function visualiserApp(luigi) {
             luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
                 $("#failedTasks").append(renderTasks(failedTasks));
                 $("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
-                bindUserEvents();
+                bindListEvents();
             });
         });
         var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);

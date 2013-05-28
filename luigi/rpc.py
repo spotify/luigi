@@ -89,6 +89,9 @@ class RemoteScheduler(Scheduler):
     def task_list(self, status, upstream_status):
         return self._request('/api/task_list', {'status': status, 'upstream_status': upstream_status})
 
+    def fetch_error(self, task_id):
+        return self._request('/api/fetch_error', {'task_id': task_id})
+
 
 class RemoteSchedulerResponder(object):
     """ Use on the server side for responding to requests"""
@@ -115,3 +118,6 @@ class RemoteSchedulerResponder(object):
 
     def task_list(self, status, upstream_status):
         return self._scheduler.task_list(status, upstream_status)
+
+    def fetch_error(self, task_id):
+        return self._scheduler.fetch_error(task_id)
