@@ -15,7 +15,6 @@
 # Simple REST server that takes commands in a JSON payload
 import json
 import os
-import re
 import atexit
 import mimetypes
 import tornado.ioloop
@@ -26,9 +25,7 @@ import interface
 import scheduler
 import pkg_resources
 import signal
-from cStringIO import StringIO
 from rpc import RemoteSchedulerResponder
-from scheduler import PENDING, DONE, FAILED, RUNNING
 
 
 def _create_scheduler():
@@ -55,86 +52,6 @@ class RPCHandler(tornado.web.RequestHandler):
             self.send_error(400)
 
 
-class VisualizeHandler(tornado.web.RequestHandler):
-    @tornado.web.asynchronous
-    def get(self):
-        client = tornado.httpclient.AsyncHTTPClient()
-        # TODO: use rpc module instead of hardcoded graph
-        client.fetch("http://localhost:8082/api/graph", self.on_graph)
-
-    def on_graph(self, graph_response):
-        """ TODO: clean this up using templates """
-
-        if graph_response.error is not None:
-            print "Got error from API server"
-            graph_response.rethrow()
-        if graph_response.code != 200:
-            print "Got response code %s from API server" % graph_response.code
-            self.send_error(graph_response.code)
-
-        # TODO: figure out the interface for this
-
-        # TODO: if there are too many nodes, we need to prune the view
-        # One idea: do a Dijkstra from all running nodes. Hide all nodes
-        # with distance >= 50.
-        tasks = json.loads(graph_response.body)["response"]
-
-        import pygraphviz
-        graphviz = pygraphviz.AGraph(directed=True, size=12)
-        n_nodes = 0
-        for task, p in tasks.iteritems():
-            selector = p['status']
-
-            if selector == PENDING and not p['workers']:
-                selector = 'BROKEN'
-
-            colors = {PENDING: ('white', 'black'),
-                      DONE: ('green', 'white'),
-                      FAILED: ('red', 'white'),
-                      RUNNING: ('blue', 'white'),
-                      'BROKEN': ('orange', 'black'),  # external task, can't run
-                     }
-            fillcolor = colors[selector][0]
-            fontcolor = colors[selector][1]
-            shape = 'box'
-            label = task.replace('(', '\\n(').replace(',', ',\\n')  # force GraphViz to break lines
-            # TODO: if the ( or , is a part of the argument we shouldn't really break it
-
-            # TODO: FIXME: encoding strings is not compatible with newer pygraphviz
-            graphviz.add_node(task.encode('utf-8'), label=label.encode('utf-8'), style='filled', fillcolor=fillcolor, fontcolor=fontcolor, shape=shape, fontname='Helvetica', fontsize=11)
-            n_nodes += 1
-
-        for task, p in tasks.iteritems():
-            for dep in p['deps']:
-                graphviz.add_edge(dep, task)
-
-        if n_nodes < 200:
-            graphviz.layout('dot')
-        else:
-            # stupid workaround...
-            graphviz.layout('fdp')
-
-        s = StringIO()
-        graphviz.draw(s, format='svg')
-        s.seek(0)
-        svg = s.read()
-        # TODO: this code definitely should not live here:
-        html_header = pkg_resources.resource_string(__name__, 'static/header.html')
-
-        pattern = r'(<svg.*?)(<g id="graph[01]".*?)(</svg>)'
-        mo = re.search(pattern, svg, re.S)
-
-        self.write(''.join([html_header,
-         mo.group(1),
-         '<g id="viewport">',
-         mo.group(2),
-        '</g>',
-         mo.group(3),
-         "</body></html>"]))
-
-        self.finish()
-
-
 class StaticFileHandler(tornado.web.RequestHandler):
     def get(self, path):
         # TODO: this is probably not the right way to do it...
@@ -146,63 +63,42 @@ class StaticFileHandler(tornado.web.RequestHandler):
         self.write(data)
 
 
-def apps(debug):
+def app(debug):
     api_app = tornado.web.Application([
         (r'/api/(.*)', RPCHandler),
         (r'/static/(.*)', StaticFileHandler)
     ], debug=debug)
-
-    visualizer_app = tornado.web.Application([
-        (r'/static/(.*)', StaticFileHandler),
-        (r'/', VisualizeHandler)
-    ], debug=debug)
-    return api_app, visualizer_app
+    return api_app
 
 
-def run(visualizer_processes=1, visualizer_port=8081, api_port=8082):
-    """ Runs one instance of the API server and <visualizer_processes> visualizer servers
+def run(api_port=8082):
+    """ Runs one instance of the API server
     """
-    import process
+    api_app = app(debug=False)
 
-    api_app, visualizer_app = apps(debug=False)
-
-    visualizer_sockets = tornado.netutil.bind_sockets(visualizer_port)
     api_sockets = tornado.netutil.bind_sockets(api_port)
 
-    proc, attempt = process.fork_linked_workers(1 + visualizer_processes)
+    print "Launching API instance"
 
-    if proc == 0:
-        # first process is API server
-        if attempt != 0:
-            print "API instance died. Will not restart."
-            exit(0)  # will not be restarted if it dies, as it indicates an issue that should be fixed
-        print "Launching API instance"
+    # load scheduler state
+    RPCHandler.scheduler.load()
 
-        # load scheduler state
-        RPCHandler.scheduler.load()
+    # prune work DAG every 10 seconds
+    pruner = tornado.ioloop.PeriodicCallback(RPCHandler.scheduler.prune, 10000)
+    pruner.start()
 
-        # prune work DAG every 10 seconds
-        pruner = tornado.ioloop.PeriodicCallback(RPCHandler.scheduler.prune, 10000)
-        pruner.start()
+    def shutdown_handler(foo=None, bar=None):
+        print "api instance shutting down..."
+        RPCHandler.scheduler.dump()
+        os._exit(0)
 
-        def shutdown_handler(foo=None, bar=None):
-            print "api instance shutting down..."
-            RPCHandler.scheduler.dump()
-            os._exit(0)
+    server = tornado.httpserver.HTTPServer(api_app)
+    server.add_sockets(api_sockets)
 
-        server = tornado.httpserver.HTTPServer(api_app)
-        server.add_sockets(api_sockets)
-
-        signal.signal(signal.SIGINT, shutdown_handler)
-        signal.signal(signal.SIGTERM, shutdown_handler)
-        signal.signal(signal.SIGQUIT, shutdown_handler)
-        atexit.register(shutdown_handler)
-
-    elif proc != 0:
-        # visualizers can die and will be restarted
-        print "Launching Visualizer instance %d (attempt %d)" % (proc, attempt)
-        server = tornado.httpserver.HTTPServer(visualizer_app)
-        server.add_sockets(visualizer_sockets)
+    signal.signal(signal.SIGINT, shutdown_handler)
+    signal.signal(signal.SIGTERM, shutdown_handler)
+    signal.signal(signal.SIGQUIT, shutdown_handler)
+    atexit.register(shutdown_handler)
 
     tornado.ioloop.IOLoop.instance().start()
 
@@ -210,7 +106,7 @@ def run(visualizer_processes=1, visualizer_port=8081, api_port=8082):
 def run_api_threaded(api_port=8082):
     ''' For unit tests'''
 
-    api_app, visualizer_app = apps(debug=False)
+    api_app = app(debug=False)
 
     api_sockets = tornado.netutil.bind_sockets(api_port)
 

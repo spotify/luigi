@@ -27,6 +27,5 @@ Depends:	${shlibs:Depends},
 		${python:Depends},
 		python-daemon,
 		python-pip,
-		python-pygraphviz,
 		python-tornado (>= 2.3)
 Description: Luigi central planner server

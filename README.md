@@ -24,7 +24,7 @@ Everything in Luigi is in Python. Instead of XML configuration or similar extern
 
 ## Installing
 
-Downloading and running *python setup.py install* should be enough. Note that you probably want [Tornado](http://www.tornadoweb.org/) and [Pygraphviz](http://networkx.lanl.gov/pygraphviz/). Also [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) is optional if you want to run Hadoop jobs since it makes debugging easier. If you want to run Hadoop you should also make sure to edit /etc/luigi/client.cfg and add something like this
+Downloading and running *python setup.py install* should be enough. Note that you probably want [Tornado](http://www.tornadoweb.org/). Also [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) is optional if you want to run Hadoop jobs since it makes debugging easier. If you want to run Hadoop you should also make sure to edit /etc/luigi/client.cfg and add something like this
 
     [hadoop]
     jar: /usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
@@ -113,7 +113,7 @@ in the background and then run
 
     $ python wordcount.py --date 2012-W03
 
-then in fact your script will now do the scheduling through a centralized server. You need [Tornado](http://www.tornadoweb.org/) and [Pygraphviz](http://networkx.lanl.gov/pygraphviz/) for this to work. These are available in Debian as *python-tornado* and *python-pygraphviz*, respectively.
+then in fact your script will now do the scheduling through a centralized server. You need [Tornado](http://www.tornadoweb.org/) for this to work. It is available in Debian as *python-tornado*.
 
 Launching *http://localhost:8081* should show something like this:
 
