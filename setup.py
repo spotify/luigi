@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import os
+
 try:
     from setuptools import setup
 except:
@@ -28,6 +30,10 @@ except IOError:
     # See https:/x/github.com/spotify/luigi/issues/46
     long_description = ''
 
+luigi_package_data = [os.path.join(dirpath.replace("luigi/", ""), ext)
+                      for (dirpath, dirnames, filenames) in os.walk("luigi/static")
+                      for ext in ["*.html", "*.js", "*.css", "*.png"]]
+
 setup(name='luigi',
       version='1.0.3',
       description='Workflow mgmgt + task scheduling + dependency resolution',
@@ -39,7 +45,7 @@ setup(name='luigi',
         'luigi'
         ],
       package_data={
-        'luigi': ['static/*']
+        'luigi': luigi_package_data
         },
       scripts=[
         'bin/luigid'

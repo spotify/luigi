@@ -17,7 +17,7 @@ Depends: ${shlibs:Depends},
 	 ${misc:Depends},
 	 ${python:Depends},
 	 python-argparse,
-	 python-mechanize,
+	 python-mechanize
 Description: Workflow mgmgt + task scheduling + dependency resolution
 
 Package: luigi-server
