@@ -63,10 +63,16 @@ class StaticFileHandler(tornado.web.RequestHandler):
         self.write(data)
 
 
+class RootPathHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.redirect("/static/visualiser/index.html")
+
+
 def app(debug):
     api_app = tornado.web.Application([
         (r'/api/(.*)', RPCHandler),
-        (r'/static/(.*)', StaticFileHandler)
+        (r'/static/(.*)', StaticFileHandler),
+        (r'/', RootPathHandler)
     ], debug=debug)
     return api_app
 
