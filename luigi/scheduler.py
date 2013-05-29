@@ -33,6 +33,11 @@ FAILED = 'FAILED'
 DONE = 'DONE'
 RUNNING = 'RUNNING'
 
+UPSTREAM_RUNNING = 'UPSTREAM_RUNNING'
+UPSTREAM_MISSING_INPUT = 'UPSTREAM_MISSING_INPUT'
+UPSTREAM_FAILED = 'UPSTREAM_FAILED'
+
+UPSTREAM_SEVERITY_ORDER = ('', UPSTREAM_RUNNING, UPSTREAM_MISSING_INPUT, UPSTREAM_FAILED)
 
 class Task(object):
     def __init__(self, status, deps):
@@ -213,13 +218,81 @@ class CentralPlannerScheduler(Scheduler):
     def ping(self, worker):
         self.update(worker)
 
+    def _upstream_status(self, task, upstream_status_table):
+        def get_upstream_status(task, upstream_status_table):
+            if task.status != PENDING:
+                return ''
+            if not task.deps:
+                return UPSTREAM_MISSING_INPUT
+            status = ''
+            status_key = lambda st: UPSTREAM_SEVERITY_ORDER.index(st)
+            for dep_id in task.deps:
+                if dep_id in self._tasks:
+                    dep = self._tasks[dep_id]
+                    if dep.status == FAILED:
+                        return UPSTREAM_FAILED
+                    if dep.status == RUNNING:
+                        status = max(status, UPSTREAM_RUNNING, key=status_key)
+                    elif dep.status == PENDING:
+                        status = max(status, self._upstream_status(dep, upstream_status_table), key=status_key)
+                    if status == UPSTREAM_FAILED:
+                        return UPSTREAM_FAILED
+            return status
+
+        if task in upstream_status_table:
+            return upstream_status_table[task]
+        else:
+            task_status = get_upstream_status(task, upstream_status_table)
+            upstream_status_table[task] = task_status
+            return task_status
+
+    def _serialize_task(self, task, upstream_status_table):
+        upstream_status = self._upstream_status(task, upstream_status_table)
+        return {
+            'deps': list(task.deps),
+            'status': task.status,
+            'upstream_status': upstream_status,
+            'workers': list(task.workers),
+            'start_time': task.time,
+        }
+
     def graph(self):
         self.prune()
         serialized = {}
-        for taskname, task in self._tasks.iteritems():
-            serialized[taskname] = {
-                'deps': list(task.deps),
-                'status': task.status,
-                'workers': list(task.workers)
-            }
+        upstream_status_table = {}
+        for task_id, task in self._tasks.iteritems():
+            serialized[task_id] = self._serialize_task(task, upstream_status_table)
         return serialized
+
+    def _recurse_deps(self, task_id, serialized):
+        if task_id not in serialized:
+            task = self._tasks[task_id]
+            upstream_status_table = {}
+            serialized[task_id] = self._serialize_task(task, upstream_status_table)
+            for dep in task.deps:
+                self._recurse_deps(dep, serialized)
+
+    def dep_graph(self, task_id):
+        self.prune()
+        serialized = {}
+        if task_id in self._tasks:
+            self._recurse_deps(task_id, serialized)
+        return serialized
+
+    def task_list(self, status, upstream_status):
+        ''' query for a subset of tasks by status '''
+        self.prune()
+        result = {}
+        upstream_status_table = {}
+        for task_id, task in self._tasks.iteritems():
+            if not status or task.status == status:
+                serialized = self._serialize_task(task, upstream_status_table)
+                if task.status != PENDING or not upstream_status or upstream_status == serialized['upstream_status']:
+                    result[task_id] = serialized
+        return result
+
+    def fetch_error(self, task_id):
+        if self._tasks[task_id].expl is not None:
+            return {"taskId": task_id, "error": self._tasks[task_id].expl}
+        else:
+            return {"taskId": task_id, "error": ""}

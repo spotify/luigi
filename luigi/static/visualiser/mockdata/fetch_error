@@ -1,0 +1,6 @@
+{
+    "response": {
+        "taskId": "FactorTask(product=2)",
+        "error": "Runtime error:\nTraceback (most recent call last):\n  File '/Users/davw/projects/luigi-core/luigi/worker.py', line 164, in _run_task\n    task.run()\n  File '/Users/davw/projects/luigi-core/test/scheduler_visualisation_test.py', line 62, in run\n    raise Exception('Error Message')\nException: Error Message\n"
+    }
+}

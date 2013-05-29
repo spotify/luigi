@@ -1,0 +1,42 @@
+{
+    "response": {
+        "FactorTask(product=12)": {
+            "deps": [
+                "FactorTask(product=2)",
+                "FactorTask(product=6)"
+            ],
+            "start_time": 1369300552.60482,
+            "status": "PENDING",
+            "workers": [
+                "worker-641996460"
+            ]
+        },
+        "FactorTask(product=2)": {
+            "deps": [],
+            "start_time": 1369300552.60741,
+            "status": "FAILED",
+            "workers": [
+                "worker-641996460"
+            ]
+        },
+        "FactorTask(product=3)": {
+            "deps": [],
+            "start_time": 1369300552.61154,
+            "status": "PENDING",
+            "workers": [
+                "worker-641996460"
+            ]
+        },
+        "FactorTask(product=6)": {
+            "deps": [
+                "FactorTask(product=2)",
+                "FactorTask(product=3)"
+            ],
+            "start_time": 1369300552.609396,
+            "status": "DONE",
+            "workers": [
+                "worker-641996460"
+            ]
+        }
+    }
+}
