@@ -12,7 +12,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-from luigi.mock import MockFile
+from luigi.mock import MockFile, MockFileSystem
 import unittest
 
 
@@ -34,3 +34,34 @@ class MockFileTest(unittest.TestCase):
 
         with t.open('r') as b:
             self.assertEquals(list(b), ['bar'])
+
+
+class MockFileSystemTest(unittest.TestCase):
+    fs = MockFileSystem()
+
+    def _touch(self, path):
+        t = MockFile(path)
+        with t.open('w'):
+            pass
+
+    def setUp(self):
+        MockFile._file_contents.clear()
+        self.path = "/tmp/foo"
+        self.path2 = "/tmp/bar"
+        self._touch(self.path)
+        self._touch(self.path2)
+
+    def test_exists(self):
+        self.assertTrue(self.fs.exists(self.path))
+
+    def test_remove(self):
+        self.fs.remove(self.path)
+        self.assertFalse(self.fs.exists(self.path))
+
+    def test_remove_recursive(self):
+        self.fs.remove("/tmp", recursive=True)
+        self.assertFalse(self.fs.exists(self.path))
+        self.assertFalse(self.fs.exists(self.path2))
+
+    def test_listdir(self):
+        self.assertEquals(sorted([self.path, self.path2]), sorted(self.fs.listdir("/tmp")))
