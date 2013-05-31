@@ -18,8 +18,39 @@ import sys
 import os
 
 
-class MockFile(target.Target):
+class MockFileSystem(target.FileSystem):
+    """MockFileSystem inspects/modifies MockFile._file_contents to simulate
+    file system operations"""
+
+    def exists(self, path):
+        return MockFile(path).exists()
+
+    def remove(self, path, recursive=True, skip_trash=True):
+        """Removes the given mockfile. skip_trash doesn't have any meaning."""
+        if recursive:
+            to_delete=[]
+            for s in MockFile._file_contents.iterkeys():
+                if s.startswith(path):
+                    to_delete.append(s)
+            for s in to_delete:
+                MockFile._file_contents.pop(s)
+        else:
+            MockFile._file_contents.pop(path)
+
+    def listdir(self, path):
+        """listdir does a prefix match of MockFile._file_contents, but
+        doesn't yet support globs"""
+        return [s for s in MockFile._file_contents.iterkeys()
+                if s.startswith(path)]
+
+    def mkdir(self, path):
+        """mkdir is a noop"""
+        pass
+
+
+class MockFile(target.FileSystemTarget):
     _file_contents = {}
+    fs = MockFileSystem()
 
     def __init__(self, fn, is_tmp=None, mirror_on_stderr=False):
         self._mirror_on_stderr = mirror_on_stderr
