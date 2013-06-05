@@ -21,7 +21,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.httpclient
 import tornado.httpserver
-import interface
+import configuration
 import scheduler
 import pkg_resources
 import signal
@@ -29,7 +29,7 @@ from rpc import RemoteSchedulerResponder
 
 
 def _create_scheduler():
-    config = interface.get_config()
+    config = configuration.get_config()
     retry_delay = config.getfloat('scheduler', 'retry-delay', 900.0)
     remove_delay = config.getfloat('scheduler', 'remove-delay', 600.0)
     worker_disconnect_delay = config.getfloat('scheduler', 'worker-disconnect-delay', 60.0)

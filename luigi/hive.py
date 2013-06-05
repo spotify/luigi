@@ -33,7 +33,7 @@ class HiveCommandError(RuntimeError):
 
 
 def load_hive_cmd():
-    return luigi.interface.get_config().get('hive', 'command', 'hive')
+    return luigi.configuration.get_config().get('hive', 'command', 'hive')
 
 
 def run_hive(args):
@@ -174,7 +174,7 @@ class HiveThriftContext(object):
             from thrift.transport import TTransport
             from thrift.protocol import TBinaryProtocol
             from hive_metastore import ThriftHiveMetastore
-            config = luigi.interface.get_config()
+            config = luigi.configuration.get_config()
             host = config.get('hive', 'metastore_host')
             port = config.getint('hive', 'metastore_port')
             transport = TSocket.TSocket(host, port)
