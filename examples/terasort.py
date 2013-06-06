@@ -9,7 +9,7 @@ logger = logging.getLogger('luigi-interface')
 
 
 def hadoop_examples_jar():
-    config = luigi.interface.get_config()
+    config = luigi.configuration.get_config()
     examples_jar = config.get('hadoop', 'examples-jar')
     if not examples_jar:
         logger.error("You must specify hadoop:examples-jar in client.cfg")

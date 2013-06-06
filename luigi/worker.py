@@ -17,7 +17,7 @@ from scheduler import CentralPlannerScheduler, PENDING, FAILED, DONE
 import threading
 import time
 import os
-import interface
+import configuration
 import traceback
 import logging
 import warnings
@@ -97,8 +97,8 @@ class Worker(object):
             except:
                 msg = "Will not schedule %s or any dependencies due to error in complete() method:" % (task,)
                 logger.warning(msg, exc_info=1)  # like logger.exception but with WARNING level
-                receiver = interface.get_config().get('core', 'error-email', None)
-                sender = interface.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
+                receiver = configuration.get_config().get('core', 'error-email', None)
+                sender = configuration.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
                 logger.info("Sending warning email to %r" % receiver)
                 notifications.send_email(
                     subject="Luigi: %s failed scheduling" % (task,),
@@ -137,8 +137,8 @@ class Worker(object):
             raise
         except:
             logger.exception("Luigi unexpected framework error while scheduling %s" % task)
-            receiver = interface.get_config().get('core', 'error-email', None)
-            sender = interface.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
+            receiver = configuration.get_config().get('core', 'error-email', None)
+            sender = configuration.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
             notifications.send_email(
                 subject="Luigi: Framework error while scheduling %s" % (task,),
                 message="Luigi framework error:\n%s" % traceback.format_exc(),
@@ -172,8 +172,8 @@ class Worker(object):
             status = FAILED
             logger.exception("[pid %s] Error while running %s" % (os.getpid(), task))
             expl = task.on_failure(ex)
-            receiver = interface.get_config().get('core', 'error-email', None)
-            sender = interface.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
+            receiver = configuration.get_config().get('core', 'error-email', None)
+            sender = configuration.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
             logger.info("[pid %s] Sending error email to %r", os.getpid(), receiver)
             notifications.send_email("Luigi: %s FAILED" % task, expl, sender, (receiver,))
 

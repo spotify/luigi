@@ -12,7 +12,9 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import configuration
 import datetime
+from ConfigParser import NoSectionError, NoOptionError
 
 _no_default = object()
 
@@ -33,10 +35,15 @@ class DuplicateParameterException(ParameterException):
     pass
 
 
+class UnknownConfigException(Exception):
+  pass
+
+
 class Parameter(object):
     counter = 0
 
-    def __init__(self, default=_no_default, is_list=False, is_boolean=False, is_global=False, significant=True, description=None):
+    def __init__(self, default=_no_default, is_list=False, is_boolean=False, is_global=False, significant=True, description=None,
+                 default_from_config=None):
         # The default default is no default
         self.__default = default  # We also use this to store global values
         self.is_list = is_list
@@ -46,17 +53,35 @@ class Parameter(object):
         if is_global and default == _no_default:
             raise ParameterException('Global parameters need default values')
         self.description = description
+
+        if default != _no_default and default_from_config is not None:
+            raise ParameterException('Can only specify either a default or a default_from_config')
+        if default_from_config is not None and (not 'section' in default_from_config or not 'name' in default_from_config):
+            raise ParameterException('default_from_config must be a hash containing entries for section and name')
+        self.default_from_config = default_from_config
+
         self.counter = Parameter.counter  # We need to keep track of this to get the order right (see Task class)
         Parameter.counter += 1
 
     @property
     def has_default(self):
-        return self.__default != _no_default
+        return self.__default != _no_default or self.default_from_config is not None
 
     @property
     def default(self):
-        assert self.__default != _no_default  # TODO: exception
-        return self.__default
+        if self.__default == _no_default and self.default_from_config is None:
+            raise MissingParameterException("No default specified")
+        if self.__default != _no_default:
+            return self.__default
+
+        conf = configuration.get_config()
+        (section, name) = (self.default_from_config['section'], self.default_from_config['name'])
+        try:
+            return self.parse(conf.get(section, name))
+        except (NoSectionError, NoOptionError), e:
+            raise UnknownConfigException("Couldn't find value for section={0} name={1}. Search config files: '{2}'".format(
+                section, name, ", ".join(conf._config_paths)), e)
+
 
     def set_default(self, value):
         self.__default = value
@@ -99,7 +124,7 @@ class IntParameter(Parameter):
 
 
 class BooleanParameter(Parameter):
-    # TODO(erikbern): why do we call this "boolean" instead of "bool"? 
+    # TODO(erikbern): why do we call this "boolean" instead of "bool"?
     # The integer parameter is called "int" so calling this "bool" would be
     # more consistent, especially given the Python type names.
     def __init__(self, *args, **kwargs):

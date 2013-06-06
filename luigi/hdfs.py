@@ -21,6 +21,7 @@ import luigi.format
 import datetime
 import re
 from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
+import configuration
 
 
 class HDFSCliError(Exception):
@@ -52,8 +53,7 @@ def use_cdh4_syntax():
     override this setting with "cdh3" in the hadoop section of the config in
     order to use the old syntax
     """
-    import interface
-    return interface.get_config().get("hadoop", "version", "cdh4").lower() == "cdh4"
+    return configuration.get_config().get("hadoop", "version", "cdh4").lower() == "cdh4"
 
 
 def tmppath(path=None):

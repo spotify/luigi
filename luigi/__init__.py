@@ -16,6 +16,7 @@ import task
 import file  # wtf @ naming
 import rpc
 import parameter
+import configuration
 import interface
 import target
 
