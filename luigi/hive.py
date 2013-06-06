@@ -190,11 +190,36 @@ class HiveThriftContext(object):
         self.transport.close()
 
 
-client = HiveCommandClient()
-table_location = client.table_location
-table_exists = client.table_exists
-table_schema = client.table_schema
-partition_spec = client.partition_spec
+default_client = HiveCommandClient()
+client = default_client
+
+def _deprecated(message):
+    import warnings
+    warnings.warn(message=message, category=DeprecationWarning, stacklevel=2)
+
+
+def table_location(**kwargs):
+    ''' Deprecated. Use an instance of client instead and call client.table_location '''
+    _deprecated("luigi.hive.table_location is deprecated and will be removed soon, use hive.default_client or create a client instead")
+    return default_client.table_location(**kwargs)
+
+
+def table_exists(**kwargs):
+    ''' Deprecated. Use an instance of client instead and call client.table_exists '''
+    _deprecated("luigi.hive.table_exists is deprecated and will be removed soon, use hive.default_client or create a client instead")
+    return default_client.table_exists(**kwargs)
+
+
+def table_schema(**kwargs):
+    ''' Deprecated. Use an instance of client instead and call client.table_schema '''
+    _deprecated("luigi.hive.table_schema is deprecated and will be removed soon, use hive.default_client or create a client instead")
+    return default_client.table_schema(**kwargs)
+
+
+def partition_spec(**kwargs):
+    ''' Deprecated. Use an instance of client instead and call client.partition_spec '''
+    _deprecated("luigi.hive.partition_spec is deprecated and will be removed soon, use hive.default_client or create a client instead")
+    return default_client.partition_spec(**kwargs)
 
 
 class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
@@ -284,19 +309,20 @@ class HiveTableTarget(luigi.Target):
     ''' exists returns true if the table exists
     '''
 
-    def __init__(self, table, database='default'):
+    def __init__(self, table, database='default', client=default_client):
         self.database = database
         self.table = table
         self.hive_cmd = load_hive_cmd()
+        self.client = client
 
     def exists(self):
         logger.debug("Checking Hive table '{d}.{t}' exists".format(d=self.database, t=self.table))
-        return table_exists(self.table, self.database)
+        return self.client.table_exists(self.table, self.database)
 
     @property
     def path(self):
         """Returns the path to this table in HDFS"""
-        location = table_location(self.table, self.database)
+        location = self.client.table_location(self.table, self.database)
         if not location:
             raise Exception("Couldn't find location for table: {0}".format(str(self)))
         return location
@@ -309,22 +335,23 @@ class HivePartitionTarget(luigi.Target):
     ''' exists returns true if the table's partition exists
     '''
 
-    def __init__(self, table, partition, database='default', fail_missing_table=True):
+    def __init__(self, table, partition, database='default', fail_missing_table=True, client=default_client):
         self.database = database
         self.table = table
         self.partition = partition
+        self.client = client
 
         self.fail_missing_table = fail_missing_table
 
     def exists(self):
         try:
             logger.debug("Checking Hive table '{d}.{t}' for partition {p}".format(d=self.database, t=self.table, p=str(self.partition)))
-            return table_exists(self.table, self.database, self.partition)
+            return self.client.table_exists(self.table, self.database, self.partition)
         except HiveCommandError, e:
             if self.fail_missing_table:
                 raise
             else:
-                if table_exists(self.table, self.database):
+                if self.client.table_exists(self.table, self.database):
                     # a real error occured
                     raise
                 else:
@@ -334,7 +361,7 @@ class HivePartitionTarget(luigi.Target):
     @property
     def path(self):
         """Returns the path for this HiveTablePartitionTarget's data"""
-        location = table_location(self.table, self.database, self.partition)
+        location = self.client.table_location(self.table, self.database, self.partition)
         if not location:
             raise Exception("Couldn't find location for table: {0}".format(str(self)))
         return location
