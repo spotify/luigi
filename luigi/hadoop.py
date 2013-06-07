@@ -29,7 +29,7 @@ import shutil
 from hashlib import md5
 import luigi
 import luigi.hdfs
-import interface
+import configuration
 import warnings
 import mrrunner
 
@@ -292,7 +292,7 @@ class HadoopJobRunner(JobRunner):
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
 
-        base_tmp_dir = interface.get_config().get('core', 'tmp-dir', '/tmp/luigi')
+        base_tmp_dir = configuration.get_config().get('core', 'tmp-dir', '/tmp/luigi')
         self.tmp_dir = os.path.join(base_tmp_dir, 'hadoop_job_%016x' % random.getrandbits(64))
         logger.debug("Tmp dir: %s", self.tmp_dir)
         os.makedirs(self.tmp_dir)
@@ -385,8 +385,7 @@ class HadoopJobRunner(JobRunner):
 class DefaultHadoopJobRunner(HadoopJobRunner):
     ''' The default job runner just reads from config and sets stuff '''
     def __init__(self):
-        import interface
-        config = interface.get_config()
+        config = configuration.get_config()
         streaming_jar = config.get('hadoop', 'streaming-jar')
         super(DefaultHadoopJobRunner, self).__init__(streaming_jar=streaming_jar)
         # TODO: add more configurable options

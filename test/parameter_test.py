@@ -12,11 +12,16 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import datetime
+import luigi.date_interval
 import luigi
 import luigi.interface
 from worker_test import EmailTest
 import luigi.notifications
+from luigi.parameter import UnknownConfigException
 luigi.notifications.DEBUG = True
+import unittest
+from helpers import with_config
 
 
 class A(luigi.Task):
@@ -207,6 +212,53 @@ class ParameterTest(EmailTest):
 
         t = InsignificantParameterTask(foo='x', bar='y')
         self.assertEquals(t.task_id, 'InsignificantParameterTask(bar=y)')
+
+
+class TestParamWithDefaultFromConfig(unittest.TestCase):
+
+    def testNoSection(self):
+        self.assertRaises(UnknownConfigException, lambda: luigi.Parameter(default_from_config=dict(section="foo", name="bar")).default)
+
+    @with_config({"foo": {}})
+    def testNoValue(self):
+        self.assertRaises(UnknownConfigException, lambda: luigi.Parameter(default_from_config=dict(section="foo", name="bar")).default)
+
+    @with_config({"foo": {"bar": "baz"}})
+    def testDefault(self):
+        class A(luigi.Task):
+            p = luigi.Parameter(default_from_config=dict(section="foo", name="bar"))
+
+        self.assertEquals("baz", A().p)
+        self.assertEquals("boo", A(p="boo").p)
+
+    @with_config({"foo": {"bar": "2001-02-03T04"}})
+    def testDateHour(self):
+        p = luigi.DateHourParameter(default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(datetime.datetime(2001, 2, 3, 4, 0, 0), p.default)
+
+    @with_config({"foo": {"bar": "2001-02-03"}})
+    def testDate(self):
+        p = luigi.DateParameter(default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(datetime.date(2001, 2, 3), p.default)
+
+    @with_config({"foo": {"bar": "123"}})
+    def testInt(self):
+        p = luigi.IntParameter(default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(123, p.default)
+
+    @with_config({"foo": {"bar": "true"}})
+    def testBool(self):
+        p = luigi.BooleanParameter(default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(True, p.default)
+
+    @with_config({"foo": {"bar": "2001-02-03-2001-02-28"}})
+    def testDateInterval(self):
+        p = luigi.DateIntervalParameter(default_from_config=dict(section="foo", name="bar"))
+        expected = luigi.date_interval.Custom.parse("2001-02-03-2001-02-28")
+        self.assertEquals(expected, p.default)
+
+    def testTwoDefaults(self):
+        self.assertRaises(luigi.parameter.ParameterException, lambda: luigi.Parameter(default="baz", default_from_config=dict(section="foo", name="bar")))
 
 if __name__ == '__main__':
     luigi.run(use_optparse=True)

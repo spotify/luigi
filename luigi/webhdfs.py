@@ -4,7 +4,7 @@ the whoops library. Provides compatiblity with similar functionality in
 luigi.hdfs whenever possible.
 """
 import datetime
-import interface
+import configuration
 import os
 import posixpath
 import urlparse
@@ -13,7 +13,7 @@ import whoops
 
 def get_whoops_defaults(config=None):
     """Reads defaults from a client configuration file and fails if not."""
-    config = config or interface.get_config()
+    config = config or configuration.get_config()
     try:
         return {
             "host": config.get("hdfs", "namenode_host"),
