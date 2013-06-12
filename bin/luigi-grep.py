@@ -37,7 +37,10 @@ class LuigiGrep(object):
         deps = job_info['deps']
         deps_status = defaultdict(list)
         for j in deps:
-            deps_status[jobs[j]['status']].append(j)
+            if j in jobs:
+                deps_status[jobs[j]['status']].append(j)
+            else:
+                deps_status['UNKNOWN'].append(j)
         return {"name": job, "status": job_info['status'], "deps_by_status": deps_status}
 
     def prefix_search(self, job_name_prefix):
