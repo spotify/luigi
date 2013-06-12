@@ -18,6 +18,7 @@ import os
 import atexit
 import mimetypes
 import tornado.ioloop
+import tornado.netutil
 import tornado.web
 import tornado.httpclient
 import tornado.httpserver
@@ -38,15 +39,16 @@ def _create_scheduler():
 
 class RPCHandler(tornado.web.RequestHandler):
     """ Handle remote scheduling calls using rpc.RemoteSchedulerResponder"""
-    scheduler = _create_scheduler()
-    api = RemoteSchedulerResponder(scheduler)
+
+    def initialize(self, api):
+        self._api = api
 
     def get(self, method):
         payload = self.get_argument('data', default="{}")
         arguments = json.loads(payload)
 
-        if hasattr(self.api, method):
-            result = getattr(self.api, method)(**arguments)
+        if hasattr(self._api, method):
+            result = getattr(self._api, method)(**arguments)
             self.write({"response": result})  # wrap all json response in a dictionary
         else:
             self.send_error(400)
@@ -68,67 +70,65 @@ class RootPathHandler(tornado.web.RequestHandler):
         self.redirect("/static/visualiser/index.html")
 
 
-def app(debug):
+def app(api):
     api_app = tornado.web.Application([
-        (r'/api/(.*)', RPCHandler),
+        (r'/api/(.*)', RPCHandler, {"api": api}),
         (r'/static/(.*)', StaticFileHandler),
         (r'/', RootPathHandler)
-    ], debug=debug)
+    ])
     return api_app
 
 
-def run(api_port=8082):
-    """ Runs one instance of the API server
-    """
-    api_app = app(debug=False)
+def _init_api(sched, responder, api_port, address):
+    api = responder or RemoteSchedulerResponder(sched)
+    api_app = app(api)
+    api_sockets = tornado.netutil.bind_sockets(api_port, address=address)
+    server = tornado.httpserver.HTTPServer(api_app)
+    server.add_sockets(api_sockets)
 
-    api_sockets = tornado.netutil.bind_sockets(api_port)
+    # Return the bound socket names.  Useful for connecting client in test scenarios.
+    return [s.getsockname() for s in api_sockets]
 
-    print "Launching API instance"
 
+def run(api_port=8082, address=None, scheduler=None, responder=None):
+    """ Runs one instance of the API server """
+
+    sched = scheduler or _create_scheduler()
     # load scheduler state
-    RPCHandler.scheduler.load()
+    sched.load()
+
+    _init_api(sched, responder, api_port, address)
 
     # prune work DAG every 10 seconds
-    pruner = tornado.ioloop.PeriodicCallback(RPCHandler.scheduler.prune, 10000)
+    pruner = tornado.ioloop.PeriodicCallback(sched.prune, 10000)
     pruner.start()
 
     def shutdown_handler(foo=None, bar=None):
         print "api instance shutting down..."
-        RPCHandler.scheduler.dump()
+        sched.dump()
         os._exit(0)
-
-    server = tornado.httpserver.HTTPServer(api_app)
-    server.add_sockets(api_sockets)
 
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
     signal.signal(signal.SIGQUIT, shutdown_handler)
     atexit.register(shutdown_handler)
 
+    print "Launching API instance"
+
     tornado.ioloop.IOLoop.instance().start()
 
 
-def run_api_threaded(api_port=8082):
-    ''' For unit tests'''
-
-    api_app = app(debug=False)
-
-    api_sockets = tornado.netutil.bind_sockets(api_port)
-
-    server = tornado.httpserver.HTTPServer(api_app)
-    server.add_sockets(api_sockets)
-
-    def run_tornado():
-        tornado.ioloop.IOLoop.instance().start()
+def run_api_threaded(api_port=8082, address=None):
+    ''' For integration tests'''
+    sock_names = _init_api(_create_scheduler(), None, api_port, address)
 
     import threading
-    threading.Thread(target=run_tornado).start()
+    threading.Thread(target=tornado.ioloop.IOLoop.instance().start).start()
+    return sock_names
 
 
 def stop():
     tornado.ioloop.IOLoop.instance().stop()
-
 
 if __name__ == "__main__":
     run()
