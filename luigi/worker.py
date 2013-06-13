@@ -32,8 +32,10 @@ except ImportError:
 
 logger = logging.getLogger('luigi-interface')
 
+
 class TaskException(Exception):
     pass
+
 
 class Worker(object):
     """ Worker object communicates with a scheduler.
@@ -43,20 +45,24 @@ class Worker(object):
     - Asks for stuff to do (pulls it in a loop and runs it)
     """
 
-    def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None, worker_processes=1):
+    def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None,
+                 worker_processes=1):
         if not worker_id:
             worker_id = 'worker-%09d' % random.randrange(0, 999999999)
 
         self.__id = worker_id
         self.__scheduler = scheduler
-        if isinstance(scheduler, CentralPlannerScheduler) and worker_processes != 1:
+        if (isinstance(scheduler, CentralPlannerScheduler)
+                and worker_processes != 1):
             warnings.warn("Will only use one process when running with local in-process scheduler")
             worker_processes = 1
 
         self.worker_processes = worker_processes
         self.__scheduled_tasks = {}
 
-        self._previous_tasks = []  # store the previous tasks executed by the same worker for debugging reasons
+        # store the previous tasks executed by the same worker
+        # for debugging reasons
+        self._previous_tasks = []
 
         class KeepAliveThread(threading.Thread):
             """ Periodically tell the scheduler that the worker still lives """
@@ -96,9 +102,12 @@ class Worker(object):
                 raise
             except:
                 msg = "Will not schedule %s or any dependencies due to error in complete() method:" % (task,)
-                logger.warning(msg, exc_info=1)  # like logger.exception but with WARNING level
-                receiver = configuration.get_config().get('core', 'error-email', None)
-                sender = configuration.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
+                # like logger.exception but with WARNING level
+                logger.warning(msg, exc_info=1)
+                config = configuration.get_config()
+                receiver = config.get('core', 'error-email', None)
+                sender = config.get('core', 'email-sender',
+                                    notifications.DEFAULT_CLIENT_EMAIL)
                 logger.info("Sending warning email to %r" % receiver)
                 notifications.send_email(
                     subject="Luigi: %s failed scheduling" % (task,),
@@ -113,11 +122,13 @@ class Worker(object):
 
             if is_complete:
                 # Not submitting dependencies of finished tasks
-                self.__scheduler.add_task(self.__id, task_id, status=DONE, runnable=False)
+                self.__scheduler.add_task(self.__id, task_id, status=DONE,
+                                          runnable=False)
 
             elif task.run == NotImplemented:
                 self.__scheduled_tasks[task_id] = task
-                self.__scheduler.add_task(self.__id, task_id, status=PENDING, runnable=False)
+                self.__scheduler.add_task(self.__id, task_id, status=PENDING,
+                                          runnable=False)
                 logger.warning('Task %s is not complete and run() is not implemented. Probably a missing external dependency.', task_id)
             else:
                 self.__scheduled_tasks[task_id] = task
@@ -128,7 +139,8 @@ class Worker(object):
                     elif not isinstance(d, Task):
                         raise Exception('requires() must return Task objects')
                 deps = [d.task_id for d in task.deps()]
-                self.__scheduler.add_task(self.__id, task_id, status=PENDING, deps=deps, runnable=True)
+                self.__scheduler.add_task(self.__id, task_id, status=PENDING,
+                                          deps=deps, runnable=True)
                 logger.info('Scheduled %s' % task_id)
 
                 for task_2 in task.deps():
@@ -137,8 +149,10 @@ class Worker(object):
             raise
         except:
             logger.exception("Luigi unexpected framework error while scheduling %s" % task)
-            receiver = configuration.get_config().get('core', 'error-email', None)
-            sender = configuration.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
+            config = configuration.get_config()
+            receiver = config.get('core', 'error-email', None)
+            sender = config.get('core', 'email-sender',
+                                notifications.DEFAULT_CLIENT_EMAIL)
             notifications.send_email(
                 subject="Luigi: Framework error while scheduling %s" % (task,),
                 message="Luigi framework error:\n%s" % traceback.format_exc(),
@@ -170,14 +184,20 @@ class Worker(object):
             raise
         except Exception as ex:
             status = FAILED
-            logger.exception("[pid %s] Error while running %s" % (os.getpid(), task))
+            logger.exception("[pid %s] Error while running %s" % (os.getpid(),
+                                                                  task))
             expl = task.on_failure(ex)
-            receiver = configuration.get_config().get('core', 'error-email', None)
-            sender = configuration.get_config().get('core', 'email-sender', notifications.DEFAULT_CLIENT_EMAIL)
-            logger.info("[pid %s] Sending error email to %r", os.getpid(), receiver)
-            notifications.send_email("Luigi: %s FAILED" % task, expl, sender, (receiver,))
+            config = configuration.get_config()
+            receiver = config.get('core', 'error-email', None)
+            sender = config.get('core', 'email-sender',
+                                notifications.DEFAULT_CLIENT_EMAIL)
+            logger.info("[pid %s] Sending error email to %r",
+                        os.getpid(), receiver)
+            notifications.send_email("Luigi: %s FAILED" % task,
+                                     expl, sender, (receiver,))
 
-        self.__scheduler.add_task(self.__id, task_id, status=status, expl=expl, runnable=None)
+        self.__scheduler.add_task(self.__id, task_id, status=status,
+                                  expl=expl, runnable=None)
 
     def run(self):
         children = set()
@@ -201,8 +221,9 @@ class Worker(object):
             else:
                 logger.debug("Pending tasks: %s", pending_tasks)
 
-            if task_id == None:
-                # TODO: sleep for a bit and query server again if there are pending tasks in the future we might be able to run
+            if task_id is None:
+                # TODO: sleep for a bit and query server again if there are
+                # pending tasks in the future we might be able to run
                 if not children:
                     break
                 else:
@@ -210,14 +231,16 @@ class Worker(object):
                     if died_pid in children:
                         children.remove(died_pid)
                     else:
-                        logger.warning("Some random process %s died" % died_pid)
+                        logger.warn("Some random process %s died" % died_pid)
                     continue
             if self.worker_processes > 1:
                 child_pid = os.fork()
                 if child_pid:
                     children.add(child_pid)
                 else:
-                    random.seed((os.getpid(), time.time()))  # need to have different random seeds...
+                    # need to have different random seeds...
+                    random.seed((os.getpid(), time.time()))
+
                     self._run_task(task_id)
                     os._exit(0)
             else:
