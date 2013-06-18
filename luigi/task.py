@@ -208,6 +208,11 @@ class Task(object):
         for key, value in param_values:
             setattr(self, key, value)
 
+        # Register args and kwargs as an attribute on the class. Might be useful
+        self.args = tuple(value for key, value in param_values)
+        self.kwargs = dict(param_values)
+
+        # Build up task id
         task_id_parts = []
         for param_name, param_value in param_values:
             if dict(params)[param_name].significant:
@@ -221,7 +226,7 @@ class Task(object):
 
     @classmethod
     def from_input(cls, params, global_params):
-        # Creates an instance from a str->str hash (to be used for cmd line interaction etc)
+        ''' Creates an instance from a str->str hash (to be used for cmd line interaction etc) '''
         for param_name, param in global_params:
             value = param.parse_from_input(param_name, params[param_name])
             param.set_default(value)
@@ -232,6 +237,17 @@ class Task(object):
             kwargs[param_name] = value
 
         return cls(**kwargs)
+
+    def clone(self, **kwargs):
+        ''' Creates a new instance from an existing instance where some of the args have changed.
+
+        There's at least two scenarios where this is useful
+        - Remove a lot of boiler plate when you have recursive dependencies and lots of args
+        - There's task inheritance and some logic is on the base class
+        '''
+        k = self.kwargs.copy()
+        k.update(kwargs.items())
+        return self.__class__(**k)
 
     def __hash__(self):
         return self.__hash
