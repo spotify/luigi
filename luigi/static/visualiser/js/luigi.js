@@ -39,6 +39,11 @@ var LuigiAPI = (function() {
             callback(flatten(response.response));
         });
     };
+    LuigiAPI.prototype.getTasksList = function(callback) {
+    	jsonRPC(this.urlRoot + "/task_list", {status: "", upstream_status: ""}, function(response) {
+    		callback(flatten(response.response));
+    	});
+    };
 
     LuigiAPI.prototype.getUpstreamFailedTaskList = function(callback) {
         jsonRPC(this.urlRoot + "/task_list", {status: "PENDING", upstream_status: "UPSTREAM_FAILED"}, function(response) {
