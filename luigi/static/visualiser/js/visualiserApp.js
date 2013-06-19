@@ -136,9 +136,12 @@ function visualiserApp(luigi) {
         loadTemplates();
         luigi.getFailedTaskList(function(failedTasks) {
             luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
-                $("#failedTasks").append(renderTasks(failedTasks));
-                $("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
-                bindListEvents();
+            	luigi.getPendingTaskList(function(pendingTasks) {
+                	$("#failedTasks").append(renderTasks(failedTasks));
+                	$("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
+                	$("#pendingTasks").append(renderTasks(pendingTasks));
+                	bindListEvents();
+                });
             });
         });
         var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
