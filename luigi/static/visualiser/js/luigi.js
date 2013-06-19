@@ -46,6 +46,12 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.getDoneTaskList = function(callback) {
+        jsonRPC(this.urlRoot + "/task_list", {status: "DONE", upstream_status: ""}, function(response) {
+            callback(flatten(response.response));
+        });
+    };
+
     LuigiAPI.prototype.getErrorTrace = function(taskId, callback) {
         jsonRPC(this.urlRoot + "/fetch_error", {task_id: taskId}, function(response) {
             callback(response.response);
