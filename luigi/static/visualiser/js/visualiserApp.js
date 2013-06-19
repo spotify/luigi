@@ -28,6 +28,7 @@ function visualiserApp(luigi) {
             taskName: taskName,
             taskParams: taskParams,
             displayTime: displayTime,
+            displayTimestamp : task.start_time,
             trackingUrl: task.trackingUrl,
             status: task.status,
             graph: (task.status == "PENDING" || task.status == "RUNNING")
@@ -55,7 +56,7 @@ function visualiserApp(luigi) {
 
     function renderTasks(tasks) {
         var displayTasks = $.map(tasks, taskToDisplayTask);
-        displayTasks.sort(function(a,b) { return a.taskId.localeCompare(b.taskId); });
+        displayTasks.sort(function(a,b) { return b.displayTimestamp - a.displayTimestamp; });
         var tasksByFamily = entryList(indexByProperty(displayTasks, "taskName"));
         tasksByFamily.sort(function(a,b) { return a.key.localeCompare(b.key); });
         return renderTemplate("rowTemplate", {tasks: tasksByFamily});
