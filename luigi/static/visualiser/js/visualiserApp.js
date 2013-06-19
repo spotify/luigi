@@ -78,13 +78,23 @@ function visualiserApp(luigi) {
         if (hash) {
             var taskId = hash.substr(1);
             $("#graphContainer").hide();
+            $("#graphPlaceholder svg").empty();
+            $("#searchError").empty();
+            $("#searchError").removeClass();
             if (taskId != "g") {
                 luigi.getDependencyGraph(taskId, function(dependencyGraph) {
-                    $("#dependencyTitle").text(taskId);
                     $("#graphPlaceholder svg").empty();
-                    $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
-                    $("#graphContainer").show();
-                    bindGraphEvents();
+                    $("#searchError").empty();
+                    $("#searchError").removeClass();
+                    if(dependencyGraph.length > 0) {
+                      $("#dependencyTitle").text(taskId);
+                      $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
+                      $("#graphContainer").show();
+                      bindGraphEvents();
+                    } else {
+                      $("#searchError").addClass("alert alert-error")
+                      $("#searchError").append("Couldn't find task " + taskId)
+                    }
                 });
             }
             switchTab("dependencyGraph");
