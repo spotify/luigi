@@ -209,8 +209,8 @@ class Task(object):
             setattr(self, key, value)
 
         # Register args and kwargs as an attribute on the class. Might be useful
-        self.args = tuple(value for key, value in param_values)
-        self.kwargs = dict(param_values)
+        self.param_args = tuple(value for key, value in param_values)
+        self.param_kwargs = dict(param_values)
 
         # Build up task id
         task_id_parts = []
@@ -241,12 +241,18 @@ class Task(object):
     def clone(self, **kwargs):
         ''' Creates a new instance from an existing instance where some of the args have changed.
 
-        There's at least two scenarios where this is useful
+        There's at least two scenarios where this is useful (see test/clone_test.py)
         - Remove a lot of boiler plate when you have recursive dependencies and lots of args
         - There's task inheritance and some logic is on the base class
-        '''
-        k = self.kwargs.copy()
+        '''            
+        k = self.param_kwargs.copy()
         k.update(kwargs.items())
+
+        # remove global params
+        for param_name, param_class in self.get_params():
+            if param_class.is_global:
+                k.pop(param_name)
+
         return self.__class__(**k)
 
     def __hash__(self):
