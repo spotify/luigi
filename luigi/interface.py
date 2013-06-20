@@ -96,18 +96,24 @@ class Interface(object):
         raise NotImplementedError
 
     @staticmethod
-    def run(tasks, override_defaults={}):
+    def run(tasks, scheduler_instance=None, worker_instance=None, override_defaults={}):
         env_params = EnvironmentParamsContainer.env_params(override_defaults)
 
         if env_params.lock:
             lock.run_once(env_params.lock_pid_dir)
 
-        if env_params.local_scheduler:
+        if scheduler_instance is not None:
+            sch = scheduler_instance
+        elif env_params.local_scheduler:
             sch = scheduler.CentralPlannerScheduler()
         else:
             sch = rpc.RemoteScheduler(host=env_params.scheduler_host, port=env_params.scheduler_port)
 
-        w = worker.Worker(scheduler=sch, worker_processes=env_params.workers)
+        if worker_instance is not None:
+            w = worker_instance
+        else:
+            w = worker.Worker(scheduler=sch, worker_processes=env_params.workers)
+
         for task in tasks:
             w.add(task)
         logger = logging.getLogger('luigi-interface')
@@ -284,7 +290,7 @@ class OptParseInterface(Interface):
         return [task]
 
 
-def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None):
+def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, scheduler_instance=None, worker_instance=None):
     ''' Run from cmdline.
 
     The default parser uses argparse.
@@ -297,10 +303,10 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task
     else:
         interface = ArgParseInterface()
     tasks = interface.parse(cmdline_args, main_task_cls=main_task_cls)
-    interface.run(tasks)
+    interface.run(tasks, scheduler_instance, worker_instance)
 
 
-def build(tasks, **env_params):
+def build(tasks, scheduler_instance=None, worker_instance=None, **env_params):
     ''' Run internally, bypassing the cmdline parsing.
 
     Useful if you have some luigi code that you want to run internally.
@@ -308,4 +314,4 @@ def build(tasks, **env_params):
     luigi.build([MyTask1(), MyTask2()], local_scheduler=True)
     '''
     setup_interface_logging()
-    Interface.run(tasks, env_params)
+    Interface.run(tasks, scheduler_instance, worker_instance, env_params)
