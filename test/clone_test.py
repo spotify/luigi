@@ -44,11 +44,16 @@ class PowerSum(LinearSum):
     def f(self, x):
         return x ** self.p
 
+
+class PowerSum2(PowerSum):
+    q = luigi.IntParameter(is_global=True, default=7)
+
+
 class CloneTest(unittest.TestCase):
     def test_args(self):
         t = LinearSum(lo=42, hi=45)
-        self.assertEquals(t.args, (42, 45))
-        self.assertEquals(t.kwargs, {'lo': 42, 'hi': 45})
+        self.assertEquals(t.param_args, (42, 45))
+        self.assertEquals(t.param_kwargs, {'lo': 42, 'hi': 45})
 
     def test_recursion(self):
         t = LinearSum(lo=42, hi=45)
@@ -57,5 +62,10 @@ class CloneTest(unittest.TestCase):
 
     def test_inheritance(self):
         t = PowerSum(lo=42, hi=45, p=2)
+        luigi.build([t], local_scheduler=True)
+        self.assertEquals(t.s, 42**2 + 43**2 + 44**2)
+
+    def test_inheritance_and_global(self):
+        t = PowerSum2(lo=42, hi=45, p=2)
         luigi.build([t], local_scheduler=True)
         self.assertEquals(t.s, 42**2 + 43**2 + 44**2)
