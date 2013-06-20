@@ -30,6 +30,15 @@ def send_email(subject, message, sender, recipients, image_png=None):
     import email.mime.text
     import email.mime.image
 
+    # Clean the recipients lists to allow multiple error-email addresses, comma
+    # separated in client.cfg
+    recipients_tmp = []
+    for r in recipients:
+        recipients_tmp.extend(r.split(','))
+
+    # Replace original recipients with the clean list
+    recipients = recipients_tmp
+
     smtp = smtplib.SMTP('localhost')
 
     msg_root = email.mime.multipart.MIMEMultipart('related')
