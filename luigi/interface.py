@@ -290,6 +290,11 @@ class OptParseInterface(Interface):
         return [task]
 
 
+class LuigiConfigParser(configuration.LuigiConfigParser):
+    ''' Deprecated class, use configuration.LuigiConfigParser instead. Left for backwards compatibility '''
+    pass
+
+
 def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, scheduler_instance=None, worker_instance=None):
     ''' Run from cmdline.
 
