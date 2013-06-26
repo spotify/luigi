@@ -199,6 +199,8 @@ class Worker(object):
         self.__scheduler.add_task(self.__id, task_id, status=status,
                                   expl=expl, runnable=None)
 
+        return status
+
     def run(self):
         children = set()
 
