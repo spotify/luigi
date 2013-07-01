@@ -111,7 +111,7 @@ class HadoopJobTest(unittest.TestCase):
         self.assertAlmostEquals(float(c['jk']), 6.0 / 33.0)
 
     def test_run_hadoop_job_failure(self):
-        def Popen_fake(arglist, stdout=None, stderr=None):
+        def Popen_fake(arglist, stdout=None, stderr=None, env=None):
             class P(object):
                 def wait(self):
                     pass
@@ -149,7 +149,7 @@ class HadoopJobTest(unittest.TestCase):
         # Will attempt to run a real hadoop job, but we will secretly mock subprocess.Popen
         arglist_result = []
 
-        def Popen_fake(arglist, stdout=None, stderr=None):
+        def Popen_fake(arglist, stdout=None, stderr=None, env=None):
             arglist_result.append(arglist)
 
             class P(object):
