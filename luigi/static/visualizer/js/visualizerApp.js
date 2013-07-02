@@ -1,4 +1,4 @@
-function visualiserApp(luigi) {
+function visualizerApp(luigi) {
     var templates = {};
 
     function loadTemplates() {
