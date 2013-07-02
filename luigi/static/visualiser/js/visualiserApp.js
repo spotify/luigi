@@ -30,7 +30,7 @@ function visualiserApp(luigi) {
             displayTime: displayTime,
             trackingUrl: task.trackingUrl,
             status: task.status,
-            graph: task.status == "PENDING"
+            graph: (task.status == "PENDING" || task.status == "RUNNING")
         };
     }
 
@@ -134,13 +134,18 @@ function visualiserApp(luigi) {
 
     $(document).ready(function() {
         loadTemplates();
+        
         luigi.getFailedTaskList(function(failedTasks) {
             luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
-                $("#failedTasks").append(renderTasks(failedTasks));
-                $("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
-                bindListEvents();
+            	luigi.getRunningTaskList(function(runningTasks) {
+                	$("#failedTasks").append(renderTasks(failedTasks));
+                	$("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
+                	$("#runningTasks").append(renderTasks(runningTasks));
+                	bindListEvents();
+             	});
             });
         });
+        
         var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
         $("#graphPlaceholder")[0].graph = graph;
         processHashChange();
