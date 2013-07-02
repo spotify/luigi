@@ -67,7 +67,7 @@ class StaticFileHandler(tornado.web.RequestHandler):
 
 class RootPathHandler(tornado.web.RequestHandler):
     def get(self):
-        self.redirect("/static/visualiser/index.html")
+        self.redirect("/static/visualizer/index.html")
 
 
 def app(api):
