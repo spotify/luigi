@@ -138,11 +138,14 @@ function visualiserApp(luigi) {
         luigi.getFailedTaskList(function(failedTasks) {
             luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
             	luigi.getRunningTaskList(function(runningTasks) {
+                luigi.getPendingTaskList(function(pendingTasks) {
                 	$("#failedTasks").append(renderTasks(failedTasks));
                 	$("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
                 	$("#runningTasks").append(renderTasks(runningTasks));
+                  $("#pendingTasks").append(renderTasks(pendingTasks));
                 	bindListEvents();
-             	});
+             	  });
+              });
             });
         });
         
