@@ -30,7 +30,8 @@ function visualiserApp(luigi) {
             displayTime: displayTime,
             trackingUrl: task.trackingUrl,
             status: task.status,
-            graph: (task.status == "PENDING" || task.status == "RUNNING")
+            graph: (task.status == "PENDING" || task.status == "RUNNING"),
+            error: task.status == "FAILED"
         };
     }
 
