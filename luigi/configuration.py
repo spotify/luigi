@@ -1,9 +1,9 @@
 
 import logging
-from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
+from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 
 
-class LuigiConfigParser(RawConfigParser):
+class LuigiConfigParser(ConfigParser):
     NO_DEFAULT = object()
     _instance = None
     _config_paths = ['/etc/luigi/client.cfg', 'client.cfg']
@@ -42,16 +42,16 @@ class LuigiConfigParser(RawConfigParser):
             return default
 
     def get(self, section, option, default=NO_DEFAULT):
-        return self._get_with_default(RawConfigParser.get, section, option, default)
+        return self._get_with_default(ConfigParser.get, section, option, default)
 
     def getboolean(self, section, option, default=NO_DEFAULT):
-        return self._get_with_default(RawConfigParser.getboolean, section, option, default, bool)
+        return self._get_with_default(ConfigParser.getboolean, section, option, default, bool)
 
     def getint(self, section, option, default=NO_DEFAULT):
-        return self._get_with_default(RawConfigParser.getint, section, option, default, int)
+        return self._get_with_default(ConfigParser.getint, section, option, default, int)
 
     def getfloat(self, section, option, default=NO_DEFAULT):
-        return self._get_with_default(RawConfigParser.getfloat, section, option, default, float)
+        return self._get_with_default(ConfigParser.getfloat, section, option, default, float)
 
 
 def get_config():
