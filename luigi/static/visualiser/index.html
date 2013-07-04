@@ -3,6 +3,8 @@
     <head>
         <title>Luigi Task Visualiser</title>
         <script src="lib/jquery-1.10.0.min.js"></script>
+        <script src="lib/jquery-ui-1.10.3.autocomplete_widget.min.js"></script>
+   		<link rel="stylesheet" href="css/jquery-ui-1.10.3.custom.min.css" />
         <link href="lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
         <script src="lib/bootstrap/js/bootstrap.min.js"></script>
         <script src="lib/mustache.js"></script>
@@ -36,7 +38,10 @@
         text {
             font-size:8pt;
         }
-
+	.ui-menu-item a {
+	    text-indent: -1em;
+	    padding-left: 1em !important;
+	}
         .link {
           stroke: #999;
           stroke-opacity: .6;
@@ -86,6 +91,30 @@
                 <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
             </div>
         </script>
+	  <script>
+		  $(function() {
+				$( ".search-query" ).autocomplete({
+			        source:  function( request, response){
+                         luigi =  new LuigiAPI("../../api")                                 
+                                                                                
+                         luigi.getTasksList(function(availableTasks){                   
+                             var tasks = [];                          
+                             var filter = new RegExp($.ui.autocomplete.escapeRegex(request.term));                      
+                             $.each(availableTasks, function(value) {
+                                 if(filter.test(this.taskId)){                       
+                                     tasks.push(this.taskId);     
+                                 }                              
+                             });                                                            
+                             tasks.sort(function(a, b){                                     
+                                    if(a==b) return 0;                                      
+                                    return a> b? 1: -1;});                                  
+                             response(tasks.slice(0,10))  
+                            }); 
+                     }
+			 });
+		
+		  });
+	  </script>
     </head>
     <body>
         <div class="page-header custom-header">
