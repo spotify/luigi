@@ -31,7 +31,7 @@ function visualiserApp(luigi) {
             displayTimestamp : task.start_time,
             trackingUrl: task.trackingUrl,
             status: task.status,
-            graph: (task.status == "PENDING" || task.status == "RUNNING"),
+            graph: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DONE"),
             error: task.status == "FAILED"
         };
     }
@@ -149,15 +149,18 @@ function visualiserApp(luigi) {
         
         luigi.getFailedTaskList(function(failedTasks) {
             luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
-            	luigi.getRunningTaskList(function(runningTasks) {
-                luigi.getPendingTaskList(function(pendingTasks) {
-                	$("#failedTasks").append(renderTasks(failedTasks));
-                	$("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
-                	$("#runningTasks").append(renderTasks(runningTasks));
-                  $("#pendingTasks").append(renderTasks(pendingTasks));
-                	bindListEvents();
-             	  });
-              });
+                luigi.getRunningTaskList(function(runningTasks) {
+                    luigi.getPendingTaskList(function(pendingTasks) {
+                        luigi.getDoneTaskList(function(doneTasks) {
+                            $("#failedTasks").append(renderTasks(failedTasks));
+                            $("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
+                            $("#runningTasks").append(renderTasks(runningTasks));
+                            $("#pendingTasks").append(renderTasks(pendingTasks));
+                            $("#doneTasks").append(renderTasks(doneTasks));
+                            bindListEvents();
+                        });
+                    });
+                });
             });
         });
         
