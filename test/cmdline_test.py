@@ -76,4 +76,4 @@ class CmdlineTest(unittest.TestCase):
         self.assertTrue(NonAmbiguousClass.has_run)
 
 if __name__ == '__main__':
-    luigi.run()
+    unittest.main()

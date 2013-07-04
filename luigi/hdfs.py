@@ -174,7 +174,7 @@ class HdfsClient(FileSystem):
                 continue
             data = line.split(' ')
 
-            file = data[-1]
+            file_name = data[-1]
             size = int(data[-4])
             line_type = line[0]
             extra_data = ()
@@ -190,9 +190,9 @@ class HdfsClient(FileSystem):
                 extra_data += (modification_time,)
 
             if len(extra_data) > 0:
-                yield (file,) + extra_data
+                yield (file_name,) + extra_data
             else:
-                yield file
+                yield file_name
 
 class HdfsClientCdh3(HdfsClient):
     """This client uses CDH3 syntax for file system commands"""
@@ -254,6 +254,7 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
     TODO: if this is buggy, change it so it first writes to a
     local temporary file and then uploads it on completion
     """
+    fs = client()  # underlying file system
 
     def __init__(self, path):
         self.path = path
@@ -270,15 +271,17 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
     def abort(self):
         print "Aborting %s('%s'). Removing temporary file '%s'" % (self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWritePipe, self).abort()
-        remove(self.tmppath)
+        self.fs.remove(self.tmppath)
 
     def close(self):
         super(HdfsAtomicWritePipe, self).close()
-        rename(self.tmppath, self.path)
+        self.fs.rename(self.tmppath, self.path)
 
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
     """ Writes a data<data_extension> file to a directory at <path> """
+    fs = client()  # underlying file system
+
     def __init__(self, path, data_extension=""):
         self.path = path
         self.tmppath = tmppath(self.path)
@@ -288,11 +291,11 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
     def abort(self):
         print "Aborting %s('%s'). Removing temporary dir '%s'" % (self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWriteDirPipe, self).abort()
-        remove(self.tmppath)
+        self.fs.remove(self.tmppath)
 
     def close(self):
         super(HdfsAtomicWriteDirPipe, self).close()
-        rename(self.tmppath, self.path)
+        self.fs.rename(self.tmppath, self.path)
 
 
 class Plain(luigi.format.Format):
@@ -317,7 +320,7 @@ class PlainDir(luigi.format.Format):
 
 
 class HdfsTarget(FileSystemTarget):
-    fs = client  # underlying file system
+    fs = client()  # underlying file system
 
     def __init__(self, path=None, format=Plain, is_tmp=False):
         if path is None:
@@ -350,7 +353,7 @@ in luigi. Use target.path instead", stacklevel=2)
         return self.path
 
     def glob_exists(self, expected_files):
-        ls = list(listdir(self.path))
+        ls = list(self.fs.listdir(self.path))
         if len(ls) == expected_files:
             return True
         return False
@@ -371,15 +374,15 @@ in luigi. Use target.path instead", stacklevel=2)
                 return self.format.pipe_writer(HdfsAtomicWritePipe(self.path))
 
     def remove(self, skip_trash=False):
-        remove(self.path, skip_trash=skip_trash)
+        self.fs.remove(self.path, skip_trash=skip_trash)
 
     def rename(self, path, fail_if_exists=False):
         # rename does not change self.path, so be careful with assumptions
         if isinstance(path, HdfsTarget):
             path = path.path
-        if fail_if_exists and exists(path):
+        if fail_if_exists and self.fs.exists(path):
             raise RuntimeError('Destination exists: %s' % path)
-        rename(self.path, path)
+        self.fs.rename(self.path, path)
 
     def move(self, path, fail_if_exists=False):
         self.rename(path, fail_if_exists=fail_if_exists)
@@ -388,8 +391,8 @@ in luigi. Use target.path instead", stacklevel=2)
         # mkdir will fail if directory already exists, thereby ensuring atomicity
         if isinstance(path, HdfsTarget):
             path = path.path
-        mkdir(path)
-        rename(self.path + '/*', path)
+        self.fs.mkdir(path)
+        self.fs.rename(self.path + '/*', path)
         self.remove()
 
     def is_writable(self):
@@ -400,7 +403,7 @@ in luigi. Use target.path instead", stacklevel=2)
             length = len(parts)
             for part in xrange(length):
                 path = "/".join(parts[0:length - part]) + "/"
-                if exists(path):
+                if self.fs.exists(path):
                     # if the path exists and we can write there, great!
                     if self._is_writable(path):
                         return True
@@ -417,5 +420,5 @@ in luigi. Use target.path instead", stacklevel=2)
         if return_value != 0:
             return False
         else:
-            remove(test_path, recursive=False)
+            self.fs.remove(test_path, recursive=False)
             return True
