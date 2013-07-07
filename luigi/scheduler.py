@@ -17,7 +17,10 @@ import logging
 import time
 import traceback
 import cPickle as pickle
+import task_history as history  # import here to avoid circular imports
 logger = logging.getLogger("luigi-interface")
+
+from task_status import PENDING, FAILED, DONE, RUNNING
 
 
 class Scheduler(object):
@@ -28,11 +31,6 @@ class Scheduler(object):
     add_task = NotImplemented
     get_work = NotImplemented
     ping = NotImplemented
-
-PENDING = 'PENDING'
-FAILED = 'FAILED'
-DONE = 'DONE'
-RUNNING = 'RUNNING'
 
 UPSTREAM_RUNNING = 'UPSTREAM_RUNNING'
 UPSTREAM_MISSING_INPUT = 'UPSTREAM_MISSING_INPUT'
@@ -79,7 +77,6 @@ class CentralPlannerScheduler(Scheduler):
         self._remove_delay = remove_delay
         self._worker_disconnect_delay = worker_disconnect_delay
         self._active_workers = {}  # map from id to timestamp (last updated)
-        import task_history as history  # import here to avoid circular imports
         self._task_history = task_history or history.NopHistory()
         # TODO: have a Worker object instead, add more data to it
 
@@ -178,7 +175,7 @@ class CentralPlannerScheduler(Scheduler):
             task.expl = expl
         self._update_task_history(task_id, status)
 
-    def get_work(self, worker, host):
+    def get_work(self, worker, host=None):
         # TODO: remove any expired nodes
 
         # Algo: iterate over all nodes, find first node with no dependencies

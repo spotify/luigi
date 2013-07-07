@@ -180,7 +180,6 @@ class Worker(object):
             expl = json.dumps(task.on_success())
             logger.info('[pid %s] Done      %s', os.getpid(), task_id)
             status = DONE
-            success = True
 
         except KeyboardInterrupt:
             raise

@@ -6,6 +6,7 @@ import configuration
 import datetime
 import json
 import logging
+import task
 import tornado.ioloop
 import tornado.web
 import tornado.httpclient
@@ -13,8 +14,7 @@ import tornado.httpserver
 
 
 from contextlib import contextmanager
-from luigi.scheduler import PENDING, FAILED, DONE, RUNNING
-
+from task_status import PENDING, FAILED, DONE, RUNNING
 
 logger = logging.getLogger('luigi-interface')
 
@@ -23,25 +23,10 @@ class Task(object):
     ''' Interface for methods on TaskHistory
     '''
     def __init__(self, task_id, status, host=None):
-        self.task_family, self.parameters = self.id_to_name_and_params(task_id)
+        self.task_family, self.parameters = task.id_to_name_and_params(task_id)
         self.status = status
         self.record_id = None
         self.host = host
-
-    def id_to_name_and_params(self, task_id):
-        lparen = task_id.index('(')
-        task_family = task_id[:lparen]
-        params = task_id[lparen + 1:-1]
-
-        def split_equals(x):
-            equals = x.index('=')
-            return x[:equals], x[equals + 1:]
-        if params:
-            param_list = map(split_equals, params.split(', '))  # TODO: param values with ', ' in them will break this
-        else:
-            param_list = []
-        return task_family, dict(param_list)
-
 
 
 class TaskHistory(object):
@@ -95,7 +80,7 @@ class DbTaskHistory(TaskHistory):
         connection_string = config.get('task_history', 'db_connection')
         try:
             self.engine = create_engine(connection_string)
-            self.session_factory = sessionmaker(bind=self.engine)
+            self.session_factory = sessionmaker(bind=self.engine, expire_on_commit=False)
             Base.metadata.create_all(self.engine)
         except NameError:
             raise Exception("Using DbTaskHistory without sqlalchemy module!")
@@ -170,8 +155,8 @@ class DbTaskHistory(TaskHistory):
                 join(TaskEvent).\
                 filter(TaskEvent.ts >= yesterday).\
                 group_by(TaskRecord.id, TaskEvent.event_name).\
-                order_by(TaskEvent.ts.desc())\
-                .all()
+                order_by(TaskEvent.ts.desc()).\
+                all()
 
     def find_task_by_id(self, id, session=None):
         ''' Find task with the given record ID
@@ -210,25 +195,6 @@ try:
         def __repr__(self):
             return "TaskEvent(task_id=%s, event_name=%s, ts=%s" % (self.task_id, self.event_name, self.ts)
 
-    class TaskHadoopJob(Base):
-        """ Table to track information about a Task that started a Hadoop job
-        """
-        __tablename__ = 'task_hadoop_jobs'
-        task_id = Column(Integer, ForeignKey('tasks.id'), primary_key=True)
-        id = Column(String, primary_key=True)
-        url = Column(String)
-        start_time = Column(TIMESTAMP)
-        end_time = Column(TIMESTAMP)
-        status = Column(String)
-
-    class TaskLog(Base):
-        """ Table to track where the logs for a task are kept
-        """
-        __tablename__ = 'task_logs'
-        task_id = Column(Integer, ForeignKey('tasks.id'), primary_key=True)
-        log_type = Column(String, primary_key=True)  # stderr, stdout
-        uri = Column(String, primary_key=True)  # uri in HDFS or elsewhere
-
     class TaskRecord(Base):
         """ Base table to track information about a luigi.Task. References to other tables are available through
             task.events, task.parameters, etc.
@@ -240,8 +206,6 @@ try:
         parameters = relationship('TaskParameter', collection_class=attribute_mapped_collection('name'),
                                   cascade="all, delete-orphan")
         events = relationship("TaskEvent", order_by=lambda: TaskEvent.ts.desc(), backref="task")
-        hadoop_job = relationship("TaskHadoopJob", order_by=lambda: TaskHadoopJob.start_time.desc(), backref="task")
-        logs = relationship("TaskLog", backref="task")
 
         def __repr__(self):
             return "TaskRecord(name=%s, host=%s)" % (self.name, self.host)
