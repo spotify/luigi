@@ -91,28 +91,38 @@ def reset():
     warnings.warn('reset is no longer supported')
 
 
+class WorkerSchedulerFactory(object):
+    def create_local_scheduler(self):
+        return scheduler.CentralPlannerScheduler()
+
+    def create_remote_scheduler(self, host, port):
+        return rpc.RemoteScheduler(host=host, port=port)
+
+    def create_worker(self, scheduler, worker_processes):
+        return worker.Worker(scheduler=scheduler, worker_processes=worker_processes)
+
+
 class Interface(object):
     def parse(self):
         raise NotImplementedError
 
     @staticmethod
-    def run(tasks, scheduler_instance=None, worker_instance=None, override_defaults={}):
+    def run(tasks, worker_scheduler_factory=None, override_defaults={}):
+
+        if worker_scheduler_factory is None:
+            worker_scheduler_factory = WorkerSchedulerFactory()
+
         env_params = EnvironmentParamsContainer.env_params(override_defaults)
 
         if env_params.lock:
             lock.run_once(env_params.lock_pid_dir)
 
-        if scheduler_instance is not None:
-            sch = scheduler_instance
-        elif env_params.local_scheduler:
-            sch = scheduler.CentralPlannerScheduler()
+        if env_params.local_scheduler:
+            sch = worker_scheduler_factory.create_local_scheduler()
         else:
-            sch = rpc.RemoteScheduler(host=env_params.scheduler_host, port=env_params.scheduler_port)
+            sch = worker_scheduler_factory.create_remote_scheduler(host=env_params.scheduler_host, port=env_params.scheduler_port)
 
-        if worker_instance is not None:
-            w = worker_instance
-        else:
-            w = worker.Worker(scheduler=sch, worker_processes=env_params.workers)
+        w = worker_scheduler_factory.create_worker(scheduler=sch, worker_processes=env_params.workers)
 
         for task in tasks:
             w.add(task)
@@ -295,7 +305,7 @@ class LuigiConfigParser(configuration.LuigiConfigParser):
     pass
 
 
-def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, scheduler_instance=None, worker_instance=None):
+def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, worker_scheduler_factory=None):
     ''' Run from cmdline.
 
     The default parser uses argparse.
@@ -308,10 +318,10 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task
     else:
         interface = ArgParseInterface()
     tasks = interface.parse(cmdline_args, main_task_cls=main_task_cls)
-    interface.run(tasks, scheduler_instance, worker_instance)
+    interface.run(tasks, worker_scheduler_factory)
 
 
-def build(tasks, scheduler_instance=None, worker_instance=None, **env_params):
+def build(tasks, worker_scheduler_factory=None, **env_params):
     ''' Run internally, bypassing the cmdline parsing.
 
     Useful if you have some luigi code that you want to run internally.
@@ -319,4 +329,4 @@ def build(tasks, scheduler_instance=None, worker_instance=None, **env_params):
     luigi.build([MyTask1(), MyTask2()], local_scheduler=True)
     '''
     setup_interface_logging()
-    Interface.run(tasks, scheduler_instance, worker_instance, env_params)
+    Interface.run(tasks, worker_scheduler_factory, env_params)
