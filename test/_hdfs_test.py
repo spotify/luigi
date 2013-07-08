@@ -14,6 +14,8 @@
 
 import unittest
 import luigi
+
+
 from luigi import hdfs
 from luigi.hdfs import client
 import luigi.target
@@ -101,9 +103,10 @@ class HdfsAtomicWriteDirPipeTests(unittest.TestCase):
         pipe.write("foo\nbar")
         pipe.close()
         self.assertTrue(hdfs.exists(self.path))
-        dirlist = tuple(hdfs.listdir(self.path))
+        dirlist = hdfs.listdir(self.path)
         datapath = '%s/data' % self.path
-        self.assertEquals(dirlist, (datapath,))
+        returnlist = [d for d in dirlist]
+        self.assertTrue(returnlist[0].endswith(datapath))
         pipe = hdfs.HdfsReadPipe(datapath)
         self.assertEqual(pipe.read(), "foo\nbar")
 
@@ -326,7 +329,7 @@ class _HdfsClientTest(unittest.TestCase):
 
     def put_file(self, local_target, local_filename, target_path):
         if local_target.exists():
-            local_target.remove(skip_trash=True)
+            local_target.remove()
         self.create_file(local_target)
 
         target = hdfs.HdfsTarget(target_path)
@@ -347,7 +350,7 @@ class _HdfsClientTest(unittest.TestCase):
         local_target = luigi.LocalTarget(local_path)
         target = self.put_file(local_target, local_filename, target_path)
         self.assertTrue(target.exists())
-        local_target.remove(skip_trash=True)
+        local_target.remove()
 
     def test_get(self):
         local_dir = "test/data"
@@ -358,15 +361,15 @@ class _HdfsClientTest(unittest.TestCase):
         local_target = luigi.LocalTarget(local_path)
         target = self.put_file(local_target, local_filename, target_path)
         self.assertTrue(target.exists())
-        local_target.remove(skip_trash=True)
+        local_target.remove()
 
         local_copy_path = "%s/file1.dat.cp" % local_dir
         local_copy = luigi.LocalTarget(local_copy_path)
         if local_copy.exists():
-            local_copy.remove(skip_trash=True)
+            local_copy.remove()
         client.get(target.path, local_copy_path)
         self.assertTrue(local_copy.exists())
-        local_copy.remove(skip_trash=True)
+        local_copy.remove()
 
     def test_getmerge(self):
         local_dir = "test/data"
@@ -379,25 +382,25 @@ class _HdfsClientTest(unittest.TestCase):
         local_target1 = luigi.LocalTarget(local_path1)
         target1 = self.put_file(local_target1, local_filename1, target_dir)
         self.assertTrue(target1.exists())
-        local_target1.remove(skip_trash=True)
+        local_target1.remove()
 
         local_target2 = luigi.LocalTarget(local_path2)
         target2 = self.put_file(local_target2, local_filename2, target_dir)
         self.assertTrue(target2.exists())
-        local_target2.remove(skip_trash=True)
+        local_target2.remove()
 
         local_copy_path = "%s/file.dat.cp" % (local_dir)
         local_copy = luigi.LocalTarget(local_copy_path)
         if local_copy.exists():
-            local_copy.remove(skip_trash=True)
+            local_copy.remove()
         client.getmerge(target_dir, local_copy_path)
         self.assertTrue(local_copy.exists())
-        local_copy.remove(skip_trash=True)
+        local_copy.remove()
 
         local_copy_crc_path = "%s/.file.dat.cp.crc" % (local_dir)
         local_copy_crc = luigi.LocalTarget(local_copy_crc_path)
         self.assertTrue(local_copy_crc.exists())
-        local_copy_crc.remove(skip_trash=True)
+        local_copy_crc.remove()
 
 if __name__ == "__main__":
     unittest.main()
