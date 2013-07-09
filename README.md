@@ -343,6 +343,15 @@ Actually the resemblance with a G-clef is coincidental. Scroll and drag to zoom 
 
 ![Wordcount](https://raw.github.com/spotify/luigi/master/doc/fib_zoomed.png)
 
+## Configuration
+
+By default, Luigi is configured to work with the CDH4 release of Hadoop.  There are some minor differences with regards to the HDFS CLI in CDH3, CDH4 and the Apache releases of Hadoop.  If you want to use a release other than CDH4, you need to add a configuration file named client.cfg to your current working directory or /etc/luigi (although this is further configurable) with the following contents:
+
+```
+[hadoop]
+version: cdh4|cdh3|apache1
+```
+
 ## More info
 
 Luigi is the sucessor to a couple of attempts that we weren't fully happy with. We learned a lot from our mistakes and some design decisions include:
