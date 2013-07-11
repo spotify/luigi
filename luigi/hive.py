@@ -248,6 +248,7 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
         mapred.job.name to task_id and if not None, sets:
         * mapred.reduce.tasks (n_reduce_tasks)
         * mapred.fairscheduler.pool (pool)
+        * mapred.job.queue.name (pool)
         * hive.exec.reducers.bytes.per.reducer (bytes_per_reducer)
         * hive.exec.reducers.max (reducers_max)
         '''
@@ -256,7 +257,9 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
         if self.n_reduce_tasks is not None:
             jcs['mapred.reduce.tasks'] = self.n_reduce_tasks
         if self.pool is not None:
+            # supports two schedulers using the same option (Fair and Capacity)
             jcs['mapred.fairscheduler.pool'] = self.pool
+            jcs['mapred.job.queue.name'] = self.pool
         if self.bytes_per_reducer is not None:
             jcs['hive.exec.reducers.bytes.per.reducer'] = self.bytes_per_reducer
         if self.reducers_max is not None:
