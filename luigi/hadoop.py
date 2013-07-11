@@ -465,7 +465,12 @@ class BaseHadoopJobTask(luigi.Task):
         jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
         pool = self.pool
         if pool is not None:
-            jcs.append('mapred.fairscheduler.pool=%s' % pool)
+            # Supporting two schedulers: fair (default) and capacity using the same option
+            scheduler_type = configuration.get_config().get('hadoop', 'scheduler', 'fair')
+            if scheduler_type == 'fair':
+                jcs.append('mapred.fairscheduler.pool=%s' % pool)
+            elif scheduler_type == 'capacity':
+                jcs.append('mapred.job.queue.name=%s' % pool)
         return jcs
 
 
