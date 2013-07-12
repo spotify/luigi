@@ -63,20 +63,16 @@ def tmppath(path=None):
 class HdfsClient(FileSystem):
     """This client uses Apache 2.x syntax for file system commands, which also matched CDH4"""
     def exists(self, path):
-        """ Use `hadoop fs -ls -d` to check file existence
-
-        `hadoop fs -test -e` can't be (reliably) used at this time since there
-        is no good way of distinguishing file non-existence of files
-        from errors when running the command (same return code)
+        """ Use `hadoop fs -stat to check file existance
         """
 
-        cmd = ['hadoop', 'fs', '-ls', '-d', path]
+        cmd = ['hadoop', 'fs', '-stat', path]
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
         if p.returncode == 0:
             return True
         else:
-            not_found_pattern = "ls: .*: No such file or directory[.]?$"
+            not_found_pattern = "^stat: cannot stat `.*': No such file or directory$"
             not_found_re = re.compile(not_found_pattern)
             for line in stderr.split('\n'):
                 if not_found_re.match(line):
