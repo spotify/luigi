@@ -350,7 +350,17 @@ By default, Luigi is configured to work with the CDH4 release of Hadoop.  There 
 ```
 [hadoop]
 version: cdh4|cdh3|apache1
+
+[hive]
+release: cdh4|cdh3|apache
+version: x.xx
+
+[core]
+error-email: target@yourdomain.com
+email-sender: Sender Name
 ```
+
+All sections are optional based on what parts of Luigi you are actually using.  By default, Luigi will not send error emails when running through a tty terminal.  If using the Apache release of Hive, there are slight differences when compared to the CDH release, so specify this configuration setting accordingly.
 
 ## More info
 
