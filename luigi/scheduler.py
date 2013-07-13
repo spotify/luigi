@@ -262,7 +262,7 @@ class CentralPlannerScheduler(Scheduler):
 
     def _get_task_params(self, task_id):
         params = {}
-        params_strings =  task_id.split('(')[1].strip(')').split()
+        params_strings =  task_id.split('(')[1].strip(')').split(',')
         for param in params_strings:
             split_param = param.strip(',').split('=')
             params[split_param[0]] = split_param[1]
