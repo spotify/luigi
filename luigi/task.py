@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import json
+
 import abc
 import parameter
 import warnings
@@ -213,12 +215,16 @@ class Task(object):
         self.param_kwargs = dict(param_values)
 
         # Build up task id
-        task_id_parts = []
+        task_id_parts = {}
         for param_name, param_value in param_values:
             if dict(params)[param_name].significant:
-                task_id_parts.append('%s=%s' % (str(param_name), str(param_value)))
+                task_id_parts[str(param_name)] = str(param_value)
 
-        self.task_id = '%s(%s)' % (self.task_family, ', '.join(task_id_parts))
+        if len(task_id_parts) > 0:
+            self.task_id = '%s(%s)' % (self.task_family, json.dumps(task_id_parts))
+        else:
+            self.task_id = '%s(%s)' % (self.task_family, "")
+
         self.__hash = hash(self.task_id)
 
     def initialized(self):
