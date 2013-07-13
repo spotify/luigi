@@ -12,12 +12,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import os
-import logging
-import time
 import cPickle as pickle
 import json
+import logging
+import os
 import re
+import time
+
 logger = logging.getLogger("luigi-interface")
 
 
