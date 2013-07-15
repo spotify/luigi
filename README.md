@@ -356,7 +356,7 @@ release: cdh4|cdh3|apache
 version: x.xx
 
 [core]
-error-email: target@yourdomain.com
+error-email: target@example.com
 email-sender: Sender Name
 ```
 
