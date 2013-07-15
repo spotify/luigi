@@ -13,6 +13,7 @@
 # the License.
 
 import abc
+import datetime
 import parameter
 import warnings
 import traceback
@@ -216,7 +217,11 @@ class Task(object):
         task_id_parts = []
         for param_name, param_value in param_values:
             if dict(params)[param_name].significant:
-                task_id_parts.append('%s=%s' % (str(param_name), str(param_value)))
+                if isinstance(param_value, datetime.datetime):
+                    string_param = param_value.isoformat()
+                else:
+                    string_param = str(param_value)
+                task_id_parts.append('%s=%s' % (str(param_name), string_param))
 
         self.task_id = '%s(%s)' % (self.task_family, ', '.join(task_id_parts))
         self.__hash = hash(self.task_id)
