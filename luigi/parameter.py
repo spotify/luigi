@@ -98,6 +98,9 @@ class Parameter(object):
     def parse(self, x):
         return x  # default impl
 
+    def serialize(self, x): # opposite of parse
+        return str(x)
+
     def parse_from_input(self, param_name, x):
         if not x:
             if self.has_default:
@@ -120,6 +123,9 @@ class DateHourParameter(Parameter):
         # TODO(erikbern): we should probably use an internal class for arbitary
         # time intervals (similar to date_interval). Or what do you think?
         return datetime.datetime.strptime(s, "%Y-%m-%dT%H")  # ISO 8601 is to use 'T'
+
+    def serialize(self, dt):
+        return dt.strftime('%Y-%m-%dT%H')
 
 
 class DateParameter(Parameter):
