@@ -211,7 +211,7 @@ class ParameterTest(EmailTest):
             bar = luigi.Parameter()
 
         t = InsignificantParameterTask(foo='x', bar='y')
-        self.assertEquals(t.task_id, 'InsignificantParameterTask(bar=y)')
+        self.assertEquals(t.task_id, 'InsignificantParameterTask({"bar": "y"})')
 
 
 class TestParamWithDefaultFromConfig(unittest.TestCase):

@@ -104,13 +104,13 @@ class SchedulerVisualisationTest(unittest.TestCase):
         remote = self._remote()
         graph = remote.graph()
         self.assertEqual(len(graph), 2)
-        self.assert_(u'DummyTask(task_id=1)' in graph)
-        d1 = graph[u'DummyTask(task_id=1)']
+        self.assert_(u'DummyTask({"task_id": "1"})' in graph)
+        d1 = graph[u'DummyTask({"task_id": "1"})']
         self.assertEqual(d1[u'status'], u'DONE')
         self.assertEqual(d1[u'deps'], [])
         self.assertGreaterEqual(d1[u'start_time'], start)
         self.assertLessEqual(d1[u'start_time'], end)
-        d2 = graph[u'DummyTask(task_id=2)']
+        d2 = graph[u'DummyTask({"task_id": "2"})']
         self.assertEqual(d2[u'status'], u'DONE')
         self.assertEqual(d2[u'deps'], [])
         self.assertGreaterEqual(d2[u'start_time'], start)
@@ -123,59 +123,58 @@ class SchedulerVisualisationTest(unittest.TestCase):
     def test_dep_graph_single(self):
         self._build([FactorTask(1)])
         remote = self._remote()
-        dep_graph = remote.dep_graph('FactorTask(product=1)')
+        dep_graph = remote.dep_graph('FactorTask({"product": "1"})')
         self.assertEqual(len(dep_graph), 1)
         self._assert_all_done(dep_graph)
-
-        d1 = dep_graph.get(u'FactorTask(product=1)')
+        d1 = dep_graph.get(u'FactorTask({"product": "1"})')
         self.assertEqual(type(d1), type({}))
         self.assertEqual(d1[u'deps'], [])
 
     def test_dep_graph_not_found(self):
         self._build([FactorTask(1)])
         remote = self._remote()
-        dep_graph = remote.dep_graph('FactorTask(product=5)')
+        dep_graph = remote.dep_graph('FactorTask({"product": "5"})')
         self.assertEqual(len(dep_graph), 0)
 
     def test_dep_graph_tree(self):
         self._build([FactorTask(30)])
         remote = self._remote()
-        dep_graph = remote.dep_graph('FactorTask(product=30)')
+        dep_graph = remote.dep_graph('FactorTask({"product": "30"})')
         self.assertEqual(len(dep_graph), 5)
         self._assert_all_done(dep_graph)
 
-        d30 = dep_graph[u'FactorTask(product=30)']
-        self.assertEqual(sorted(d30[u'deps']), [u'FactorTask(product=15)', 'FactorTask(product=2)'])
+        d30 = dep_graph[u'FactorTask({"product": "30"})']
+        self.assertEqual(sorted(d30[u'deps']), [u'FactorTask({"product": "15"})', 'FactorTask({"product": "2"})'])
 
-        d2 = dep_graph[u'FactorTask(product=2)']
+        d2 = dep_graph[u'FactorTask({"product": "2"})']
         self.assertEqual(sorted(d2[u'deps']), [])
 
-        d15 = dep_graph[u'FactorTask(product=15)']
-        self.assertEqual(sorted(d15[u'deps']), [u'FactorTask(product=3)', 'FactorTask(product=5)'])
+        d15 = dep_graph[u'FactorTask({"product": "15"})']
+        self.assertEqual(sorted(d15[u'deps']), [u'FactorTask({"product": "3"})', 'FactorTask({"product": "5"})'])
 
-        d3 = dep_graph[u'FactorTask(product=3)']
+        d3 = dep_graph[u'FactorTask({"product": "3"})']
         self.assertEqual(sorted(d3[u'deps']), [])
 
-        d5 = dep_graph[u'FactorTask(product=5)']
+        d5 = dep_graph[u'FactorTask({"product": "5"})']
         self.assertEqual(sorted(d5[u'deps']), [])
 
     def test_dep_graph_diamond(self):
         self._build([FactorTask(12)])
         remote = self._remote()
-        dep_graph = remote.dep_graph('FactorTask(product=12)')
+        dep_graph = remote.dep_graph('FactorTask({"product": "12"})')
         self.assertEqual(len(dep_graph), 4)
         self._assert_all_done(dep_graph)
 
-        d12 = dep_graph[u'FactorTask(product=12)']
-        self.assertEqual(sorted(d12[u'deps']), [u'FactorTask(product=2)', 'FactorTask(product=6)'])
+        d12 = dep_graph[u'FactorTask({"product": "12"})']
+        self.assertEqual(sorted(d12[u'deps']), [u'FactorTask({"product": "2"})', 'FactorTask({"product": "6"})'])
 
-        d6 = dep_graph[u'FactorTask(product=6)']
-        self.assertEqual(sorted(d6[u'deps']), [u'FactorTask(product=2)', 'FactorTask(product=3)'])
+        d6 = dep_graph[u'FactorTask({"product": "6"})']
+        self.assertEqual(sorted(d6[u'deps']), [u'FactorTask({"product": "2"})', 'FactorTask({"product": "3"})'])
 
-        d3 = dep_graph[u'FactorTask(product=3)']
+        d3 = dep_graph[u'FactorTask({"product": "3"})']
         self.assertEqual(sorted(d3[u'deps']), [])
 
-        d2 = dep_graph[u'FactorTask(product=2)']
+        d2 = dep_graph[u'FactorTask({"product": "2"})']
         self.assertEqual(sorted(d2[u'deps']), [])
 
     def test_task_list_single(self):
@@ -185,7 +184,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(len(tasks_done), 1)
         self._assert_all_done(tasks_done)
 
-        t7 = tasks_done.get(u'FactorTask(product=7)')
+        t7 = tasks_done.get(u'FactorTask({"product": "7"})')
         self.assertEqual(type(t7), type({}))
         self.assertEqual(t7[u'deps'], [])
 
@@ -199,7 +198,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         failed = remote.task_list('FAILED', '')
         self.assertEqual(len(failed), 1)
 
-        f8 = failed.get(u'FailingTask(task_id=8)')
+        f8 = failed.get(u'FailingTask({"task_id": "8"})')
         self.assertEqual(f8[u'status'], u'FAILED')
         self.assertEqual(f8[u'deps'], [])
 
@@ -275,8 +274,8 @@ class SchedulerVisualisationTest(unittest.TestCase):
     def test_fetch_error(self):
         self._build([FailingTask(8)])
         remote = self._remote()
-        error = remote.fetch_error("FailingTask(task_id=8)")
-        self.assertEqual(error["taskId"], "FailingTask(task_id=8)")
+        error = remote.fetch_error('FailingTask({"task_id": "8"})')
+        self.assertEqual(error["taskId"], 'FailingTask({"task_id": "8"})')
         self.assertTrue("Error Message" in error["error"])
         self.assertTrue("Runtime error" in error["error"])
         self.assertTrue("Traceback" in error["error"])

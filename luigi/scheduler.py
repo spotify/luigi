@@ -12,10 +12,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import os
-import logging
-import time
 import cPickle as pickle
+import json
+import logging
+import os
+import re
+import time
+
 logger = logging.getLogger("luigi-interface")
 
 
@@ -262,11 +265,14 @@ class CentralPlannerScheduler(Scheduler):
 
     def _get_task_params(self, task_id):
         params = {}
-        params_strings =  task_id.split('(')[1].strip(')').split()
-        for param in params_strings:
-            split_param = param.strip(',').split('=')
-            params[split_param[0]] = split_param[1]
-        return params
+        params_string = re.search('\((.*)\)', task_id)
+        if params_string:
+            if len(params_string.group(1)) > 0:
+                params_json = json.loads(params_string.group(1))
+                for k, v in params_json.iteritems():
+                    params[k] = v
+        if len(params) > 0:
+            return params
 
     def _get_task_name(self, task_id):
         return task_id.split('(')[0]

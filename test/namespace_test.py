@@ -40,8 +40,8 @@ class TestNamespacing(unittest.TestCase):
     def test_namespace(self):
         self.assertEquals(namespace_test_helper.Foo.task_namespace, "mynamespace")
         self.assertEquals(namespace_test_helper.Foo.task_family, "mynamespace.Foo")
-        self.assertEquals(namespace_test_helper.Foo(1).task_id, "mynamespace.Foo(p=1)")
+        self.assertEquals(namespace_test_helper.Foo(1).task_id, 'mynamespace.Foo({"p": "1"})')
 
         self.assertEquals(namespace_test_helper.Bar.task_namespace, "othernamespace")
         self.assertEquals(namespace_test_helper.Bar.task_family, "othernamespace.Bar")
-        self.assertEquals(namespace_test_helper.Bar(1).task_id, "othernamespace.Bar(p=1)")
+        self.assertEquals(namespace_test_helper.Bar(1).task_id, 'othernamespace.Bar({"p": "1"})')
