@@ -17,6 +17,7 @@ import urllib2
 import logging
 import json
 import time
+import warnings
 from scheduler import Scheduler, PENDING
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
@@ -39,7 +40,7 @@ class RemoteScheduler(Scheduler):
     def _wait(self):
         time.sleep(30)
 
-    def _request(self, url, data):
+    def _request(self, url, data, log_exceptions=True):
         # TODO(erikbern): do POST requests instead
         data = {'data': json.dumps(data)}
         url = 'http://%s:%d%s?%s' % \
@@ -55,7 +56,8 @@ class RemoteScheduler(Scheduler):
                 response = urllib2.urlopen(req)
                 break
             except urllib2.URLError, last_exception:
-                logger.exception("Failed connecting to remote scheduler %r" % (self._host,))
+                if log_exceptions:
+                    logger.exception("Failed connecting to remote scheduler %r" % (self._host,))
                 continue
         else:
             raise RPCError("Errors (%d attempts) when connecting to remote scheduler %r" % (
@@ -77,8 +79,20 @@ class RemoteScheduler(Scheduler):
              'expl': expl,
              })
 
-    def get_work(self, worker):
-        return self._request('/api/get_work', {'worker': worker})
+    def get_work(self, worker, host=None):
+        ''' Ugly work around for an older scheduler version, where get_work doesn't have a host argument. Try once passing
+            host to it, falling back to the old version. Should be removed once people have had time to update everything
+        '''
+        current_attempts = self._attempts
+        try:
+            self._attempts = 1
+            return self._request('/api/get_work', {'worker': worker, 'host': host}, log_exceptions=False)
+        except:
+            warnings.warn("Failed call to scheduler.get_work(worker, host), are you running an old scheduler version?")
+            self._attempts = 2
+            return self._request('/api/get_work', {'worker': worker}, log_exceptions=True)
+        finally:
+            self._attempts = current_attempts
 
     def graph(self):
         return self._request('/api/graph', {})
@@ -102,8 +116,8 @@ class RemoteSchedulerResponder(object):
     def add_task(self, worker, task_id, status, runnable, deps, expl):
         return self._scheduler.add_task(worker, task_id, status, runnable, deps, expl)
 
-    def get_work(self, worker):
-        return self._scheduler.get_work(worker)
+    def get_work(self, worker, host=None):
+        return self._scheduler.get_work(worker, host)
 
     def ping(self, worker):
         return self._scheduler.ping(worker)

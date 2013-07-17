@@ -12,3 +12,5 @@ hadoop_test.py
 *.rej
 *.orig
 .DS_Store
+.idea/
+*.iml
