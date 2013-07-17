@@ -45,7 +45,7 @@ class HadoopJarJobRunner(luigi.hadoop.JobRunner):
             logger.error("Can't find jar: {0}, full path {1}".format(job.jar(),
                          os.path.abspath(job.jar())))
             raise Exception("job jar does not exist")
-        arglist = ['hadoop', 'jar', job.jar()]
+        arglist = [luigi.hdfs.load_hadoop_cmd(), 'jar', job.jar()]
         if job.main():
             arglist.append(job.main())
 

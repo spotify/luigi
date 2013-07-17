@@ -418,6 +418,8 @@ default-scheduler-host: luigi-host.mycompany.foo
 error-email: foo@bar.baz
 ```
 
+All sections are optional based on what parts of Luigi you are actually using.  By default, Luigi will not send error emails when running through a tty terminal.  If using the Apache release of Hive, there are slight differences when compared to the CDH release, so specify this configuration setting accordingly.
+
 ## More info
 
 Luigi is the sucessor to a couple of attempts that we weren't fully happy with. We learned a lot from our mistakes and some design decisions include:
