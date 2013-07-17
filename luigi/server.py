@@ -27,6 +27,7 @@ import scheduler
 import pkg_resources
 import signal
 from rpc import RemoteSchedulerResponder
+from task_history import DbTaskHistory, NopHistory, handlers as history_handlers
 
 
 def _create_scheduler():
@@ -34,7 +35,9 @@ def _create_scheduler():
     retry_delay = config.getfloat('scheduler', 'retry-delay', 900.0)
     remove_delay = config.getfloat('scheduler', 'remove-delay', 600.0)
     worker_disconnect_delay = config.getfloat('scheduler', 'worker-disconnect-delay', 60.0)
-    return scheduler.CentralPlannerScheduler(retry_delay, remove_delay, worker_disconnect_delay)
+    use_task_history = config.getboolean('scheduler', 'record_task_history', False)
+    task_history = DbTaskHistory() if use_task_history else NopHistory()
+    return scheduler.CentralPlannerScheduler(retry_delay, remove_delay, worker_disconnect_delay, task_history)
 
 
 class RPCHandler(tornado.web.RequestHandler):
@@ -71,11 +74,12 @@ class RootPathHandler(tornado.web.RequestHandler):
 
 
 def app(api):
-    api_app = tornado.web.Application([
-        (r'/api/(.*)', RPCHandler, {"api": api}),
-        (r'/static/(.*)', StaticFileHandler),
-        (r'/', RootPathHandler)
-    ])
+    handlers = history_handlers('history') + [
+            (r'/api/(.*)', RPCHandler, {"api": api}),
+            (r'/static/(.*)', StaticFileHandler),
+            (r'/', RootPathHandler)
+    ]
+    api_app = tornado.web.Application(handlers)
     return api_app
 
 
@@ -92,7 +96,6 @@ def _init_api(sched, responder, api_port, address):
 
 def run(api_port=8082, address=None, scheduler=None, responder=None):
     """ Runs one instance of the API server """
-
     sched = scheduler or _create_scheduler()
     # load scheduler state
     sched.load()
