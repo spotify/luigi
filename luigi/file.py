@@ -58,7 +58,7 @@ class LocalFileSystem(FileSystem):
         os.makedirs(path)
 
     def isdir(self, path):
-        os.path.isdir(path)
+        return os.path.isdir(path)
 
     def remove(self, path, recursive=True):
         if recursive and self.isdir(path):
