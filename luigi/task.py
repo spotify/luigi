@@ -27,6 +27,25 @@ def namespace(namespace=None):
     Register._default_namespace = namespace
 
 
+def id_to_name_and_params(task_id):
+    ''' Turn a task_id into a (task_family, {params}) tuple.
+        E.g. calling with 'Foo(bar=bar, baz=baz)' returns ('Foo', {'bar': 'bar', 'baz': 'baz'})
+    '''
+    lparen = task_id.index('(')
+    task_family = task_id[:lparen]
+    params = task_id[lparen + 1:-1]
+
+    def split_equals(x):
+        equals = x.index('=')
+        return x[:equals], x[equals + 1:]
+    if params:
+        param_list = map(split_equals, params.split(', '))  # TODO: param values with ', ' in them will break this
+    else:
+        param_list = []
+    return task_family, dict(param_list)
+
+
+
 class Register(abc.ABCMeta):
     # 1. Cache instances of objects so that eg. X(1, 2, 3) always returns the same object
     # 2. Keep track of all subclasses of Task and expose them
@@ -245,7 +264,7 @@ class Task(object):
         There's at least two scenarios where this is useful (see test/clone_test.py)
         - Remove a lot of boiler plate when you have recursive dependencies and lots of args
         - There's task inheritance and some logic is on the base class
-        '''            
+        '''
         k = self.param_kwargs.copy()
         k.update(kwargs.items())
 
