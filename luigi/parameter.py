@@ -137,6 +137,9 @@ class IntParameter(Parameter):
     def parse(self, s):
         return int(s)
 
+class FloatParameter(Parameter):
+    def parse(self, s):
+        return float(s)
 
 class BooleanParameter(Parameter):
     # TODO(erikbern): why do we call this "boolean" instead of "bool"?
