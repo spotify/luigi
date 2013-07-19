@@ -108,30 +108,35 @@ class RemoteScheduler(Scheduler):
 
 
 class RemoteSchedulerResponder(object):
-    """ Use on the server side for responding to requests"""
+    """ Use on the server side for responding to requests
+    
+    The kwargs are there for forwards compatibility in case workers add
+    new (optional) arguments. That way there's no dependency on the server
+    component when upgrading Luigi on the worker side.
+    """
 
     def __init__(self, scheduler):
         self._scheduler = scheduler
 
-    def add_task(self, worker, task_id, status, runnable, deps, expl):
+    def add_task(self, worker, task_id, status, runnable, deps, expl, **kwargs):
         return self._scheduler.add_task(worker, task_id, status, runnable, deps, expl)
 
-    def get_work(self, worker, host=None):
+    def get_work(self, worker, host=None, **kwargs):
         return self._scheduler.get_work(worker, host)
 
-    def ping(self, worker):
+    def ping(self, worker, **kwargs):
         return self._scheduler.ping(worker)
 
-    def graph(self):
+    def graph(self, **kwargs):
         return self._scheduler.graph()
 
     index = graph
 
-    def dep_graph(self, task_id):
+    def dep_graph(self, task_id, **kwargs):
         return self._scheduler.dep_graph(task_id)
 
-    def task_list(self, status, upstream_status):
+    def task_list(self, status, upstream_status, **kwargs):
         return self._scheduler.task_list(status, upstream_status)
 
-    def fetch_error(self, task_id):
+    def fetch_error(self, task_id, **kwargs):
         return self._scheduler.fetch_error(task_id)
