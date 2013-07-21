@@ -54,7 +54,7 @@ class RPCHandler(tornado.web.RequestHandler):
             result = getattr(self._api, method)(**arguments)
             self.write({"response": result})  # wrap all json response in a dictionary
         else:
-            self.send_error(400)
+            self.send_error(404)
 
 
 class StaticFileHandler(tornado.web.RequestHandler):
