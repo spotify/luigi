@@ -17,6 +17,7 @@ import tempfile
 import unittest
 
 import luigi.server
+import server_test
 
 tempdir = tempfile.mkdtemp()
 
@@ -31,15 +32,7 @@ class DummyTask(luigi.Task):
         return luigi.LocalTarget(os.path.join(tempdir, str(self.id)))
 
 
-class RemoteSchedulerTest(unittest.TestCase):
-    def setUp(self):
-        # Pass IPv4 localhost to ensure that only a single address, and therefore single port, is bound
-        sock_names = luigi.server.run_api_threaded(0, address='127.0.0.1')
-        _, self._api_port = sock_names[0]
-
-    def tearDown(self):
-        luigi.server.stop()
-
+class RemoteSchedulerTest(server_test.ServerTestBase):
     def _test_run(self, workers):
         tasks = [DummyTask(id) for id in xrange(20)]
         luigi.build(tasks, scheduler_host='localhost', scheduler_port=self._api_port, workers=workers)
