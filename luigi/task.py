@@ -304,12 +304,24 @@ class Task(object):
     def requires(self):
         return []  # default impl
 
+    def _requires(self):
+        '''
+        Override in "template" tasks which themselves are supposed to be
+        subclassed and thus have their requires() overridden (name preserved to
+        provide consistent end-user experience), yet need to introduce
+        (non-input) dependencies.
+
+        Must return an iterable which among others contains the _requires() of
+        the superclass.
+        '''
+        return flatten(self.requires())  # base impl
+
     def input(self):
         return getpaths(self.requires())
 
     def deps(self):
         # used by scheduler
-        return flatten(self.requires())
+        return flatten(self._requires())
 
     def run(self):
         pass  # default impl
