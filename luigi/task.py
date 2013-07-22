@@ -13,11 +13,13 @@
 # the License.
 
 import abc
+import logging
 import parameter
 import warnings
 import traceback
 
 Parameter = parameter.Parameter
+logger = logging.getLogger('luigi-interface')
 
 
 def namespace(namespace=None):
@@ -88,6 +90,7 @@ class Register(abc.ABCMeta):
         try:
             hash(k)
         except TypeError:
+            logger.debug("Not all parameter values are hashable so instance isn't coming from the cache")
             return instantiate()  # unhashable types in parameters
 
         if k not in h:
@@ -211,8 +214,8 @@ class Task(object):
                 result[param_name] = param_obj.default
 
         def list_to_tuple(x):
-            """ Make tuples out of lists to allow hashing """
-            if isinstance(x, list):
+            """ Make tuples out of lists and sets to allow hashing """
+            if isinstance(x, list) or isinstance(x, set):
                 return tuple(x)
             else:
                 return x
