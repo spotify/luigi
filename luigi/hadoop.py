@@ -142,6 +142,10 @@ def flatten(sequence):
             yield item
 
 
+def load_hadoop_cmd():
+    return luigi.configuration.get_config().get('hadoop', 'command', 'hadoop')
+
+
 class HadoopJobError(RuntimeError):
     def __init__(self, message, out=None, err=None):
         super(HadoopJobError, self).__init__(message, out, err)
@@ -307,13 +311,13 @@ class HadoopJobRunner(JobRunner):
         output_tmp_fn = output_final + '-temp-' + datetime.datetime.now().isoformat().replace(':', '-')
         tmp_target = luigi.hdfs.HdfsTarget(output_tmp_fn, is_tmp=True)
 
-        arglist = ['hadoop', 'jar', self.streaming_jar]
+        arglist = [load_hadoop_cmd(), 'jar', self.streaming_jar]
 
         # 'libjars' is a generic option, so place it first
         libjars = [libjar for libjar in self.libjars]
 
         for libjar in self.libjars_in_hdfs:
-            subprocess.call(['hadoop', 'fs', '-get', libjar, self.tmp_dir])
+            subprocess.call([load_hadoop_cmd(), 'fs', '-get', libjar, self.tmp_dir])
             libjars.append(os.path.join(self.tmp_dir, os.path.basename(libjar)))
 
         if libjars:
