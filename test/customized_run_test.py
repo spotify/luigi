@@ -14,6 +14,7 @@
 
 import luigi
 import luigi.scheduler
+import luigi.rpc
 import luigi.worker
 import luigi.hadoop
 import unittest
@@ -36,13 +37,27 @@ class DummyTask(luigi.Task):
         self.has_run = True
 
 
-class CustomizedScheduler(luigi.scheduler.CentralPlannerScheduler):
+class CustomizedLocalScheduler(luigi.scheduler.CentralPlannerScheduler):
     def __init__(self, *args, **kwargs):
-        super(CustomizedScheduler, self).__init__(*args, **kwargs)
+        super(CustomizedLocalScheduler, self).__init__(*args, **kwargs)
         self.has_run = False
 
-    def get_work(self, worker):
-        locally_pending_tasks, best_task = super(CustomizedScheduler, self).get_work(worker)
+    def get_work(self, worker, host=None):
+        locally_pending_tasks, best_task = super(CustomizedLocalScheduler, self).get_work(worker, host)
+        self.has_run = True
+        return locally_pending_tasks, best_task
+
+    def complete(self):
+        return self.has_run
+
+
+class CustomizedRemoteScheduler(luigi.rpc.RemoteScheduler):
+    def __init__(self, *args, **kwargs):
+        super(CustomizedRemoteScheduler, self).__init__(*args, **kwargs)
+        self.has_run = False
+
+    def get_work(self, worker, host=None):
+        locally_pending_tasks, best_task = super(CustomizedRemoteScheduler, self).get_work(worker, host)
         self.has_run = True
         return locally_pending_tasks, best_task
 
@@ -63,37 +78,25 @@ class CustomizedWorker(luigi.worker.Worker):
         return self.has_run
 
 
-class CustomizedSchedulerTest(unittest.TestCase):
-    ''' Test that luigi's build method (and ultimately the run method) can accept a customized scheduler '''
-    def setUp(self):
-        self.scheduler = CustomizedScheduler()
-        self.time = time.time
+class CustomizedWorkerSchedulerFactory(object):
+    def __init__(self, *args, **kwargs):
+        self.scheduler = CustomizedLocalScheduler()
+        self.worker = CustomizedWorker(self.scheduler)
 
-    def tearDown(self):
-        if time.time != self.time:
-            time.time = self.time
+    def create_local_scheduler(self):
+        return self.scheduler
 
-    def setTime(self, t):
-        time.time = lambda: t
+    def create_remote_scheduler(self, host, port):
+        return CustomizedRemoteScheduler(host=host, port=port)
 
-    def test_customized_scheduler(self):
-        a = DummyTask(1)
-        self.assertFalse(self.scheduler.complete())
-        luigi.build([a], scheduler_instance=self.scheduler)
-        self.assertTrue(a.complete())
-        self.assertTrue(self.scheduler.complete())
-
-    def test_cmdline_custom_scheduler(self):
-        self.assertFalse(self.scheduler.complete())
-        luigi.run(['DummyTask', '--n', '2'], scheduler_instance=self.scheduler)
-        self.assertTrue(self.scheduler.complete())
+    def create_worker(self, scheduler, worker_processes=None):
+        return self.worker
 
 
 class CustomizedWorkerTest(unittest.TestCase):
-    ''' Test that luigi's build method (and ultimately the run method) can accept a customized worker '''
+    ''' Test that luigi's build method (and ultimately the run method) can accept a customized worker and scheduler '''
     def setUp(self):
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler()
-        self.worker = CustomizedWorker(scheduler=self.scheduler)
+        self.worker_scheduler_factory = CustomizedWorkerSchedulerFactory()
         self.time = time.time
 
     def tearDown(self):
@@ -106,15 +109,15 @@ class CustomizedWorkerTest(unittest.TestCase):
     def test_customized_worker(self):
         a = DummyTask(3)
         self.assertFalse(a.complete())
-        self.assertFalse(self.worker.complete())
-        luigi.build([a], scheduler_instance=self.scheduler, worker_instance=self.worker)
+        self.assertFalse(self.worker_scheduler_factory.worker.complete())
+        luigi.build([a], worker_scheduler_factory=self.worker_scheduler_factory)
         self.assertTrue(a.complete())
-        self.assertTrue(self.worker.complete())
+        self.assertTrue(self.worker_scheduler_factory.worker.complete())
 
     def test_cmdline_custom_worker(self):
-        self.assertFalse(self.worker.complete())
-        luigi.run(['DummyTask', '--n', '4'], scheduler_instance=self.scheduler, worker_instance=self.worker)
-        self.assertTrue(self.worker.complete())
+        self.assertFalse(self.worker_scheduler_factory.worker.complete())
+        luigi.run(['DummyTask', '--n', '4'], worker_scheduler_factory=self.worker_scheduler_factory)
+        self.assertTrue(self.worker_scheduler_factory.worker.complete())
 
 if __name__ == '__main__':
     unittest.main()

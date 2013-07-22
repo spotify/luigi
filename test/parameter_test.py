@@ -260,5 +260,17 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
     def testTwoDefaults(self):
         self.assertRaises(luigi.parameter.ParameterException, lambda: luigi.Parameter(default="baz", default_from_config=dict(section="foo", name="bar")))
 
+    def testHasDefaultNoSection(self):
+        luigi.Parameter(default_from_config=dict(section="foo", name="bar")).has_default
+        self.assertFalse(luigi.Parameter(default_from_config=dict(section="foo", name="bar")).has_default)
+
+    @with_config({"foo": {}})
+    def testHasDefaultNoValue(self):
+        self.assertFalse(luigi.Parameter(default_from_config=dict(section="foo", name="bar")).has_default)
+
+    @with_config({"foo": {"bar": "baz"}})
+    def testHasDefaultWithBoth(self):
+        self.assertTrue(luigi.Parameter(default_from_config=dict(section="foo", name="bar")).has_default)
+
 if __name__ == '__main__':
     luigi.run(use_optparse=True)

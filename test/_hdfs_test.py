@@ -17,6 +17,7 @@ import luigi
 from luigi import hdfs
 from luigi.hdfs import client
 import luigi.target
+import mock
 
 
 class TestException(Exception):
@@ -101,9 +102,10 @@ class HdfsAtomicWriteDirPipeTests(unittest.TestCase):
         pipe.write("foo\nbar")
         pipe.close()
         self.assertTrue(hdfs.exists(self.path))
-        dirlist = tuple(hdfs.listdir(self.path))
+        dirlist = hdfs.listdir(self.path)
         datapath = '%s/data' % self.path
-        self.assertEquals(dirlist, (datapath,))
+        returnlist = [d for d in dirlist]
+        self.assertTrue(returnlist[0].endswith(datapath))
         pipe = hdfs.HdfsReadPipe(datapath)
         self.assertEqual(pipe.read(), "foo\nbar")
 
@@ -326,7 +328,7 @@ class _HdfsClientTest(unittest.TestCase):
 
     def put_file(self, local_target, local_filename, target_path):
         if local_target.exists():
-            local_target.remove(skip_trash=True)
+            local_target.remove()
         self.create_file(local_target)
 
         target = hdfs.HdfsTarget(target_path)
@@ -347,7 +349,7 @@ class _HdfsClientTest(unittest.TestCase):
         local_target = luigi.LocalTarget(local_path)
         target = self.put_file(local_target, local_filename, target_path)
         self.assertTrue(target.exists())
-        local_target.remove(skip_trash=True)
+        local_target.remove()
 
     def test_get(self):
         local_dir = "test/data"
@@ -358,15 +360,15 @@ class _HdfsClientTest(unittest.TestCase):
         local_target = luigi.LocalTarget(local_path)
         target = self.put_file(local_target, local_filename, target_path)
         self.assertTrue(target.exists())
-        local_target.remove(skip_trash=True)
+        local_target.remove()
 
         local_copy_path = "%s/file1.dat.cp" % local_dir
         local_copy = luigi.LocalTarget(local_copy_path)
         if local_copy.exists():
-            local_copy.remove(skip_trash=True)
+            local_copy.remove()
         client.get(target.path, local_copy_path)
         self.assertTrue(local_copy.exists())
-        local_copy.remove(skip_trash=True)
+        local_copy.remove()
 
     def test_getmerge(self):
         local_dir = "test/data"
@@ -379,25 +381,55 @@ class _HdfsClientTest(unittest.TestCase):
         local_target1 = luigi.LocalTarget(local_path1)
         target1 = self.put_file(local_target1, local_filename1, target_dir)
         self.assertTrue(target1.exists())
-        local_target1.remove(skip_trash=True)
+        local_target1.remove()
 
         local_target2 = luigi.LocalTarget(local_path2)
         target2 = self.put_file(local_target2, local_filename2, target_dir)
         self.assertTrue(target2.exists())
-        local_target2.remove(skip_trash=True)
+        local_target2.remove()
 
         local_copy_path = "%s/file.dat.cp" % (local_dir)
         local_copy = luigi.LocalTarget(local_copy_path)
         if local_copy.exists():
-            local_copy.remove(skip_trash=True)
+            local_copy.remove()
         client.getmerge(target_dir, local_copy_path)
         self.assertTrue(local_copy.exists())
-        local_copy.remove(skip_trash=True)
+        local_copy.remove()
 
         local_copy_crc_path = "%s/.file.dat.cp.crc" % (local_dir)
         local_copy_crc = luigi.LocalTarget(local_copy_crc_path)
         self.assertTrue(local_copy_crc.exists())
-        local_copy_crc.remove(skip_trash=True)
+        local_copy_crc.remove()
+
+    @mock.patch('luigi.hdfs.call_check')
+    def test_cdh3_client(self, call_check):
+        cdh3_client = luigi.hdfs.HdfsClientCdh3()
+        cdh3_client.remove("/some/path/here")
+        call_check.assert_called_once_with(['hadoop', 'fs', '-rmr', '/some/path/here'])
+
+        cdh3_client.remove("/some/path/here", recursive=False)
+        self.assertEquals(mock.call(['hadoop', 'fs', '-rm', '/some/path/here']), call_check.call_args_list[-1])
+
+    @mock.patch('subprocess.Popen')
+    def test_apache1_client(self, popen):
+        comm = mock.Mock(name='communicate_mock')
+        comm.return_value = "some return stuff", ""
+
+        preturn = mock.Mock(name='open_mock')
+        preturn.returncode = 0
+        preturn.communicate = comm
+        popen.return_value = preturn
+
+        apache_client = luigi.hdfs.HdfsClientApache1()
+        returned = apache_client.exists("/some/path/somewhere")
+        self.assertTrue(returned)
+
+        preturn.returncode = 1
+        returned = apache_client.exists("/some/path/somewhere")
+        self.assertFalse(returned)
+
+        preturn.returncode = 13
+        self.assertRaises(luigi.hdfs.HDFSCliError, apache_client.exists, "/some/path/somewhere")
 
 if __name__ == "__main__":
     unittest.main()

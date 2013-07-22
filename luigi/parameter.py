@@ -63,9 +63,26 @@ class Parameter(object):
         self.counter = Parameter.counter  # We need to keep track of this to get the order right (see Task class)
         Parameter.counter += 1
 
+    def _get_default_from_config(self, safe):
+        """Loads the default from the config. If safe=True, then returns None if missing. Otherwise,
+           raises an UnknownConfigException."""
+
+        conf = configuration.get_config()
+        (section, name) = (self.default_from_config['section'], self.default_from_config['name'])
+        try:
+            return conf.get(section, name)
+        except (NoSectionError, NoOptionError), e:
+            if safe:
+                return None
+            raise UnknownConfigException("Couldn't find value for section={0} name={1}. Search config files: '{2}'".format(
+                section, name, ", ".join(conf._config_paths)), e)
+
     @property
     def has_default(self):
-        return self.__default != _no_default or self.default_from_config is not None
+        """True if a default was specified or if default_from_config references a valid entry in the conf."""
+        if self.default_from_config is not None:
+            return self._get_default_from_config(safe=True) is not None
+        return self.__default != _no_default
 
     @property
     def default(self):
@@ -73,21 +90,16 @@ class Parameter(object):
             raise MissingParameterException("No default specified")
         if self.__default != _no_default:
             return self.__default
-
-        conf = configuration.get_config()
-        (section, name) = (self.default_from_config['section'], self.default_from_config['name'])
-        try:
-            return self.parse(conf.get(section, name))
-        except (NoSectionError, NoOptionError), e:
-            raise UnknownConfigException("Couldn't find value for section={0} name={1}. Search config files: '{2}'".format(
-                section, name, ", ".join(conf._config_paths)), e)
-
+        return self.parse(self._get_default_from_config(safe=False))
 
     def set_default(self, value):
         self.__default = value
 
     def parse(self, x):
         return x  # default impl
+
+    def serialize(self, x): # opposite of parse
+        return str(x)
 
     def parse_from_input(self, param_name, x):
         if not x:
@@ -112,6 +124,9 @@ class DateHourParameter(Parameter):
         # time intervals (similar to date_interval). Or what do you think?
         return datetime.datetime.strptime(s, "%Y-%m-%dT%H")  # ISO 8601 is to use 'T'
 
+    def serialize(self, dt):
+        return dt.strftime('%Y-%m-%dT%H')
+
 
 class DateParameter(Parameter):
     def parse(self, s):
@@ -122,6 +137,9 @@ class IntParameter(Parameter):
     def parse(self, s):
         return int(s)
 
+class FloatParameter(Parameter):
+    def parse(self, s):
+        return float(s)
 
 class BooleanParameter(Parameter):
     # TODO(erikbern): why do we call this "boolean" instead of "bool"?

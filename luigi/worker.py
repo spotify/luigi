@@ -17,6 +17,7 @@ from scheduler import CentralPlannerScheduler, PENDING, FAILED, DONE
 import threading
 import time
 import os
+import socket
 import configuration
 import traceback
 import logging
@@ -58,6 +59,7 @@ class Worker(object):
             worker_processes = 1
 
         self.worker_processes = worker_processes
+        self.host = socket.gethostname()
         self.__scheduled_tasks = {}
 
         # store the previous tasks executed by the same worker
@@ -174,7 +176,6 @@ class Worker(object):
             if not ok:
                 # TODO: possibly try to re-add task again ad pending
                 raise RuntimeError('Unfulfilled dependency %r at run time!\nPrevious tasks: %r' % (missing_dep.task_id, self._previous_tasks))
-
             task.run()
             expl = json.dumps(task.on_success())
             logger.info('[pid %s] Done      %s', os.getpid(), task_id)
@@ -213,8 +214,7 @@ class Worker(object):
                     logger.warning("Some random process %s died" % died_pid)
 
             logger.debug("Asking scheduler for work...")
-            pending_tasks, task_id = self.__scheduler.get_work(worker=self.__id)
-
+            pending_tasks, task_id = self.__scheduler.get_work(worker=self.__id, host=self.host)
             if task_id is None:
                 logger.info("Done")
                 logger.info("There are no more tasks to run at this time")

@@ -27,6 +27,25 @@ def namespace(namespace=None):
     Register._default_namespace = namespace
 
 
+def id_to_name_and_params(task_id):
+    ''' Turn a task_id into a (task_family, {params}) tuple.
+        E.g. calling with 'Foo(bar=bar, baz=baz)' returns ('Foo', {'bar': 'bar', 'baz': 'baz'})
+    '''
+    lparen = task_id.index('(')
+    task_family = task_id[:lparen]
+    params = task_id[lparen + 1:-1]
+
+    def split_equals(x):
+        equals = x.index('=')
+        return x[:equals], x[equals + 1:]
+    if params:
+        param_list = map(split_equals, params.split(', '))  # TODO: param values with ', ' in them will break this
+    else:
+        param_list = []
+    return task_family, dict(param_list)
+
+
+
 class Register(abc.ABCMeta):
     # 1. Cache instances of objects so that eg. X(1, 2, 3) always returns the same object
     # 2. Keep track of all subclasses of Task and expose them
@@ -214,9 +233,10 @@ class Task(object):
 
         # Build up task id
         task_id_parts = []
+        param_objs = dict(params)
         for param_name, param_value in param_values:
             if dict(params)[param_name].significant:
-                task_id_parts.append('%s=%s' % (str(param_name), str(param_value)))
+                task_id_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
 
         self.task_id = '%s(%s)' % (self.task_family, ', '.join(task_id_parts))
         self.__hash = hash(self.task_id)
@@ -244,7 +264,7 @@ class Task(object):
         There's at least two scenarios where this is useful (see test/clone_test.py)
         - Remove a lot of boiler plate when you have recursive dependencies and lots of args
         - There's task inheritance and some logic is on the base class
-        '''            
+        '''
         k = self.param_kwargs.copy()
         k.update(kwargs.items())
 
@@ -284,12 +304,24 @@ class Task(object):
     def requires(self):
         return []  # default impl
 
+    def _requires(self):
+        '''
+        Override in "template" tasks which themselves are supposed to be
+        subclassed and thus have their requires() overridden (name preserved to
+        provide consistent end-user experience), yet need to introduce
+        (non-input) dependencies.
+
+        Must return an iterable which among others contains the _requires() of
+        the superclass.
+        '''
+        return flatten(self.requires())  # base impl
+
     def input(self):
         return getpaths(self.requires())
 
     def deps(self):
         # used by scheduler
-        return flatten(self.requires())
+        return flatten(self._requires())
 
     def run(self):
         pass  # default impl
