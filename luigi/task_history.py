@@ -7,17 +7,19 @@ import datetime
 import json
 import logging
 import task
-import tornado.ioloop
-import tornado.web
-import tornado.httpclient
-import tornado.httpserver
-
-
 from contextlib import contextmanager
 from task_status import PENDING, FAILED, DONE, RUNNING
 
 logger = logging.getLogger('luigi-interface')
 
+try:
+    import tornado.ioloop
+    import tornado.web
+    import tornado.httpclient
+    import tornado.httpserver
+except:
+    logger.warning('Tornado not available')
+    pass
 
 class Task(object):
     ''' Interface for methods on TaskHistory
