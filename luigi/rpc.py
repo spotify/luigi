@@ -113,6 +113,9 @@ class RemoteSchedulerResponder(object):
     The kwargs are there for forwards compatibility in case workers add
     new (optional) arguments. That way there's no dependency on the server
     component when upgrading Luigi on the worker side.
+
+    TODO(erikbern): what is this class actually used for? Other than an
+    unnecessary layer of indirection around central scheduler
     """
 
     def __init__(self, scheduler):
@@ -140,3 +143,7 @@ class RemoteSchedulerResponder(object):
 
     def fetch_error(self, task_id, **kwargs):
         return self._scheduler.fetch_error(task_id)
+
+    @property
+    def task_history(self):
+        return self._scheduler.task_history
