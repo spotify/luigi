@@ -4,15 +4,17 @@ Luigi is a Python package that helps you build complex pipelines of batch jobs. 
 
 The purpose of Luigi is to address all the plumbing typically associated with long-running batch processes. You want to chain many tasks, automate them, and failures *will* happen. These tasks can be anything, but typically long running things like [Hadoop](http://hadoop.apache.org/) jobs, dumping data to/from databases, running machine learning algorithms, or anything else. 
 
-There are other software packages that focus on lower level aspects of data processing, like [Hive](http://hive.apache.org/), [Pig](http://pig.apache.org/), [Cascading](http://www.cascading.org/). Luigi is not a framework to replace these. Instead it helps you stitch many tasks together into long-running pipelines that can comprise thousands of tasks and take weeks to complete. Luigi takes care of a lot of the workflow management so that you can focus on the concrete tasks and their dependencies.
+There are other software packages that focus on lower level aspects of data processing, like [Hive](http://hive.apache.org/), [Pig](http://pig.apache.org/), [Cascading](http://www.cascading.org/). Luigi is not a framework to replace these. Instead it helps you stitch many tasks together, where each task can be a Hive query, a Hadoop job in Java, a Python snippet, dumping a table from a database, or anything else. It's easy to build up long-running pipelines that can comprise thousands of tasks and take days or weeks to complete. Luigi takes care of a lot of the workflow management so that you can focus on the tasks themselves and their dependencies. 
 
-Luigi comes with a toolbox of several common tasks that you use. It includes native Python support for running mapreduce jobs in Hadoop. It also comes with file system abstractions for HDFS and local files that also ensures all file system operations are atomic. This is important because it means your data pipeline will not crash in a state containing partial data.
+You can build pretty much any task you want, but Luigi also comes with a *toolbox* of several common task templates that you use. It includes native Python support for running mapreduce jobs in Hadoop, as well as Pig and Jar jobs. It also comes with file system abstractions for HDFS and local files that also ensures all file system operations are atomic. This is important because it means your data pipeline will not crash in a state containing partial data.
+
+Luigi was built at [Spotify](http://www.spotify.com/), mainly by [Erik Bernhardsson](https://github.com/erikbern) and [Elias Freider](https://github.com/freider), but many other people have contributed.
 
 ## Dependency graph example
 
-Just to give you an idea of what Luigi does, this is a screen shot from something we are running in production. Using Luigi's visualizer, we get a nice visual overview of the dependency graph of the workflow. At the top of the graph are two data sets containing external data dumps. Each node represents a task which has to be run. Green tasks are already completed whereas white tasks are yet to be run. Most of these tasks are Hadoop job, but at the end of the graph is a task ingesting data from HDFS into Cassandra.
+Just to give you an idea of what Luigi does, this is a screen shot from something we are running in production. Using Luigi's visualizer, we get a nice visual overview of the dependency graph of the workflow. At the top of the graph are two data sets containing external data dumps. Each node represents a task which has to be run. Green tasks are already completed whereas white tasks are yet to be run. Most of these tasks are Hadoop job, but there's also some things that run locally and build up data files.
 
-![Dependency graph](https://raw.github.com/erikbern/luigi/master/doc/user_recs_graph.png)
+![Dependency graph](https://raw.github.com/erikbern/luigi/new-doc/doc/user_recs.png)
 
 ## Background
 
@@ -20,64 +22,59 @@ We use Luigi internally at [Spotify](http://www.spotify.com/) to run 1000s of ta
 
 Conceptually, Luigi similar to [GNU Make](http://www.gnu.org/software/make/) where you have certain tasks and these tasks in turn may have dependencies on other tasks. There are also some similarities to [Oozie](http://incubator.apache.org/oozie/) and [Azkaban](http://data.linkedin.com/opensource/azkaban). One major difference is that Luigi is not just built specifically for Hadoop, and it's easy to extend it with other kinds of tasks.
 
-Everything in Luigi is in Python. Instead of XML configuration or similar external data files, the dependency graph is specified *within Python*. This makes it easy to build up complex dependency graphs of tasks, where the dependencies can involve date algebra or recursive references to other versions of the same task.
+Everything in Luigi is in Python. Instead of XML configuration or similar external data files, the dependency graph is specified *within Python*. This makes it easy to build up complex dependency graphs of tasks, where the dependencies can involve date algebra or recursive references to other versions of the same task. However, the workflow can trigger things not in Python, such as running Pig scripts or scp'ing files.
 
 ## Installing
 
-Downloading and running *python setup.py install* should be enough. Note that you probably want [Tornado](http://www.tornadoweb.org/). Also [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) is optional if you want to run Hadoop jobs since it makes debugging easier. If you want to run Hadoop you should also make sure to edit /etc/luigi/client.cfg and add something like this
+Downloading and running *python setup.py install* should be enough. Note that you probably want [Tornado](http://www.tornadoweb.org/). Also [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) is optional if you want to run Hadoop jobs since it makes debugging easier. See [Configuration](#configuration) for how to configure Luigi.
 
-    [hadoop]
-    jar: /usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
+## Example workflow – top artists
 
-## Examples
+This is a very simplified case of something we do at Spotify a lot. All user actions are logged to HDFS where we run a bunch of Hadoop jobs to transform the data. At some point we might end up with a smaller data set that we can bulk ingest into Cassandra, Postgres, or some other format.
 
-Let's begin with the classic WordCount example. We'll show a non-Hadoop version then later show how it can be implemented as a Hadoop job. The examples are all available in the examples/ directory.
+For the purpose of this excercise, we want to aggregate all streams, and find the top 10 artists. We will then put it into Postgres.
 
-### Example 1 - Simple wordcount
+This example is also available in *examples/top_artists.py*
 
-Assume you have a bunch of text files dumped onto disk every night by some external process. These text files contain English text, and we want to monitor the top few thousand words over arbitrary date periods. Hopefully this doesn't sound too contrived - you could imagine mapping "words" to "artists" to get an idea of a real application at Spotify.
+### Step 1 - Aggregate artist streams
 
 ```python
-import luigi
-import datetime
-
-class InputText(luigi.ExternalTask):
-    ''' This class represents something that was created elsewhere by an external process, so all we want to do is to implement the output method
-    '''
-    date = luigi.DateParameter()
-
-    def output(self):
-        return luigi.LocalTarget(self.date.strftime('/var/tmp/text/%Y-%m-%d.txt'))
-
-class WordCount(luigi.Task):
+class AggregateArtists(luigi.Task):
     date_interval = luigi.DateIntervalParameter()
 
-    def requires(self):
-        return [InputText(date) for date in self.date_interval.dates()]
-
     def output(self):
-        return luigi.LocalTarget('/var/tmp/text-count/%s' % (self.date_interval))
+        return luigi.LocalTarget("data/artist_streams_%s.tsv" % self.date_interval)
+
+    def requires(self):
+        return [Streams(date) for date in self.date_interval]
 
     def run(self):
-        count = {}
-        for file in self.input(): # The input() method is a wrapper around requires() that returns Target objects
-            for line in file.open('r'): # Target objects are a file system/format abstraction and this will return a file stream object
-                for word in line.strip().split():
-                    count[word] = count.get(word, 0) + 1
+        artist_count = defaultdict(int)
 
-        # output data
-        f = self.output().open('w')
-        for word, count in count.iteritems():
-            f.write("%s\t%d\n" % (word, count))
-        f.close() # Note that this is essential because file system operations are atomic
+        for input in self.input():
+            with input.open('r') as in_file:
+                for line in in_file:
+                    timestamp, artist, track = line.strip().split()
+                    artist_count[artist] += 1
 
-if __name__ == '__main__':
-    luigi.run()
+        with self.output().open('w') as out_file:
+            for artist, count in artist_count.iteritems():
+                print >> out_file, artist, count
 ```
 
-Now, provided you have a bunch of input files in /var/tmp/text/ (you can generate them using examples/generate\_input.py), try running this using eg
+There are several pieces of this snippet that deserve more explanation.
 
-    $ python wordcount.py WordCount --local-scheduler --date 2012-08-01
+* Any *Task* may be customized by instantiating one or more *Parameter* objects on the class level.
+* The *output* method tells Luigi where the result of running the task will end up. The path can be some function of the parameters.
+* The *requires* tasks specifies other tasks that we need to perform this task. In this case it's an external dump named *Streams* which takes the date as the argument.
+* For plain Tasks, the *run* method implements the task. This could be anything, including calling subprocesses, performing long running number crunching, etc. For some subclasses of *Task* you don't have to implement the *run* method. For instance, for the *HadoopJobTask* subclass you implement a *mapper* and *reducer* instead.
+* *HdfsTarget* is a built in class that makes it easy to read/write from/to HDFS. It also makes all file operations atomic, which is nice in case your script crashes for any reason.
+
+### Running this locally
+
+Try running this using eg.
+
+    $ python examples/top_artists.py AggregateArtists --local-scheduler --date-interval 2012-06
 
 You can also try to view the manual using --help which will give you an overview of the options:
 
@@ -97,15 +94,104 @@ You can also try to view the manual using --help which will give you an overview
                             /var/tmp/luigi]
       --workers WORKERS     Maximum number of parallel tasks to run [default: 1]
       --date-interval DATE_INTERVAL
-                            WordCount.date_interval
+                            AggregateArtists.date_interval
 
-Running the command again will do nothing because the output file is already created. Note that unlike Makefile, the output will not be recreated when any of the input files is modified. You need to delete the output file manually.
+Running the command again will do nothing because the output file is already created. In that sense, any task in Luigi is *idempotent* because running it many times gives the same outcome as running it once. Note that unlike Makefile, the output will not be recreated when any of the input files is modified. You need to delete the output file manually.
+
+The *--local-scheduler* flag tells Luigi not to connect to a scheduler server. This is not recommended for other purpose than just testing things.
+
+### Step 1b - running this in Hadoop
+
+Luigi comes with native Python Hadoop mapreduce support built in, and here is how this could look like, instead of the class above.
+
+```python
+class AggregateArtistsHadoop(luigi.hadoop.JobTask):
+    date_interval = luigi.DateIntervalParameter()
+
+    def output(self):
+        return luigi.HdfsTarget("data/artist_streams_%s.tsv" % self.date_interval)
+
+    def requires(self):
+        return [StreamsHdfs(date) for date in self.date_interval]
+
+    def mapper(self, line):
+        timestamp, artist, track = line.strip().split()
+        yield artist, 1
+        
+    def reducer(self, key, values):
+        yield key, sum(values)
+```
+
+Note that `luigi.hadoop.JobTask` doesn't require you to implement a `run` method. Instead, you typically implement a `mapper` and `reducer` method.
+
+### Step 2 – Find the top artists
+
+At this point, we've counted the number of streams for each artists, for the full time period. We are left with a large file that contains mappings of artist -> count data, and we want to find the top 10 artists. Since we only have a few hundred thousand artists, and calculating artists is nontrivial to parallelize, we choose to do this not as a Hadoop job, but just as a plain old for-loop in Python.
+
+```python
+class Top10Artists(luigi.Task):
+    date_interval = luigi.DateIntervalParameter()
+    use_hadoop = luigi.BooleanParameter()
+
+    def requires(self):
+        if self.use_hadoop:
+            return AggregateArtistsHadoop(self.date_interval)
+        else:
+            return AggregateArtists(self.date_interval)
+
+    def output(self):
+        return luigi.LocalTarget("data/top_artists_%s.tsv" % self.date_interval)
+
+    def run(self):
+        top_10 = nlargest(10, self._input_iterator())
+        with self.output().open('w') as out_file:
+            for streams, artist in top_10:
+                print >> out_file, self.date_interval.date_a, self.date_interval.date_b, artist, streams
+
+    def _input_iterator(self):
+        with self.input().open('r') as in_file:
+            for line in in_file:
+                artist, streams = line.strip().split()
+                yield int(streams), int(artist)
+```
+
+The most interesting thing here is that this task (*Top10Artists*) defines a dependency on the previous task (*AggregateArtists*). This means that if the output of *AggregateArtists* does not exist, the task will run before *Top10Artists*.
+
+    $ python examples/top_artists.py Top10Artists --local-scheduler --date-interval 2012-07
+
+This will run both tasks.
+
+### Step 3 - Insert into Postgres
+
+This mainly serves as an example of a specific subclass *Task* that doesn't require any code to be written. It's also an example of how you can define task templates that you can reuse for a lot of different tasks.
+
+```python
+class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
+    date_interval = luigi.DateIntervalParameter()
+    use_hadoop = luigi.BooleanParameter()
+
+    host = "localhost"
+    database = "toplists"
+    user = "luigi"
+    password = "abc123"  # ;)
+    table = "top10"
+
+    columns = [("date_from", "DATE"),
+               ("date_to", "DATE"),
+               ("artist", "TEXT"),
+               ("streams", "INT")]
+
+    def requires(self):
+        return Top10Artists(self.date_interval, self.use_hadoop)
+```
+
+Just like previously, this defines a recursive dependency on the previous task. If you try to build the task, that will also trigger building all its upstream dependencies.
 
 ### Using the central planner
 
 The --local-scheduler flag tells Luigi not to connect to a central scheduler. This is recommended in order to get started and or for development purposes. At the point where you start putting things in production we strongly recommend running the central scheduler server. In addition to provide locking so the same task is not run by multiple processes at the same time, this server also provides a pretty nice visualization of your current work flow.
 
-If you drop the *--local-scheduler* flag, your script will try to connect to the central planner, by default at localhost port 8081. If you run
+If you drop the *--local-scheduler* flag, your script will try to connect to the central planner, by default at localhost port 8082. If you run
 
     PYTHONPATH=. python bin/luigid
 
@@ -113,71 +199,15 @@ in the background and then run
 
     $ python wordcount.py --date 2012-W03
 
-then in fact your script will now do the scheduling through a centralized server. You need [Tornado](http://www.tornadoweb.org/) for this to work. It is available in Debian as *python-tornado*.
+then in fact your script will now do the scheduling through a centralized server. You need [Tornado](http://www.tornadoweb.org/) for this to work.
 
-Launching *http://localhost:8081* should show something like this:
+Launching *http://localhost:8082* should show something like this:
 
-![Wordcount](https://raw.github.com/spotify/luigi/master/doc/wordcount.png)
+![Web server screenshot](https://raw.github.com/erikbern/luigi/new-doc/doc/web_server.png)
 
-The green boxes mean that the job is already done. If you keep invoking the script with a bunch of different date intervals it might look like this after a while:
+Looking at the dependency graph for any of the tasks yields something like this:
 
-![Wordcount](https://raw.github.com/spotify/luigi/master/doc/wordcount_more.png)
-
-You can drag and scroll to re-center and zoom. The visualizer will automatically prune all done tasks after a while.
-
-### Example 2 - Hadoop WordCount
-
-Luigi also provides support for Hadoop jobs straight out of the box. The interface is similar to mrjob but each job class is now a Luigi Task that can also define their dependencies and output files.
-
-EC2 is unfortunately not supported at this point. We have some old code for this (using Python [boto](http://github.com/boto/boto)) and would love to help anyone interested in getting it running.
-
-```python
-import luigi, luigi.hadoop, luigi.hdfs
-import datetime
-
-# To make this run, you probably want to edit /etc/luigi/client.cfg and add something like:
-#
-# [hadoop]
-# jar: /usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
-
-class InputText(luigi.ExternalTask):
-    date = luigi.DateParameter()
-    def output(self):
-        return luigi.hdfs.HdfsTarget(self.date.strftime('/tmp/text/%Y-%m-%d.txt'))
-
-class WordCount(luigi.hadoop.JobTask):
-    date_interval = luigi.DateIntervalParameter()
-
-    def requires(self):
-        return [InputText(date) for date in self.date_interval.dates()]
-
-    def output(self):
-        return luigi.hdfs.HdfsTarget('/tmp/text-count/%s' % self.date_interval)
-
-    def mapper(self, line):
-        for word in line.strip().split():
-            yield word, 1
-
-    def reducer(self, key, values):
-        yield key, sum(values)
-
-if __name__ == '__main__':
-    luigi.run()
-```
-
-Luigi also has support for combiners and counters. If you want to bundle modules with your job, you can use that either by overriding the *extra_packages* method, or by invoking the *luigi.hadoop.attach* function anywhere in your code.
-
-Run the example using
-
-    $ python wordcount_hadoop.py WordCount --date 2012-W03
-
-This will yield a familiar overview
-
-![Wordcount](https://raw.github.com/spotify/luigi/master/doc/wordcount_hadoop.png)
-
-The blue box means that the job is currently running. If it fails, it will become red:
-
-![Wordcount](https://raw.github.com/spotify/luigi/master/doc/wordcount_hadoop_failed.png)
+![Aggregate artists screenshot](https://raw.github.com/erikbern/luigi/new-doc/doc/aggregate_artists.png)
 
 In case your job crashes remotely due to any Python exception, Luigi will try to fetch the traceback and print it on standard output. You need [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) for it to work and you also need connectivity to your tasktrackers.
 
@@ -199,7 +229,7 @@ The Task class corresponds to some type of job that is run, but in general you w
 
 #### Parameter
 
-Now, in Python this is generally done by adding arguments to the constructor. Luigi requires you to declare these parameters instantiating Parameter objects on the class scope:
+In Python this is generally done by adding arguments to the constructor, but Luigi requires you to declare these parameters instantiating Parameter objects on the class scope:
 
 ```python
 class DailyReport(luigi.hadoop.JobTask):
@@ -219,6 +249,7 @@ print d.date
 will return the same date that the object was constructed with. Same goes if you invoke Luigi on the command line.
 
 Python is not a typed language and you don't have to specify the types of any of your parameters. You can simply use *luigi.Parameter* if you don't care. In fact, the reason DateParameter et al exist is just in order to support command line interaction and make sure to convert the input to the corresponding type (i.e. datetime.date instead of a string).
+
 
 #### Task.requires
 
@@ -333,23 +364,55 @@ f = t.open('w')
 f.close() # needed
 ```
 
-## More graph porn
+#### Using the central scheduler
 
-Running the *test/fib_test.py* with *--n 200* yields a complex graph (albeit slightly artificial):
+The central scheduler does not execute anything for you, or help you with job parallelization. The two purposes it serves is to
 
-![Wordcount](https://raw.github.com/spotify/luigi/master/doc/fib.png)
+* Make sure two instances of the same task are not running simultaneously
+* Provide visualization of everything that's going on.
 
-Actually the resemblance with a G-clef is coincidental. Scroll and drag to zoom in:
+For running tasks periodically, the easiest thing to do is to trigger a Python script from cron or from a continuously running process. There is no central process that automatically triggers job. This model may seem limited, but we believe that it makes things far more intuitive and easy to understand.
 
-![Wordcount](https://raw.github.com/spotify/luigi/master/doc/fib_zoomed.png)
+## Luigi patterns
+
+### Code reuse
+
+One nice thing about Luigi is that it's super easy to depend on tasks defined in other repos. It's also trivial to have "forks" in the execution path, where the output of one task may become the input of many other tasks.
+
+Currently no semantics for "intermediate" output is supported, meaning that all output will be persisted indefinitely. The upside of that is that if you try to run X -> Y, and Y crashes, you can resume with the previously built X. The downside is that you will have a lot of intermediate results on your file system. A useful pattern is to put these files in a special directory and have some kind of periodical garbage collection clean it up.
+
+### Triggering many tasks
+
+A common use case is to make sure some daily Hadoop job (or something else) is run every night. Sometimes for various reasons things will crash for more than a day though. A useful pattern is to have a dummy Task at the end just declaring dependencies on the past few days of tasks you want to run.
+
+```python
+class DailyReports(luigi.Task):
+    date = luigi.DateParameter()
+    def requires(self):
+        return SomeReport(self.date), SomeOtherReport(self.date), CropReport(self.date), TPSReport(self.date), FooBarBazReport(self.date)
+```
+
+This simple task will not do anything itself, but will invoke a bunch of other tasks.
 
 ## Configuration
 
-By default, Luigi is configured to work with the CDH4 release of Hadoop.  There are some minor differences with regards to the HDFS CLI in CDH3, CDH4 and the Apache releases of Hadoop.  If you want to use a release other than CDH4, you need to add a configuration file named client.cfg to your current working directory or /etc/luigi (although this is further configurable) with the following contents:
+All configuration can be done by adding a configuration file named client.cfg to your current working directory or /etc/luigi (although this is further configurable) 
+
+* *default-scheduler-host* defaults the scheduler to some hostname so that you don't have to provide it as an argument
+* *error-email* makes sure every time things crash, you will get an email (unless it was run on the command line)
+* If you want to run Hadoop mapreduce jobs in Python, you should also a path to your streaming jar
+* By default, Luigi is configured to work with the CDH4 release of Hadoop.  There are some minor differences with regards to the HDFS CLI in CDH3, CDH4 and the Apache releases of Hadoop.  If you want to use a release other than CDH4, you need to specify which version you are using.
+
+### Example /etc/luigi/client.cfg
 
 ```
 [hadoop]
-version: cdh4|cdh3|apache1
+version: cdh4
+jar: /usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
+
+[core]
+default-scheduler-host: luigi-host.mycompany.foo
+error-email: foo@bar.baz
 ```
 
 ## More info
