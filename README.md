@@ -12,7 +12,7 @@ Luigi was built at [Spotify](http://www.spotify.com/), mainly by [Erik Bernhards
 
 ## Dependency graph example
 
-Just to give you an idea of what Luigi does, this is a screen shot from something we are running in production. Using Luigi's visualizer, we get a nice visual overview of the dependency graph of the workflow. At the top of the graph are two data sets containing external data dumps. Each node represents a task which has to be run. Green tasks are already completed whereas white tasks are yet to be run. Most of these tasks are Hadoop job, but there's also some things that run locally and build up data files.
+Just to give you an idea of what Luigi does, this is a screen shot from something we are running in production. Using Luigi's visualizer, we get a nice visual overview of the dependency graph of the workflow. Each node represents a task which has to be run. Green tasks are already completed whereas yellow tasks are yet to be run. Most of these tasks are Hadoop job, but there's also some things that run locally and build up data files.
 
 ![Dependency graph](https://raw.github.com/erikbern/luigi/new-doc/doc/user_recs.png)
 
@@ -438,7 +438,7 @@ It wouldn't be fair not to mention some limitations with the current design:
 
 It should actually be noted that all these limitations are not fundamental in any way. However, it would take some major refactoring work.
 
-Also it should be mentioned that Luigi is named after the pipeline-running friend of Super Mario.
+Also it should be mentioned that Luigi is named after the world's second most famous plumber.
 
 ## Future ideas
 
