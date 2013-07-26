@@ -20,7 +20,7 @@ import cPickle as pickle
 import task_history as history
 logger = logging.getLogger("luigi-interface")
 
-from task_status import PENDING, FAILED, DONE, RUNNING
+from task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
 
 
 class Scheduler(object):
@@ -259,7 +259,7 @@ class CentralPlannerScheduler(Scheduler):
             'workers': list(task.workers),
             'start_time': task.time,
             'params': self._get_task_params(task_id),
-            'name' : self._get_task_name(task_id)
+            'name': self._get_task_name(task_id)
         }
 
     def _get_task_params(self, task_id):
@@ -283,11 +283,22 @@ class CentralPlannerScheduler(Scheduler):
 
     def _recurse_deps(self, task_id, serialized):
         if task_id not in serialized:
-            task = self._tasks[task_id]
-            upstream_status_table = {}
-            serialized[task_id] = self._serialize_task(task_id, upstream_status_table)
-            for dep in task.deps:
-                self._recurse_deps(dep, serialized)
+            task = self._tasks.get(task_id)
+            if task is None:
+                logger.warn('Missing task for id [%s]' % task_id)
+                serialized[task_id] = {
+                    'deps': [],
+                    'status': UNKNOWN,
+                    'workers': [],
+                    'start_time': UNKNOWN,
+                    'params': self._get_task_params(task_id),
+                    'name': self._get_task_name(task_id)
+                }
+            else:
+                upstream_status_table = {}
+                serialized[task_id] = self._serialize_task(task_id, upstream_status_table)
+                for dep in task.deps:
+                    self._recurse_deps(dep, serialized)
 
     def dep_graph(self, task_id):
         self.prune()
