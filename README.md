@@ -386,10 +386,13 @@ Currently no semantics for "intermediate" output is supported, meaning that all 
 A common use case is to make sure some daily Hadoop job (or something else) is run every night. Sometimes for various reasons things will crash for more than a day though. A useful pattern is to have a dummy Task at the end just declaring dependencies on the past few days of tasks you want to run.
 
 ```python
-class DailyReports(luigi.Task):
-    date = luigi.DateParameter()
+class AllReports(luigi.Task):
+    date = luigi.DateParameter(default=datetime.date.today())
+    lookback = luigi.IntParameter(default=14)
     def requires(self):
-        return SomeReport(self.date), SomeOtherReport(self.date), CropReport(self.date), TPSReport(self.date), FooBarBazReport(self.date)
+        for i in xrange(self.lookback):
+           date = self.date - datetime.timedelta(i + 1)
+           yield SomeReport(date), SomeOtherReport(date), CropReport(date), TPSReport(date), FooBarBazReport(date)    
 ```
 
 This simple task will not do anything itself, but will invoke a bunch of other tasks.
