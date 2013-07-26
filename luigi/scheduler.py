@@ -337,3 +337,8 @@ class CentralPlannerScheduler(Scheduler):
         except:
             print 'Error saving Task history'
             print traceback.format_exc()
+
+    @property
+    def task_history(self):
+        # Used by server.py to expose the calls
+        return self._task_history
