@@ -31,4 +31,4 @@ class WordCount(luigi.Task):
         f.close() # Note that this is essential because file system operations are atomic
 
 if __name__ == '__main__':
-    luigi.run()
+    luigi.run(main_task_cls=WordCount)

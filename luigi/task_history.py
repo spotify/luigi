@@ -7,16 +7,63 @@ import datetime
 import json
 import logging
 import task
-import tornado.ioloop
-import tornado.web
-import tornado.httpclient
-import tornado.httpserver
-
-
 from contextlib import contextmanager
 from task_status import PENDING, FAILED, DONE, RUNNING
 
 logger = logging.getLogger('luigi-interface')
+
+try:
+    import tornado.ioloop
+    import tornado.web
+    import tornado.httpclient
+    import tornado.httpserver
+
+    class BaseTaskHistoryHandler(tornado.web.RequestHandler):
+        def initialize(self, task_history):
+            self.task_history = task_history
+
+        def get_template_path(self):
+            return 'luigi/templates'
+
+    class RecentRunHandler(BaseTaskHistoryHandler):
+        def get(self):
+            tasks = self.task_history.find_latest_runs()
+            self.render("recent.html", tasks=tasks)
+
+    class ByNameHandler(BaseTaskHistoryHandler):
+        def get(self, name):
+            tasks = self.task_history.find_all_by_name(name)
+            self.render("recent.html", tasks=tasks)
+
+    class ByIdHandler(BaseTaskHistoryHandler):
+        def get(self, id):
+            task = self.task_history.find_task_by_id(id)
+            self.render("show.html", task=task)
+
+    class ByParamsHandler(BaseTaskHistoryHandler):
+        def get(self, name):
+            payload = self.get_argument('data', default="{}")
+            arguments = json.loads(payload)
+            tasks = self.task_history.find_all_by_parameters(name, session=None, **arguments)
+            self.render("recent.html", tasks=tasks)
+
+    def handlers(prefix):
+        try:
+            return [
+                tornado.web.url(r'/%s/' % prefix, RecentRunHandler, dict(task_history=DbTaskHistory()), name='recent_runs'),
+                tornado.web.url(r'/%s/by_name/(.*)' % prefix, ByNameHandler, dict(task_history=DbTaskHistory()), name='by_name'),
+                tornado.web.url(r'/%s/by_id/(.*)' % prefix, ByIdHandler, dict(task_history=DbTaskHistory()), name='by_id'),
+                tornado.web.url(r'/%s/by_params/(.*)' % prefix, ByParamsHandler, dict(task_history=DbTaskHistory()), name='by_params')
+            ]
+        except:
+            print "Error loading Task history handlers, history viewer won't work."
+            print traceback.format_exc()
+            return [
+                (r'/%s/(.*)' % prefix, tornado.web.ErrorHandler, dict(status_code=500))
+            ]
+except:
+    logger.warning('Tornado not available')
+    pass
 
 
 class Task(object):
@@ -214,51 +261,4 @@ except ImportError as e:
     logger.error(e, exc_info=True)
 
 
-class BaseTaskHistoryHandler(tornado.web.RequestHandler):
-    def initialize(self, task_history):
-        self.task_history = task_history
 
-    def get_template_path(self):
-        return 'luigi/templates'
-
-
-class RecentRunHandler(BaseTaskHistoryHandler):
-    def get(self):
-        tasks = self.task_history.find_latest_runs()
-        self.render("recent.html", tasks=tasks)
-
-
-class ByNameHandler(BaseTaskHistoryHandler):
-    def get(self, name):
-        tasks = self.task_history.find_all_by_name(name)
-        self.render("recent.html", tasks=tasks)
-
-
-class ByIdHandler(BaseTaskHistoryHandler):
-    def get(self, id):
-        task = self.task_history.find_task_by_id(id)
-        self.render("show.html", task=task)
-
-
-class ByParamsHandler(BaseTaskHistoryHandler):
-    def get(self, name):
-        payload = self.get_argument('data', default="{}")
-        arguments = json.loads(payload)
-        tasks = self.task_history.find_all_by_parameters(name, session=None, **arguments)
-        self.render("recent.html", tasks=tasks)
-
-
-def handlers(prefix):
-    try:
-        return [
-            tornado.web.url(r'/%s/' % prefix, RecentRunHandler, dict(task_history=DbTaskHistory()), name='recent_runs'),
-            tornado.web.url(r'/%s/by_name/(.*)' % prefix, ByNameHandler, dict(task_history=DbTaskHistory()), name='by_name'),
-            tornado.web.url(r'/%s/by_id/(.*)' % prefix, ByIdHandler, dict(task_history=DbTaskHistory()), name='by_id'),
-            tornado.web.url(r'/%s/by_params/(.*)' % prefix, ByParamsHandler, dict(task_history=DbTaskHistory()), name='by_params')
-        ]
-    except:
-        print "Error loading Task history handlers, history viewer won't work."
-        print traceback.format_exc()
-        return [
-            (r'/%s/(.*)' % prefix, tornado.web.ErrorHandler, dict(status_code=500))
-        ]
