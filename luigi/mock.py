@@ -65,6 +65,9 @@ class MockFile(target.FileSystemTarget):
         contents = MockFile._file_contents.pop(self._fn)
         MockFile._file_contents[path] = contents
 
+    def move_dir(self, path):
+        self.move(path, fail_if_exists=True)
+
     @property
     def path(self):
         return self._fn
