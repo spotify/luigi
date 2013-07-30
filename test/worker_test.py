@@ -301,6 +301,14 @@ class WorkerPingThreadTests(unittest.TestCase):
             msg="Didn't retry pings (%d pings performed)" % (self._total_pings,)
         )
 
+    def test_ping_thread_shutdown(self):
+        w = Worker(ping_interval=0.01)
+        time.sleep(0.05)  # wait for it to come alive
+        self.assertTrue(w._keep_alive_thread.is_alive())
+        w.stop()  # should stop within 0.01 s
+        time.sleep(0.05)
+        self.assertFalse(w._keep_alive_thread.is_alive())
+
 
 class EmailTest(unittest.TestCase):
     def setUp(self):
