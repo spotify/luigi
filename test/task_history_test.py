@@ -36,6 +36,9 @@ class TaskHistoryTest(unittest.TestCase):
         self.sch = luigi.scheduler.CentralPlannerScheduler(task_history=self.th)
         self.w = luigi.worker.Worker(scheduler=self.sch)
 
+    def tearDown(self):
+        self.w.stop()
+
     def test_run(self):
         class MyTask(luigi.Task):
             pass
@@ -44,10 +47,10 @@ class TaskHistoryTest(unittest.TestCase):
         self.w.run()
 
         self.assertEquals(self.th.actions, [
-                ('scheduled', 'MyTask()'),
-                ('started', 'MyTask()'),
-                ('finished', 'MyTask()')
-                ])
+            ('scheduled', 'MyTask()'),
+            ('started', 'MyTask()'),
+            ('finished', 'MyTask()')
+        ])
 
 
 if __name__ == '__main__':

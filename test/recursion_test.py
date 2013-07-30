@@ -12,8 +12,10 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import sys
 import datetime
-import luigi, luigi.interface
+import luigi
+import luigi.interface
 from luigi.mock import MockFile
 import unittest
 
@@ -39,12 +41,18 @@ class Popularity(luigi.Task):
 
 class RecursionTest(unittest.TestCase):
     def setUp(self):
+        self.original_recursionlimit = sys.getrecursionlimit()
+        sys.setrecursionlimit(2000)  # 365 * recursion depth of 3 > 1000 -> b0rk
         MockFile._file_contents['/tmp/popularity/2009-01-01.txt'] = '0\n'
+
+    def tearDown(self):
+        sys.setrecursionlimit(self.original_recursionlimit)
 
     def test_invoke(self):
         w = luigi.worker.Worker()
         w.add(Popularity(datetime.date(2010, 1, 1)))
         w.run()
+        w.stop()
 
         self.assertEquals(MockFile._file_contents['/tmp/popularity/2010-01-01.txt'], '365\n')
 

@@ -85,6 +85,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         for t in tasks:
             w.add(t)
         w.run()
+        w.stop()
 
     def _remote(self):
         return self.scheduler

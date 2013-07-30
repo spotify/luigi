@@ -12,7 +12,8 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi, luigi.interface
+import luigi
+import luigi.interface
 import unittest
 from luigi.mock import MockFile
 
@@ -55,12 +56,13 @@ class FibTestBase(unittest.TestCase):
         File = MockFile
         MockFile._file_contents.clear()
 
+
 class FibTest(FibTestBase):
     def test_invoke(self):
         w = luigi.worker.Worker()
         w.add(Fib(100))
         w.run()
-
+        w.stop()
         self.assertEqual(MockFile._file_contents['/tmp/fib_10'], '55\n')
         self.assertEqual(MockFile._file_contents['/tmp/fib_100'], '354224848179261915075\n')
 

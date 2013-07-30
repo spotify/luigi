@@ -129,6 +129,7 @@ class Interface(object):
         logger = logging.getLogger('luigi-interface')
         logger.info('Done scheduling tasks')
         w.run()
+        w.stop()
 
 
 class ArgParseInterface(Interface):
