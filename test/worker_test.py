@@ -267,6 +267,41 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(a.has_run)
 
 
+class WorkerPingThreadTests(unittest.TestCase):
+    def test_ping_retry(self):
+        """ Worker ping fails once. Ping continues to try to connect to scheduler
+
+        Kind of ugly since it uses actual timing with sleep to test the thread
+        """
+        sch = CentralPlannerScheduler(
+            retry_delay=100,
+            remove_delay=1000,
+            worker_disconnect_delay=10,
+        )
+
+        self._total_pings = 0  # class var so it can be accessed from fail_ping
+
+        def fail_ping(worker):
+            self._total_pings += 1
+            raise Exception("Some random exception")
+
+        sch.ping = fail_ping
+
+        w = Worker(
+            scheduler=sch,
+            worker_id="foo",
+            ping_interval=0.01  # very short between pings to make test fast
+        )
+
+        # let the keep-alive thread run for a bit...
+        time.sleep(0.1)  # yes, this is ugly but it's exactly what we need to test
+        w.stop()
+        self.assertTrue(
+            self._total_pings > 1,
+            msg="Didn't retry pings (%d pings performed)" % (self._total_pings,)
+        )
+
+
 class EmailTest(unittest.TestCase):
     def setUp(self):
         super(EmailTest, self).setUp()
@@ -359,6 +394,7 @@ class WorkerEmailTest(EmailTest):
         self.worker.run()
         self.assertEquals(self.last_email, None)
         self.assertTrue(a.complete())
+
 
 if __name__ == '__main__':
     unittest.main()

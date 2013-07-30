@@ -47,9 +47,13 @@ class Worker(object):
     """
 
     def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None,
-                 worker_processes=1):
+                 worker_processes=1, ping_interval=None):
         if not worker_id:
             worker_id = 'worker-%09d' % random.randrange(0, 999999999)
+        
+        if ping_interval is None:
+            config = configuration.get_config()
+            ping_interval = config.getfloat('core', 'worker-ping-interval', 1.0)
 
         self.__id = worker_id
         self.__scheduler = scheduler
@@ -68,18 +72,39 @@ class Worker(object):
 
         class KeepAliveThread(threading.Thread):
             """ Periodically tell the scheduler that the worker still lives """
+            def __init__(self):
+                super(KeepAliveThread, self).__init__()
+                self._should_stop = threading.Event()
+
+            def stop(self):
+                self._should_stop.set()
+
             def run(self):
                 while True:
-                    time.sleep(1.0)
+                    if self._should_stop.wait(ping_interval):
+                        logger.info("Worker was stopped. Shutting down Keep-Alive thread")
+                        break
                     try:
                         scheduler.ping(worker=worker_id)
                     except:  # httplib.BadStatusLine:
-                        print 'WARNING: could not ping!'
-                        raise
+                        logger.warning('Failed pinging scheduler')
 
-        k = KeepAliveThread()
-        k.daemon = True
-        k.start()
+        self._keep_alive_thread = KeepAliveThread()
+        self._keep_alive_thread.daemon = True
+        self._keep_alive_thread.start()
+
+    def stop(self):
+        """ Stop the KeepAliveThread associated with this Worker
+            This should be called whenever you are done with a worker instance to clean up
+
+        Warning: this should _only_ be performed if you are sure this worker
+        is not performing any work or will perform any work after this has been called
+
+        TODO: also kill all currently running tasks
+        TODO (maybe): Worker should be/have a context manager to enforce calling this
+            whenever you stop using a Worker instance
+        """
+        self._keep_alive_thread.stop()
 
     def add(self, task):
         if not isinstance(task, Task):
