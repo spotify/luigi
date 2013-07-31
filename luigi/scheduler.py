@@ -38,6 +38,7 @@ UPSTREAM_FAILED = 'UPSTREAM_FAILED'
 
 UPSTREAM_SEVERITY_ORDER = ('', UPSTREAM_RUNNING, UPSTREAM_MISSING_INPUT, UPSTREAM_FAILED)
 
+
 class Task(object):
     def __init__(self, status, deps):
         self.stakeholders = set()  # workers that are somehow related to this task (i.e. don't prune while any of these workers are still active)
@@ -112,7 +113,7 @@ class CentralPlannerScheduler(Scheduler):
         # Mark tasks with no remaining active stakeholders for deletion
         for task_id, task in self._tasks.iteritems():
             if not task.stakeholders.intersection(remaining_workers):
-                if task.remove == None:
+                if task.remove is None:
                     print 'task', task_id, 'has stakeholders', task.stakeholders, 'but only', remaining_workers, 'remain -> will remove task in', self._remove_delay, 'seconds'
                     task.remove = time.time() + self._remove_delay
 
@@ -264,9 +265,15 @@ class CentralPlannerScheduler(Scheduler):
 
     def _get_task_params(self, task_id):
         params = {}
-        params_strings =  task_id.split('(')[1].strip(')').split()
+        params_part = task_id.split('(')[1].strip(')')
+        params_strings = params_part.split(", ")
+
         for param in params_strings:
-            split_param = param.strip(',').split('=')
+            if not param:
+                continue
+            split_param = param.split('=')
+            if len(split_param) != 2:
+                return {'<complex parameters>': params_part}
             params[split_param[0]] = split_param[1]
         return params
 
