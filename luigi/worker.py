@@ -94,10 +94,6 @@ class Worker(object):
         self._keep_alive_thread.daemon = True
         self._keep_alive_thread.start()
 
-    def __del__(self):
-        """ If somebody forgets to clean up after themselves """
-        self.stop()
-
     def stop(self):
         """ Stop the KeepAliveThread associated with this Worker
             This should be called whenever you are done with a worker instance to clean up
