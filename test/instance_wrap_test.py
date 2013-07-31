@@ -92,6 +92,6 @@ class InstanceWrapperTest(unittest.TestCase):
         w = luigi.worker.Worker()
         w.add(ex)
         w.run()
-
+        w.stop()
         self.assertEqual(ex.get_line(0), (decimal.Decimal('10.0'), 'USD'))
         self.assertEqual(ex.get_line(1), (decimal.Decimal('5.0'), 'USD'))

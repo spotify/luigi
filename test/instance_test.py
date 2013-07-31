@@ -55,6 +55,7 @@ class InstanceTest(unittest.TestCase):
         w.add(B(1))
         w.add(B(2))
         w.run()
+        w.stop()
 
     def test_external_instance_cache(self):
         class A(luigi.Task):
