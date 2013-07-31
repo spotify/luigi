@@ -192,6 +192,7 @@ Just like previously, this defines a recursive dependency on the previous task. 
 The --local-scheduler flag tells Luigi not to connect to a central scheduler. This is recommended in order to get started and or for development purposes. At the point where you start putting things in production we strongly recommend running the central scheduler server. In addition to provide locking so the same task is not run by multiple processes at the same time, this server also provides a pretty nice visualization of your current work flow.
 
 If you drop the *--local-scheduler* flag, your script will try to connect to the central planner, by default at localhost port 8082. If you run
+<<<<<<< HEAD
 
     PYTHONPATH=. python bin/luigid
 
@@ -207,6 +208,23 @@ Launching *http://localhost:8082* should show something like this:
 
 Looking at the dependency graph for any of the tasks yields something like this:
 
+=======
+
+    PYTHONPATH=. python bin/luigid
+
+in the background and then run
+
+    $ python wordcount.py --date 2012-W03
+
+then in fact your script will now do the scheduling through a centralized server. You need [Tornado](http://www.tornadoweb.org/) for this to work.
+
+Launching *http://localhost:8082* should show something like this:
+
+![Web server screenshot](https://raw.github.com/erikbern/luigi/new-doc/doc/web_server.png)
+
+Looking at the dependency graph for any of the tasks yields something like this:
+
+>>>>>>> cm_master
 ![Aggregate artists screenshot](https://raw.github.com/erikbern/luigi/new-doc/doc/aggregate_artists.png)
 
 In case your job crashes remotely due to any Python exception, Luigi will try to fetch the traceback and print it on standard output. You need [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) for it to work and you also need connectivity to your tasktrackers.
@@ -417,6 +435,8 @@ jar: /usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
 default-scheduler-host: luigi-host.mycompany.foo
 error-email: foo@bar.baz
 ```
+
+All sections are optional based on what parts of Luigi you are actually using.  By default, Luigi will not send error emails when running through a tty terminal.  If using the Apache release of Hive, there are slight differences when compared to the CDH release, so specify this configuration setting accordingly.
 
 ## More info
 

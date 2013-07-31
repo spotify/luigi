@@ -50,7 +50,7 @@ class Parameter(object):
         self.is_boolean = is_boolean and not is_list  # Only BooleanParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
         self.significant = significant
-        if is_global and default == _no_default:
+        if is_global and default == _no_default and default_from_config is None:
             raise ParameterException('Global parameters need default values')
         self.description = description
 
