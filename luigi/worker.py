@@ -140,15 +140,50 @@ class Worker(object):
 
     def add(self, task):
         """ Add a Task for the worker to check and possibly schedule and run """
-        self._validate_task(task)
+        stack = [task]
         try:
-            self._add(task)
-        except KeyboardInterrupt:
+            while stack:
+                current = stack.pop()
+                for next in self._add(current):
+                    stack.append(next)
+        except (KeyboardInterrupt, TaskException):
             raise
         except:
             formatted_traceback = traceback.format_exc()
             self._log_unexpected_error(task)
             self._email_unexpected_error(task, formatted_traceback)
+
+    def _add(self, task):
+        self._validate_task(task)
+        if task.task_id in self.__scheduled_tasks:
+            return []  # already scheduled
+        logger.debug("Checking if {task} is complete".format(task=task))
+        is_complete = False
+        try:
+            is_complete = task.complete()
+            self._check_complete_value(is_complete)
+        except KeyboardInterrupt:
+            raise
+        except:
+            formatted_traceback = traceback.format_exc()
+            self._log_complete_error(task)
+            self._email_complete_error(task, formatted_traceback)
+            # abort, i.e. don't schedule any subtasks of a task with
+            # failing complete()-method since we don't know if the task
+            # is complete and subtasks might not be desirable to run if
+            # they have already ran before
+            return []
+
+        if is_complete:
+            # Not submitting dependencies of finished tasks
+            self.__scheduler.add_task(self.__id, task.task_id, status=DONE,
+                                      runnable=False)
+
+        elif task.run == NotImplemented:
+            self._add_external(task)
+        else:
+            return self._add_task_and_deps(task)
+        return []
 
     def _add_external(self, external_task):
         self.__scheduled_tasks[external_task.task_id] = external_task
@@ -174,41 +209,11 @@ class Worker(object):
         logger.info('Scheduled %s' % task.task_id)
 
         for task_2 in task.deps():
-            self.add(task_2)  # Schedule stuff recursively
+            yield task_2  # return additional tasks to add
 
     def _check_complete_value(self, is_complete):
         if is_complete not in (True, False):
             raise Exception("Return value of Task.complete() must be boolean (was %r)" % is_complete)
-
-    def _add(self, task):
-        if task.task_id in self.__scheduled_tasks:
-            return  # already scheduled
-        logger.debug("Checking if {task} is complete".format(task=task))
-        is_complete = False
-        try:
-            is_complete = task.complete()
-            self._check_complete_value(is_complete)
-        except KeyboardInterrupt:
-            raise
-        except:
-            formatted_traceback = traceback.format_exc()
-            self._log_complete_error(task)
-            self._email_complete_error(task, formatted_traceback)
-            # abort, i.e. don't schedule any subtasks of a task with
-            # failing complete()-method since we don't know if the task
-            # is complete and subtasks might not be desirable to run if
-            # they have already ran before
-            return
-
-        if is_complete:
-            # Not submitting dependencies of finished tasks
-            self.__scheduler.add_task(self.__id, task.task_id, status=DONE,
-                                      runnable=False)
-
-        elif task.run == NotImplemented:
-            self._add_external(task)
-        else:
-            self._add_task_and_deps(task)
 
     def _run_task(self, task_id):
         task = self.__scheduled_tasks[task_id]

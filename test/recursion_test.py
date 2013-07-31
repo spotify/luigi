@@ -41,12 +41,7 @@ class Popularity(luigi.Task):
 
 class RecursionTest(unittest.TestCase):
     def setUp(self):
-        self.original_recursionlimit = sys.getrecursionlimit()
-        sys.setrecursionlimit(2000)  # 365 * recursion depth of 3 > 1000 -> b0rk
         MockFile._file_contents['/tmp/popularity/2009-01-01.txt'] = '0\n'
-
-    def tearDown(self):
-        sys.setrecursionlimit(self.original_recursionlimit)
 
     def test_invoke(self):
         w = luigi.worker.Worker()
