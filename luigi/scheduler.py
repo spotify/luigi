@@ -253,14 +253,11 @@ class CentralPlannerScheduler(Scheduler):
             upstream_status_table[task] = task_status
             return task_status
 
-    def _serialize_task(self, task_id, upstream_status_table):
+    def _serialize_task(self, task_id):
         task = self._tasks[task_id]
-        upstream_status = self._upstream_status(task, upstream_status_table)
-
         return {
             'deps': list(task.deps),
             'status': task.status,
-            'upstream_status': upstream_status,
             'workers': list(task.workers),
             'start_time': task.time,
             'params': self._get_task_params(task_id),
@@ -287,9 +284,8 @@ class CentralPlannerScheduler(Scheduler):
     def graph(self):
         self.prune()
         serialized = {}
-        upstream_status_table = {}
         for task_id, task in self._tasks.iteritems():
-            serialized[task_id] = self._serialize_task(task_id, upstream_status_table)
+            serialized[task_id] = self._serialize_task(task_id)
         return serialized
 
     def _recurse_deps(self, task_id, serialized):
@@ -306,8 +302,7 @@ class CentralPlannerScheduler(Scheduler):
                     'name': self._get_task_name(task_id)
                 }
             else:
-                upstream_status_table = {}
-                serialized[task_id] = self._serialize_task(task_id, upstream_status_table)
+                serialized[task_id] = self._serialize_task(task_id)
                 for dep in task.deps:
                     self._recurse_deps(dep, serialized)
 
@@ -322,11 +317,12 @@ class CentralPlannerScheduler(Scheduler):
         ''' query for a subset of tasks by status '''
         self.prune()
         result = {}
-        upstream_status_table = {}
+        upstream_status_table = {}  # used to memoize upstream status
         for task_id, task in self._tasks.iteritems():
             if not status or task.status == status:
-                serialized = self._serialize_task(task_id, upstream_status_table)
-                if task.status != PENDING or not upstream_status or upstream_status == serialized['upstream_status']:
+                if (task.status != PENDING or not upstream_status or
+                    upstream_status == self._upstream_status(task, upstream_status_table)):
+                    serialized = self._serialize_task(task_id)
                     result[task_id] = serialized
         return result
 

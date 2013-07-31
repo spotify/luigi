@@ -242,19 +242,22 @@ class SchedulerVisualisationTest(unittest.TestCase):
         pa = missing_input.get(u'A()')
         self.assertEqual(pa['deps'], [])
         self.assertEqual(pa['status'], 'PENDING')
-        self.assertEqual(pa['upstream_status'], 'UPSTREAM_MISSING_INPUT')
+        remote_task = remote._tasks['A()']
+        self.assertEqual(remote._upstream_status(remote_task, {}), 'UPSTREAM_MISSING_INPUT')
 
         pc = missing_input.get(u'C()')
         self.assertEqual(sorted(pc['deps']), ['A()', 'B()'])
         self.assertEqual(pc['status'], 'PENDING')
-        self.assertEqual(pc['upstream_status'], 'UPSTREAM_MISSING_INPUT')
+        remote_task = remote._tasks['C()']
+        self.assertEqual(remote._upstream_status(remote_task, {}), 'UPSTREAM_MISSING_INPUT')
 
         upstream_failed = remote.task_list('PENDING', 'UPSTREAM_FAILED')
         self.assertEqual(len(upstream_failed), 1)
         pe = upstream_failed.get(u'E()')
         self.assertEqual(sorted(pe['deps']), ['C()', 'D()'])
         self.assertEqual(pe['status'], 'PENDING')
-        self.assertEqual(pe['upstream_status'], 'UPSTREAM_FAILED')
+        remote_task = remote._tasks['E()']
+        self.assertEqual(remote._upstream_status(remote_task, {}), 'UPSTREAM_FAILED')
 
         pending = dict(missing_input)
         pending.update(upstream_failed)
