@@ -50,7 +50,7 @@ class Worker(object):
                  worker_processes=1, ping_interval=None):
         if not worker_id:
             worker_id = 'worker-%09d' % random.randrange(0, 999999999)
-        
+
         if ping_interval is None:
             config = configuration.get_config()
             ping_interval = config.getfloat('core', 'worker-ping-interval', 1.0)
@@ -81,7 +81,8 @@ class Worker(object):
 
             def run(self):
                 while True:
-                    if self._should_stop.wait(ping_interval):
+                    self._should_stop.wait(ping_interval)
+                    if self._should_stop.is_set():
                         logger.info("Worker was stopped. Shutting down Keep-Alive thread")
                         break
                     try:
@@ -105,8 +106,9 @@ class Worker(object):
             whenever you stop using a Worker instance
         """
         self._keep_alive_thread.stop()
+        self._keep_alive_thread.join()
 
-    def add(self, task):
+    def _validate_task(self, task):
         if not isinstance(task, Task):
             raise TaskException('Can not schedule non-task %s' % task)
 
@@ -114,77 +116,100 @@ class Worker(object):
             # we can't get the repr of it since it's not initialized...
             raise TaskException('Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__)
 
+    def _log_complete_error(self, task):
+        log_msg = "Will not schedule {task} or any dependencies due to error in complete() method:".format(task=task)
+        logger.warning(log_msg, exc_info=1)  # Needs to be called from except-clause to work
+
+    def _log_unexpected_error(self, task):
+        logger.exception("Luigi unexpected framework error while scheduling {task}".format(task=task))  # needs to be called from within except clause
+
+    def _email_complete_error(self, task, formatted_traceback):
+          # like logger.exception but with WARNING level
+        subject = "Luigi: {task} failed scheduling".format(task=task)
+        message = "Will not schedule {task} or any dependencies due to error in complete() method:\n{traceback}".format(task=task, traceback=formatted_traceback)
+        notifications.send_error_email(subject, message)
+
+    def _email_unexpected_error(self, task, formatted_traceback):
+        subject = "Luigi: Framework error while scheduling {task}".format(task=task)
+        message = "Luigi framework error:\n{traceback}".format(traceback=formatted_traceback)
+        notifications.send_error_email(subject, message)
+
+    def add(self, task):
+        """ Add a Task for the worker to check and possibly schedule and run """
+        stack = [task]
         try:
-            task_id = task.task_id
+            while stack:
+                current = stack.pop()
+                for next in self._add(current):
+                    stack.append(next)
+        except (KeyboardInterrupt, TaskException):
+            raise
+        except:
+            formatted_traceback = traceback.format_exc()
+            self._log_unexpected_error(task)
+            self._email_unexpected_error(task, formatted_traceback)
 
-            if task_id in self.__scheduled_tasks:
-                return  # already scheduled
-            logger.debug("Checking if %s is complete" % task_id)
-            is_complete = False
-            try:
-                is_complete = task.complete()
-                if is_complete not in (True, False):
-                    raise Exception("Return value of Task.complete() must be boolean (was %r)" % is_complete)
-            except KeyboardInterrupt:
-                raise
-            except:
-                msg = "Will not schedule %s or any dependencies due to error in complete() method:" % (task,)
-                # like logger.exception but with WARNING level
-                logger.warning(msg, exc_info=1)
-                config = configuration.get_config()
-                receiver = config.get('core', 'error-email', None)
-                sender = config.get('core', 'email-sender',
-                                    notifications.DEFAULT_CLIENT_EMAIL)
-                logger.info("Sending warning email to %r" % receiver)
-                notifications.send_email(
-                    subject="Luigi: %s failed scheduling" % (task,),
-                    message="%s:\n%s" % (msg, traceback.format_exc()),
-                    sender=sender,
-                    recipients=(receiver,))
-                return
-                # abort, i.e. don't schedule any subtasks of a task with
-                # failing complete()-method since we don't know if the task
-                # is complete and subtasks might not be desirable to run if
-                # they have already ran before
-
-            if is_complete:
-                # Not submitting dependencies of finished tasks
-                self.__scheduler.add_task(self.__id, task_id, status=DONE,
-                                          runnable=False)
-
-            elif task.run == NotImplemented:
-                self.__scheduled_tasks[task_id] = task
-                self.__scheduler.add_task(self.__id, task_id, status=PENDING,
-                                          runnable=False)
-                logger.warning('Task %s is not complete and run() is not implemented. Probably a missing external dependency.', task_id)
-            else:
-                self.__scheduled_tasks[task_id] = task
-                deps = task.deps()
-                for d in deps:
-                    if isinstance(d, Target):
-                        raise Exception('requires() can not return Target objects. Wrap it in an ExternalTask class')
-                    elif not isinstance(d, Task):
-                        raise Exception('requires() must return Task objects')
-                deps = [d.task_id for d in task.deps()]
-                self.__scheduler.add_task(self.__id, task_id, status=PENDING,
-                                          deps=deps, runnable=True)
-                logger.info('Scheduled %s' % task_id)
-
-                for task_2 in task.deps():
-                    self.add(task_2)  # Schedule stuff recursively
+    def _add(self, task):
+        self._validate_task(task)
+        if task.task_id in self.__scheduled_tasks:
+            return []  # already scheduled
+        logger.debug("Checking if {task} is complete".format(task=task))
+        is_complete = False
+        try:
+            is_complete = task.complete()
+            self._check_complete_value(is_complete)
         except KeyboardInterrupt:
             raise
         except:
-            logger.exception("Luigi unexpected framework error while scheduling %s" % task)
-            config = configuration.get_config()
-            receiver = config.get('core', 'error-email', None)
-            sender = config.get('core', 'email-sender',
-                                notifications.DEFAULT_CLIENT_EMAIL)
-            notifications.send_email(
-                subject="Luigi: Framework error while scheduling %s" % (task,),
-                message="Luigi framework error:\n%s" % traceback.format_exc(),
-                recipients=(receiver,),
-                sender=sender)
+            formatted_traceback = traceback.format_exc()
+            self._log_complete_error(task)
+            self._email_complete_error(task, formatted_traceback)
+            # abort, i.e. don't schedule any subtasks of a task with
+            # failing complete()-method since we don't know if the task
+            # is complete and subtasks might not be desirable to run if
+            # they have already ran before
+            return []
+
+        if is_complete:
+            # Not submitting dependencies of finished tasks
+            self.__scheduler.add_task(self.__id, task.task_id, status=DONE,
+                                      runnable=False)
+
+        elif task.run == NotImplemented:
+            self._add_external(task)
+        else:
+            return self._add_task_and_deps(task)
+        return []
+
+    def _add_external(self, external_task):
+        self.__scheduled_tasks[external_task.task_id] = external_task
+        self.__scheduler.add_task(self.__id, external_task.task_id, status=PENDING,
+                                  runnable=False)
+        logger.warning('Task %s is not complete and run() is not implemented. Probably a missing external dependency.', external_task.task_id)
+
+    def _validate_dependency(self, dependency):
+        if isinstance(dependency, Target):
+            raise Exception('requires() can not return Target objects. Wrap it in an ExternalTask class')
+        elif not isinstance(dependency, Task):
+            raise Exception('requires() must return Task objects')
+
+    def _add_task_and_deps(self, task):
+        self.__scheduled_tasks[task.task_id] = task
+        deps = task.deps()
+        for d in deps:
+            self._validate_dependency(task)
+
+        deps = [d.task_id for d in task.deps()]
+        self.__scheduler.add_task(self.__id, task.task_id, status=PENDING,
+                                  deps=deps, runnable=True)
+        logger.info('Scheduled %s' % task.task_id)
+
+        for task_2 in task.deps():
+            yield task_2  # return additional tasks to add
+
+    def _check_complete_value(self, is_complete):
+        if is_complete not in (True, False):
+            raise Exception("Return value of Task.complete() must be boolean (was %r)" % is_complete)
 
     def _run_task(self, task_id):
         task = self.__scheduled_tasks[task_id]
@@ -202,7 +227,7 @@ class Worker(object):
                 # TODO: possibly try to re-add task again ad pending
                 raise RuntimeError('Unfulfilled dependency %r at run time!\nPrevious tasks: %r' % (missing_dep.task_id, self._previous_tasks))
             task.run()
-            expl = json.dumps(task.on_success())
+            error_message = json.dumps(task.on_success())
             logger.info('[pid %s] Done      %s', os.getpid(), task_id)
             status = DONE
 
@@ -212,18 +237,13 @@ class Worker(object):
             status = FAILED
             logger.exception("[pid %s] Error while running %s" % (os.getpid(),
                                                                   task))
-            expl = task.on_failure(ex)
-            config = configuration.get_config()
-            receiver = config.get('core', 'error-email', None)
-            sender = config.get('core', 'email-sender',
-                                notifications.DEFAULT_CLIENT_EMAIL)
-            logger.info("[pid %s] Sending error email to %r",
-                        os.getpid(), receiver)
-            notifications.send_email("Luigi: %s FAILED" % task,
-                                     expl, sender, (receiver,))
+            error_message = task.on_failure(ex)
+
+            subject = "Luigi: %s FAILED" % task
+            notifications.send_error_email(subject, error_message)
 
         self.__scheduler.add_task(self.__id, task_id, status=status,
-                                  expl=expl, runnable=None)
+                                  expl=error_message, runnable=None)
 
         return status
 

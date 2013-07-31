@@ -35,12 +35,11 @@ class RemoteScheduler(Scheduler):
     def __init__(self, host='localhost', port=8082):
         self._host = host
         self._port = port
-        self._attempts = 3
 
     def _wait(self):
         time.sleep(30)
 
-    def _request(self, url, data, log_exceptions=True):
+    def _request(self, url, data, log_exceptions=True, attempts=3):
         # TODO(erikbern): do POST requests instead
         data = {'data': json.dumps(data)}
         url = 'http://%s:%d%s?%s' % \
@@ -48,7 +47,7 @@ class RemoteScheduler(Scheduler):
 
         req = urllib2.Request(url)
         last_exception = None
-        for attempt in xrange(self._attempts):
+        for attempt in xrange(attempts):
             if last_exception:
                 logger.info("Retrying...")
                 self._wait()  # wait for a bit and retry
@@ -60,39 +59,48 @@ class RemoteScheduler(Scheduler):
                     logger.exception("Failed connecting to remote scheduler %r" % (self._host,))
                 continue
         else:
-            raise RPCError("Errors (%d attempts) when connecting to remote scheduler %r" % (
-                            self._attempts, self._host), last_exception)
+            raise RPCError(
+                "Errors (%d attempts) when connecting to remote scheduler %r" %
+                (attempts, self._host),
+                last_exception
+            )
         page = response.read()
         result = json.loads(page)
         return result["response"]
 
     def ping(self, worker):
-        self._request('/api/ping', {'worker': worker})  # Keep-alive
+        # just one attemtps, keep-alive thread will keep trying anyway
+        self._request('/api/ping', {'worker': worker}, attempts=1)
 
     def add_task(self, worker, task_id, status=PENDING, runnable=False, deps=None, expl=None):
-        self._request('/api/add_task',
-            {'task_id': task_id,
-             'worker': worker,
-             'status': status,
-             'runnable': runnable,
-             'deps': deps,
-             'expl': expl,
-             })
+        self._request('/api/add_task', {
+            'task_id': task_id,
+            'worker': worker,
+            'status': status,
+            'runnable': runnable,
+            'deps': deps,
+            'expl': expl,
+        })
 
     def get_work(self, worker, host=None):
         ''' Ugly work around for an older scheduler version, where get_work doesn't have a host argument. Try once passing
             host to it, falling back to the old version. Should be removed once people have had time to update everything
         '''
-        current_attempts = self._attempts
         try:
-            self._attempts = 1
-            return self._request('/api/get_work', {'worker': worker, 'host': host}, log_exceptions=False)
+            return self._request(
+                '/api/get_work',
+                {'worker': worker, 'host': host},
+                log_exceptions=False,
+                attempts=1
+            )
         except:
             warnings.warn("Failed call to scheduler.get_work(worker, host), are you running an old scheduler version?")
-            self._attempts = 2
-            return self._request('/api/get_work', {'worker': worker}, log_exceptions=True)
-        finally:
-            self._attempts = current_attempts
+            return self._request(
+                '/api/get_work',
+                {'worker': worker},
+                log_exceptions=True,
+                attempts=2
+            )
 
     def graph(self):
         return self._request('/api/graph', {})

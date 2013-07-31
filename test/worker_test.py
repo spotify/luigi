@@ -47,6 +47,8 @@ class WorkerTest(unittest.TestCase):
     def tearDown(self):
         if time.time != self.time:
             time.time = self.time
+        self.w.stop()
+        self.w2.stop()
 
     def setTime(self, t):
         time.time = lambda: t
@@ -211,6 +213,8 @@ class WorkerTest(unittest.TestCase):
         w.run()
         self.assertTrue(a.complete())
         self.assertTrue(b.complete())
+        w.stop()
+        w2.stop()
 
     def test_interleaved_workers2(self):
         # two tasks without dependencies, one external, one not
@@ -239,6 +243,8 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(b.complete())
         w.run()
         self.assertTrue(b.complete())
+        w.stop()
+        w2.stop()
 
     def test_complete_exception(self):
         "Tests that a task is still scheduled if its sister task crashes in the complete() method"
@@ -265,6 +271,7 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(b.has_run)
         self.assertTrue(c.has_run)
         self.assertFalse(a.has_run)
+        w.stop()
 
 
 class WorkerPingThreadTests(unittest.TestCase):
@@ -282,6 +289,7 @@ class WorkerPingThreadTests(unittest.TestCase):
         self._total_pings = 0  # class var so it can be accessed from fail_ping
 
         def fail_ping(worker):
+            # this will be called from within keep-alive thread...
             self._total_pings += 1
             raise Exception("Some random exception")
 
@@ -303,10 +311,8 @@ class WorkerPingThreadTests(unittest.TestCase):
 
     def test_ping_thread_shutdown(self):
         w = Worker(ping_interval=0.01)
-        time.sleep(0.05)  # wait for it to come alive
         self.assertTrue(w._keep_alive_thread.is_alive())
         w.stop()  # should stop within 0.01 s
-        time.sleep(0.05)
         self.assertFalse(w._keep_alive_thread.is_alive())
 
 
@@ -331,6 +337,9 @@ class WorkerEmailTest(EmailTest):
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         self.worker = Worker(scheduler=sch, worker_id="foo")
 
+    def tearDown(self):
+        self.worker.stop()
+
     def test_connection_error(self):
         sch = RemoteScheduler(host="this_host_doesnt_exist", port=1337)
         worker = Worker(scheduler=sch)
@@ -348,9 +357,10 @@ class WorkerEmailTest(EmailTest):
         a = A()
         self.assertEquals(self.last_email, None)
         worker.add(a)
-        self.assertEquals(self.waits, sch._attempts - 1)
+        self.assertEquals(self.waits, 2)  # should attempt to add it 3 times
         self.assertNotEquals(self.last_email, None)
         self.assertEquals(self.last_email[0], "Luigi: Framework error while scheduling %s" % (a,))
+        worker.stop()
 
     def test_complete_error(self):
         class A(DummyTask):
