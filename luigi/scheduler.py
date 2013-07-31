@@ -20,7 +20,7 @@ import cPickle as pickle
 import task_history as history
 logger = logging.getLogger("luigi-interface")
 
-from task_status import PENDING, FAILED, DONE, RUNNING
+from task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
 
 
 class Scheduler(object):
@@ -37,6 +37,7 @@ UPSTREAM_MISSING_INPUT = 'UPSTREAM_MISSING_INPUT'
 UPSTREAM_FAILED = 'UPSTREAM_FAILED'
 
 UPSTREAM_SEVERITY_ORDER = ('', UPSTREAM_RUNNING, UPSTREAM_MISSING_INPUT, UPSTREAM_FAILED)
+
 
 class Task(object):
     def __init__(self, status, deps):
@@ -112,7 +113,7 @@ class CentralPlannerScheduler(Scheduler):
         # Mark tasks with no remaining active stakeholders for deletion
         for task_id, task in self._tasks.iteritems():
             if not task.stakeholders.intersection(remaining_workers):
-                if task.remove == None:
+                if task.remove is None:
                     print 'task', task_id, 'has stakeholders', task.stakeholders, 'but only', remaining_workers, 'remain -> will remove task in', self._remove_delay, 'seconds'
                     task.remove = time.time() + self._remove_delay
 
@@ -259,14 +260,20 @@ class CentralPlannerScheduler(Scheduler):
             'workers': list(task.workers),
             'start_time': task.time,
             'params': self._get_task_params(task_id),
-            'name' : self._get_task_name(task_id)
+            'name': self._get_task_name(task_id)
         }
 
     def _get_task_params(self, task_id):
         params = {}
-        params_strings =  task_id.split('(')[1].strip(')').split()
+        params_part = task_id.split('(')[1].strip(')')
+        params_strings = params_part.split(", ")
+
         for param in params_strings:
-            split_param = param.strip(',').split('=')
+            if not param:
+                continue
+            split_param = param.split('=')
+            if len(split_param) != 2:
+                return {'<complex parameters>': params_part}
             params[split_param[0]] = split_param[1]
         return params
 
@@ -283,11 +290,22 @@ class CentralPlannerScheduler(Scheduler):
 
     def _recurse_deps(self, task_id, serialized):
         if task_id not in serialized:
-            task = self._tasks[task_id]
-            upstream_status_table = {}
-            serialized[task_id] = self._serialize_task(task_id, upstream_status_table)
-            for dep in task.deps:
-                self._recurse_deps(dep, serialized)
+            task = self._tasks.get(task_id)
+            if task is None:
+                logger.warn('Missing task for id [%s]' % task_id)
+                serialized[task_id] = {
+                    'deps': [],
+                    'status': UNKNOWN,
+                    'workers': [],
+                    'start_time': UNKNOWN,
+                    'params': self._get_task_params(task_id),
+                    'name': self._get_task_name(task_id)
+                }
+            else:
+                upstream_status_table = {}
+                serialized[task_id] = self._serialize_task(task_id, upstream_status_table)
+                for dep in task.deps:
+                    self._recurse_deps(dep, serialized)
 
     def dep_graph(self, task_id):
         self.prune()
@@ -326,3 +344,8 @@ class CentralPlannerScheduler(Scheduler):
         except:
             print 'Error saving Task history'
             print traceback.format_exc()
+
+    @property
+    def task_history(self):
+        # Used by server.py to expose the calls
+        return self._task_history

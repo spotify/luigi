@@ -27,7 +27,7 @@ import scheduler
 import pkg_resources
 import signal
 from rpc import RemoteSchedulerResponder
-from task_history import DbTaskHistory, NopHistory, handlers as history_handlers
+import task_history
 
 
 def _create_scheduler():
@@ -35,9 +35,12 @@ def _create_scheduler():
     retry_delay = config.getfloat('scheduler', 'retry-delay', 900.0)
     remove_delay = config.getfloat('scheduler', 'remove-delay', 600.0)
     worker_disconnect_delay = config.getfloat('scheduler', 'worker-disconnect-delay', 60.0)
-    use_task_history = config.getboolean('scheduler', 'record_task_history', False)
-    task_history = DbTaskHistory() if use_task_history else NopHistory()
-    return scheduler.CentralPlannerScheduler(retry_delay, remove_delay, worker_disconnect_delay, task_history)
+    if config.getboolean('scheduler', 'record_task_history', False):
+        import db_task_history # Needs sqlalchemy, thus imported here
+        task_history_impl = db_task_history.DbTaskHistory()
+    else:
+        task_history_impl = task_history.NopHistory()
+    return scheduler.CentralPlannerScheduler(retry_delay, remove_delay, worker_disconnect_delay, task_history_impl)
 
 
 class RPCHandler(tornado.web.RequestHandler):
@@ -57,6 +60,40 @@ class RPCHandler(tornado.web.RequestHandler):
             self.send_error(404)
 
 
+class BaseTaskHistoryHandler(tornado.web.RequestHandler):
+    def initialize(self, api):
+        self._api = api
+
+    def get_template_path(self):
+        return 'luigi/templates'
+
+
+class RecentRunHandler(BaseTaskHistoryHandler):
+    def get(self):
+        tasks = self._api.task_history.find_latest_runs()
+        self.render("recent.html", tasks=tasks)
+
+
+class ByNameHandler(BaseTaskHistoryHandler):
+    def get(self, name):
+        tasks = self._api.task_history.find_all_by_name(name)
+        self.render("recent.html", tasks=tasks)
+
+
+class ByIdHandler(BaseTaskHistoryHandler):
+    def get(self, id):
+        task = self._api.task_history.find_task_by_id(id)
+        self.render("show.html", task=task)
+
+
+class ByParamsHandler(BaseTaskHistoryHandler):
+    def get(self, name):
+        payload = self.get_argument('data', default="{}")
+        arguments = json.loads(payload)
+        tasks = self._api.task_history.find_all_by_parameters(name, session=None, **arguments)
+        self.render("recent.html", tasks=tasks)
+
+
 class StaticFileHandler(tornado.web.RequestHandler):
     def get(self, path):
         # TODO: this is probably not the right way to do it...
@@ -74,10 +111,14 @@ class RootPathHandler(tornado.web.RequestHandler):
 
 
 def app(api):
-    handlers = history_handlers('history') + [
+    handlers = [
             (r'/api/(.*)', RPCHandler, {"api": api}),
             (r'/static/(.*)', StaticFileHandler),
-            (r'/', RootPathHandler)
+            (r'/', RootPathHandler),
+            (r'/history', RecentRunHandler, {'api': api}),
+            (r'/history/by_name/(.*?)', ByNameHandler, {'api': api}),
+            (r'/history/by_id/(.*?)', ByIdHandler, {'api': api}),
+            (r'/history/by_params/(.*?)', ByParamsHandler, {'api': api})
     ]
     api_app = tornado.web.Application(handlers)
     return api_app

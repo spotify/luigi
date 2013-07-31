@@ -1,6 +1,7 @@
 import sys
 import logging
 import socket
+from luigi import configuration
 logger = logging.getLogger("luigi-interface")
 
 
@@ -10,13 +11,13 @@ DEBUG = False
 
 def send_email(subject, message, sender, recipients, image_png=None):
     logger.debug("Emailing:\n"
-                "-------------\n"
-                "To: %s\n"
-                "From: %s\n"
-                "Subject: %s\n"
-                "Message:\n"
-                "%s\n"
-                "-------------" % (recipients, sender, subject, message))
+                 "-------------\n"
+                 "To: %s\n"
+                 "From: %s\n"
+                 "Subject: %s\n"
+                 "Message:\n"
+                 "%s\n"
+                 "-------------" % (recipients, sender, subject, message))
     if not recipients or recipients == (None,):
         return
     if sys.stdout.isatty() or DEBUG:
@@ -58,3 +59,17 @@ def send_email(subject, message, sender, recipients, image_png=None):
     msg_root['To'] = ','.join(recipients)
 
     smtp.sendmail(sender, recipients, msg_root.as_string())
+
+
+def send_error_email(subject, message):
+    """ Sends an email to the configured error-email """
+    config = configuration.get_config()
+    receiver = config.get('core', 'error-email', None)
+    sender = config.get('core', 'email-sender', DEFAULT_CLIENT_EMAIL)
+    logger.info("Sending warning email to %r" % (receiver,))
+    send_email(
+        subject=subject,
+        message=message,
+        sender=sender,
+        recipients=(receiver,)
+    )

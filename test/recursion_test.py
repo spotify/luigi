@@ -12,8 +12,10 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import sys
 import datetime
-import luigi, luigi.interface
+import luigi
+import luigi.interface
 from luigi.mock import MockFile
 import unittest
 
@@ -45,6 +47,7 @@ class RecursionTest(unittest.TestCase):
         w = luigi.worker.Worker()
         w.add(Popularity(datetime.date(2010, 1, 1)))
         w.run()
+        w.stop()
 
         self.assertEquals(MockFile._file_contents['/tmp/popularity/2010-01-01.txt'], '365\n')
 
