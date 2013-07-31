@@ -145,5 +145,21 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(task_id=t, worker='Y')
         self.assertEqual(self.sch.get_work(worker='Y')[1], None)
 
+
+class TestParameterSplit(unittest.TestCase):
+    task_id_examples = [
+        "TrackIsrcs()",
+        "CrazyTask(foo=foo_table_id, bar={'keyName': 'com.my.org', 'parameters': {'this.is.tricky': '1'}}, what_is_dis=foo bar, oh hippo)",
+        "MyOldDateHourTask(datehour=2013-07-21 11:00:00)",
+        "MyOldDateHourTask(datehour=2013-07-21T11:00:00)"
+    ]
+
+    def setUp(self):
+        self.sch = CentralPlannerScheduler()
+
+    def test_parameter_split(self):
+        for task_id in self.task_id_examples:
+            self.sch._get_task_params(task_id)
+
 if __name__ == '__main__':
     unittest.main()
