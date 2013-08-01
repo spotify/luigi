@@ -12,10 +12,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-from __future__ import with_statement
 import os
 import signal
 import random
+import datetime
+import logging
+import logging.handlers
+rootlogger = logging.getLogger()
+server_logger = logging.getLogger("luigi.server")
 
 
 def check_pid(pidfile):
@@ -30,7 +34,7 @@ def check_pid(pidfile):
 
 
 def write_pid(pidfile):
-    print "Writing pid file"
+    server_logger.info("Writing pid file")
     piddir = os.path.dirname(pidfile)
     if not os.path.exists(piddir):
         os.makedirs(piddir)
@@ -39,30 +43,69 @@ def write_pid(pidfile):
         fobj.write(str(os.getpid()))
 
 
-def daemonize(cmd, pidfile=None):
-    import daemon
+def get_log_format():
+    return "%(asctime)s %(name)s[%(process)s] %(levelname)s: %(message)s"
+
+
+def get_spool_handler(filename):
+    handler = logging.handlers.TimedRotatingFileHandler(
+        filename=filename,
+        when='d',
+        encoding='utf8',
+        backupCount=7  # keep one week of historical logs
+    )
+    formatter = logging.Formatter(get_log_format())
+    handler.setFormatter(formatter)
+    return handler
+
+
+def _server_already_running(pidfile):
     existing_pid = check_pid(pidfile)
     if pidfile and existing_pid:
-        print "Server already running (pid=%s)" % (existing_pid,)
-        return
-    logdir = '/var/log/luigi'
-    logpath = os.path.join(logdir, 'luigi-server.log')
+        return True
+    return False
+
+
+def daemonize(cmd, pidfile=None):
+    import daemon
+    logdir = "/var/log/luigi"
     if not os.path.exists(logdir):
         os.makedirs(logdir)
-    log = open(logpath, 'a+')  # TODO: better log location...
-    ctx = daemon.DaemonContext(stdout=log, stderr=log, working_directory='.')
+
+    log_path = os.path.join(logdir, "luigi-server.log")
+
+    # redirect stdout/stderr
+    today = datetime.date.today()
+    stdout_path = os.path.join(
+        logdir,
+        "luigi-server-{0:%Y-%m-%d}.out".format(today)
+    )
+    stderr_path = os.path.join(
+        logdir,
+        "luigi-server-{0:%Y-%m-%d}.err".format(today)
+    )
+    stdout_proxy = open(stdout_path, 'a+')
+    stderr_proxy = open(stderr_path, 'a+')
+
+    ctx = daemon.DaemonContext(
+        stdout=stdout_proxy,
+        stderr=stderr_proxy,
+        working_directory='.'
+    )
+
     with ctx:
+        loghandler = get_spool_handler(log_path)
+        rootlogger.addHandler(loghandler)
+
         if pidfile:
-            print "Checking pid file"
+            server_logger.info("Checking pid file")
             existing_pid = check_pid(pidfile)
-            if not existing_pid:
-                write_pid(pidfile)
-                cmd()
-            else:
-                print "Server already running (pid=%s)" % (existing_pid,)
+            if pidfile and existing_pid:
+                server_logger.info("Server already running (pid=%s)", existing_pid)
                 return
-        else:
-            cmd()
+            write_pid(pidfile)
+
+        cmd()
 
 
 def fork_linked_workers(num_processes):
