@@ -3,6 +3,7 @@
 import luigi.server
 import luigi.process
 import optparse
+import logging
 
 parser = optparse.OptionParser()
 parser.add_option('--background', help='Run in background mode', action='store_true')
@@ -11,6 +12,9 @@ parser.add_option('--pidfile', help='Write pidfile')
 opts, args = parser.parse_args()
 
 if opts.background:
+    # daemonize sets up logging to spooled log files
+    logging.getLogger().setLevel(logging.INFO)
     luigi.process.daemonize(luigi.server.run, pidfile=opts.pidfile)
 else:
+    logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format())
     luigi.server.run()
