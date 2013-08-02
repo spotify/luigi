@@ -28,6 +28,8 @@ import pkg_resources
 import signal
 from rpc import RemoteSchedulerResponder
 import task_history
+import logging
+logger = logging.getLogger("luigi.server")
 
 
 def _create_scheduler():
@@ -36,7 +38,7 @@ def _create_scheduler():
     remove_delay = config.getfloat('scheduler', 'remove-delay', 600.0)
     worker_disconnect_delay = config.getfloat('scheduler', 'worker-disconnect-delay', 60.0)
     if config.getboolean('scheduler', 'record_task_history', False):
-        import db_task_history # Needs sqlalchemy, thus imported here
+        import db_task_history  # Needs sqlalchemy, thus imported here
         task_history_impl = db_task_history.DbTaskHistory()
     else:
         task_history_impl = task_history.NopHistory()
@@ -112,13 +114,13 @@ class RootPathHandler(tornado.web.RequestHandler):
 
 def app(api):
     handlers = [
-            (r'/api/(.*)', RPCHandler, {"api": api}),
-            (r'/static/(.*)', StaticFileHandler),
-            (r'/', RootPathHandler),
-            (r'/history', RecentRunHandler, {'api': api}),
-            (r'/history/by_name/(.*?)', ByNameHandler, {'api': api}),
-            (r'/history/by_id/(.*?)', ByIdHandler, {'api': api}),
-            (r'/history/by_params/(.*?)', ByParamsHandler, {'api': api})
+        (r'/api/(.*)', RPCHandler, {"api": api}),
+        (r'/static/(.*)', StaticFileHandler),
+        (r'/', RootPathHandler),
+        (r'/history', RecentRunHandler, {'api': api}),
+        (r'/history/by_name/(.*?)', ByNameHandler, {'api': api}),
+        (r'/history/by_id/(.*?)', ByIdHandler, {'api': api}),
+        (r'/history/by_params/(.*?)', ByParamsHandler, {'api': api})
     ]
     api_app = tornado.web.Application(handlers)
     return api_app
@@ -143,12 +145,12 @@ def run(api_port=8082, address=None, scheduler=None, responder=None):
 
     _init_api(sched, responder, api_port, address)
 
-    # prune work DAG every 10 seconds
-    pruner = tornado.ioloop.PeriodicCallback(sched.prune, 10000)
+    # prune work DAG every 60 seconds
+    pruner = tornado.ioloop.PeriodicCallback(sched.prune, 60000)
     pruner.start()
 
     def shutdown_handler(foo=None, bar=None):
-        print "api instance shutting down..."
+        logger.info("Scheduler instance shutting down")
         sched.dump()
         os._exit(0)
 
@@ -157,7 +159,7 @@ def run(api_port=8082, address=None, scheduler=None, responder=None):
     signal.signal(signal.SIGQUIT, shutdown_handler)
     atexit.register(shutdown_handler)
 
-    print "Launching API instance"
+    logger.info("Scheduler starting up")
 
     tornado.ioloop.IOLoop.instance().start()
 

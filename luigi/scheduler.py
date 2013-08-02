@@ -15,10 +15,9 @@
 import os
 import logging
 import time
-import traceback
 import cPickle as pickle
 import task_history as history
-logger = logging.getLogger("luigi-interface")
+logger = logging.getLogger("luigi.server")
 
 from task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
 
@@ -82,27 +81,31 @@ class CentralPlannerScheduler(Scheduler):
         # TODO: have a Worker object instead, add more data to it
 
     def dump(self):
-        print "saving state..."
         state = (self._tasks, self._active_workers)
-        with open(self._state_path, 'w') as fobj:
-            pickle.dump(state, fobj)
+        try:
+            with open(self._state_path, 'w') as fobj:
+                pickle.dump(state, fobj)
+        except IOError:
+            logger.warning("Failed saving scheduler state", exc_info=1)
+        else:
+            logger.info("Saved state in %s", self._state_path)
 
     def load(self):
         if os.path.exists(self._state_path):
-            print "loading state..."
+            logger.info("Attempting to load state from %s", self._state_path)
             with open(self._state_path) as fobj:
                 state = pickle.load(fobj)
             self._tasks, self._active_workers = state
         else:
-            print "not loading state, %s doesn't exist" % self._state_path
+            logger.info("No prior state file exists at %s. Starting with clean slate", self._state_path)
 
     def prune(self):
-        print "Pruning..."
+        logger.info("Starting pruning of task graph")
         # Delete workers that haven't said anything for a while (probably killed)
         delete_workers = []
         for worker in self._active_workers:
             if self._active_workers[worker] < time.time() - self._worker_disconnect_delay:
-                print 'worker', worker, 'updated at', self._active_workers[worker], 'timed out at', time.time(), '-', self._worker_disconnect_delay
+                logger.info("worker %r updated at %s timed out (no contact for >=%ss)", worker, self._active_workers[worker], self._worker_disconnect_delay)
                 delete_workers.append(worker)
 
         for worker in delete_workers:
@@ -114,12 +117,12 @@ class CentralPlannerScheduler(Scheduler):
         for task_id, task in self._tasks.iteritems():
             if not task.stakeholders.intersection(remaining_workers):
                 if task.remove is None:
-                    print 'task', task_id, 'has stakeholders', task.stakeholders, 'but only', remaining_workers, 'remain -> will remove task in', self._remove_delay, 'seconds'
+                    logger.info("Task %r has stakeholders %r but none remain connected -> will remove task in %s seconds", task_id, task.stakeholders, self._remove_delay)
                     task.remove = time.time() + self._remove_delay
 
             if task.status == RUNNING and task.worker_running and task.worker_running not in remaining_workers:
                 # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
-                print 'task', task_id, 'is marked as running by inactive worker', task.worker_running, '(only', remaining_workers, 'remain) -> marking as FAILED'
+                logger.info("Task %r is marked as running by disconnected worker %r -> marking as FAILED with retry delay of %rs", task_id, task.worker_running, self._retry_delay)
                 task.worker_running = None
                 task.status = FAILED
                 task.retry = time.time() + self._retry_delay
@@ -128,7 +131,7 @@ class CentralPlannerScheduler(Scheduler):
         remove_tasks = []
         for task_id, task in self._tasks.iteritems():
             if task.remove and time.time() > task.remove:
-                print 'Removing task', task_id
+                logger.info("Removing task %r (no connected stakeholders)", task_id)
                 remove_tasks.append(task_id)
 
         for task_id in remove_tasks:
@@ -138,6 +141,7 @@ class CentralPlannerScheduler(Scheduler):
         for task in self._tasks.values():
             if task.status == FAILED and self._retry_delay >= 0 and task.retry < time.time():
                 task.status = PENDING
+        logger.info("Done pruning task graph")
 
     def update(self, worker):
         # update timestamp so that we keep track
@@ -252,7 +256,7 @@ class CentralPlannerScheduler(Scheduler):
     def _serialize_task(self, task_id, upstream_status_table):
         task = self._tasks[task_id]
         upstream_status = self._upstream_status(task, upstream_status_table)
-        print task_id
+
         return {
             'deps': list(task.deps),
             'status': task.status,
@@ -342,8 +346,7 @@ class CentralPlannerScheduler(Scheduler):
             elif status == RUNNING:
                 self._task_history.task_started(task_id, host)
         except:
-            print 'Error saving Task history'
-            print traceback.format_exc()
+            logger.warning("Error saving Task history", exc_info=1)
 
     @property
     def task_history(self):
