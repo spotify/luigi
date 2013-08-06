@@ -25,14 +25,19 @@ import shutil
 
 class FileTest(unittest.TestCase):
     path = '/tmp/test.txt'
+    copy = '/tmp/test.copy.txt'
 
     def setUp(self):
         if os.path.exists(self.path):
             os.remove(self.path)
+        if os.path.exists(self.copy):
+            os.remove(self.copy)
 
     def tearDown(self):
         if os.path.exists(self.path):
             os.remove(self.path)
+        if os.path.exists(self.copy):
+            os.remove(self.copy)
 
     def test_close(self):
         t = File(self.path)
@@ -91,6 +96,18 @@ class FileTest(unittest.TestCase):
         self.assertTrue(test_data == f.read())
         f.close()
 
+    def test_copy(self):
+        t = File(self.path)
+        f = t.open('w')
+        test_data = 'test'
+        f.write(test_data)
+        f.close()
+        self.assertTrue(os.path.exists(self.path))
+        self.assertFalse(os.path.exists(self.copy))
+        t.copy(self.copy)
+        self.assertTrue(os.path.exists(self.path))
+        self.assertTrue(os.path.exists(self.copy))
+        self.assertEqual(t.open('r').read(), File(self.copy).open('r').read())
 
 class FileCreateDirectoriesTest(FileTest):
     path = '/tmp/%s/xyz/test.txt' % random.randint(0, 999999999)
