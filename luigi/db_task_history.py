@@ -27,6 +27,8 @@ from sqlalchemy.orm import sessionmaker, relationship
 
 Base = declarative_base()
 
+logger = logging.getLogger('luigi-interface')
+
 
 class DbTaskHistory(task_history.TaskHistory):
     """ Task History that writes to a database using sqlalchemy. Also has methods for useful db queries
@@ -73,7 +75,7 @@ class DbTaskHistory(task_history.TaskHistory):
             if host:
                 task.host = host
         else:
-            task = self.tasks[task_id] = Task(task_id, status, host)
+            task = self.tasks[task_id] = task_history.Task(task_id, status, host)
         return task
 
     def _add_task_event(self, task, event):
@@ -90,7 +92,6 @@ class DbTaskHistory(task_history.TaskHistory):
                 yield (task_record, session)
             else:
                 task_record = TaskRecord(name=task.task_family, host=task.host)
-                task_record.events = [TaskEvent(event_name=PENDING, ts=datetime.datetime.now())]
                 for (k, v) in task.parameters.iteritems():
                     task_record.parameters[k] = TaskParameter(name=k, value=v)
                 session.add(task_record)
@@ -105,7 +106,7 @@ class DbTaskHistory(task_history.TaskHistory):
         with self._session(session) as session:
             tasks = session.query(TaskRecord).join(TaskEvent).filter(TaskRecord.name == task_name).order_by(TaskEvent.ts).all()
             for task in tasks:
-                if all(k in task.parameters and v[0] == str(task.parameters[k].value) for (k, v) in task_params.iteritems()):
+                if all(k in task.parameters and v == str(task.parameters[k].value) for (k, v) in task_params.iteritems()):
                     yield task
 
     def find_all_by_name(self, task_name, session=None):
@@ -168,6 +169,6 @@ class TaskRecord(Base):
     parameters = relationship('TaskParameter', collection_class=attribute_mapped_collection('name'),
                               cascade="all, delete-orphan")
     events = relationship("TaskEvent", order_by=lambda: TaskEvent.ts.desc(), backref="task")
-    
+
     def __repr__(self):
         return "TaskRecord(name=%s, host=%s)" % (self.name, self.host)
