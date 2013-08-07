@@ -14,11 +14,10 @@
 
 import unittest
 import luigi
-
-
 from luigi import hdfs
 from luigi.hdfs import client
 import luigi.target
+import mock
 
 
 class TestException(Exception):
@@ -401,6 +400,36 @@ class _HdfsClientTest(unittest.TestCase):
         local_copy_crc = luigi.LocalTarget(local_copy_crc_path)
         self.assertTrue(local_copy_crc.exists())
         local_copy_crc.remove()
+
+    @mock.patch('luigi.hdfs.call_check')
+    def test_cdh3_client(self, call_check):
+        cdh3_client = luigi.hdfs.HdfsClientCdh3()
+        cdh3_client.remove("/some/path/here")
+        call_check.assert_called_once_with(['hadoop', 'fs', '-rmr', '/some/path/here'])
+
+        cdh3_client.remove("/some/path/here", recursive=False)
+        self.assertEquals(mock.call(['hadoop', 'fs', '-rm', '/some/path/here']), call_check.call_args_list[-1])
+
+    @mock.patch('subprocess.Popen')
+    def test_apache1_client(self, popen):
+        comm = mock.Mock(name='communicate_mock')
+        comm.return_value = "some return stuff", ""
+
+        preturn = mock.Mock(name='open_mock')
+        preturn.returncode = 0
+        preturn.communicate = comm
+        popen.return_value = preturn
+
+        apache_client = luigi.hdfs.HdfsClientApache1()
+        returned = apache_client.exists("/some/path/somewhere")
+        self.assertTrue(returned)
+
+        preturn.returncode = 1
+        returned = apache_client.exists("/some/path/somewhere")
+        self.assertFalse(returned)
+
+        preturn.returncode = 13
+        self.assertRaises(luigi.hdfs.HDFSCliError, apache_client.exists, "/some/path/somewhere")
 
 if __name__ == "__main__":
     unittest.main()
