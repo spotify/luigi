@@ -219,9 +219,13 @@ class SchedulerVisualisationTest(unittest.TestCase):
             def requires(self):
                 return [A(), B()]
 
-        class D(luigi.Task):
+        class F(luigi.Task):
             def run(self):
                 raise Exception()
+
+        class D(luigi.Task):
+            def requires(self):
+                return [F()]
 
         class E(luigi.Task):
             def requires(self):
@@ -242,22 +246,24 @@ class SchedulerVisualisationTest(unittest.TestCase):
         pa = missing_input.get(u'A()')
         self.assertEqual(pa['deps'], [])
         self.assertEqual(pa['status'], 'PENDING')
-        remote_task = remote._tasks['A()']
-        self.assertEqual(remote._upstream_status(remote_task, {}), 'UPSTREAM_MISSING_INPUT')
+        self.assertEqual(remote._upstream_status('A()', {}), 'UPSTREAM_MISSING_INPUT')
 
         pc = missing_input.get(u'C()')
         self.assertEqual(sorted(pc['deps']), ['A()', 'B()'])
         self.assertEqual(pc['status'], 'PENDING')
-        remote_task = remote._tasks['C()']
-        self.assertEqual(remote._upstream_status(remote_task, {}), 'UPSTREAM_MISSING_INPUT')
+        self.assertEqual(remote._upstream_status('C()', {}), 'UPSTREAM_MISSING_INPUT')
 
         upstream_failed = remote.task_list('PENDING', 'UPSTREAM_FAILED')
-        self.assertEqual(len(upstream_failed), 1)
+        self.assertEqual(len(upstream_failed), 2)
         pe = upstream_failed.get(u'E()')
         self.assertEqual(sorted(pe['deps']), ['C()', 'D()'])
         self.assertEqual(pe['status'], 'PENDING')
-        remote_task = remote._tasks['E()']
-        self.assertEqual(remote._upstream_status(remote_task, {}), 'UPSTREAM_FAILED')
+        self.assertEqual(remote._upstream_status('E()', {}), 'UPSTREAM_FAILED')
+
+        pe = upstream_failed.get(u'D()')
+        self.assertEqual(sorted(pe['deps']), ['F()'])
+        self.assertEqual(pe['status'], 'PENDING')
+        self.assertEqual(remote._upstream_status('D()', {}), 'UPSTREAM_FAILED')
 
         pending = dict(missing_input)
         pending.update(upstream_failed)
@@ -266,7 +272,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         failed = remote.task_list('FAILED', '')
         self.assertEqual(len(failed), 1)
-        fd = failed.get('D()')
+        fd = failed.get('F()')
         self.assertEqual(fd['deps'], [])
         self.assertEqual(fd['status'], 'FAILED')
 
