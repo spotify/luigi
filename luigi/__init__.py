@@ -19,6 +19,7 @@ import parameter
 import configuration
 import interface
 import target
+import mock
 
 Task = task.Task
 ExternalTask = task.ExternalTask
