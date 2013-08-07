@@ -35,7 +35,7 @@ luigi_package_data = [os.path.join(dirpath.replace("luigi/", ""), ext)
                       for ext in ["*.html", "*.js", "*.css", "*.png"]]
 
 setup(name='luigi',
-      version='1.0.3',
+      version='1.0.4',
       description='Workflow mgmgt + task scheduling + dependency resolution',
       long_description=''.join(long_description),
       author='Erik Bernhardsson',
