@@ -150,17 +150,17 @@ class HadoopJobError(RuntimeError):
         self.err = err
 
 
-def run_and_track_hadoop_job(arglist, tracking_url_callback=None):
+def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
     ''' Runs the job by invoking the command from the given arglist. Finds tracking urls from the output and attempts to fetch
     errors using those urls if the job fails. Throws HadoopJobError with information about the error (including stdout and stderr
     from the process) on failure and returns normally otherwise.
     '''
     logger.info(' '.join(arglist))
 
-    def track_process(arglist, tracking_url_callback):
+    def track_process(arglist, tracking_url_callback, env=None):
         # Dump stdout to a temp file, poll stderr and log it
         temp_stdout = tempfile.TemporaryFile()
-        proc = subprocess.Popen(arglist, stdout=temp_stdout, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(arglist, stdout=temp_stdout, stderr=subprocess.PIPE, env=env)
 
         # We parse the output to try to find the tracking URL.
         # This URL is useful for fetching the logs of the job.
@@ -188,7 +188,11 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None):
                     logger.error("Error in tracking_url_callback, disabling! %s" % e)
                     tracking_url_callback = lambda x: None
             if err_line.find('Running job') != -1:
+                # hadoop jar output
                 job_id = err_line.strip().split('Running job: ')[-1]
+            if err_line.find('submitted hadoop job:') != -1:
+                # scalding output
+                job_id = err_line.strip().split('submitted hadoop job: ')[-1]
 
         # Read the rest + stdout
         err = ''.join(err_lines + [err_line for err_line in proc.stderr])
@@ -217,7 +221,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None):
     if tracking_url_callback is None:
         tracking_url_callback = lambda x: None
 
-    track_process(arglist, tracking_url_callback)
+    track_process(arglist, tracking_url_callback, env)
 
 
 def kill_job(job_id):
