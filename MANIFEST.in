@@ -1,2 +1,3 @@
 include bin/luigid
+include README.md
 recursive-include luigi/static *

@@ -20,6 +20,9 @@ except:
     from distutils.core import setup
 
 try:
+    # Convert the Markdown Readme into raw text so that it looks good in PyPi.
+    # Simple workaround because PyPi does't support Markdown.
+    # https://pypi.python.org/pypi/luigi
     import textwrap
 
     long_description = ['NOTE: For the latest code and documentation, please go to https://github.com/spotify/luigi', '']
@@ -35,8 +38,6 @@ try:
 except Exception, e:
     import traceback
     traceback.print_exc()
-    # Temporary workaround for pip install
-    # See https:/x/github.com/spotify/luigi/issues/46
     long_description = ''
 
 luigi_package_data = [os.path.join(dirpath.replace("luigi/", ""), ext)
@@ -44,7 +45,7 @@ luigi_package_data = [os.path.join(dirpath.replace("luigi/", ""), ext)
                       for ext in ["*.html", "*.js", "*.css", "*.png"]]
 
 setup(name='luigi',
-      version='1.0.6',
+      version='1.0.8',
       description='Workflow mgmgt + task scheduling + dependency resolution',
       long_description=long_description,
       author='Erik Bernhardsson',
