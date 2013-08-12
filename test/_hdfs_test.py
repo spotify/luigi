@@ -16,8 +16,6 @@ import getpass
 import unittest
 import luigi
 from luigi import hdfs
-from luigi.hdfs import client
-import luigi.target
 import mock
 
 
@@ -27,7 +25,7 @@ class TestException(Exception):
 
 class HdfsTestCase(unittest.TestCase):
     def setUp(self):
-        self.fs = hdfs.client()
+        self.fs = hdfs.client
 
     @staticmethod
     def _test_dir():
@@ -352,7 +350,7 @@ class _HdfsClientTest(HdfsTestCase):
             target.remove(skip_trash=True)
         self.fs.mkdir(target.path)
 
-        hdfs.client().put(local_target.path, target_path)
+        self.fs.put(local_target.path, target_path)
         target_file_path = target_path + "/" + local_filename
         return hdfs.HdfsTarget(target_file_path)
 
@@ -382,7 +380,7 @@ class _HdfsClientTest(HdfsTestCase):
         local_copy = luigi.LocalTarget(local_copy_path)
         if local_copy.exists():
             local_copy.remove()
-        client.get(target.path, local_copy_path)
+        self.fs.get(target.path, local_copy_path)
         self.assertTrue(local_copy.exists())
         local_copy.remove()
 
@@ -408,7 +406,7 @@ class _HdfsClientTest(HdfsTestCase):
         local_copy = luigi.LocalTarget(local_copy_path)
         if local_copy.exists():
             local_copy.remove()
-        client.getmerge(target_dir, local_copy_path)
+        self.fs.getmerge(target_dir, local_copy_path)
         self.assertTrue(local_copy.exists())
         local_copy.remove()
 
