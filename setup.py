@@ -53,7 +53,8 @@ setup(
     author_email='erikbern@spotify.com',
     url='https://github.com/spotify/luigi',
     packages=[
-        'luigi'
+        'luigi',
+        'luigi.contrib',
     ],
     package_data={
         'luigi': luigi_package_data
