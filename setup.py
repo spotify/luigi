@@ -44,20 +44,21 @@ luigi_package_data = [os.path.join(dirpath.replace("luigi/", ""), ext)
                       for (dirpath, dirnames, filenames) in os.walk("luigi/static")
                       for ext in ["*.html", "*.js", "*.css", "*.png"]]
 
-setup(name='luigi',
-      version='1.0.8',
-      description='Workflow mgmgt + task scheduling + dependency resolution',
-      long_description=long_description,
-      author='Erik Bernhardsson',
-      author_email='erikbern@spotify.com',
-      url='https://github.com/spotify/luigi',
-      packages=[
+setup(
+    name='luigi',
+    version='1.0.8',
+    description='Workflow mgmgt + task scheduling + dependency resolution',
+    long_description=long_description,
+    author='Erik Bernhardsson',
+    author_email='erikbern@spotify.com',
+    url='https://github.com/spotify/luigi',
+    packages=[
         'luigi'
-        ],
-      package_data={
+    ],
+    package_data={
         'luigi': luigi_package_data
-        },
-      scripts=[
+    },
+    scripts=[
         'bin/luigid'
-        ]
-      )
+    ]
+)
