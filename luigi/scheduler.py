@@ -36,6 +36,8 @@ UPSTREAM_MISSING_INPUT = 'UPSTREAM_MISSING_INPUT'
 UPSTREAM_FAILED = 'UPSTREAM_FAILED'
 
 UPSTREAM_SEVERITY_ORDER = ('', UPSTREAM_RUNNING, UPSTREAM_MISSING_INPUT, UPSTREAM_FAILED)
+UPSTREAM_SEVERITY_KEY = lambda st: UPSTREAM_SEVERITY_ORDER.index(st)
+STATUS_TO_UPSTREAM_MAP = {FAILED: UPSTREAM_FAILED, RUNNING: UPSTREAM_RUNNING, PENDING: UPSTREAM_MISSING_INPUT}
 
 
 class Task(object):
@@ -225,42 +227,37 @@ class CentralPlannerScheduler(Scheduler):
     def ping(self, worker):
         self.update(worker)
 
-    def _upstream_status(self, task, upstream_status_table):
-        def get_upstream_status(task, upstream_status_table):
-            if task.status != PENDING:
-                return ''
-            if not task.deps:
-                return UPSTREAM_MISSING_INPUT
-            status = ''
-            status_key = lambda st: UPSTREAM_SEVERITY_ORDER.index(st)
-            for dep_id in task.deps:
+    def _upstream_status(self, task_id, upstream_status_table):
+        if task_id in upstream_status_table:
+            return upstream_status_table[task_id]
+        elif task_id in self._tasks:
+            task_stack = [task_id]
+
+            while task_stack:
+                dep_id = task_stack.pop()
                 if dep_id in self._tasks:
                     dep = self._tasks[dep_id]
-                    if dep.status == FAILED:
-                        return UPSTREAM_FAILED
-                    if dep.status == RUNNING:
-                        status = max(status, UPSTREAM_RUNNING, key=status_key)
-                    elif dep.status == PENDING:
-                        status = max(status, self._upstream_status(dep, upstream_status_table), key=status_key)
-                    if status == UPSTREAM_FAILED:
-                        return UPSTREAM_FAILED
-            return status
+                    if dep_id not in upstream_status_table:
+                        if dep.status == PENDING and dep.deps:
+                            task_stack = task_stack + [dep_id] + list(dep.deps)
+                            upstream_status_table[dep_id] = ''  # will be updated postorder
+                        else:
+                            dep_status = STATUS_TO_UPSTREAM_MAP.get(dep.status, '')
+                            upstream_status_table[dep_id] = dep_status
+                    elif upstream_status_table[dep_id] == '' and dep.deps:
+                        # This is the postorder update step when we set the
+                        # status based on the previously calculated child elements
+                        upstream_status = [upstream_status_table.get(id, '') for id in dep.deps]
+                        upstream_status.append('')  # to handle empty list
+                        status = max(upstream_status, key=UPSTREAM_SEVERITY_KEY)
+                        upstream_status_table[dep_id] = status
+            return upstream_status_table[dep_id]
 
-        if task in upstream_status_table:
-            return upstream_status_table[task]
-        else:
-            task_status = get_upstream_status(task, upstream_status_table)
-            upstream_status_table[task] = task_status
-            return task_status
-
-    def _serialize_task(self, task_id, upstream_status_table):
+    def _serialize_task(self, task_id):
         task = self._tasks[task_id]
-        upstream_status = self._upstream_status(task, upstream_status_table)
-
         return {
             'deps': list(task.deps),
             'status': task.status,
-            'upstream_status': upstream_status,
             'workers': list(task.workers),
             'start_time': task.time,
             'params': self._get_task_params(task_id),
@@ -287,9 +284,8 @@ class CentralPlannerScheduler(Scheduler):
     def graph(self):
         self.prune()
         serialized = {}
-        upstream_status_table = {}
         for task_id, task in self._tasks.iteritems():
-            serialized[task_id] = self._serialize_task(task_id, upstream_status_table)
+            serialized[task_id] = self._serialize_task(task_id)
         return serialized
 
     def _recurse_deps(self, task_id, serialized):
@@ -306,8 +302,7 @@ class CentralPlannerScheduler(Scheduler):
                     'name': self._get_task_name(task_id)
                 }
             else:
-                upstream_status_table = {}
-                serialized[task_id] = self._serialize_task(task_id, upstream_status_table)
+                serialized[task_id] = self._serialize_task(task_id)
                 for dep in task.deps:
                     self._recurse_deps(dep, serialized)
 
@@ -322,11 +317,12 @@ class CentralPlannerScheduler(Scheduler):
         ''' query for a subset of tasks by status '''
         self.prune()
         result = {}
-        upstream_status_table = {}
+        upstream_status_table = {}  # used to memoize upstream status
         for task_id, task in self._tasks.iteritems():
             if not status or task.status == status:
-                serialized = self._serialize_task(task_id, upstream_status_table)
-                if task.status != PENDING or not upstream_status or upstream_status == serialized['upstream_status']:
+                if (task.status != PENDING or not upstream_status or
+                    upstream_status == self._upstream_status(task_id, upstream_status_table)):
+                    serialized = self._serialize_task(task_id)
                     result[task_id] = serialized
         return result
 
