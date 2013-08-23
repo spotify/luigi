@@ -6,4 +6,5 @@ install:
   - pip install tornado --use-mirrors
   - pip install argparse --use-mirrors
   - pip install sqlalchemy --use-mirrors
+  - pip install mock --use-mirrors
 script: nosetests
