@@ -15,6 +15,30 @@
 import subprocess
 
 
+class FileWrapper(object):
+    """Wrap `file` in a "real" so stuff can be added to it after creation
+    """
+    def __init__(self, file_object):
+        self._subpipe = file_object
+
+    def __getattr__(self, name):
+        # forward calls to 'write', 'close' and other methods not defined below
+        return getattr(self._subpipe, name)
+
+    def __enter__(self, *args, **kwargs):
+        # instead of returning whatever is returned by __enter__ on the subpipe
+        # this returns self, so whatever custom injected methods are still available
+        # this might cause problems with custom file_objects, but seems to work
+        # fine with standard python `file` objects which is the only default use
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        return self._subpipe.__exit__(*args, **kwargs)
+
+    def __iter__(self):
+        return iter(self._subpipe)
+
+
 class InputPipeProcessWrapper(object):
     def __init__(self, command, input_pipe=None):
         self._command = command
