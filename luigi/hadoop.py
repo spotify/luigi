@@ -93,7 +93,7 @@ def create_packages_archive(packages, filename):
         if hasattr(package, "__path__"):
             p = package.__path__[0]
 
-            if p.find('.egg') != -1:
+            if p.endswith('.egg') and os.path.isfile(p):
                 raise 'egg files not supported!!!'
                 # Add the entire egg file
                 # p = p[:p.find('.egg') + 4]
