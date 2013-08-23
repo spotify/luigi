@@ -109,6 +109,24 @@ class FileTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.copy))
         self.assertEqual(t.open('r').read(), File(self.copy).open('r').read())
 
+    def test_format_injection(self):
+        class CustomFormat(luigi.format.Format):
+            def pipe_reader(self, input_pipe):
+                input_pipe.foo = "custom read property"
+                return input_pipe
+
+            def pipe_writer(self, output_pipe):
+                output_pipe.foo = "custom write property"
+                return output_pipe
+
+        t = File(self.path, format=CustomFormat())
+        with t.open("w") as f:
+            self.assertEqual(f.foo, "custom write property")
+
+        with t.open("r") as f:
+            self.assertEqual(f.foo, "custom read property")
+
+
 class FileCreateDirectoriesTest(FileTest):
     path = '/tmp/%s/xyz/test.txt' % random.randint(0, 999999999)
 

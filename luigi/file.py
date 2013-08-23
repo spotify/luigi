@@ -17,6 +17,7 @@ import random
 import tempfile
 import shutil
 from target import FileSystem, FileSystemTarget
+from luigi.format import FileWrapper
 
 
 class atomic_file(file):
@@ -93,10 +94,10 @@ class File(FileSystemTarget):
                 return atomic_file(self.path)
 
         elif mode == 'r':
+            fileobj = FileWrapper(open(self.path, 'r'))
             if self.format:
-                return self.format.pipe_reader(file(self.path))
-            else:
-                return open(self.path, mode)
+                return self.format.pipe_reader(fileobj)
+            return fileobj
         else:
             raise Exception('mode must be r/w')
 
