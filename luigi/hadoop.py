@@ -346,9 +346,11 @@ class HadoopJobRunner(JobRunner):
 
         arglist += self.streaming_args
 
-        arglist += ['-mapper', map_cmd, '-reducer', red_cmd]
+        arglist += ['-mapper', map_cmd]
         if job.combiner != NotImplemented:
             arglist += ['-combiner', cmb_cmd]
+        if job.reducer != NotImplemented:
+            arglist += ['-reducer', red_cmd]
         files = [runner_path, self.tmp_dir + '/packages.tar', self.tmp_dir + '/job-instance.pickle']
 
         for f in files:
@@ -431,6 +433,13 @@ class LocalJobRunner(JobRunner):
 
         map_input.seek(0)
 
+        if job.reducer == NotImplemented:
+            # Map only job; no combiner, no reducer
+            map_output = job.output().open('w')
+            job._run_mapper(map_input, map_output)
+            map_output.close()
+            return
+
         # run job now...
         map_output = StringIO.StringIO()
         job._run_mapper(map_input, map_output)
@@ -466,7 +475,10 @@ class BaseHadoopJobTask(luigi.Task):
     def jobconfs(self):
         jcs = []
         jcs.append('mapred.job.name=%s' % self.task_id)
-        jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
+        if self.reducer == NotImplemented:
+            jcs.append('mapred.reduce.tasks=0')
+        else:
+            jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
         pool = self.pool
         if pool is not None:
             # Supporting two schedulers: fair (default) and capacity using the same option
@@ -581,9 +593,7 @@ class JobTask(BaseHadoopJobTask):
 
     combiner = NotImplemented
 
-    def reducer(self, key, values):
-        for v in values:
-            yield key, v
+    reducer = NotImplemented
 
     def incr_counter(self, *args, **kwargs):
         """ Increments a Hadoop counter
@@ -698,7 +708,10 @@ class JobTask(BaseHadoopJobTask):
         self.init_hadoop()
         self.init_mapper()
         outputs = self._map_input((line[:-1] for line in stdin))
-        self.internal_writer(outputs, stdout)
+        if self.reducer == NotImplemented:
+            self.writer(outputs, stdout)
+        else:
+            self.internal_writer(outputs, stdout)
 
     def _run_reducer(self, stdin=sys.stdin, stdout=sys.stdout):
         """Run the reducer on the hadoop node."""
