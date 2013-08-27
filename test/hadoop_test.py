@@ -89,6 +89,18 @@ class WordFreqJob(TestJobTask):
         return File("luigitest-2")
 
 
+class MapOnlyJob(TestJobTask):
+    def mapper(self, line):
+        for word in line.strip().split():
+            yield (word,)
+
+    def requires_hadoop(self):
+        return Words()
+
+    def output(self):
+        return File("luigitest-3")
+
+
 class HadoopJobTest(unittest.TestCase):
     def setUp(self):
         MockFile._file_contents = {}
@@ -109,6 +121,14 @@ class HadoopJobTest(unittest.TestCase):
         luigi.build([WordFreqJob()], local_scheduler=True)
         c = self.read_output(File('luigitest-2'))
         self.assertAlmostEquals(float(c['jk']), 6.0 / 33.0)
+
+    def test_map_only(self):
+        luigi.build([MapOnlyJob()], local_scheduler=True)
+        c = []
+        for line in File('luigitest-3').open('r'):
+            c.append(line.strip())
+        self.assertEquals(c[0], 'kj')
+        self.assertEquals(c[4], 'ljoi')
 
     def test_run_hadoop_job_failure(self):
         def Popen_fake(arglist, stdout=None, stderr=None, env=None):
