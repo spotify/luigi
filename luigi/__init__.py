@@ -40,6 +40,7 @@ build = interface.build
 DateHourParameter = parameter.DateHourParameter
 DateParameter = parameter.DateParameter
 IntParameter = parameter.IntParameter
+FloatParameter = parameter.FloatParameter
 BooleanParameter = parameter.BooleanParameter
 DateIntervalParameter = parameter.DateIntervalParameter
 
