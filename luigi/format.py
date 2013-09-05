@@ -41,9 +41,14 @@ class FileWrapper(object):
 
 class InputPipeProcessWrapper(object):
     def __init__(self, command, input_pipe=None):
+        '''
+        @param command a subprocess.Popen instance with stdin=input_pipe and
+        stdout=subprocess.PIPE. Alternatively, just its args argument as a
+        convenience.
+        '''
         self._command = command
         self._input_pipe = input_pipe
-        self._process = subprocess.Popen(command,
+        self._process = command if isinstance(command, subprocess.Popen) else subprocess.Popen(command,
             stdin=input_pipe,
             stdout=subprocess.PIPE)
         # we want to keep a circular reference to avoid garbage collection
