@@ -2,25 +2,25 @@
 
 Luigi is a Python package that helps you build complex pipelines of batch jobs. It handles dependency resolution, workflow management, visualization, handling failures, command line integration, and much more.
 
-The purpose of Luigi is to address all the plumbing typically associated with long-running batch processes. You want to chain many tasks, automate them, and failures *will* happen. These tasks can be anything, but typically long running things like [Hadoop](http://hadoop.apache.org/) jobs, dumping data to/from databases, running machine learning algorithms, or anything else. 
+The purpose of Luigi is to address all the plumbing typically associated with long-running batch processes. You want to chain many tasks, automate them, and failures *will* happen. These tasks can be anything, but are typically long running things like [Hadoop](http://hadoop.apache.org/) jobs, dumping data to/from databases, running machine learning algorithms, or anything else.
 
-There are other software packages that focus on lower level aspects of data processing, like [Hive](http://hive.apache.org/), [Pig](http://pig.apache.org/), [Cascading](http://www.cascading.org/). Luigi is not a framework to replace these. Instead it helps you stitch many tasks together, where each task can be a Hive query, a Hadoop job in Java, a Python snippet, dumping a table from a database, or anything else. It's easy to build up long-running pipelines that can comprise thousands of tasks and take days or weeks to complete. Luigi takes care of a lot of the workflow management so that you can focus on the tasks themselves and their dependencies. 
+There are other software packages that focus on lower level aspects of data processing, like [Hive](http://hive.apache.org/), [Pig](http://pig.apache.org/), or [Cascading](http://www.cascading.org/). Luigi is not a framework to replace these. Instead it helps you stitch many tasks together, where each task can be a Hive query, a Hadoop job in Java, a Python snippet, dumping a table from a database, or anything else. It's easy to build up long-running pipelines that comprise thousands of tasks and take days or weeks to complete. Luigi takes care of a lot of the workflow management so that you can focus on the tasks themselves and their dependencies. 
 
-You can build pretty much any task you want, but Luigi also comes with a *toolbox* of several common task templates that you use. It includes native Python support for running mapreduce jobs in Hadoop, as well as Pig and Jar jobs. It also comes with file system abstractions for HDFS and local files that also ensures all file system operations are atomic. This is important because it means your data pipeline will not crash in a state containing partial data.
+You can build pretty much any task you want, but Luigi also comes with a *toolbox* of several common task templates that you use. It includes native Python support for running mapreduce jobs in Hadoop, as well as Pig and Jar jobs. It also comes with filesystem abstractions for HDFS and local files that ensures all file system operations are atomic. This is important because it means your data pipeline will not crash in a state containing partial data.
 
 Luigi was built at [Spotify](http://www.spotify.com/), mainly by [Erik Bernhardsson](https://github.com/erikbern) and [Elias Freider](https://github.com/freider), but many other people have contributed.
 
 ## Dependency graph example
 
-Just to give you an idea of what Luigi does, this is a screen shot from something we are running in production. Using Luigi's visualizer, we get a nice visual overview of the dependency graph of the workflow. Each node represents a task which has to be run. Green tasks are already completed whereas yellow tasks are yet to be run. Most of these tasks are Hadoop job, but there's also some things that run locally and build up data files.
+Just to give you an idea of what Luigi does, this is a screen shot from something we are running in production. Using Luigi's visualizer, we get a nice visual overview of the dependency graph of the workflow. Each node represents a task which has to be run. Green tasks are already completed whereas yellow tasks are yet to be run. Most of these tasks are Hadoop jobs, but there are also some things that run locally and build up data files.
 
 ![Dependency graph](https://raw.github.com/erikbern/luigi/new-doc/doc/user_recs.png)
 
 ## Background
 
-We use Luigi internally at [Spotify](http://www.spotify.com/) to run 1000s of tasks every day, organized in complex dependency graphs. Most of these tasks are Hadoop job. Luigi provides an infrastructure that powers all kinds of stuff including recommendations, toplists, A/B test analysis, external reports, internal dashboards, etc. Luigi grew out of the realization that powerful abstractions for the batch processing can help programmers focus on the most important bits and leave the rest (the boilerplate) to the framework.
+We use Luigi internally at [Spotify](http://www.spotify.com/) to run thousands of tasks every day, organized in complex dependency graphs. Most of these tasks are Hadoop jobs. Luigi provides an infrastructure that powers all kinds of stuff including recommendations, toplists, A/B test analysis, external reports, internal dashboards, etc. Luigi grew out of the realization that powerful abstractions for batch processing can help programmers focus on the most important bits and leave the rest (the boilerplate) to the framework.
 
-Conceptually, Luigi similar to [GNU Make](http://www.gnu.org/software/make/) where you have certain tasks and these tasks in turn may have dependencies on other tasks. There are also some similarities to [Oozie](http://incubator.apache.org/oozie/) and [Azkaban](http://data.linkedin.com/opensource/azkaban). One major difference is that Luigi is not just built specifically for Hadoop, and it's easy to extend it with other kinds of tasks.
+Conceptually, Luigi is similar to [GNU Make](http://www.gnu.org/software/make/) where you have certain tasks and these tasks in turn may have dependencies on other tasks. There are also some similarities to [Oozie](http://incubator.apache.org/oozie/) and [Azkaban](http://data.linkedin.com/opensource/azkaban). One major difference is that Luigi is not just built specifically for Hadoop, and it's easy to extend it with other kinds of tasks.
 
 Everything in Luigi is in Python. Instead of XML configuration or similar external data files, the dependency graph is specified *within Python*. This makes it easy to build up complex dependency graphs of tasks, where the dependencies can involve date algebra or recursive references to other versions of the same task. However, the workflow can trigger things not in Python, such as running Pig scripts or scp'ing files.
 
@@ -189,7 +189,7 @@ Just like previously, this defines a recursive dependency on the previous task. 
 
 ### Using the central planner
 
-The --local-scheduler flag tells Luigi not to connect to a central scheduler. This is recommended in order to get started and or for development purposes. At the point where you start putting things in production we strongly recommend running the central scheduler server. In addition to provide locking so the same task is not run by multiple processes at the same time, this server also provides a pretty nice visualization of your current work flow.
+The *--local-scheduler* flag tells Luigi not to connect to a central scheduler. This is recommended in order to get started and or for development purposes. At the point where you start putting things in production we strongly recommend running the central scheduler server. In addition to providing locking so the same task is not run by multiple processes at the same time, this server also provides a pretty nice visualization of your current work flow.
 
 If you drop the *--local-scheduler* flag, your script will try to connect to the central planner, by default at localhost port 8082. If you run
 
@@ -223,7 +223,7 @@ In practice, implementing Target subclasses is rarely needed. You can probably g
 
 ### Task
 
-The *Task* class is a bit more conceptually interesting because this is where computation is done. There is a few methods that can be implemented to alter its behavior, most notably *run*, *output* and *requires*.
+The *Task* class is a bit more conceptually interesting because this is where computation is done. There are a few methods that can be implemented to alter its behavior, most notably *run*, *output* and *requires*.
 
 The Task class corresponds to some type of job that is run, but in general you want to allow some form of parametrization of it. For instance, if your Task class runs a Hadoop job to create a report every night, you probably want to make the date a parameter of the class.
 
@@ -237,7 +237,7 @@ class DailyReport(luigi.hadoop.JobTask):
     # ...
 ```
 
-By doing this, Luigi can do take care of all the boiler plate code that would normally be needed in the constructor. Internally, the DailyReport object can now be constructed by running *DailyReport(datetime.date(2012, 5, 10))* or just *DailyReport()*. Luigi also creates a command line parser that automatically handles the conversion from strings to Python types. This way you can invoke the job on the command line eg. by passing *--date 2012-15-10*.
+By doing this, Luigi can do take care of all the boilerplate code that would normally be needed in the constructor. Internally, the DailyReport object can now be constructed by running *DailyReport(datetime.date(2012, 5, 10))* or just *DailyReport()*. Luigi also creates a command line parser that automatically handles the conversion from strings to Python types. This way you can invoke the job on the command line eg. by passing *--date 2012-15-10*.
 
 The parameters are all set to their values on the Task object instance, i.e.
 
@@ -260,11 +260,11 @@ def requires(self):
     return OtherTask(self.date), DailyReport(self.date - datetime.timedelta(1))
 ```
 
-In this case, the DailyReport task depends on two inputs created earlier, one of which is the same class. requires can return other Tasks in any way wrapped up within dicts/lists/tuples etc
+In this case, the DailyReport task depends on two inputs created earlier, one of which is the same class. requires can return other Tasks in any way wrapped up within dicts/lists/tuples/etc.
 
 #### Task.output
 
-The *output* method returns one or more Target objects. Similarly to requires, can return wrap them up in any way that's convenient for you. However we strongly recommend that any Task only returns one single Target in output.
+The *output* method returns one or more Target objects. Similarly to requires, can return wrap them up in any way that's convenient for you. However we strongly recommend that any Task only return one single Target in output.
 
 ```python
 class DailyReport(luigi.Task):
@@ -366,7 +366,7 @@ f.close() # needed
 
 #### Using the central scheduler
 
-The central scheduler does not execute anything for you, or help you with job parallelization. The two purposes it serves is to
+The central scheduler does not execute anything for you, or help you with job parallelization. The two purposes it serves are to
 
 * Make sure two instances of the same task are not running simultaneously
 * Provide visualization of everything that's going on.
@@ -399,7 +399,7 @@ This simple task will not do anything itself, but will invoke a bunch of other t
 
 ## Configuration
 
-All configuration can be done by adding a configuration file named client.cfg to your current working directory or /etc/luigi (although this is further configurable) 
+All configuration can be done by adding a configuration file named client.cfg to your current working directory or /etc/luigi (although this is further configurable).
 
 * *default-scheduler-host* defaults the scheduler to some hostname so that you don't have to provide it as an argument
 * *error-email* makes sure every time things crash, you will get an email (unless it was run on the command line)
@@ -425,13 +425,13 @@ All sections are optional based on what parts of Luigi you are actually using.  
 Luigi is the sucessor to a couple of attempts that we weren't fully happy with. We learned a lot from our mistakes and some design decisions include:
 
 * Straightforward command line integration.
-* As little boiler plate as possible.
+* As little boilerplate as possible.
 * Focus on job scheduling and dependency resolution, not a particular platform. In particular this means no limitation to Hadoop. Though Hadoop/HDFS support is built-in and is easy to use, this is just one of many types of things you can run.
 * A file system abstraction where code doesn't have to care about where files are located.
 * Atomic file system operations through this abstraction. If a task crashes it won't lead to a broken state.
 * The depencies are decentralized. No big config file in XML. Each task just specifies which inputs it needs and cross-module dependencies are trivial.
 * A web server that renders the dependency graph and does locking etc for free.
-* Trivial to extend with new file systems, file formats and job types. You can easily write jobs that inserts a Tokyo Cabinet into Cassandra. Adding broad support S3, MySQL or Hive should be a stroll in the park. (and feel free to send us a patch when you're done!)
+* Trivial to extend with new file systems, file formats and job types. You can easily write jobs that inserts a Tokyo Cabinet into Cassandra. Adding broad support S3, MySQL or Hive should be a stroll in the park. (Feel free to send us a patch when you're done!)
 * Date algebra included.
 * Lots of unit tests of the most basic stuff
 
@@ -451,7 +451,7 @@ Also it should be mentioned that Luigi is named after the world's second most fa
 * Built in support for Pig/Hive.
 * Better visualization tool - the layout gets pretty messy as the number of tasks grows.
 * Integration with existing Hadoop frameworks like mrjob would be cool and probably pretty easy.
-* Better support (without much boiler plate) for unittesting specific Tasks
+* Better support (without much boilerplate) for unittesting specific Tasks
 
 ## Getting help
 
