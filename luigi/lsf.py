@@ -122,6 +122,8 @@ class JobTask(luigi.Task):
         args += ["-W", self.runtime_flag]
         args += ["-n", self.n_cpu_flag]
         args += ["-R", "rusage[%s]"%self.resource_flag]
+        args += ["-o", "job.out"]
+        args += ["-e", "job.err"]
         args += ["python"]
 
         # Find where our file is
