@@ -25,8 +25,23 @@ import luigi.format
 import boto
 from boto.s3 import bucket
 from boto.exception import S3ResponseError
-from moto import mock_s3
 
+# moto does not yet work with 
+# python 2.6. Until it does,
+# disable these tests in python2.6
+try:
+    from moto import mock_s3
+except ImportError:
+    # https://github.com/spulec/moto/issues/29
+    print 'Skipping s3 tests because moto does not install properly before python2.7'
+    
+    def skip(func):
+        def wrapper():
+            pass
+        return wrapper
+
+    mock_s3 = skip
+    
 AWS_ACCESS_KEY = "XXXXXXXXXXXXXXXXXXXX"
 AWS_SECRET_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
