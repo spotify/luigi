@@ -17,6 +17,7 @@ from luigi.file import LocalFileSystem
 import unittest
 import os
 import gzip
+import bz2
 import luigi.format
 import random
 import gc
@@ -95,6 +96,27 @@ class FileTest(unittest.TestCase):
         f = File(self.path, luigi.format.Gzip).open('r')
         self.assertTrue(test_data == f.read())
         f.close()
+
+    def test_bzip2(self):
+        t = File(self.path, luigi.format.Bzip2)
+        p = t.open('w')
+        test_data = 'test'
+        p.write(test_data)
+        print self.path
+        self.assertFalse(os.path.exists(self.path))
+        p.close()
+        self.assertTrue(os.path.exists(self.path))
+
+        # Using bzip module as validation
+        f = bz2.BZ2File(self.path, 'rb')
+        self.assertTrue(test_data == f.read())
+        f.close()
+
+        # Verifying our own bzip2 reader
+        f = File(self.path, luigi.format.Bzip2).open('r')
+        self.assertTrue(test_data == f.read())
+        f.close()
+
 
     def test_copy(self):
         t = File(self.path)
