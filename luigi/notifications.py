@@ -69,7 +69,7 @@ def send_email(subject, message, sender, recipients, image_png=None):
         msg_root.attach(msg_image)
 
     msg_root['Subject'] = subject
-    msg_root['From'] = 'Luigi'
+    msg_root['From'] = sender
     msg_root['To'] = ','.join(recipients)
 
     smtp.sendmail(sender, recipients, msg_root.as_string())
