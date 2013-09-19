@@ -178,3 +178,13 @@ class Gzip(Format):
     @classmethod
     def pipe_writer(cls, output_pipe):
         return OutputPipeProcessWrapper(['gzip'], output_pipe)
+
+class Bzip2(Format):
+    @classmethod
+    def pipe_reader(cls, input_pipe):
+        return InputPipeProcessWrapper(['bzcat'], input_pipe)
+
+    @classmethod
+    def pipe_writer(cls, output_pipe):
+        return OutputPipeProcessWrapper(['bzip2'], output_pipe)
+
