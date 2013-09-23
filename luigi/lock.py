@@ -21,7 +21,7 @@ def getpcmd(pid):
     p = os.popen(cmd, 'r')
     return p.readline().strip()
 
-def run_once(pid_dir):
+def acquire_for(pid_dir):
     ''' Makes sure the process is only run once at the same time with the same name.
 
     Notice that we since we check the process name, different parameters to the same
@@ -52,7 +52,7 @@ def run_once(pid_dir):
         if cmd == my_cmd:
             # We are already running under a different pid
             print 'Pid', pid, 'running'
-            sys.exit(1)
+            return False
         else:
             # The pid belongs to something else, we could 
             pass
