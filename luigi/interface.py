@@ -114,8 +114,8 @@ class Interface(object):
 
         env_params = EnvironmentParamsContainer.env_params(override_defaults)
 
-        if env_params.lock:
-            lock.run_once(env_params.lock_pid_dir)
+        if env_params.lock and not(lock.acquire_for(env_params.lock_pid_dir)):
+            sys.exit(1)
 
         if env_params.local_scheduler:
             sch = worker_scheduler_factory.create_local_scheduler()
