@@ -43,9 +43,9 @@ class CustomizedLocalScheduler(luigi.scheduler.CentralPlannerScheduler):
         self.has_run = False
 
     def get_work(self, worker, host=None):
-        locally_pending_tasks, best_task = super(CustomizedLocalScheduler, self).get_work(worker, host)
+        r = super(CustomizedLocalScheduler, self).get_work(worker, host)
         self.has_run = True
-        return locally_pending_tasks, best_task
+        return r
 
     def complete(self):
         return self.has_run
@@ -57,9 +57,9 @@ class CustomizedRemoteScheduler(luigi.rpc.RemoteScheduler):
         self.has_run = False
 
     def get_work(self, worker, host=None):
-        locally_pending_tasks, best_task = super(CustomizedRemoteScheduler, self).get_work(worker, host)
+        r = super(CustomizedRemoteScheduler, self).get_work(worker, host)
         self.has_run = True
-        return locally_pending_tasks, best_task
+        return r
 
     def complete(self):
         return self.has_run
