@@ -169,7 +169,12 @@ def run_api_threaded(api_port=8082, address=None):
     sock_names = _init_api(_create_scheduler(), None, api_port, address)
 
     import threading
-    threading.Thread(target=tornado.ioloop.IOLoop.instance().start).start()
+    def scheduler_thread():
+        # this is wrapped in a function so we get the instance
+        # from the scheduler thread and not from the main thread
+        tornado.ioloop.IOLoop.instance().start()
+
+    threading.Thread(target=scheduler_thread).start()
     return sock_names
 
 
