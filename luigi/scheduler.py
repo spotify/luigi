@@ -195,10 +195,14 @@ class CentralPlannerScheduler(Scheduler):
         best_t = float('inf')
         best_task = None
         locally_pending_tasks = 0
+        running_tasks = []
 
         for task_id, task in self._tasks.iteritems():
             if worker not in task.workers:
                 continue
+
+            if task.status == RUNNING:
+                running_tasks.append({'task_id': task_id, 'worker': task.worker_running})
 
             if task.status != PENDING:
                 continue
@@ -222,7 +226,9 @@ class CentralPlannerScheduler(Scheduler):
             t.worker_running = worker
             self._update_task_history(best_task, RUNNING, host=host)
 
-        return locally_pending_tasks, best_task
+        return {'n_pending_tasks': locally_pending_tasks,
+                'task_id': best_task,
+                'running_tasks': running_tasks}
 
     def ping(self, worker):
         self.update(worker)

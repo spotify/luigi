@@ -259,14 +259,27 @@ class Worker(object):
                     logger.warning("Some random process %s died" % died_pid)
 
             logger.debug("Asking scheduler for work...")
-            pending_tasks, task_id = self.__scheduler.get_work(worker=self.__id, host=self.host)
+            r = self.__scheduler.get_work(worker=self.__id, host=self.host)
+            # Support old version of scheduler
+            if isinstance(r, tuple) or isinstance(r, list):
+                n_pending_tasks, task_id = r
+                running_tasks = []
+            else:
+                n_pending_tasks = r['n_pending_tasks']
+                task_id = r['task_id']
+                running_tasks = r['running_tasks']
+
             if task_id is None:
                 logger.info("Done")
                 logger.info("There are no more tasks to run at this time")
-                if pending_tasks:
-                    logger.info("There are %s pending tasks possibly being run by other workers", pending_tasks)
+                if running_tasks:
+                    for r in running_tasks:
+                        logger.info('%s is currently run by worker %s' % (r['task_id'], r['worker']))
+                elif n_pending_tasks:
+                    logger.info("There are %s pending tasks possibly being run by other workers", n_pending_tasks)
+
             else:
-                logger.debug("Pending tasks: %s", pending_tasks)
+                logger.debug("Pending tasks: %s", n_pending_tasks)
 
             if task_id is None:
                 # TODO: sleep for a bit and query server again if there are
