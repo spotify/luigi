@@ -30,6 +30,8 @@ in the integration part of unittests).
 This can be super convenient when you want secure communication using a non-secure
 protocol or circumvent firewalls (as long as they are open for ssh traffic).
 """
+import os
+import random
 
 import luigi
 import luigi.target
@@ -122,6 +124,39 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.remote_context.check_output(cmd)
 
 
+class atomic_remote_file_writer(luigi.format.OutputPipeProcessWrapper):
+    def __init__(self, fs, path):
+        self._fs = fs
+        self.path = path
+
+        # create parent folder if not exists
+        normpath = os.path.normpath(self.path)
+        folder = os.path.dirname(normpath)
+        if folder and not self.fs.exists(folder):
+            self.fs.remote_context.check_output(['mkdir', '-p', folder])
+
+        self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        super(atomic_remote_file_writer, self).__init__(
+            self.fs.remote_context._prepare_cmd(['cat', '>', self.__tmp_path]))
+
+    def __del__(self):
+        super(atomic_remote_file_writer, self).__del__()
+        if self.fs.exists(self.__tmp_path):
+            self.fs.remote_context.check_output(['rm', self.__tmp_path])
+
+    def close(self):
+        super(atomic_remote_file_writer, self).close()
+        self.fs.remote_context.check_output(['mv', self.__tmp_path, self.path])
+
+    @property
+    def tmp_path(self):
+        return self.__tmp_path
+
+    @property
+    def fs(self):
+        return self._fs
+
+
 class RemoteTarget(luigi.target.FileSystemTarget):
     """
     Target used for reading from remote files. The target is implemented using
@@ -138,7 +173,11 @@ class RemoteTarget(luigi.target.FileSystemTarget):
 
     def open(self, mode='r'):
         if mode == 'w':
-            raise NotImplementedError("Writing to remote files it not yet implemented")
+            file_writer = atomic_remote_file_writer(self.fs, self.path)
+            if self.format:
+                return self.format.pipe_writer(file_writer)
+            else:
+                return file_writer
         elif mode == 'r':
             file_reader = luigi.format.InputPipeProcessWrapper(
                 self.fs.remote_context._prepare_cmd(["cat", self.path]))
