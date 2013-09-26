@@ -135,9 +135,49 @@ class Interface(object):
 class ArgParseInterface(Interface):
     ''' Takes the task as the command, with parameters specific to it
     '''
+    import argparse
+
+    commandname = 'command'
+
+    class ErrorWrappedArgumentParser(argparse.ArgumentParser):
+        ''' Wraps ArgumentParser's error message to suggested similar tasks
+        '''
+
+        # Simple unweighted Levenshtein distance
+        def _editdistance(self, a, b):
+            r0 = range(0, len(b) + 1)
+            r1 = [0] * (len(b) + 1)
+     
+            for i in range(0, len(a)):
+                r1[0] = i + 1
+ 
+                for j in range(0, len(b)):
+                    c = 0 if a[i] is b[j] else 1
+                    r1[j + 1] = min(r1[j] + 1, r0[j + 1] + 1, r0[j] + c)
+
+                r0 = r1[:]
+
+            return r1[len(b)]
+
+        def error(self, message):
+            import re
+            result = re.match("argument %s: invalid choice: '(\w+)'.+" % ArgParseInterface.commandname, message)
+            if result:
+                arg = result.group(1)
+                weightedTasks = [(self._editdistance(arg, task), task) for task in Register.get_reg().keys()]
+                orderedTasks = sorted(weightedTasks, key=lambda pair: pair[0])
+                candidates = [task for (dist, task) in orderedTasks if dist <= 5 and dist < len(task)]
+                displaystring = ""
+                if candidates:
+                    displaystring = "No task %s. Did you mean:\n%s" % (arg, '\n'.join(candidates))
+                else:
+                    displaystring = "No task %s." % arg
+                super(ArgParseInterface.ErrorWrappedArgumentParser, self).error(displaystring)
+            else:
+                super(ArgParseInterface.ErrorWrappedArgumentParser, self).error(message)
+
     def parse(self, cmdline_args=None, main_task_cls=None):
-        import argparse
-        parser = argparse.ArgumentParser()
+        parser = self.ErrorWrappedArgumentParser()
 
         def _add_parameter(parser, param_name, param, prefix=None):
             description = []
@@ -172,7 +212,7 @@ class ArgParseInterface(Interface):
             _add_task_parameters(parser, main_task_cls)
 
         else:
-            subparsers = parser.add_subparsers(dest='command')
+            subparsers = parser.add_subparsers(dest=self.commandname)
 
             for name, cls in Register.get_reg().iteritems():
                 subparser = subparsers.add_parser(name)
