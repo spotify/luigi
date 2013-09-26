@@ -194,7 +194,7 @@ class TestRemoteTargetAtomicity(unittest.TestCase):
         self.assertTrue(self._exists(self.path))
 
         # Using gzip module as validation
-        cmd = 'scp %s:%s %s > /dev/null 2>&1' % (working_ssh_host, self.path, self.local_file)
+        cmd = 'scp -q %s:%s %s' % (working_ssh_host, self.path, self.local_file)
         assert os.system(cmd) == 0
         f = gzip.open(self.local_file, 'rb')
         self.assertTrue(test_data == f.read())
