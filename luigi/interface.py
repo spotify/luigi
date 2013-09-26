@@ -137,8 +137,6 @@ class ArgParseInterface(Interface):
     '''
     import argparse
 
-    commandname = 'command'
-
     class ErrorWrappedArgumentParser(argparse.ArgumentParser):
         ''' Wraps ArgumentParser's error message to suggested similar tasks
         '''
@@ -161,7 +159,7 @@ class ArgParseInterface(Interface):
 
         def error(self, message):
             import re
-            result = re.match("argument %s: invalid choice: '(\w+)'.+" % ArgParseInterface.commandname, message)
+            result = re.match("argument .+: invalid choice: '(\w+)'.+", message)
             if result:
                 arg = result.group(1)
                 weightedTasks = [(self._editdistance(arg, task), task) for task in Register.get_reg().keys()]
@@ -212,7 +210,8 @@ class ArgParseInterface(Interface):
             _add_task_parameters(parser, main_task_cls)
 
         else:
-            subparsers = parser.add_subparsers(dest=self.commandname)
+            orderedtasks = '{%s}' % ','.join(sorted(Register.get_reg().keys()))
+            subparsers = parser.add_subparsers(dest='command', metavar=orderedtasks)
 
             for name, cls in Register.get_reg().iteritems():
                 subparser = subparsers.add_parser(name)
