@@ -205,6 +205,22 @@ class TestRemoteTargetAtomicity(unittest.TestCase):
         self.assertTrue(test_data == f.read())
         f.close()
 
+    def test_put(self):
+        f = open(self.local_file, 'w')
+        f.write('hello')
+        f.close()
+        t = RemoteTarget(self.path, working_ssh_host)
+        t.put(self.local_file)
+        self.assertTrue(self._exists(self.path))
+
+    def test_get(self):
+        self.ctx.check_output(["echo -n 'hello' >", self.path])
+        t = RemoteTarget(self.path, working_ssh_host)
+        t.get(self.local_file)
+        f = open(self.local_file, 'r')
+        file_content = f.read()
+        self.assertEquals(file_content, 'hello')
+
 
 class TestRemoteTargetCreateDirectories(TestRemoteTargetAtomicity):
     path = '/tmp/%s/xyz/luigi_remote_atomic_test.txt' % random.randint(0, 999999999)
