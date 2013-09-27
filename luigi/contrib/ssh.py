@@ -46,14 +46,14 @@ class RemoteContext(object):
         self.username = username
         self.key_file = key_file
 
-    def target(self):
+    def _host_ref(self):
         if self.username:
             return "{0}@{1}".format(self.username, self.host)
         else:
             return self.host
 
     def _prepare_cmd(self, cmd):
-        connection_cmd = ["ssh", self.target(),
+        connection_cmd = ["ssh", self._host_ref(),
                           "-S", "none",  # disable ControlMaster since it causes all sorts of weird behaviour with subprocesses...
                           "-o", "BatchMode=yes",  # no password prompts etc
                           ]
@@ -124,7 +124,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
         self.remote_context.check_output(cmd)
 
-    def scp(self, src, dest):
+    def _scp(self, src, dest):
         cmd = ["scp", "-q", "-B", "-o", "ControlMaster=no"]
         if self.remote_context.key_file:
             cmd.extend(["-i", self.remote_context.key_file])
@@ -142,7 +142,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
             self.remote_context.check_output(['mkdir', '-p', folder])
 
         tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
-        self.scp(local_path, "%s:%s" % (self.remote_context.target(), tmp_path))
+        self._scp(local_path, "%s:%s" % (self.remote_context._host_ref(), tmp_path))
         self.remote_context.check_output(['mv', tmp_path, path])
 
     def get(self, path, local_path):
@@ -153,11 +153,11 @@ class RemoteFileSystem(luigi.target.FileSystem):
             os.makedirs(folder)
 
         tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
-        self.scp("%s:%s" % (self.remote_context.target(), path), tmp_local_path)
+        self._scp("%s:%s" % (self.remote_context._host_ref(), path), tmp_local_path)
         os.rename(tmp_local_path, local_path)
 
 
-class atomic_remote_file_writer(luigi.format.OutputPipeProcessWrapper):
+class AtomicRemoteFileWriter(luigi.format.OutputPipeProcessWrapper):
     def __init__(self, fs, path):
         self._fs = fs
         self.path = path
@@ -169,16 +169,16 @@ class atomic_remote_file_writer(luigi.format.OutputPipeProcessWrapper):
             self.fs.remote_context.check_output(['mkdir', '-p', folder])
 
         self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
-        super(atomic_remote_file_writer, self).__init__(
+        super(AtomicRemoteFileWriter, self).__init__(
             self.fs.remote_context._prepare_cmd(['cat', '>', self.__tmp_path]))
 
     def __del__(self):
-        super(atomic_remote_file_writer, self).__del__()
+        super(AtomicRemoteFileWriter, self).__del__()
         if self.fs.exists(self.__tmp_path):
             self.fs.remote_context.check_output(['rm', self.__tmp_path])
 
     def close(self):
-        super(atomic_remote_file_writer, self).close()
+        super(AtomicRemoteFileWriter, self).close()
         self.fs.remote_context.check_output(['mv', self.__tmp_path, self.path])
 
     @property
@@ -206,7 +206,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
 
     def open(self, mode='r'):
         if mode == 'w':
-            file_writer = atomic_remote_file_writer(self.fs, self.path)
+            file_writer = AtomicRemoteFileWriter(self.fs, self.path)
             if self.format:
                 return self.format.pipe_writer(file_writer)
             else:
