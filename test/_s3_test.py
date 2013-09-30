@@ -19,7 +19,7 @@ import os
 import unittest
 
 from luigi import configuration
-from luigi.s3 import S3Target, S3Client, InvalidDeleteException
+from luigi.s3 import S3Target, S3Client, InvalidDeleteException, FileNotFoundException
 import luigi.format
 
 import boto
@@ -47,7 +47,15 @@ AWS_SECRET_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 class TestS3Target(unittest.TestCase):
 
-    
+    def setUp(self):
+        f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
+        self.tempFilePath = f.name
+        f.write("I'm a temporary file for testing\n")
+        f.close()
+
+    def tearDown(self):
+        os.remove(self.tempFilePath)
+
     @mock_s3
     def test_close(self):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
@@ -68,7 +76,25 @@ class TestS3Target(unittest.TestCase):
         print >> p, 'test'
         del p
         self.assertFalse(t.exists())
-        
+
+    @mock_s3
+    def test_read(self):
+        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        client.s3.create_bucket('mybucket')
+        client.put(self.tempFilePath, 's3://mybucket/tempfile')
+        t = S3Target('s3://mybucket/tempfile', client=client)
+        read_file = t.open()
+        file_str = read_file.read()
+        self.assertEquals("I'm a temporary file for testing\n", file_str)
+
+    @mock_s3
+    def test_read_no_file(self):
+        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        client.s3.create_bucket('mybucket')
+        t = S3Target('s3://mybucket/tempfile', client=client)
+        with self.assertRaises(FileNotFoundException):
+            t.open()
+
     @mock_s3
     def test_write_cleanup_no_close(self):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
@@ -147,6 +173,29 @@ class TestS3Client(unittest.TestCase):
         s3_client.put(self.tempFilePath, 's3://mybucket/tempdir2/subdir')
         self.assertTrue(s3_client.exists('s3://mybucket/tempdir2'))
         self.assertFalse(s3_client.exists('s3://mybucket/tempdir'))
+
+    @mock_s3
+    def test_get_key(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+        s3_client.put(self.tempFilePath, 's3://mybucket/key_to_find')
+        self.assertTrue(s3_client.get_key('s3://mybucket/key_to_find'))
+        self.assertFalse(s3_client.get_key('s3://mybucket/does_not_exist'))
+
+    @mock_s3
+    def test_is_dir(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+        self.assertTrue(s3_client.is_dir('s3://mybucket'))
+
+        s3_client.put(self.tempFilePath, 's3://mybucket/tempdir0_$folder$')
+        self.assertTrue(s3_client.is_dir('s3://mybucket/tempdir0'))
+
+        s3_client.put(self.tempFilePath, 's3://mybucket/tempdir1/')
+        self.assertTrue(s3_client.is_dir('s3://mybucket/tempdir1'))
+
+        s3_client.put(self.tempFilePath, 's3://mybucket/key')
+        self.assertFalse(s3_client.is_dir('s3://mybucket/key'))
     
     @mock_s3
     def test_remove(self):
@@ -170,5 +219,4 @@ class TestS3Client(unittest.TestCase):
         s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/file')
         with self.assertRaises(InvalidDeleteException):
             s3_client.remove('s3://mybucket/removemedir', recursive=False)
-        
         

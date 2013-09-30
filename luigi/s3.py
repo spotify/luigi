@@ -38,6 +38,9 @@ logger = logging.getLogger('luigi-interface')
 class InvalidDeleteException(FileSystemException):
     pass
 
+class FileNotFoundException(FileSystemException):
+    pass
+
 class S3Client(FileSystem):
     """
     boto-powered S3 client.
@@ -113,6 +116,13 @@ class S3Client(FileSystem):
             return True
         
         return False
+
+    def get_key(self, path):
+        (bucket, key) = self._path_to_bucket_and_key(path)
+
+        s3_bucket = self.s3.get_bucket(bucket, validate=True)
+
+        return s3_bucket.get_key(key)
 
     def put(self, local_path, destination_s3_path):
         """
@@ -200,6 +210,23 @@ class AtomicS3File(file):
             return
         return file.__exit__(self, exc_type, exc, traceback)
 
+class ReadableS3File(object):
+
+    def __init__(self, s3_key):
+        self.s3_key = s3_key
+
+    def read(self, size=0):
+        return self.s3_key.read(size=size)
+
+    def close(self):
+        self.s3_key.close()
+
+    def __del__(self):
+        self.close()
+
+    def __exit__(self, exc_type, exc, traceback):
+        self.close()
+
 class S3Target(FileSystemTarget):
     """
     """
@@ -218,7 +245,11 @@ class S3Target(FileSystemTarget):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
         if mode == 'r':
-            raise NotImplementedError('TODO: Implement me')
+            s3_key = self.fs.get_key(self.path)
+            if s3_key:
+                return ReadableS3File(s3_key)
+            else:
+                raise FileNotFoundException("Could not find file at %s" % self.path)
         else:
             return AtomicS3File(self.path, self.fs)
 
