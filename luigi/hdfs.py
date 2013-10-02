@@ -309,7 +309,7 @@ if snakebite_enabled:
             parent_dir = os.path.dirname(dest)
             if parent_dir != '' and not self.exists(parent_dir):
                 self.mkdir(parent_dir)
-            self.client.rename(path, dest)
+            list(self.client.rename([path], dest))
 
         def chmod(self, path, permissions, recursive=False):
             list(self.client.chmod([path], permissions, recurse=recursive))
@@ -320,7 +320,7 @@ if snakebite_enabled:
             if group is None:
                 group = ''
             ownership = "%s:%s" % (owner, group)
-            self.client.chown([path], ownership, recurse=recursive)
+            list(self.client.chown([path], ownership, recurse=recursive))
 
         def count(self, path):
             client_results = self.client.count([path])
