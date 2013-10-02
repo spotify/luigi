@@ -273,7 +273,7 @@ class HdfsClientApache1(HdfsClientCdh3):
             raise HDFSCliError(cmd, p.returncode, stdout, stderr)
 
 if snakebite_enabled:
-    class SnakebiteHdfsClient(object):
+    class SnakebiteHdfsClient(HdfsClient):
         @staticmethod
         def convert_permission_to_string(file_type, permission):
             def number_to_permission_string(permission_number):
@@ -311,19 +311,6 @@ if snakebite_enabled:
                 self.mkdir(parent_dir)
             self.client.rename(path, dest)
 
-        def remove(self, path, recursive=True, skip_trash=False):
-            if recursive:
-                if use_cdh4_syntax():
-                    cmd = ['hadoop', 'fs', '-rm', '-r']
-                else:
-                    cmd = ['hadoop', 'fs', '-rmr']
-            else:
-                cmd = ['hadoop', 'fs', '-rm']
-            if skip_trash:
-                cmd = cmd + ['-skipTrash']
-            cmd = cmd + [path]
-            call_check(cmd)
-
         def chmod(self, path, permissions, recursive=False):
             list(self.client.chmod([path], permissions, recurse=recursive))
 
@@ -342,22 +329,6 @@ if snakebite_enabled:
                 'dir_count': client_results['directoryCount'],
                 'file_count': client_results['fileCount']
             }
-
-        def copy(self, path, destination):
-            call_check(['hadoop', 'fs', '-cp', path, destination])
-
-        def put(self, local_path, destination):
-            call_check(['hadoop', 'fs', '-put', local_path, destination])
-
-        def get(self, path, local_destination):
-            call_check(['hadoop', 'fs', '-get', path, local_destination])
-
-        def getmerge(self, path, local_destination, new_line=False):
-            if new_line:
-                cmd = ['hadoop', 'fs', '-getmerge', '-nl', path, local_destination]
-            else:
-                cmd = ['hadoop', 'fs', '-getmerge', path, local_destination]
-            call_check(cmd)
 
         def mkdir(self, path):
             list(self.client.mkdir([path], create_parent=True))
