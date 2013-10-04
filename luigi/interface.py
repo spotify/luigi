@@ -15,6 +15,9 @@
 import worker
 import lock
 import logging
+from logging.config import fileConfig
+import tempfile
+import os
 import rpc
 import optparse
 import scheduler
@@ -29,17 +32,32 @@ def setup_interface_logging():
     # use a variable in the function object to determine if it has run before
     if getattr(setup_interface_logging, "has_run", False):
         return
+    
+    config = configuration.get_config()
+    if config.has_section('loggers'):
+        # configure logging from client.cfg.
+        # since config can come from multiple locations, write it out to
+        # a known temp location and read back in
+        _, tmp_path = tempfile.mkstemp(suffix='.ini', prefix='luigi-tmp-logging-config')
+        try:
+            with open(tmp_path, 'w') as tmp_file:
+                config.write(tmp_file)
+            fileConfig(tmp_path)
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+    else:
+        # default logging configuration
+        logger = logging.getLogger('luigi-interface')
+        logger.setLevel(logging.DEBUG)
 
-    logger = logging.getLogger('luigi-interface')
-    logger.setLevel(logging.DEBUG)
+        streamHandler = logging.StreamHandler()
+        streamHandler.setLevel(logging.DEBUG)
 
-    streamHandler = logging.StreamHandler()
-    streamHandler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(levelname)s: %(message)s')
+        streamHandler.setFormatter(formatter)
 
-    formatter = logging.Formatter('%(levelname)s: %(message)s')
-    streamHandler.setFormatter(formatter)
-
-    logger.addHandler(streamHandler)
+        logger.addHandler(streamHandler)
     setup_interface_logging.has_run = True
 
 
