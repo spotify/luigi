@@ -2,48 +2,17 @@
 # What's LSF? see http://en.wikipedia.org/wiki/Platform_LSF 
 # and https://wiki.med.harvard.edu/Orchestra/IntroductionToLSF
 # 
-# What do I need to do to test this thing:
-# - Make a task which saves a numpy array
-# - Make a task which reads the numpy array, and saves its results into a text file
-#
-#
-#
-#
 # This extension is modeled after the hadoop.py approach.
 # I'll be making a few assumptions, and will try to note them.
 # Going into it, the assumptions are:
 # - You schedule your jobs on an LSF submission node. 
-# - The scheduler has to stay alive (so launch in screen, tmux, etc, if you're roaming)
-# - The 'bjobs' command on an LSF batch submission system returns a standardized format, 
-#       which we'll exploit to get a job's status.
-# - The cluster admin won't get pissed if we run a 'bjobs' check every thirty 
-#      seconds or so per job. 
-# - All nodes have access to the code you're running (we won't be shuttling dependencies around).
-# 
-# 
-# This is a "push" model, where we push work to nodes. In the future, it would be ideal
-# to switch to a "pull" model. Coding push is easier than pull, so that's what I'm doing right now.
+# - the 'bjobs' command on an LSF batch submission system returns a standardized format.
+# - All nodes have access to the code you're running. 
+# - The sysadmin won't get pissed if we run a 'bjobs' check every thirty 
+#   seconds or so per job (there are ways of coalescing the bjobs calls if that's not cool). 
 #
-# "Pull" requires a daemon process that continuously runs, asking for work. It then (somehow) receives
-# that work, and when finished, asks for more work. If it dies, the dispatcher sees that the job was unfinished
-# when the daemon died, and reschedules it. 
-# The daemon continually pings the dispatcher on a non-work thread to let the dispatcher know it's alive.
-# If we assume all dependencies are available, this isn't too hard. If we require dependencies to be packaged,
-# then the scheduler should do the work of tarballing the required packages, and placing them in a place
-# accessible to the daemon. That's not too hard.
-# If we want to extend this to the extremely interesting case where we dispatch across multiple clusters, 
-# then we need some rsync goodness. Particularly, we need config files on each cluster that specify data and 
-# dependency directories, and we need to set up rsync wth completion hooks. Specifically, if a dependency (either
-# code or data) is not available locally, we need to know how to check for its existence elsewhere. This will probably
-# get very cumbersome very quickly if there's extremely large files, where it'd be much smarter to do the computation
-# near the data. So, we'd perhaps be able to assume that code dependencies can always be rsync'd, but that data might not. 
-# This becomes a complicated problem that some of the best minds in technology have not yet solved generally. 
-# We'd need a notion of time-to-completion for every task, including rsync'ing and also computation, in order
-# to rationally shuttle tasks and data around. We're not going to get that for computation time, unless we have prior examples.
-# We can probably pretty easily test bandwidth between clusters to get an immediate sense of time-to-copy. 
-# If we provide a mechanism to report percent-complete within a task, then perhaps we can tell whether or not to spawn
-# a shim Task that would copy the data. The dispatcher will always know how big the daemon worker pool is, 
-# and can make rough calculations for how long until a worker near the data will be available. 
+# Implementation notes:
+
 
 # The procedure:
 # - Pickle the class
@@ -56,7 +25,13 @@ import os
 import subprocess
 import time
 import luigi
+import luigi.hadoop
 import lsf_runner
+import sys
+import logging
+import random
+import shutil
+import cPickle as pickle
 from task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
 logger = logging.getLogger('luigi-interface')
 
@@ -79,6 +54,8 @@ def track_job(job_id):
     status = p.communicate()[0].strip('\n')
     return status
 
+
+
 def kill_job(job_id):
     subprocess.call(['bkill', job_id])
 
@@ -88,32 +65,51 @@ class LSFJobError(Exception):
 class JobTask(luigi.Task):
     """Takes care of uploading and executing an LSF job"""
 
-    resource_flag = configuration.get_config().get("lsf", "resource-flag", "mem=15000")
-    n_cpu_flag = configuration.get_config().get("lsf", "n-cpu-flag", 1)
-    queue_flag = configuration.get_config().get("lsf", "queue-flag", "short")
-    runtime_flag = configuration.get_config().get("lsf", "runtime-flag", 720)
-    poll_time = configuration.get_config().get('lsf', 'job-status-timeout', 30)
+    n_cpu_flag = luigi.IntParameter(default_from_config={"section":"lsf", "name":"n-cpu-flag"})
+    resource_flag = luigi.Parameter(default_from_config={"section":"lsf", "name":"resource-flag"})
+    queue_flag = luigi.Parameter(default_from_config={"section":"lsf", "name":"queue-flag"})
+    runtime_flag = luigi.Parameter(default_from_config={"section":"lsf", "name":"runtime-flag"})
+    poll_time = luigi.FloatParameter(default_from_config={"section":"lsf", "name":'job-status-timeout'})
+    save_job_info = luigi.BooleanParameter(default_from_config={"section": "lsf", "name": "save-job-info"})
 
-    def __init__(self, lsf_args=[]):
-
-        base_tmp_dir = configuration.get_config().get('lsf', 'shared-tmp-dir')
-        self.tmp_dir = os.path.join(base_tmp_dir, self.task_id+'%016x' % random.getrandbits(64))
-        logger.debug("Tmp dir: %s", self.tmp_dir)
-        os.makedirs(self.tmp_dir)
-
-        self.job_file = os.path.join(self.tmp_dir, "job-instance.pickle")
-
-    def fetch_task_output(self):
-        with open(os.path.join(self.tmp_dir, "job.err"), "r") as f:
-            errors = f.readlines()
+    def fetch_task_failures(self):
+        error_file = os.path.join(self.tmp_dir, "job.err")
+        if os.path.isfile(error_file):
+            with open(error_file, "r") as f:
+                errors = f.readlines()
+        else:
+            errors = ''
         return errors
 
     def fetch_task_output(self):
         # Read in the output file 
         base_tmp_dir = configuration.get_config().get('lsf', 'shared-tmp-dir')
-        with open(os.path.join(base_tmp_dir, "job.out"), "r") as f:
+        with open(os.path.join(self.tmp_dir, "job.out"), "r") as f:
             outputs = f.readlines()
         return outputs
+
+    def _init_local(self):
+
+        base_tmp_dir = configuration.get_config().get('lsf', 'shared-tmp-dir')
+
+        task_name = self.task_id+'%016x' % random.getrandbits(64)
+        self.tmp_dir = os.path.join(base_tmp_dir, task_name)
+
+        logger.debug("Tmp dir: %s", self.tmp_dir)
+        os.makedirs(self.tmp_dir)
+
+        # Dump the code to be run into a pickle file
+        logging.debug("Dumping pickled class")
+        self._dump(self.tmp_dir)
+
+        # Make sure that all the class's dependencies are tarred and available
+        logging.debug("Tarballing dependencies")
+        # Grab luigi and the module containing the code to be run
+        packages = [luigi] + [__import__(self.__module__, None, None, 'dummy')]
+        luigi.hadoop.create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
+
+        # Now, pass onto the class's specified init_local() method. 
+        self.init_local()
 
     def init_local(self):
         ''' Implement any work to setup any internal datastructure etc here.
@@ -123,13 +119,15 @@ class JobTask(luigi.Task):
         pass
 
     def run(self):
-        self.init_local()
+        self._init_local()
         self._run_job()
         # The procedure:
         # - Pickle the class
+        # - Tarball the dependencies
         # - Construct a bsub argument that runs a generic runner function with the path to the pickled class
         # - Runner function loads the class from pickle
-        # - Runner function hits the run button on it
+        # - Runner class untars the dependencies
+        # - Runner function hits the button on the class's work() method
 
     def work(self):
         # Subclass this for where you're doing your actual work.
@@ -139,18 +137,28 @@ class JobTask(luigi.Task):
         # So, the work will happen in work().
         pass
 
+    def _dump(self, out_dir=''):
+        """Dump instance to file."""
+        self.job_file = os.path.join(out_dir, 'job-instance.pickle')
+        if self.__module__ == '__main__':
+            d = pickle.dumps(self)
+            module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
+            d = d.replace('(c__main__', "(c" + module_name)
+            open(self.job_file, "w").write(d)
+
+        else:
+            pickle.dump(self, open(self.job_file, "w"))
+
+
     def _run_job(self):
-        # Pickle ourselves.
-        with open(self.job_file, "w") as f:
-            pickle.dump(self, f)
 
         # Build a bsub argument that will run lsf_runner.py on the directory we've specified.
         args = []
 
         args += ["bsub", "-q", self.queue_flag]
         args += ["-W", self.runtime_flag]
-        args += ["-n", self.n_cpu_flag]
-        args += ["-R", "rusage[%s]"%self.resource_flag]
+        args += ["-n", str(self.n_cpu_flag)]
+        args += ["-R", "rusage[%s]"%"mem=15000"]
         args += ["-o", "job.out"]
         args += ["-e", "job.err"]
         args += ["python"]
@@ -180,15 +188,14 @@ class JobTask(luigi.Task):
 
         self._track_job()
 
-        # TODO
-        # Move the contents of tmp_dir to the output_dir()
-        try:
+        # If we want to save the job temporaries, then do so
+        # We'll move them to be next to the job output
+        if self.save_job_info:
             dest_dir = self.output().path
-            for filename in os.listdir(self.tmp_dir):
-                shutil.move(os.path.join(self.tmp_dir, filename), dest_dir)
-            self._finish()
-        except:
-            logger.debug("Couldn't move contents of %s to the output folder. Does an output exist?" % self.tmp_dir)
+            shutil.move(self.tmp_dir, os.path.split(dest_dir)[0])
+
+        # Now delete the temporaries, if they're there.
+        self._finish()
 
     def _track_job(self):
         while True:
@@ -197,24 +204,34 @@ class JobTask(luigi.Task):
 
             # See what the job's up to
             # ASSUMPTION
-            lsf_status = track_job(job_id)
+            lsf_status = track_job(self.job_id)
             if lsf_status == "RUN":
                 job_status = RUNNING
-            elif lsf_status == "PEND"
+                logger.debug("Job is running...")
+            elif lsf_status == "PEND":
                 job_status = PENDING
-            elif lsf_status == "EXIT"
+                logger.debug("Job is pending...")
+            elif lsf_status == "EXIT":
                 # Then the job could either be failed or done.
-                errors = fetch_task_failures(job_name)
+                errors = self.fetch_task_failures()
                 if errors == '':
                     job_status = DONE
+                    logger.debug("Job is done")
                 else:
                     job_status = FAILED
+                    logger.debug("Job has FAILED")
+                    logger.debug("\n\n")
+                    logger.debug("Traceback: ")
+                    for error in errors:
+                        logger.debug(error)
                 break
             elif lsf_status == "SSUSP": # I think that's what it is...
                 job_status = PENDING
+                logger.debug("Job is suspended (basically, pending)...")
 
             else:
                 job_status = UNKNOWN
+                logger.debug("Job status is UNKNOWN!")
                 break
                 raise Exception, "What the heck, the job_status isn't in my list, but it is %s" % lsf_status
 
@@ -222,9 +239,23 @@ class JobTask(luigi.Task):
 
 
     def _finish(self):
+
+        logger.debug("Cleaning up temporary bits")
         if self.tmp_dir and os.path.exists(self.tmp_dir):
             logger.debug('Removing directory %s' % self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
 
     def __del__(self):
-        self._finish()  
+        pass
+        # self._finish()
+
+
+
+
+
+
+
+
+
+
+
