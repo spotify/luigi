@@ -2,17 +2,48 @@
 # What's LSF? see http://en.wikipedia.org/wiki/Platform_LSF 
 # and https://wiki.med.harvard.edu/Orchestra/IntroductionToLSF
 # 
+# What do I need to do to test this thing:
+# - Make a task which saves a numpy array
+# - Make a task which reads the numpy array, and saves its results into a text file
+#
+#
+#
+#
 # This extension is modeled after the hadoop.py approach.
 # I'll be making a few assumptions, and will try to note them.
 # Going into it, the assumptions are:
 # - You schedule your jobs on an LSF submission node. 
-# - the 'bjobs' command on an LSF batch submission system returns a standardized format.
-# - All nodes have access to the code you're running. 
-# - The sysadmin won't get pissed if we run a 'bjobs' check every thirty 
-#   seconds or so per job (there are ways of coalescing the bjobs calls if that's not cool). 
+# - The scheduler has to stay alive (so launch in screen, tmux, etc, if you're roaming)
+# - The 'bjobs' command on an LSF batch submission system returns a standardized format, 
+#       which we'll exploit to get a job's status.
+# - The cluster admin won't get pissed if we run a 'bjobs' check every thirty 
+#      seconds or so per job. 
+# - All nodes have access to the code you're running (we won't be shuttling dependencies around).
+# 
+# 
+# This is a "push" model, where we push work to nodes. In the future, it would be ideal
+# to switch to a "pull" model. Coding push is easier than pull, so that's what I'm doing right now.
 #
-# Implementation notes:
-
+# "Pull" requires a daemon process that continuously runs, asking for work. It then (somehow) receives
+# that work, and when finished, asks for more work. If it dies, the dispatcher sees that the job was unfinished
+# when the daemon died, and reschedules it. 
+# The daemon continually pings the dispatcher on a non-work thread to let the dispatcher know it's alive.
+# If we assume all dependencies are available, this isn't too hard. If we require dependencies to be packaged,
+# then the scheduler should do the work of tarballing the required packages, and placing them in a place
+# accessible to the daemon. That's not too hard.
+# If we want to extend this to the extremely interesting case where we dispatch across multiple clusters, 
+# then we need some rsync goodness. Particularly, we need config files on each cluster that specify data and 
+# dependency directories, and we need to set up rsync wth completion hooks. Specifically, if a dependency (either
+# code or data) is not available locally, we need to know how to check for its existence elsewhere. This will probably
+# get very cumbersome very quickly if there's extremely large files, where it'd be much smarter to do the computation
+# near the data. So, we'd perhaps be able to assume that code dependencies can always be rsync'd, but that data might not. 
+# This becomes a complicated problem that some of the best minds in technology have not yet solved generally. 
+# We'd need a notion of time-to-completion for every task, including rsync'ing and also computation, in order
+# to rationally shuttle tasks and data around. We're not going to get that for computation time, unless we have prior examples.
+# We can probably pretty easily test bandwidth between clusters to get an immediate sense of time-to-copy. 
+# If we provide a mechanism to report percent-complete within a task, then perhaps we can tell whether or not to spawn
+# a shim Task that would copy the data. The dispatcher will always know how big the daemon worker pool is, 
+# and can make rough calculations for how long until a worker near the data will be available. 
 
 # The procedure:
 # - Pickle the class
@@ -47,8 +78,6 @@ def track_job(job_id):
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     status = p.communicate()[0].strip('\n')
     return status
-
-
 
 def kill_job(job_id):
     subprocess.call(['bkill', job_id])
@@ -139,7 +168,7 @@ class JobTask(luigi.Task):
         logger.info(" ".join(args))
 
         # Submit the job
-        p = subprocess.Popen(arglist, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.tmp_dir)
         output = p.communicate()[0]
         # ASSUMPTION
         # The result will be of the format
@@ -198,15 +227,4 @@ class JobTask(luigi.Task):
             shutil.rmtree(self.tmp_dir)
 
     def __del__(self):
-        self._finish()
-
-
-
-
-
-
-
-
-
-
-
+        self._finish()  
