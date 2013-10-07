@@ -232,6 +232,7 @@ class JobTask(luigi.Task):
             else:
                 job_status = UNKNOWN
                 logger.debug("Job status is UNKNOWN!")
+                logger.debug("Status is : %s" % lsf_status)
                 break
                 raise Exception, "What the heck, the job_status isn't in my list, but it is %s" % lsf_status
 
