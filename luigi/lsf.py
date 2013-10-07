@@ -92,7 +92,12 @@ class JobTask(luigi.Task):
 
         base_tmp_dir = configuration.get_config().get('lsf', 'shared-tmp-dir')
 
-        task_name = self.task_id+'%016x' % random.getrandbits(64)
+        random_id = '%016x' % random.getrandbits(64)
+        task_name =  random_id + self.task_id
+        # If any parameters are directories, if we don't
+        # replace the separators on *nix, it'll create a weird nested directory
+        task_name = task_name.replace("/", "::") 
+
         self.tmp_dir = os.path.join(base_tmp_dir, task_name)
 
         logger.debug("Tmp dir: %s", self.tmp_dir)
