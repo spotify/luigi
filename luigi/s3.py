@@ -13,6 +13,7 @@
 # the License.
 import itertools
 import logging
+import os
 import os.path
 import random
 import tempfile
@@ -214,6 +215,7 @@ class ReadableS3File(object):
 
     def __init__(self, s3_key):
         self.s3_key = s3_key
+        self.buffer = []
 
     def read(self, size=0):
         return self.s3_key.read(size=size)
@@ -225,6 +227,50 @@ class ReadableS3File(object):
         self.close()
 
     def __exit__(self, exc_type, exc, traceback):
+        self.close()
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        self.close()
+    
+    def _add_to_buffer(self, line):
+        self.buffer.append(line)
+    
+    def _flush_buffer(self):
+        output = ''.join(self.buffer)
+        self.buffer = []
+        return output
+    
+    def __iter__(self):
+        key_iter = self.s3_key.__iter__()
+        
+        has_next = True
+        while has_next:
+            try:
+                # grab the next chunk
+                chunk = key_iter.next()
+                
+                # split on newlines, preserving the newline
+                for line in chunk.splitlines(True):
+                    
+                    if not line.endswith(os.linesep):
+                        # no newline, so store in buffer
+                        self._add_to_buffer(line)
+                    else:
+                        # newline found, send it out
+                        if self.buffer:
+                            self._add_to_buffer(line)
+                            yield self._flush_buffer()
+                        else:
+                            yield line
+            except StopIteration:
+                # send out anything we have left in the buffer
+                output = self._flush_buffer()
+                if output:
+                    yield output
+                has_next = False
         self.close()
 
 class S3Target(FileSystemTarget):
