@@ -86,7 +86,7 @@ class File(FileSystemTarget):
             normpath = os.path.normpath(self.path)
             parentfolder = os.path.dirname(normpath)
             if parentfolder and not os.path.exists(parentfolder):
-                os.makedirs(parentfolder)
+                self.fs.mkdir(parentfolder)
 
             if self.format:
                 return self.format.pipe_writer(atomic_file(self.path))
