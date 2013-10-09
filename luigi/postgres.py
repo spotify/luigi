@@ -320,7 +320,7 @@ class CopyToTable(luigi.Task):
         for row in self.rows():
             n += 1
             if n % 100000 == 0:
-                logger.info("Wrote %d lines" % n)
+                logger.info("Wrote %d lines", n)
             rowstr = self.column_separator.join(self.map_column(val) for val in row)
             tmp_file.write(rowstr + '\n')
 
@@ -338,7 +338,7 @@ class CopyToTable(luigi.Task):
             except psycopg2.ProgrammingError, e:
                 if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
                     # if first attempt fails with "relation not found", try creating table
-                    logger.info("Creating table %s" % self.table)
+                    logger.info("Creating table %s", self.table)
                     connection.reset()
                     self.create_table(connection)
                 else:

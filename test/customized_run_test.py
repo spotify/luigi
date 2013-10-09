@@ -33,7 +33,7 @@ class DummyTask(luigi.Task):
         return self.has_run
 
     def run(self):
-        logging.debug("%s - setting has_run" % self.task_id)
+        logging.debug("%s - setting has_run", self.task_id)
         self.has_run = True
 
 

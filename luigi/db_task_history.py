@@ -85,7 +85,7 @@ class DbTaskHistory(task_history.TaskHistory):
     def _find_or_create_task(self, task):
         with self._session() as session:
             if task.record_id is not None:
-                logger.debug("Finding task with record_id [%d]" % task.record_id)
+                logger.debug("Finding task with record_id [%d]", task.record_id)
                 task_record = session.query(TaskRecord).get(task.record_id)
                 if not task_record:
                     raise Exception("Task with record_id, but no matching Task record!")

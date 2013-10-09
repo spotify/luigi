@@ -155,7 +155,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
     errors using those urls if the job fails. Throws HadoopJobError with information about the error (including stdout and stderr
     from the process) on failure and returns normally otherwise.
     '''
-    logger.info(' '.join(arglist))
+    logger.info('%s', ' '.join(arglist))
 
     def track_process(arglist, tracking_url_callback, env=None):
         # Dump stdout to a temp file, poll stderr and log it
@@ -178,21 +178,22 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
                     kill_job(job_id)
                 raise
             err_lines.append(err_line)
-            if err_line.strip():
-                logger.info(err_line.strip())
+            err_line = err_line.strip()
+            if err_line:
+                logger.info('%s', err_line)
             if err_line.find('Tracking URL') != -1:
-                tracking_url = err_line.strip().split('Tracking URL: ')[-1]
+                tracking_url = err_line.split('Tracking URL: ')[-1]
                 try:
                     tracking_url_callback(tracking_url)
                 except Exception as e:
-                    logger.error("Error in tracking_url_callback, disabling! %s" % e)
+                    logger.error("Error in tracking_url_callback, disabling! %s", e)
                     tracking_url_callback = lambda x: None
             if err_line.find('Running job') != -1:
                 # hadoop jar output
-                job_id = err_line.strip().split('Running job: ')[-1]
+                job_id = err_line.split('Running job: ')[-1]
             if err_line.find('submitted hadoop job:') != -1:
                 # scalding output
-                job_id = err_line.strip().split('submitted hadoop job: ')[-1]
+                job_id = err_line.split('submitted hadoop job: ')[-1]
 
         # Read the rest + stdout
         err = ''.join(err_lines + [err_line for err_line in proc.stderr])
@@ -240,7 +241,7 @@ def fetch_task_failures(tracking_url):
     import mechanize
     timeout = 3.0
     failures_url = tracking_url.replace('jobdetails.jsp', 'jobfailures.jsp') + '&cause=failed'
-    logger.debug('Fetching data from %s' % failures_url)
+    logger.debug('Fetching data from %s', failures_url)
     b = mechanize.Browser()
     b.open(failures_url, timeout=timeout)
     links = list(b.links(text_regex='Last 4KB'))  # For some reason text_regex='All' doesn't work... no idea why
@@ -254,7 +255,7 @@ def fetch_task_failures(tracking_url):
             r = b2.open(task_url, timeout=timeout)
             data = r.read()
         except Exception, e:
-            logger.debug('Error fetching data from %s: %s' % (task_url, e))
+            logger.debug('Error fetching data from %s: %s', task_url, e)
             continue
         # Try to get the hex-encoded traceback back from the output
         for exc in re.findall(r'luigi-exc-hex=[0-9a-f]+', data):
@@ -381,7 +382,7 @@ class HadoopJobRunner(JobRunner):
 
     def finish(self):
         if self.tmp_dir and os.path.exists(self.tmp_dir):
-            logger.debug('Removing directory %s' % self.tmp_dir)
+            logger.debug('Removing directory %s', self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
 
     def __del__(self):

@@ -17,7 +17,7 @@ def send_email(subject, message, sender, recipients, image_png=None):
                  "Subject: %s\n"
                  "Message:\n"
                  "%s\n"
-                 "-------------" % (recipients, sender, subject, message))
+                 "-------------", recipients, sender, subject, message)
     if not recipients or recipients == (None,):
         return
     if sys.stdout.isatty() or DEBUG:
@@ -80,7 +80,7 @@ def send_error_email(subject, message):
     config = configuration.get_config()
     receiver = config.get('core', 'error-email', None)
     sender = config.get('core', 'email-sender', DEFAULT_CLIENT_EMAIL)
-    logger.info("Sending warning email to %r" % (receiver,))
+    logger.info("Sending warning email to %r", receiver)
     send_email(
         subject=subject,
         message=message,
