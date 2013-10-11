@@ -41,7 +41,7 @@ def attach(*packages):
     pass
 
 def track_job(job_id):
-    # You see how specific this is to the particular output of bjobs?
+# You see how specific this is to the particular output of bjobs?
     # I've never set up an LSF cluster, so I don't know whether or not the output of bjobs
     # is set by the sysadmins. 
     # It could probably be generalized by running bjobs {job_id}, then grepping for
@@ -59,9 +59,6 @@ def track_job(job_id):
 def kill_job(job_id):
     subprocess.call(['bkill', job_id])
 
-class LSFJobError(Exception):
-    pass
-
 class JobTask(luigi.Task):
     """Takes care of uploading and executing an LSF job"""
 
@@ -70,7 +67,7 @@ class JobTask(luigi.Task):
     queue_flag = luigi.Parameter(default_from_config={"section":"lsf", "name":"queue-flag"})
     runtime_flag = luigi.Parameter(default_from_config={"section":"lsf", "name":"runtime-flag"})
     poll_time = luigi.FloatParameter(default_from_config={"section":"lsf", "name":'job-status-timeout'})
-    save_job_info = luigi.BooleanParameter(default_from_config={"section": "lsf", "name": "save-job-info"})
+    save_job_info = luigi.BooleanParameter(default=False)
 
     def fetch_task_failures(self):
         error_file = os.path.join(self.tmp_dir, "job.err")
@@ -137,7 +134,7 @@ class JobTask(luigi.Task):
     def work(self):
         # Subclass this for where you're doing your actual work.
         # 
-        # Why? Because we need run to always be something that the Worker can call,
+        # Why not run(), like other tasks? Because we need run to always be something that the Worker can call,
         # and that's the real logical place to do LSF scheduling. 
         # So, the work will happen in work().
         pass
@@ -256,6 +253,12 @@ class JobTask(luigi.Task):
         # self._finish()
 
 
+class LocalJobTask(JobTask):
+    """A local version of JobTask, for easier debugging."""
+
+    def run(self):
+        self.init_local()
+        self.work()
 
 
 
