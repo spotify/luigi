@@ -23,6 +23,35 @@ import re
 from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
 import configuration
 
+try:
+    from snakebite.client import Client
+    from snakebite.errors import RequestError
+
+    bite = None
+    rc_file = os.path.join(os.environ['HOME'], '.snakebiterc')
+    if os.path.exists(rc_file): # This grabs the snakebite command line tool
+        import json             # configuration. 
+        with open(rc_file) as snakebiterc:
+            rc_json = json.load(snakebiterc)
+            bite = Client(rc_json['namenode'], rc_json['port'])
+    else:
+        from xml.dom.minidom import parse
+        for conf_path in ['/etc/hadoop/conf', # Traditional deployment
+                          '/usr/local/opt/hadoop/libexec/conf', # Homebrew
+                          ]:
+            if bite:
+                break
+            if os.path.exists(conf_path):
+                core = parse(conf_path + "/core-site.xml")
+                for prop in core.getElementsByTagName('property'):
+                    if prop.getElementsByTagName('name')[0].firstChild.data == \
+                       'fs.default.name':
+                        url = prop.getElementsByTagName('value')[0].firstChild.data
+                        break
+                nn = urlparse.urlparse(url)
+                bite = Client(nn.hostname, nn.port)
+except ImportError:
+    bite = None
 
 class HDFSCliError(Exception):
     def __init__(self, command, returncode, stdout, stderr):
@@ -61,14 +90,35 @@ def load_hadoop_cmd():
 
 
 def tmppath(path=None):
-    return tempfile.gettempdir() + '/' + (path + "-" if path else "") + "luigitemp-%08d" % random.randrange(1e9)
+    # No /tmp//tmp/luigi_tmp_testdir sorts of paths just /tmp/luigi_tmp_testdir.
+    if path is not None and path.startswith(tempfile.gettempdir()):
+        base = ''
+    else:
+        base = tempfile.gettempdir()
+    if path is not None and path.startswith('/'):
+        sep = ''
+    else:
+        sep = '/'
+    return base + sep + (path + "-" if path else "") + "luigitemp-%08d" % random.randrange(1e9)
 
+def list_path(path):
+    if isinstance(path, list) or isinstance(path, tuple):
+        return path
+    if isinstance(path, str) or isinstance(path, unicode):
+        return [path, ]
+    return [str(path), ]
 
 class HdfsClient(FileSystem):
     """This client uses Apache 2.x syntax for file system commands, which also matched CDH4"""
     def exists(self, path):
-        """ Use `hadoop fs -stat to check file existance
         """
+        Use `hadoop fs -stat to check file existence, or snakebite.test.
+        """
+        if bite:
+            try:
+                return bite.test(path, exists=True)
+            except RequestError, err:
+                raise HDFSCliError("bite.test", -1, str(err), repr(err))
 
         cmd = [load_hadoop_cmd(), 'fs', '-stat', path]
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -84,12 +134,29 @@ class HdfsClient(FileSystem):
             raise HDFSCliError(cmd, p.returncode, stdout, stderr)
 
     def rename(self, path, dest):
+        """
+        Use `hadoop fs -mv to rename a file, or snakebite.rename, if available.
+        """
+        if bite:
+            parts = dest.split('/')
+            if len(parts) > 1:
+                dir_path = '/'.join(parts[0:-1])
+                if not self.exists(dir_path):
+                    self.mkdir(dir_path, parents=True)
+            return all(bite.rename(list_path(path), dest))
+
         parent_dir = os.path.dirname(dest)
         if parent_dir != '' and not self.exists(parent_dir):
             self.mkdir(parent_dir)
         call_check([load_hadoop_cmd(), 'fs', '-mv', path, dest])
 
     def remove(self, path, recursive=True, skip_trash=False):
+        """
+        Use `hadoop fs -rm to delete a file, or snakebite.delete, if available.
+        """
+        if bite:
+            return all(bite.delete(list_path(path), recurse=recursive))
+
         if recursive:
             cmd = [load_hadoop_cmd(), 'fs', '-rm', '-r']
         else:
@@ -102,6 +169,12 @@ class HdfsClient(FileSystem):
         call_check(cmd)
 
     def chmod(self, path, permissions, recursive=False):
+        """
+        Use `hadoop fs -chmnod to rename a file, or snakebite.chmod.
+        """
+        if bite:
+            return all(bite.chmod(list_path(path), permissions, recursive))
+
         if recursive:
             cmd = [load_hadoop_cmd(), 'fs', '-chmod', '-R', permissions, path]
         else:
@@ -109,6 +182,17 @@ class HdfsClient(FileSystem):
         call_check(cmd)
 
     def chown(self, path, owner, group, recursive=False):
+        """
+        Use `hadoop fs -chown to reassign ownership, or snakebite.chown/chgrp.
+        """
+        if bite:
+            if owner:
+                if group:
+                    return all(bite.chown(list_path(path), "%s:%s" % \
+                                          (owner, group), recurse=recursive))
+                return all(bite.chown(list_path(path), owner, recurse=recursive))
+            return all(bite.chgrp(list_path(path), group, recurse=recursive))
+
         if owner is None:
             owner = ''
         if group is None:
@@ -121,29 +205,74 @@ class HdfsClient(FileSystem):
         call_check(cmd)
 
     def count(self, path):
-        cmd = [load_hadoop_cmd(), 'fs', '-count', path]
-        stdout = call_check(cmd)
-        (dir_count, file_count, content_size, ppath) = stdout.split()
+        """
+        Use `hadoop fs -count`, or snakebite.count, if available.
+        """
+
+        if bite:
+            try:
+                (dir_count, file_count, content_size, ppath) = \
+                    bite.count(list_path(path)).next().split()
+            except StopIteration:
+                dir_count = file_count = content_size = 0
+        else:
+            cmd = [load_hadoop_cmd(), 'fs', '-count', path]
+            stdout = call_check(cmd)
+            (dir_count, file_count, content_size, ppath) = stdout.split()
         results = {'content_size': content_size, 'dir_count': dir_count, 'file_count': file_count}
         return results
 
     def copy(self, path, destination):
+        """
+        Use `hadoop fs -cp` to copy a file in HDFS. No snakebite version!
+        """
         call_check([load_hadoop_cmd(), 'fs', '-cp', path, destination])
 
     def put(self, local_path, destination):
+        """
+        Use `hadop fs -put` to copy a file to HDFS. No snakebite version!
+        """
         call_check([load_hadoop_cmd(), 'fs', '-put', local_path, destination])
 
     def get(self, path, local_destination):
+        """
+        Use `hadoop fs -get` to copy a file from HDFS, or snakebite.copyToLocal.
+        """
+        if bite:
+            return all(bite.copyToLocal(list_path(path), local_destination))
+
         call_check([load_hadoop_cmd(), 'fs', '-get', path, local_destination])
 
     def getmerge(self, path, local_destination, new_line=False):
+        """
+        Use `hadoop fs -getmerge` to concatenate to a local file.
+        
+        The snakebite version does not generate a crc file like the hadoop
+        version, so it doesn't pass unit tests.
+        """
+        #if bite:
+        #    return all(bite.getmerge(path, local_destination, newline=new_line,
+        #                             check_crc=True))
+
         if new_line:
             cmd = [load_hadoop_cmd(), 'fs', '-getmerge', '-nl', path, local_destination]
         else:
             cmd = [load_hadoop_cmd(), 'fs', '-getmerge', path, local_destination]
         call_check(cmd)
 
-    def mkdir(self, path):
+    def mkdir(self, path, parents=True, mode=0755):
+        """
+        Use `hadoop fs -mkdir` to build a directory, or snakebite.mkdir.
+
+        Snakebite's mkdir method allows control over full path creation, so by
+        default, tell it to build a full path to work like `hadoop fs -mkdir`.
+        """
+        if bite:
+            if bite.test(path, exists=True):
+                raise luigi.target.FileAlreadyExists("%s exists" % (path, ))
+            return all(bite.mkdir(list_path(path), create_parent=parents,
+                                  mode=mode))
+
         try:
             call_check([load_hadoop_cmd(), 'fs', '-mkdir', path])
         except HDFSCliError, ex:
@@ -153,46 +282,66 @@ class HdfsClient(FileSystem):
                 raise
 
     def listdir(self, path, ignore_directories=False, ignore_files=False,
-                include_size=False, include_type=False, include_time=False, recursive=False):
-        if not path:
-            path = "."  # default to current/home catalog
+                include_size=False, include_type=False, include_time=False,
+                recursive=False):
+        if bite:
+            for entry in bite.ls(list_path(path), recursive):
+                if ignore_directories and entry['file_type'] == 'd':
+                    continue
+                if ignore_files and entry['file_type'] == 'f':
+                    continue
+                rval = [entry['path'], ]
+                if include_size:
+                    rval.append(entry['length'])
+                if include_type:
+                    rval.append(entry['file_type'])
+                if include_time:
+                    rval.append(datetime.datetime.fromtimestamp(entry['modification_time']))
+                if len(rval) > 1:
+                    yield tuple(rval)
+                else:
+                    yield rval[0]
 
-        if recursive:
-            cmd = [load_hadoop_cmd(), 'fs', '-ls', '-R', path]
         else:
-            cmd = [load_hadoop_cmd(), 'fs', '-ls', path]
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-        lines = proc.stdout
+            if not path:
+                path = "."  # default to current/home catalog
 
-        for line in lines:
-            if line.startswith('Found'):
-                continue  # "hadoop fs -ls" outputs "Found %d items" as its first line
-            line = line.rstrip("\n")
-            if ignore_directories and line[0] == 'd':
-                continue
-            if ignore_files and line[0] == '-':
-                continue
-            data = line.split(' ')
-
-            file = data[-1]
-            size = int(data[-4])
-            line_type = line[0]
-            extra_data = ()
-
-            if include_size:
-                extra_data += (size,)
-            if include_type:
-                extra_data += (line_type,)
-            if include_time:
-                time_str = '%sT%s' % (data[-3], data[-2])
-                modification_time = datetime.datetime.strptime(time_str,
-                                                               '%Y-%m-%dT%H:%M')
-                extra_data += (modification_time,)
-
-            if len(extra_data) > 0:
-                yield (file,) + extra_data
+            if recursive:
+                cmd = [load_hadoop_cmd(), 'fs', '-ls', '-R', path]
             else:
-                yield file
+                cmd = [load_hadoop_cmd(), 'fs', '-ls', path]
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+            lines = proc.stdout
+
+            for line in lines:
+                if line.startswith('Found'):
+                    continue  # "hadoop fs -ls" outputs "Found %d items" as its first line
+                line = line.rstrip("\n")
+                if ignore_directories and line[0] == 'd':
+                    continue
+                if ignore_files and line[0] == '-':
+                    continue
+                data = line.split(' ')
+
+                file_name = data[-1]
+                size = int(data[-4])
+                line_type = line[0]
+                extra_data = ()
+
+                if include_size:
+                    extra_data += (size,)
+                if include_type:
+                    extra_data += (line_type,)
+                if include_time:
+                    time_str = '%sT%s' % (data[-3], data[-2])
+                    modification_time = datetime.datetime.strptime(time_str,
+                                                                   '%Y-%m-%dT%H:%M')
+                    extra_data += (modification_time,)
+
+                if len(extra_data) > 0:
+                    yield (file_name, ) + extra_data
+                else:
+                    yield file_name
 
 class HdfsClientCdh3(HdfsClient):
     """This client uses CDH3 syntax for file system commands"""
@@ -259,12 +408,8 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         self.path = path
         self.tmppath = tmppath(self.path)
         tmpdir = os.path.dirname(self.tmppath)
-        if get_hdfs_syntax() == "cdh4":
-            if subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', '-p', tmpdir]).wait():
-                raise RuntimeError("Could not create directory: %s" % tmpdir)
-        else:
-            if not exists(tmpdir) and subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', tmpdir]).wait():
-                raise RuntimeError("Could not create directory: %s" % tmpdir)
+        if not exists(tmpdir):
+            mkdir(tmpdir)
         super(HdfsAtomicWritePipe, self).__init__([load_hadoop_cmd(), 'fs', '-put', '-', self.tmppath])
 
     def abort(self):
