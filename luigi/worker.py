@@ -197,9 +197,9 @@ class Worker(object):
         self.__scheduled_tasks[task.task_id] = task
         deps = task.deps()
         for d in deps:
-            self._validate_dependency(task)
+            self._validate_dependency(d)
 
-        deps = [d.task_id for d in task.deps()]
+        deps = [d.task_id for d in deps]
         self.__scheduler.add_task(self.__id, task.task_id, status=PENDING,
                                   deps=deps, runnable=True)
         logger.info('Scheduled %s' % task.task_id)
