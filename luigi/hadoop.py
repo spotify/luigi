@@ -469,6 +469,8 @@ class BaseHadoopJobTask(luigi.Task):
     final_combiner = NotImplemented
     final_reducer = NotImplemented
 
+    reducer = NotImplemented
+
     _counter_dict = {}
     task_id = None
 
@@ -592,8 +594,6 @@ class JobTask(BaseHadoopJobTask):
         yield None, item
 
     combiner = NotImplemented
-
-    reducer = NotImplemented
 
     def incr_counter(self, *args, **kwargs):
         """ Increments a Hadoop counter
