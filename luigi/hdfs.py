@@ -53,7 +53,11 @@ def get_hdfs_syntax():
     override this setting with "cdh3" or "apache1" in the hadoop section of the config in
     order to use the old syntax
     """
-    return configuration.get_config().get("hadoop", "version", "cdh4").lower()
+    try:
+        import snakebite
+        return configuration.get_config().get("hadoop", "version", "snakebite").lower()
+    except ImportError:
+        return configuration.get_config().get("hadoop", "version", "cdh4").lower()
 
 
 def load_hadoop_cmd():
@@ -61,13 +65,28 @@ def load_hadoop_cmd():
 
 
 def tmppath(path=None):
-    return tempfile.gettempdir() + '/' + (path + "-" if path else "") + "luigitemp-%08d" % random.randrange(1e9)
+    # No /tmp//tmp/luigi_tmp_testdir sorts of paths just /tmp/luigi_tmp_testdir.
+    if path is not None and path.startswith(tempfile.gettempdir()):
+        base = ''
+    else:
+        base = tempfile.gettempdir()
+    if path is not None and path.startswith('/'):
+        sep = ''
+    else:
+        sep = '/'
+    return base + sep + (path + "-" if path else "") + "luigitemp-%08d" % random.randrange(1e9)
 
+def list_path(path):
+    if isinstance(path, list) or isinstance(path, tuple):
+        return path
+    if isinstance(path, str) or isinstance(path, unicode):
+        return [path, ]
+    return [str(path), ]
 
 class HdfsClient(FileSystem):
     """This client uses Apache 2.x syntax for file system commands, which also matched CDH4"""
     def exists(self, path):
-        """ Use `hadoop fs -stat to check file existance
+        """ Use `hadoop fs -stat to check file existence
         """
 
         cmd = [load_hadoop_cmd(), 'fs', '-stat', path]
@@ -194,6 +213,216 @@ class HdfsClient(FileSystem):
             else:
                 yield file
 
+class SnakebiteHdfsClient(HdfsClient):
+    """This client uses Spotify's snakebite client whenever possible."""
+    def __init__(self):
+        super(SnakebiteHdfsClient, self).__init__()
+        try:
+            from snakebite.client import Client
+
+            self.bite = None
+            rc_file = os.path.join(os.environ['HOME'], '.snakebiterc')
+            if os.path.exists(rc_file): # This grabs the snakebite command line tool
+                import json             # configuration.
+                with open(rc_file) as snakebiterc:
+                    rc_json = json.load(snakebiterc)
+                    self.bite = Client(rc_json['namenode'], rc_json['port'])
+            else:
+                from xml.dom.minidom import parse
+                for conf_path in ['/etc/hadoop/conf', # Traditional deployment
+                                  '/usr/local/opt/hadoop/libexec/conf', # Homebrew
+                                  ]:
+                    if self.bite:
+                        break
+                    if os.path.exists(conf_path):
+                        core = parse(conf_path + "/core-site.xml")
+                        for prop in core.getElementsByTagName('property'):
+                            if prop.getElementsByTagName('name')[0].firstChild.data == \
+                               'fs.default.name':
+                                url = prop.getElementsByTagName('value')[0].firstChild.data
+                                break
+                        nn = urlparse.urlparse(url)
+                        self.bite = Client(nn.hostname, nn.port)
+            if not self.bite:
+                raise ImportError("Snakebite setup failed")
+        except ImportError:
+            self.exists = super(SnakebiteHdfsClient, self).exists
+            self.rename = super(SnakebiteHdfsClient, self).rename
+            self.remove = super(SnakebiteHdfsClient, self).remove
+            self.chmod = super(SnakebiteHdfsClient, self).chmod
+            self.chown = super(SnakebiteHdfsClient, self).chown
+            self.count = super(SnakebiteHdfsClient, self).count
+            self.get = super(SnakebiteHdfsClient, self).get
+            self.mkdir = super(SnakebiteHdfsClient, self).mkdir
+            self.listdir = super(SnakebiteHdfsClient, self).listdir
+
+    def exists(self, path):
+        """
+        Use snakebite.test to check file existence.
+
+        @param path: path to test
+        @type path: string
+        @return: boolean, True if path exists in HDFS
+        """
+        try:
+            return self.bite.test(path, exists=True)
+        except snakebite.errors.RequestError as err:
+            raise HDFSCliError("bite.test", -1, str(err), repr(err))
+
+    def rename(self, path, dest):
+        """
+        Use snakebite.rename, if available.
+
+        @param path: source file(s)
+        @type path: either a string or sequence of strings
+        @param dest: destination file (single input) or directory (multiple)
+        @type dest: string
+        @return: list of renamed items
+        """
+        parts = dest.split('/')
+        if len(parts) > 1:
+            dir_path = '/'.join(parts[0:-1])
+            if not self.exists(dir_path):
+                self.mkdir(dir_path, parents=True)
+        return all(self.bite.rename(list_path(path), dest))
+
+    def remove(self, path, recursive=True, skip_trash=False):
+        """
+        Use snakebite.delete, if available.
+
+        @param path: delete-able file(s) or directory(ies)
+        @type path: either a string or a sequence of strings
+        @param recursive: delete directories trees like *nix: rm -r
+        @type recursive: boolean, default is True
+        @param skip_trash: do or don't move deleted items into the trash first
+        @type skip_trash: boolean, default is False (use trash)
+        @return: list of deleted items
+        """
+        return all(self.bite.delete(list_path(path), recurse=recursive))
+
+    def chmod(self, path, permissions, recursive=False):
+        """
+        Use snakebite.chmod, if available.
+
+        @param path: update-able file(s)
+        @type path: either a string or sequence of strings
+        @param permissions: *nix style permission number
+        @type permissions: octal
+        @param recursive: change just listed entry(ies) or all in directories
+        @type recursive: boolean, default is False
+        @return: list of all changed items
+        """
+        return all(self.bite.chmod(list_path(path), permissions, recursive))
+
+    def chown(self, path, owner, group, recursive=False):
+        """
+        Use snakebite.chown/chgrp, if available.
+
+        One of owner or group must be set. Just setting group calls chgrp.
+
+        @param path: update-able file(s)
+        @type path: either a string or sequence of strings
+        @param owner: new owner, can be blank
+        @type owner: string
+        @param group: new group, can be blank
+        @type group: string
+        @param recursive: change just listed entry(ies) or all in directories
+        @type recursive: boolean, default is False
+        @return: list of all changed items
+        """
+        if owner:
+            if group:
+                return all(self.bite.chown(list_path(path),
+                                           "%s:%s" % (owner, group),
+                                           recurse=recursive))
+            return all(self.bite.chown(list_path(path), owner,
+                                       recurse=recursive))
+        return all(self.bite.chgrp(list_path(path), group, recurse=recursive))
+
+    def count(self, path):
+        """
+        Use snakebite.count, if available.
+
+        @param path: directory to count the contents of
+        @type path: string
+        @return: dictionary with content_size, dir_count and file_count keys
+        """
+        try:
+            (dir_count, file_count, content_size, ppath) = \
+                self.bite.count(list_path(path)).next().split()
+        except StopIteration:
+            dir_count = file_count = content_size = 0
+        return {'content_size': content_size, 'dir_count': dir_count,
+                'file_count': file_count}
+
+    def get(self, path, local_destination):
+        """
+        Use snakebite.copyToLocal, if available.
+
+        @param path: HDFS file
+        @type path: string
+        @param local_destination: path on the system running Luigi
+        @type local_destination: string
+        """
+        return all(self.bite.copyToLocal(list_path(path), local_destination))
+
+    def mkdir(self, path, parents=True, mode=0755):
+        """
+        Use snakebite.mkdir, if available.
+
+        Snakebite's mkdir method allows control over full path creation, so by
+        default, tell it to build a full path to work like `hadoop fs -mkdir`.
+
+        @param path: HDFS path to create
+        @type path: string
+        @param parents: create any missing parent directories
+        @type parents: boolean, default is True
+        @param mode: *nix style owner/group/other permissions
+        @type mode: octal, default 0755
+        """
+        if self.bite.test(path, exists=True):
+            raise luigi.target.FileAlreadyExists("%s exists" % (path, ))
+        return all(self.bite.mkdir(list_path(path), create_parent=parents,
+                                   mode=mode))
+
+    def listdir(self, path, ignore_directories=False, ignore_files=False,
+                include_size=False, include_type=False, include_time=False,
+                recursive=False):
+        """
+        Use snakebite.ls to get the list of items in a directory.
+
+        @param path: the directory to list
+        @type path: string
+        @param ignore_directories: if True, do not yield directory entries
+        @type ignore_directories: boolean, default is False
+        @param ignore_files: if True, do not yield file entries
+        @type ignore_files: boolean, default is False
+        @param include_size: include the size in bytes of the current item
+        @type include_size: boolean, default is False (do not include)
+        @param include_type: include the type (d or f) of the current item
+        @type include_type: boolean, default is False (do not include)
+        @param include_time: include the last modification time of the current item
+        @type include_time: boolean, default is False (do not include)
+        @return: yield with a string, or if any of the include_* settings are
+            true, a tuple starting with the path, and include_* items in order
+        """
+        for entry in self.bite.ls(list_path(path), recursive):
+            if ignore_directories and entry['file_type'] == 'd':
+                continue
+            if ignore_files and entry['file_type'] == 'f':
+                continue
+            rval = [entry['path'], ]
+            if include_size:
+                rval.append(entry['length'])
+            if include_type:
+                rval.append(entry['file_type'])
+            if include_time:
+                rval.append(datetime.datetime.fromtimestamp(entry['modification_time']))
+            if len(rval) > 1:
+                yield tuple(rval)
+            else:
+                yield rval[0]
+
 class HdfsClientCdh3(HdfsClient):
     """This client uses CDH3 syntax for file system commands"""
     def remove(self, path, recursive=True, skip_trash=False):
@@ -224,6 +453,8 @@ class HdfsClientApache1(HdfsClientCdh3):
 
 if get_hdfs_syntax() == "cdh4":
     client = HdfsClient()
+elif get_hdfs_syntax() == "snakebite":
+    client = SnakebiteHdfsClient()
 elif get_hdfs_syntax() == "cdh3":
     client = HdfsClientCdh3()
 elif get_hdfs_syntax() == "apache1":
