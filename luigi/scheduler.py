@@ -65,15 +65,17 @@ class CentralPlannerScheduler(Scheduler):
     Can be run locally or on a server (using RemoteScheduler + server.Server).
     '''
 
-    def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0, task_history=None):
+    def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0,
+                 state_path='/var/lib/luigi-server/state.pickle', task_history=None):
         '''
         (all arguments are in seconds)
         Keyword Arguments:
         retry_delay -- How long after a Task fails to try it again, or -1 to never retry
         remove_delay -- How long after a Task finishes to remove it from the scheduler
+        state_path -- Path to state file (tasks and active workers)
         worker_disconnect_delay -- If a worker hasn't communicated for this long, remove it from active workers
         '''
-        self._state_path = '/var/lib/luigi-server/state.pickle'
+        self._state_path = state_path
         self._tasks = {}
         self._retry_delay = retry_delay
         self._remove_delay = remove_delay
