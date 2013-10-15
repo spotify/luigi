@@ -125,7 +125,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.remote_context.check_output(cmd)
 
     def _scp(self, src, dest):
-        cmd = ["scp", "-q", "-B", "-o", "ControlMaster=no"]
+        cmd = ["scp", "-q", "-B", "-C", "-o", "ControlMaster=no"]
         if self.remote_context.key_file:
             cmd.extend(["-i", self.remote_context.key_file])
         cmd.extend([src, dest])
