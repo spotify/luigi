@@ -68,6 +68,7 @@ class JobTask(luigi.Task):
     runtime_flag = luigi.Parameter(default_from_config={"section":"lsf", "name":"runtime-flag"})
     poll_time = luigi.FloatParameter(default_from_config={"section":"lsf", "name":'job-status-timeout'})
     save_job_info = luigi.BooleanParameter(default=False)
+    extra_bsub_args = luigi.Parameter("")
 
     def fetch_task_failures(self):
         error_file = os.path.join(self.tmp_dir, "job.err")
@@ -95,9 +96,13 @@ class JobTask(luigi.Task):
         # replace the separators on *nix, it'll create a weird nested directory
         task_name = task_name.replace("/", "::") 
 
+        
         self.tmp_dir = os.path.join(base_tmp_dir, task_name)
+        # Max filename length
+        max_filename_length = os.fstatvfs(0).f_namemax
+        self.tmp_dir = self.tmp_dir[:max_filename_length]
 
-        logger.debug("Tmp dir: %s", self.tmp_dir)
+        logger.info("Tmp dir: %s", self.tmp_dir)
         os.makedirs(self.tmp_dir)
 
         # Dump the code to be run into a pickle file
@@ -160,9 +165,10 @@ class JobTask(luigi.Task):
         args += ["bsub", "-q", self.queue_flag]
         args += ["-W", self.runtime_flag]
         args += ["-n", str(self.n_cpu_flag)]
-        args += ["-R", "rusage[%s]"%"mem=15000"]
+        args += ["-R", "rusage[%s]" % self.resource_flag]
         args += ["-o", "job.out"]
         args += ["-e", "job.err"]
+        args += self.extra_bsub_args.split()
         args += ["python"]
 
         # Find where our file is
@@ -185,6 +191,9 @@ class JobTask(luigi.Task):
         # Job <123> is submitted ot queue <myqueue>
         # So get the number in those first brackets. 
         # I cannot think of a better workaround that leaves logic on the Task side of things.
+        print "\n"*10
+        print output
+        print "\n"*10
         self.job_id = int(output.split("<")[1].split(">")[0])
         logger.info("Job submitted as job {job_id}".format(job_id=self.job_id))
 
@@ -209,43 +218,41 @@ class JobTask(luigi.Task):
             lsf_status = track_job(self.job_id)
             if lsf_status == "RUN":
                 job_status = RUNNING
-                logger.debug("Job is running...")
+                logger.info("Job is running...")
             elif lsf_status == "PEND":
                 job_status = PENDING
-                logger.debug("Job is pending...")
+                logger.info("Job is pending...")
             elif lsf_status == "EXIT":
                 # Then the job could either be failed or done.
                 errors = self.fetch_task_failures()
                 if errors == '':
                     job_status = DONE
-                    logger.debug("Job is done")
+                    logger.info("Job is done")
                 else:
                     job_status = FAILED
-                    logger.debug("Job has FAILED")
-                    logger.debug("\n\n")
-                    logger.debug("Traceback: ")
+                    logger.error("Job has FAILED")
+                    logger.error("\n\n")
+                    logger.error("Traceback: ")
                     for error in errors:
-                        logger.debug(error)
+                        logger.error(error)
                 break
             elif lsf_status == "SSUSP": # I think that's what it is...
                 job_status = PENDING
-                logger.debug("Job is suspended (basically, pending)...")
+                logger.info("Job is suspended (basically, pending)...")
 
             else:
                 job_status = UNKNOWN
-                logger.debug("Job status is UNKNOWN!")
-                logger.debug("Status is : %s" % lsf_status)
+                logger.info("Job status is UNKNOWN!")
+                logger.info("Status is : %s" % lsf_status)
                 break
                 raise Exception, "What the heck, the job_status isn't in my list, but it is %s" % lsf_status
-
-            print "Job status is %s" % job_status
 
 
     def _finish(self):
 
-        logger.debug("Cleaning up temporary bits")
+        logger.info("Cleaning up temporary bits")
         if self.tmp_dir and os.path.exists(self.tmp_dir):
-            logger.debug('Removing directory %s' % self.tmp_dir)
+            logger.info('Removing directory %s' % self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
 
     def __del__(self):
