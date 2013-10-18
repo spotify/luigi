@@ -14,6 +14,20 @@
 
 import task
 
+class inherits(object):
+    """docstring for inherits"""
+    def __init__(self, task_to_inherit):
+        super(inherits, self).__init__()
+        self.task_to_inherit = task_to_inherit
+    
+    def __call__(self, task_that_inherits):
+        this_param_names = dict(task_that_inherits.get_nonglobal_params()).keys()
+        for param_name, param_obj in self.task_to_inherit.get_params():
+            if param_name not in this_param_names:
+                setattr(task_that_inherits, param_name, param_obj)
+
+        return task_that_inherits
+
 
 def Derived(parent_cls):
     ''' This is a class factory function. It returns a new class with same parameters as
