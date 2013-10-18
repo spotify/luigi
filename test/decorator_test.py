@@ -2,7 +2,7 @@ import unittest
 import luigi
 import luigi.notifications
 luigi.notifications.DEBUG = True
-from luigi.util import inherits
+from luigi.util import inherits, common_params
 
 class A(luigi.Task):
     param1 = luigi.Parameter("class A-specific default")
@@ -23,7 +23,6 @@ class D(luigi.Task):
 @inherits(B)
 class E(luigi.Task):
     param4 = luigi.Parameter("class E-specific default")
-
 
 class InheritTest(unittest.TestCase):
     def setUp(self):
@@ -61,7 +60,54 @@ class InheritTest(unittest.TestCase):
         self.assertEqual(self.e.param2, self.b.param2)
 
 
+class F(luigi.Task):
+    param1 = luigi.Parameter("A parameter on a base task, that will be required later.")
 
+@inherits(F)
+class G(luigi.Task):
+    param2 = luigi.Parameter("A separate parameter that doesn't affect 'F'")
+    
+    def requires(self):
+        return F(**common_params(self, F))
+
+@inherits(G)
+class H(luigi.Task):
+    param2 = luigi.Parameter("OVERWRITING")
+    def requires(self):
+        return G(**common_params(self, G))
+
+@inherits(G)
+class I(luigi.Task):
+    def requires(self):
+        return F(**common_params(self, F))
+
+
+class RequiresTest(unittest.TestCase):
+
+    def setUp(self):
+        self.f = F()
+        self.g = G()
+        self.g_changed = G(param1="changing the default")
+        self.h = H()
+        self.i = I()
+
+    def test_inherits(self):
+        self.assertEqual(self.f.param1, self.g.param1)
+        self.assertEqual(self.f.param1, self.g.requires().param1)
+
+    def test_change_of_defaults(self):
+        self.assertNotEqual(self.f.param1, self.g_changed.param1)
+        self.assertNotEqual(self.g.param1, self.g_changed.param1)
+        self.assertNotEqual(self.f.param1, self.g_changed.requires().param1)
+
+    def test_overwriting_parameter(self):
+        self.h.requires()
+        self.assertNotEqual(self.h.param2, self.g.param2)
+        self.assertEqual(self.h.param2, self.h.requires().param2)
+        self.assertEqual(self.h.param2, "OVERWRITING")
+
+    def test_skipping_one_inheritance(self):
+        self.assertEqual(self.i.requires().param1, self.f.param1)
 
 
 if __name__ == '__main__':
