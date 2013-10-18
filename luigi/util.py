@@ -33,7 +33,7 @@ class inherits(object):
     def __call__(self, task_that_inherits):
         this_param_names = dict(task_that_inherits.get_nonglobal_params()).keys()
         for param_name, param_obj in self.task_to_inherit.get_params():
-            if param_name not in this_param_names:
+            if not hasattr(task_that_inherits, param_name):
                 setattr(task_that_inherits, param_name, param_obj)
 
         return task_that_inherits
