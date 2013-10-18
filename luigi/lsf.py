@@ -191,9 +191,6 @@ class JobTask(luigi.Task):
         # Job <123> is submitted ot queue <myqueue>
         # So get the number in those first brackets. 
         # I cannot think of a better workaround that leaves logic on the Task side of things.
-        print "\n"*10
-        print output
-        print "\n"*10
         self.job_id = int(output.split("<")[1].split(">")[0])
         logger.info("Job submitted as job {job_id}".format(job_id=self.job_id))
 
