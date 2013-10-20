@@ -14,14 +14,16 @@
 
 import task
 
-def common_params(task1, task2):
-    """Grab all the values in task1 that are found in task2"""
-    task1_param_names = dict(task1.get_params()).keys()
-    task2_param_names = dict(task2.get_params()).keys()
-    common_param_names = list(set.intersection(set(task1_param_names),set(task2_param_names)))
-    common_param_vals = [(key,dict(task2.get_params())[key]) for key in common_param_names]
-    common_kwargs = dict([(key,task1.param_kwargs[key]) for key in common_param_names])
-    vals = dict(task1.get_param_values(common_param_vals, [], common_kwargs))
+def common_params(task_instance, task_cls):
+    """Grab all the values in task_instance that are found in task_cls"""
+    assert isinstance(task_cls, task.Register), "task_cls must be an uninstantiated Task"
+
+    task_instance_param_names = dict(task_instance.get_params()).keys()
+    task_cls_param_names = dict(task_cls.get_params()).keys()
+    common_param_names = list(set.intersection(set(task_instance_param_names),set(task_cls_param_names)))
+    common_param_vals = [(key,dict(task_cls.get_params())[key]) for key in common_param_names]
+    common_kwargs = dict([(key,task_instance.param_kwargs[key]) for key in common_param_names])
+    vals = dict(task_instance.get_param_values(common_param_vals, [], common_kwargs))
     return vals
 
 class inherits(object):

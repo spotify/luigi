@@ -118,6 +118,12 @@ class K_shouldsucceed(luigi.Task):
     def requires(self):
         return J(param1="Required parameter", **common_params(self, J))
 
+@inherits(J)
+class K_wrongparamsorder(luigi.Task):
+    param1 = None
+    param2 = luigi.Parameter("A K-specific parameter")
+    def requires(self):
+        return J(param1="Required parameter", **common_params(J, self))
 
 
 class RequiresTest(unittest.TestCase):
@@ -131,6 +137,7 @@ class RequiresTest(unittest.TestCase):
         self.i = I()
         self.k_shouldfail = K_shouldfail()
         self.k_shouldsucceed = K_shouldsucceed()
+        self.k_wrongparamsorder = K_wrongparamsorder()
 
     def test_inherits(self):
         self.assertEqual(self.f.param1, self.g.param1)
@@ -165,6 +172,10 @@ class RequiresTest(unittest.TestCase):
     def test_resuscitation(self):
         k = K_shouldnotinstantiate(param1='hello')
         k.requires()
+
+    def test_wrong_common_params_order(self):
+        self.assertRaises(AssertionError, self.k_wrongparamsorder.requires)
+
 
 
 
