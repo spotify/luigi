@@ -14,6 +14,32 @@
 
 import task
 
+def common_params(task_instance, task_cls):
+    """Grab all the values in task_instance that are found in task_cls"""
+    assert isinstance(task_cls, task.Register), "task_cls must be an uninstantiated Task"
+
+    task_instance_param_names = dict(task_instance.get_params()).keys()
+    task_cls_param_names = dict(task_cls.get_params()).keys()
+    common_param_names = list(set.intersection(set(task_instance_param_names),set(task_cls_param_names)))
+    common_param_vals = [(key,dict(task_cls.get_params())[key]) for key in common_param_names]
+    common_kwargs = dict([(key,task_instance.param_kwargs[key]) for key in common_param_names])
+    vals = dict(task_instance.get_param_values(common_param_vals, [], common_kwargs))
+    return vals
+
+class inherits(object):
+    """docstring for inherits"""
+    def __init__(self, task_to_inherit):
+        super(inherits, self).__init__()
+        self.task_to_inherit = task_to_inherit
+    
+    def __call__(self, task_that_inherits):
+        this_param_names = dict(task_that_inherits.get_nonglobal_params()).keys()
+        for param_name, param_obj in self.task_to_inherit.get_params():
+            if not hasattr(task_that_inherits, param_name):
+                setattr(task_that_inherits, param_name, param_obj)
+
+        return task_that_inherits
+
 
 def Derived(parent_cls):
     ''' This is a class factory function. It returns a new class with same parameters as
