@@ -31,7 +31,7 @@ class Streams(luigi.Task):
 
 class StreamsHdfs(Streams):
     def output(self):
-        return luigi.HdfsTarget(self.date.strftime('data/streams_%Y_%m_%d_faked.tsv'))
+        return luigi.hdfs.HdfsTarget(self.date.strftime('data/streams_%Y_%m_%d_faked.tsv'))
 
 class AggregateArtists(luigi.Task):
     date_interval = luigi.DateIntervalParameter()
@@ -59,7 +59,8 @@ class AggregateArtistsHadoop(luigi.hadoop.JobTask):
     date_interval = luigi.DateIntervalParameter()
 
     def output(self):
-        return luigi.HdfsTarget("data/artist_streams_%s.tsv" % self.date_interval)
+        return luigi.hdfs.HdfsTarget("data/artist_streams_%s.tsv" % self.date_interval, 
+                                     format = luigi.hdfs.PlainDir)
 
     def requires(self):
         return [StreamsHdfs(date) for date in self.date_interval]
