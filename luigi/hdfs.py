@@ -23,6 +23,8 @@ import re
 from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
 import configuration
 
+import logging
+logger = logging.getLogger('luigi-interface')
 
 class HDFSCliError(Exception):
     def __init__(self, command, returncode, stdout, stderr):
@@ -53,11 +55,10 @@ def get_hdfs_syntax():
     override this setting with "cdh3" or "apache1" in the hadoop section of the config in
     order to use the old syntax
     """
-    try:
-        import snakebite
-        return configuration.get_config().get("hadoop", "version", "snakebite").lower()
-    except ImportError:
-        return configuration.get_config().get("hadoop", "version", "cdh4").lower()
+    config = configuration.get_config()
+    if config.getboolean("hdfs", "use_snakebite", False):
+        return "snakebite"
+    return config.get("hadoop", "version", "cdh4").lower()
 
 
 def load_hadoop_cmd():
@@ -222,42 +223,22 @@ class SnakebiteHdfsClient(HdfsClient):
         super(SnakebiteHdfsClient, self).__init__()
         try:
             from snakebite.client import Client
+            config = configuration.get_config()
+            self.bite = Client(config.get("hdfs", "namenode_host"),
+                               config.getint("hdfs", "namenode_port"))
+        except Exception as err:    # IGNORE:broad-except
+            raise RuntimeError("You must specify namenode_host and namenode_port "
+                               "in the [hdfs] section of your luigi config in "
+                               "order to use luigi's snakebite support", err)
 
-            self.bite = None
-            rc_file = os.path.join(os.environ['HOME'], '.snakebiterc')
-            if os.path.exists(rc_file): # This grabs the snakebite command line tool
-                import json             # configuration.
-                with open(rc_file) as snakebiterc:
-                    rc_json = json.load(snakebiterc)
-                    self.bite = Client(rc_json['namenode'], rc_json['port'])
-            else:
-                from xml.dom.minidom import parse
-                for conf_path in ['/etc/hadoop/conf', # Traditional deployment
-                                  '/usr/local/opt/hadoop/libexec/conf', # Homebrew
-                                  ]:
-                    if self.bite:
-                        break
-                    if os.path.exists(conf_path):
-                        core = parse(conf_path + "/core-site.xml")
-                        for prop in core.getElementsByTagName('property'):
-                            if prop.getElementsByTagName('name')[0].firstChild.data == \
-                               'fs.default.name':
-                                url = prop.getElementsByTagName('value')[0].firstChild.data
-                                break
-                        nn = urlparse.urlparse(url)
-                        self.bite = Client(nn.hostname, nn.port)
-            if not self.bite:
-                raise ImportError("Snakebite setup failed")
+    def __new__(cls):
+        try:
+            from snakebite.client import Client
+            this = super(SnakebiteHdfsClient, cls).__new__(cls)
+            return this
         except ImportError:
-            self.exists = super(SnakebiteHdfsClient, self).exists
-            self.rename = super(SnakebiteHdfsClient, self).rename
-            self.remove = super(SnakebiteHdfsClient, self).remove
-            self.chmod = super(SnakebiteHdfsClient, self).chmod
-            self.chown = super(SnakebiteHdfsClient, self).chown
-            self.count = super(SnakebiteHdfsClient, self).count
-            self.get = super(SnakebiteHdfsClient, self).get
-            self.mkdir = super(SnakebiteHdfsClient, self).mkdir
-            self.listdir = super(SnakebiteHdfsClient, self).listdir
+            logger.warning("Failed to load snakebite.client. Using HdfsClient.")
+            return HdfsClient()
 
     def exists(self, path):
         """
@@ -269,7 +250,7 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         try:
             return self.bite.test(path, exists=True)
-        except snakebite.errors.RequestError as err:
+        except Exception as err:    # IGNORE:broad-except
             raise HDFSCliError("bite.test", -1, str(err), repr(err))
 
     def rename(self, path, dest):
