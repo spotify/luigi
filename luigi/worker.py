@@ -121,7 +121,7 @@ class Worker(object):
         logger.warning(log_msg, exc_info=1)  # Needs to be called from except-clause to work
 
     def _log_unexpected_error(self, task):
-        logger.exception("Luigi unexpected framework error while scheduling {task}".format(task=task))  # needs to be called from within except clause
+        logger.exception("Luigi unexpected framework error while scheduling %s", task) # needs to be called from within except clause
 
     def _email_complete_error(self, task, formatted_traceback):
           # like logger.exception but with WARNING level
@@ -153,7 +153,7 @@ class Worker(object):
         self._validate_task(task)
         if task.task_id in self.__scheduled_tasks:
             return []  # already scheduled
-        logger.debug("Checking if {task} is complete".format(task=task))
+        logger.debug("Checking if %s is complete", task)
         is_complete = False
         try:
             is_complete = task.complete()
@@ -197,12 +197,12 @@ class Worker(object):
         self.__scheduled_tasks[task.task_id] = task
         deps = task.deps()
         for d in deps:
-            self._validate_dependency(task)
+            self._validate_dependency(d)
 
-        deps = [d.task_id for d in task.deps()]
+        deps = [d.task_id for d in deps]
         self.__scheduler.add_task(self.__id, task.task_id, status=PENDING,
                                   deps=deps, runnable=True)
-        logger.info('Scheduled %s' % task.task_id)
+        logger.info('Scheduled %s', task.task_id)
 
         for task_2 in task.deps():
             yield task_2  # return additional tasks to add
@@ -235,8 +235,7 @@ class Worker(object):
             raise
         except Exception as ex:
             status = FAILED
-            logger.exception("[pid %s] Error while running %s" % (os.getpid(),
-                                                                  task))
+            logger.exception("[pid %s] Error while running %s", os.getpid(), task)
             error_message = task.on_failure(ex)
 
             subject = "Luigi: %s FAILED" % task
@@ -256,17 +255,30 @@ class Worker(object):
                 if died_pid in children:
                     children.remove(died_pid)
                 else:
-                    logger.warning("Some random process %s died" % died_pid)
+                    logger.warning("Some random process %s died", died_pid)
 
             logger.debug("Asking scheduler for work...")
-            pending_tasks, task_id = self.__scheduler.get_work(worker=self.__id, host=self.host)
+            r = self.__scheduler.get_work(worker=self.__id, host=self.host)
+            # Support old version of scheduler
+            if isinstance(r, tuple) or isinstance(r, list):
+                n_pending_tasks, task_id = r
+                running_tasks = []
+            else:
+                n_pending_tasks = r['n_pending_tasks']
+                task_id = r['task_id']
+                running_tasks = r['running_tasks']
+
             if task_id is None:
                 logger.info("Done")
                 logger.info("There are no more tasks to run at this time")
-                if pending_tasks:
-                    logger.info("There are %s pending tasks possibly being run by other workers", pending_tasks)
+                if running_tasks:
+                    for r in running_tasks:
+                        logger.info('%s is currently run by worker %s', r['task_id'], r['worker'])
+                elif n_pending_tasks:
+                    logger.info("There are %s pending tasks possibly being run by other workers", n_pending_tasks)
+
             else:
-                logger.debug("Pending tasks: %s", pending_tasks)
+                logger.debug("Pending tasks: %s", n_pending_tasks)
 
             if task_id is None:
                 # TODO: sleep for a bit and query server again if there are
@@ -278,7 +290,7 @@ class Worker(object):
                     if died_pid in children:
                         children.remove(died_pid)
                     else:
-                        logger.warn("Some random process %s died" % died_pid)
+                        logger.warn("Some random process %s died", died_pid)
                     continue
             if self.worker_processes > 1:
                 child_pid = os.fork()
@@ -300,4 +312,4 @@ class Worker(object):
             if died_pid in children:
                 children.remove(died_pid)
             else:
-                logger.warning("Some random process %s died" % died_pid)
+                logger.warning("Some random process %s died", died_pid)

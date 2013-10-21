@@ -56,7 +56,7 @@ class RemoteScheduler(Scheduler):
                 break
             except urllib2.URLError, last_exception:
                 if log_exceptions:
-                    logger.exception("Failed connecting to remote scheduler %r" % (self._host,))
+                    logger.exception("Failed connecting to remote scheduler %r", self._host)
                 continue
         else:
             raise RPCError(
@@ -94,13 +94,8 @@ class RemoteScheduler(Scheduler):
                 attempts=1
             )
         except:
-            warnings.warn("Failed call to scheduler.get_work(worker, host), are you running an old scheduler version?")
-            return self._request(
-                '/api/get_work',
-                {'worker': worker},
-                log_exceptions=True,
-                attempts=2
-            )
+            logger.info("get_work RPC call failed, is it possible that you need to update your scheduler?")
+            raise
 
     def graph(self):
         return self._request('/api/graph', {})

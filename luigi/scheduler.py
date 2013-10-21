@@ -65,15 +65,17 @@ class CentralPlannerScheduler(Scheduler):
     Can be run locally or on a server (using RemoteScheduler + server.Server).
     '''
 
-    def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0, task_history=None):
+    def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0,
+                 state_path='/var/lib/luigi-server/state.pickle', task_history=None):
         '''
         (all arguments are in seconds)
         Keyword Arguments:
         retry_delay -- How long after a Task fails to try it again, or -1 to never retry
         remove_delay -- How long after a Task finishes to remove it from the scheduler
+        state_path -- Path to state file (tasks and active workers)
         worker_disconnect_delay -- If a worker hasn't communicated for this long, remove it from active workers
         '''
-        self._state_path = '/var/lib/luigi-server/state.pickle'
+        self._state_path = state_path
         self._tasks = {}
         self._retry_delay = retry_delay
         self._remove_delay = remove_delay
@@ -195,10 +197,14 @@ class CentralPlannerScheduler(Scheduler):
         best_t = float('inf')
         best_task = None
         locally_pending_tasks = 0
+        running_tasks = []
 
         for task_id, task in self._tasks.iteritems():
             if worker not in task.workers:
                 continue
+
+            if task.status == RUNNING:
+                running_tasks.append({'task_id': task_id, 'worker': task.worker_running})
 
             if task.status != PENDING:
                 continue
@@ -222,7 +228,9 @@ class CentralPlannerScheduler(Scheduler):
             t.worker_running = worker
             self._update_task_history(best_task, RUNNING, host=host)
 
-        return locally_pending_tasks, best_task
+        return {'n_pending_tasks': locally_pending_tasks,
+                'task_id': best_task,
+                'running_tasks': running_tasks}
 
     def ping(self, worker):
         self.update(worker)
@@ -292,7 +300,7 @@ class CentralPlannerScheduler(Scheduler):
         if task_id not in serialized:
             task = self._tasks.get(task_id)
             if task is None:
-                logger.warn('Missing task for id [%s]' % task_id)
+                logger.warn('Missing task for id [%s]', task_id)
                 serialized[task_id] = {
                     'deps': [],
                     'status': UNKNOWN,

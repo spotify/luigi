@@ -73,8 +73,20 @@ class InputPipeProcessWrapper(object):
     def __enter__(self):
         return self
 
+    def _abort(self):
+        "Call _finish, but eat the exception (if any)."
+        try:
+            self._finish()
+        except KeyboardInterrupt:
+            raise
+        except:
+            pass
+
     def __exit__(self, type, value, traceback):
-        self._finish()
+        if type:
+            self._abort()
+        else:
+            self._finish()
 
     def __getattr__(self, name):
         if name == '_process':
@@ -178,3 +190,13 @@ class Gzip(Format):
     @classmethod
     def pipe_writer(cls, output_pipe):
         return OutputPipeProcessWrapper(['gzip'], output_pipe)
+
+class Bzip2(Format):
+    @classmethod
+    def pipe_reader(cls, input_pipe):
+        return InputPipeProcessWrapper(['bzcat'], input_pipe)
+
+    @classmethod
+    def pipe_writer(cls, output_pipe):
+        return OutputPipeProcessWrapper(['bzip2'], output_pipe)
+

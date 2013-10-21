@@ -37,12 +37,13 @@ def _create_scheduler():
     retry_delay = config.getfloat('scheduler', 'retry-delay', 900.0)
     remove_delay = config.getfloat('scheduler', 'remove-delay', 600.0)
     worker_disconnect_delay = config.getfloat('scheduler', 'worker-disconnect-delay', 60.0)
+    state_path = config.get('scheduler', 'state-path', '/var/lib/luigi-server/state.pickle')
     if config.getboolean('scheduler', 'record_task_history', False):
         import db_task_history  # Needs sqlalchemy, thus imported here
         task_history_impl = db_task_history.DbTaskHistory()
     else:
         task_history_impl = task_history.NopHistory()
-    return scheduler.CentralPlannerScheduler(retry_delay, remove_delay, worker_disconnect_delay, task_history_impl)
+    return scheduler.CentralPlannerScheduler(retry_delay, remove_delay, worker_disconnect_delay, state_path, task_history_impl)
 
 
 class RPCHandler(tornado.web.RequestHandler):
@@ -169,7 +170,12 @@ def run_api_threaded(api_port=8082, address=None):
     sock_names = _init_api(_create_scheduler(), None, api_port, address)
 
     import threading
-    threading.Thread(target=tornado.ioloop.IOLoop.instance().start).start()
+    def scheduler_thread():
+        # this is wrapped in a function so we get the instance
+        # from the scheduler thread and not from the main thread
+        tornado.ioloop.IOLoop.instance().start()
+
+    threading.Thread(target=scheduler_thread).start()
     return sock_names
 
 

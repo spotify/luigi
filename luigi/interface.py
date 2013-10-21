@@ -22,6 +22,9 @@ import warnings
 import configuration
 import task
 import parameter
+import re
+import argparse
+import sys
 from task import Register
 
 
@@ -114,8 +117,8 @@ class Interface(object):
 
         env_params = EnvironmentParamsContainer.env_params(override_defaults)
 
-        if env_params.lock:
-            lock.run_once(env_params.lock_pid_dir)
+        if env_params.lock and not(lock.acquire_for(env_params.lock_pid_dir)):
+            sys.exit(1)
 
         if env_params.local_scheduler:
             sch = worker_scheduler_factory.create_local_scheduler()
@@ -132,12 +135,48 @@ class Interface(object):
         w.stop()
 
 
+class ErrorWrappedArgumentParser(argparse.ArgumentParser):
+    ''' Wraps ArgumentParser's error message to suggested similar tasks
+    '''
+
+    # Simple unweighted Levenshtein distance
+    def _editdistance(self, a, b):
+        r0 = range(0, len(b) + 1)
+        r1 = [0] * (len(b) + 1)
+
+        for i in range(0, len(a)):
+            r1[0] = i + 1
+
+            for j in range(0, len(b)):
+                c = 0 if a[i] is b[j] else 1
+                r1[j + 1] = min(r1[j] + 1, r0[j + 1] + 1, r0[j] + c)
+
+            r0 = r1[:]
+
+        return r1[len(b)]
+
+    def error(self, message):
+        result = re.match("argument .+: invalid choice: '(\w+)'.+", message)
+        if result:
+            arg = result.group(1)
+            weightedTasks = [(self._editdistance(arg, task), task) for task in Register.get_reg().keys()]
+            orderedTasks = sorted(weightedTasks, key=lambda pair: pair[0])
+            candidates = [task for (dist, task) in orderedTasks if dist <= 5 and dist < len(task)]
+            displaystring = ""
+            if candidates:
+                displaystring = "No task %s. Did you mean:\n%s" % (arg, '\n'.join(candidates))
+            else:
+                displaystring = "No task %s." % arg
+            super(ErrorWrappedArgumentParser, self).error(displaystring)
+        else:
+            super(ErrorWrappedArgumentParser, self).error(message)
+
+
 class ArgParseInterface(Interface):
     ''' Takes the task as the command, with parameters specific to it
     '''
     def parse(self, cmdline_args=None, main_task_cls=None):
-        import argparse
-        parser = argparse.ArgumentParser()
+        parser = ErrorWrappedArgumentParser()
 
         def _add_parameter(parser, param_name, param, prefix=None):
             description = []
@@ -172,7 +211,8 @@ class ArgParseInterface(Interface):
             _add_task_parameters(parser, main_task_cls)
 
         else:
-            subparsers = parser.add_subparsers(dest='command')
+            orderedtasks = '{%s}' % ','.join(sorted(Register.get_reg().keys()))
+            subparsers = parser.add_subparsers(dest='command', metavar=orderedtasks)
 
             for name, cls in Register.get_reg().iteritems():
                 subparser = subparsers.add_parser(name)
