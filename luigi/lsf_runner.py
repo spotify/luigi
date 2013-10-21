@@ -6,7 +6,6 @@ import tarfile
 import cPickle as pickle
 
 def do_work_on_compute_node(work_dir):
-    print "HOLY CRAP LOAD THE DATA AND DO THE THING"
     
     # Extract the necessary dependencies
     extract_packages_archive(work_dir)
