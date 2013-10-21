@@ -179,7 +179,18 @@ class Task(object):
         return [(param_name, param_obj) for param_name, param_obj in cls.get_params() if not param_obj.is_global]
 
     @classmethod
-    def get_param_values(cls, params, args, kwargs):
+    def get_param_values(cls, params, args, kwargs, on_unknown_param=None):
+        '''
+        Returns a list of (param_name, param_value) for the given positional / keyword arguments.
+
+        on_unknown_param is a function that takes (exc_description, param_name), will be called if a name in kwargs
+        is not present in params.
+        '''
+        def default_unknown_params(exc_desc, param_name):
+            raise parameter.UnknownParameterException('%s: unknown parameter %s' % (exc_desc, param_name))
+
+        if on_unknown_param is None:
+            on_unknown_param = default_unknown_params
         result = {}
 
         params_dict = dict(params)
@@ -200,9 +211,9 @@ class Task(object):
         for param_name, arg in kwargs.iteritems():
             if param_name in result:
                 raise parameter.DuplicateParameterException('%s: parameter %s was already set as a positional parameter' % (exc_desc, param_name))
-            if param_name not in params_dict:
-                raise parameter.UnknownParameterException('%s: unknown parameter %s' % (exc_desc, param_name))
-            if params_dict[param_name].is_global:
+            elif param_name not in params_dict:
+                on_unknown_param(exc_desc, param_name)
+            elif params_dict[param_name].is_global:
                 raise parameter.ParameterException('%s: can not override global parameter %s' % (exc_desc, param_name))
             result[param_name] = arg
 
@@ -221,6 +232,18 @@ class Task(object):
                 return x
         # Sort it by the correct order and make a list
         return [(param_name, list_to_tuple(result[param_name])) for param_name, param_obj in params]
+
+    @classmethod
+    def get_known_param_values(cls, params, args, kwargs):
+        '''
+        Return a list of (param_name, param_value) for the given arguments, ignoring values in kwargs that don't exist
+        in params
+        '''
+        def ignore_unknown(exc_desc, param_name):
+            pass
+
+        return cls.get_param_values(params, args, kwargs, ignore_unknown)
+
 
     def __init__(self, *args, **kwargs):
         params = self.get_params()

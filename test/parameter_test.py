@@ -16,6 +16,7 @@ import datetime
 import luigi.date_interval
 import luigi
 import luigi.interface
+import luigi.parameter
 from worker_test import EmailTest
 import luigi.notifications
 from luigi.parameter import UnknownConfigException
@@ -212,6 +213,37 @@ class ParameterTest(EmailTest):
 
         t = InsignificantParameterTask(foo='x', bar='y')
         self.assertEquals(t.task_id, 'InsignificantParameterTask(bar=y)')
+
+
+class TestGetParams(unittest.TestCase):
+    def test_get_params(self):
+        expected = [('p', A.p)]
+        self.assertEquals(A.get_params(), expected)
+
+    def test_get_param_values(self):
+        args = {'p': 1}
+        params = dict(A.get_param_values(A.get_params(), [], args))
+        self.assertEquals(params, args)
+
+    def test_get_param_values_unknown_arg(self):
+        args = {'p': '1', 'unknown': 'unknown'}
+
+        def test():
+            A.get_param_values(A.get_params(), [], args)
+        self.assertRaises(luigi.parameter.UnknownParameterException, test)
+        self.has_run = False
+
+        def on_unknown(*args):
+            self.has_run = True
+
+        A.get_param_values(A.get_params(), [], args, on_unknown)
+        self.assertTrue(self.has_run)
+
+    def test_get_known_params(self):
+        args = {'p': 1, 'unknown': 'unknown'}
+        params = A.get_known_param_values(A.get_params(), [], args)
+        args.pop('unknown')
+        self.assertEquals(dict(params), args)
 
 
 class TestParamWithDefaultFromConfig(unittest.TestCase):
