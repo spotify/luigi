@@ -117,6 +117,13 @@ class TestS3Client(unittest.TestCase):
     def tearDown(self):
         os.remove(self.tempFilePath)
 
+    def test_init(self):
+        os.environ['AWS_ACCESS_KEY_ID'] = 'foo'
+        os.environ['AWS_SECRET_ACCESS_KEY'] = 'bar'
+        s3_client = S3Client()
+        self.assertEqual(s3_client.s3.gs_access_key_id, 'foo')
+        self.assertEqual(s3_client.s3.gs_secret_access_key, 'bar')
+
     @mock_s3
     def test_put(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)

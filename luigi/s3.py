@@ -18,10 +18,11 @@ import random
 import tempfile
 import urlparse
 
-from boto.s3.connection import S3Connection
+import boto
 from boto.s3.key import Key
 
 import configuration
+from ConfigParser import NoSectionError, NoOptionError
 from luigi.parameter import Parameter
 from luigi.target import FileSystem
 from luigi.target import FileSystemTarget
@@ -42,30 +43,30 @@ class S3Client(FileSystem):
     """
     boto-powered S3 client.
     """
-        
+
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None):
         if not aws_access_key_id:
-            aws_access_key_id = configuration.get_config().get('s3', 'aws_access_key_id')
+            aws_access_key_id = self._get_s3_config('aws_access_key_id')
         if not aws_secret_access_key:
-            aws_secret_access_key = configuration.get_config().get('s3', 'aws_secret_access_key')
-        
-        self.s3 = S3Connection(aws_access_key_id,
-                               aws_secret_access_key,
-                               is_secure=True)
-        
+            aws_secret_access_key = self._get_s3_config('aws_secret_access_key')
+
+        self.s3 = boto.connect_s3(aws_access_key_id,
+                                  aws_secret_access_key,
+                                  is_secure=True)
+
     def exists(self, path):
         """
         Does provided path exist on S3?
         """
         (bucket, key) = self._path_to_bucket_and_key(path)
-        
+
         # grab and validate the bucket
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
 
         # root always exists
         if self._is_root(key):
             return True
-        
+
         # file
         s3_key = s3_bucket.get_key(key)
         if s3_key:
@@ -157,14 +158,22 @@ class S3Client(FileSystem):
 
         return False
 
+    def _get_s3_config(self, key):
+        try:
+            return configuration.get_config().get('s3', key)
+        except NoSectionError:
+            return None
+        except NoOptionError:
+            return None
+
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, query, fragment) = urlparse.urlsplit(path)
         path_without_initial_slash = path[1:]
         return netloc, path_without_initial_slash
-    
+
     def _is_root(self, key):
         return (len(key) == 0) or (key == '/')
-    
+
     def _add_path_delimiter(self, key):
         return key if key[-1:] == '/' else key + '/'
 
