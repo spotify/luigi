@@ -74,7 +74,7 @@ class S3Client(FileSystem):
         if self.is_dir(path):
             return True
         
-        logger.debug('Path %s does not exist' % path)
+        logger.debug('Path %s does not exist', path)
         return False
     
     def remove(self, path, recursive=True):
@@ -82,7 +82,7 @@ class S3Client(FileSystem):
         Remove a file or directory from S3.
         """
         if not self.exists(path):
-            logger.debug('Could not delete %s; path does not exist' % path)
+            logger.debug('Could not delete %s; path does not exist', path)
             return False
 
         (bucket, key) = self._path_to_bucket_and_key(path)
@@ -98,7 +98,7 @@ class S3Client(FileSystem):
         s3_key = s3_bucket.get_key(key)
         if s3_key:
             s3_bucket.delete_key(s3_key)
-            logger.debug('Deleting %s from bucket %s' % (key, bucket))
+            logger.debug('Deleting %s from bucket %s', key, bucket)
             return True
 
         if self.is_dir(path) and not recursive:
@@ -108,7 +108,7 @@ class S3Client(FileSystem):
 
         if len(delete_key_list) > 0:
             for k in delete_key_list:
-                logger.debug('Deleting %s from bucket %s' % (k, bucket))
+                logger.debug('Deleting %s from bucket %s', k, bucket)
             s3_bucket.delete_keys(delete_key_list)
             return True
         

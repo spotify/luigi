@@ -56,7 +56,7 @@ class RemoteScheduler(Scheduler):
                 break
             except urllib2.URLError, last_exception:
                 if log_exceptions:
-                    logger.exception("Failed connecting to remote scheduler %r" % (self._host,))
+                    logger.exception("Failed connecting to remote scheduler %r", self._host)
                 continue
         else:
             raise RPCError(

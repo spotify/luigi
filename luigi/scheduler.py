@@ -300,7 +300,7 @@ class CentralPlannerScheduler(Scheduler):
         if task_id not in serialized:
             task = self._tasks.get(task_id)
             if task is None:
-                logger.warn('Missing task for id [%s]' % task_id)
+                logger.warn('Missing task for id [%s]', task_id)
                 serialized[task_id] = {
                     'deps': [],
                     'status': UNKNOWN,
