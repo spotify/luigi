@@ -352,7 +352,7 @@ if snakebite_enabled:
                     if include_type:
                         extra_data += (SnakebiteHdfsClient.convert_permission_to_string(file_type, result['permission']),)
                     if include_time:
-                        extra_data += (result['modification_time'],)
+                        extra_data += (datetime.datetime.fromtimestamp(result['modification_time']),)
                     if len(extra_data) > 0:
                         yield (file,) + extra_data
                     else:
