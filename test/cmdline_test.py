@@ -12,11 +12,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import ConfigParser
+import logging
 import luigi
-import unittest
 from luigi.mock import MockFile
+import mock
+import unittest
 import warnings
-import luigi.interface
 
 
 class SomeTask(luigi.Task):
@@ -60,20 +62,50 @@ class CmdlineTest(unittest.TestCase):
             luigi.expose(SomeTask)
             self.assertEqual(w[-1].category, DeprecationWarning)
 
-    def test_cmdline_main_task_cls(self):
+    @mock.patch("logging.getLogger")
+    def test_cmdline_main_task_cls(self, logger):
         luigi.run(['--local-scheduler', '--n', '100'], main_task_cls=SomeTask)
         self.assertEqual(MockFile._file_contents, {'/tmp/test_100': 'done'})
 
-    def test_cmdline_other_task(self):
+    @mock.patch("logging.getLogger")
+    def test_cmdline_other_task(self, logger):
         luigi.run(['--local-scheduler', 'SomeTask', '--n', '1000'])
         self.assertEqual(MockFile._file_contents, {'/tmp/test_1000': 'done'})
 
-    def test_cmdline_ambiguous_class(self):
+    @mock.patch("logging.getLogger")
+    def test_cmdline_ambiguous_class(self, logger):
         self.assertRaises(Exception, luigi.run, ['--local-scheduler', 'AmbiguousClass'])
 
-    def test_cmdline_non_ambiguous_class(self):
+    @mock.patch("logging.getLogger")
+    @mock.patch("warnings.warn")
+    def test_cmdline_non_ambiguous_class(self, warn, logger):
         luigi.run(['--local-scheduler', 'NonAmbiguousClass'])
         self.assertTrue(NonAmbiguousClass.has_run)
+
+    @mock.patch("logging.getLogger")
+    @mock.patch("logging.StreamHandler")
+    def test_setup_interface_logging(self, handler, logger):
+        handler.return_value = mock.Mock(name="stream_handler")
+        with mock.patch("luigi.interface.setup_interface_logging.has_run", new=False):
+            luigi.interface.setup_interface_logging()
+            self.assertEqual([mock.call(handler.return_value)], logger.return_value.addHandler.call_args_list)
+
+        with mock.patch("luigi.interface.setup_interface_logging.has_run", new=False):
+            self.assertRaises(ConfigParser.NoSectionError, luigi.interface.setup_interface_logging, '/blah')
+
+    @mock.patch("warnings.warn")
+    @mock.patch("luigi.interface.setup_interface_logging")
+    def test_cmdline_logger(self, setup_mock, warn):
+        luigi.run(['Task', '--local-scheduler'])
+        self.assertEqual([mock.call(None)], setup_mock.call_args_list)
+
+        with mock.patch("luigi.configuration.get_config") as getconf:
+            getconf.return_value.get.return_value = None
+            getconf.return_value.get_boolean.return_value = True
+
+            luigi.interface.setup_interface_logging.call_args_list = []
+            luigi.run(['Task', '--local-scheduler'])
+            self.assertEqual([], setup_mock.call_args_list)
 
 if __name__ == '__main__':
     unittest.main()
