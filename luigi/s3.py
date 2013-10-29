@@ -13,6 +13,7 @@
 # the License.
 import itertools
 import logging
+import os
 import os.path
 import random
 import tempfile
@@ -37,6 +38,9 @@ S3_DIRECTORY_MARKER_SUFFIX_1 = '/'
 logger = logging.getLogger('luigi-interface')
 
 class InvalidDeleteException(FileSystemException):
+    pass
+
+class FileNotFoundException(FileSystemException):
     pass
 
 class S3Client(FileSystem):
@@ -114,6 +118,13 @@ class S3Client(FileSystem):
             return True
         
         return False
+
+    def get_key(self, path):
+        (bucket, key) = self._path_to_bucket_and_key(path)
+
+        s3_bucket = self.s3.get_bucket(bucket, validate=True)
+
+        return s3_bucket.get_key(key)
 
     def put(self, local_path, destination_s3_path):
         """
@@ -209,6 +220,68 @@ class AtomicS3File(file):
             return
         return file.__exit__(self, exc_type, exc, traceback)
 
+class ReadableS3File(object):
+
+    def __init__(self, s3_key):
+        self.s3_key = s3_key
+        self.buffer = []
+
+    def read(self, size=0):
+        return self.s3_key.read(size=size)
+
+    def close(self):
+        self.s3_key.close()
+
+    def __del__(self):
+        self.close()
+
+    def __exit__(self, exc_type, exc, traceback):
+        self.close()
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        self.close()
+    
+    def _add_to_buffer(self, line):
+        self.buffer.append(line)
+    
+    def _flush_buffer(self):
+        output = ''.join(self.buffer)
+        self.buffer = []
+        return output
+    
+    def __iter__(self):
+        key_iter = self.s3_key.__iter__()
+        
+        has_next = True
+        while has_next:
+            try:
+                # grab the next chunk
+                chunk = key_iter.next()
+                
+                # split on newlines, preserving the newline
+                for line in chunk.splitlines(True):
+                    
+                    if not line.endswith(os.linesep):
+                        # no newline, so store in buffer
+                        self._add_to_buffer(line)
+                    else:
+                        # newline found, send it out
+                        if self.buffer:
+                            self._add_to_buffer(line)
+                            yield self._flush_buffer()
+                        else:
+                            yield line
+            except StopIteration:
+                # send out anything we have left in the buffer
+                output = self._flush_buffer()
+                if output:
+                    yield output
+                has_next = False
+        self.close()
+
 class S3Target(FileSystemTarget):
     """
     """
@@ -227,7 +300,11 @@ class S3Target(FileSystemTarget):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
         if mode == 'r':
-            raise NotImplementedError('TODO: Implement me')
+            s3_key = self.fs.get_key(self.path)
+            if s3_key:
+                return ReadableS3File(s3_key)
+            else:
+                raise FileNotFoundException("Could not find file at %s" % self.path)
         else:
             return AtomicS3File(self.path, self.fs)
 
