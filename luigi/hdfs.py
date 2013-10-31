@@ -274,6 +274,15 @@ class HdfsClientApache1(HdfsClientCdh3):
 
 if snakebite_enabled:
     class SnakebiteHdfsClient(HdfsClient):
+
+        def check_pid(func):
+            def refresh_func(self, *args, **kwargs):
+                # renew client if we have forked
+                if os.getpid() != self.pid:
+                    self.renew_client()
+                return func(self, *args, **kwargs)
+            return refresh_func
+
         @staticmethod
         def convert_permission_to_string(file_type, permission):
             def number_to_permission_string(permission_number):
@@ -292,10 +301,19 @@ if snakebite_enabled:
             owner = number_to_permission_string(permission % 10)
             return file_flag + owner + group + everyone
 
-        def __init__(self):
+        def new_client(self):
             namenode, port = get_namenode_details()
             self.client = snakebite.client.Client(namenode, int(port))
+            self.pid = os.getpid()
 
+        def __init__(self):
+            self.new_client()
+
+        def renew_client(self):
+            del self.client
+            self.new_client()
+
+        @check_pid
         def exists(self, path):
             """ Use `hadoop fs -ls -d` to check file existence
 
@@ -305,15 +323,18 @@ if snakebite_enabled:
             """
             return self.client.test(path, exists=True)
 
+        @check_pid
         def rename(self, path, dest):
             parent_dir = os.path.dirname(dest)
             if parent_dir != '' and not self.exists(parent_dir):
                 self.mkdir(parent_dir)
             list(self.client.rename([path], dest))
 
+        @check_pid
         def chmod(self, path, permissions, recursive=False):
             list(self.client.chmod([path], permissions, recurse=recursive))
 
+        @check_pid
         def chown(self, path, owner, group, recursive=False):
             if owner is None:
                 owner = ''
@@ -322,6 +343,7 @@ if snakebite_enabled:
             ownership = "%s:%s" % (owner, group)
             list(self.client.chown([path], ownership, recurse=recursive))
 
+        @check_pid
         def count(self, path):
             client_results = self.client.count([path])
             return {
@@ -330,9 +352,11 @@ if snakebite_enabled:
                 'file_count': client_results['fileCount']
             }
 
+        @check_pid
         def mkdir(self, path):
             list(self.client.mkdir([path], create_parent=True))
 
+        @check_pid
         def listdir(self, path, ignore_directories=False, ignore_files=False,
                     include_size=False, include_type=False, include_time=False, recursive=False):
             if not path:
