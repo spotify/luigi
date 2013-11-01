@@ -222,8 +222,8 @@ class SnakebiteHdfsClient(HdfsClient):
         try:
             from snakebite.client import Client
             config = configuration.get_config()
-            self.bite = Client(config.get("hdfs", "namenode_host"),
-                               config.getint("hdfs", "namenode_port"))
+            self.pid = -1
+            self._check_pid()
         except Exception as err:    # IGNORE:broad-except
             raise RuntimeError("You must specify namenode_host and namenode_port "
                                "in the [hdfs] section of your luigi config in "
@@ -238,6 +238,15 @@ class SnakebiteHdfsClient(HdfsClient):
             logger.warning("Failed to load snakebite.client. Using HdfsClient.")
             return HdfsClient()
 
+    def _check_pid(self):
+        """
+        If Luigi has forked, we have a different PID, and need to reconnect.
+        """
+        if self.pid != os.getpid():
+            self.pid = os.getpid()
+            self.bite = Client(config.get("hdfs", "namenode_host"),
+                               config.getint("hdfs", "namenode_port"))
+
     def exists(self, path):
         """
         Use snakebite.test to check file existence.
@@ -246,6 +255,7 @@ class SnakebiteHdfsClient(HdfsClient):
         @type path: string
         @return: boolean, True if path exists in HDFS
         """
+        self._check_pid()
         try:
             return self.bite.test(path, exists=True)
         except Exception as err:    # IGNORE:broad-except
@@ -261,6 +271,7 @@ class SnakebiteHdfsClient(HdfsClient):
         @type dest: string
         @return: list of renamed items
         """
+        self._check_pid()
         parts = dest.split('/')
         if len(parts) > 1:
             dir_path = '/'.join(parts[0:-1])
@@ -280,6 +291,7 @@ class SnakebiteHdfsClient(HdfsClient):
         @type skip_trash: boolean, default is False (use trash)
         @return: list of deleted items
         """
+        self._check_pid()
         return all(self.bite.delete(list_path(path), recurse=recursive))
 
     def chmod(self, path, permissions, recursive=False):
@@ -294,6 +306,7 @@ class SnakebiteHdfsClient(HdfsClient):
         @type recursive: boolean, default is False
         @return: list of all changed items
         """
+        self._check_pid()
         return all(self.bite.chmod(list_path(path), permissions, recursive))
 
     def chown(self, path, owner, group, recursive=False):
@@ -312,6 +325,7 @@ class SnakebiteHdfsClient(HdfsClient):
         @type recursive: boolean, default is False
         @return: list of all changed items
         """
+        self._check_pid()
         if owner:
             if group:
                 return all(self.bite.chown(list_path(path),
@@ -329,6 +343,7 @@ class SnakebiteHdfsClient(HdfsClient):
         @type path: string
         @return: dictionary with content_size, dir_count and file_count keys
         """
+        self._check_pid()
         try:
             (dir_count, file_count, content_size, ppath) = \
                 self.bite.count(list_path(path)).next().split()
@@ -346,6 +361,7 @@ class SnakebiteHdfsClient(HdfsClient):
         @param local_destination: path on the system running Luigi
         @type local_destination: string
         """
+        self._check_pid()
         return all(self.bite.copyToLocal(list_path(path), local_destination))
 
     def mkdir(self, path, parents=True, mode=0755):
@@ -362,6 +378,7 @@ class SnakebiteHdfsClient(HdfsClient):
         @param mode: *nix style owner/group/other permissions
         @type mode: octal, default 0755
         """
+        self._check_pid()
         if self.bite.test(path, exists=True):
             raise luigi.target.FileAlreadyExists("%s exists" % (path, ))
         return all(self.bite.mkdir(list_path(path), create_parent=parents,
@@ -388,6 +405,7 @@ class SnakebiteHdfsClient(HdfsClient):
         @return: yield with a string, or if any of the include_* settings are
             true, a tuple starting with the path, and include_* items in order
         """
+        self._check_pid()
         for entry in self.bite.ls(list_path(path), recursive):
             if ignore_directories and entry['file_type'] == 'd':
                 continue
