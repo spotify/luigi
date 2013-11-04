@@ -18,6 +18,9 @@ import unittest
 import datetime
 from luigi.util import Copy
 
+# TODO: this is deprecated, replaced by luigi.util.copies decorator instead
+# See unit tests in decorator_test.py
+
 File = MockFile
 
 class A(luigi.Task):

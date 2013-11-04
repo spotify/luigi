@@ -261,7 +261,7 @@ class Task(object):
 
         return cls(**kwargs)
 
-    def clone(self, **kwargs):
+    def clone(self, cls=None, **kwargs):
         ''' Creates a new instance from an existing instance where some of the args have changed.
 
         There's at least two scenarios where this is useful (see test/clone_test.py)
@@ -271,12 +271,15 @@ class Task(object):
         k = self.param_kwargs.copy()
         k.update(kwargs.items())
 
-        # remove global params
-        for param_name, param_class in self.get_params():
-            if param_class.is_global:
-                k.pop(param_name)
+        if cls is None:
+            cls = self.__class__
+        
+        new_k = {}
+        for param_name, param_class in cls.get_nonglobal_params():
+            if param_name in k:
+                new_k[param_name] = k[param_name]
 
-        return self.__class__(**k)
+        return cls(**new_k)
 
     def __hash__(self):
         return self.__hash
