@@ -22,6 +22,8 @@ import datetime
 import re
 from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
 import configuration
+import logging
+logger = logging.getLogger('luigi-interface')
 
 
 class HDFSCliError(Exception):
@@ -221,9 +223,9 @@ class SnakebiteHdfsClient(HdfsClient):
         super(SnakebiteHdfsClient, self).__init__()
         try:
             from snakebite.client import Client
-            config = configuration.get_config()
+            self.config = configuration.get_config()
+            self._bite = None
             self.pid = -1
-            self._check_pid()
         except Exception as err:    # IGNORE:broad-except
             raise RuntimeError("You must specify namenode_host and namenode_port "
                                "in the [hdfs] section of your luigi config in "
@@ -238,14 +240,23 @@ class SnakebiteHdfsClient(HdfsClient):
             logger.warning("Failed to load snakebite.client. Using HdfsClient.")
             return HdfsClient()
 
-    def _check_pid(self):
+    def get_bite(self):
         """
         If Luigi has forked, we have a different PID, and need to reconnect.
         """
-        if self.pid != os.getpid():
-            self.pid = os.getpid()
-            self.bite = Client(config.get("hdfs", "namenode_host"),
-                               config.getint("hdfs", "namenode_port"))
+        if self.pid != os.getpid() or not self._bite:
+            from snakebite.client import Client
+            try:
+                ver = self.config.getint("hdfs", "client_version")
+                if ver is None:
+                    raise RuntimeError()
+                self._bite = Client(self.config.get("hdfs", "namenode_host"),
+                                    self.config.getint("hdfs", "namenode_port"),
+                                    hadoop_version=ver)
+            except:
+                self._bite = Client(self.config.get("hdfs", "namenode_host"),
+                                    self.config.getint("hdfs", "namenode_port"))
+        return self._bite
 
     def exists(self, path):
         """
@@ -255,11 +266,10 @@ class SnakebiteHdfsClient(HdfsClient):
         @type path: string
         @return: boolean, True if path exists in HDFS
         """
-        self._check_pid()
         try:
-            return self.bite.test(path, exists=True)
+            return self.get_bite().test(path, exists=True)
         except Exception as err:    # IGNORE:broad-except
-            raise HDFSCliError("bite.test", -1, str(err), repr(err))
+            raise HDFSCliError("snakebite.test", -1, str(err), repr(err))
 
     def rename(self, path, dest):
         """
@@ -271,13 +281,12 @@ class SnakebiteHdfsClient(HdfsClient):
         @type dest: string
         @return: list of renamed items
         """
-        self._check_pid()
         parts = dest.split('/')
         if len(parts) > 1:
             dir_path = '/'.join(parts[0:-1])
             if not self.exists(dir_path):
                 self.mkdir(dir_path, parents=True)
-        return all(self.bite.rename(list_path(path), dest))
+        return list(self.get_bite().rename(list_path(path), dest))
 
     def remove(self, path, recursive=True, skip_trash=False):
         """
@@ -291,8 +300,7 @@ class SnakebiteHdfsClient(HdfsClient):
         @type skip_trash: boolean, default is False (use trash)
         @return: list of deleted items
         """
-        self._check_pid()
-        return all(self.bite.delete(list_path(path), recurse=recursive))
+        return list(self.get_bite().delete(list_path(path), recurse=recursive))
 
     def chmod(self, path, permissions, recursive=False):
         """
@@ -306,8 +314,8 @@ class SnakebiteHdfsClient(HdfsClient):
         @type recursive: boolean, default is False
         @return: list of all changed items
         """
-        self._check_pid()
-        return all(self.bite.chmod(list_path(path), permissions, recursive))
+        return list(self.get_bite().chmod(list_path(path),
+                                         permissions, recursive))
 
     def chown(self, path, owner, group, recursive=False):
         """
@@ -325,15 +333,13 @@ class SnakebiteHdfsClient(HdfsClient):
         @type recursive: boolean, default is False
         @return: list of all changed items
         """
-        self._check_pid()
+        bite = self.get_bite()
         if owner:
             if group:
-                return all(self.bite.chown(list_path(path),
-                                           "%s:%s" % (owner, group),
-                                           recurse=recursive))
-            return all(self.bite.chown(list_path(path), owner,
-                                       recurse=recursive))
-        return all(self.bite.chgrp(list_path(path), group, recurse=recursive))
+                return all(bite.chown(list_path(path), "%s:%s" % (owner, group),
+                                      recurse=recursive))
+            return all(bite.chown(list_path(path), owner, recurse=recursive))
+        return list(bite.chgrp(list_path(path), group, recurse=recursive))
 
     def count(self, path):
         """
@@ -343,10 +349,9 @@ class SnakebiteHdfsClient(HdfsClient):
         @type path: string
         @return: dictionary with content_size, dir_count and file_count keys
         """
-        self._check_pid()
         try:
             (dir_count, file_count, content_size, ppath) = \
-                self.bite.count(list_path(path)).next().split()
+                self.get_bite().count(list_path(path)).next().split()
         except StopIteration:
             dir_count = file_count = content_size = 0
         return {'content_size': content_size, 'dir_count': dir_count,
@@ -361,8 +366,8 @@ class SnakebiteHdfsClient(HdfsClient):
         @param local_destination: path on the system running Luigi
         @type local_destination: string
         """
-        self._check_pid()
-        return all(self.bite.copyToLocal(list_path(path), local_destination))
+        return list(self.get_bite().copyToLocal(list_path(path),
+                                                local_destination))
 
     def mkdir(self, path, parents=True, mode=0755):
         """
@@ -378,11 +383,11 @@ class SnakebiteHdfsClient(HdfsClient):
         @param mode: *nix style owner/group/other permissions
         @type mode: octal, default 0755
         """
-        self._check_pid()
-        if self.bite.test(path, exists=True):
+        bite = self.get_bite()
+        if bite.test(path, exists=True):
             raise luigi.target.FileAlreadyExists("%s exists" % (path, ))
-        return all(self.bite.mkdir(list_path(path), create_parent=parents,
-                                   mode=mode))
+        return list(bite.mkdir(list_path(path), create_parent=parents,
+                               mode=mode))
 
     def listdir(self, path, ignore_directories=False, ignore_files=False,
                 include_size=False, include_type=False, include_time=False,
@@ -402,11 +407,13 @@ class SnakebiteHdfsClient(HdfsClient):
         @type include_type: boolean, default is False (do not include)
         @param include_time: include the last modification time of the current item
         @type include_time: boolean, default is False (do not include)
+        @param recursive: list subdirectory contents
+        @type recursive: boolean, default is False (do not recurse)
         @return: yield with a string, or if any of the include_* settings are
             true, a tuple starting with the path, and include_* items in order
         """
-        self._check_pid()
-        for entry in self.bite.ls(list_path(path), recursive):
+        bite = self.get_bite()
+        for entry in bite.ls(list_path(path), recurse=recursive):
             if ignore_directories and entry['file_type'] == 'd':
                 continue
             if ignore_files and entry['file_type'] == 'f':
@@ -417,7 +424,7 @@ class SnakebiteHdfsClient(HdfsClient):
             if include_type:
                 rval.append(entry['file_type'])
             if include_time:
-                rval.append(datetime.datetime.fromtimestamp(entry['modification_time']))
+                rval.append(datetime.datetime.fromtimestamp(entry['modification_time'] / 1000))
             if len(rval) > 1:
                 yield tuple(rval)
             else:
