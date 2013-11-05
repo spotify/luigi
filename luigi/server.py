@@ -123,7 +123,7 @@ def app(api):
         (r'/history/by_id/(.*?)', ByIdHandler, {'api': api}),
         (r'/history/by_params/(.*?)', ByParamsHandler, {'api': api})
     ]
-    api_app = tornado.web.Application(handlers, gzip=True)
+    api_app = tornado.web.Application(handlers)
     return api_app
 
 
