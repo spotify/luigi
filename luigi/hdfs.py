@@ -22,7 +22,14 @@ import datetime
 import re
 from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
 import configuration
+import luigi.interface
 
+snakebite_enabled = False
+try:
+    import snakebite.client
+    snakebite_enabled = True
+except ImportError, e:
+    pass
 
 class HDFSCliError(Exception):
     def __init__(self, command, returncode, stdout, stderr):
@@ -62,6 +69,49 @@ def load_hadoop_cmd():
 
 def tmppath(path=None):
     return tempfile.gettempdir() + '/' + (path + "-" if path else "") + "luigitemp-%08d" % random.randrange(1e9)
+
+luigi_config = luigi.interface.LuigiConfigParser.instance()
+
+def get_config_property(config_filename, property):
+    """Get a hadoop config property value from xml config file
+
+    Args:
+        config_name (str): Filename of the config to read, e.g 'hdfs-site.xml'
+        property (str): The name of the property to get
+    """
+    hadoop_conf_dir = luigi_config.get('hadoop', 'confdir', None)
+    if hadoop_conf_dir is None and os.environ.get('HADOOP_HOME') != None:
+        hadoop_conf_dir = os.path.join(os.environ.get('HADOOP_HOME'), 'conf')
+    if hadoop_conf_dir is None:
+        hadoop_conf_dir = '/etc/hadoop/conf'
+    hdfs_conf = os.path.join(hadoop_conf_dir, config_filename)
+    if not os.path.exists(hdfs_conf):
+        return None
+
+    from xml.etree import ElementTree
+    tree = ElementTree.parse(hdfs_conf)
+    root = tree.getroot()
+    for prop in root.findall('property'):
+        name_element = prop.find('name')
+        if name_element is None:
+            return None
+        if name_element.text == property:
+            value_element = prop.find('value')
+            if value_element is not None:
+                return value_element.text
+    return None
+
+hdfs_re = re.compile('hdfs://([^:]+):(\d+)')
+
+def get_namenode_details():
+    namenode = luigi_config.get('hdfs', 'namenode_host', None)
+    port = luigi_config.get('hdfs', 'namenode_port', None)
+    if namenode is None or port is None:
+        path = get_config_property('core-site.xml', 'fs.defaultFS')
+        match = hdfs_re.match(path)
+        return match.group(1), match.group(2)
+    else:
+        return (namenode, port)
 
 
 class HdfsClient(FileSystem):
@@ -222,14 +272,130 @@ class HdfsClientApache1(HdfsClientCdh3):
         else:
             raise HDFSCliError(cmd, p.returncode, stdout, stderr)
 
-if get_hdfs_syntax() == "cdh4":
-    client = HdfsClient()
-elif get_hdfs_syntax() == "cdh3":
-    client = HdfsClientCdh3()
-elif get_hdfs_syntax() == "apache1":
-    client = HdfsClientApache1()
+if snakebite_enabled:
+    class SnakebiteHdfsClient(HdfsClient):
+
+        def check_pid(func):
+            def refresh_func(self, *args, **kwargs):
+                # renew client if we have forked
+                if os.getpid() != self.pid:
+                    self.renew_client()
+                return func(self, *args, **kwargs)
+            return refresh_func
+
+        @staticmethod
+        def convert_permission_to_string(file_type, permission):
+            def number_to_permission_string(permission_number):
+                x = 'x' if permission_number % 2 else '-'
+                permission_number /= 2
+                w = 'w' if permission_number % 2 else '-'
+                permission_number /= 2
+                r = 'r' if permission_number % 2 else '-'
+                return r + w + x
+            permission = int(oct(permission))
+            file_flag = file_type if file_type == 'd' else '-'
+            everyone = number_to_permission_string(permission % 10)
+            permission /= 10
+            group = number_to_permission_string(permission % 10)
+            permission /= 10
+            owner = number_to_permission_string(permission % 10)
+            return file_flag + owner + group + everyone
+
+        def new_client(self):
+            namenode, port = get_namenode_details()
+            self.client = snakebite.client.Client(namenode, int(port))
+            self.pid = os.getpid()
+
+        def __init__(self):
+            self.new_client()
+
+        def renew_client(self):
+            del self.client
+            self.new_client()
+
+        @check_pid
+        def exists(self, path):
+            """ Use `hadoop fs -ls -d` to check file existence
+
+            `hadoop fs -test -e` can't be (reliably) used at this time since there
+            is no good way of distinguishing file non-existence of files
+            from errors when running the comman (same return code)
+            """
+            return self.client.test(path, exists=True)
+
+        @check_pid
+        def rename(self, path, dest):
+            parent_dir = os.path.dirname(dest)
+            if parent_dir != '' and not self.exists(parent_dir):
+                self.mkdir(parent_dir)
+            list(self.client.rename([path], dest))
+
+        @check_pid
+        def chmod(self, path, permissions, recursive=False):
+            list(self.client.chmod([path], permissions, recurse=recursive))
+
+        @check_pid
+        def chown(self, path, owner, group, recursive=False):
+            if owner is None:
+                owner = ''
+            if group is None:
+                group = ''
+            ownership = "%s:%s" % (owner, group)
+            list(self.client.chown([path], ownership, recurse=recursive))
+
+        @check_pid
+        def count(self, path):
+            client_results = self.client.count([path])
+            return {
+                'content_size': client_results['spaceConsumed'],
+                'dir_count': client_results['directoryCount'],
+                'file_count': client_results['fileCount']
+            }
+
+        @check_pid
+        def mkdir(self, path):
+            list(self.client.mkdir([path], create_parent=True))
+
+        @check_pid
+        def listdir(self, path, ignore_directories=False, ignore_files=False,
+                    include_size=False, include_type=False, include_time=False, recursive=False):
+            if not path:
+                path = "."  # default to current/home catalog
+
+            try:
+                for result in self.client.ls([path], recurse=recursive):
+                    file_type = result['file_type']
+                    if ignore_directories and file_type == 'd':
+                        continue
+                    if ignore_files and file_type == 'f':
+                        continue
+                    file = result['path']
+                    extra_data = ()
+                    if include_size:
+                        extra_data += (result['length'],)
+                    if include_type:
+                        extra_data += (SnakebiteHdfsClient.convert_permission_to_string(file_type, result['permission']),)
+                    if include_time:
+                        extra_data += (datetime.datetime.fromtimestamp(result['modification_time']),)
+                    if len(extra_data) > 0:
+                        yield (file,) + extra_data
+                    else:
+                        yield file
+            except Exception:
+                pass
+
+hdfs_client_config = luigi_config.get('hdfs', 'client', default='default')
+if hdfs_client_config == 'snakebite' and snakebite_enabled:
+    client = SnakebiteHdfsClient()
 else:
-    raise Exception("Error: Unknown version specified in Hadoop version configuration parameter")
+    if get_hdfs_syntax() == "cdh4":
+        client = HdfsClient()
+    elif get_hdfs_syntax() == "cdh3":
+        client = HdfsClientCdh3()
+    elif get_hdfs_syntax() == "apache1":
+        client = HdfsClientApache1()
+    else:
+        raise Exception("Error: Unknown version specified in Hadoop version configuration parameter")
 
 exists = client.exists
 rename = client.rename
