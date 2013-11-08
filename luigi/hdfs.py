@@ -135,7 +135,7 @@ class HdfsClient(FileSystem):
 
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
-            cmd = [load_hadoop_cmd(), 'fs', '-rm', '-r']
+            cmd = [load_hadoop_cmd(), 'fs', '-rmr']
         else:
             cmd = [load_hadoop_cmd(), 'fs', '-rm']
 
