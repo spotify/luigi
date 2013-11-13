@@ -13,6 +13,7 @@
 # the License.
 
 import datetime
+from datetime import timedelta
 import luigi.date_interval
 import luigi
 import luigi.interface
@@ -256,6 +257,53 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
         p = luigi.DateIntervalParameter(default_from_config=dict(section="foo", name="bar"))
         expected = luigi.date_interval.Custom.parse("2001-02-03-2001-02-28")
         self.assertEquals(expected, p.default)
+
+    @with_config({"foo": {"bar": "1 day"}})
+    def testTimeDelta(self):
+        p = luigi.TimeDeltaParameter(default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(timedelta(days = 1), p.default)
+
+    @with_config({"foo": {"bar": "2 seconds"}})
+    def testTimeDeltaPlural(self):
+        p = luigi.TimeDeltaParameter(default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(timedelta(seconds = 2), p.default)
+
+    @with_config({"foo": {"bar": "3w 4h 5m"}})
+    def testTimeDeltaMultiple(self):
+        p = luigi.TimeDeltaParameter(default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(timedelta(weeks = 3, hours = 4, minutes = 5), p.default)
+
+    @with_config({"foo": {"bar": "P4DT12H30M5S"}})
+    def testTimeDelta8601(self):
+        p = luigi.TimeDeltaParameter(default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(timedelta(days = 4, hours = 12, minutes = 30, seconds = 5), p.default)
+
+    @with_config({"foo": {"bar": "P5D"}})
+    def testTimeDelta8601NoTimeComponent(self):
+        p = luigi.TimeDeltaParameter(default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(timedelta(days = 5), p.default)
+
+    @with_config({"foo": {"bar": "P5W"}})
+    def testTimeDelta8601Weeks(self):
+        p = luigi.TimeDeltaParameter(default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(timedelta(weeks = 5), p.default)
+
+    @with_config({"foo": {"bar": "P3Y6M4DT12H30M5S"}})
+    def testTimeDelta8601YearMonthNotSupported(self):
+        def f():
+            return luigi.TimeDeltaParameter(default_from_config=dict(section="foo", name="bar")).default
+        self.assertRaises(luigi.parameter.ParameterException, f)  # ISO 8601 durations with years or months are not supported
+
+    @with_config({"foo": {"bar": "PT6M"}})
+    def testTimeDelta8601MAfterT(self):
+        p = luigi.TimeDeltaParameter(default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(timedelta(minutes = 6), p.default)
+
+    @with_config({"foo": {"bar": "P6M"}})
+    def testTimeDelta8601MBeforeT(self):
+        def f():
+            return luigi.TimeDeltaParameter(default_from_config=dict(section="foo", name="bar")).default
+        self.assertRaises(luigi.parameter.ParameterException, f)  # ISO 8601 durations with months are not supported
 
     def testTwoDefaults(self):
         self.assertRaises(luigi.parameter.ParameterException, lambda: luigi.Parameter(default="baz", default_from_config=dict(section="foo", name="bar")))

@@ -167,3 +167,53 @@ class DateIntervalParameter(Parameter):
                 return i
         else:
             raise ValueError('Invalid date interval - could not be parsed')
+
+
+class TimeDeltaParameter(Parameter):
+    """Class that maps to timedelta using strings in any of the following forms:
+     - (n {w[eek[s]]|d[ay[s]]|h[our[s]]|m[inute[s]|s[second[s]]}) (e.g. "1 week 2 days" or "1 h")
+        Note: multiple arguments must be supplied in longest to shortest unit order
+     - ISO 8601 duration PnDTnHnMnS (each field optional, years and months not supported)
+     - ISO 8601 duration PnW
+    See https://en.wikipedia.org/wiki/ISO_8601#Durations
+    """
+
+    def apply_regex(self, regex, input):
+        from datetime import timedelta
+        import re
+        re_match = re.match(regex, input)
+        if re_match:
+            kwargs = {}
+            has_val = False
+            for k,v in re_match.groupdict(default="0").items():
+                val = int(v)
+                has_val = has_val or val != 0
+                kwargs[k] = val
+            if has_val:
+                return timedelta(**kwargs)
+
+    def parseIso8601(self, input):
+        def field(key):
+            return "(?P<%s>\d+)%s" % (key, key[0].upper())
+        def optional_field(key):
+            return "(%s)?" % field(key)
+        # A little loose: ISO 8601 does not allow weeks in combination with other fields, but this regex does (as does python timedelta)
+        regex = "P(%s|%s(T%s)?)" % (field("weeks"), optional_field("days"), "".join([optional_field(key) for key in ["hours", "minutes", "seconds"]]))
+        return self.apply_regex(regex,input)
+
+    def parseSimple(self, input):
+        keys = ["weeks", "days", "hours", "minutes", "seconds"]
+        # Give the digits a regex group name from the keys, then look for text with the first letter of the key,
+        # optionally followed by the rest of the word, with final char (the "s") optional
+        regex = "".join(["((?P<%s>\d+) ?%s(%s)?(%s)? ?)?" % (k, k[0], k[1:-1], k[-1]) for k in keys])
+        return self.apply_regex(regex, input)
+
+    def parse(self, input):
+        result = self.parseIso8601(input)
+        if not result:
+            result = self.parseSimple(input)
+        if result:
+            return result
+        else:
+            raise ParameterException("Invalid time delta - could not parse %s" % input)
+
