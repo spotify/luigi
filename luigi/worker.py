@@ -246,70 +246,72 @@ class Worker(object):
 
         return status
 
+    def _log_remote_tasks(self, running_tasks, n_pending_tasks):
+        logger.info("Done")
+        logger.info("There are no more tasks to run at this time")
+        if running_tasks:
+            for r in running_tasks:
+                logger.info('%s is currently run by worker %s', r['task_id'], r['worker'])
+        elif n_pending_tasks:
+            logger.info("There are %s pending tasks possibly being run by other workers", n_pending_tasks)
+
+    def _reap_children(self, children):
+        died_pid, status = os.wait()
+        if died_pid in children:
+            children.remove(died_pid)
+        else:
+            logger.warning("Some random process %s died", died_pid)
+
+    def _get_work(self):
+        logger.debug("Asking scheduler for work...")
+        r = self.__scheduler.get_work(worker=self.__id, host=self.host)
+        # Support old version of scheduler
+        if isinstance(r, tuple) or isinstance(r, list):
+            n_pending_tasks, task_id = r
+            running_tasks = []
+        else:
+            n_pending_tasks = r['n_pending_tasks']
+            task_id = r['task_id']
+            running_tasks = r['running_tasks']
+        return task_id, running_tasks, n_pending_tasks
+
+    def _fork_task(self, children, task_id):
+        child_pid = os.fork()
+        if child_pid:
+            children.add(child_pid)
+        else:
+            # need to have different random seeds...
+            random.seed((os.getpid(), time.time()))
+            self._run_task(task_id)
+            os._exit(0)
+
     def run(self):
         children = set()
 
         while True:
             while len(children) >= self.worker_processes:
-                died_pid, status = os.wait()
-                if died_pid in children:
-                    children.remove(died_pid)
-                else:
-                    logger.warning("Some random process %s died", died_pid)
+                self._reap_children(children)
 
-            logger.debug("Asking scheduler for work...")
-            r = self.__scheduler.get_work(worker=self.__id, host=self.host)
-            # Support old version of scheduler
-            if isinstance(r, tuple) or isinstance(r, list):
-                n_pending_tasks, task_id = r
-                running_tasks = []
-            else:
-                n_pending_tasks = r['n_pending_tasks']
-                task_id = r['task_id']
-                running_tasks = r['running_tasks']
-
-            if task_id is None:
-                logger.info("Done")
-                logger.info("There are no more tasks to run at this time")
-                if running_tasks:
-                    for r in running_tasks:
-                        logger.info('%s is currently run by worker %s', r['task_id'], r['worker'])
-                elif n_pending_tasks:
-                    logger.info("There are %s pending tasks possibly being run by other workers", n_pending_tasks)
-
-            else:
-                logger.debug("Pending tasks: %s", n_pending_tasks)
+            task_id, running_tasks, n_pending_tasks = self._get_work()
 
             if task_id is None:
                 # TODO: sleep for a bit and query server again if there are
                 # pending tasks in the future we might be able to run
+                self._log_remote_tasks(running_tasks, n_pending_tasks)
                 if not children:
                     break
                 else:
-                    died_pid, status = os.wait()
-                    if died_pid in children:
-                        children.remove(died_pid)
-                    else:
-                        logger.warn("Some random process %s died", died_pid)
+                    self._reap_children(children)
                     continue
-            if self.worker_processes > 1:
-                child_pid = os.fork()
-                if child_pid:
-                    children.add(child_pid)
-                else:
-                    # need to have different random seeds...
-                    random.seed((os.getpid(), time.time()))
 
-                    self._run_task(task_id)
-                    os._exit(0)
+            # task_id is not None:
+            logger.debug("Pending tasks: %s", n_pending_tasks)
+            if self.worker_processes > 1:
+                self._fork_task(children, task_id)
             else:
                 self._run_task(task_id)
 
             self._previous_tasks.append(task_id)
 
         while children:
-            died_pid, status = os.wait()
-            if died_pid in children:
-                children.remove(died_pid)
-            else:
-                logger.warning("Some random process %s died", died_pid)
+            self._reap_children(children)
