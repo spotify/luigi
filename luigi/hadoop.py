@@ -32,6 +32,7 @@ import luigi.hdfs
 import configuration
 import warnings
 import mrrunner
+import json
 
 logger = logging.getLogger('luigi-interface')
 
@@ -157,6 +158,18 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
     '''
     logger.info('%s', ' '.join(arglist))
 
+    def write_luigi_history(arglist, history):
+        '''
+        Writes history to a file in the job's output directory in JSON format.
+        Currently just for tracking the job ID in a configuration where no history is stored in the output directory by Hadoop.
+        '''
+        history_filename = configuration.get_config().get('core', 'history-filename', '')
+        if history_filename:
+            output_dir = arglist[arglist.index('-output') + 1]
+            f = luigi.hdfs.HdfsTarget(os.path.join(output_dir, history_filename)).open('w')
+            f.write(json.dumps(history))
+            f.close()
+
     def track_process(arglist, tracking_url_callback, env=None):
         # Dump stdout to a temp file, poll stderr and log it
         temp_stdout = tempfile.TemporaryFile()
@@ -201,6 +214,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
         out = ''.join(temp_stdout.readlines())
 
         if proc.returncode == 0:
+            write_luigi_history(arglist, {'job_id': job_id})
             return
 
         # Try to fetch error logs if possible
