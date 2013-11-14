@@ -19,6 +19,7 @@ from luigi.worker import Worker
 from luigi import Task, ExternalTask, RemoteScheduler
 import unittest
 import logging
+import threading
 import luigi.notifications
 luigi.notifications.DEBUG = True
 
@@ -243,6 +244,41 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(b.complete())
         w.run()
         self.assertTrue(b.complete())
+        w.stop()
+        w2.stop()
+
+    def test_interleaved_workers3(self):
+        class A(DummyTask):
+            def run(self):
+                logging.debug('running A')
+                time.sleep(0.1)
+                super(A, self).run()
+
+        a = A()
+
+        class B(DummyTask):
+            def requires(self):
+                return a
+            def run(self):
+                logging.debug('running B')
+                super(B, self).run()
+
+        b = B()
+
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+
+        w  = Worker(scheduler=sch, worker_id='X', keep_alive=True)
+        w2 = Worker(scheduler=sch, worker_id='Y', keep_alive=True, wait_interval=0.1)
+
+        w.add(a)
+        w2.add(b)
+
+        threading.Thread(target=w.run).start()
+        w2.run()
+
+        self.assertTrue(a.complete())
+        self.assertTrue(b.complete())
+
         w.stop()
         w2.stop()
 

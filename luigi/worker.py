@@ -47,13 +47,24 @@ class Worker(object):
     """
 
     def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None,
-                 worker_processes=1, ping_interval=None):
+                 worker_processes=1, ping_interval=None, keep_alive=None,
+                 wait_interval=None):
         if not worker_id:
             worker_id = 'worker-%09d' % random.randrange(0, 999999999)
 
+        config = configuration.get_config()
+
         if ping_interval is None:
-            config = configuration.get_config()
             ping_interval = config.getfloat('core', 'worker-ping-interval', 1.0)
+
+        if keep_alive is None:
+            keep_alive = config.getboolean('core', 'worker-keep-alive', False)
+        self.__keep_alive = keep_alive
+
+        if keep_alive:
+            if wait_interval is None:
+                wait_interval = config.getint('core', 'worker-wait-interval', 1)
+            self.__wait_interval = wait_interval
 
         self.__id = worker_id
         self.__scheduler = scheduler
@@ -285,8 +296,17 @@ class Worker(object):
             self._run_task(task_id)
             os._exit(0)
 
+    def _sleeper(self):
+        # TODO is exponential backoff necessary?
+        while True:
+            wait_interval = self.__wait_interval + random.randint(1, 5)
+            logger.debug('Sleeping for %d seconds', wait_interval)
+            time.sleep(wait_interval)
+            yield
+
     def run(self):
         children = set()
+        sleeper  = self._sleeper()
 
         while True:
             while len(children) >= self.worker_processes:
@@ -295,11 +315,13 @@ class Worker(object):
             task_id, running_tasks, n_pending_tasks = self._get_work()
 
             if task_id is None:
-                # TODO: sleep for a bit and query server again if there are
-                # pending tasks in the future we might be able to run
                 self._log_remote_tasks(running_tasks, n_pending_tasks)
                 if not children:
-                    break
+                    if self.__keep_alive and running_tasks and n_pending_tasks:
+                        sleeper.next()
+                        continue
+                    else:
+                        break
                 else:
                     self._reap_children(children)
                     continue
