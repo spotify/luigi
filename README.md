@@ -403,6 +403,7 @@ All configuration can be done by adding a configuration file named client.cfg to
 
 * *default-scheduler-host* defaults the scheduler to some hostname so that you don't have to provide it as an argument
 * *error-email* makes sure every time things crash, you will get an email (unless it was run on the command line)
+* *luigi-history*, if set, specifies a filename for Luigi to write stuff (currently just job id) to in mapreduce job's output directory. Useful in a configuration where no history is stored in the output directory by Hadoop.
 * If you want to run Hadoop mapreduce jobs in Python, you should also a path to your streaming jar
 * By default, Luigi is configured to work with the CDH4 release of Hadoop.  There are some minor differences with regards to the HDFS CLI in CDH3, CDH4 and the Apache releases of Hadoop.  If you want to use a release other than CDH4, you need to specify which version you are using.
 
