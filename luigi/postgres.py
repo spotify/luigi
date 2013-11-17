@@ -228,7 +228,7 @@ class CopyToTable(luigi.Task):
         """Return/yield tuples or lists corresponding to each row to be inserted """
         with self.input().open('r') as fobj:
             for line in fobj:
-                yield line.strip('\n').split('\t')
+                yield line.strip('\n').split(column_separator)
 
     def create_table(self, connection):
         """ Override to provide code for creating the target table.
