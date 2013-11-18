@@ -1,5 +1,4 @@
 import luigi, luigi.hadoop, luigi.hdfs
-import datetime
 
 # To make this run, you probably want to edit /etc/luigi/client.cfg and add something like:
 #
