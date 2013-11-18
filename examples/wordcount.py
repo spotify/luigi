@@ -1,8 +1,9 @@
 import luigi
-import datetime
-    
+
+
 class InputText(luigi.ExternalTask):
-    ''' This class represents something that was created elsewhere by an external process, so all we want to do is to implement the output method.
+    ''' This class represents something that was created elsewhere by an external process,
+    so all we want to do is to implement the output method.
     '''
     date = luigi.DateParameter()
     def output(self):
@@ -16,7 +17,7 @@ class WordCount(luigi.Task):
 
     def output(self):
         return luigi.LocalTarget('/var/tmp/text-count/%s' % self.date_interval)
-     
+
     def run(self):
         count = {}
         for file in self.input(): # The input() method is a wrapper around requires() that returns Target objects
