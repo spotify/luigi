@@ -264,7 +264,8 @@ In this case, the DailyReport task depends on two inputs created earlier, one of
 
 #### Task.output
 
-The *output* method returns one or more Target objects. Similarly to requires, can return wrap them up in any way that's convenient for you. However we strongly recommend that any Task only return one single Target in output.
+The *output* method returns one or more Target objects. Similarly to requires, can return wrap them up in any way that's convenient for you. However we recommend that any Task only return one single Target in output. If multiple outputs are returned, atomicity will be lost unless the Task itself can ensure that the Targets are atomically created. (If atomicity is not of concern, then it is safe to return multiple Target objects.)
+
 
 ```python
 class DailyReport(luigi.Task):
