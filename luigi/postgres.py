@@ -83,10 +83,11 @@ class PostgresTarget(luigi.Target):
     This will rarely have to be directly instantiated by the user"""
     marker_table = luigi.configuration.get_config().get('postgres', 'marker-table', 'table_updates')
 
-    def __init__(self, host, database, user, password, table, update_id):
+    def __init__(self, host, port, database, user, password, table, update_id):
         """
         Args:
             host (str): Postgres server address
+            port (int): Postgres server port
             database (str): Database name
             user (str): Database user
             password (str): Password for specified user
@@ -94,6 +95,7 @@ class PostgresTarget(luigi.Target):
 
         """
         self.host = host
+        self.port = port
         self.database = database
         self.user = user
         self.password = password
@@ -145,6 +147,7 @@ class PostgresTarget(luigi.Target):
         "Get a psycopg2 connection object to the database where the table is"
         connection = psycopg2.connect(
             host=self.host,
+            port=self.port,
             database=self.database,
             user=self.user,
             password=self.password)
@@ -184,7 +187,7 @@ class CopyToTable(luigi.Task):
     Template task for inserting a data set into Postgres
 
     Usage:
-    Subclass and override the required `host`, `database`, `user`,
+    Subclass and override the required `host`, `port`, `database`, `user`,
     `password`, `table` and `columns` attributes.
 
     To customize how to access data from an input task, override the `rows` method
@@ -195,6 +198,10 @@ class CopyToTable(luigi.Task):
     @abc.abstractproperty
     def host(self):
         return None
+
+    @abc.abstractproperty
+    def port(self):
+        return 5432
 
     @abc.abstractproperty
     def database(self):
@@ -274,6 +281,7 @@ class CopyToTable(luigi.Task):
         """
         return PostgresTarget(
             host=self.host,
+            port=self.port,
             database=self.database,
             user=self.user,
             password=self.password,
@@ -287,7 +295,7 @@ class CopyToTable(luigi.Task):
             Any code here will be formed in the same transaction as the main copy, just prior to copying data. Example use cases include truncating the table or removing all data older than X in the database to keep a rolling window of data available in the table.
         """
 
-        # TODO: remove this after sufficient time so most people using the 
+        # TODO: remove this after sufficient time so most people using the
         # clear_table attribtue will have noticed it doesn't work anymore
         if hasattr(self, "clear_table"):
             raise Exception("The clear_table attribute has been removed. Override init_copy instead!")
