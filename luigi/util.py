@@ -140,13 +140,13 @@ def delegates(task_that_delegates):
         def subtasks(self): return PowersOfN(5)
         def run(self): print self.subtasks().f(42)
     '''
-    class Wrapped(task_that_delegates):
-        def subtasks(self):
-            # This method can (optionally) define a couple of delegate tasks that
-            # will be accessible as interfaces, meaning that the task can access
-            # those tasks and run methods defined on them, etc
-            return []  # default impl
+    if not hasattr(task_that_delegates, 'subtasks'):
+        # This method can (optionally) define a couple of delegate tasks that
+        # will be accessible as interfaces, meaning that the task can access
+        # those tasks and run methods defined on them, etc
+        raise AttributeError('%s needs to implement the method "subtasks"' % task_that_delegates)
 
+    class Wrapped(task_that_delegates):
         def deps(self):
             # Overrides method in base class
             return task.flatten(self.requires()) + task.flatten([t.deps() for t in task.flatten(self.subtasks())])
