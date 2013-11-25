@@ -178,7 +178,11 @@ class HdfsClient(FileSystem):
             path = "."  # default to current/home catalog
 
         if recursive:
-            cmd = [load_hadoop_cmd(), 'fs', '-ls', '-R', path]
+            if get_hdfs_syntax() == "apache1":
+                subcommand = ['-lsr']
+            else:
+                subcommand = ['-ls', '-R']
+            cmd = [load_hadoop_cmd(), 'fs'] + subcommand + [path]
         else:
             cmd = [load_hadoop_cmd(), 'fs', '-ls', path]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
