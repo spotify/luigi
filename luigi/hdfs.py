@@ -107,7 +107,9 @@ class HdfsClient(FileSystem):
         parent_dir = os.path.dirname(dest)
         if parent_dir != '' and not self.exists(parent_dir):
             self.mkdir(parent_dir)
-        call_check([load_hadoop_cmd(), 'fs', '-mv', path, dest])
+        if type(path) not in (list, tuple):
+            path = [path]
+        call_check([load_hadoop_cmd(), 'fs', '-mv'] + path + [dest])
 
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
