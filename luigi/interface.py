@@ -76,6 +76,8 @@ class EnvironmentParamsContainer(task.Task):
                                        description='Directory to store the pid file')
     workers = parameter.IntParameter(is_global=True, default=1,
                                      description='Maximum number of parallel tasks to run')
+    logging_conf_file = parameter.Parameter(is_global=True, default=None,
+                                     description='Configuration file for logging')
 
     @classmethod
     def env_params(cls, override_defaults):
@@ -123,7 +125,10 @@ class Interface(object):
             worker_scheduler_factory = WorkerSchedulerFactory()
 
         env_params = EnvironmentParamsContainer.env_params(override_defaults)
-        logging_conf = configuration.get_config().get('core', 'logging_conf_file', None)
+        # search for logging configuration path first on the command line, then
+        # in the application config file
+        logging_conf = env_params.logging_conf_file or \
+            configuration.get_config().get('core', 'logging_conf_file', None)
         if logging_conf is not None and not os.path.exists(logging_conf):
             raise Exception("Error: Unable to locate specified logging configuration file!")
 
