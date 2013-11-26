@@ -276,16 +276,27 @@ class Subtask(luigi.Task):
 @delegates
 class SubtaskDelegator(luigi.Task):
     def subtasks(self):
-        return [F(1), F(2)]
+        return [Subtask(1), Subtask(2)]
 
     def run(self):
+        self.s = 0
         for t in self.subtasks():
-            t.f(42)
+            self.s += t.f(42)
 
 
 class SubtaskTest(unittest.TestCase):
-    def test_multiple_workers(self):
-        luigi.build([SubtaskDelegator()], local_scheduler=True)
+    def test_subtasks(self):
+        sd = SubtaskDelegator()
+        luigi.build([sd], local_scheduler=True)
+        self.assertEqual(sd.s, 42 * (1 + 42))
+
+    def test_forgot_subtasks(self):
+        def trigger_failure():
+            @delegates
+            class SubtaskDelegatorBroken(luigi.Task):
+                pass
+
+        self.assertRaises(AttributeError, trigger_failure)
 
 
 if __name__ == '__main__':
