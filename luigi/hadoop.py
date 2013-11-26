@@ -164,7 +164,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
         Currently just for tracking the job ID in a configuration where no history is stored in the output directory by Hadoop.
         '''
         history_filename = configuration.get_config().get('core', 'history-filename', '')
-        if history_filename:
+        if history_filename and '-output' in arglist:
             output_dir = arglist[arglist.index('-output') + 1]
             f = luigi.hdfs.HdfsTarget(os.path.join(output_dir, history_filename)).open('w')
             f.write(json.dumps(history))
