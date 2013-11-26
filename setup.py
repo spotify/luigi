@@ -46,7 +46,7 @@ luigi_package_data = [os.path.join(dirpath.replace("luigi/", ""), ext)
 
 setup(
     name='luigi',
-    version='1.0.8',
+    version='1.0.12',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='Erik Bernhardsson',
