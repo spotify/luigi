@@ -59,8 +59,10 @@ class AggregateArtistsHadoop(luigi.hadoop.JobTask):
     date_interval = luigi.DateIntervalParameter()
 
     def output(self):
-        return luigi.hdfs.HdfsTarget("data/artist_streams_%s.tsv" % self.date_interval, 
-                                     format = luigi.hdfs.PlainDir)
+        return luigi.hdfs.HdfsTarget(
+            "data/artist_streams_%s.tsv" % self.date_interval, 
+            format = luigi.hdfs.PlainDir
+        )
 
     def requires(self):
         return [StreamsHdfs(date) for date in self.date_interval]
@@ -89,13 +91,19 @@ class Top10Artists(luigi.Task):
         top_10 = nlargest(10, self._input_iterator())
         with self.output().open('w') as out_file:
             for streams, artist in top_10:
-                print >> out_file, self.date_interval.date_a, self.date_interval.date_b, artist, streams
+                out_line = '\t'.join([
+                    str(self.date_interval.date_a),
+                    str(self.date_interval.date_b),
+                    artist,
+                    str(streams)
+                ])
+                out_file.write(out_line + '\n')
 
     def _input_iterator(self):
         with self.input().open('r') as in_file:
             for line in in_file:
                 artist, streams = line.strip().split()
-                yield int(streams), int(artist)
+                yield int(streams), artist
 
 class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
     date_interval = luigi.DateIntervalParameter()
@@ -114,6 +122,7 @@ class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
 
     def requires(self):
         return Top10Artists(self.date_interval, self.use_hadoop)
+
 
 if __name__ == "__main__":
     luigi.run()
