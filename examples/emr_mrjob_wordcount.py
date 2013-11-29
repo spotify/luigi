@@ -1,3 +1,8 @@
+'''
+External MRJob file to be refereced in luigi, see `emr_mrjob_external_wordcount.py`
+'''
+
+
 from mrjob.job import MRJob
 
 
