@@ -7,7 +7,7 @@ from emr_mrjob_wordcount import MRWordFrequencyCount
 class InputTask(luigi.ExternalTask):
 
     def output(self):
-        return s3.S3Target("s3://tiger.blood/test.txt")
+        return s3.S3Target("s3://bucket/test.txt")
 
 
 class MRJob_WordFrequencyCount(MrJobExternalTask):
@@ -19,7 +19,7 @@ class MRJob_WordFrequencyCount(MrJobExternalTask):
         return InputTask()
 
     def output_dir(self):
-        return s3.S3Target("s3://tiger.blood/mrjob")
+        return s3.S3Target("s3://bucket/mrjob-dir")
 
 
 if __name__ == '__main__':
