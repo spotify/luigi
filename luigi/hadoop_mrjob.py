@@ -1,8 +1,11 @@
 '''
 Add basic support to EMR using MRJob
 '''
-import abc
 import os
+import re
+import imp
+import inspect
+import tempfile
 
 import luigi
 from luigi import s3
@@ -13,14 +16,12 @@ from mrjob.job import MRJob
 
 class MrJobExternalTask(luigi.Task):
 
+    mrjob_class = None
+
     aws_access_key_id = ''
     aws_secret_access_key = ''
     ec2_instance_type = 'm1.small'
     num_ec2_instances = '1'
-
-    @abc.abstractproperty
-    def mrjob_class(self):
-        return None
 
     def output(self):
         fnames = ["part_%.5i" % i for i in range(int(self.num_ec2_instances))]
@@ -67,3 +68,66 @@ class MrJobExternalTask(luigi.Task):
 
         with job.make_runner() as runner:
             runner.run()
+
+
+class MrJobTask(MrJobExternalTask):
+
+    def run(self):
+        '''
+        Going to create a temp file as a MRJob regular file based on self
+        And call MRJob.run() on that file.
+        '''
+        lines = inspect.getsource(self.__class__).splitlines()
+
+        # Fix the import and extend class
+        source_line1 = lines[0]
+        get_class_name_regex = 'class ([a-zA-Z0-9]+)\(MrJobTask\):'
+        match = re.match(get_class_name_regex, source_line1)
+        if match and len(match.groups()) > 0:
+            class_name = match.groups()[0]
+            first_lines = ['from mrjob.job import MRJob']
+            first_lines += ['class {0}(MRJob):'.format(class_name)]
+            lines = first_lines + lines[1:]
+        else:
+            raise Exception('Couldn\'t find class name')
+
+        # Add __main__
+        lines += ['if __name__ == \'__main__\':', '', '    MRWordFrequencyCount.run()', '']
+
+        # Remove luigi specific methods
+        # There is probably a cleaner way of doing this
+        methods = ['requires', 'output']
+        lines_to_remove = []
+        removing = False
+        for i, line in enumerate(lines):
+            # TODO: regexp
+            if not removing:
+                # Reached a new method, check if have to remove
+                if any([' def {0}'.format(method) in line for method in methods]):
+                    removing = True
+            else:
+                # Reached a new method, check again
+                if ' def ' in line:
+                    if any([' def {0}'.format(method) in line for method in methods]):
+                        removing = True
+                    else:
+                        removing = False
+
+            if removing:
+                lines_to_remove.append(i)
+        lines = [line for i, line in enumerate(lines) if i not in lines_to_remove]
+
+        # Create a temp file
+        tf = tempfile.NamedTemporaryFile(delete=False)
+        tf.write('\n'.join(lines))
+        tf.close()  # Write contents
+
+        # Import the temp file as a temp module
+        temp_module = imp.load_source('temp_module', tf.name)
+        # Get the MRJob class
+        self.mrjob_class = temp_module.__dict__[class_name]
+
+        super(MrJobTask, self).run()
+
+        # Delete temp file
+        os.unlink(tf.name)
