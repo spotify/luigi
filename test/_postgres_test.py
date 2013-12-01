@@ -19,6 +19,7 @@ Typical use cases that should be tested:
 # to avoid copying:
 class CopyToTestDB(postgres.CopyToTable):
     host = 'localhost'
+    port = 5432
     database = 'spotify'
     user = 'spotify'
     password = 'guest'
@@ -29,7 +30,7 @@ class TestPostgresTask(CopyToTestDB):
     columns = (('test_text', 'text'),
                ('test_int', 'int'),
                ('test_float', 'float'))
-    
+
     def create_table(self, connection):
         connection.cursor().execute(
             "CREATE TABLE {table} (id SERIAL PRIMARY KEY, test_text TEXT, test_int INT, test_float FLOAT)"
@@ -125,6 +126,6 @@ class TestPostgresImportTask(TestCase):
         luigi.build([clearer], local_scheduler=True)
         cursor = conn.cursor()
         cursor.execute('select count(*) from {table}'.format(table=clearer.table))
-        self.assertEquals(tuple(cursor), ((3,),))        
+        self.assertEquals(tuple(cursor), ((3,),))
 
 luigi.namespace()
