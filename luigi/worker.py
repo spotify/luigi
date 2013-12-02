@@ -38,6 +38,10 @@ class TaskException(Exception):
     pass
 
 
+class Event:
+    SUCCESS = 1
+    FAILURE = 2
+
 class Worker(object):
     """ Worker object communicates with a scheduler.
 
@@ -240,6 +244,7 @@ class Worker(object):
             task.run()
             error_message = json.dumps(task.on_success())
             logger.info('[pid %s] Done      %s', os.getpid(), task_id)
+            task.trigger_event(Event.SUCCESS, task)
             status = DONE
 
         except KeyboardInterrupt:
@@ -248,7 +253,7 @@ class Worker(object):
             status = FAILED
             logger.exception("[pid %s] Error while running %s", os.getpid(), task)
             error_message = task.on_failure(ex)
-
+            task.trigger_event(Event.FAILURE, task, ex)
             subject = "Luigi: %s FAILED" % task
             notifications.send_error_email(subject, error_message)
 

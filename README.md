@@ -300,6 +300,32 @@ class FlipLinesBackwards(luigi.Task):
         g.close() # needed because files are atomic
 ```
 
+
+#### Events and callbacks
+
+Luigi has a built-in event system that allows you to register callbacks to events and trigger them from your own tasks. You can both hook into some pre-defined events and create your own. Each event handle is tied to a Task class, and will be triggered only from that class or a subclass of it. This allows you to effortlessly subscribe to events only from a specific class (e.g. for hadoop jobs).
+
+
+```python
+@luigi.Task.event_handler(luigi.Event.SUCCESS):
+def celebrate_success(self):
+    """Will be called directly after a successful execution
+       of `run` on any Task subclass (i.e. all luigi Tasks)
+    """
+    ...
+
+@luigi.hadoop.JobTask.event_handler(luigi.Event.FAILURE):
+def mourn_failure(self):
+    """Will be called directly after a successful execution
+       of `run` on any JobTask subclass
+    """
+    ...
+
+luigi.run()
+```
+
+
+
 #### Running from the command line
 
 Any task can be instantiated and run from the command line
