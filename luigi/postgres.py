@@ -86,14 +86,18 @@ class PostgresTarget(luigi.Target):
     def __init__(self, host, database, user, password, table, update_id):
         """
         Args:
-            host (str): Postgres server address
+            host (str): Postgres server address. Possibly a host:port string.
             database (str): Database name
             user (str): Database user
             password (str): Password for specified user
             update_id (str): An identifier for this data set
 
         """
-        self.host = host
+        if ':' in host:
+            self.host, self.port = host.split(':')
+        else:
+            self.host = host
+            self.port = None
         self.database = database
         self.user = user
         self.password = password
@@ -145,6 +149,7 @@ class PostgresTarget(luigi.Target):
         "Get a psycopg2 connection object to the database where the table is"
         connection = psycopg2.connect(
             host=self.host,
+            port=self.port,
             database=self.database,
             user=self.user,
             password=self.password)
@@ -287,7 +292,7 @@ class CopyToTable(luigi.Task):
             Any code here will be formed in the same transaction as the main copy, just prior to copying data. Example use cases include truncating the table or removing all data older than X in the database to keep a rolling window of data available in the table.
         """
 
-        # TODO: remove this after sufficient time so most people using the 
+        # TODO: remove this after sufficient time so most people using the
         # clear_table attribtue will have noticed it doesn't work anymore
         if hasattr(self, "clear_table"):
             raise Exception("The clear_table attribute has been removed. Override init_copy instead!")
