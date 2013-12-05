@@ -308,15 +308,15 @@ Luigi has a built-in event system that allows you to register callbacks to event
 
 ```python
 @luigi.Task.event_handler(luigi.Event.SUCCESS):
-def celebrate_success(self):
+def celebrate_success(self, task):
     """Will be called directly after a successful execution
        of `run` on any Task subclass (i.e. all luigi Tasks)
     """
     ...
 
 @luigi.hadoop.JobTask.event_handler(luigi.Event.FAILURE):
-def mourn_failure(self):
-    """Will be called directly after a successful execution
+def mourn_failure(self, task, exception):
+    """Will be called directly after a failed execution
        of `run` on any JobTask subclass
     """
     ...
