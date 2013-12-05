@@ -39,8 +39,9 @@ class TaskException(Exception):
 
 
 class Event:
-    SUCCESS = 1
-    FAILURE = 2
+    SUCCESS = "event.core.success"
+    FAILURE = "event.core.failuire"
+
 
 class Worker(object):
     """ Worker object communicates with a scheduler.
