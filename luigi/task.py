@@ -138,7 +138,6 @@ class Register(abc.ABCMeta):
         return global_params.iteritems()
 
 
-_event_callbacks = {}
 
 class Task(object):
     __metaclass__ = Register
@@ -151,19 +150,20 @@ class Task(object):
 
     `Task._parameters` - list of (parameter_name, parameter) tuples for this task class
     """
+    _event_callbacks = {}
 
     @classmethod
     def event_handler(cls, event):
         """ Decorator for adding event handlers """
         def wrapped(callback):
-            _event_callbacks.setdefault(cls, {}).setdefault(event, set()).add(callback)
+            cls._event_callbacks.setdefault(cls, {}).setdefault(event, set()).add(callback)
             return callback
         return wrapped
 
     def trigger_event(self, event, *args, **kwargs):
         """ Trigger that calls all of the specified events associated with this class.
         """
-        for event_class, event_callbacks in _event_callbacks.iteritems():
+        for event_class, event_callbacks in self._event_callbacks.iteritems():
             if not isinstance(self, event_class):
                 continue
             for callback in event_callbacks.get(event, []):

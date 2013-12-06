@@ -40,7 +40,7 @@ class TaskException(Exception):
 
 class Event:
     SUCCESS = "event.core.success"
-    FAILURE = "event.core.failuire"
+    FAILURE = "event.core.failure"
 
 
 class Worker(object):
