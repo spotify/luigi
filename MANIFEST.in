@@ -1,3 +1,8 @@
 include bin/luigid
 include README.md
+include LICENSE
+include examples/*.py
+include test/*.py
 recursive-include luigi/static *
+include luigi/templates/*.html
+
