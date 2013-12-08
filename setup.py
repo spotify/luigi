@@ -52,6 +52,7 @@ setup(
     author='Erik Bernhardsson',
     author_email='erikbern@spotify.com',
     url='https://github.com/spotify/luigi',
+    license='Apache License 2.0',
     packages=[
         'luigi',
         'luigi.contrib',
