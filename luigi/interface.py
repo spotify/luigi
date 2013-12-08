@@ -48,7 +48,7 @@ def setup_interface_logging(conf_file=None):
 
         logger.addHandler(streamHandler)
     else:
-        logging.config.fileConfig(conf_file)
+        logging.config.fileConfig(conf_file, disable_existing_loggers=False)
 
     setup_interface_logging.has_run = True
 
