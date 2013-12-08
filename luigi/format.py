@@ -50,7 +50,8 @@ class InputPipeProcessWrapper(object):
         self._input_pipe = input_pipe
         self._process = command if isinstance(command, subprocess.Popen) else subprocess.Popen(command,
             stdin=input_pipe,
-            stdout=subprocess.PIPE)
+            stdout=subprocess.PIPE,
+            close_fds=True)
         # we want to keep a circular reference to avoid garbage collection
         # when the object is used in, e.g., pipe.read()
         self._process._selfref = self
@@ -58,6 +59,7 @@ class InputPipeProcessWrapper(object):
     def _finish(self):
         if self._input_pipe is not None:
             self._input_pipe.close()
+        # FIXME: why not self._process.communicate()
         for line in self._process.stdout:  # exhaust all output...
             pass
         self._process.wait()  # deadlock?
@@ -108,7 +110,8 @@ class OutputPipeProcessWrapper(object):
         self._output_pipe = output_pipe
         self._process = subprocess.Popen(command,
             stdin=subprocess.PIPE,
-            stdout=output_pipe)
+            stdout=output_pipe,
+            close_fds=True)
         self._flushcount = 0
 
     def write(self, *args, **kwargs):

@@ -173,7 +173,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
     def track_process(arglist, tracking_url_callback, env=None):
         # Dump stdout to a temp file, poll stderr and log it
         temp_stdout = tempfile.TemporaryFile()
-        proc = subprocess.Popen(arglist, stdout=temp_stdout, stderr=subprocess.PIPE, env=env)
+        proc = subprocess.Popen(arglist, stdout=temp_stdout, stderr=subprocess.PIPE, env=env, close_fds=True)
 
         # We parse the output to try to find the tracking URL.
         # This URL is useful for fetching the logs of the job.
