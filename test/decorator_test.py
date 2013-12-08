@@ -71,6 +71,9 @@ class InheritTest(unittest.TestCase):
     def test_removing_parameter(self):
         self.assertFalse("param1" in dict(self.d_null.get_params()).keys())
 
+    def test_wrapper_preserve_attributes(self):
+        self.assertEquals(B.__name__, 'B')
+
 class F(luigi.Task):
     param1 = luigi.Parameter("A parameter on a base task, that will be required later.")
 

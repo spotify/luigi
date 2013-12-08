@@ -29,15 +29,13 @@ def common_params(task_instance, task_cls):
     return vals
 
 
-# FIXME: why not use functools.update_wrapper?
-def _cleanup_wrapper(P, Q):
+def class_wraps(P):
     # In order to make the behavior of a wrapper class nicer, we set the name of the
     # new class to the wrapped class, and copy over the docstring and module as well.
-    # This make it possible to pickle the wrapped class etc.
-
-    for attr in functools.WRAPPER_ASSIGNMENTS:
-        # copy ['__doc__', '__name__', '__module__'] from Q to P
-        setattr(P, attr, getattr(Q, attr))
+    # This makes it possible to pickle the wrapped class etc.
+    # Btw, this is a slight abuse of functools.wraps. It's meant to be used only for
+    # functions, but it works for classes too, if you pass updated=[]
+    return functools.wraps(P, updated=[])
 
 
 class inherits(object):
@@ -66,11 +64,10 @@ class inherits(object):
                 setattr(task_that_inherits, param_name, param_obj)
 
         # Modify task_that_inherits by subclassing it and adding methods
+        @class_wraps(task_that_inherits)
         class Wrapped(task_that_inherits):
             def clone_parent(_self, **args):
                 return _self.clone(cls=self.task_to_inherit, **args)
-
-        _cleanup_wrapper(Wrapped, task_that_inherits)
 
         return Wrapped
 
@@ -86,11 +83,10 @@ class requires(object):
         task_that_requires = self.inherit_decorator(task_that_requires)
         
         # Modify task_that_requres by subclassing it and adding methods
+        @class_wraps(task_that_requires)
         class Wrapped(task_that_requires):
             def requires(_self):
                 return _self.clone_parent()
-
-        _cleanup_wrapper(Wrapped, task_that_requires)
 
         return Wrapped
 
@@ -112,6 +108,7 @@ class copies(object):
         task_that_copies = self.requires_decorator(task_that_copies)
 
         # Modify task_that_copies by subclassing it and adding methods
+        @class_wraps(task_that_copies)
         class Wrapped(task_that_copies):
             def run(_self):
                 i, o = _self.input(), _self.output()
@@ -119,8 +116,6 @@ class copies(object):
                 for line in i.open('r'):
                     f.write(line)
                 f.close()
-
-        _cleanup_wrapper(Wrapped, task_that_copies)
 
         return Wrapped
 
@@ -147,6 +142,7 @@ def delegates(task_that_delegates):
         # those tasks and run methods defined on them, etc
         raise AttributeError('%s needs to implement the method "subtasks"' % task_that_delegates)
 
+    @class_wraps(task_that_delegates)
     class Wrapped(task_that_delegates):
         def deps(self):
             # Overrides method in base class
@@ -156,8 +152,6 @@ def delegates(task_that_delegates):
             for t in task.flatten(self.subtasks()):
                 t.run()
             task_that_delegates.run(self)
-
-    _cleanup_wrapper(Wrapped, task_that_delegates)
         
     return Wrapped
 
