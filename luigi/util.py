@@ -29,10 +29,11 @@ def common_params(task_instance, task_cls):
     return vals
 
 
+# FIXME: why not use functools.update_wrapper?
 def _cleanup_wrapper(P, Q):
     # In order to make the behavior of a wrapper class nicer, we set the name of the
     # new class to the wrapped class, and copy over the docstring and module as well.
-    # This make it possible to picke the wrapped class etc.
+    # This make it possible to pickle the wrapped class etc.
 
     for attr in functools.WRAPPER_ASSIGNMENTS:
         # copy ['__doc__', '__name__', '__module__'] from Q to P
