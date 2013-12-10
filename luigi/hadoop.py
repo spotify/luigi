@@ -157,8 +157,9 @@ class HadoopRunContext(object):
         if self.job_id:
             logger.info('Job interrupted, killing job %s', self.job_id)
             subprocess.call(['mapred', 'job', '-kill', self.job_id])
-        if captured_signal == signal.SIGTERM:
-            sys.exit(143)
+        if captured_signal is not None:
+            # adding 128 gives the exit code corresponding to a signal
+            sys.exit(128 + captured_signal)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is KeyboardInterrupt:
