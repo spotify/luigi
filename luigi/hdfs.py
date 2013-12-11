@@ -86,6 +86,9 @@ def list_path(path):
 
 class HdfsClient(FileSystem):
     """This client uses Apache 2.x syntax for file system commands, which also matched CDH4"""
+
+    recursive_listdir_cmd = ['-ls', '-R']
+
     def exists(self, path):
         """ Use `hadoop fs -stat to check file existence
         """
@@ -178,7 +181,7 @@ class HdfsClient(FileSystem):
             path = "."  # default to current/home catalog
 
         if recursive:
-            cmd = [load_hadoop_cmd(), 'fs', '-ls', '-R', path]
+            cmd = [load_hadoop_cmd(), 'fs'] + self.recursive_listdir_cmd + [path]
         else:
             cmd = [load_hadoop_cmd(), 'fs', '-ls', path]
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -447,6 +450,9 @@ class HdfsClientCdh3(HdfsClient):
 class HdfsClientApache1(HdfsClientCdh3):
     """This client uses Apache 1.x syntax for file system commands,
     which are similar to CDH3 except for the file existence check"""
+
+    recursive_listdir_cmd = ['-lsr']
+
     def exists(self, path):
         cmd = [load_hadoop_cmd(), 'fs', '-test', '-e', path]
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
