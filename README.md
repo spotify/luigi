@@ -450,14 +450,14 @@ All sections are optional based on what parts of Luigi you are actually using.  
 
 ## More info
 
-Luigi is the sucessor to a couple of attempts that we weren't fully happy with. We learned a lot from our mistakes and some design decisions include:
+Luigi is the successor to a couple of attempts that we weren't fully happy with. We learned a lot from our mistakes and some design decisions include:
 
 * Straightforward command line integration.
 * As little boilerplate as possible.
 * Focus on job scheduling and dependency resolution, not a particular platform. In particular this means no limitation to Hadoop. Though Hadoop/HDFS support is built-in and is easy to use, this is just one of many types of things you can run.
 * A file system abstraction where code doesn't have to care about where files are located.
 * Atomic file system operations through this abstraction. If a task crashes it won't lead to a broken state.
-* The depencies are decentralized. No big config file in XML. Each task just specifies which inputs it needs and cross-module dependencies are trivial.
+* The dependencies are decentralized. No big config file in XML. Each task just specifies which inputs it needs and cross-module dependencies are trivial.
 * A web server that renders the dependency graph and does locking etc for free.
 * Trivial to extend with new file systems, file formats and job types. You can easily write jobs that inserts a Tokyo Cabinet into Cassandra. Adding broad support S3, MySQL or Hive should be a stroll in the park. (Feel free to send us a patch when you're done!)
 * Date algebra included.
@@ -489,4 +489,11 @@ Also it should be mentioned that Luigi is named after the world's second most fa
 ## Want to contribute?
 
 Awesome! Let us know if you have any ideas. Feel free to contact x@y.com where x = luigi and y = spotify.
+
+### Running Unit Tests
+
+1. Install required packages: `pip -r test/requirements.txt`
+1. From the top directory, run [Nose](http://pypi.python.org/pypi/nose/0.11.4): `nosetests`
+    * To run all tests within individual files: `nosetests test/parameter_test.py test/fib_test.py ...`
+    * To run named tests within individual files: `nosetests -m '(testDate.*|testInt)' test/parameter_test.py ...`
 
