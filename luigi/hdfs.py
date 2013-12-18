@@ -41,7 +41,7 @@ class HDFSCliError(Exception):
 
 
 def call_check(command):
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
         raise HDFSCliError(command, p.returncode, stdout, stderr)
@@ -94,7 +94,7 @@ class HdfsClient(FileSystem):
         """
 
         cmd = [load_hadoop_cmd(), 'fs', '-stat', path]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         stdout, stderr = p.communicate()
         if p.returncode == 0:
             return True
@@ -184,16 +184,16 @@ class HdfsClient(FileSystem):
             cmd = [load_hadoop_cmd(), 'fs'] + self.recursive_listdir_cmd + [path]
         else:
             cmd = [load_hadoop_cmd(), 'fs', '-ls', path]
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-        lines = proc.stdout
+        lines = call_check(cmd).split('\n')
 
         for line in lines:
-            if line.startswith('Found'):
-                continue  # "hadoop fs -ls" outputs "Found %d items" as its first line
-            line = line.rstrip("\n")
-            if ignore_directories and line[0] == 'd':
+            if not line:
                 continue
-            if ignore_files and line[0] == '-':
+            elif line.startswith('Found'):
+                continue  # "hadoop fs -ls" outputs "Found %d items" as its first line
+            elif ignore_directories and line[0] == 'd':
+                continue
+            elif ignore_files and line[0] == '-':
                 continue
             data = line.split(' ')
 
@@ -455,7 +455,7 @@ class HdfsClientApache1(HdfsClientCdh3):
 
     def exists(self, path):
         cmd = [load_hadoop_cmd(), 'fs', '-test', '-e', path]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         stdout, stderr = p.communicate()
         if p.returncode == 0:
             return True
@@ -504,10 +504,10 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         self.tmppath = tmppath(self.path)
         tmpdir = os.path.dirname(self.tmppath)
         if get_hdfs_syntax() == "cdh4":
-            if subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', '-p', tmpdir]).wait():
+            if subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', '-p', tmpdir], close_fds=True).wait():
                 raise RuntimeError("Could not create directory: %s" % tmpdir)
         else:
-            if not exists(tmpdir) and subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', tmpdir]).wait():
+            if not exists(tmpdir) and subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', tmpdir], close_fds=True).wait():
                 raise RuntimeError("Could not create directory: %s" % tmpdir)
         super(HdfsAtomicWritePipe, self).__init__([load_hadoop_cmd(), 'fs', '-put', '-', self.tmppath])
 
