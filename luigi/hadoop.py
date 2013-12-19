@@ -26,6 +26,7 @@ import logging
 import StringIO
 import re
 import shutil
+import signal
 from hashlib import md5
 import luigi
 import luigi.hdfs
@@ -143,6 +144,29 @@ def flatten(sequence):
             yield item
 
 
+class HadoopRunContext(object):
+    def __init__(self):
+        self.job_id = None
+
+    def __enter__(self):
+        self.__old_signal = signal.getsignal(signal.SIGTERM)
+        signal.signal(signal.SIGTERM, self.kill_job)
+        return self
+
+    def kill_job(self, captured_signal=None, stack_frame=None):
+        if self.job_id:
+            logger.info('Job interrupted, killing job %s', self.job_id)
+            subprocess.call(['mapred', 'job', '-kill', self.job_id])
+        if captured_signal is not None:
+            # adding 128 gives the exit code corresponding to a signal
+            sys.exit(128 + captured_signal)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is KeyboardInterrupt:
+            self.kill_job()
+        signal.signal(signal.SIGTERM, self.__old_signal)
+
+
 class HadoopJobError(RuntimeError):
     def __init__(self, message, out=None, err=None):
         super(HadoopJobError, self).__init__(message, out, err)
@@ -180,33 +204,28 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
         tracking_url = None
         job_id = None
         err_lines = []
-        while True:
-            try:
-                if proc.poll() is not None:
-                    break
+
+        with HadoopRunContext() as hadoop_context:
+            while proc.poll() is None:
                 err_line = proc.stderr.readline()
-            except KeyboardInterrupt:
-                if job_id:
-                    logger.info('Job interrupted by user, killing job %s', job_id)
-                    kill_job(job_id)
-                raise
-            err_lines.append(err_line)
-            err_line = err_line.strip()
-            if err_line:
-                logger.info('%s', err_line)
-            if err_line.find('Tracking URL') != -1:
-                tracking_url = err_line.split('Tracking URL: ')[-1]
-                try:
-                    tracking_url_callback(tracking_url)
-                except Exception as e:
-                    logger.error("Error in tracking_url_callback, disabling! %s", e)
-                    tracking_url_callback = lambda x: None
-            if err_line.find('Running job') != -1:
-                # hadoop jar output
-                job_id = err_line.split('Running job: ')[-1]
-            if err_line.find('submitted hadoop job:') != -1:
-                # scalding output
-                job_id = err_line.split('submitted hadoop job: ')[-1]
+                err_lines.append(err_line)
+                err_line = err_line.strip()
+                if err_line:
+                    logger.info('%s', err_line)
+                if err_line.find('Tracking URL') != -1:
+                    tracking_url = err_line.split('Tracking URL: ')[-1]
+                    try:
+                        tracking_url_callback(tracking_url)
+                    except Exception as e:
+                        logger.error("Error in tracking_url_callback, disabling! %s", e)
+                        tracking_url_callback = lambda x: None
+                if err_line.find('Running job') != -1:
+                    # hadoop jar output
+                    job_id = err_line.split('Running job: ')[-1]
+                if err_line.find('submitted hadoop job:') != -1:
+                    # scalding output
+                    job_id = err_line.split('submitted hadoop job: ')[-1]
+                hadoop_context.job_id = job_id
 
         # Read the rest + stdout
         err = ''.join(err_lines + [err_line for err_line in proc.stderr])
@@ -237,10 +256,6 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
         tracking_url_callback = lambda x: None
 
     track_process(arglist, tracking_url_callback, env)
-
-
-def kill_job(job_id):
-    subprocess.call(['mapred', 'job', '-kill', job_id])
 
 
 def fetch_task_failures(tracking_url):
