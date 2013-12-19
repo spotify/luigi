@@ -326,10 +326,19 @@ class HadoopJobRunner(JobRunner):
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
 
-        base_tmp_dir = configuration.get_config().get('core', 'tmp-dir', '/tmp/luigi')
-        self.tmp_dir = os.path.join(base_tmp_dir, 'hadoop_job_%016x' % random.getrandbits(64))
+        base_tmp_dir = configuration.get_config().get('core', 'tmp-dir', None)
+        if base_tmp_dir:
+            warnings.warn("The core.tmp-dir configuration item is"\
+                          " deprecated, please use the TMPDIR"\
+                          " environment variable if you wish"\
+                          " to control where luigi.hadoop may"\
+                          " create temporary files and directories.")
+            self.tmp_dir = os.path.join(base_tmp_dir, 'hadoop_job_%016x' % random.getrandbits(64))
+            os.makedirs(self.tmp_dir)
+        else:
+            self.tmp_dir = tempfile.mkdtemp()
+
         logger.debug("Tmp dir: %s", self.tmp_dir)
-        os.makedirs(self.tmp_dir)
 
         # build arguments
         map_cmd = 'python mrrunner.py map'
@@ -410,6 +419,7 @@ class HadoopJobRunner(JobRunner):
         self.finish()
 
     def finish(self):
+        # FIXME: check for isdir?
         if self.tmp_dir and os.path.exists(self.tmp_dir):
             logger.debug('Removing directory %s', self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
