@@ -211,6 +211,12 @@ Looking at the dependency graph for any of the tasks yields something like this:
 
 In case your job crashes remotely due to any Python exception, Luigi will try to fetch the traceback and print it on standard output. You need [Mechanize](http://wwwsearch.sourceforge.net/mechanize/) for it to work and you also need connectivity to your tasktrackers.
 
+To run the server as a daemon run:
+
+    PYTHONPATH=. python bin/luigid --background --pidfile <PATH_TO_PIDFILE>
+
+Note that this requires python-daemon for this to work.
+
 ## Conceptual overview
 
 There are two fundamental building blocks of Luigi - the *Task* class and the *Target* class. Both are abstract classes and expect a few methods to be implemented. In addition to those two concepts, the *Parameter* class is an important concept that governs how a Task is run.
