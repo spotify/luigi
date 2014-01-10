@@ -13,7 +13,7 @@
 # the License.
 
 import random
-from scheduler import CentralPlannerScheduler, PENDING, FAILED, DONE
+from scheduler import CentralPlannerScheduler, PENDING, FAILED, DONE, SUSPENDED
 import threading
 import time
 import os
@@ -23,8 +23,10 @@ import traceback
 import logging
 import warnings
 import notifications
+import types
 from target import Target
 from task import Task
+from task import getpaths
 
 try:
     import simplejson as json
@@ -85,6 +87,8 @@ class Worker(object):
         self.worker_processes = worker_processes
         self.host = socket.gethostname()
         self.__scheduled_tasks = {}
+
+        self.__suspended_tasks = {} # map from task_id to (generator, pending task)
 
         # store the previous tasks executed by the same worker
         # for debugging reasons
@@ -249,11 +253,38 @@ class Worker(object):
             if not ok:
                 # TODO: possibly try to re-add task again ad pending
                 raise RuntimeError('Unfulfilled dependency %r at run time!\nPrevious tasks: %r' % (missing_dep.task_id, self._previous_tasks))
-            task.run()
-            error_message = json.dumps(task.on_success())
-            logger.info('[pid %s] Done      %s', os.getpid(), task_id)
-            task.trigger_event(Event.SUCCESS, task)
-            status = DONE
+
+            if task_id in self.__suspended_tasks:
+                logger.info('Resuming task %s', task_id)
+                gen, old_dyn_task_req = self.__suspended_tasks[task_id]
+                input = getpaths(old_dyn_task_req) # TODO: doesn't seem right that the worker does this
+                try:
+                    dyn_task_req = gen.send(input)
+                except StopIteration:
+                    dyn_task_req = None
+            else:
+                gen = task.run()
+
+                # See if run() is a generator that returns dynamic requirements
+                if isinstance(gen, types.GeneratorType):
+                    dyn_task_req = gen.next() # Get the first requirement
+                else:
+                    dyn_task_req = None
+
+            if dyn_task_req:
+                logger.info('Dynamically scheduling %s' % dyn_task_req)
+                self.add(dyn_task_req)
+                self.__suspended_tasks[task_id] = (gen, dyn_task_req)
+                logger.info('Suspended task %s' % task_id)
+                error_message = ''
+                status = SUSPENDED
+                new_deps = [dyn_task_req.task_id]
+            else:
+                error_message = json.dumps(task.on_success())
+                logger.info('[pid %s] Done      %s', os.getpid(), task_id)
+                task.trigger_event(Event.SUCCESS, task)
+                status = DONE
+                new_deps = []
 
         except KeyboardInterrupt:
             raise
@@ -264,9 +295,20 @@ class Worker(object):
             task.trigger_event(Event.FAILURE, task, ex)
             subject = "Luigi: %s FAILED" % task
             notifications.send_error_email(subject, error_message)
+            new_deps = []
 
+        kwargs = {}
+        if new_deps:
+            # Workaround so that old servers can still run
+            # with code that doesn't do a dynamic require
+            # TODO: remove this in the future
+            kwargs['new_deps'] = new_deps
+
+        # This code doesn't really add the task, it just updates the status
+        # Slight abuse of RPC calls
         self.__scheduler.add_task(self.__id, task_id, status=status,
-                                  expl=error_message, runnable=None)
+                                  expl=error_message, runnable=None,
+                                  **kwargs)
 
         return status
 
