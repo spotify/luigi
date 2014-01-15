@@ -66,9 +66,8 @@ def _server_already_running(pidfile):
     return False
 
 
-def daemonize(cmd, pidfile=None):
+def daemonize(cmd, pidfile=None, logdir="/var/log/luigi"):
     import daemon
-    logdir = "/var/log/luigi"
     if not os.path.exists(logdir):
         os.makedirs(logdir)
 

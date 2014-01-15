@@ -53,6 +53,11 @@ class LuigiConfigParser(ConfigParser):
     def getfloat(self, section, option, default=NO_DEFAULT):
         return self._get_with_default(ConfigParser.getfloat, section, option, default, float)
 
+    def set(self, section, option, value):
+        if not ConfigParser.has_section(self, section):
+            ConfigParser.add_section(self, section)
+
+        return ConfigParser.set(self, section, option, value)
 
 def get_config():
     """ Convenience method (for backwards compatibility) for accessing config singleton """
