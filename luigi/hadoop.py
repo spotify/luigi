@@ -341,9 +341,11 @@ class HadoopJobRunner(JobRunner):
         logger.debug("Tmp dir: %s", self.tmp_dir)
 
         # build arguments
-        map_cmd = 'python mrrunner.py map'
-        cmb_cmd = 'python mrrunner.py combiner'
-        red_cmd = 'python mrrunner.py reduce'
+        config = configuration.get_config()
+        python_executable = config.get('hadoop', 'python-executable', 'python')
+        map_cmd = '{0} mrrunner.py map'.format(python_executable)
+        cmb_cmd = '{0} mrrunner.py combiner'.format(python_executable)
+        red_cmd = '{0} mrrunner.py reduce'.format(python_executable)
 
         # replace output with a temporary work directory
         output_final = job.output().path
