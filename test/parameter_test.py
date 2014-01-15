@@ -320,5 +320,15 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
     def testHasDefaultWithBoth(self):
         self.assertTrue(luigi.Parameter(default_from_config=dict(section="foo", name="bar")).has_default)
 
+    @with_config({"foo": {"bar": "one\n\ttwo\n\tthree\n"}})
+    def testDefaultList(self):
+        p = luigi.Parameter(is_list=True, default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals(('one', 'two', 'three'), p.default)
+
+    @with_config({"foo": {"bar": "1\n2\n3"}})
+    def testDefaultIntList(self):
+        p = luigi.IntParameter(is_list=True, default_from_config=dict(section="foo", name="bar"))
+        self.assertEquals((1, 2, 3), p.default)
+
 if __name__ == '__main__':
     luigi.run(use_optparse=True)
