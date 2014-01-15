@@ -213,7 +213,7 @@ In case your job crashes remotely due to any Python exception, Luigi will try to
 
 To run the server as a daemon run:
 
-    PYTHONPATH=. python bin/luigid --background --pidfile <PATH_TO_PIDFILE>
+    PYTHONPATH=. python bin/luigid --background --pidfile <PATH_TO_PIDFILE> --logdir <PATH_TO_LOGDIR> --state-path <PATH_TO_STATEFILE>
 
 Note that this requires python-daemon for this to work.
 
