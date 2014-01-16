@@ -90,7 +90,12 @@ class Parameter(object):
             raise MissingParameterException("No default specified")
         if self.__default != _no_default:
             return self.__default
-        return self.parse(self._get_default_from_config(safe=False))
+
+        value = self._get_default_from_config(safe=False)
+        if self.is_list:
+            return tuple(self.parse(p.strip()) for p in value.strip().split('\n'))
+        else:
+            return self.parse(value)
 
     def set_default(self, value):
         self.__default = value
@@ -216,4 +221,3 @@ class TimeDeltaParameter(Parameter):
             return result
         else:
             raise ParameterException("Invalid time delta - could not parse %s" % input)
-
