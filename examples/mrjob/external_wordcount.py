@@ -6,8 +6,8 @@ All hadoop/EMR functionality is included in the `mrjob_wordcount.py` file
 
 import luigi
 from luigi import s3
-from luigi.contrib.hadoop_mrjob import MrJobExternalTask
-from emr_mrjob_wordcount import MRWordFrequencyCount
+from luigi.contrib.mrjob import MrJobExternalTask
+from mrjob_wordcount import MRWordFrequencyCount
 
 
 class InputTask(luigi.ExternalTask):
@@ -29,4 +29,4 @@ class MRJob_WordFrequencyCount(MrJobExternalTask):
 
 
 if __name__ == '__main__':
-    luigi.run()
+    luigi.run(main_task_cls=MRJob_WordFrequencyCount, cmdline_args=['--local-scheduler'])

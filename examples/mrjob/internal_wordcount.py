@@ -1,6 +1,6 @@
 import luigi
 from luigi import s3
-from luigi.contrib.hadoop_mrjob import MrJobTask
+from luigi.contrib.mrjob import MrJobTask
 
 
 class InputTask(luigi.ExternalTask):

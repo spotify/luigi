@@ -1,6 +1,7 @@
 '''
 Add basic support to EMR using MRJob
 '''
+from __future__ import absolute_import
 import os
 import re
 import imp
