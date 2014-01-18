@@ -15,6 +15,11 @@ from mrjob.job import MRJob
 
 
 class MrJobExternalTask(luigi.Task):
+    '''
+    This class takes a external MRJob file and integrates into a luigi pipeline.
+
+    Example: `examples/mrjob/external_wordcont.py`
+    '''
 
     mrjob_class = None
 
@@ -49,18 +54,24 @@ class MrJobExternalTask(luigi.Task):
         args += ['--output-dir', self.output_dir().path, '--no-output']
         job = self.mrjob_class(args=args)
 
-        # Very dirty hack to pass the same AWS credentials from the luigi config file
-        # Why? So the user doesn't need to configure boto or mrjob, only luigi
-        # Problem: Need to pass to the EMRJobRunner.__init__() the kwargs `aws_access_key_id` and `aws_access_key_id`
-        # The problem is those variables are not in the `MRJobLauncher.options`
-        #    Note this open issue: https://github.com/Yelp/mrjob/issues/782
-        # Maybe is possible to add the options at runtime, see on `launch.py` line 401:
-        #    self.options, args = self.option_parser.parse_args(args)
-        # This method is actually recommended on the MRJob docs on `launch.py` on `def emr_job_runner_kwargs(self)`:
-        #    Re-define this if you want finer control when running jobs on EMR.
+        '''
+        Very dirty hack to pass the same AWS credentials from the luigi config file
+        Why? So the user doesn't need to configure boto or mrjob, only luigi
+
+        Problem:
+        We need to pass to the EMRJobRunner.__init__() the kwargs `aws_access_key_id` and `aws_access_key_id`
+        The problem is those variables are not in the `MRJobLauncher.options`
+           Note this MRJob open issue: https://github.com/Yelp/mrjob/issues/782
+        Maybe is possible to add the options at runtime, see on `launch.py` line 401:
+           self.options, args = self.option_parser.parse_args(args)
+
+        This method is actually recommended on the MRJob docs on `launch.py` on `def emr_job_runner_kwargs(self)`:
+           Quote: Re-define this if you want finer control when running jobs on EMR.
+        '''
         all_options = job.emr_job_runner_kwargs()
         all_options['aws_access_key_id'] = self.aws_access_key_id
         all_options['aws_secret_access_key'] = self.aws_secret_access_key
+
         def overwrite_emr_job_runner_kwargs():
             return all_options
         job.emr_job_runner_kwargs = overwrite_emr_job_runner_kwargs
@@ -71,6 +82,16 @@ class MrJobExternalTask(luigi.Task):
 
 
 class MrJobTask(MrJobExternalTask):
+    '''
+    This is the main class to use with EMR.
+    Is possible to define the mapper and reducer funcions as a regular luigi.hadoop class.
+
+    This class will create an external `.py` file that MRJob will ship to EMR.
+
+    After creating the file is going to use `MrJobExternalTask`
+
+    Example: `examples/mrjob/internal_wordcount.py`
+    '''
 
     def run(self):
         '''

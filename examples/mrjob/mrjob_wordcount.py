@@ -1,5 +1,5 @@
 '''
-External MRJob file to be refereced in luigi, see `emr_mrjob_external_wordcount.py`
+External MRJob file to be refereced in the luigi pipeline, see `external_wordcount.py`
 '''
 
 

@@ -1,12 +1,12 @@
 '''
-Example on how to integrate external MRJob tasks
+Example on how to integrate with external/existing MRJob tasks.
 
-All hadoop functionality is included in the `emr_mrjob_wordcount.py` script
+All hadoop/EMR functionality is included in the `mrjob_wordcount.py` file
 '''
 
 import luigi
 from luigi import s3
-from luigi.hadoop_mrjob import MrJobExternalTask
+from luigi.contrib.hadoop_mrjob import MrJobExternalTask
 from emr_mrjob_wordcount import MRWordFrequencyCount
 
 
