@@ -14,13 +14,17 @@ parser.add_option('--logdir', help='logdir')
 parser.add_option('--state-path', help='Pickled state file')
 opts, args = parser.parse_args()
 
-config = luigi.configuration.get_config()
-config.set('scheduler', 'state-path', opts.state_path)
+if opts.state_path:
+    config = luigi.configuration.get_config()
+    config.set('scheduler', 'state-path', opts.state_path)
 
 if opts.background:
     # daemonize sets up logging to spooled log files
     logging.getLogger().setLevel(logging.INFO)
     luigi.process.daemonize(luigi.server.run, pidfile=opts.pidfile, logdir=opts.logdir)
 else:
-    logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format(), filename=os.path.join(logdir, "luigi-server.log"))
+    if opts.logdir:
+        logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format(), filename=os.path.join(opts.logdir, "luigi-server.log"))
+    else:
+        logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format())
     luigi.server.run()
