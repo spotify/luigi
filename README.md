@@ -254,6 +254,50 @@ print d.date
 
 will return the same date that the object was constructed with. Same goes if you invoke Luigi on the command line.
 
+Tasks are uniquely identified by their class name and values of their parameters. In fact, within the same worker, two tasks of the same class with parameters of the same values are not just equal, but the same instance:
+
+```python
+>>> import luigi
+>>> import datetime
+>>> class DateTask(luigi.Task):
+...   date = luigi.DateParameter()
+... 
+>>> a = datetime.date(2014, 1, 21)
+>>> b = datetime.date(2014, 1, 21)
+>>> a is b
+False
+>>> c = DateTask(date=a)
+>>> d = DateTask(date=b)
+>>> c
+DateTask(date=2014-01-21)
+>>> d
+DateTask(date=2014-01-21)
+>>> c is d
+True
+```
+
+However, if a parameter is created with *significant=False*, it is ignored as far as the Task signature is concerned. Tasks created with only insignificant parameters differing have the same signature, but are not the same instance:
+
+```python
+>>> class DateTask2(DateTask):
+...   other = luigi.Parameter(significant=False)
+... 
+>>> c = DateTask2(date=a, other="foo")
+>>> d = DateTask2(date=b, other="bar")
+>>> c
+DateTask2(date=2014-01-21)
+>>> d
+DateTask2(date=2014-01-21)
+>>> c.other
+'foo'
+>>> d.other
+'bar'
+>>> c is d
+False
+>>> hash(c) == hash(d)
+True
+```
+
 Python is not a typed language and you don't have to specify the types of any of your parameters. You can simply use *luigi.Parameter* if you don't care. In fact, the reason DateParameter et al exist is just in order to support command line interaction and make sure to convert the input to the corresponding type (i.e. datetime.date instead of a string).
 
 
