@@ -141,6 +141,7 @@ class CentralPlannerScheduler(Scheduler):
                 logger.info("Task %r is marked as running by disconnected worker %r -> marking as FAILED with retry delay of %rs", task_id, task.worker_running, self._retry_delay)
                 task.worker_running = None
                 task.status = FAILED
+                self._pools_finished(task)
                 task.retry = time.time() + self._retry_delay
 
         # Remove tasks that have no stakeholders

@@ -216,7 +216,7 @@ class Worker(object):
             self._validate_dependency(d)
 
         deps = [d.task_id for d in deps]
-        pools = [(name, pool.max_capacity) for (name, pool) in task.get_pools()]
+        pools = [(pool.name, pool.max_capacity) for (_, pool) in task.get_pools()]
         self.__scheduler.add_task(self.__id, task.task_id, status=PENDING,
                                   deps=deps, runnable=True, pools=pools)
         logger.info('Scheduled %s', task.task_id)

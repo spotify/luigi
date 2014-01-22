@@ -11,12 +11,10 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under
 # the License.
-import threading
 
 import unittest
 import luigi
 import worker_test
-import time
 
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
@@ -26,9 +24,14 @@ class A(worker_test.DummyTask):
     pool = luigi.Pool("a_pool")
     foo = luigi.IntParameter()
 
-    def run(self):
-        time.sleep(0.1)
-        super(A, self).run()
+
+class B(worker_test.DummyTask):
+    pool = luigi.Pool("b_pool")
+
+
+class AB(worker_test.DummyTask):
+    a_pool = luigi.Pool("a_pool")
+    b_pool = luigi.Pool("b_pool")
 
 
 class PoolTest(unittest.TestCase):
@@ -52,3 +55,19 @@ class PoolTest(unittest.TestCase):
         task_id, _, _ = self.w2._get_work()
         self.assertEquals(task_id, repr(a2))
 
+    def test_multiple_pools(self):
+        a = A(1)
+        b = B()
+        ab = AB()
+        self.w1.add(ab)
+        self.w2.add(a)
+        self.w2.add(b)
+
+        task_id1, _, _ = self.w1._get_work()
+        task_id2, _, _ = self.w2._get_work()
+
+        self.assertEquals(task_id2, None)
+        self.w1._run_task(task_id1)
+
+        task_id, _, _ = self.w2._get_work()
+        self.assertTrue(task_id == repr(a) or task_id == repr(b), "worker2 should get work for A or B")
