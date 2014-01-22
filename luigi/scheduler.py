@@ -54,7 +54,7 @@ class Task(object):
         self.remove = None
         self.worker_running = None  # the worker that is currently running the task or None
         self.expl = None
-        self.pools = set()
+        self.pools = []
 
     def __repr__(self):
         return "Task(%r)" % vars(self)
@@ -187,9 +187,11 @@ class CentralPlannerScheduler(Scheduler):
 
         # List of (name, max_capacity)
         if pools:
+            pool_names = []
             for name, max_capacity in pools:
                 self._pools.setdefault(name, Pool(name, max_capacity))
-            task.pools = set(pools)
+                pool_names.append(name)
+            task.pools = pool_names
 
         # Update pools if task finished
         if status == DONE or status == FAILED:
@@ -385,17 +387,17 @@ class CentralPlannerScheduler(Scheduler):
         return self._task_history
 
     def _pools_finished(self, task):
-        for name, _ in task.pools:
+        for name in task.pools:
             pool = self._pools[name]
             pool.used_capacity = max(pool.used_capacity - 1, 0)
 
     def _pools_taken(self, task):
-        for name, _ in task.pools:
+        for name in task.pools:
             pool = self._pools[name]
             pool.used_capacity = max(pool.used_capacity + 1, pool.max_capacity)
 
     def _pools_available(self, task):
-        for name, _ in task.pools:
+        for name in task.pools:
             pool = self._pools[name]
             if pool.used_capacity >= pool.max_capacity:
                 return False

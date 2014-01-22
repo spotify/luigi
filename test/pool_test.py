@@ -16,6 +16,7 @@ import unittest
 import luigi
 import worker_test
 
+from server_test import ServerTestBase
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
 
@@ -34,40 +35,61 @@ class AB(worker_test.DummyTask):
     b_pool = luigi.Pool("b_pool")
 
 
+def run_workers(w1, w2):
+    task_id1, _, _ = w1._get_work()
+    task_id2, _, _ = w2._get_work()
+
+    assert task_id1 is not None
+    assert task_id2 is None, "w1 did not take lock"
+
+    w1._run_task(task_id1)
+
+    task_id, _, _ = w2._get_work()
+    return task_id
+
+
 class PoolTest(unittest.TestCase):
     def setUp(self):
-        self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        self.sch = CentralPlannerScheduler()
         self.w1 = Worker(scheduler=self.sch, worker_id='X')
         self.w2 = Worker(scheduler=self.sch, worker_id='Y', wait_interval=0.1)
 
     def test_pool(self):
-        a1 = A(foo=1)
-        a2 = A(foo=2)
+        a1 = A(1)
+        a2 = A(2)
         self.w1.add(a1)
         self.w2.add(a2)
 
-        task_id1, _, _ = self.w1._get_work()  # a1 takes lock
-        task_id2, _, _ = self.w2._get_work()
-
-        self.assertEquals(task_id2, None)
-        self.w1._run_task(task_id1)
-
-        task_id, _, _ = self.w2._get_work()
+        task_id = run_workers(self.w1, self.w2)
         self.assertEquals(task_id, repr(a2))
 
     def test_multiple_pools(self):
-        a = A(1)
+        a = A(3)
         b = B()
         ab = AB()
         self.w1.add(ab)
         self.w2.add(a)
         self.w2.add(b)
 
-        task_id1, _, _ = self.w1._get_work()
-        task_id2, _, _ = self.w2._get_work()
+        task_id = run_workers(self.w1, self.w2)
 
-        self.assertEquals(task_id2, None)
-        self.w1._run_task(task_id1)
-
-        task_id, _, _ = self.w2._get_work()
         self.assertTrue(task_id == repr(a) or task_id == repr(b), "worker2 should get work for A or B")
+
+
+class RemotePoolTest(ServerTestBase):
+    def _get_sch(self):
+        sch = luigi.rpc.RemoteScheduler(host='localhost', port=self._api_port)
+        sch._wait = lambda: None
+        return sch
+
+    def test_remote_pools(self):
+        sch = self._get_sch()
+        w1 = Worker(scheduler=sch, worker_id='X')
+        w2 = Worker(scheduler=sch, worker_id='Y', wait_interval=0.1)
+        w1.add(A(4))
+        w2.add(A(5))
+
+        task_id = run_workers(w1, w2)
+        self.assertEquals(task_id, repr(A(5)))
+
+
