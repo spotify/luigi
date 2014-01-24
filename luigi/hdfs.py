@@ -99,7 +99,7 @@ class HdfsClient(FileSystem):
         if p.returncode == 0:
             return True
         else:
-            not_found_pattern = "^stat: `.*': No such file or directory$"
+            not_found_pattern = "^.*No such file or directory$"
             not_found_re = re.compile(not_found_pattern)
             for line in stderr.split('\n'):
                 if not_found_re.match(line):
