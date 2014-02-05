@@ -62,6 +62,11 @@ class AggregateArtists(luigi.Task):
                 print >> out_file, artist, count
 ```
 
+Note that this is just a portion of the file *examples/top_artists.py*. In
+particular, `Streams` is defined as a `luigi.Task`, acting as a dependency
+for `AggregateArtists`. In addition, `luigi.run()` is called if the script is
+executed directly, allowing it to be run from the command line.
+
 There are several pieces of this snippet that deserve more explanation.
 
 * Any *Task* may be customized by instantiating one or more *Parameter* objects on the class level.
