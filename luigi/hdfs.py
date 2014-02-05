@@ -67,7 +67,10 @@ def load_hadoop_cmd():
 
 def tmppath(path=None):
     # No /tmp//tmp/luigi_tmp_testdir sorts of paths just /tmp/luigi_tmp_testdir.
-    if path is not None and path.startswith(tempfile.gettempdir()):
+    hdfs_tmp_dir = configuration.get_config().get('core', 'hdfs-tmp-dir', None)
+    if hdfs_tmp_dir is not None:
+        base = hdfs_tmp_dir
+    elif path is not None and path.startswith(tempfile.gettempdir()):
         base = ''
     else:
         base = tempfile.gettempdir()
