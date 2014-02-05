@@ -13,21 +13,25 @@ class ExternalStreams(luigi.ExternalTask):
     date = luigi.DateParameter()
 
     def output(self):
-        return luigi.hdfs.HdfsTarget(self.date.strftime('data/streams_%Y-%m-%d.tsv'))
+        return luigi.hdfs.HdfsTarget(self.date.strftime(
+            'data/streams_%Y-%m-%d.tsv'))
 
 class Streams(luigi.Task):
-    ''' Faked version right now, just generates bogus data.    
+    ''' Faked version right now, just generates bogus data.
     '''
     date = luigi.DateParameter()
 
     def run(self):
-        f = self.output().open('w')
-        for i in xrange(1000):
-            print >> f, random.randint(0, 999), random.randint(0, 999), random.randint(0, 999)
-        f.close()
+        with open(self.output(), 'w') as output:
+            for i in xrange(1000):
+                output.write('{}{}{}\n'.format(
+                    random.randint(0, 999),
+                    random.randint(0, 999),
+                    random.randint(0, 999)))
 
     def output(self):
-        return luigi.LocalTarget(self.date.strftime('data/streams_%Y_%m_%d_faked.tsv'))
+        return luigi.LocalTarget(self.date.strftime(
+            'data/streams_%Y_%m_%d_faked.tsv'))
 
 class StreamsHdfs(Streams):
     def output(self):
@@ -37,7 +41,8 @@ class AggregateArtists(luigi.Task):
     date_interval = luigi.DateIntervalParameter()
 
     def output(self):
-        return luigi.LocalTarget("data/artist_streams_%s.tsv" % self.date_interval)
+        return luigi.LocalTarget("data/artist_streams_{}.tsv".format(
+            self.date_interval))
 
     def requires(self):
         return [Streams(date) for date in self.date_interval]
@@ -53,22 +58,22 @@ class AggregateArtists(luigi.Task):
 
         with self.output().open('w') as out_file:
             for artist, count in artist_count.iteritems():
-                print >> out_file, artist, count
+                out_file.write('{}\t{}\n'.format(artist, count))
 
 class AggregateArtistsHadoop(luigi.hadoop.JobTask):
     date_interval = luigi.DateIntervalParameter()
 
     def output(self):
         return luigi.hdfs.HdfsTarget(
-            "data/artist_streams_%s.tsv" % self.date_interval, 
-            format = luigi.hdfs.PlainDir
+            "data/artist_streams_%s.tsv" % self.date_interval,
+            format=luigi.hdfs.PlainDir
         )
 
     def requires(self):
         return [StreamsHdfs(date) for date in self.date_interval]
 
     def mapper(self, line):
-        timestamp, artist, track = line.strip().split()
+        _, artist, _ = line.strip().split()
         yield artist, 1
         
     def reducer(self, key, values):
@@ -100,7 +105,7 @@ class Top10Artists(luigi.Task):
                 out_file.write(out_line + '\n')
 
     def _input_iterator(self):
-        with self.input().open('r') as in_file:
+        with open(self.input(), 'r') as in_file:
             for line in in_file:
                 artist, streams = line.strip().split()
                 yield int(streams), artist
