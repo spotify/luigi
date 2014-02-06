@@ -80,18 +80,22 @@ class TestPostgresImportTask(TestCase):
         self.assertEquals(postgres.default_escape('\n\r\\\t\\N\\'),
                           '\\n\\r\\\\\\t\\\\N\\\\')
 
+    def clear(self, connection, table):
+        connection.cursor().execute(
+            "DROP TABLE IF EXISTS {table}".format(table=table))
+        connection.cursor().execute(
+            "DROP TABLE IF EXISTS {marker_table}".format(
+                marker_table=postgres.PostgresTarget.marker_table))
+
     def test_repeat(self):
         task = TestPostgresTask()
         conn = task.output().connect()
         conn.autocommit = True
-        cursor = conn.cursor()
-        cursor.execute('DROP TABLE IF EXISTS {table}'.format(table=task.table))
-        cursor.execute('DROP TABLE IF EXISTS {marker_table}'.format(
-            marker_table=postgres.PostgresTarget.marker_table))
+        self.clear(conn, task.table)
 
         luigi.build([task], local_scheduler=True)
         luigi.build([task], local_scheduler=True)  # try to schedule twice
-
+        cursor = conn.cursor()
         cursor.execute("""SELECT test_text, test_int, test_float
                           FROM test_table
                           ORDER BY id ASC""")
@@ -108,10 +112,7 @@ class TestPostgresImportTask(TestCase):
         metrics = MetricBase()
         conn = metrics.output().connect()
         conn.autocommit = True
-        conn.cursor().execute(
-            'DROP TABLE IF EXISTS {table}'.format(table=metrics.table))
-        conn.cursor().execute('DROP TABLE IF EXISTS {marker_table}'.format(
-            marker_table=postgres.PostgresTarget.marker_table))
+        self.clear(conn, metrics.table)
         luigi.build(
             [Metric1(20), Metric1(21), Metric2("foo")], local_scheduler=True)
 
@@ -130,10 +131,7 @@ class TestPostgresImportTask(TestCase):
         clearer = Metric2Copy(21)
         conn = clearer.output().connect()
         conn.autocommit = True
-        conn.cursor().execute(
-            'DROP TABLE IF EXISTS {table}'.format(table=clearer.table))
-        conn.cursor().execute('DROP TABLE IF EXISTS {marker_table}'.format(
-            marker_table=postgres.PostgresTarget.marker_table))
+        self.clear(conn, clearer.table)
 
         luigi.build([Metric1(0), Metric1(1)], local_scheduler=True)
         luigi.build([clearer], local_scheduler=True)
@@ -141,5 +139,47 @@ class TestPostgresImportTask(TestCase):
         cursor.execute(
             'select count(*) from {table}'.format(table=clearer.table))
         self.assertEquals(tuple(cursor), ((3,),))
+
+    def _test_exists_query(self, task):
+        conn = task.output().connect()
+        conn.autocommit = True
+        self.clear(conn, task.table)
+        task.run()
+        self.assertTrue(task.complete())  # uses marker
+
+        conn.cursor().execute(
+            "DELETE FROM {marker_table} WHERE target_table = %s".format(
+                marker_table=postgres.PostgresTarget.marker_table),
+            (task.table,)
+        )
+        self.assertFalse(task.complete())  # uses marker
+        task.run()
+        self.assertTrue(task.complete())
+        # now, there should not be duplicate data
+        c = conn.cursor()
+        c.execute("SELECT count(*) FROM {data_table}".format(
+            data_table=task.table))
+        return c.fetchone()
+
+    def test_no_exists_query_fail(self):
+        # results are duplicated if there is no exists query
+        class TestExistsTask(TestPostgresTask):
+            table = "exists_test"
+
+        task = TestExistsTask()
+        result_rows = self._test_exists_query(task)
+        self.assertEquals(result_rows, (6,))
+
+    def test_exists_query(self):
+        # result marker is inserted if there is an exists query
+        class TestExistsTask2(TestPostgresTask):
+            table = "exists_test"
+
+            def exists_query(self):
+                return "SELECT * FROM {0} LIMIT 1".format(self.table)
+
+        task = TestExistsTask2()
+        result_rows = self._test_exists_query(task)
+        self.assertEquals(result_rows, (3,))
 
 luigi.namespace()
