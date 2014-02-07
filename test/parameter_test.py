@@ -24,6 +24,8 @@ luigi.notifications.DEBUG = True
 import unittest
 from helpers import with_config
 
+EMAIL_CONFIG = {"core": {"error-email": "not-a-real-email-address-for-test-only"}}
+
 
 class A(luigi.Task):
     p = luigi.IntParameter()
@@ -158,6 +160,7 @@ class ParameterTest(EmailTest):
     def test_forgot_param(self):
         self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', 'ForgotParam'],)
 
+    @with_config(EMAIL_CONFIG)
     def test_forgot_param_in_dep(self):
         # A programmatic missing parameter will cause an error email to be sent
         luigi.run(['--local-scheduler', 'ForgotParamDep'])
