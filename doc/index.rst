@@ -11,6 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   api
+
 External links
 
 * `Mailing List <https://groups.google.com/forum/#!forum/luigi-user>`_ (Google Groups)
