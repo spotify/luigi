@@ -76,14 +76,22 @@ def send_email(subject, message, sender, recipients, image_png=None):
 
 
 def send_error_email(subject, message):
-    """ Sends an email to the configured error-email """
+    """ Sends an email to the configured error-email.
+
+    If no error-email is configured, then a message is logged
+    """
     config = configuration.get_config()
     receiver = config.get('core', 'error-email', None)
-    sender = config.get('core', 'email-sender', DEFAULT_CLIENT_EMAIL)
-    logger.info("Sending warning email to %r", receiver)
-    send_email(
-        subject=subject,
-        message=message,
-        sender=sender,
-        recipients=(receiver,)
-    )
+    if receiver:
+        sender = config.get('core', 'email-sender', DEFAULT_CLIENT_EMAIL)
+        logger.info("Sending warning email to %r", receiver)
+        send_email(
+            subject=subject,
+            message=message,
+            sender=sender,
+            recipients=(receiver,)
+        )
+    else:
+        logger.info("Skipping error email. Set `error-email` in the `core` "
+                    "section of the luigi config file to receive error "
+                    "emails.")
