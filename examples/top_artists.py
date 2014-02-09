@@ -22,9 +22,9 @@ class Streams(luigi.Task):
     date = luigi.DateParameter()
 
     def run(self):
-        with open(self.output(), 'w') as output:
+        with self.output().open('w') as output:
             for i in xrange(1000):
-                output.write('{}{}{}\n'.format(
+                output.write('{} {} {}\n'.format(
                     random.randint(0, 999),
                     random.randint(0, 999),
                     random.randint(0, 999)))
@@ -75,7 +75,7 @@ class AggregateArtistsHadoop(luigi.hadoop.JobTask):
     def mapper(self, line):
         _, artist, _ = line.strip().split()
         yield artist, 1
-        
+
     def reducer(self, key, values):
         yield key, sum(values)
 
@@ -105,7 +105,7 @@ class Top10Artists(luigi.Task):
                 out_file.write(out_line + '\n')
 
     def _input_iterator(self):
-        with open(self.input(), 'r') as in_file:
+        with self.input().open('r') as in_file:
             for line in in_file:
                 artist, streams = line.strip().split()
                 yield int(streams), artist
