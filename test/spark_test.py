@@ -1,15 +1,15 @@
-import functools
 import subprocess
 import StringIO
 import unittest
 
 from mock import patch
+
 import luigi
 import luigi.hdfs
 from luigi.mock import MockFile
-
-from luigi.spark import SparkJobError, SparkJob
+from luigi.contrib.spark import SparkJobError, SparkJob
 from helpers import with_config
+
 
 class HdfsJob(luigi.ExternalTask):
     def output(self):
