@@ -30,7 +30,7 @@ class TestJob(SparkJob):
         return luigi.LocalTarget('output')
 
 
-class SparkeyTest(unittest.TestCase):
+class SparkTest(unittest.TestCase):
     hcd = 'hcd-stub'
     ycd = 'ycd-stub'
     sj = 'sj-stub'
