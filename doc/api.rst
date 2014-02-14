@@ -22,6 +22,12 @@ The key parts of the Luigi API are as follows:
   :py:class:`~luigi.parameter.IntParameter`, :py:class:`~luigi.parameter.DateParameter`,
   :py:class:`~luigi.parameter.DateInterval`, :py:class:`~luigi.parameter.FloatParameter`, and more.
 
+:py:class:`~luigi.target.Target`:
+  A :py:class:`~luigi.target.Target` describes a resource created by a :py:class:`~luigi.task.Task`
+  as returned by the :py:class:`~luigi.task.Task`'s :py:meth:`~luigi.task.Task.output` method.
+  Targets bundled with Luigi include the :py:class:`~luigi.hdfs.HdfsTarget` and the
+  :py:class:`~luigi.postgres.PostgresTarget`.
+
 
 Tasks
 =====
@@ -34,6 +40,12 @@ Parameters
 ==========
 
 .. automodule:: luigi.parameter
+   :members:
+
+Targets
+=======
+
+.. automodule:: luigi.target
    :members:
 
 
