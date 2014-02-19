@@ -185,24 +185,16 @@ class Task(object):
     @classmethod
     def get_params(cls):
         # We want to do this here and not at class instantiation, or else there is no room to extend classes dynamically
-        params = cls.get_attrs_of_type(Parameter)
-        # The order the parameters are created matters. See Parameter class
-        params.sort(key=lambda t: t[1].counter)
-        return params
-
-    @classmethod
-    def get_pools(cls):
-        return cls.get_attrs_of_type(pool.Pool)
-
-    @classmethod
-    def get_attrs_of_type(cls, tpe):
         params = []
-        for attr_name in dir(cls):
-            attr = getattr(cls, attr_name)
-            if not isinstance(attr, tpe):
+        for param_name in dir(cls):
+            param_obj = getattr(cls, param_name)
+            if not isinstance(param_obj, Parameter):
                 continue
 
-            params.append((attr_name, attr))
+            params.append((param_name, param_obj))
+
+        # The order the parameters are created matters. See Parameter class
+        params.sort(key=lambda t: t[1].counter)
         return params
 
     @classmethod
@@ -344,6 +336,12 @@ class Task(object):
 
     def requires(self):
         return []  # default impl
+
+    def requires_resources(self):
+        return []
+
+    def _requires_resources(self):
+        return flatten(self.requires_resources())
 
     def _requires(self):
         '''

@@ -22,17 +22,20 @@ from luigi.worker import Worker
 
 
 class A(worker_test.DummyTask):
-    pool = luigi.Pool("a_pool")
     foo = luigi.IntParameter()
+
+    def requires_resources(self):
+        return luigi.Pool("a_pool")
 
 
 class B(worker_test.DummyTask):
-    pool = luigi.Pool("b_pool")
+    def requires_resources(self):
+        return luigi.Pool("b_pool")
 
 
 class AB(worker_test.DummyTask):
-    a_pool = luigi.Pool("a_pool")
-    b_pool = luigi.Pool("b_pool")
+    def requires_resources(self):
+        return [luigi.Pool("a_pool"), luigi.Pool("b_pool")]
 
 
 def run_workers(w1, w2):
