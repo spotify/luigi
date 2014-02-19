@@ -54,9 +54,20 @@ class Task(object):
         self.remove = None
         self.worker_running = None  # the worker that is currently running the task or None
         self.expl = None
+        self.pools = []
 
     def __repr__(self):
         return "Task(%r)" % vars(self)
+
+
+class Pool(object):
+    def __init__(self, name, max_capacity):
+        self.name = name
+        self.max_capacity = max_capacity
+        self.used_capacity = 0
+
+    def __repr__(self):
+        return "Pool(name=%r, max_capacity=%r)" % (self.name, self.max_capacity)
 
 
 class CentralPlannerScheduler(Scheduler):
@@ -81,6 +92,7 @@ class CentralPlannerScheduler(Scheduler):
         self._remove_delay = remove_delay
         self._worker_disconnect_delay = worker_disconnect_delay
         self._active_workers = {}  # map from id to timestamp (last updated)
+        self._pools = {}
         self._task_history = task_history or history.NopHistory()
         # TODO: have a Worker object instead, add more data to it
 
@@ -129,6 +141,7 @@ class CentralPlannerScheduler(Scheduler):
                 logger.info("Task %r is marked as running by disconnected worker %r -> marking as FAILED with retry delay of %rs", task_id, task.worker_running, self._retry_delay)
                 task.worker_running = None
                 task.status = FAILED
+                self._pools_finished(task)
                 task.retry = time.time() + self._retry_delay
 
         # Remove tasks that have no stakeholders
@@ -152,7 +165,7 @@ class CentralPlannerScheduler(Scheduler):
         # of whenever the worker was last active
         self._active_workers[worker] = time.time()
 
-    def add_task(self, worker, task_id, status=PENDING, runnable=True, deps=None, expl=None):
+    def add_task(self, worker, task_id, status=PENDING, runnable=True, deps=None, expl=None, pools=None):
         """
         * Add task identified by task_id if it doesn't exist
         * If deps is not None, update dependency list
@@ -171,6 +184,18 @@ class CentralPlannerScheduler(Scheduler):
             task.status = status
             if status == FAILED:
                 task.retry = time.time() + self._retry_delay
+
+        # List of (name, max_capacity)
+        if pools:
+            pool_names = []
+            for name, max_capacity in pools:
+                self._pools.setdefault(name, Pool(name, max_capacity))
+                pool_names.append(name)
+            task.pools = pool_names
+
+        # Update pools if task finished
+        if status == DONE or status == FAILED:
+            self._pools_finished(task)
 
         if deps is not None:
             task.deps = set(deps)
@@ -217,6 +242,9 @@ class CentralPlannerScheduler(Scheduler):
                 elif self._tasks[dep].status != DONE:
                     ok = False
 
+            if not self._pools_available(task):
+                ok = False
+
             if ok:
                 if task.time < best_t:
                     best_t = task.time
@@ -226,6 +254,7 @@ class CentralPlannerScheduler(Scheduler):
             t = self._tasks[best_task]
             t.status = RUNNING
             t.worker_running = worker
+            self._pools_taken(task)
             self._update_task_history(best_task, RUNNING, host=host)
 
         return {'n_pending_tasks': locally_pending_tasks,
@@ -356,3 +385,21 @@ class CentralPlannerScheduler(Scheduler):
     def task_history(self):
         # Used by server.py to expose the calls
         return self._task_history
+
+    def _pools_finished(self, task):
+        for name in task.pools:
+            pool = self._pools[name]
+            pool.used_capacity = max(pool.used_capacity - 1, 0)
+
+    def _pools_taken(self, task):
+        for name in task.pools:
+            pool = self._pools[name]
+            pool.used_capacity = max(pool.used_capacity + 1, pool.max_capacity)
+
+    def _pools_available(self, task):
+        for name in task.pools:
+            pool = self._pools[name]
+            if pool.used_capacity >= pool.max_capacity:
+                return False
+
+        return True

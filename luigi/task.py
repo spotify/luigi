@@ -15,6 +15,7 @@
 import abc
 import logging
 import parameter
+import pool
 import warnings
 import traceback
 
@@ -381,7 +382,7 @@ class Task(object):
 
         if cls is None:
             cls = self.__class__
-        
+
         new_k = {}
         for param_name, param_class in cls.get_nonglobal_params():
             if param_name in k:
@@ -437,6 +438,12 @@ class Task(object):
         values are Task instances.
         """
         return []  # default impl
+
+    def requires_resources(self):
+        return []
+
+    def _requires_resources(self):
+        return flatten(self.requires_resources())
 
     def _requires(self):
         '''

@@ -16,6 +16,7 @@ import task
 import file  # wtf @ naming
 import rpc
 import parameter
+import pool
 import configuration
 import interface
 import target
@@ -28,6 +29,7 @@ ExternalTask = task.ExternalTask
 WrapperTask = task.WrapperTask
 Target = target.Target
 
+Pool = pool.Pool
 File = file.File  # TODO: remove, should be LocalTarget
 LocalTarget = File
 Parameter = parameter.Parameter
