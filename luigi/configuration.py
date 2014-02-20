@@ -1,4 +1,5 @@
 
+import os
 import logging
 from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 
@@ -7,6 +8,8 @@ class LuigiConfigParser(ConfigParser):
     NO_DEFAULT = object()
     _instance = None
     _config_paths = ['/etc/luigi/client.cfg', 'client.cfg']
+    if 'LUIGI_CONFIG_PATH' in os.environ:
+        _config_paths.append(os.environ['LUIGI_CONFIG_PATH'])
 
     @classmethod
     def add_config_path(cls, path):
