@@ -1,21 +1,3 @@
-'''
-$ mysql
-Welcome to the MySQL monitor.  Commands end with ; or \g.
-Your MySQL connection id is 211
-Server version: 5.6.15 Homebrew
-
-Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
-
-Oracle is a registered trademark of Oracle Corporation and/or its
-affiliates. Other names may be trademarks of their respective
-owners.
-
-Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
-
-mysql> create database luigi;
-Query OK, 1 row affected (0.00 sec)
-'''
-
 import mysql.connector
 from luigi.contrib.mysqldb import MySqlTarget
 import unittest
