@@ -22,3 +22,7 @@
         git checkout master
         git pull
         git merge upstream
+
+#Sending Pull Requests upstream
+
+To create pull requests for spotify/luigi, we'll branch off of our "upstream" branch, apply a patch there, and then send the pull request to spotify/luigi#master. This will ensure that changes always apply cleanly to spotify.
