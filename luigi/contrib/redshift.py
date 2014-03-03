@@ -1,21 +1,20 @@
-import datetime
 import abc
 import logging
 import luigi.postgres
 import luigi
-from luigi.contrib import postgreslike
+from luigi.contrib import rdbms
+from luigi import postgres
 
 logger = logging.getLogger('luigi-interface')
 
 try:
     import psycopg2
     import psycopg2.errorcodes
-    import psycopg2.extensions
 except ImportError:
     logger.warning("Loading postgres module without psycopg2 installed. Will crash at runtime if postgres functionality is used.")
 
 
-class RedshiftTarget(postgreslike.PostgreslikeTarget):
+class RedshiftTarget(postgres.PostgresTarget):
     """
     Target for a resource in Redshift.
 
@@ -23,58 +22,9 @@ class RedshiftTarget(postgreslike.PostgreslikeTarget):
     """
     marker_table = luigi.configuration.get_config().get('redshift', 'marker-table', 'table_updates')
 
-    def touch(self, connection=None):
-        """Mark this update as complete.
+    use_db_timestamps = False
 
-        Important: If the marker table doesn't exist,
-        the connection transaction will be aborted
-        and the connection reset. Then the marker table will be created.
-        """
-        self.create_marker_table()
-
-        if connection is None:
-            connection = self.connect()
-            # if connection created here, we commit it here
-            connection.autocommit = True
-
-        # Automatic timestamps aren't supported by redshift, so we
-        # send the insertion date explicitly
-        connection.cursor().execute(
-                """INSERT INTO {marker_table} (update_id, target_table, inserted)
-                     VALUES (%s, %s, %s);
-                """.format(marker_table=self.marker_table),
-                        (self.update_id, self.table,
-                        datetime.datetime.now())
-        )
-        # make sure update is properly marked
-        assert self.exists(connection)
-
-    def create_marker_table(self):
-        """Create marker table if it doesn't exist.
-
-        Using a separate connection since the transaction might have to be reset
-        """
-        connection = self.connect()
-        connection.autocommit = True
-        cursor = connection.cursor()
-        try:
-                cursor.execute(
-                        """ CREATE TABLE {marker_table} (
-                                        update_id TEXT PRIMARY KEY,
-                                        target_table TEXT,
-                                        inserted TIMESTAMP);
-                        """
-                        .format(marker_table=self.marker_table)
-                )
-        except psycopg2.ProgrammingError, e:
-                if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
-                        pass
-                else:
-                        raise
-        connection.close()
-
-
-class S3CopyToTable(postgreslike.CopyToTable):
+class S3CopyToTable(rdbms.CopyToTable):
     """
     Template task for inserting a data set into Redshift from s3.
 
