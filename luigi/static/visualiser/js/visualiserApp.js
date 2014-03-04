@@ -1,5 +1,6 @@
 function visualiserApp(luigi) {
     var templates = {};
+    var invertDependencies = false;
 
     function loadTemplates() {
         $("script[type='text/template']").each(function(i, element) {
@@ -84,7 +85,7 @@ function visualiserApp(luigi) {
             $("#searchError").empty();
             $("#searchError").removeClass();
             if (taskId != "g") {
-                luigi.getDependencyGraph(taskId, function(dependencyGraph) {
+                depGraphCallback = function(dependencyGraph) {
                     $("#graphPlaceholder svg").empty();
                     $("#searchError").empty();
                     $("#searchError").removeClass();
@@ -97,7 +98,12 @@ function visualiserApp(luigi) {
                       $("#searchError").addClass("alert alert-error")
                       $("#searchError").append("Couldn't find task " + taskId)
                     }
-                });
+                }
+                if (invertDependencies) {
+                    luigi.getInverseDependencyGraph(taskId, depGraphCallback);
+                } else {
+                    luigi.getDependencyGraph(taskId, depGraphCallback);
+                }
             }
             switchTab("dependencyGraph");
         } else {
@@ -132,6 +138,10 @@ function visualiserApp(luigi) {
             var taskRows = $(this).closest(".taskFamily").find(".taskRows").slideToggle("fast");
         });
         $(window).on('hashchange', processHashChange);
+        $("#invertCheckbox").click(function() {
+            invertDependencies = this.checked;
+            processHashChange();
+        });
         $("a[href=#list]").click(function() { location.hash=""; });
         $("#loadTaskForm").submit(function(event) {
             event.preventDefault();
@@ -146,7 +156,7 @@ function visualiserApp(luigi) {
 
     $(document).ready(function() {
         loadTemplates();
-        
+
         luigi.getFailedTaskList(function(failedTasks) {
             luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
                 luigi.getRunningTaskList(function(runningTasks) {
@@ -163,7 +173,7 @@ function visualiserApp(luigi) {
                 });
             });
         });
-        
+
         var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
         $("#graphPlaceholder")[0].graph = graph;
         processHashChange();

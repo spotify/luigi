@@ -334,6 +334,27 @@ class CentralPlannerScheduler(Scheduler):
                     result[task_id] = serialized
         return result
 
+    def inverse_dependencies(self, task_id):
+        self.prune()
+        serialized = {}
+        if task_id in self._tasks:
+            self._traverse_inverse_deps(task_id, serialized)
+        return serialized
+
+    def _traverse_inverse_deps(self, task_id, serialized):
+        stack = [task_id]
+        serialized[task_id] = self._serialize_task(task_id)
+        while len(stack) > 0:
+            curr_id = stack.pop()
+            for id, task in self._tasks.iteritems():
+                if id in serialized:
+                    continue
+                if curr_id in task.deps:
+                    serialized[id] = self._serialize_task(id)
+                    serialized[id]["deps"] = []
+                    serialized[curr_id]["deps"].append(id)
+                    stack.append(id)
+
     def fetch_error(self, task_id):
         if self._tasks[task_id].expl is not None:
             return {"taskId": task_id, "error": self._tasks[task_id].expl}
