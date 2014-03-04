@@ -171,7 +171,7 @@ class HdfsClient(FileSystem):
 
     def mkdir(self, path):
         try:
-            call_check([load_hadoop_cmd(), 'fs', '-mkdir', path])
+            call_check([load_hadoop_cmd(), 'fs', '-mkdir', '-p', path])
         except HDFSCliError, ex:
             if "File exists" in ex.stderr:
                 raise FileAlreadyExists(ex.stderr)
