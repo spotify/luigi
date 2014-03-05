@@ -291,5 +291,37 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertTrue("Runtime error" in error["error"])
         self.assertTrue("Traceback" in error["error"])
 
+    def test_inverse_deps(self):
+        class X(luigi.Task):
+            pass
+
+        class Y(luigi.Task):
+            def requires(self):
+                return [X()]
+
+        class Z(luigi.Task):
+            id = luigi.Parameter()
+
+            def requires(self):
+                return [Y()]
+
+        class ZZ(luigi.Task):
+            def requires(self):
+                return [Z(1), Z(2)]
+
+        self._build([ZZ()])
+        dep_graph = self._remote().inverse_dependencies('X()')
+
+        def assert_has_deps(task_id, deps):
+            self.assertTrue(task_id in dep_graph, '%s not in dep_graph %s' % (task_id, dep_graph))
+            task = dep_graph[task_id]
+            self.assertEquals(sorted(task['deps']), sorted(deps), '%s does not have deps %s' % (task_id, deps))
+
+        assert_has_deps('X()', ['Y()'])
+        assert_has_deps('Y()', ['Z(id=1)', 'Z(id=2)'])
+        assert_has_deps('Z(id=1)', ['ZZ()'])
+        assert_has_deps('Z(id=2)', ['ZZ()'])
+        assert_has_deps('ZZ()', [])
+
 if __name__ == '__main__':
     unittest.main()

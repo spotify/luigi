@@ -347,13 +347,12 @@ class CentralPlannerScheduler(Scheduler):
         while len(stack) > 0:
             curr_id = stack.pop()
             for id, task in self._tasks.iteritems():
-                if id in serialized:
-                    continue
                 if curr_id in task.deps:
-                    serialized[id] = self._serialize_task(id)
-                    serialized[id]["deps"] = []
                     serialized[curr_id]["deps"].append(id)
-                    stack.append(id)
+                    if id not in serialized:
+                        serialized[id] = self._serialize_task(id)
+                        serialized[id]["deps"] = []
+                        stack.append(id)
 
     def fetch_error(self, task_id):
         if self._tasks[task_id].expl is not None:
