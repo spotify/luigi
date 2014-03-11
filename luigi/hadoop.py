@@ -502,7 +502,6 @@ class LocalJobRunner(JobRunner):
 
 
 class BaseHadoopJobTask(luigi.Task):
-    n_reduce_tasks = 25
     pool = luigi.Parameter(is_global=True, default=None, significant=False)
     # This value can be set to change the default batching increment. Default is 1 for backwards compatibility.
     batch_counter_default = 1
@@ -511,18 +510,12 @@ class BaseHadoopJobTask(luigi.Task):
     final_combiner = NotImplemented
     final_reducer = NotImplemented
 
-    reducer = NotImplemented
-
     _counter_dict = {}
     task_id = None
 
     def jobconfs(self):
         jcs = []
         jcs.append('mapred.job.name=%s' % self.task_id)
-        if self.reducer == NotImplemented:
-            jcs.append('mapred.reduce.tasks=0')
-        else:
-            jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
         pool = self.pool
         if pool is not None:
             # Supporting two schedulers: fair (default) and capacity using the same option
@@ -582,8 +575,17 @@ class BaseHadoopJobTask(luigi.Task):
             return super(BaseHadoopJobTask, self).on_failure(exception)
 
 
-
 class JobTask(BaseHadoopJobTask):
+    n_reduce_tasks = 25
+    reducer = NotImplemented
+
+    def jobconfs(self):
+        jcs = super(JobTask, self).jobconfs()
+        if self.reducer == NotImplemented:
+            jcs.append('mapred.reduce.tasks=0')
+        else:
+            jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
+        return jcs
 
     def init_mapper(self):
         pass
