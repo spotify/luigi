@@ -156,7 +156,7 @@ class ApacheHiveCommandClient(HiveCommandClient):
                 return False
         else:
             stdout = run_hive_cmd("""use %s; show partitions %s partition
-                                (%s)""" % (database, table, self.partition_spec(partition)))
+                                (%s)""" % (database, table, self.partition_spec(partition)), False)
 
             if stdout:
                 return True
