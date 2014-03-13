@@ -438,6 +438,18 @@ class SnakebiteHdfsClient(HdfsClient):
 
 class HdfsClientCdh3(HdfsClient):
     """This client uses CDH3 syntax for file system commands"""
+    def mkdir(self, path):
+        '''
+        No -p switch, so this will fail creating ancestors
+        '''
+        try:
+            call_check([load_hadoop_cmd(), 'fs', '-mkdir', path])
+        except HDFSCliError, ex:
+            if "File exists" in ex.stderr:
+                raise FileAlreadyExists(ex.stderr)
+            else:
+                raise
+
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
             cmd = [load_hadoop_cmd(), 'fs', '-rmr']
