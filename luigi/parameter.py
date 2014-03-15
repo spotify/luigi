@@ -210,6 +210,7 @@ class DateHourParameter(Parameter):
         """
         Converts the datetime to a string usnig the format string ``%Y-%m-%dT%H``.
         """
+        if dt is None: return str(dt)
         return dt.strftime('%Y-%m-%dT%H')
 
 
