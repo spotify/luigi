@@ -59,7 +59,7 @@
                     <span class="badge badge-important">
                         {{value.length}}
                     </span>
-                    {{key}} 
+                    {{key}}
                 </h4>
                 <div class="taskRows" style="display:none">
                     {{#value}}
@@ -93,7 +93,7 @@
         <div class="page-header custom-header">
             <h1>Luigi Task Status <small>Active tasks</small></h1>
         </div>
-        
+
         <ul class="nav nav-tabs">
             <li class="active"><a href="#" data-tab="taskList" class="tabButton">Task List</a></li>
             <li><a href="#g" data-tab="dependencyGraph" class="tabButton">Dependency Graph</a></li>
@@ -118,6 +118,10 @@
                       <input type="text" class="search-query" placeholder="TaskId(param1=val1,param2=val2)">
                       <button type="submit" class="btn">Show task details</button>
                     </form>
+                    <form class="navbar-form pull-left">
+                        Show Upstream Dependencies
+                        <input type="checkbox" class="checkbox" checked="checked" id="invertCheckbox"/>
+                    </form>
                   </div>
                 </div>
                 <div id="searchError">
@@ -131,7 +135,7 @@
             </section>
         </div>
         <div id="errorModal" class="modal" style="display:none;">
-            
+
         </div>
         <script>
             visualiserApp(new LuigiAPI("../../api"));
