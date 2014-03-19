@@ -234,7 +234,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
 
         if proc.returncode == 0:
             write_luigi_history(arglist, {'job_id': job_id})
-            return
+            return (out, err)
 
         # Try to fetch error logs if possible
         message = 'Streaming job failed with exit code %d. ' % proc.returncode
@@ -255,7 +255,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
     if tracking_url_callback is None:
         tracking_url_callback = lambda x: None
 
-    track_process(arglist, tracking_url_callback, env)
+    return track_process(arglist, tracking_url_callback, env)
 
 
 def fetch_task_failures(tracking_url):
