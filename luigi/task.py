@@ -406,10 +406,7 @@ class Task(object):
             warnings.warn("Task %r without outputs has no custom complete() method" % self)
             return False
 
-        paths_to_check = []
-        paths_to_check += flatten(self.requires())
-        paths_to_check += flatten(self.output())
-        for p in paths_to_check:
+        for p in flatten(self.output()):
             if hasattr(p, 'path'):
                 path = p.path
                 if '*' in path or '[' in path or '{' in path:
