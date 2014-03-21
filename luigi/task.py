@@ -413,7 +413,7 @@ class Task(object):
             if hasattr(a, 'path'):
                 path = p.path
                 if '*' in path or '[' in path or '{' in path:
-                    logger.warn('Wildcards in paths is dangerous: %s' % path)
+                    logger.warn('Wildcards in path %s is dangerous, please implement custom complete function' % path)
 
         for output in outputs:
             if not output.exists():
