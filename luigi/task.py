@@ -407,15 +407,13 @@ class Task(object):
             return False
 
         paths_to_check = []
-        paths_to_check = flatten(self.requires())
-        paths_to_check = flatten(self.output())
+        paths_to_check += flatten(self.requires())
+        paths_to_check += flatten(self.output())
         for p in paths_to_check:
-            try:
+            if hasattr(a, 'path'):
                 path = p.path
                 if '*' in path or '[' in path or '{' in path:
-                    logger.warn('Do not use wildcards in path: %s' % path)
-            except AttributeError:
-                pass
+                    logger.warn('Wildcards in paths is dangerous: %s' % path)
 
         for output in outputs:
             if not output.exists():
