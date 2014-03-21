@@ -381,7 +381,7 @@ class Task(object):
 
         if cls is None:
             cls = self.__class__
-        
+
         new_k = {}
         for param_name, param_class in cls.get_nonglobal_params():
             if param_name in k:
@@ -405,6 +405,12 @@ class Task(object):
             # TODO: unclear if tasks without outputs should always run or never run
             warnings.warn("Task %r without outputs has no custom complete() method" % self)
             return False
+
+        for p in flatten(self.output()):
+            if hasattr(p, 'path'):
+                path = p.path
+                if '*' in path or '[' in path or '{' in path:
+                    logger.warn('Wildcards in path %s is dangerous, please implement custom complete function' % path)
 
         for output in outputs:
             if not output.exists():
