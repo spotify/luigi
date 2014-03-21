@@ -406,13 +406,13 @@ class Task(object):
             warnings.warn("Task %r without outputs has no custom complete() method" % self)
             return False
 
-        pathsToCheck = []
-        pathsToCheck = flatten(self.requires())
-        pathsToCheck = flatten(self.output())
-        for p in pathsToCheck:
+        paths_to_check = []
+        paths_to_check = flatten(self.requires())
+        paths_to_check = flatten(self.output())
+        for p in paths_to_check:
             try:
                 path = p.path
-                if '*' in path or '[0' in path:
+                if '*' in path or '[' in path or '{' in path:
                     logger.warn('Do not use wildcards in path: %s' % path)
             except AttributeError:
                 pass
