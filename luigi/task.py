@@ -410,7 +410,7 @@ class Task(object):
         paths_to_check += flatten(self.requires())
         paths_to_check += flatten(self.output())
         for p in paths_to_check:
-            if hasattr(a, 'path'):
+            if hasattr(p, 'path'):
                 path = p.path
                 if '*' in path or '[' in path or '{' in path:
                     logger.warn('Wildcards in path %s is dangerous, please implement custom complete function' % path)
