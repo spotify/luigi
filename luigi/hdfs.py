@@ -109,6 +109,9 @@ class HdfsClient(FileSystem):
             self.mkdir(parent_dir)
         if type(path) not in (list, tuple):
             path = [path]
+        else:
+            import warnings
+            warnings.warn("Renaming multiple files at once is not atomic.")
         call_check([load_hadoop_cmd(), 'fs', '-mv'] + path + [dest])
 
     def remove(self, path, recursive=True, skip_trash=False):
