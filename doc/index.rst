@@ -3,9 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Luigi's documentation!
-=================================
-
+.. include:: ../README.rst
 
 Table of Contents
 -----------------
@@ -13,7 +11,16 @@ Table of Contents
 .. toctree::
    :maxdepth: 2
 
-   api
+   example_top_artists.rst
+   api_overview.rst
+   command_line.rst
+   programmatic_execution.rst
+   central_scheduler.rst
+   execution_model.rst
+   luigi_patterns.rst
+   configuration.rst
+   more_info.rst
+   contributing.rst
 
 API Reference
 -------------
@@ -24,12 +31,6 @@ API Reference
    luigi
    luigi.contrib
 
-External links
-==============
-
-* `Mailing List <https://groups.google.com/forum/#!forum/luigi-user>`_ (Google Groups)
-* `Releases <https://pypi.python.org/pypi/luigi>`_ (PyPi)
-* `Source code <https://github.com/spotify/luigi>`_ (Github)
 
 Indices and tables
 ==================
