@@ -93,7 +93,7 @@ class HdfsClient(FileSystem):
     recursive_listdir_cmd = ['-ls', '-R']
 
     def exists(self, path):
-        """ Use `hadoop fs -stat to check file existence
+        """ Use ``hadoop fs -stat`` to check file existence
         """
 
         cmd = [load_hadoop_cmd(), 'fs', '-stat', path]
@@ -278,9 +278,9 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.test to check file existence.
 
-        @param path: path to test
-        @type path: string
-        @return: boolean, True if path exists in HDFS
+        :param path: path to test
+        :type path: string
+        :return: boolean, True if path exists in HDFS
         """
         try:
             return self.get_bite().test(path, exists=True)
@@ -291,11 +291,11 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.rename, if available.
 
-        @param path: source file(s)
-        @type path: either a string or sequence of strings
-        @param dest: destination file (single input) or directory (multiple)
-        @type dest: string
-        @return: list of renamed items
+        :param path: source file(s)
+        :type path: either a string or sequence of strings
+        :param dest: destination file (single input) or directory (multiple)
+        :type dest: string
+        :return: list of renamed items
         """
         parts = dest.split('/')
         if len(parts) > 1:
@@ -308,13 +308,13 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.delete, if available.
 
-        @param path: delete-able file(s) or directory(ies)
-        @type path: either a string or a sequence of strings
-        @param recursive: delete directories trees like *nix: rm -r
-        @type recursive: boolean, default is True
-        @param skip_trash: do or don't move deleted items into the trash first
-        @type skip_trash: boolean, default is False (use trash)
-        @return: list of deleted items
+        :param path: delete-able file(s) or directory(ies)
+        :type path: either a string or a sequence of strings
+        :param recursive: delete directories trees like \*nix: rm -r
+        :type recursive: boolean, default is True
+        :param skip_trash: do or don't move deleted items into the trash first
+        :type skip_trash: boolean, default is False (use trash)
+        :return: list of deleted items
         """
         return list(self.get_bite().delete(list_path(path), recurse=recursive))
 
@@ -322,13 +322,13 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.chmod, if available.
 
-        @param path: update-able file(s)
-        @type path: either a string or sequence of strings
-        @param permissions: *nix style permission number
-        @type permissions: octal
-        @param recursive: change just listed entry(ies) or all in directories
-        @type recursive: boolean, default is False
-        @return: list of all changed items
+        :param path: update-able file(s)
+        :type path: either a string or sequence of strings
+        :param permissions: \*nix style permission number
+        :type permissions: octal
+        :param recursive: change just listed entry(ies) or all in directories
+        :type recursive: boolean, default is False
+        :return: list of all changed items
         """
         return list(self.get_bite().chmod(list_path(path),
                                          permissions, recursive))
@@ -339,15 +339,15 @@ class SnakebiteHdfsClient(HdfsClient):
 
         One of owner or group must be set. Just setting group calls chgrp.
 
-        @param path: update-able file(s)
-        @type path: either a string or sequence of strings
-        @param owner: new owner, can be blank
-        @type owner: string
-        @param group: new group, can be blank
-        @type group: string
-        @param recursive: change just listed entry(ies) or all in directories
-        @type recursive: boolean, default is False
-        @return: list of all changed items
+        :param path: update-able file(s)
+        :type path: either a string or sequence of strings
+        :param owner: new owner, can be blank
+        :type owner: string
+        :param group: new group, can be blank
+        :type group: string
+        :param recursive: change just listed entry(ies) or all in directories
+        :type recursive: boolean, default is False
+        :return: list of all changed items
         """
         bite = self.get_bite()
         if owner:
@@ -361,9 +361,9 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.count, if available.
 
-        @param path: directory to count the contents of
-        @type path: string
-        @return: dictionary with content_size, dir_count and file_count keys
+        :param path: directory to count the contents of
+        :type path: string
+        :return: dictionary with content_size, dir_count and file_count keys
         """
         try:
             (dir_count, file_count, content_size, ppath) = \
@@ -377,10 +377,10 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.copyToLocal, if available.
 
-        @param path: HDFS file
-        @type path: string
-        @param local_destination: path on the system running Luigi
-        @type local_destination: string
+        :param path: HDFS file
+        :type path: string
+        :param local_destination: path on the system running Luigi
+        :type local_destination: string
         """
         return list(self.get_bite().copyToLocal(list_path(path),
                                                 local_destination))
@@ -390,14 +390,14 @@ class SnakebiteHdfsClient(HdfsClient):
         Use snakebite.mkdir, if available.
 
         Snakebite's mkdir method allows control over full path creation, so by
-        default, tell it to build a full path to work like `hadoop fs -mkdir`.
+        default, tell it to build a full path to work like ``hadoop fs -mkdir``.
 
-        @param path: HDFS path to create
-        @type path: string
-        @param parents: create any missing parent directories
-        @type parents: boolean, default is True
-        @param mode: *nix style owner/group/other permissions
-        @type mode: octal, default 0755
+        :param path: HDFS path to create
+        :type path: string
+        :param parents: create any missing parent directories
+        :type parents: boolean, default is True
+        :param mode: \*nix style owner/group/other permissions
+        :type mode: octal, default 0755
         """
         bite = self.get_bite()
         if bite.test(path, exists=True):
@@ -411,21 +411,21 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.ls to get the list of items in a directory.
 
-        @param path: the directory to list
-        @type path: string
-        @param ignore_directories: if True, do not yield directory entries
-        @type ignore_directories: boolean, default is False
-        @param ignore_files: if True, do not yield file entries
-        @type ignore_files: boolean, default is False
-        @param include_size: include the size in bytes of the current item
-        @type include_size: boolean, default is False (do not include)
-        @param include_type: include the type (d or f) of the current item
-        @type include_type: boolean, default is False (do not include)
-        @param include_time: include the last modification time of the current item
-        @type include_time: boolean, default is False (do not include)
-        @param recursive: list subdirectory contents
-        @type recursive: boolean, default is False (do not recurse)
-        @return: yield with a string, or if any of the include_* settings are
+        :param path: the directory to list
+        :type path: string
+        :param ignore_directories: if True, do not yield directory entries
+        :type ignore_directories: boolean, default is False
+        :param ignore_files: if True, do not yield file entries
+        :type ignore_files: boolean, default is False
+        :param include_size: include the size in bytes of the current item
+        :type include_size: boolean, default is False (do not include)
+        :param include_type: include the type (d or f) of the current item
+        :type include_type: boolean, default is False (do not include)
+        :param include_time: include the last modification time of the current item
+        :type include_time: boolean, default is False (do not include)
+        :param recursive: list subdirectory contents
+        :type recursive: boolean, default is False (do not recurse)
+        :return: yield with a string, or if any of the include_* settings are
             true, a tuple starting with the path, and include_* items in order
         """
         bite = self.get_bite()

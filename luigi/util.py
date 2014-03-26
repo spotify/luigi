@@ -39,19 +39,22 @@ def class_wraps(P):
 
 
 class inherits(object):
-    ''' Usage:
-    class AnotherTask(luigi.Task):
-        n = luigi.IntParameter()
-        # ...
+    '''Task inheritance.
 
-    @inherits(AnotherTask):
-    class MyTask(luigi.Task):
-        def requires(self):
-           return self.clone_parent()
+    Usage::
 
-        def run(self):
-           print self.n # this will be defined
-           # ...
+        class AnotherTask(luigi.Task):
+            n = luigi.IntParameter()
+            # ...
+
+        @inherits(AnotherTask):
+        class MyTask(luigi.Task):
+            def requires(self):
+               return self.clone_parent()
+
+            def run(self):
+               print self.n # this will be defined
+               # ...
     '''
     def __init__(self, task_to_inherit):
         super(inherits, self).__init__()
@@ -94,11 +97,12 @@ class requires(object):
 class copies(object):
     ''' Auto-copies a task
 
-    Usage:
-    @copies(MyTask):
-    class CopyOfMyTask(luigi.Task):
-        def output(self):
-           return LocalTarget(self.date.strftime('/var/xyz/report-%Y-%m-%d'))
+    Usage::
+
+        @copies(MyTask):
+        class CopyOfMyTask(luigi.Task):
+            def output(self):
+               return LocalTarget(self.date.strftime('/var/xyz/report-%Y-%m-%d'))
     '''
     def __init__(self, task_to_copy):
         super(copies, self).__init__()
@@ -126,15 +130,16 @@ def delegates(task_that_delegates):
     to care about the requirements of the subtasks. The subtask doesn't exist from the scheduler's point
     of view, and its dependencies are instead required by the main task.
 
-    Example:
-    class PowersOfN(luigi.Task):
-        n = luigi.IntParameter()
-        def f(self, x): return x ** self.n
+    Example::
 
-    @delegates
-    class T(luigi.Task):
-        def subtasks(self): return PowersOfN(5)
-        def run(self): print self.subtasks().f(42)
+        class PowersOfN(luigi.Task):
+            n = luigi.IntParameter()
+            def f(self, x): return x ** self.n
+
+        @delegates
+        class T(luigi.Task):
+            def subtasks(self): return PowersOfN(5)
+            def run(self): print self.subtasks().f(42)
     '''
     if not hasattr(task_that_delegates, 'subtasks'):
         # This method can (optionally) define a couple of delegate tasks that
@@ -166,17 +171,18 @@ def Derived(parent_cls):
     Note 1: The derived class does not inherit from the parent class
     Note 2: You can add more parameters in the derived class
 
-    Usage:
-    class AnotherTask(luigi.Task):
-        n = luigi.IntParameter()
-        # ...
+    Usage::
 
-    class MyTask(luigi.uti.Derived(AnotherTask)):
-        def requires(self):
-           return self.parent_obj
-        def run(self):
-           print self.n # this will be defined
-           # ...
+        class AnotherTask(luigi.Task):
+            n = luigi.IntParameter()
+            # ...
+
+        class MyTask(luigi.uti.Derived(AnotherTask)):
+            def requires(self):
+               return self.parent_obj
+            def run(self):
+               print self.n # this will be defined
+               # ...
     '''
     class DerivedCls(task.Task):
         def __init__(self, *args, **kwargs):
@@ -201,11 +207,13 @@ def Derived(parent_cls):
 
 
 def Copy(parent_cls):
-    ''' Creates a new Task that copies the old task. Usage:
+    ''' Creates a new Task that copies the old task.
 
-    class CopyOfMyTask(Copy(MyTask)):
-        def output(self):
-           return LocalTarget(self.date.strftime('/var/xyz/report-%Y-%m-%d'))
+    Usage::
+
+        class CopyOfMyTask(Copy(MyTask)):
+            def output(self):
+               return LocalTarget(self.date.strftime('/var/xyz/report-%Y-%m-%d'))
     '''
 
     class CopyCls(Derived(parent_cls)):
