@@ -13,6 +13,8 @@
 # the License.
 
 import abc
+import logging
+logger = logging.getLogger('luigi-interface')
 
 
 class Target(object):
@@ -139,7 +141,12 @@ class FileSystemTarget(Target):
 
         This method is implemented by using :py:meth:`fs`.
         """
-        return self.fs.exists(self.path)
+        path = self.path
+        if FileSystemTarget.exists.__func__ == self.exists.__func__: # supress warning when called from derived class with super
+            if '*' in path or '?' in path or '[' in path or '{' in path:
+                logger.warning("Using wildcards in path %s might lead to processing of an incomplete dataset; "
+                               "override exists() to suppress the warning." % path)
+        return self.fs.exists(path)
 
     def remove(self):
         """Remove the resource at the path specified by this FileSystemTarget.
