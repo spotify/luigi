@@ -105,7 +105,7 @@ class File(FileSystemTarget):
         if fail_if_exists and os.path.exists(new_path):
             raise RuntimeError('Destination exists: %s' % new_path)
         d = os.path.dirname(new_path)
-        if not os.path.exists(d):
+        if d and not os.path.exists(d):
             self.fs.mkdir(d)
         os.rename(self.path, new_path)
 
