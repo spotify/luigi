@@ -148,14 +148,28 @@ class FileTest(unittest.TestCase):
         with t.open("r") as f:
             self.assertEqual(f.foo, "custom read property")
 
+    def test_move(self):
+        t = File(self.path)
+        f = t.open('w')
+        test_data = 'test'
+        f.write(test_data)
+        f.close()
+        self.assertTrue(os.path.exists(self.path))
+        self.assertFalse(os.path.exists(self.copy))
+        t.move(self.copy)
+        self.assertFalse(os.path.exists(self.path))
+        self.assertTrue(os.path.exists(self.copy))
+
 
 class FileCreateDirectoriesTest(FileTest):
     path = '/tmp/%s/xyz/test.txt' % random.randint(0, 999999999)
+    copy = '/tmp/%s/xyz_2/copy.txt' % random.randint(0, 999999999)
 
 
 class FileRelativeTest(FileTest):
     # We had a bug that caused relative file paths to fail, adding test for it
     path = 'test.txt'
+    copy = 'copy.txt'
 
 
 class TmpFileTest(unittest.TestCase):
