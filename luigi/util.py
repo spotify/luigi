@@ -29,13 +29,20 @@ def common_params(task_instance, task_cls):
     return vals
 
 
-def class_wraps(P):
+def task_wraps(P):
+    # Makes sure the subclass overrides the base class in the register so that when
+    # the user tries to instantiate P by name, it refers to the subclass and doesn't
+    # create any ambiguity problems.
+    P.unregister()
+
     # In order to make the behavior of a wrapper class nicer, we set the name of the
     # new class to the wrapped class, and copy over the docstring and module as well.
     # This makes it possible to pickle the wrapped class etc.
     # Btw, this is a slight abuse of functools.wraps. It's meant to be used only for
     # functions, but it works for classes too, if you pass updated=[]
-    return functools.wraps(P, updated=[])
+    P = functools.wraps(P, updated=[])
+
+    return P
 
 
 class inherits(object):
@@ -67,7 +74,7 @@ class inherits(object):
                 setattr(task_that_inherits, param_name, param_obj)
 
         # Modify task_that_inherits by subclassing it and adding methods
-        @class_wraps(task_that_inherits)
+        @task_wraps(task_that_inherits)
         class Wrapped(task_that_inherits):
             def clone_parent(_self, **args):
                 return _self.clone(cls=self.task_to_inherit, **args)
@@ -86,7 +93,7 @@ class requires(object):
         task_that_requires = self.inherit_decorator(task_that_requires)
         
         # Modify task_that_requres by subclassing it and adding methods
-        @class_wraps(task_that_requires)
+        @task_wraps(task_that_requires)
         class Wrapped(task_that_requires):
             def requires(_self):
                 return _self.clone_parent()
@@ -112,7 +119,7 @@ class copies(object):
         task_that_copies = self.requires_decorator(task_that_copies)
 
         # Modify task_that_copies by subclassing it and adding methods
-        @class_wraps(task_that_copies)
+        @task_wraps(task_that_copies)
         class Wrapped(task_that_copies):
             def run(_self):
                 i, o = _self.input(), _self.output()
@@ -147,7 +154,7 @@ def delegates(task_that_delegates):
         # those tasks and run methods defined on them, etc
         raise AttributeError('%s needs to implement the method "subtasks"' % task_that_delegates)
 
-    @class_wraps(task_that_delegates)
+    @task_wraps(task_that_delegates)
     class Wrapped(task_that_delegates):
         def deps(self):
             # Overrides method in base class
