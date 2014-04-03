@@ -8,6 +8,7 @@
         git clone git@github.com:mortardata/luigi.git
         cd luigi
         git remote add spotify git@github.com:spotify/luigi.git
+        git fetch spotify
         git checkout upstream
         git branch upstream -u spotify/master
 
