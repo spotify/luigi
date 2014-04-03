@@ -5,9 +5,10 @@
 * Checkout upstream branch
 * Set upstream to track spotify master
 
-        git clone git@github.com:spotify/luigi.git
+        git clone git@github.com:mortardata/luigi.git
+        cd luigi
         git remote add spotify git@github.com:spotify/luigi.git
-        get checkout upstream
+        git checkout upstream
         git branch upstream -u spotify/master
 
 # Pull in latest changes from spotify
