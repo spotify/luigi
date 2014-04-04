@@ -39,8 +39,12 @@ class TaskException(Exception):
 
 
 class Event:
-    SUCCESS = "event.core.success"
+    # TODO nice descriptive subclasses of Event instead of strings? pass their instances to the callback instead of an undocumented arg list?
+    DEPENDENCY_DISCOVERED = "event.core.dependency.discovered"  # triggered for every (task, upstream task) pair discovered in a jobflow
+    DEPENDENCY_MISSING = "event.core.dependency.missing"
+    DEPENDENCY_PRESENT = "event.core.dependency.present"
     FAILURE = "event.core.failure"
+    SUCCESS = "event.core.success"
 
 
 class Worker(object):
@@ -179,6 +183,7 @@ class Worker(object):
         except:
             formatted_traceback = traceback.format_exc()
             self._log_complete_error(task)
+            task.trigger_event(Event.DEPENDENCY_MISSING, task)
             self._email_complete_error(task, formatted_traceback)
             # abort, i.e. don't schedule any subtasks of a task with
             # failing complete()-method since we don't know if the task
@@ -190,7 +195,7 @@ class Worker(object):
             # Not submitting dependencies of finished tasks
             self.__scheduler.add_task(self.__id, task.task_id, status=DONE,
                                       runnable=False)
-
+            task.trigger_event(Event.DEPENDENCY_PRESENT, task)
         elif task.run == NotImplemented:
             self._add_external(task)
         else:
@@ -201,6 +206,7 @@ class Worker(object):
         self.__scheduled_tasks[external_task.task_id] = external_task
         self.__scheduler.add_task(self.__id, external_task.task_id, status=PENDING,
                                   runnable=False)
+        external_task.trigger_event(Event.DEPENDENCY_MISSING, external_task)
         logger.warning('Task %s is not complete and run() is not implemented. Probably a missing external dependency.', external_task.task_id)
 
     def _validate_dependency(self, dependency):
@@ -214,14 +220,15 @@ class Worker(object):
         deps = task.deps()
         for d in deps:
             self._validate_dependency(d)
+            task.trigger_event(Event.DEPENDENCY_DISCOVERED, task, d)
 
         deps = [d.task_id for d in deps]
         self.__scheduler.add_task(self.__id, task.task_id, status=PENDING,
                                   deps=deps, runnable=True)
         logger.info('Scheduled %s', task.task_id)
 
-        for task_2 in task.deps():
-            yield task_2  # return additional tasks to add
+        for d in task.deps():
+            yield d  # return additional tasks to add
 
     def _check_complete_value(self, is_complete):
         if is_complete not in (True, False):
