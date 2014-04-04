@@ -12,6 +12,9 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import mock
+import os
+import sys
 import unittest
 import subprocess
 import luigi
@@ -233,6 +236,74 @@ class MrrunnerTest(unittest.TestCase):
         self.assertRaises(FailingJobException, run)        
         self.assertEquals(len(excs), 1) # should have been set
         self.assertTrue(type(excs[0]), FailingJobException)
+
+class CreatePackagesArchive(unittest.TestCase):
+    def setUp(self):
+        sys.path.append(os.path.join('test', 'create_packages_archive_root'))
+
+    def tearDown(self):
+        sys.path.remove(os.path.join('test', 'create_packages_archive_root'))
+
+    def _assert_module(self, add):
+        add.assert_called_once_with('test/create_packages_archive_root/module.py',
+                                    'module.py')
+
+    def _assert_package(self, add):
+        add.assert_any_call('test/create_packages_archive_root/package/__init__.py', 'package/__init__.py')
+        add.assert_any_call('test/create_packages_archive_root/package/submodule.py', 'package/submodule.py')
+        add.assert_any_call('test/create_packages_archive_root/package/submodule_with_absolute_import.py', 'package/submodule_with_absolute_import.py')
+        add.assert_any_call('test/create_packages_archive_root/package/submodule_without_imports.py', 'package/submodule_without_imports.py')
+        add.assert_any_call('test/create_packages_archive_root/package/subpackage/__init__.py', 'package/subpackage/__init__.py')
+        add.assert_any_call('test/create_packages_archive_root/package/subpackage/submodule.py', 'package/subpackage/submodule.py')
+        assert add.call_count == 6
+
+    def _assert_package_subpackage(self, add):
+        add.assert_any_call('test/create_packages_archive_root/package/__init__.py', 'package/__init__.py')
+        add.assert_any_call('test/create_packages_archive_root/package/subpackage/__init__.py', 'package/subpackage/__init__.py')
+        add.assert_any_call('test/create_packages_archive_root/package/subpackage/submodule.py', 'package/subpackage/submodule.py')
+        assert add.call_count == 3
+
+    @mock.patch('tarfile.open')
+    def test_create_packages_archive_module(self, tar):
+        module = __import__("module", None, None, 'dummy')
+        luigi.hadoop.create_packages_archive([module], '/dev/null')
+        self._assert_module(tar.return_value.add)
+
+    @mock.patch('tarfile.open')
+    def test_create_packages_archive_package(self, tar):
+        package = __import__("package", None, None, 'dummy')
+        luigi.hadoop.create_packages_archive([package], '/dev/null')
+        self._assert_package(tar.return_value.add)
+
+    @mock.patch('tarfile.open')
+    def test_create_packages_archive_package_submodule(self, tar):
+        package_submodule = __import__("package.submodule", None, None, 'dummy')
+        luigi.hadoop.create_packages_archive([package_submodule], '/dev/null')
+        self._assert_package(tar.return_value.add)
+
+    @mock.patch('tarfile.open')
+    def test_create_packages_archive_package_submodule_with_absolute_import(self, tar):
+        package_submodule_with_absolute_import = __import__("package.submodule_with_absolute_import", None, None, 'dummy')
+        luigi.hadoop.create_packages_archive([package_submodule_with_absolute_import], '/dev/null')
+        self._assert_package(tar.return_value.add)
+
+    @mock.patch('tarfile.open')
+    def test_create_packages_archive_package_submodule_without_imports(self, tar):
+        package_submodule_without_imports = __import__("package.submodule_without_imports", None, None, 'dummy')
+        luigi.hadoop.create_packages_archive([package_submodule_without_imports], '/dev/null')
+        self._assert_package(tar.return_value.add)
+
+    @mock.patch('tarfile.open')
+    def test_create_packages_archive_package_subpackage(self, tar):
+        package_subpackage = __import__("package.subpackage", None, None, 'dummy')
+        luigi.hadoop.create_packages_archive([package_subpackage], '/dev/null')
+        self._assert_package_subpackage(tar.return_value.add)
+
+    @mock.patch('tarfile.open')
+    def test_create_packages_archive_package_subpackage_submodule(self, tar):
+        package_subpackage_submodule = __import__("package.subpackage.submodule", None, None, 'dummy')
+        luigi.hadoop.create_packages_archive([package_subpackage_submodule], '/dev/null')
+        self._assert_package_subpackage(tar.return_value.add)
 
 if __name__ == '__main__':
     HadoopJobTest.test_run_real()
