@@ -86,13 +86,18 @@ def create_packages_archive(packages, filename):
         logger.debug('adding to tar: %s -> %s', src, dst)
         tar.add(src, dst)
     for package in packages:
-        if package.__package__ and package.__package__ != package.__name__:
-            # Replace with package instead of submodule
-            package = __import__(package.__package__, None, None, 'non_empty')
+        # Put a submodule's entire package in the archive. This is the
+        # magic that usually packages everything you need without
+        # having to attach packages/modules explicitly
+        if not hasattr(package, "__path__") and '.' in package.__name__:
+            package = __import__(package.__name__.rpartition('.')[0], None, None, 'non_empty')
 
         n = package.__name__.replace(".", "/")
 
         if hasattr(package, "__path__"):
+            # TODO: (BUG) picking only the first path does not
+            # properly deal with namespaced packages in different
+            # directories
             p = package.__path__[0]
 
             if p.endswith('.egg') and os.path.isfile(p):
