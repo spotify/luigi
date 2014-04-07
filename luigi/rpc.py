@@ -32,9 +32,10 @@ class RPCError(Exception):
 class RemoteScheduler(Scheduler):
     ''' Scheduler proxy object. Talks to a RemoteSchedulerResponder '''
 
-    def __init__(self, host='localhost', port=8082):
+    def __init__(self, host='localhost', port=8082, connect_timeout=None):
         self._host = host
         self._port = port
+        self._connect_timeout = connect_timeout
 
     def _wait(self):
         time.sleep(30)
@@ -52,7 +53,7 @@ class RemoteScheduler(Scheduler):
                 logger.info("Retrying...")
                 self._wait()  # wait for a bit and retry
             try:
-                response = urllib2.urlopen(req)
+                response = urllib2.urlopen(req, None, self._connect_timeout)
                 break
             except urllib2.URLError, last_exception:
                 if log_exceptions:

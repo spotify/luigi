@@ -381,7 +381,7 @@ class WorkerEmailTest(EmailTest):
 
     @with_config(EMAIL_CONFIG)
     def test_connection_error(self):
-        sch = RemoteScheduler(host="this_host_doesnt_exist", port=1337)
+        sch = RemoteScheduler(host="this_host_doesnt_exist", port=1337, connect_timeout=1)
         worker = Worker(scheduler=sch)
 
         self.waits = 0
