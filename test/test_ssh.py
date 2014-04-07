@@ -43,7 +43,7 @@ class TestMockedRemoteContext(unittest.TestCase):
 
     def test_check_output_fail_connect(self):
         """ Test check_output to a non-existing host """
-        context = RemoteContext("__NO_HOST_LIKE_THIS__")
+        context = RemoteContext("__NO_HOST_LIKE_THIS__", connect_timeout=1)
         self.assertRaises(
             subprocess.CalledProcessError,
             context.check_output, ["ls"]
