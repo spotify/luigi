@@ -86,13 +86,18 @@ def create_packages_archive(packages, filename):
         logger.debug('adding to tar: %s -> %s', src, dst)
         tar.add(src, dst)
     for package in packages:
-        if package.__package__ and package.__package__ != package.__name__:
-            # Replace with package instead of submodule
-            package = __import__(package.__package__, None, None, 'non_empty')
+        # Put a submodule's entire package in the archive. This is the
+        # magic that usually packages everything you need without
+        # having to attach packages/modules explicitly
+        if not hasattr(package, "__path__") and '.' in package.__name__:
+            package = __import__(package.__name__.rpartition('.')[0], None, None, 'non_empty')
 
         n = package.__name__.replace(".", "/")
 
         if hasattr(package, "__path__"):
+            # TODO: (BUG) picking only the first path does not
+            # properly deal with namespaced packages in different
+            # directories
             p = package.__path__[0]
 
             if p.endswith('.egg') and os.path.isfile(p):
@@ -234,7 +239,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
 
         if proc.returncode == 0:
             write_luigi_history(arglist, {'job_id': job_id})
-            return
+            return (out, err)
 
         # Try to fetch error logs if possible
         message = 'Streaming job failed with exit code %d. ' % proc.returncode
@@ -255,7 +260,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
     if tracking_url_callback is None:
         tracking_url_callback = lambda x: None
 
-    track_process(arglist, tracking_url_callback, env)
+    return track_process(arglist, tracking_url_callback, env)
 
 
 def fetch_task_failures(tracking_url):
@@ -502,7 +507,6 @@ class LocalJobRunner(JobRunner):
 
 
 class BaseHadoopJobTask(luigi.Task):
-    n_reduce_tasks = 25
     pool = luigi.Parameter(is_global=True, default=None, significant=False)
     # This value can be set to change the default batching increment. Default is 1 for backwards compatibility.
     batch_counter_default = 1
@@ -511,18 +515,12 @@ class BaseHadoopJobTask(luigi.Task):
     final_combiner = NotImplemented
     final_reducer = NotImplemented
 
-    reducer = NotImplemented
-
     _counter_dict = {}
     task_id = None
 
     def jobconfs(self):
         jcs = []
         jcs.append('mapred.job.name=%s' % self.task_id)
-        if self.reducer == NotImplemented:
-            jcs.append('mapred.reduce.tasks=0')
-        else:
-            jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
         pool = self.pool
         if pool is not None:
             # Supporting two schedulers: fair (default) and capacity using the same option
@@ -582,8 +580,17 @@ class BaseHadoopJobTask(luigi.Task):
             return super(BaseHadoopJobTask, self).on_failure(exception)
 
 
-
 class JobTask(BaseHadoopJobTask):
+    n_reduce_tasks = 25
+    reducer = NotImplemented
+
+    def jobconfs(self):
+        jcs = super(JobTask, self).jobconfs()
+        if self.reducer == NotImplemented:
+            jcs.append('mapred.reduce.tasks=0')
+        else:
+            jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
+        return jcs
 
     def init_mapper(self):
         pass

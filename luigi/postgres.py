@@ -12,13 +12,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import abc
 import datetime
 import logging
 import tempfile
 import re
 
 import luigi
+from luigi.contrib import rdbms
 
 logger = logging.getLogger('luigi-interface')
 
@@ -83,6 +83,9 @@ class PostgresTarget(luigi.Target):
     This will rarely have to be directly instantiated by the user"""
     marker_table = luigi.configuration.get_config().get('postgres', 'marker-table', 'table_updates')
 
+    # Use DB side timestamps or client side timestamps in the marker_table
+    use_db_timestamps = True
+
     def __init__(self, host, database, user, password, table, update_id):
         """
         Args:
@@ -117,12 +120,20 @@ class PostgresTarget(luigi.Target):
             connection = self.connect()
             connection.autocommit = True  # if connection created here, we commit it here
 
-        connection.cursor().execute(
-            """INSERT INTO {marker_table} (update_id, target_table)
-               VALUES (%s, %s)
-            """.format(marker_table=self.marker_table),
-            (self.update_id, self.table)
-        )
+        if self.use_db_timestamps:
+            connection.cursor().execute(
+                """INSERT INTO {marker_table} (update_id, target_table)
+                   VALUES (%s, %s)
+                """.format(marker_table=self.marker_table),
+                    (self.update_id, self.table))
+        else:
+            connection.cursor().execute(
+                    """INSERT INTO {marker_table} (update_id, target_table, inserted)
+                         VALUES (%s, %s, %s);
+                    """.format(marker_table=self.marker_table),
+                            (self.update_id, self.table,
+                            datetime.datetime.now()))
+
         # make sure update is properly marked
         assert self.exists(connection)
 
@@ -163,16 +174,20 @@ class PostgresTarget(luigi.Target):
         connection = self.connect()
         connection.autocommit = True
         cursor = connection.cursor()
+        if self.use_db_timestamps:
+            sql = """ CREATE TABLE {marker_table} (
+                      update_id TEXT PRIMARY KEY,
+                      target_table TEXT,
+                      inserted TIMESTAMP DEFAULT NOW())
+                """.format(marker_table=self.marker_table)
+        else:
+            sql = """ CREATE TABLE {marker_table} (
+                      update_id TEXT PRIMARY KEY,
+                      target_table TEXT,
+                      inserted TIMESTAMP);
+                  """.format(marker_table=self.marker_table)
         try:
-            cursor.execute(
-                """ CREATE TABLE {marker_table} (
-                        update_id TEXT PRIMARY KEY,
-                        target_table TEXT,
-                        inserted TIMESTAMP DEFAULT NOW()
-                    )
-                """
-                .format(marker_table=self.marker_table)
-            )
+            cursor.execute(sql)
         except psycopg2.ProgrammingError, e:
             if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
                 pass
@@ -184,7 +199,7 @@ class PostgresTarget(luigi.Target):
         raise NotImplementedError("Cannot open() PostgresTarget")
 
 
-class CopyToTable(luigi.Task):
+class CopyToTable(rdbms.CopyToTable):
     """
     Template task for inserting a data set into Postgres
 
@@ -197,62 +212,11 @@ class CopyToTable(luigi.Task):
 
     """
 
-    @abc.abstractproperty
-    def host(self):
-        return None
-
-    @abc.abstractproperty
-    def database(self):
-        return None
-
-    @abc.abstractproperty
-    def user(self):
-        return None
-
-    @abc.abstractproperty
-    def password(self):
-        return None
-
-    @abc.abstractproperty
-    def table(self):
-        return None
-
-    # specify the columns that are to be inserted (same as are returned by columns)
-    # overload this in subclasses with the either column names of columns to import:
-    # e.g. ['id', 'username', 'inserted']
-    # or tuples with column name, postgres column type strings:
-    # e.g. [('id', 'SERIAL PRIMARY KEY'), ('username', 'VARCHAR(255)'), ('inserted', 'DATETIME')]
-    columns = []
-
-    # options
-    null_values = (None,)  # container of values that should be inserted as NULL values
-
-    column_separator = "\t"  # how columns are separated in the file copied into postgres
-
     def rows(self):
         """Return/yield tuples or lists corresponding to each row to be inserted """
         with self.input().open('r') as fobj:
             for line in fobj:
                 yield line.strip('\n').split('\t')
-
-    def create_table(self, connection):
-        """ Override to provide code for creating the target table.
-
-        By default it will be created using types (optionally) specified in columns.
-
-        If overridden, use the provided connection object for setting up the table in order to
-        create the table and insert data using the same transaction.
-        """
-        if len(self.columns[0]) == 1:
-            # only names of columns specified, no types
-            raise NotImplementedError("create_table() not implemented for %r and columns types not specified" % self.table)
-        elif len(self.columns[0]) == 2:
-            # if columns is specified as (name, type) tuples
-            coldefs = ','.join(
-                '{name} {type}'.format(name=name, type=type) for name, type in self.columns
-            )
-            query = "CREATE TABLE {table} ({coldefs})".format(table=self.table, coldefs=coldefs)
-            connection.cursor().execute(query)
 
     def map_column(self, value):
         """Applied to each column of every row returned by `rows`
@@ -266,9 +230,6 @@ class CopyToTable(luigi.Task):
         else:
             return default_escape(str(value))
 
-    def update_id(self):
-        """This update id will be a unique identifier for this insert on this table."""
-        return self.task_id
 
 # everything below will rarely have to be overridden
 
@@ -286,16 +247,6 @@ class CopyToTable(luigi.Task):
             update_id=self.update_id()
          )
 
-    def init_copy(self, connection):
-        """ Override to perform custom queries.
-
-            Any code here will be formed in the same transaction as the main copy, just prior to copying data. Example use cases include truncating the table or removing all data older than X in the database to keep a rolling window of data available in the table.
-        """
-
-        # TODO: remove this after sufficient time so most people using the
-        # clear_table attribtue will have noticed it doesn't work anymore
-        if hasattr(self, "clear_table"):
-            raise Exception("The clear_table attribute has been removed. Override init_copy instead!")
 
     def copy(self, cursor, file):
         if isinstance(self.columns[0], basestring):

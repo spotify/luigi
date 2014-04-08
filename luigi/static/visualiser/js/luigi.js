@@ -34,6 +34,12 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.getInverseDependencyGraph = function (taskId, callback) {
+        jsonRPC(this.urlRoot + "/inverse_dep_graph", {task_id: taskId}, function(response) {
+            callback(flatten(response.response, taskId));
+        });
+    }
+
     LuigiAPI.prototype.getFailedTaskList = function(callback) {
         jsonRPC(this.urlRoot + "/task_list", {status: "FAILED", upstream_status: ""}, function(response) {
             callback(flatten(response.response));
@@ -57,7 +63,7 @@ var LuigiAPI = (function() {
             callback(response.response);
         });
     };
-    
+
     LuigiAPI.prototype.getRunningTaskList = function(callback) {
         jsonRPC(this.urlRoot + "/task_list", {status: "RUNNING", upstream_status: ""}, function(response) {
             callback(flatten(response.response));

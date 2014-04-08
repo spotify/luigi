@@ -1,3 +1,4 @@
+"""Package containing core luigi functionality"""
 # Copyright (c) 2012 Spotify AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not

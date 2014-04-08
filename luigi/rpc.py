@@ -32,9 +32,10 @@ class RPCError(Exception):
 class RemoteScheduler(Scheduler):
     ''' Scheduler proxy object. Talks to a RemoteSchedulerResponder '''
 
-    def __init__(self, host='localhost', port=8082):
+    def __init__(self, host='localhost', port=8082, connect_timeout=None):
         self._host = host
         self._port = port
+        self._connect_timeout = connect_timeout
 
     def _wait(self):
         time.sleep(30)
@@ -52,7 +53,7 @@ class RemoteScheduler(Scheduler):
                 logger.info("Retrying...")
                 self._wait()  # wait for a bit and retry
             try:
-                response = urllib2.urlopen(req)
+                response = urllib2.urlopen(req, None, self._connect_timeout)
                 break
             except urllib2.URLError, last_exception:
                 if log_exceptions:
@@ -103,6 +104,9 @@ class RemoteScheduler(Scheduler):
     def dep_graph(self, task_id):
         return self._request('/api/dep_graph', {'task_id': task_id})
 
+    def inverse_dep_graph(self, task_id):
+        return self._request('/api/inverse_dep_graph', {'task_id': task_id})
+
     def task_list(self, status, upstream_status):
         return self._request('/api/task_list', {'status': status, 'upstream_status': upstream_status})
 
@@ -112,7 +116,7 @@ class RemoteScheduler(Scheduler):
 
 class RemoteSchedulerResponder(object):
     """ Use on the server side for responding to requests
-    
+
     The kwargs are there for forwards compatibility in case workers add
     new (optional) arguments. That way there's no dependency on the server
     component when upgrading Luigi on the worker side.
@@ -140,6 +144,9 @@ class RemoteSchedulerResponder(object):
 
     def dep_graph(self, task_id, **kwargs):
         return self._scheduler.dep_graph(task_id)
+
+    def inverse_dep_graph(self, task_id, **kwargs):
+        return self._scheduler.inverse_dependencies(task_id)
 
     def task_list(self, status, upstream_status, **kwargs):
         return self._scheduler.task_list(status, upstream_status)

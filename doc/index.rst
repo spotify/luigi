@@ -6,14 +6,26 @@
 Welcome to Luigi's documentation!
 =================================
 
-Contents:
+
+Table of Contents
+-----------------
 
 .. toctree::
    :maxdepth: 2
 
    api
 
+API Reference
+-------------
+
+.. autosummary::
+   :toctree: api
+
+   luigi
+   luigi.contrib
+
 External links
+==============
 
 * `Mailing List <https://groups.google.com/forum/#!forum/luigi-user>`_ (Google Groups)
 * `Releases <https://pypi.python.org/pypi/luigi>`_ (PyPi)

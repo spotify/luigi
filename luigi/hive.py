@@ -156,7 +156,7 @@ class ApacheHiveCommandClient(HiveCommandClient):
                 return False
         else:
             stdout = run_hive_cmd("""use %s; show partitions %s partition
-                                (%s)""" % (database, table, self.partition_spec(partition)))
+                                (%s)""" % (database, table, self.partition_spec(partition)), False)
 
             if stdout:
                 return True
@@ -344,7 +344,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
                     arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
 
             logger.info(arglist)
-            luigi.hadoop.run_and_track_hadoop_job(arglist)
+            return luigi.hadoop.run_and_track_hadoop_job(arglist)
 
 
 class HiveTableTarget(luigi.Target):
