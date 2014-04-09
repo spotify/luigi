@@ -64,7 +64,7 @@ class Register(abc.ABCMeta):
     """
     __instance_cache = {}
     _default_namespace = None
-    _reg = []
+    _reg = {}
     AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
     """If this value is returned by :py:meth:`get_reg` then there is an
     ambiguous task name (two :py:class:`Task` have the same name). This denotes
@@ -79,8 +79,15 @@ class Register(abc.ABCMeta):
             classdict["task_namespace"] = metacls._default_namespace
 
         cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
-        if cls.run != NotImplemented:
-            metacls._reg.append(cls)
+        if cls.run != NotImplemented and cls.register_cls:
+            name = cls.task_family
+            if name in metacls._reg and metacls._reg[name] != cls and \
+                    metacls._reg[name] != cls.AMBIGUOUS_CLASS:
+                # Registering two different classes - this means we can't instantiate them by name
+                metacls._reg[name] = cls.AMBIGUOUS_CLASS
+            else:
+                metacls._reg[name] = cls
+
         return cls
 
     def __call__(cls, *args, **kwargs):
@@ -140,16 +147,7 @@ class Register(abc.ABCMeta):
 
         :return:  a ``dict`` of task_family -> class
         """
-        reg = {}
-        for cls in cls._reg:
-            name = cls.task_family
-            if name in reg and reg[name] != cls:
-                # Registering two different classes - this means we can't instantiate them by name
-                reg[name] = cls.AMBIGUOUS_CLASS
-            else:
-                reg[name] = cls
-
-        return reg
+        return cls._reg
 
     @classmethod
     def get_global_params(cls):
@@ -158,8 +156,10 @@ class Register(abc.ABCMeta):
         :return: a ``dict`` of parameter name -> parameter.
         """
         global_params = {}
-        for cls in cls._reg:
-            for param_name, param_obj in cls.get_global_params():
+        for t_name, t_cls in cls._reg.iteritems():
+            if t_cls == cls.AMBIGUOUS_CLASS:
+                continue
+            for param_name, param_obj in t_cls.get_global_params():
                 if param_name in global_params and global_params[param_name] != param_obj:
                     # Could be registered multiple times in case there's subclasses
                     raise Exception('Global parameter %r registered by multiple classes' % param_name)
@@ -200,7 +200,7 @@ class Task(object):
       list of ``(parameter_name, parameter)`` tuples for this task class
     """
     __metaclass__ = Register
-
+    register_cls = True # Whether this class should be exposed
 
     _event_callbacks = {}
 
@@ -312,6 +312,13 @@ class Task(object):
                 return x
         # Sort it by the correct order and make a list
         return [(param_name, list_to_tuple(result[param_name])) for param_name, param_obj in params]
+
+    @classmethod
+    def unregister(cls):
+        """ Makes this class not exposed under its name.
+
+        Useful if you have more than one class with the same name"""
+        cls.register_cls = False
 
     def __init__(self, *args, **kwargs):
         """Constructor to resolve values for all Parameters.
