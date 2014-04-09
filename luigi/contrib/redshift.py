@@ -135,14 +135,14 @@ class RedshiftManifestTask(S3PathTask):
     in S3CopyToTable in order to copy multiple files from your 
     s3 folder into a redshift table at once
 
-    For full usage on how to use the manifest file see:
+    For full description on how to use the manifest file see:
     http://docs.aws.amazon.com/redshift/latest/dg/loading-data-files-using-manifest.html
 
     Usage:
-    Requires two parameters when utilized
-        path - s3 path to your generated manifest file, including the
+    Requires two parameters 
+        path - s3 path to the generated manifest file, including the
                name of the generated file
-        folder_path - s3 path to the folder of all files you wished
+        folder_path - s3 path to the folder of all files 
                       to be copied into a redshift table
     Output:
         generated manifest file
