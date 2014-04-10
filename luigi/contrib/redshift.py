@@ -143,6 +143,7 @@ class RedshiftManifestTask(S3PathTask):
         path - s3 path to the generated manifest file, including the
                name of the generated file
                       to be copied into a redshift table
+        folder_paths - s3 paths to the folders containing files you wish to be copied
     Output:
         generated manifest file
     """
