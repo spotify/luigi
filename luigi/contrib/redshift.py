@@ -147,16 +147,17 @@ class RedshiftManifestTask(S3PathTask):
     Output:
         generated manifest file
     """
-    folder_path = luigi.Parameter()
+    folder_paths = []
 
     def run(self):
-        s3 = S3Target(self.folder_path)
-        client = s3.fs
-        entries = []
-        for file_name in client.list(s3.path):
-            entries.append({
-                'url' : '%s/%s' % (self.folder_path, file_name),
-                'mandatory': True
+        entries = [] 
+        for folder_path in self.folder_paths:
+            s3 = S3Target(folder_path)
+            client = s3.fs
+            for file_name in client.list(s3.path):
+                entries.append({
+                    'url' : '%s/%s' % (folder_path, file_name),
+                    'mandatory': True
                 })
         manifest = {'entries' : entries}
         target = self.output().open('w')
