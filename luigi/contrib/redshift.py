@@ -148,7 +148,7 @@ class RedshiftManifestTask(S3PathTask):
     """
 
     # should be over ridden to point to a variety of folders you wish to copy from
-    folder_paths = []
+    folder_paths = luigi.Parameter() 
 
     def run(self):
         entries = [] 

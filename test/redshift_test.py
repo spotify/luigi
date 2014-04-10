@@ -43,12 +43,12 @@ class TestRedshiftManifestTask(TestCase):
         k = Key(bucket)
         k.key = 'manifest'
         path = 's3://%s/%s/%s' % (BUCKET, k.key, 'test.manifest')
-        t = redshift.RedshiftManifestTask(path)
-        t.folder_paths = [folder_path]
+        folder_paths = [folder_path]
+        t = redshift.RedshiftManifestTask(path, folder_paths)
         luigi.build([t], local_scheduler=True)
 
         output = t.output().open('r').read()
-        expected_manifest_output = json.dumps(generate_manifest_json([folder_path],FILES))
+        expected_manifest_output = json.dumps(generate_manifest_json(folder_paths,FILES))
         self.assertEqual(output,expected_manifest_output )
 
     @mock_s3 
@@ -66,8 +66,7 @@ class TestRedshiftManifestTask(TestCase):
         k = Key(bucket)
         k.key = 'manifest'
         path = 's3://%s/%s/%s' % (BUCKET, k.key, 'test.manifest')
-        t = redshift.RedshiftManifestTask(path)
-        t.folder_paths = folder_paths
+        t = redshift.RedshiftManifestTask(path, folder_paths)
         luigi.build([t], local_scheduler=True)
 
         output = t.output().open('r').read()
