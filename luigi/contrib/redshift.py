@@ -139,24 +139,27 @@ class RedshiftManifestTask(S3PathTask):
     http://docs.aws.amazon.com/redshift/latest/dg/loading-data-files-using-manifest.html
 
     Usage:
-    Requires two parameters 
+    Requires parameters 
         path - s3 path to the generated manifest file, including the
                name of the generated file
-        folder_path - s3 path to the folder of all files 
                       to be copied into a redshift table
+        folder_paths - s3 paths to the folders containing files you wish to be copied
     Output:
         generated manifest file
     """
-    folder_path = luigi.Parameter()
+
+    # should be over ridden to point to a variety of folders you wish to copy from
+    folder_paths = luigi.Parameter() 
 
     def run(self):
-        s3 = S3Target(self.folder_path)
-        client = s3.fs
-        entries = []
-        for file_name in client.list(s3.path):
-            entries.append({
-                'url' : '%s/%s' % (self.folder_path, file_name),
-                'mandatory': True
+        entries = [] 
+        for folder_path in self.folder_paths:
+            s3 = S3Target(folder_path)
+            client = s3.fs
+            for file_name in client.list(s3.path):
+                entries.append({
+                    'url' : '%s/%s' % (folder_path, file_name),
+                    'mandatory': True
                 })
         manifest = {'entries' : entries}
         target = self.output().open('w')
