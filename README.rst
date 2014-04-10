@@ -93,6 +93,15 @@ that you probably want `Tornado <http://www.tornadoweb.org/>`__. Also
 if you want to run Hadoop jobs since it makes debugging easier. See
 `Configuration <http://luigi.readthedocs.org/en/latest/configuration.html>`_ for how to configure Luigi.
 
+Getting Started
+------------
+
+The `Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_
+contains an overview of how to work with Luigi, including an `Example workflow
+<http://luigi.readthedocs.org/en/latest/example_top_artists.html>`_ and an `API overview
+<http://luigi.readthedocs.org/en/latest/api_overview.html>`_ which explains some of
+the most important concepts.
+
 Getting Help
 ------------
 
