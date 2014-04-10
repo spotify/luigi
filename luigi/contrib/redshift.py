@@ -139,14 +139,15 @@ class RedshiftManifestTask(S3PathTask):
     http://docs.aws.amazon.com/redshift/latest/dg/loading-data-files-using-manifest.html
 
     Usage:
-    Requires two parameters 
+    Requires parameters 
         path - s3 path to the generated manifest file, including the
                name of the generated file
-        folder_path - s3 path to the folder of all files 
                       to be copied into a redshift table
     Output:
         generated manifest file
     """
+
+    # should be over ridden to point to a variety of folders you wish to copy from
     folder_paths = []
 
     def run(self):
