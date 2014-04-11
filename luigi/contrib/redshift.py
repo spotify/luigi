@@ -2,8 +2,11 @@ import abc
 import logging
 import luigi.postgres
 import luigi
+import json
 from luigi.contrib import rdbms
 from luigi import postgres
+
+from luigi.s3 import S3PathTask, S3Target
 
 logger = logging.getLogger('luigi-interface')
 
@@ -125,3 +128,40 @@ class S3CopyToTable(rdbms.CopyToTable):
                 password=self.password,
                 table=self.table,
                 update_id=self.update_id())
+
+class RedshiftManifestTask(S3PathTask):
+    """
+    Generic task to generate a manifest file that can be used
+    in S3CopyToTable in order to copy multiple files from your
+    s3 folder into a redshift table at once
+
+    For full description on how to use the manifest file see:
+    http://docs.aws.amazon.com/redshift/latest/dg/loading-data-files-using-manifest.html
+
+    Usage:
+    Requires parameters
+        path - s3 path to the generated manifest file, including the
+               name of the generated file
+                      to be copied into a redshift table
+        folder_paths - s3 paths to the folders containing files you wish to be copied
+    Output:
+        generated manifest file
+    """
+
+    # should be over ridden to point to a variety of folders you wish to copy from
+    folder_paths = luigi.Parameter()
+
+    def run(self):
+        entries = []
+        for folder_path in self.folder_paths:
+            s3 = S3Target(folder_path)
+            client = s3.fs
+            for file_name in client.list(s3.path):
+                entries.append({
+                    'url' : '%s/%s' % (folder_path, file_name),
+                    'mandatory': True
+                })
+        manifest = {'entries' : entries}
+        target = self.output().open('w')
+        target.write(json.dumps(manifest))
+        target.close()
