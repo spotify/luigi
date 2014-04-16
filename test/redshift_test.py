@@ -3,10 +3,15 @@ import json
 import luigi.notifications
 
 from unittest import TestCase
-from luigi.contrib import redshift
-from moto import mock_s3
-from boto.s3.key import Key
-from luigi.s3 import S3Client
+try:
+    from luigi.contrib import redshift
+    from moto import mock_s3
+    from boto.s3.key import Key
+    from luigi.s3 import S3Client
+except ImportError:
+    print 'Skipping %s, requires s3 stuff' % __file__
+    from luigi.mock import skip
+    mock_s3 = skip
 
 luigi.notifications.DEBUG = True
 

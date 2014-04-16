@@ -27,22 +27,17 @@ from boto.s3 import bucket
 from boto.s3 import key
 from boto.exception import S3ResponseError
 
-# moto does not yet work with 
+# moto does not yet work with
 # python 2.6. Until it does,
 # disable these tests in python2.6
 try:
     from moto import mock_s3
 except ImportError:
     # https://github.com/spulec/moto/issues/29
-    print 'Skipping s3 tests because moto does not install properly before python2.7'
-    
-    def skip(func):
-        def wrapper():
-            pass
-        return wrapper
-
+    print 'Skipping %s because moto does not install properly before python2.7' % __file__
+    from luigi.mock import skip
     mock_s3 = skip
-    
+
 AWS_ACCESS_KEY = "XXXXXXXXXXXXXXXXXXXX"
 AWS_SECRET_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
@@ -54,7 +49,7 @@ class TestS3Target(unittest.TestCase):
         self.tempFilePath = f.name
         f.write(self.tempFileContents)
         f.close()
-    
+
     def tearDown(self):
         os.remove(self.tempFilePath)
 
@@ -108,7 +103,7 @@ class TestS3Target(unittest.TestCase):
         contents = firstline + 'line two' + os.linesep + 'line three'
         tempf.write(contents)
         tempf.close()
-        
+
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         client.s3.create_bucket('mybucket')
         client.put(temppath, 's3://mybucket/largetempfile')
@@ -132,7 +127,7 @@ class TestS3Target(unittest.TestCase):
         context()
         gc.collect()
         self.assertFalse(t.exists())
-        
+
     @mock_s3
     def test_write_cleanup_with_error(self):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
@@ -186,7 +181,7 @@ class TestS3Client(unittest.TestCase):
     def test_exists(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
-        
+
         self.assertTrue(s3_client.exists('s3://mybucket/'))
         self.assertTrue(s3_client.exists('s3://mybucket'))
         self.assertFalse(s3_client.exists('s3://mybucket/nope'))
@@ -195,13 +190,13 @@ class TestS3Client(unittest.TestCase):
         s3_client.put(self.tempFilePath, 's3://mybucket/tempfile')
         self.assertTrue(s3_client.exists('s3://mybucket/tempfile'))
         self.assertFalse(s3_client.exists('s3://mybucket/temp'))
-        
+
         s3_client.put(self.tempFilePath, 's3://mybucket/tempdir0_$folder$')
         self.assertTrue(s3_client.exists('s3://mybucket/tempdir0'))
-        
+
         s3_client.put(self.tempFilePath, 's3://mybucket/tempdir1/')
         self.assertTrue(s3_client.exists('s3://mybucket/tempdir1'))
-        
+
         s3_client.put(self.tempFilePath, 's3://mybucket/tempdir2/subdir')
         self.assertTrue(s3_client.exists('s3://mybucket/tempdir2'))
         self.assertFalse(s3_client.exists('s3://mybucket/tempdir'))
@@ -228,21 +223,21 @@ class TestS3Client(unittest.TestCase):
 
         s3_client.put(self.tempFilePath, 's3://mybucket/key')
         self.assertFalse(s3_client.is_dir('s3://mybucket/key'))
-    
+
     @mock_s3
     def test_remove(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
-        
+
         with self.assertRaises(S3ResponseError):
             s3_client.remove('s3://bucketdoesnotexist/file')
-        
+
         self.assertFalse(s3_client.remove('s3://mybucket/doesNotExist'))
-        
-        s3_client.put(self.tempFilePath, 's3://mybucket/existingFile0')        
+
+        s3_client.put(self.tempFilePath, 's3://mybucket/existingFile0')
         self.assertTrue(s3_client.remove('s3://mybucket/existingFile0'))
         self.assertFalse(s3_client.exists('s3://mybucket/existingFile0'))
-        
+
         with self.assertRaises(InvalidDeleteException):
             s3_client.remove('s3://mybucket/')
         with self.assertRaises(InvalidDeleteException):
@@ -251,4 +246,3 @@ class TestS3Client(unittest.TestCase):
         s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/file')
         with self.assertRaises(InvalidDeleteException):
             s3_client.remove('s3://mybucket/removemedir', recursive=False)
-        
