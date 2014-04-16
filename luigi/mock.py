@@ -98,3 +98,10 @@ class MockFile(target.FileSystemTarget):
             return StringBuffer()
         else:
             return StringBuffer(MockFile._file_contents[fn])
+
+
+def skip(func):
+    """ Sort of a substitute for unittest.skip*, which is 2.7+ """
+    def wrapper():
+        pass
+    return wrapper
