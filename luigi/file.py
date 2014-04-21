@@ -23,10 +23,12 @@ from luigi.format import FileWrapper
 class atomic_file(file):
     # Simple class that writes to a temp file and moves it on close()
     # Also cleans up the temp file if close is not invoked
-    def __init__(self, path):
+    def __init__(self, path, is_binary=False):
         self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         self.path = path
-        super(atomic_file, self).__init__(self.__tmp_path, 'w')
+        self.is_binary = is_binary
+        mode = 'w' if not is_binary else 'wb'
+        super(atomic_file, self).__init__(self.__tmp_path, mode)
 
     def close(self):
         super(atomic_file, self).close()
@@ -71,7 +73,7 @@ class LocalFileSystem(FileSystem):
 class File(FileSystemTarget):
     fs = LocalFileSystem()
 
-    def __init__(self, path=None, format=None, is_tmp=False):
+    def __init__(self, path=None, format=None, is_tmp=False, is_binary=False):
         if not path:
             if not is_tmp:
                 raise Exception('path or is_tmp must be set')
@@ -79,6 +81,7 @@ class File(FileSystemTarget):
         super(File, self).__init__(path)
         self.format = format
         self.is_tmp = is_tmp
+        self.is_binary = is_binary
 
     def open(self, mode='r'):
         if mode == 'w':
@@ -89,12 +92,13 @@ class File(FileSystemTarget):
                 os.makedirs(parentfolder)
 
             if self.format:
-                return self.format.pipe_writer(atomic_file(self.path))
+                return self.format.pipe_writer(atomic_file(self.path, is_binary=self.is_binary))
             else:
-                return atomic_file(self.path)
+                return atomic_file(self.path, is_binary=self.is_binary)
 
         elif mode == 'r':
-            fileobj = FileWrapper(open(self.path, 'r'))
+            mode = 'r' if not self.is_binary else 'rb'
+            fileobj = FileWrapper(open(self.path, mode))
             if self.format:
                 return self.format.pipe_reader(fileobj)
             return fileobj

@@ -77,6 +77,36 @@ class FileTest(unittest.TestCase):
             pass
         self.assertFalse(t.exists())
 
+    def test_is_binary_true_opens_file_in_binary(self):
+        """
+        Given that file object was created with is_binary=True, open('w') and open('r') should open it as 'wb' and 'rb'
+        """
+        t = File(self.path, is_binary=True)
+
+        w = t.open('w')
+        self.assertTrue('b' in w.mode)
+        w.write('test')
+        w.close()
+
+        r = t.open('r')
+        self.assertTrue('b' in r.mode)
+        r.close()
+
+    def test_is_binary_false_opens_file_in_plaintext(self):
+        """
+        Given that file object was created with is_binary=False, open('w') and open('r') should open it as 'w' and 'r'
+        """
+        t = File(self.path, is_binary=False)
+
+        w = t.open('w')
+        self.assertFalse('b' in w.mode)
+        w.write('test')
+        w.close()
+
+        r = t.open('r')
+        self.assertFalse('b' in r.mode)
+        r.close()
+
     def test_gzip(self):
         t = File(self.path, luigi.format.Gzip)
         p = t.open('w')
@@ -159,6 +189,7 @@ class FileTest(unittest.TestCase):
         t.move(self.copy)
         self.assertFalse(os.path.exists(self.path))
         self.assertTrue(os.path.exists(self.copy))
+
 
 
 class FileCreateDirectoriesTest(FileTest):
