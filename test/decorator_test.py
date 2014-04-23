@@ -305,8 +305,8 @@ class SubtaskTest(unittest.TestCase):
     def test_cmdline(self):
         # Exposes issue where wrapped tasks are registered twice under
         # the same name
-        interface = ArgParseInterface()
-        tasks = interface.parse(['SubtaskDelegator'])
+        from luigi.task import Register
+        self.assertEquals(Register.get_reg().get('SubtaskDelegator', None), SubtaskDelegator)
 
 
 if __name__ == '__main__':
