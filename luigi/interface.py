@@ -387,5 +387,12 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     Useful if you have some luigi code that you want to run internally.
     Example
     luigi.build([MyTask1(), MyTask2()], local_scheduler=True)
+
+    One notable difference is that `build` defaults to not using
+    the identical process lock. Otherwise, `build` would only be
+    callable once from each process.
     '''
+    if "nolock" not in env_params and "lock" not in env_params:
+        env_params["nolock"] = True
+        env_params["lock"] = False
     Interface.run(tasks, worker_scheduler_factory, env_params)
