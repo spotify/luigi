@@ -70,8 +70,10 @@ class EnvironmentParamsContainer(task.Task):
                                          description='Hostname of machine running remote scheduler')
     scheduler_port = parameter.IntParameter(is_global=True, default=8082,
                                             description='Port of remote scheduler api process')
-    lock = parameter.BooleanParameter(is_global=True, default=False,
-                                      description='Do not run if the task is already running')
+    lock = parameter.BooleanParameter(is_global=True, default=True,
+                                      description='(Deprecated, replaced by nolock) Do not run if similar process is already running')
+    nolock = parameter.BooleanParameter(is_global=True, default=False,
+                                      description='Ignore if similar process is already running')
     lock_pid_dir = parameter.Parameter(is_global=True, default='/var/tmp/luigi',
                                        description='Directory to store the pid file')
     workers = parameter.IntParameter(is_global=True, default=1,
@@ -135,7 +137,7 @@ class Interface(object):
         if not configuration.get_config().getboolean('core', 'no_configure_logging', False):
             setup_interface_logging(logging_conf)
 
-        if env_params.lock and not(lock.acquire_for(env_params.lock_pid_dir)):
+        if not env_params.nolock and not(lock.acquire_for(env_params.lock_pid_dir)):
             sys.exit(1)
 
         if env_params.local_scheduler:
