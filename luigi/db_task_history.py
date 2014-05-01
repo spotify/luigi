@@ -138,8 +138,8 @@ class TaskParameter(Base):
     """
     __tablename__ = 'task_parameters'
     task_id = Column(Integer, ForeignKey('tasks.id'), primary_key=True)
-    name = Column(String, primary_key=True)
-    value = Column(String)
+    name = Column(String(128), primary_key=True)
+    value = Column(String(256))
 
     def __repr__(self):
         return "TaskParameter(task_id=%d, name=%s, value=%s)" % (self.task_id, self.name, self.value)
@@ -151,7 +151,7 @@ class TaskEvent(Base):
     __tablename__ = 'task_events'
     id = Column(Integer, primary_key=True)
     task_id = Column(Integer, ForeignKey('tasks.id'))
-    event_name = Column(String)
+    event_name = Column(String(20))
     ts = Column(TIMESTAMP, index=True)
 
     def __repr__(self):
@@ -164,8 +164,8 @@ class TaskRecord(Base):
     """
     __tablename__ = 'tasks'
     id = Column(Integer, primary_key=True)
-    name = Column(String, index=True)
-    host = Column(String)
+    name = Column(String(128), index=True)
+    host = Column(String(128))
     parameters = relationship('TaskParameter', collection_class=attribute_mapped_collection('name'),
                               cascade="all, delete-orphan")
     events = relationship("TaskEvent", order_by=lambda: TaskEvent.ts.desc(), backref="task")
