@@ -35,12 +35,14 @@ class MPIScheduler(Scheduler):
 
 class MPIWorker(Worker):
 
-    def __init__(self, scheduler=MPIScheduler(), worker_id=None):
+    def __init__(self, scheduler=MPIScheduler(), worker_id=None, ping_interval=None,
+                 keep_alive=None, wait_interval=None):
         if not worker_id:
             worker_id = 'mpi-%06d' % pp.rank()
         super(MPIWorker, self).__init__(scheduler, worker_id=worker_id,
-                                        worker_processes=1, ping_interval=None,
-                                        keep_alive=None, wait_interval=None)
+                                        ping_interval=ping_interval, keep_alive=keep_alive,
+                                        wait_interval=wait_interval)
+        self.host = self.host + ':' + self._id
 
 
 class MasterMPIWorker(MPIWorker):
@@ -91,15 +93,22 @@ class MasterMPIWorker(MPIWorker):
 
 class SlaveMPIWorker(MPIWorker):
 
-    def __init__(self, scheduler=MPIScheduler(), worker_id=None):
+    def __init__(self, scheduler=MPIScheduler(), worker_id=None, ping_interval=None,
+                 keep_alive=None, wait_interval=None):
+
         # Here we block to allow the MasterMPIWorker to check the completion 
         # status of all tasks (see `_check_complete`). This is to stop
         # SlaveMPIWorkers from thrashing the (distributed) file system.
+
         log.debug('Syncronising with master')
         pp.barrier()
 
         # Now go ahead and initialise.
-        super(SlaveMPIWorker, self).__init__(scheduler, worker_id)
+
+        super(SlaveMPIWorker, self).__init__(scheduler, worker_id,
+                                             ping_interval=ping_interval,
+                                             keep_alive=keep_alive,
+                                             wait_interval=wait_interval)
 
     def _check_complete(self, task):
         pp.send({'cmd': 'check_complete', 'args': [task.task_id], 'kwargs': None},
@@ -118,12 +127,12 @@ class SlaveMPIWorker(MPIWorker):
 
 class WorkerSchedulerFactory(object):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, task_history=None):
         if pp.rank() > 0:
             self.scheduler = MPIScheduler()
             self.worker = SlaveMPIWorker(self.scheduler)
         else: # on master
-            self.scheduler = MasterScheduler()
+            self.scheduler = MasterScheduler(task_history=task_history)
             self.worker = MasterMPIWorker(self.scheduler)
 
     def create_local_scheduler(self):
@@ -135,6 +144,6 @@ class WorkerSchedulerFactory(object):
     def create_worker(self, scheduler, worker_processes=None):
         return self.worker
 
-def run(tasks, *args, **kwargs):
-    sch = WorkerSchedulerFactory(*args, **kwargs)
+def run(tasks, task_history=None):
+    sch = WorkerSchedulerFactory(task_history=task_history)
     build(tasks, worker_scheduler_factory=sch, local_scheduler=True)

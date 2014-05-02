@@ -70,6 +70,21 @@ def test3():
         for t in tasks:
             assert (t.complete() is True)
 
+def test4():
+    tasks = [DummyTask(id) for id in range(20)]
+
+    if pp.rank() == 0:
+        config = luigi.configuration.get_config()
+        if not config.has_option('task_history', 'db_connection'):
+            config.add_section('task_history')
+            config.set('task_history', 'db_connection', 'sqlite:///history.db')
+        filename = config.get('task_history', 'db_connection').split('///')[-1]
+        from luigi.db_task_history import DbTaskHistory
+        mpi.run(tasks, task_history=DbTaskHistory())
+        assert os.path.exists(filename)
+        os.remove(filename)
+    else:
+        mpi.run(tasks)
 
 if __name__ == '__main__':
     test0()
@@ -82,6 +97,9 @@ if __name__ == '__main__':
     pp.barrier()
 
     test3()
+    pp.barrier()
+
+    test4()
     pp.barrier()
 
     # if pp.rank() == 0:
