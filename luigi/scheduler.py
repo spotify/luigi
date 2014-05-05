@@ -19,7 +19,7 @@ import cPickle as pickle
 import task_history as history
 logger = logging.getLogger("luigi.server")
 
-from task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
+from task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN, SUSPENDED
 
 
 class Scheduler(object):
@@ -152,7 +152,7 @@ class CentralPlannerScheduler(Scheduler):
         # of whenever the worker was last active
         self._active_workers[worker] = time.time()
 
-    def add_task(self, worker, task_id, status=PENDING, runnable=True, deps=None, expl=None):
+    def add_task(self, worker, task_id, status=PENDING, runnable=True, deps=None, expl=None, new_deps=None):
         """
         * Add task identified by task_id if it doesn't exist
         * If deps is not None, update dependency list
@@ -175,6 +175,10 @@ class CentralPlannerScheduler(Scheduler):
         if deps is not None:
             task.deps = set(deps)
 
+        if new_deps is not None:
+            # This is only used if a task is suspended
+            task.deps.update(new_deps)
+
         task.stakeholders.add(worker)
 
         if runnable:
@@ -193,20 +197,31 @@ class CentralPlannerScheduler(Scheduler):
         # nothing it can wait for
 
         # Return remaining tasks that have no FAILED descendents
+        logger.info('Worker %s asking for work' % worker)
+
         self.update(worker)
         best_t = float('inf')
         best_task = None
         locally_pending_tasks = 0
         running_tasks = []
 
+        # TODO: this code could be heaviliy optimized.
+        # 1. Don't iterate over *all* tasks every time (could be many thousands)
+        # 2. For tasks with dynamic dependencies, it will check all previous dependencies
+        # every time, meaning you get O(n^2) complexity
+
         for task_id, task in self._tasks.iteritems():
             if worker not in task.workers:
                 continue
 
             if task.status == RUNNING:
+                # This is done mainly to return a status to the worker
                 running_tasks.append({'task_id': task_id, 'worker': task.worker_running})
 
-            if task.status != PENDING:
+            if task.status == SUSPENDED:
+                if task.worker_running != worker:
+                    continue
+            elif task.status != PENDING:
                 continue
 
             locally_pending_tasks += 1

@@ -76,5 +76,11 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.getSuspendedTaskList = function(callback) {
+        jsonRPC(this.urlRoot + "/task_list", {status: "SUSPENDED", upstream_status: ""}, function(response) {
+            callback(flatten(response.response));
+        });
+    };
+
     return LuigiAPI;
 })();

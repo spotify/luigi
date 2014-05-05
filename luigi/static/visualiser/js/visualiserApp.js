@@ -156,18 +156,21 @@ function visualiserApp(luigi) {
 
     $(document).ready(function() {
         loadTemplates();
-
-        luigi.getFailedTaskList(function(failedTasks) {
-            luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
+        // TODO: code below is horrible, we should fix
+        luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
+            $("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
+            luigi.getFailedTaskList(function(failedTasks) {
+                $("#failedTasks").append(renderTasks(failedTasks));
                 luigi.getRunningTaskList(function(runningTasks) {
-                    luigi.getPendingTaskList(function(pendingTasks) {
-                        luigi.getDoneTaskList(function(doneTasks) {
-                            $("#failedTasks").append(renderTasks(failedTasks));
-                            $("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
-                            $("#runningTasks").append(renderTasks(runningTasks));
+                    $("#runningTasks").append(renderTasks(runningTasks));
+                    luigi.getSuspendedTaskList(function(suspendedTasks) {
+                        $("#suspendedTasks").append(renderTasks(suspendedTasks));
+                        luigi.getPendingTaskList(function(pendingTasks) {
                             $("#pendingTasks").append(renderTasks(pendingTasks));
-                            $("#doneTasks").append(renderTasks(doneTasks));
-                            bindListEvents();
+                            luigi.getDoneTaskList(function(doneTasks) {
+                                 $("#doneTasks").append(renderTasks(doneTasks));
+                                 bindListEvents();
+                            });
                         });
                     });
                 });

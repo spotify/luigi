@@ -2,6 +2,7 @@ Graph = (function() {
     var statusColors = {
         "FAILED":"#DD0000",
         "RUNNING":"#0044DD",
+        "SUSPENDED":"#00AAEE",
         "PENDING":"#EEBB00",
         "DONE":"#00DD00"
     };
