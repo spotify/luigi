@@ -61,25 +61,40 @@ def get_config():
 class EnvironmentParamsContainer(task.Task):
     ''' Keeps track of a bunch of environment params.
 
-    Uses the internal luigi parameter mechanism. The nice thing is that we can instantiate this class
-    and get an object with all the environment variables set. This is arguably a bit of a hack.'''
-    # TODO(erikbern): would be cleaner if we don't have to read config in global scope
-    local_scheduler = parameter.BooleanParameter(is_global=True, default=False,
-                                                 description='Use local scheduling')
-    scheduler_host = parameter.Parameter(is_global=True, default=configuration.get_config().get('core', 'default-scheduler-host', default='localhost'),
-                                         description='Hostname of machine running remote scheduler')
-    scheduler_port = parameter.IntParameter(is_global=True, default=8082,
-                                            description='Port of remote scheduler api process')
-    lock = parameter.BooleanParameter(is_global=True, default=True,
-                                      description='(Deprecated, replaced by nolock) Do not run if similar process is already running')
-    nolock = parameter.BooleanParameter(is_global=True, default=False,
-                                      description='Ignore if similar process is already running')
-    lock_pid_dir = parameter.Parameter(is_global=True, default='/var/tmp/luigi',
-                                       description='Directory to store the pid file')
-    workers = parameter.IntParameter(is_global=True, default=1,
-                                     description='Maximum number of parallel tasks to run')
-    logging_conf_file = parameter.Parameter(is_global=True, default=None,
-                                     description='Configuration file for logging')
+    Uses the internal luigi parameter mechanism.
+    The nice thing is that we can instantiate this class
+    and get an object with all the environment variables set.
+    This is arguably a bit of a hack.'''
+
+    # TODO(erikbern): would be cleaner if we don't
+    # have to read config in global scope
+    local_scheduler = parameter.BooleanParameter(
+        is_global=True, default=False,
+        description='Use local scheduling')
+    scheduler_host = parameter.Parameter(
+        is_global=True,
+        default=configuration.get_config().get(
+            'core', 'default-scheduler-host', default='localhost'),
+        description='Hostname of machine running remote scheduler')
+    scheduler_port = parameter.IntParameter(
+        is_global=True, default=8082,
+        description='Port of remote scheduler api process')
+    lock = parameter.BooleanParameter(
+        is_global=True, default=True,
+        description='(Deprecated, replaced by no_lock)'
+                    'Do not run if similar process is already running')
+    no_lock = parameter.BooleanParameter(
+        is_global=True, default=False,
+        description='Ignore if similar process is already running')
+    lock_pid_dir = parameter.Parameter(
+        is_global=True, default='/var/tmp/luigi',
+        description='Directory to store the pid file')
+    workers = parameter.IntParameter(
+        is_global=True, default=1,
+        description='Maximum number of parallel tasks to run')
+    logging_conf_file = parameter.Parameter(
+        is_global=True, default=None,
+        description='Configuration file for logging')
 
     @classmethod
     def env_params(cls, override_defaults):
@@ -113,7 +128,8 @@ class WorkerSchedulerFactory(object):
         return rpc.RemoteScheduler(host=host, port=port)
 
     def create_worker(self, scheduler, worker_processes):
-        return worker.Worker(scheduler=scheduler, worker_processes=worker_processes)
+        return worker.Worker(
+            scheduler=scheduler, worker_processes=worker_processes)
 
 
 class Interface(object):
@@ -132,23 +148,38 @@ class Interface(object):
         logging_conf = env_params.logging_conf_file or \
             configuration.get_config().get('core', 'logging_conf_file', None)
         if logging_conf is not None and not os.path.exists(logging_conf):
-            raise Exception("Error: Unable to locate specified logging configuration file!")
+            raise Exception(
+                "Error: Unable to locate specified logging configuration file!"
+            )
 
-        if not configuration.get_config().getboolean('core', 'no_configure_logging', False):
+        if not configuration.get_config().getboolean(
+                'core', 'no_configure_logging', False):
             setup_interface_logging(logging_conf)
 
-        if not env_params.nolock and not(lock.acquire_for(env_params.lock_pid_dir)):
+        if env_params.lock:
+            warnings.warn(
+                "The --lock flag is deprecated and will be removed."
+                "Locking is now the default behavior."
+                "Use --no-lock to override to not use lock",
+                DeprecationWarning
+            )
+
+        if (not env_params.no_lock and
+                not(lock.acquire_for(env_params.lock_pid_dir))):
             sys.exit(1)
 
         if env_params.local_scheduler:
             sch = worker_scheduler_factory.create_local_scheduler()
         else:
-            sch = worker_scheduler_factory.create_remote_scheduler(host=env_params.scheduler_host, port=env_params.scheduler_port)
+            sch = worker_scheduler_factory.create_remote_scheduler(
+                host=env_params.scheduler_host,
+                port=env_params.scheduler_port)
 
-        w = worker_scheduler_factory.create_worker(scheduler=sch, worker_processes=env_params.workers)
+        w = worker_scheduler_factory.create_worker(
+            scheduler=sch, worker_processes=env_params.workers)
 
-        for task in tasks:
-            w.add(task)
+        for t in tasks:
+            w.add(t)
         logger = logging.getLogger('luigi-interface')
         logger.info('Done scheduling tasks')
         w.run()
@@ -392,7 +423,7 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     the identical process lock. Otherwise, `build` would only be
     callable once from each process.
     '''
-    if "nolock" not in env_params and "lock" not in env_params:
-        env_params["nolock"] = True
+    if "no_lock" not in env_params and "lock" not in env_params:
+        env_params["no_lock"] = True
         env_params["lock"] = False
     Interface.run(tasks, worker_scheduler_factory, env_params)
