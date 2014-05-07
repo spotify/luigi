@@ -54,6 +54,8 @@ class MySqlTarget(luigi.Target):
         connection.cursor().execute(
             """INSERT INTO {marker_table} (update_id, target_table)
                VALUES (%s, %s)
+               ON DUPLICATE KEY UPDATE
+               update_id = VALUES(update_id)
             """.format(marker_table=self.marker_table),
             (self.update_id, self.table)
         )
