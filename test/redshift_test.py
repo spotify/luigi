@@ -3,10 +3,15 @@ import json
 import luigi.notifications
 
 from unittest import TestCase
-from luigi.contrib import redshift 
-from moto import mock_s3
-from boto.s3.key import Key
-from luigi.s3 import S3Client
+try:
+    from luigi.contrib import redshift
+    from moto import mock_s3
+    from boto.s3.key import Key
+    from luigi.s3 import S3Client
+except ImportError:
+    print 'Skipping %s, requires s3 stuff' % __file__
+    from luigi.mock import skip
+    mock_s3 = skip
 
 luigi.notifications.DEBUG = True
 
@@ -27,11 +32,11 @@ def generate_manifest_json(path_to_folders, file_names):
                 'url' : '%s/%s' % (path_to_folder, file_name),
                 'mandatory': True
                 })
-    return {'entries' : entries} 
+    return {'entries' : entries}
 
 class TestRedshiftManifestTask(TestCase):
 
-    @mock_s3 
+    @mock_s3
     def test_run(self):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         bucket = client.s3.create_bucket(BUCKET)
@@ -51,7 +56,7 @@ class TestRedshiftManifestTask(TestCase):
         expected_manifest_output = json.dumps(generate_manifest_json(folder_paths,FILES))
         self.assertEqual(output,expected_manifest_output )
 
-    @mock_s3 
+    @mock_s3
     def test_run_multiple_paths(self):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         bucket = client.s3.create_bucket(BUCKET)

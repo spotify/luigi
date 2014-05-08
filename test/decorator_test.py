@@ -7,6 +7,7 @@ from luigi.parameter import MissingParameterException
 luigi.notifications.DEBUG = True
 from luigi.util import inherits, common_params, requires, copies, delegates
 from luigi.mock import MockFile
+from luigi.interface import ArgParseInterface
 
 class A(luigi.Task):
     param1 = luigi.Parameter("class A-specific default")
@@ -300,6 +301,12 @@ class SubtaskTest(unittest.TestCase):
                 pass
 
         self.assertRaises(AttributeError, trigger_failure)
+
+    def test_cmdline(self):
+        # Exposes issue where wrapped tasks are registered twice under
+        # the same name
+        interface = ArgParseInterface()
+        tasks = interface.parse(['SubtaskDelegator'])
 
 
 if __name__ == '__main__':
