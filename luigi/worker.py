@@ -83,7 +83,7 @@ class Worker(object):
             worker_processes = 1
 
         self.worker_processes = worker_processes
-        self.host = socket.gethostname()
+        self.host = socket.gethostbyaddr(socket.gethostname())[0]
         self._scheduled_tasks = {}
 
         # store the previous tasks executed by the same worker
@@ -103,7 +103,7 @@ class Worker(object):
                 while True:
                     self._should_stop.wait(ping_interval)
                     if self._should_stop.is_set():
-                        logger.info("Worker was stopped. Shutting down Keep-Alive thread")
+                        logger.info("Worker %s was stopped. Shutting down Keep-Alive thread" % worker_id)
                         break
                     try:
                         scheduler.ping(worker=worker_id)
@@ -240,7 +240,7 @@ class Worker(object):
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
 
-        logger.info('[pid %s] Running   %s', os.getpid(), task_id)
+        logger.info('[pid %s] Worker %s running   %s', os.getpid(), self._id, task_id)
         try:
             # Verify that all the tasks are fulfilled!
             ok = True
@@ -254,7 +254,7 @@ class Worker(object):
                 raise RuntimeError('Unfulfilled dependency %r at run time!\nPrevious tasks: %r' % (missing_dep.task_id, self._previous_tasks))
             task.run()
             error_message = json.dumps(task.on_success())
-            logger.info('[pid %s] Done      %s', os.getpid(), task_id)
+            logger.info('[pid %s] Worker %s done      %s', os.getpid(), self._id, task_id)
             task.trigger_event(Event.SUCCESS, task)
             status = DONE
 
@@ -262,7 +262,7 @@ class Worker(object):
             raise
         except Exception as ex:
             status = FAILED
-            logger.exception("[pid %s] Error while running %s", os.getpid(), task)
+            logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self._id, task)
             error_message = task.on_failure(ex)
             task.trigger_event(Event.FAILURE, task, ex)
             subject = "Luigi: %s FAILED" % task
