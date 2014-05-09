@@ -349,6 +349,31 @@ class S3Target(FileSystemTarget):
         else:
             return AtomicS3File(self.path, self.fs)
 
+class S3EmrTarget(S3Target):
+    """
+    Defines a target directory for EMR output on S3
+
+    This checks for two things:  that the path exists (just like the S3Target) and that the _SUCCESS file exists
+    within the directory.  Because Hadoop outputs into a directory and not a single file, the path is assume to be a
+    directory.
+
+    This is meant to be a handy alternative to AtomicS3File.  The AtomicFile approach can be burdensome for S3 since
+    there are no directories, per se.  If we have 1,000,000 output files, then we have to rename 1,000,000 objects.
+    """
+
+    fs = None
+
+    def __init__(self, path, format=None, client=None):
+        if path[-1] is not "/":
+            raise ValueError("S3EmrTarget requires the path to be to a directory.  It must end with a slash ( / ).")
+        super(S3Target, self).__init__(path)
+        self.format = format
+        self.fs = client or S3Client()
+
+    def exists(self):
+        hadoopSemaphore = self.path + '_SUCCESS'
+        return self.fs.exists(hadoopSemaphore)
+
 class S3PathTask(ExternalTask):
     """
     A external task that to require existence of
@@ -358,3 +383,12 @@ class S3PathTask(ExternalTask):
         
     def output(self):
         return S3Target(self.path)
+
+class S3EmrTask(ExternalTask):
+    """
+    An external task that requires the existence of EMR output in S3
+    """
+    path = Parameter()
+
+    def output(self):
+        return S3EmrTarget(self.path)
