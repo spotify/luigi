@@ -322,7 +322,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
         for o in outputs:
             if isinstance(o, FileSystemTarget):
                 parent_dir = os.path.dirname(o.path)
-                if not o.fs.exists(parent_dir):
+                if parent_dir and not o.fs.exists(parent_dir):
                     logger.info("Creating parent directory %r", parent_dir)
                     try:
                         # there is a possible race condition
@@ -421,8 +421,8 @@ class ExternalHiveTask(luigi.ExternalTask):
     def output(self):
         if self.partition is not None:
             assert self.partition, "partition required"
-            return HivePartitionTarget(database=self.database,
-                                       table=self.table,
-                                       partition=self.partition)
+            return HivePartitionTarget(table=self.table,
+                                       partition=self.partition,
+                                       database=self.database)
         else:
-            return HiveTableTarget(self.database, self.table)
+            return HiveTableTarget(self.table, self.database)
