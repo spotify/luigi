@@ -322,7 +322,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
         for o in outputs:
             if isinstance(o, FileSystemTarget):
                 parent_dir = os.path.dirname(o.path)
-                if not parent_dir and not o.fs.exists(parent_dir):
+                if parent_dir and not o.fs.exists(parent_dir):
                     logger.info("Creating parent directory %r", parent_dir)
                     try:
                         # there is a possible race condition
