@@ -707,14 +707,22 @@ class JobTask(BaseHadoopJobTask):
 
     def _setup_links(self):
         if hasattr(self, '_links'):
+            missing = []
             for src, dst in self._links:
                 d = os.path.dirname(dst)
                 if d and not os.path.exists(d):
                     os.makedirs(d)
+                if not os.path.exists(src):
+                    missing.append(src)
+                    continue
                 if not os.path.exists(dst):
                     # If the combiner runs, the file might already exist,
                     # so no reason to create the link again
                     os.link(src, dst)
+            if missing:
+                raise HadoopJobError(
+                    'Missing files for distributed cache: ' +
+                    ', '.join(missing))
 
     def _dump(self, dir=''):
         """Dump instance to file."""
