@@ -1,5 +1,5 @@
 include bin/luigid
-include README.md
+include README.rst
 include LICENSE
 include examples/*.py
 include test/*.py
