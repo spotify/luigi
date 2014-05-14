@@ -14,13 +14,13 @@ The purpose of Luigi is to address all the plumbing typically associated
 with long-running batch processes. You want to chain many tasks,
 automate them, and failures *will* happen. These tasks can be anything,
 but are typically long running things like
-`Hadoop <http://hadoop.apache.org/>`__ jobs, dumping data to/from
+`Hadoop <http://hadoop.apache.org/>`_ jobs, dumping data to/from
 databases, running machine learning algorithms, or anything else.
 
 There are other software packages that focus on lower level aspects of
-data processing, like `Hive <http://hive.apache.org/>`__,
-`Pig <http://pig.apache.org/>`__, or
-`Cascading <http://www.cascading.org/>`__. Luigi is not a framework to
+data processing, like `Hive <http://hive.apache.org/>`_,
+`Pig <http://pig.apache.org/>`_, or
+`Cascading <http://www.cascading.org/>`_. Luigi is not a framework to
 replace these. Instead it helps you stitch many tasks together, where
 each task can be a Hive query, a Hadoop job in Java, a Python snippet,
 dumping a table from a database, or anything else. It's easy to build up
@@ -36,9 +36,9 @@ and local files that ensures all file system operations are atomic. This
 is important because it means your data pipeline will not crash in a
 state containing partial data.
 
-Luigi was built at `Spotify <http://www.spotify.com/>`__, mainly by
-`Erik Bernhardsson <https://github.com/erikbern>`__ and `Elias
-Freider <https://github.com/freider>`__, but many other people have
+Luigi was built at `Spotify <http://www.spotify.com/>`_, mainly by
+`Erik Bernhardsson <https://github.com/erikbern>`_ and `Elias
+Freider <https://github.com/freider>`_, but many other people have
 contributed.
 
 
@@ -59,7 +59,7 @@ build up data files.
 Background
 ----------
 
-We use Luigi internally at `Spotify <http://www.spotify.com/>`__ to run
+We use Luigi internally at `Spotify <http://www.spotify.com/>`_ to run
 thousands of tasks every day, organized in complex dependency graphs.
 Most of these tasks are Hadoop jobs. Luigi provides an infrastructure
 that powers all kinds of stuff including recommendations, toplists, A/B
@@ -69,10 +69,10 @@ can help programmers focus on the most important bits and leave the rest
 (the boilerplate) to the framework.
 
 Conceptually, Luigi is similar to `GNU
-Make <http://www.gnu.org/software/make/>`__ where you have certain tasks
+Make <http://www.gnu.org/software/make/>`_ where you have certain tasks
 and these tasks in turn may have dependencies on other tasks. There are
-also some similarities to `Oozie <http://incubator.apache.org/oozie/>`__
-and `Azkaban <http://data.linkedin.com/opensource/azkaban>`__. One major
+also some similarities to `Oozie <http://incubator.apache.org/oozie/>`_
+and `Azkaban <http://data.linkedin.com/opensource/azkaban>`_. One major
 difference is that Luigi is not just built specifically for Hadoop, and
 it's easy to extend it with other kinds of tasks.
 
@@ -88,13 +88,13 @@ Installing
 ----------
 
 Downloading and running ``python setup.py install`` should be enough. Note
-that you probably want `Tornado <http://www.tornadoweb.org/>`__. Also
-`Mechanize <http://wwwsearch.sourceforge.net/mechanize/>`__ is optional
+that you probably want `Tornado <http://www.tornadoweb.org/>`_. Also
+`Mechanize <http://wwwsearch.sourceforge.net/mechanize/>`_ is optional
 if you want to run Hadoop jobs since it makes debugging easier. See
 `Configuration <http://luigi.readthedocs.org/en/latest/configuration.html>`_ for how to configure Luigi.
 
 Getting Started
-------------
+---------------
 
 The `Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_
 contains an overview of how to work with Luigi, including an `Example workflow
@@ -106,7 +106,7 @@ Getting Help
 ------------
 
 * Find us on `#luigi` on freenode.
-* Subscribe to the `luigi-user <http://groups.google.com/group/luigi-user/>`__
+* Subscribe to the `luigi-user <http://groups.google.com/group/luigi-user/>`_
   group and ask a question.
 
 
