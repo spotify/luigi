@@ -19,9 +19,12 @@ try:
 except:
     from distutils.core import setup
 
-luigi_package_data = [os.path.join(dirpath.replace("luigi/", ""), ext)
-                      for (dirpath, dirnames, filenames) in os.walk("luigi/static")
-                      for ext in ["*.html", "*.js", "*.css", "*.png"]]
+def get_static_files(path):
+    return [os.path.join(dirpath.replace("luigi/", ""), ext) 
+            for (dirpath, dirnames, filenames) in os.walk(path)
+            for ext in ["*.html", "*.js", "*.css", "*.png"]]
+
+luigi_package_data = sum(map(get_static_files, ["luigi/static", "luigi/templates"]), [])
 
 long_description = ['Note: For the latest source, discussion, etc, please visit the `Github repository <https://github.com/spotify/luigi>`_\n\n']
 for line in open('README.rst'):
