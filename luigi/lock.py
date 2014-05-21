@@ -12,14 +12,17 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import os, sys, hashlib
+import os
+import hashlib
+
 
 def getpcmd(pid):
     ''' Returns command of process
     '''
-    cmd = 'ps -p %s -o cmd=' % (pid,)
+    cmd = 'ps -p %s -o command=' % (pid,)
     p = os.popen(cmd, 'r')
     return p.readline().strip()
+
 
 def acquire_for(pid_dir):
     ''' Makes sure the process is only run once at the same time with the same name.
@@ -33,7 +36,6 @@ def acquire_for(pid_dir):
     # Check the name and pid of this process
     my_pid = os.getpid()
     my_cmd = getpcmd(my_pid)
-
     # Check if there is a pid file corresponding to this name
     if not os.path.exists(pid_dir):
         os.mkdir(pid_dir)
@@ -64,4 +66,3 @@ def acquire_for(pid_dir):
     f.close()
 
     return True
-
