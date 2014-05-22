@@ -1,8 +1,10 @@
 import doctest
+import unittest
 
 import luigi.task
 
 
-def load_tests(loader, tests, ignore):
-    tests.addTests(doctest.DocTestSuite(luigi.task))
-    return tests
+class TargetTest(unittest.TestCase):
+	
+	def test_tasks_doctest(self):
+		doctest.testmod(luigi.task)
