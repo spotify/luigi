@@ -15,3 +15,5 @@ hadoop_test.py
 .DS_Store
 .idea/
 *.iml
+Vagrantfile
+.vagrant/
