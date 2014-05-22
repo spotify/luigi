@@ -4,7 +4,7 @@ import unittest
 import luigi.task
 
 
-class TargetTest(unittest.TestCase):
+class TaskTest(unittest.TestCase):
 	
 	def test_tasks_doctest(self):
 		doctest.testmod(luigi.task)
