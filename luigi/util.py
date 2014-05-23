@@ -30,19 +30,12 @@ def common_params(task_instance, task_cls):
 
 
 def task_wraps(P):
-    # Makes sure the subclass overrides the base class in the register so that when
-    # the user tries to instantiate P by name, it refers to the subclass and doesn't
-    # create any ambiguity problems.
-    P.unregister()
-
     # In order to make the behavior of a wrapper class nicer, we set the name of the
     # new class to the wrapped class, and copy over the docstring and module as well.
     # This makes it possible to pickle the wrapped class etc.
     # Btw, this is a slight abuse of functools.wraps. It's meant to be used only for
     # functions, but it works for classes too, if you pass updated=[]
-    P = functools.wraps(P, updated=[])
-
-    return P
+    return functools.wraps(P, updated=[])
 
 
 class inherits(object):
@@ -164,7 +157,7 @@ def delegates(task_that_delegates):
             for t in task.flatten(self.subtasks()):
                 t.run()
             task_that_delegates.run(self)
-        
+
     return Wrapped
 
 

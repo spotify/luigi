@@ -50,12 +50,7 @@ class NonAmbiguousClass(luigi.Task):
         NonAmbiguousClass.has_run = True
 
 
-class DontRegisterThisOne(luigi.Task):
-    register_cls = False
-
-
 class TaskWithSameName(luigi.Task):
-    register_cls = False
     def run(self):
         self.x = 42
 
@@ -126,14 +121,6 @@ class CmdlineTest(unittest.TestCase):
     @mock.patch('argparse.ArgumentParser.print_usage')
     def test_non_existent_class(self, print_usage):
         self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', 'XYZ'])
-
-    @mock.patch('argparse.ArgumentParser.print_usage')
-    def test_not_registered_class(self, print_usage):
-        self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', 'DontRegisterThisOne'])
-
-    def test_unregistered_class(self):
-        luigi.run(['--local-scheduler', 'TaskWithSameName'])
-        self.assertEqual(TaskWithSameName().x, 43)
 
 if __name__ == '__main__':
     unittest.main()
