@@ -64,7 +64,7 @@ class Register(abc.ABCMeta):
     """
     __instance_cache = {}
     _default_namespace = None
-    _reg = {}
+    _reg = []
     AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
     """If this value is returned by :py:meth:`get_reg` then there is an
     ambiguous task name (two :py:class:`Task` have the same name). This denotes
@@ -79,14 +79,7 @@ class Register(abc.ABCMeta):
             classdict["task_namespace"] = metacls._default_namespace
 
         cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
-        if cls.run != NotImplemented and cls.register_cls:
-            name = cls.task_family
-            if name in metacls._reg and metacls._reg[name] != cls and \
-                    metacls._reg[name] != cls.AMBIGUOUS_CLASS:
-                # Registering two different classes - this means we can't instantiate them by name
-                metacls._reg[name] = cls.AMBIGUOUS_CLASS
-            else:
-                metacls._reg[name] = cls
+        metacls._reg.append(cls)
 
         return cls
 
@@ -147,7 +140,22 @@ class Register(abc.ABCMeta):
 
         :return:  a ``dict`` of task_family -> class
         """
-        return cls._reg
+        # We have to do this on-demand in case task names have changed later
+        reg = {}
+        for cls in cls._reg:
+            if cls.run != NotImplemented:
+                name = cls.task_family
+                if name in reg and reg[name] != cls and \
+                        reg[name] != cls.AMBIGUOUS_CLASS and \
+                        not issubclass(cls, reg[name]):
+                    # Registering two different classes - this means we can't instantiate them by name
+                    # The only exception is if one class is a subclass of the other. In that case, we
+                    # instantiate the most-derived class (this fixes some issues with decorator wrappers).
+                    reg[name] = cls.AMBIGUOUS_CLASS
+                else:
+                    reg[name] = cls
+
+        return reg
 
     @classmethod
     def get_global_params(cls):
@@ -156,7 +164,7 @@ class Register(abc.ABCMeta):
         :return: a ``dict`` of parameter name -> parameter.
         """
         global_params = {}
-        for t_name, t_cls in cls._reg.iteritems():
+        for t_name, t_cls in cls.get_reg().iteritems():
             if t_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in t_cls.get_global_params():
@@ -200,7 +208,6 @@ class Task(object):
       list of ``(parameter_name, parameter)`` tuples for this task class
     """
     __metaclass__ = Register
-    register_cls = True # Whether this class should be exposed
 
     _event_callbacks = {}
 
@@ -312,13 +319,6 @@ class Task(object):
                 return x
         # Sort it by the correct order and make a list
         return [(param_name, list_to_tuple(result[param_name])) for param_name, param_obj in params]
-
-    @classmethod
-    def unregister(cls):
-        """ Makes this class not exposed under its name.
-
-        Useful if you have more than one class with the same name"""
-        cls.register_cls = False
 
     def __init__(self, *args, **kwargs):
         """Constructor to resolve values for all Parameters.
