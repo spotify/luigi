@@ -23,6 +23,7 @@ import traceback
 import logging
 import warnings
 import notifications
+import getpass
 from target import Target
 from task import Task
 
@@ -59,8 +60,10 @@ class Worker(object):
     def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None,
                  worker_processes=1, ping_interval=None, keep_alive=None,
                  wait_interval=None):
+        self._worker_info = self._generate_worker_info()
+
         if not worker_id:
-            worker_id = 'worker-%09d' % random.randrange(0, 999999999)
+            worker_id = 'Worker(%s)' % ', '.join(['%s=%s' % (k, v) for k, v in self._worker_info])
 
         config = configuration.get_config()
 
@@ -128,6 +131,24 @@ class Worker(object):
         """
         self._keep_alive_thread.stop()
         self._keep_alive_thread.join()
+
+    def _generate_worker_info(self):
+        # Generate as much info as possible about the worker
+        # Some of these calls might not be available on all OS's
+        args = [('salt', '%09d' % random.randrange(0, 999999999))]
+        try:
+            args += [('host', socket.gethostname())]
+        except:
+            pass
+        try:
+            args += [('username', getpass.getuser())]
+        except:
+            pass
+        try:
+            args += [('pid', os.getpid())]
+        except:
+            pass
+        return args
 
     def _validate_task(self, task):
         if not isinstance(task, Task):
@@ -275,6 +296,12 @@ class Worker(object):
 
         return status
 
+    def _add_worker(self):
+        try:
+            self._scheduler.add_worker(self._id, self._worker_info)
+        except:
+            logger.exception('Exception adding worker - scheduler might be running an older version')
+
     def _log_remote_tasks(self, running_tasks, n_pending_tasks):
         logger.info("Done")
         logger.info("There are no more tasks to run at this time")
@@ -325,6 +352,8 @@ class Worker(object):
     def run(self):
         children = set()
         sleeper  = self._sleeper()
+
+        self._add_worker()
 
         while True:
             while len(children) >= self.worker_processes:
