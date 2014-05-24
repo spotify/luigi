@@ -23,6 +23,7 @@ import traceback
 import logging
 import warnings
 import notifications
+import getpass
 from target import Target
 from task import Task
 
@@ -59,7 +60,11 @@ class Worker(object):
                  worker_processes=1, ping_interval=None, keep_alive=None,
                  wait_interval=None):
         if not worker_id:
-            worker_id = 'worker-%09d' % random.randrange(0, 999999999)
+            try:
+                worker_id = 'worker-%s-%s-%d-%03d' % (socket.gethostname(), getpass.getuser(), os.getpid(), random.randrange(0, 999))
+            except:
+                # Not sure of the above commands work on all OS's, so let's have a fallback
+                worker_id = 'worker-%09d' % random.randrange(0, 999999999)
 
         config = configuration.get_config()
 
