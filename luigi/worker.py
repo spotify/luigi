@@ -83,7 +83,7 @@ class Worker(object):
             worker_processes = 1
 
         self.worker_processes = worker_processes
-        self.host = socket.gethostbyaddr(socket.gethostname())[0]
+        self.host = socket.gethostname()
         self._scheduled_tasks = {}
 
         # store the previous tasks executed by the same worker
