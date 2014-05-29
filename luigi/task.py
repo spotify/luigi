@@ -544,16 +544,16 @@ def getpaths(struct):
 
 
 def flatten(struct):
-    """Cleates a flat list of all all items in structured output (dicts, lists, items)
-    Examples::
+    """Creates a flat list of all all items in structured output (dicts, lists, items)
 
-        > _flatten({'a': foo, b: bar})
-        [foo, bar]
-        > _flatten([foo, [bar, troll]])
-        [foo, bar, troll]
-        > _flatten(foo)
-        [foo]
-
+    >>> flatten({'a': 'foo', 'b': 'bar'})
+    ['foo', 'bar']
+    >>> flatten(['foo', ['bar', 'troll']])
+    ['foo', 'bar', 'troll']
+    >>> flatten('foo')
+    ['foo']
+    >>> flatten(42)
+    [42]
     """
     if struct is None:
         return []
@@ -562,6 +562,8 @@ def flatten(struct):
         for key, result in struct.iteritems():
             flat += flatten(result)
         return flat
+    if isinstance(struct, basestring):
+        return [struct]
 
     try:
         # if iterable
