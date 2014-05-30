@@ -7,7 +7,7 @@ where x = luigi and y = spotify.
 Running Unit Tests
 ~~~~~~~~~~~~~~~~~~
 
-1. Install required packages: ``pip -r test/requirements.txt``
+1. Install required packages: ``pip install -r test/requirements.txt``
 2. From the top directory, run
    `Nose <http://pypi.python.org/pypi/nose/0.11.4>`__: ``nosetests``
 
