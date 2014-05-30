@@ -22,6 +22,18 @@ class TaskWithCallback(Task):
 
 
 class TestEventCallbacks(TestCase):
+    def test_start_handler(self):
+        saved_tasks = []
+
+        @EmptyTask.event_handler(Event.START)
+        def save_task(task):
+            print "Saving task..."
+            saved_tasks.append(task)
+
+        t = EmptyTask(True)
+        build([t], local_scheduler=True)
+        self.assertEquals(saved_tasks, [t])
+
     def test_success_handler(self):
         saved_tasks = []
 
@@ -32,19 +44,22 @@ class TestEventCallbacks(TestCase):
 
         t = EmptyTask(False)
         build([t], local_scheduler=True)
-        self.assertEquals(saved_tasks[0], t)
+        self.assertEquals(saved_tasks, [t])
 
     def test_failure_handler(self):
+        saved_tasks = []
         exceptions = []
 
         @EmptyTask.event_handler(Event.FAILURE)
         def save_task(task, exception):
-            print "Saving exception..."
+            print "Saving task and exception..."
+            saved_tasks.append(task)
             exceptions.append(exception)
 
         t = EmptyTask(True)
         build([t], local_scheduler=True)
-        self.assertEquals(type(exceptions[0]), DummyException)
+        self.assertEquals(saved_tasks, [t])
+        self.assertTrue(isinstance(exceptions[0], DummyException))
 
     def test_custom_handler(self):
         dummies = []

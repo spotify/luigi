@@ -206,14 +206,14 @@ from a specific class (e.g. for hadoop jobs).
 .. code:: python
 
     @luigi.Task.event_handler(luigi.Event.SUCCESS):
-    def celebrate_success(self, task):
+    def celebrate_success(task):
         """Will be called directly after a successful execution
            of `run` on any Task subclass (i.e. all luigi Tasks)
         """
         ...
 
     @luigi.hadoop.JobTask.event_handler(luigi.Event.FAILURE):
-    def mourn_failure(self, task, exception):
+    def mourn_failure(task, exception):
         """Will be called directly after a failed execution
            of `run` on any JobTask subclass
         """
