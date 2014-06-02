@@ -62,10 +62,10 @@ class Task(object):
 
 class Worker(object):
     """ Structure for tracking worker activity and keeping their references """
-    def __init__(self, id):
+    def __init__(self, id, last_active=None):
         self.id = id
         self.reference = None  # reference to the worker in the real world. (Currently a dict containing just the host)
-        self.last_active = None  # seconds since epoch
+        self.last_active = last_active  # seconds since epoch
 
     def __str__(self):
         return "%s on %s, last active %s" % (self.id, self.reference, datetime.datetime.utcfromtimestamp(self.last_active).isoformat())
@@ -112,6 +112,13 @@ class CentralPlannerScheduler(Scheduler):
             with open(self._state_path) as fobj:
                 state = pickle.load(fobj)
             self._tasks, self._active_workers = state
+
+            # Convert from old format
+            # TODO: this is really ugly, we need something more future-proof
+            # Every time we add an attribute to the Worker class, this code needs to be updated
+            for k, v in self._active_workers.iteritems():
+                if isinstance(v, float):
+                    self._active_workers[k] = Worker(id=k, last_active=v)
         else:
             logger.info("No prior state file exists at %s. Starting with clean slate", self._state_path)
 
