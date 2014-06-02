@@ -66,18 +66,15 @@ class EnvironmentParamsContainer(task.Task):
     and get an object with all the environment variables set.
     This is arguably a bit of a hack.'''
 
-    # TODO(erikbern): would be cleaner if we don't
-    # have to read config in global scope
     local_scheduler = parameter.BooleanParameter(
         is_global=True, default=False,
         description='Use local scheduling')
     scheduler_host = parameter.Parameter(
         is_global=True,
-        default=configuration.get_config().get(
-            'core', 'default-scheduler-host', default='localhost'),
+        default=None,
         description='Hostname of machine running remote scheduler')
     scheduler_port = parameter.IntParameter(
-        is_global=True, default=8082,
+        is_global=True, default=None,
         description='Port of remote scheduler api process')
     lock = parameter.BooleanParameter(
         is_global=True, default=True,
@@ -97,7 +94,20 @@ class EnvironmentParamsContainer(task.Task):
         description='Configuration file for logging')
 
     @classmethod
+    def apply_config_defaults(cls):
+        cls.scheduler_host.set_default(
+            configuration.get_config().get(
+                'core', 'default-scheduler-host', 'localhost'))
+        cls.scheduler_port.set_default(
+            configuration.get_config().get(
+                'core', 'default-scheduler-port', 8082))
+        cls.logging_conf_file.set_default(
+            configuration.get_config().get(
+                'core', 'logging_conf_file', None))
+
+    @classmethod
     def env_params(cls, override_defaults):
+        cls.apply_config_defaults()
         # Override any global parameter with whatever is in override_defaults
         for param_name, param_obj in cls.get_global_params():
             if param_name in override_defaults:
@@ -141,12 +151,10 @@ class Interface(object):
 
         if worker_scheduler_factory is None:
             worker_scheduler_factory = WorkerSchedulerFactory()
-
         env_params = EnvironmentParamsContainer.env_params(override_defaults)
         # search for logging configuration path first on the command line, then
         # in the application config file
-        logging_conf = env_params.logging_conf_file or \
-            configuration.get_config().get('core', 'logging_conf_file', None)
+        logging_conf = env_params.logging_conf_file
         if logging_conf is not None and not os.path.exists(logging_conf):
             raise Exception(
                 "Error: Unable to locate specified logging configuration file!"
