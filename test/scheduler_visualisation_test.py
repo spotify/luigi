@@ -118,8 +118,11 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertLessEqual(d2[u'start_time'], end)
 
     def _assert_all_done(self, tasks):
+        self._assert_all(tasks, u'DONE')
+
+    def _assert_all(self, tasks, status):
         for task in tasks.values():
-            self.assertEqual(task[u'status'], u'DONE')
+            self.assertEqual(task[u'status'], status)
 
     def test_dep_graph_single(self):
         self._build([FactorTask(1)])
@@ -281,6 +284,15 @@ class SchedulerVisualisationTest(unittest.TestCase):
         all.update(failed)
         self.assertEqual(remote.task_list('', ''), all)
         self.assertEqual(remote.task_list('RUNNING', ''), {})
+
+    def test_task_search(self):
+        self._build([FactorTask(8)])
+        self._build([FailingTask(8)])
+        remote = self._remote()
+        all_tasks = remote.task_search('Task')
+        self.assertEqual(len(all_tasks), 2)
+        self._assert_all(all_tasks['DONE'], 'DONE')
+        self._assert_all(all_tasks['FAILED'], 'FAILED')
 
     def test_fetch_error(self):
         self._build([FailingTask(8)])
