@@ -57,7 +57,7 @@ function visualiserApp(luigi) {
     }
 
     function renderTasks(tasks) {
-        var displayTasks = $.map(tasks, taskToDisplayTask);
+        var displayTasks = tasks.map(taskToDisplayTask);
         displayTasks.sort(function(a,b) { return b.displayTimestamp - a.displayTimestamp; });
         var tasksByFamily = entryList(indexByProperty(displayTasks, "taskName"));
         tasksByFamily.sort(function(a,b) { return a.key.localeCompare(b.key); });
