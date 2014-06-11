@@ -59,7 +59,7 @@ def acquire_for(pid_dir, num_available=1):
             pass
     pid_cmds[str(my_pid)] = my_cmd
 
-    # Write pid
+    # Write pids
     pids.add(str(my_pid))
     with open(pidfile, 'w') as f:
         f.writelines('%s\n' % (pid, ) for pid in filter(pid_cmds.__getitem__, pids))
