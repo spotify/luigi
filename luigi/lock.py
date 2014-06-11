@@ -24,7 +24,7 @@ def getpcmd(pid):
     return p.readline().strip()
 
 
-def acquire_for(pid_dir):
+def acquire_for(pid_dir, num_available=1):
     ''' Makes sure the process is only run once at the same time with the same name.
 
     Notice that we since we check the process name, different parameters to the same
@@ -42,27 +42,26 @@ def acquire_for(pid_dir):
 
     pidfile = os.path.join(pid_dir, hashlib.md5(my_cmd).hexdigest()) + '.pid'
 
+    pids = set()
+    pid_cmds = {}
     if os.path.exists(pidfile):
         # There is such a file - read the pid and look up its process name
-        try:
-            pid = int(open(pidfile).readline().strip())
-        except ValueError:
-            pid = -1
+        pids.update(filter(None, map(str.strip, open(pidfile))))
+        pid_cmds = dict((pid, getpcmd(pid)) for pid in pids)
+        matching_pids = filter(lambda pid: pid_cmds[pid] == my_cmd, pids)
 
-        cmd = getpcmd(pid)
-
-        if cmd == my_cmd:
+        if len(matching_pids) >= num_available:
             # We are already running under a different pid
-            print 'Pid', pid, 'running'
+            print 'Pid(s)', ', '.join(matching_pids), 'already running'
             return False
         else:
-            # The pid belongs to something else, we could 
+            # The pid belongs to something else, we could
             pass
+    pid_cmds[str(my_pid)] = my_cmd
 
     # Write pid
-    pid = os.getpid()
-    f = open(pidfile, 'w')
-    f.write('%d\n' % (pid, ))
-    f.close()
+    pids.add(str(my_pid))
+    with open(pidfile, 'w') as f:
+        f.writelines('%s\n' % (pid, ) for pid in filter(pid_cmds.__getitem__, pids))
 
     return True
