@@ -208,7 +208,7 @@ class Worker(object):
     def _add_external(self, external_task):
         self._scheduled_tasks[external_task.task_id] = external_task
         self._scheduler.add_task(self._id, external_task.task_id, status=PENDING,
-                                  runnable=False)
+                                  runnable=False, priority=external_task.priority)
         external_task.trigger_event(Event.DEPENDENCY_MISSING, external_task)
         logger.warning('Task %s is not complete and run() is not implemented. Probably a missing external dependency.', external_task.task_id)
 
@@ -227,7 +227,7 @@ class Worker(object):
 
         deps = [d.task_id for d in deps]
         self._scheduler.add_task(self._id, task.task_id, status=PENDING,
-                                  deps=deps, runnable=True)
+                                  deps=deps, runnable=True, priority=task.priority)
         logger.info('Scheduled %s', task.task_id)
 
         for d in task.deps():

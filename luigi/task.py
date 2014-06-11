@@ -211,6 +211,10 @@ class Task(object):
 
     _event_callbacks = {}
 
+    # Priority of the task: the scheduler should favor available
+    # tasks with higher priority values first.
+    priority = 0
+
     @classmethod
     def event_handler(cls, event):
         """ Decorator for adding event handlers """

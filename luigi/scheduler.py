@@ -42,7 +42,7 @@ STATUS_TO_UPSTREAM_MAP = {FAILED: UPSTREAM_FAILED, RUNNING: UPSTREAM_RUNNING, PE
 
 
 class Task(object):
-    def __init__(self, status, deps):
+    def __init__(self, status, deps, priority=0):
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
         if deps is None:
@@ -55,6 +55,7 @@ class Task(object):
         self.remove = None
         self.worker_running = None  # the worker id that is currently running the task or None
         self.expl = None
+        self.priority = priority
 
     def __repr__(self):
         return "Task(%r)" % vars(self)
@@ -173,7 +174,7 @@ class CentralPlannerScheduler(Scheduler):
             worker.reference = worker_reference
         worker.last_active = time.time()
 
-    def add_task(self, worker, task_id, status=PENDING, runnable=True, deps=None, expl=None):
+    def add_task(self, worker, task_id, status=PENDING, runnable=True, deps=None, expl=None, priority=0):
         """
         * Add task identified by task_id if it doesn't exist
         * If deps is not None, update dependency list
@@ -182,7 +183,7 @@ class CentralPlannerScheduler(Scheduler):
         """
         self.update(worker)
 
-        task = self._tasks.setdefault(task_id, Task(status=PENDING, deps=deps))
+        task = self._tasks.setdefault(task_id, Task(status=PENDING, deps=deps, priority=priority))
 
         if task.remove is not None:
             task.remove = None  # unmark task for removal so it isn't removed after being added
@@ -208,7 +209,7 @@ class CentralPlannerScheduler(Scheduler):
     def get_work(self, worker, host=None):
         # TODO: remove any expired nodes
 
-        # Algo: iterate over all nodes, find first node with no dependencies
+        # Algo: iterate over all nodes, find the first node with no dependencies and highest priority
 
         # TODO: remove tasks that can't be done, figure out if the worker has absolutely
         # nothing it can wait for
@@ -216,6 +217,7 @@ class CentralPlannerScheduler(Scheduler):
         # Return remaining tasks that have no FAILED descendents
         self.update(worker, {'host': host})
         best_t = float('inf')
+        best_priority = float('-inf')
         best_task = None
         locally_pending_tasks = 0
         running_tasks = []
@@ -239,8 +241,9 @@ class CentralPlannerScheduler(Scheduler):
                     ok = False
 
             if ok:
-                if task.time < best_t:
+                if (-task.priority, task.time) < (-best_priority, best_t):
                     best_t = task.time
+                    best_priority = task.priority
                     best_task = task_id
 
         if best_task:
