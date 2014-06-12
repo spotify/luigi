@@ -129,7 +129,7 @@ class RemoteSchedulerResponder(object):
     def __init__(self, scheduler):
         self._scheduler = scheduler
 
-    def add_task(self, worker, task_id, status, runnable, deps, expl, priority, **kwargs):
+    def add_task(self, worker, task_id, status, runnable, deps, expl, priority=0, **kwargs):
         return self._scheduler.add_task(worker, task_id, status, runnable, deps, expl, priority)
 
     def get_work(self, worker, host=None, **kwargs):
