@@ -55,6 +55,7 @@ class Task(object):
         self.retry = None
         self.remove = None
         self.worker_running = None  # the worker id that is currently running the task or None
+        self.time_running = None  # Timestamp when picked up by worker
         self.expl = None
         self.priority = priority
 
@@ -251,6 +252,7 @@ class CentralPlannerScheduler(Scheduler):
             t = self._tasks[best_task]
             t.status = RUNNING
             t.worker_running = worker
+            t.time_running = time.time()
             self._update_task_history(best_task, RUNNING, host=host)
 
         return {'n_pending_tasks': locally_pending_tasks,
@@ -292,6 +294,8 @@ class CentralPlannerScheduler(Scheduler):
             'deps': list(task.deps),
             'status': task.status,
             'workers': list(task.workers),
+            'worker_running': task.worker_running,
+            'time_running': getattr(task, "time_running", None),
             'start_time': task.time,
             'params': self._get_task_params(task_id),
             'name': self._get_task_name(task_id)
