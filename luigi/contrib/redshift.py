@@ -8,7 +8,9 @@ from luigi import postgres
 
 from luigi.s3 import S3PathTask, S3Target
 
+
 logger = logging.getLogger('luigi-interface')
+
 
 try:
     import psycopg2
@@ -26,6 +28,7 @@ class RedshiftTarget(postgres.PostgresTarget):
     marker_table = luigi.configuration.get_config().get('redshift', 'marker-table', 'table_updates')
 
     use_db_timestamps = False
+
 
 class S3CopyToTable(rdbms.CopyToTable):
     """
@@ -129,6 +132,46 @@ class S3CopyToTable(rdbms.CopyToTable):
                 table=self.table,
                 update_id=self.update_id())
 
+
+class S3CopyJSONToTable(S3CopyToTable):
+    """
+    Template task for inserting a JSON data set into Redshift from s3.
+
+    Usage:
+    Subclass and override the required attributes:
+    `host`, `database`, `user`, `password`, `table`, `columns`,
+    `aws_access_key_id`, `aws_secret_access_key`, `s3_load_path`,
+    `jsonpath`, `copy_json_options`
+    """
+
+    @abc.abstractproperty
+    def jsonpath(self):
+        'override the jsonpath schema location for the table'
+        return ''
+
+    @abc.abstractproperty
+    def copy_json_options(self):
+        '''Add extra copy options, for example:
+        GZIP
+        LZOP
+        '''
+        return ''
+
+    def copy(self, cursor, f):
+        '''
+        Defines copying JSON from s3 into redshift
+        '''
+
+        cursor.execute("""
+         COPY %s from '%s'
+         CREDENTIALS 'aws_access_key_id=%s;aws_secret_access_key=%s'
+         JSON AS '%s' %s
+         %s
+         ;""" % (self.table, f, self.aws_access_key_id,
+                 self.aws_secret_access_key, self.jsonpath,
+                 self.copy_json_options, self.copy_options))
+
+
 class RedshiftManifestTask(S3PathTask):
     """
     Generic task to generate a manifest file that can be used
@@ -158,10 +201,10 @@ class RedshiftManifestTask(S3PathTask):
             client = s3.fs
             for file_name in client.list(s3.path):
                 entries.append({
-                    'url' : '%s/%s' % (folder_path, file_name),
+                    'url': '%s/%s' % (folder_path, file_name),
                     'mandatory': True
                 })
-        manifest = {'entries' : entries}
+        manifest = {'entries': entries}
         target = self.output().open('w')
         target.write(json.dumps(manifest))
         target.close()
