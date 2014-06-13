@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import collections
 import datetime
 import os
 import logging
@@ -377,6 +378,16 @@ class CentralPlannerScheduler(Scheduler):
                         serialized[id] = self._serialize_task(id)
                         serialized[id]["deps"] = []
                         stack.append(id)
+
+    def task_search(self, task_str):
+        ''' query for a subset of tasks by task_id '''
+        self.prune()
+        result = collections.defaultdict(dict)
+        for task_id, task in self._tasks.iteritems():
+            if task_id.find(task_str) != -1:
+                serialized = self._serialize_task(task_id)
+                result[task.status][task_id] = serialized
+        return result
 
     def fetch_error(self, task_id):
         if self._tasks[task_id].expl is not None:
