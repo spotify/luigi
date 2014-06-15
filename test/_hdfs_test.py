@@ -268,9 +268,9 @@ class HdfsTargetTests(HdfsTestCase):
         self.assertRaises(TestException, foo)
         self.assertFalse(target.exists())
 
-    def test_create_parents(self):
+    def test_create_ancestors(self):
         parent = self._test_dir()
-        target = hdfs.HdfsTarget("%s/testfile" % parent)
+        target = hdfs.HdfsTarget("%s/foo/bar/baz" % parent)
         if self.fs.exists(parent):
             self.fs.remove(parent, skip_trash=True)
         self.assertFalse(self.fs.exists(parent))
@@ -313,11 +313,26 @@ class HdfsTargetTests(HdfsTestCase):
         self.assertTrue(target2.exists())
 
     def test_rename_no_parent(self):
-        if self.fs.exists("foo"):
-            self.fs.remove("foo", skip_trash=True)
+        parent = self._test_dir() + '/foo'
+        if self.fs.exists(parent):
+            self.fs.remove(parent, skip_trash=True)
 
         target1 = hdfs.HdfsTarget(is_tmp=True)
-        target2 = hdfs.HdfsTarget("foo/bar")
+        target2 = hdfs.HdfsTarget(parent + '/bar')
+        with target1.open('w'):
+            pass
+        self.assertTrue(target1.exists())
+        target1.move(target2.path)
+        self.assertFalse(target1.exists())
+        self.assertTrue(target2.exists())
+
+    def test_rename_no_grandparent(self):
+        grandparent = self._test_dir() + '/foo'
+        if self.fs.exists(grandparent):
+            self.fs.remove(grandparent, skip_trash=True)
+
+        target1 = hdfs.HdfsTarget(is_tmp=True)
+        target2 = hdfs.HdfsTarget(grandparent + '/bar/baz')
         with target1.open('w'):
             pass
         self.assertTrue(target1.exists())

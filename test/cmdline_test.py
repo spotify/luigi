@@ -50,6 +50,17 @@ class NonAmbiguousClass(luigi.Task):
         NonAmbiguousClass.has_run = True
 
 
+class TaskWithSameName(luigi.Task):
+    def run(self):
+        self.x = 42
+
+
+class TaskWithSameName(luigi.Task):
+    # there should be no ambiguity
+    def run(self):
+        self.x = 43
+
+
 class CmdlineTest(unittest.TestCase):
     def setUp(self):
         global File
@@ -106,6 +117,10 @@ class CmdlineTest(unittest.TestCase):
             luigi.interface.setup_interface_logging.call_args_list = []
             luigi.run(['Task', '--local-scheduler'])
             self.assertEqual([], setup_mock.call_args_list)
+
+    @mock.patch('argparse.ArgumentParser.print_usage')
+    def test_non_existent_class(self, print_usage):
+        self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', 'XYZ'])
 
 if __name__ == '__main__':
     unittest.main()

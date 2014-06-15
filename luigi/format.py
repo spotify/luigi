@@ -13,11 +13,13 @@
 # the License.
 
 import subprocess
+import signal
 
 
 class FileWrapper(object):
     """Wrap `file` in a "real" so stuff can be added to it after creation
     """
+
     def __init__(self, file_object):
         self._subpipe = file_object
 
@@ -48,21 +50,39 @@ class InputPipeProcessWrapper(object):
         '''
         self._command = command
         self._input_pipe = input_pipe
-        self._process = command if isinstance(command, subprocess.Popen) else subprocess.Popen(command,
-            stdin=input_pipe,
-            stdout=subprocess.PIPE)
+        self._process = command if isinstance(command, subprocess.Popen) else self.create_subprocess(command)
         # we want to keep a circular reference to avoid garbage collection
         # when the object is used in, e.g., pipe.read()
         self._process._selfref = self
 
+    def create_subprocess(self, command):
+        """
+        http://www.chiark.greenend.org.uk/ucgi/~cjwatson/blosxom/2009-07-02-python-sigpipe.html
+        """
+
+        def subprocess_setup():
+            # Python installs a SIGPIPE handler by default. This is usually not what
+            # non-Python subprocesses expect.
+            signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
+        return subprocess.Popen(command,
+                                stdin=self._input_pipe,
+                                stdout=subprocess.PIPE,
+                                preexec_fn=subprocess_setup,
+                                close_fds=True)
+
     def _finish(self):
+        # Need to close this before input_pipe to get all SIGPIPE messages correctly
+        self._process.stdout.close()
+
         if self._input_pipe is not None:
             self._input_pipe.close()
-        for line in self._process.stdout:  # exhaust all output...
-            pass
+
         self._process.wait()  # deadlock?
-        if self._process.returncode != 0:
-            raise RuntimeError('Error reading from pipe. Subcommand exited with non-zero exit status.')
+        if self._process.returncode not in (0, 141, 128 - 141):
+            # 141 == 128 + 13 == 128 + SIGPIPE - normally processes exit with 128 + {reiceived SIG}
+            # 128 - 141 == -13 == -SIGPIPE, sometimes python receives -13 for some subprocesses
+            raise RuntimeError('Error reading from pipe. Subcommand exited with non-zero exit status %s.' % self._process.returncode)
 
     def close(self):
         self._finish()
@@ -107,8 +127,9 @@ class OutputPipeProcessWrapper(object):
         self._command = command
         self._output_pipe = output_pipe
         self._process = subprocess.Popen(command,
-            stdin=subprocess.PIPE,
-            stdout=output_pipe)
+                                         stdin=subprocess.PIPE,
+                                         stdout=output_pipe,
+                                         close_fds=True)
         self._flushcount = 0
 
     def write(self, *args, **kwargs):
@@ -190,6 +211,7 @@ class Gzip(Format):
     @classmethod
     def pipe_writer(cls, output_pipe):
         return OutputPipeProcessWrapper(['gzip'], output_pipe)
+
 
 class Bzip2(Format):
     @classmethod

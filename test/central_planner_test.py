@@ -155,7 +155,40 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(r['task_id'], None)  # Worker Y is pending on A to be done
         s = r['running_tasks'][0]
         self.assertEqual(s['task_id'], 'A')
-        self.assertEqual(s['worker'], 'X')
+        self.assert_(s['worker'].startswith('X on '))
+
+    def test_priorities(self):
+        self.sch.add_task(WORKER, 'A', priority=10)
+        self.sch.add_task(WORKER, 'B', priority=5)
+        self.sch.add_task(WORKER, 'C', priority=15)
+        self.sch.add_task(WORKER, 'D', priority=9)
+        for expected_id in ['C', 'A', 'D', 'B']:
+            self.assertEqual(self.sch.get_work(WORKER)['task_id'], expected_id)
+            self.sch.add_task(WORKER, expected_id, status=DONE)
+        self.assertEqual(self.sch.get_work(WORKER)['task_id'], None)
+
+    def test_priorities_default_and_negative(self):
+        self.sch.add_task(WORKER, 'A', priority=10)
+        self.sch.add_task(WORKER, 'B')
+        self.sch.add_task(WORKER, 'C', priority=15)
+        self.sch.add_task(WORKER, 'D', priority=-20)
+        self.sch.add_task(WORKER, 'E', priority=1)
+        for expected_id in ['C', 'A', 'E', 'B', 'D']:
+            self.assertEqual(self.sch.get_work(WORKER)['task_id'], expected_id)
+            self.sch.add_task(WORKER, expected_id, status=DONE)
+        self.assertEqual(self.sch.get_work(WORKER)['task_id'], None)
+
+    def test_priorities_and_dependencies(self):
+        self.sch.add_task(WORKER, 'A', deps=['Z'], priority=10)
+        self.sch.add_task(WORKER, 'B', priority=5)
+        self.sch.add_task(WORKER, 'C', deps=['Z'], priority=3)
+        self.sch.add_task(WORKER, 'D', priority=2)
+        self.sch.add_task(WORKER, 'Z', priority=1)
+        for expected_id in ['B', 'D', 'Z', 'A', 'C']:
+            self.assertEqual(self.sch.get_work(WORKER)['task_id'], expected_id)
+            self.sch.add_task(WORKER, expected_id, status=DONE)
+        self.assertEqual(self.sch.get_work(WORKER)['task_id'], None)
+
 
 class TestParameterSplit(unittest.TestCase):
     task_id_examples = [

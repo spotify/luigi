@@ -156,7 +156,7 @@ class ApacheHiveCommandClient(HiveCommandClient):
                 return False
         else:
             stdout = run_hive_cmd("""use %s; show partitions %s partition
-                                (%s)""" % (database, table, self.partition_spec(partition)))
+                                (%s)""" % (database, table, self.partition_spec(partition)), False)
 
             if stdout:
                 return True
@@ -273,8 +273,11 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
         raise RuntimeError("Must implement query!")
 
     def hiverc(self):
-        """ Location of an rc file to run before the query """
-        return None
+        """ Location of an rc file to run before the query 
+            if hiverc-location key is specified in client.cfg, will default to the value there
+            otherwise returns None
+        """
+        return luigi.configuration.get_config().get('hive', 'hiverc-location', default=None)
 
     def hiveconfs(self):
         """
@@ -319,7 +322,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
         for o in outputs:
             if isinstance(o, FileSystemTarget):
                 parent_dir = os.path.dirname(o.path)
-                if not o.fs.exists(parent_dir):
+                if parent_dir and not o.fs.exists(parent_dir):
                     logger.info("Creating parent directory %r", parent_dir)
                     try:
                         # there is a possible race condition
@@ -341,7 +344,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
                     arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
 
             logger.info(arglist)
-            luigi.hadoop.run_and_track_hadoop_job(arglist)
+            return luigi.hadoop.run_and_track_hadoop_job(arglist)
 
 
 class HiveTableTarget(luigi.Target):
@@ -418,8 +421,8 @@ class ExternalHiveTask(luigi.ExternalTask):
     def output(self):
         if self.partition is not None:
             assert self.partition, "partition required"
-            return HivePartitionTarget(database=self.database,
-                                       table=self.table,
-                                       partition=self.partition)
+            return HivePartitionTarget(table=self.table,
+                                       partition=self.partition,
+                                       database=self.database)
         else:
-            return HiveTableTarget(self.database, self.table)
+            return HiveTableTarget(self.table, self.database)

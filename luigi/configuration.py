@@ -1,4 +1,5 @@
 
+import os
 import logging
 from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 
@@ -7,6 +8,8 @@ class LuigiConfigParser(ConfigParser):
     NO_DEFAULT = object()
     _instance = None
     _config_paths = ['/etc/luigi/client.cfg', 'client.cfg']
+    if 'LUIGI_CONFIG_PATH' in os.environ:
+        _config_paths.append(os.environ['LUIGI_CONFIG_PATH'])
 
     @classmethod
     def add_config_path(cls, path):
@@ -53,6 +56,11 @@ class LuigiConfigParser(ConfigParser):
     def getfloat(self, section, option, default=NO_DEFAULT):
         return self._get_with_default(ConfigParser.getfloat, section, option, default, float)
 
+    def set(self, section, option, value):
+        if not ConfigParser.has_section(self, section):
+            ConfigParser.add_section(self, section)
+
+        return ConfigParser.set(self, section, option, value)
 
 def get_config():
     """ Convenience method (for backwards compatibility) for accessing config singleton """

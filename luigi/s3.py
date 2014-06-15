@@ -140,6 +140,47 @@ class S3Client(FileSystem):
         s3_key.key = key
         s3_key.set_contents_from_filename(local_path)
 
+    def copy(self, source_path, destination_path):
+        """
+        Copy an object from one S3 location to another.
+        """
+        (src_bucket, src_key) = self._path_to_bucket_and_key(source_path)
+        (dst_bucket, dst_key) = self._path_to_bucket_and_key(destination_path)
+
+        s3_bucket = self.s3.get_bucket(dst_bucket, validate=True)
+
+        if self.is_dir(source_path):
+            src_prefix = self._add_path_delimiter(src_key)
+            dst_prefix = self._add_path_delimiter(dst_key)
+            for key in self.list(source_path):
+                s3_bucket.copy_key(dst_prefix + key,
+                                   src_bucket,
+                                   src_prefix + key)
+        else:
+            s3_bucket.copy_key(dst_key, src_bucket, src_key)
+
+    def rename(self, source_path, destination_path):
+        """
+        Rename/move an object from one S3 location to another.
+        """
+        self.copy(source_path, destination_path)
+        self.remove(source_path)
+
+    def list(self, path):
+        """
+        Get an iterable with S3 folder contents.
+        Iterable contains paths relative to queried path.
+        """
+        (bucket, key) = self._path_to_bucket_and_key(path)
+
+        # grab and validate the bucket
+        s3_bucket = self.s3.get_bucket(bucket, validate=True)
+
+        key_path = self._add_path_delimiter(key)
+        key_path_len = len(key_path)
+        for item in s3_bucket.list(prefix=key_path):
+            yield item.key[key_path_len:]
+
     def is_dir(self, path):
         """
         Is the parameter S3 path a directory?
@@ -308,6 +349,31 @@ class S3Target(FileSystemTarget):
         else:
             return AtomicS3File(self.path, self.fs)
 
+class S3EmrTarget(S3Target):
+    """
+    Defines a target directory for EMR output on S3
+
+    This checks for two things:  that the path exists (just like the S3Target) and that the _SUCCESS file exists
+    within the directory.  Because Hadoop outputs into a directory and not a single file, the path is assume to be a
+    directory.
+
+    This is meant to be a handy alternative to AtomicS3File.  The AtomicFile approach can be burdensome for S3 since
+    there are no directories, per se.  If we have 1,000,000 output files, then we have to rename 1,000,000 objects.
+    """
+
+    fs = None
+
+    def __init__(self, path, format=None, client=None):
+        if path[-1] is not "/":
+            raise ValueError("S3EmrTarget requires the path to be to a directory.  It must end with a slash ( / ).")
+        super(S3Target, self).__init__(path)
+        self.format = format
+        self.fs = client or S3Client()
+
+    def exists(self):
+        hadoopSemaphore = self.path + '_SUCCESS'
+        return self.fs.exists(hadoopSemaphore)
+
 class S3PathTask(ExternalTask):
     """
     A external task that to require existence of
@@ -317,3 +383,12 @@ class S3PathTask(ExternalTask):
         
     def output(self):
         return S3Target(self.path)
+
+class S3EmrTask(ExternalTask):
+    """
+    An external task that requires the existence of EMR output in S3
+    """
+    path = Parameter()
+
+    def output(self):
+        return S3EmrTarget(self.path)

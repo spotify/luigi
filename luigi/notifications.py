@@ -10,6 +10,7 @@ DEBUG = False
 
 
 def send_email(subject, message, sender, recipients, image_png=None):
+    subject = _prefix(subject)
     logger.debug("Emailing:\n"
                  "-------------\n"
                  "To: %s\n"
@@ -76,14 +77,32 @@ def send_email(subject, message, sender, recipients, image_png=None):
 
 
 def send_error_email(subject, message):
-    """ Sends an email to the configured error-email """
+    """ Sends an email to the configured error-email.
+
+    If no error-email is configured, then a message is logged
+    """
     config = configuration.get_config()
     receiver = config.get('core', 'error-email', None)
-    sender = config.get('core', 'email-sender', DEFAULT_CLIENT_EMAIL)
-    logger.info("Sending warning email to %r", receiver)
-    send_email(
-        subject=subject,
-        message=message,
-        sender=sender,
-        recipients=(receiver,)
-    )
+    if receiver:
+        sender = config.get('core', 'email-sender', DEFAULT_CLIENT_EMAIL)
+        logger.info("Sending warning email to %r", receiver)
+        send_email(
+            subject=subject,
+            message=message,
+            sender=sender,
+            recipients=(receiver,)
+        )
+    else:
+        logger.info("Skipping error email. Set `error-email` in the `core` "
+                    "section of the luigi config file to receive error "
+                    "emails.")
+
+def _prefix(subject):
+    """If the config has a special prefix for emails then this function adds
+    this prefix
+    """
+    config = configuration.get_config()
+    email_prefix = config.get('core', 'email-prefix', None)
+    if email_prefix is not None:
+        subject = "%s %s" % (email_prefix, subject)
+    return subject

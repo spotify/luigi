@@ -19,8 +19,20 @@ import luigi.notifications
 import tempfile
 import os
 import hashlib
+import subprocess
 
 luigi.notifications.DEBUG = True
+
+
+class TestCmd(unittest.TestCase):
+    def test_getpcmd(self):
+        p = subprocess.Popen(["sleep", "1"])
+        self.assertEquals(
+            luigi.lock.getpcmd(p.pid),
+            "sleep 1"
+        )
+        p.kill()
+
 
 class LockTest(unittest.TestCase):
 

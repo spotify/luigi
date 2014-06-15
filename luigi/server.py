@@ -68,7 +68,7 @@ class BaseTaskHistoryHandler(tornado.web.RequestHandler):
         self._api = api
 
     def get_template_path(self):
-        return 'luigi/templates'
+        return pkg_resources.resource_filename(__name__, 'templates')
 
 
 class RecentRunHandler(BaseTaskHistoryHandler):

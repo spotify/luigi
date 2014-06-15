@@ -7,6 +7,7 @@ from luigi.parameter import MissingParameterException
 luigi.notifications.DEBUG = True
 from luigi.util import inherits, common_params, requires, copies, delegates
 from luigi.mock import MockFile
+from luigi.interface import ArgParseInterface
 
 class A(luigi.Task):
     param1 = luigi.Parameter("class A-specific default")
@@ -70,6 +71,9 @@ class InheritTest(unittest.TestCase):
 
     def test_removing_parameter(self):
         self.assertFalse("param1" in dict(self.d_null.get_params()).keys())
+
+    def test_wrapper_preserve_attributes(self):
+        self.assertEquals(B.__name__, 'B')
 
 class F(luigi.Task):
     param1 = luigi.Parameter("A parameter on a base task, that will be required later.")
@@ -297,6 +301,12 @@ class SubtaskTest(unittest.TestCase):
                 pass
 
         self.assertRaises(AttributeError, trigger_failure)
+
+    def test_cmdline(self):
+        # Exposes issue where wrapped tasks are registered twice under
+        # the same name
+        from luigi.task import Register
+        self.assertEquals(Register.get_reg().get('SubtaskDelegator', None), SubtaskDelegator)
 
 
 if __name__ == '__main__':

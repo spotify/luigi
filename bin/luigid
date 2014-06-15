@@ -2,19 +2,29 @@
 
 import luigi.server
 import luigi.process
+import os
+import luigi.configuration
 import optparse
 import logging
 
 parser = optparse.OptionParser()
 parser.add_option('--background', help='Run in background mode', action='store_true')
 parser.add_option('--pidfile', help='Write pidfile')
-
+parser.add_option('--logdir', help='logdir')
+parser.add_option('--state-path', help='Pickled state file')
 opts, args = parser.parse_args()
+
+if opts.state_path:
+    config = luigi.configuration.get_config()
+    config.set('scheduler', 'state-path', opts.state_path)
 
 if opts.background:
     # daemonize sets up logging to spooled log files
     logging.getLogger().setLevel(logging.INFO)
-    luigi.process.daemonize(luigi.server.run, pidfile=opts.pidfile)
+    luigi.process.daemonize(luigi.server.run, pidfile=opts.pidfile, logdir=opts.logdir)
 else:
-    logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format())
+    if opts.logdir:
+        logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format(), filename=os.path.join(opts.logdir, "luigi-server.log"))
+    else:
+        logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format())
     luigi.server.run()

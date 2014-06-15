@@ -41,7 +41,7 @@ class HDFSCliError(Exception):
 
 
 def call_check(command):
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
         raise HDFSCliError(command, p.returncode, stdout, stderr)
@@ -67,7 +67,10 @@ def load_hadoop_cmd():
 
 def tmppath(path=None):
     # No /tmp//tmp/luigi_tmp_testdir sorts of paths just /tmp/luigi_tmp_testdir.
-    if path is not None and path.startswith(tempfile.gettempdir()):
+    hdfs_tmp_dir = configuration.get_config().get('core', 'hdfs-tmp-dir', None)
+    if hdfs_tmp_dir is not None:
+        base = hdfs_tmp_dir
+    elif path is not None and path.startswith(tempfile.gettempdir()):
         base = ''
     else:
         base = tempfile.gettempdir()
@@ -86,17 +89,20 @@ def list_path(path):
 
 class HdfsClient(FileSystem):
     """This client uses Apache 2.x syntax for file system commands, which also matched CDH4"""
+
+    recursive_listdir_cmd = ['-ls', '-R']
+
     def exists(self, path):
-        """ Use `hadoop fs -stat to check file existence
+        """ Use ``hadoop fs -stat`` to check file existence
         """
 
         cmd = [load_hadoop_cmd(), 'fs', '-stat', path]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         stdout, stderr = p.communicate()
         if p.returncode == 0:
             return True
         else:
-            not_found_pattern = "^stat: `.*': No such file or directory$"
+            not_found_pattern = "^.*No such file or directory$"
             not_found_re = re.compile(not_found_pattern)
             for line in stderr.split('\n'):
                 if not_found_re.match(line):
@@ -107,7 +113,12 @@ class HdfsClient(FileSystem):
         parent_dir = os.path.dirname(dest)
         if parent_dir != '' and not self.exists(parent_dir):
             self.mkdir(parent_dir)
-        call_check([load_hadoop_cmd(), 'fs', '-mv', path, dest])
+        if type(path) not in (list, tuple):
+            path = [path]
+        else:
+            import warnings
+            warnings.warn("Renaming multiple files at once is not atomic.")
+        call_check([load_hadoop_cmd(), 'fs', '-mv'] + path + [dest])
 
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
@@ -165,7 +176,7 @@ class HdfsClient(FileSystem):
 
     def mkdir(self, path):
         try:
-            call_check([load_hadoop_cmd(), 'fs', '-mkdir', path])
+            call_check([load_hadoop_cmd(), 'fs', '-mkdir', '-p', path])
         except HDFSCliError, ex:
             if "File exists" in ex.stderr:
                 raise FileAlreadyExists(ex.stderr)
@@ -178,19 +189,19 @@ class HdfsClient(FileSystem):
             path = "."  # default to current/home catalog
 
         if recursive:
-            cmd = [load_hadoop_cmd(), 'fs', '-ls', '-R', path]
+            cmd = [load_hadoop_cmd(), 'fs'] + self.recursive_listdir_cmd + [path]
         else:
             cmd = [load_hadoop_cmd(), 'fs', '-ls', path]
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-        lines = proc.stdout
+        lines = call_check(cmd).split('\n')
 
         for line in lines:
-            if line.startswith('Found'):
-                continue  # "hadoop fs -ls" outputs "Found %d items" as its first line
-            line = line.rstrip("\n")
-            if ignore_directories and line[0] == 'd':
+            if not line:
                 continue
-            if ignore_files and line[0] == '-':
+            elif line.startswith('Found'):
+                continue  # "hadoop fs -ls" outputs "Found %d items" as its first line
+            elif ignore_directories and line[0] == 'd':
+                continue
+            elif ignore_files and line[0] == '-':
                 continue
             data = line.split(' ')
 
@@ -245,26 +256,36 @@ class SnakebiteHdfsClient(HdfsClient):
         If Luigi has forked, we have a different PID, and need to reconnect.
         """
         if self.pid != os.getpid() or not self._bite:
-            from snakebite.client import Client
-            try:
-                ver = self.config.getint("hdfs", "client_version")
-                if ver is None:
-                    raise RuntimeError()
-                self._bite = Client(self.config.get("hdfs", "namenode_host"),
-                                    self.config.getint("hdfs", "namenode_port"),
-                                    hadoop_version=ver)
-            except:
-                self._bite = Client(self.config.get("hdfs", "namenode_host"),
-                                    self.config.getint("hdfs", "namenode_port"))
+            autoconfig_enabled = self.config.getboolean("hdfs", "snakebite_autoconfig", False)
+            if autoconfig_enabled is True:
+                """
+                This is fully backwards compatible with the vanilla Client and can be used for a non HA cluster as well.
+                This client tries to read ``${HADOOP_PATH}/conf/hdfs-site.xml`` to get the address of the namenode.
+                The behaviour is the same as Client.
+                """
+                from snakebite.client import AutoConfigClient
+                self._bite = AutoConfigClient()
+            else:
+                from snakebite.client import Client
+                try:
+                    ver = self.config.getint("hdfs", "client_version")
+                    if ver is None:
+                        raise RuntimeError()
+                    self._bite = Client(self.config.get("hdfs", "namenode_host"),
+                                       self.config.getint("hdfs", "namenode_port"),
+                                       hadoop_version=ver)
+                except:
+                    self._bite = Client(self.config.get("hdfs", "namenode_host"),
+                                       self.config.getint("hdfs", "namenode_port"))
         return self._bite
 
     def exists(self, path):
         """
         Use snakebite.test to check file existence.
 
-        @param path: path to test
-        @type path: string
-        @return: boolean, True if path exists in HDFS
+        :param path: path to test
+        :type path: string
+        :return: boolean, True if path exists in HDFS
         """
         try:
             return self.get_bite().test(path, exists=True)
@@ -275,11 +296,11 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.rename, if available.
 
-        @param path: source file(s)
-        @type path: either a string or sequence of strings
-        @param dest: destination file (single input) or directory (multiple)
-        @type dest: string
-        @return: list of renamed items
+        :param path: source file(s)
+        :type path: either a string or sequence of strings
+        :param dest: destination file (single input) or directory (multiple)
+        :type dest: string
+        :return: list of renamed items
         """
         parts = dest.split('/')
         if len(parts) > 1:
@@ -292,13 +313,13 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.delete, if available.
 
-        @param path: delete-able file(s) or directory(ies)
-        @type path: either a string or a sequence of strings
-        @param recursive: delete directories trees like *nix: rm -r
-        @type recursive: boolean, default is True
-        @param skip_trash: do or don't move deleted items into the trash first
-        @type skip_trash: boolean, default is False (use trash)
-        @return: list of deleted items
+        :param path: delete-able file(s) or directory(ies)
+        :type path: either a string or a sequence of strings
+        :param recursive: delete directories trees like \*nix: rm -r
+        :type recursive: boolean, default is True
+        :param skip_trash: do or don't move deleted items into the trash first
+        :type skip_trash: boolean, default is False (use trash)
+        :return: list of deleted items
         """
         return list(self.get_bite().delete(list_path(path), recurse=recursive))
 
@@ -306,13 +327,13 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.chmod, if available.
 
-        @param path: update-able file(s)
-        @type path: either a string or sequence of strings
-        @param permissions: *nix style permission number
-        @type permissions: octal
-        @param recursive: change just listed entry(ies) or all in directories
-        @type recursive: boolean, default is False
-        @return: list of all changed items
+        :param path: update-able file(s)
+        :type path: either a string or sequence of strings
+        :param permissions: \*nix style permission number
+        :type permissions: octal
+        :param recursive: change just listed entry(ies) or all in directories
+        :type recursive: boolean, default is False
+        :return: list of all changed items
         """
         return list(self.get_bite().chmod(list_path(path),
                                          permissions, recursive))
@@ -323,15 +344,15 @@ class SnakebiteHdfsClient(HdfsClient):
 
         One of owner or group must be set. Just setting group calls chgrp.
 
-        @param path: update-able file(s)
-        @type path: either a string or sequence of strings
-        @param owner: new owner, can be blank
-        @type owner: string
-        @param group: new group, can be blank
-        @type group: string
-        @param recursive: change just listed entry(ies) or all in directories
-        @type recursive: boolean, default is False
-        @return: list of all changed items
+        :param path: update-able file(s)
+        :type path: either a string or sequence of strings
+        :param owner: new owner, can be blank
+        :type owner: string
+        :param group: new group, can be blank
+        :type group: string
+        :param recursive: change just listed entry(ies) or all in directories
+        :type recursive: boolean, default is False
+        :return: list of all changed items
         """
         bite = self.get_bite()
         if owner:
@@ -345,9 +366,9 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.count, if available.
 
-        @param path: directory to count the contents of
-        @type path: string
-        @return: dictionary with content_size, dir_count and file_count keys
+        :param path: directory to count the contents of
+        :type path: string
+        :return: dictionary with content_size, dir_count and file_count keys
         """
         try:
             (dir_count, file_count, content_size, ppath) = \
@@ -361,10 +382,10 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.copyToLocal, if available.
 
-        @param path: HDFS file
-        @type path: string
-        @param local_destination: path on the system running Luigi
-        @type local_destination: string
+        :param path: HDFS file
+        :type path: string
+        :param local_destination: path on the system running Luigi
+        :type local_destination: string
         """
         return list(self.get_bite().copyToLocal(list_path(path),
                                                 local_destination))
@@ -374,14 +395,14 @@ class SnakebiteHdfsClient(HdfsClient):
         Use snakebite.mkdir, if available.
 
         Snakebite's mkdir method allows control over full path creation, so by
-        default, tell it to build a full path to work like `hadoop fs -mkdir`.
+        default, tell it to build a full path to work like ``hadoop fs -mkdir``.
 
-        @param path: HDFS path to create
-        @type path: string
-        @param parents: create any missing parent directories
-        @type parents: boolean, default is True
-        @param mode: *nix style owner/group/other permissions
-        @type mode: octal, default 0755
+        :param path: HDFS path to create
+        :type path: string
+        :param parents: create any missing parent directories
+        :type parents: boolean, default is True
+        :param mode: \*nix style owner/group/other permissions
+        :type mode: octal, default 0755
         """
         bite = self.get_bite()
         if bite.test(path, exists=True):
@@ -395,21 +416,21 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         Use snakebite.ls to get the list of items in a directory.
 
-        @param path: the directory to list
-        @type path: string
-        @param ignore_directories: if True, do not yield directory entries
-        @type ignore_directories: boolean, default is False
-        @param ignore_files: if True, do not yield file entries
-        @type ignore_files: boolean, default is False
-        @param include_size: include the size in bytes of the current item
-        @type include_size: boolean, default is False (do not include)
-        @param include_type: include the type (d or f) of the current item
-        @type include_type: boolean, default is False (do not include)
-        @param include_time: include the last modification time of the current item
-        @type include_time: boolean, default is False (do not include)
-        @param recursive: list subdirectory contents
-        @type recursive: boolean, default is False (do not recurse)
-        @return: yield with a string, or if any of the include_* settings are
+        :param path: the directory to list
+        :type path: string
+        :param ignore_directories: if True, do not yield directory entries
+        :type ignore_directories: boolean, default is False
+        :param ignore_files: if True, do not yield file entries
+        :type ignore_files: boolean, default is False
+        :param include_size: include the size in bytes of the current item
+        :type include_size: boolean, default is False (do not include)
+        :param include_type: include the type (d or f) of the current item
+        :type include_type: boolean, default is False (do not include)
+        :param include_time: include the last modification time of the current item
+        :type include_time: boolean, default is False (do not include)
+        :param recursive: list subdirectory contents
+        :type recursive: boolean, default is False (do not recurse)
+        :return: yield with a string, or if any of the include_* settings are
             true, a tuple starting with the path, and include_* items in order
         """
         bite = self.get_bite()
@@ -432,6 +453,18 @@ class SnakebiteHdfsClient(HdfsClient):
 
 class HdfsClientCdh3(HdfsClient):
     """This client uses CDH3 syntax for file system commands"""
+    def mkdir(self, path):
+        '''
+        No -p switch, so this will fail creating ancestors
+        '''
+        try:
+            call_check([load_hadoop_cmd(), 'fs', '-mkdir', path])
+        except HDFSCliError, ex:
+            if "File exists" in ex.stderr:
+                raise FileAlreadyExists(ex.stderr)
+            else:
+                raise
+
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
             cmd = [load_hadoop_cmd(), 'fs', '-rmr']
@@ -447,9 +480,12 @@ class HdfsClientCdh3(HdfsClient):
 class HdfsClientApache1(HdfsClientCdh3):
     """This client uses Apache 1.x syntax for file system commands,
     which are similar to CDH3 except for the file existence check"""
+
+    recursive_listdir_cmd = ['-lsr']
+
     def exists(self, path):
         cmd = [load_hadoop_cmd(), 'fs', '-test', '-e', path]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         stdout, stderr = p.communicate()
         if p.returncode == 0:
             return True
@@ -498,10 +534,10 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         self.tmppath = tmppath(self.path)
         tmpdir = os.path.dirname(self.tmppath)
         if get_hdfs_syntax() == "cdh4":
-            if subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', '-p', tmpdir]).wait():
+            if subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', '-p', tmpdir], close_fds=True).wait():
                 raise RuntimeError("Could not create directory: %s" % tmpdir)
         else:
-            if not exists(tmpdir) and subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', tmpdir]).wait():
+            if not exists(tmpdir) and subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', tmpdir], close_fds=True).wait():
                 raise RuntimeError("Could not create directory: %s" % tmpdir)
         super(HdfsAtomicWritePipe, self).__init__([load_hadoop_cmd(), 'fs', '-put', '-', self.tmppath])
 

@@ -105,7 +105,7 @@ class File(FileSystemTarget):
         if fail_if_exists and os.path.exists(new_path):
             raise RuntimeError('Destination exists: %s' % new_path)
         d = os.path.dirname(new_path)
-        if not os.path.exists(d):
+        if d and not os.path.exists(d):
             self.fs.mkdir(d)
         os.rename(self.path, new_path)
 
@@ -118,7 +118,7 @@ class File(FileSystemTarget):
     def copy(self, new_path, fail_if_exists=False):
         if fail_if_exists and os.path.exists(new_path):
             raise RuntimeError('Destination exists: %s' % new_path)
-        tmp = File(is_tmp=True)
+        tmp = File(new_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10), is_tmp=True)
         tmp.open('w')
         shutil.copy(self.path, tmp.fn)
         tmp.move(new_path)

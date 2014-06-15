@@ -32,9 +32,10 @@ class RPCError(Exception):
 class RemoteScheduler(Scheduler):
     ''' Scheduler proxy object. Talks to a RemoteSchedulerResponder '''
 
-    def __init__(self, host='localhost', port=8082):
+    def __init__(self, host='localhost', port=8082, connect_timeout=None):
         self._host = host
         self._port = port
+        self._connect_timeout = connect_timeout
 
     def _wait(self):
         time.sleep(30)
@@ -52,7 +53,7 @@ class RemoteScheduler(Scheduler):
                 logger.info("Retrying...")
                 self._wait()  # wait for a bit and retry
             try:
-                response = urllib2.urlopen(req)
+                response = urllib2.urlopen(req, None, self._connect_timeout)
                 break
             except urllib2.URLError, last_exception:
                 if log_exceptions:
@@ -72,7 +73,7 @@ class RemoteScheduler(Scheduler):
         # just one attemtps, keep-alive thread will keep trying anyway
         self._request('/api/ping', {'worker': worker}, attempts=1)
 
-    def add_task(self, worker, task_id, status=PENDING, runnable=False, deps=None, expl=None):
+    def add_task(self, worker, task_id, status=PENDING, runnable=False, deps=None, expl=None, priority=0):
         self._request('/api/add_task', {
             'task_id': task_id,
             'worker': worker,
@@ -80,6 +81,7 @@ class RemoteScheduler(Scheduler):
             'runnable': runnable,
             'deps': deps,
             'expl': expl,
+            'priority': priority,
         })
 
     def get_work(self, worker, host=None):
@@ -103,8 +105,14 @@ class RemoteScheduler(Scheduler):
     def dep_graph(self, task_id):
         return self._request('/api/dep_graph', {'task_id': task_id})
 
+    def inverse_dep_graph(self, task_id):
+        return self._request('/api/inverse_dep_graph', {'task_id': task_id})
+
     def task_list(self, status, upstream_status):
         return self._request('/api/task_list', {'status': status, 'upstream_status': upstream_status})
+
+    def task_search(self, task_str):
+        return self._request('/api/task_search', {'task_str': task_str})
 
     def fetch_error(self, task_id):
         return self._request('/api/fetch_error', {'task_id': task_id})
@@ -112,7 +120,7 @@ class RemoteScheduler(Scheduler):
 
 class RemoteSchedulerResponder(object):
     """ Use on the server side for responding to requests
-    
+
     The kwargs are there for forwards compatibility in case workers add
     new (optional) arguments. That way there's no dependency on the server
     component when upgrading Luigi on the worker side.
@@ -124,8 +132,8 @@ class RemoteSchedulerResponder(object):
     def __init__(self, scheduler):
         self._scheduler = scheduler
 
-    def add_task(self, worker, task_id, status, runnable, deps, expl, **kwargs):
-        return self._scheduler.add_task(worker, task_id, status, runnable, deps, expl)
+    def add_task(self, worker, task_id, status, runnable, deps, expl, priority=0, **kwargs):
+        return self._scheduler.add_task(worker, task_id, status, runnable, deps, expl, priority)
 
     def get_work(self, worker, host=None, **kwargs):
         return self._scheduler.get_work(worker, host)
@@ -141,8 +149,14 @@ class RemoteSchedulerResponder(object):
     def dep_graph(self, task_id, **kwargs):
         return self._scheduler.dep_graph(task_id)
 
+    def inverse_dep_graph(self, task_id, **kwargs):
+        return self._scheduler.inverse_dependencies(task_id)
+
     def task_list(self, status, upstream_status, **kwargs):
         return self._scheduler.task_list(status, upstream_status)
+
+    def task_search(self, task_str, **kwargs):
+        return self._scheduler.task_search(task_str)
 
     def fetch_error(self, task_id, **kwargs):
         return self._scheduler.fetch_error(task_id)
