@@ -362,6 +362,42 @@ class HdfsTargetTests(HdfsTestCase):
         self.assertFalse(files.glob_exists(3))
         self.assertFalse(files.glob_exists(1))
 
+    def test_tmppath_not_configured(self):
+        #Given: several target paths to test
+        path1 = "/dir1/dir2/file"
+        path2 = "hdfs:///dir1/dir2/file"
+        path3 = "hdfs://somehost/dir1/dir2/file"
+        path4 = "file:///dir1/dir2/file"
+        path5 = "/tmp/dir/file"
+        path6 = "file:///tmp/dir/file"
+        path7 = "hdfs://somehost/tmp/dir/file"
+        path8 = None
+        path9 = "/tmpdir/file"
+
+        #When: I create a temporary path for targets
+        res1 = hdfs.tmppath(path1)
+        res2 = hdfs.tmppath(path2)
+        res3 = hdfs.tmppath(path3)
+        res4 = hdfs.tmppath(path4)
+        res5 = hdfs.tmppath(path5)
+        res6 = hdfs.tmppath(path6)
+        res7 = hdfs.tmppath(path7)
+        res8 = hdfs.tmppath(path8)
+        res9 = hdfs.tmppath(path9)
+
+        #Then: I should get correct results relative to Luigi temporary directory
+        self.assertRegexpMatches(res1,"^/tmp/dir1/dir2/file-luigitemp-\d+")
+        #it would be better to see hdfs:///path instead of hdfs:/path, but single slash also works well
+        self.assertRegexpMatches(res2, "^hdfs:/tmp/dir1/dir2/file-luigitemp-\d+")
+        self.assertRegexpMatches(res3, "^hdfs://somehost/tmp/dir1/dir2/file-luigitemp-\d+")
+        self.assertRegexpMatches(res4, "^file:///tmp/dir1/dir2/file-luigitemp-\d+")
+        self.assertRegexpMatches(res5, "^/tmp/dir/file-luigitemp-\d+")
+        #known issue with duplicated "tmp" if schema is present
+        self.assertRegexpMatches(res6, "^file:///tmp/tmp/dir/file-luigitemp-\d+")
+        #known issue with duplicated "tmp" if schema is present
+        self.assertRegexpMatches(res7, "^hdfs://somehost/tmp/tmp/dir/file-luigitemp-\d+")
+        self.assertRegexpMatches(res8, "^/tmp/luigitemp-\d+")
+        self.assertRegexpMatches(res9,  "/tmp/tmpdir/file")
 
 TIMESTAMP_DELAY = 60 # Big enough for `hadoop fs`?
 class _HdfsClientTest(HdfsTestCase):
@@ -644,3 +680,11 @@ class _HdfsClientTest(HdfsTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    # Uncomment to run a single test
+    # unittest.TextTestRunner(failfast=True, verbosity=2).run(suite())
+
+# def suite():
+#     suite = unittest.TestSuite()
+#     suite.addTest(unittest.makeSuite(HdfsTargetTests, prefix='test_tmppath'))
+#     return suite
+
