@@ -39,6 +39,7 @@ def acquire_for(pid_dir):
     # Check if there is a pid file corresponding to this name
     if not os.path.exists(pid_dir):
         os.mkdir(pid_dir)
+        os.chmod(pid_dir, 0777)
 
     pidfile = os.path.join(pid_dir, hashlib.md5(my_cmd).hexdigest()) + '.pid'
 
