@@ -217,16 +217,17 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
                 err_line = err_line.strip()
                 if err_line:
                     logger.info('%s', err_line)
-                if err_line.find('Tracking URL') != -1:
-                    tracking_url = err_line.split('Tracking URL: ')[-1]
+                err_line = err_line.lower()
+                if err_line.find('tracking url') != -1:
+                    tracking_url = err_line.split('tracking url: ')[-1]
                     try:
                         tracking_url_callback(tracking_url)
                     except Exception as e:
                         logger.error("Error in tracking_url_callback, disabling! %s", e)
                         tracking_url_callback = lambda x: None
-                if err_line.find('Running job') != -1:
+                if err_line.find('running job') != -1:
                     # hadoop jar output
-                    job_id = err_line.split('Running job: ')[-1]
+                    job_id = err_line.split('running job: ')[-1]
                 if err_line.find('submitted hadoop job:') != -1:
                     # scalding output
                     job_id = err_line.split('submitted hadoop job: ')[-1]
