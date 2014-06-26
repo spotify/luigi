@@ -66,19 +66,42 @@ def load_hadoop_cmd():
 
 
 def tmppath(path=None):
-    # No /tmp//tmp/luigi_tmp_testdir sorts of paths just /tmp/luigi_tmp_testdir.
-    hdfs_tmp_dir = configuration.get_config().get('core', 'hdfs-tmp-dir', None)
-    if hdfs_tmp_dir is not None:
-        base = hdfs_tmp_dir
-    elif path is not None and path.startswith(tempfile.gettempdir()):
-        base = ''
+    """
+    @param path: target path for which it is needed to generate temporary location
+    @type path: str
+    @rtype: str
+    """
+    addon = "luigitemp-%08d" % random.randrange(1e9)
+    temp_dir = tempfile.gettempdir()
+
+    #1. Figure out to which temporary directory to place
+    configured_hdfs_tmp_dir = configuration.get_config().get('core', 'hdfs-tmp-dir', None)
+    if configured_hdfs_tmp_dir is not None:
+        #config is superior
+        base_dir = configured_hdfs_tmp_dir
+    elif path is not None:
+        #need to copy correct schema and network location
+        parsed = urlparse.urlparse(path)
+        base_dir = urlparse.urlunparse((parsed.scheme, parsed.netloc, temp_dir, '', '', ''))
     else:
-        base = tempfile.gettempdir()
-    if path is not None and path.startswith('/'):
-        sep = ''
+        #just system temporary directory
+        base_dir = temp_dir
+
+    #2. Figure out what to place
+    if path is not None:
+        if path.startswith(temp_dir + '/'):
+            #Not 100%, but some protection from directories like /tmp/tmp/file
+            subdir = path[len(temp_dir):]
+        else:
+            #Protection from /tmp/hdfs:/dir/file
+            parsed = urlparse.urlparse(path)
+            subdir = parsed.path
+        subdir = subdir.lstrip('/') + '-'
     else:
-        sep = '/'
-    return base + sep + (path + "-" if path else "") + "luigitemp-%08d" % random.randrange(1e9)
+        #just return any random temporary location
+        subdir = ''
+
+    return os.path.join(base_dir, subdir + addon)
 
 def list_path(path):
     if isinstance(path, list) or isinstance(path, tuple):
