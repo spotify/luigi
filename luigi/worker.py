@@ -43,6 +43,7 @@ class Event:
     DEPENDENCY_DISCOVERED = "event.core.dependency.discovered"  # triggered for every (task, upstream task) pair discovered in a jobflow
     DEPENDENCY_MISSING = "event.core.dependency.missing"
     DEPENDENCY_PRESENT = "event.core.dependency.present"
+    START = "event.core.start"
     FAILURE = "event.core.failure"
     SUCCESS = "event.core.success"
 
@@ -252,6 +253,7 @@ class Worker(object):
             if not ok:
                 # TODO: possibly try to re-add task again ad pending
                 raise RuntimeError('Unfulfilled dependency %r at run time!\nPrevious tasks: %r' % (missing_dep.task_id, self._previous_tasks))
+            task.trigger_event(Event.START, task)
             task.run()
             error_message = json.dumps(task.on_success())
             logger.info('[pid %s] Worker %s done      %s', os.getpid(), self._id, task_id)
