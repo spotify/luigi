@@ -80,6 +80,9 @@ class EnvironmentParamsContainer(task.Task):
         is_global=True, default=True,
         description='(Deprecated, replaced by no_lock)'
                     'Do not run if similar process is already running')
+    lock_size = parameter.IntParameter(
+        is_global=True, default=1,
+        description="Maximum number of workers running the same command")
     no_lock = parameter.BooleanParameter(
         is_global=True, default=False,
         description='Ignore if similar process is already running')
@@ -173,7 +176,7 @@ class Interface(object):
             )
 
         if (not env_params.no_lock and
-                not(lock.acquire_for(env_params.lock_pid_dir))):
+                not(lock.acquire_for(env_params.lock_pid_dir, env_params.lock_size))):
             sys.exit(1)
 
         if env_params.local_scheduler:
