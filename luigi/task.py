@@ -418,7 +418,7 @@ class Task(object):
         outputs = flatten(self.output())
         if len(outputs) == 0:
             # TODO: unclear if tasks without outputs should always run or never run
-            warning = "Task `{}` without outputs has no custom complete() method".format(self)
+            warning = "WARNING: Task `{}` without outputs has no custom complete() method".format(self)
             warnings.warn(warning)
             return False
         for output in outputs:
