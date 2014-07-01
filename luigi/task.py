@@ -352,7 +352,8 @@ class Task(object):
             if dict(params)[param_name].significant:
                 task_id_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
 
-        self.task_id = '%s(%s)' % (self.task_family, ', '.join(task_id_parts))
+        task_id_parts = [task.strip() for task in task_id_parts]
+        self.task_id = '{}({})'.format(self.task_family, ', '.join(task_id_parts))
         self.__hash = hash(self.task_id)
 
     def initialized(self):
