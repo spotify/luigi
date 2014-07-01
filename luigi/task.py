@@ -351,8 +351,9 @@ class Task(object):
         for param_name, param_value in param_values:
             if dict(params)[param_name].significant:
                 task_id_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
-
-        self.task_id = '%s(%s)' % (self.task_family, ', '.join(task_id_parts))
+        # self.task_id = '%s(%s)' % (self.task_family, ', '.join(task_id_parts))
+        task_id_parts = [task.strip() for task in task_id_parts]
+        self.task_id = '{}({})'.format(self.task_family, ', '.join(task_id_parts))
         self.__hash = hash(self.task_id)
 
     def initialized(self):
@@ -411,12 +412,15 @@ class Task(object):
             If the task has any outputs, return ``True`` if all outputs exists.
             Otherwise, return whether or not the task has run or not
         """
+        def custom_warningformat(msg, *a):
+            return str(msg) + '\n'
+        warnings.formatwarning = custom_warningformat
         outputs = flatten(self.output())
         if len(outputs) == 0:
             # TODO: unclear if tasks without outputs should always run or never run
-            warnings.warn("Task %r without outputs has no custom complete() method" % self)
+            warning = "WARNING: Task `{}` without outputs has no custom complete() method".format(self)
+            warnings.warn(warning)
             return False
-
         for output in outputs:
             if not output.exists():
                 return False
