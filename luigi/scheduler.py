@@ -69,9 +69,13 @@ class Worker(object):
         self.id = id
         self.reference = None  # reference to the worker in the real world. (Currently a dict containing just the host)
         self.last_active = last_active  # seconds since epoch
+        self.info = {}
+
+    def add_info(self, info):
+        self.info.update(info)
 
     def __str__(self):
-        return "%s on %s, last active %s" % (self.id, self.reference, datetime.datetime.utcfromtimestamp(self.last_active).isoformat())
+        return self.id
 
 
 class CentralPlannerScheduler(Scheduler):
@@ -212,6 +216,9 @@ class CentralPlannerScheduler(Scheduler):
         if expl is not None:
             task.expl = expl
 
+    def add_worker(self, worker, info):
+        self._active_workers[worker].add_info(info)
+
     def get_work(self, worker, host=None):
         # TODO: remove any expired nodes
 
@@ -233,7 +240,13 @@ class CentralPlannerScheduler(Scheduler):
                 continue
 
             if task.status == RUNNING:
-                running_tasks.append({'task_id': task_id, 'worker': str(self._active_workers.get(task.worker_running))})
+                # Return a list of currently running tasks to the client,
+                # makes it easier to troubleshoot
+                other_worker = self._active_workers[task.worker_running]
+                more_info = {'task_id': task_id, 'worker': str(other_worker)}
+                if other_worker is not None:
+                    more_info.update(other_worker.info)
+                running_tasks.append(more_info)
 
             if task.status != PENDING:
                 continue
