@@ -66,7 +66,7 @@ def _server_already_running(pidfile):
     return False
 
 
-def daemonize(cmd, pidfile=None, logdir=None):
+def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None):
     import daemon
 
     logdir = logdir or "/var/log/luigi"
@@ -106,7 +106,7 @@ def daemonize(cmd, pidfile=None, logdir=None):
                 return
             write_pid(pidfile)
 
-        cmd()
+        cmd(api_port=api_port, address=address)
 
 
 def fork_linked_workers(num_processes):

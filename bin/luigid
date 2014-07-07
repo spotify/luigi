@@ -12,6 +12,8 @@ parser.add_option('--background', help='Run in background mode', action='store_t
 parser.add_option('--pidfile', help='Write pidfile')
 parser.add_option('--logdir', help='logdir')
 parser.add_option('--state-path', help='Pickled state file')
+parser.add_option('--address', help='Listening interface')
+parser.add_option('--port', default=8082, help='Listeing port')
 opts, args = parser.parse_args()
 
 if opts.state_path:
@@ -21,10 +23,12 @@ if opts.state_path:
 if opts.background:
     # daemonize sets up logging to spooled log files
     logging.getLogger().setLevel(logging.INFO)
-    luigi.process.daemonize(luigi.server.run, pidfile=opts.pidfile, logdir=opts.logdir)
+    luigi.process.daemonize(luigi.server.run, api_port=opts.port,
+                            address=opts.address, pidfile=opts.pidfile,
+                            logdir=opts.logdir)
 else:
     if opts.logdir:
         logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format(), filename=os.path.join(opts.logdir, "luigi-server.log"))
     else:
         logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format())
-    luigi.server.run()
+    luigi.server.run(api_port=opts.port, address=opts.address)
