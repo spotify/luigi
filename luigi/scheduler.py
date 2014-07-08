@@ -116,8 +116,13 @@ class CentralPlannerScheduler(Scheduler):
     def load(self):
         if os.path.exists(self._state_path):
             logger.info("Attempting to load state from %s", self._state_path)
-            with open(self._state_path) as fobj:
-                state = pickle.load(fobj)
+            try:
+                with open(self._state_path) as fobj:
+                    state = pickle.load(fobj)
+            except:
+                logger.exception("Error when loading state. Starting from clean slate.")
+                return
+
             self._tasks, self._active_workers = state
 
             # Convert from old format
