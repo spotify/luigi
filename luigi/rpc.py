@@ -117,6 +117,9 @@ class RemoteScheduler(Scheduler):
     def fetch_error(self, task_id):
         return self._request('/api/fetch_error', {'task_id': task_id})
 
+    def add_worker(self, worker, info):
+        return self._request('/api/add_worker', {'worker': worker, 'info': info})
+
 
 class RemoteSchedulerResponder(object):
     """ Use on the server side for responding to requests
