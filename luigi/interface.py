@@ -77,7 +77,7 @@ class EnvironmentParamsContainer(task.Task):
         is_global=True, default=None,
         description='Port of remote scheduler api process')
     lock = parameter.BooleanParameter(
-        is_global=True, default=True,
+        is_global=True, default=False,
         description='(Deprecated, replaced by no_lock)'
                     'Do not run if similar process is already running')
     lock_size = parameter.IntParameter(
