@@ -44,6 +44,7 @@ class Event:
     DEPENDENCY_DISCOVERED = "event.core.dependency.discovered"  # triggered for every (task, upstream task) pair discovered in a jobflow
     DEPENDENCY_MISSING = "event.core.dependency.missing"
     DEPENDENCY_PRESENT = "event.core.dependency.present"
+    BROKEN_TASK = "event.core.task.broken"
     START = "event.core.start"
     FAILURE = "event.core.failure"
     SUCCESS = "event.core.success"
@@ -186,9 +187,10 @@ class Worker(object):
                     stack.append(next)
         except (KeyboardInterrupt, TaskException):
             raise
-        except:
+        except Exception as ex:
             formatted_traceback = traceback.format_exc()
             self._log_unexpected_error(task)
+            task.trigger_event(Event.BROKEN_TASK, task, ex)
             self._email_unexpected_error(task, formatted_traceback)
 
     def _check_complete(self, task):
