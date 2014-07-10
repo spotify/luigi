@@ -78,8 +78,8 @@ class WorkerTest(unittest.TestCase):
         a.has_run = False
         b.has_run = False
 
-        self.w.add(b)
-        self.w.run()
+        self.assertTrue(self.w.add(b))
+        self.assertTrue(self.w.run())
         self.assertTrue(a.has_run)
         self.assertTrue(b.has_run)
 
@@ -104,8 +104,8 @@ class WorkerTest(unittest.TestCase):
         a.has_run = False
         b.has_run = False
 
-        self.w.add(b)
-        self.w.run()
+        self.assertTrue(self.w.add(b))
+        self.assertTrue(self.w.run())
 
         self.assertFalse(a.has_run)
         self.assertFalse(b.has_run)
@@ -136,8 +136,8 @@ class WorkerTest(unittest.TestCase):
         a.has_run = False
         b.has_run = False
 
-        self.w.add(b)
-        self.w.run()
+        self.assertTrue(self.w.add(b))
+        self.assertFalse(self.w.run())
 
         self.assertTrue(a.has_run)
         self.assertFalse(b.has_run)
@@ -170,12 +170,12 @@ class WorkerTest(unittest.TestCase):
         b_a = get_b(A())
         b_c = get_b(C())
 
-        self.w.add(b_a)
+        self.assertTrue(self.w.add(b_a))
         # So now another worker goes in and schedules C -> B
         # This should remove the dep A -> B but will screw up the first worker
-        self.w2.add(b_c)
+        self.assertTrue(self.w2.add(b_c))
 
-        self.w.run()  # should not run anything - the worker should detect that A is broken
+        self.assertFalse(self.w.run())  # should not run anything - the worker should detect that A is broken
         self.assertFalse(b_a.has_run)
         # not sure what should happen??
         # self.w2.run() # should run B since C is fulfilled
@@ -205,14 +205,14 @@ class WorkerTest(unittest.TestCase):
         w = Worker(scheduler=sch, worker_id='X')
         w2 = Worker(scheduler=sch, worker_id='Y')
 
-        w.add(b)
-        w2.add(eb)
+        self.assertTrue(w.add(b))
+        self.assertTrue(w2.add(eb))
         logging.debug("RUNNING BROKEN WORKER")
-        w2.run()
+        self.assertTrue(w2.run())
         self.assertFalse(a.complete())
         self.assertFalse(b.complete())
         logging.debug("RUNNING FUNCTIONAL WORKER")
-        w.run()
+        self.assertTrue(w.run())
         self.assertTrue(a.complete())
         self.assertTrue(b.complete())
         w.stop()
@@ -238,12 +238,12 @@ class WorkerTest(unittest.TestCase):
         w = Worker(scheduler=sch, worker_id='X')
         w2 = Worker(scheduler=sch, worker_id='Y')
 
-        w2.add(eb)
-        w.add(b)
+        self.assertTrue(w2.add(eb))
+        self.assertTrue(w.add(b))
 
-        w2.run()
+        self.assertTrue(w2.run())
         self.assertFalse(b.complete())
-        w.run()
+        self.assertTrue(w.run())
         self.assertTrue(b.complete())
         w.stop()
         w2.stop()
@@ -271,11 +271,11 @@ class WorkerTest(unittest.TestCase):
         w  = Worker(scheduler=sch, worker_id='X', keep_alive=True)
         w2 = Worker(scheduler=sch, worker_id='Y', keep_alive=True, wait_interval=0.1)
 
-        w.add(a)
-        w2.add(b)
+        self.assertTrue(w.add(a))
+        self.assertTrue(w2.add(b))
 
         threading.Thread(target=w.run).start()
-        w2.run()
+        self.assertTrue(w2.run())
 
         self.assertTrue(a.complete())
         self.assertTrue(b.complete())
@@ -303,8 +303,8 @@ class WorkerTest(unittest.TestCase):
         b = B()
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         w = Worker(scheduler=sch, worker_id="foo")
-        w.add(b)
-        w.run()
+        self.assertFalse(w.add(b))
+        self.assertTrue(w.run())
         self.assertFalse(b.has_run)
         self.assertTrue(c.has_run)
         self.assertFalse(a.has_run)

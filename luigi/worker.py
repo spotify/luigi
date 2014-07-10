@@ -95,6 +95,9 @@ class Worker(object):
         # for debugging reasons
         self._previous_tasks = []
 
+        self.add_succeeded = True
+        self.run_succeeded = True
+
         class KeepAliveThread(threading.Thread):
             """ Periodically tell the scheduler that the worker still lives """
             def __init__(self):
@@ -178,7 +181,9 @@ class Worker(object):
         notifications.send_error_email(subject, message)
 
     def add(self, task):
-        """ Add a Task for the worker to check and possibly schedule and run """
+        """ Add a Task for the worker to check and possibly schedule and run.
+         Returns True if task and its dependencies were successfully scheduled or completed before"""
+        self.add_succeeded = True
         stack = [task]
         try:
             while stack:
@@ -188,10 +193,12 @@ class Worker(object):
         except (KeyboardInterrupt, TaskException):
             raise
         except Exception as ex:
+            self.add_succeeded = False
             formatted_traceback = traceback.format_exc()
             self._log_unexpected_error(task)
             task.trigger_event(Event.BROKEN_TASK, task, ex)
             self._email_unexpected_error(task, formatted_traceback)
+        return self.add_succeeded
 
     def _check_complete(self, task):
         return task.complete()
@@ -208,6 +215,7 @@ class Worker(object):
         except KeyboardInterrupt:
             raise
         except:
+            self.add_succeeded = False
             formatted_traceback = traceback.format_exc()
             self._log_complete_error(task)
             task.trigger_event(Event.DEPENDENCY_MISSING, task)
@@ -296,6 +304,7 @@ class Worker(object):
         self._scheduler.add_task(self._id, task_id, status=status,
                                   expl=error_message, runnable=None)
 
+        self.run_succeeded &= status == DONE
         return status
 
     def _add_worker(self):
@@ -317,6 +326,7 @@ class Worker(object):
         died_pid, status = os.wait()
         if died_pid in children:
             children.remove(died_pid)
+            self.run_succeeded &= status == 0
         else:
             logger.warning("Some random process %s died", died_pid)
 
@@ -340,8 +350,8 @@ class Worker(object):
         else:
             # need to have different random seeds...
             random.seed((os.getpid(), time.time()))
-            self._run_task(task_id)
-            os._exit(0)
+            status = self._run_task(task_id)
+            os._exit(0 if status == DONE else 1)
 
     def _sleeper(self):
         # TODO is exponential backoff necessary?
@@ -352,8 +362,11 @@ class Worker(object):
             yield
 
     def run(self):
+        """Returns True if all scheduled tasks were executed successfully"""
+
         children = set()
         sleeper  = self._sleeper()
+        self.run_succeeded = True
 
         self._add_worker()
 
@@ -386,3 +399,4 @@ class Worker(object):
 
         while children:
             self._reap_children(children)
+        return self.run_succeeded
