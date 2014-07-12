@@ -310,6 +310,31 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(a.has_run)
         w.stop()
 
+    def test_requires_exception(self):
+        class A(DummyTask):
+            def requires(self):
+                raise Exception("doh")
+
+        a = A()
+
+        class C(DummyTask):
+            pass
+
+        c = C()
+
+        class B(DummyTask):
+            def requires(self):
+                return a, c
+
+        b = B()
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        w = Worker(scheduler=sch, worker_id="foo")
+        self.assertFalse(w.add(b))
+        self.assertTrue(w.run())
+        self.assertFalse(b.has_run)
+        self.assertTrue(c.has_run)
+        self.assertFalse(a.has_run)
+        w.stop()
 
 class WorkerPingThreadTests(unittest.TestCase):
     def test_ping_retry(self):

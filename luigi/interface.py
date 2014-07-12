@@ -151,6 +151,10 @@ class Interface(object):
 
     @staticmethod
     def run(tasks, worker_scheduler_factory=None, override_defaults={}):
+        """
+        :return: True if all tasks and their dependencies were successfully run (or already completed)
+        False if any error occurred
+        """
 
         if worker_scheduler_factory is None:
             worker_scheduler_factory = WorkerSchedulerFactory()
@@ -189,12 +193,14 @@ class Interface(object):
         w = worker_scheduler_factory.create_worker(
             scheduler=sch, worker_processes=env_params.workers)
 
+        success = True
         for t in tasks:
-            w.add(t)
+            success &= w.add(t)
         logger = logging.getLogger('luigi-interface')
         logger.info('Done scheduling tasks')
-        w.run()
+        success &= w.run()
         w.stop()
+        return success
 
 
 class ErrorWrappedArgumentParser(argparse.ArgumentParser):
@@ -420,7 +426,7 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task
     else:
         interface = ArgParseInterface()
     tasks = interface.parse(cmdline_args, main_task_cls=main_task_cls)
-    interface.run(tasks, worker_scheduler_factory)
+    return interface.run(tasks, worker_scheduler_factory)
 
 
 def build(tasks, worker_scheduler_factory=None, **env_params):
