@@ -20,7 +20,6 @@ import mock
 import unittest
 import warnings
 
-
 class SomeTask(luigi.Task):
     n = luigi.IntParameter()
 
@@ -111,7 +110,7 @@ class CmdlineTest(unittest.TestCase):
         self.assertEqual([mock.call(None)], setup_mock.call_args_list)
 
         with mock.patch("luigi.configuration.get_config") as getconf:
-            getconf.return_value.get.return_value = None
+            getconf.return_value.get.side_effect = ConfigParser.NoOptionError(section='foo', option='bar')
             getconf.return_value.get_boolean.return_value = True
 
             luigi.interface.setup_interface_logging.call_args_list = []

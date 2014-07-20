@@ -71,11 +71,13 @@ class EnvironmentParamsContainer(task.Task):
         description='Use local scheduling')
     scheduler_host = parameter.Parameter(
         is_global=True,
-        default=None,
-        description='Hostname of machine running remote scheduler')
+        default='localhost',
+        description='Hostname of machine running remote scheduler',
+        config_path=dict(section='core', name='default-scheduler-host'))
     scheduler_port = parameter.IntParameter(
-        is_global=True, default=None,
-        description='Port of remote scheduler api process')
+        is_global=True, default=8082,
+        description='Port of remote scheduler api process',
+        config_path=dict(section='core', name='default-scheduler-port'))
     lock = parameter.BooleanParameter(
         is_global=True, default=False,
         description='(Deprecated, replaced by no_lock)'
@@ -94,30 +96,18 @@ class EnvironmentParamsContainer(task.Task):
         description='Maximum number of parallel tasks to run')
     logging_conf_file = parameter.Parameter(
         is_global=True, default=None,
-        description='Configuration file for logging')
+        description='Configuration file for logging',
+        config_path=dict(section='core', name='logging_conf_file'))
     module = parameter.Parameter(
         is_global=True, default=None,
         description='Used for dynamic loading of modules') # see DynamicArgParseInterface
 
     @classmethod
-    def apply_config_defaults(cls):
-        cls.scheduler_host.set_default(
-            configuration.get_config().get(
-                'core', 'default-scheduler-host', 'localhost'))
-        cls.scheduler_port.set_default(
-            configuration.get_config().get(
-                'core', 'default-scheduler-port', 8082))
-        cls.logging_conf_file.set_default(
-            configuration.get_config().get(
-                'core', 'logging_conf_file', None))
-
-    @classmethod
-    def env_params(cls, override_defaults):
-        cls.apply_config_defaults()
+    def env_params(cls, override_defaults={}):
         # Override any global parameter with whatever is in override_defaults
         for param_name, param_obj in cls.get_global_params():
             if param_name in override_defaults:
-                param_obj.set_default(override_defaults[param_name])
+                param_obj.set_global(override_defaults[param_name])
 
         return cls()  # instantiate an object with the global params set on it
 
@@ -255,8 +245,8 @@ class ArgParseInterface(Interface):
             description.append(param_name)
         if param.description:
             description.append(param.description)
-        if param.has_default:
-            description.append(" [default: %s]" % (param.default,))
+        if param.has_value:
+            description.append(" [default: %s]" % (param.value,))
 
         if param.is_list:
             action = "append"
