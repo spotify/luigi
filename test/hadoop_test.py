@@ -103,6 +103,19 @@ class MapOnlyJob(TestJobTask):
     def output(self):
         return File("luigitest-3")
 
+class UnicodeJob(TestJobTask):
+    def mapper(self, line):
+        yield u'test', 1
+        yield 'test', 1
+
+    def reducer(self, word, occurences):
+        yield word, sum(occurences)
+
+    def requires(self):
+        return Words()
+
+    def output(self):
+        return File("luigitest-4")
 
 class HadoopJobTest(unittest.TestCase):
     def setUp(self):
@@ -132,6 +145,18 @@ class HadoopJobTest(unittest.TestCase):
             c.append(line.strip())
         self.assertEquals(c[0], 'kj')
         self.assertEquals(c[4], 'ljoi')
+
+    def test_unicode_job(self):
+        luigi.build([UnicodeJob()], local_scheduler=True)
+        c = []
+        for line in File('luigitest-4').open('r'):
+            c.append(line)
+        # Make sure unicode('test') isnt grouped with str('test')
+        # Since this is what happens when running on cluster
+        self.assertEquals(len(c), 2)
+        self.assertEquals(c[0], "test\t2\n")
+        self.assertEquals(c[0], "test\t2\n")
+
 
     def test_run_hadoop_job_failure(self):
         def Popen_fake(arglist, stdout=None, stderr=None, env=None, close_fds=True):

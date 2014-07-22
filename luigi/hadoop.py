@@ -753,8 +753,8 @@ class JobTask(BaseHadoopJobTask):
 
     def _reduce_input(self, inputs, reducer, final=NotImplemented):
         """Iterate over input, collect values with the same key, and call the reducer for each uniqe key."""
-        for key, values in groupby(inputs, itemgetter(0)):
-            for output in reducer(key, (v[1] for v in values)):
+        for key, values in groupby(inputs, key=lambda x: repr(x[0])):
+            for output in reducer(eval(key), (v[1] for v in values)):
                 yield output
         if final != NotImplemented:
             for output in final():
