@@ -91,10 +91,6 @@ class Worker(object):
         self.host = socket.gethostname()
         self._scheduled_tasks = {}
 
-        # store the previous tasks executed by the same worker
-        # for debugging reasons
-        self._previous_tasks = []
-
         self.add_succeeded = True
         self.run_succeeded = True
 
@@ -275,15 +271,11 @@ class Worker(object):
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self._id, task_id)
         try:
             # Verify that all the tasks are fulfilled!
-            ok = True
-            for task_2 in task.deps():
-                if not task_2.complete():
-                    ok = False
-                    missing_dep = task_2
-
-            if not ok:
+            missing = [dep.task_id for dep in task.deps() if not dep.complete()]
+            if missing:
+                deps = 'dependency' if len(missing) == 1 else 'dependencies'
                 # TODO: possibly try to re-add task again ad pending
-                raise RuntimeError('Unfulfilled dependency %r at run time!\nPrevious tasks: %r' % (missing_dep.task_id, self._previous_tasks))
+                raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
             task.trigger_event(Event.START, task)
             task.run()
             error_message = json.dumps(task.on_success())
@@ -394,8 +386,6 @@ class Worker(object):
                 self._fork_task(children, task_id)
             else:
                 self._run_task(task_id)
-
-            self._previous_tasks.append(task_id)
 
         while children:
             self._reap_children(children)
