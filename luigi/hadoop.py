@@ -488,6 +488,9 @@ class LocalJobRunner(JobRunner):
             map_output.close()
             return
 
+        if not job.init_mapper == NotImplemented:
+            job.init_mapper()
+
         # run job now...
         map_output = StringIO.StringIO()
         job._run_mapper(map_input, map_output)
@@ -501,6 +504,9 @@ class LocalJobRunner(JobRunner):
             job._run_combiner(combine_input, combine_output)
             combine_output.seek(0)
             reduce_input = self.group(combine_output)
+
+        if not job.init_reducer == NotImplemented:
+            job.init_reducer()
 
         reduce_output = job.output().open('w')
         job._run_reducer(reduce_input, reduce_output)
