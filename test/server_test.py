@@ -32,7 +32,7 @@ class ServerTest(ServerTestBase):
     def test_visualizer(self):
         uri = 'http://localhost:%d' % self._api_port
         req = urllib2.Request(uri)
-        response = urllib2.urlopen(req)
+        response = urllib2.urlopen(req, timeout=10)
         page = response.read()
         self.assertTrue(page.find('<title>') != -1)
         
@@ -40,7 +40,7 @@ class ServerTest(ServerTestBase):
         uri = 'http://localhost:%d%s' % (self._api_port, path)
         req = urllib2.Request(uri)
         try:
-            response = urllib2.urlopen(req)
+            response = urllib2.urlopen(req, timeout=10)
         except urllib2.HTTPError, http_exc:
             pass
 
