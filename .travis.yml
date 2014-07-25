@@ -10,4 +10,4 @@ install:
   - pip install boto --use-mirrors
   - pip install moto --use-mirrors
   - pip install ordereddict --use-mirrors
-script: nosetests
+script: nosetests -v
