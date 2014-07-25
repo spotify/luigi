@@ -181,6 +181,49 @@ class WorkerTest(unittest.TestCase):
         # self.w2.run() # should run B since C is fulfilled
         # self.assertTrue(b_c.has_run)
 
+    def test_unfulfilled_dep(self):
+        class A(Task):
+            def complete(self):
+                return self.done
+
+            def run(self):
+                self.done = True
+
+        def get_b(a):
+            class B(A):
+                def requires(self):
+                    return a
+            b = B()
+            b.done = False
+            a.done = True
+            return b
+
+        a = A()
+        b = get_b(a)
+
+        self.assertTrue(self.w.add(b))
+        a.done = False
+        self.w.run()
+        self.assertTrue(a.complete())
+        self.assertTrue(b.complete())
+
+
+    def test_avoid_infinite_reschedule(self):
+        class A(Task):
+            def complete(self):
+                return False
+
+        class B(Task):
+            def complete(self):
+                return False
+
+            def requires(self):
+                return A()
+
+        self.assertTrue(self.w.add(B()))
+        self.assertFalse(self.w.run())
+
+
     def test_interleaved_workers(self):
         class A(DummyTask):
             pass
