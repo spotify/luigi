@@ -181,11 +181,16 @@ class Worker(object):
          Returns True if task and its dependencies were successfully scheduled or completed before"""
         self.add_succeeded = True
         stack = [task]
+        self._validate_task(task)
+        seen = set([task.task_id])
         try:
             while stack:
                 current = stack.pop()
                 for next in self._add(current):
-                    stack.append(next)
+                    if next.task_id not in seen:
+                        self._validate_task(next)
+                        seen.add(next.task_id)
+                        stack.append(next)
         except (KeyboardInterrupt, TaskException):
             raise
         except Exception as ex:
@@ -200,9 +205,6 @@ class Worker(object):
         return task.complete()
 
     def _add(self, task):
-        self._validate_task(task)
-        if task.task_id in self._scheduled_tasks:
-            return []  # already scheduled
         logger.debug("Checking if %s is complete", task)
         is_complete = False
         try:
