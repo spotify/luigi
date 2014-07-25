@@ -12,6 +12,7 @@
 
 import abc
 import logging
+import operator
 import luigi
 import luigi.hadoop
 from luigi.target import FileSystemTarget, FileAlreadyExists
@@ -133,7 +134,8 @@ class HiveCommandClient(HiveClient):
 
     def partition_spec(self, partition):
         """ Turns a dict into the a Hive partition specification string """
-        return ','.join(["{0}='{1}'".format(k, v) for (k, v) in partition.items()])
+        return ','.join(["{0}='{1}'".format(k, v) for (k, v) in
+                         sorted(partition.items(), key=operator.itemgetter(0))])
 
 
 class ApacheHiveCommandClient(HiveCommandClient):
@@ -204,7 +206,7 @@ class MetastoreClient(HiveClient):
             return [(field_schema.name, field_schema.type) for field_schema in client.get_schema(database, table)]
 
     def partition_spec(self, partition):
-        return "/".join("%s=%s" % (k, v) for (k, v) in partition.items())
+        return "/".join("%s=%s" % (k, v) for (k, v) in sorted(partition.items(), key=operator.itemgetter(0)))
 
 
 class HiveThriftContext(object):

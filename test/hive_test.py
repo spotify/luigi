@@ -207,6 +207,15 @@ class HiveCommandClientTest(unittest.TestCase):
         partition_spec = OrderedDict([("p2", "b"), ("p1", "a")])
         self.assertTrue(self.metastoreclient.table_exists("table", "default", partition_spec))
 
+    def test_metastore_partition_spec_has_the_same_order(self):
+        partition_spec = OrderedDict([("p1", "a"), ("p2", "b")])
+        spec_string = luigi.hive.MetastoreClient().partition_spec(partition_spec)
+        self.assertEqual(spec_string, "p1=a/p2=b")
+
+        partition_spec = OrderedDict([("p2", "b"), ("p1", "a")])
+        spec_string = luigi.hive.MetastoreClient().partition_spec(partition_spec)
+        self.assertEqual(spec_string, "p1=a/p2=b")
+
     @mock.patch("luigi.configuration")
     def test_client_def(self, hive_syntax):
         hive_syntax.get_config.return_value.get.return_value = "cdh4"
