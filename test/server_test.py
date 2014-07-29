@@ -19,12 +19,14 @@ import luigi.server
 
 
 class ServerTestBase(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         # Pass IPv4 localhost to ensure that only a single address, and therefore single port, is bound
         sock_names = luigi.server.run_api_threaded(0, address='127.0.0.1')
-        _, self._api_port = sock_names[0]
+        _, cls._api_port = sock_names[0]
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         luigi.server.stop()
 
 
@@ -32,15 +34,15 @@ class ServerTest(ServerTestBase):
     def test_visualizer(self):
         uri = 'http://localhost:%d' % self._api_port
         req = urllib2.Request(uri)
-        response = urllib2.urlopen(req)
+        response = urllib2.urlopen(req, timeout=10)
         page = response.read()
         self.assertTrue(page.find('<title>') != -1)
-        
+
     def _test_404(self, path):
         uri = 'http://localhost:%d%s' % (self._api_port, path)
         req = urllib2.Request(uri)
         try:
-            response = urllib2.urlopen(req)
+            response = urllib2.urlopen(req, timeout=10)
         except urllib2.HTTPError, http_exc:
             pass
 

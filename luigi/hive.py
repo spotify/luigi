@@ -12,6 +12,7 @@
 
 import abc
 import logging
+import operator
 import luigi
 import luigi.hadoop
 from luigi.target import FileSystemTarget, FileAlreadyExists
@@ -133,7 +134,8 @@ class HiveCommandClient(HiveClient):
 
     def partition_spec(self, partition):
         """ Turns a dict into the a Hive partition specification string """
-        return ','.join(["{0}='{1}'".format(k, v) for (k, v) in partition.items()])
+        return ','.join(["{0}='{1}'".format(k, v) for (k, v) in
+                         sorted(partition.items(), key=operator.itemgetter(0))])
 
 
 class ApacheHiveCommandClient(HiveCommandClient):
@@ -185,16 +187,26 @@ class MetastoreClient(HiveClient):
             if not partition:
                 return table in client.get_all_tables(database)
             else:
-                partition_str = self.partition_spec(partition)
-                # -1 is max_parts, the # of partition names to return (-1 = unlimited)
-                return partition_str in client.get_partition_names(database, table, -1)
+                return partition in self._existing_partitions(table, database, client)
+
+    def _existing_partitions(self, table, database, client):
+        def _parse_partition_string(partition_string):
+            partition_def = {}
+            for part in partition_string.split("/"):
+                name, value = part.split("=")
+                partition_def[name] = value
+            return partition_def
+
+        # -1 is max_parts, the # of partition names to return (-1 = unlimited)
+        partition_strings = client.get_partition_names(database, table, -1)
+        return [_parse_partition_string(existing_partition) for existing_partition in partition_strings]
 
     def table_schema(self, table, database='default'):
         with HiveThriftContext() as client:
             return [(field_schema.name, field_schema.type) for field_schema in client.get_schema(database, table)]
 
     def partition_spec(self, partition):
-        return "/".join("%s=%s" % (k, v) for (k, v) in partition.items())
+        return "/".join("%s=%s" % (k, v) for (k, v) in sorted(partition.items(), key=operator.itemgetter(0)))
 
 
 class HiveThriftContext(object):
