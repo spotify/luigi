@@ -19,6 +19,8 @@ from luigi.mock import MockFile
 import mock
 import unittest
 import warnings
+import subprocess
+import os
 
 
 class SomeTask(luigi.Task):
@@ -59,6 +61,17 @@ class TaskWithSameName(luigi.Task):
     # there should be no ambiguity
     def run(self):
         self.x = 43
+
+
+class WriteToFile(luigi.Task):
+    filename = luigi.Parameter()
+    def output(self):
+        return luigi.LocalTarget(self.filename)
+
+    def run(self):
+        f = self.output().open('w')
+        print >>f, 'foo'
+        f.close()
 
 
 class CmdlineTest(unittest.TestCase):
@@ -123,6 +136,14 @@ class CmdlineTest(unittest.TestCase):
     @mock.patch('argparse.ArgumentParser.print_usage')
     def test_non_existent_class(self, print_usage):
         self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', 'XYZ'])
+
+    def test_bin_luigi(self):
+        t = luigi.LocalTarget(is_tmp=True)
+        cmd = ['./bin/luigi', '--module', 'cmdline_test', 'WriteToFile', '--filename', t.path, '--local-scheduler']
+        env = os.environ.copy()
+        env['PYTHONPATH'] = env.get('PYTHONPATH', '') + ':.:test'
+        subprocess.check_call(cmd, env=env, stderr=subprocess.STDOUT)
+        self.assertTrue(t.exists())
 
 if __name__ == '__main__':
     unittest.main()
