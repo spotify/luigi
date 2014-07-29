@@ -14,6 +14,7 @@
 
 import random
 from scheduler import CentralPlannerScheduler, PENDING, FAILED, DONE
+import collections
 import threading
 import time
 import os
@@ -60,7 +61,7 @@ class Worker(object):
 
     def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None,
                  worker_processes=1, ping_interval=None, keep_alive=None,
-                 wait_interval=None):
+                 wait_interval=None, max_reschedules=None):
         self._worker_info = self._generate_worker_info()
 
         if not worker_id:
@@ -80,6 +81,10 @@ class Worker(object):
                 wait_interval = config.getint('core', 'worker-wait-interval', 1)
             self.__wait_interval = wait_interval
 
+        if max_reschedules is None:
+            max_reschedules = config.getint('core', 'max-reschedules', 1)
+        self.__max_reschedules = max_reschedules
+
         self._id = worker_id
         self._scheduler = scheduler
         if (isinstance(scheduler, CentralPlannerScheduler)
@@ -93,6 +98,7 @@ class Worker(object):
 
         self.add_succeeded = True
         self.run_succeeded = True
+        self.unfulfilled_counts = collections.defaultdict(int)
 
         class KeepAliveThread(threading.Thread):
             """ Periodically tell the scheduler that the worker still lives """
@@ -276,7 +282,6 @@ class Worker(object):
             missing = [dep.task_id for dep in task.deps() if not dep.complete()]
             if missing:
                 deps = 'dependency' if len(missing) == 1 else 'dependencies'
-                # TODO: possibly try to re-add task again ad pending
                 raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
             task.trigger_event(Event.START, task)
             task.run()
@@ -297,6 +302,18 @@ class Worker(object):
 
         self._scheduler.add_task(self._id, task_id, status=status,
                                   expl=error_message, runnable=None)
+
+        # re-add task to reschedule missing dependencies
+        if missing:
+            reschedule = True
+
+            # keep out of infinite loops by not rescheduling too many times
+            for task_id in missing:
+                self.unfulfilled_counts[task_id] += 1
+                if self.unfulfilled_counts[task_id] > self.__max_reschedules:
+                    reschedule = False
+            if reschedule:
+                self.add(task)
 
         self.run_succeeded &= status == DONE
         return status

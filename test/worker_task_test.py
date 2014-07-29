@@ -35,3 +35,6 @@ class WorkerTaskTest(unittest.TestCase):
         def f():
             luigi.build([None], local_scheduler=True)
         self.assertRaises(TaskException, f)
+
+if __name__ == '__main__':
+    unittest.main()
