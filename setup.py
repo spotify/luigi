@@ -48,6 +48,7 @@ setup(
         'luigi': luigi_package_data
     },
     scripts=[
-        'bin/luigid'
+        'bin/luigid',
+        'bin/luigi'
     ]
 )
