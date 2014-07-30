@@ -14,9 +14,10 @@
 
 import configuration
 import datetime
+import warnings
 from ConfigParser import NoSectionError, NoOptionError
 
-_no_default = object()
+_no_value = object()
 
 
 class ParameterException(Exception):
@@ -39,23 +40,46 @@ class DuplicateParameterException(ParameterException):
     pass
 
 
-class UnknownConfigException(Exception):
+class UnknownConfigException(ParameterException):
     """Exception signifying that the ``default_from_config`` for the Parameter could not be found."""
     pass
 
 
 class Parameter(object):
-    """An untyped Parameter"""
+    """An untyped Parameter
+
+    Parameters are objects set on the Task class level to make it possible to parameterize tasks.
+    For instance:
+
+        class MyTask(luigi.Task):
+            foo = luigi.Parameter()
+
+    This makes it possible to instantiate multiple tasks, eg ``MyTask(foo='bar')`` and
+    ``My(foo='baz')``. The task will then have the ``foo`` attribute set appropriately.
+
+    There are subclasses of ``Parameter`` that define what type the parameter has. This is not
+    enforced within Python, but are used for command line interaction.
+
+    The ``config_path`` argument lets you specify a place where the parameter is read from config
+    in case no value is provided.
+
+    Providing ``is_global=True`` changes the behavior of the parameter so that the value is shared
+    across all instances of the task. Global parameters can be provided in several ways. In
+    falling order of precedence:
+
+    * A value provided on the command line (eg. ``--my-global-value xyz``)
+    * A value provided via config (using the ``config_path`` argument)
+    * A default value set using the ``default`` flag.
+    """
     counter = 0
     """non-atomically increasing counter used for ordering parameters."""
 
-    def __init__(self, default=_no_default, is_list=False, is_boolean=False, is_global=False, significant=True, description=None,
-                 default_from_config=None):
+    def __init__(self, default=_no_value, is_list=False, is_boolean=False, is_global=False, significant=True, description=None,
+                 config_path=None, default_from_config=None):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
-                        ``IntParameter``. You may only specify either ``default`` or
-                        ``default_from_config`` and not both. By default, no default is stored and
+                        ``IntParameter``. By default, no default is stored and
                         the value must be specified at runtime.
         :param bool is_list: specify ``True`` if the parameter should allow a list of values rather
                              than a single value. Default: ``False``. A list has an implicit default
@@ -72,75 +96,117 @@ class Parameter(object):
         :param str description: A human-readable string describing the purpose of this Parameter.
                                 For command-line invocations, this will be used as the `help` string
                                 shown to users. Default: ``None``.
-        :param dict default_from_config: a dictionary with entries ``section`` and ``name``
-                                         specifying a config file entry from which to read the
-                                         default value for this parameter. You may only specify
-                                         either ``default`` or ``default_from_config`` and not both.
-                                         Default: ``None``.
+        :param dict config_path: a dictionary with entries ``section`` and ``name``
+                                 specifying a config file entry from which to read the
+                                 default value for this parameter.
+                                 Default: ``None``.
         """
         # The default default is no default
-        self.__default = default  # We also use this to store global values
+        self.__default = default
+        self.__global = _no_value
+
         self.is_list = is_list
         self.is_boolean = is_boolean and not is_list  # Only BooleanParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
         self.significant = significant # Whether different values for this parameter will differentiate otherwise equal tasks
-        if is_global and default == _no_default and default_from_config is None:
+
+        if default_from_config is not None:
+            warnings.warn("Use config_path parameter, not default_from_config", DeprecationWarning)
+            config_path = default_from_config
+
+        if is_global and default == _no_value and config_path is None:
             raise ParameterException('Global parameters need default values')
         self.description = description
 
-        if default != _no_default and default_from_config is not None:
-            raise ParameterException('Can only specify either a default or a default_from_config')
-        if default_from_config is not None and (not 'section' in default_from_config or not 'name' in default_from_config):
-            raise ParameterException('default_from_config must be a hash containing entries for section and name')
-        self.default_from_config = default_from_config
+        if config_path is not None and (not 'section' in config_path or not 'name' in config_path):
+            raise ParameterException('config_path must be a hash containing entries for section and name')
+        self.__config = config_path
 
         self.counter = Parameter.counter  # We need to keep track of this to get the order right (see Task class)
         Parameter.counter += 1
 
-    def _get_default_from_config(self, safe):
-        """Loads the default from the config. If safe=True, then returns None if missing. Otherwise,
-           raises an UnknownConfigException."""
+    def _get_value_from_config(self):
+        """Loads the default from the config. Returns _no_value if it doesn't exist"""
+
+        if not self.__config:
+            return _no_value
 
         conf = configuration.get_config()
-        (section, name) = (self.default_from_config['section'], self.default_from_config['name'])
+        (section, name) = (self.__config['section'], self.__config['name'])
+
         try:
-            return conf.get(section, name)
+            value = conf.get(section, name)
         except (NoSectionError, NoOptionError), e:
-            if safe:
-                return None
-            raise UnknownConfigException("Couldn't find value for section={0} name={1}. Search config files: '{2}'".format(
-                section, name, ", ".join(conf._config_paths)), e)
+            return _no_value
 
-    @property
-    def has_default(self):
-        """``True`` if a default was specified or if default_from_config references a valid entry in the conf."""
-        if self.default_from_config is not None:
-            return self._get_default_from_config(safe=True) is not None
-        return self.__default != _no_default
-
-    @property
-    def default(self):
-        """The default value for this Parameter.
-
-        :raises MissingParameterException: if a default is not set.
-        :return: the parsed default value.
-        """
-        if self.__default == _no_default and self.default_from_config is None:
-            raise MissingParameterException("No default specified")
-        if self.__default != _no_default:
-            return self.__default
-
-        value = self._get_default_from_config(safe=False)
         if self.is_list:
             return tuple(self.parse(p.strip()) for p in value.strip().split('\n'))
         else:
             return self.parse(value)
+
+    @property
+    def has_value(self):
+        """``True`` if a default was specified or if config_path references a valid entry in the conf.
+
+        Note that "value" refers to the Parameter object itself - it can be either
+        1. The default value for this parameter
+        2. A value read from the config
+        3. A global value
+
+        Any Task instance can have its own value set that overrides this.
+        """
+        values = [self.__global, self._get_value_from_config(), self.__default]
+        for value in values:
+            if value != _no_value:
+                return True
+        else:
+            return False
+
+    @property
+    def has_default(self):
+        """Don't use this function - see has_value instead"""
+        warnings.warn('Use has_value rather than has_default. The meaning of "default" has changed', DeprecationWarning)
+        return self.has_value
+
+    @property
+    def value(self):
+        """The value for this Parameter.
+
+        This refers to any value defined by a default, a config option, or
+        a global value.
+
+        :raises MissingParameterException: if a value is not set.
+        :return: the parsed value.
+        """
+        values = [self.__global, self._get_value_from_config(), self.__default]
+        for value in values:
+            if value != _no_value:
+                return value
+        else:
+            raise MissingParameterException("No default specified")
+
+    @property
+    def default(self):
+        warnings.warn('Use value rather than default. The meaning of "default" has changed', DeprecationWarning)
+        return self.value
+
+    def set_global(self, value):
+        """Set the global value of this Parameter.
+
+        :param value: the new global value.
+        """
+        assert self.is_global
+        self.__global = value
+
+    def reset_global(self):
+        self.__global = _no_value
 
     def set_default(self, value):
         """Set the default value of this Parameter.
 
         :param value: the new default value.
         """
+        warnings.warn('Use set_global rather than set_default. The meaning of "default" has changed', DeprecationWarning)
         self.__default = value
 
     def parse(self, x):

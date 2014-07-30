@@ -311,9 +311,9 @@ class Task(object):
         # Then use the defaults for anything not filled in
         for param_name, param_obj in params:
             if param_name not in result:
-                if not param_obj.has_default:
+                if not param_obj.has_value:
                     raise parameter.MissingParameterException("%s: requires the '%s' parameter to be set" % (exc_desc, param_name))
-                result[param_name] = param_obj.default
+                result[param_name] = param_obj.value
 
         def list_to_tuple(x):
             """ Make tuples out of lists and sets to allow hashing """
@@ -371,7 +371,7 @@ class Task(object):
         """
         for param_name, param in global_params:
             value = param.parse_from_input(param_name, params[param_name])
-            param.set_default(value)
+            param.set_global(value)
 
         kwargs = {}
         for param_name, param in cls.get_nonglobal_params():
