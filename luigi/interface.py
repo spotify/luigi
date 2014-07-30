@@ -301,7 +301,7 @@ class ArgParseInterface(Interface):
             raise Exception('%s is ambigiuous' % args.command)
 
         # Notice that this is not side effect free because it might set global params
-        task = task_cls.from_input(params, Register.get_global_params())
+        task = task_cls.from_str_params(params, Register.get_global_params())
 
         return [task]
 
@@ -425,7 +425,7 @@ class OptParseInterface(Interface):
             if k != 'task':
                 params[k] = v
 
-        task = task_cls.from_input(params, global_params)
+        task = task_cls.from_str_params(params, global_params)
 
         return [task]
 

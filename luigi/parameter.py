@@ -255,6 +255,12 @@ class Parameter(object):
         else:
             return self.parse(x)
 
+    def serialize_to_input(self, x):
+        if self.is_list:
+            return tuple(self.serialize(p) for p in x)
+        else:
+            return self.serialize(x)
+
 
 class DateHourParameter(Parameter):
     """Parameter whose value is a :py:class:`~datetime.datetime` specified to the hour.
