@@ -360,25 +360,34 @@ class Task(object):
         return hasattr(self, 'task_id')
 
     @classmethod
-    def from_input(cls, params, global_params):
+    def from_str_params(cls, params_str, global_params):
         """Creates an instance from a str->str hash
 
         This method is for parsing of command line arguments or other
         non-programmatic invocations.
 
-        :param params: dict of param name -> value.
+        :param params_str: dict of param name -> value.
         :param global_params: dict of param name -> value, the global params.
         """
         for param_name, param in global_params:
-            value = param.parse_from_input(param_name, params[param_name])
+            value = param.parse_from_input(param_name, params_str[param_name])
             param.set_global(value)
 
         kwargs = {}
         for param_name, param in cls.get_nonglobal_params():
-            value = param.parse_from_input(param_name, params[param_name])
+            value = param.parse_from_input(param_name, params_str[param_name])
             kwargs[param_name] = value
 
         return cls(**kwargs)
+
+    def to_str_params(self):
+        """Opposite of from_str_params"""
+        params_str = {}
+        params = dict(self.get_params())
+        for param_name, param_value in self.param_kwargs.iteritems():
+            params_str[param_name] = params[param_name].serialize(param_value)
+
+        return params_str
 
     def clone(self, cls=None, **kwargs):
         ''' Creates a new instance from an existing instance where some of the args have changed.
