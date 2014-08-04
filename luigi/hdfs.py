@@ -689,7 +689,7 @@ in luigi. Use target.path instead", stacklevel=2)
         # mkdir will fail if directory already exists, thereby ensuring atomicity
         if isinstance(path, HdfsTarget):
             path = path.path
-        mkdir(path)
+        mkdir(path, parents=False)
         rename(self.path + '/*', path)
         self.remove()
 
