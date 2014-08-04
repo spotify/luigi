@@ -198,9 +198,12 @@ class HdfsClient(FileSystem):
             cmd = [load_hadoop_cmd(), 'fs', '-getmerge', path, local_destination]
         call_check(cmd)
 
-    def mkdir(self, path):
+    def mkdir(self, path, parents=True):
         try:
-            call_check([load_hadoop_cmd(), 'fs', '-mkdir', '-p', path])
+            cmd = ([load_hadoop_cmd(), 'fs', '-mkdir'] +
+                   (['-p'] if parents else []) +
+                   [path])
+            call_check(cmd)
         except HDFSCliError, ex:
             if "File exists" in ex.stderr:
                 raise FileAlreadyExists(ex.stderr)
