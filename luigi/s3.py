@@ -29,6 +29,7 @@ from luigi.target import FileSystem
 from luigi.target import FileSystemTarget
 from luigi.target import FileSystemException
 from luigi.task import ExternalTask
+from luigi.format import FileWrapper
 
 # two different ways of marking a directory
 # with a suffix in S3
@@ -343,11 +344,22 @@ class S3Target(FileSystemTarget):
         if mode == 'r':
             s3_key = self.fs.get_key(self.path)
             if s3_key:
-                return ReadableS3File(s3_key)
+                fileobj = ReadableS3File(s3_key)
+                if self.format:
+                    tmp_path = tempfile.mktemp(prefix='luigi_s3_')
+                    with open(tmp_path, 'w') as f:
+                        f.write(fileobj.read())
+                    return self.format.pipe_reader(FileWrapper(open(tmp_path)))
+                return fileobj
             else:
-                raise FileNotFoundException("Could not find file at %s" % self.path)
+                raise FileNotFoundException(
+                    "Could not find file at %s" % self.path)
         else:
-            return AtomicS3File(self.path, self.fs)
+            if self.format:
+                return self.format.pipe_writer(
+                    AtomicS3File(self.path, self.fs))
+            else:
+                return AtomicS3File(self.path, self.fs)
 
 class S3EmrTarget(S3Target):
     """
