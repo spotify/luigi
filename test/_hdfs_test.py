@@ -15,10 +15,7 @@
 from calendar import timegm
 from datetime import datetime
 import getpass
-try:
-    import unittes2 as unittest
-except ImportError:
-    import unittest
+import unittest
 import luigi
 from luigi import hdfs
 import mock
