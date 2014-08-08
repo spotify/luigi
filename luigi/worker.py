@@ -100,6 +100,8 @@ class Worker(object):
         self.run_succeeded = True
         self.unfulfilled_counts = collections.defaultdict(int)
 
+        self.graceful_shutdown_initiated = False
+
         class KeepAliveThread(threading.Thread):
             """ Periodically tell the scheduler that the worker still lives """
             def __init__(self):
@@ -137,6 +139,14 @@ class Worker(object):
         """
         self._keep_alive_thread.stop()
         self._keep_alive_thread.join()
+
+    def graceful_shutdown(self):
+        """
+        Call this method to tell worker to finish tasks that it is running
+        and shutdown without accepting any new ones
+        """
+        logger.info("Worker %s shutting down gracefully" % self._id)
+        self.graceful_shutdown_initiated = True
 
     def _generate_worker_info(self):
         # Generate as much info as possible about the worker
@@ -385,7 +395,10 @@ class Worker(object):
             while len(children) >= self.worker_processes:
                 self._reap_children(children)
 
-            task_id, running_tasks, n_pending_tasks = self._get_work()
+            if not self.graceful_shutdown_initiated:
+                task_id, running_tasks, n_pending_tasks = self._get_work()
+            else:
+                task_id, running_tasks, n_pending_tasks = [None, None, None]
 
             if task_id is None:
                 self._log_remote_tasks(running_tasks, n_pending_tasks)
