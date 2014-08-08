@@ -19,6 +19,7 @@ import json
 import time
 import warnings
 from scheduler import Scheduler, PENDING
+import configuration
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 
@@ -35,6 +36,11 @@ class RemoteScheduler(Scheduler):
     def __init__(self, host='localhost', port=8082, connect_timeout=None):
         self._host = host
         self._port = port
+
+        config = configuration.get_config()
+
+        if connect_timeout is None:
+            connect_timeout = config.getfloat('core', 'rpc-connect-timeout', 10.0)
         self._connect_timeout = connect_timeout
 
     def _wait(self):
