@@ -4,9 +4,10 @@ import functools
 class with_config(object):
   """Decorator to override config settings for the length of a function. Example:
 
+    >>> import luigi.configuration
     >>> @with_config({'foo': {'bar': 'baz'}})
-    >>> def test():
-    >>>  print luigi.configuration.get_config.get("foo", "bar")
+    ... def test():
+    ...     print luigi.configuration.get_config().get("foo", "bar")
     >>> test()
     baz
   """
