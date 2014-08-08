@@ -59,7 +59,7 @@ class inherits(object):
     def __init__(self, task_to_inherit):
         super(inherits, self).__init__()
         self.task_to_inherit = task_to_inherit
-    
+
     def __call__(self, task_that_inherits):
         this_param_names = dict(task_that_inherits.get_nonglobal_params()).keys()
         for param_name, param_obj in self.task_to_inherit.get_params():
@@ -84,7 +84,7 @@ class requires(object):
 
     def __call__(self, task_that_requires):
         task_that_requires = self.inherit_decorator(task_that_requires)
-        
+
         # Modify task_that_requres by subclassing it and adding methods
         @task_wraps(task_that_requires)
         class Wrapped(task_that_requires):
@@ -107,7 +107,7 @@ class copies(object):
     def __init__(self, task_to_copy):
         super(copies, self).__init__()
         self.requires_decorator = requires(task_to_copy)
-    
+
     def __call__(self, task_that_copies):
         task_that_copies = self.requires_decorator(task_that_copies)
 
@@ -152,7 +152,7 @@ def delegates(task_that_delegates):
         def deps(self):
             # Overrides method in base class
             return task.flatten(self.requires()) + task.flatten([t.deps() for t in task.flatten(self.subtasks())])
-        
+
         def run(self):
             for t in task.flatten(self.subtasks()):
                 t.run()
