@@ -419,7 +419,7 @@ class SnakebiteHdfsClient(HdfsClient):
         return list(self.get_bite().copyToLocal(list_path(path),
                                                 local_destination))
 
-    def mkdir(self, path, parents=True, mode=0755, raise_if_exists=True):
+    def mkdir(self, path, parents=True, mode=0755, raise_if_exists=False):
         """
         Use snakebite.mkdir, if available.
 
@@ -433,9 +433,8 @@ class SnakebiteHdfsClient(HdfsClient):
         :param mode: \*nix style owner/group/other permissions
         :type mode: octal, default 0755
         """
-        assert (raise_if_exists is not False)
         bite = self.get_bite()
-        if bite.test(path, exists=True):
+        if raise_if_exists and bite.test(path, exists=True):
             raise luigi.target.FileAlreadyExists("%s exists" % (path, ))
         return list(bite.mkdir(list_path(path), create_parent=parents,
                                mode=mode))
