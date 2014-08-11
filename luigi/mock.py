@@ -16,6 +16,7 @@ import StringIO
 import target
 import sys
 import os
+import luigi.util
 
 
 class MockFileSystem(target.FileSystem):
@@ -59,6 +60,7 @@ class MockFile(target.FileSystemTarget):
     def exists(self,):
         return self._fn in MockFile._file_contents
 
+    @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def rename(self, path, fail_if_exists=False):
         if fail_if_exists and path in MockFile._file_contents:
             raise RuntimeError('Destination exists: %s' % path)

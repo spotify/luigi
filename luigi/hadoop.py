@@ -423,7 +423,7 @@ class HadoopJobRunner(JobRunner):
         run_and_track_hadoop_job(arglist)
 
         # rename temporary work directory to given output
-        tmp_target.move(output_final, fail_if_exists=True)
+        tmp_target.move(output_final, raise_if_exists=True)
         self.finish()
 
     def finish(self):

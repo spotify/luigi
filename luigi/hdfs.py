@@ -671,6 +671,7 @@ in luigi. Use target.path instead", stacklevel=2)
     def remove(self, skip_trash=False):
         remove(self.path, skip_trash=skip_trash)
 
+    @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def rename(self, path, fail_if_exists=False):
         # rename does not change self.path, so be careful with assumptions
         if isinstance(path, HdfsTarget):
@@ -679,6 +680,7 @@ in luigi. Use target.path instead", stacklevel=2)
             raise RuntimeError('Destination exists: %s' % path)
         rename(self.path, path)
 
+    @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def move(self, path, fail_if_exists=False):
         self.rename(path, fail_if_exists=fail_if_exists)
 
