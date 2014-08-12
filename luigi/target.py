@@ -48,6 +48,12 @@ class FileAlreadyExists(FileSystemException):
     pass
 
 
+class MissingParentDirectory(FileSystemException):
+    """Raised when a parent directory doesn't exist. (Imagine mkdir without -p)
+    """
+    pass
+
+
 class FileSystem(object):
     """FileSystem abstraction used in conjunction with :py:class:`FileSystemTarget`.
 
@@ -78,15 +84,22 @@ class FileSystem(object):
         """
         pass
 
-    def mkdir(self, path):
+    def mkdir(self, path, parents=True, raise_if_exists=False):
         """ Create directory at location ``path``
 
-        Creates the directory at ``path`` and implicitly create parent directories if they do not
-        already exist.
+        Creates the directory at ``path`` and implicitly create parent
+        directories if they do not already exist.
 
         :param str path: a path within the FileSystem to create as a directory.
+        :param bool parents: Create parent directories when necessary. When
+                             parents=False and the parent directory doesn't
+                             exist, raise luigi.target.MissingParentDirectory
+        :param bool raise_if_exists: raise luigi.target.FileAlreadyExists if
+                                     the folder already exists.
 
         *Note*: This method is optional, not all FileSystem subclasses implements it.
+        *Note*: parents and raise_if_exists were added in August 2014. Some
+                implementations might not support these flags yet.
 
         """
         raise NotImplementedError("mkdir() not implemented on {0}".format(self.__class__.__name__))

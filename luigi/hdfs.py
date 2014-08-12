@@ -198,9 +198,14 @@ class HdfsClient(FileSystem):
             cmd = [load_hadoop_cmd(), 'fs', '-getmerge', path, local_destination]
         call_check(cmd)
 
-    def mkdir(self, path):
+    def mkdir(self, path, parents=True, raise_if_exists=False):
+        assert ((parents and raise_if_exists is not True) or
+                (not parents and raise_if_exists is not False))
         try:
-            call_check([load_hadoop_cmd(), 'fs', '-mkdir', '-p', path])
+            cmd = ([load_hadoop_cmd(), 'fs', '-mkdir'] +
+                   (['-p'] if parents else []) +
+                   [path])
+            call_check(cmd)
         except HDFSCliError, ex:
             if "File exists" in ex.stderr:
                 raise FileAlreadyExists(ex.stderr)
@@ -414,7 +419,7 @@ class SnakebiteHdfsClient(HdfsClient):
         return list(self.get_bite().copyToLocal(list_path(path),
                                                 local_destination))
 
-    def mkdir(self, path, parents=True, mode=0755):
+    def mkdir(self, path, parents=True, mode=0755, raise_if_exists=False):
         """
         Use snakebite.mkdir, if available.
 
@@ -429,7 +434,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :type mode: octal, default 0755
         """
         bite = self.get_bite()
-        if bite.test(path, exists=True):
+        if raise_if_exists and bite.test(path, exists=True):
             raise luigi.target.FileAlreadyExists("%s exists" % (path, ))
         return list(bite.mkdir(list_path(path), create_parent=parents,
                                mode=mode))
@@ -688,7 +693,7 @@ in luigi. Use target.path instead", stacklevel=2)
         # mkdir will fail if directory already exists, thereby ensuring atomicity
         if isinstance(path, HdfsTarget):
             path = path.path
-        mkdir(path)
+        mkdir(path, parents=False, raise_if_exists=True)
         rename(self.path + '/*', path)
         self.remove()
 
