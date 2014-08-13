@@ -18,8 +18,10 @@ import random
 import tempfile
 import urlparse
 import luigi.format
+import luigi.contrib.target
 import datetime
 import re
+import warnings
 from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
 import configuration
 import logging
@@ -46,19 +48,6 @@ def call_check(command):
     if p.returncode != 0:
         raise HDFSCliError(command, p.returncode, stdout, stderr)
     return stdout
-
-
-def get_hdfs_syntax():
-    """
-    CDH4 (hadoop 2+) has a slightly different syntax for interacting with
-    hdfs via the command line. The default version is CDH4, but one can
-    override this setting with "cdh3" or "apache1" in the hadoop section of the config in
-    order to use the old syntax
-    """
-    config = configuration.get_config()
-    if config.getboolean("hdfs", "use_snakebite", False):
-        return "snakebite"
-    return config.get("hadoop", "version", "cdh4").lower()
 
 
 def load_hadoop_cmd():
@@ -523,16 +512,56 @@ class HdfsClientApache1(HdfsClientCdh3):
         else:
             raise HDFSCliError(cmd, p.returncode, stdout, stderr)
 
-if get_hdfs_syntax() == "cdh4":
-    client = HdfsClient()
-elif get_hdfs_syntax() == "snakebite":
+
+def get_configured_hadoop_version():
+    """
+    CDH4 (hadoop 2+) has a slightly different syntax for interacting with hdfs
+    via the command line. The default version is CDH4, but one can override
+    this setting with "cdh3" or "apache1" in the hadoop section of the config
+    in order to use the old syntax
+    """
+    return configuration.get_config().get("hadoop", "version", "cdh4").lower()
+
+
+def get_configured_hdfs_client():
+    """ This is a helper that fetches the configuration value for 'client' in
+    the [hdfs] section. It will return the client that retains backwards
+    compatibility when 'client' isn't configured. """
+    config = configuration.get_config()
+    custom = config.get("hdfs", "client", None)
+    if custom:
+        # Eventually this should be the only valid code path
+        return custom
+    if config.getboolean("hdfs", "use_snakebite", False):
+        warnings.warn("Deprecated: Just specify 'client: snakebite' in config")
+        return "snakebite"
+    warnings.warn("Deprecated: Specify 'client: hadoopcli' in config")
+    return "hadoopcli"  # The old default when not specified
+
+
+def create_hadoopcli_client():
+    """ Given that we want one of the hadoop cli clients (unlike snakebite),
+    this one will return the right one """
+    version = get_configured_hadoop_version()
+    if version == "cdh4":
+        return HdfsClient()
+    elif version == "cdh3":
+        return HdfsClientCdh3()
+    elif version == "apache1":
+        return HdfsClientApache1()
+    else:
+        raise Exception("Error: Unknown version specified in Hadoop version"
+                        "configuration parameter")
+
+if get_configured_hdfs_client() == "snakebite":
     client = SnakebiteHdfsClient()
-elif get_hdfs_syntax() == "cdh3":
-    client = HdfsClientCdh3()
-elif get_hdfs_syntax() == "apache1":
-    client = HdfsClientApache1()
+elif get_configured_hdfs_client() == "snakebite_with_hadoopcli_fallback":
+    client = luigi.contrib.target.CascadingClient([SnakebiteHdfsClient(),
+                                                   create_hadoopcli_client()])
+elif get_configured_hdfs_client() == "hadoopcli":
+    client = create_hadoopcli_client()
 else:
-    raise Exception("Error: Unknown version specified in Hadoop version configuration parameter")
+    raise Exception("Unknown hdfs client " + get_configured_hdfs_client())
 
 exists = client.exists
 rename = client.rename
@@ -562,7 +591,7 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         self.path = path
         self.tmppath = tmppath(self.path)
         tmpdir = os.path.dirname(self.tmppath)
-        if get_hdfs_syntax() == "cdh4":
+        if get_configured_hadoop_version() == "cdh4":
             if subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', '-p', tmpdir], close_fds=True).wait():
                 raise RuntimeError("Could not create directory: %s" % tmpdir)
         else:
