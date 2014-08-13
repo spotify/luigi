@@ -49,6 +49,7 @@ class Event:
     START = "event.core.start"
     FAILURE = "event.core.failure"
     SUCCESS = "event.core.success"
+    PROCESSING_TIME = "event.core.processing_time"
 
 
 class Worker(object):
@@ -254,7 +255,7 @@ class Worker(object):
                 self._validate_dependency(d)
                 task.trigger_event(Event.DEPENDENCY_DISCOVERED, task, d)
                 yield d # return additional tasks to add
-            
+
             deps = [d.task_id for d in deps]
 
         self._scheduled_tasks[task.task_id] = task
@@ -286,7 +287,11 @@ class Worker(object):
                 deps = 'dependency' if len(missing) == 1 else 'dependencies'
                 raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
             task.trigger_event(Event.START, task)
-            task.run()
+            t0 = time.time()
+            try:
+                task.run()
+            finally:
+                task.trigger_event(Event.PROCESSING_TIME, task, time.time() - t0)
             error_message = json.dumps(task.on_success())
             logger.info('[pid %s] Worker %s done      %s', os.getpid(), self._id, task_id)
             task.trigger_event(Event.SUCCESS, task)
