@@ -84,8 +84,8 @@ class TestEventCallbacks(TestCase):
         with patch('luigi.worker.time') as mock:
             mock.time = times.pop
             build([t], local_scheduler=True)
-        self.assertIs(self.result[0], t)
-        self.assertEqual(self.result[1], 42.0)
+        self.assertTrue(self.result[0] is t)
+        self.assertEquals(self.result[1], 42.0)
 
 
 #        A
