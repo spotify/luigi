@@ -188,8 +188,7 @@ class HdfsClient(FileSystem):
         call_check(cmd)
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
-        assert ((parents and raise_if_exists is not True) or
-                (not parents and raise_if_exists is not False))
+        assert not (parents and raise_if_exists)
         try:
             cmd = ([load_hadoop_cmd(), 'fs', '-mkdir'] +
                    (['-p'] if parents else []) +
@@ -197,7 +196,8 @@ class HdfsClient(FileSystem):
             call_check(cmd)
         except HDFSCliError, ex:
             if "File exists" in ex.stderr:
-                raise FileAlreadyExists(ex.stderr)
+                if raise_if_exists:
+                    raise FileAlreadyExists(ex.stderr)
             else:
                 raise
 
