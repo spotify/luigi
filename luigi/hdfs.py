@@ -188,7 +188,8 @@ class HdfsClient(FileSystem):
         call_check(cmd)
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
-        assert not (parents and raise_if_exists)
+        if (parents and raise_if_exists):
+            raise NotImplementedError("HdfsClient.mkdir can't raise with -p")
         try:
             cmd = ([load_hadoop_cmd(), 'fs', '-mkdir'] +
                    (['-p'] if parents else []) +
