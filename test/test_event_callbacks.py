@@ -1,4 +1,6 @@
 from unittest import TestCase
+from mock import patch
+import random
 from luigi import Task, build, Event
 from luigi.mock import MockFile, MockFileSystem
 from luigi.task import flatten
@@ -71,6 +73,19 @@ class TestEventCallbacks(TestCase):
         t = TaskWithCallback()
         build([t], local_scheduler=True)
         self.assertEquals(dummies[0], "foo")
+
+    def test_processing_time_handler(self):
+        @EmptyTask.event_handler(Event.PROCESSING_TIME)
+        def save_task(task, processing_time):
+            self.result = task, processing_time
+
+        times = [43.0, 1.0]
+        t = EmptyTask(random.choice([True, False]))
+        with patch('luigi.worker.time') as mock:
+            mock.time = times.pop
+            build([t], local_scheduler=True)
+        self.assertTrue(self.result[0] is t)
+        self.assertEquals(self.result[1], 42.0)
 
 
 #        A
