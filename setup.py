@@ -33,7 +33,7 @@ long_description = ''.join(long_description)
 
 setup(
     name='luigi',
-    version='1.0.16',
+    version='1.0.17',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='Erik Bernhardsson',
