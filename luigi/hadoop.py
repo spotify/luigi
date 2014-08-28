@@ -518,12 +518,16 @@ class BaseHadoopJobTask(luigi.Task):
     final_combiner = NotImplemented
     final_reducer = NotImplemented
 
+    mr_priority = NotImplemented
+
     _counter_dict = {}
     task_id = None
 
     def jobconfs(self):
         jcs = []
         jcs.append('mapred.job.name=%s' % self.task_id)
+        if self.mr_priority != NotImplemented:
+            jcs.append('mapred.job.priority=%s' % self.mr_priority())
         pool = self.pool
         if pool is not None:
             # Supporting two schedulers: fair (default) and capacity using the same option
