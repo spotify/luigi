@@ -337,13 +337,20 @@ class CentralPlannerScheduler(Scheduler):
             task = self._tasks.get(task_id)
             if task is None:
                 logger.warn('Missing task for id [%s]', task_id)
+
+                # try to infer family and params from task_id
+                try:
+                    family, _, param_str = task_id.rstrip(')').partition('(')
+                    params = dict(param.split('=') for param in param_str.split(', '))
+                except:
+                    family, params = '', {}
                 serialized[task_id] = {
                     'deps': [],
                     'status': UNKNOWN,
                     'workers': [],
                     'start_time': UNKNOWN,
-                    'params': task.params,
-                    'name': task.family
+                    'params': params,
+                    'name': family
                 }
             else:
                 serialized[task_id] = self._serialize_task(task_id)

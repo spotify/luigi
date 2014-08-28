@@ -55,6 +55,20 @@ class FactorTask(luigi.Task):
         return luigi.LocalTarget(os.path.join(tempdir, 'luigi_test_factor_%d' % self.product))
 
 
+class BadReqTask(luigi.Task):
+    succeed = luigi.BooleanParameter()
+
+    def requires(self):
+        assert self.succeed
+        yield BadReqTask(False)
+
+    def run(self):
+        pass
+
+    def complete(self):
+        return False
+
+
 class FailingTask(luigi.Task):
     task_id = luigi.Parameter()
 
@@ -162,6 +176,19 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         d5 = dep_graph[u'FactorTask(product=5)']
         self.assertEqual(sorted(d5[u'deps']), [])
+
+    def test_dep_graph_missing_deps(self):
+        self._build([BadReqTask(True)])
+        dep_graph = self._remote().dep_graph('BadReqTask(succeed=True)')
+        self.assertEqual(len(dep_graph), 2)
+
+        suc = dep_graph[u'BadReqTask(succeed=True)']
+        self.assertEqual(suc[u'deps'], [u'BadReqTask(succeed=False)'])
+
+        fail = dep_graph[u'BadReqTask(succeed=False)']
+        self.assertEqual(fail[u'name'], 'BadReqTask')
+        self.assertEqual(fail[u'params'], {'succeed': 'False'})
+        self.assertEqual(fail[u'status'], 'UNKNOWN')
 
     def test_dep_graph_diamond(self):
         self._build([FactorTask(12)])
