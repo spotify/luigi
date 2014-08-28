@@ -13,7 +13,6 @@
 # the License.
 
 import configuration
-import datetime
 import dateutils
 import json
 import logging
@@ -64,9 +63,9 @@ class SqsTaskHistory(task_history.TaskHistory):
         fields = {
                   'task_family': task.task_family,
                   'params': task.parameters,
-                  'status': status,
-                  'host': host,
-                  'ts': datetime.datetime.now()
+                  'status': task.status,
+                  'host': task.host,
+                  'timestamp': dateutils.utcnow().isoformat()
                  }
         text = json.dumps(fields)
         message = Message()
