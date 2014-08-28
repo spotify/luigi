@@ -64,6 +64,8 @@ class RPCHandler(tornado.web.RequestHandler):
         else:
             self.send_error(404)
 
+    post = get
+
 
 class BaseTaskHistoryHandler(tornado.web.RequestHandler):
     def initialize(self, api):

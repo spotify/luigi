@@ -47,12 +47,10 @@ class RemoteScheduler(Scheduler):
         time.sleep(30)
 
     def _request(self, url, data, log_exceptions=True, attempts=3):
-        # TODO(erikbern): do POST requests instead
         data = {'data': json.dumps(data)}
-        url = 'http://%s:%d%s?%s' % \
-            (self._host, self._port, url, urllib.urlencode(data))
+        url = 'http://%s:%d%s' % (self._host, self._port, url)
 
-        req = urllib2.Request(url)
+        req = urllib2.Request(url, urllib.urlencode(data))
         last_exception = None
         for attempt in xrange(attempts):
             if last_exception:
