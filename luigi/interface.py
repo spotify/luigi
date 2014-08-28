@@ -27,7 +27,6 @@ import re
 import argparse
 import sys
 import os
-import signal
 
 from task import Register
 
@@ -192,11 +191,6 @@ class Interface(object):
             success &= w.add(t)
         logger = logging.getLogger('luigi-interface')
         logger.info('Done scheduling tasks')
-
-        def handler(signum, frame):
-            w.graceful_shutdown()
-        signal.signal(signal.SIGTERM, handler)
-
         success &= w.run()
         w.stop()
         return success
