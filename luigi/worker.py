@@ -25,6 +25,7 @@ import logging
 import warnings
 import notifications
 import getpass
+import multiprocessing
 from target import Target
 from task import Task
 
@@ -50,6 +51,54 @@ class Event:
     FAILURE = "event.core.failure"
     SUCCESS = "event.core.success"
     PROCESSING_TIME = "event.core.processing_time"
+
+
+class TaskProcess(multiprocessing.Process):
+    ''' Wrap all task execution in this class.
+
+    Mainly for convenience since this is run in a separate process. '''
+    def __init__(self, task, worker_id, result_queue, random_seed=False):
+        super(TaskProcess, self).__init__()
+        self.task = task
+        self.worker_id = worker_id
+        self.result_queue = result_queue
+        self.random_seed = random_seed
+
+    def run(self):
+        logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task.task_id)
+
+        if self.random_seed:
+            # Need to have different random seeds if running in separate processes
+            random.seed((os.getpid(), time.time()))
+
+        try:
+            # Verify that all the tasks are fulfilled!
+            missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
+            if missing:
+                deps = 'dependency' if len(missing) == 1 else 'dependencies'
+                raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
+            self.task.trigger_event(Event.START, self.task)
+            t0 = time.time()
+            try:
+                self.task.run()
+            finally:
+                self.task.trigger_event(Event.PROCESSING_TIME, self.task, time.time() - t0)
+            error_message = json.dumps(self.task.on_success())
+            logger.info('[pid %s] Worker %s done      %s', os.getpid(), self.worker_id, self.task.task_id)
+            self.task.trigger_event(Event.SUCCESS, self.task)
+            status = DONE
+
+        except KeyboardInterrupt:
+            raise
+        except Exception as ex:
+            status = FAILED
+            logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
+            error_message = self.task.on_failure(ex)
+            self.task.trigger_event(Event.FAILURE, self.task, ex)
+            subject = "Luigi: %s FAILED" % self.task
+            notifications.send_error_email(subject, error_message)
+
+        self.result_queue.put((self.task.task_id, status, error_message, missing))
 
 
 class Worker(object):
@@ -88,12 +137,8 @@ class Worker(object):
 
         self._id = worker_id
         self._scheduler = scheduler
-        if (isinstance(scheduler, CentralPlannerScheduler)
-                and worker_processes != 1):
-            warnings.warn("Will only use one process when running with local in-process scheduler")
-            worker_processes = 1
 
-        self.worker_processes = worker_processes
+        self.worker_processes = int(worker_processes)
         self.host = socket.gethostname()
         self._scheduled_tasks = {}
 
@@ -124,6 +169,10 @@ class Worker(object):
         self._keep_alive_thread = KeepAliveThread()
         self._keep_alive_thread.daemon = True
         self._keep_alive_thread.start()
+
+        # Keep info about what tasks are running (could be in other processes)
+        self._task_result_queue = multiprocessing.Queue()
+        self._running_tasks = set()
 
     def stop(self):
         """ Stop the KeepAliveThread associated with this Worker
@@ -276,57 +325,6 @@ class Worker(object):
         if is_complete not in (True, False):
             raise Exception("Return value of Task.complete() must be boolean (was %r)" % is_complete)
 
-    def _run_task(self, task_id):
-        task = self._scheduled_tasks[task_id]
-
-        logger.info('[pid %s] Worker %s running   %s', os.getpid(), self._id, task_id)
-        try:
-            # Verify that all the tasks are fulfilled!
-            missing = [dep.task_id for dep in task.deps() if not dep.complete()]
-            if missing:
-                deps = 'dependency' if len(missing) == 1 else 'dependencies'
-                raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
-            task.trigger_event(Event.START, task)
-            t0 = time.time()
-            try:
-                task.run()
-            finally:
-                task.trigger_event(Event.PROCESSING_TIME, task, time.time() - t0)
-            error_message = json.dumps(task.on_success())
-            logger.info('[pid %s] Worker %s done      %s', os.getpid(), self._id, task_id)
-            task.trigger_event(Event.SUCCESS, task)
-            status = DONE
-
-        except KeyboardInterrupt:
-            raise
-        except Exception as ex:
-            status = FAILED
-            logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self._id, task)
-            error_message = task.on_failure(ex)
-            task.trigger_event(Event.FAILURE, task, ex)
-            subject = "Luigi: %s FAILED" % task
-            notifications.send_error_email(subject, error_message)
-
-        self._scheduler.add_task(self._id, task_id, status=status,
-                                 expl=error_message, runnable=None,
-                                 params=task.to_str_params(),
-                                 family=task.task_family)
-
-        # re-add task to reschedule missing dependencies
-        if missing:
-            reschedule = True
-
-            # keep out of infinite loops by not rescheduling too many times
-            for task_id in missing:
-                self.unfulfilled_counts[task_id] += 1
-                if self.unfulfilled_counts[task_id] > self.__max_reschedules:
-                    reschedule = False
-            if reschedule:
-                self.add(task)
-
-        self.run_succeeded &= status == DONE
-        return status
-
     def _add_worker(self):
         try:
             self._scheduler.add_worker(self._id, self._worker_info)
@@ -342,14 +340,6 @@ class Worker(object):
         elif n_pending_tasks:
             logger.info("There are %s pending tasks possibly being run by other workers", n_pending_tasks)
 
-    def _reap_children(self, children):
-        died_pid, status = os.wait()
-        if died_pid in children:
-            children.remove(died_pid)
-            self.run_succeeded &= status == 0
-        else:
-            logger.warning("Some random process %s died", died_pid)
-
     def _get_work(self):
         logger.debug("Asking scheduler for work...")
         r = self._scheduler.get_work(worker=self._id, host=self.host)
@@ -363,15 +353,42 @@ class Worker(object):
             running_tasks = r['running_tasks']
         return task_id, running_tasks, n_pending_tasks
 
-    def _fork_task(self, children, task_id):
-        child_pid = os.fork()
-        if child_pid:
-            children.add(child_pid)
+    def _run_task(self, task_id):
+        task = self._scheduled_tasks[task_id]
+        p = TaskProcess(task, self._id, self._task_result_queue, random_seed=bool(self.worker_processes > 1))
+        self._running_tasks.add(task_id)
+
+        if self.worker_processes > 1:
+            p.start()
         else:
-            # need to have different random seeds...
-            random.seed((os.getpid(), time.time()))
-            status = self._run_task(task_id)
-            os._exit(0 if status == DONE else 1)
+            # Run in the same process
+            p.run()
+
+    def _handle_next_done_task(self):
+        task_id, status, error_message, missing = self._task_result_queue.get()
+        self._running_tasks.remove(task_id)
+        self.run_succeeded &= (status == DONE)
+        task = self._scheduled_tasks[task_id]
+
+        self._scheduler.add_task(self._id, task.task_id, status=status,
+                                 expl=error_message, runnable=None,
+                                 params=task.to_str_params(),
+                                 family=task.task_family)
+
+        # re-add task to reschedule missing dependencies
+        if missing:
+            reschedule = True
+
+            # keep out of infinite loops by not rescheduling too many times
+            for task_id in missing:
+                self.unfulfilled_counts[task.task_id] += 1
+                if self.unfulfilled_counts[task.task_id] > self.__max_reschedules:
+                    reschedule = False
+            if reschedule:
+                self.add(task)
+
+        self.run_succeeded &= status == DONE
+        return status
 
     def _sleeper(self):
         # TODO is exponential backoff necessary?
@@ -383,38 +400,38 @@ class Worker(object):
 
     def run(self):
         """Returns True if all scheduled tasks were executed successfully"""
+        logger.info('Running Worker with %d processes', self.worker_processes)
 
-        children = set()
         sleeper  = self._sleeper()
         self.run_succeeded = True
 
         self._add_worker()
 
         while True:
-            while len(children) >= self.worker_processes:
-                self._reap_children(children)
+            while len(self._running_tasks) >= self.worker_processes:
+                logger.debug('%d running tasks, waiting for next task to finish', len(self._running_tasks))
+                self._handle_next_done_task()
 
             task_id, running_tasks, n_pending_tasks = self._get_work()
 
             if task_id is None:
                 self._log_remote_tasks(running_tasks, n_pending_tasks)
-                if not children:
-                    if self.__keep_alive and running_tasks and n_pending_tasks:
+                if len(self._running_tasks) == 0:
+                    if self.__keep_alive and n_pending_tasks:
                         sleeper.next()
                         continue
                     else:
                         break
                 else:
-                    self._reap_children(children)
+                    self._handle_next_done_task()
                     continue
 
             # task_id is not None:
             logger.debug("Pending tasks: %s", n_pending_tasks)
-            if self.worker_processes > 1:
-                self._fork_task(children, task_id)
-            else:
-                self._run_task(task_id)
+            self._run_task(task_id)
 
-        while children:
-            self._reap_children(children)
+        while len(self._running_tasks):
+            logger.debug('Shut down Worker, %d more tasks to go', len(self._running_tasks))
+            self._handle_next_done_task()
+
         return self.run_succeeded

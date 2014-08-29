@@ -66,8 +66,9 @@ class LockTest(unittest.TestCase):
         self.assertEquals(s.st_mode & 0777, 0777)
 
     def test_acquiring_lock_from_missing_process(self):
+        fake_pid = 99999
         with open(self.pid_file, 'w') as f:
-            f.write('%d\n' % (self.pid + 1, ))
+            f.write('%d\n' % (fake_pid, ))
 
         acquired = luigi.lock.acquire_for(self.pid_dir)
         self.assertTrue(acquired)
