@@ -8,7 +8,8 @@ Build-Depends:	debhelper (>= 7),
 		python-pip,
 		python-simplejson,
 		python-tornado (>= 2.3),
-		python-mock
+		python-mock,
+		python-ordereddict
 Standards-Version: 3.7.3
 X-Python-Version: >= 2.6
 
