@@ -139,13 +139,7 @@ def _init_api(sched, responder, api_port, address):
     api = responder or RemoteSchedulerResponder(sched)
     api_app = app(api)
     api_sockets = tornado.netutil.bind_sockets(api_port, address=address)
-    try:
-        # TODO: move the max_header_size argument once we've moved over to POST
-        server = tornado.httpserver.HTTPServer(api_app, max_header_size=2097152)
-    except TypeError:
-        warnings.warn('could not create HTTPServer, trying again without the max_header_size argument (are you running an older version of Tornado?)')
-        server = tornado.httpserver.HTTPServer(api_app)
-
+    server = tornado.httpserver.HTTPServer(api_app)
     server.add_sockets(api_sockets)
 
     # Return the bound socket names.  Useful for connecting client in test scenarios.
