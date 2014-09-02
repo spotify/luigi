@@ -35,7 +35,7 @@ def generate_email(sender, subject, message, recipients, image_png):
     return msg_root
 
 
-def notify_email(config, sender, subject, message, recipients, image_png):
+def send_email_smtp(config, sender, subject, message, recipients, image_png):
     import smtplib
 
     smtp_ssl = config.getboolean('core', 'smtp_ssl', False)
@@ -58,7 +58,7 @@ def notify_email(config, sender, subject, message, recipients, image_png):
     smtp.sendmail(sender, recipients, msg_root.as_string())
 
 
-def notify_ses(config, sender, subject, message, recipients, image_png):
+def send_email_ses(config, sender, subject, message, recipients, image_png):
     import boto.ses
     con = boto.ses.connect_to_region(config.get('email', 'region', 'us-east-1'),
                                      aws_access_key_id=config.get('email', 'AWS_ACCESS_KEY', None),
@@ -96,12 +96,10 @@ def send_email(subject, message, sender, recipients, image_png=None):
     # Replace original recipients with the clean list
     recipients = recipients_tmp
 
-    globals()["notify_%s" % (config.get('email', 'type', 'email'))](config,
-                                                                    sender,
-                                                                    subject,
-                                                                    message,
-                                                                    recipients,
-                                                                    image_png)
+    if config.get('email', 'type', None) == "ses":
+        send_email_ses(config, sender, subject, message, recipients, image_png)
+    else:
+        send_email_smtp(config, sender, subject, message, recipients, image_png)
 
 
 def send_error_email(subject, message):
