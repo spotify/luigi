@@ -243,35 +243,6 @@ else:
 client = default_client
 
 
-def _deprecated(message):
-    import warnings
-    warnings.warn(message=message, category=DeprecationWarning, stacklevel=2)
-
-
-def table_location(**kwargs):
-    """ Deprecated. Use an instance of client instead and call client.table_location """
-    _deprecated("luigi.hive.table_location is deprecated and will be removed soon, use hive.default_client or create a client instead")
-    return default_client.table_location(**kwargs)
-
-
-def table_exists(**kwargs):
-    """ Deprecated. Use an instance of client instead and call client.table_exists """
-    _deprecated("luigi.hive.table_exists is deprecated and will be removed soon, use hive.default_client or create a client instead")
-    return default_client.table_exists(**kwargs)
-
-
-def table_schema(**kwargs):
-    """ Deprecated. Use an instance of client instead and call client.table_schema """
-    _deprecated("luigi.hive.table_schema is deprecated and will be removed soon, use hive.default_client or create a client instead")
-    return default_client.table_schema(**kwargs)
-
-
-def partition_spec(**kwargs):
-    """ Deprecated. Use an instance of client instead and call client.partition_spec """
-    _deprecated("luigi.hive.partition_spec is deprecated and will be removed soon, use hive.default_client or create a client instead")
-    return default_client.partition_spec(**kwargs)
-
-
 class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
     """ Task to run a hive query """
     # by default, we let hive figure these out.
