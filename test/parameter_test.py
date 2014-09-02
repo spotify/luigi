@@ -142,32 +142,32 @@ class ParameterTest(EmailTest):
         self.assertEquals(f.not_a_param, "lol")
 
     def test_multibool(self):
-        luigi.run(['--local-scheduler', 'Bar', '--multibool', 'true', '--multibool', 'false'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Bar', '--multibool', 'true', '--multibool', 'false'])
         self.assertEquals(Bar._val, (True, False))
 
     def test_multibool_empty(self):
-        luigi.run(['--local-scheduler', 'Bar'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Bar'])
         self.assertEquals(Bar._val, tuple())
 
     def test_bool_false(self):
-        luigi.run(['--local-scheduler', 'Baz'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Baz'])
         self.assertEquals(Baz._val, False)
 
     def test_bool_true(self):
-        luigi.run(['--local-scheduler', 'Baz', '--bool'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Baz', '--bool'])
         self.assertEquals(Baz._val, True)
 
     def test_forgot_param(self):
-        self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', 'ForgotParam'],)
+        self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', '--no-lock', 'ForgotParam'],)
 
     @with_config(EMAIL_CONFIG)
     def test_forgot_param_in_dep(self):
         # A programmatic missing parameter will cause an error email to be sent
-        luigi.run(['--local-scheduler', 'ForgotParamDep'])
+        luigi.run(['--local-scheduler', '--no-lock', 'ForgotParamDep'])
         self.assertNotEquals(self.last_email, None)
 
     def test_default_param_cmdline(self):
-        luigi.run(['--local-scheduler', 'WithDefault'])
+        luigi.run(['--local-scheduler', '--no-lock', 'WithDefault'])
         self.assertEquals(WithDefault().x, 'xyz')
 
     def test_global_param_defaults(self):
@@ -176,36 +176,61 @@ class ParameterTest(EmailTest):
         self.assertEquals(h.global_bool_param, False)
 
     def test_global_param_cmdline(self):
-        luigi.run(['--local-scheduler', 'HasGlobalParam', '--x', 'xyz', '--global-param', '124'])
+        luigi.run(['--local-scheduler', '--no-lock', 'HasGlobalParam', '--x', 'xyz', '--global-param', '124'])
         h = HasGlobalParam(x='xyz')
         self.assertEquals(h.global_param, 124)
         self.assertEquals(h.global_bool_param, False)
 
     def test_global_param_override(self):
-        def f():
-            return HasGlobalParam(x='xyz', global_param=124)
-        self.assertRaises(luigi.parameter.ParameterException, f)  # can't override a global parameter
+        def assert_values(global_value):
+            a = HasGlobalParam(x='xyz')
+            self.assertEquals(a.global_param, global_value)
+
+            # Override global param using kwargs
+            b = HasGlobalParam(x='xyz', global_param=987)
+            self.assertEquals(b.global_param, 987)
+            
+            # Override global param using args
+            c = HasGlobalParam('xyz', 456)
+            self.assertEquals(c.global_param, 456)
+
+            # Clone and override global param
+            d = a.clone(global_param=654)
+            self.assertEquals(d.global_param, 654)
+            
+            # Make sure global variable didn't change
+            e = HasGlobalParam(x='xyz')
+            self.assertEquals(e.global_param, global_value)
+
+        HasGlobalParam.global_param.reset_global()
+        assert_values(123)
+
+        HasGlobalParam.global_param.set_global(124)
+        assert_values(124)
+
+        HasGlobalParam.global_param.reset_global()
+        assert_values(123)
 
     def test_global_param_dep_cmdline(self):
-        luigi.run(['--local-scheduler', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'])
+        luigi.run(['--local-scheduler', '--no-lock', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'])
         h = HasGlobalParam(x='xyz')
         self.assertEquals(h.global_param, 124)
         self.assertEquals(h.global_bool_param, False)
 
     def test_global_param_dep_cmdline_optparse(self):
-        luigi.run(['--local-scheduler', '--task', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'], use_optparse=True)
+        luigi.run(['--local-scheduler', '--no-lock', '--task', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'], use_optparse=True)
         h = HasGlobalParam(x='xyz')
         self.assertEquals(h.global_param, 124)
         self.assertEquals(h.global_bool_param, False)
 
     def test_global_param_dep_cmdline_bool(self):
-        luigi.run(['--local-scheduler', 'HasGlobalParamDep', '--x', 'xyz', '--global-bool-param'])
+        luigi.run(['--local-scheduler', '--no-lock', 'HasGlobalParamDep', '--x', 'xyz', '--global-bool-param'])
         h = HasGlobalParam(x='xyz')
         self.assertEquals(h.global_param, 123)
         self.assertEquals(h.global_bool_param, True)
 
     def test_global_param_shared(self):
-        luigi.run(['--local-scheduler', 'SharedGlobalParamA', '--shared-global-param', 'abc'])
+        luigi.run(['--local-scheduler', '--no-lock', 'SharedGlobalParamA', '--shared-global-param', 'abc'])
         b = SharedGlobalParamB()
         self.assertEquals(b.shared_global_param, 'abc')
 
