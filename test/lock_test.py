@@ -38,13 +38,10 @@ class LockTest(unittest.TestCase):
 
     def setUp(self):
         self.pid_dir = tempfile.mkdtemp()
-        self.pid = os.getpid()
-        self.cmd = luigi.lock.getpcmd(self.pid)
-        self.pidfile = os.path.join(self.pid_dir, hashlib.md5(self.cmd).hexdigest()) + '.pid'
+        self.pid, self.cmd, self.pid_file = luigi.lock.get_info(self.pid_dir)
 
     def tearDown(self):
-
-        os.remove(self.pidfile)
+        os.remove(self.pid_file)
         os.rmdir(self.pid_dir)
 
     def test_acquiring_free_lock(self):
@@ -52,22 +49,28 @@ class LockTest(unittest.TestCase):
         self.assertTrue(acquired)
 
     def test_acquiring_taken_lock(self):
-        with open(self.pidfile, 'w') as f:
+        with open(self.pid_file, 'w') as f:
             f.write('%d\n' % (self.pid, ))
 
         acquired = luigi.lock.acquire_for(self.pid_dir)
         self.assertFalse(acquired)
 
     def test_acquiring_partially_taken_lock(self):
-        with open(self.pidfile, 'w') as f:
+        with open(self.pid_file, 'w') as f:
             f.write('%d\n' % (self.pid, ))
 
         acquired = luigi.lock.acquire_for(self.pid_dir, 2)
         self.assertTrue(acquired)
 
+        s = os.stat(self.pid_file)
+        self.assertEquals(s.st_mode & 0777, 0777)
+
     def test_acquiring_lock_from_missing_process(self):
-        with open(self.pidfile, 'w') as f:
+        with open(self.pid_file, 'w') as f:
             f.write('%d\n' % (self.pid + 1, ))
 
         acquired = luigi.lock.acquire_for(self.pid_dir)
         self.assertTrue(acquired)
+
+        s = os.stat(self.pid_file)
+        self.assertEquals(s.st_mode & 0777, 0777)
