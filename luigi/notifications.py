@@ -9,6 +9,66 @@ DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.getfqdn()
 DEBUG = False
 
 
+def generate_email(sender, subject, message, recipients, image_png):
+    import email
+    import email.mime
+    import email.mime.multipart
+    import email.mime.text
+    import email.mime.image
+
+    msg_root = email.mime.multipart.MIMEMultipart('related')
+
+    msg_text = email.mime.text.MIMEText(message, 'plain')
+    msg_text.set_charset('utf-8')
+    msg_root.attach(msg_text)
+
+    if image_png:
+        fp = open(image_png, 'rb')
+        msg_image = email.mime.image.MIMEImage(fp.read(), 'png')
+        fp.close()
+        msg_root.attach(msg_image)
+
+    msg_root['Subject'] = subject
+    msg_root['From'] = sender
+    msg_root['To'] = ','.join(recipients)
+
+    return msg_root
+
+
+def notify_email(config, sender, subject, message, recipients, image_png):
+    import smtplib
+
+    smtp_ssl = config.getboolean('core', 'smtp_ssl', False)
+    smtp_host = config.get('core', 'smtp_host', 'localhost')
+    smtp_port = config.getint('core', 'smtp_port', 0)
+    smtp_local_hostname = config.get('core', 'smtp_local_hostname', None)
+    smtp_timeout = config.getfloat('core', 'smtp_timeout', None)
+    kwargs = dict(host=smtp_host, port=smtp_port, local_hostname=smtp_local_hostname)
+    if smtp_timeout:
+        kwargs['timeout'] = smtp_timeout
+
+    smtp_login = config.get('core', 'smtp_login', None)
+    smtp_password = config.get('core', 'smtp_password', None)
+    smtp = smtplib.SMTP(**kwargs) if not smtp_ssl else smtplib.SMTP_SSL(**kwargs)
+    if smtp_login and smtp_password:
+        smtp.login(smtp_login, smtp_password)
+
+    msg_root = generate_email(sender, subject, message, recipients, image_png)
+
+    smtp.sendmail(sender, recipients, msg_root.as_string())
+
+
+def notify_ses(config, sender, subject, message, recipients, image_png):
+    import boto.ses
+    con = boto.ses.connect_to_region(config.get('email', 'region', 'us-east-1'),
+                                     aws_access_key_id=config.get('email', 'AWS_ACCESS_KEY', None),
+                                     aws_secret_access_key=config.get('email', 'AWS_SECRET_KEY', None))
+    msg_root = generate_email(sender, subject, message, recipients, image_png)
+    con.send_raw_email(msg_root.as_string(),
+                       source=msg_root['From'],
+                       destinations=msg_root['To'])
+
+
 def send_email(subject, message, sender, recipients, image_png=None):
     subject = _prefix(subject)
     logger.debug("Emailing:\n"
@@ -36,53 +96,12 @@ def send_email(subject, message, sender, recipients, image_png=None):
     # Replace original recipients with the clean list
     recipients = recipients_tmp
 
-    if config.get('email', 'type', None) == "boto":
-        import boto
-        import boto.ses
-        con = boto.ses.connect_to_region(config.get('email', 'region', 'us-east-1'),
-                                         aws_access_key_id=config.get('email', 'AWS_ACCESS_KEY'),
-                                         aws_secret_access_key=config.get('email', 'AWS_SECRET_KEY'))
-        con.send_email(sender, subject, message, recipients)
-    else:
-        import smtplib
-        import email
-        import email.mime
-        import email.mime.multipart
-        import email.mime.text
-        import email.mime.image
-
-        smtp_ssl = config.getboolean('core', 'smtp_ssl', False)
-        smtp_host = config.get('core', 'smtp_host', 'localhost')
-        smtp_port = config.getint('core', 'smtp_port', 0)
-        smtp_local_hostname = config.get('core', 'smtp_local_hostname', None)
-        smtp_timeout = config.getfloat('core', 'smtp_timeout', None)
-        kwargs = dict(host=smtp_host, port=smtp_port, local_hostname=smtp_local_hostname)
-        if smtp_timeout:
-            kwargs['timeout'] = smtp_timeout
-
-        smtp_login = config.get('core', 'smtp_login', None)
-        smtp_password = config.get('core', 'smtp_password', None)
-        smtp = smtplib.SMTP(**kwargs) if not smtp_ssl else smtplib.SMTP_SSL(**kwargs)
-        if smtp_login and smtp_password:
-            smtp.login(smtp_login, smtp_password)
-
-        msg_root = email.mime.multipart.MIMEMultipart('related')
-
-        msg_text = email.mime.text.MIMEText(message, 'plain')
-        msg_text.set_charset('utf-8')
-        msg_root.attach(msg_text)
-
-        if image_png:
-            fp = open(image_png, 'rb')
-            msg_image = email.mime.image.MIMEImage(fp.read(), 'png')
-            fp.close()
-            msg_root.attach(msg_image)
-
-        msg_root['Subject'] = subject
-        msg_root['From'] = sender
-        msg_root['To'] = ','.join(recipients)
-
-        smtp.sendmail(sender, recipients, msg_root.as_string())
+    globals()["notify_%s" % (config.get('email', 'type', 'email'))](config,
+                                                                    sender,
+                                                                    subject,
+                                                                    message,
+                                                                    recipients,
+                                                                    image_png)
 
 
 def send_error_email(subject, message):
@@ -105,6 +124,7 @@ def send_error_email(subject, message):
         logger.info("Skipping error email. Set `error-email` in the `core` "
                     "section of the luigi config file to receive error "
                     "emails.")
+
 
 def _prefix(subject):
     """If the config has a special prefix for emails then this function adds
