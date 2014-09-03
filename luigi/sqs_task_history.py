@@ -30,10 +30,10 @@ logger = logging.getLogger('luigi-interface')
 class SqsTaskHistory(task_history.TaskHistory):
 
     def __init__(self):
-        config = configuration.get_config()
-        queue_name = config.get('task_history', 'sqs_queue_name')
-        aws_access_key_id  = config.get('task_history', 'aws_access_key_id')
-        aws_secret_access_key = config.get('task_history', 'aws_secret_access_key')
+        self.config = configuration.get_config()
+        queue_name = self.config.get('task_history', 'sqs_queue_name')
+        aws_access_key_id  = self.config.get('task_history', 'aws_access_key_id')
+        aws_secret_access_key = self.config.get('task_history', 'aws_secret_access_key')
 
         cx = SQSConnection(aws_access_key_id=aws_access_key_id,
                            aws_secret_access_key=aws_secret_access_key,
@@ -60,12 +60,14 @@ class SqsTaskHistory(task_history.TaskHistory):
         return task_history.Task(task_id, status, host)
 
     def _send_message(self, task):
+        self.config.reload()
         fields = {
                   'task_family': task.task_family,
                   'params': task.parameters,
                   'status': task.status,
                   'host': task.host,
-                  'timestamp': dateutils.utcnow().isoformat()
+                  'timestamp': dateutils.utcnow().isoformat(),
+                  'meta': self.config.items('meta')
                  }
         text = json.dumps(fields)
         message = Message()

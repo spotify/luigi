@@ -44,6 +44,12 @@ class LuigiConfigParser(ConfigParser):
                 raise
             return default
 
+    def items(self, section):
+        try:
+            return ConfigParser.items(self, section)
+        except NoSectionError:
+            return []
+
     def get(self, section, option, default=NO_DEFAULT):
         return self._get_with_default(ConfigParser.get, section, option, default)
 
