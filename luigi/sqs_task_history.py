@@ -43,23 +43,23 @@ class SqsTaskHistory(task_history.TaskHistory):
         if not self._queue:
             raise Exception('Unable to create sqs queue %s' % queue_name)
 
-    def task_scheduled(self, task_id):
+    def task_scheduled(self, task_id, worker_id):
         task = self._get_task(task_id, status=PENDING)
-        self._send_message(task)
+        self._send_message(task, worker_id)
 
-    def task_finished(self, task_id, successful):
+    def task_finished(self, task_id, successful, worker_id):
         status = DONE if successful else FAILED
         task = self._get_task(task_id, status=status)
-        self._send_message(task)
+        self._send_message(task, worker_id)
 
-    def task_started(self, task_id, worker_host):
+    def task_started(self, task_id, worker_host, worker_id):
         task = self._get_task(task_id, status=RUNNING, host=worker_host)
-        self._send_message(task)
+        self._send_message(task, worker_id)
 
     def _get_task(self, task_id, status, host=None):
         return task_history.Task(task_id, status, host)
 
-    def _send_message(self, task):
+    def _send_message(self, task, worker_id):
         self.config.reload()
         fields = {
                   'task_family': task.task_family,
@@ -67,7 +67,8 @@ class SqsTaskHistory(task_history.TaskHistory):
                   'status': task.status,
                   'host': task.host,
                   'timestamp': dateutils.utcnow().isoformat(),
-                  'meta': self.config.items('meta')
+                  'meta': self.config.items('meta'),
+                  'worker_id': worker_id
                  }
         text = json.dumps(fields)
         message = Message()

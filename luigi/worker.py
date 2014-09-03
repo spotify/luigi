@@ -58,10 +58,13 @@ class Worker(object):
     def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None,
                  worker_processes=1, ping_interval=None, keep_alive=None,
                  wait_interval=None):
+        config = configuration.get_config()
         if not worker_id:
             worker_id = 'worker-%09d' % random.randrange(0, 999999999)
 
-        config = configuration.get_config()
+            generated_worker_id = config.get('meta', 'generated_worker_id', None)
+            if generated_worker_id:
+                worker_id += '-%s' % generated_worker_id
 
         if ping_interval is None:
             ping_interval = config.getfloat('core', 'worker-ping-interval', 1.0)

@@ -182,7 +182,7 @@ class CentralPlannerScheduler(Scheduler):
 
         if expl is not None:
             task.expl = expl
-        self._update_task_history(task_id, status)
+        self._update_task_history(task_id, status, worker_id=worker)
 
     def get_work(self, worker, host=None):
         # TODO: remove any expired nodes
@@ -226,7 +226,7 @@ class CentralPlannerScheduler(Scheduler):
             t = self._tasks[best_task]
             t.status = RUNNING
             t.worker_running = worker
-            self._update_task_history(best_task, RUNNING, host=host)
+            self._update_task_history(best_task, RUNNING, host=host, worker_id=worker)
 
         return {'n_pending_tasks': locally_pending_tasks,
                 'task_id': best_task,
@@ -360,15 +360,15 @@ class CentralPlannerScheduler(Scheduler):
         else:
             return {"taskId": task_id, "error": ""}
 
-    def _update_task_history(self, task_id, status, host=None):
+    def _update_task_history(self, task_id, status, host=None, worker_id=None):
         try:
             if status == DONE or status == FAILED:
                 successful = (status == DONE)
-                self._task_history.task_finished(task_id, successful)
+                self._task_history.task_finished(task_id, successful, worker_id)
             elif status == PENDING:
-                self._task_history.task_scheduled(task_id)
+                self._task_history.task_scheduled(task_id, worker_id)
             elif status == RUNNING:
-                self._task_history.task_started(task_id, host)
+                self._task_history.task_started(task_id, host, worker_id)
         except:
             logger.warning("Error saving Task history", exc_info=1)
 

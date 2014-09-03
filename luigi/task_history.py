@@ -36,26 +36,26 @@ class TaskHistory(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def task_scheduled(self, task_id):
+    def task_scheduled(self, task_id, worker_id):
         pass
 
     @abc.abstractmethod
-    def task_finished(self, task_id, successful):
+    def task_finished(self, task_id, successful, worker_id):
         pass
 
     @abc.abstractmethod
-    def task_started(self, task_id, worker_host):
+    def task_started(self, task_id, worker_host, worker_id):
         pass
 
     # TODO(erikbern): should web method (find_latest_runs etc) be abstract?
 
 
 class NopHistory(TaskHistory):
-    def task_scheduled(self, task_id):
+    def task_scheduled(self, task_id, worker_id):
         pass
 
-    def task_finished(self, task_id, successful):
+    def task_finished(self, task_id, successful, worker_id):
         pass
 
-    def task_started(self, task_id, worker_host):
+    def task_started(self, task_id, worker_host, worker_id):
         pass

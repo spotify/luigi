@@ -55,16 +55,16 @@ class DbTaskHistory(task_history.TaskHistory):
         Base.metadata.create_all(self.engine)
         self.tasks = {}  # task_id -> TaskRecord
 
-    def task_scheduled(self, task_id):
+    def task_scheduled(self, task_id, worker_id):
         task = self._get_task(task_id, status=PENDING)
         self._add_task_event(task, TaskEvent(event_name=PENDING, ts=datetime.datetime.now()))
 
-    def task_finished(self, task_id, successful):
+    def task_finished(self, task_id, successful, worker_id):
         event_name = DONE if successful else FAILED
         task = self._get_task(task_id, status=event_name)
         self._add_task_event(task, TaskEvent(event_name=event_name, ts=datetime.datetime.now()))
 
-    def task_started(self, task_id, worker_host):
+    def task_started(self, task_id, worker_host, worker_id):
         task = self._get_task(task_id, status=RUNNING, host=worker_host)
         self._add_task_event(task, TaskEvent(event_name=RUNNING, ts=datetime.datetime.now()))
 
