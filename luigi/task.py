@@ -291,7 +291,7 @@ class Task(object):
         exc_desc = '%s[args=%s, kwargs=%s]' % (cls.__name__, args, kwargs)
 
         # Fill in the positional arguments
-        positional_params = [(n, p) for n, p in params if not p.is_global]
+        positional_params = [(n, p) for n, p in params]
         for i, arg in enumerate(args):
             if i >= len(positional_params):
                 raise parameter.UnknownParameterException('%s: takes at most %d parameters (%d given)' % (exc_desc, len(positional_params), len(args)))
@@ -304,8 +304,6 @@ class Task(object):
                 raise parameter.DuplicateParameterException('%s: parameter %s was already set as a positional parameter' % (exc_desc, param_name))
             if param_name not in params_dict:
                 raise parameter.UnknownParameterException('%s: unknown parameter %s' % (exc_desc, param_name))
-            if params_dict[param_name].is_global:
-                raise parameter.ParameterException('%s: can not override global parameter %s' % (exc_desc, param_name))
             result[param_name] = arg
 
         # Then use the defaults for anything not filled in
@@ -403,7 +401,7 @@ class Task(object):
             cls = self.__class__
         
         new_k = {}
-        for param_name, param_class in cls.get_nonglobal_params():
+        for param_name, param_class in cls.get_params():
             if param_name in k:
                 new_k[param_name] = k[param_name]
 

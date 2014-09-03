@@ -63,11 +63,13 @@ class Parameter(object):
     The ``config_path`` argument lets you specify a place where the parameter is read from config
     in case no value is provided.
 
-    Providing ``is_global=True`` changes the behavior of the parameter so that the value is shared
-    across all instances of the task. Global parameters can be provided in several ways. In
-    falling order of precedence:
+    Providing ``is_global=True`` adds the ability to set any parameter on the command line (or using
+    ``set_global``) - this value will be used when instantiating a task object as a default value.
 
-    * A value provided on the command line (eg. ``--my-global-value xyz``)
+    The value of a parameter is used when instantiating a task in this falling order of priority:
+
+    * A value provided when instantiating a task (eg. ``FooTask(my_value=43)``)
+    * A value provided on the command line (eg. ``--my-global-value xyz``) (this only applies to global variables)
     * A value provided via config (using the ``config_path`` argument)
     * A default value set using the ``default`` flag.
     """
