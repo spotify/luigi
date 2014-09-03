@@ -591,13 +591,7 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
     def __init__(self, path):
         self.path = path
         self.tmppath = tmppath(self.path)
-        tmpdir = os.path.dirname(self.tmppath)
-        if get_configured_hadoop_version() == "cdh4":
-            if subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', '-p', tmpdir], close_fds=True).wait():
-                raise RuntimeError("Could not create directory: %s" % tmpdir)
-        else:
-            if not exists(tmpdir) and subprocess.Popen([load_hadoop_cmd(), 'fs', '-mkdir', tmpdir], close_fds=True).wait():
-                raise RuntimeError("Could not create directory: %s" % tmpdir)
+        mkdir(os.path.dirname(self.tmppath), parents=True, raise_if_exists=True)
         super(HdfsAtomicWritePipe, self).__init__([load_hadoop_cmd(), 'fs', '-put', '-', self.tmppath])
 
     def abort(self):
