@@ -87,22 +87,22 @@ class CmdlineTest(unittest.TestCase):
 
     @mock.patch("logging.getLogger")
     def test_cmdline_main_task_cls(self, logger):
-        luigi.run(['--local-scheduler', '--n', '100'], main_task_cls=SomeTask)
-        self.assertEqual(MockFile._file_contents, {'/tmp/test_100': 'done'})
+        luigi.run(['--local-scheduler', '--no-lock', '--n', '100'], main_task_cls=SomeTask)
+        self.assertEqual(dict(MockFile._file_contents), {'/tmp/test_100': 'done'})
 
     @mock.patch("logging.getLogger")
     def test_cmdline_other_task(self, logger):
-        luigi.run(['--local-scheduler', 'SomeTask', '--n', '1000'])
-        self.assertEqual(MockFile._file_contents, {'/tmp/test_1000': 'done'})
+        luigi.run(['--local-scheduler', '--no-lock', 'SomeTask', '--n', '1000'])
+        self.assertEqual(dict(MockFile._file_contents), {'/tmp/test_1000': 'done'})
 
     @mock.patch("logging.getLogger")
     def test_cmdline_ambiguous_class(self, logger):
-        self.assertRaises(Exception, luigi.run, ['--local-scheduler', 'AmbiguousClass'])
+        self.assertRaises(Exception, luigi.run, ['--local-scheduler', '--no-lock', 'AmbiguousClass'])
 
     @mock.patch("logging.getLogger")
     @mock.patch("warnings.warn")
     def test_cmdline_non_ambiguous_class(self, warn, logger):
-        luigi.run(['--local-scheduler', 'NonAmbiguousClass'])
+        luigi.run(['--local-scheduler', '--no-lock', 'NonAmbiguousClass'])
         self.assertTrue(NonAmbiguousClass.has_run)
 
     @mock.patch("logging.getLogger")
@@ -121,7 +121,7 @@ class CmdlineTest(unittest.TestCase):
     def test_cmdline_logger(self, setup_mock, warn):
         with mock.patch("luigi.interface.EnvironmentParamsContainer.env_params") as env_params:
             env_params.return_value.logging_conf_file = None
-            luigi.run(['Task', '--local-scheduler'])
+            luigi.run(['SomeTask', '--n', '7', '--local-scheduler', '--no-lock'])
             self.assertEqual([mock.call(None)], setup_mock.call_args_list)
 
         with mock.patch("luigi.configuration.get_config") as getconf:
@@ -129,16 +129,16 @@ class CmdlineTest(unittest.TestCase):
             getconf.return_value.get_boolean.return_value = True
 
             luigi.interface.setup_interface_logging.call_args_list = []
-            luigi.run(['Task', '--local-scheduler'])
+            luigi.run(['SomeTask', '--n', '42', '--local-scheduler', '--no-lock'])
             self.assertEqual([], setup_mock.call_args_list)
 
     @mock.patch('argparse.ArgumentParser.print_usage')
     def test_non_existent_class(self, print_usage):
-        self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', 'XYZ'])
+        self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', '--no-lock', 'XYZ'])
 
     def test_bin_luigi(self):
         t = luigi.LocalTarget(is_tmp=True)
-        cmd = ['./bin/luigi', '--module', 'cmdline_test', 'WriteToFile', '--filename', t.path, '--local-scheduler']
+        cmd = ['./bin/luigi', '--module', 'cmdline_test', 'WriteToFile', '--filename', t.path, '--local-scheduler', '--no-lock']
         env = os.environ.copy()
         env['PYTHONPATH'] = env.get('PYTHONPATH', '') + ':.:test'
         subprocess.check_call(cmd, env=env, stderr=subprocess.STDOUT)
