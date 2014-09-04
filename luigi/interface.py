@@ -22,6 +22,7 @@ import scheduler
 import warnings
 import configuration
 import task
+import luigi_state
 import parameter
 import re
 import argparse
@@ -187,10 +188,12 @@ class Interface(object):
             scheduler=sch, worker_processes=env_params.workers)
 
         success = True
+        luigi_state.set_state(luigi_state.SCHEDULING)
         for t in tasks:
             success &= w.add(t)
         logger = logging.getLogger('luigi-interface')
         logger.info('Done scheduling tasks')
+        luigi_state.set_state(luigi_state.RUNNING)
         success &= w.run()
         w.stop()
         return success
