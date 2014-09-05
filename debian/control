@@ -9,7 +9,8 @@ Build-Depends:	debhelper (>= 7),
 		python-simplejson,
 		python-tornado (>= 2.3),
 		python-mock,
-		python-ordereddict
+		python-ordereddict,
+		openssh-client
 Standards-Version: 3.7.3
 X-Python-Version: >= 2.6
 
