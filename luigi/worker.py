@@ -25,6 +25,7 @@ import warnings
 import notifications
 from target import Target
 from task import Task
+import worker_history
 
 try:
     import simplejson as json
@@ -65,6 +66,14 @@ class Worker(object):
             generated_worker_id = config.get('meta', 'generated_worker_id', None)
             if generated_worker_id:
                 worker_id += '-%s' % generated_worker_id
+
+        if config.getboolean('worker_history', 'record_worker_history_sqs', False):
+            import sqs_history # Needs boto, thus imported here
+            self._worker_history_impl = sqs_history.SqsWorkerHistory()
+        else:
+            self._worker_history_impl = worker_history.NopWorkerHistory()
+
+
 
         if ping_interval is None:
             ping_interval = config.getfloat('core', 'worker-ping-interval', 1.0)
@@ -113,6 +122,7 @@ class Worker(object):
                     except:  # httplib.BadStatusLine:
                         logger.warning('Failed pinging scheduler')
 
+        self._worker_history_impl.worker_started(worker_id)
         self._keep_alive_thread = KeepAliveThread()
         self._keep_alive_thread.daemon = True
         self._keep_alive_thread.start()
@@ -128,6 +138,7 @@ class Worker(object):
         TODO (maybe): Worker should be/have a context manager to enforce calling this
             whenever you stop using a Worker instance
         """
+        self._worker_history_impl.worker_stopped(self._id)
         self._keep_alive_thread.stop()
         self._keep_alive_thread.join()
 
