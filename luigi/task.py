@@ -17,6 +17,7 @@ import logging
 import parameter
 import warnings
 import traceback
+import pyparsing as pp
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -33,24 +34,59 @@ def namespace(namespace=None):
     Register._default_namespace = namespace
 
 
+def id_to_parsable(task_id):
+    """ Turns a task_id into a tuple of task name and parameters formated to
+        be parsable by interface.ArgParseInterface.
+
+        E.g. "Foo(bar=bar, baz=baz)" returns
+        ('Foo', ['--bar', 'bar', '--baz', 'baz'])
+
+    """
+    task_name, params = id_to_name_and_params(task_id)
+    parsable_params = []
+    for name, param in params.items():
+        name_arg = '--' + name.replace('_', '-')
+        if isinstance(param, list):
+            for p in param:
+                parsable_params.extend([name_arg, p])
+        else:
+            parsable_params.extend([name_arg, param])
+    return task_name, parsable_params
+
+
 def id_to_name_and_params(task_id):
     ''' Turn a task_id into a (task_family, {params}) tuple.
         E.g. calling with ``Foo(bar=bar, baz=baz)`` returns
         ``('Foo', {'bar': 'bar', 'baz': 'baz'})``
     '''
-    lparen = task_id.index('(')
-    task_family = task_id[:lparen]
-    params = task_id[lparen + 1:-1]
+    name_chars = pp.alphanums + '_'
+    parameter = (
+        (pp.Word(name_chars) +
+         pp.Literal('=').suppress() +
+         ((pp.Literal('(').suppress() | pp.Literal('[').suppress()) +
+          pp.ZeroOrMore(pp.Word(name_chars) +
+                        pp.ZeroOrMore(pp.Literal(',')).suppress()) +
+          (pp.Literal(')').suppress() |
+           pp.Literal(']').suppress()))).setResultsName('list_params',
+                                                        listAllMatches=True) |
+        (pp.Word(name_chars) +
+         pp.Literal('=').suppress() +
+         pp.Word(name_chars)).setResultsName('params', listAllMatches=True))
 
-    def split_equals(x):
-        equals = x.index('=')
-        return x[:equals], x[equals + 1:]
-    if params:
-        param_list = map(split_equals, params.split(', '))  # TODO: param values with ', ' in them will break this
-    else:
-        param_list = []
-    return task_family, dict(param_list)
+    parser = (
+        pp.Word(name_chars).setResultsName('task') +
+        pp.Literal('(').suppress() +
+        pp.ZeroOrMore(parameter + (pp.Literal(',')).suppress()) +
+        pp.ZeroOrMore(parameter) +
+        pp.Literal(')').suppress())
 
+    parsed = parser.parseString(task_id).asDict()
+    task_name = parsed['task']
+
+    params = {k: v for k, v in parsed['params']} if 'params' in parsed else {}
+    if 'list_params' in parsed:
+        params.update({x[0]: x[1:] for x in parsed['list_params']})
+    return task_name, params
 
 
 class Register(abc.ABCMeta):
