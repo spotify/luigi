@@ -97,7 +97,13 @@ class SqsWorkerHistory(SqsHistory, worker_history.WorkerHistory):
       self._config(queue_name, aws_access_key_id, aws_secret_access_key)
 
     def worker_started(self, worker_id):
-        pass
+        fields = {
+          'event': 'WORKER_STARTED',
+          'timestamp': dateutils.utcnow().isoformat(),
+          'meta': self.config.items('meta'),
+          'worker_id': worker_id
+        }
+        self._send_message(fields)
 
     def worker_stopped(self, worker_id):
         fields = {
