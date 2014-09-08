@@ -77,14 +77,12 @@ class HiveCommandClientTest(unittest.TestCase):
 
     @mock.patch("luigi.hive.run_hive_cmd")
     def test_table_exists(self, run_command):
-        run_command.return_value = "FAILED: SemanticException [Error 10001]: blah does not exist\nSome other stuff"
+        run_command.return_value = "OK"
         returned = self.client.table_exists("mytable")
         self.assertFalse(returned)
 
         run_command.return_value = "OK\n" \
-                                   "col1       	string              	None                \n" \
-                                   "col2            	string              	None                \n" \
-                                   "col3         	string              	None  \n"
+                                   "mytable"
         returned = self.client.table_exists("mytable")
         self.assertTrue(returned)
 
@@ -139,14 +137,12 @@ class HiveCommandClientTest(unittest.TestCase):
 
     @mock.patch("luigi.hive.run_hive_cmd")
     def test_apacheclient_table_exists(self, run_command):
-        run_command.return_value = "FAILED: SemanticException [Error 10001]: Table not found mytable\nSome other stuff"
+        run_command.return_value = "OK"
         returned = self.apacheclient.table_exists("mytable")
         self.assertFalse(returned)
 
         run_command.return_value = "OK\n" \
-                                   "col1       	string              	None                \n" \
-                                   "col2            	string              	None                \n" \
-                                   "col3         	string              	None  \n"
+                                   "mytable"
         returned = self.apacheclient.table_exists("mytable")
         self.assertTrue(returned)
 
