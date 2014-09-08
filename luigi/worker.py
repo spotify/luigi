@@ -31,7 +31,7 @@ import Queue
 import luigi.interface
 import sys
 import types
-from importlib import import_module
+import interface
 from target import Target
 from task import Task, flatten, id_to_parsable
 from event import Event
@@ -69,6 +69,7 @@ class TaskProcess(multiprocessing.Process):
         status = FAILED
         error_message = ''
         missing = []
+        new_deps = []
         try:
             # Verify that all the tasks are fulfilled!
             missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
@@ -85,10 +86,12 @@ class TaskProcess(multiprocessing.Process):
                         new_req = flatten(requires)
                         status = (RUNNING if all(t.complete() for t in new_req)
                                   else SUSPENDED)
-                        new_deps = [t.task_id for t in new_req]
-                        self.result_queue.put(
-                            (self.task.task_id, status, '', missing, new_deps))
+                        new_deps = [(t.task_family, t.to_str_params())
+                                    for t in new_req]
                         if status == RUNNING:
+                            self.result_queue.put(
+                                (self.task.task_id, status, '', missing,
+                                 new_deps))
                             continue
                         logger.info(
                             '[pid %s] Worker %s new requirements      %s',
@@ -115,7 +118,7 @@ class TaskProcess(multiprocessing.Process):
             notifications.send_error_email(subject, error_message)
         finally:
             self.result_queue.put(
-                (self.task.task_id, status, error_message, missing, []))
+                (self.task.task_id, status, error_message, missing, new_deps))
 
 
 class Worker(object):
@@ -394,7 +397,7 @@ class Worker(object):
                 self._task_result_queue.put(
                         (task_id, FAILED, error_msg, [], []))
 
-    def _get_subtask(self, parent_task, task_id):
+    def _get_subtask(self, parent_task, task_name, params):
         """ Imports task and uses ArgParseInterface to initialize it
         """
         # How the module is represented depends on if Luigi was started from
@@ -403,15 +406,10 @@ class Worker(object):
         if '__main__' == module.__name__:
             parent_module_path = module.__file__
             ending = parent_module_path.rfind('.py')
-            import_path = parent_module_path[:ending].replace('/', '.')
+            actual_module = parent_module_path[:ending].replace('/', '.')
         else:
-            import_path = module.__name__
-
-        task_name, parameters = id_to_parsable(task_id)
-        Task = getattr(import_module(import_path), task_name)
-
-        interface = luigi.interface.ArgParseInterface()
-        return interface.parse(parameters, Task)[0]
+            actual_module = module.__name__
+        return interface.init_task(actual_module, task_name, params, {})
 
     def _handle_next_task(self):
         ''' We have to catch three ways a task can be "done"
@@ -425,7 +423,7 @@ class Worker(object):
             self._purge_children()  # Deal with subprocess failures
 
             try:
-                task_id, status, error_message, missing, new_deps = (
+                task_id, status, error_message, missing, new_requirements = (
                     self._task_result_queue.get(
                         timeout=float(self.__wait_interval)))
             except Queue.Empty:
@@ -433,15 +431,16 @@ class Worker(object):
 
             task = self._scheduled_tasks[task_id]
             if not task:
-                conti
+                continue
                 # Not a scheduled task. Probably already removed.
                 # Maybe it yielded something?
-            if new_deps:
-
-                new_req = [self._get_subtask(task, new_task_id)
-                           for new_task_id in new_deps]
+            new_deps = []
+            if new_requirements:
+                new_req = [self._get_subtask(task, name, params)
+                           for name, params in new_requirements]
                 for t in new_req:
                     self.add(t)
+                new_deps = [t.task_id for t in new_req]
             self._scheduler.add_task(self._id,
                                      task_id,
                                      status=status,
@@ -484,7 +483,7 @@ class Worker(object):
         """Returns True if all scheduled tasks were executed successfully"""
         logger.info('Running Worker with %d processes', self.worker_processes)
 
-        sleeper  = self._sleeper()
+        sleeper = self._sleeper()
         self.run_succeeded = True
 
         self._add_worker()

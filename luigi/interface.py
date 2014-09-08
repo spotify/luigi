@@ -27,7 +27,7 @@ import re
 import argparse
 import sys
 import os
-
+from importlib import import_module
 from task import Register
 
 
@@ -56,6 +56,12 @@ def setup_interface_logging(conf_file=None):
 def get_config():
     warnings.warn('Use luigi.configuration.get_config() instead')
     return configuration.get_config()
+
+
+def init_task(module, task, str_params, global_str_params):
+    Task = getattr(import_module(module), task)
+
+    return Task.from_str_params(str_params, global_str_params)
 
 
 class EnvironmentParamsContainer(task.Task):
