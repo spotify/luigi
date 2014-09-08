@@ -116,8 +116,14 @@ class CmdlineTest(unittest.TestCase):
         self.assertEqual([mock.call(None)], setup_mock.call_args_list)
 
         with mock.patch("luigi.configuration.get_config") as getconf:
+            def get_boolean_side_effect(section, option, default=None):
+                if section == 'worker_history':
+                    return False
+                else:
+                    return True
+
             getconf.return_value.get.return_value = None
-            getconf.return_value.get_boolean.return_value = True
+            getconf.return_value.getboolean.side_effect = get_boolean_side_effect
 
             luigi.interface.setup_interface_logging.call_args_list = []
             luigi.run(['Task', '--local-scheduler'])

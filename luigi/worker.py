@@ -74,7 +74,6 @@ class Worker(object):
             self._worker_history_impl = worker_history.NopWorkerHistory()
 
 
-
         if ping_interval is None:
             ping_interval = config.getfloat('core', 'worker-ping-interval', 1.0)
 
