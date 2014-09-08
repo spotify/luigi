@@ -2,7 +2,7 @@ language: python
 python:
   - "2.7"
   - "2.6"
-install: 
+install:
   - pip install tornado --use-mirrors
   - pip install argparse --use-mirrors
   - pip install sqlalchemy --use-mirrors
@@ -10,4 +10,5 @@ install:
   - pip install boto --use-mirrors
   - pip install moto --use-mirrors
   - pip install ordereddict --use-mirrors
+  - pip install pyparsing --use-mirrors
 script: nosetests -v
