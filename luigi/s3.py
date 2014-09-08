@@ -17,10 +17,8 @@ import os
 import os.path
 import random
 import tempfile
+import warnings
 import urlparse
-
-import boto
-from boto.s3.key import Key
 
 import configuration
 from ConfigParser import NoSectionError, NoOptionError
@@ -31,12 +29,20 @@ from luigi.target import FileSystemException
 from luigi.task import ExternalTask
 from luigi.format import FileWrapper
 
+logger = logging.getLogger('luigi-interface')
+
+try:
+    import boto
+    from boto.s3.key import Key
+except ImportError:
+    logger.warning("Loading s3 module without boto installed. Will crash at runtime if s3 functionality is used.")
+
+
 # two different ways of marking a directory
 # with a suffix in S3
 S3_DIRECTORY_MARKER_SUFFIX_0 = '_$folder$'
 S3_DIRECTORY_MARKER_SUFFIX_1 = '/'
 
-logger = logging.getLogger('luigi-interface')
 
 class InvalidDeleteException(FileSystemException):
     pass

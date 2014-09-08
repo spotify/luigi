@@ -5,10 +5,18 @@ luigi.hdfs whenever possible.
 """
 import datetime
 import configuration
+import logging
 import os
 import posixpath
 import urlparse
-import whoops
+
+logger = logging.getLogger("luigi-interface")
+
+try:
+    import whoops
+except ImportError:
+    logger.warning("Loading webhdfs module without whoops installed. Will crash at runtime if webhdfs functionality is used.")
+
 
 
 def get_whoops_defaults(config=None):
@@ -60,10 +68,6 @@ class WebHdfsClient(object):
     use the client, you must specify `namenode_host` and `namenode_port` in the `hdfs` section of
     your luigi configuration."""
 
-    def __init__(self):
-        "Configures _homedir so that we can handle relative paths"
-        self._homedir = get_whoops("/").home()
-
     def _make_absolute(self, inpath):
         """Makes the given path absolute if it's not already. It is assumed that the path is
         relative to self._homedir"""
@@ -72,7 +76,7 @@ class WebHdfsClient(object):
         if scheme or posixpath.isabs(path):
             # if a scheme is specified, assume it's absolute.
             return path
-        return posixpath.join(self._homedir, path)
+        return posixpath.join(get_whoops("/").home(), path)
 
     def exists(self, path):
         """Returns true if the path exists and false otherwise"""
