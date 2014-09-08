@@ -374,7 +374,7 @@ class OptParseInterface(Interface):
             description = [param_name]
             if param.description:
                 description.append(param.description)
-            if param.has_default:
+            if param.has_value:
                 description.append(" [default: %s]" % (param.default,))
 
             if param.is_list:

@@ -241,7 +241,7 @@ class Parameter(object):
         :raises MissingParameterException: if x is false-y and no default is specified.
         """
         if not x:
-            if self.has_default:
+            if self.has_value:
                 return self.default
             elif self.is_boolean:
                 return False
