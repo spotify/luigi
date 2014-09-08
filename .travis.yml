@@ -11,4 +11,5 @@ install:
   - pip install moto --use-mirrors
   - pip install ordereddict --use-mirrors
   - pip install pyparsing --use-mirrors
+  - pip install importlib --use-mirrors
 script: nosetests -v

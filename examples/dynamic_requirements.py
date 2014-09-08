@@ -7,7 +7,7 @@ class Config(luigi.Task):
     seed = luigi.IntParameter()
 
     def output(self):
-        return luigi.LocalTarget('/tmp/Config_{}.txt'.format(self.seed))
+        return luigi.LocalTarget('/tmp/Config_%d.txt' % self.seed)
 
     def run(self):
         time.sleep(5)
@@ -23,8 +23,7 @@ class Data(luigi.Task):
     magic_numer = luigi.IntParameter()
 
     def output(self):
-        return luigi.LocalTarget('/tmp/Data_{}.txt'.format(
-            self.magic_numer))
+        return luigi.LocalTarget('/tmp/Data_%d.txt' % self.magic_numer)
 
     def run(self):
         time.sleep(1)
@@ -36,7 +35,7 @@ class Dynamic(luigi.Task):
     seed = luigi.IntParameter(default=1)
 
     def output(self):
-        return luigi.LocalTarget('/tmp/Dynamic_{}.txt'.format(self.seed))
+        return luigi.LocalTarget('/tmp/Dynamic_%d.txt' % self.seed)
 
     def run(self):
         # This could be done using regular requires method

@@ -83,9 +83,13 @@ def id_to_name_and_params(task_id):
     parsed = parser.parseString(task_id).asDict()
     task_name = parsed['task']
 
-    params = {k: v for k, v in parsed['params']} if 'params' in parsed else {}
+    params = {}
+    if 'params' in parsed:
+        for k, v in parsed['params']:
+            params[k] = v
     if 'list_params' in parsed:
-        params.update({x[0]: x[1:] for x in parsed['list_params']})
+        for x in parsed['list_params']:
+            params[x[0]] = x[1:]
     return task_name, params
 
 
