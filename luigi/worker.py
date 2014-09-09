@@ -60,6 +60,9 @@ class TaskProcess(multiprocessing.Process):
             # Need to have different random seeds if running in separate processes
             random.seed((os.getpid(), time.time()))
 
+        status = FAILED
+        error_message = ''
+        missing = []
         try:
             # Verify that all the tasks are fulfilled!
             missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
