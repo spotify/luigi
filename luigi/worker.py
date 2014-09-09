@@ -25,9 +25,10 @@ import logging
 import warnings
 import notifications
 import getpass
-import multiprocessing
+import multiprocessing # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
 from target import Target
 from task import Task
+from event import Event
 
 try:
     import simplejson as json
@@ -39,18 +40,6 @@ logger = logging.getLogger('luigi-interface')
 
 class TaskException(Exception):
     pass
-
-
-class Event:
-    # TODO nice descriptive subclasses of Event instead of strings? pass their instances to the callback instead of an undocumented arg list?
-    DEPENDENCY_DISCOVERED = "event.core.dependency.discovered"  # triggered for every (task, upstream task) pair discovered in a jobflow
-    DEPENDENCY_MISSING = "event.core.dependency.missing"
-    DEPENDENCY_PRESENT = "event.core.dependency.present"
-    BROKEN_TASK = "event.core.task.broken"
-    START = "event.core.start"
-    FAILURE = "event.core.failure"
-    SUCCESS = "event.core.success"
-    PROCESSING_TIME = "event.core.processing_time"
 
 
 class TaskProcess(multiprocessing.Process):
