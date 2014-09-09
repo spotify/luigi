@@ -79,15 +79,16 @@ class TaskProcess(multiprocessing.Process):
 
         except KeyboardInterrupt:
             raise
-        except Exception as ex:
+        except BaseException as ex:
             status = FAILED
             logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
             error_message = self.task.on_failure(ex)
             self.task.trigger_event(Event.FAILURE, self.task, ex)
             subject = "Luigi: %s FAILED" % self.task
             notifications.send_error_email(subject, error_message)
-
-        self.result_queue.put((self.task.task_id, status, error_message, missing))
+        finally:
+            self.result_queue.put(
+                (self.task.task_id, status, error_message, missing))
 
 
 class Worker(object):
