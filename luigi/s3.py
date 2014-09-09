@@ -188,6 +188,38 @@ class S3Client(FileSystem):
         for item in s3_bucket.list(prefix=key_path):
             yield item.key[key_path_len:]
 
+    def mkdir(self, path, parents=True, raise_if_exists=False):
+        """ Create directory at location ``path``
+
+        Creates the directory at ``path`` and implicitly create parent
+        directories if they do not already exist.
+
+        :param str path: a path within the FileSystem to create as a directory.
+        :param bool parents: Create parent directories when necessary. When
+                             parents=False and the parent directory doesn't
+                             exist, raise luigi.target.MissingParentDirectory
+        :param bool raise_if_exists: raise luigi.target.FileAlreadyExists if
+                                     the folder already exists.
+
+        *Note*: This method is optional, not all FileSystem subclasses implements it.
+        *Note*: parents and raise_if_exists were added in August 2014. Some
+                implementations might not support these flags yet.
+
+        """
+        if self.exists(path):
+            logger.debug('Cannot create directory %s; path already exists', path)
+            return False
+
+        (bucket, key) = self._path_to_bucket_and_key(path)
+
+        s3_bucket = self.s3.get_bucket(bucket, validate=True)
+
+        s3_key = s3_bucket.new_key(key + S3_DIRECTORY_MARKER_SUFFIX_0)
+        s3_key.set_contents_from_string('')
+        s3_key.close()
+
+        return True
+        
     def is_dir(self, path):
         """
         Is the parameter S3 path a directory?
