@@ -60,6 +60,9 @@ class TaskProcess(multiprocessing.Process):
             # Need to have different random seeds if running in separate processes
             random.seed((os.getpid(), time.time()))
 
+        status = FAILED
+        error_message = ''
+        missing = []
         try:
             # Verify that all the tasks are fulfilled!
             missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
@@ -79,15 +82,16 @@ class TaskProcess(multiprocessing.Process):
 
         except KeyboardInterrupt:
             raise
-        except Exception as ex:
+        except BaseException as ex:
             status = FAILED
             logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
             error_message = self.task.on_failure(ex)
             self.task.trigger_event(Event.FAILURE, self.task, ex)
             subject = "Luigi: %s FAILED" % self.task
             notifications.send_error_email(subject, error_message)
-
-        self.result_queue.put((self.task.task_id, status, error_message, missing))
+        finally:
+            self.result_queue.put(
+                (self.task.task_id, status, error_message, missing))
 
 
 class Worker(object):
