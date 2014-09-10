@@ -1,4 +1,4 @@
-# Copyright (c) 2014 Mortar Data Inc
+# Copyright (c) 2014 Mortar Data, Inc
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -12,25 +12,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import abc
-
-
-class WorkerHistory(object):
-    ''' Abstract Base Class for updating the run history of a worker
-    '''
-    __metaclass__ = abc.ABCMeta
-
-    @abc.abstractmethod
-    def worker_started(self, worker_id):
-        pass
-
-    @abc.abstractmethod
-    def worker_stopped(self, worker_id):
-        pass
-
-class NopWorkerHistory(WorkerHistory):
-    def worker_started(self, worker_id):
-        pass
-
-    def worker_stopped(self, worker_id):
-        pass
+''' Possible values for a Worker's status
+'''
+STARTED = 'STARTED'
+STOPPED = 'STOPPED'

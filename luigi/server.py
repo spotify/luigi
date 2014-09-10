@@ -42,7 +42,7 @@ def _create_scheduler():
         import db_task_history  # Needs sqlalchemy, thus imported here
         task_history_impl = db_task_history.DbTaskHistory()
     elif config.getboolean('scheduler', 'record_task_history_sqs', False):
-        import sqs_history # Needs boto, thus imported here
+        import sqs_history # Needs boto, dateutil, thus imported here
         task_history_impl = sqs_history.SqsTaskHistory()
     else:
         task_history_impl = task_history.NopHistory()

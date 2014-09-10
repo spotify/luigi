@@ -29,7 +29,6 @@ class SimpleTaskHistory(luigi.task_history.TaskHistory):
     def task_started(self, task_id, worker_host, worker_id):
         self.actions.append(('started', task_id, worker_id))
 
-
 class TaskHistoryTest(unittest.TestCase):
     def setUp(self):
         self.th = SimpleTaskHistory()
@@ -51,7 +50,6 @@ class TaskHistoryTest(unittest.TestCase):
             ('started', 'MyTask()'),
             ('finished', 'MyTask()')
         ])
-
 
 if __name__ == '__main__':
     unittest.main()

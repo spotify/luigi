@@ -59,14 +59,10 @@ class Worker(object):
     def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None,
                  worker_processes=1, ping_interval=None, keep_alive=None,
                  wait_interval=None):
-        config = configuration.get_config()
         if not worker_id:
             worker_id = 'worker-%09d' % random.randrange(0, 999999999)
 
-            generated_worker_id = config.get('meta', 'generated_worker_id', None)
-            if generated_worker_id:
-                worker_id += '-%s' % generated_worker_id
-
+        config = configuration.get_config()
         if config.getboolean('worker_history', 'record_worker_history_sqs', False):
             import sqs_history # Needs boto, thus imported here
             self._worker_history_impl = sqs_history.SqsWorkerHistory()
