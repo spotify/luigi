@@ -26,6 +26,7 @@ import warnings
 import notifications
 import getpass
 import multiprocessing # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
+import Queue
 from target import Target
 from task import Task
 from event import Event
@@ -165,7 +166,7 @@ class Worker(object):
 
         # Keep info about what tasks are running (could be in other processes)
         self._task_result_queue = multiprocessing.Queue()
-        self._running_tasks = set()
+        self._running_tasks = {}
 
     def stop(self):
         """ Stop the KeepAliveThread associated with this Worker
@@ -349,7 +350,7 @@ class Worker(object):
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
         p = TaskProcess(task, self._id, self._task_result_queue, random_seed=bool(self.worker_processes > 1))
-        self._running_tasks.add(task_id)
+        self._running_tasks[task_id] = p
 
         if self.worker_processes > 1:
             p.start()
@@ -357,9 +358,31 @@ class Worker(object):
             # Run in the same process
             p.run()
 
+    def _purge_children(self):
+        ''' Find dead children and put a response on the result queue '''
+        for task_id, p in self._running_tasks.iteritems():
+            if not p.is_alive() and p.exitcode:
+                error_msg = 'Worker task %s died unexpectedly with exit code %s' % (task_id, p.exitcode)
+                logger.info(error_msg)
+                self._task_result_queue.put((task_id, FAILED, error_msg, []))
+
     def _handle_next_done_task(self):
-        task_id, status, error_message, missing = self._task_result_queue.get()
-        self._running_tasks.remove(task_id)
+        ''' We have to catch two ways a task can be "done"
+        1. Normal execution: the task runs/fails and puts a result back on the queue
+        2. Child process dies: we need to catch this separately
+        '''
+        self._purge_children() # Deal with subprocess failures
+
+        try:
+            task_id, status, error_message, missing = self._task_result_queue.get(timeout=1.0)
+        except Queue.Empty:
+            return
+
+        if task_id not in self._running_tasks:
+            log.info('Task %s not a running task, will not handle', task_id)
+            return
+
+        self._running_tasks.pop(task_id)
         self.run_succeeded &= (status == DONE)
         task = self._scheduled_tasks[task_id]
 
