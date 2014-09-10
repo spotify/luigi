@@ -526,6 +526,11 @@ class WorkerEmailTest(EmailTest):
         self.assertTrue(a.complete())
 
 
+class RaiseSystemExit(luigi.Task):
+    def run(self):
+        raise SystemExit("System exit!!")
+
+
 class MultipleWorkersTest(unittest.TestCase):
     def test_multiple_workers(self):
         # Test using multiple workers
@@ -541,6 +546,11 @@ class MultipleWorkersTest(unittest.TestCase):
         t0 = time.time()
         luigi.build([MyDynamicTask(i) for i in xrange(100)], workers=100, local_scheduler=True)
         self.assertTrue(time.time() < t0 + 5.0) # should ideally take exactly 0.1s, but definitely less than 10.0
+
+    def test_system_exit(self):
+        # This would hang indefinitely before this fix:
+        # https://github.com/spotify/luigi/pull/439
+        luigi.build([RaiseSystemExit()], workers=2, local_scheduler=True)
 
 
 if __name__ == '__main__':
