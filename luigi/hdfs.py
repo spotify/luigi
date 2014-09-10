@@ -591,7 +591,8 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
     def __init__(self, path):
         self.path = path
         self.tmppath = tmppath(self.path)
-        mkdir(os.path.dirname(self.tmppath), parents=True, raise_if_exists=True)
+        parent_dir = os.path.dirname(self.tmppath)
+        mkdir(parent_dir, parents=True, raise_if_exists=False)
         super(HdfsAtomicWritePipe, self).__init__([load_hadoop_cmd(), 'fs', '-put', '-', self.tmppath])
 
     def abort(self):
