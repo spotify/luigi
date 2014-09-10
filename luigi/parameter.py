@@ -242,7 +242,7 @@ class Parameter(object):
         """
         if not x:
             if self.has_value:
-                return self.default
+                return self.value
             elif self.is_boolean:
                 return False
             elif self.is_list:
