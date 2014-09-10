@@ -21,6 +21,8 @@ from helpers import with_config
 import unittest
 import logging
 import threading
+import os
+import signal
 import luigi.notifications
 luigi.notifications.DEBUG = True
 
@@ -531,6 +533,12 @@ class RaiseSystemExit(luigi.Task):
         raise SystemExit("System exit!!")
 
 
+class SuicidalWorker(luigi.Task):
+    signal = luigi.IntParameter()
+    def run(self):
+        os.kill(os.getpid(), self.signal)
+
+
 class MultipleWorkersTest(unittest.TestCase):
     def test_multiple_workers(self):
         # Test using multiple workers
@@ -552,6 +560,11 @@ class MultipleWorkersTest(unittest.TestCase):
         # https://github.com/spotify/luigi/pull/439
         luigi.build([RaiseSystemExit()], workers=2, local_scheduler=True)
 
+    def test_term_worker(self):
+        luigi.build([SuicidalWorker(signal.SIGTERM)], workers=2, local_scheduler=True)
+
+    def test_kill_worker(self):
+        luigi.build([SuicidalWorker(signal.SIGKILL)], workers=2, local_scheduler=True)
 
 if __name__ == '__main__':
     unittest.main()
