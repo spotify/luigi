@@ -397,20 +397,6 @@ class Worker(object):
                 self._task_result_queue.put(
                         (task_id, FAILED, error_msg, [], []))
 
-    def _get_subtask(self, parent_task, task_name, params):
-        """ Imports task and uses ArgParseInterface to initialize it
-        """
-        # How the module is represented depends on if Luigi was started from
-        # that file or if the module was imported later on
-        module = sys.modules[parent_task.__module__]
-        if '__main__' == module.__name__:
-            parent_module_path = module.__file__
-            ending = parent_module_path.rfind('.py')
-            actual_module = parent_module_path[:ending].replace('/', '.')
-        else:
-            actual_module = module.__name__
-        return interface.init_task(actual_module, task_name, params, {})
-
     def _handle_next_task(self):
         ''' We have to catch three ways a task can be "done"
         1. Normal execution: the task runs/fails and puts a result back on the
@@ -436,11 +422,12 @@ class Worker(object):
                 # Maybe it yielded something?
             new_deps = []
             if new_requirements:
-                new_req = [self._get_subtask(task, name, params)
+                new_req = [interface.load_task(task, name, params)
                            for name, params in new_requirements]
                 for t in new_req:
                     self.add(t)
                 new_deps = [t.task_id for t in new_req]
+
             self._scheduler.add_task(self._id,
                                      task_id,
                                      status=status,

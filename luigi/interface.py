@@ -58,6 +58,21 @@ def get_config():
     return configuration.get_config()
 
 
+def load_task(parent_task, task_name, params):
+    """ Imports task and uses ArgParseInterface to initialize it
+    """
+    # How the module is represented depends on if Luigi was started from
+    # that file or if the module was imported later on
+    module = sys.modules[parent_task.__module__]
+    if '__main__' == module.__name__:
+        parent_module_path = module.__file__
+        ending = parent_module_path.rfind('.py')
+        actual_module = parent_module_path[:ending].replace('/', '.')
+    else:
+        actual_module = module.__name__
+    return init_task(actual_module, task_name, params, {})
+
+
 def init_task(module, task, str_params, global_str_params):
     Task = getattr(import_module(module), task)
 
