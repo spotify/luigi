@@ -28,7 +28,8 @@ from boto.sqs.message import Message
 logger = logging.getLogger('luigi-interface')
 
 class SqsHistory(object):
-    """ A History class that sends messages to an SQS queue using boto for events. 
+    """ A History class that sends messages to an SQS (http://aws.amazon.com/sqs/) 
+    queue using boto for events. 
     """
 
     def _send_message(self, fields):
