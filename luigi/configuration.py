@@ -57,6 +57,12 @@ class LuigiConfigParser(ConfigParser):
     def getfloat(self, section, option, default=NO_DEFAULT):
         return self._get_with_default(ConfigParser.getfloat, section, option, default, float)
 
+    def getintdict(self, section):
+        try:
+            return dict((key, int(value)) for key, value in self.items(section))
+        except NoSectionError:
+            return {}
+
     def set(self, section, option, value):
         if not ConfigParser.has_section(self, section):
             ConfigParser.add_section(self, section)
