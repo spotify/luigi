@@ -34,26 +34,6 @@ def namespace(namespace=None):
     Register._default_namespace = namespace
 
 
-def id_to_parsable(task_id):
-    """ Turns a task_id into a tuple of task name and parameters formated to
-        be parsable by interface.ArgParseInterface.
-
-        E.g. "Foo(bar=bar, baz=baz)" returns
-        ('Foo', ['--bar', 'bar', '--baz', 'baz'])
-
-    """
-    task_name, params = id_to_name_and_params(task_id)
-    parsable_params = []
-    for name, param in params.items():
-        name_arg = '--' + name.replace('_', '-')
-        if isinstance(param, list):
-            for p in param:
-                parsable_params.extend([name_arg, p])
-        else:
-            parsable_params.extend([name_arg, param])
-    return task_name, parsable_params
-
-
 def id_to_name_and_params(task_id):
     ''' Turn a task_id into a (task_family, {params}) tuple.
         E.g. calling with ``Foo(bar=bar, baz=baz)`` returns

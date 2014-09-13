@@ -33,7 +33,7 @@ import sys
 import types
 import interface
 from target import Target
-from task import Task, flatten, id_to_parsable
+from task import Task, flatten
 from event import Event
 
 try:
