@@ -24,6 +24,7 @@ import threading
 import os
 import signal
 import luigi.notifications
+import tempfile
 luigi.notifications.DEBUG = True
 
 
@@ -38,6 +39,17 @@ class DummyTask(Task):
     def run(self):
         logging.debug("%s - setting has_run", self.task_id)
         self.has_run = True
+
+
+class DynamicDummyTask(Task):
+    p = luigi.Parameter()
+
+    def output(self):
+        return luigi.LocalTarget(self.p)
+
+    def run(self):
+        with self.output().open('w') as f:
+            f.write('Done!')
 
 
 class WorkerTest(unittest.TestCase):
@@ -209,6 +221,28 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(a.complete())
         self.assertTrue(b.complete())
 
+    def test_dynamic_dependencies(self):
+
+        class DynamicRequires(Task):
+            p = luigi.Parameter()
+
+            def output(self):
+                return luigi.LocalTarget(os.path.join(self.p, 'parent'))
+
+            def run(self):
+                yield [DynamicDummyTask(os.path.join(self.p, str(i)))
+                       for i in range(5)]
+                yield [DynamicDummyTask(os.path.join(self.p, str(i)))
+                       for i in range(5, 7)]
+                with self.output().open('w') as f:
+                    f.write('Done!')
+
+        t = DynamicRequires(p=tempfile.mktemp())
+        luigi.build([t])
+        self.assertTrue(t.complete())
+        # loop through dependencies just to be extra sure they're all complete
+        for req in t.run():
+            self.assertTrue(all([x.complete() for x in req]))
 
     def test_avoid_infinite_reschedule(self):
         class A(Task):
@@ -224,7 +258,6 @@ class WorkerTest(unittest.TestCase):
 
         self.assertTrue(self.w.add(B()))
         self.assertFalse(self.w.run())
-
 
     def test_interleaved_workers(self):
         class A(DummyTask):
