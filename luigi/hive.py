@@ -113,23 +113,18 @@ class HiveCommandClient(HiveClient):
                 return line.split("\t")[1]
 
     def table_exists(self, table, database='default', partition={}):
-        if not partition:
-            try:
-                stdout = run_hive_cmd('use {0}; describe {1}'.format(database, table))
-                return bool(stdout)
-            except HiveCommandError as e:
-                if "failed with error code: 17" in e.message and "Table not found" in e.err:
-                    return False
-                else:
-                    raise e
-        else:
-            stdout = run_hive_cmd("""use %s; show partitions %s partition
-                                (%s)""" % (database, table, self.partition_spec(partition)))
+        cmd = "use {0}; describe {1}".format(database, table)
+        if partition:
+            cmd = "use {0}; show partitions {1} partition ({2})".format(database, table, self.partition_spec(partition))
 
-            if stdout:
-                return True
-            else:
+        try:
+            stdout = run_hive_cmd(cmd)
+            return bool(stdout)
+        except HiveCommandError as e:
+            if "failed with error code: 17" in e.message and "Table not found" in e.err:
                 return False
+            else:
+                raise e
 
     def table_schema(self, table, database='default'):
         describe = run_hive_cmd("use {0}; describe {1}".format(database, table))
