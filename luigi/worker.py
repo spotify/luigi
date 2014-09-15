@@ -29,6 +29,7 @@ import multiprocessing # Note: this seems to have some stability issues: https:/
 import Queue
 from target import Target
 from task import Task
+import worker_history
 from event import Event
 
 try:
@@ -106,12 +107,19 @@ class Worker(object):
     def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None,
                  worker_processes=1, ping_interval=None, keep_alive=None,
                  wait_interval=None, max_reschedules=None):
+
         self._worker_info = self._generate_worker_info()
+        config = configuration.get_config()
 
         if not worker_id:
-            worker_id = 'Worker(%s)' % ', '.join(['%s=%s' % (k, v) for k, v in self._worker_info])
+            default_worker_id = 'Worker(%s)' % ', '.join(['%s=%s' % (k, v) for k, v in self._worker_info])
+            worker_id = config.get('worker_metadata', 'worker_id', default_worker_id)
 
-        config = configuration.get_config()
+        if config.getboolean('worker_history', 'record_worker_history_sqs', False):
+            import sqs_history # Needs boto, thus imported here
+            self._worker_history_impl = sqs_history.SqsWorkerHistory()
+        else:
+            self._worker_history_impl = worker_history.NopWorkerHistory()
 
         if ping_interval is None:
             ping_interval = config.getfloat('core', 'worker-ping-interval', 1.0)
@@ -160,6 +168,7 @@ class Worker(object):
                     except:  # httplib.BadStatusLine:
                         logger.warning('Failed pinging scheduler')
 
+        self._worker_history_impl.worker_started(worker_id)
         self._keep_alive_thread = KeepAliveThread()
         self._keep_alive_thread.daemon = True
         self._keep_alive_thread.start()
@@ -179,6 +188,7 @@ class Worker(object):
         TODO (maybe): Worker should be/have a context manager to enforce calling this
             whenever you stop using a Worker instance
         """
+        self._worker_history_impl.worker_stopped(self._id)
         self._keep_alive_thread.stop()
         self._keep_alive_thread.join()
 
@@ -336,7 +346,7 @@ class Worker(object):
 
     def _get_work(self):
         logger.debug("Asking scheduler for work...")
-        r = self._scheduler.get_work(worker=self._id, host=self.host)
+        r = self._scheduler.get_work(worker_id=self._id, host=self.host)
         # Support old version of scheduler
         if isinstance(r, tuple) or isinstance(r, list):
             n_pending_tasks, task_id = r
