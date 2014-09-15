@@ -131,8 +131,14 @@ class CmdlineTest(unittest.TestCase):
                 else:
                     return True
 
-            getconf.return_value.get.side_effect = ConfigParser.NoOptionError(section='foo', option='bar')
-            getconf.return_value.get_boolean.side_effect = get_boolean_side_effect
+            def get_side_effect(section, option, default=luigi.configuration.LuigiConfigParser.NO_DEFAULT):
+                if section == 'worker_metadata' and option == 'worker_id':
+                    return default
+                else:
+                    raise ConfigParser.NoOptionError(section='foo', option='bar')
+
+            getconf.return_value.get.side_effect = get_side_effect
+            getconf.return_value.getboolean.side_effect = get_boolean_side_effect
 
             luigi.interface.setup_interface_logging.call_args_list = []
             luigi.run(['SomeTask', '--n', '42', '--local-scheduler', '--no-lock'])

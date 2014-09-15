@@ -215,10 +215,10 @@ class CentralPlannerScheduler(Scheduler):
         if deps is not None:
             task.deps = set(deps)
 
-        task.stakeholders.add(worker)
+        task.stakeholders.add(worker_id)
 
         if runnable:
-            task.workers.add(worker)
+            task.workers.add(worker_id)
 
         if expl is not None:
             task.expl = expl
