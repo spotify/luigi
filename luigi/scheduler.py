@@ -187,19 +187,18 @@ class CentralPlannerScheduler(Scheduler):
             worker.reference = worker_reference
         worker.last_active = time.time()
 
-    def _update_priority(self, task_id, prio, worker):
+    def _update_priority(self, task, prio, worker):
         """ Update priority of the given task
 
         Priority can only be increased. If the task doesn't exist, a placeholder
         task is created to preserve priority when the task is later scheduled.
         """
-        task = self._tasks.setdefault(task_id, Task(status=UNKNOWN, deps=None, priority=prio))
-        task.stakeholders.add(worker)
-        if prio > task.priority:
-            task.priority = prio
-            if task.deps:
-                for dep in task.deps:
-                    self._update_priority(dep, prio, worker)
+        task.priority = prio = max(prio, task.priority)
+        for dep in task.deps or []:
+            t = self._tasks.setdefault(dep, Task(status=UNKNOWN, deps=None, priority=prio))
+            t.stakeholders.add(worker)
+            if prio > t.priority:
+                self._update_priority(t, prio, worker)
 
     def add_task(self, worker, task_id, status=PENDING, runnable=True, deps=None, expl=None, priority=0, family='', params={}):
         """
@@ -236,16 +235,9 @@ class CentralPlannerScheduler(Scheduler):
         if deps is not None:
             task.deps = set(deps)
 
-        if priority > task.priority:
-            task.priority = priority
-
-        # Recursively update priority of all dependencies
-        for dep in task.deps:
-            # passing worker here because we need to add current worker
-            # into task's stakeholders otherwise they will be pruned
-            self._update_priority(dep, task.priority, worker)
-
         task.stakeholders.add(worker)
+
+        self._update_priority(task, priority, worker)
 
         if runnable:
             task.workers.add(worker)
