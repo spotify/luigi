@@ -346,7 +346,7 @@ class Worker(object):
 
     def _get_work(self):
         logger.debug("Asking scheduler for work...")
-        r = self._scheduler.get_work(worker_id=self._id, host=self.host)
+        r = self._scheduler.get_work(self._id, host=self.host)
         # Support old version of scheduler
         if isinstance(r, tuple) or isinstance(r, list):
             n_pending_tasks, task_id = r
