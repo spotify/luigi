@@ -7,7 +7,7 @@ transform the data. At some point we might end up with a smaller data
 set that we can bulk ingest into Cassandra, Postgres, or some other
 format.
 
-For the purpose of this excercise, we want to aggregate all streams, and
+For the purpose of this exercise, we want to aggregate all streams, and
 find the top 10 artists. We will then put it into Postgres.
 
 This example is also available in ``examples/top_artists.py``

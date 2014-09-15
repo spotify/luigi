@@ -26,3 +26,11 @@ you can invoke it simply using
 ::
 
     python my_task.py --x 123 --y 456
+
+The other way to run a Luigi task is to use the builtin *luigi* task. This will
+be default on your path and can be run by providing a module name. The module
+will imported dynamically:
+
+::
+
+    luigi --module my_module MyTask --x 123 --y 456

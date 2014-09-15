@@ -157,20 +157,38 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(s['task_id'], 'A')
         self.assertEqual(s['worker'], 'X')
 
-class TestParameterSplit(unittest.TestCase):
-    task_id_examples = [
-        "TrackIsrcs()",
-        "CrazyTask(foo=foo_table_id, bar={'keyName': 'com.my.org', 'parameters': {'this.is.tricky': '1'}}, what_is_dis=foo bar, oh hippo)",
-        "MyOldDateHourTask(datehour=2013-07-21 11:00:00)",
-        "MyOldDateHourTask(datehour=2013-07-21T11:00:00)"
-    ]
+    def test_priorities(self):
+        self.sch.add_task(WORKER, 'A', priority=10)
+        self.sch.add_task(WORKER, 'B', priority=5)
+        self.sch.add_task(WORKER, 'C', priority=15)
+        self.sch.add_task(WORKER, 'D', priority=9)
+        for expected_id in ['C', 'A', 'D', 'B']:
+            self.assertEqual(self.sch.get_work(WORKER)['task_id'], expected_id)
+            self.sch.add_task(WORKER, expected_id, status=DONE)
+        self.assertEqual(self.sch.get_work(WORKER)['task_id'], None)
 
-    def setUp(self):
-        self.sch = CentralPlannerScheduler()
+    def test_priorities_default_and_negative(self):
+        self.sch.add_task(WORKER, 'A', priority=10)
+        self.sch.add_task(WORKER, 'B')
+        self.sch.add_task(WORKER, 'C', priority=15)
+        self.sch.add_task(WORKER, 'D', priority=-20)
+        self.sch.add_task(WORKER, 'E', priority=1)
+        for expected_id in ['C', 'A', 'E', 'B', 'D']:
+            self.assertEqual(self.sch.get_work(WORKER)['task_id'], expected_id)
+            self.sch.add_task(WORKER, expected_id, status=DONE)
+        self.assertEqual(self.sch.get_work(WORKER)['task_id'], None)
 
-    def test_parameter_split(self):
-        for task_id in self.task_id_examples:
-            self.sch._get_task_params(task_id)
+    def test_priorities_and_dependencies(self):
+        self.sch.add_task(WORKER, 'A', deps=['Z'], priority=10)
+        self.sch.add_task(WORKER, 'B', priority=5)
+        self.sch.add_task(WORKER, 'C', deps=['Z'], priority=3)
+        self.sch.add_task(WORKER, 'D', priority=2)
+        self.sch.add_task(WORKER, 'Z', priority=1)
+        for expected_id in ['B', 'D', 'Z', 'A', 'C']:
+            self.assertEqual(self.sch.get_work(WORKER)['task_id'], expected_id)
+            self.sch.add_task(WORKER, expected_id, status=DONE)
+        self.assertEqual(self.sch.get_work(WORKER)['task_id'], None)
+
 
 if __name__ == '__main__':
     unittest.main()

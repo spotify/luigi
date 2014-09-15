@@ -1,4 +1,6 @@
 from unittest import TestCase
+from mock import patch
+import random
 from luigi import Task, build, Event
 from luigi.mock import MockFile, MockFileSystem
 from luigi.task import flatten
@@ -22,6 +24,18 @@ class TaskWithCallback(Task):
 
 
 class TestEventCallbacks(TestCase):
+    def test_start_handler(self):
+        saved_tasks = []
+
+        @EmptyTask.event_handler(Event.START)
+        def save_task(task):
+            print "Saving task..."
+            saved_tasks.append(task)
+
+        t = EmptyTask(True)
+        build([t], local_scheduler=True)
+        self.assertEquals(saved_tasks, [t])
+
     def test_success_handler(self):
         saved_tasks = []
 
@@ -32,19 +46,22 @@ class TestEventCallbacks(TestCase):
 
         t = EmptyTask(False)
         build([t], local_scheduler=True)
-        self.assertEquals(saved_tasks[0], t)
+        self.assertEquals(saved_tasks, [t])
 
     def test_failure_handler(self):
+        saved_tasks = []
         exceptions = []
 
         @EmptyTask.event_handler(Event.FAILURE)
         def save_task(task, exception):
-            print "Saving exception..."
+            print "Saving task and exception..."
+            saved_tasks.append(task)
             exceptions.append(exception)
 
         t = EmptyTask(True)
         build([t], local_scheduler=True)
-        self.assertEquals(type(exceptions[0]), DummyException)
+        self.assertEquals(saved_tasks, [t])
+        self.assertTrue(isinstance(exceptions[0], DummyException))
 
     def test_custom_handler(self):
         dummies = []
@@ -56,6 +73,19 @@ class TestEventCallbacks(TestCase):
         t = TaskWithCallback()
         build([t], local_scheduler=True)
         self.assertEquals(dummies[0], "foo")
+
+    def test_processing_time_handler(self):
+        @EmptyTask.event_handler(Event.PROCESSING_TIME)
+        def save_task(task, processing_time):
+            self.result = task, processing_time
+
+        times = [43.0, 1.0]
+        t = EmptyTask(random.choice([True, False]))
+        with patch('luigi.worker.time') as mock:
+            mock.time = times.pop
+            build([t], local_scheduler=True)
+        self.assertTrue(self.result[0] is t)
+        self.assertEquals(self.result[1], 42.0)
 
 
 #        A

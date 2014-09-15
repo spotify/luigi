@@ -12,16 +12,27 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import os, sys, hashlib
+import os
+import hashlib
+
 
 def getpcmd(pid):
     ''' Returns command of process
     '''
-    cmd = 'ps -p %s -o cmd=' % (pid,)
+    cmd = 'ps -p %s -o command=' % (pid,)
     p = os.popen(cmd, 'r')
     return p.readline().strip()
 
-def acquire_for(pid_dir):
+def get_info(pid_dir):
+    # Check the name and pid of this process
+    my_pid = os.getpid()
+    my_cmd = getpcmd(my_pid)
+
+    pid_file = os.path.join(pid_dir, hashlib.md5(my_cmd).hexdigest()) + '.pid'
+
+    return my_pid, my_cmd, pid_file
+
+def acquire_for(pid_dir, num_available=1):
     ''' Makes sure the process is only run once at the same time with the same name.
 
     Notice that we since we check the process name, different parameters to the same
@@ -30,38 +41,37 @@ def acquire_for(pid_dir):
     "/usr/bin/my_process --foo bar".
     '''
 
-    # Check the name and pid of this process
-    my_pid = os.getpid()
-    my_cmd = getpcmd(my_pid)
+    my_pid, my_cmd, pid_file = get_info(pid_dir)
 
     # Check if there is a pid file corresponding to this name
     if not os.path.exists(pid_dir):
         os.mkdir(pid_dir)
+        os.chmod(pid_dir, 0777)
 
-    pidfile = os.path.join(pid_dir, hashlib.md5(my_cmd).hexdigest()) + '.pid'
-
-    if os.path.exists(pidfile):
+    pids = set()
+    pid_cmds = {}
+    if os.path.exists(pid_file):
         # There is such a file - read the pid and look up its process name
-        try:
-            pid = int(open(pidfile).readline().strip())
-        except ValueError:
-            pid = -1
+        pids.update(filter(None, map(str.strip, open(pid_file))))
+        pid_cmds = dict((pid, getpcmd(pid)) for pid in pids)
+        matching_pids = filter(lambda pid: pid_cmds[pid] == my_cmd, pids)
 
-        cmd = getpcmd(pid)
-
-        if cmd == my_cmd:
+        if len(matching_pids) >= num_available:
             # We are already running under a different pid
-            print 'Pid', pid, 'running'
+            print 'Pid(s)', ', '.join(matching_pids), 'already running'
             return False
         else:
-            # The pid belongs to something else, we could 
+            # The pid belongs to something else, we could
             pass
+    pid_cmds[str(my_pid)] = my_cmd
 
-    # Write pid
-    pid = os.getpid()
-    f = open(pidfile, 'w')
-    f.write('%d\n' % (pid, ))
-    f.close()
+    # Write pids
+    pids.add(str(my_pid))
+    with open(pid_file, 'w') as f:
+        f.writelines('%s\n' % (pid, ) for pid in filter(pid_cmds.__getitem__, pids))
+
+    # Make the file writable by all
+    s = os.stat(pid_file)
+    os.chmod(pid_file, s.st_mode | 0777)
 
     return True
-

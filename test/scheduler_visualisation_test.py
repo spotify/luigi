@@ -55,6 +55,20 @@ class FactorTask(luigi.Task):
         return luigi.LocalTarget(os.path.join(tempdir, 'luigi_test_factor_%d' % self.product))
 
 
+class BadReqTask(luigi.Task):
+    succeed = luigi.BooleanParameter()
+
+    def requires(self):
+        assert self.succeed
+        yield BadReqTask(False)
+
+    def run(self):
+        pass
+
+    def complete(self):
+        return False
+
+
 class FailingTask(luigi.Task):
     task_id = luigi.Parameter()
 
@@ -118,8 +132,11 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertLessEqual(d2[u'start_time'], end)
 
     def _assert_all_done(self, tasks):
+        self._assert_all(tasks, u'DONE')
+
+    def _assert_all(self, tasks, status):
         for task in tasks.values():
-            self.assertEqual(task[u'status'], u'DONE')
+            self.assertEqual(task[u'status'], status)
 
     def test_dep_graph_single(self):
         self._build([FactorTask(1)])
@@ -159,6 +176,19 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         d5 = dep_graph[u'FactorTask(product=5)']
         self.assertEqual(sorted(d5[u'deps']), [])
+
+    def test_dep_graph_missing_deps(self):
+        self._build([BadReqTask(True)])
+        dep_graph = self._remote().dep_graph('BadReqTask(succeed=True)')
+        self.assertEqual(len(dep_graph), 2)
+
+        suc = dep_graph[u'BadReqTask(succeed=True)']
+        self.assertEqual(suc[u'deps'], [u'BadReqTask(succeed=False)'])
+
+        fail = dep_graph[u'BadReqTask(succeed=False)']
+        self.assertEqual(fail[u'name'], 'BadReqTask')
+        self.assertEqual(fail[u'params'], {'succeed': 'False'})
+        self.assertEqual(fail[u'status'], 'UNKNOWN')
 
     def test_dep_graph_diamond(self):
         self._build([FactorTask(12)])
@@ -281,6 +311,15 @@ class SchedulerVisualisationTest(unittest.TestCase):
         all.update(failed)
         self.assertEqual(remote.task_list('', ''), all)
         self.assertEqual(remote.task_list('RUNNING', ''), {})
+
+    def test_task_search(self):
+        self._build([FactorTask(8)])
+        self._build([FailingTask(8)])
+        remote = self._remote()
+        all_tasks = remote.task_search('Task')
+        self.assertEqual(len(all_tasks), 2)
+        self._assert_all(all_tasks['DONE'], 'DONE')
+        self._assert_all(all_tasks['FAILED'], 'FAILED')
 
     def test_fetch_error(self):
         self._build([FailingTask(8)])

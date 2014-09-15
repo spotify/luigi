@@ -19,20 +19,29 @@ import luigi.notifications
 import tempfile
 import os
 import hashlib
+import subprocess
 
 luigi.notifications.DEBUG = True
+
+
+class TestCmd(unittest.TestCase):
+    def test_getpcmd(self):
+        p = subprocess.Popen(["sleep", "1"])
+        self.assertEquals(
+            luigi.lock.getpcmd(p.pid),
+            "sleep 1"
+        )
+        p.kill()
+
 
 class LockTest(unittest.TestCase):
 
     def setUp(self):
         self.pid_dir = tempfile.mkdtemp()
+        self.pid, self.cmd, self.pid_file = luigi.lock.get_info(self.pid_dir)
 
     def tearDown(self):
-        my_pid = os.getpid()
-        my_cmd = luigi.lock.getpcmd(my_pid)
-        pidfile = os.path.join(self.pid_dir, hashlib.md5(my_cmd).hexdigest()) + '.pid'
-
-        os.remove(pidfile)
+        os.remove(self.pid_file)
         os.rmdir(self.pid_dir)
 
     def test_acquiring_free_lock(self):
@@ -40,14 +49,29 @@ class LockTest(unittest.TestCase):
         self.assertTrue(acquired)
 
     def test_acquiring_taken_lock(self):
-        my_pid = os.getpid()
-        my_cmd = luigi.lock.getpcmd(my_pid)
-
-        pidfile = os.path.join(self.pid_dir, hashlib.md5(my_cmd).hexdigest()) + '.pid'
-
-        f = open(pidfile, 'w')
-        f.write('%d\n' % (my_pid, ))
-        f.close()
+        with open(self.pid_file, 'w') as f:
+            f.write('%d\n' % (self.pid, ))
 
         acquired = luigi.lock.acquire_for(self.pid_dir)
         self.assertFalse(acquired)
+
+    def test_acquiring_partially_taken_lock(self):
+        with open(self.pid_file, 'w') as f:
+            f.write('%d\n' % (self.pid, ))
+
+        acquired = luigi.lock.acquire_for(self.pid_dir, 2)
+        self.assertTrue(acquired)
+
+        s = os.stat(self.pid_file)
+        self.assertEquals(s.st_mode & 0777, 0777)
+
+    def test_acquiring_lock_from_missing_process(self):
+        fake_pid = 99999
+        with open(self.pid_file, 'w') as f:
+            f.write('%d\n' % (fake_pid, ))
+
+        acquired = luigi.lock.acquire_for(self.pid_dir)
+        self.assertTrue(acquired)
+
+        s = os.stat(self.pid_file)
+        self.assertEquals(s.st_mode & 0777, 0777)

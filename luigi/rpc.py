@@ -19,6 +19,7 @@ import json
 import time
 import warnings
 from scheduler import Scheduler, PENDING
+import configuration
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 
@@ -35,28 +36,47 @@ class RemoteScheduler(Scheduler):
     def __init__(self, host='localhost', port=8082, connect_timeout=None):
         self._host = host
         self._port = port
+
+        config = configuration.get_config()
+
+        if connect_timeout is None:
+            connect_timeout = config.getfloat('core', 'rpc-connect-timeout', 10.0)
         self._connect_timeout = connect_timeout
 
     def _wait(self):
         time.sleep(30)
 
-    def _request(self, url, data, log_exceptions=True, attempts=3):
-        # TODO(erikbern): do POST requests instead
-        data = {'data': json.dumps(data)}
+    def _get(self, url, data):
         url = 'http://%s:%d%s?%s' % \
-            (self._host, self._port, url, urllib.urlencode(data))
+              (self._host, self._port, url, urllib.urlencode(data))
+        return urllib2.Request(url)
 
-        req = urllib2.Request(url)
+    def _post(self, url, data):
+        url = 'http://%s:%d%s' % (self._host, self._port, url)
+        return urllib2.Request(url, urllib.urlencode(data))
+
+    def _request(self, url, data, log_exceptions=True, attempts=3):
+        data = {'data': json.dumps(data)}
+
+        req = self._post(url, data)
         last_exception = None
-        for attempt in xrange(attempts):
+        attempt = 0
+        while attempt < attempts:
+            attempt += 1
             if last_exception:
                 logger.info("Retrying...")
                 self._wait()  # wait for a bit and retry
             try:
                 response = urllib2.urlopen(req, None, self._connect_timeout)
                 break
-            except urllib2.URLError, last_exception:
-                if log_exceptions:
+            except urllib2.URLError as last_exception:
+                if isinstance(last_exception, urllib2.HTTPError) and last_exception.code == 405:
+                    # TODO(f355): 2014-08-29 Remove this fallback after several weeks
+                    logger.warning("POST requests are unsupported. Please upgrade scheduler ASAP. Falling back to GET for now.")
+                    req = self._get(url, data)
+                    last_exception = None
+                    attempt -= 1
+                elif log_exceptions:
                     logger.exception("Failed connecting to remote scheduler %r", self._host)
                 continue
         else:
@@ -73,7 +93,7 @@ class RemoteScheduler(Scheduler):
         # just one attemtps, keep-alive thread will keep trying anyway
         self._request('/api/ping', {'worker': worker}, attempts=1)
 
-    def add_task(self, worker, task_id, status=PENDING, runnable=False, deps=None, expl=None):
+    def add_task(self, worker, task_id, status=PENDING, runnable=False, deps=None, expl=None, priority=0, family='', params={}):
         self._request('/api/add_task', {
             'task_id': task_id,
             'worker': worker,
@@ -81,6 +101,9 @@ class RemoteScheduler(Scheduler):
             'runnable': runnable,
             'deps': deps,
             'expl': expl,
+            'priority': priority,
+            'family': family,
+            'params': params,
         })
 
     def get_work(self, worker, host=None):
@@ -110,8 +133,14 @@ class RemoteScheduler(Scheduler):
     def task_list(self, status, upstream_status):
         return self._request('/api/task_list', {'status': status, 'upstream_status': upstream_status})
 
+    def task_search(self, task_str):
+        return self._request('/api/task_search', {'task_str': task_str})
+
     def fetch_error(self, task_id):
         return self._request('/api/fetch_error', {'task_id': task_id})
+
+    def add_worker(self, worker, info):
+        return self._request('/api/add_worker', {'worker': worker, 'info': info})
 
 
 class RemoteSchedulerResponder(object):
@@ -128,8 +157,11 @@ class RemoteSchedulerResponder(object):
     def __init__(self, scheduler):
         self._scheduler = scheduler
 
-    def add_task(self, worker, task_id, status, runnable, deps, expl, **kwargs):
-        return self._scheduler.add_task(worker, task_id, status, runnable, deps, expl)
+    def add_task(self, worker, task_id, status, runnable, deps, expl, priority=0, family='', params={}, **kwargs):
+        return self._scheduler.add_task(worker, task_id, status, runnable, deps, expl, priority, family, params)
+
+    def add_worker(self, worker, info, **kwargs):
+        return self._scheduler.add_worker(worker, info)
 
     def get_work(self, worker, host=None, **kwargs):
         return self._scheduler.get_work(worker, host)
@@ -150,6 +182,9 @@ class RemoteSchedulerResponder(object):
 
     def task_list(self, status, upstream_status, **kwargs):
         return self._scheduler.task_list(status, upstream_status)
+
+    def task_search(self, task_str, **kwargs):
+        return self._scheduler.task_search(task_str)
 
     def fetch_error(self, task_id, **kwargs):
         return self._scheduler.fetch_error(task_id)

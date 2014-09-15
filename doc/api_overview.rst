@@ -206,14 +206,14 @@ from a specific class (e.g. for hadoop jobs).
 .. code:: python
 
     @luigi.Task.event_handler(luigi.Event.SUCCESS):
-    def celebrate_success(self, task):
+    def celebrate_success(task):
         """Will be called directly after a successful execution
            of `run` on any Task subclass (i.e. all luigi Tasks)
         """
         ...
 
     @luigi.hadoop.JobTask.event_handler(luigi.Event.FAILURE):
-    def mourn_failure(self, task, exception):
+    def mourn_failure(task, exception):
         """Will be called directly after a failed execution
            of `run` on any JobTask subclass
         """
@@ -243,6 +243,49 @@ You can use the hdfs.HdfsTarget class anywhere by just instantiating it:
     f = t.open('w')
     # ...
     f.close() # needed
+
+
+Task priority
+^^^^^^^^^^^^^
+
+The scheduler decides which task to run next from the set of all task
+that have all their dependencies met. By default, this choice is pretty
+arbitrary, which is fine for most workflows and situations.
+
+If you want to have some control on the order of execution
+of available tasks, you can set the *priority* property of a task,
+for example as follows:
+
+.. code:: python
+
+    # A static priority value as a class contant:
+    class MyTask(luigi.Task):
+        priority = 100
+        # ...
+
+    # A dynamic priority value with a "@property" decorated method:
+    class OtherTask(luigi.Task):
+        @property
+        def priority(self):
+            if self.date > some_threshold:
+                return 80
+            else:
+                return 40
+        # ...
+
+Tasks with a higher priority value will be picked before tasks
+with a lower priority value.
+There is no predefined range of priorities, you can choose whatever
+(int or float) values you want to use. The default value is 0.
+Note that it is perfectly valid to choose negative priorities for
+tasks that should have less priority than default.
+
+Warning: task execution order in Luigi is influenced by both dependencies
+and priorities, but in Luigi dependencies come first. For example:
+if there is a task A with priority 1000 but still with unmet dependencies
+and a task B with priority 1 without any pending dependencies,
+task B will be picked first.
+
 
 Instance caching
 ^^^^^^^^^^^^^^^^
