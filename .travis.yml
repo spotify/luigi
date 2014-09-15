@@ -9,4 +9,5 @@ install:
   - pip install mock --use-mirrors
   - pip install boto --use-mirrors
   - pip install moto --use-mirrors
-script: nosetests
+  - pip install ordereddict --use-mirrors
+script: nosetests -v

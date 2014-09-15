@@ -20,9 +20,9 @@ import parameter
 import configuration
 import interface
 import target
-import worker
+import event
 
-Event = worker.Event
+Event = event.Event
 
 Task = task.Task
 ExternalTask = task.ExternalTask

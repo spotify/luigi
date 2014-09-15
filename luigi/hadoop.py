@@ -217,16 +217,17 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
                 err_line = err_line.strip()
                 if err_line:
                     logger.info('%s', err_line)
-                if err_line.find('Tracking URL') != -1:
-                    tracking_url = err_line.split('Tracking URL: ')[-1]
+                err_line = err_line.lower()
+                if err_line.find('tracking url') != -1:
+                    tracking_url = err_line.split('tracking url: ')[-1]
                     try:
                         tracking_url_callback(tracking_url)
                     except Exception as e:
                         logger.error("Error in tracking_url_callback, disabling! %s", e)
                         tracking_url_callback = lambda x: None
-                if err_line.find('Running job') != -1:
+                if err_line.find('running job') != -1:
                     # hadoop jar output
-                    job_id = err_line.split('Running job: ')[-1]
+                    job_id = err_line.split('running job: ')[-1]
                 if err_line.find('submitted hadoop job:') != -1:
                     # scalding output
                     job_id = err_line.split('submitted hadoop job: ')[-1]
@@ -422,7 +423,7 @@ class HadoopJobRunner(JobRunner):
         run_and_track_hadoop_job(arglist)
 
         # rename temporary work directory to given output
-        tmp_target.move(output_final, fail_if_exists=True)
+        tmp_target.move(output_final, raise_if_exists=True)
         self.finish()
 
     def finish(self):
@@ -487,6 +488,7 @@ class LocalJobRunner(JobRunner):
             map_output.close()
             return
 
+        job.init_mapper()
         # run job now...
         map_output = StringIO.StringIO()
         job._run_mapper(map_input, map_output)
@@ -501,6 +503,7 @@ class LocalJobRunner(JobRunner):
             combine_output.seek(0)
             reduce_input = self.group(combine_output)
 
+        job.init_reducer()
         reduce_output = job.output().open('w')
         job._run_reducer(reduce_input, reduce_output)
         reduce_output.close()
@@ -515,12 +518,16 @@ class BaseHadoopJobTask(luigi.Task):
     final_combiner = NotImplemented
     final_reducer = NotImplemented
 
+    mr_priority = NotImplemented
+
     _counter_dict = {}
     task_id = None
 
     def jobconfs(self):
         jcs = []
         jcs.append('mapred.job.name=%s' % self.task_id)
+        if self.mr_priority != NotImplemented:
+            jcs.append('mapred.job.priority=%s' % self.mr_priority())
         pool = self.pool
         if pool is not None:
             # Supporting two schedulers: fair (default) and capacity using the same option
@@ -707,14 +714,22 @@ class JobTask(BaseHadoopJobTask):
 
     def _setup_links(self):
         if hasattr(self, '_links'):
+            missing = []
             for src, dst in self._links:
                 d = os.path.dirname(dst)
                 if d and not os.path.exists(d):
                     os.makedirs(d)
+                if not os.path.exists(src):
+                    missing.append(src)
+                    continue
                 if not os.path.exists(dst):
                     # If the combiner runs, the file might already exist,
                     # so no reason to create the link again
                     os.link(src, dst)
+            if missing:
+                raise HadoopJobError(
+                    'Missing files for distributed cache: ' +
+                    ', '.join(missing))
 
     def _dump(self, dir=''):
         """Dump instance to file."""
@@ -744,8 +759,8 @@ class JobTask(BaseHadoopJobTask):
 
     def _reduce_input(self, inputs, reducer, final=NotImplemented):
         """Iterate over input, collect values with the same key, and call the reducer for each uniqe key."""
-        for key, values in groupby(inputs, itemgetter(0)):
-            for output in reducer(key, (v[1] for v in values)):
+        for key, values in groupby(inputs, key=lambda x: repr(x[0])):
+            for output in reducer(eval(key), (v[1] for v in values)):
                 yield output
         if final != NotImplemented:
             for output in final():

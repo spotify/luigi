@@ -21,6 +21,8 @@ from helpers import with_config
 import unittest
 import logging
 import threading
+import os
+import signal
 import luigi.notifications
 luigi.notifications.DEBUG = True
 
@@ -78,8 +80,8 @@ class WorkerTest(unittest.TestCase):
         a.has_run = False
         b.has_run = False
 
-        self.w.add(b)
-        self.w.run()
+        self.assertTrue(self.w.add(b))
+        self.assertTrue(self.w.run())
         self.assertTrue(a.has_run)
         self.assertTrue(b.has_run)
 
@@ -104,8 +106,8 @@ class WorkerTest(unittest.TestCase):
         a.has_run = False
         b.has_run = False
 
-        self.w.add(b)
-        self.w.run()
+        self.assertTrue(self.w.add(b))
+        self.assertTrue(self.w.run())
 
         self.assertFalse(a.has_run)
         self.assertFalse(b.has_run)
@@ -136,8 +138,8 @@ class WorkerTest(unittest.TestCase):
         a.has_run = False
         b.has_run = False
 
-        self.w.add(b)
-        self.w.run()
+        self.assertTrue(self.w.add(b))
+        self.assertFalse(self.w.run())
 
         self.assertTrue(a.has_run)
         self.assertFalse(b.has_run)
@@ -170,16 +172,59 @@ class WorkerTest(unittest.TestCase):
         b_a = get_b(A())
         b_c = get_b(C())
 
-        self.w.add(b_a)
+        self.assertTrue(self.w.add(b_a))
         # So now another worker goes in and schedules C -> B
         # This should remove the dep A -> B but will screw up the first worker
-        self.w2.add(b_c)
+        self.assertTrue(self.w2.add(b_c))
 
-        self.w.run()  # should not run anything - the worker should detect that A is broken
+        self.assertFalse(self.w.run())  # should not run anything - the worker should detect that A is broken
         self.assertFalse(b_a.has_run)
         # not sure what should happen??
         # self.w2.run() # should run B since C is fulfilled
         # self.assertTrue(b_c.has_run)
+
+    def test_unfulfilled_dep(self):
+        class A(Task):
+            def complete(self):
+                return self.done
+
+            def run(self):
+                self.done = True
+
+        def get_b(a):
+            class B(A):
+                def requires(self):
+                    return a
+            b = B()
+            b.done = False
+            a.done = True
+            return b
+
+        a = A()
+        b = get_b(a)
+
+        self.assertTrue(self.w.add(b))
+        a.done = False
+        self.w.run()
+        self.assertTrue(a.complete())
+        self.assertTrue(b.complete())
+
+
+    def test_avoid_infinite_reschedule(self):
+        class A(Task):
+            def complete(self):
+                return False
+
+        class B(Task):
+            def complete(self):
+                return False
+
+            def requires(self):
+                return A()
+
+        self.assertTrue(self.w.add(B()))
+        self.assertFalse(self.w.run())
+
 
     def test_interleaved_workers(self):
         class A(DummyTask):
@@ -205,14 +250,14 @@ class WorkerTest(unittest.TestCase):
         w = Worker(scheduler=sch, worker_id='X')
         w2 = Worker(scheduler=sch, worker_id='Y')
 
-        w.add(b)
-        w2.add(eb)
+        self.assertTrue(w.add(b))
+        self.assertTrue(w2.add(eb))
         logging.debug("RUNNING BROKEN WORKER")
-        w2.run()
+        self.assertTrue(w2.run())
         self.assertFalse(a.complete())
         self.assertFalse(b.complete())
         logging.debug("RUNNING FUNCTIONAL WORKER")
-        w.run()
+        self.assertTrue(w.run())
         self.assertTrue(a.complete())
         self.assertTrue(b.complete())
         w.stop()
@@ -238,12 +283,12 @@ class WorkerTest(unittest.TestCase):
         w = Worker(scheduler=sch, worker_id='X')
         w2 = Worker(scheduler=sch, worker_id='Y')
 
-        w2.add(eb)
-        w.add(b)
+        self.assertTrue(w2.add(eb))
+        self.assertTrue(w.add(b))
 
-        w2.run()
+        self.assertTrue(w2.run())
         self.assertFalse(b.complete())
-        w.run()
+        self.assertTrue(w.run())
         self.assertTrue(b.complete())
         w.stop()
         w2.stop()
@@ -271,11 +316,11 @@ class WorkerTest(unittest.TestCase):
         w  = Worker(scheduler=sch, worker_id='X', keep_alive=True)
         w2 = Worker(scheduler=sch, worker_id='Y', keep_alive=True, wait_interval=0.1)
 
-        w.add(a)
-        w2.add(b)
+        self.assertTrue(w.add(a))
+        self.assertTrue(w2.add(b))
 
         threading.Thread(target=w.run).start()
-        w2.run()
+        self.assertTrue(w2.run())
 
         self.assertTrue(a.complete())
         self.assertTrue(b.complete())
@@ -303,13 +348,38 @@ class WorkerTest(unittest.TestCase):
         b = B()
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         w = Worker(scheduler=sch, worker_id="foo")
-        w.add(b)
-        w.run()
+        self.assertFalse(w.add(b))
+        self.assertTrue(w.run())
         self.assertFalse(b.has_run)
         self.assertTrue(c.has_run)
         self.assertFalse(a.has_run)
         w.stop()
 
+    def test_requires_exception(self):
+        class A(DummyTask):
+            def requires(self):
+                raise Exception("doh")
+
+        a = A()
+
+        class C(DummyTask):
+            pass
+
+        c = C()
+
+        class B(DummyTask):
+            def requires(self):
+                return a, c
+
+        b = B()
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        w = Worker(scheduler=sch, worker_id="foo")
+        self.assertFalse(w.add(b))
+        self.assertTrue(w.run())
+        self.assertFalse(b.has_run)
+        self.assertTrue(c.has_run)
+        self.assertFalse(a.has_run)
+        w.stop()
 
 class WorkerPingThreadTests(unittest.TestCase):
     def test_ping_retry(self):
@@ -351,6 +421,7 @@ class WorkerPingThreadTests(unittest.TestCase):
         self.assertTrue(w._keep_alive_thread.is_alive())
         w.stop()  # should stop within 0.01 s
         self.assertFalse(w._keep_alive_thread.is_alive())
+
 
 EMAIL_CONFIG = {"core": {"error-email": "not-a-real-email-address-for-test-only"}}
 
@@ -456,6 +527,44 @@ class WorkerEmailTest(EmailTest):
         self.assertEquals(self.last_email, None)
         self.assertTrue(a.complete())
 
+
+class RaiseSystemExit(luigi.Task):
+    def run(self):
+        raise SystemExit("System exit!!")
+
+
+class SuicidalWorker(luigi.Task):
+    signal = luigi.IntParameter()
+    def run(self):
+        os.kill(os.getpid(), self.signal)
+
+
+class MultipleWorkersTest(unittest.TestCase):
+    def test_multiple_workers(self):
+        # Test using multiple workers
+        # Also test generating classes dynamically since this may reflect issues with
+        # various platform and how multiprocessing is implemented. If it's using os.fork
+        # under the hood it should be fine, but dynamic classses can't be pickled, so
+        # other implementations of multiprocessing (using spawn etc) may fail
+        class MyDynamicTask(luigi.Task):
+            x = luigi.Parameter()
+            def run(self):
+                time.sleep(0.1)
+
+        t0 = time.time()
+        luigi.build([MyDynamicTask(i) for i in xrange(100)], workers=100, local_scheduler=True)
+        self.assertTrue(time.time() < t0 + 5.0) # should ideally take exactly 0.1s, but definitely less than 10.0
+
+    def test_system_exit(self):
+        # This would hang indefinitely before this fix:
+        # https://github.com/spotify/luigi/pull/439
+        luigi.build([RaiseSystemExit()], workers=2, local_scheduler=True)
+
+    def test_term_worker(self):
+        luigi.build([SuicidalWorker(signal.SIGTERM)], workers=2, local_scheduler=True)
+
+    def test_kill_worker(self):
+        luigi.build([SuicidalWorker(signal.SIGKILL)], workers=2, local_scheduler=True)
 
 if __name__ == '__main__':
     unittest.main()

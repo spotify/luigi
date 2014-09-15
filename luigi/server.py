@@ -17,6 +17,7 @@ import json
 import os
 import atexit
 import mimetypes
+import posixpath
 import tornado.ioloop
 import tornado.netutil
 import tornado.web
@@ -29,6 +30,7 @@ import signal
 from rpc import RemoteSchedulerResponder
 import task_history
 import logging
+import warnings
 logger = logging.getLogger("luigi.server")
 
 
@@ -62,13 +64,15 @@ class RPCHandler(tornado.web.RequestHandler):
         else:
             self.send_error(404)
 
+    post = get
+
 
 class BaseTaskHistoryHandler(tornado.web.RequestHandler):
     def initialize(self, api):
         self._api = api
 
     def get_template_path(self):
-        return 'luigi/templates'
+        return pkg_resources.resource_filename(__name__, 'templates')
 
 
 class RecentRunHandler(BaseTaskHistoryHandler):
@@ -99,8 +103,12 @@ class ByParamsHandler(BaseTaskHistoryHandler):
 
 class StaticFileHandler(tornado.web.RequestHandler):
     def get(self, path):
-        # TODO: this is probably not the right way to do it...
-        # TODO: security
+        # Path checking taken from Flask's safe_join function:
+        # https://github.com/mitsuhiko/flask/blob/1d55b8983/flask/helpers.py#L563-L587
+        path = posixpath.normpath(path)
+        if os.path.isabs(path) or path.startswith(".."):
+            return self.send_error(404)
+
         extension = os.path.splitext(path)[1]
         if extension in mimetypes.types_map:
             self.set_header("Content-Type", mimetypes.types_map[extension])

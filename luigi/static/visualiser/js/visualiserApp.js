@@ -23,7 +23,12 @@ function visualiserApp(luigi) {
         var taskIdParts = /([A-Za-z0-9_]*)\((.*)\)/.exec(task.taskId);
         var taskName = taskIdParts[1];
         var taskParams = taskIdParts[2];
-        var displayTime = new Date(Math.floor(task.start_time*1000)).toLocaleTimeString();
+        var displayTime = new Date(Math.floor(task.start_time*1000)).toLocaleString();
+        if (task.status == "RUNNING" && "time_running" in task) {
+            var current_time = new Date().getTime()
+            var minutes_running = Math.round((current_time - task.time_running * 1000) / 1000 / 60)
+            displayTime += " | " + minutes_running + " minutes"
+        }
         return {
             taskId: task.taskId,
             taskName: taskName,
@@ -57,7 +62,7 @@ function visualiserApp(luigi) {
     }
 
     function renderTasks(tasks) {
-        var displayTasks = $.map(tasks, taskToDisplayTask);
+        var displayTasks = tasks.map(taskToDisplayTask);
         displayTasks.sort(function(a,b) { return b.displayTimestamp - a.displayTimestamp; });
         var tasksByFamily = entryList(indexByProperty(displayTasks, "taskName"));
         tasksByFamily.sort(function(a,b) { return a.key.localeCompare(b.key); });
@@ -125,7 +130,20 @@ function visualiserApp(luigi) {
     }
 
     function bindListEvents() {
-        $("[data-action=expandTaskRows]").click(function(event) {
+        $(window).on('hashchange', processHashChange);
+        $("#invertCheckbox").click(function() {
+            invertDependencies = this.checked;
+            processHashChange();
+        });
+        $("a[href=#list]").click(function() { location.hash=""; });
+        $("#loadTaskForm").submit(function(event) {
+            event.preventDefault();
+            location.hash = $(this).find("input").val();
+        });
+    }
+
+    function bindTaskEvents(id, expand) {
+        $(id + " [data-action=expandTaskRows]").click(function(event) {
             event.preventDefault();
             var icon = $(this).find("span");
             if (icon.hasClass("icon-plus")) {
@@ -137,17 +155,10 @@ function visualiserApp(luigi) {
             }
             var taskRows = $(this).closest(".taskFamily").find(".taskRows").slideToggle("fast");
         });
-        $(window).on('hashchange', processHashChange);
-        $("#invertCheckbox").click(function() {
-            invertDependencies = this.checked;
-            processHashChange();
-        });
-        $("a[href=#list]").click(function() { location.hash=""; });
-        $("#loadTaskForm").submit(function(event) {
-            event.preventDefault();
-            location.hash = $(this).find("input").val();
-        });
-        $(".error-trace-button").click(function() {
+        if (expand) {
+            $(id + " [data-action=expandTaskRows]").click();
+        }
+        $(id + " .error-trace-button").click(function() {
             luigi.getErrorTrace($(this).attr("data-task-id"), function(error) {
                showErrorTrace(error);
             });
@@ -157,22 +168,32 @@ function visualiserApp(luigi) {
     $(document).ready(function() {
         loadTemplates();
 
-        luigi.getFailedTaskList(function(failedTasks) {
-            luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
-                luigi.getRunningTaskList(function(runningTasks) {
-                    luigi.getPendingTaskList(function(pendingTasks) {
-                        luigi.getDoneTaskList(function(doneTasks) {
-                            $("#failedTasks").append(renderTasks(failedTasks));
-                            $("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
-                            $("#runningTasks").append(renderTasks(runningTasks));
-                            $("#pendingTasks").append(renderTasks(pendingTasks));
-                            $("#doneTasks").append(renderTasks(doneTasks));
-                            bindListEvents();
-                        });
-                    });
-                });
-            });
+        luigi.getRunningTaskList(function(runningTasks) {
+            $("#runningTasks").append(renderTasks(runningTasks));
+            bindTaskEvents("#runningTasks", true);
         });
+
+        luigi.getFailedTaskList(function(failedTasks) {
+            $("#failedTasks").append(renderTasks(failedTasks));
+            bindTaskEvents("#failedTasks");
+        });
+
+        luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
+            $("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
+            bindTaskEvents("#upstreamFailedTasks");
+        });
+
+        luigi.getPendingTaskList(function(pendingTasks) {
+            $("#pendingTasks").append(renderTasks(pendingTasks));
+            bindTaskEvents("#pendingTasks");
+        });
+
+        luigi.getDoneTaskList(function(doneTasks) {
+            $("#doneTasks").append(renderTasks(doneTasks));
+            bindTaskEvents("#doneTasks");
+        });
+
+        bindListEvents();
 
         var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
         $("#graphPlaceholder")[0].graph = graph;

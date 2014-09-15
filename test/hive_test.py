@@ -1,3 +1,7 @@
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 import mock
 import os
 import sys
@@ -59,6 +63,7 @@ class HiveCommandClientTest(unittest.TestCase):
     def setUp(self):
         self.client = luigi.hive.HiveCommandClient()
         self.apacheclient = luigi.hive.ApacheHiveCommandClient()
+        self.metastoreclient = luigi.hive.MetastoreClient()
 
     @mock.patch("luigi.hive.run_hive_cmd")
     def test_default_table_location(self, run_command):
@@ -189,6 +194,30 @@ class HiveCommandClientTest(unittest.TestCase):
                     ('Time taken: 2.08 seconds, Fetched: 34 row(s)',)]
         returned = self.apacheclient.table_schema("mytable")
         self.assertEquals(expected, returned)
+
+    @mock.patch("luigi.hive.HiveThriftContext")
+    def test_metastoreclient_partition_existence_regardless_of_order(self, thrift_context):
+        thrift_context.return_value = thrift_context
+        client_mock = mock.Mock(name="clientmock")
+        client_mock.return_value = client_mock
+        thrift_context.__enter__ = client_mock
+        client_mock.get_partition_names = mock.Mock(return_value=["p1=x/p2=y", "p1=a/p2=b"])
+
+
+        partition_spec = OrderedDict([("p1", "a"), ("p2", "b")])
+        self.assertTrue(self.metastoreclient.table_exists("table", "default", partition_spec))
+
+        partition_spec = OrderedDict([("p2", "b"), ("p1", "a")])
+        self.assertTrue(self.metastoreclient.table_exists("table", "default", partition_spec))
+
+    def test_metastore_partition_spec_has_the_same_order(self):
+        partition_spec = OrderedDict([("p1", "a"), ("p2", "b")])
+        spec_string = luigi.hive.MetastoreClient().partition_spec(partition_spec)
+        self.assertEqual(spec_string, "p1=a/p2=b")
+
+        partition_spec = OrderedDict([("p2", "b"), ("p1", "a")])
+        spec_string = luigi.hive.MetastoreClient().partition_spec(partition_spec)
+        self.assertEqual(spec_string, "p1=a/p2=b")
 
     @mock.patch("luigi.configuration")
     def test_client_def(self, hive_syntax):

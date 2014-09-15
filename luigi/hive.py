@@ -12,6 +12,7 @@
 
 import abc
 import logging
+import operator
 import luigi
 import luigi.hadoop
 from luigi.target import FileSystemTarget, FileAlreadyExists
@@ -133,7 +134,8 @@ class HiveCommandClient(HiveClient):
 
     def partition_spec(self, partition):
         """ Turns a dict into the a Hive partition specification string """
-        return ','.join(["{0}='{1}'".format(k, v) for (k, v) in partition.items()])
+        return ','.join(["{0}='{1}'".format(k, v) for (k, v) in
+                         sorted(partition.items(), key=operator.itemgetter(0))])
 
 
 class ApacheHiveCommandClient(HiveCommandClient):
@@ -185,16 +187,26 @@ class MetastoreClient(HiveClient):
             if not partition:
                 return table in client.get_all_tables(database)
             else:
-                partition_str = self.partition_spec(partition)
-                # -1 is max_parts, the # of partition names to return (-1 = unlimited)
-                return partition_str in client.get_partition_names(database, table, -1)
+                return partition in self._existing_partitions(table, database, client)
+
+    def _existing_partitions(self, table, database, client):
+        def _parse_partition_string(partition_string):
+            partition_def = {}
+            for part in partition_string.split("/"):
+                name, value = part.split("=")
+                partition_def[name] = value
+            return partition_def
+
+        # -1 is max_parts, the # of partition names to return (-1 = unlimited)
+        partition_strings = client.get_partition_names(database, table, -1)
+        return [_parse_partition_string(existing_partition) for existing_partition in partition_strings]
 
     def table_schema(self, table, database='default'):
         with HiveThriftContext() as client:
             return [(field_schema.name, field_schema.type) for field_schema in client.get_schema(database, table)]
 
     def partition_spec(self, partition):
-        return "/".join("%s=%s" % (k, v) for (k, v) in partition.items())
+        return "/".join("%s=%s" % (k, v) for (k, v) in sorted(partition.items(), key=operator.itemgetter(0)))
 
 
 class HiveThriftContext(object):
@@ -229,35 +241,6 @@ if get_hive_syntax() == "apache":
 else:
     default_client = HiveCommandClient()
 client = default_client
-
-
-def _deprecated(message):
-    import warnings
-    warnings.warn(message=message, category=DeprecationWarning, stacklevel=2)
-
-
-def table_location(**kwargs):
-    """ Deprecated. Use an instance of client instead and call client.table_location """
-    _deprecated("luigi.hive.table_location is deprecated and will be removed soon, use hive.default_client or create a client instead")
-    return default_client.table_location(**kwargs)
-
-
-def table_exists(**kwargs):
-    """ Deprecated. Use an instance of client instead and call client.table_exists """
-    _deprecated("luigi.hive.table_exists is deprecated and will be removed soon, use hive.default_client or create a client instead")
-    return default_client.table_exists(**kwargs)
-
-
-def table_schema(**kwargs):
-    """ Deprecated. Use an instance of client instead and call client.table_schema """
-    _deprecated("luigi.hive.table_schema is deprecated and will be removed soon, use hive.default_client or create a client instead")
-    return default_client.table_schema(**kwargs)
-
-
-def partition_spec(**kwargs):
-    """ Deprecated. Use an instance of client instead and call client.partition_spec """
-    _deprecated("luigi.hive.partition_spec is deprecated and will be removed soon, use hive.default_client or create a client instead")
-    return default_client.partition_spec(**kwargs)
 
 
 class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
@@ -322,7 +305,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
         for o in outputs:
             if isinstance(o, FileSystemTarget):
                 parent_dir = os.path.dirname(o.path)
-                if not o.fs.exists(parent_dir):
+                if parent_dir and not o.fs.exists(parent_dir):
                     logger.info("Creating parent directory %r", parent_dir)
                     try:
                         # there is a possible race condition
@@ -421,8 +404,8 @@ class ExternalHiveTask(luigi.ExternalTask):
     def output(self):
         if self.partition is not None:
             assert self.partition, "partition required"
-            return HivePartitionTarget(database=self.database,
-                                       table=self.table,
-                                       partition=self.partition)
+            return HivePartitionTarget(table=self.table,
+                                       partition=self.partition,
+                                       database=self.database)
         else:
-            return HiveTableTarget(self.database, self.table)
+            return HiveTableTarget(self.table, self.database)

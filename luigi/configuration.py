@@ -14,7 +14,7 @@ class LuigiConfigParser(ConfigParser):
     @classmethod
     def add_config_path(cls, path):
         cls._config_paths.append(path)
-        cls._instance.reload()
+        cls.reload()
 
     @classmethod
     def instance(cls, *args, **kwargs):
@@ -26,8 +26,9 @@ class LuigiConfigParser(ConfigParser):
 
         return cls._instance
 
-    def reload(self):
-        return self._instance.read(self._config_paths)
+    @classmethod
+    def reload(cls):
+        return cls.instance().read(cls._config_paths)
 
     def _get_with_default(self, method, section, option, default, expected_type=None):
         """ Gets the value of the section/option using method. Returns default if value

@@ -64,7 +64,7 @@ class Register(abc.ABCMeta):
     """
     __instance_cache = {}
     _default_namespace = None
-    _reg = {}
+    _reg = []
     AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
     """If this value is returned by :py:meth:`get_reg` then there is an
     ambiguous task name (two :py:class:`Task` have the same name). This denotes
@@ -79,14 +79,7 @@ class Register(abc.ABCMeta):
             classdict["task_namespace"] = metacls._default_namespace
 
         cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
-        if cls.run != NotImplemented and cls.register_cls:
-            name = cls.task_family
-            if name in metacls._reg and metacls._reg[name] != cls and \
-                    metacls._reg[name] != cls.AMBIGUOUS_CLASS:
-                # Registering two different classes - this means we can't instantiate them by name
-                metacls._reg[name] = cls.AMBIGUOUS_CLASS
-            else:
-                metacls._reg[name] = cls
+        metacls._reg.append(cls)
 
         return cls
 
@@ -147,7 +140,22 @@ class Register(abc.ABCMeta):
 
         :return:  a ``dict`` of task_family -> class
         """
-        return cls._reg
+        # We have to do this on-demand in case task names have changed later
+        reg = {}
+        for cls in cls._reg:
+            if cls.run != NotImplemented:
+                name = cls.task_family
+                if name in reg and reg[name] != cls and \
+                        reg[name] != cls.AMBIGUOUS_CLASS and \
+                        not issubclass(cls, reg[name]):
+                    # Registering two different classes - this means we can't instantiate them by name
+                    # The only exception is if one class is a subclass of the other. In that case, we
+                    # instantiate the most-derived class (this fixes some issues with decorator wrappers).
+                    reg[name] = cls.AMBIGUOUS_CLASS
+                else:
+                    reg[name] = cls
+
+        return reg
 
     @classmethod
     def get_global_params(cls):
@@ -156,7 +164,7 @@ class Register(abc.ABCMeta):
         :return: a ``dict`` of parameter name -> parameter.
         """
         global_params = {}
-        for t_name, t_cls in cls._reg.iteritems():
+        for t_name, t_cls in cls.get_reg().iteritems():
             if t_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in t_cls.get_global_params():
@@ -200,9 +208,12 @@ class Task(object):
       list of ``(parameter_name, parameter)`` tuples for this task class
     """
     __metaclass__ = Register
-    register_cls = True # Whether this class should be exposed
 
     _event_callbacks = {}
+
+    # Priority of the task: the scheduler should favor available
+    # tasks with higher priority values first.
+    priority = 0
 
     @classmethod
     def event_handler(cls, event):
@@ -300,9 +311,9 @@ class Task(object):
         # Then use the defaults for anything not filled in
         for param_name, param_obj in params:
             if param_name not in result:
-                if not param_obj.has_default:
+                if not param_obj.has_value:
                     raise parameter.MissingParameterException("%s: requires the '%s' parameter to be set" % (exc_desc, param_name))
-                result[param_name] = param_obj.default
+                result[param_name] = param_obj.value
 
         def list_to_tuple(x):
             """ Make tuples out of lists and sets to allow hashing """
@@ -312,13 +323,6 @@ class Task(object):
                 return x
         # Sort it by the correct order and make a list
         return [(param_name, list_to_tuple(result[param_name])) for param_name, param_obj in params]
-
-    @classmethod
-    def unregister(cls):
-        """ Makes this class not exposed under its name.
-
-        Useful if you have more than one class with the same name"""
-        cls.register_cls = False
 
     def __init__(self, *args, **kwargs):
         """Constructor to resolve values for all Parameters.
@@ -356,25 +360,34 @@ class Task(object):
         return hasattr(self, 'task_id')
 
     @classmethod
-    def from_input(cls, params, global_params):
+    def from_str_params(cls, params_str, global_params):
         """Creates an instance from a str->str hash
 
         This method is for parsing of command line arguments or other
         non-programmatic invocations.
 
-        :param params: dict of param name -> value.
+        :param params_str: dict of param name -> value.
         :param global_params: dict of param name -> value, the global params.
         """
         for param_name, param in global_params:
-            value = param.parse_from_input(param_name, params[param_name])
-            param.set_default(value)
+            value = param.parse_from_input(param_name, params_str[param_name])
+            param.set_global(value)
 
         kwargs = {}
         for param_name, param in cls.get_nonglobal_params():
-            value = param.parse_from_input(param_name, params[param_name])
+            value = param.parse_from_input(param_name, params_str[param_name])
             kwargs[param_name] = value
 
         return cls(**kwargs)
+
+    def to_str_params(self):
+        """Opposite of from_str_params"""
+        params_str = {}
+        params = dict(self.get_params())
+        for param_name, param_value in self.param_kwargs.iteritems():
+            params_str[param_name] = params[param_name].serialize(param_value)
+
+        return params_str
 
     def clone(self, cls=None, **kwargs):
         ''' Creates a new instance from an existing instance where some of the args have changed.
@@ -401,6 +414,9 @@ class Task(object):
 
     def __repr__(self):
         return self.task_id
+
+    def __eq__(self, other):
+        return self.__class__ == other.__class__ and self.param_args == other.param_args
 
     def complete(self):
         """
@@ -544,16 +560,16 @@ def getpaths(struct):
 
 
 def flatten(struct):
-    """Cleates a flat list of all all items in structured output (dicts, lists, items)
-    Examples::
+    """Creates a flat list of all all items in structured output (dicts, lists, items)
 
-        > _flatten({'a': foo, b: bar})
-        [foo, bar]
-        > _flatten([foo, [bar, troll]])
-        [foo, bar, troll]
-        > _flatten(foo)
-        [foo]
-
+    >>> flatten({'a': 'foo', 'b': 'bar'})
+    ['foo', 'bar']
+    >>> flatten(['foo', ['bar', 'troll']])
+    ['foo', 'bar', 'troll']
+    >>> flatten('foo')
+    ['foo']
+    >>> flatten(42)
+    [42]
     """
     if struct is None:
         return []
@@ -562,6 +578,8 @@ def flatten(struct):
         for key, result in struct.iteritems():
             flat += flatten(result)
         return flat
+    if isinstance(struct, basestring):
+        return [struct]
 
     try:
         # if iterable
