@@ -9,6 +9,10 @@ DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.getfqdn()
 DEBUG = False
 
 
+def email_type():
+    return configuration.get_config().get('core', 'email-type', 'plain')
+
+
 def generate_email(sender, subject, message, recipients, image_png):
     import email
     import email.mime
@@ -18,7 +22,7 @@ def generate_email(sender, subject, message, recipients, image_png):
 
     msg_root = email.mime.multipart.MIMEMultipart('related')
 
-    msg_text = email.mime.text.MIMEText(message, 'plain')
+    msg_text = email.mime.text.MIMEText(message, email_type())
     msg_text.set_charset('utf-8')
     msg_root.attach(msg_text)
 
@@ -33,6 +37,12 @@ def generate_email(sender, subject, message, recipients, image_png):
     msg_root['To'] = ','.join(recipients)
 
     return msg_root
+
+
+def wrap_traceback(traceback):
+    if email_type() == 'html':
+        return '<pre>%s</pre>' % traceback
+    return traceback
 
 
 def send_email_smtp(config, sender, subject, message, recipients, image_png):
