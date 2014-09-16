@@ -67,16 +67,16 @@ class CentralPlannerTest(unittest.TestCase):
     def test_two_workers(self):
         # Worker X wants to build A -> B
         # Worker Y wants to build A -> C
-        self.sch.add_task(worker='X', task_id='A')
-        self.sch.add_task(worker='Y', task_id='A')
-        self.sch.add_task(task_id='B', deps=('A',), worker='X')
-        self.sch.add_task(task_id='C', deps=('A',), worker='Y')
+        self.sch.add_task(worker_id='X', task_id='A')
+        self.sch.add_task(worker_id='Y', task_id='A')
+        self.sch.add_task(task_id='B', deps=('A',), worker_id='X')
+        self.sch.add_task(task_id='C', deps=('A',), worker_id='Y')
 
-        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
-        self.assertEqual(self.sch.get_work(worker='Y')['task_id'], None)  # Worker Y is pending on A to be done
-        self.sch.add_task(worker='X', task_id='A', status=DONE)
-        self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'C')
-        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'B')
+        self.assertEqual(self.sch.get_work(worker_id='X')['task_id'], 'A')
+        self.assertEqual(self.sch.get_work(worker_id='Y')['task_id'], None)  # Worker Y is pending on A to be done
+        self.sch.add_task(worker_id='X', task_id='A', status=DONE)
+        self.assertEqual(self.sch.get_work(worker_id='Y')['task_id'], 'C')
+        self.assertEqual(self.sch.get_work(worker_id='X')['task_id'], 'B')
 
     def test_retry(self):
         # Try to build A but fails, will retry after 100s
@@ -100,58 +100,58 @@ class CentralPlannerTest(unittest.TestCase):
         # X starts but does not report back. Y does.
         # After some timeout, Y will build it instead
         self.setTime(0)
-        self.sch.add_task(task_id='A', worker='X')
-        self.sch.add_task(task_id='A', worker='Y')
-        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
+        self.sch.add_task(task_id='A', worker_id='X')
+        self.sch.add_task(task_id='A', worker_id='Y')
+        self.assertEqual(self.sch.get_work(worker_id='X')['task_id'], 'A')
         for t in xrange(200):
             self.setTime(t)
             self.sch.ping(worker='Y')
             if t % 10 == 0:
                 self.sch.prune()
 
-        self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'A')
+        self.assertEqual(self.sch.get_work(worker_id='Y')['task_id'], 'A')
 
     def test_remove_dep(self):
         # X schedules A -> B, A is broken
         # Y schedules C -> B: this should remove A as a dep of B
-        self.sch.add_task(task_id='A', worker='X', runnable=False)
-        self.sch.add_task(task_id='B', deps=('A',), worker='X')
+        self.sch.add_task(task_id='A', worker_id='X', runnable=False)
+        self.sch.add_task(task_id='B', deps=('A',), worker_id='X')
 
         # X can't build anything
-        self.assertEqual(self.sch.get_work(worker='X')['task_id'], None)
+        self.assertEqual(self.sch.get_work(worker_id='X')['task_id'], None)
 
-        self.sch.add_task(task_id='B', deps=('C',), worker='Y')  # should reset dependencies for A
-        self.sch.add_task(task_id='C', worker='Y', status=DONE)
+        self.sch.add_task(task_id='B', deps=('C',), worker_id='Y')  # should reset dependencies for A
+        self.sch.add_task(task_id='C', worker_id='Y', status=DONE)
 
-        self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'B')
+        self.assertEqual(self.sch.get_work(worker_id='Y')['task_id'], 'B')
 
     def test_timeout(self):
         # A bug that was earlier present when restarting the same flow
         self.setTime(0)
-        self.sch.add_task(task_id='A', worker='X')
-        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
+        self.sch.add_task(task_id='A', worker_id='X')
+        self.assertEqual(self.sch.get_work(worker_id='X')['task_id'], 'A')
         self.setTime(10000)
-        self.sch.add_task(task_id='A', worker='Y')  # Will timeout X but not schedule A for removal
+        self.sch.add_task(task_id='A', worker_id='Y')  # Will timeout X but not schedule A for removal
         for i in xrange(2000):
             self.setTime(10000 + i)
             self.sch.ping(worker='Y')
-        self.sch.add_task(task_id='A', status=DONE, worker='Y')  # This used to raise an exception since A was removed
+        self.sch.add_task(task_id='A', status=DONE, worker_id='Y')  # This used to raise an exception since A was removed
 
     def test_disallowed_state_changes(self):
         # Test that we can not schedule an already running task
         t = 'A'
-        self.sch.add_task(task_id=t, worker='X')
-        self.assertEqual(self.sch.get_work(worker='X')['task_id'], t)
-        self.sch.add_task(task_id=t, worker='Y')
-        self.assertEqual(self.sch.get_work(worker='Y')['task_id'], None)
+        self.sch.add_task(task_id=t, worker_id='X')
+        self.assertEqual(self.sch.get_work(worker_id='X')['task_id'], t)
+        self.sch.add_task(task_id=t, worker_id='Y')
+        self.assertEqual(self.sch.get_work(worker_id='Y')['task_id'], None)
 
     def test_two_worker_info(self):
         # Make sure the scheduler returns info that some other worker is running task A
-        self.sch.add_task(worker='X', task_id='A')
-        self.sch.add_task(worker='Y', task_id='A')
+        self.sch.add_task(worker_id='X', task_id='A')
+        self.sch.add_task(worker_id='Y', task_id='A')
 
-        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
-        r = self.sch.get_work(worker='Y')
+        self.assertEqual(self.sch.get_work(worker_id='X')['task_id'], 'A')
+        r = self.sch.get_work(worker_id='Y')
         self.assertEqual(r['task_id'], None)  # Worker Y is pending on A to be done
         s = r['running_tasks'][0]
         self.assertEqual(s['task_id'], 'A')
