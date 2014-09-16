@@ -33,15 +33,14 @@ class ParamTask(luigi.Task):
     param1 = luigi.Parameter()
     param2 = luigi.IntParameter()
 
-
 class DbTaskHistoryTest(unittest.TestCase):
     @helpers.with_config(dict(task_history=dict(db_connection='sqlite:///:memory:')))
     def setUp(self):
         self.history = DbTaskHistory()
 
     def test_task_list(self):
-        self.run_task(DummyTask())
-        self.run_task(DummyTask(foo='bar'))
+        self.run_task(DummyTask(), "worker-id")
+        self.run_task(DummyTask(foo='bar'), "worker-id")
 
         tasks = list(self.history.find_all_by_name('DummyTask'))
 
@@ -51,7 +50,7 @@ class DbTaskHistoryTest(unittest.TestCase):
             self.assertEquals(task.host, 'hostname')
 
     def test_task_events(self):
-        self.run_task(DummyTask())
+        self.run_task(DummyTask(), "worker-id")
         tasks = list(self.history.find_all_by_name('DummyTask'))
         self.assertEquals(len(tasks), 1)
         [task] = tasks
@@ -64,8 +63,8 @@ class DbTaskHistoryTest(unittest.TestCase):
         task1 = ParamTask('foo', 'bar')
         task2 = ParamTask('bar', 'foo')
 
-        self.run_task(task1)
-        self.run_task(task2)
+        self.run_task(task1, "worker-id")
+        self.run_task(task2, "worker-id")
         task1_record = self.history.find_all_by_parameters(task_name='ParamTask', param1='foo', param2='bar')
         task2_record = self.history.find_all_by_parameters(task_name='ParamTask', param1='bar', param2='foo')
         for task, records in zip((task1, task2), (task1_record, task2_record)):
@@ -77,7 +76,7 @@ class DbTaskHistoryTest(unittest.TestCase):
                 self.assertTrue(param_name in record.parameters)
                 self.assertEquals(str(param_value), record.parameters[param_name].value)
 
-    def run_task(self, task):
-        self.history.task_scheduled(task.task_id)
-        self.history.task_started(task.task_id, 'hostname')
-        self.history.task_finished(task.task_id, successful=True)
+    def run_task(self, task, worker_id):
+        self.history.task_scheduled(task.task_id, worker_id)
+        self.history.task_started(task.task_id, 'hostname', worker_id)
+        self.history.task_finished(task.task_id, successful=True, worker_id=worker_id)
