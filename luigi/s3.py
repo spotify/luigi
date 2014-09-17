@@ -367,9 +367,10 @@ class S3Target(FileSystemTarget):
             else:
                 return AtomicS3File(self.path, self.fs)
 
-class S3EmrTarget(S3Target):
+
+class S3FlagTarget(S3Target):
     """
-    Defines a target directory for EMR output on S3
+    Defines a target directory with a flag-file (defaults to `_SUCCESS`) used to signify job success.
 
     This checks for two things:  that the path exists (just like the S3Target) and that the _SUCCESS file exists
     within the directory.  Because Hadoop outputs into a directory and not a single file, the path is assume to be a
@@ -381,16 +382,27 @@ class S3EmrTarget(S3Target):
 
     fs = None
 
-    def __init__(self, path, format=None, client=None):
+    def __init__(self, path, format=None, client=None, flag='_SUCCESS'):
         if path[-1] is not "/":
-            raise ValueError("S3EmrTarget requires the path to be to a directory.  It must end with a slash ( / ).")
+            raise ValueError("S3FlagTarget requires the path to be to a directory.  It must end with a slash ( / ).")
         super(S3Target, self).__init__(path)
         self.format = format
         self.fs = client or S3Client()
+        self.flag = flag
 
     def exists(self):
-        hadoopSemaphore = self.path + '_SUCCESS'
+        hadoopSemaphore = self.path + self.flag
         return self.fs.exists(hadoopSemaphore)
+
+
+class S3EmrTarget(S3FlagTarget):
+    """
+    Deprecated. Use :py:class:`S3FlagTarget`
+    """
+    def __init__(self, *args, **kwargs):
+        warnings.warn("S3EmrTarget is deprecated. Please use S3FlagTarget")
+        super(S3EmrTarget, self).__init__(*args, **kwargs)
+
 
 class S3PathTask(ExternalTask):
     """
@@ -410,3 +422,14 @@ class S3EmrTask(ExternalTask):
 
     def output(self):
         return S3EmrTarget(self.path)
+
+
+class S3FlagTask(ExternalTask):
+    """
+    An external task that requires the existence of EMR output in S3
+    """
+    path = Parameter()
+    flag = Parameter(default=None)
+
+    def output(self):
+        return S3FlagTarget(self.path, flag=self.flag)
