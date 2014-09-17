@@ -187,16 +187,36 @@ class CentralPlannerScheduler(Scheduler):
             worker.reference = worker_reference
         worker.last_active = time.time()
 
+    def _update_priority(self, task, prio, worker):
+        """ Update priority of the given task
+
+        Priority can only be increased. If the task doesn't exist, a placeholder
+        task is created to preserve priority when the task is later scheduled.
+        """
+        task.priority = prio = max(prio, task.priority)
+        for dep in task.deps or []:
+            t = self._tasks.setdefault(dep, Task(status=UNKNOWN, deps=None, priority=prio))
+            t.stakeholders.add(worker)
+            if prio > t.priority:
+                self._update_priority(t, prio, worker)
+
     def add_task(self, worker, task_id, status=PENDING, runnable=True, deps=None, expl=None, priority=0, family='', params={}):
         """
         * Add task identified by task_id if it doesn't exist
         * If deps is not None, update dependency list
         * Update status of task
         * Add additional workers/stakeholders
+        * Update priority when needed
         """
         self.update(worker)
 
         task = self._tasks.setdefault(task_id, Task(status=PENDING, deps=deps, priority=priority, family=family, params=params))
+
+        # for setting priority, we'll sometimes create tasks with unset family and params
+        if not task.family:
+            task.family = family
+        if not task.params:
+            task.params = params
 
         if task.remove is not None:
             task.remove = None  # unmark task for removal so it isn't removed after being added
@@ -216,6 +236,8 @@ class CentralPlannerScheduler(Scheduler):
             task.deps = set(deps)
 
         task.stakeholders.add(worker)
+
+        self._update_priority(task, priority, worker)
 
         if runnable:
             task.workers.add(worker)
@@ -335,7 +357,7 @@ class CentralPlannerScheduler(Scheduler):
     def _recurse_deps(self, task_id, serialized):
         if task_id not in serialized:
             task = self._tasks.get(task_id)
-            if task is None:
+            if task is None or not task.family:
                 logger.warn('Missing task for id [%s]', task_id)
 
                 # try to infer family and params from task_id
