@@ -34,6 +34,7 @@ import configuration
 import warnings
 import mrrunner
 import json
+import glob
 
 logger = logging.getLogger('luigi-interface')
 
@@ -85,6 +86,15 @@ def create_packages_archive(packages, filename):
     def add(src, dst):
         logger.debug('adding to tar: %s -> %s', src, dst)
         tar.add(src, dst)
+
+    def add_files_for_package(sub_package_path, root_package_path, root_package_name):
+        for root, dirs, files in os.walk(sub_package_path):
+            if '.svn' in dirs:
+                dirs.remove('.svn')
+            for f in files:
+                if not f.endswith(".pyc") and not f.startswith("."):
+                    add(dereference(root + "/" + f), root.replace(root_package_path, root_package_name) + "/" + f)
+
     for package in packages:
         # Put a submodule's entire package in the archive. This is the
         # magic that usually packages everything you need without
@@ -117,12 +127,17 @@ def create_packages_archive(packages, filename):
                     add(dereference(__import__(module_name, None, None, 'non_empty').__path__[0] + "/__init__.py"),
                         directory + "/__init__.py")
 
-                for root, dirs, files in os.walk(p):
-                    if '.svn' in dirs:
-                        dirs.remove('.svn')
-                    for f in files:
-                        if not f.endswith(".pyc") and not f.startswith("."):
-                            add(dereference(root + "/" + f), root.replace(p, n) + "/" + f)
+                add_files_for_package(p, p, n)
+
+                # include egg-info directories that are parallel:
+                for egg_info_path in glob.glob(p + '*.egg-info'):
+                    logger.debug(
+                        'Adding package metadata to archive for "%s" found at "%s"',
+                        package.__name__,
+                        egg_info_path
+                    )
+                    add_files_for_package(egg_info_path, p, n)
+
         else:
             f = package.__file__
             if f.endswith("pyc"):
