@@ -195,8 +195,7 @@ class CentralPlannerScheduler(Scheduler):
         """
         task.priority = prio = max(prio, task.priority)
         for dep in task.deps or []:
-            t = self._tasks.setdefault(dep, Task(status=UNKNOWN, deps=None, priority=prio))
-            t.stakeholders.add(worker)
+            t = self._tasks[dep] # This should always exist, see add_task
             if prio > t.priority:
                 self._update_priority(t, prio, worker)
 
@@ -236,6 +235,12 @@ class CentralPlannerScheduler(Scheduler):
             task.deps = set(deps)
 
         task.stakeholders.add(worker)
+
+        # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
+        # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
+        for dep in task.deps or []:
+            t = self._tasks.setdefault(dep, Task(status=UNKNOWN, deps=None, priority=priority))
+            t.stakeholders.add(worker)
 
         self._update_priority(task, priority, worker)
 
