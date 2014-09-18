@@ -215,8 +215,8 @@ class Task(object):
     # tasks with higher priority values first.
     priority = 0
 
-    # Resources used by the task. Should be formatted like {"impala": 1} to indicate that the
-    # task requires 1 unit of the impala resource.
+    # Resources used by the task. Should be formatted like {"scp": 1} to indicate that the
+    # task requires 1 unit of the scp resource.
     resources = {}
 
     @classmethod
