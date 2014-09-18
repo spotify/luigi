@@ -89,12 +89,12 @@ def create_packages_archive(packages, filename):
         # Put a submodule's entire package in the archive. This is the
         # magic that usually packages everything you need without
         # having to attach packages/modules explicitly
-        if not hasattr(package, "__path__") and '.' in package.__name__:
+        if not getattr(package, "__path__", None) and '.' in package.__name__:
             package = __import__(package.__name__.rpartition('.')[0], None, None, 'non_empty')
 
         n = package.__name__.replace(".", "/")
 
-        if hasattr(package, "__path__"):
+        if getattr(package, "__path__", None):
             # TODO: (BUG) picking only the first path does not
             # properly deal with namespaced packages in different
             # directories
