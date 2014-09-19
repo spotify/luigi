@@ -596,7 +596,8 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         super(HdfsAtomicWritePipe, self).__init__([load_hadoop_cmd(), 'fs', '-put', '-', self.tmppath])
 
     def abort(self):
-        print "Aborting %s('%s'). Removing temporary file '%s'" % (self.__class__.__name__, self.path, self.tmppath)
+        logger.info("Aborting %s('%s'). Removing temporary file '%s'",
+                self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWritePipe, self).abort()
         remove(self.tmppath)
 
@@ -614,7 +615,8 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
         super(HdfsAtomicWriteDirPipe, self).__init__([load_hadoop_cmd(), 'fs', '-put', '-', self.datapath])
 
     def abort(self):
-        print "Aborting %s('%s'). Removing temporary dir '%s'" % (self.__class__.__name__, self.path, self.tmppath)
+        logger.info("Aborting %s('%s'). Removing temporary dir '%s'",
+                self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWriteDirPipe, self).abort()
         remove(self.tmppath)
 
