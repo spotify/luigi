@@ -157,6 +157,53 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(s['task_id'], 'A')
         self.assertEqual(s['worker'], 'X')
 
+    def test_scheduler_resources_none_allow_one(self):
+        self.sch.add_task(worker='X', task_id='A', resources={'R1': 1})
+        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
+
+    def test_scheduler_resources_none_disallow_two(self):
+        self.sch.add_task(worker='X', task_id='A', resources={'R1': 2})
+        self.assertFalse(self.sch.get_work(worker='X')['task_id'], 'A')
+
+    def test_scheduler_with_insufficient_resources(self):
+        self.sch.add_task(worker='X', task_id='A', resources={'R1': 3})
+        self.sch.update_resources(R1=2)
+        self.assertFalse(self.sch.get_work(worker='X')['task_id'])
+
+    def test_scheduler_with_sufficient_resources(self):
+        self.sch.add_task(worker='X', task_id='A', resources={'R1': 3})
+        self.sch.update_resources(R1=3)
+        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
+
+    def test_scheduler_with_resources_used(self):
+        self.sch.add_task(worker='X', task_id='A', resources={'R1': 1})
+        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
+
+        self.sch.add_task(worker='Y', task_id='B', resources={'R1': 1})
+        self.sch.update_resources(R1=1)
+        self.assertFalse(self.sch.get_work(worker='Y')['task_id'])
+
+    def test_scheduler_overprovisioned_on_other_resource(self):
+        self.sch.add_task(worker='X', task_id='A', resources={'R1': 2})
+        self.sch.update_resources(R1=2)
+        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
+
+        self.sch.add_task(worker='Y', task_id='B', resources={'R2': 2})
+        self.sch.update_resources(R1=1, R2=2)
+        self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'B')
+
+    def test_scheduler_with_priority_and_competing_resources(self):
+        self.sch.add_task(worker='X', task_id='A')
+        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
+
+        self.sch.add_task(worker='X', task_id='B', resources={'R': 1}, priority=10)
+        self.sch.add_task(worker='Y', task_id='C', resources={'R': 1}, priority=1)
+        self.sch.update_resources(R=1)
+        self.assertFalse(self.sch.get_work(worker='Y')['task_id'])
+
+        self.sch.add_task(worker='Y', task_id='D', priority=0)
+        self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'D')
+
     def check_task_order(self, order):
         for expected_id in order:
             self.assertEqual(self.sch.get_work(WORKER)['task_id'], expected_id)

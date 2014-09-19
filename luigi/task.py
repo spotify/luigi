@@ -215,6 +215,10 @@ class Task(object):
     # tasks with higher priority values first.
     priority = 0
 
+    # Resources used by the task. Should be formatted like {"scp": 1} to indicate that the
+    # task requires 1 unit of the scp resource.
+    resources = {}
+
     @classmethod
     def event_handler(cls, event):
         """ Decorator for adding event handlers """
@@ -401,7 +405,7 @@ class Task(object):
 
         if cls is None:
             cls = self.__class__
-        
+
         new_k = {}
         for param_name, param_class in cls.get_nonglobal_params():
             if param_name in k:
@@ -472,6 +476,14 @@ class Task(object):
         the superclass.
         '''
         return flatten(self.requires())  # base impl
+
+    def process_resources(self):
+        '''
+        Override in "template" tasks which provide common resource functionality
+        but allow subclasses to specify additional resources while preserving
+        the name for consistent end-user experience.
+        '''
+        return self.resources  # default impl
 
     def input(self):
         """Returns the outputs of the Tasks returned by :py:meth:`requires`
