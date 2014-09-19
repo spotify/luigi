@@ -241,6 +241,7 @@ class CentralPlannerScheduler(Scheduler):
             task.deps = set(deps)
 
         task.stakeholders.add(worker)
+        task.resources = resources
 
         # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
         # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
