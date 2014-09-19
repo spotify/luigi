@@ -359,6 +359,15 @@ class HdfsTargetTests(HdfsTestCase):
         self.assertFalse(files.glob_exists(3))
         self.assertFalse(files.glob_exists(1))
 
+    def assertRegexpMatches(self, text, expected_regexp, msg=None):
+        """Python 2.7 backport."""
+        if isinstance(expected_regexp, basestring):
+            expected_regexp = re.compile(expected_regexp)
+        if not expected_regexp.search(text):
+            msg = msg or "Regexp didn't match"
+            msg = '%s: %r not found in %r' % (msg, expected_regexp.pattern, text)
+            raise self.failureException(msg)
+
     def test_tmppath_not_configured(self):
         #Given: several target paths to test
         path1 = "/dir1/dir2/file"
