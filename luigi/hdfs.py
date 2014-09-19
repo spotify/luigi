@@ -25,6 +25,7 @@ import warnings
 from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
 import configuration
 import logging
+import getpass
 logger = logging.getLogger('luigi-interface')
 
 
@@ -54,11 +55,14 @@ def load_hadoop_cmd():
     return luigi.configuration.get_config().get('hadoop', 'command', 'hadoop')
 
 
-def tmppath(path=None):
+def tmppath(path=None, include_unix_username=True):
     """
     @param path: target path for which it is needed to generate temporary location
     @type path: str
+    @type include_unix_username: bool
     @rtype: str
+
+    Note that include_unix_username might work on windows too.
     """
     addon = "luigitemp-%08d" % random.randrange(1e9)
     temp_dir = tempfile.gettempdir()
@@ -89,6 +93,9 @@ def tmppath(path=None):
     else:
         #just return any random temporary location
         subdir = ''
+
+    if include_unix_username:
+        subdir = os.path.join(getpass.getuser(), subdir)
 
     return os.path.join(base_dir, subdir + addon)
 
