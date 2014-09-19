@@ -20,6 +20,7 @@ import luigi
 from luigi import hdfs
 import mock
 import re
+import functools
 
 
 class TestException(Exception):
@@ -59,7 +60,7 @@ class ErrorHandling(HdfsTestCase):
         self.assertTrue(self.fs.exists(path))
         self.assertRaises(
             luigi.target.FileAlreadyExists,
-            self.fs.mkdir,
+            functools.partial(self.fs.mkdir, parents=False, raise_if_exists=True),
             path
         )
         self.fs.remove(path, skip_trash=True)
