@@ -204,6 +204,19 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(worker='Y', task_id='D', priority=0)
         self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'D')
 
+    def test_update_resources(self):
+        self.sch.add_task(WORKER, task_id='A', deps=['B'])
+        self.sch.add_task(WORKER, task_id='B', resources={'r': 2})
+        self.sch.update_resources(r=1)
+
+        # B requires too many resources, we can't schedule
+        self.check_task_order([])
+
+        self.sch.add_task(WORKER, task_id='B', resources={'r': 1})
+
+        # now we have enough resources
+        self.check_task_order(['B', 'A'])
+
     def check_task_order(self, order):
         for expected_id in order:
             self.assertEqual(self.sch.get_work(WORKER)['task_id'], expected_id)
