@@ -346,8 +346,8 @@ class WorkerTest(unittest.TestCase):
 
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
 
-        w  = Worker(scheduler=sch, worker_id='X', keep_alive=True)
-        w2 = Worker(scheduler=sch, worker_id='Y', keep_alive=True, wait_interval=0.1)
+        w  = Worker(scheduler=sch, worker_id='X', keep_alive=True, count_uniques=True)
+        w2 = Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1)
 
         self.assertTrue(w.add(a))
         self.assertTrue(w2.add(b))
@@ -359,6 +359,40 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(b.complete())
 
         w.stop()
+        w2.stop()
+
+    def test_die_for_non_unique_pending(self):
+        class A(DummyTask):
+            def run(self):
+                logging.debug('running A')
+                time.sleep(0.1)
+                super(A, self).run()
+
+        a = A()
+
+        class B(DummyTask):
+            def requires(self):
+                return a
+            def run(self):
+                logging.debug('running B')
+                super(B, self).run()
+
+        b = B()
+
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+
+        w  = Worker(scheduler=sch, worker_id='X', keep_alive=True, count_uniques=True)
+        w2 = Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1)
+
+        self.assertTrue(w.add(b))
+        self.assertTrue(w2.add(b))
+
+        self.assertEquals(w._get_work()[0], 'A()')
+        self.assertTrue(w2.run())
+
+        self.assertFalse(a.complete())
+        self.assertFalse(b.complete())
+
         w2.stop()
 
     def test_complete_exception(self):
