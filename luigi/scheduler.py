@@ -290,7 +290,16 @@ class CentralPlannerScheduler(Scheduler):
 
     def _rank(self, worker):
         ''' Return worker's rank function for task scheduling '''
-        return lambda (task_id, task): (task.priority, worker in task.workers, -task.time)
+        dependents = collections.defaultdict(int)
+        not_done = lambda t: t not in self._tasks or self._tasks[t].status != DONE
+        for task_id, task in self._tasks.iteritems():
+            if task.status != DONE:
+                deps = filter(not_done, task.deps)
+                inverse_num_deps = 1.0 / max(len(deps), 1)
+                for dep in deps:
+                    dependents[dep] += inverse_num_deps
+
+        return lambda (task_id, task): (task.priority, worker in task.workers, dependents[task_id], -task.time)
 
     def _not_schedulable(self, task, used_resources):
         return any((
