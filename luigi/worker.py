@@ -120,10 +120,9 @@ class Worker(object):
             keep_alive = config.getboolean('core', 'worker-keep-alive', False)
         self.__keep_alive = keep_alive
 
-        if keep_alive:
-            if wait_interval is None:
-                wait_interval = config.getint('core', 'worker-wait-interval', 1)
-            self.__wait_interval = wait_interval
+        if wait_interval is None:
+            wait_interval = config.getint('core', 'worker-wait-interval', 1)
+        self.__wait_interval = wait_interval
 
         if max_reschedules is None:
             max_reschedules = config.getint('core', 'max-reschedules', 1)
@@ -377,7 +376,8 @@ class Worker(object):
         self._purge_children() # Deal with subprocess failures
 
         try:
-            task_id, status, error_message, missing = self._task_result_queue.get(timeout=1.0)
+            task_id, status, error_message, missing = self._task_result_queue.get(
+                timeout=float(self.__wait_interval))
         except Queue.Empty:
             return
 
