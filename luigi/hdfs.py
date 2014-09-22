@@ -714,7 +714,7 @@ in luigi. Use target.path instead", stacklevel=2)
 
     @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def move(self, path, fail_if_exists=False):
-        self.rename(path, fail_if_exists=fail_if_exists)
+        self.rename(path, raise_if_exists=fail_if_exists)
 
     def move_dir(self, path):
         # mkdir will fail if directory already exists, thereby ensuring atomicity
