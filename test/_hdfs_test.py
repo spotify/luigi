@@ -360,6 +360,15 @@ class HdfsTargetTests(HdfsTestCase):
         self.assertFalse(files.glob_exists(3))
         self.assertFalse(files.glob_exists(1))
 
+    def assertRegexpMatches(self, text, expected_regexp, msg=None):
+        """Python 2.7 backport."""
+        if isinstance(expected_regexp, basestring):
+            expected_regexp = re.compile(expected_regexp)
+        if not expected_regexp.search(text):
+            msg = msg or "Regexp didn't match"
+            msg = '%s: %r not found in %r' % (msg, expected_regexp.pattern, text)
+            raise self.failureException(msg)
+
     def test_tmppath_not_configured(self):
         #Given: several target paths to test
         path1 = "/dir1/dir2/file"
@@ -373,15 +382,15 @@ class HdfsTargetTests(HdfsTestCase):
         path9 = "/tmpdir/file"
 
         #When: I create a temporary path for targets
-        res1 = hdfs.tmppath(path1)
-        res2 = hdfs.tmppath(path2)
-        res3 = hdfs.tmppath(path3)
-        res4 = hdfs.tmppath(path4)
-        res5 = hdfs.tmppath(path5)
-        res6 = hdfs.tmppath(path6)
-        res7 = hdfs.tmppath(path7)
-        res8 = hdfs.tmppath(path8)
-        res9 = hdfs.tmppath(path9)
+        res1 = hdfs.tmppath(path1, include_unix_username=False)
+        res2 = hdfs.tmppath(path2, include_unix_username=False)
+        res3 = hdfs.tmppath(path3, include_unix_username=False)
+        res4 = hdfs.tmppath(path4, include_unix_username=False)
+        res5 = hdfs.tmppath(path5, include_unix_username=False)
+        res6 = hdfs.tmppath(path6, include_unix_username=False)
+        res7 = hdfs.tmppath(path7, include_unix_username=False)
+        res8 = hdfs.tmppath(path8, include_unix_username=False)
+        res9 = hdfs.tmppath(path9, include_unix_username=False)
 
         #Then: I should get correct results relative to Luigi temporary directory
         self.assertRegexpMatches(res1,"^/tmp/dir1/dir2/file-luigitemp-\d+")
@@ -396,6 +405,11 @@ class HdfsTargetTests(HdfsTestCase):
         self.assertRegexpMatches(res7, "^hdfs://somehost/tmp/tmp/dir/file-luigitemp-\d+")
         self.assertRegexpMatches(res8, "^/tmp/luigitemp-\d+")
         self.assertRegexpMatches(res9,  "/tmp/tmpdir/file")
+
+    def test_tmppath_username(self):
+        self.assertRegexpMatches(hdfs.tmppath('/path/to/stuff', include_unix_username=True),
+                                 "^/tmp/[a-z0-9_]+/path/to/stuff-luigitemp-\d+")
+
 
 TIMESTAMP_DELAY = 60 # Big enough for `hadoop fs`?
 class _HdfsClientTest(HdfsTestCase):
