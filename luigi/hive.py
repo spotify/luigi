@@ -237,6 +237,7 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
         """ Location of an rc file to run before the query
             if hiverc-location key is specified in client.cfg, will default to the value there
             otherwise returns None
+            Returning a list of rc files will load all of them in order.
         """
         return luigi.configuration.get_config().get('hive', 'hiverc-location', default=None)
 
