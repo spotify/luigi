@@ -114,9 +114,9 @@ class HiveCommandClient(HiveClient):
 
     def table_exists(self, table, database='default', partition={}):
         if not partition:
-            stdout = run_hive_cmd('use {0}; describe {1}'.format(database, table))
+            stdout = run_hive_cmd('use {0}; show tables like "{1}";'.format(database, table))
 
-            return not "does not exist" in stdout
+            return stdout and table in stdout
         else:
             stdout = run_hive_cmd("""use %s; show partitions %s partition
                                 (%s)""" % (database, table, self.partition_spec(partition)))
@@ -143,28 +143,6 @@ class ApacheHiveCommandClient(HiveCommandClient):
     A subclass for the HiveCommandClient to (in some cases) ignore the return code from
     the hive command so that we can just parse the output.
     """
-    def table_exists(self, table, database='default', partition={}):
-        if not partition:
-            # Hive 0.11 returns 17 as the exit status if the table does not exist.
-            # The actual message is: [Error 10001]: Table not found tablename
-            # stdout is empty and an error message is returned on stderr.
-            # This is why we can't check the return code on this command and
-            # assume if stdout is empty that the table doesn't exist.
-            stdout = run_hive_cmd('use {0}; describe {1}'.format(database, table), False)
-            if stdout:
-                return not "Table not found" in stdout
-            else:
-                # Hive returned a non-zero exit status and printed its output to stderr not stdout
-                return False
-        else:
-            stdout = run_hive_cmd("""use %s; show partitions %s partition
-                                (%s)""" % (database, table, self.partition_spec(partition)), False)
-
-            if stdout:
-                return True
-            else:
-                return False
-
     def table_schema(self, table, database='default'):
         describe = run_hive_cmd("use {0}; describe {1}".format(database, table), False)
         if not describe or "Table not found" in describe:
