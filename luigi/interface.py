@@ -295,10 +295,7 @@ class ArgParseInterface(Interface):
         if main_task_cls:
             task_cls = main_task_cls
         else:
-            task_cls = Register.get_reg()[args.command]
-
-        if task_cls == Register.AMBIGUOUS_CLASS:
-            raise Exception('%s is ambigiuous' % args.command)
+            task_cls = Register.get_task_cls(args.command)
 
         # Notice that this is not side effect free because it might set global params
         task = task_cls.from_str_params(params, Register.get_global_params())
@@ -362,13 +359,12 @@ class OptParseInterface(Interface):
         global_params = list(Register.get_global_params())
 
         parser = PassThroughOptionParser()
-        tasks_str = '/'.join(sorted([name for name in Register.get_reg()]))
 
         def add_task_option(p):
             if main_task_cls:
-                p.add_option('--task', help='Task to run (' + tasks_str + ') [default: %default]', default=main_task_cls.task_family)
+                p.add_option('--task', help='Task to run (one of ' + Register.tasks_str() + ') [default: %default]', default=main_task_cls.task_family)
             else:
-                p.add_option('--task', help='Task to run (%s)' % tasks_str)
+                p.add_option('--task', help='Task to run (one of %s)' % Register.tasks_str())
 
         def _add_parameter(parser, param_name, param):
             description = [param_name]
@@ -401,14 +397,9 @@ class OptParseInterface(Interface):
             parser = optparse.OptionParser()
         add_task_option(parser)
 
-        if task_cls_name not in Register.get_reg():
-            raise Exception('Error: %s is not a valid tasks (must be %s)' % (task_cls_name, tasks_str))
+        task_cls = Register.get_task_cls(task_cls_name)
 
         # Register all parameters as a big mess
-        task_cls = Register.get_reg()[task_cls_name]
-        if task_cls == Register.AMBIGUOUS_CLASS:
-            raise Exception('%s is ambiguous' % task_cls_name)
-
         params = task_cls.get_nonglobal_params()
 
         for param_name, param in global_params:

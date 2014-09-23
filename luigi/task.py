@@ -158,6 +158,23 @@ class Register(abc.ABCMeta):
         return reg
 
     @classmethod
+    def tasks_str(cls):
+        """Human-readable register contents dump.
+        """
+        return repr(sorted(Register.get_reg().keys()))
+
+    @classmethod
+    def get_task_cls(cls, name):
+        """Returns an unambiguous class or raises an exception.
+        """
+        task_cls = Register.get_reg().get(name)
+        if not task_cls:
+            raise Exception('Task %r not found. Candidates are: %s' % (name, Register.tasks_str()))
+        if task_cls == Register.AMBIGUOUS_CLASS:
+            raise Exception('Task %r is ambiguous' % name)
+        return task_cls
+
+    @classmethod
     def get_global_params(cls):
         """Compiles and returns the global parameters for all :py:class:`Task`.
 
