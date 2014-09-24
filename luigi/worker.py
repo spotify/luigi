@@ -329,6 +329,9 @@ class Worker(object):
 
             deps = [d.task_id for d in deps]
 
+        for t in task.co_schedule_iterable():
+            yield t
+
         self._scheduled_tasks[task.task_id] = task
         self._scheduler.add_task(self._id, task.task_id, status=status,
                                  deps=deps, runnable=runnable, priority=task.priority,

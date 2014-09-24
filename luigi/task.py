@@ -514,6 +514,23 @@ class Task(object):
         '''
         return flatten(self.requires())  # base impl
 
+    def co_schedule(self):
+        """The tasks that will be scheduled alongside this one
+
+        When a task is scheduled, you may want to always schedule another
+        complementary task that this one does not depend on. For example, you
+        may want to schedule a cleanup task that depends on this one and removes
+        any unneeded output.
+        """
+        return []  # default impl
+
+    def co_schedule_iterable(self):
+        """ Internal method used by the scheduler
+
+        Returns the flattened list of co_schedule
+        """
+        return flatten(self.co_schedule())
+
     def process_resources(self):
         '''
         Override in "template" tasks which provide common resource functionality
