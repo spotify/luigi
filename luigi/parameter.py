@@ -229,6 +229,8 @@ class Parameter(object):
 
         :param x: the value to serialize.
         """
+        if self.is_list:
+            return [str(v) for v in x]
         return str(x)
 
     def parse_from_input(self, param_name, x):

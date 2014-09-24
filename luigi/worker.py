@@ -13,7 +13,8 @@
 # the License.
 
 import random
-from scheduler import CentralPlannerScheduler, PENDING, FAILED, DONE
+from scheduler import (CentralPlannerScheduler, PENDING, RUNNING, FAILED,
+                       SUSPENDED, DONE)
 import collections
 import threading
 import time
@@ -27,8 +28,12 @@ import notifications
 import getpass
 import multiprocessing # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
 import Queue
+import luigi.interface
+import sys
+import types
+import interface
 from target import Target
-from task import Task
+from task import Task, flatten
 from event import Event
 
 try:
@@ -64,6 +69,7 @@ class TaskProcess(multiprocessing.Process):
         status = FAILED
         error_message = ''
         missing = []
+        new_deps = []
         try:
             # Verify that all the tasks are fulfilled!
             missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
@@ -72,12 +78,32 @@ class TaskProcess(multiprocessing.Process):
                 raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
             self.task.trigger_event(Event.START, self.task)
             t0 = time.time()
+            status = None
             try:
-                self.task.run()
+                task_gen = self.task.run()
+                if isinstance(task_gen, types.GeneratorType):  # new deps
+                    for requires in task_gen:
+                        new_req = flatten(requires)
+                        status = (RUNNING if all(t.complete() for t in new_req)
+                                  else SUSPENDED)
+                        new_deps = [(t.task_family, t.to_str_params())
+                                    for t in new_req]
+                        if status == RUNNING:
+                            self.result_queue.put(
+                                (self.task.task_id, status, '', missing,
+                                 new_deps))
+                            continue
+                        logger.info(
+                            '[pid %s] Worker %s new requirements      %s',
+                            os.getpid(), self.worker_id, self.task.task_id)
+                        return
             finally:
-                self.task.trigger_event(Event.PROCESSING_TIME, self.task, time.time() - t0)
+                if status != SUSPENDED:
+                    self.task.trigger_event(
+                        Event.PROCESSING_TIME, self.task, time.time() - t0)
             error_message = json.dumps(self.task.on_success())
-            logger.info('[pid %s] Worker %s done      %s', os.getpid(), self.worker_id, self.task.task_id)
+            logger.info('[pid %s] Worker %s done      %s', os.getpid(),
+                        self.worker_id, self.task.task_id)
             self.task.trigger_event(Event.SUCCESS, self.task)
             status = DONE
 
@@ -92,7 +118,7 @@ class TaskProcess(multiprocessing.Process):
             notifications.send_error_email(subject, error_message)
         finally:
             self.result_queue.put(
-                (self.task.task_id, status, error_message, missing))
+                (self.task.task_id, status, error_message, missing, new_deps))
 
 
 class Worker(object):
@@ -134,6 +160,7 @@ class Worker(object):
         self.worker_processes = int(worker_processes)
         self.host = socket.gethostname()
         self._scheduled_tasks = {}
+        self._suspended_tasks = {}
 
         self.add_succeeded = True
         self.run_succeeded = True
@@ -351,7 +378,8 @@ class Worker(object):
 
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
-        p = TaskProcess(task, self._id, self._task_result_queue, random_seed=bool(self.worker_processes > 1))
+        p = TaskProcess(task, self._id, self._task_result_queue,
+                        random_seed=bool(self.worker_processes > 1))
         self._running_tasks[task_id] = p
 
         if self.worker_processes > 1:
@@ -366,49 +394,69 @@ class Worker(object):
             if not p.is_alive() and p.exitcode:
                 error_msg = 'Worker task %s died unexpectedly with exit code %s' % (task_id, p.exitcode)
                 logger.info(error_msg)
-                self._task_result_queue.put((task_id, FAILED, error_msg, []))
+                self._task_result_queue.put(
+                        (task_id, FAILED, error_msg, [], []))
 
-    def _handle_next_done_task(self):
-        ''' We have to catch two ways a task can be "done"
-        1. Normal execution: the task runs/fails and puts a result back on the queue
-        2. Child process dies: we need to catch this separately
+    def _handle_next_task(self):
+        ''' We have to catch three ways a task can be "done"
+        1. Normal execution: the task runs/fails and puts a result back on the
+           queue
+        2. New dependencies: the task yielded new deps that were not complete
+           and will be rescheduled and dependencies added.
+        3. Child process dies: we need to catch this separately
         '''
-        self._purge_children() # Deal with subprocess failures
+        while True:
+            self._purge_children()  # Deal with subprocess failures
 
-        try:
-            task_id, status, error_message, missing = self._task_result_queue.get(
-                timeout=float(self.__wait_interval))
-        except Queue.Empty:
+            try:
+                task_id, status, error_message, missing, new_requirements = (
+                    self._task_result_queue.get(
+                        timeout=float(self.__wait_interval)))
+            except Queue.Empty:
+                return
+
+            task = self._scheduled_tasks[task_id]
+            if not task:
+                continue
+                # Not a scheduled task. Probably already removed.
+                # Maybe it yielded something?
+            new_deps = []
+            if new_requirements:
+                new_req = [interface.load_task(task, name, params)
+                           for name, params in new_requirements]
+                for t in new_req:
+                    self.add(t)
+                new_deps = [t.task_id for t in new_req]
+
+            self._scheduler.add_task(self._id,
+                                     task_id,
+                                     status=status,
+                                     expl=error_message,
+                                     resources=task.process_resources(),
+                                     runnable=None,
+                                     params=task.to_str_params(),
+                                     family=task.task_family,
+                                     new_deps=new_deps)
+
+            if status == RUNNING:
+                continue
+            self._running_tasks.pop(task_id)
+
+            # re-add task to reschedule missing dependencies
+            if missing:
+                reschedule = True
+
+                # keep out of infinite loops by not rescheduling too many times
+                for task_id in missing:
+                    self.unfulfilled_counts[task.task_id] += 1
+                    if (self.unfulfilled_counts[task.task_id] >
+                            self.__max_reschedules):
+                        reschedule = False
+                if reschedule:
+                    self.add(task)
+
+            self.run_succeeded &= status in (DONE, SUSPENDED)
             return
-
-        if task_id not in self._running_tasks:
-            log.info('Task %s not a running task, will not handle', task_id)
-            return
-
-        self._running_tasks.pop(task_id)
-        self.run_succeeded &= (status == DONE)
-        task = self._scheduled_tasks[task_id]
-
-        self._scheduler.add_task(self._id, task.task_id, status=status,
-                                 expl=error_message, runnable=None,
-                                 resources=task.process_resources(),
-                                 params=task.to_str_params(),
-                                 family=task.task_family)
-
-        # re-add task to reschedule missing dependencies
-        if missing:
-            reschedule = True
-
-            # keep out of infinite loops by not rescheduling too many times
-            for task_id in missing:
-                self.unfulfilled_counts[task.task_id] += 1
-                if self.unfulfilled_counts[task.task_id] > self.__max_reschedules:
-                    reschedule = False
-            if reschedule:
-                self.add(task)
-
-        self.run_succeeded &= status == DONE
-        return status
 
     def _sleeper(self):
         # TODO is exponential backoff necessary?
@@ -422,7 +470,7 @@ class Worker(object):
         """Returns True if all scheduled tasks were executed successfully"""
         logger.info('Running Worker with %d processes', self.worker_processes)
 
-        sleeper  = self._sleeper()
+        sleeper = self._sleeper()
         self.run_succeeded = True
 
         self._add_worker()
@@ -430,7 +478,7 @@ class Worker(object):
         while True:
             while len(self._running_tasks) >= self.worker_processes:
                 logger.debug('%d running tasks, waiting for next task to finish', len(self._running_tasks))
-                self._handle_next_done_task()
+                self._handle_next_task()
 
             task_id, running_tasks, n_pending_tasks = self._get_work()
 
@@ -443,7 +491,7 @@ class Worker(object):
                     else:
                         break
                 else:
-                    self._handle_next_done_task()
+                    self._handle_next_task()
                     continue
 
             # task_id is not None:
@@ -452,6 +500,6 @@ class Worker(object):
 
         while len(self._running_tasks):
             logger.debug('Shut down Worker, %d more tasks to go', len(self._running_tasks))
-            self._handle_next_done_task()
+            self._handle_next_task()
 
         return self.run_succeeded

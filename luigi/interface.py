@@ -27,7 +27,7 @@ import re
 import argparse
 import sys
 import os
-
+from importlib import import_module
 from task import Register
 
 
@@ -56,6 +56,31 @@ def setup_interface_logging(conf_file=None):
 def get_config():
     warnings.warn('Use luigi.configuration.get_config() instead')
     return configuration.get_config()
+
+
+def load_task(parent_task, task_name, params):
+    """ Imports task and uses ArgParseInterface to initialize it
+    """
+    # How the module is represented depends on if Luigi was started from
+    # that file or if the module was imported later on
+    module = sys.modules[parent_task.__module__]
+    if module.__name__ == '__main__':
+        parent_module_path = os.path.abspath(module.__file__)
+        for p in sys.path:
+            if parent_module_path.startswith(p):
+                end = parent_module_path.rfind('.py')
+                actual_module = parent_module_path[len(p):end].strip(
+                    '/').replace('/', '.')
+                break
+    else:
+        actual_module = module.__name__
+    return init_task(actual_module, task_name, params, {})
+
+
+def init_task(module, task, str_params, global_str_params):
+    Task = getattr(import_module(module), task)
+
+    return Task.from_str_params(str_params, global_str_params)
 
 
 class EnvironmentParamsContainer(task.Task):

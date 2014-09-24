@@ -21,7 +21,7 @@ import cPickle as pickle
 import task_history as history
 logger = logging.getLogger("luigi.server")
 
-from task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
+from task_status import PENDING, FAILED, DONE, RUNNING, SUSPENDED, UNKNOWN
 
 
 class Scheduler(object):
@@ -202,8 +202,9 @@ class CentralPlannerScheduler(Scheduler):
             if prio > t.priority:
                 self._update_priority(t, prio, worker)
 
-    def add_task(self, worker, task_id, status=PENDING, runnable=True, deps=None, expl=None,
-                 resources=None, priority=0, family='', params={}):
+    def add_task(self, worker, task_id, status=PENDING, runnable=True,
+                 deps=None, new_deps=None, expl=None, resources=None,
+                 priority=0, family='', params={}):
         """
         * Add task identified by task_id if it doesn't exist
         * If deps is not None, update dependency list
@@ -233,12 +234,15 @@ class CentralPlannerScheduler(Scheduler):
                 # We also check for status == PENDING b/c that's the default value
                 # (so checking for status != task.status woule lie)
                 self._update_task_history(task_id, status)
-            task.status = status
+            task.status = PENDING if status == SUSPENDED else status
             if status == FAILED:
                 task.retry = time.time() + self._retry_delay
 
         if deps is not None:
             task.deps = set(deps)
+
+        if new_deps is not None:
+            task.deps.update(new_deps)
 
         task.stakeholders.add(worker)
         task.resources = resources
