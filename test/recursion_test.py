@@ -41,7 +41,7 @@ class Popularity(luigi.Task):
 
 class RecursionTest(unittest.TestCase):
     def setUp(self):
-        MockFile._file_contents['/tmp/popularity/2009-01-01.txt'] = '0\n'
+        MockFile.fs.get_all_data()['/tmp/popularity/2009-01-01.txt'] = '0\n'
 
     def test_invoke(self):
         w = luigi.worker.Worker()
@@ -49,10 +49,10 @@ class RecursionTest(unittest.TestCase):
         w.run()
         w.stop()
 
-        self.assertEquals(MockFile._file_contents['/tmp/popularity/2010-01-01.txt'], '365\n')
+        self.assertEquals(MockFile.fs.get_data('/tmp/popularity/2010-01-01.txt'), '365\n')
 
     def test_cmdline(self):
         luigi.interface.reset()
         luigi.run(['--local-scheduler', 'Popularity', '--date', '2010-01-01'])
 
-        self.assertEquals(MockFile._file_contents['/tmp/popularity/2010-01-01.txt'], '365\n')
+        self.assertEquals(MockFile.fs.get_data('/tmp/popularity/2010-01-01.txt'), '365\n')

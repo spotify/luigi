@@ -76,15 +76,15 @@ class WrapperTest(unittest.TestCase):
     See instance_wrap_test.py for an example of how instances can wrap each other. '''
     workers = 1
     def setUp(self):
-        MockFile._file_contents.clear()
+        MockFile.fs.clear()
 
     def test_a(self):
         luigi.build([AXML()], local_scheduler=True, no_lock=True, workers=self.workers)
-        self.assertEqual(MockFile._file_contents['/tmp/a.xml'], '<?xml version="1.0" ?>\n<dummy-xml>hello, world</dummy-xml>\n')
+        self.assertEqual(MockFile.fs.get_data('/tmp/a.xml'), '<?xml version="1.0" ?>\n<dummy-xml>hello, world</dummy-xml>\n')
 
     def test_b(self):
         luigi.build([BXML(datetime.date(2012, 1, 1))], local_scheduler=True, no_lock=True, workers=self.workers)
-        self.assertEqual(MockFile._file_contents['/tmp/b-2012-01-01.xml'], '<?xml version="1.0" ?>\n<dummy-xml>goodbye, space</dummy-xml>\n')
+        self.assertEqual(MockFile.fs.get_data('/tmp/b-2012-01-01.xml'), '<?xml version="1.0" ?>\n<dummy-xml>goodbye, space</dummy-xml>\n')
 
 
 class WrapperWithMultipleWorkersTest(WrapperTest):

@@ -45,7 +45,7 @@ class MockFileSystemTest(unittest.TestCase):
             pass
 
     def setUp(self):
-        MockFile._file_contents.clear()
+        self.fs.clear()
         self.path = "/tmp/foo"
         self.path2 = "/tmp/bar"
         self._touch(self.path)

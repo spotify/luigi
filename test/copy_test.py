@@ -41,7 +41,7 @@ class ACopy(Copy(A)):
 class UtilTest(unittest.TestCase):
     def test_a(self):
         luigi.build([ACopy(date=datetime.date(2012, 1, 1))], local_scheduler=True)
-        self.assertEqual(MockFile._file_contents['/tmp/data-2012-01-01.txt'], 'hello, world\n')
+        self.assertEqual(MockFile.fs.get_data('/tmp/data-2012-01-01.txt'), 'hello, world\n')
 
 if __name__ == '__main__':
     luigi.run()

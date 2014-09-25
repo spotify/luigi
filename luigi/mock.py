@@ -21,9 +21,18 @@ import multiprocessing
 
 
 class MockFileSystem(target.FileSystem):
-    """MockFileSystem inspects/modifies file_contents to simulate
+    """MockFileSystem inspects/modifies _data to simulate
     file system operations"""
-    file_contents = multiprocessing.Manager().dict()
+    _data = None
+
+    def get_all_data(self):
+        # This starts a server in the background, so we don't want to do it in the global scope
+        if MockFileSystem._data is None:
+            MockFileSystem._data = multiprocessing.Manager().dict()
+        return MockFileSystem._data
+
+    def get_data(self, fn):
+        return self.get_all_data()[fn]
 
     def exists(self, path):
         return MockFile(path).exists()
@@ -32,18 +41,18 @@ class MockFileSystem(target.FileSystem):
         """Removes the given mockfile. skip_trash doesn't have any meaning."""
         if recursive:
             to_delete=[]
-            for s in MockFileSystem.file_contents.keys():
+            for s in self.get_all_data().keys():
                 if s.startswith(path):
                     to_delete.append(s)
             for s in to_delete:
-                MockFileSystem.file_contents.pop(s)
+                self.get_all_data().pop(s)
         else:
-            MockFileSystem.file_contents.pop(path)
+            self.get_all_data().pop(path)
 
     def listdir(self, path):
-        """listdir does a prefix match of MockFileSystem.file_contents, but
+        """listdir does a prefix match of self.get_all_data(), but
         doesn't yet support globs"""
-        return [s for s in MockFileSystem.file_contents.keys()
+        return [s for s in self.get_all_data().keys()
                 if s.startswith(path)]
 
     def mkdir(self, path):
@@ -51,26 +60,25 @@ class MockFileSystem(target.FileSystem):
         pass
 
     def clear(self):
-        MockFileSystem.file_contents.clear()
+        self.get_all_data().clear()
 
 
 class MockFile(target.FileSystemTarget):
     fs = MockFileSystem()
-    _file_contents = fs.file_contents
 
     def __init__(self, fn, is_tmp=None, mirror_on_stderr=False):
         self._mirror_on_stderr = mirror_on_stderr
         self._fn = fn
 
     def exists(self,):
-        return self._fn in MockFile._file_contents
+        return self._fn in self.fs.get_all_data()
 
     @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def rename(self, path, fail_if_exists=False):
-        if fail_if_exists and path in MockFile._file_contents:
+        if fail_if_exists and path in self.fs.get_all_data():
             raise RuntimeError('Destination exists: %s' % path)
-        contents = MockFile._file_contents.pop(self._fn)
-        MockFile._file_contents[path] = contents
+        contents = self.fs.get_all_data().pop(self._fn)
+        self.fs.get_all_data()[path] = contents
 
     @property
     def path(self):
@@ -91,7 +99,7 @@ class MockFile(target.FileSystemTarget):
 
             def close(self2):
                 if mode == 'w':
-                    MockFile._file_contents[fn] = self2.getvalue()
+                    self.fs.get_all_data()[fn] = self2.getvalue()
                 StringIO.StringIO.close(self2)
 
             def __exit__(self, type, value, traceback):
@@ -104,7 +112,7 @@ class MockFile(target.FileSystemTarget):
         if mode == 'w':
             return StringBuffer()
         else:
-            return StringBuffer(MockFile._file_contents[fn])
+            return StringBuffer(self.fs.get_all_data()[fn])
 
 
 def skip(func):
