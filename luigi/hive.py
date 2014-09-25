@@ -234,9 +234,10 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
         raise RuntimeError("Must implement query!")
 
     def hiverc(self):
-        """ Location of an rc file to run before the query 
+        """ Location of an rc file to run before the query
             if hiverc-location key is specified in client.cfg, will default to the value there
             otherwise returns None
+            Returning a list of rc files will load all of them in order.
         """
         return luigi.configuration.get_config().get('hive', 'hiverc-location', default=None)
 
@@ -298,8 +299,12 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
             f.write(job.query())
             f.flush()
             arglist = [load_hive_cmd(), '-f', f.name]
-            if job.hiverc():
-                arglist += ['-i', job.hiverc()]
+            hiverc = job.hiverc()
+            if hiverc:
+                if type(hiverc) == str:
+                    hiverc = [hiverc]
+                for rcfile in hiverc:
+                    arglist += ['-i', rcfile]
             if job.hiveconfs():
                 for k, v in job.hiveconfs().iteritems():
                     arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
