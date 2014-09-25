@@ -255,8 +255,8 @@ class PCopy(luigi.Task):
 class CopyTest(unittest.TestCase):
     def test_copy(self):
         luigi.build([PCopy(date=datetime.date(2012, 1, 1))], local_scheduler=True)
-        self.assertEqual(MockFile._file_contents['/tmp/data-2012-01-01.txt'], 'hello, world\n')
-        self.assertEqual(MockFile._file_contents['/tmp/copy-data-2012-01-01.txt'], 'hello, world\n')
+        self.assertEqual(MockFile.fs.get_data('/tmp/data-2012-01-01.txt'), 'hello, world\n')
+        self.assertEqual(MockFile.fs.get_data('/tmp/copy-data-2012-01-01.txt'), 'hello, world\n')
 
 
 class PickleTest(unittest.TestCase):
@@ -267,8 +267,8 @@ class PickleTest(unittest.TestCase):
         p = pickle.loads(p_pickled)
 
         luigi.build([p], local_scheduler=True)
-        self.assertEqual(MockFile._file_contents['/tmp/data-2013-01-01.txt'], 'hello, world\n')
-        self.assertEqual(MockFile._file_contents['/tmp/copy-data-2013-01-01.txt'], 'hello, world\n')
+        self.assertEqual(MockFile.fs.get_data('/tmp/data-2013-01-01.txt'), 'hello, world\n')
+        self.assertEqual(MockFile.fs.get_data('/tmp/copy-data-2013-01-01.txt'), 'hello, world\n')
 
 
 class Subtask(luigi.Task):

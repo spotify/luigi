@@ -119,7 +119,7 @@ class UnicodeJob(TestJobTask):
 
 class HadoopJobTest(unittest.TestCase):
     def setUp(self):
-        MockFile._file_contents.clear()
+        MockFile.fs.clear()
 
     def read_output(self, p):
         count = {}
