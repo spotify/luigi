@@ -230,19 +230,23 @@ class WorkerTest(unittest.TestCase):
                 return luigi.LocalTarget(os.path.join(self.p, 'parent'))
 
             def run(self):
-                yield [DynamicDummyTask(os.path.join(self.p, str(i)))
-                       for i in range(5)]
-                yield [DynamicDummyTask(os.path.join(self.p, str(i)))
-                       for i in range(5, 7)]
+                dummy_targets = yield [DynamicDummyTask(os.path.join(self.p, str(i)))
+                                     for i in range(5)]
+                dummy_targets += yield [DynamicDummyTask(os.path.join(self.p, str(i)))
+                                       for i in range(5, 7)]
                 with self.output().open('w') as f:
-                    f.write('Done!')
+                    for i, d in enumerate(dummy_targets):
+                        for line in d.open('r'):
+                            print >>f, '%d: %s' % (i, line.strip())
 
         t = DynamicRequires(p=tempfile.mktemp())
-        luigi.build([t])
+        luigi.build([t], local_scheduler=True)
         self.assertTrue(t.complete())
-        # loop through dependencies just to be extra sure they're all complete
-        for req in t.run():
-            self.assertTrue(all([x.complete() for x in req]))
+
+        # loop through output and verify
+        f = t.output().open('r')
+        for i in xrange(7):
+            self.assertEquals(f.readline().strip(), '%d: Done!' % i)
 
     def test_avoid_infinite_reschedule(self):
         class A(Task):
