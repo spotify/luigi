@@ -27,7 +27,6 @@ import re
 import argparse
 import sys
 import os
-from importlib import import_module
 from task import Register
 
 
@@ -77,8 +76,10 @@ def load_task(parent_task, task_name, params):
     return init_task(actual_module, task_name, params, {})
 
 
-def init_task(module, task, str_params, global_str_params):
-    Task = getattr(import_module(module), task)
+def init_task(module_name, task, str_params, global_str_params):
+    __import__(module_name)
+    module = sys.modules[module_name]
+    Task = getattr(module, task)
 
     return Task.from_str_params(str_params, global_str_params)
 
