@@ -33,7 +33,7 @@ import sys
 import types
 import interface
 from target import Target
-from task import Task, flatten
+from task import Task, flatten, getpaths
 from event import Event
 
 try:
@@ -82,7 +82,16 @@ class TaskProcess(multiprocessing.Process):
             try:
                 task_gen = self.task.run()
                 if isinstance(task_gen, types.GeneratorType):  # new deps
-                    for requires in task_gen:
+                    next_send = None
+                    while True:
+                        try:
+                            if next_send is None:
+                                requires = task_gen.next()
+                            else:
+                                requires = task_gen.send(next_send)
+                        except StopIteration:
+                            break
+
                         new_req = flatten(requires)
                         status = (RUNNING if all(t.complete() for t in new_req)
                                   else SUSPENDED)
@@ -92,11 +101,12 @@ class TaskProcess(multiprocessing.Process):
                             self.result_queue.put(
                                 (self.task.task_id, status, '', missing,
                                  new_deps))
-                            continue
-                        logger.info(
-                            '[pid %s] Worker %s new requirements      %s',
-                            os.getpid(), self.worker_id, self.task.task_id)
-                        return
+                            next_send = getpaths(requires)
+                        else:
+                            logger.info(
+                                '[pid %s] Worker %s new requirements      %s',
+                                os.getpid(), self.worker_id, self.task.task_id)
+                            return
             finally:
                 if status != SUSPENDED:
                     self.task.trigger_event(
