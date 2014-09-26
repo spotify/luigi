@@ -3,7 +3,7 @@ import datetime
 
 import luigi
 import luigi.date_interval
-from luigi.task_previous import previous, get_previous_completed
+from luigi.util import previous, get_previous_completed
 
 
 class DateTaskOk(luigi.Task):
