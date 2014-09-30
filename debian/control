@@ -22,6 +22,8 @@ Depends: ${shlibs:Depends},
 	 ${misc:Depends},
 	 ${python:Depends},
 	 python-argparse,
+	 python-pyparsing,
+	 python-sqlalchemy,
 	 python-mechanize
 Description: Workflow mgmgt + task scheduling + dependency resolution
 
@@ -32,5 +34,7 @@ Depends:	${shlibs:Depends},
 		${python:Depends},
 		python-daemon,
 		python-pip,
+		python-pyparsing,
+		python-sqlalchemy,
 		python-tornado (>= 2.3)
 Description: Luigi central planner server
