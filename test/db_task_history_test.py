@@ -18,11 +18,7 @@ import unittest
 import luigi
 
 from luigi.task_status import PENDING, RUNNING, DONE
-
-try:
-    from luigi.db_task_history import DbTaskHistory
-except ImportError as e:
-    raise unittest.SkipTest('Could not test db_task_history: %s' % e)
+from luigi.db_task_history import DbTaskHistory
 
 
 class DummyTask(luigi.Task):
