@@ -141,7 +141,7 @@ class Worker(object):
 
     def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None,
                  worker_processes=1, ping_interval=None, keep_alive=None,
-                 wait_interval=None, max_reschedules=None):
+                 wait_interval=None, max_reschedules=None, count_uniques=None):
         self._worker_info = self._generate_worker_info()
 
         if not worker_id:
@@ -155,6 +155,12 @@ class Worker(object):
         if keep_alive is None:
             keep_alive = config.getboolean('core', 'worker-keep-alive', False)
         self.__keep_alive = keep_alive
+
+        # worker-count-uniques means that we will keep a worker alive only if it has a unique
+        # pending task, as well as having keep-alive true
+        if count_uniques is None:
+            count_uniques = config.getboolean('core', 'worker-count-uniques', False)
+        self.__count_uniques = count_uniques
 
         if wait_interval is None:
             wait_interval = config.getint('core', 'worker-wait-interval', 1)
@@ -364,7 +370,7 @@ class Worker(object):
         except:
             logger.exception('Exception adding worker - scheduler might be running an older version')
 
-    def _log_remote_tasks(self, running_tasks, n_pending_tasks):
+    def _log_remote_tasks(self, running_tasks, n_pending_tasks, n_unique_pending):
         logger.info("Done")
         logger.info("There are no more tasks to run at this time")
         if running_tasks:
@@ -372,6 +378,8 @@ class Worker(object):
                 logger.info('%s is currently run by worker %s', r['task_id'], r['worker'])
         elif n_pending_tasks:
             logger.info("There are %s pending tasks possibly being run by other workers", n_pending_tasks)
+            if n_unique_pending:
+                logger.info("There are %i pending tasks unique to this worker", n_unique_pending)
 
     def _get_work(self):
         logger.debug("Asking scheduler for work...")
@@ -380,11 +388,14 @@ class Worker(object):
         if isinstance(r, tuple) or isinstance(r, list):
             n_pending_tasks, task_id = r
             running_tasks = []
+            n_unique_pending = 0
         else:
             n_pending_tasks = r['n_pending_tasks']
             task_id = r['task_id']
             running_tasks = r['running_tasks']
-        return task_id, running_tasks, n_pending_tasks
+            # support old version of scheduler
+            n_unique_pending = r.get('n_unique_pending', 0)
+        return task_id, running_tasks, n_pending_tasks, n_unique_pending
 
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
@@ -476,6 +487,16 @@ class Worker(object):
             time.sleep(wait_interval)
             yield
 
+    def _keep_alive(self, n_pending_tasks, n_unique_pending):
+        """ Returns true if a worker should stay alive given
+
+        If worker-keep-alive is not set, this will always return false. Otherwise, it will return
+        true for nonzero n_pending_tasks. If worker-count-uniques is true, it will also
+        require that one of the tasks is unique to this worker.
+        """
+        return (self.__keep_alive and n_pending_tasks
+                and (n_unique_pending or not self.__count_uniques))
+
     def run(self):
         """Returns True if all scheduled tasks were executed successfully"""
         logger.info('Running Worker with %d processes', self.worker_processes)
@@ -490,12 +511,12 @@ class Worker(object):
                 logger.debug('%d running tasks, waiting for next task to finish', len(self._running_tasks))
                 self._handle_next_task()
 
-            task_id, running_tasks, n_pending_tasks = self._get_work()
+            task_id, running_tasks, n_pending_tasks, n_unique_pending = self._get_work()
 
             if task_id is None:
-                self._log_remote_tasks(running_tasks, n_pending_tasks)
+                self._log_remote_tasks(running_tasks, n_pending_tasks, n_unique_pending)
                 if len(self._running_tasks) == 0:
-                    if self.__keep_alive and n_pending_tasks:
+                    if self._keep_alive(n_pending_tasks, n_unique_pending):
                         sleeper.next()
                         continue
                     else:

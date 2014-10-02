@@ -267,6 +267,16 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(WORKER, 'D', priority=6)
         self.check_task_order(['A', 'B', 'D', 'C'])
 
+    def test_unique_tasks(self):
+        self.sch.add_task(WORKER, 'A')
+        self.sch.add_task(WORKER, 'B')
+        self.sch.add_task(WORKER, 'C')
+        self.sch.add_task(WORKER + "_2", 'B')
+
+        response = self.sch.get_work(WORKER)
+        self.assertEqual(3, response['n_pending_tasks'])
+        self.assertEqual(2, response['n_unique_pending'])
+
 
 if __name__ == '__main__':
     unittest.main()

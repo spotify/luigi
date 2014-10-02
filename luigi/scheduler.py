@@ -321,6 +321,7 @@ class CentralPlannerScheduler(Scheduler):
         used_resources = self._used_resources()
         potential_resources = collections.defaultdict(int)
         potential_workers = set([worker])
+        n_unique_pending = 0
 
         for task_id, task in sorted(self._tasks.iteritems(), key=self._rank(worker), reverse=True):
             if task.status == RUNNING and worker in task.workers:
@@ -334,6 +335,8 @@ class CentralPlannerScheduler(Scheduler):
 
             if task.status == PENDING and worker in task.workers:
                 locally_pending_tasks += 1
+                if len(task.workers) == 1:
+                    n_unique_pending += 1
 
             if self._not_schedulable(task, potential_resources) or best_task:
                 continue
@@ -355,6 +358,7 @@ class CentralPlannerScheduler(Scheduler):
             self._update_task_history(best_task, RUNNING, host=host)
 
         return {'n_pending_tasks': locally_pending_tasks,
+                'n_unique_pending': n_unique_pending,
                 'task_id': best_task,
                 'running_tasks': running_tasks}
 
