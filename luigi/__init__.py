@@ -50,3 +50,5 @@ DateIntervalParameter = parameter.DateIntervalParameter
 TimeDeltaParameter = parameter.TimeDeltaParameter
 
 namespace = task.namespace
+
+import tools.range  # just makes the tool classes available from command line

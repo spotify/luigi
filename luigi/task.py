@@ -640,3 +640,15 @@ def flatten(struct):
         pass
 
     return [struct]
+
+
+def flatten_output(task):
+    """Lists all output targets by recursively walking output-less (wrapper) tasks.
+
+    FIXME order consistently.
+    """
+    r = flatten(task.output())
+    if not r:
+        for dep in flatten(task.requires()):
+            r += flatten_output(dep)
+    return r
