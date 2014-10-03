@@ -28,11 +28,16 @@ function visualiserApp(luigi) {
             var current_time = new Date().getTime()
             var minutes_running = Math.round((current_time - task.time_running * 1000) / 1000 / 60)
             displayTime += " | " + minutes_running + " minutes"
+            if ("worker_running" in task) {
+              displayTime += " (" + task.worker_running + ")"
+            }
         }
         return {
             taskId: task.taskId,
             taskName: taskName,
             taskParams: taskParams,
+            priority: task.priority,
+            resources: JSON.stringify(task.resources),
             displayTime: displayTime,
             displayTimestamp : task.start_time,
             trackingUrl: task.trackingUrl,

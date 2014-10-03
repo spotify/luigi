@@ -24,6 +24,7 @@ Graph = (function() {
             trackingUrl: "#"+task.taskId,
             deps: deps,
             params: task.params,
+            priority: task.priority,
             depth: -1
         };
     }
@@ -189,6 +190,7 @@ Graph = (function() {
             $.each(node.params, function (param_name, param_value) {
                 titleText += param_name + "=" + param_value + '<br/>';
             });
+            titleText += "priority" + "=" + node.priority + '<br/>';
             g.attr("title", $.trim(titleText))
                 .tooltip();
         });

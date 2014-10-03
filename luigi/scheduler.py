@@ -400,18 +400,22 @@ class CentralPlannerScheduler(Scheduler):
                         upstream_status_table[dep_id] = status
             return upstream_status_table[dep_id]
 
-    def _serialize_task(self, task_id):
+    def _serialize_task(self, task_id, include_deps=True):
         task = self._tasks[task_id]
-        return {
-            'deps': list(task.deps),
+        ret = {
             'status': task.status,
             'workers': list(task.workers),
             'worker_running': task.worker_running,
             'time_running': getattr(task, "time_running", None),
             'start_time': task.time,
             'params': task.params,
-            'name': task.family
+            'name': task.family,
+            'priority': task.priority,
+            'resources': task.resources,
         }
+        if include_deps:
+            ret['deps'] = list(task.deps)
+        return ret
 
     def graph(self):
         self.prune()
@@ -438,7 +442,8 @@ class CentralPlannerScheduler(Scheduler):
                     'workers': [],
                     'start_time': UNKNOWN,
                     'params': params,
-                    'name': family
+                    'name': family,
+                    'priority': 0,
                 }
             else:
                 serialized[task_id] = self._serialize_task(task_id)
@@ -461,7 +466,7 @@ class CentralPlannerScheduler(Scheduler):
             if not status or task.status == status:
                 if (task.status != PENDING or not upstream_status or
                     upstream_status == self._upstream_status(task_id, upstream_status_table)):
-                    serialized = self._serialize_task(task_id)
+                    serialized = self._serialize_task(task_id, False)
                     result[task_id] = serialized
         return result
 
@@ -491,7 +496,7 @@ class CentralPlannerScheduler(Scheduler):
         result = collections.defaultdict(dict)
         for task_id, task in self._tasks.iteritems():
             if task_id.find(task_str) != -1:
-                serialized = self._serialize_task(task_id)
+                serialized = self._serialize_task(task_id, False)
                 result[task.status][task_id] = serialized
         return result
 
