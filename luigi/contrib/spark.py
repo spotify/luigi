@@ -251,12 +251,12 @@ class Spark1xJob(luigi.Task):
         args = map(str, args)
         env = os.environ.copy()
         temp_stderr = tempfile.TemporaryFile()
-        logger.info('Running: {}'.format(repr(args)))
+        logger.info('Running: {0}'.format(repr(args)))
         proc = subprocess.Popen(args, stdout=subprocess.PIPE,
                                 stderr=temp_stderr, env=env, close_fds=True)
         return_code, final_state, app_id = self.track_progress(proc)
         if final_state == 'FAILED':
-            raise SparkJobError('Spark job failed: see yarn logs for {}'
+            raise SparkJobError('Spark job failed: see yarn logs for {0}'
                                 .format(app_id))
         elif return_code != 0:
             temp_stderr.seek(0)
