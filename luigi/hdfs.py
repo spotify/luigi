@@ -136,7 +136,6 @@ class HdfsClient(FileSystem):
         if type(path) not in (list, tuple):
             path = [path]
         else:
-            import warnings
             warnings.warn("Renaming multiple files at once is not atomic.")
         call_check([load_hadoop_cmd(), 'fs', '-mv'] + path + [dest])
 
@@ -680,21 +679,6 @@ class HdfsTarget(FileSystemTarget):
     @property
     def fs(self):
         return self._fs
-
-    @property
-    def fn(self):
-        """ Deprecated. Use path property instead """
-        import warnings
-        warnings.warn("target.fn is deprecated and will be removed soon\
-in luigi. Use target.path instead", stacklevel=2)
-        return self.path
-
-    def get_fn(self):
-        """ Deprecated. Use path property instead """
-        import warnings
-        warnings.warn("target.get_fn() is deprecated and will be removed soon\
-in luigi. Use target.path instead", stacklevel=2)
-        return self.path
 
     def glob_exists(self, expected_files):
         ls = list(listdir(self.path))
