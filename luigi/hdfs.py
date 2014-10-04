@@ -531,7 +531,7 @@ def get_configured_hadoop_version():
     return configuration.get_config().get("hadoop", "version", "cdh4").lower()
 
 
-def get_configured_hdfs_client():
+def get_configured_hdfs_client(show_warnings=True):
     """ This is a helper that fetches the configuration value for 'client' in
     the [hdfs] section. It will return the client that retains backwards
     compatibility when 'client' isn't configured. """
@@ -541,9 +541,11 @@ def get_configured_hdfs_client():
         # Eventually this should be the only valid code path
         return custom
     if config.getboolean("hdfs", "use_snakebite", False):
-        warnings.warn("Deprecated: Just specify 'client: snakebite' in config")
+        if show_warnings:
+            warnings.warn("Deprecated: Just specify 'client: snakebite' in config")
         return "snakebite"
-    warnings.warn("Deprecated: Specify 'client: hadoopcli' in config")
+    if show_warnings:
+        warnings.warn("Deprecated: Specify 'client: hadoopcli' in config")
     return "hadoopcli"  # The old default when not specified
 
 
@@ -561,16 +563,20 @@ def create_hadoopcli_client():
         raise Exception("Error: Unknown version specified in Hadoop version"
                         "configuration parameter")
 
-if get_configured_hdfs_client() == "snakebite":
-    client = SnakebiteHdfsClient()
-elif get_configured_hdfs_client() == "snakebite_with_hadoopcli_fallback":
-    client = luigi.contrib.target.CascadingClient([SnakebiteHdfsClient(),
-                                                   create_hadoopcli_client()])
-elif get_configured_hdfs_client() == "hadoopcli":
-    client = create_hadoopcli_client()
-else:
+def get_autoconfig_client(show_warnings=True):
+    """Creates the client as specified in the `client.cfg` configuration"""
+    configured_client = get_configured_hdfs_client(show_warnings=show_warnings)
+    if configured_client == "snakebite":
+        return SnakebiteHdfsClient()
+    if configured_client == "snakebite_with_hadoopcli_fallback":
+        return luigi.contrib.target.CascadingClient([SnakebiteHdfsClient(),
+                                                     create_hadoopcli_client()])
+    if configured_client == "hadoopcli":
+        return create_hadoopcli_client()
     raise Exception("Unknown hdfs client " + get_configured_hdfs_client())
 
+# Suppress warnings so that importing luigi.hdfs doesn't show a deprecated warning.
+client = get_autoconfig_client(show_warnings=False)
 exists = client.exists
 rename = client.rename
 remove = client.remove
@@ -654,9 +660,8 @@ class PlainDir(luigi.format.Format):
 
 
 class HdfsTarget(FileSystemTarget):
-    fs = client  # underlying file system
 
-    def __init__(self, path=None, format=Plain, is_tmp=False):
+    def __init__(self, path=None, format=Plain, is_tmp=False, fs=None):
         if path is None:
             assert is_tmp
             path = tmppath()
@@ -665,11 +670,16 @@ class HdfsTarget(FileSystemTarget):
         self.is_tmp = is_tmp
         (scheme, netloc, path, query, fragment) = urlparse.urlsplit(path)
         assert ":" not in path  # colon is not allowed in hdfs filenames
+        self._fs = fs or get_autoconfig_client()
 
     def __del__(self):
         #TODO: not sure is_tmp belongs in Targets construction arguments
         if self.is_tmp and self.exists():
             self.remove()
+
+    @property
+    def fs(self):
+        return self._fs
 
     @property
     def fn(self):
