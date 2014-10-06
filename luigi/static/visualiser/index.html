@@ -48,6 +48,10 @@
             border:1px solid #DDDDDD;
             overflow:scroll;
         }
+
+        .taskRow {
+          word-break:break-all;
+        }
         </style>
         <script type="text/template" name="rowTemplate">
             {{#tasks}}
@@ -65,9 +69,10 @@
                     {{#value}}
                     <div class="taskRow row-fluid" data-task-id="{{taskId}}">
                         <div class="span4"><strong>{{taskName}}</strong><em> ({{taskParams}})</em></div>
-                        <div class="span2">{{verdict}}</div>
+                        <div class="span1">{{priority}}</div>
+                        <div class="span2">{{resources}}</div>
                         <div class="span3">{{displayTime}}</div>
-                        <div class="span3">
+                        <div class="span2">
                             <a href="#{{taskId}}" class="btn btn-info btn-small" data-action="drawGraph">Dependency Graph</a>
                             {{#error}}<a class="btn btn-primary btn-small error-trace-button" data-task-id="{{taskId}}">Show Error Trace</a>{{/error}}
                         </div>
