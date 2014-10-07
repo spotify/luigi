@@ -19,7 +19,7 @@ function visualiserApp(luigi) {
         return dateObject.getHours() + ":" + dateObject.getMinutes() + ":" + dateObject.getSeconds();
     }
 
-    function taskToDisplayTask(task) {
+    function taskToDisplayTask(showWorker, task) {
         var taskIdParts = /([A-Za-z0-9_]*)\((.*)\)/.exec(task.taskId);
         var taskName = taskIdParts[1];
         var taskParams = taskIdParts[2];
@@ -28,7 +28,7 @@ function visualiserApp(luigi) {
             var current_time = new Date().getTime()
             var minutes_running = Math.round((current_time - task.time_running * 1000) / 1000 / 60)
             displayTime += " | " + minutes_running + " minutes"
-            if ("worker_running" in task) {
+            if (showWorker && "worker_running" in task) {
               displayTime += " (" + task.worker_running + ")"
             }
         }
@@ -67,11 +67,22 @@ function visualiserApp(luigi) {
     }
 
     function renderTasks(tasks) {
-        var displayTasks = tasks.map(taskToDisplayTask);
+        var displayTasks = tasks.map($.proxy(taskToDisplayTask, null, true));
         displayTasks.sort(function(a,b) { return b.displayTimestamp - a.displayTimestamp; });
         var tasksByFamily = entryList(indexByProperty(displayTasks, "taskName"));
         tasksByFamily.sort(function(a,b) { return a.key.localeCompare(b.key); });
         return renderTemplate("rowTemplate", {tasks: tasksByFamily});
+    }
+
+    function processWorker(worker) {
+        worker.tasks = worker.running.map($.proxy(taskToDisplayTask, null, false));
+        worker.start_time = new Date(worker.started * 1000).toLocaleString();
+        worker.active = new Date(worker.last_active * 1000).toLocaleString();
+        return worker;
+    }
+
+    function renderWorkers(workers) {
+        return renderTemplate("workerTemplate", {"workers": workers.map(processWorker)});
     }
 
     function switchTab(tabId) {
@@ -88,7 +99,9 @@ function visualiserApp(luigi) {
 
     function processHashChange() {
         var hash = location.hash;
-        if (hash) {
+        if (hash == "#w") {
+            switchTab("workerList");
+        } else if (hash) {
             var taskId = hash.substr(1);
             $("#graphContainer").hide();
             $("#graphPlaceholder svg").empty();
@@ -172,6 +185,10 @@ function visualiserApp(luigi) {
 
     $(document).ready(function() {
         loadTemplates();
+
+        luigi.getWorkerList(function(workers) {
+            $("#workerList").append(renderWorkers(workers));
+        });
 
         luigi.getRunningTaskList(function(runningTasks) {
             $("#runningTasks").append(renderTasks(runningTasks));

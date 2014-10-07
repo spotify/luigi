@@ -19,6 +19,13 @@ var LuigiAPI = (function() {
         return flattened;
     }
 
+    function flatten_running(response) {
+        $.each(response, function(key, value) {
+            value.running = flatten(value.running);
+        });
+        return response;
+    }
+
     function jsonRPC(url, paramObject, callback) {
         return $.ajax(url, {
             data: {data: JSON.stringify(paramObject)},
@@ -73,6 +80,12 @@ var LuigiAPI = (function() {
     LuigiAPI.prototype.getPendingTaskList = function(callback) {
         jsonRPC(this.urlRoot + "/task_list", {status: "PENDING", upstream_status: ""}, function(response) {
             callback(flatten(response.response));
+        });
+    };
+
+    LuigiAPI.prototype.getWorkerList = function(callback) {
+        jsonRPC(this.urlRoot + "/worker_list", {}, function(response) {
+            callback(flatten_running(response.response));
         });
     };
 

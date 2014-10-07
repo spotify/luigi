@@ -178,6 +178,8 @@ class Worker(object):
         self._scheduled_tasks = {}
         self._suspended_tasks = {}
 
+        self._first_task = None
+
         self.add_succeeded = True
         self.run_succeeded = True
         self.unfulfilled_counts = collections.defaultdict(int)
@@ -279,6 +281,8 @@ class Worker(object):
     def add(self, task):
         """ Add a Task for the worker to check and possibly schedule and run.
          Returns True if task and its dependencies were successfully scheduled or completed before"""
+        if self._first_task is None and hasattr(task, 'task_id'):
+            self._first_task = task.task_id
         self.add_succeeded = True
         stack = [task]
         self._validate_task(task)
@@ -371,6 +375,7 @@ class Worker(object):
             raise Exception("Return value of Task.complete() must be boolean (was %r)" % is_complete)
 
     def _add_worker(self):
+        self._worker_info.append(('first_task', self._first_task))
         try:
             self._scheduler.add_worker(self._id, self._worker_info)
         except:

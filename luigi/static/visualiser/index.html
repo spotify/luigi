@@ -93,6 +93,29 @@
                 <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
             </div>
         </script>
+        <script type="text/template" name="workerTemplate">
+            {{#workers}}
+                <h3>{{name}}</h3>
+                <p><b>Started</b>: {{start_time}}</p>
+                <p><b>Last Checkin</b>: {{active}}</p>
+                <p><b>Root Task</b>: <a href="#{{{first_task}}}">{{first_task}}</a></p>
+                <p><b>Pending Tasks</b>: {{num_pending}}</p>
+                <p><b>Unique Pending Tasks</b>: {{num_uniques}}</p>
+                <p><b>Running Tasks</b>: {{num_running}}</p>
+                {{#tasks}}
+                <div class="taskRow row-fluid" data-task-id="{{taskId}}">
+                    <div class="span4"><strong>{{taskName}}</strong><em> ({{taskParams}})</em></div>
+                    <div class="span1">{{priority}}</div>
+                    <div class="span2">{{resources}}</div>
+                    <div class="span3">{{displayTime}}</div>
+                    <div class="span2">
+                        <a href="#{{taskId}}" class="btn btn-info btn-small" data-action="drawGraph">Dependency Graph</a>
+                        {{#error}}<a class="btn btn-primary btn-small error-trace-button" data-task-id="{{taskId}}">Show Error Trace</a>{{/error}}
+                    </div>
+                </div>
+                {{/tasks}}
+            {{/workers}}
+        </script>
     </head>
     <body>
         <div class="page-header custom-header">
@@ -102,6 +125,7 @@
         <ul class="nav nav-tabs">
             <li class="active"><a href="#" data-tab="taskList" class="tabButton">Task List</a></li>
             <li><a href="#g" data-tab="dependencyGraph" class="tabButton">Dependency Graph</a></li>
+            <li><a href="#w" data-tab="workerList" class="tabButton">Workers</a></li>
         </ul>
         <div class="tab-content">
             <section id="taskList" class="container-fluid tab-pane active">
@@ -138,6 +162,8 @@
                     <div id="graphPlaceholder">
                     </div>
                 </div>
+            </section>
+            <section id="workerList" class="container-fluid tab-pane active">
             </section>
         </div>
         <div id="errorModal" class="modal" style="display:none;">

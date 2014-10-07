@@ -137,6 +137,9 @@ class RemoteScheduler(Scheduler):
     def task_list(self, status, upstream_status):
         return self._request('/api/task_list', {'status': status, 'upstream_status': upstream_status})
 
+    def worker_list(self):
+        return self._request('/api/worker_list', {})
+
     def task_search(self, task_str):
         return self._request('/api/task_search', {'task_str': task_str})
 
@@ -189,6 +192,9 @@ class RemoteSchedulerResponder(object):
 
     def task_list(self, status, upstream_status, **kwargs):
         return self._scheduler.task_list(status, upstream_status)
+
+    def worker_list(self, **kwargs):
+        return self._scheduler.worker_list()
 
     def task_search(self, task_str, **kwargs):
         return self._scheduler.task_search(task_str)
