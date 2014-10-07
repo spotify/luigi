@@ -240,6 +240,12 @@ class Worker(object):
             args += [('pid', os.getpid())]
         except:
             pass
+        try:
+            sudo_user = os.getenv("SUDO_USER")
+            if sudo_user:
+                args.append(('sudo_user', sudo_user))
+        except:
+            pass
         return args
 
     def _validate_task(self, task):
