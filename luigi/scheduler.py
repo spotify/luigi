@@ -556,15 +556,15 @@ class CentralPlannerScheduler(Scheduler):
                 last_active=worker.last_active,
                 started=getattr(worker, 'started', None),
                 **worker.info
-            ) for worker in self._active_workers.values()]
+            ) for worker in self._state.get_active_workers()]
         workers.sort(key=lambda worker: worker['started'], reverse=True)
         if include_running:
             running = collections.defaultdict(dict)
             num_pending = collections.defaultdict(int)
             num_uniques = collections.defaultdict(int)
-            for task_id, task in self._tasks.items():
+            for task in self._state.get_pending_tasks():
                 if task.status == RUNNING and task.worker_running:
-                    running[task.worker_running][task_id] = self._serialize_task(task_id, False)
+                    running[task.worker_running][task.id] = self._serialize_task(task.id, False)
                 elif task.status == PENDING:
                     for worker in task.workers:
                         num_pending[worker] += 1
