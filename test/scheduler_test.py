@@ -30,26 +30,24 @@ class SchedulerTest(unittest.TestCase):
             with open(fn.name, 'w') as fobj:
                 state = (tasks, active_workers)
                 pickle.dump(state, fobj)
-
-            scheduler = luigi.scheduler.CentralPlannerScheduler(
+                
+            state= luigi.scheduler.SimpleTaskState(
                 state_path=fn.name)
-            scheduler.load()
+            state.load()
 
-            scheduler.prune()
-
-            self.assertEquals(list(scheduler._active_workers.keys()),
-                              ['Worker2'])
+            self.assertEquals(list(state.get_worker_ids()),
+                              ['Worker1', 'Worker2'])
 
     def test_load_broken_state(self):
         with tempfile.NamedTemporaryFile(delete=True) as fn:
             with open(fn.name, 'w') as fobj:
                 print >> fobj, "b0rk"
 
-            scheduler = luigi.scheduler.CentralPlannerScheduler(
+            state = luigi.scheduler.SimpleTaskState(
                 state_path=fn.name)
-            scheduler.load()  # bad if this crashes
+            state.load()  # bad if this crashes
 
-            self.assertEquals(list(scheduler._active_workers.keys()), [])
+            self.assertEquals(list(state.get_worker_ids()), [])
 
 
 if __name__ == '__main__':
