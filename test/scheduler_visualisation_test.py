@@ -354,5 +354,74 @@ class SchedulerVisualisationTest(unittest.TestCase):
         assert_has_deps('Z(id=2)', ['ZZ()'])
         assert_has_deps('ZZ()', [])
 
+    def test_simple_worker_list(self):
+        class X(luigi.Task):
+            def run(self):
+                self._complete = True
+
+            def complete(self):
+                return getattr(self, '_complete', False)
+
+        self._build([X()])
+
+        workers = self._remote().worker_list()
+
+        self.assertEquals(1, len(workers))
+        worker = workers[0]
+        self.assertEqual('X()', worker['first_task'])
+        self.assertEqual(0, worker['num_pending'])
+        self.assertEqual(0, worker['num_uniques'])
+        self.assertEqual(0, worker['num_running'])
+        self.assertEqual(1, worker['workers'])
+
+    def test_worker_list_pending_uniques(self):
+        class X(luigi.Task):
+            def complete(self):
+                return False
+
+        class Y(X):
+            def requires(self):
+                return X()
+
+        class Z(Y):
+            pass
+
+        w1 = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1)
+        w2 = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1)
+
+        w1.add(Y())
+        w2.add(Z())
+
+        workers = self._remote().worker_list()
+        self.assertEqual(2, len(workers))
+        for worker in workers:
+            self.assertEqual(2, worker['num_pending'])
+            self.assertEqual(1, worker['num_uniques'])
+            self.assertEqual(0, worker['num_running'])
+
+    def test_worker_list_running(self):
+        class X(luigi.Task):
+            n = luigi.IntParameter()
+
+        w = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=3)
+        w.add(X(0))
+        w.add(X(1))
+        w.add(X(2))
+        w.add(X(3))
+
+        w._get_work()
+        w._get_work()
+        w._get_work()
+
+        workers = self._remote().worker_list()
+        self.assertEqual(1, len(workers))
+        worker = workers[0]
+
+        self.assertEqual(3, worker['num_running'])
+        self.assertEqual(1, worker['num_pending'])
+        self.assertEqual(1, worker['num_uniques'])
+
+
+
 if __name__ == '__main__':
     unittest.main()
