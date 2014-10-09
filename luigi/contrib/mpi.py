@@ -27,6 +27,10 @@ class MPIScheduler(Scheduler):
         return self._sndrcv({'cmd': 'add_task', 'args': args,
                              'kwargs': kwargs})
 
+    def add_worker(self, *args, **kwargs):
+        return self._sndrcv({'cmd': 'add_worker', 'args': args,
+                             'kwargs': kwargs})
+
     def get_work(self, *args, **kwargs):
         return self._sndrcv({'cmd': 'get_work', 'args': args,
                              'kwargs': kwargs})
@@ -95,6 +99,8 @@ class MasterMPIWorker(MPIWorker):
                 elif cmd == 'stop':
                     slaves_alive -= 1
 
+        return True
+
 
 class SlaveMPIWorker(MPIWorker):
 
@@ -124,7 +130,7 @@ class SlaveMPIWorker(MPIWorker):
 
     def run(self):
         self._scheduler.ping(self._id)
-        super(SlaveMPIWorker, self).run()
+        return super(SlaveMPIWorker, self).run()
 
     def stop(self):
         pp.send({'cmd': 'stop', 'args': [self._id], 'kwargs': None},
