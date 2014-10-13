@@ -7,7 +7,7 @@ from collections import defaultdict
 class ExternalStreams(luigi.ExternalTask):
     ''' Example of a possible external data dump
 
-    To depend on external targets (typically at the top of your dependency grpah), you can define
+    To depend on external targets (typically at the top of your dependency graph), you can define
     an ExternalTask like this.
     '''
     date = luigi.DateParameter()

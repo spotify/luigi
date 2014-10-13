@@ -24,7 +24,7 @@ class CreateRemoteData(luigi.Task):
 
 
 class ProcessRemoteData(luigi.Task):
-    """ Create a toplist of users based on how many running processed they have
+    """ Create a toplist of users based on how many running processes they have
         on a remote machine
 
     In this example the processed data is stored in a MockFile
