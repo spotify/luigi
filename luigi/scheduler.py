@@ -181,7 +181,12 @@ class SimpleTaskState(object):
         # Mark workers as inactive
         for worker in delete_workers:
             self._active_workers.pop(worker)
-        
+
+        # remove workers from tasks
+        for task in self.get_active_tasks():
+            task.stakeholders.difference_update(delete_workers)
+            task.workers.difference_update(delete_workers)
+
 
 class CentralPlannerScheduler(Scheduler):
     ''' Async scheduler that can handle multiple workers etc
@@ -230,7 +235,6 @@ class CentralPlannerScheduler(Scheduler):
         remove_tasks = []
         for task in self._state.get_active_tasks():
             # Mark tasks with no remaining active stakeholders for deletion
-            task.stakeholders.difference_update(delete_workers)
             if not task.stakeholders:
                 if task.remove is None:
                     logger.info("Task %r has stakeholders %r but none remain connected -> will remove task in %s seconds", task.id, task.stakeholders, self._remove_delay)
