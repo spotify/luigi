@@ -9,7 +9,7 @@ class FakeDocuments(luigi.Task):
     """ Generate some documents to index. """
 
     date = luigi.DateParameter(default=datetime.date.today())
-    
+
     def run(self):
         """ Write line-delimited json. `_id` is the default Elasticsearch id
         field. """
@@ -25,7 +25,7 @@ class FakeDocuments(luigi.Task):
 
 class IndexDocuments(CopyToIndex):
     """
-    Run 
+    Run
 
         $ curl "localhost:9200/example_index/_search?pretty"
 
