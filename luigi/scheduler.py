@@ -412,6 +412,7 @@ class CentralPlannerScheduler(Scheduler):
         running_tasks = []
 
         used_resources = self._used_resources()
+        greedy_resources = collections.defaultdict(int)
         n_unique_pending = 0
 
         tasks = list(self._state.get_pending_tasks())
@@ -432,14 +433,14 @@ class CentralPlannerScheduler(Scheduler):
                 if len(task.workers) == 1:
                     n_unique_pending += 1
 
-            if not best_task and self._schedulable(task):
+            if not best_task and self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
                 if worker in task.workers and self._has_resources(task.resources, used_resources):
                     best_task = task
                     best_task_id = task.id
                 else:
                     # keep track of the resources used in greedy scheduling
                     for resource, amount in (task.resources or {}).items():
-                        used_resources[resource] += amount
+                        greedy_resources[resource] += amount
 
         if best_task:
             best_task.status = RUNNING
