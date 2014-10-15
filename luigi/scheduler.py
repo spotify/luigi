@@ -276,8 +276,8 @@ class CentralPlannerScheduler(Scheduler):
         """
         task.priority = prio = max(prio, task.priority)
         for dep in task.deps or []:
-            t = self._state.get_task(dep) # This should always exist, see add_task
-            if prio > t.priority:
+            t = self._state.get_task(dep)
+            if t is not None and prio > t.priority:
                 self._update_priority(t, prio, worker)
 
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
