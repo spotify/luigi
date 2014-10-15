@@ -183,6 +183,12 @@ function visualiserApp(luigi) {
         });
     }
 
+    function getTaskList(id, tasks, expand) {
+        $(id).append(renderTasks(tasks));
+        $(id).prev("h3").append(" (" + tasks.length + ")");
+        bindTaskEvents(id, expand);
+    }
+
     $(document).ready(function() {
         loadTemplates();
 
@@ -191,28 +197,31 @@ function visualiserApp(luigi) {
         });
 
         luigi.getRunningTaskList(function(runningTasks) {
-            $("#runningTasks").append(renderTasks(runningTasks));
-            bindTaskEvents("#runningTasks", true);
+            getTaskList("#runningTasks", runningTasks, true);
         });
 
         luigi.getFailedTaskList(function(failedTasks) {
-            $("#failedTasks").append(renderTasks(failedTasks));
-            bindTaskEvents("#failedTasks");
+            getTaskList("#failedTasks", failedTasks);
         });
 
         luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
-            $("#upstreamFailedTasks").append(renderTasks(upstreamFailedTasks));
-            bindTaskEvents("#upstreamFailedTasks");
+            getTaskList("#upstreamFailedTasks", upstreamFailedTasks);
+        });
+
+        luigi.getDisabledTaskList(function(disabledTasks) {
+            getTaskList("#disabledTasks", disabledTasks);
+        });
+
+        luigi.getUpstreamDisabledTaskList(function(upstreamDisabledTasks) {
+            getTaskList("#upstreamDisabledTasks", upstreamDisabledTasks);
         });
 
         luigi.getPendingTaskList(function(pendingTasks) {
-            $("#pendingTasks").append(renderTasks(pendingTasks));
-            bindTaskEvents("#pendingTasks");
+            getTaskList("#pendingTasks", pendingTasks);
         });
 
         luigi.getDoneTaskList(function(doneTasks) {
-            $("#doneTasks").append(renderTasks(doneTasks));
-            bindTaskEvents("#doneTasks");
+            getTaskList("#doneTasks", doneTasks);
         });
 
         bindListEvents();

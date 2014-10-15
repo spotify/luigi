@@ -14,6 +14,8 @@
 
 import collections
 import datetime
+import functools
+import notifications
 import os
 import logging
 import time
@@ -22,7 +24,7 @@ import bisect
 import task_history as history
 logger = logging.getLogger("luigi.server")
 
-from task_status import PENDING, FAILED, DONE, RUNNING, SUSPENDED, UNKNOWN
+from task_status import PENDING, FAILED, DONE, RUNNING, SUSPENDED, UNKNOWN, DISABLED
 
 
 class Scheduler(object):
@@ -37,14 +39,59 @@ class Scheduler(object):
 UPSTREAM_RUNNING = 'UPSTREAM_RUNNING'
 UPSTREAM_MISSING_INPUT = 'UPSTREAM_MISSING_INPUT'
 UPSTREAM_FAILED = 'UPSTREAM_FAILED'
+UPSTREAM_DISABLED = 'UPSTREAM_DISABLED'
 
-UPSTREAM_SEVERITY_ORDER = ('', UPSTREAM_RUNNING, UPSTREAM_MISSING_INPUT, UPSTREAM_FAILED)
+UPSTREAM_SEVERITY_ORDER = (
+    '',
+    UPSTREAM_RUNNING,
+    UPSTREAM_MISSING_INPUT,
+    UPSTREAM_FAILED,
+    UPSTREAM_DISABLED,
+)
 UPSTREAM_SEVERITY_KEY = lambda st: UPSTREAM_SEVERITY_ORDER.index(st)
-STATUS_TO_UPSTREAM_MAP = {FAILED: UPSTREAM_FAILED, RUNNING: UPSTREAM_RUNNING, PENDING: UPSTREAM_MISSING_INPUT}
+STATUS_TO_UPSTREAM_MAP = {
+    FAILED: UPSTREAM_FAILED,
+    RUNNING: UPSTREAM_RUNNING,
+    PENDING: UPSTREAM_MISSING_INPUT,
+    DISABLED: UPSTREAM_DISABLED,
+}
+
+
+class Failures(object):
+    """ This class tracks the number of failures in a given time window
+
+    Failures added are marked with the current timestamp, and this class counts
+    the number of failures in a sliding time window ending at the present.
+
+    """
+
+    def __init__(self, window):
+        """ Initialize with the given window
+
+        :param window: how long to track failures for, as a datetime.timedelta
+        """
+        self.window = window
+        self.failures = collections.deque()
+
+    def add_failure(self):
+        """ Add a failure event with the current timestamp """
+        self.failures.append(datetime.datetime.now())
+
+    def num_failures(self):
+        """ Return the number of failures in the window """
+        min_time = datetime.datetime.now() - self.window
+        while self.failures and self.failures[0] < min_time:
+            self.failures.popleft()
+        return len(self.failures)
+
+    def clear(self):
+        """ Clear the failure queue """
+        self.failures.clear()
 
 
 class Task(object):
-    def __init__(self, id, status, deps, resources={}, priority=0, family='', params={}):
+    def __init__(self, id, status, deps, resources={}, priority=0, family='', params={},
+                 disable_failures=None, disable_window=None):
         self.id = id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -63,9 +110,26 @@ class Task(object):
         self.resources = resources
         self.family = family
         self.params = params
+        self.disable_failures = disable_failures
+        self.failures = Failures(disable_window)
+        self.scheduler_disable_time = None
 
     def __repr__(self):
         return "Task(%r)" % vars(self)
+
+    def add_failure(self):
+        self.failures.add_failure()
+
+    def has_excessive_failures(self):
+        return self.failures.num_failures() >= self.disable_failures
+
+    def can_disable(self):
+        return self.disable_failures is not None
+
+    def re_enable(self):
+        self.scheduler_disable_time = None
+        self.status = FAILED
+        self.failures.clear()
 
 
 class Worker(object):
@@ -92,17 +156,6 @@ class SimpleTaskState(object):
     inherit from.
     '''
 
-    def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0,
-                 state_path='/var/lib/luigi-server/state.pickle', task_history=None,
-                 resources=None):
-        '''
-        (all arguments are in seconds)
-        Keyword Arguments:
-        retry_delay -- How long after a Task fails to try it again, or -1 to never retry
-        remove_delay -- How long after a Task finishes to remove it from the scheduler
-        state_path -- Path to state file (tasks and active workers)
-        worker_disconnect_delay -- If a worker hasn't communicated for this long, remove it from active workers
-        '''
     def __init__(self, state_path):
         self._state_path = state_path
         self._tasks = {}  # map from id to a Task object
@@ -196,7 +249,7 @@ class CentralPlannerScheduler(Scheduler):
 
     def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0,
                  state_path='/var/lib/luigi-server/state.pickle', task_history=None,
-                 resources=None):
+                 resources=None, disable_persist=0, disable_window=0, disable_failures=None):
         '''
         (all arguments are in seconds)
         Keyword Arguments:
@@ -213,6 +266,13 @@ class CentralPlannerScheduler(Scheduler):
 
         self._task_history = task_history or history.NopHistory()
         self._resources = resources
+        self._disable_failures = disable_failures
+        self._disable_window = disable_window
+        self._make_task = functools.partial(
+            Task, disable_failures=disable_failures,
+            disable_window=datetime.timedelta(seconds=disable_window))
+        self._disable_persist = disable_persist
+        self._disable_time = datetime.timedelta(seconds=disable_persist)
 
     def load(self):
         self._state.load()
@@ -244,8 +304,13 @@ class CentralPlannerScheduler(Scheduler):
             if task.status == RUNNING and task.worker_running and task.worker_running not in task.stakeholders:
                 logger.info("Task %r is marked as running by disconnected worker %r -> marking as FAILED with retry delay of %rs", task.id, task.worker_running, self._retry_delay)
                 task.worker_running = None
-                task.status = FAILED
+                self.set_status(task, FAILED)
                 task.retry = time.time() + self._retry_delay
+
+            if task.status == DISABLED and task.scheduler_disable_time:
+                # re-enable task after the disable time expires
+                if datetime.datetime.now() - task.scheduler_disable_time > self._disable_time:
+                    task.re_enable()
 
             # Remove tasks that have no stakeholders
             if task.remove and time.time() > task.remove:
@@ -255,11 +320,49 @@ class CentralPlannerScheduler(Scheduler):
         # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
         for task in self._state.get_active_tasks():
             if task.status == FAILED and self._retry_delay >= 0 and task.retry < time.time():
-                task.status = PENDING
+                self.set_status(task, PENDING)
 
         self._state.inactivate_tasks(remove_tasks)
 
         logger.info("Done pruning task graph")
+
+    def set_status(self, task, new_status):
+        # not sure why we have SUSPENDED, as it can never be set
+        if new_status == SUSPENDED:
+            new_status = PENDING
+
+        if new_status == DISABLED and task.status == RUNNING:
+            return
+
+        if task.status == DISABLED:
+            if new_status == DISABLED:
+                task.scheduler_disable_time = None
+            elif new_status == DONE:
+                task.re_enable()
+                task.status = DONE
+            elif task.scheduler_disable_time is None:
+                # when it is disabled by client, we allow the status change
+                task.status = new_status
+            return
+
+        if new_status == FAILED and task.can_disable():
+            task.add_failure()
+            if task.has_excessive_failures():
+                task.scheduler_disable_time = datetime.datetime.now()
+                new_status = DISABLED
+                notifications.send_error_email(
+                    'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
+                    '{task} failed {failures} times in the last {window} minutes, so it is being '
+                    'disabled for {persist} hours'.format(
+                        failures=self._disable_failures,
+                        task=task.id,
+                        window=self._disable_window,
+                        persist=self._disable_persist,
+                        ))
+        elif new_status == DISABLED:
+            task.scheduler_disable_time = None
+
+        task.status = new_status
 
     def update(self, worker_id, worker_reference=None):
         """ Keep track of whenever the worker was last active """
@@ -292,10 +395,10 @@ class CentralPlannerScheduler(Scheduler):
         """
         self.update(worker)
 
-        task = self._state.get_task(task_id, setdefault=Task(
+        task = self._state.get_task(task_id, setdefault=self._make_task(
                 id=task_id, status=PENDING, deps=deps, resources=resources,
                 priority=priority, family=family, params=params))
-        
+
         # for setting priority, we'll sometimes create tasks with unset family and params
         if not task.family:
             task.family = family
@@ -312,7 +415,7 @@ class CentralPlannerScheduler(Scheduler):
                 # We also check for status == PENDING b/c that's the default value
                 # (so checking for status != task.status woule lie)
                 self._update_task_history(task_id, status)
-            task.status = PENDING if status == SUSPENDED else status
+            self.set_status(task, PENDING if status == SUSPENDED else status)
             if status == FAILED:
                 task.retry = time.time() + self._retry_delay
 
@@ -328,7 +431,7 @@ class CentralPlannerScheduler(Scheduler):
         # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
         # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
         for dep in task.deps or []:
-            t = self._state.get_task(dep, setdefault=Task(id=dep, status=UNKNOWN, deps=None, priority=priority))
+            t = self._state.get_task(dep, setdefault=self._make_task(id=dep, status=UNKNOWN, deps=None, priority=priority))
             t.stakeholders.add(worker)
 
         self._update_priority(task, priority, worker)
@@ -612,6 +715,14 @@ class CentralPlannerScheduler(Scheduler):
                 serialized = self._serialize_task(task.id, False)
                 result[task.status][task.id] = serialized
         return result
+
+    def re_enable_task(self, task_id):
+        serialized = {}
+        task = self._state.get_task(task_id)
+        if task and task.status == DISABLED and task.scheduler_disable_time:
+            task.re_enable()
+            serialized = self._serialize_task(task_id)
+        return serialized
 
     def fetch_error(self, task_id):
         if self._state.has_task(task_id):

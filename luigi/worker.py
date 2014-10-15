@@ -14,7 +14,7 @@
 
 import random
 from scheduler import (CentralPlannerScheduler, PENDING, RUNNING, FAILED,
-                       SUSPENDED, DONE)
+                       SUSPENDED, DONE, DISABLED)
 import collections
 import threading
 import time
@@ -347,6 +347,9 @@ class Worker(object):
             deps = task.deps()
             status = PENDING
             runnable = True
+
+        if task.disabled:
+            status = DISABLED
 
         if deps:
             for d in deps:

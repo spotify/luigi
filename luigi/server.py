@@ -40,6 +40,13 @@ def _create_scheduler():
     remove_delay = config.getfloat('scheduler', 'remove-delay', 600.0)
     worker_disconnect_delay = config.getfloat('scheduler', 'worker-disconnect-delay', 60.0)
     state_path = config.get('scheduler', 'state-path', '/var/lib/luigi-server/state.pickle')
+
+    # Jobs are disabled if we see more than disable_failures failures in disable_window seconds.
+    # These disables last for disable_persist seconds.
+    disable_window = config.getint('scheduler', 'disable-window-seconds', 3600)
+    disable_failures = config.getint('scheduler', 'disable-num-failures', None)
+    disable_persist = config.getint('scheduler', 'disable-persist-seconds', 86400)
+
     resources = config.getintdict('resources')
     if config.getboolean('scheduler', 'record_task_history', False):
         import db_task_history  # Needs sqlalchemy, thus imported here
@@ -48,7 +55,7 @@ def _create_scheduler():
         task_history_impl = task_history.NopHistory()
     return scheduler.CentralPlannerScheduler(
         retry_delay, remove_delay, worker_disconnect_delay, state_path, task_history_impl,
-        resources)
+        resources, disable_persist, disable_window, disable_failures)
 
 
 class RPCHandler(tornado.web.RequestHandler):

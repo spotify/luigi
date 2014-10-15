@@ -251,6 +251,7 @@ class Task(object):
     # Priority of the task: the scheduler should favor available
     # tasks with higher priority values first.
     priority = 0
+    disabled = False
 
     # Resources used by the task. Should be formatted like {"scp": 1} to indicate that the
     # task requires 1 unit of the scp resource.
