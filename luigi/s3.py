@@ -372,10 +372,15 @@ class S3Target(FileSystemTarget):
             if s3_key:
                 fileobj = ReadableS3File(s3_key)
                 if self.format:
-                    tmp_path = tempfile.mktemp(prefix='luigi_s3_')
-                    with open(tmp_path, 'w') as f:
+                    self._tmp_extract_path = tempfile.mktemp(
+                        prefix='luigi_s3_')
+                    with open(self._tmp_extract_path, 'w') as f:
                         f.write(fileobj.read())
-                    return self.format.pipe_reader(FileWrapper(open(tmp_path)))
+                    try:
+                        with open(self._tmp_extract_path) as f:
+                            return self.format.pipe_reader(FileWrapper(f))
+                    finally:
+                        os.remove(self._tmp_extract_path)
                 return fileobj
             else:
                 raise FileNotFoundException(

@@ -155,6 +155,22 @@ class TestS3Target(unittest.TestCase):
         p.close()
         self.assertTrue(t.exists())
 
+    @mock_s3
+    def test_gzip_works_and_cleans_up(self):
+        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        client.s3.create_bucket('mybucket')
+        t = S3Target('s3://mybucket/gzip_test', luigi.format.Gzip,
+                     client=client)
+        test_data = '123testing'
+        with t.open('w') as f:
+            f.write(test_data)
+
+        with t.open() as f:
+            result = f.read()
+
+        self.assertEqual(test_data, result)
+        self.assertFalse(os.path.exists(t._tmp_extract_path))
+
 
 class TestS3Client(unittest.TestCase):
 
@@ -276,3 +292,6 @@ class TestS3Client(unittest.TestCase):
         s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/file')
         with self.assertRaises(InvalidDeleteException):
             s3_client.remove('s3://mybucket/removemedir', recursive=False)
+
+if __name__ == '__main__':
+    unittest.main()
