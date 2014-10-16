@@ -21,7 +21,7 @@ import warnings
 import urlparse
 
 import configuration
-from ConfigParser import NoSectionError, NoOptionError
+from ConfigParser import NoSectionError
 from luigi.parameter import Parameter
 from luigi.target import FileSystem
 from luigi.target import FileSystemTarget
@@ -48,23 +48,31 @@ S3_DIRECTORY_MARKER_SUFFIX_1 = '/'
 class InvalidDeleteException(FileSystemException):
     pass
 
+
 class FileNotFoundException(FileSystemException):
     pass
+
 
 class S3Client(FileSystem):
     """
     boto-powered S3 client.
     """
 
-    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None):
+    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
+                 **kwargs):
+        options = self._get_s3_config()
+        options.update(kwargs)
+        # Removing key args would break backwards compability
         if not aws_access_key_id:
-            aws_access_key_id = self._get_s3_config('aws_access_key_id')
+            aws_access_key_id = options.get('aws_access_key_id')
         if not aws_secret_access_key:
-            aws_secret_access_key = self._get_s3_config('aws_secret_access_key')
-
+            aws_secret_access_key = options.get('aws_secret_access_key')
+        for key in ['aws_access_key_id', 'aws_secret_access_key']:
+            if key in options:
+                options.pop(key)
         self.s3 = boto.connect_s3(aws_access_key_id,
                                   aws_secret_access_key,
-                                  is_secure=True)
+                                  **options)
 
     def exists(self, path):
         """
@@ -215,20 +223,27 @@ class S3Client(FileSystem):
         key_path = self._add_path_delimiter(key)
         s3_bucket_list_result = \
             list(itertools.islice(
-                    s3_bucket.list(prefix=key_path),
+                 s3_bucket.list(prefix=key_path),
                  1))
         if s3_bucket_list_result:
             return True
 
         return False
 
-    def _get_s3_config(self, key):
+    def _get_s3_config(self, key=None):
         try:
-            return configuration.get_config().get('s3', key)
+            config = dict(configuration.get_config().items('s3'))
         except NoSectionError:
-            return None
-        except NoOptionError:
-            return None
+            return {}
+        # So what ports etc can be read without us having to specify all dtypes
+        for k, v in config.items():
+            try:
+                config[k] = int(v)
+            except ValueError:
+                pass
+        if key:
+            return config.get(key)
+        return config
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, query, fragment) = urlparse.urlsplit(path)
