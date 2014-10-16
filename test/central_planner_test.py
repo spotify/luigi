@@ -209,6 +209,25 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(worker='Y', task_id='D', priority=0)
         self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'D')
 
+    def test_priority_update_with_pruning(self):
+        self.setTime(0)
+        self.sch.add_task(task_id='A', worker='X')
+
+        self.setTime(50)  # after worker disconnects
+        self.sch.prune()
+        self.sch.add_task(task_id='B', deps=['A'], worker='X')
+
+        self.setTime(2000)  # after remove for task A
+        self.sch.prune()
+
+        # Here task A that B depends on is missing
+        self.sch.add_task(WORKER, task_id='C', deps=['B'], priority=100)
+        self.sch.add_task(WORKER, task_id='B', deps=['A'])
+        self.sch.add_task(WORKER, task_id='A')
+        self.sch.add_task(WORKER, task_id='D', priority=10)
+
+        self.check_task_order('ABCD')
+
     def test_update_resources(self):
         self.sch.add_task(WORKER, task_id='A', deps=['B'])
         self.sch.add_task(WORKER, task_id='B', resources={'r': 2})
