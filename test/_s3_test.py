@@ -12,7 +12,6 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import gzip
 import gc
 import tempfile
 import os
@@ -23,8 +22,6 @@ from luigi.s3 import (S3Target, S3Client, InvalidDeleteException,
                       FileNotFoundException)
 import luigi.format
 
-import boto
-from boto.s3 import bucket
 from boto.s3 import key
 from boto.exception import S3ResponseError
 
@@ -167,15 +164,41 @@ class TestS3Client(unittest.TestCase):
         f.write("I'm a temporary file for testing\n")
         f.close()
 
+        self.s3_config = dict(aws_access_key_id='foo',
+                              aws_secret_access_key='bar')
+        with open(tempfile.mktemp(prefix='luigi_s3_test_'), 'w') as f:
+            self._s3_config_path = f.name
+            f.write('[s3]\n{}\n'.format(
+                '\n'.join(['{}: {}'.format(k, v)
+                           for k, v in self.s3_config.items()])))
+        self._old_config_paths = configuration.LuigiConfigParser._config_paths
+        configuration.LuigiConfigParser._config_paths = self._s3_config_path
+
     def tearDown(self):
         os.remove(self.tempFilePath)
+        os.remove(self._s3_config_path)
+        configuration.LuigiConfigParser._config_paths = self._old_config_paths
 
-    def test_init(self):
+    def test_init_with_environment_variables(self):
         os.environ['AWS_ACCESS_KEY_ID'] = 'foo'
         os.environ['AWS_SECRET_ACCESS_KEY'] = 'bar'
+        # Don't read any exsisting config
+        old_config_paths = configuration.LuigiConfigParser._config_paths
+        configuration.LuigiConfigParser._config_paths = [tempfile.mktemp()]
+
         s3_client = S3Client()
+        configuration.LuigiConfigParser._config_paths = old_config_paths
+
         self.assertEqual(s3_client.s3.gs_access_key_id, 'foo')
         self.assertEqual(s3_client.s3.gs_secret_access_key, 'bar')
+
+    @mock_s3
+    def test_init_with_config(self):
+        s3_client = S3Client()
+        self.assertEqual(s3_client.s3.access_key,
+                         self.s3_config['aws_access_key_id'])
+        self.assertEqual(s3_client.s3.secret_key,
+                         self.s3_config['aws_secret_access_key'])
 
     @mock_s3
     def test_put(self):
