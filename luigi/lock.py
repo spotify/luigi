@@ -13,6 +13,7 @@
 # the License.
 
 import os
+import errno
 import hashlib
 
 
@@ -23,6 +24,7 @@ def getpcmd(pid):
     p = os.popen(cmd, 'r')
     return p.readline().strip()
 
+
 def get_info(pid_dir):
     # Check the name and pid of this process
     my_pid = os.getpid()
@@ -31,6 +33,18 @@ def get_info(pid_dir):
     pid_file = os.path.join(pid_dir, hashlib.md5(my_cmd).hexdigest()) + '.pid'
 
     return my_pid, my_cmd, pid_file
+
+
+def rm_if_exists(filename):
+    """Remove file, don't throw when file is missing.
+
+    Taken from http://stackoverflow.com/a/10840586/621449 """
+    try:
+        os.remove(filename)
+    except OSError as e:
+        if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+            raise # re-raise exception if a different error occured
+
 
 def acquire_for(pid_dir, num_available=1):
     ''' Makes sure the process is only run once at the same time with the same name.
@@ -67,6 +81,7 @@ def acquire_for(pid_dir, num_available=1):
 
     # Write pids
     pids.add(str(my_pid))
+    rm_if_exists(pid_file)  # So we become owner on write, otherwise chmod fails
     with open(pid_file, 'w') as f:
         f.writelines('%s\n' % (pid, ) for pid in filter(pid_cmds.__getitem__, pids))
 
