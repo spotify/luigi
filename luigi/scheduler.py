@@ -352,8 +352,8 @@ class CentralPlannerScheduler(Scheduler):
                 new_status = DISABLED
                 notifications.send_error_email(
                     'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
-                    '{task} failed {failures} times in the last {window} minutes, so it is being '
-                    'disabled for {persist} hours'.format(
+                    '{task} failed {failures} times in the last {window} seconds, so it is being '
+                    'disabled for {persist} seconds'.format(
                         failures=self._disable_failures,
                         task=task.id,
                         window=self._disable_window,
