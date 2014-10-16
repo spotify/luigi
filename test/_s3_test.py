@@ -12,18 +12,16 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import gzip
 import gc
 import tempfile
 import os
 import unittest
 
 from luigi import configuration
-from luigi.s3 import S3Target, S3Client, InvalidDeleteException, FileNotFoundException
+from luigi.s3 import (S3Target, S3Client, InvalidDeleteException,
+                      FileNotFoundException)
 import luigi.format
 
-import boto
-from boto.s3 import bucket
 from boto.s3 import key
 from boto.exception import S3ResponseError
 
@@ -34,18 +32,22 @@ try:
     from moto import mock_s3
 except ImportError:
     # https://github.com/spulec/moto/issues/29
-    print 'Skipping %s because moto does not install properly before python2.7' % __file__
+    print('Skipping %s because moto does not install properly before '
+          'python2.7' % __file__)
     from luigi.mock import skip
     mock_s3 = skip
 
 AWS_ACCESS_KEY = "XXXXXXXXXXXXXXXXXXXX"
 AWS_SECRET_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
+
 class TestS3Target(unittest.TestCase):
 
     def setUp(self):
         f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
-        self.tempFileContents = "I'm a temporary file for testing\nAnd this is the second line\nThis is the third."
+        self.tempFileContents = (
+            "I'm a temporary file for testing\nAnd this is the second line\n"
+            "This is the third.")
         self.tempFilePath = f.name
         f.write(self.tempFileContents)
         f.close()
@@ -92,7 +94,6 @@ class TestS3Target(unittest.TestCase):
         with self.assertRaises(FileNotFoundException):
             t.open()
 
-
     @mock_s3
     def test_read_iterator(self):
         # write a file that is 5X the boto buffersize
@@ -120,6 +121,7 @@ class TestS3Target(unittest.TestCase):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         client.s3.create_bucket('mybucket')
         t = S3Target('s3://mybucket/test_cleanup', client=client)
+
         def context():
             f = t.open('w')
             f.write('stuff')
@@ -144,13 +146,15 @@ class TestS3Target(unittest.TestCase):
     def test_gzip(self):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         client.s3.create_bucket('mybucket')
-        t = S3Target('s3://mybucket/gzip_test', luigi.format.Gzip, client=client)
+        t = S3Target('s3://mybucket/gzip_test', luigi.format.Gzip,
+                     client=client)
         p = t.open('w')
         test_data = 'test'
         p.write(test_data)
         self.assertFalse(t.exists())
         p.close()
         self.assertTrue(t.exists())
+
 
 class TestS3Client(unittest.TestCase):
 
@@ -160,15 +164,41 @@ class TestS3Client(unittest.TestCase):
         f.write("I'm a temporary file for testing\n")
         f.close()
 
+        self.s3_config = dict(aws_access_key_id='foo',
+                              aws_secret_access_key='bar')
+        with open(tempfile.mktemp(prefix='luigi_s3_test_'), 'w') as f:
+            self._s3_config_path = f.name
+            f.write('[s3]\n{}\n'.format(
+                '\n'.join(['{}: {}'.format(k, v)
+                           for k, v in self.s3_config.items()])))
+        self._old_config_paths = configuration.LuigiConfigParser._config_paths
+        configuration.LuigiConfigParser._config_paths = self._s3_config_path
+
     def tearDown(self):
         os.remove(self.tempFilePath)
+        os.remove(self._s3_config_path)
+        configuration.LuigiConfigParser._config_paths = self._old_config_paths
 
-    def test_init(self):
+    def test_init_with_environment_variables(self):
         os.environ['AWS_ACCESS_KEY_ID'] = 'foo'
         os.environ['AWS_SECRET_ACCESS_KEY'] = 'bar'
+        # Don't read any exsisting config
+        old_config_paths = configuration.LuigiConfigParser._config_paths
+        configuration.LuigiConfigParser._config_paths = [tempfile.mktemp()]
+
         s3_client = S3Client()
+        configuration.LuigiConfigParser._config_paths = old_config_paths
+
         self.assertEqual(s3_client.s3.gs_access_key_id, 'foo')
         self.assertEqual(s3_client.s3.gs_secret_access_key, 'bar')
+
+    @mock_s3
+    def test_init_with_config(self):
+        s3_client = S3Client()
+        self.assertEqual(s3_client.s3.access_key,
+                         self.s3_config['aws_access_key_id'])
+        self.assertEqual(s3_client.s3.secret_key,
+                         self.s3_config['aws_secret_access_key'])
 
     @mock_s3
     def test_put(self):
