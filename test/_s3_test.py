@@ -19,7 +19,8 @@ import os
 import unittest
 
 from luigi import configuration
-from luigi.s3 import S3Target, S3Client, InvalidDeleteException, FileNotFoundException
+from luigi.s3 import (S3Target, S3Client, InvalidDeleteException,
+                      FileNotFoundException)
 import luigi.format
 
 import boto
@@ -34,18 +35,22 @@ try:
     from moto import mock_s3
 except ImportError:
     # https://github.com/spulec/moto/issues/29
-    print 'Skipping %s because moto does not install properly before python2.7' % __file__
+    print('Skipping %s because moto does not install properly before '
+          'python2.7' % __file__)
     from luigi.mock import skip
     mock_s3 = skip
 
 AWS_ACCESS_KEY = "XXXXXXXXXXXXXXXXXXXX"
 AWS_SECRET_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
+
 class TestS3Target(unittest.TestCase):
 
     def setUp(self):
         f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
-        self.tempFileContents = "I'm a temporary file for testing\nAnd this is the second line\nThis is the third."
+        self.tempFileContents = (
+            "I'm a temporary file for testing\nAnd this is the second line\n"
+            "This is the third.")
         self.tempFilePath = f.name
         f.write(self.tempFileContents)
         f.close()
@@ -92,7 +97,6 @@ class TestS3Target(unittest.TestCase):
         with self.assertRaises(FileNotFoundException):
             t.open()
 
-
     @mock_s3
     def test_read_iterator(self):
         # write a file that is 5X the boto buffersize
@@ -120,6 +124,7 @@ class TestS3Target(unittest.TestCase):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         client.s3.create_bucket('mybucket')
         t = S3Target('s3://mybucket/test_cleanup', client=client)
+
         def context():
             f = t.open('w')
             f.write('stuff')
@@ -144,13 +149,15 @@ class TestS3Target(unittest.TestCase):
     def test_gzip(self):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         client.s3.create_bucket('mybucket')
-        t = S3Target('s3://mybucket/gzip_test', luigi.format.Gzip, client=client)
+        t = S3Target('s3://mybucket/gzip_test', luigi.format.Gzip,
+                     client=client)
         p = t.open('w')
         test_data = 'test'
         p.write(test_data)
         self.assertFalse(t.exists())
         p.close()
         self.assertTrue(t.exists())
+
 
 class TestS3Client(unittest.TestCase):
 
