@@ -174,7 +174,12 @@ class HdfsClient(FileSystem):
     def count(self, path):
         cmd = [load_hadoop_cmd(), 'fs', '-count', path]
         stdout = call_check(cmd)
-        (dir_count, file_count, content_size, ppath) = stdout.split()
+        lines = stdout.split('\n')
+        for line in stdout.split('\n'):
+            if line.startswith("OpenJDK 64-Bit Server VM warning") or line.startswith("It's highly recommended") or not line:
+                lines.pop(lines.index(line))
+            else:
+               (dir_count, file_count, content_size, ppath) = stdout.split() 
         results = {'content_size': content_size, 'dir_count': dir_count, 'file_count': file_count}
         return results
 
