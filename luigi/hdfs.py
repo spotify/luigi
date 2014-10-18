@@ -332,7 +332,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :type dest: string
         :return: list of renamed items
         """
-        parts = dest.split('/')
+        parts = dest.rstrip('/').split('/')
         if len(parts) > 1:
             dir_path = '/'.join(parts[0:-1])
             if not self.exists(dir_path):
