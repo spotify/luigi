@@ -30,13 +30,13 @@ class SchedulerTest(unittest.TestCase):
             with open(fn.name, 'w') as fobj:
                 state = (tasks, active_workers)
                 pickle.dump(state, fobj)
-                
+
             state= luigi.scheduler.SimpleTaskState(
                 state_path=fn.name)
             state.load()
 
-            self.assertEquals(list(state.get_worker_ids()),
-                              ['Worker1', 'Worker2'])
+            self.assertEquals(set(state.get_worker_ids()),
+                              set(['Worker1', 'Worker2']))
 
     def test_load_broken_state(self):
         with tempfile.NamedTemporaryFile(delete=True) as fn:

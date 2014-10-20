@@ -27,6 +27,7 @@ import configuration
 import logging
 import getpass
 logger = logging.getLogger('luigi-interface')
+import sys
 
 
 class HDFSCliError(Exception):
@@ -52,7 +53,7 @@ def call_check(command):
 
 
 def load_hadoop_cmd():
-    return luigi.configuration.get_config().get('hadoop', 'command', 'hadoop')
+    return [luigi.configuration.get_config().get('hadoop', 'command', 'hadoop')]
 
 
 def tmppath(path=None, include_unix_username=True):
@@ -65,7 +66,7 @@ def tmppath(path=None, include_unix_username=True):
     Note that include_unix_username might work on windows too.
     """
     addon = "luigitemp-%08d" % random.randrange(1e9)
-    temp_dir = tempfile.gettempdir()
+    temp_dir = '/tmp'  # default tmp dir if none is specified in config
 
     #1. Figure out to which temporary directory to place
     configured_hdfs_tmp_dir = configuration.get_config().get('core', 'hdfs-tmp-dir', None)
@@ -115,7 +116,7 @@ class HdfsClient(FileSystem):
         """ Use ``hadoop fs -stat`` to check file existence
         """
 
-        cmd = [load_hadoop_cmd(), 'fs', '-stat', path]
+        cmd = load_hadoop_cmd() + ['fs', '-stat', path]
         logger.debug('Running file existence check: %s' % u' '.join(cmd))
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         stdout, stderr = p.communicate()
@@ -137,13 +138,13 @@ class HdfsClient(FileSystem):
             path = [path]
         else:
             warnings.warn("Renaming multiple files at once is not atomic.")
-        call_check([load_hadoop_cmd(), 'fs', '-mv'] + path + [dest])
+        call_check(load_hadoop_cmd() + ['fs', '-mv'] + path + [dest])
 
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
-            cmd = [load_hadoop_cmd(), 'fs', '-rm', '-r']
+            cmd = load_hadoop_cmd() + ['fs', '-rm', '-r']
         else:
-            cmd = [load_hadoop_cmd(), 'fs', '-rm']
+            cmd = load_hadoop_cmd() + ['fs', '-rm']
 
         if skip_trash:
             cmd = cmd + ['-skipTrash']
@@ -153,9 +154,9 @@ class HdfsClient(FileSystem):
 
     def chmod(self, path, permissions, recursive=False):
         if recursive:
-            cmd = [load_hadoop_cmd(), 'fs', '-chmod', '-R', permissions, path]
+            cmd = load_hadoop_cmd() + ['fs', '-chmod', '-R', permissions, path]
         else:
-            cmd = [load_hadoop_cmd(), 'fs', '-chmod', permissions, path]
+            cmd = load_hadoop_cmd() + ['fs', '-chmod', permissions, path]
         call_check(cmd)
 
     def chown(self, path, owner, group, recursive=False):
@@ -165,13 +166,13 @@ class HdfsClient(FileSystem):
             group = ''
         ownership = "%s:%s" % (owner, group)
         if recursive:
-            cmd = [load_hadoop_cmd(), 'fs', '-chown', '-R', ownership, path]
+            cmd = load_hadoop_cmd() + ['fs', '-chown', '-R', ownership, path]
         else:
-            cmd = [load_hadoop_cmd(), 'fs', '-chown', ownership, path]
+            cmd = load_hadoop_cmd() + ['fs', '-chown', ownership, path]
         call_check(cmd)
 
     def count(self, path):
-        cmd = [load_hadoop_cmd(), 'fs', '-count', path]
+        cmd = load_hadoop_cmd() + ['fs', '-count', path]
         stdout = call_check(cmd)
         lines = stdout.split('\n')
         for line in stdout.split('\n'):
@@ -183,26 +184,26 @@ class HdfsClient(FileSystem):
         return results
 
     def copy(self, path, destination):
-        call_check([load_hadoop_cmd(), 'fs', '-cp', path, destination])
+        call_check(load_hadoop_cmd() + ['fs', '-cp', path, destination])
 
     def put(self, local_path, destination):
-        call_check([load_hadoop_cmd(), 'fs', '-put', local_path, destination])
+        call_check(load_hadoop_cmd() + ['fs', '-put', local_path, destination])
 
     def get(self, path, local_destination):
-        call_check([load_hadoop_cmd(), 'fs', '-get', path, local_destination])
+        call_check(load_hadoop_cmd() + ['fs', '-get', path, local_destination])
 
     def getmerge(self, path, local_destination, new_line=False):
         if new_line:
-            cmd = [load_hadoop_cmd(), 'fs', '-getmerge', '-nl', path, local_destination]
+            cmd = load_hadoop_cmd() + ['fs', '-getmerge', '-nl', path, local_destination]
         else:
-            cmd = [load_hadoop_cmd(), 'fs', '-getmerge', path, local_destination]
+            cmd = load_hadoop_cmd() + ['fs', '-getmerge', path, local_destination]
         call_check(cmd)
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
         if (parents and raise_if_exists):
             raise NotImplementedError("HdfsClient.mkdir can't raise with -p")
         try:
-            cmd = ([load_hadoop_cmd(), 'fs', '-mkdir'] +
+            cmd = (load_hadoop_cmd() + ['fs', '-mkdir'] +
                    (['-p'] if parents else []) +
                    [path])
             call_check(cmd)
@@ -219,9 +220,9 @@ class HdfsClient(FileSystem):
             path = "."  # default to current/home catalog
 
         if recursive:
-            cmd = [load_hadoop_cmd(), 'fs'] + self.recursive_listdir_cmd + [path]
+            cmd = load_hadoop_cmd() + ['fs'] + self.recursive_listdir_cmd + [path]
         else:
-            cmd = [load_hadoop_cmd(), 'fs', '-ls', path]
+            cmd = load_hadoop_cmd() + ['fs', '-ls', path]
         lines = call_check(cmd).split('\n')
 
         for line in lines:
@@ -488,7 +489,7 @@ class HdfsClientCdh3(HdfsClient):
         No -p switch, so this will fail creating ancestors
         '''
         try:
-            call_check([load_hadoop_cmd(), 'fs', '-mkdir', path])
+            call_check(load_hadoop_cmd() + ['fs', '-mkdir', path])
         except HDFSCliError, ex:
             if "File exists" in ex.stderr:
                 raise FileAlreadyExists(ex.stderr)
@@ -497,9 +498,9 @@ class HdfsClientCdh3(HdfsClient):
 
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
-            cmd = [load_hadoop_cmd(), 'fs', '-rmr']
+            cmd = load_hadoop_cmd() + ['fs', '-rmr']
         else:
-            cmd = [load_hadoop_cmd(), 'fs', '-rm']
+            cmd = load_hadoop_cmd() + ['fs', '-rm']
 
         if skip_trash:
             cmd = cmd + ['-skipTrash']
@@ -514,7 +515,7 @@ class HdfsClientApache1(HdfsClientCdh3):
     recursive_listdir_cmd = ['-lsr']
 
     def exists(self, path):
-        cmd = [load_hadoop_cmd(), 'fs', '-test', '-e', path]
+        cmd = load_hadoop_cmd() + ['fs', '-test', '-e', path]
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         stdout, stderr = p.communicate()
         if p.returncode == 0:
@@ -590,7 +591,7 @@ listdir = client.listdir
 
 class HdfsReadPipe(luigi.format.InputPipeProcessWrapper):
     def __init__(self, path):
-        super(HdfsReadPipe, self).__init__([load_hadoop_cmd(), 'fs', '-cat', path])
+        super(HdfsReadPipe, self).__init__(load_hadoop_cmd() + ['fs', '-cat', path])
 
 
 class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
@@ -610,7 +611,7 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         self.tmppath = tmppath(self.path)
         parent_dir = os.path.dirname(self.tmppath)
         mkdir(parent_dir, parents=True, raise_if_exists=False)
-        super(HdfsAtomicWritePipe, self).__init__([load_hadoop_cmd(), 'fs', '-put', '-', self.tmppath])
+        super(HdfsAtomicWritePipe, self).__init__(load_hadoop_cmd() + ['fs', '-put', '-', self.tmppath])
 
     def abort(self):
         logger.info("Aborting %s('%s'). Removing temporary file '%s'",
@@ -629,7 +630,7 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
         self.path = path
         self.tmppath = tmppath(self.path)
         self.datapath = self.tmppath + ("/data%s" % data_extension)
-        super(HdfsAtomicWriteDirPipe, self).__init__([load_hadoop_cmd(), 'fs', '-put', '-', self.datapath])
+        super(HdfsAtomicWriteDirPipe, self).__init__(load_hadoop_cmd() + ['fs', '-put', '-', self.datapath])
 
     def abort(self):
         logger.info("Aborting %s('%s'). Removing temporary dir '%s'",
@@ -751,7 +752,7 @@ class HdfsTarget(FileSystemTarget):
 
     def _is_writable(self, path):
         test_path = path + '.test_write_access-%09d' % random.randrange(1e10)
-        return_value = subprocess.call([load_hadoop_cmd(), 'fs', '-touchz', test_path])
+        return_value = subprocess.call(load_hadoop_cmd() + ['fs', '-touchz', test_path])
         if return_value != 0:
             return False
         else:
