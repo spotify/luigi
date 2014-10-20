@@ -39,6 +39,14 @@ class TestSnakebiteClient(unittest.TestCase):
         self.assertTrue(self.snakebite.rename(foo, bar))
         self.assertTrue(self.snakebite.exists(bar))
 
+    def test_rename_trailing_slash(self):
+        foo = posixpath.join(self.testDir, "foo")
+        bar = posixpath.join(self.testDir, "bar/")
+        self.assertTrue(self.snakebite.mkdir(foo))
+        self.assertTrue(self.snakebite.rename(foo, bar))
+        self.assertTrue(self.snakebite.exists(bar))
+        self.assertFalse(self.snakebite.exists(posixpath.join(bar, 'foo')))
+
     def test_relativepath(self):
         rel_test_dir = "." + os.path.split(self.testDir)[1]
         try:
