@@ -308,3 +308,111 @@ class Spark1xJob(luigi.Task):
                 self.spark_heartbeat(s, context)
         logger.info(proc.communicate()[0])
         return proc.returncode, final_state, app_id
+
+
+
+class PySpark1xJob(luigi.Task):
+
+    num_executors = None
+    driver_memory = None
+    executor_memory = None
+    executor_cores = None
+
+    def program(self):
+        raise NotImplementedError("subclass should define Spark .py file")
+
+    def py_files(self):
+        """Override to provide a list of py files."""
+        return []
+
+    def spark_options(self):
+        return []
+
+    def job_args(self):
+        return []
+
+    def output(self):
+        raise NotImplementedError("subclass should define HDFS output path")
+
+    def spark_heartbeat(self, line, spark_run_context):
+        pass
+
+    def run(self):
+        spark_submit = configuration.get_config().get('spark', 'spark-submit',
+                                                      'spark-submit')
+        options = [
+            '--class', '--master', 'yarn-client',
+        ]
+        if self.num_executors is not None:
+            options += ['--num-executors', self.num_executors]
+        if self.driver_memory is not None:
+            options += ['--driver-memory', self.driver_memory]
+        if self.executor_memory is not None:
+            options += ['--executor-memory', self.executor_memory]
+        if self.executor_cores is not None:
+            options += ['--executor-cores', self.executor_cores]
+        py_files = self.py_files()
+        if py_files != []:
+            options += ['--py-files', ','.join(py_files)]
+        args = [spark_submit] + options + self.spark_options() + \
+            [self.program()] + list(self.job_args())
+        args = map(str, args)
+        env = os.environ.copy()
+        temp_stderr = tempfile.TemporaryFile()
+        logger.info('Running: {0}'.format(repr(args)))
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE,
+                                stderr=temp_stderr, env=env, close_fds=True)
+        return_code, final_state, app_id = self.track_progress(proc)
+        if final_state == 'FAILED':
+            raise SparkJobError('Spark job failed: see yarn logs for {0}'
+                                .format(app_id))
+        elif return_code != 0:
+            temp_stderr.seek(0)
+            errors = temp_stderr.readlines()
+            logger.error(errors)
+            raise SparkJobError('Spark job failed', err=errors)
+
+    def track_progress(self, proc):
+        """
+        The Spark client currently outputs a multiline status to stdout every
+        second while the application is running. This instead captures status
+        data and updates a single line of output until the application
+        finishes.
+        """
+        app_id = None
+        app_status = 'N/A'
+        url = 'N/A'
+        final_state = None
+        start = time.time()
+        re_app_id = re.compile('application identifier: (\w+)')
+        re_app_status = re.compile('yarnAppState: (\w+)')
+        re_url = re.compile('appTrackingUrl: (.+)')
+        re_final_state = re.compile('distributedFinalState: (\w+)')
+        with SparkRunContext() as context:
+            while proc.poll() is None:
+                s = proc.stdout.readline()
+                app_id_s = re_app_id.search(s)
+                if app_id_s:
+                    app_id = app_id_s.group(1)
+                    context.app_id = app_id
+                app_status_s = re_app_status.search(s)
+                if app_status_s:
+                    app_status = app_status_s.group(1)
+                url_s = re_url.search(s)
+                if url_s:
+                    url = url_s.group(1)
+                final_state_s = re_final_state.search(s)
+                if final_state_s:
+                    final_state = final_state_s.group(1)
+                if not app_id:
+                    logger.info(s.strip())
+                else:
+                    t_diff = time.time() - start
+                    elapsed_mins, elapsed_secs = divmod(t_diff, 60)
+                    status = ('[%0d:%02d] Status: %s Tracking: %s' %
+                              (elapsed_mins, elapsed_secs, app_status, url))
+                    sys.stdout.write("\r\x1b[K" + status)
+                    sys.stdout.flush()
+                self.spark_heartbeat(s, context)
+        logger.info(proc.communicate()[0])
+        return proc.returncode, final_state, app_id
