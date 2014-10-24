@@ -334,15 +334,12 @@ class CentralPlannerScheduler(Scheduler):
             return
 
         if task.status == DISABLED:
-            if new_status == DISABLED:
-                task.scheduler_disable_time = None
-            elif new_status == DONE:
+            if new_status == DONE:
                 task.re_enable()
-                task.status = DONE
-            elif task.scheduler_disable_time is None:
-                # when it is disabled by client, we allow the status change
-                task.status = new_status
-            return
+
+            # don't allow workers to override a scheduler disable
+            elif task.scheduler_disable_time is not None:
+                return
 
         if new_status == FAILED and task.can_disable():
             task.add_failure()
