@@ -30,6 +30,7 @@ import signal
 from hashlib import md5
 import luigi
 import luigi.hdfs
+import luigi.s3
 import configuration
 import warnings
 import mrrunner
@@ -322,7 +323,29 @@ class JobRunner(object):
 class HadoopJobRunner(JobRunner):
     ''' Takes care of uploading & executing a Hadoop job using Hadoop streaming
 
-    TODO: add code to support Elastic Mapreduce (using boto) and local execution.
+    Output is written atomically by writing to a temporary output directory
+    and moving the result to the intended output directory. By default,
+    this move happens using `hadoop -fs mv ...` for
+    :class:`luigi.hdfs.HdfsTarget`. For any target type, including
+    :class:`luigi.s3.S3Target`, you can use distcp instead by setting
+    `[hadoop]->move-strategy=distcp` in the config
+    or `move_strategy = 'distcp'` on the task.
+
+    On Amazon Elastic MapReduce, the EMRFS S3 distcp jar is recommended.
+    To use the EMRFS S3 distcp jar, set
+    `[hadoop]->move-strategy=distcp-jar` and
+    `[hadoop]->distcp-jar=<jar-path-here>`
+    (i.e. /home/hadoop/lib/emr-s3distcp-1.0.jar). You can provide additional
+    distcp arguments, including Amazon's unique S3 arguments, to the distcp jar
+    by defining a move_tmp_distcp_args() method on your task, which returns a
+    list, i.e. `['--s3Endpoint=s3-eu-west-1.amazonaws.com']`.
+
+    Hint: If your mapper-only job results in too many small files, you can use
+    distcp to combine them in the move step's reducer with groupBy and
+    targetSize.
+
+    TODO: add code to support Elastic Mapreduce (using boto)
+          and local execution.
     '''
     def __init__(self, streaming_jar, modules=[], streaming_args=[], libjars=[], libjars_in_hdfs=[], jobconfs={}, input_format=None, output_format=None):
         self.streaming_jar = streaming_jar
@@ -369,9 +392,16 @@ class HadoopJobRunner(JobRunner):
         red_cmd = '{0} mrrunner.py reduce'.format(python_executable)
 
         # replace output with a temporary work directory
-        output_final = job.output().path
-        output_tmp_fn = output_final + '-temp-' + datetime.datetime.now().isoformat().replace(':', '-')
-        tmp_target = luigi.hdfs.HdfsTarget(output_tmp_fn, is_tmp=True)
+        job_output = job.output()
+        output_final = job_output.path.rstrip('/')
+        tmp_path_dt = datetime.datetime.now().isoformat().replace(':', '-')
+        output_tmp_fn = '{p}-temp-{dt}'.format(p=output_final, dt=tmp_path_dt)
+        if isinstance(job_output, luigi.hdfs.HdfsTarget):
+            tmp_target = luigi.hdfs.HdfsTarget(output_tmp_fn, is_tmp=True)
+        elif isinstance(job_output, luigi.s3.S3Target):
+            tmp_target = luigi.s3.S3Target(output_tmp_fn)
+        else:
+            raise RuntimeError('job.output() is not HdfsTarget nor S3Target')
 
         arglist = [luigi.hdfs.load_hadoop_cmd(), 'jar', self.streaming_jar]
 
@@ -424,10 +454,10 @@ class HadoopJobRunner(JobRunner):
             arglist += ['-inputformat', self.input_format]
 
         for target in luigi.task.flatten(job.input_hadoop()):
-            assert isinstance(target, luigi.hdfs.HdfsTarget)
+            assert isinstance(target, luigi.hdfs.HdfsTarget) or \
+                isinstance(target, luigi.s3.S3Target)
             arglist += ['-input', target.path]
 
-        assert isinstance(job.output(), luigi.hdfs.HdfsTarget)
         arglist += ['-output', output_tmp_fn]
 
         # submit job
@@ -438,7 +468,38 @@ class HadoopJobRunner(JobRunner):
         run_and_track_hadoop_job(arglist)
 
         # rename temporary work directory to given output
-        tmp_target.move(output_final, raise_if_exists=True)
+        move_strategy = getattr(job, 'move_strategy', None)
+        if move_strategy is None:
+            move_strategy = config.get('hadoop', 'move-strategy', 'hadoop-fs')
+        if move_strategy == 'hadoop-fs':
+            assert isinstance(tmp_target, luigi.hdfs.HdfsTarget), \
+                "hadoop-fs only works for HdfsTarget"
+            logger.info('Moving temp output')
+            tmp_target.move(output_final, raise_if_exists=True)
+        elif move_strategy == 'distcp':
+            logger.info('Moving temp output with distcp')
+            distcp_job_args = [luigi.hdfs.load_hadoop_cmd(), 'distcp']
+            if hasattr(job, 'move_tmp_distcp_args'):
+                distcp_job_args += job.move_tmp_distcp_args()
+            distcp_job_args += [tmp_target.path, output_final]
+            run_and_track_hadoop_job(distcp_job_args)
+            tmp_target.remove(recursive=True)
+        elif move_strategy == 'distcp-jar':
+            logger.info('Moving temp output with distcp jar')
+            distcp_jar = config.get('hadoop', 'distcp-jar')
+            distcp_job_args = [
+                luigi.hdfs.load_hadoop_cmd(), 'jar', distcp_jar,
+                '--src={0}'.format(tmp_target.path),
+                '--dest={0}'.format(output_final),
+            ]
+            if hasattr(job, 'move_tmp_distcp_args'):
+                distcp_job_args += job.move_tmp_distcp_args()
+            run_and_track_hadoop_job(distcp_job_args)
+            tmp_target.remove(recursive=True)
+        else:
+            raise RuntimeError('Unknown move strategy "{0}"'
+                               .format(move_strategy))
+
         self.finish()
 
     def finish(self):
@@ -634,7 +695,8 @@ class JobTask(BaseHadoopJobTask):
         """
         outputs = luigi.task.flatten(self.output())
         for output in outputs:
-            if not isinstance(output, luigi.hdfs.HdfsTarget):
+            if not isinstance(output, luigi.hdfs.HdfsTarget) or \
+                    isinstance(output, luigi.s3.S3Target):
                 warnings.warn("Job is using one or more non-HdfsTarget outputs" +
                               " so it will be run in local mode")
                 return LocalJobRunner()
