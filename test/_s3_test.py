@@ -15,6 +15,7 @@
 import gc
 import tempfile
 import os
+import sys
 import unittest
 
 from luigi import configuration
@@ -224,6 +225,46 @@ class TestS3Client(unittest.TestCase):
         self.assertTrue(s3_client.exists('s3://mybucket/putMe'))
 
     @mock_s3
+    def test_put_multipart_multiple_parts_non_exact_fit(self):
+        """
+        Test a multipart put with two parts, where the parts are not exactly the split size.
+        """
+        # 5MB is minimum part size
+        part_size = (1024**2)*5
+        file_size = (part_size * 2) - 5000
+        self._run_multipart_test(part_size, file_size)
+
+    @mock_s3
+    def test_put_multipart_multiple_parts_exact_fit(self):
+        """
+        Test a multipart put with multiple parts, where the parts are exactly the split size.
+        """
+        # 5MB is minimum part size
+        part_size = (1024**2)*5
+        file_size = part_size * 2
+        self._run_multipart_test(part_size, file_size)
+
+    @mock_s3
+    def test_put_multipart_less_than_split_size(self):
+        """
+        Test a multipart put with a file smaller than split size; should revert to regular put.
+        """
+        # 5MB is minimum part size
+        part_size = (1024**2)*5
+        file_size = 5000
+        self._run_multipart_test(part_size, file_size)
+
+    @mock_s3
+    def test_put_multipart_empty_file(self):
+        """
+        Test a multipart put with an empty file.
+        """
+        # 5MB is minimum part size
+        part_size = (1024**2)*5
+        file_size = 0
+        self._run_multipart_test(part_size, file_size)
+
+    @mock_s3
     def test_exists(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
@@ -292,6 +333,26 @@ class TestS3Client(unittest.TestCase):
         s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/file')
         with self.assertRaises(InvalidDeleteException):
             s3_client.remove('s3://mybucket/removemedir', recursive=False)
+
+    def _run_multipart_test(self, part_size, file_size):
+        file_contents = "a" * file_size
+        
+        s3_path = 's3://mybucket/putMe'
+        tmp_file = tempfile.NamedTemporaryFile(mode='wb', delete=True)
+        tmp_file_path = tmp_file.name
+        tmp_file.write(file_contents)
+        tmp_file.flush()
+
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+        s3_client.put_multipart(tmp_file_path, s3_path, part_size=part_size)
+        self.assertTrue(s3_client.exists(s3_path))
+        # b/c of https://github.com/spulec/moto/issues/131 have to 
+        # get contents to check size
+        key_contents = s3_client.get_key(s3_path).get_contents_as_string()
+        self.assertEquals(len(file_contents), len(key_contents))
+
+        tmp_file.close()
 
 if __name__ == '__main__':
     unittest.main()
