@@ -43,6 +43,7 @@ setup(
     packages=[
         'luigi',
         'luigi.contrib',
+        'luigi.tools'
     ],
     package_data={
         'luigi': luigi_package_data

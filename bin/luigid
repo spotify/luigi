@@ -10,10 +10,10 @@ import logging
 parser = optparse.OptionParser()
 parser.add_option('--background', help='Run in background mode', action='store_true')
 parser.add_option('--pidfile', help='Write pidfile')
-parser.add_option('--logdir', help='logdir')
+parser.add_option('--logdir', help='log directory')
 parser.add_option('--state-path', help='Pickled state file')
 parser.add_option('--address', help='Listening interface')
-parser.add_option('--port', default=8082, help='Listeing port')
+parser.add_option('--port', default=8082, help='Listening port')
 opts, args = parser.parse_args()
 
 if opts.state_path:
