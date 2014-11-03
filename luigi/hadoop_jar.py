@@ -5,6 +5,7 @@ import random
 
 import luigi.hadoop
 import luigi.hdfs
+import luigi.s3
 
 logger = logging.getLogger('luigi-interface')
 
@@ -17,7 +18,8 @@ def fix_paths(job):
     tmp_files = []
     args = []
     for x in job.args():
-        if isinstance(x, luigi.hdfs.HdfsTarget):  # input/output
+        if isinstance(x, luigi.hdfs.HdfsTarget) or \
+                isinstance(x, luigi.s3.S3Target):  # input/output
             if x.exists() or not job.atomic_output():  # input
                 args.append(x.path)
             else:  # output

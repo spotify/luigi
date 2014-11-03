@@ -392,6 +392,9 @@ class S3Target(FileSystemTarget):
             else:
                 return AtomicS3File(self.path, self.fs)
 
+    def remove(self, recursive=False):
+        self.fs.remove(path=self.path, recursive=recursive)
+
 
 class S3FlagTarget(S3Target):
     """
