@@ -12,29 +12,51 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import os
 from calendar import timegm
 from datetime import datetime
 import getpass
-import unittest
+import unittest2
 import luigi
 from luigi import hdfs
 import mock
 import re
 import functools
+from snakebite.minicluster import MiniCluster
 
 
 class TestException(Exception):
     pass
 
 
-class HdfsTestCase(unittest.TestCase):
+class HdfsTestCase(unittest2.TestCase):
+    cluster = None
+
+    @classmethod
+    def setupClass(cls):
+        if not cls.cluster:
+            cls.cluster = MiniCluster(None, nnport=50030)
+        cls.cluster.mkdir("/tmp")
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.cluster:
+            cls.cluster.terminate()
+
     def setUp(self):
         self.fs = hdfs.client
+        cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "testconfig")
+        hadoop_bin = os.path.join(os.environ['HADOOP_HOME'], 'bin/hadoop')
+        hdfs.load_hadoop_cmd = lambda: [hadoop_bin, '--config', cfg_path]
+
+    def tearDown(self):
+        if self.fs.exists(self._test_dir()):
+            self.fs.remove(self._test_dir(), skip_trash=True)
 
     @staticmethod
     def _test_dir():
         return '/tmp/luigi_tmp_testdir_%s' % getpass.getuser()
-    
+
     @staticmethod
     def _test_file(suffix=""):
         return '%s/luigi_tmp_testfile%s' % (HdfsTestCase._test_dir(), suffix)
@@ -67,6 +89,7 @@ class ErrorHandling(HdfsTestCase):
 
 
 class AtomicHdfsOutputPipeTests(HdfsTestCase):
+
     def test_atomicity(self):
         testpath = self._test_dir()
         if self.fs.exists(testpath):
@@ -150,10 +173,11 @@ class HdfsAtomicWriteDirPipeTests(HdfsTestCase):
 
 
 # This class is a mixin, and does not inherit from TestCase, in order to avoid running the base class as a test case.
-class _HdfsFormatTest(object):
+class _HdfsFormatTest(HdfsTestCase):
     format = None  # override with luigi.format.Format subclass
 
     def setUp(self):
+        super(_HdfsFormatTest, self).setUp()
         self.target = hdfs.HdfsTarget(self._test_file(), format=self.format)
         if self.target.exists():
             self.target.remove(skip_trash=True)
@@ -691,7 +715,7 @@ class _HdfsClientTest(HdfsTestCase):
         self.assertRaises(luigi.hdfs.HDFSCliError, apache_client.exists, "/some/path/somewhere")
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest2.main()
     # Uncomment to run a single test
     # unittest.TextTestRunner(failfast=True, verbosity=2).run(suite())
 

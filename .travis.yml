@@ -2,13 +2,11 @@ language: python
 python:
   - "2.7"
   - "2.6"
+jdk: oraclejdk7
+env:
+  - TOX_ENV=cdh
+  - TOX_ENV=hdp
 install:
-  - pip install tornado --use-mirrors
-  - pip install argparse --use-mirrors
-  - pip install sqlalchemy --use-mirrors
-  - pip install mock --use-mirrors
-  - pip install boto --use-mirrors
-  - pip install moto --use-mirrors
-  - pip install ordereddict --use-mirrors
-  - pip install pyparsing --use-mirrors
-script: nosetests -v
+  - pip install virtualenv
+  - pip install tox
+script: python setup.py test --tox-args="-e $TOX_ENV"
