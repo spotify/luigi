@@ -15,7 +15,7 @@
 import fnmatch
 import datetime
 import luigi
-from luigi.tools.range import RangeHourly, RangeHourlyBase, _constrain_glob
+from luigi.tools.range import RangeEvent, RangeHourly, RangeHourlyBase, _constrain_glob
 from luigi.mock import MockFile, MockFileSystem
 import mock
 import time
@@ -140,55 +140,85 @@ def datetime_to_epoch(dt):
 
 
 class RangeHourlyBaseTest(unittest.TestCase):
-    def test_missing_datehours_empty_interval_correctly_interfaced(self):
-        def subcase(kwargs):
-            calls = []
+    maxDiff = None
 
-            class RangeHourlyDerived(RangeHourlyBase):
-                def missing_datehours(*args):
-                    calls.append(args)
-                    return args[-1][:5]
+    def setUp(self):
+        # yucky to create separate callbacks; would be nicer if the callback received an instance of a subclass of Event, so one callback could accumulate all types
+        @RangeHourlyBase.event_handler(RangeEvent.DELAY)
+        def callback_delay(*args):
+            self.events.setdefault(RangeEvent.DELAY, []).append(args)
+        @RangeHourlyBase.event_handler(RangeEvent.COMPLETE_COUNT)
+        def callback_complete_count(*args):
+            self.events.setdefault(RangeEvent.COMPLETE_COUNT, []).append(args)
+        @RangeHourlyBase.event_handler(RangeEvent.COMPLETE_FRACTION)
+        def callback_complete_fraction(*args):
+            self.events.setdefault(RangeEvent.COMPLETE_FRACTION, []).append(args)
+        self.events = {}
 
-            task = RangeHourlyDerived(of='CommonDateHourTask',
-                                      start=datetime.datetime(2014, 3, 20, 17),
-                                      **kwargs)
-            self.assertEqual(task.requires(), [])
-            self.assertEqual(calls, [])
-            self.assertEqual(task.requires(), [])
-            self.assertEqual(calls, [])  # subsequent requires() should return the cached result, never call missing_datehours
-            self.assertTrue(task.complete())
+    def _empty_subcase(self, kwargs, expected_events):
+        calls = []
 
+        class RangeHourlyDerived(RangeHourlyBase):
+            def missing_datehours(*args):
+                calls.append(args)
+                return args[-1][:5]
+
+        task = RangeHourlyDerived(of='CommonDateHourTask',
+                                  **kwargs)
+        self.assertEqual(task.requires(), [])
+        self.assertEqual(calls, [])
+        self.assertEqual(task.requires(), [])
+        self.assertEqual(calls, [])  # subsequent requires() should return the cached result, never call missing_datehours
+        self.assertEqual(self.events, expected_events)
+        self.assertTrue(task.complete())
+
+    def test_start_after_hours_forward(self):
         # nothing to do because start is later
-        subcase({
-            'now': datetime_to_epoch(datetime.datetime(2000, 1, 1, 4)),
-            'hours_back': 4,
-            'hours_forward': 20
-        })
+        self._empty_subcase(
+            {
+                'now': datetime_to_epoch(datetime.datetime(2000, 1, 1, 4)),
+                'start': datetime.datetime(2014, 3, 20, 17),
+                'hours_back': 4,
+                'hours_forward': 20,
+            },
+            {
+                'event.tools.range.delay': [
+                    ('CommonDateHourTask', 0.),
+                ],
+                'event.tools.range.complete.count': [
+                    ('CommonDateHourTask', 0),
+                ],
+                'event.tools.range.complete.fraction': [
+                    ('CommonDateHourTask', 1.),
+                ],
+            }
+        )
 
-    def test_missing_datehours_nonempty_interval_correctly_interfaced(self):
-        def subcase(kwargs, expected_finite_datehours_range, expected_requires):
-            calls = []
+    def _nonempty_subcase(self, kwargs, expected_finite_datehours_range, expected_requires, expected_events):
+        calls = []
 
-            class RangeHourlyDerived(RangeHourlyBase):
-                def missing_datehours(*args):
-                    calls.append(args)
-                    return args[-1][:7]
+        class RangeHourlyDerived(RangeHourlyBase):
+            def missing_datehours(*args):
+                calls.append(args)
+                return args[-1][:7]
 
-            task = RangeHourlyDerived(of='CommonDateHourTask',
-                                      **kwargs)
-            self.assertEqual(map(str, task.requires()), expected_requires)
-            self.assertEqual(calls[0][1], CommonDateHourTask)
-            self.assertEqual((min(calls[0][2]), max(calls[0][2])), expected_finite_datehours_range)
-            self.assertEqual(map(str, task.requires()), expected_requires)
-            self.assertEqual(len(calls), 1)  # subsequent requires() should return the cached result, not call missing_datehours again
-            self.assertFalse(task.complete())
+        task = RangeHourlyDerived(of='CommonDateHourTask',
+                                  **kwargs)
+        self.assertEqual(map(str, task.requires()), expected_requires)
+        self.assertEqual(calls[0][1], CommonDateHourTask)
+        self.assertEqual((min(calls[0][2]), max(calls[0][2])), expected_finite_datehours_range)
+        self.assertEqual(map(str, task.requires()), expected_requires)
+        self.assertEqual(len(calls), 1)  # subsequent requires() should return the cached result, not call missing_datehours again
+        self.assertEqual(self.events, expected_events)
+        self.assertFalse(task.complete())
 
-        subcases = [(
+    def test_start_long_before_hours_back(self):
+        self._nonempty_subcase(
             {
                 'now': datetime_to_epoch(datetime.datetime(2000, 1, 1, 4)),
                 'start': datetime.datetime(1960, 3, 2, 1),
                 'hours_back': 5,
-                'hours_forward': 20
+                'hours_forward': 20,
             },
             (datetime.datetime(1999, 12, 31, 23), datetime.datetime(2000, 1, 2, 0)),
             [
@@ -199,40 +229,76 @@ class RangeHourlyBaseTest(unittest.TestCase):
                 'CommonDateHourTask(dh=2000-01-01T03)',
                 'CommonDateHourTask(dh=2000-01-01T04)',
                 'CommonDateHourTask(dh=2000-01-01T05)',
-            ]
-        ), (
+            ],
+            {
+                'event.tools.range.delay': [
+                    ('CommonDateHourTask', 26.),  # because of short hours_back we're oblivious to those 40 preceding years
+                ],
+                'event.tools.range.complete.count': [
+                    ('CommonDateHourTask', 349193),
+                ],
+                'event.tools.range.complete.fraction': [
+                    ('CommonDateHourTask', 349193. / (349193 + 7)),
+                ],
+            }
+        )
+
+    def test_start_after_long_hours_back(self):
+        self._nonempty_subcase(
             {
                 'now': datetime_to_epoch(datetime.datetime(2014, 10, 22, 12, 4, 29)),
                 'start': datetime.datetime(2014, 3, 20, 17),
                 'task_limit': 4,
                 'hours_back': 365 * 24,
             },
-            (datetime.datetime(2014, 3, 20, 17), datetime.datetime(2014, 10, 23, 12)),
+            (datetime.datetime(2014, 3, 20, 17), datetime.datetime(2014, 10, 22, 12)),
             [
                 'CommonDateHourTask(dh=2014-03-20T17)',
                 'CommonDateHourTask(dh=2014-03-20T18)',
                 'CommonDateHourTask(dh=2014-03-20T19)',
                 'CommonDateHourTask(dh=2014-03-20T20)',
-            ]
-        ), (
+            ],
             {
-                'now': datetime_to_epoch(datetime.datetime(2015, 10, 22, 12, 4, 29)),
-                'start': datetime.datetime(2014, 3, 20, 17),
-                'task_limit': 4,
-                'hours_back': 365 * 24,
-                'hours_forward': 20,
-            },
-            (datetime.datetime(2014, 10, 22, 12), datetime.datetime(2015, 10, 23, 8)),
-            [
-                'CommonDateHourTask(dh=2014-10-22T12)',
-                'CommonDateHourTask(dh=2014-10-22T13)',
-                'CommonDateHourTask(dh=2014-10-22T14)',
-                'CommonDateHourTask(dh=2014-10-22T15)',
-            ]
-        )]
+                'event.tools.range.delay': [
+                    ('CommonDateHourTask', 5180.),
+                ],
+                'event.tools.range.complete.count': [
+                    ('CommonDateHourTask', 5173),
+                ],
+                'event.tools.range.complete.fraction': [
+                    ('CommonDateHourTask', 5173. / (5173 + 7)),
+                ],
+            }
+        )
 
-        for s in subcases:
-            subcase(*s)
+    def test_start_long_before_long_hours_back_and_with_long_hours_forward(self):
+        self._nonempty_subcase(
+            {
+                'now': datetime_to_epoch(datetime.datetime(2017, 10, 22, 12, 4, 29)),
+                'start': datetime.datetime(2011, 3, 20, 17),
+                'task_limit': 4,
+                'hours_back': 3 * 365 * 24,
+                'hours_forward': 3 * 365 * 24,
+            },
+            (datetime.datetime(2014, 10, 23, 12), datetime.datetime(2020, 10, 21, 12)),
+            [
+                'CommonDateHourTask(dh=2014-10-23T12)',
+                'CommonDateHourTask(dh=2014-10-23T13)',
+                'CommonDateHourTask(dh=2014-10-23T14)',
+                'CommonDateHourTask(dh=2014-10-23T15)',
+            ],
+            {
+                'event.tools.range.delay': [
+                    ('CommonDateHourTask', 52561.),
+                ],
+                'event.tools.range.complete.count': [
+                    ('CommonDateHourTask', 84061),
+                ],
+                'event.tools.range.complete.fraction': [
+                    ('CommonDateHourTask', 84061. / (84061 + 7)),
+                ],
+            }
+        )
 
 
 class RangeHourlyTest(unittest.TestCase):
