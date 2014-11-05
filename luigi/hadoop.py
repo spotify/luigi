@@ -371,7 +371,7 @@ class HadoopJobRunner(JobRunner):
         # replace output with a temporary work directory
         output_final = job.output().path
         output_tmp_fn = output_final + '-temp-' + datetime.datetime.now().isoformat().replace(':', '-')
-        tmp_target = luigi.hdfs.HdfsTarget(output_tmp_fn, is_tmp=True)
+        tmp_target = luigi.hdfs.HdfsTarget(output_tmp_fn)
 
         arglist = luigi.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
 
@@ -437,8 +437,7 @@ class HadoopJobRunner(JobRunner):
 
         run_and_track_hadoop_job(arglist)
 
-        # rename temporary work directory to given output
-        tmp_target.move(output_final, raise_if_exists=True)
+        tmp_target.move_dir(output_final)
         self.finish()
 
     def finish(self):

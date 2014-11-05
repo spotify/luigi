@@ -712,7 +712,10 @@ class HdfsTarget(FileSystemTarget):
 
     @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def rename(self, path, fail_if_exists=False):
-        # rename does not change self.path, so be careful with assumptions
+        """ Rename does not change self.path, so be careful with assumptions
+
+        Not recommendeed for directories. Use move_dir.  spotify/luigi#522
+        """
         if isinstance(path, HdfsTarget):
             path = path.path
         if fail_if_exists and exists(path):
@@ -721,6 +724,10 @@ class HdfsTarget(FileSystemTarget):
 
     @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def move(self, path, fail_if_exists=False):
+        """ Move does not change self.path, so be careful with assumptions
+
+        Not recommendeed for directories. Use move_dir.  spotify/luigi#522
+        """
         self.rename(path, raise_if_exists=fail_if_exists)
 
     def move_dir(self, path):
