@@ -159,6 +159,62 @@ class S3Client(FileSystem):
         s3_key.key = key
         s3_key.set_contents_from_filename(local_path)
 
+    def put_multipart(self, local_path, destination_s3_path, part_size=67108864):
+        """
+        Put an object stored locally to an S3 path
+        using S3 multi-part upload (for files > 5GB).
+
+        :param local_path: Path to source local file
+        :param destination_s3_path: URL for target S3 location
+        :param part_size: Part size in bytes. Default: 67108864 (64MB), must be >= 5MB and <= 5 GB.
+        """
+        # calculate number of parts to upload
+        # based on the size of the file
+        source_size = os.stat(local_path).st_size
+
+        if source_size <= part_size:
+            # fallback to standard, non-multipart strategy
+            return self.put(local_path, destination_s3_path)
+
+        (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
+
+        # grab and validate the bucket
+        s3_bucket = self.s3.get_bucket(bucket, validate=True)
+
+        # calculate the number of parts (int division). 
+        # use modulo to avoid float precision issues
+        # for exactly-sized fits
+        num_parts = \
+            (source_size / part_size) \
+            if source_size % part_size == 0 \
+            else (source_size / part_size) + 1
+        
+        mp = None
+        try:
+            mp = s3_bucket.initiate_multipart_upload(key)
+
+            for i in xrange(num_parts):
+                # upload a part at a time to S3
+                offset = part_size * i
+                bytes = min(part_size, source_size - offset)
+                with open(local_path, 'rb') as fp:
+                    part_num = i+1
+                    logger.info('Uploading part %s/%s to %s' % \
+                        (part_num, num_parts, destination_s3_path))
+                    fp.seek(offset)
+                    mp.upload_part_from_file(fp, part_num=part_num, size=bytes)
+
+            # finish the upload, making the file available in S3
+            mp.complete_upload()
+        except:
+            if mp:
+                logger.info('Canceling multipart s3 upload for %s' %  destination_s3_path)
+                # cancel the upload so we don't get charged for
+                # storage consumed by uploaded parts
+                mp.cancel_upload()
+            raise
+
+
     def copy(self, source_path, destination_path):
         """
         Copy an object from one S3 location to another.
@@ -276,7 +332,7 @@ class AtomicS3File(file):
         super(AtomicS3File, self).close()
 
         # store the contents in S3
-        self.s3_client.put(self.__tmp_path, self.path)
+        self.s3_client.put_multipart(self.__tmp_path, self.path)
 
     def __del__(self):
         # remove the temporary directory
