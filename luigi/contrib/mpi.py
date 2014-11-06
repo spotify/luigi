@@ -1,19 +1,35 @@
+"""
+MPI Task Scheduling
+"""
+
 import logging
+import socket
+import collections
+import multiprocessing
 from mpi4py import MPI
-from luigi import build
+from luigi import build, configuration
 from luigi.worker import Worker, Event
 from luigi.scheduler import CentralPlannerScheduler, Scheduler
+
+import cPickle as pickle
 
 log = logging.getLogger('luigi-interface')
 
 COMM = MPI.COMM_WORLD
 
-def sndrcv(msg, with_rank=0):
-    log.debug('[%i] %s', COMM.Get_rank(), msg['cmd'])
-    COMM.send(msg, with_rank)
-    result = COMM.recv(source=with_rank)
-    return result
+def send(msg, dest=0):
+    #log.debug('%i->%i: %s', COMM.Get_rank(), dest, msg)
+    COMM.send(msg, dest)
 
+def recv(source=MPI.ANY_SOURCE):
+    status = MPI.Status()
+    msg = COMM.recv(source=source, status=status)
+    #log.debug('%i<-%i: %s', COMM.Get_rank(), status.source, msg)
+    return msg, status
+
+def sndrcv(msg, with_rank=0):
+    COMM.send(msg, with_rank)
+    return COMM.recv(source=with_rank)
 
 class MasterScheduler(CentralPlannerScheduler):
 
@@ -33,30 +49,99 @@ class MPIScheduler(Scheduler):
         return sndrcv({'cmd': 'get_work', 'args': args, 'kwargs': kwargs})
 
     def ping(self, *args, **kwargs):
-        return sndrcv({'cmd': 'ping', 'args': args, 'kwargs': kwargs})
+        return True
+        #return sndrcv({'cmd': 'ping', 'args': args, 'kwargs': kwargs})
 
 
 class MPIWorker(Worker):
 
+    #def __init__(self, scheduler=MPIScheduler(), worker_id=None,
+    #             worker_processes=1, ping_interval=None, keep_alive=None,
+    #             wait_interval=None, max_reschedules=None, count_uniques=None):
+    #    super(MPIWorker, self).__init__(scheduler=scheduler, 
+    #                                    worker_id=worker_id,
+    #                                    worker_processes=worker_processes,
+    #                                    ping_interval=ping_interval,
+    #                                    keep_alive=keep_alive,
+    #                                    wait_interval=wait_interval,
+    #                                    max_reschedules=max_reschedules,
+    #                                    count_uniques=count_uniques)
+
     def __init__(self, scheduler=MPIScheduler(), worker_id=None,
-                 ping_interval=None, keep_alive=None, wait_interval=None):
+                 worker_processes=1, ping_interval=None, keep_alive=None,
+                 wait_interval=None, max_reschedules=None, count_uniques=None):
+        self.worker_processes = int(worker_processes)
+        self._worker_info = self._generate_worker_info()
+
         if not worker_id:
-            worker_id = 'mpi-%06d' % COMM.Get_rank()
-        super(MPIWorker, self).__init__(scheduler, worker_id=worker_id,
-                                        ping_interval=ping_interval,
-                                        keep_alive=keep_alive,
-                                        wait_interval=wait_interval)
-        self.host = self.host + ':' + self._id
+            worker_id = 'Worker(%s)' % ', '.join(['%s=%s' % (k, v) for k, v in self._worker_info])
+
+        config = configuration.get_config()
+
+        if ping_interval is None:
+            ping_interval = config.getfloat('core', 'worker-ping-interval', 1.0)
+
+        if keep_alive is None:
+            keep_alive = config.getboolean('core', 'worker-keep-alive', False)
+        self.keep_alive = keep_alive
+
+        # worker-count-uniques means that we will keep a worker alive only if it has a unique
+        # pending task, as well as having keep-alive true
+        if count_uniques is None:
+            count_uniques = config.getboolean('core', 'worker-count-uniques', False)
+        self._count_uniques = count_uniques
+
+        if wait_interval is None:
+            wait_interval = config.getint('core', 'worker-wait-interval', 1)
+        self._wait_interval = wait_interval
+
+        if max_reschedules is None:
+            max_reschedules = config.getint('core', 'max-reschedules', 1)
+        self._max_reschedules = max_reschedules
+
+        self._id = worker_id
+        self._scheduler = scheduler
+
+        self.host = socket.gethostname()
+        self._scheduled_tasks = {}
+        self._suspended_tasks = {}
+
+        self._first_task = None
+
+        self.add_succeeded = True
+        self.run_succeeded = True
+        self.unfulfilled_counts = collections.defaultdict(int)
+
+        # Keep info about what tasks are running (could be in other processes)
+        self._task_result_queue = multiprocessing.Queue()
+        self._running_tasks = {}
+
+    def _generate_worker_info(self):
+        args = super(MPIWorker, self)._generate_worker_info()
+        args += [('rank', COMM.Get_rank())]
+        return args
 
 
 class MasterMPIWorker(MPIWorker):
 
-    def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None):
-        super(MasterMPIWorker, self).__init__(scheduler, worker_id)
+    def __init__(self, scheduler=MasterScheduler(), worker_id=None,
+                 worker_processes=1, ping_interval=None, keep_alive=None,
+                 wait_interval=None, max_reschedules=None, count_uniques=None):
+        super(MasterMPIWorker, self).__init__(scheduler=scheduler, 
+                                              worker_id=worker_id,
+                                              worker_processes=worker_processes,
+                                              ping_interval=ping_interval,
+                                              keep_alive=keep_alive,
+                                              wait_interval=wait_interval,
+                                              max_reschedules=max_reschedules,
+                                              count_uniques=count_uniques)
         self._task_status = {}
 
     def _check_complete(self, task):
         return self._task_status.setdefault(task.task_id, task.complete())
+
+    def stop(self):
+        pass
 
     def run(self):
         # Here we block to wait for all workers to be ready for
@@ -75,14 +160,14 @@ class MasterMPIWorker(MPIWorker):
         status = MPI.Status()
 
         while slaves_alive > 0:
-            msg = COMM.recv(status=status)
+            msg, status = recv()
             cmd, args, kwargs = msg['cmd'], msg['args'], msg['kwargs']
 
             try:  # to pass along the message to the master scheduler
                 func = getattr(self._scheduler, cmd)
                 result = func(*args, **kwargs)
                 # send back the result
-                COMM.send(result, status.source)
+                send(result, status.source)
             except AttributeError:
                 if cmd == 'check_complete':
                     is_complete = False
@@ -91,7 +176,7 @@ class MasterMPIWorker(MPIWorker):
                         is_complete = self._check_complete(task)
                     except KeyError:
                         is_complete = True
-                    COMM.send(is_complete, status.source)
+                    send(is_complete, status.source)
 
                 elif cmd == 'stop':
                     slaves_alive -= 1
@@ -102,7 +187,8 @@ class MasterMPIWorker(MPIWorker):
 class SlaveMPIWorker(MPIWorker):
 
     def __init__(self, scheduler=MPIScheduler(), worker_id=None,
-                 ping_interval=None, keep_alive=None, wait_interval=None):
+                 worker_processes=1, ping_interval=None, keep_alive=None,
+                 wait_interval=None, max_reschedules=None, count_uniques=None):
 
         # Here we block to allow the MasterMPIWorker to check the
         # completion status of all tasks (see `_check_complete`). This
@@ -113,24 +199,29 @@ class SlaveMPIWorker(MPIWorker):
         COMM.Barrier()
 
         # Now go ahead and initialise.
-
-        super(SlaveMPIWorker, self).__init__(scheduler, worker_id,
+        
+        super(SlaveMPIWorker, self).__init__(scheduler=scheduler, 
+                                             worker_id=worker_id,
+                                             worker_processes=worker_processes,
                                              ping_interval=ping_interval,
                                              keep_alive=keep_alive,
-                                             wait_interval=wait_interval)
+                                             wait_interval=wait_interval,
+                                             max_reschedules=max_reschedules,
+                                             count_uniques=count_uniques)
 
     def _check_complete(self, task):
-        COMM.send({'cmd': 'check_complete', 'args': [task.task_id],
-                 'kwargs': None}, 0)
-        return COMM.recv(source=0)
+        send({'cmd': 'check_complete',
+              'args': [task.task_id],
+              'kwargs': None}, 0)
+        result, status = recv(source=0)
+        return result
 
-    def run(self):
-        self._scheduler.ping(self._id)
-        return super(SlaveMPIWorker, self).run()
+    def _run_task(self, task_id):
+        task = self._scheduled_tasks[task_id]
+        return super(SlaveMPIWorker, self)._run_task(task_id)
 
     def stop(self):
-        COMM.send({'cmd': 'stop', 'args': [self._id], 'kwargs': None}, 0)
-        super(SlaveMPIWorker, self).stop()
+        send({'cmd': 'stop', 'args': [self._id], 'kwargs': None}, 0)
 
 
 class WorkerSchedulerFactory(object):
