@@ -4,14 +4,14 @@ import posixpath
 import time
 import unittest
 import luigi.hdfs
-import luigi.interface
+import luigi.configuration
 import luigi.webhdfs
 import whoops
 
 
 class TestConfig(unittest.TestCase):
     def test_no_config(self):
-        class TestConfigParser(luigi.interface.LuigiConfigParser):
+        class TestConfigParser(luigi.configuration.LuigiConfigParser):
             _config_paths = []
             _instance = None
 
@@ -22,7 +22,7 @@ class TestConfig(unittest.TestCase):
             config)
 
     def test_config(self):
-        class TestConfigParser(luigi.interface.LuigiConfigParser):
+        class TestConfigParser(luigi.configuration.LuigiConfigParser):
             _config_paths = []
             _instance = None
         host = "webhdfs-test"
@@ -40,7 +40,7 @@ class TestGetWhoops(unittest.TestCase):
     port = "9999"
 
     def setUp(self):
-        class TestConfigParser(luigi.interface.LuigiConfigParser):
+        class TestConfigParser(luigi.configuration.LuigiConfigParser):
             _config_paths = []
             _instance = None
         self.config = TestConfigParser.instance()
