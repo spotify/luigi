@@ -1,14 +1,18 @@
-import pypar as pp
-import atexit
 import logging
-
+from mpi4py import MPI
 from luigi import build
 from luigi.worker import Worker, Event
 from luigi.scheduler import CentralPlannerScheduler, Scheduler
 
-atexit.register(pp.finalize)
-
 log = logging.getLogger('luigi-interface')
+
+COMM = MPI.COMM_WORLD
+
+def sndrcv(msg, with_rank=0):
+    log.debug('[%i] %s', COMM.Get_rank(), msg['cmd'])
+    COMM.send(msg, with_rank)
+    result = COMM.recv(source=with_rank)
+    return result
 
 
 class MasterScheduler(CentralPlannerScheduler):
@@ -19,25 +23,17 @@ class MasterScheduler(CentralPlannerScheduler):
 
 class MPIScheduler(Scheduler):
 
-    def _sndrcv(self, msg, with_rank=0):
-        pp.send(msg, destination=with_rank)
-        return pp.receive(source=with_rank)
-
     def add_task(self, *args, **kwargs):
-        return self._sndrcv({'cmd': 'add_task', 'args': args,
-                             'kwargs': kwargs})
+        return sndrcv({'cmd': 'add_task', 'args': args, 'kwargs': kwargs})
 
     def add_worker(self, *args, **kwargs):
-        return self._sndrcv({'cmd': 'add_worker', 'args': args,
-                             'kwargs': kwargs})
+        return sndrcv({'cmd': 'add_worker', 'args': args, 'kwargs': kwargs})
 
     def get_work(self, *args, **kwargs):
-        return self._sndrcv({'cmd': 'get_work', 'args': args,
-                             'kwargs': kwargs})
+        return sndrcv({'cmd': 'get_work', 'args': args, 'kwargs': kwargs})
 
     def ping(self, *args, **kwargs):
-        return self._sndrcv({'cmd': 'ping', 'args': args,
-                             'kwargs': kwargs})
+        return sndrcv({'cmd': 'ping', 'args': args, 'kwargs': kwargs})
 
 
 class MPIWorker(Worker):
@@ -45,7 +41,7 @@ class MPIWorker(Worker):
     def __init__(self, scheduler=MPIScheduler(), worker_id=None,
                  ping_interval=None, keep_alive=None, wait_interval=None):
         if not worker_id:
-            worker_id = 'mpi-%06d' % pp.rank()
+            worker_id = 'mpi-%06d' % COMM.Get_rank()
         super(MPIWorker, self).__init__(scheduler, worker_id=worker_id,
                                         ping_interval=ping_interval,
                                         keep_alive=keep_alive,
@@ -71,21 +67,22 @@ class MasterMPIWorker(MPIWorker):
         # (distributed) file system.
 
         log.debug('Syncronising with slaves')
-        pp.barrier()
+        COMM.Barrier()
 
         # Handle the messages from the workers
 
-        slaves_alive = pp.size() - 1  # minus the master
+        slaves_alive = COMM.Get_size() - 1  # minus the master
+        status = MPI.Status()
 
         while slaves_alive > 0:
-            msg, status = pp.receive(source=pp.any_source, return_status=True)
+            msg = COMM.recv(status=status)
             cmd, args, kwargs = msg['cmd'], msg['args'], msg['kwargs']
 
             try:  # to pass along the message to the master scheduler
                 func = getattr(self._scheduler, cmd)
                 result = func(*args, **kwargs)
                 # send back the result
-                pp.send(result, status.source)
+                COMM.send(result, status.source)
             except AttributeError:
                 if cmd == 'check_complete':
                     is_complete = False
@@ -94,7 +91,7 @@ class MasterMPIWorker(MPIWorker):
                         is_complete = self._check_complete(task)
                     except KeyError:
                         is_complete = True
-                    pp.send(is_complete, status.source)
+                    COMM.send(is_complete, status.source)
 
                 elif cmd == 'stop':
                     slaves_alive -= 1
@@ -113,7 +110,7 @@ class SlaveMPIWorker(MPIWorker):
         # file system.
 
         log.debug('Syncronising with master')
-        pp.barrier()
+        COMM.Barrier()
 
         # Now go ahead and initialise.
 
@@ -123,25 +120,23 @@ class SlaveMPIWorker(MPIWorker):
                                              wait_interval=wait_interval)
 
     def _check_complete(self, task):
-        pp.send({'cmd': 'check_complete', 'args': [task.task_id],
-                 'kwargs': None},
-                destination=0)
-        return pp.receive(source=0)
+        COMM.send({'cmd': 'check_complete', 'args': [task.task_id],
+                 'kwargs': None}, 0)
+        return COMM.recv(source=0)
 
     def run(self):
         self._scheduler.ping(self._id)
         return super(SlaveMPIWorker, self).run()
 
     def stop(self):
-        pp.send({'cmd': 'stop', 'args': [self._id], 'kwargs': None},
-                destination=0)
+        COMM.send({'cmd': 'stop', 'args': [self._id], 'kwargs': None}, 0)
         super(SlaveMPIWorker, self).stop()
 
 
 class WorkerSchedulerFactory(object):
 
     def __init__(self, task_history=None):
-        if pp.rank() > 0:
+        if COMM.Get_rank() > 0:
             self.scheduler = MPIScheduler()
             self.worker = SlaveMPIWorker(self.scheduler)
         else:  # on master
