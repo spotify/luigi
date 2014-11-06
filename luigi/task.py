@@ -561,6 +561,7 @@ class Task(object):
         This method gets called when :py:meth:`run` completes without raising any exceptions.
         The returned value is json encoded and sent to the scheduler as the `expl` argument.
         Default behavior is to send an None value"""
+        pass
 
 
 def externalize(task):
