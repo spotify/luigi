@@ -8,34 +8,32 @@ import collections
 import multiprocessing
 from mpi4py import MPI
 from luigi import build, configuration
-from luigi.worker import Worker, Event
+from luigi.worker import Worker
 from luigi.scheduler import CentralPlannerScheduler, Scheduler
 
-import cPickle as pickle
-
 log = logging.getLogger('luigi-interface')
+COM = MPI.COMM_WORLD
 
-COMM = MPI.COMM_WORLD
 
 def send(msg, dest=0):
-    #log.debug('%i->%i: %s', COMM.Get_rank(), dest, msg)
-    COMM.send(msg, dest)
+    COM.send(msg, dest)
+
 
 def recv(source=MPI.ANY_SOURCE):
     status = MPI.Status()
-    msg = COMM.recv(source=source, status=status)
-    #log.debug('%i<-%i: %s', COMM.Get_rank(), status.source, msg)
+    msg = COM.recv(source=source, status=status)
     return msg, status
 
+
 def sndrcv(msg, with_rank=0):
-    COMM.send(msg, with_rank)
-    return COMM.recv(source=with_rank)
+    COM.send(msg, with_rank)
+    return COM.recv(source=with_rank)
+
 
 class MasterScheduler(CentralPlannerScheduler):
 
     def __init__(self, *args, **kwargs):
         super(MasterScheduler, self).__init__(*args, **kwargs)
-
 
 class MPIScheduler(Scheduler):
 
@@ -55,18 +53,6 @@ class MPIScheduler(Scheduler):
 
 class MPIWorker(Worker):
 
-    #def __init__(self, scheduler=MPIScheduler(), worker_id=None,
-    #             worker_processes=1, ping_interval=None, keep_alive=None,
-    #             wait_interval=None, max_reschedules=None, count_uniques=None):
-    #    super(MPIWorker, self).__init__(scheduler=scheduler, 
-    #                                    worker_id=worker_id,
-    #                                    worker_processes=worker_processes,
-    #                                    ping_interval=ping_interval,
-    #                                    keep_alive=keep_alive,
-    #                                    wait_interval=wait_interval,
-    #                                    max_reschedules=max_reschedules,
-    #                                    count_uniques=count_uniques)
-
     def __init__(self, scheduler=MPIScheduler(), worker_id=None,
                  worker_processes=1, ping_interval=None, keep_alive=None,
                  wait_interval=None, max_reschedules=None, count_uniques=None):
@@ -77,9 +63,6 @@ class MPIWorker(Worker):
             worker_id = 'Worker(%s)' % ', '.join(['%s=%s' % (k, v) for k, v in self._worker_info])
 
         config = configuration.get_config()
-
-        if ping_interval is None:
-            ping_interval = config.getfloat('core', 'worker-ping-interval', 1.0)
 
         if keep_alive is None:
             keep_alive = config.getboolean('core', 'worker-keep-alive', False)
@@ -118,7 +101,7 @@ class MPIWorker(Worker):
 
     def _generate_worker_info(self):
         args = super(MPIWorker, self)._generate_worker_info()
-        args += [('rank', COMM.Get_rank())]
+        args += [('rank', COM.Get_rank())]
         return args
 
 
@@ -151,33 +134,27 @@ class MasterMPIWorker(MPIWorker):
         # see if the task is complete instead of thrashing the
         # (distributed) file system.
 
-        log.debug('Syncronising with slaves')
-        COMM.Barrier()
+        log.debug('Synchronising with slaves')
+        COM.Barrier()
 
-        # Handle the messages from the workers
-
-        slaves_alive = COMM.Get_size() - 1  # minus the master
-        status = MPI.Status()
+        slaves_alive = COM.Get_size() - 1  # minus the master
 
         while slaves_alive > 0:
             msg, status = recv()
             cmd, args, kwargs = msg['cmd'], msg['args'], msg['kwargs']
 
-            try:  # to pass along the message to the master scheduler
+            try:  # to pass the message to the master scheduler
                 func = getattr(self._scheduler, cmd)
                 result = func(*args, **kwargs)
-                # send back the result
                 send(result, status.source)
             except AttributeError:
                 if cmd == 'check_complete':
-                    is_complete = False
                     try:
                         task = self._scheduled_tasks[args[0]]
                         is_complete = self._check_complete(task)
                     except KeyError:
                         is_complete = True
                     send(is_complete, status.source)
-
                 elif cmd == 'stop':
                     slaves_alive -= 1
 
@@ -196,7 +173,7 @@ class SlaveMPIWorker(MPIWorker):
         # file system.
 
         log.debug('Syncronising with master')
-        COMM.Barrier()
+        COM.Barrier()
 
         # Now go ahead and initialise.
         
@@ -227,7 +204,7 @@ class SlaveMPIWorker(MPIWorker):
 class WorkerSchedulerFactory(object):
 
     def __init__(self, task_history=None):
-        if COMM.Get_rank() > 0:
+        if COM.Get_rank() > 0:
             self.scheduler = MPIScheduler()
             self.worker = SlaveMPIWorker(self.scheduler)
         else:  # on master
