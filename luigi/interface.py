@@ -52,11 +52,6 @@ def setup_interface_logging(conf_file=None):
     setup_interface_logging.has_run = True
 
 
-def get_config():
-    warnings.warn('Use luigi.configuration.get_config() instead')
-    return configuration.get_config()
-
-
 def load_task(parent_task, task_name, params):
     """ Imports task and uses ArgParseInterface to initialize it
     """
