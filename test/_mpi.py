@@ -1,11 +1,13 @@
 import luigi
 import luigi.contrib.mpi as mpi
-import pypar as pp
 import time
 import random
 import os
+from mpi4py import MPI
 
-TEMPDIR = os.path.join('/tmp', 'work')
+COM = MPI.COMM_WORLD
+
+TEMPDIR = '/tmp/work'
 
 class DummyTask(luigi.Task):
     id = luigi.Parameter()
@@ -41,14 +43,14 @@ class ChainedSleepyTask(SleepyTask):
 
 
 def test0():
-    print 'test0', '%i/%i' % (pp.rank(), pp.size())
+    print 'test0', '%i/%i' % (COM.Get_rank(), COM.Get_size())
 
 
 def test1():
     tasks = [DummyTask(id) for id in range(20)]
     mpi.run(tasks)
     
-    if pp.rank() == 0:
+    if COM.Get_rank() == 0:
         for t in tasks:
             assert (t.complete() is True)
 
@@ -57,7 +59,7 @@ def test2():
     tasks = [SleepyTask(id) for id in range(20, 30)]
     mpi.run(tasks)
     
-    if pp.rank() == 0:
+    if COM.Get_rank() == 0:
         for t in tasks:
             assert (t.complete() is True)
 
@@ -66,14 +68,14 @@ def test3():
     tasks = [ChainedSleepyTask(35)]
     mpi.run(tasks)
     
-    if pp.rank() == 0:
+    if COM.Get_rank() == 0:
         for t in tasks:
             assert (t.complete() is True)
 
 def test4():
     tasks = [DummyTask(id) for id in range(20)]
 
-    if pp.rank() == 0:
+    if COM.Get_rank() == 0:
         config = luigi.configuration.get_config()
         if not config.has_option('task_history', 'db_connection'):
             config.add_section('task_history')
@@ -88,20 +90,20 @@ def test4():
 
 if __name__ == '__main__':
     test0()
-    pp.barrier()
+    COM.Barrier()
 
     test1()
-    pp.barrier()
+    COM.Barrier()
 
     test2()
-    pp.barrier()
+    COM.Barrier()
 
     test3()
-    pp.barrier()
+    COM.Barrier()
 
     test4()
-    pp.barrier()
+    COM.Barrier()
 
-    # if pp.rank() == 0:
+    # if COM.Get_rank() == 0:
     #     from pprint import pprint
     #     pprint(sch.scheduler.graph())
