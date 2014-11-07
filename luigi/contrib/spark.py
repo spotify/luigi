@@ -308,3 +308,52 @@ class Spark1xJob(luigi.Task):
                 self.spark_heartbeat(s, context)
         logger.info(proc.communicate()[0])
         return proc.returncode, final_state, app_id
+
+
+
+class PySpark1xJob(Spark1xJob):
+
+    num_executors = None
+    driver_memory = None
+    executor_memory = None
+    executor_cores = None
+
+    def program(self):
+        raise NotImplementedError("subclass should define Spark .py file")
+
+    def py_files(self):
+        """Override to provide a list of py files."""
+        return []
+
+    def run(self):
+        spark_submit = configuration.get_config().get('spark', 'spark-submit',
+                                                      'spark-submit')
+        options = ['--master', 'yarn-client']
+        if self.num_executors is not None:
+            options += ['--num-executors', self.num_executors]
+        if self.driver_memory is not None:
+            options += ['--driver-memory', self.driver_memory]
+        if self.executor_memory is not None:
+            options += ['--executor-memory', self.executor_memory]
+        if self.executor_cores is not None:
+            options += ['--executor-cores', self.executor_cores]
+        py_files = self.py_files()
+        if py_files != []:
+            options += ['--py-files', ','.join(py_files)]
+        args = [spark_submit] + options + self.spark_options() + \
+            [self.program()] + list(self.job_args())
+        args = map(str, args)
+        env = os.environ.copy()
+        temp_stderr = tempfile.TemporaryFile()
+        logger.info('Running: {0}'.format(repr(args)))
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE,
+                                stderr=temp_stderr, env=env, close_fds=True)
+        return_code, final_state, app_id = self.track_progress(proc)
+        if final_state == 'FAILED':
+            raise SparkJobError('Spark job failed: see yarn logs for {0}'
+                                .format(app_id))
+        elif return_code != 0:
+            temp_stderr.seek(0)
+            errors = temp_stderr.readlines()
+            logger.error(errors)
+            raise SparkJobError('Spark job failed', err=errors)
