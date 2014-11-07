@@ -17,6 +17,7 @@ import logging
 import parameter
 import warnings
 import traceback
+import itertools
 import pyparsing as pp
 
 Parameter = parameter.Parameter
@@ -472,11 +473,7 @@ class Task(object):
             warnings.warn("Task %r without outputs has no custom complete() method" % self)
             return False
 
-        for output in outputs:
-            if not output.exists():
-                return False
-        else:
-            return True
+        return all(itertools.imap(lambda output: output.exists(), outputs))
 
     def output(self):
         """The output that this Task produces.
