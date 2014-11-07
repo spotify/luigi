@@ -150,8 +150,6 @@ class MasterMPIWorker(MPIWorker):
             msg, status = recv()
             cmd, args, kwargs = msg['cmd'], msg['args'], msg['kwargs']
 
-            log.debug('Message received from rank %i: %s', status.source, cmd)
-
             try:  # to pass the message to the master scheduler
                 func = getattr(self._scheduler, cmd)
                 result = func(*args, **kwargs)
@@ -185,7 +183,8 @@ class SlaveMPIWorker(MPIWorker):
         # is to stop SlaveMPIWorkers from thrashing the (distributed)
         # file system.
 
-        log.debug('Synchronising with master')
+        log.debug('Slave %i waiting to synchronise with Master',
+                  COM.Get_rank())
         self._refresh_task_status()
 
         # Now go ahead and initialise.
@@ -204,7 +203,8 @@ class SlaveMPIWorker(MPIWorker):
         send({'cmd': 'task_status', 'args': [], 'kwargs': None})
         result, status = recv(source=0)
         self._task_status.update(result)
-        log.debug("Locally updated task status.")
+        log.debug("Slave %i locally updated task status.",
+                  COM.Get_rank())
 
     def _check_complete(self, task):
         is_complete = self._task_status[task.task_id]
