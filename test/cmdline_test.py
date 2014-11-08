@@ -143,7 +143,7 @@ class CmdlineTest(unittest.TestCase):
         cmd = ['./bin/luigi', '--module', 'cmdline_test', 'WriteToFile', '--filename', t.path, '--local-scheduler', '--no-lock']
         env = os.environ.copy()
         env['PYTHONPATH'] = env.get('PYTHONPATH', '') + ':.:test'
-        subprocess.check_call(cmd, env=env, stderr=subprocess.STDOUT)
+        subprocess.check_call(cmd, env=env, stdout=subprocess.PIPE)
         self.assertTrue(t.exists())
 
 if __name__ == '__main__':
