@@ -81,7 +81,7 @@ class MockFile(target.FileSystemTarget):
         self.fs.get_all_data()[path] = contents
 
     def move_dir(self, path):
-        self.rename(path, raise_if_exists=True)
+        self.move(path, raise_if_exists=True)
 
     @property
     def path(self):
