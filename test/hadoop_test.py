@@ -128,12 +128,14 @@ class HadoopJobTest(unittest.TestCase):
             count[k] = v
         return count
 
-    def test_run(self):
+    @mock.patch('luigi.hadoop.JobTask.incr_counter')  # Just for silencing
+    def test_run(self, incr_counter):
         luigi.build([WordCountJob()], local_scheduler=True)
         c = self.read_output(File('luigitest'))
         self.assertEquals(int(c['jk']), 6)
 
-    def test_run_2(self):
+    @mock.patch('luigi.hadoop.JobTask.incr_counter')  # Just for silencing
+    def test_run_2(self, incr_counter):
         luigi.build([WordFreqJob()], local_scheduler=True)
         c = self.read_output(File('luigitest-2'))
         self.assertAlmostEquals(float(c['jk']), 6.0 / 33.0)
@@ -232,7 +234,8 @@ class FailingJob(TestJobTask):
 
 
 class MrrunnerTest(unittest.TestCase):
-    def test_mrrunner(self):
+    @mock.patch('luigi.hadoop.JobTask.incr_counter')  # Just for silencing
+    def test_mrrunner(self, incr_counter):
         # TODO: we're doing a lot of stuff here that depends on the internals of how
         # we run Hadoop streaming job (in particular the create_packages_archive).
         # We should abstract these things out into helper methods in luigi.hadoop so
