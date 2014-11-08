@@ -132,8 +132,10 @@ class CmdlineTest(unittest.TestCase):
             luigi.run(['SomeTask', '--n', '42', '--local-scheduler', '--no-lock'])
             self.assertEqual([], setup_mock.call_args_list)
 
+    @mock.patch('argparse.ArgumentParser.error')
     @mock.patch('argparse.ArgumentParser.print_usage')
-    def test_non_existent_class(self, print_usage):
+    def test_non_existent_class(self, print_usage, error):
+        error.side_effect = SystemExit('yay')
         self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', '--no-lock', 'XYZ'])
 
     def test_bin_luigi(self):
