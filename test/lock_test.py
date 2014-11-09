@@ -27,9 +27,8 @@ luigi.notifications.DEBUG = True
 class TestCmd(unittest.TestCase):
     def test_getpcmd(self):
         p = subprocess.Popen(["sleep", "1"])
-        self.assertEquals(
-            luigi.lock.getpcmd(p.pid),
-            "sleep 1"
+        self.assertTrue(
+            luigi.lock.getpcmd(p.pid) in ["sleep 1", '[sleep]']
         )
         p.kill()
 
