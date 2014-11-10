@@ -209,6 +209,70 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(worker='Y', task_id='D', priority=0)
         self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'D')
 
+    def test_do_not_lock_resources_when_not_ready(self):
+        """ Test to make sure that resources won't go unused waiting on workers """
+        self.sch.add_task(worker='X', task_id='A', priority=10)
+        self.sch.add_task(worker='X', task_id='B', resources={'R': 1}, priority=5)
+        self.sch.add_task(worker='Y', task_id='C', resources={'R': 1}, priority=1)
+
+        self.sch.update_resources(R=1)
+        self.sch.add_worker('X', [('workers', 1)])
+        self.assertEqual('C', self.sch.get_work(worker='Y')['task_id'])
+
+    def test_lock_resources_when_one_of_multiple_workers_is_ready(self):
+        self.sch.add_task(worker='X', task_id='A', priority=10)
+        self.sch.add_task(worker='X', task_id='B', resources={'R': 1}, priority=5)
+        self.sch.add_task(worker='Y', task_id='C', resources={'R': 1}, priority=1)
+
+        self.sch.update_resources(R=1)
+        self.sch.add_worker('X', [('workers', 2)])
+        self.sch.add_worker('Y', [])
+        self.assertFalse(self.sch.get_work('Y')['task_id'])
+
+    def test_do_not_lock_resources_while_running_higher_priority(self):
+        """ Test to make sure that resources won't go unused waiting on workers """
+        self.sch.add_task(worker='X', task_id='A', priority=10)
+        self.sch.add_task(worker='X', task_id='B', resources={'R': 1}, priority=5)
+        self.sch.add_task(worker='Y', task_id='C', resources={'R': 1}, priority=1)
+
+        self.sch.update_resources(R=1)
+        self.sch.add_worker('X', [('workers', 1)])
+        self.assertEqual('A', self.sch.get_work('X')['task_id'])
+        self.assertEqual('C', self.sch.get_work('Y')['task_id'])
+
+    def test_lock_resources_while_running_lower_priority(self):
+        """ Make sure resources will be made available while working on lower priority tasks """
+        self.sch.add_task(worker='X', task_id='A', priority=4)
+        self.assertEqual('A', self.sch.get_work('X')['task_id'])
+        self.sch.add_task(worker='X', task_id='B', resources={'R': 1}, priority=5)
+        self.sch.add_task(worker='Y', task_id='C', resources={'R': 1}, priority=1)
+
+        self.sch.update_resources(R=1)
+        self.sch.add_worker('X', [('workers', 1)])
+        self.assertFalse(self.sch.get_work('Y')['task_id'])
+
+    def test_lock_resources_for_second_worker(self):
+        self.sch.add_task(worker='X', task_id='A', resources={'R': 1})
+        self.sch.add_task(worker='X', task_id='B', resources={'R': 1})
+        self.sch.add_task(worker='Y', task_id='C', resources={'R': 1}, priority=10)
+
+        self.sch.add_worker('X', {'workers': 2})
+        self.sch.add_worker('Y', {'workers': 1})
+        self.sch.update_resources(R=2)
+
+        self.assertEqual('A', self.sch.get_work('X')['task_id'])
+        self.assertFalse(self.sch.get_work('X')['task_id'])
+
+    def test_can_work_on_lower_priority_while_waiting_for_resources(self):
+        self.sch.add_task(worker='X', task_id='A', resources={'R': 1}, priority=0)
+        self.assertEqual('A', self.sch.get_work('X')['task_id'])
+
+        self.sch.add_task(worker='Y', task_id='B', resources={'R': 1}, priority=10)
+        self.sch.add_task(worker='Y', task_id='C', priority=0)
+        self.sch.update_resources(R=1)
+
+        self.assertEqual('C', self.sch.get_work('Y')['task_id'])
+
     def test_priority_update_with_pruning(self):
         self.setTime(0)
         self.sch.add_task(task_id='A', worker='X')
@@ -251,12 +315,13 @@ class CentralPlannerTest(unittest.TestCase):
         self.check_task_order('C')
 
     def test_single_resource_lock(self):
-        self.sch.add_task(WORKER, task_id='A', resources={'r': 1}, priority=10)
+        self.sch.add_task('X', task_id='A', resources={'r': 1})
+        self.assertEqual('A', self.sch.get_work('X')['task_id'])
+
         self.sch.add_task(WORKER, task_id='B', resources={'r': 2}, priority=10)
         self.sch.add_task(WORKER, task_id='C', resources={'r': 1})
         self.sch.update_resources(r=2)
 
-        self.assertEqual('A', self.sch.get_work(WORKER)['task_id'])
         # Should wait for 2 units of r to be available for B before scheduling C
         self.check_task_order([])
 
@@ -267,13 +332,12 @@ class CentralPlannerTest(unittest.TestCase):
         self.check_task_order('B')
 
     def test_multiple_resources_lock(self):
-        self.sch.add_task(WORKER, task_id='A', resources={'r1': 1}, priority=10)
-        self.sch.add_task(WORKER, task_id='B', resources={'r1': 1, 'r2': 1}, priority=10)
-        self.sch.add_task(WORKER, task_id='C', resources={'r2': 1})
+        self.sch.add_task('X', task_id='A', resources={'r1': 1, 'r2': 1}, priority=10)
+        self.sch.add_task(WORKER, task_id='B', resources={'r2': 1})
+        self.sch.add_task(WORKER, task_id='C', resources={'r1': 1})
         self.sch.update_resources(r1=1, r2=1)
 
-        self.assertEqual('A', self.sch.get_work(WORKER)['task_id'])
-        # Should wait for r1 to be available for B before using up r2
+        # should preserve both resources for worker 'X'
         self.check_task_order([])
 
     def test_multiple_resources_no_lock(self):
