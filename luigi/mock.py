@@ -80,6 +80,9 @@ class MockFile(target.FileSystemTarget):
         contents = self.fs.get_all_data().pop(self._fn)
         self.fs.get_all_data()[path] = contents
 
+    def move_dir(self, path):
+        self.move(path, raise_if_exists=True)
+
     @property
     def path(self):
         return self._fn
