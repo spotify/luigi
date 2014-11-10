@@ -74,6 +74,7 @@ logger = logging.getLogger('luigi-interface')
 
 try:
     from elasticsearch.helpers import bulk_index
+    from elasticsearch.connection import Urllib3HttpConnection
     import elasticsearch
     if elasticsearch.__version__ < (1, 0, 0):
         logger.warning("This module works with elasticsearch 1.0.0 "
@@ -92,7 +93,7 @@ class ElasticsearchTarget(luigi.Target):
                                         'marker-doc-type', 'entry')
 
     def __init__(self, host, port, index, doc_type, update_id,
-                 marker_index_hist_size=0):
+                 marker_index_hist_size=0, http_auth=None):
         """
         Args:
             host (str): Elasticsearch server host
@@ -104,13 +105,18 @@ class ElasticsearchTarget(luigi.Target):
         """
         self.host = host
         self.port = port
+        self.http_auth = http_auth
         self.index = index
         self.doc_type = doc_type
         self.update_id = update_id
         self.marker_index_hist_size = marker_index_hist_size
 
-        self.es = elasticsearch.Elasticsearch([{'host': self.host,
-                                                'port': self.port}])
+        self.es = elasticsearch.Elasticsearch(
+            connection_class=Urllib3HttpConnection,
+            host=self.host,
+            port=self.port,
+            http_auth=self.http_auth
+        )
 
     def marker_index_document_id(self):
         """ Generate an id for the indicator document. """
@@ -208,6 +214,15 @@ class CopyToIndex(luigi.Task):
         """ ES port """
         return 9200
 
+    @property
+    def http_auth(self):
+        """
+        ES optional http auth information
+        as either ‘:’ separated string or a tuple.
+        eg: ` ('user', 'pass') `  or ` "user:pass" `
+        """
+        return None
+
     @abc.abstractproperty
     def index(self):
         """ The target index. May exists or not. """
@@ -283,20 +298,27 @@ class CopyToIndex(luigi.Task):
                 doc['_type'] = self.doc_type
             yield doc
 
+    def _init_connection(self):
+        return elasticsearch.Elasticsearch(
+            connection_class=Urllib3HttpConnection,
+            host=self.host,
+            port=self.port,
+            http_auth=self.http_auth,
+            timeout=self.timeout
+        )
+
     def create_index(self):
         """ Override to provide code for creating the target index.
 
         By default it will be created without any special settings or mappings.
         """
-        es = elasticsearch.Elasticsearch([{'host': self.host,
-                                           'port': self.port}])
+        es = self._init_connection()
         if not es.indices.exists(index=self.index):
             es.indices.create(index=self.index, body=self.settings)
 
     def delete_index(self):
         """ Delete the index, if it exists. """
-        es = elasticsearch.Elasticsearch([{'host': self.host,
-                                           'port': self.port}])
+        es = self._init_connection()
         if es.indices.exists(index=self.index):
             es.indices.delete(index=self.index)
 
@@ -312,6 +334,7 @@ class CopyToIndex(luigi.Task):
         return ElasticsearchTarget(
             host=self.host,
             port=self.port,
+            http_auth=self.http_auth,
             index=self.index,
             doc_type=self.doc_type,
             update_id=self.update_id(),
@@ -329,9 +352,7 @@ class CopyToIndex(luigi.Task):
         if self.purge_existing_index:
             self.delete_index()
         self.create_index()
-        es = elasticsearch.Elasticsearch([{'host': self.host,
-                                           'port': self.port}],
-                                         timeout=self.timeout)
+        es = self._init_connection()
         if self.mapping:
             es.indices.put_mapping(index=self.index, doc_type=self.doc_type,
                                    body=self.mapping)
