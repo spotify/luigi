@@ -32,6 +32,27 @@ import time
 logger = logging.getLogger('luigi-interface')
 
 
+class RangeEvent(luigi.Event):  # Not sure if subclassing currently serves a purpose. Stringly typed, events are.
+    """Events communicating useful metrics.
+
+    COMPLETE_COUNT would normally be nondecreasing, and its derivative would
+    describe performance (how many instances complete
+    invocation-over-invocation).
+
+    COMPLETE_FRACTION reaching 1 would be a telling event in case of a backfill
+    with defined start and stop. Would not be strikingly useful for a typical
+    recurring task without stop defined, fluctuating close to 1.
+
+    DELAY is measured from the first found missing datehour till (current time
+    + hours_forward), or till stop if it is defined. In hours for Hourly.
+    TBD different units for other frequencies?
+    TODO any different for reverse mode? From first missing till last missing?
+    """
+    COMPLETE_COUNT = "event.tools.range.complete.count"
+    COMPLETE_FRACTION = "event.tools.range.complete.fraction"
+    DELAY = "event.tools.range.delay"
+
+
 class RangeHourlyBase(luigi.WrapperTask):
     """Produces a contiguous completed range of a hourly recurring task.
 
@@ -66,13 +87,18 @@ class RangeHourlyBase(luigi.WrapperTask):
         description="extent to which contiguousness is to be assured into past, in hours from current time. Prevents infinite loop when start is none. If the dataset has limited retention (i.e. old outputs get removed), this should be set shorter to that, too, to prevent the oldest outputs flapping. Increase freely if you intend to process old dates - worker's memory is the limit")
         # TODO always entire interval for reprocessings (fixed start and stop)?
     hours_forward = luigi.IntParameter(
-        default=24,
+        default=0,
         description="extent to which contiguousness is to be assured into future, in hours from current time. Prevents infinite loop when stop is none")
     # TODO when generalizing for RangeDaily/Weekly, "hours_" will need to become something else... strict_back, always in seconds?
     # TODO overridable exclude_datehours or something...
     now = luigi.IntParameter(
         default=None,
         description="set to override current time. In seconds since epoch")
+
+    @staticmethod
+    def total_seconds(td):
+        """Total seconds in datetime.timedelta td. Python 2.7 backport."""
+        return td.days * 24 * 60 * 60 + td.seconds + td.microseconds * 1E-6
 
     def missing_datehours(self, task_cls, finite_datehours):
         """Override in subclasses to do bulk checks.
@@ -81,6 +107,27 @@ class RangeHourlyBase(luigi.WrapperTask):
         completeness, instance by instance. Inadvisable as it may be slow.
         """
         return [d for d in finite_datehours if not task_cls(d).complete()]
+
+    def _emit_metrics(self, missing_datehours, now):
+        """For consistent metrics one should consider the entire range, but it
+        is open (infinite) if stop or start is None. In those cases the most
+        meaningful thing I can think of is to use (now + hours_forward) resp.
+        (now - hours_back) as a moving endpoint.
+        """
+        if self.start:
+            finite_start = self.start
+            finite_stop = max(self.stop or now + timedelta(hours=self.hours_forward + 1), finite_start)
+        else:
+            finite_stop = self.stop
+            finite_start = min(self.start or now - timedelta(hours=self.hours_back), finite_stop)
+
+        delay_in_hours = (self.total_seconds(finite_stop - missing_datehours[0]) if missing_datehours else 0) / 3600.
+        self.trigger_event(RangeEvent.DELAY, self.of, delay_in_hours)
+
+        expected_count = int(self.total_seconds(finite_stop - finite_start)) / 3600
+        complete_count = expected_count - len(missing_datehours)
+        self.trigger_event(RangeEvent.COMPLETE_COUNT, self.of, complete_count)
+        self.trigger_event(RangeEvent.COMPLETE_FRACTION, self.of, float(complete_count) / expected_count if expected_count else 1)
 
     def requires(self):
         # cache because we anticipate lots of tasks
@@ -105,6 +152,8 @@ class RangeHourlyBase(luigi.WrapperTask):
             logger.debug('Range [%s, %s] lacked %d of expected %d %s instances' % (datehours[0], datehours[-1], len(missing_datehours), len(datehours), self.of))
         else:
             missing_datehours = []
+
+        self._emit_metrics(missing_datehours, now)
 
         if self.reverse:
             required_datehours = missing_datehours[-self.task_limit:]
