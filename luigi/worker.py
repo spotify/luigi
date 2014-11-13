@@ -43,6 +43,10 @@ except ImportError:
 
 logger = logging.getLogger('luigi-interface')
 
+# Prevent fork() from being called during a C-level getaddrinfo() which uses a process-global mutex,
+# that may not be unlocked in child process, resulting in the process being locked indefinitely.
+fork_lock = threading.Lock()
+
 
 class TaskException(Exception):
     pass
@@ -199,10 +203,13 @@ class Worker(object):
                     if self._should_stop.is_set():
                         logger.info("Worker %s was stopped. Shutting down Keep-Alive thread" % worker_id)
                         break
+                    fork_lock.acquire()
                     try:
                         scheduler.ping(worker=worker_id)
                     except:  # httplib.BadStatusLine:
                         logger.warning('Failed pinging scheduler')
+                    finally:
+                        fork_lock.release()
 
         self._keep_alive_thread = KeepAliveThread()
         self._keep_alive_thread.daemon = True
@@ -419,7 +426,11 @@ class Worker(object):
         self._running_tasks[task_id] = p
 
         if self.worker_processes > 1:
-            p.start()
+            fork_lock.acquire()
+            try:
+                p.start()
+            finally:
+                fork_lock.release()
         else:
             # Run in the same process
             p.run()
