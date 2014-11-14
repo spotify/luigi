@@ -47,6 +47,16 @@ class RemoteContext(object):
         self.key_file = key_file
         self.connect_timeout = connect_timeout
 
+    def __repr__(self):
+        return '%s(%r, %r, %r, %r)' % (
+            type(self).__name__, self.host, self.username, self.key_file, self.connect_timeout)
+
+    def __eq__(self, other):
+        return repr(self) == repr(other)
+
+    def __hash__(self):
+        return hash(repr(self))
+
     def _host_ref(self):
         if self.username:
             return "{0}@{1}".format(self.username, self.host)
