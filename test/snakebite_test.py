@@ -7,9 +7,11 @@ import luigi.hdfs
 import luigi.interface
 from luigi.hdfs import SnakebiteHdfsClient
 from snakebite.client import AutoConfigClient as SnakebiteAutoConfigClient
+from nose.plugins.attrib import attr
 from snakebite.minicluster import MiniCluster
 
 
+@attr('minicluster')
 class TestSnakebiteClient(unittest2.TestCase):
     """This test requires a snakebite -- it finds it from your
     client.cfg"""

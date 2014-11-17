@@ -22,6 +22,7 @@ from luigi import hdfs
 import mock
 import re
 import functools
+from nose.plugins.attrib import attr
 from snakebite.minicluster import MiniCluster
 
 
@@ -29,6 +30,7 @@ class TestException(Exception):
     pass
 
 
+@attr('minicluster')
 class HdfsTestCase(unittest2.TestCase):
     cluster = None
 
@@ -62,6 +64,7 @@ class HdfsTestCase(unittest2.TestCase):
         return '%s/luigi_tmp_testfile%s' % (HdfsTestCase._test_dir(), suffix)
 
 
+@attr('minicluster')
 class ErrorHandling(HdfsTestCase):
     def test_connection_refused(self):
         """ The point of this test is to see if file existence checks
@@ -88,6 +91,7 @@ class ErrorHandling(HdfsTestCase):
         self.fs.remove(path, skip_trash=True)
 
 
+@attr('minicluster')
 class AtomicHdfsOutputPipeTests(HdfsTestCase):
 
     def test_atomicity(self):
@@ -131,6 +135,7 @@ class AtomicHdfsOutputPipeTests(HdfsTestCase):
         self.assertFalse(self.fs.exists(testpath))
 
 
+@attr('minicluster')
 class HdfsAtomicWriteDirPipeTests(HdfsTestCase):
     def setUp(self):
         super(HdfsAtomicWriteDirPipeTests, self).setUp()
@@ -173,6 +178,7 @@ class HdfsAtomicWriteDirPipeTests(HdfsTestCase):
 
 
 # This class is a mixin, and does not inherit from TestCase, in order to avoid running the base class as a test case.
+@attr('minicluster')
 class _HdfsFormatTest(HdfsTestCase):
     format = None  # override with luigi.format.Format subclass
 
@@ -197,10 +203,12 @@ class _HdfsFormatTest(HdfsTestCase):
         self.assertFalse(self.target.exists())
 
 
+@attr('minicluster')
 class PlainFormatTest(_HdfsFormatTest, HdfsTestCase):
     format = hdfs.Plain
 
 
+@attr('minicluster')
 class PlainDirFormatTest(_HdfsFormatTest, HdfsTestCase):
     format = hdfs.PlainDir
 
@@ -223,6 +231,7 @@ class PlainDirFormatTest(_HdfsFormatTest, HdfsTestCase):
         self.assertEqual(tuple(parts), ('bar', 'foo'))
 
 
+@attr('minicluster')
 class HdfsTargetTests(HdfsTestCase):
 
     def test_slow_exists(self):
@@ -436,6 +445,7 @@ class HdfsTargetTests(HdfsTestCase):
 
 
 TIMESTAMP_DELAY = 60 # Big enough for `hadoop fs`?
+@attr('minicluster')
 class _HdfsClientTest(HdfsTestCase):
 
     def create_file(self, target):
