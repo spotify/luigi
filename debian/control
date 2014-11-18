@@ -12,7 +12,9 @@ Build-Depends:	debhelper (>= 7),
 		python-mock,
 		python-ordereddict,
 		openssh-client,
-		python-sqlalchemy
+		python-sqlalchemy,
+		python-unittest2,
+		snakebite
 Standards-Version: 3.7.3
 X-Python-Version: >= 2.6
 
