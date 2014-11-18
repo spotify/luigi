@@ -225,6 +225,13 @@ class TestS3Client(unittest.TestCase):
         self.assertTrue(s3_client.exists('s3://mybucket/putMe'))
 
     @mock_s3
+    def test_put_string(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+        s3_client.put_string("SOMESTRING", 's3://mybucket/putString')
+        self.assertTrue(s3_client.exists('s3://mybucket/putString'))
+
+    @mock_s3
     def test_put_multipart_multiple_parts_non_exact_fit(self):
         """
         Test a multipart put with two parts, where the parts are not exactly the split size.
