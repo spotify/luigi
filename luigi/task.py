@@ -240,7 +240,7 @@ class Task(object):
                     # callbacks are protected
                     callback(*args, **kwargs)
                 except KeyboardInterrupt:
-                    return
+                    raise
                 except:
                     logger.exception("Error in event callback for %r", event)
                     pass
@@ -249,7 +249,7 @@ class Task(object):
             try:
                 global_callback(event, *args, **kwargs)
             except KeyboardInterrupt:
-                return
+                raise
             except:
                 logger.exception("Error in global callback for %r", event)
 
