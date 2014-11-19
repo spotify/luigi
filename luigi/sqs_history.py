@@ -145,32 +145,3 @@ class SqsWorkerHistory(SqsHistory, worker_history.WorkerHistory):
                  'task_family': task.task_family,
                  'params': task.get_params(),
                }
-
-
-class SqsWorkerTaskEvents(SqsHistory, worker_history.WorkerHistory):
-    def __init__(self):
-      self.config = configuration.get_config()
-      queue_name = self.config.get('worker_history', 'sqs_queue_name')
-      aws_access_key_id  = self.config.get('worker_history', 'aws_access_key_id')
-      aws_secret_access_key = self.config.get('worker_history', 'aws_secret_access_key')
-      region = self.config.get('worker_history', 'region', None)
-      self._config(queue_name, aws_access_key_id, aws_secret_access_key, region)
-
-    def worker_started(self, worker_id):
-        fields = {
-          'worker_status': STARTED,
-          'timestamp': dateutils.utcnow().isoformat(),
-          'worker_metadata': self.config.items('worker_metadata'),
-          'worker_id': worker_id
-        }
-        self._send_message(fields)
-
-    def worker_stopped(self, worker_id):
-        fields = {
-          'worker_status': STOPPED,
-          'timestamp': dateutils.utcnow().isoformat(),
-          'worker_metadata': self.config.items('worker_metadata'),
-          'worker_id': worker_id
-        }
-        self._send_message(fields)
-
