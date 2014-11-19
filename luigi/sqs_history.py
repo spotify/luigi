@@ -143,5 +143,5 @@ class SqsWorkerHistory(SqsHistory, worker_history.WorkerHistory):
     def _get_task_fields(self, task):
         return { 'id': task.task_id,
                  'task_family': task.task_family,
-                 'params': task.get_params(),
+                 'params': task.to_str_params(),
                }

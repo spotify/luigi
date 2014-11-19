@@ -446,6 +446,8 @@ class WorkerTaskGlobalEventHandlerTests(unittest.TestCase):
 
     def test_dep(self):
         class A(Task):
+            param_a = luigi.Parameter(default="a")
+
             def run(self):
                 self.has_run = True
 
@@ -480,19 +482,19 @@ class WorkerTaskGlobalEventHandlerTests(unittest.TestCase):
         #Check started events:
         started_events = event_messages.get(Event.START)
         self.assertEquals(2, len(started_events))
-        self.assertEquals('A()', started_events[0]['task']['id'])
+        self.assertEquals('A(param_a=a)', started_events[0]['task']['id'])
         self.assertEquals('B()', started_events[1]['task']['id'])
 
         #Check success events
         success_events = event_messages.get(Event.SUCCESS)
         self.assertEquals(2, len(success_events))
-        self.assertEquals('A()', success_events[0]['task']['id'])
+        self.assertEquals('A(param_a=a)', success_events[0]['task']['id'])
         self.assertEquals('B()', success_events[1]['task']['id'])
 
         #Check processing time events
         processing_events = event_messages.get(Event.PROCESSING_TIME)
         self.assertEquals(2, len(processing_events))
-        self.assertEquals('A()', processing_events[0]['task']['id'])
+        self.assertEquals('A(param_a=a)', processing_events[0]['task']['id'])
         self.assertTrue('processing_time' in processing_events[0])
         self.assertEquals('B()', processing_events[1]['task']['id'])
         self.assertTrue('processing_time' in processing_events[1])
@@ -501,7 +503,7 @@ class WorkerTaskGlobalEventHandlerTests(unittest.TestCase):
         dependency_event = event_messages.get(Event.DEPENDENCY_DISCOVERED)
         self.assertEquals(1, len(dependency_event))
         self.assertEquals('B()', dependency_event[0]['task']['id'])
-        self.assertEquals('A()', dependency_event[0]['dependency_task']['id'])
+        self.assertEquals('A(param_a=a)', dependency_event[0]['dependency_task']['id'])
 
     def test_external_dep(self):
         class A(ExternalTask):
