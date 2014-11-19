@@ -240,6 +240,7 @@ class Worker(object):
         """ Add a Task for the worker to check and possibly schedule and run.
          Returns True if task and its dependencies were successfully scheduled or completed before"""
         self.add_succeeded = True
+
         stack = [task]
         self._validate_task(task)
         seen = set([task.task_id])
@@ -265,6 +266,12 @@ class Worker(object):
         return task.complete()
 
     def _add(self, task):
+        # Attach a global event handler on the task that will send 
+        # task events to the worker history impl.
+        def handler(event, *args, **kwargs):
+            self._worker_history_impl.worker_task_event(self._id, event, *args, **kwargs)
+        task.set_global_event_handlers([handler])
+
         logger.debug("Checking if %s is complete", task)
         is_complete = False
         try:

@@ -28,9 +28,18 @@ class WorkerHistory(object):
     def worker_stopped(self, worker_id):
         pass
 
+    @abc.abstractmethod
+    def worker_task_event(self, worker_id, event, *args, **kwargs):
+        pass
+
+
 class NopWorkerHistory(WorkerHistory):
     def worker_started(self, worker_id):
         pass
 
     def worker_stopped(self, worker_id):
         pass
+
+    def worker_task_event(self, worker_id, event, *args, **kwargs):
+        pass
+
