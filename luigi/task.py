@@ -210,6 +210,7 @@ class Task(object):
     __metaclass__ = Register
 
     _event_callbacks = {}
+    _global_event_callbacks = []
 
     # Priority of the task: the scheduler should favor available
     # tasks with higher priority values first.
@@ -222,6 +223,10 @@ class Task(object):
             cls._event_callbacks.setdefault(cls, {}).setdefault(event, set()).add(callback)
             return callback
         return wrapped
+
+    @classmethod
+    def set_global_event_handlers(cls, callbacks):
+        cls._global_event_callbacks = callbacks
 
     def trigger_event(self, event, *args, **kwargs):
         """Trigger that calls all of the specified events associated with this
@@ -239,6 +244,14 @@ class Task(object):
                 except:
                     logger.exception("Error in event callback for %r", event)
                     pass
+
+        for global_callback in self._global_event_callbacks:
+            try:
+                global_callback(event, *args, **kwargs)
+            except KeyboardInterrupt:
+                return
+            except:
+                logger.exception("Error in global callback for %r", event)
 
     @property
     def task_family(self):

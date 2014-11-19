@@ -17,6 +17,7 @@ import dateutils
 import json
 import logging
 
+from event import Event
 import task_history
 from task_status import PENDING, FAILED, DONE, RUNNING
 from worker_status import STARTED, STOPPED
@@ -89,8 +90,64 @@ class SqsTaskHistory(SqsHistory, task_history.TaskHistory):
         self._send_message(fields)
 
 
-
 class SqsWorkerHistory(SqsHistory, worker_history.WorkerHistory):
+    def __init__(self):
+      self.config = configuration.get_config()
+      queue_name = self.config.get('worker_history', 'sqs_queue_name')
+      aws_access_key_id  = self.config.get('worker_history', 'aws_access_key_id')
+      aws_secret_access_key = self.config.get('worker_history', 'aws_secret_access_key')
+      region = self.config.get('worker_history', 'region', None)
+      self._config(queue_name, aws_access_key_id, aws_secret_access_key, region)
+
+    def worker_started(self, worker_id):
+        fields = {
+          'worker_status': STARTED,
+          'timestamp': dateutils.utcnow().isoformat(),
+          'worker_metadata': self.config.items('worker_metadata'),
+          'worker_id': worker_id
+        }
+        self._send_message(fields)
+
+    def worker_stopped(self, worker_id):
+        fields = {
+          'worker_status': STOPPED,
+          'timestamp': dateutils.utcnow().isoformat(),
+          'worker_metadata': self.config.items('worker_metadata'),
+          'worker_id': worker_id
+        }
+        self._send_message(fields)
+
+    def worker_task_event(self, worker_id, event, *args, **kwargs):
+        task = args[0]
+        fields = {
+          'timestamp': dateutils.utcnow().isoformat(),
+          'worker_metadata': self.config.items('worker_metadata'),
+          'worker_id': worker_id,
+          'event': event,
+          'task': self._get_task_fields(task)
+        }
+        # Handle events with extra data.
+        if event == Event.DEPENDENCY_DISCOVERED:
+            fields['dependency_task'] = self._get_task_fields(args[1])
+        elif event == Event.PROCESSING_TIME:
+            fields['processing_time'] = args[1]
+        elif event == Event.FAILURE:
+            fields['exception'] = repr(args[1])
+        elif event == Event.BROKEN_TASK:
+            fields['exception'] = repr(args[1])
+        else:
+            pass
+
+        self._send_message(fields)
+
+    def _get_task_fields(self, task):
+        return { 'id': task.task_id,
+                 'task_family': task.task_family,
+                 'params': task.get_params(),
+               }
+
+
+class SqsWorkerTaskEvents(SqsHistory, worker_history.WorkerHistory):
     def __init__(self):
       self.config = configuration.get_config()
       queue_name = self.config.get('worker_history', 'sqs_queue_name')

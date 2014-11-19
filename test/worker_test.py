@@ -24,6 +24,10 @@ import threading
 import os
 import signal
 import luigi.notifications
+import helpers
+import json
+from luigi.event import Event
+
 luigi.notifications.DEBUG = True
 
 
@@ -39,14 +43,25 @@ class DummyTask(Task):
         logging.debug("%s - setting has_run", self.task_id)
         self.has_run = True
 
+class DummyQueue():
+    """
+    Mock Queue for Testing.
+    """
+    def __init__(self):
+        self.messages = []
+
+    def write(self, message):
+        self.messages.append(message)
 
 class WorkerTest(unittest.TestCase):
+
     def setUp(self):
         # InstanceCache.disable()
         self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         self.w = Worker(scheduler=self.sch, worker_id='X')
         self.w2 = Worker(scheduler=self.sch, worker_id='Y')
         self.time = time.time
+
 
     def tearDown(self):
         if time.time != self.time:
@@ -380,6 +395,266 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(c.has_run)
         self.assertFalse(a.has_run)
         w.stop()
+
+class WorkerTaskGlobalEventHandlerTests(unittest.TestCase):
+
+    @helpers.with_config(dict( worker_history=dict(record_worker_history_sqs='true',
+                                                   sqs_queue_name='name', 
+                                                   aws_access_key_id='key', 
+                                                   aws_secret_access_key='secret_key'),
+                               worker_metadata=dict(meta1='data1')))
+    def setUp(self):
+        try:
+            from luigi.sqs_history import SqsHistory, SqsTaskHistory, SqsWorkerHistory
+        except ImportError as e:
+            raise unittest.SkipTest('Could not test WorkerTaskGlobalEventHandlerTests: %s' % e)
+
+        #Replace _config method with one that uses our dummy queue.
+        def fake_config(s, *args):
+            s._queue = DummyQueue()
+        SqsHistory._config = fake_config
+
+        # InstanceCache.disable()
+        self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        self.w = Worker(scheduler=self.sch, worker_id='X')
+        self.w2 = Worker(scheduler=self.sch, worker_id='Y')
+        self.time = time.time
+
+
+    def tearDown(self):
+        if time.time != self.time:
+            time.time = self.time
+        self.w.stop()
+        self.w2.stop()
+
+    def setTime(self, t):
+        time.time = lambda: t
+
+    def _parse_task_events(self, messages):
+        results = {}
+        for m in messages:
+            event = m.get('event')
+
+            if not event:
+                continue
+
+            messages = results.get(event, [])
+            messages.append(m)
+            results[event] = messages
+
+        return results
+
+    def test_dep(self):
+        class A(Task):
+            def run(self):
+                self.has_run = True
+
+            def complete(self):
+                return self.has_run
+        a = A()
+
+        class B(Task):
+            def requires(self):
+                return a
+
+            def run(self):
+                self.has_run = True
+
+            def complete(self):
+                return self.has_run
+
+        b = B()
+        a.has_run = False
+        b.has_run = False
+
+        self.assertTrue(self.w.add(b))
+        self.assertTrue(self.w.run())
+        self.assertTrue(a.has_run)
+        self.assertTrue(b.has_run)
+
+        sent_messages = [json.loads(m.get_body()) for m in self.w._worker_history_impl._queue.messages]
+        event_messages = self._parse_task_events(sent_messages)
+
+        self.assertEquals(4, len(event_messages))
+
+        #Check started events:
+        started_events = event_messages.get(Event.START)
+        self.assertEquals(2, len(started_events))
+        self.assertEquals('A()', started_events[0]['task']['id'])
+        self.assertEquals('B()', started_events[1]['task']['id'])
+
+        #Check success events
+        success_events = event_messages.get(Event.SUCCESS)
+        self.assertEquals(2, len(success_events))
+        self.assertEquals('A()', success_events[0]['task']['id'])
+        self.assertEquals('B()', success_events[1]['task']['id'])
+
+        #Check processing time events
+        processing_events = event_messages.get(Event.PROCESSING_TIME)
+        self.assertEquals(2, len(processing_events))
+        self.assertEquals('A()', processing_events[0]['task']['id'])
+        self.assertTrue('processing_time' in processing_events[0])
+        self.assertEquals('B()', processing_events[1]['task']['id'])
+        self.assertTrue('processing_time' in processing_events[1])
+
+        #Check dependency event
+        dependency_event = event_messages.get(Event.DEPENDENCY_DISCOVERED)
+        self.assertEquals(1, len(dependency_event))
+        self.assertEquals('B()', dependency_event[0]['task']['id'])
+        self.assertEquals('A()', dependency_event[0]['dependency_task']['id'])
+
+    def test_external_dep(self):
+        class A(ExternalTask):
+            def complete(self):
+                return False
+        a = A()
+
+        class B(Task):
+            def requires(self):
+                return a
+
+            def run(self):
+                self.has_run = True
+
+            def complete(self):
+                return self.has_run
+
+        b = B()
+
+        a.has_run = False
+        b.has_run = False
+
+        self.assertTrue(self.w.add(b))
+        self.assertTrue(self.w.run())
+
+        self.assertFalse(a.has_run)
+        self.assertFalse(b.has_run)
+
+        sent_messages = [json.loads(m.get_body()) for m in self.w._worker_history_impl._queue.messages]
+        event_messages = self._parse_task_events(sent_messages)
+
+        self.assertEquals(2, len(event_messages))
+
+        #Check dependency event
+        dependency_event = event_messages.get(Event.DEPENDENCY_DISCOVERED)
+        self.assertEquals(1, len(dependency_event))
+        self.assertEquals('B()', dependency_event[0]['task']['id'])
+        self.assertEquals('A()', dependency_event[0]['dependency_task']['id'])
+
+        #Check dependency missing event
+        dependency_missing_event = event_messages.get(Event.DEPENDENCY_MISSING)
+        self.assertEquals(1, len(dependency_missing_event))
+        self.assertEquals('A()', dependency_missing_event[0]['task']['id'])
+
+    def test_fail(self):
+        class A(Task):
+            def run(self):
+                self.has_run = True
+                raise Exception()
+
+            def complete(self):
+                return self.has_run
+
+        a = A()
+
+        a.has_run = False
+
+        self.assertTrue(self.w.add(a))
+        self.assertFalse(self.w.run())
+
+        self.assertTrue(a.has_run)
+
+        sent_messages = [json.loads(m.get_body()) for m in self.w._worker_history_impl._queue.messages]
+        event_messages = self._parse_task_events(sent_messages)
+
+        self.assertEquals(3, len(event_messages))
+        
+        #Check failure event
+        failure_event = event_messages.get(Event.FAILURE)
+        self.assertEquals(1, len(failure_event))
+        self.assertEquals('A()', failure_event[0]['task']['id'])
+        self.assertEquals('Exception()', failure_event[0]['exception'])
+
+    def test_unknown_dep(self):
+        # see central_planner_test.CentralPlannerTest.test_remove_dep
+        class A(ExternalTask):
+            def complete(self):
+                return False
+
+        class C(Task):
+            def complete(self):
+                return True
+
+        def get_b(dep):
+            class B(Task):
+                def requires(self):
+                    return dep
+
+                def run(self):
+                    self.has_run = True
+
+                def complete(self):
+                    return False
+
+            b = B()
+            b.has_run = False
+            return b
+
+        b_a = get_b(A())
+        b_c = get_b(C())
+
+        self.assertTrue(self.w.add(b_a))
+        self.assertTrue(self.w2.add(b_c))
+
+        sent_messages = [json.loads(m.get_body()) for m in self.w._worker_history_impl._queue.messages]
+        event_messages = self._parse_task_events(sent_messages)
+
+        # Verify missing event
+        dependency_missing_event = event_messages.get(Event.DEPENDENCY_MISSING)
+        self.assertEquals(1, len(dependency_missing_event))
+        self.assertEquals('A()', dependency_missing_event[0]['task']['id'])
+
+        sent_messages2 = [json.loads(m.get_body()) for m in self.w2._worker_history_impl._queue.messages]
+        event_messages2 = self._parse_task_events(sent_messages2)
+
+        # Verify present event
+        dependency_present_event = event_messages2.get(Event.DEPENDENCY_PRESENT)
+        self.assertEquals(1, len(dependency_present_event))
+        self.assertEquals('C()', dependency_present_event[0]['task']['id'])
+
+    def test_broken_task(self):
+        # see central_planner_test.CentralPlannerTest.test_remove_dep
+        class A(object):
+            def complete(self):
+                return False
+        a = A()
+
+        class B(Task):
+            def requires(self):
+                return a
+
+            def run(self):
+                self.has_run = False
+
+            def complete(self):
+                return self.has_run
+        b = B()
+        b.has_run = False
+
+        try:
+            self.assertTrue(self.w.add(b))
+        except:
+            pass
+
+        sent_messages = [json.loads(m.get_body()) for m in self.w._worker_history_impl._queue.messages]
+        event_messages = self._parse_task_events(sent_messages)
+
+        # Verify broken event
+        broken_event = event_messages.get(Event.BROKEN_TASK)
+        self.assertEquals(1, len(broken_event))
+        self.assertEquals('B()', broken_event[0]['task']['id'])
+        self.assertEquals("Exception('requires() must return Task objects',)", broken_event[0]['exception'])
+
 
 class WorkerPingThreadTests(unittest.TestCase):
     def test_ping_retry(self):
