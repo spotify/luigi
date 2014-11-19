@@ -266,7 +266,7 @@ class Worker(object):
         return task.complete()
 
     def _add(self, task):
-        # Attack a global event handler on the task that will send 
+        # Attach a global event handler on the task that will send 
         # task events to the worker history impl.
         def handler(event, *args, **kwargs):
             self._worker_history_impl.worker_task_event(self._id, event, *args, **kwargs)
