@@ -159,6 +159,19 @@ class S3Client(FileSystem):
         s3_key.key = key
         s3_key.set_contents_from_filename(local_path)
 
+    def put_string(self, content, destination_s3_path):
+        """
+        Put a string to an S3 path.
+        """
+        (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
+        # grab and validate the bucket
+        s3_bucket = self.s3.get_bucket(bucket, validate=True)
+        
+        # put the content
+        s3_key = Key(s3_bucket)
+        s3_key.key = key
+        s3_key.set_contents_from_string(content)
+
     def put_multipart(self, local_path, destination_s3_path, part_size=67108864):
         """
         Put an object stored locally to an S3 path
