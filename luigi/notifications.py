@@ -38,6 +38,7 @@ def generate_email(sender, subject, message, recipients, image_png):
 def send_email_smtp(config, sender, subject, message, recipients, image_png):
     import smtplib
 
+    smtp_tls = config.getboolean('core', 'smtp_tls', False)
     smtp_ssl = config.getboolean('core', 'smtp_ssl', False)
     smtp_host = config.get('core', 'smtp_host', 'localhost')
     smtp_port = config.getint('core', 'smtp_port', 0)
@@ -50,6 +51,8 @@ def send_email_smtp(config, sender, subject, message, recipients, image_png):
     smtp_login = config.get('core', 'smtp_login', None)
     smtp_password = config.get('core', 'smtp_password', None)
     smtp = smtplib.SMTP(**kwargs) if not smtp_ssl else smtplib.SMTP_SSL(**kwargs)
+    if smtp_tls:
+        smtp.starttls()
     if smtp_login and smtp_password:
         smtp.login(smtp_login, smtp_password)
 
