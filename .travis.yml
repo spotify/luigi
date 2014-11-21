@@ -1,12 +1,21 @@
 language: python
+
 python:
   - "2.7"
   - "2.6"
+
 jdk: oraclejdk7
+
 env:
   - TOX_ENV=cdh
   - TOX_ENV=hdp
+
+sudo: false
+
 install:
   - pip install virtualenv
   - pip install tox
+
 script: python setup.py test --tox-args="-e $TOX_ENV"
+
+after_failure: cat /home/travis/build/spotify/luigi/.tox/cdh/log/cdh-1.log
