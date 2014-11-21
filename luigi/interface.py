@@ -122,6 +122,11 @@ class EnvironmentParamsContainer(task.Task):
     module = parameter.Parameter(
         is_global=True, default=None,
         description='Used for dynamic loading of modules') # see DynamicArgParseInterface
+    parallel_scheduling = parameter.BooleanParameter(
+        is_global=True, default=False,
+        description='Use multiprocessing to do scheduling in parallel.',
+        config_path={'section': 'core', 'name': 'parallel-scheduling'},
+    )
 
     @classmethod
     def env_params(cls, override_defaults={}):
@@ -209,7 +214,7 @@ class Interface(object):
 
         success = True
         for t in tasks:
-            success &= w.add(t)
+            success &= w.add(t, env_params.parallel_scheduling)
         logger = logging.getLogger('luigi-interface')
         logger.info('Done scheduling tasks')
         success &= w.run()
