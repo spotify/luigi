@@ -37,6 +37,12 @@ class CentralPlannerTest(unittest.TestCase):
     def setTime(self, t):
         time.time = lambda: t
 
+    def check_task_order(self, order):
+        for expected_id in order:
+            self.assertEqual(self.sch.get_work(WORKER)['task_id'], expected_id)
+            self.sch.add_task(WORKER, expected_id, status=DONE)
+        self.assertEqual(self.sch.get_work(WORKER)['task_id'], None)
+
     def test_dep(self):
         self.sch.add_task(WORKER, 'B', deps=('A',))
         self.sch.add_task(WORKER, 'A')
@@ -350,12 +356,6 @@ class CentralPlannerTest(unittest.TestCase):
         # C doesn't block B, so it can go first
         self.check_task_order('C')
 
-    def check_task_order(self, order):
-        for expected_id in order:
-            self.assertEqual(self.sch.get_work(WORKER)['task_id'], expected_id)
-            self.sch.add_task(WORKER, expected_id, status=DONE)
-        self.assertEqual(self.sch.get_work(WORKER)['task_id'], None)
-
     def test_priorities(self):
         self.sch.add_task(WORKER, 'A', priority=10)
         self.sch.add_task(WORKER, 'B', priority=5)
@@ -530,6 +530,15 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(WORKER, 'E', deps=['C', 'D'])
         self.sch.add_task(WORKER, 'F', deps=['A', 'B'])
         self.check_task_order('DCABEF')
+
+    def test_prune_old_tasks(self):
+        self.setTime(0)
+        self.sch.add_task(task_id='A', worker=WORKER)
+
+        self.setTime(999)  # after worker disconnects
+        # self.sch.prune() # DON'T call prune!
+
+        self.check_task_order('')
 
 
 if __name__ == '__main__':

@@ -13,6 +13,7 @@
 # the License.
 
 import collections
+import heapq
 import datetime
 import functools
 import notifications
@@ -218,27 +219,24 @@ class SimpleTaskState(object):
         for task in delete_tasks:
             self._tasks.pop(task)
 
-    def get_active_workers(self, last_active_lt=None):
+    def get_active_workers(self):
         for worker in self._active_workers.itervalues():
-            if last_active_lt is not None and worker.last_active >= last_active_lt:
-                continue
             yield worker
 
     def get_worker_ids(self):
         return self._active_workers.keys() # only used for unit tests
 
-    def get_worker(self, worker_id):
-        return self._active_workers.setdefault(worker_id, Worker(worker_id))
+    def get_worker(self, worker_id, create=False):
+        if create:
+            return self._active_workers.setdefault(worker_id, Worker(worker_id))
+        else:
+            return self._active_workers.get(worker_id, None)
 
     def inactivate_workers(self, delete_workers):
         # Mark workers as inactive
         for worker in delete_workers:
-            self._active_workers.pop(worker)
-
-        # remove workers from tasks
-        for task in self.get_active_tasks():
-            task.stakeholders.difference_update(delete_workers)
-            task.workers.difference_update(delete_workers)
+            if worker in self._active_workers:
+                self._active_workers.pop(worker)
 
 
 class CentralPlannerScheduler(Scheduler):
@@ -274,59 +272,115 @@ class CentralPlannerScheduler(Scheduler):
         self._disable_persist = disable_persist
         self._disable_time = datetime.timedelta(seconds=disable_persist)
 
+        # Keep track of a queue of checks we've scheduled
+        self._event_queue = []
+
     def load(self):
         self._state.load()
 
     def dump(self):
         self._state.dump()
 
-    def prune(self):
-        logger.info("Starting pruning of task graph")
-        # Delete workers that haven't said anything for a while (probably killed)
-        delete_workers = []
-        for worker in self._state.get_active_workers(last_active_lt=time.time() - self._worker_disconnect_delay):
-            logger.info("Worker %s timed out (no contact for >=%ss)", worker, self._worker_disconnect_delay)
-            delete_workers.append(worker.id)
+    def _check_old_worker(self, timestamp, worker_id):
+        worker = self._state.get_worker(worker_id)
+        if not worker:
+            return
+        if timestamp >= worker.last_active + self._worker_disconnect_delay:
+            self._state.inactivate_workers([worker])
 
-        self._state.inactivate_workers(delete_workers)
+    def _check_orphan_task(self, timestamp, task_id):
+        # Mark tasks with no remaining active stakeholders for deletion
+        task = self._state.get_task(task_id)
 
-        delete_workers = set(delete_workers)
+        if task.remove is not None:
+            return
 
-        remove_tasks = []
-        for task in self._state.get_active_tasks():
-            # Mark tasks with no remaining active stakeholders for deletion
-            if not task.stakeholders:
-                if task.remove is None:
-                    logger.info("Task %r has stakeholders %r but none remain connected -> will remove task in %s seconds", task.id, task.stakeholders, self._remove_delay)
-                    task.remove = time.time() + self._remove_delay
+        for worker in task.stakeholders:
+            if self._state.get_worker(worker) is None:
+                task.stakeholders.pop(worker)
 
-            # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
-            if task.status == RUNNING and task.worker_running and task.worker_running not in task.stakeholders:
-                logger.info("Task %r is marked as running by disconnected worker %r -> marking as FAILED with retry delay of %rs", task.id, task.worker_running, self._retry_delay)
-                task.worker_running = None
-                self.set_status(task, FAILED)
-                task.retry = time.time() + self._retry_delay
+        if not task.stakeholders:
+            logger.info("Task %r has stakeholders %r but none remain connected -> will remove task in %s seconds", task.id, task.stakeholders, self._remove_delay)
+            task.remove = timestamp + self._remove_delay
+            self._schedule_event(task.remove, self._check_remove_task, task_id)
+        else:
+            # Check again later
+            self._schedule_event(timestamp + self._remove_delay, self._check_orphan_task, task_id)
 
-            if task.status == DISABLED and task.scheduler_disable_time:
-                # re-enable task after the disable time expires
-                if datetime.datetime.now() - task.scheduler_disable_time > self._disable_time:
-                    task.re_enable()
+    def _check_running_task_with_disconnected_worker(self, timestamp, task_id):
+        # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
+        task = self._state.get_task(task_id)
+        print task.status
+        if task.status != RUNNING:
+            return
 
-            # Remove tasks that have no stakeholders
-            if task.remove and time.time() > task.remove:
-                logger.info("Removing task %r (no connected stakeholders)", task.id)
-                remove_tasks.append(task.id)
+        # Check if worker disconnected
+        self._check_old_worker(timestamp, task.worker_running)
 
+        if self._state.get_worker(task.worker_running):
+            logger.info("Task %r is marked as running by disconnected worker %r -> marking as FAILED with retry delay of %rs", task.id, task.worker_running, self._retry_delay)
+            task.worker_running = None
+            self.set_status(task, FAILED)
+        else:
+            # Check again in a a bit later
+            self._schedule_event(timestamp + self._worker_disconnect_delay, self._check_running_task_with_disconnected_worker, task_id)
+
+    def _check_reenable_task(self, timestamp, task_id):
+        # re-enable task after the disable time expires
+        task = self._state.get_task(task_id)
+        if task.status == DISABLED and task.scheduler_disable_time:
+            if timestamp >= task.scheduler_disable_time + self._disable_time:
+                task.re_enable()
+
+    def _check_remove_task(self, timestamp, task_id):
+        # Remove tasks that have no stakeholders
+        task = self._state.get_task(task_id)
+        if task.remove and timestamp > task.remove:
+            logger.info("Removing task %r (no connected stakeholders)", task.id)
+            self._state.inactivate_tasks([task.id])
+
+    def _check_retry_task(self, timestamp, task_id):
         # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
-        for task in self._state.get_active_tasks():
-            if task.status == FAILED and self._retry_delay >= 0 and task.retry < time.time():
-                self.set_status(task, PENDING)
+        task = self._state.get_task(task_id)
+        print task.status, self._retry_delay, task.retry, timestamp
+        if task.status == FAILED and self._retry_delay >= 0 and timestamp >= task.retry:
+            self.set_status(task, PENDING)
 
-        self._state.inactivate_tasks(remove_tasks)
+    def prune(self):
+        while len(self._event_queue):
+            timestamp, function, args = self._event_queue[0]
+            if timestamp > time.time():
+                break
+            heapq.heappop(self._event_queue)
 
-        logger.info("Done pruning task graph")
+            function(timestamp, *args)
 
-    def set_status(self, task, new_status):
+    def _schedule_event(self, timestamp, event, *args):
+        heapq.heappush(self._event_queue, (timestamp, event, args))
+
+    def set_status(self, task, new_status, host=None):
+        ''' This is the state machine of a task. The intention is no other task state updates take place elsewhere
+
+        The state machine also schedules various checks that will perform later that may change the state of a task'''
+
+        if task.status == RUNNING and new_status == PENDING:
+            # don't allow re-scheduling of task while it is running, it must either fail or succeed first
+            return
+
+        if new_status == 'UNKNOWN':
+            # UNKNOWN is reserved for new tasks, don't set it to UNKNOWN
+            return
+
+        if new_status == PENDING or task.status != PENDING:
+            # Update the DB only if there was a acctual change, to prevent noise.
+            # We also check for status == PENDING b/c that's the default value
+            # (so checking for status != task.status woule lie)
+            self._update_task_history(task.id, new_status)
+
+        if new_status == FAILED:
+            task.retry = time.time() + self._retry_delay
+            self._schedule_event(task.retry, self._check_retry_task, task.id)
+
         # not sure why we have SUSPENDED, as it can never be set
         if new_status == SUSPENDED:
             new_status = PENDING
@@ -362,14 +416,26 @@ class CentralPlannerScheduler(Scheduler):
         elif new_status == DISABLED:
             task.scheduler_disable_time = None
 
+        if task.status == UNKNOWN:
+            # New task, create a loop checking whether the task should be removed
+            self._schedule_event(time.time() + self._worker_disconnect_delay,self._check_orphan_task, task.id)
+        
+        if new_status == RUNNING and task.status != RUNNING:
+            self._schedule_event(time.time() + self._worker_disconnect_delay, self._check_running_task_with_disconnected_worker, task.id)
+            self._update_task_history(task.id, RUNNING, host=host)
+
         task.status = new_status
 
-    def update(self, worker_id, worker_reference=None):
+
+    def _update_worker_activity(self, worker_id, worker_reference=None):
         """ Keep track of whenever the worker was last active """
-        worker = self._state.get_worker(worker_id)
+        worker = self._state.get_worker(worker_id, create=True)
         if worker_reference:
             worker.reference = worker_reference
         worker.last_active = time.time()
+
+        # Delete the worker later if there's no news
+        self._schedule_event(time.time() + self._worker_disconnect_delay, self._check_old_worker, worker_id)
 
     def _update_priority(self, task, prio, worker):
         """ Update priority of the given task
@@ -393,10 +459,10 @@ class CentralPlannerScheduler(Scheduler):
         * Add additional workers/stakeholders
         * Update priority when needed
         """
-        self.update(worker)
+        self._update_worker_activity(worker)
 
         task = self._state.get_task(task_id, setdefault=self._make_task(
-                id=task_id, status=PENDING, deps=deps, resources=resources,
+                id=task_id, status=UNKNOWN, deps=deps, resources=resources,
                 priority=priority, family=family, params=params))
 
         # for setting priority, we'll sometimes create tasks with unset family and params
@@ -408,16 +474,7 @@ class CentralPlannerScheduler(Scheduler):
         if task.remove is not None:
             task.remove = None  # unmark task for removal so it isn't removed after being added
 
-        if not (task.status == RUNNING and status == PENDING):
-            # don't allow re-scheduling of task while it is running, it must either fail or succeed first
-            if status == PENDING or status != task.status:
-                # Update the DB only if there was a acctual change, to prevent noise.
-                # We also check for status == PENDING b/c that's the default value
-                # (so checking for status != task.status woule lie)
-                self._update_task_history(task_id, status)
-            self.set_status(task, PENDING if status == SUSPENDED else status)
-            if status == FAILED:
-                task.retry = time.time() + self._retry_delay
+        self.set_status(task, PENDING if status == SUSPENDED else status)
 
         if deps is not None:
             task.deps = set(deps)
@@ -508,7 +565,8 @@ class CentralPlannerScheduler(Scheduler):
         # nothing it can wait for
 
         # Return remaining tasks that have no FAILED descendents
-        self.update(worker, {'host': host})
+        self.prune()
+        self._update_worker_activity(worker, {'host': host})
         best_task = None
         best_task_id = None
         locally_pending_tasks = 0
@@ -560,10 +618,10 @@ class CentralPlannerScheduler(Scheduler):
                             break
 
         if best_task:
-            best_task.status = RUNNING
+            self.set_status(best_task, RUNNING, host=host)
+
             best_task.worker_running = worker
             best_task.time_running = time.time()
-            self._update_task_history(best_task.id, RUNNING, host=host)
 
         return {'n_pending_tasks': locally_pending_tasks,
                 'n_unique_pending': n_unique_pending,
@@ -571,7 +629,7 @@ class CentralPlannerScheduler(Scheduler):
                 'running_tasks': running_tasks}
 
     def ping(self, worker):
-        self.update(worker)
+        self._update_worker_activity(worker)
 
     def _upstream_status(self, task_id, upstream_status_table):
         if task_id in upstream_status_table:
