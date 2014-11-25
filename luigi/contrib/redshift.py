@@ -40,7 +40,7 @@ class S3CopyToTable(rdbms.CopyToTable):
     `aws_access_key_id`, `aws_secret_access_key`, `s3_load_path`
     """
 
-    @abc.abstractproperty
+    @abc.abstractmethod
     def s3_load_path(self):
         'override to return the load path'
         return None
