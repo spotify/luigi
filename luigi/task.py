@@ -19,7 +19,7 @@ import parameter
 import warnings
 import traceback
 import itertools
-from luigi.mock import MockFile
+from luigi.mock import MockFile, MockFileSystem
 import pyparsing as pp
 
 Parameter = parameter.Parameter
@@ -583,14 +583,19 @@ class ExternalTask(Task):
     run = NotImplemented
 
 
+class _WrapperMarker(MockFile):
+    fs = MockFileSystem()  # separate from the user space mockfile system
+
+    def __init__(self, task):
+        super(_WrapperMarker, self).__init__(self, task.task_id)
+
+
 class WrapperTask(Task):
     """Use for tasks that only wrap other tasks and that by definition are done
     if all their requirements exist.
     """
     def output(self):
-        return MockFile(
-            "WrapperTask://{task_id}".format(task_id=self.task_id)
-        )
+        return _WrapperMarker(self)
 
     def run(self):
         with self.output().open('w') as f:

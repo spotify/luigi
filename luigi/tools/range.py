@@ -167,6 +167,10 @@ class RangeHourlyBase(luigi.WrapperTask):
         self._cached_requires = [task_cls(d) for d in required_datehours]
         return self._cached_requires
 
+    def complete(self):
+        base_exist = super(RangeHourlyBase, self).complete()
+        return base_exist or all(t.complete() for t in self.requires())
+
 
 def _constrain_glob(glob, paths, limit=5):
     """Tweaks glob into a list of more specific globs that together still cover
