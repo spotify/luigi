@@ -15,19 +15,18 @@
 import subprocess
 import os
 import random
-import tempfile
 import urlparse
 import luigi.format
 import luigi.contrib.target
 import datetime
 import re
+import luigi.devutil
 import warnings
 from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
 import configuration
 import logging
 import getpass
 logger = logging.getLogger('luigi-interface')
-import sys
 
 
 class HDFSCliError(Exception):
@@ -710,7 +709,7 @@ class HdfsTarget(FileSystemTarget):
     def remove(self, skip_trash=False):
         remove(self.path, skip_trash=skip_trash)
 
-    @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
+    @luigi.devutil.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def rename(self, path, fail_if_exists=False):
         """ Rename does not change self.path, so be careful with assumptions
 
@@ -722,7 +721,7 @@ class HdfsTarget(FileSystemTarget):
             raise RuntimeError('Destination exists: %s' % path)
         rename(self.path, path)
 
-    @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
+    @luigi.devutil.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def move(self, path, fail_if_exists=False):
         """ Move does not change self.path, so be careful with assumptions
 

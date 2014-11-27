@@ -12,12 +12,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+from __future__ import print_function
 import abc
 import logging
 import parameter
 import warnings
 import traceback
 import itertools
+from luigi.mock import MockFile
 import pyparsing as pp
 
 Parameter = parameter.Parameter
@@ -585,8 +587,14 @@ class WrapperTask(Task):
     """Use for tasks that only wrap other tasks and that by definition are done
     if all their requirements exist.
     """
-    def complete(self):
-        return all(r.complete() for r in flatten(self.requires()))
+    def output(self):
+        return MockFile(
+            "WrapperTask://{task_id}".format(task_id=self.task_id)
+        )
+
+    def run(self):
+        with self.output().open('w') as f:
+            print("completed", file=f)
 
 
 def getpaths(struct):
