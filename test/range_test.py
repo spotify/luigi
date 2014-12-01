@@ -15,10 +15,12 @@
 import fnmatch
 import datetime
 import luigi
-from luigi.tools.range import RangeEvent, RangeHourly, RangeHourlyBase, _constrain_glob
+from luigi.tools.range import (
+    RangeEvent, RangeHourly, RangeHourlyBase, _constrain_glob,
+    _flatten_output
+)
 from luigi.mock import MockFile, MockFileSystem
 import mock
-import time
 import unittest
 
 
@@ -170,7 +172,10 @@ class RangeHourlyBaseTest(unittest.TestCase):
         self.assertEqual(task.requires(), [])
         self.assertEqual(calls, [])  # subsequent requires() should return the cached result, never call missing_datehours
         self.assertEqual(self.events, expected_events)
-        self.assertTrue(task.complete())
+        self.assertTrue(all(
+            # check that all outputs exist
+            t.exists() for t in _flatten_output(task)
+        ))
 
     def test_start_after_hours_forward(self):
         # nothing to do because start is later
@@ -210,7 +215,10 @@ class RangeHourlyBaseTest(unittest.TestCase):
         self.assertEqual(map(str, task.requires()), expected_requires)
         self.assertEqual(len(calls), 1)  # subsequent requires() should return the cached result, not call missing_datehours again
         self.assertEqual(self.events, expected_events)
-        self.assertFalse(task.complete())
+        self.assertFalse(all(
+            # check that all outputs exist
+            t.exists() for t in _flatten_output(task)
+        ))
 
     def test_start_long_before_hours_back(self):
         self._nonempty_subcase(

@@ -587,7 +587,7 @@ class _WrapperMarker(MockFile):
     fs = MockFileSystem()  # separate from the user space mockfile system
 
     def __init__(self, task):
-        super(_WrapperMarker, self).__init__(self, task.task_id)
+        super(_WrapperMarker, self).__init__(task.task_id)
 
 
 class WrapperTask(Task):
@@ -652,15 +652,3 @@ def flatten(struct):
         pass
 
     return [struct]
-
-
-def flatten_output(task):
-    """Lists all output targets by recursively walking output-less (wrapper) tasks.
-
-    FIXME order consistently.
-    """
-    r = flatten(task.output())
-    if not r:
-        for dep in flatten(task.requires()):
-            r += flatten_output(dep)
-    return r
