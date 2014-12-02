@@ -674,7 +674,8 @@ class HdfsTarget(FileSystemTarget):
         self.format = format
         self.is_tmp = is_tmp
         (scheme, netloc, path, query, fragment) = urlparse.urlsplit(path)
-        assert ":" not in path  # colon is not allowed in hdfs filenames
+        if ":" in path:
+            raise ValueError('colon is not allowed in hdfs filenames')
         self._fs = fs or get_autoconfig_client()
 
     def __del__(self):

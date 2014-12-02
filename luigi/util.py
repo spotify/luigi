@@ -25,7 +25,8 @@ logger = logging.getLogger('luigi-interface')
 
 def common_params(task_instance, task_cls):
     """Grab all the values in task_instance that are found in task_cls"""
-    assert isinstance(task_cls, task.Register), "task_cls must be an uninstantiated Task"
+    if not isinstance(task_cls, task.Register):
+        raise TypeError("task_cls must be an uninstantiated Task")
 
     task_instance_param_names = dict(task_instance.get_params()).keys()
     task_cls_param_names = dict(task_cls.get_params()).keys()

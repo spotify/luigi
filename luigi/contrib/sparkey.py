@@ -43,7 +43,8 @@ class SparkeyExportTask(luigi.Task):
 
         infile = self.input()
         outfile = self.output()
-        assert isinstance(outfile, luigi.LocalTarget), "output must be a LocalTarget"
+        if not isinstance(outfile, luigi.LocalTarget):
+            raise TypeError("output must be a LocalTarget")
 
         # write job output to temporary sparkey file
         temp_output = luigi.LocalTarget(is_tmp=True)

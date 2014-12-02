@@ -424,10 +424,12 @@ class HadoopJobRunner(JobRunner):
             arglist += ['-inputformat', self.input_format]
 
         for target in luigi.task.flatten(job.input_hadoop()):
-            assert isinstance(target, luigi.hdfs.HdfsTarget)
+            if not isinstance(target, luigi.hdfs.HdfsTarget):
+                raise TypeError('target must be an HdfsTarget')
             arglist += ['-input', target.path]
 
-        assert isinstance(job.output(), luigi.hdfs.HdfsTarget)
+        if not isinstance(job.output(), luigi.hdfs.HdfsTarget):
+            raise TypeError('outout must be an HdfsTarget')
         arglist += ['-output', output_tmp_fn]
 
         # submit job
