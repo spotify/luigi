@@ -184,7 +184,7 @@ def Derived(parent_cls):
             n = luigi.IntParameter()
             # ...
 
-        class MyTask(luigi.uti.Derived(AnotherTask)):
+        class MyTask(luigi.util.Derived(AnotherTask)):
             def requires(self):
                return self.parent_obj
             def run(self):
@@ -205,7 +205,11 @@ def Derived(parent_cls):
             self.parent_obj = parent_cls(**parent_param_values)
             super(DerivedCls, self).__init__(*args, **kwargs)
 
-    warnings.warn('Derived is deprecated, please use the @inherits decorator instead', DeprecationWarning)
+    warnings.warn(
+        'Derived is deprecated, please use the @inherits decorator instead',
+        DeprecationWarning,
+        stacklevel=2
+    )
 
     # Copy parent's params to child
     for param_name, param_obj in parent_cls.get_params():
@@ -236,7 +240,11 @@ def Copy(parent_cls):
                 f.write(line)
             f.close()
 
-    warnings.warn('Copy is deprecated, please use the @copies decorator instead', DeprecationWarning)
+    warnings.warn(
+        'Copy is deprecated, please use the @copies decorator instead',
+        DeprecationWarning,
+        stacklevel=2
+    )
     return CopyCls
 
 
