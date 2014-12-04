@@ -19,7 +19,6 @@ import datetime
 import subprocess
 import tempfile
 from itertools import groupby
-from operator import itemgetter
 import pickle
 import binascii
 import logging

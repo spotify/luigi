@@ -15,7 +15,6 @@
 import subprocess
 import os
 import random
-import tempfile
 import urlparse
 import luigi.format
 import luigi.contrib.target
@@ -27,7 +26,6 @@ import configuration
 import logging
 import getpass
 logger = logging.getLogger('luigi-interface')
-import sys
 
 
 class HDFSCliError(Exception):
