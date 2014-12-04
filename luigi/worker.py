@@ -23,13 +23,10 @@ import socket
 import configuration
 import traceback
 import logging
-import warnings
 import notifications
 import getpass
 import multiprocessing # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
 import Queue
-import luigi.interface
-import sys
 import types
 import interface
 from target import Target

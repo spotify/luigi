@@ -13,7 +13,6 @@
 # the License.
 
 import abc
-import traceback
 import logging
 import task
 

@@ -14,7 +14,6 @@
 # the License.
 from __future__ import absolute_import
 
-import os
 import luigi
 
 class SparkeyExportTask(luigi.Task):

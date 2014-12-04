@@ -20,7 +20,6 @@ import os
 import logging
 import time
 import cPickle as pickle
-import bisect
 import task_history as history
 logger = logging.getLogger("luigi.server")
 

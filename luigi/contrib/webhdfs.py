@@ -8,9 +8,6 @@ import os
 import random
 import logging
 import tempfile
-import datetime
-import urlparse
-import posixpath
 
 from luigi import configuration
 from luigi.target import FileSystemTarget

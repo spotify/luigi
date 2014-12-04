@@ -17,7 +17,6 @@ import urllib2
 import logging
 import json
 import time
-import warnings
 from scheduler import Scheduler, PENDING
 import configuration
 

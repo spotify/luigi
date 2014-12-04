@@ -30,7 +30,6 @@ import signal
 from rpc import RemoteSchedulerResponder
 import task_history
 import logging
-import warnings
 logger = logging.getLogger("luigi.server")
 
 
