@@ -204,6 +204,9 @@ class Spark1xJob(luigi.Task):
     driver_memory = None
     executor_memory = None
     executor_cores = None
+    deploy_mode = None
+    queue = None
+    spark_master = "yarn-client"
 
     def jar(self):
         raise NotImplementedError("subclass should define jar "
@@ -233,7 +236,6 @@ class Spark1xJob(luigi.Task):
                                                       'spark-submit')
         options = [
             '--class', self.job_class(),
-            '--master', 'yarn-client',
         ]
         if self.num_executors is not None:
             options += ['--num-executors', self.num_executors]
@@ -243,6 +245,12 @@ class Spark1xJob(luigi.Task):
             options += ['--executor-memory', self.executor_memory]
         if self.executor_cores is not None:
             options += ['--executor-cores', self.executor_cores]
+        if self.deploy_mode is not None:
+            options += ['--deploy-mode', self.deploy_mode]
+        if self.queue is not None:
+            options += ['--queue', self.queue]
+        if self.spark_master is not None:
+            options += ['--master', self.spark_master]
         dependency_jars = self.dependency_jars()
         if dependency_jars != []:
             options += ['--jars', ','.join(dependency_jars)]
