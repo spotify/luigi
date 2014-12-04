@@ -1,36 +1,37 @@
+.. highlight:: bash
+
 Running from the Command Line
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Any task can be instantiated and run from the command line
+Any task can be instantiated and run from the command line:
 
-.. code:: python
+.. code-block:: python
+
+    import luigi
 
     class MyTask(luigi.Task):
-        x = IntParameter()
-        y = IntParameter(default=45)
+        x = luigi.IntParameter()
+        y = luigi.IntParameter(default=45)
+
         def run(self):
             print self.x + self.y
 
     if __name__ == '__main__':
-           luigi.run()
+        luigi.run()
 
-You can run this task from the command line like this:
+You can run this task from the command line like this::
 
-::
+    $ python my_task.py MyTask --x 123 --y 456
 
-    python my_task.py MyTask --x 123 --y 456
-
-You can also pass *main\_task\_cls=MyTask* to luigi.run() and that way
+You can also pass ``main_task_cls=MyTask`` to ``luigi.run()`` and that way
 you can invoke it simply using
 
 ::
 
-    python my_task.py --x 123 --y 456
+    $ python my_task.py --x 123 --y 456
 
 The other way to run a Luigi task is to use the builtin *luigi* task. This will
 be default on your path and can be run by providing a module name. The module
-will imported dynamically:
+will imported dynamically::
 
-::
-
-    luigi --module my_module MyTask --x 123 --y 456
+    $ luigi --module my_module MyTask --x 123 --y 456
