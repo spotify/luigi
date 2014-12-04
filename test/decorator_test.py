@@ -180,7 +180,7 @@ class RequiresTest(unittest.TestCase):
         k.requires()
 
     def test_wrong_common_params_order(self):
-        self.assertRaises(AssertionError, self.k_wrongparamsorder.requires)
+        self.assertRaises(TypeError, self.k_wrongparamsorder.requires)
 
 
 class X(luigi.Task):
