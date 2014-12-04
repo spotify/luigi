@@ -47,11 +47,15 @@ def get_static_files(path):
 
 luigi_package_data = sum(map(get_static_files, ["luigi/static", "luigi/templates"]), [])
 
+readme_note = """\
+.. note::
 
-long_description = ['Note: For the latest source, discussion, etc, please visit the `Github repository <https://github.com/spotify/luigi>`_\n\n']
-for line in open('README.rst'):
-    long_description.append(line)
-long_description = ''.join(long_description)
+   For the latest source, discussion, etc, please visit the
+   `GitHub repository <https://github.com/spotify/luigi>`_\n\n
+"""
+
+with open('README.rst') as fobj:
+    long_description = readme_note + fobj.read()
 
 
 setup(
