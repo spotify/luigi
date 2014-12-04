@@ -2,8 +2,12 @@
    :alt: Luigi Logo
    :align: center
 
+
 About Luigi
 -----------
+
+.. image:: https://travis-ci.org/spotify/luigi.svg?branch=master
+    :target: https://travis-ci.org/spotify/luigi
 
 Luigi is a Python package that helps you build complex pipelines of
 batch jobs. It handles dependency resolution, workflow management,
