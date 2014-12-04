@@ -206,7 +206,7 @@ class Spark1xJob(luigi.Task):
     executor_cores = None
     deploy_mode = None
     queue = None
-    spark_master = None
+    spark_master = "yarn-client"
 
     def jar(self):
         raise NotImplementedError("subclass should define jar "
