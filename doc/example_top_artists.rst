@@ -118,7 +118,7 @@ here is how this could look like, instead of the class above.
         date_interval = luigi.DateIntervalParameter()
 
         def output(self):
-            return luigi.HdfsTarget("data/artist_streams_%s.tsv" % self.date_interval)
+            return luigi.hdfs.HdfsTarget("data/artist_streams_%s.tsv" % self.date_interval)
 
         def requires(self):
             return [StreamsHdfs(date) for date in self.date_interval]
