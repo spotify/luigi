@@ -2,7 +2,6 @@ import datetime
 import os
 import posixpath
 import time
-import unittest2
 import luigi.hdfs
 import luigi.interface
 from luigi.hdfs import SnakebiteHdfsClient
@@ -10,9 +9,14 @@ from snakebite.client import AutoConfigClient as SnakebiteAutoConfigClient
 from nose.plugins.attrib import attr
 from snakebite.minicluster import MiniCluster
 
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+
 
 @attr('minicluster')
-class TestSnakebiteClient(unittest2.TestCase):
+class TestSnakebiteClient(unittest.TestCase):
     """This test requires a snakebite -- it finds it from your
     client.cfg"""
     snakebite = None

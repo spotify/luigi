@@ -16,7 +16,6 @@ import os
 from calendar import timegm
 from datetime import datetime
 import getpass
-import unittest2
 import luigi
 from luigi import hdfs
 import mock
@@ -25,13 +24,17 @@ import functools
 from nose.plugins.attrib import attr
 from snakebite.minicluster import MiniCluster
 
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
 
 class TestException(Exception):
     pass
 
 
 @attr('minicluster')
-class HdfsTestCase(unittest2.TestCase):
+class HdfsTestCase(unittest.TestCase):
     cluster = None
 
     @classmethod
@@ -725,7 +728,7 @@ class _HdfsClientTest(HdfsTestCase):
         self.assertRaises(luigi.hdfs.HDFSCliError, apache_client.exists, "/some/path/somewhere")
 
 if __name__ == "__main__":
-    unittest2.main()
+    unittest.main()
     # Uncomment to run a single test
     # unittest.TextTestRunner(failfast=True, verbosity=2).run(suite())
 
