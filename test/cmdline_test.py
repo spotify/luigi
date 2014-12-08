@@ -79,12 +79,6 @@ class CmdlineTest(unittest.TestCase):
         File = MockFile
         MockFile.fs.clear()
 
-    def test_expose_deprecated(self):
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            luigi.expose(SomeTask)
-            self.assertEqual(w[-1].category, DeprecationWarning)
-
     @mock.patch("logging.getLogger")
     def test_cmdline_main_task_cls(self, logger):
         luigi.run(['--local-scheduler', '--no-lock', '--n', '100'], main_task_cls=SomeTask)
