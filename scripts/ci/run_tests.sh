@@ -7,4 +7,4 @@ fi
 
 echo "Using ${HADOOP_DISTRO} distribution of Hadoop from ${HADOOP_HOME}"
 
-nosetests -v $@
+python test/runtests.py -v

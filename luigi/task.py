@@ -470,7 +470,10 @@ class Task(object):
         """
         outputs = flatten(self.output())
         if len(outputs) == 0:
-            warnings.warn("Task %r without outputs has no custom complete() method" % self)
+            warnings.warn(
+                "Task %r without outputs has no custom complete() method" % self,
+                stacklevel=2
+            )
             return False
 
         return all(itertools.imap(lambda output: output.exists(), outputs))

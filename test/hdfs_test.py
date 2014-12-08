@@ -182,7 +182,7 @@ class HdfsAtomicWriteDirPipeTests(HdfsTestCase):
 
 # This class is a mixin, and does not inherit from TestCase, in order to avoid running the base class as a test case.
 @attr('minicluster')
-class _HdfsFormatTest(HdfsTestCase):
+class _HdfsFormatTest(object):
     format = None  # override with luigi.format.Format subclass
 
     def setUp(self):
