@@ -74,6 +74,11 @@ max-reschedules
 no_configure_logging
   If true, logging is not configured. Defaults to false.
 
+parallel-scheduling
+  If true, the scheduler will compute complete functions of tasks in
+  parallel using multiprocessing. This can significantly speed up
+  scheduling, but requires that all tasks can be pickled.
+
 rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0
