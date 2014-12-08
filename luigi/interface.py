@@ -133,20 +133,6 @@ class EnvironmentParamsContainer(task.Task):
         return cls()  # instantiate an object with the global params set on it
 
 
-def expose(cls):
-    warnings.warn('expose is no longer used, everything is autoexposed', DeprecationWarning)
-    return cls
-
-
-def expose_main(cls):
-    warnings.warn('expose_main is no longer supported, use luigi.run(..., main_task_cls=cls) instead', DeprecationWarning)
-    return cls
-
-
-def reset():
-    warnings.warn('reset is no longer supported')
-
-
 class WorkerSchedulerFactory(object):
     def create_local_scheduler(self):
         return scheduler.CentralPlannerScheduler()
