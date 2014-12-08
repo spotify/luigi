@@ -35,8 +35,6 @@ Parameter = parameter.Parameter
 RemoteScheduler = rpc.RemoteScheduler
 RPCError = rpc.RPCError
 
-expose = interface.expose
-expose_main = interface.expose_main
 run = interface.run
 build = interface.build
 
