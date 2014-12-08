@@ -9,7 +9,7 @@ Running Unit Tests
 
 1. Install required packages: ``pip install -r test/requirements.txt``
 2. From the top directory, run
-   `Nose <http://pypi.python.org/pypi/nose/0.11.4>`__: ``nosetests``
+   `Nose <http://nose.readthedocs.org>`__: ``nosetests``
 
    -  To run all tests within individual files:
       ``nosetests test/parameter_test.py test/fib_test.py ...``
