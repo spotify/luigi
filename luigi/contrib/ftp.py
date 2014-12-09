@@ -99,7 +99,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
         # create paths if do not exists
         for subfolder in folder.split(os.sep):
-            if subfolder and not subfolder in self.ftpcon.nlst():
+            if subfolder and subfolder not in self.ftpcon.nlst():
                 self.ftpcon.mkd(subfolder)
 
             self.ftpcon.cwd(subfolder)

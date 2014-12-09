@@ -118,7 +118,7 @@ class Parameter(object):
             raise ParameterException('Global parameters need default values')
         self.description = description
 
-        if config_path is not None and (not 'section' in config_path or not 'name' in config_path):
+        if config_path is not None and ('section' not in config_path or 'name' not in config_path):
             raise ParameterException('config_path must be a hash containing entries for section and name')
         self.__config = config_path
 
