@@ -41,20 +41,20 @@ class DbTaskHistoryTest(unittest.TestCase):
 
         tasks = list(self.history.find_all_by_name('DummyTask'))
 
-        self.assertEquals(len(tasks), 2)
+        self.assertEqual(len(tasks), 2)
         for task in tasks:
-            self.assertEquals(task.name, 'DummyTask')
-            self.assertEquals(task.host, 'hostname')
+            self.assertEqual(task.name, 'DummyTask')
+            self.assertEqual(task.host, 'hostname')
 
     def test_task_events(self):
         self.run_task(DummyTask())
         tasks = list(self.history.find_all_by_name('DummyTask'))
-        self.assertEquals(len(tasks), 1)
+        self.assertEqual(len(tasks), 1)
         [task] = tasks
-        self.assertEquals(task.name, 'DummyTask')
-        self.assertEquals(len(task.events), 3)
+        self.assertEqual(task.name, 'DummyTask')
+        self.assertEqual(len(task.events), 3)
         for (event, name) in zip(task.events, [DONE, RUNNING, PENDING]):
-            self.assertEquals(event.event_name, name)
+            self.assertEqual(event.event_name, name)
 
     def test_task_by_params(self):
         task1 = ParamTask('foo', 'bar')
@@ -66,12 +66,12 @@ class DbTaskHistoryTest(unittest.TestCase):
         task2_record = self.history.find_all_by_parameters(task_name='ParamTask', param1='bar', param2='foo')
         for task, records in zip((task1, task2), (task1_record, task2_record)):
             records = list(records)
-            self.assertEquals(len(records), 1)
+            self.assertEqual(len(records), 1)
             [record] = records
             self.assertEqual(task.task_family, record.name)
             for param_name, param_value in task.param_kwargs.iteritems():
                 self.assertTrue(param_name in record.parameters)
-                self.assertEquals(str(param_value), record.parameters[param_name].value)
+                self.assertEqual(str(param_value), record.parameters[param_name].value)
 
     def run_task(self, task):
         self.history.task_scheduled(task.task_id)

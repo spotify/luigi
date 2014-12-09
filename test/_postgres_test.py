@@ -68,11 +68,11 @@ class Metric2(MetricBase):
 
 class TestPostgresImportTask(TestCase):
     def test_default_escape(self):
-        self.assertEquals(postgres.default_escape('foo'), 'foo')
-        self.assertEquals(postgres.default_escape('\n'), '\\n')
-        self.assertEquals(postgres.default_escape('\\\n'), '\\\\\\n')
-        self.assertEquals(postgres.default_escape('\n\r\\\t\\N\\'),
-                                                  '\\n\\r\\\\\\t\\\\N\\\\')
+        self.assertEqual(postgres.default_escape('foo'), 'foo')
+        self.assertEqual(postgres.default_escape('\n'), '\\n')
+        self.assertEqual(postgres.default_escape('\\\n'), '\\\\\\n')
+        self.assertEqual(postgres.default_escape('\n\r\\\t\\N\\'),
+                                                 '\\n\\r\\\\\\t\\\\N\\\\')
 
     def test_repeat(self):
         task = TestPostgresTask()
@@ -91,7 +91,7 @@ class TestPostgresImportTask(TestCase):
 
         rows = tuple(cursor)
 
-        self.assertEquals(rows, (
+        self.assertEqual(rows, (
             ('foo', 123, 123.45),
             (None, -100, 5143.213),
             ('\t\n\r\\N', 0.0, 0))
@@ -107,7 +107,7 @@ class TestPostgresImportTask(TestCase):
 
         cursor = conn.cursor()
         cursor.execute('select count(*) from {table}'.format(table=metrics.table))
-        self.assertEquals(tuple(cursor), ((9,),))
+        self.assertEqual(tuple(cursor), ((9,),))
 
     def test_clear(self):
         class Metric2Copy(Metric2):
@@ -125,6 +125,6 @@ class TestPostgresImportTask(TestCase):
         luigi.build([clearer], local_scheduler=True)
         cursor = conn.cursor()
         cursor.execute('select count(*) from {table}'.format(table=clearer.table))
-        self.assertEquals(tuple(cursor), ((3,),))        
+        self.assertEqual(tuple(cursor), ((3,),))
 
 luigi.namespace()

@@ -40,7 +40,7 @@ class TestRemoteContext(unittest.TestCase):
         Assumes the running user can ssh to working_ssh_host
         """
         output = self.context.check_output(["echo", "-n", "luigi"])
-        self.assertEquals(output, "luigi")
+        self.assertEqual(output, "luigi")
 
     def test_tunnel(self):
         print "Setting up remote listener..."
@@ -55,18 +55,18 @@ class TestRemoteContext(unittest.TestCase):
             # hack to make sure the listener process is up
             # and running before we write to it
             server_output = remote_server_handle.stdout.read(5)
-            self.assertEquals(server_output, "ready")
+            self.assertEqual(server_output, "ready")
             print "Connecting to server via tunnel"
             s = socket.socket()
             s.connect(("localhost", 2135))
             print "Receiving...",
             response = s.recv(5)
-            self.assertEquals(response, "hello")
+            self.assertEqual(response, "hello")
             print "Closing connection"
             s.close()
             print "Waiting for listener..."
             output, _ = remote_server_handle.communicate()
-            self.assertEquals(remote_server_handle.returncode, 0)
+            self.assertEqual(remote_server_handle.returncode, 0)
             print "Closing tunnel"
 
 
@@ -107,13 +107,13 @@ class TestRemoteTarget(unittest.TestCase):
         f = self.target.open('r')
         file_content = f.read()
         f.close()
-        self.assertEquals(file_content, "hello")
+        self.assertEqual(file_content, "hello")
 
     def test_context_manager(self):
         with self.target.open('r') as f:
             file_content = f.read()
 
-        self.assertEquals(file_content, "hello")
+        self.assertEqual(file_content, "hello")
 
 
 class TestRemoteTargetAtomicity(unittest.TestCase):
@@ -219,7 +219,7 @@ class TestRemoteTargetAtomicity(unittest.TestCase):
         t.get(self.local_file)
         f = open(self.local_file, 'r')
         file_content = f.read()
-        self.assertEquals(file_content, 'hello')
+        self.assertEqual(file_content, 'hello')
 
 
 class TestRemoteTargetCreateDirectories(TestRemoteTargetAtomicity):

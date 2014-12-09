@@ -39,17 +39,17 @@ class B2(luigi.util.Derived(A2)):
 class UtilTest(unittest.TestCase):
     def test_derived_extended(self):
         b = B(1, 2)
-        self.assertEquals(b.x, 1)
-        self.assertEquals(b.y, 2)
+        self.assertEqual(b.x, 1)
+        self.assertEqual(b.y, 2)
         a = A(1)
-        self.assertEquals(b.parent_obj, a)
+        self.assertEqual(b.parent_obj, a)
 
     def test_derived_extended_default(self):
         b = B()
-        self.assertEquals(b.x, 3)
-        self.assertEquals(b.y, 4)
+        self.assertEqual(b.x, 3)
+        self.assertEqual(b.y, 4)
 
     def test_derived_global_param(self):
         # Had a bug with this
         b = B2()
-        self.assertEquals(b.g, 42)
+        self.assertEqual(b.g, 42)
