@@ -36,13 +36,13 @@ class TestWebHdfsTarget(unittest.TestCase):
         self.test_write()
         input_ = self.target.open('r')
         all_test = 'this is line 1\nthis is line #2\n'
-        self.assertEquals(all_test, input_.read())
+        self.assertEqual(all_test, input_.read())
         input_.close()
 
     def test_read_lines(self):
         self.test_write()
         input_ = self.target.open('r')
         lines = list(input_.readlines())
-        self.assertEquals(lines[0], 'this is line 1')
-        self.assertEquals(lines[1], 'this is line #2')
+        self.assertEqual(lines[0], 'this is line 1')
+        self.assertEqual(lines[1], 'this is line #2')
         input_.close()

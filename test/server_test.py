@@ -46,7 +46,7 @@ class ServerTest(ServerTestBase):
         except urllib2.HTTPError, http_exc:
             pass
 
-        self.assertEquals(http_exc.code, 404)
+        self.assertEqual(http_exc.code, 404)
 
     def test_404(self):
         self._test_404('/foo')

@@ -79,7 +79,7 @@ class AbstractSubclassTest(unittest.TestCase):
         self.assertRaises(TypeError, try_instantiate)
 
     def test_instantiate(self):
-        self.assertEquals("bar,hellohello", Implementation(k=2).run())
+        self.assertEqual("bar,hellohello", Implementation(k=2).run())
 
 if __name__ == '__main__':
     luigi.run()

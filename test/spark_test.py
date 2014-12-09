@@ -72,10 +72,10 @@ class SparkTest(unittest.TestCase):
             MockFile.move = lambda *args, **kwargs: None
             job = TestJob()
             job.run()
-            self.assertEquals(len(arglist_result), 1)
-            self.assertEquals(arglist_result[0][0:6],
-                              [self.sc, 'org.apache.spark.deploy.yarn.Client', '--jar', job.jar(), '--class',
-                               job.job_class()])
+            self.assertEqual(len(arglist_result), 1)
+            self.assertEqual(arglist_result[0][0:6],
+                             [self.sc, 'org.apache.spark.deploy.yarn.Client', '--jar', job.jar(), '--class',
+                              job.job_class()])
         finally:
             luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
 
@@ -111,7 +111,7 @@ class SparkTest(unittest.TestCase):
             job = TestJob()
             job.run()
         except SparkJobError as e:
-            self.assertEquals(e.err, ['stderr'])
+            self.assertEqual(e.err, ['stderr'])
         else:
             self.fail("Should have thrown SparkJobError")
         finally:
@@ -176,10 +176,10 @@ class Spark1xTest(unittest.TestCase):
             MockFile.move = lambda *args, **kwargs: None
             job = Test1xJob()
             job.run()
-            self.assertEquals(len(arglist_result), 1)
-            self.assertEquals(arglist_result[0][0:6],
-                              [self.ss, '--class', job.job_class(),
-                               '--master', 'yarn-client', job.jar()])
+            self.assertEqual(len(arglist_result), 1)
+            self.assertEqual(arglist_result[0][0:6],
+                             [self.ss, '--class', job.job_class(),
+                              '--master', 'yarn-client', job.jar()])
         finally:
             luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
 
@@ -217,7 +217,7 @@ class Spark1xTest(unittest.TestCase):
             job = Test1xJob()
             job.run()
         except SparkJobError as e:
-            self.assertEquals(e.err, ['stderr'])
+            self.assertEqual(e.err, ['stderr'])
         else:
             self.fail("Should have thrown SparkJobError")
         finally:
@@ -279,9 +279,9 @@ class PySpark1xTest(unittest.TestCase):
             MockFile.move = lambda *args, **kwargs: None
             job = TestPySpark1xJob()
             job.run()
-            self.assertEquals(len(arglist_result), 1)
-            self.assertEquals(arglist_result[0][0:6],
-                              [self.ss,'--master', 'yarn-client', job.program()])
+            self.assertEqual(len(arglist_result), 1)
+            self.assertEqual(arglist_result[0][0:6],
+                             [self.ss,'--master', 'yarn-client', job.program()])
         finally:
             luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
 
@@ -319,7 +319,7 @@ class PySpark1xTest(unittest.TestCase):
             job = TestPySpark1xJob()
             job.run()
         except SparkJobError as e:
-            self.assertEquals(e.err, ['stderr'])
+            self.assertEqual(e.err, ['stderr'])
         else:
             self.fail("Should have thrown SparkJobError")
         finally:

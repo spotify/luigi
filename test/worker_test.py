@@ -246,7 +246,7 @@ class WorkerTest(unittest.TestCase):
         # loop through output and verify
         f = t.output().open('r')
         for i in xrange(7):
-            self.assertEquals(f.readline().strip(), '%d: Done!' % i)
+            self.assertEqual(f.readline().strip(), '%d: Done!' % i)
 
     def test_avoid_infinite_reschedule(self):
         class A(Task):
@@ -281,7 +281,7 @@ class WorkerTest(unittest.TestCase):
 
         b = B()
         eb = ExternalB()
-        self.assertEquals(eb.task_id, "B()")
+        self.assertEqual(eb.task_id, "B()")
 
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         w = Worker(scheduler=sch, worker_id='X')
@@ -314,7 +314,7 @@ class WorkerTest(unittest.TestCase):
         b = B()
         eb = ExternalB()
 
-        self.assertEquals(eb.task_id, "B()")
+        self.assertEqual(eb.task_id, "B()")
 
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         w = Worker(scheduler=sch, worker_id='X')
@@ -391,7 +391,7 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(w.add(b))
         self.assertTrue(w2.add(b))
 
-        self.assertEquals(w._get_work()[0], 'A()')
+        self.assertEqual(w._get_work()[0], 'A()')
         self.assertTrue(w2.run())
 
         self.assertFalse(a.complete())
@@ -537,11 +537,11 @@ class WorkerEmailTest(EmailTest):
             pass
 
         a = A()
-        self.assertEquals(self.last_email, None)
+        self.assertEqual(self.last_email, None)
         worker.add(a)
-        self.assertEquals(self.waits, 2)  # should attempt to add it 3 times
+        self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
         self.assertNotEquals(self.last_email, None)
-        self.assertEquals(self.last_email[0], "Luigi: Framework error while scheduling %s" % (a,))
+        self.assertEqual(self.last_email[0], "Luigi: Framework error while scheduling %s" % (a,))
         worker.stop()
 
     @with_config(EMAIL_CONFIG)
@@ -551,11 +551,11 @@ class WorkerEmailTest(EmailTest):
                 raise Exception("b0rk")
 
         a = A()
-        self.assertEquals(self.last_email, None)
+        self.assertEqual(self.last_email, None)
         self.worker.add(a)
-        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
         self.worker.run()
-        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
         self.assertFalse(a.has_run)
 
     @with_config(EMAIL_CONFIG)
@@ -565,11 +565,11 @@ class WorkerEmailTest(EmailTest):
                 pass  # no return value should be an error
 
         a = A()
-        self.assertEquals(self.last_email, None)
+        self.assertEqual(self.last_email, None)
         self.worker.add(a)
-        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
         self.worker.run()
-        self.assertEquals(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
         self.assertFalse(a.has_run)
 
     @with_config(EMAIL_CONFIG)
@@ -583,19 +583,19 @@ class WorkerEmailTest(EmailTest):
 
         a = A()
         self.worker.add(a)
-        self.assertEquals(self.last_email, None)
+        self.assertEqual(self.last_email, None)
         self.worker.run()
-        self.assertEquals(("Luigi: %s FAILED" % (a,)), self.last_email[0])
+        self.assertEqual(("Luigi: %s FAILED" % (a,)), self.last_email[0])
 
     def test_no_error(self):
         class A(DummyTask):
             pass
         a = A()
-        self.assertEquals(self.last_email, None)
+        self.assertEqual(self.last_email, None)
         self.worker.add(a)
-        self.assertEquals(self.last_email, None)
+        self.assertEqual(self.last_email, None)
         self.worker.run()
-        self.assertEquals(self.last_email, None)
+        self.assertEqual(self.last_email, None)
         self.assertTrue(a.complete())
 
 

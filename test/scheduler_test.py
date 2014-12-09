@@ -35,8 +35,8 @@ class SchedulerTest(unittest.TestCase):
                 state_path=fn.name)
             state.load()
 
-            self.assertEquals(set(state.get_worker_ids()),
-                              set(['Worker1', 'Worker2']))
+            self.assertEqual(set(state.get_worker_ids()),
+                             set(['Worker1', 'Worker2']))
 
     def test_load_broken_state(self):
         with tempfile.NamedTemporaryFile(delete=True) as fn:
@@ -47,7 +47,7 @@ class SchedulerTest(unittest.TestCase):
                 state_path=fn.name)
             state.load()  # bad if this crashes
 
-            self.assertEquals(list(state.get_worker_ids()), [])
+            self.assertEqual(list(state.get_worker_ids()), [])
 
 
 if __name__ == '__main__':

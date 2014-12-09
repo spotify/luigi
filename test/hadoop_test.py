@@ -131,7 +131,7 @@ class HadoopJobTest(unittest.TestCase):
     def test_run(self):
         luigi.build([WordCountJob()], local_scheduler=True)
         c = self.read_output(File('luigitest'))
-        self.assertEquals(int(c['jk']), 6)
+        self.assertEqual(int(c['jk']), 6)
 
     def test_run_2(self):
         luigi.build([WordFreqJob()], local_scheduler=True)
@@ -143,8 +143,8 @@ class HadoopJobTest(unittest.TestCase):
         c = []
         for line in File('luigitest-3').open('r'):
             c.append(line.strip())
-        self.assertEquals(c[0], 'kj')
-        self.assertEquals(c[4], 'ljoi')
+        self.assertEqual(c[0], 'kj')
+        self.assertEqual(c[4], 'ljoi')
 
     def test_unicode_job(self):
         luigi.build([UnicodeJob()], local_scheduler=True)
@@ -153,9 +153,9 @@ class HadoopJobTest(unittest.TestCase):
             c.append(line)
         # Make sure unicode('test') isnt grouped with str('test')
         # Since this is what happens when running on cluster
-        self.assertEquals(len(c), 2)
-        self.assertEquals(c[0], "test\t2\n")
-        self.assertEquals(c[0], "test\t2\n")
+        self.assertEqual(len(c), 2)
+        self.assertEqual(c[0], "test\t2\n")
+        self.assertEqual(c[0], "test\t2\n")
 
 
     def test_run_hadoop_job_failure(self):
@@ -185,8 +185,8 @@ class HadoopJobTest(unittest.TestCase):
         try:
             luigi.hadoop.run_and_track_hadoop_job([])
         except luigi.hadoop.HadoopJobError as e:
-            self.assertEquals(e.out, 'stdout')
-            self.assertEquals(e.err, 'stderr')
+            self.assertEqual(e.out, 'stdout')
+            self.assertEqual(e.err, 'stderr')
         else:
             self.fail("Should have thrown HadoopJobError")
         finally:
@@ -216,8 +216,8 @@ class HadoopJobTest(unittest.TestCase):
         try:
             MockFile.move = lambda *args, **kwargs: None
             WordCountJobReal().run()
-            self.assertEquals(len(arglist_result), 1)
-            self.assertEquals(arglist_result[0][0:3], ['hadoop', 'jar', 'test.jar'])
+            self.assertEqual(len(arglist_result), 1)
+            self.assertEqual(arglist_result[0][0:3], ['hadoop', 'jar', 'test.jar'])
         finally:
             luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
 
@@ -259,7 +259,7 @@ class MrrunnerTest(unittest.TestCase):
             output = StringIO.StringIO()
             luigi.mrrunner.main(args=['mrrunner.py', 'map'], stdin=input, stdout=output, print_exception=print_exception)
         self.assertRaises(FailingJobException, run)        
-        self.assertEquals(len(excs), 1) # should have been set
+        self.assertEqual(len(excs), 1) # should have been set
         self.assertTrue(type(excs[0]), FailingJobException)
 
 class CreatePackagesArchive(unittest.TestCase):

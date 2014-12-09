@@ -26,16 +26,16 @@ class CmdlineTest(unittest.TestCase):
         interface = luigi.interface.DynamicArgParseInterface()
         tasks = interface.parse(['--module', 'foo_module', 'FooTask', '--blah', 'xyz', '--x', '123'])
 
-        self.assertEquals(ExtraArgs().blah, 'xyz')
+        self.assertEqual(ExtraArgs().blah, 'xyz')
 
-        self.assertEquals(len(tasks), 1)
+        self.assertEqual(len(tasks), 1)
 
         task, = tasks
-        self.assertEquals(task.x, 123)
+        self.assertEqual(task.x, 123)
 
         import foo_module
-        self.assertEquals(task.__class__, foo_module.FooTask)
-        self.assertEquals(task, foo_module.FooTask(x=123))
+        self.assertEqual(task.__class__, foo_module.FooTask)
+        self.assertEqual(task, foo_module.FooTask(x=123))
 
     def test_run(self):
         # TODO: this needs to run after the existing module, since by now foo_module is already imported

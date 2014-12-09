@@ -46,7 +46,7 @@ class TaskHistoryTest(unittest.TestCase):
         self.w.add(MyTask())
         self.w.run()
 
-        self.assertEquals(self.th.actions, [
+        self.assertEqual(self.th.actions, [
             ('scheduled', 'MyTask()'),
             ('started', 'MyTask()'),
             ('finished', 'MyTask()')

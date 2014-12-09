@@ -153,9 +153,9 @@ class CopyToIndexTest(unittest.TestCase):
         luigi.build([task], local_scheduler=True)
         self.assertTrue(self.es.indices.exists(task.index))
         self.assertTrue(task.complete())
-        self.assertEquals(1, self.es.count(index=task.index).get('count'))
-        self.assertEquals({u'date': u'today', u'name': u'sample'},
-                          self.es.get_source(index=task.index,
+        self.assertEqual(1, self.es.count(index=task.index).get('count'))
+        self.assertEqual({u'date': u'today', u'name': u'sample'},
+                         self.es.get_source(index=task.index,
                                         doc_type=task.doc_type, id=123))
 
     def test_copy_to_index_incrementally(self):
@@ -171,15 +171,15 @@ class CopyToIndexTest(unittest.TestCase):
         self.assertTrue(self.es.indices.exists(task2.index))
         self.assertTrue(task1.complete())
         self.assertTrue(task2.complete())
-        self.assertEquals(2, self.es.count(index=task1.index).get('count'))
-        self.assertEquals(2, self.es.count(index=task2.index).get('count'))
+        self.assertEqual(2, self.es.count(index=task1.index).get('count'))
+        self.assertEqual(2, self.es.count(index=task2.index).get('count'))
 
-        self.assertEquals({u'date': u'today', u'name': u'sample'},
-                          self.es.get_source(index=task1.index,
+        self.assertEqual({u'date': u'today', u'name': u'sample'},
+                         self.es.get_source(index=task1.index,
                                         doc_type=task1.doc_type, id=123))
 
-        self.assertEquals({u'date': u'today', u'name': u'another'},
-                          self.es.get_source(index=task2.index,
+        self.assertEqual({u'date': u'today', u'name': u'another'},
+                         self.es.get_source(index=task2.index,
                                         doc_type=task2.doc_type, id=234))
 
     def test_copy_to_index_purge_existing(self):
@@ -191,10 +191,10 @@ class CopyToIndexTest(unittest.TestCase):
         luigi.build([task3], local_scheduler=True)
         self.assertTrue(self.es.indices.exists(task3.index))
         self.assertTrue(task3.complete())
-        self.assertEquals(1, self.es.count(index=task3.index).get('count'))
+        self.assertEqual(1, self.es.count(index=task3.index).get('count'))
 
-        self.assertEquals({u'date': u'today', u'name': u'yet another'},
-                          self.es.get_source(index=task3.index,
+        self.assertEqual({u'date': u'today', u'name': u'yet another'},
+                         self.es.get_source(index=task3.index,
                                         doc_type=task3.doc_type, id=234))
 
 
@@ -222,14 +222,14 @@ class MarkerIndexTest(unittest.TestCase):
 
         result = self.es.count(index=MARKER_INDEX, doc_type=MARKER_DOC_TYPE,
                            body={'query': {'match_all': {}}})
-        self.assertEquals(1, result.get('count'))
+        self.assertEqual(1, result.get('count'))
 
         result = self.es.search(index=MARKER_INDEX, doc_type=MARKER_DOC_TYPE,
                            body={'query': {'match_all': {}}})
         marker_doc = result.get('hits').get('hits')[0].get('_source')
-        self.assertEquals('IndexingTask1()', marker_doc.get('update_id'))
-        self.assertEquals(INDEX, marker_doc.get('target_index'))
-        self.assertEquals(DOC_TYPE, marker_doc.get('target_doc_type'))
+        self.assertEqual('IndexingTask1()', marker_doc.get('update_id'))
+        self.assertEqual(INDEX, marker_doc.get('target_index'))
+        self.assertEqual(DOC_TYPE, marker_doc.get('target_doc_type'))
         self.assertTrue('date' in marker_doc)
 
         task2 = IndexingTask2()
@@ -237,7 +237,7 @@ class MarkerIndexTest(unittest.TestCase):
 
         result = self.es.count(index=MARKER_INDEX, doc_type=MARKER_DOC_TYPE,
                            body={'query': {'match_all': {}}})
-        self.assertEquals(2, result.get('count'))
+        self.assertEqual(2, result.get('count'))
 
 
         result = self.es.search(index=MARKER_INDEX, doc_type=MARKER_DOC_TYPE,
@@ -255,8 +255,8 @@ class MarkerIndexTest(unittest.TestCase):
         first = it.next()
         second = it.next()
         self.assertTrue(first.date < second.date)
-        self.assertEquals(first.update_id, 'IndexingTask1()')
-        self.assertEquals(second.update_id, 'IndexingTask2()')
+        self.assertEqual(first.update_id, 'IndexingTask1()')
+        self.assertEqual(second.update_id, 'IndexingTask2()')
 
 
 class IndexingTask4(CopyToTestIndex):
@@ -296,9 +296,9 @@ class IndexHistSizeTest(unittest.TestCase):
 
         result = self.es.count(index=MARKER_INDEX, doc_type=MARKER_DOC_TYPE,
                           body={'query': {'match_all': {}}})
-        self.assertEquals(1, result.get('count'))
+        self.assertEqual(1, result.get('count'))
         marker_index_document_id = task4_3.output().marker_index_document_id()
         result = self.es.get(id=marker_index_document_id, index=MARKER_INDEX,
                         doc_type=MARKER_DOC_TYPE)
-        self.assertEquals('IndexingTask4(date=2002-01-01)',
+        self.assertEqual('IndexingTask4(date=2002-01-01)',
                           result.get('_source').get('update_id'))

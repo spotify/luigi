@@ -49,4 +49,4 @@ class RecursionTest(unittest.TestCase):
         w.run()
         w.stop()
 
-        self.assertEquals(MockFile.fs.get_data('/tmp/popularity/2010-01-01.txt'), '365\n')
+        self.assertEqual(MockFile.fs.get_data('/tmp/popularity/2010-01-01.txt'), '365\n')

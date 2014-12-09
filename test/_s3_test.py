@@ -85,7 +85,7 @@ class TestS3Target(unittest.TestCase):
         t = S3Target('s3://mybucket/tempfile', client=client)
         read_file = t.open()
         file_str = read_file.read()
-        self.assertEquals(self.tempFileContents, file_str)
+        self.assertEqual(self.tempFileContents, file_str)
 
     @mock_s3
     def test_read_no_file(self):
@@ -112,10 +112,10 @@ class TestS3Target(unittest.TestCase):
         t = S3Target('s3://mybucket/largetempfile', client=client)
         with t.open() as read_file:
             lines = [line for line in read_file]
-        self.assertEquals(3, len(lines))
-        self.assertEquals(firstline, lines[0])
-        self.assertEquals("line two" + os.linesep, lines[1])
-        self.assertEquals("line three", lines[2])
+        self.assertEqual(3, len(lines))
+        self.assertEqual(firstline, lines[0])
+        self.assertEqual("line two" + os.linesep, lines[1])
+        self.assertEqual("line three", lines[2])
 
     @mock_s3
     def test_write_cleanup_no_close(self):
@@ -357,7 +357,7 @@ class TestS3Client(unittest.TestCase):
         # b/c of https://github.com/spulec/moto/issues/131 have to 
         # get contents to check size
         key_contents = s3_client.get_key(s3_path).get_contents_as_string()
-        self.assertEquals(len(file_contents), len(key_contents))
+        self.assertEqual(len(file_contents), len(key_contents))
 
         tmp_file.close()
 
