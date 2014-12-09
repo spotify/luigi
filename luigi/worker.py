@@ -343,13 +343,13 @@ class Worker(object):
             logger.exception('Exception adding worker - scheduler might be running an older version')
 
     def _log_remote_tasks(self, running_tasks, n_pending_tasks):
-        logger.info("Done")
-        logger.info("There are no more tasks to run at this time")
+        logger.debug("Done")
+        logger.debug("There are no more tasks to run at this time")
         if running_tasks:
             for r in running_tasks:
-                logger.info('%s is currently run by worker %s', r['task_id'], r['worker'])
+                logger.debug('%s is currently run by worker %s', r['task_id'], r['worker'])
         elif n_pending_tasks:
-            logger.info("There are %s pending tasks possibly being run by other workers", n_pending_tasks)
+            logger.debug("There are %s pending tasks possibly being run by other workers", n_pending_tasks)
 
     def _get_work(self):
         logger.debug("Asking scheduler for work...")
