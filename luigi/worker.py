@@ -195,21 +195,21 @@ class Worker(object):
 
         if keep_alive is None:
             keep_alive = config.getboolean('core', 'worker-keep-alive', False)
-        self.__keep_alive = keep_alive
+        self.keep_alive = keep_alive
 
         # worker-count-uniques means that we will keep a worker alive only if it has a unique
         # pending task, as well as having keep-alive true
         if count_uniques is None:
             count_uniques = config.getboolean('core', 'worker-count-uniques', False)
-        self.__count_uniques = count_uniques
+        self._count_uniques = count_uniques
 
         if wait_interval is None:
             wait_interval = config.getint('core', 'worker-wait-interval', 1)
-        self.__wait_interval = wait_interval
+        self._wait_interval = wait_interval
 
         if max_reschedules is None:
             max_reschedules = config.getint('core', 'max-reschedules', 1)
-        self.__max_reschedules = max_reschedules
+        self._max_reschedules = max_reschedules
 
         self._id = worker_id
         self._scheduler = scheduler
@@ -507,7 +507,7 @@ class Worker(object):
             try:
                 task_id, status, error_message, missing, new_requirements = (
                     self._task_result_queue.get(
-                        timeout=float(self.__wait_interval)))
+                        timeout=float(self._wait_interval)))
             except Queue.Empty:
                 return
 
@@ -546,7 +546,7 @@ class Worker(object):
                 for task_id in missing:
                     self.unfulfilled_counts[task.task_id] += 1
                     if (self.unfulfilled_counts[task.task_id] >
-                            self.__max_reschedules):
+                            self._max_reschedules):
                         reschedule = False
                 if reschedule:
                     self.add(task)
@@ -557,7 +557,7 @@ class Worker(object):
     def _sleeper(self):
         # TODO is exponential backoff necessary?
         while True:
-            wait_interval = self.__wait_interval + random.randint(1, 5)
+            wait_interval = self._wait_interval + random.randint(1, 5)
             logger.debug('Sleeping for %d seconds', wait_interval)
             time.sleep(wait_interval)
             yield
@@ -569,8 +569,8 @@ class Worker(object):
         true for nonzero n_pending_tasks. If worker-count-uniques is true, it will also
         require that one of the tasks is unique to this worker.
         """
-        return (self.__keep_alive and n_pending_tasks
-                and (n_unique_pending or not self.__count_uniques))
+        return (self.keep_alive and n_pending_tasks
+                and (n_unique_pending or not self._count_uniques))
 
     def run(self):
         """Returns True if all scheduled tasks were executed successfully"""
