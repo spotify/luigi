@@ -62,6 +62,15 @@ SchedulerConfig = collections.namedtuple('SchedulerConfig', [
         'disable_failures', 'disable_window', 'disable_persist', 'disable_time'])
 
 
+def fix_time(x):
+    # Backwards compatibility for a fix in Dec 2014. Prior to the fix, pickled state might store datetime objects
+    # Let's remove this function soon
+    if isinstance(x, datetime.datetime):
+        return time.mktime(d.timetuple())
+    else:
+        return x
+
+
 class Failures(object):
     """ This class tracks the number of failures in a given time window
 
@@ -73,20 +82,22 @@ class Failures(object):
     def __init__(self, window):
         """ Initialize with the given window
 
-        :param window: how long to track failures for, as a datetime.timedelta
+        :param window: how long to track failures for, as a float (number of seconds)
         """
         self.window = window
         self.failures = collections.deque()
 
     def add_failure(self):
         """ Add a failure event with the current timestamp """
-        self.failures.append(datetime.datetime.now())
+        self.failures.append(time.time())
 
     def num_failures(self):
         """ Return the number of failures in the window """
-        min_time = datetime.datetime.now() - self.window
-        while self.failures and self.failures[0] < min_time:
+        min_time = time.time() - self.window
+
+        while self.failures and fix_time(self.failures[0]) < min_time:
             self.failures.popleft()
+
         return len(self.failures)
 
     def clear(self):
@@ -155,7 +166,7 @@ class Task(object):
         if new_status == FAILED and self.can_disable():
             self.add_failure()
             if self.has_excessive_failures():
-                self.scheduler_disable_time = datetime.datetime.now()
+                self.scheduler_disable_time = time.time()
                 new_status = DISABLED
                 notifications.send_error_email(
                     'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=self.id),
@@ -189,7 +200,7 @@ class Task(object):
 
         # Re-enable task after the disable time expires
         if self.status == DISABLED and self.scheduler_disable_time:
-            if datetime.datetime.now() - self.scheduler_disable_time > config.disable_time:
+            if time.time() - fix_time(self.scheduler_disable_time) > config.disable_time:
                 self.re_enable()
 
         # Remove tasks that have no stakeholders
@@ -347,7 +358,7 @@ class CentralPlannerScheduler(Scheduler):
             disable_failures=disable_failures,
             disable_window=disable_window,
             disable_persist=disable_persist,
-            disable_time=datetime.timedelta(seconds=disable_persist))
+            disable_time=disable_persist)
 
         self._task_history = task_history or history.NopHistory()
         self._state = SimpleTaskState(state_path)
@@ -356,7 +367,7 @@ class CentralPlannerScheduler(Scheduler):
         self._resources = resources
         self._make_task = functools.partial(
             Task, disable_failures=disable_failures,
-            disable_window=datetime.timedelta(seconds=disable_window))
+            disable_window=disable_window)
 
     def load(self):
         self._state.load()
