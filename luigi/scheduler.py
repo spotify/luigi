@@ -59,8 +59,7 @@ STATUS_TO_UPSTREAM_MAP = {
 # We're passing around this config a lot, so let's put it on an object
 SchedulerConfig = collections.namedtuple('SchedulerConfig', [
         'retry_delay', 'remove_delay', 'worker_disconnect_delay',
-        'disable_failures', 'disable_window', 'disable_persist', 'disable_time'],
-                                         verbose=True)
+        'disable_failures', 'disable_window', 'disable_persist', 'disable_time'])
 
 
 class Failures(object):
@@ -137,7 +136,7 @@ class Task(object):
         self.status = FAILED
         self.failures.clear()
 
-    def set_status(self, new_status, disable_failures=None, disable_window=None, disable_persist=None):
+    def set_status(self, new_status, config):
         # not sure why we have SUSPENDED, as it can never be set
         if new_status == SUSPENDED:
             new_status = PENDING
@@ -162,36 +161,35 @@ class Task(object):
                     'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=self.id),
                     '{task} failed {failures} times in the last {window} seconds, so it is being '
                     'disabled for {persist} seconds'.format(
-                        failures=disable_failures,
+                        failures=config.disable_failures,
                         task=self.id,
-                        window=disable_window,
-                        persist=disable_persist,
+                        window=config.disable_window,
+                        persist=config.disable_persist,
                         ))
         elif new_status == DISABLED:
             self.scheduler_disable_time = None
 
         self.status = new_status
 
-    def prune(self, remove_delay, retry_delay, disable_time,
-              disable_failures, disable_window, disable_persist):
+    def prune(self, config):
         remove = False
 
         # Mark tasks with no remaining active stakeholders for deletion
         if not self.stakeholders:
             if self.remove is None:
-                logger.info("Task %r has stakeholders %r but none remain connected -> will remove task in %s seconds", self.id, self.stakeholders, remove_delay)
-                self.remove = time.time() + remove_delay
+                logger.info("Task %r has stakeholders %r but none remain connected -> will remove task in %s seconds", self.id, self.stakeholders, config.remove_delay)
+                self.remove = time.time() + config.remove_delay
 
         # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
         if self.status == RUNNING and self.worker_running and self.worker_running not in self.stakeholders:
-            logger.info("Task %r is marked as running by disconnected worker %r -> marking as FAILED with retry delay of %rs", self.id, self.worker_running, retry_delay)
+            logger.info("Task %r is marked as running by disconnected worker %r -> marking as FAILED with retry delay of %rs", self.id, self.worker_running, config.retry_delay)
             self.worker_running = None
-            self.set_status(FAILED, disable_failures, disable_window, disable_persist)
-            self.retry = time.time() + retry_delay
+            self.set_status(FAILED, config)
+            self.retry = time.time() + config.retry_delay
 
         # Re-enable task after the disable time expires
         if self.status == DISABLED and self.scheduler_disable_time:
-            if datetime.datetime.now() - self.scheduler_disable_time > disable_time:
+            if datetime.datetime.now() - self.scheduler_disable_time > config.disable_time:
                 self.re_enable()
 
         # Remove tasks that have no stakeholders
@@ -200,8 +198,8 @@ class Task(object):
             remove = True
 
         # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
-        if self.status == FAILED and retry_delay >= 0 and self.retry < time.time():
-            self.set_status(PENDING)
+        if self.status == FAILED and config.retry_delay >= 0 and self.retry < time.time():
+            self.set_status(PENDING, config)
 
         return remove
 
@@ -223,9 +221,9 @@ class Worker(object):
             self.reference = worker_reference
         self.last_active = time.time()
 
-    def prune(self, worker_disconnect_delay):
+    def prune(self, config):
         # Delete workers that haven't said anything for a while (probably killed)
-        if self.last_active + worker_disconnect_delay < time.time():
+        if self.last_active + config.worker_disconnect_delay < time.time():
             return True
 
     def __str__(self):
@@ -370,7 +368,7 @@ class CentralPlannerScheduler(Scheduler):
         logger.info("Starting pruning of task graph")
         remove_workers = []
         for worker in self._state.get_active_workers():
-            if worker.prune(self._config.worker_disconnect_delay):
+            if worker.prune(self._config):
                 logger.info("Worker %s timed out (no contact for >=%ss)", worker, self._config.worker_disconnect_delay)
                 remove_workers.append(worker.id)
 
@@ -378,8 +376,7 @@ class CentralPlannerScheduler(Scheduler):
 
         remove_tasks = []
         for task in self._state.get_active_tasks():
-            if task.prune(self._config.remove_delay, self._config.retry_delay, self._config.disable_time,
-                          self._config.disable_failures, self._config.disable_window, self._config.disable_persist):
+            if task.prune(self._config):
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)
@@ -435,8 +432,7 @@ class CentralPlannerScheduler(Scheduler):
                 # We also check for status == PENDING b/c that's the default value
                 # (so checking for status != task.status woule lie)
                 self._update_task_history(task_id, status)
-            task.set_status(PENDING if status == SUSPENDED else status,
-                            self._config.disable_failures, self._config.disable_window, self._config.disable_persist)
+            task.set_status(PENDING if status == SUSPENDED else status, self._config)
             if status == FAILED:
                 task.retry = time.time() + self._config.retry_delay
 
