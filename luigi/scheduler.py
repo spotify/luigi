@@ -316,8 +316,7 @@ class CentralPlannerScheduler(Scheduler):
                 logger.info("Removing task %r (no connected stakeholders)", task.id)
                 remove_tasks.append(task.id)
 
-        # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
-        for task in self._state.get_active_tasks():
+            # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
             if task.status == FAILED and self._retry_delay >= 0 and task.retry < time.time():
                 self.set_status(task, PENDING)
 
