@@ -130,6 +130,42 @@ class Task(object):
         self.status = FAILED
         self.failures.clear()
 
+    def set_status(self, new_status, disable_failures=None, disable_window=None, disable_persist=None):
+        # not sure why we have SUSPENDED, as it can never be set
+        if new_status == SUSPENDED:
+            new_status = PENDING
+
+        if new_status == DISABLED and self.status == RUNNING:
+            return
+
+        if self.status == DISABLED:
+            if new_status == DONE:
+                self.re_enable()
+
+            # don't allow workers to override a scheduler disable
+            elif self.scheduler_disable_time is not None:
+                return
+
+        if new_status == FAILED and self.can_disable():
+            self.add_failure()
+            if self.has_excessive_failures():
+                self.scheduler_disable_time = datetime.datetime.now()
+                new_status = DISABLED
+                notifications.send_error_email(
+                    'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=self.id),
+                    '{task} failed {failures} times in the last {window} seconds, so it is being '
+                    'disabled for {persist} seconds'.format(
+                        failures=disable_failures,
+                        task=self.id,
+                        window=disable_window,
+                        persist=disable_persist,
+                        ))
+        elif new_status == DISABLED:
+            self.scheduler_disable_time = None
+
+        self.status = new_status
+
+
 
 class Worker(object):
     """ Structure for tracking worker activity and keeping their references """
@@ -303,7 +339,7 @@ class CentralPlannerScheduler(Scheduler):
             if task.status == RUNNING and task.worker_running and task.worker_running not in task.stakeholders:
                 logger.info("Task %r is marked as running by disconnected worker %r -> marking as FAILED with retry delay of %rs", task.id, task.worker_running, self._retry_delay)
                 task.worker_running = None
-                self.set_status(task, FAILED)
+                task.set_status(FAILED, self._disable_failures, self._disable_window, self._disable_persist)
                 task.retry = time.time() + self._retry_delay
 
             if task.status == DISABLED and task.scheduler_disable_time:
@@ -318,46 +354,11 @@ class CentralPlannerScheduler(Scheduler):
 
             # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
             if task.status == FAILED and self._retry_delay >= 0 and task.retry < time.time():
-                self.set_status(task, PENDING)
+                task.set_status(PENDING)
 
         self._state.inactivate_tasks(remove_tasks)
 
         logger.info("Done pruning task graph")
-
-    def set_status(self, task, new_status):
-        # not sure why we have SUSPENDED, as it can never be set
-        if new_status == SUSPENDED:
-            new_status = PENDING
-
-        if new_status == DISABLED and task.status == RUNNING:
-            return
-
-        if task.status == DISABLED:
-            if new_status == DONE:
-                task.re_enable()
-
-            # don't allow workers to override a scheduler disable
-            elif task.scheduler_disable_time is not None:
-                return
-
-        if new_status == FAILED and task.can_disable():
-            task.add_failure()
-            if task.has_excessive_failures():
-                task.scheduler_disable_time = datetime.datetime.now()
-                new_status = DISABLED
-                notifications.send_error_email(
-                    'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
-                    '{task} failed {failures} times in the last {window} seconds, so it is being '
-                    'disabled for {persist} seconds'.format(
-                        failures=self._disable_failures,
-                        task=task.id,
-                        window=self._disable_window,
-                        persist=self._disable_persist,
-                        ))
-        elif new_status == DISABLED:
-            task.scheduler_disable_time = None
-
-        task.status = new_status
 
     def update(self, worker_id, worker_reference=None):
         """ Keep track of whenever the worker was last active """
@@ -410,7 +411,8 @@ class CentralPlannerScheduler(Scheduler):
                 # We also check for status == PENDING b/c that's the default value
                 # (so checking for status != task.status woule lie)
                 self._update_task_history(task_id, status)
-            self.set_status(task, PENDING if status == SUSPENDED else status)
+            task.set_status(PENDING if status == SUSPENDED else status,
+                            self._disable_failures, self._disable_window, self._disable_persist)
             if status == FAILED:
                 task.retry = time.time() + self._retry_delay
 
