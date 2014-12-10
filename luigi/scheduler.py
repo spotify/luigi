@@ -211,6 +211,11 @@ class Worker(object):
     def add_info(self, info):
         self.info.update(info)
 
+    def update(self, worker_reference):
+        if worker_reference:
+            self.reference = worker_reference
+        self.last_active = time.time()
+
     def __str__(self):
         return self.id
 
@@ -370,9 +375,7 @@ class CentralPlannerScheduler(Scheduler):
     def update(self, worker_id, worker_reference=None):
         """ Keep track of whenever the worker was last active """
         worker = self._state.get_worker(worker_id)
-        if worker_reference:
-            worker.reference = worker_reference
-        worker.last_active = time.time()
+        worker.update(worker_reference)
 
     def _update_priority(self, task, prio, worker):
         """ Update priority of the given task
