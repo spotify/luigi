@@ -165,6 +165,38 @@ class Task(object):
 
         self.status = new_status
 
+    def prune(self, remove_delay, retry_delay, disable_time,
+              disable_failures, disable_window, disable_persist):
+        remove = False
+
+        # Mark tasks with no remaining active stakeholders for deletion
+        if not self.stakeholders:
+            if self.remove is None:
+                logger.info("Task %r has stakeholders %r but none remain connected -> will remove task in %s seconds", self.id, self.stakeholders, remove_delay)
+                self.remove = time.time() + remove_delay
+
+        # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
+        if self.status == RUNNING and self.worker_running and self.worker_running not in self.stakeholders:
+            logger.info("Task %r is marked as running by disconnected worker %r -> marking as FAILED with retry delay of %rs", self.id, self.worker_running, retry_delay)
+            self.worker_running = None
+            self.set_status(FAILED, disable_failures, disable_window, disable_persist)
+            self.retry = time.time() + retry_delay
+
+        # Re-enable task after the disable time expires
+        if self.status == DISABLED and self.scheduler_disable_time:
+            if datetime.datetime.now() - self.scheduler_disable_time > disable_time:
+                self.re_enable()
+
+        # Remove tasks that have no stakeholders
+        if self.remove and time.time() > self.remove:
+            logger.info("Removing task %r (no connected stakeholders)", self.id)
+            remove = True
+
+        # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
+        if self.status == FAILED and retry_delay >= 0 and self.retry < time.time():
+            self.set_status(PENDING)
+
+        return remove
 
 
 class Worker(object):
@@ -315,39 +347,6 @@ class CentralPlannerScheduler(Scheduler):
     def dump(self):
         self._state.dump()
 
-    def prune_task(self, task):
-        remove = False
-
-        # Mark tasks with no remaining active stakeholders for deletion
-        if not task.stakeholders:
-            if task.remove is None:
-                logger.info("Task %r has stakeholders %r but none remain connected -> will remove task in %s seconds", task.id, task.stakeholders, self._remove_delay)
-                task.remove = time.time() + self._remove_delay
-
-        # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
-        if task.status == RUNNING and task.worker_running and task.worker_running not in task.stakeholders:
-            logger.info("Task %r is marked as running by disconnected worker %r -> marking as FAILED with retry delay of %rs", task.id, task.worker_running, self._retry_delay)
-            task.worker_running = None
-            task.set_status(FAILED, self._disable_failures, self._disable_window, self._disable_persist)
-            task.retry = time.time() + self._retry_delay
-
-        # Re-enable task after the disable time expires
-        if task.status == DISABLED and task.scheduler_disable_time:
-            if datetime.datetime.now() - task.scheduler_disable_time > self._disable_time:
-                task.re_enable()
-
-        # Remove tasks that have no stakeholders
-        if task.remove and time.time() > task.remove:
-            logger.info("Removing task %r (no connected stakeholders)", task.id)
-            remove = True
-
-        # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
-        if task.status == FAILED and self._retry_delay >= 0 and task.retry < time.time():
-            task.set_status(PENDING)
-
-        return remove
-
-
     def prune(self):
         logger.info("Starting pruning of task graph")
         # Delete workers that haven't said anything for a while (probably killed)
@@ -360,7 +359,8 @@ class CentralPlannerScheduler(Scheduler):
 
         remove_tasks = []
         for task in self._state.get_active_tasks():
-            if self.prune_task(task):
+            if task.prune(self._remove_delay, self._retry_delay, self._disable_time,
+                          self._disable_failures, self._disable_window, self._disable_persist):
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)
