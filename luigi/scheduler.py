@@ -216,6 +216,11 @@ class Worker(object):
             self.reference = worker_reference
         self.last_active = time.time()
 
+    def prune(self, worker_disconnect_delay):
+        # Delete workers that haven't said anything for a while (probably killed)
+        if self.last_active + worker_disconnect_delay < time.time():
+            return True
+
     def __str__(self):
         return self.id
 
@@ -354,13 +359,13 @@ class CentralPlannerScheduler(Scheduler):
 
     def prune(self):
         logger.info("Starting pruning of task graph")
-        # Delete workers that haven't said anything for a while (probably killed)
-        delete_workers = []
-        for worker in self._state.get_active_workers(last_active_lt=time.time() - self._worker_disconnect_delay):
-            logger.info("Worker %s timed out (no contact for >=%ss)", worker, self._worker_disconnect_delay)
-            delete_workers.append(worker.id)
+        remove_workers = []
+        for worker in self._state.get_active_workers():
+            if worker.prune(self._worker_disconnect_delay):
+                logger.info("Worker %s timed out (no contact for >=%ss)", worker, self._worker_disconnect_delay)
+                remove_workers.append(worker.id)
 
-        self._state.inactivate_workers(delete_workers)
+        self._state.inactivate_workers(remove_workers)
 
         remove_tasks = []
         for task in self._state.get_active_tasks():
