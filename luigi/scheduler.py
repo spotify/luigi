@@ -56,6 +56,13 @@ STATUS_TO_UPSTREAM_MAP = {
 }
 
 
+# We're passing around this config a lot, so let's put it on an object
+SchedulerConfig = collections.namedtuple('SchedulerConfig', [
+        'retry_delay', 'remove_delay', 'worker_disconnect_delay',
+        'disable_failures', 'disable_window', 'disable_persist', 'disable_time'],
+                                         verbose=True)
+
+
 class Failures(object):
     """ This class tracks the number of failures in a given time window
 
@@ -335,21 +342,23 @@ class CentralPlannerScheduler(Scheduler):
         state_path -- Path to state file (tasks and active workers)
         worker_disconnect_delay -- If a worker hasn't communicated for this long, remove it from active workers
         '''
-        self._retry_delay = retry_delay
-        self._remove_delay = remove_delay
-        self._worker_disconnect_delay = worker_disconnect_delay
+        self._config = SchedulerConfig(
+            retry_delay=retry_delay,
+            remove_delay=remove_delay,
+            worker_disconnect_delay=worker_disconnect_delay,
+            disable_failures=disable_failures,
+            disable_window=disable_window,
+            disable_persist=disable_persist,
+            disable_time=datetime.timedelta(seconds=disable_persist))
+
         self._task_history = task_history or history.NopHistory()
         self._state = SimpleTaskState(state_path)
 
         self._task_history = task_history or history.NopHistory()
         self._resources = resources
-        self._disable_failures = disable_failures
-        self._disable_window = disable_window
         self._make_task = functools.partial(
             Task, disable_failures=disable_failures,
             disable_window=datetime.timedelta(seconds=disable_window))
-        self._disable_persist = disable_persist
-        self._disable_time = datetime.timedelta(seconds=disable_persist)
 
     def load(self):
         self._state.load()
@@ -361,16 +370,16 @@ class CentralPlannerScheduler(Scheduler):
         logger.info("Starting pruning of task graph")
         remove_workers = []
         for worker in self._state.get_active_workers():
-            if worker.prune(self._worker_disconnect_delay):
-                logger.info("Worker %s timed out (no contact for >=%ss)", worker, self._worker_disconnect_delay)
+            if worker.prune(self._config.worker_disconnect_delay):
+                logger.info("Worker %s timed out (no contact for >=%ss)", worker, self._config.worker_disconnect_delay)
                 remove_workers.append(worker.id)
 
         self._state.inactivate_workers(remove_workers)
 
         remove_tasks = []
         for task in self._state.get_active_tasks():
-            if task.prune(self._remove_delay, self._retry_delay, self._disable_time,
-                          self._disable_failures, self._disable_window, self._disable_persist):
+            if task.prune(self._config.remove_delay, self._config.retry_delay, self._config.disable_time,
+                          self._config.disable_failures, self._config.disable_window, self._config.disable_persist):
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)
@@ -427,9 +436,9 @@ class CentralPlannerScheduler(Scheduler):
                 # (so checking for status != task.status woule lie)
                 self._update_task_history(task_id, status)
             task.set_status(PENDING if status == SUSPENDED else status,
-                            self._disable_failures, self._disable_window, self._disable_persist)
+                            self._config.disable_failures, self._config.disable_window, self._config.disable_persist)
             if status == FAILED:
-                task.retry = time.time() + self._retry_delay
+                task.retry = time.time() + self._config.retry_delay
 
         if deps is not None:
             task.deps = set(deps)
