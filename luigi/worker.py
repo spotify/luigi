@@ -512,9 +512,9 @@ class Worker(object):
                 return
 
             task = self._scheduled_tasks[task_id]
-            if not task:
+            if not task or task_id not in self._running_tasks:
                 continue
-                # Not a scheduled task. Probably already removed.
+                # Not a running task. Probably already removed.
                 # Maybe it yielded something?
             new_deps = []
             if new_requirements:
