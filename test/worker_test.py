@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import shutil
 import time
 from luigi.scheduler import CentralPlannerScheduler
 import luigi.worker
@@ -239,14 +240,18 @@ class WorkerTest(unittest.TestCase):
                         for line in d.open('r'):
                             print >>f, '%d: %s' % (i, line.strip())
 
-        t = DynamicRequires(p=tempfile.mktemp())
-        luigi.build([t], local_scheduler=True)
-        self.assertTrue(t.complete())
+        p = tempfile.mkdtemp()
+        try:
+            t = DynamicRequires(p=p)
+            luigi.build([t], local_scheduler=True)
+            self.assertTrue(t.complete())
 
-        # loop through output and verify
-        f = t.output().open('r')
-        for i in xrange(7):
-            self.assertEqual(f.readline().strip(), '%d: Done!' % i)
+            # loop through output and verify
+            f = t.output().open('r')
+            for i in xrange(7):
+                self.assertEqual(f.readline().strip(), '%d: Done!' % i)
+        finally:
+            shutil.rmtree(p)
 
     def test_avoid_infinite_reschedule(self):
         class A(Task):
