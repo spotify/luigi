@@ -1,6 +1,7 @@
 function visualiserApp(luigi) {
     var templates = {};
     var invertDependencies = false;
+    var typingTimer = 0;
 
     function loadTemplates() {
         $("script[type='text/template']").each(function(i, element) {
@@ -25,11 +26,11 @@ function visualiserApp(luigi) {
         var taskParams = taskIdParts[2];
         var displayTime = new Date(Math.floor(task.start_time*1000)).toLocaleString();
         if (task.status == "RUNNING" && "time_running" in task) {
-            var current_time = new Date().getTime()
-            var minutes_running = Math.round((current_time - task.time_running * 1000) / 1000 / 60)
-            displayTime += " | " + minutes_running + " minutes"
+            var current_time = new Date().getTime();
+            var minutes_running = Math.round((current_time - task.time_running * 1000) / 1000 / 60);
+            displayTime += " | " + minutes_running + " minutes";
             if (showWorker && "worker_running" in task) {
-              displayTime += " (" + task.worker_running + ")"
+              displayTime += " (" + task.worker_running + ")";
             }
         }
         return {
@@ -118,8 +119,8 @@ function visualiserApp(luigi) {
                       $("#graphContainer").show();
                       bindGraphEvents();
                     } else {
-                      $("#searchError").addClass("alert alert-error")
-                      $("#searchError").append("Couldn't find task " + taskId)
+                      $("#searchError").addClass("alert alert-error");
+                      $("#searchError").append("Couldn't find task " + taskId);
                     }
                 }
                 if (invertDependencies) {
@@ -187,10 +188,61 @@ function visualiserApp(luigi) {
         $(id).append(renderTasks(tasks));
         $(id).prev("h3").append(" (" + tasks.length + ")");
         bindTaskEvents(id, expand);
+        filterTasks();
+    }
+
+    function filterTasks() {
+        inputVal = $('#filter-input').val();
+        if (inputVal) {
+            arr = inputVal.split(" ");
+            // hide all columns first
+            $('#taskList .taskRow').addClass('hidden');
+            $('#taskList .taskRow').parent().parent().addClass('hidden');
+
+            // unhide columns that matches filter
+            attrSelector = arr.map(function(a) {
+                return a ? '[data-task-id*=' + a + ']' : '';
+            }).join("");
+            selector = '.taskRow' + attrSelector;
+            $(selector).removeClass('hidden');
+            $(selector).parent().parent().removeClass('hidden');
+        } else {
+            $('#taskList .taskRow').removeClass('hidden');
+            $('#taskList .taskRow').parent().parent().removeClass('hidden');
+        }
+
+        updateCount();
+    }
+
+    function updateCount() {
+        taskGroups = $('#taskList .taskGroup');
+        for (i=0; i<taskGroups.length; i++) {
+            groupCount = 0;
+
+            // update each task family
+            taskFamilies = $(taskGroups[i]).find('.taskFamily:visible');
+            for (j=0; j<taskFamilies.length; j++) {
+                cnt = $(taskFamilies[j]).find('.taskRow:not(.hidden)').length;
+                groupCount += cnt;
+                node = $(taskFamilies[j]).find(".badge-important");
+                node.text(cnt);
+            }
+
+            // update task group
+            newText = $(taskGroups[i]).find('h3').text().replace(/\d+/, groupCount);
+            $(taskGroups[i]).find('h3').text(newText);
+        }
     }
 
     $(document).ready(function() {
         loadTemplates();
+
+        $('#filter-input').bind("keyup paste", function() {
+            clearTimeout(typingTimer);
+            if ($('#filter-input').val) {
+                typingTimer = setTimeout(filterTasks, 300);
+            }
+        });
 
         luigi.getWorkerList(function(workers) {
             $("#workerList").append(renderWorkers(workers));
