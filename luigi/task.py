@@ -568,7 +568,7 @@ class Task(object):
 def externalize(task):
     """Returns an externalized version of the Task.
 
-    See py:class:`ExternalTask`.
+    See :py:class:`ExternalTask`.
     """
     task.run = NotImplemented
     return task
