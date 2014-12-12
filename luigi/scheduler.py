@@ -66,7 +66,7 @@ def fix_time(x):
     # Backwards compatibility for a fix in Dec 2014. Prior to the fix, pickled state might store datetime objects
     # Let's remove this function soon
     if isinstance(x, datetime.datetime):
-        return time.mktime(d.timetuple())
+        return time.mktime(x.timetuple())
     else:
         return x
 
