@@ -268,6 +268,41 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(self.w.add(B()))
         self.assertFalse(self.w.run())
 
+    def test_allow_reschedule_with_many_missing_deps(self):
+        class A(Task):
+            """ Task that must run twice to succeed """
+            i = luigi.IntParameter()
+
+            runs = 0
+
+            def complete(self):
+                return self.runs >= 2
+
+            def run(self):
+                self.runs += 1
+
+        class B(Task):
+            done = False
+
+            def requires(self):
+                return map(A, range(20))
+
+            def complete(self):
+                return self.done
+
+            def run(self):
+                self.done = True
+
+        b = B()
+        w = Worker(scheduler=self.sch, worker_id='X', max_reschedules=1)
+        self.assertTrue(w.add(b))
+        self.assertFalse(w.run())
+
+        # For b to be done, we must have rescheduled its dependencies to run them twice
+        self.assertTrue(b.complete())
+        self.assertTrue(all(a.complete() for a in b.deps()))
+
+
     def test_interleaved_workers(self):
         class A(DummyTask):
             pass

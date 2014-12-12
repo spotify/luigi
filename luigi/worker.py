@@ -544,8 +544,8 @@ class Worker(object):
 
                 # keep out of infinite loops by not rescheduling too many times
                 for task_id in missing:
-                    self.unfulfilled_counts[task.task_id] += 1
-                    if (self.unfulfilled_counts[task.task_id] >
+                    self.unfulfilled_counts[task_id] += 1
+                    if (self.unfulfilled_counts[task_id] >
                             self.__max_reschedules):
                         reschedule = False
                 if reschedule:
