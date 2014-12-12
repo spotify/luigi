@@ -464,7 +464,7 @@ class Task(object):
     def complete(self):
         """
             If the task has any outputs, return ``True`` if all outputs exists.
-            Otherwise, return ``False`.
+            Otherwise, return ``False``.
 
             However, you may freely override this method with custom logic.
         """
@@ -568,7 +568,7 @@ class Task(object):
 def externalize(task):
     """Returns an externalized version of the Task.
 
-    See py:class:`ExternalTask`.
+    See :py:class:`ExternalTask`.
     """
     task.run = NotImplemented
     return task
