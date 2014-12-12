@@ -113,6 +113,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         elif self.do_truncate_table():
             logger.info("Truncating table %s", self.table)
             self.truncate_table(connection)
+            logger.info("Done truncating table %s", self.table)
 
         logger.info("Inserting file: %s", path)
         cursor = connection.cursor()
