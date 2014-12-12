@@ -464,7 +464,7 @@ class Task(object):
     def complete(self):
         """
             If the task has any outputs, return ``True`` if all outputs exists.
-            Otherwise, return ``False`.
+            Otherwise, return ``False``.
 
             However, you may freely override this method with custom logic.
         """
