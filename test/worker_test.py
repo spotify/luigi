@@ -637,5 +637,20 @@ class MultipleWorkersTest(unittest.TestCase):
     def test_kill_worker(self):
         luigi.build([SuicidalWorker(signal.SIGKILL)], workers=2, local_scheduler=True)
 
+    def test_purge_multiple_workers(self):
+        w = Worker(worker_processes=2, wait_interval=0.01)
+        t1 = SuicidalWorker(signal.SIGTERM)
+        t2 = SuicidalWorker(signal.SIGKILL)
+        w.add(t1)
+        w.add(t2)
+
+        w._run_task(t1.task_id)
+        w._run_task(t2.task_id)
+        time.sleep(1.0)
+
+        w._handle_next_task()
+        w._handle_next_task()
+        w._handle_next_task()
+
 if __name__ == '__main__':
     unittest.main()
