@@ -197,6 +197,9 @@ class HdfsClient(FileSystem):
         call_check(cmd)
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
+        self.mkdirP(path, parents, raise_if_exists)
+    
+    def mkdirP(self, path, parents, raise_if_exists):
         if (parents and raise_if_exists):
             raise NotImplementedError("HdfsClient.mkdir can't raise with -p")
         try:
@@ -522,6 +525,9 @@ class HdfsClientApache1(HdfsClientCdh3):
         else:
             raise HDFSCliError(cmd, p.returncode, stdout, stderr)
 
+
+    def mkdir(self, path, parents=True, raise_if_exists=False):
+        self.mkdirP(path, parents, raise_if_exists)
 
 def get_configured_hadoop_version():
     """
