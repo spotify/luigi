@@ -16,6 +16,7 @@ import collections
 import datetime
 import functools
 import notifications
+import operator
 import os
 import logging
 import time
@@ -349,12 +350,17 @@ class SimpleTaskState(object):
             task.stakeholders.difference_update(delete_workers)
             task.workers.difference_update(delete_workers)
 
-    def task_priority(self, task):
-        if task.supersedes_bucket is None:
-            return task.priority
-
-        # a task has at least as high priority as things below it in the same supersedes bucket
-        return max(t.priority for t in self.get_supersedes_bucket_tasks(task))
+    def supersedes_task_priorities(self):
+        priorities = {}
+        supersedes_buckets = collections.defaultdict(set)
+        for task in self._tasks.values():
+            if task.supersedes_bucket is not None:
+                supersedes_buckets[task.supersedes_bucket].add(task)
+        for bucket in supersedes_buckets.values():
+            prev_priority = float('-inf')
+            for task in sorted(bucket, key=operator.attrgetter('supersedes_priority')):
+                prev_priority = priorities[task] = max(task.priority, prev_priority)
+        return priorities
 
 
 class CentralPlannerScheduler(Scheduler):
@@ -534,6 +540,7 @@ class CentralPlannerScheduler(Scheduler):
     def _rank(self):
         ''' Return worker's rank function for task scheduling '''
         dependents = collections.defaultdict(int)
+        bucket_priorities = self._state.supersedes_task_priorities()
         def not_done(t):
             task = self._state.get_task(t, default=None)
             return task is None or task.status != DONE
@@ -545,7 +552,7 @@ class CentralPlannerScheduler(Scheduler):
                     dependents[dep] += inverse_num_deps
 
         return lambda t: (
-            self._state.task_priority(t),
+            bucket_priorities.get(t, t.priority),
             t.supersedes_priority,
             dependents[t.id],
             -t.time,
