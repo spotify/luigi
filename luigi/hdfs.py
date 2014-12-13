@@ -27,7 +27,6 @@ import logging
 import getpass
 logger = logging.getLogger('luigi-interface')
 
-
 class HDFSCliError(Exception):
     def __init__(self, command, returncode, stdout, stderr):
         self.returncode = returncode
