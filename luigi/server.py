@@ -174,7 +174,10 @@ def run(api_port=8082, address=None, scheduler=None, responder=None):
 
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
-    signal.signal(signal.SIGQUIT, shutdown_handler)
+    if os.name == 'nt':
+            signal.signal(signal.SIGBREAK, shutdown_handler)
+    else:
+            signal.signal(signal.SIGQUIT, shutdown_handler)
     atexit.register(shutdown_handler)
 
     logger.info("Scheduler starting up")
