@@ -73,8 +73,11 @@ def acquire_for(pid_dir, num_available=1):
         f.writelines('%s\n' % (pid, ) for pid in filter(pid_cmds.__getitem__, pids))
 
     # Make the file writable by all
-    s = os.stat(pid_file)
-    if os.getuid() == s.st_uid:
-        os.chmod(pid_file, s.st_mode | 0777)
+    if os.name == 'nt':
+        pass
+    else:
+        s = os.stat(pid_file)
+        if os.getuid() == s.st_uid:
+            os.chmod(pid_file, s.st_mode | 0777)
 
     return True
