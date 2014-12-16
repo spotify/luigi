@@ -4,6 +4,7 @@ import logging
 import luigi.postgres
 import luigi
 import json
+import time
 from luigi.contrib import rdbms
 from luigi import postgres
 from luigi.s3 import S3PathTask, S3Target
