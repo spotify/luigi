@@ -66,7 +66,6 @@ class S3CopyToTable(rdbms.CopyToTable):
         '''
         return ''
 
-    @abc.abstractproperty
     def do_truncate_table(self):
         """
         Return True if table should be truncated before copying new data in.
