@@ -4,6 +4,7 @@ import logging
 import luigi.postgres
 import luigi
 import json
+import time
 from luigi.contrib import rdbms
 from luigi import postgres
 from luigi.s3 import S3PathTask, S3Target
@@ -282,9 +283,12 @@ class KillOpenRedshiftSessions(luigi.Task):
         Kill any Redshift sessions for the given database.
         """
         connection = self.output().connect()
+        # kill any sessions other than ours and
+        # internal Redshift sessions (rdsdb)
         query = """SELECT pg_terminate_backend(process) 
                      FROM STV_SESSIONS 
-                    WHERE db_name=%s 
+                    WHERE db_name=%s  
+                      AND user_name != 'rdsdb' 
                       AND process != pg_backend_pid()"""
         cursor = connection.cursor()
         logger.info("Killing all open Redshift sessions for database: %s" % self.database)
