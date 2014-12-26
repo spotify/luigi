@@ -71,6 +71,13 @@ max-reschedules
   reschedule a job if it is found to not be done when attempting to run
   a dependent job. This defaults to 1.
 
+max-shown-tasks
+  .. versionadded:: 1.0.20
+  The maximum number of tasks returned in a task_list api call. This
+  will restrict the number of tasks shown in any section in the
+  visualiser. Small values can alleviate frozen browsers when there are
+  too many done tasks. This defaults to 100000 (one hundred thousand).
+
 no_configure_logging
   If true, logging is not configured. Defaults to false.
 

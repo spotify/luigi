@@ -185,8 +185,16 @@ function visualiserApp(luigi) {
     }
 
     function getTaskList(id, tasks, expand) {
-        $(id).append(renderTasks(tasks));
-        $(id).prev("h3").append(" (" + tasks.length + ")");
+        if (tasks.length == 1 && typeof(tasks[0]) === "number") {
+            var length = tasks[0];
+            var rendered = renderTemplate("rowCountTemplate", {'num_tasks': length});
+            $(id).parent().addClass('emptyTaskGroup');
+        } else {
+            var length = tasks.length;
+            var rendered = renderTasks(tasks);
+        }
+        $(id).append(rendered);
+        $(id).prev("h3").append(" (" + length + ")");
         bindTaskEvents(id, expand);
         filterTasks();
     }
@@ -215,7 +223,7 @@ function visualiserApp(luigi) {
     }
 
     function updateCount() {
-        taskGroups = $('#taskList .taskGroup');
+        taskGroups = $('#taskList .taskGroup:not(.emptyTaskGroup)');
         for (i=0; i<taskGroups.length; i++) {
             groupCount = 0;
 
