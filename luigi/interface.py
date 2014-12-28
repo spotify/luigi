@@ -181,7 +181,8 @@ class Interface(object):
                 "The --lock flag is deprecated and will be removed."
                 "Locking is now the default behavior."
                 "Use --no-lock to override to not use lock",
-                DeprecationWarning
+                DeprecationWarning,
+                stacklevel=3
             )
 
         if (not env_params.no_lock and
