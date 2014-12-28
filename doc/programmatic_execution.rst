@@ -18,6 +18,7 @@ look something like
 .. code:: python
 
     task = MyTask(123, 'xyz')
+    interface.setup_interface_logging()
     sch = scheduler.CentralPlannerScheduler()
     w = worker.Worker(scheduler=sch)
     w.add(task)
