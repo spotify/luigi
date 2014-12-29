@@ -142,7 +142,7 @@ class SingleProcessPool(object):
     """
 
     def apply_async(self, function, args):
-        return apply(function, args)
+        return function(*args)
 
 
 class DequeQueue(collections.deque):
