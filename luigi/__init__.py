@@ -13,14 +13,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import task
-import file  # wtf @ naming
-import rpc
-import parameter
-import configuration
-import interface
-import target
-import event
+from luigi import task
+from luigi import file  # wtf @ naming
+from luigi import rpc
+from luigi import parameter
+from luigi import configuration
+from luigi import interface
+from luigi import target
+from luigi import event
 
 Event = event.Event
 
@@ -49,4 +49,4 @@ TimeDeltaParameter = parameter.TimeDeltaParameter
 
 namespace = task.namespace
 
-import tools.range  # just makes the tool classes available from command line
+from . import tools.range  # just makes the tool classes available from command line
