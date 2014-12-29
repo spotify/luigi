@@ -59,7 +59,9 @@ STATUS_TO_UPSTREAM_MAP = {
 # We're passing around this config a lot, so let's put it on an object
 SchedulerConfig = collections.namedtuple('SchedulerConfig', [
         'retry_delay', 'remove_delay', 'worker_disconnect_delay',
-        'disable_failures', 'disable_window', 'disable_persist', 'disable_time'])
+        'disable_failures', 'disable_window', 'disable_persist', 'disable_time',
+        'max_shown_tasks',
+])
 
 
 def fix_time(x):
@@ -342,7 +344,8 @@ class CentralPlannerScheduler(Scheduler):
 
     def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0,
                  state_path='/var/lib/luigi-server/state.pickle', task_history=None,
-                 resources=None, disable_persist=0, disable_window=0, disable_failures=None):
+                 resources=None, disable_persist=0, disable_window=0, disable_failures=None,
+                 max_shown_tasks=100000):
         '''
         (all arguments are in seconds)
         Keyword Arguments:
@@ -358,7 +361,9 @@ class CentralPlannerScheduler(Scheduler):
             disable_failures=disable_failures,
             disable_window=disable_window,
             disable_persist=disable_persist,
-            disable_time=disable_persist)
+            disable_time=disable_persist,
+            max_shown_tasks=max_shown_tasks,
+        )
 
         self._task_history = task_history or history.NopHistory()
         self._state = SimpleTaskState(state_path)
@@ -685,7 +690,7 @@ class CentralPlannerScheduler(Scheduler):
             self._recurse_deps(task_id, serialized)
         return serialized
 
-    def task_list(self, status, upstream_status):
+    def task_list(self, status, upstream_status, limit=True):
         ''' query for a subset of tasks by status '''
         self.prune()
         result = {}
@@ -696,6 +701,8 @@ class CentralPlannerScheduler(Scheduler):
                     upstream_status == self._upstream_status(task.id, upstream_status_table)):
                     serialized = self._serialize_task(task.id, False)
                     result[task.id] = serialized
+        if limit and len(result) > self._config.max_shown_tasks:
+            return {'num_tasks': len(result)}
         return result
 
     def worker_list(self, include_running=True):

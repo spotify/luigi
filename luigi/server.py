@@ -45,6 +45,7 @@ def _create_scheduler():
     disable_window = config.getint('scheduler', 'disable-window-seconds', 3600)
     disable_failures = config.getint('scheduler', 'disable-num-failures', None)
     disable_persist = config.getint('scheduler', 'disable-persist-seconds', 86400)
+    max_shown_tasks = config.getint('scheduler', 'max-shown-tasks', 100000)
 
     resources = config.getintdict('resources')
     if config.getboolean('scheduler', 'record_task_history', False):
@@ -54,7 +55,8 @@ def _create_scheduler():
         task_history_impl = task_history.NopHistory()
     return scheduler.CentralPlannerScheduler(
         retry_delay, remove_delay, worker_disconnect_delay, state_path, task_history_impl,
-        resources, disable_persist, disable_window, disable_failures)
+        resources, disable_persist, disable_window, disable_failures, max_shown_tasks,
+    )
 
 
 class RPCHandler(tornado.web.RequestHandler):
