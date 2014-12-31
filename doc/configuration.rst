@@ -334,6 +334,8 @@ scalding-libjars
   SCALDING_HOME/libjars or /usr/share/scalding/libjars
 
 
+.. _scheduler-config:
+
 [scheduler]
 -----------
 
