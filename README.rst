@@ -120,4 +120,4 @@ External links
 * `Documentation <http://luigi.readthedocs.org/>`_ (Read the Docs)
 * `Mailing List <https://groups.google.com/forum/#!forum/luigi-user>`_ (Google Groups)
 * `Releases <https://pypi.python.org/pypi/luigi>`_ (PyPi)
-* `Source code <https://github.com/spotify/luigi>`_ (Github)
+* `Source code <https://github.com/spotify/luigi>`_ (GitHub)
