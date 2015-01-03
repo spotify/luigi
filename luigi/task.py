@@ -396,8 +396,9 @@ class Task(object):
         task_id_parts = []
         param_objs = dict(params)
         for param_name, param_value in param_values:
-            if dict(params)[param_name].significant:
-                task_id_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
+            if dict(params)[param_name].significant and param_value is not None:
+                s = param_value is not None and param_value or ""
+                task_id_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(s)))
 
         self.task_id = '%s(%s)' % (self.task_family, ', '.join(task_id_parts))
         self.__hash = hash(self.task_id)
