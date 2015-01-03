@@ -433,7 +433,8 @@ class Task(object):
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in self.param_kwargs.iteritems():
-            params_str[param_name] = params[param_name].serialize(param_value)
+            s = param_value is not None and param_value or ""
+            params_str[param_name] = params[param_name].serialize(s)
 
         return params_str
 
