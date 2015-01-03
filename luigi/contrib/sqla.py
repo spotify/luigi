@@ -52,6 +52,8 @@ class SQLAlchemyTarget(luigi.Target):
 
     def exists(self):
         row = None
+        if self.marker_table_bound is None:
+            self.create_marker_table()
         try:
             with self.engine.begin() as conn:
                 table = self.marker_table_bound
