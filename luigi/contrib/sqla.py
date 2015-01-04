@@ -160,7 +160,6 @@ class CopyToTable(luigi.Task):
             echo=self.echo
             )
 
-
     def rows(self):
         """Return/yield tuples or lists corresponding to each row to be inserted """
         with self.input().open('r') as fobj:
