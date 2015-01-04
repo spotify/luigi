@@ -34,6 +34,7 @@ class SQLATask(sqla.CopyToTable):
 
 
 
+
 class TestSQLA(unittest.TestCase):
 
     def _clear_tables(self):
@@ -107,7 +108,7 @@ class TestSQLA(unittest.TestCase):
             with engine.begin() as conn:
                 meta = sqlalchemy.MetaData()
                 meta.reflect(bind=engine)
-                #self.assertSetEqual(set([u'table_updates', u'item_property']), set(meta.tables.keys()))
+                self.assertSetEqual(set([u'table_updates', u'item_property']), set(meta.tables.keys()))
                 table = meta.tables[task.table]
                 s = sqlalchemy.select([sqlalchemy.func.count(table.c.item)])
                 result = conn.execute(s).fetchone()
@@ -119,7 +120,6 @@ class TestSQLA(unittest.TestCase):
                     given = (unicode(given[0]), unicode(given[1]))
                     self.assertTupleEqual(given, tuple(result[i]))
 
-
         task, task0 = SQLATask(), BaseTask()
         luigi.build([task, task0], local_scheduler=True)
         check_entries(self.engine)
@@ -128,9 +128,8 @@ class TestSQLA(unittest.TestCase):
         luigi.build([task, task0], local_scheduler=True)
         check_entries(self.engine)
 
+
 class SQLAlchemyTarget(unittest.TestCase):
-
-
 
     def test_create_marker_table(self):
         target = sqla.SQLAlchemyTarget(CONNECTION_STRING, "test_table", "12312123")
