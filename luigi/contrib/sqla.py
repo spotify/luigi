@@ -11,6 +11,7 @@ import abc
 import logging
 import luigi
 import datetime
+import itertools
 from sqlalchemy import Table, MetaData, Column, String, DateTime, create_engine, select
 
 logger = logging.getLogger('luigi-interface')
@@ -122,7 +123,8 @@ class CopyToTable(luigi.Task):
     # options
     null_values = (None,)  # container of values that should be inserted as NULL values
     column_separator = "\t"  # how columns are separated in the file copied into postgres
-    batch_size = 500
+    chunk_size = 5000   # default chunk size for insert
+    reflect = False
 
     def create_table(self, engine):
         """ Override to provide code for creating the target table.
@@ -172,10 +174,14 @@ class CopyToTable(luigi.Task):
         self.create_table(output.engine)
         try:
             with output.engine.begin() as conn:
-                rows = self.rows()
-                ins_rows = [ dict(zip((c.key for c in self.table_bound.c), row)) for row in rows]
-                ins = self.table_bound.insert()
-                conn.execute(ins, ins_rows)
+                rows = iter(self.rows())
+                ins_rows = [dict(zip((c.key for c in self.table_bound.c), row)) \
+                            for row in itertools.islice(rows, self.chunk_size)]
+                while ins_rows:
+                    ins = self.table_bound.insert()
+                    conn.execute(ins, ins_rows)
+                    ins_rows = [dict(zip((c.key for c in self.table_bound.c), row)) \
+                                for row in itertools.islice(rows, self.chunk_size)]
             output.touch()
         except Exception as e:
             raise RuntimeError(str(e))
