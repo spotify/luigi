@@ -93,6 +93,21 @@ class TestSQLA(unittest.TestCase):
         eng = sqlalchemy.create_engine(TestSQLData.connection_string)
         self.assertRaises(NotImplementedError, sql_copy.create_table, eng)
 
+    def _check_entries(self, engine):
+        with engine.begin() as conn:
+            meta = sqlalchemy.MetaData()
+            meta.reflect(bind=engine)
+            self.assertSetEqual(set([u'table_updates', u'item_property']), set(meta.tables.keys()))
+            table = meta.tables[SQLATask.table]
+            s = sqlalchemy.select([sqlalchemy.func.count(table.c.item)])
+            result = conn.execute(s).fetchone()
+            self.assertEqual(len(TASK_LIST),  result[0])
+            s = sqlalchemy.select([table]).order_by(table.c.item)
+            result = conn.execute(s).fetchall()
+            for i in range(len(TASK_LIST)):
+                given = TASK_LIST[i].strip("\n").split("\t")
+                given = (unicode(given[0]), unicode(given[1]))
+                self.assertTupleEqual(given, tuple(result[i]))
 
     def test_rows(self):
         task, task0 = SQLATask(), BaseTask()
@@ -104,32 +119,19 @@ class TestSQLA(unittest.TestCase):
 
     def test_run(self):
 
-        def check_entries(engine):
-            with engine.begin() as conn:
-                meta = sqlalchemy.MetaData()
-                meta.reflect(bind=engine)
-                self.assertSetEqual(set([u'table_updates', u'item_property']), set(meta.tables.keys()))
-                table = meta.tables[task.table]
-                s = sqlalchemy.select([sqlalchemy.func.count(table.c.item)])
-                result = conn.execute(s).fetchone()
-                self.assertEqual(len(TASK_LIST),  result[0])
-                s = sqlalchemy.select([table]).order_by(table.c.item)
-                result = conn.execute(s).fetchall()
-                for i in range(len(TASK_LIST)):
-                    given = TASK_LIST[i].strip("\n").split("\t")
-                    given = (unicode(given[0]), unicode(given[1]))
-                    self.assertTupleEqual(given, tuple(result[i]))
-
         task, task0 = SQLATask(), BaseTask()
         luigi.build([task, task0], local_scheduler=True)
-        check_entries(self.engine)
+        self._check_entries(self.engine)
 
         # rerun and the num entries should be the same
         luigi.build([task, task0], local_scheduler=True)
-        check_entries(self.engine)
+        self._check_entries(self.engine)
 
-
-class SQLAlchemyTarget(unittest.TestCase):
+    def test_run_with_chunk_size(self):
+        task, task0 = SQLATask(), BaseTask()
+        task.chunk_size = 2 # change chunk size and check it runs ok
+        luigi.build([task, task0], local_scheduler=True)
+        self._check_entries(self.engine)
 
     def test_create_marker_table(self):
         target = sqla.SQLAlchemyTarget(CONNECTION_STRING, "test_table", "12312123")
