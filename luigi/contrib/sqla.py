@@ -1,6 +1,23 @@
+# Copyright (c) 2015 Gouthaman Balaraman
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+
 """
-This file implements RDBMS target using SQLAlchemy. This was derived
-based on rdbms.py, mysqldb.py
+This file implements RDBMS target using SQLAlchemy. This opens up
+possibilities to use other database targets as long as it is supported
+by SQLAlchemy. In order to write to a database, one should subclass the
+CopyToTable defined in this file. Please see the sqla_test.py for
+some simple use cases.
 
 Author : Gouthaman Balaraman
 Date : 01/02/2015
@@ -15,6 +32,7 @@ import itertools
 from sqlalchemy import Table, MetaData, Column, String, DateTime, create_engine, select
 
 logger = logging.getLogger('luigi-interface')
+
 
 class SQLAlchemyTarget(luigi.Target):
     """Target for a resource in database using SQLAlchemy.
@@ -108,21 +126,24 @@ class CopyToTable(luigi.Task):
     def table(self):
         return None
 
-    # specify the columns that are to be inserted (same as are returned by columns)
-    # overload this in subclasses with tuples with column name, sqlalchemy column type Class:
-    # e.g.
+    # specify the columns that define the schema. The format for the columns is a list
+    # of tuples. For example :
     # columns = [
     #            (["id", sqlalchemy.Integer], dict(primary_key=True)),
     #            (["name", sqlalchemy.String(64)], {}),
     #            (["value", sqlalchemy.String(64)], {})
     #        ]
+    # The tuple (args_list, kwargs_dict) here is the args and kwargs
+    # that need to be passed to sqlalchemy.Column(*args, **kwargs).
+    # If the tables have already been setup by another process, then you can
+    # completely ignore the columns. Instead set the reflect value to True below
     columns = []
 
     # options
     null_values = (None,)  # container of values that should be inserted as NULL values
     column_separator = "\t"  # how columns are separated in the file copied into postgres
     chunk_size = 5000   # default chunk size for insert
-    reflect = False
+    reflect = False  # Set this to true only if the table has already been created by alternate means
 
     def create_table(self, engine):
         """ Override to provide code for creating the target table.
