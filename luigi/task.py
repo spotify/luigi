@@ -41,18 +41,20 @@ def id_to_name_and_params(task_id):
         ``('Foo', {'bar': 'bar', 'baz': 'baz'})``
     '''
     name_chars = pp.alphanums + '_'
+    # modified version of pp.printables. Removed '[]', '()', ','
+    value_chars = pp.alphanums + '\'!"#$%&*+-./:;<=>?@\\^_`{|}~'
     parameter = (
         (pp.Word(name_chars) +
          pp.Literal('=').suppress() +
          ((pp.Literal('(').suppress() | pp.Literal('[').suppress()) +
-          pp.ZeroOrMore(pp.Word(name_chars) +
+          pp.ZeroOrMore(pp.Word(value_chars) +
                         pp.ZeroOrMore(pp.Literal(',')).suppress()) +
           (pp.Literal(')').suppress() |
            pp.Literal(']').suppress()))).setResultsName('list_params',
                                                         listAllMatches=True) |
         (pp.Word(name_chars) +
          pp.Literal('=').suppress() +
-         pp.Word(name_chars)).setResultsName('params', listAllMatches=True))
+         pp.Word(value_chars)).setResultsName('params', listAllMatches=True))
 
     parser = (
         pp.Word(name_chars).setResultsName('task') +
