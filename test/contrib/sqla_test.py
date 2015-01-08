@@ -1,12 +1,20 @@
-__author__ = 'gbalaraman'
+__author__ = 'Gouthaman Balaraman'
 
 import unittest
 import sqlalchemy
 import luigi
+import os
+import shutil
+import tempfile
 from luigi.mock import MockFile
 from luigi.contrib import sqla
 
-CONNECTION_STRING = "sqlite:///"
+#################################
+# Globals part of the test case #
+#################################
+TEMPDIR = tempfile.mkdtemp()
+SQLITEPATH = os.path.join(TEMPDIR, "sqlatest.db")
+CONNECTION_STRING = "sqlite:///%s" % SQLITEPATH
 TASK_LIST = ["item%d\tproperty%d\n" % (i, i) for i in range(10)]
 
 
@@ -21,18 +29,17 @@ class BaseTask(luigi.Task):
             out.write(task)
         out.close()
 
+
 class SQLATask(sqla.CopyToTable):
     columns = [
-        sqlalchemy.Column("item", sqlalchemy.String(64)),
-        sqlalchemy.Column("property", sqlalchemy.String(64))
+        (["item", sqlalchemy.String(64)], {}),
+        (["property", sqlalchemy.String(64)], {})
     ]
-    connection_string = "sqlite:////tmp/test.db" #CONNECTION_STRING
+    connection_string = CONNECTION_STRING
     table = "item_property"
 
     def requires(self):
         return BaseTask()
-
-
 
 
 class TestSQLA(unittest.TestCase):
@@ -44,11 +51,15 @@ class TestSQLA(unittest.TestCase):
             self.engine.execute(table.delete())
 
     def setUp(self):
-        self.engine = sqlalchemy.create_engine(SQLATask.connection_string)
-        self._clear_tables()
+        if not os.path.exists(TEMPDIR):
+            os.mkdir(TEMPDIR)
+        self.engine = sqlalchemy.create_engine(CONNECTION_STRING)
 
     def tearDown(self):
-        pass
+        self._clear_tables()
+        if os.path.exists(TEMPDIR):
+            shutil.rmtree(TEMPDIR)
+
 
     def test_create_table(self):
         """
@@ -59,20 +70,20 @@ class TestSQLA(unittest.TestCase):
             connection_string = CONNECTION_STRING
             table = "test_table"
             columns = [
-                sqlalchemy.Column("id", sqlalchemy.Integer,primary_key=True),
-                sqlalchemy.Column("name", sqlalchemy.String(64)),
-                sqlalchemy.Column("value", sqlalchemy.String(64))
+                (["id", sqlalchemy.Integer], dict(primary_key=True)),
+                (["name", sqlalchemy.String(64)], {}),
+                (["value", sqlalchemy.String(64)], {})
             ]
 
-        def output(self):
-            pass
+            def output(self):
+                pass
 
 
         sql_copy = TestSQLData()
         eng = sqlalchemy.create_engine(TestSQLData.connection_string)
-        self.assertEqual(False, eng.dialect.has_table(eng.connect(), TestSQLData.table))
+        self.assertFalse(eng.dialect.has_table(eng.connect(), TestSQLData.table))
         sql_copy.create_table(eng)
-        self.assertEqual(True, eng.dialect.has_table(eng.connect(), TestSQLData.table))
+        self.assertTrue(eng.dialect.has_table(eng.connect(), TestSQLData.table))
         # repeat and ensure it just binds to existing table
         sql_copy.create_table(eng)
 
@@ -113,36 +124,75 @@ class TestSQLA(unittest.TestCase):
         task, task0 = SQLATask(), BaseTask()
         luigi.build([task, task0], local_scheduler=True)
 
-        for i,row in enumerate(task.rows()):
+        for i, row in enumerate(task.rows()):
             given = TASK_LIST[i].strip("\n").split("\t")
             self.assertListEqual(row, given)
 
     def test_run(self):
-
+        """
+        Checking that the runs go as expected. Rerunning the same shouldn't end up
+        inserting more rows into the db.
+        :return:
+        """
         task, task0 = SQLATask(), BaseTask()
-        luigi.build([task, task0], local_scheduler=True)
+        self.engine = sqlalchemy.create_engine(task.connection_string)
+        luigi.build([task0, task], local_scheduler=True)
         self._check_entries(self.engine)
 
         # rerun and the num entries should be the same
-        luigi.build([task, task0], local_scheduler=True)
+        luigi.build([task0, task], local_scheduler=True)
         self._check_entries(self.engine)
 
     def test_run_with_chunk_size(self):
+        """
+        The chunk_size can be specified in order to control the batch size for inserts.
+        :return:
+        """
         task, task0 = SQLATask(), BaseTask()
+        self.engine = sqlalchemy.create_engine(task.connection_string)
         task.chunk_size = 2 # change chunk size and check it runs ok
         luigi.build([task, task0], local_scheduler=True)
         self._check_entries(self.engine)
 
+    def test_reflect(self):
+        """
+        If the table is setup already, then one can set reflect to True, and
+        completely skip the columns part. It is not even required at that point.
+        :return:
+        """
+
+        class AnotherSQLATask(sqla.CopyToTable):
+            connection_string = CONNECTION_STRING
+            table = "item_property"
+            reflect = True
+
+            def requires(self):
+                return SQLATask()
+
+        task0, task1, task2 = AnotherSQLATask(), SQLATask(), BaseTask()
+        luigi.build([task0, task1, task2], local_scheduler=True)
+        self._check_entries(self.engine)
+
+
     def test_create_marker_table(self):
+        """
+        Is the marker table created as expected for the SQLAlchemyTarget
+        :return:
+        """
         target = sqla.SQLAlchemyTarget(CONNECTION_STRING, "test_table", "12312123")
         target.create_marker_table()
         self.assertTrue(target.engine.dialect.has_table(target.engine.connect(), target.marker_table))
 
     def test_touch(self):
+        """
+        Touch takes care of creating a checkpoint for task completion
+        :return:
+        """
         target = sqla.SQLAlchemyTarget(CONNECTION_STRING, "test_table", "12312123")
         target.create_marker_table()
         self.assertFalse(target.exists())
         target.touch()
         self.assertTrue(target.exists())
+
 
 
