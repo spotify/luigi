@@ -16,6 +16,7 @@ import collections
 import datetime
 import functools
 import notifications
+import operator
 import os
 import logging
 import time
@@ -109,7 +110,8 @@ class Failures(object):
 
 class Task(object):
     def __init__(self, id, status, deps, resources={}, priority=0, family='', params={},
-                 disable_failures=None, disable_window=None):
+                 disable_failures=None, disable_window=None, supersedes_bucket=None,
+                 supersedes_priority=None):
         self.id = id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -125,6 +127,8 @@ class Task(object):
         self.time_running = None  # Timestamp when picked up by worker
         self.expl = None
         self.priority = priority
+        self.supersedes_bucket = supersedes_bucket
+        self.supersedes_priority = supersedes_priority
         self.resources = resources
         self.family = family
         self.params = params
@@ -292,9 +296,22 @@ class SimpleTaskState(object):
         for task in self._tasks.itervalues():
             yield task
 
+    def get_running_tasks(self):
+        for task in self._tasks.itervalues():
+            if task.status == RUNNING:
+                yield task
+
     def get_pending_tasks(self):
         for task in self._tasks.itervalues():
             if task.status in [PENDING, RUNNING]:
+                yield task
+
+    def get_supersedes_bucket_tasks(self, supersedes_task):
+        if supersedes_task.supersedes_bucket is None:
+            return
+        for task in self._tasks.values():
+            if (task.supersedes_bucket == supersedes_task.supersedes_bucket
+                    and task.supersedes_priority <= supersedes_task.supersedes_priority):
                 yield task
 
     def get_task(self, task_id, default=None, setdefault=None):
@@ -334,6 +351,18 @@ class SimpleTaskState(object):
         for task in self.get_active_tasks():
             task.stakeholders.difference_update(delete_workers)
             task.workers.difference_update(delete_workers)
+
+    def supersedes_task_priorities(self):
+        priorities = {}
+        supersedes_buckets = collections.defaultdict(set)
+        for task in self._tasks.values():
+            if task.supersedes_bucket is not None:
+                supersedes_buckets[task.supersedes_bucket].add(task)
+        for bucket in supersedes_buckets.values():
+            prev_priority = float('-inf')
+            for task in sorted(bucket, key=operator.attrgetter('supersedes_priority')):
+                prev_priority = priorities[task] = max(task.priority, prev_priority)
+        return priorities
 
 
 class CentralPlannerScheduler(Scheduler):
@@ -418,7 +447,8 @@ class CentralPlannerScheduler(Scheduler):
 
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
-                 priority=0, family='', params={}):
+                 priority=0, family='', params={}, supersedes_bucket=None,
+                 supersedes_priority=None):
         """
         * Add task identified by task_id if it doesn't exist
         * If deps is not None, update dependency list
@@ -429,8 +459,9 @@ class CentralPlannerScheduler(Scheduler):
         self.update(worker)
 
         task = self._state.get_task(task_id, setdefault=self._make_task(
-                id=task_id, status=PENDING, deps=deps, resources=resources,
-                priority=priority, family=family, params=params))
+            id=task_id, status=PENDING, deps=deps, resources=resources,
+            priority=priority, family=family, params=params, supersedes_bucket=supersedes_bucket,
+            supersedes_priority=supersedes_priority))
 
         # for setting priority, we'll sometimes create tasks with unset family and params
         if not task.family:
@@ -449,6 +480,10 @@ class CentralPlannerScheduler(Scheduler):
                 # (so checking for status != task.status woule lie)
                 self._update_task_history(task_id, status)
             task.set_status(PENDING if status == SUSPENDED else status, self._config)
+            if status == DONE and task.supersedes_bucket:
+                for superseded_task in self._state.get_supersedes_bucket_tasks(task):
+                    if superseded_task.status != DONE:
+                        superseded_task.set_status(DONE, self._config)
             if status == FAILED:
                 task.retry = time.time() + self._config.retry_delay
 
@@ -460,6 +495,8 @@ class CentralPlannerScheduler(Scheduler):
 
         task.stakeholders.add(worker)
         task.resources = resources
+        task.supersedes_bucket = supersedes_bucket
+        task.supersedes_priority = supersedes_priority
 
         # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
         # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
@@ -496,15 +533,19 @@ class CentralPlannerScheduler(Scheduler):
     def _used_resources(self):
         used_resources = collections.defaultdict(int)
         if self._resources is not None:
-            for task in self._state.get_active_tasks():
+            for task in self._state.get_running_tasks():
                 if task.status == RUNNING and task.resources:
                     for resource, amount in task.resources.items():
                         used_resources[resource] += amount
         return used_resources
 
+    def _supersedes_buckets(self):
+        return set(t.supersedes_bucket for t in self._state.get_running_tasks()) - set([None])
+
     def _rank(self):
         ''' Return worker's rank function for task scheduling '''
         dependents = collections.defaultdict(int)
+        bucket_priorities = self._state.supersedes_task_priorities()
         def not_done(t):
             task = self._state.get_task(t, default=None)
             return task is None or task.status != DONE
@@ -515,7 +556,12 @@ class CentralPlannerScheduler(Scheduler):
                 for dep in deps:
                     dependents[dep] += inverse_num_deps
 
-        return lambda task: (task.priority, dependents[task.id], -task.time)
+        return lambda t: (
+            bucket_priorities.get(t, t.priority),
+            t.supersedes_priority,
+            dependents[t.id],
+            -t.time,
+        )
 
     def _schedulable(self, task):
         if task.status != PENDING:
@@ -549,6 +595,7 @@ class CentralPlannerScheduler(Scheduler):
 
         used_resources = self._used_resources()
         greedy_resources = collections.defaultdict(int)
+        supersedes_buckets = self._supersedes_buckets()
         n_unique_pending = 0
         greedy_workers = dict((worker.id, worker.info.get('workers', 1))
                               for worker in self._state.get_active_workers())
@@ -571,12 +618,16 @@ class CentralPlannerScheduler(Scheduler):
                 if len(task.workers) == 1:
                     n_unique_pending += 1
 
-            if task.status == RUNNING and task.worker_running in greedy_workers:
+            check_greedy = lambda: (self._has_resources(task.resources, greedy_resources)
+                                    and task.supersedes_bucket not in supersedes_buckets)
+            if task.status == RUNNING and task.worker_running in greedy_workers and check_greedy():
                 greedy_workers[task.worker_running] -= 1
                 for resource, amount in (task.resources or {}).items():
                     greedy_resources[resource] += amount
+                if task.supersedes_bucket is not None:
+                    supersedes_buckets.add(task.supersedes_bucket)
 
-            if not best_task and self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
+            if not best_task and self._schedulable(task) and check_greedy():
                 if worker in task.workers and self._has_resources(task.resources, used_resources):
                     best_task = task
                     best_task_id = task.id
@@ -585,6 +636,10 @@ class CentralPlannerScheduler(Scheduler):
                         if greedy_workers.get(task_worker, 0) > 0:
                             # use up a worker
                             greedy_workers[task_worker] -= 1
+
+                            # add the supersedes bucket
+                            if task.supersedes_bucket is not None:
+                                supersedes_buckets.add(task.supersedes_bucket)
 
                             # keep track of the resources used in greedy scheduling
                             for resource, amount in (task.resources or {}).items():

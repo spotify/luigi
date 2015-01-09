@@ -94,7 +94,7 @@ class RemoteScheduler(Scheduler):
 
     def add_task(self, worker, task_id, status=PENDING, runnable=False,
                  deps=None, new_deps=None, expl=None, resources={},priority=0,
-                 family='', params={}):
+                 family='', params={}, supersedes_bucket=None, supersedes_priority=None):
         self._request('/api/add_task', {
             'task_id': task_id,
             'worker': worker,
@@ -107,6 +107,8 @@ class RemoteScheduler(Scheduler):
             'priority': priority,
             'family': family,
             'params': params,
+            'supersedes_bucket': supersedes_bucket,
+            'supersedes_priority': supersedes_priority,
         })
 
     def get_work(self, worker, host=None):
@@ -164,10 +166,11 @@ class RemoteSchedulerResponder(object):
         self._scheduler = scheduler
 
     def add_task(self, worker, task_id, status, runnable, deps, new_deps, expl,
-                 resources=None, priority=0, family='', params={}, **kwargs):
+                 resources=None, priority=0, family='', params={}, supersedes_bucket=None,
+                 supersedes_priority=None, **kwargs):
         return self._scheduler.add_task(
             worker, task_id, status, runnable, deps, new_deps, expl,
-            resources, priority, family, params)
+            resources, priority, family, params, supersedes_bucket, supersedes_priority)
 
     def add_worker(self, worker, info, **kwargs):
         return self._scheduler.add_worker(worker, info)
