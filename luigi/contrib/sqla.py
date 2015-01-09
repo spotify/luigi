@@ -142,7 +142,6 @@ class SQLAlchemyTarget(luigi.Target):
     the database."""
     marker_table = None
 
-
     def __init__(self, connection_string, target_table, update_id, echo=False):
         """ Constructor for the SQLAlchemyTarget
         :param connection_string: (str) SQLAlchemy connection string
@@ -159,7 +158,8 @@ class SQLAlchemyTarget(luigi.Target):
     def touch(self):
         """Mark this update as complete.
         """
-        self.create_marker_table()
+        if self.marker_table_bound is None:
+            self.create_marker_table()
 
         table = self.marker_table_bound
         with self.engine.begin() as conn:
@@ -167,7 +167,8 @@ class SQLAlchemyTarget(luigi.Target):
             if not id_exists:
                 ins = table.insert().values(update_id=self.update_id, target_table=self.target_table)
             else:
-                ins = table.update().values(update_id=self.update_id, target_table=self.target_table,inserted=datetime.datetime.now())
+                ins = table.update().values(update_id=self.update_id, target_table=self.target_table,
+                                            inserted=datetime.datetime.now())
             conn.execute(ins)
         assert self.exists()
 
@@ -175,20 +176,11 @@ class SQLAlchemyTarget(luigi.Target):
         row = None
         if self.marker_table_bound is None:
             self.create_marker_table()
-        try:
-            with self.engine.begin() as conn:
-                table = self.marker_table_bound
-                s = select([table]).where(table.c.update_id == self.update_id).limit(1)
-                row = conn.execute(s).fetchone()
-        except Exception as e:
-            se = str(e)
-            row = None
+        with self.engine.begin() as conn:
+            table = self.marker_table_bound
+            s = select([table]).where(table.c.update_id == self.update_id).limit(1)
+            row = conn.execute(s).fetchone()
         return row is not None
-
-    def connect(self):
-        "Get a sqlalchemy connection object to the database where the table is"
-        connection = self.engine.connect()
-        return connection
 
     def create_marker_table(self):
         """Create marker table if it doesn't exist.
