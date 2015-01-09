@@ -95,7 +95,6 @@ class TestSQLA(unittest.TestCase):
             def output(self):
                 pass
 
-
         sql_copy = TestSQLData()
         eng = sqlalchemy.create_engine(TestSQLData.connection_string)
         self.assertFalse(eng.dialect.has_table(eng.connect(), TestSQLData.table))
@@ -212,4 +211,56 @@ class TestSQLA(unittest.TestCase):
         self.assertTrue(target.exists())
 
 
+    def test_row_overload(self):
+        """Overload the rows method and we should be able to insert data into database"""
 
+        class SQLARowOverloadTest(sqla.CopyToTable):
+            columns = [
+                (["item", sqlalchemy.String(64)], {}),
+                (["property", sqlalchemy.String(64)], {})
+            ]
+            connection_string = CONNECTION_STRING
+            table = "item_property"
+
+            def rows(self):
+                tasks = [("item0", "property0"), ("item1", "property1"), ("item2", "property2"), ("item3", "property3"),
+                         ("item4", "property4"), ("item5", "property5"), ("item6", "property6"), ("item7", "property7"),
+                         ("item8", "property8"), ("item9", "property9")]
+                for row in tasks:
+                    yield row
+
+        task = SQLARowOverloadTest()
+        luigi.build([task], local_scheduler=True)
+        self._check_entries(self.engine)
+
+
+    def test_column_row_separator(self):
+
+        class ModBaseTask(luigi.Task):
+
+            def output(self):
+                return MockFile("ModBaseTask",  mirror_on_stderr=True)
+
+            def run(self):
+                out = self.output().open("w")
+                tasks = ["item%d,property%d\n" % (i, i) for i in range(10)]
+                for task in tasks:
+                    out.write(task)
+                out.close()
+
+
+        class ModSQLATask(sqla.CopyToTable):
+            columns = [
+                (["item", sqlalchemy.String(64)], {}),
+                (["property", sqlalchemy.String(64)], {})
+            ]
+            connection_string = CONNECTION_STRING
+            table = "item_property"
+            column_separator = ","
+
+            def requires(self):
+                return ModBaseTask()
+
+        task1, task2 = ModBaseTask(), ModSQLATask()
+        luigi.build([task1, task2], local_scheduler=True)
+        self._check_entries(self.engine)
