@@ -13,14 +13,115 @@
 # the License.
 
 """
-This file implements RDBMS target using SQLAlchemy. This opens up
-possibilities to use other database targets as long as it is supported
-by SQLAlchemy. In order to write to a database, one should subclass the
-CopyToTable defined in this file. Please see the sqla_test.py for
-some simple use cases.
+Support for SQLAlchmey. Provides SQLAlchemyTarget for storing in databases
+supported by SQLAlchemy. The user would be responsible for installing the
+required database driver to connect using SQLAlchemy.
 
-Author : Gouthaman Balaraman
-Date : 01/02/2015
+Minimal example of a job to copy data to database using SQLAlchemy is as shown
+below:
+
+    from sqlalchemy import String
+    import luigi
+    from luigi.contrib import sqla
+
+    class SQLATask(sqla.CopyToTable):
+        # columns defines the table schema, with each element corresponding
+        # to a column in the format (args, kwargs) which will be sent to
+        # the sqlalchemy.Column(*args, **kwargs)
+        columns = [
+            (["item", String(64)], {"primary_key": True}),
+            (["property", String(64)], {})
+        ]
+        connection_string = "sqlite://"  # in memory SQLite database
+        table = "item_property"  # name of the table to store data
+
+        def rows(self):
+            for row in [("item1" "property1"), ("item2", "property2")]:
+                yield row
+
+    if __name__ == '__main__':
+        task = SQLATask()
+        luigi.build([task], local_scheduler=True)
+
+
+If the target table where the data needs to be copied already exists, then
+the column schema definition can be skipped and instead the reflect flag
+can be set as True. Here is a modified version of the above example:
+
+    from sqlalchemy import String
+    import luigi
+    from luigi.contrib import sqla
+
+    class SQLATask(sqla.CopyToTable):
+        # If database table is already created, then the schema can be loaded
+        # by setting the reflect flag to True
+        reflect = True
+        connection_string = "sqlite://"  # in memory SQLite database
+        table = "item_property"  # name of the table to store data
+
+        def rows(self):
+            for row in [("item1" "property1"), ("item2", "property2")]:
+                yield row
+
+    if __name__ == '__main__':
+        task = SQLATask()
+        luigi.build([task], local_scheduler=True)
+
+
+In the above examples, the data that needs to be copied was directly provided by
+overriding the rows method. Alternately, if the data comes from another task, the
+modified example would look as shown below:
+
+    from sqlalchemy import String
+    import luigi
+    from luigi.contrib import sqla
+    from luigi.mock import MockFile
+
+
+    class BaseTask(luigi.Task):
+
+        def output(self):
+            return MockFile("BaseTask")
+
+        def run(self):
+            out = self.output().open("w")
+            TASK_LIST = ["item%d\tproperty%d\n" % (i, i) for i in range(10)]
+            for task in TASK_LIST:
+                out.write(task)
+            out.close()
+
+    class SQLATask(sqla.CopyToTable):
+        # columns defines the table schema, with each element corresponding
+        # to a column in the format (args, kwargs) which will be sent to
+        # the sqlalchemy.Column(*args, **kwargs)
+        columns = [
+            (["item", String(64)], {"primary_key": True}),
+            (["property", String(64)], {})
+        ]
+        connection_string = "sqlite://"  # in memory SQLite database
+        table = "item_property"  # name of the table to store data
+
+        def requires(self):
+            return BaseTask()
+
+    if __name__ == '__main__':
+        task1, task2 = SQLATask(), BaseTask()
+        luigi.build([task1, task2], local_scheduler=True)
+
+In the above example, the output from `BaseTask` is copied into the
+database. Here we did not have to implement the `rows` method because
+by default `rows` implementation assumes every line is a row with
+column values separated by a tab. One can define `column_separator`
+option for the task if the values are say comma separated instead of
+tab separated.
+
+The other option to `sqla.CopyToTable` that can be of help with performance aspect is the
+`chunk_size`. The default is 5000. This is the number of rows that will be inserted in
+a transaction at a time. Depending on the size of the inserts, this value can be tuned
+for performance.
+
+Author: Gouthaman Balaraman
+Date: 01/02/2015
 """
 
 
@@ -35,10 +136,11 @@ logger = logging.getLogger('luigi-interface')
 
 
 class SQLAlchemyTarget(luigi.Target):
-    """Target for a resource in database using SQLAlchemy.
-
-    This will rarely have to be directly instantiated by the user"""
-    marker_table = luigi.configuration.get_config().get('sqlalchemy', 'marker-table', 'table_updates')
+    """Database target using SQLAlchemy. This will rarely have to be
+    directly instantiated by the user. Typical usage would be to override
+    `luigi.contrib.sqla.CopyToTable` class to create a task to write to
+    the database."""
+    marker_table = None
 
 
     def __init__(self, connection_string, target_table, update_id, echo=False):
@@ -92,6 +194,8 @@ class SQLAlchemyTarget(luigi.Target):
         """Create marker table if it doesn't exist.
 
         Using a separate connection since the transaction might have to be reset"""
+        if self.marker_table is None:
+            self.marker_table = luigi.configuration.get_config().get('sqlalchemy', 'marker-table', 'table_updates')
 
         with self.engine.begin() as con:
             metadata = MetaData()
@@ -106,7 +210,7 @@ class SQLAlchemyTarget(luigi.Target):
                 self.marker_table_bound = metadata.tables[self.marker_table]
 
     def open(self, mode):
-        raise NotImplementedError("Cannot open() PostgresTarget")
+        raise NotImplementedError("Cannot open() SQLAlchemyTarget")
 
 
 class CopyToTable(luigi.Task):
@@ -140,7 +244,6 @@ class CopyToTable(luigi.Task):
     columns = []
 
     # options
-    null_values = (None,)  # container of values that should be inserted as NULL values
     column_separator = "\t"  # how columns are separated in the file copied into postgres
     chunk_size = 5000   # default chunk size for insert
     reflect = False  # Set this to true only if the table has already been created by alternate means
@@ -194,7 +297,7 @@ class CopyToTable(luigi.Task):
          can be overridden for custom file types or formats."""
         with self.input().open('r') as fobj:
             for line in fobj:
-                yield line.strip('\n').split(self.column_separator)
+                yield line.strip("\n").split(self.column_separator)
 
     def run(self):
         logger.info("Running task copy to table for update id %s for table %s" % (self.update_id(), self.table))
