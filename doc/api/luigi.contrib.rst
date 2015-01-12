@@ -20,6 +20,14 @@ luigi.contrib.ftp module
     :undoc-members:
     :show-inheritance:
 
+luigi.contrib.sqla module
+-------------------------
+
+.. automodule:: luigi.contrib.sqla
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 luigi.contrib.mysqldb module
 ----------------------------
 
