@@ -285,27 +285,21 @@ class SnakebiteHdfsClient(HdfsClient):
         If Luigi has forked, we have a different PID, and need to reconnect.
         """
         if self.pid != os.getpid() or not self._bite:
-            autoconfig_enabled = self.config.getboolean("hdfs", "snakebite_autoconfig", False)
-            if autoconfig_enabled is True:
+            client_kwargs = dict(filter(lambda (k, v): v is not None and v != '',  {
+                'hadoop_version': self.config.getint("hdfs", "client_version", None),
+                'effective_user': self.config.get("hdfs", "effective_user", None)
+            }.items()))
+            if self.config.getboolean("hdfs", "snakebite_autoconfig", False):
                 """
                 This is fully backwards compatible with the vanilla Client and can be used for a non HA cluster as well.
                 This client tries to read ``${HADOOP_PATH}/conf/hdfs-site.xml`` to get the address of the namenode.
                 The behaviour is the same as Client.
                 """
                 from snakebite.client import AutoConfigClient
-                self._bite = AutoConfigClient()
+                self._bite = AutoConfigClient(**client_kwargs)
             else:
                 from snakebite.client import Client
-                try:
-                    ver = self.config.getint("hdfs", "client_version")
-                    if ver is None:
-                        raise RuntimeError()
-                    self._bite = Client(self.config.get("hdfs", "namenode_host"),
-                                       self.config.getint("hdfs", "namenode_port"),
-                                       hadoop_version=ver)
-                except:
-                    self._bite = Client(self.config.get("hdfs", "namenode_host"),
-                                       self.config.getint("hdfs", "namenode_port"))
+                self._bite = Client(self.config.get("hdfs", "namenode_host"), self.config.getint("hdfs", "namenode_port"), **client_kwargs)
         return self._bite
 
     def exists(self, path):
