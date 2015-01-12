@@ -108,6 +108,7 @@ modified example would look as shown below::
         task1, task2 = SQLATask(), BaseTask()
         luigi.build([task1, task2], local_scheduler=True)
 
+
 In the above example, the output from `BaseTask` is copied into the
 database. Here we did not have to implement the `rows` method because
 by default `rows` implementation assumes every line is a row with
@@ -130,7 +131,7 @@ import logging
 import luigi
 import datetime
 import itertools
-from sqlalchemy import Table, MetaData, Column, String, DateTime, create_engine, select
+import sqlalchemy
 
 logger = logging.getLogger('luigi-interface')
 
@@ -152,7 +153,7 @@ class SQLAlchemyTarget(luigi.Target):
         """
         self.target_table = target_table
         self.update_id = update_id
-        self.engine = create_engine(connection_string, echo=echo)
+        self.engine = sqlalchemy.create_engine(connection_string, echo=echo)
         self.marker_table_bound = None
 
     def touch(self):
@@ -178,7 +179,7 @@ class SQLAlchemyTarget(luigi.Target):
             self.create_marker_table()
         with self.engine.begin() as conn:
             table = self.marker_table_bound
-            s = select([table]).where(table.c.update_id == self.update_id).limit(1)
+            s = sqlalchemy.select([table]).where(table.c.update_id == self.update_id).limit(1)
             row = conn.execute(s).fetchone()
         return row is not None
 
@@ -190,12 +191,13 @@ class SQLAlchemyTarget(luigi.Target):
             self.marker_table = luigi.configuration.get_config().get('sqlalchemy', 'marker-table', 'table_updates')
 
         with self.engine.begin() as con:
-            metadata = MetaData()
+            metadata = sqlalchemy.MetaData()
             if not con.dialect.has_table(con, self.marker_table):
-                self.marker_table_bound = Table(self.marker_table, metadata,
-                                     Column("update_id", String(128), primary_key=True),
-                                     Column("target_table", String(128)),
-                                     Column("inserted",DateTime,default=datetime.datetime.now()))
+                self.marker_table_bound = sqlalchemy.Table(
+                    self.marker_table, metadata,
+                    sqlalchemy.Column("update_id", sqlalchemy.String(128), primary_key=True),
+                    sqlalchemy.Column("target_table", sqlalchemy.String(128)),
+                    sqlalchemy.Column("inserted", sqlalchemy.DateTime, default=datetime.datetime.now()))
                 metadata.create_all(self.engine)
             else:
                 metadata.reflect(bind=self.engine)
@@ -250,7 +252,7 @@ class CopyToTable(luigi.Task):
         create the table and insert data using the same transaction.
         """
         def construct_sqla_columns(columns):
-            retval = [Column(*c[0], **c[1]) for c in columns]
+            retval = [sqlalchemy.Column(*c[0], **c[1]) for c in columns]
             return retval
 
         needs_setup = (len(self.columns) == 0) or (False in [len(c) == 2 for c in self.columns]) if not self.reflect else False
@@ -260,11 +262,11 @@ class CopyToTable(luigi.Task):
         else:
             # if columns is specified as (name, type) tuples
             with engine.begin() as con:
-                metadata = MetaData()
+                metadata = sqlalchemy.MetaData()
                 try:
                     if not con.dialect.has_table(con, self.table):
                         sqla_columns = construct_sqla_columns(self.columns)
-                        self.table_bound = Table(self.table, metadata, *sqla_columns)
+                        self.table_bound = sqlalchemy.Table(self.table, metadata, *sqla_columns)
                         metadata.create_all(engine)
                     else:
                         metadata.reflect(bind=engine)
