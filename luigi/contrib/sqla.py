@@ -18,7 +18,7 @@ supported by SQLAlchemy. The user would be responsible for installing the
 required database driver to connect using SQLAlchemy.
 
 Minimal example of a job to copy data to database using SQLAlchemy is as shown
-below:
+below::
 
     from sqlalchemy import String
     import luigi
@@ -46,7 +46,7 @@ below:
 
 If the target table where the data needs to be copied already exists, then
 the column schema definition can be skipped and instead the reflect flag
-can be set as True. Here is a modified version of the above example:
+can be set as True. Here is a modified version of the above example::
 
     from sqlalchemy import String
     import luigi
@@ -70,7 +70,7 @@ can be set as True. Here is a modified version of the above example:
 
 In the above examples, the data that needs to be copied was directly provided by
 overriding the rows method. Alternately, if the data comes from another task, the
-modified example would look as shown below:
+modified example would look as shown below::
 
     from sqlalchemy import String
     import luigi
