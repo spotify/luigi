@@ -77,9 +77,7 @@ modified example would look as shown below::
     from luigi.contrib import sqla
     from luigi.mock import MockFile
 
-
     class BaseTask(luigi.Task):
-
         def output(self):
             return MockFile("BaseTask")
 
