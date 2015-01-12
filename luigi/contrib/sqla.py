@@ -83,7 +83,7 @@ modified example would look as shown below::
 
         def run(self):
             out = self.output().open("w")
-            TASK_LIST = ["item%d\tproperty%d\n" % (i, i) for i in range(10)]
+            TASK_LIST = ["item%d\\tproperty%d\\n" % (i, i) for i in range(10)]
             for task in TASK_LIST:
                 out.write(task)
             out.close()
