@@ -484,6 +484,15 @@ class Task(object):
 
         return all(itertools.imap(lambda output: output.exists(), outputs))
 
+    @classmethod
+    def bulk_complete(cls, parameter_tuples):
+        """Returns those of parameter_tuples for which this Task is complete.
+
+        Override (with an efficient implementation) for efficient scheduling
+        with range tools. Keep the logic consistent with that of complete().
+        """
+        raise NotImplementedError
+
     def output(self):
         """The output that this Task produces.
 
