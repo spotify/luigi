@@ -164,7 +164,8 @@ class SQLAlchemyTarget(luigi.Target):
         with self.engine.begin() as conn:
             id_exists = self.exists()
             if not id_exists:
-                ins = table.insert().values(update_id=self.update_id, target_table=self.target_table)
+                ins = table.insert().values(update_id=self.update_id, target_table=self.target_table,
+                                            inserted=datetime.datetime.now())
             else:
                 ins = table.update().values(update_id=self.update_id, target_table=self.target_table,
                                             inserted=datetime.datetime.now())
