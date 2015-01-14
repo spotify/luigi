@@ -25,11 +25,25 @@ import logging
 import luigi
 from luigi.parameter import ParameterException
 from luigi.target import FileSystemTarget
-from luigi.task import Register, flatten_output
+from luigi.task import Register, WrapperTask, flatten
 import re
 import time
 
 logger = logging.getLogger('luigi-interface')
+
+
+def _flatten_output(task):
+    """Lists all output targets by recursively walking wrapper tasks (if any)
+
+    FIXME order consistently.
+    """
+    if isinstance(task, WrapperTask):
+        r = []
+        for dep in flatten(task.requires()):
+            r += _flatten_output(dep)
+    else:
+        r = flatten(task.output())
+    return r
 
 
 class RangeEvent(luigi.Event):  # Not sure if subclassing currently serves a purpose. Stringly typed, events are.
@@ -54,7 +68,7 @@ class RangeEvent(luigi.Event):  # Not sure if subclassing currently serves a pur
 
 
 class RangeHourlyBase(luigi.WrapperTask):
-    """Produces a contiguous completed range of a hourly recurring task.
+    """Produces a contiguous comple ted range of a hourly recurring task.
 
     Made for the common use case where a task is parameterized by datehour and
     assurance is needed that any gaps arising from downtime are eventually
@@ -273,7 +287,7 @@ class RangeHourly(RangeHourlyBase):
         sample_datehours = [datetime(y, m, d, h) for y in range(2000, 2050, 10) for m in range(1, 4) for d in range(5, 8) for h in range(21, 24)]
         regexes = [re.compile('(%04d).*(%02d).*(%02d).*(%02d)' % (d.year, d.month, d.day, d.hour)) for d in sample_datehours]
         sample_tasks = [task_cls(d) for d in sample_datehours]
-        sample_outputs = [flatten_output(t) for t in sample_tasks]
+        sample_outputs = [_flatten_output(t) for t in sample_tasks]
 
         for o, t in zip(sample_outputs, sample_tasks):
             if len(o) != len(sample_outputs[0]):
@@ -303,7 +317,7 @@ class RangeHourly(RangeHourlyBase):
         """Infers them by listing the task output target(s) filesystem.
         """
         filesystems_and_globs_by_location = self._get_filesystems_and_globs(task_cls)
-        paths_by_datehour = [[o.path for o in flatten_output(task_cls(d))] for d in finite_datehours]
+        paths_by_datehour = [[o.path for o in _flatten_output(task_cls(d))] for d in finite_datehours]
         listing = set()
         for (f, g), p in zip(filesystems_and_globs_by_location, zip(*paths_by_datehour)):  # transposed, so here we're iterating over logical outputs, not datehours
             listing |= self._list_existing(f, g, p)

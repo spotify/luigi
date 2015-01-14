@@ -12,12 +12,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+from __future__ import print_function
 import abc
 import logging
 import parameter
 import warnings
 import traceback
 import itertools
+from luigi.mock import MockFile, MockFileSystem
 import pyparsing as pp
 
 Parameter = parameter.Parameter
@@ -590,12 +592,23 @@ class ExternalTask(Task):
     run = NotImplemented
 
 
+class _WrapperMarker(MockFile):
+    fs = MockFileSystem()  # separate from the user space mockfile system
+
+    def __init__(self, task):
+        super(_WrapperMarker, self).__init__(task.task_id)
+
+
 class WrapperTask(Task):
     """Use for tasks that only wrap other tasks and that by definition are done
     if all their requirements exist.
     """
-    def complete(self):
-        return all(r.complete() for r in flatten(self.requires()))
+    def output(self):
+        return _WrapperMarker(self)
+
+    def run(self):
+        with self.output().open('w') as f:
+            print("completed", file=f)
 
 
 def getpaths(struct):
@@ -648,15 +661,3 @@ def flatten(struct):
         pass
 
     return [struct]
-
-
-def flatten_output(task):
-    """Lists all output targets by recursively walking output-less (wrapper) tasks.
-
-    FIXME order consistently.
-    """
-    r = flatten(task.output())
-    if not r:
-        for dep in flatten(task.requires()):
-            r += flatten_output(dep)
-    return r
