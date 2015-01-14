@@ -15,7 +15,7 @@
 import unittest
 from nose.plugins.attrib import attr
 from snakebite.minicluster import MiniCluster
-from luigi import hdfs
+from luigi import hdfs, hadoop
 import os
 import getpass
 
@@ -58,3 +58,17 @@ class MiniClusterTestCase(unittest.TestCase):
         return '%s/luigi_tmp_testfile%s' % (MiniClusterTestCase._test_dir(), suffix)
 
 
+class MiniClusterHadoopJobRunner(hadoop.HadoopJobRunner):
+    ''' The default job runner just reads from config and sets stuff '''
+    def __init__(self):
+        # Locate the hadoop streaming jar in the hadoop directory
+        hadoop_tools_lib = os.path.join(os.environ['HADOOP_HOME'], 'share/hadoop/tools/lib')        
+
+        for path in os.listdir(hadoop_tools_lib):
+            if path.startswith('hadoop-streaming') and path.endswith('.jar'):
+                streaming_jar = os.path.join(hadoop_tools_lib, path)
+                break
+        else:
+            raise Exception('Could not locate streaming jar in ' + hadoop_tools_lib)
+
+        super(MiniClusterHadoopJobRunner, self).__init__(streaming_jar=streaming_jar)

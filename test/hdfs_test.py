@@ -60,7 +60,6 @@ class ErrorHandling(MiniClusterTestCase):
 
 @attr('minicluster')
 class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
-
     def test_atomicity(self):
         testpath = self._test_dir()
         if self.fs.exists(testpath):
