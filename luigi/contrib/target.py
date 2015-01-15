@@ -16,7 +16,9 @@ class CascadingClient():
     # created, pass the kwarg to the constructor.
     ALL_METHOD_NAMES = ['exists', 'rename', 'remove', 'chmod', 'chown',
                         'count', 'copy', 'get', 'put', 'mkdir', 'listdir',
-                        'isdir']
+                        'isdir',
+                        'rename_dont_move',
+                        ]
 
     def __init__(self, clients, method_names=ALL_METHOD_NAMES):
         self.clients = clients

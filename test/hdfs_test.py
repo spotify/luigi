@@ -20,6 +20,7 @@ import re
 import functools
 from minicluster import MiniClusterTestCase
 from nose.plugins.attrib import attr
+import helpers
 
 try:
     import unittest2 as unittest
@@ -29,6 +30,39 @@ except ImportError:
 
 class TestException(Exception):
     pass
+
+
+@attr('minicluster')
+class ConfigurationTest(MiniClusterTestCase):
+
+    def tezt_rename_dont_move(self, client):
+        """ I happen to just want to test this, Since I know the codepaths will
+        be quite different for the three kinds of clients """
+        if client.exists('d'):
+            client.remove('d')
+        client.mkdir('d/a')
+        client.mkdir('d/b')
+        self.assertEqual(2, len(list(client.listdir('d'))))
+        target = hdfs.HdfsTarget('d/a', fs=client)
+        self.assertFalse(target.move_dir('d/b'))
+        self.assertEqual(2, len(list(client.listdir('d'))))
+        self.assertTrue(target.move_dir('d/c'))
+        self.assertEqual(2, len(list(client.listdir('d'))))
+
+    @helpers.with_config({"hdfs": {"client": "hadoopcli"}})
+    def test_hadoopcli(self):
+        client = hdfs.get_autoconfig_client()
+        self.tezt_rename_dont_move(client)
+
+    @helpers.with_config({"hdfs": {"client": "snakebite"}})
+    def test_snakebite(self):
+        client = hdfs.get_autoconfig_client()
+        self.tezt_rename_dont_move(client)
+
+    @helpers.with_config({"hdfs": {"client": "snakebite_with_hadoopcli_fallback"}})
+    def test_snakebite_with_hadoopcli_fallback(self):
+        client = hdfs.get_autoconfig_client()
+        self.tezt_rename_dont_move(client)
 
 
 @attr('minicluster')
