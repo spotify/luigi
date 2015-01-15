@@ -12,17 +12,15 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import os
 from calendar import timegm
 from datetime import datetime
-import getpass
 import luigi
 from luigi import hdfs
 import mock
 import re
 import functools
+from minicluster import MiniClusterTestCase
 from nose.plugins.attrib import attr
-from snakebite.minicluster import MiniCluster
 
 try:
     import unittest2 as unittest
@@ -34,41 +32,7 @@ class TestException(Exception):
 
 
 @attr('minicluster')
-class HdfsTestCase(unittest.TestCase):
-    cluster = None
-
-    @classmethod
-    def setupClass(cls):
-        if not cls.cluster:
-            cls.cluster = MiniCluster(None, nnport=50030)
-        cls.cluster.mkdir("/tmp")
-
-    @classmethod
-    def tearDownClass(cls):
-        if cls.cluster:
-            cls.cluster.terminate()
-
-    def setUp(self):
-        self.fs = hdfs.client
-        cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "testconfig")
-        hadoop_bin = os.path.join(os.environ['HADOOP_HOME'], 'bin/hadoop')
-        hdfs.load_hadoop_cmd = lambda: [hadoop_bin, '--config', cfg_path]
-
-    def tearDown(self):
-        if self.fs.exists(self._test_dir()):
-            self.fs.remove(self._test_dir(), skip_trash=True)
-
-    @staticmethod
-    def _test_dir():
-        return '/tmp/luigi_tmp_testdir_%s' % getpass.getuser()
-
-    @staticmethod
-    def _test_file(suffix=""):
-        return '%s/luigi_tmp_testfile%s' % (HdfsTestCase._test_dir(), suffix)
-
-
-@attr('minicluster')
-class ErrorHandling(HdfsTestCase):
+class ErrorHandling(MiniClusterTestCase):
     def test_connection_refused(self):
         """ The point of this test is to see if file existence checks
         can distinguish file non-existence from errors
@@ -95,8 +59,7 @@ class ErrorHandling(HdfsTestCase):
 
 
 @attr('minicluster')
-class AtomicHdfsOutputPipeTests(HdfsTestCase):
-
+class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
     def test_atomicity(self):
         testpath = self._test_dir()
         if self.fs.exists(testpath):
@@ -139,7 +102,7 @@ class AtomicHdfsOutputPipeTests(HdfsTestCase):
 
 
 @attr('minicluster')
-class HdfsAtomicWriteDirPipeTests(HdfsTestCase):
+class HdfsAtomicWriteDirPipeTests(MiniClusterTestCase):
     def setUp(self):
         super(HdfsAtomicWriteDirPipeTests, self).setUp()
         self.path = self._test_file()
@@ -207,12 +170,12 @@ class _HdfsFormatTest(object):
 
 
 @attr('minicluster')
-class PlainFormatTest(_HdfsFormatTest, HdfsTestCase):
+class PlainFormatTest(_HdfsFormatTest, MiniClusterTestCase):
     format = hdfs.Plain
 
 
 @attr('minicluster')
-class PlainDirFormatTest(_HdfsFormatTest, HdfsTestCase):
+class PlainDirFormatTest(_HdfsFormatTest, MiniClusterTestCase):
     format = hdfs.PlainDir
 
     def test_multifile(self):
@@ -235,7 +198,7 @@ class PlainDirFormatTest(_HdfsFormatTest, HdfsTestCase):
 
 
 @attr('minicluster')
-class HdfsTargetTests(HdfsTestCase):
+class HdfsTargetTests(MiniClusterTestCase):
 
     def test_slow_exists(self):
         target = hdfs.HdfsTarget(self._test_file())
@@ -449,7 +412,7 @@ class HdfsTargetTests(HdfsTestCase):
 
 TIMESTAMP_DELAY = 60 # Big enough for `hadoop fs`?
 @attr('minicluster')
-class _HdfsClientTest(HdfsTestCase):
+class _HdfsClientTest(MiniClusterTestCase):
 
     def create_file(self, target):
         fobj = target.open("w")
