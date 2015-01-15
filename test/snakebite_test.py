@@ -8,6 +8,7 @@ from luigi.hdfs import SnakebiteHdfsClient
 from snakebite.client import AutoConfigClient as SnakebiteAutoConfigClient
 from nose.plugins.attrib import attr
 from snakebite.minicluster import MiniCluster
+from minicluster import MiniClusterTestCase
 
 try:
     import unittest2 as unittest
@@ -16,26 +17,18 @@ except ImportError:
 
 
 @attr('minicluster')
-class TestSnakebiteClient(unittest.TestCase):
+class TestSnakebiteClient(MiniClusterTestCase):
     """This test requires a snakebite -- it finds it from your
     client.cfg"""
     snakebite = None
-    cluster = None
 
-    @classmethod
-    def setupClass(cls):
-        if not cls.cluster:
-            cls.cluster = MiniCluster(None, nnport=50030)
-
-    @classmethod
-    def tearDownClass(cls):
-        if cls.cluster:
-            cls.cluster.terminate()
 
     def get_client(self):
         return SnakebiteHdfsClient()
 
     def setUp(self):
+        """ We override setUp because we want to also use snakebite for
+        creating the testing directory.  """
         self.testDir = "/tmp/luigi-test-{0}-{1}".format(
             os.environ["USER"],
             time.mktime(datetime.datetime.now().timetuple())
