@@ -777,12 +777,18 @@ class HdfsTarget(FileSystemTarget):
         self.rename(path, raise_if_exists=fail_if_exists)
 
     def move_dir(self, path):
-        # mkdir will fail if directory already exists, thereby ensuring atomicity
-        if isinstance(path, HdfsTarget):
-            path = path.path
-        mkdir(path, parents=False, raise_if_exists=True)
-        rename(self.path + '/*', path)
-        self.remove()
+        """ Rename a directory. The implementation uses `rename_dont_move`,
+        which on some clients is just a normal `mv` operation, which can cause
+        nested directories.
+
+        One could argue that the implementation should use the
+        mkdir+raise_if_exists approach, but we at Spotify have had more trouble
+        with that over just using plain mv.  See spotify/luigi#557
+        """
+        move_succeeded = self.fs.rename_dont_move(self.path, path)
+        if move_succeeded:
+            self.path = path
+        return move_succeeded
 
     def is_writable(self):
         if "/" in self.path:
