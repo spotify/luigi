@@ -67,3 +67,19 @@ class TestSnakebiteClient(MiniClusterTestCase):
         finally:
             if self.snakebite.exists(rel_test_dir):
                 self.snakebite.remove(rel_test_dir, True)
+
+    def test_rename_dont_move(self):
+        foo = posixpath.join(self.testDir, "foo")
+        bar = posixpath.join(self.testDir, "bar")
+        self.assertTrue(self.snakebite.mkdir(foo))
+        self.assertTrue(self.snakebite.mkdir(bar))
+        self.assertTrue(self.snakebite.exists(foo))  # For sanity
+        self.assertTrue(self.snakebite.exists(bar))  # For sanity
+
+        self.assertFalse(self.snakebite.rename_dont_move(foo, bar))
+        self.assertTrue(self.snakebite.exists(foo))
+        self.assertTrue(self.snakebite.exists(bar))
+
+        self.assertTrue(self.snakebite.rename_dont_move(foo, foo + '2'))
+        self.assertFalse(self.snakebite.exists(foo))
+        self.assertTrue(self.snakebite.exists(foo + '2'))

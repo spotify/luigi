@@ -339,6 +339,24 @@ class SnakebiteHdfsClient(HdfsClient):
                 self.mkdir(dir_path, parents=True)
         return list(self.get_bite().rename(list_path(path), dest))
 
+    def rename_dont_move(self, path, dest):
+        """
+        Use snakebite.rename_dont_move, if available.
+
+        :param path: source path (single input)
+        :type path: string
+        :param dest: destination path
+        :type dest: string
+        :return: True if succeeded
+        :raises: snakebite.errors.FileAlreadyExistsException
+        """
+        from snakebite.errors import FileAlreadyExistsException
+        try:
+            self.get_bite().rename2(path, dest, overwriteDest=False)
+            return True
+        except FileAlreadyExistsException:
+            return False
+
     def remove(self, path, recursive=True, skip_trash=False):
         """
         Use snakebite.delete, if available.
