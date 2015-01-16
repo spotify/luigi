@@ -78,6 +78,23 @@ def send_email_ses(config, sender, subject, message, recipients, image_png):
                        source=msg_root['From'],
                        destinations=msg_root['To'])
 
+def send_email_sendgrid(config, sender, subject, message, recipients, image_png):
+    import sendgrid
+    client = sendgrid.SendGridClient(config.get('email', 'SENDGRID_USERNAME', None),
+                                     config.get('email', 'SENDGRID_PASSWORD', None),
+                                     raise_errors=True)
+    to_send = sendgrid.Mail()
+    to_send.add_to(recipients)
+    to_send.set_from(sender)
+    to_send.set_subject(subject)
+    if email_type() == 'html':
+        to_send.set_html(message)
+    else:
+        to_send.set_text(message)
+    if image_png:
+        to_send.add_attachment(image_png)
+
+    client.send(to_send)
 
 def send_email(subject, message, sender, recipients, image_png=None):
     subject = _prefix(subject)
@@ -106,8 +123,11 @@ def send_email(subject, message, sender, recipients, image_png=None):
     # Replace original recipients with the clean list
     recipients = recipients_tmp
 
-    if config.get('email', 'type', None) == "ses":
+    email_sender_type = config.get('email', 'type', None)
+    if email_sender_type == "ses":
         send_email_ses(config, sender, subject, message, recipients, image_png)
+    elif email_sender_type == "sendgrid":
+        send_email_sendgrid(config, sender, subject, message, recipients, image_png)
     else:
         send_email_smtp(config, sender, subject, message, recipients, image_png)
 

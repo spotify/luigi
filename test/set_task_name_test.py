@@ -24,7 +24,8 @@ def create_class(cls_name):
     return NewTask
 
 
-my_new_task = luigi.expose(create_class('MyNewTask'))
+create_class('MyNewTask')
+
 
 class SetTaskNameTest(unittest.TestCase):
     ''' I accidentally introduced an issue in this commit:

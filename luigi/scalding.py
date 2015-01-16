@@ -4,6 +4,7 @@ import re
 import subprocess
 
 from luigi import LocalTarget
+from luigi.task import flatten
 import configuration
 import hadoop
 import hadoop_jar
@@ -205,8 +206,9 @@ class ScaldingJobTask(hadoop.BaseHadoopJobTask):
     method
 
     requires() should return a dictionary where the keys are Scalding argument
-    names and values are lists of paths. For example:
-    {'input1': ['A', 'B'], 'input2': ['C']} => --input1 A B --input2 C
+    names and values are sub tasks or lists of subtasks. For example:
+    {'input1': A, 'input2': C} => --input1 <Aoutput> --input2 <Coutput>
+    {'input1': [A, B], 'input2': [C]} => --input1 <Aoutput> <Boutput> --input2 <Coutput>
     """
 
     def relpath(self, current_file, rel_path):
@@ -255,7 +257,7 @@ class ScaldingJobTask(hadoop.BaseHadoopJobTask):
         arglist = []
         for k, v in self.requires_hadoop().iteritems():
             arglist.append('--' + k)
-            arglist.extend([t.output().path for t in v])
+            arglist.extend([t.output().path for t in flatten(v)])
         arglist.extend(['--output', self.output()])
         arglist.extend(self.job_args())
         return arglist

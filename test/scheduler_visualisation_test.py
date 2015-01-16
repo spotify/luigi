@@ -346,7 +346,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         def assert_has_deps(task_id, deps):
             self.assertTrue(task_id in dep_graph, '%s not in dep_graph %s' % (task_id, dep_graph))
             task = dep_graph[task_id]
-            self.assertEquals(sorted(task['deps']), sorted(deps), '%s does not have deps %s' % (task_id, deps))
+            self.assertEqual(sorted(task['deps']), sorted(deps), '%s does not have deps %s' % (task_id, deps))
 
         assert_has_deps('X()', ['Y()'])
         assert_has_deps('Y()', ['Z(id=1)', 'Z(id=2)'])
@@ -366,7 +366,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         workers = self._remote().worker_list()
 
-        self.assertEquals(1, len(workers))
+        self.assertEqual(1, len(workers))
         worker = workers[0]
         self.assertEqual('X()', worker['first_task'])
         self.assertEqual(0, worker['num_pending'])

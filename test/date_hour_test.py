@@ -23,16 +23,16 @@ class DateHourTask(luigi.Task):
 class DateHourTest(unittest.TestCase):
     def test_parse(self):
         dh = luigi.DateHourParameter().parse('2013-01-01T18')
-        self.assertEquals(dh, datetime.datetime(2013, 1, 1, 18, 0, 0))
+        self.assertEqual(dh, datetime.datetime(2013, 1, 1, 18, 0, 0))
 
     def test_serialize(self):
         dh = luigi.DateHourParameter().serialize(datetime.datetime(2013, 1, 1, 18, 0, 0))
-        self.assertEquals(dh, '2013-01-01T18')
+        self.assertEqual(dh, '2013-01-01T18')
 
     def test_parse_interface(self):
         task = luigi.interface.ArgParseInterface().parse(["DateHourTask", "--dh", "2013-01-01T18"])[0]
-        self.assertEquals(task.dh, datetime.datetime(2013, 1, 1, 18, 0, 0))
+        self.assertEqual(task.dh, datetime.datetime(2013, 1, 1, 18, 0, 0))
 
     def test_serialize_task(self):
         t = DateHourTask(datetime.datetime(2013, 1, 1, 18, 0, 0))
-        self.assertEquals(str(t), 'DateHourTask(dh=2013-01-01T18)')
+        self.assertEqual(str(t), 'DateHourTask(dh=2013-01-01T18)')

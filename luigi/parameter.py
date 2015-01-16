@@ -111,14 +111,18 @@ class Parameter(object):
         self.significant = significant # Whether different values for this parameter will differentiate otherwise equal tasks
 
         if default_from_config is not None:
-            warnings.warn("Use config_path parameter, not default_from_config", DeprecationWarning)
+            warnings.warn(
+                "Use config_path parameter, not default_from_config",
+                DeprecationWarning,
+                stacklevel=2
+            )
             config_path = default_from_config
 
         if is_global and default == _no_value and config_path is None:
             raise ParameterException('Global parameters need default values')
         self.description = description
 
-        if config_path is not None and (not 'section' in config_path or not 'name' in config_path):
+        if config_path is not None and ('section' not in config_path or 'name' not in config_path):
             raise ParameterException('config_path must be a hash containing entries for section and name')
         self.__config = config_path
 
@@ -165,7 +169,12 @@ class Parameter(object):
     @property
     def has_default(self):
         """Don't use this function - see has_value instead"""
-        warnings.warn('Use has_value rather than has_default. The meaning of "default" has changed', DeprecationWarning)
+        warnings.warn(
+            'Use has_value rather than has_default. The meaning of '
+            '"default" has changed',
+            DeprecationWarning,
+            stacklevel=2
+        )
         return self.has_value
 
     @property
@@ -187,7 +196,12 @@ class Parameter(object):
 
     @property
     def default(self):
-        warnings.warn('Use value rather than default. The meaning of "default" has changed', DeprecationWarning)
+        warnings.warn(
+            'Use value rather than default. The meaning of '
+            '"default" has changed',
+            DeprecationWarning,
+            stacklevel=2
+        )
         return self.value
 
     def set_global(self, value):
@@ -206,7 +220,12 @@ class Parameter(object):
 
         :param value: the new default value.
         """
-        warnings.warn('Use set_global rather than set_default. The meaning of "default" has changed', DeprecationWarning)
+        warnings.warn(
+            'Use set_global rather than set_default. The meaning of '
+            '"default" has changed',
+            DeprecationWarning,
+            stacklevel=2
+        )
         self.__default = value
 
     def parse(self, x):

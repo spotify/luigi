@@ -20,8 +20,8 @@ from helpers import with_config
 class TestEmail(unittest.TestCase):
 
     def testEmailNoPrefix(self):
-        self.assertEquals("subject", notifications._prefix('subject'))
+        self.assertEqual("subject", notifications._prefix('subject'))
 
     @with_config({"core": {"email-prefix": "[prefix]"}})
     def testEmailPrefix(self):
-        self.assertEquals("[prefix] subject", notifications._prefix('subject'))
+        self.assertEqual("[prefix] subject", notifications._prefix('subject'))

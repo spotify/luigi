@@ -34,7 +34,7 @@ class TestEventCallbacks(TestCase):
 
         t = EmptyTask(True)
         build([t], local_scheduler=True)
-        self.assertEquals(saved_tasks, [t])
+        self.assertEqual(saved_tasks, [t])
 
     def test_success_handler(self):
         saved_tasks = []
@@ -46,7 +46,7 @@ class TestEventCallbacks(TestCase):
 
         t = EmptyTask(False)
         build([t], local_scheduler=True)
-        self.assertEquals(saved_tasks, [t])
+        self.assertEqual(saved_tasks, [t])
 
     def test_failure_handler(self):
         saved_tasks = []
@@ -60,7 +60,7 @@ class TestEventCallbacks(TestCase):
 
         t = EmptyTask(True)
         build([t], local_scheduler=True)
-        self.assertEquals(saved_tasks, [t])
+        self.assertEqual(saved_tasks, [t])
         self.assertTrue(isinstance(exceptions[0], DummyException))
 
     def test_custom_handler(self):
@@ -72,7 +72,7 @@ class TestEventCallbacks(TestCase):
 
         t = TaskWithCallback()
         build([t], local_scheduler=True)
-        self.assertEquals(dummies[0], "foo")
+        self.assertEqual(dummies[0], "foo")
 
     def test_processing_time_handler(self):
         @EmptyTask.event_handler(Event.PROCESSING_TIME)
@@ -85,7 +85,7 @@ class TestEventCallbacks(TestCase):
             mock.time = times.pop
             build([t], local_scheduler=True)
         self.assertTrue(self.result[0] is t)
-        self.assertEquals(self.result[1], 42.0)
+        self.assertEqual(self.result[1], 42.0)
 
 
 #        A
@@ -154,7 +154,7 @@ class TestDependencyEvents(TestCase):
             actual_events.setdefault(Event.DEPENDENCY_PRESENT, set()).add(tuple(map(lambda t: t.task_id, args)))
 
         build([task], local_scheduler=True)
-        self.assertEquals(actual_events, expected_events)
+        self.assertEqual(actual_events, expected_events)
 
     def test_incomplete_dag(self):
         for param in range(1, 3):
@@ -200,4 +200,4 @@ class TestDependencyEvents(TestCase):
                 ('D(param=3)',),
             ]),
         })
-        self.assertEquals(eval_contents(A().output()), ['A(param=1)', ['B(param=1)', ['C(param=1)', ['D(param=1)'], ['D(param=2)']]], ['B(param=2)', ['C(param=2)', ['D(param=2)'], ['D(param=3)']]]])
+        self.assertEqual(eval_contents(A().output()), ['A(param=1)', ['B(param=1)', ['C(param=1)', ['D(param=1)'], ['D(param=2)']]], ['B(param=2)', ['C(param=2)', ['D(param=2)'], ['D(param=3)']]]])

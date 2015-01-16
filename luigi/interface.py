@@ -122,6 +122,11 @@ class EnvironmentParamsContainer(task.Task):
     module = parameter.Parameter(
         is_global=True, default=None,
         description='Used for dynamic loading of modules') # see DynamicArgParseInterface
+    parallel_scheduling = parameter.BooleanParameter(
+        is_global=True, default=False,
+        description='Use multiprocessing to do scheduling in parallel.',
+        config_path={'section': 'core', 'name': 'parallel-scheduling'},
+    )
 
     @classmethod
     def env_params(cls, override_defaults={}):
@@ -131,20 +136,6 @@ class EnvironmentParamsContainer(task.Task):
                 param_obj.set_global(override_defaults[param_name])
 
         return cls()  # instantiate an object with the global params set on it
-
-
-def expose(cls):
-    warnings.warn('expose is no longer used, everything is autoexposed', DeprecationWarning)
-    return cls
-
-
-def expose_main(cls):
-    warnings.warn('expose_main is no longer supported, use luigi.run(..., main_task_cls=cls) instead', DeprecationWarning)
-    return cls
-
-
-def reset():
-    warnings.warn('reset is no longer supported')
 
 
 class WorkerSchedulerFactory(object):
@@ -190,7 +181,8 @@ class Interface(object):
                 "The --lock flag is deprecated and will be removed."
                 "Locking is now the default behavior."
                 "Use --no-lock to override to not use lock",
-                DeprecationWarning
+                DeprecationWarning,
+                stacklevel=3
             )
 
         if (not env_params.no_lock and
@@ -209,7 +201,7 @@ class Interface(object):
 
         success = True
         for t in tasks:
-            success &= w.add(t)
+            success &= w.add(t, env_params.parallel_scheduling)
         logger = logging.getLogger('luigi-interface')
         logger.info('Done scheduling tasks')
         success &= w.run()

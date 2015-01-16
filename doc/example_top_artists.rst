@@ -118,7 +118,7 @@ here is how this could look like, instead of the class above.
         date_interval = luigi.DateIntervalParameter()
 
         def output(self):
-            return luigi.HdfsTarget("data/artist_streams_%s.tsv" % self.date_interval)
+            return luigi.hdfs.HdfsTarget("data/artist_streams_%s.tsv" % self.date_interval)
 
         def requires(self):
             return [StreamsHdfs(date) for date in self.date_interval]
@@ -261,10 +261,4 @@ will try to fetch the traceback and print it on standard output. You
 need `Mechanize <http://wwwsearch.sourceforge.net/mechanize/>`__ for it
 to work and you also need connectivity to your tasktrackers.
 
-To run the server as a daemon run:
-
-::
-
-    PYTHONPATH=. python bin/luigid --background --pidfile <PATH_TO_PIDFILE> --logdir <PATH_TO_LOGDIR> --state-path <PATH_TO_STATEFILE>
-
-Note that this requires python-daemon for this to work.
+In production, you'll want to run the centralized scheduler. See: :doc:`central_scheduler` for more information.

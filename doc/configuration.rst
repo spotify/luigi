@@ -71,8 +71,20 @@ max-reschedules
   reschedule a job if it is found to not be done when attempting to run
   a dependent job. This defaults to 1.
 
+max-shown-tasks
+  .. versionadded:: 1.0.20
+  The maximum number of tasks returned in a task_list api call. This
+  will restrict the number of tasks shown in any section in the
+  visualiser. Small values can alleviate frozen browsers when there are
+  too many done tasks. This defaults to 100000 (one hundred thousand).
+
 no_configure_logging
   If true, logging is not configured. Defaults to false.
+
+parallel-scheduling
+  If true, the scheduler will compute complete functions of tasks in
+  parallel using multiprocessing. This can significantly speed up
+  scheduling, but requires that all tasks can be pickled.
 
 rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
@@ -120,6 +132,15 @@ worker-keep-alive
 worker-ping-interval
   Number of seconds to wait between pinging scheduler to let it know
   that the worker is still alive. Defaults to 1.0.
+
+worker-timeout
+  .. versionadded:: 1.0.20
+  Number of seconds after which to kill a task which has been running
+  for too long. This provides a default value for all tasks, which can
+  be overridden by setting the worker-timeout property in any task. This
+  only works when using multiple workers, as the timeout is implemented
+  by killing worker subprocesses. Default value is 0, meaning no
+  timeout.
 
 worker-wait-interval
   Number of seconds for the worker to wait before asking the scheduler
@@ -196,6 +217,9 @@ client
 
 client_version
   Optionally specifies hadoop client version for snakebite.
+
+effective_user
+  Optionally specifies the effective user for snakebite.
 
 namenode_host
   The hostname of the namenode. Needed for snakebite if
@@ -312,6 +336,8 @@ scalding-libjars
   Libjars directory for scalding on your machine. Defaults to either
   SCALDING_HOME/libjars or /usr/share/scalding/libjars
 
+
+.. _scheduler-config:
 
 [scheduler]
 -----------

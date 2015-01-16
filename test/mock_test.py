@@ -33,7 +33,7 @@ class MockFileTest(unittest.TestCase):
             b.write("bar")
 
         with t.open('r') as b:
-            self.assertEquals(list(b), ['bar'])
+            self.assertEqual(list(b), ['bar'])
 
 
 class MockFileSystemTest(unittest.TestCase):
@@ -64,4 +64,4 @@ class MockFileSystemTest(unittest.TestCase):
         self.assertFalse(self.fs.exists(self.path2))
 
     def test_listdir(self):
-        self.assertEquals(sorted([self.path, self.path2]), sorted(self.fs.listdir("/tmp")))
+        self.assertEqual(sorted([self.path, self.path2]), sorted(self.fs.listdir("/tmp")))

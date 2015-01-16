@@ -41,18 +41,20 @@ def id_to_name_and_params(task_id):
         ``('Foo', {'bar': 'bar', 'baz': 'baz'})``
     '''
     name_chars = pp.alphanums + '_'
+    # modified version of pp.printables. Removed '[]', '()', ','
+    value_chars = pp.alphanums + '\'!"#$%&*+-./:;<=>?@\\^_`{|}~'
     parameter = (
         (pp.Word(name_chars) +
          pp.Literal('=').suppress() +
          ((pp.Literal('(').suppress() | pp.Literal('[').suppress()) +
-          pp.ZeroOrMore(pp.Word(name_chars) +
+          pp.ZeroOrMore(pp.Word(value_chars) +
                         pp.ZeroOrMore(pp.Literal(',')).suppress()) +
           (pp.Literal(')').suppress() |
            pp.Literal(']').suppress()))).setResultsName('list_params',
                                                         listAllMatches=True) |
         (pp.Word(name_chars) +
          pp.Literal('=').suppress() +
-         pp.Word(name_chars)).setResultsName('params', listAllMatches=True))
+         pp.Word(value_chars)).setResultsName('params', listAllMatches=True))
 
     parser = (
         pp.Word(name_chars).setResultsName('task') +
@@ -257,6 +259,10 @@ class Task(object):
     # Resources used by the task. Should be formatted like {"scp": 1} to indicate that the
     # task requires 1 unit of the scp resource.
     resources = {}
+
+    # Number of seconds after which to time out the run function. No timeout if set to 0. Defaults
+    # to 0 or value in client.cfg
+    worker_timeout = None
 
     @classmethod
     def event_handler(cls, event):
@@ -464,16 +470,28 @@ class Task(object):
     def complete(self):
         """
             If the task has any outputs, return ``True`` if all outputs exists.
-            Otherwise, return ``False`.
+            Otherwise, return ``False``.
 
             However, you may freely override this method with custom logic.
         """
         outputs = flatten(self.output())
         if len(outputs) == 0:
-            warnings.warn("Task %r without outputs has no custom complete() method" % self)
+            warnings.warn(
+                "Task %r without outputs has no custom complete() method" % self,
+                stacklevel=2
+            )
             return False
 
         return all(itertools.imap(lambda output: output.exists(), outputs))
+
+    @classmethod
+    def bulk_complete(cls, parameter_tuples):
+        """Returns those of parameter_tuples for which this Task is complete.
+
+        Override (with an efficient implementation) for efficient scheduling
+        with range tools. Keep the logic consistent with that of complete().
+        """
+        raise NotImplementedError
 
     def output(self):
         """The output that this Task produces.
@@ -565,7 +583,7 @@ class Task(object):
 def externalize(task):
     """Returns an externalized version of the Task.
 
-    See py:class:`ExternalTask`.
+    See :py:class:`ExternalTask`.
     """
     task.run = NotImplemented
     return task

@@ -30,8 +30,8 @@ class HiveTest(unittest.TestCase):
     def test_run_hive_command(self):
         pre_count = self.count
         res = luigi.hive.run_hive_cmd("foo")
-        self.assertEquals(["-e", "foo"], self.last_hive_cmd)
-        self.assertEquals("statement{0}".format(pre_count+1), res)
+        self.assertEqual(["-e", "foo"], self.last_hive_cmd)
+        self.assertEqual("statement{0}".format(pre_count+1), res)
 
     def test_run_hive_script_not_exists(self):
         def test():
@@ -42,8 +42,8 @@ class HiveTest(unittest.TestCase):
         with tempfile.NamedTemporaryFile(delete=True) as f:
             pre_count = self.count
             res = luigi.hive.run_hive_script(f.name)
-            self.assertEquals(["-f", f.name], self.last_hive_cmd)
-            self.assertEquals("statement{0}".format(pre_count+1), res)
+            self.assertEqual(["-f", f.name], self.last_hive_cmd)
+            self.assertEqual("statement{0}".format(pre_count+1), res)
 
     def test_create_parent_dirs(self):
         dirname = "/tmp/hive_task_test_dir"
@@ -73,7 +73,7 @@ class HiveCommandClientTest(unittest.TestCase):
                                    "Table Type:         	MANAGED_TABLE       	 \n"
 
         returned = self.client.table_location("mytable")
-        self.assertEquals('hdfs://localhost:9000/user/hive/warehouse/mytable', returned)
+        self.assertEqual('hdfs://localhost:9000/user/hive/warehouse/mytable', returned)
 
     @mock.patch("luigi.hive.run_hive_cmd")
     def test_table_exists(self, run_command):
@@ -129,11 +129,11 @@ class HiveCommandClientTest(unittest.TestCase):
                     ('hour', 'smallint', 'None'),
                     ('Time taken: 2.08 seconds, Fetched: 34 row(s)',)]
         returned = self.client.table_schema("mytable")
-        self.assertEquals(expected, returned)
+        self.assertEqual(expected, returned)
 
     def test_partition_spec(self):
         returned = self.client.partition_spec({'a': 'b', 'c': 'd'})
-        self.assertEquals("a='b',c='d'", returned)
+        self.assertEqual("a='b',c='d'", returned)
 
     @mock.patch("luigi.hive.run_hive_cmd")
     def test_apacheclient_table_exists(self, run_command):
@@ -189,7 +189,7 @@ class HiveCommandClientTest(unittest.TestCase):
                     ('hour', 'smallint', 'None'),
                     ('Time taken: 2.08 seconds, Fetched: 34 row(s)',)]
         returned = self.apacheclient.table_schema("mytable")
-        self.assertEquals(expected, returned)
+        self.assertEqual(expected, returned)
 
     @mock.patch("luigi.hive.HiveThriftContext")
     def test_metastoreclient_partition_existence_regardless_of_order(self, thrift_context):
@@ -221,17 +221,17 @@ class HiveCommandClientTest(unittest.TestCase):
 
         del sys.modules['luigi.hive']
         import luigi.hive
-        self.assertEquals(luigi.hive.HiveCommandClient, type(luigi.hive.client))
+        self.assertEqual(luigi.hive.HiveCommandClient, type(luigi.hive.client))
 
         hive_syntax.get_config.return_value.get.return_value = "cdh3"
         del sys.modules['luigi.hive']
         import luigi.hive
-        self.assertEquals(luigi.hive.HiveCommandClient, type(luigi.hive.client))
+        self.assertEqual(luigi.hive.HiveCommandClient, type(luigi.hive.client))
 
         hive_syntax.get_config.return_value.get.return_value = "apache"
         del sys.modules['luigi.hive']
         import luigi.hive
-        self.assertEquals(luigi.hive.ApacheHiveCommandClient, type(luigi.hive.client))
+        self.assertEqual(luigi.hive.ApacheHiveCommandClient, type(luigi.hive.client))
 
     @mock.patch('subprocess.Popen')
     def test_run_hive_command(self, popen):
@@ -246,14 +246,14 @@ class HiveCommandClientTest(unittest.TestCase):
         popen.return_value = preturn
 
         returned = luigi.hive.run_hive(["blah", "blah"])
-        self.assertEquals("some return stuff", returned)
+        self.assertEqual("some return stuff", returned)
 
         preturn.returncode = 17
         self.assertRaises(luigi.hive.HiveCommandError, luigi.hive.run_hive, ["blah", "blah"])
 
         comm.return_value = "", "some stderr stuff"
         returned = luigi.hive.run_hive(["blah", "blah"], False)
-        self.assertEquals("", returned)
+        self.assertEqual("", returned)
 
 if __name__ == '__main__':
     unittest.main()

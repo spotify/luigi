@@ -480,6 +480,28 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(WORKER, 'A')
         self.assertEqual(self.sch.get_work(WORKER)['task_id'], 'A')
 
+    def test_task_list_beyond_limit(self):
+        sch = CentralPlannerScheduler(max_shown_tasks=3)
+        for c in 'ABCD':
+            sch.add_task(WORKER, c)
+        self.assertEqual(set('ABCD'), set(sch.task_list('PENDING', '', False).keys()))
+        self.assertEqual({'num_tasks': 4}, sch.task_list('PENDING', ''))
+
+    def test_task_list_within_limit(self):
+        sch = CentralPlannerScheduler(max_shown_tasks=4)
+        for c in 'ABCD':
+            sch.add_task(WORKER, c)
+        self.assertEqual(set('ABCD'), set(sch.task_list('PENDING', '').keys()))
+
+    def test_task_lists_some_beyond_limit(self):
+        sch = CentralPlannerScheduler(max_shown_tasks=3)
+        for c in 'ABCD':
+            sch.add_task(WORKER, c, 'DONE')
+        for c in 'EFG':
+            sch.add_task(WORKER, c)
+        self.assertEqual(set('EFG'), set(sch.task_list('PENDING', '').keys()))
+        self.assertEqual({'num_tasks': 4}, sch.task_list('DONE', ''))
+
     def test_priority_update_dependency_chain(self):
         self.sch.add_task(WORKER, 'A', priority=10, deps=['B'])
         self.sch.add_task(WORKER, 'B', priority=5, deps=['C'])
