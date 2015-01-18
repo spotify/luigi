@@ -18,8 +18,6 @@ class InterfaceTest(unittest.TestCase):
         self.worker_scheduler_factory.create_worker = Mock(return_value=self.worker)
         self.worker_scheduler_factory.create_local_scheduler = Mock()
 
-        EnvironmentParamsContainer.no_lock = Mock(return_value=True)
-
         class NoOpTask(luigi.Task):
             param = luigi.Parameter()
 
@@ -45,7 +43,7 @@ class InterfaceTest(unittest.TestCase):
         self.assertFalse(self._run_interface())
 
     def _run_interface(self):
-        return Interface.run([self.task_a, self.task_b], self.worker_scheduler_factory)
+        return Interface.run([self.task_a, self.task_b], self.worker_scheduler_factory, {'no_lock': True})
 
 
 if __name__ == '__main__':
