@@ -41,7 +41,7 @@ class DuplicateParameterException(ParameterException):
 
 
 class UnknownConfigException(ParameterException):
-    """Exception signifying that the ``default_from_config`` for the Parameter could not be found."""
+    """Exception signifying that the ``config_path`` for the Parameter could not be found."""
     pass
 
 
@@ -75,7 +75,7 @@ class Parameter(object):
     """non-atomically increasing counter used for ordering parameters."""
 
     def __init__(self, default=_no_value, is_list=False, is_boolean=False, is_global=False, significant=True, description=None,
-                 config_path=None, default_from_config=None):
+                 config_path=None):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -109,14 +109,6 @@ class Parameter(object):
         self.is_boolean = is_boolean and not is_list  # Only BooleanParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
         self.significant = significant # Whether different values for this parameter will differentiate otherwise equal tasks
-
-        if default_from_config is not None:
-            warnings.warn(
-                "Use config_path parameter, not default_from_config",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            config_path = default_from_config
 
         if is_global and default == _no_value and config_path is None:
             raise ParameterException('Global parameters need default values')
