@@ -60,6 +60,14 @@ luigi.contrib.spark module
     :undoc-members:
     :show-inheritance:
 
+luigi.contrib.scalding module
+--------------------------
+
+.. automodule:: luigi.contrib.scalding
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 luigi.contrib.sparkey module
 ----------------------------
 
