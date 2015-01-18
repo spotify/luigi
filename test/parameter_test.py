@@ -236,16 +236,6 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
         self.assertEqual("baz", A().p)
         self.assertEqual("boo", A(p="boo").p)
 
-
-    @with_config({"foo": {"bar": "baz"}})
-    def testDefaultFromConfig(self):
-        # Use deprecated argument for "config_path"
-        class A(luigi.Task):
-            p = luigi.Parameter(default_from_config=dict(section="foo", name="bar"))
-
-        self.assertEqual("baz", A().p)
-        self.assertEqual("boo", A(p="boo").p)
-
     @with_config({"foo": {"bar": "2001-02-03T04"}})
     def testDateHour(self):
         p = luigi.DateHourParameter(config_path=dict(section="foo", name="bar"))
