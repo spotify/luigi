@@ -151,63 +151,93 @@ def read_wordcount_output(p):
     return count
 
 
-class MapreduceTestMixin(object):
-    def test_run(self):
-        job = WordCountJob(use_hdfs=self.use_hdfs)
+class CommonTests(object):
+    @staticmethod
+    def test_run(test_case):
+        job = WordCountJob(use_hdfs=test_case.use_hdfs)
         luigi.build([job], local_scheduler=True)
         c = read_wordcount_output(job.output())
-        self.assertEqual(int(c['jk']), 6)
+        test_case.assertEqual(int(c['jk']), 6)
 
-    def test_run_2(self):
-        job = WordFreqJob(use_hdfs=self.use_hdfs)
+    @staticmethod
+    def test_run_2(test_case):
+        job = WordFreqJob(use_hdfs=test_case.use_hdfs)
         luigi.build([job], local_scheduler=True)
         c = read_wordcount_output(job.output())
-        self.assertAlmostEquals(float(c['jk']), 6.0 / 33.0)
+        test_case.assertAlmostEquals(float(c['jk']), 6.0 / 33.0)
 
-    def test_map_only(self):
-        job = MapOnlyJob(use_hdfs=self.use_hdfs)
+    @staticmethod
+    def test_map_only(test_case):
+        job = MapOnlyJob(use_hdfs=test_case.use_hdfs)
         luigi.build([job], local_scheduler=True)
         c = []
         for line in job.output().open('r'):
             c.append(line.strip())
-        self.assertEqual(c[0], 'kj')
-        self.assertEqual(c[4], 'ljoi')
+        test_case.assertEqual(c[0], 'kj')
+        test_case.assertEqual(c[4], 'ljoi')
 
-    def test_unicode_job(self):
-        job = UnicodeJob(use_hdfs=self.use_hdfs)
+    @staticmethod
+    def test_unicode_job(test_case):
+        job = UnicodeJob(use_hdfs=test_case.use_hdfs)
         luigi.build([job], local_scheduler=True)
         c = []
         for line in job.output().open('r'):
             c.append(line)
         # Make sure unicode('test') isnt grouped with str('test')
         # Since this is what happens when running on cluster
-        self.assertEqual(len(c), 2)
-        self.assertEqual(c[0], "test\t2\n")
-        self.assertEqual(c[0], "test\t2\n")
+        test_case.assertEqual(len(c), 2)
+        test_case.assertEqual(c[0], "test\t2\n")
+        test_case.assertEqual(c[0], "test\t2\n")
 
-    def test_failing_job(self):
-        job = FailingJob(use_hdfs=self.use_hdfs)
+    @staticmethod
+    def test_failing_job(test_case):
+        job = FailingJob(use_hdfs=test_case.use_hdfs)
 
         success = luigi.build([job], local_scheduler=True)
-        self.assertFalse(success)
+        test_case.assertFalse(success)
 
 
-class MapreduceLocalTest(unittest.TestCase, MapreduceTestMixin):
+class MapreduceLocalTest(unittest.TestCase):
     use_hdfs = False
+
+    def test_run(self):
+        CommonTests.test_run(self)
+
+    def test_run_2(self):
+        CommonTests.test_run_2(self)
+
+    def test_map_only(self):
+        CommonTests.test_map_only(self)
+
+    def test_unicode_job(self):
+        CommonTests.test_unicode_job(self)
+
+    def test_failing_job(self):
+        CommonTests.test_failing_job(self)
 
     def setUp(self):
         MockFile.fs.clear()
 
 
 @attr('minicluster')
-class MapreduceIntegrationTest(minicluster.MiniClusterTestCase, MapreduceTestMixin):
+class MapreduceIntegrationTest(minicluster.MiniClusterTestCase):
     """ Uses the Minicluster functionality to test this against Hadoop """
     use_hdfs = True
 
-    def test_unicode_job(self):
-        # TODO: some really annoying issue with minicluster causes this job to hang
-        pass
+    def test_run(self):
+        CommonTests.test_run(self)
 
+    def test_run_2(self):
+        CommonTests.test_run_2(self)
+
+    def test_map_only(self):
+        CommonTests.test_map_only(self)
+
+    # TODO(erikbern): some really annoying issue with minicluster causes
+    # test_unicode_job to hang
+
+    def test_failing_job(self):
+        CommonTests.test_failing_job(self)
 
 class CreatePackagesArchive(unittest.TestCase):
     def setUp(self):
