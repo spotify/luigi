@@ -72,6 +72,14 @@ class SparkJobError(RuntimeError):
         self.out = out
         self.err = err
 
+    def __str__(self):
+        info = self.message
+        if self.out:
+            info += "\nSTDOUT: " + str(self.out)
+        if self.err:
+            info += "\nSTDERR: " + str(self.err)
+        return info
+
 
 class SparkJob(luigi.Task):
     spark_workers = None
@@ -158,7 +166,7 @@ class SparkJob(luigi.Task):
             raise SparkJobError('Spark job failed: see yarn logs for %s' % app_id)
         else:
             temp_stderr.seek(0)
-            errors = temp_stderr.readlines()
+            errors = "".join(temp_stderr.readlines())
             logger.error(errors)
             raise SparkJobError('Spark job failed', err=errors)
 
@@ -268,7 +276,7 @@ class Spark1xJob(luigi.Task):
                                 .format(app_id))
         elif return_code != 0:
             temp_stderr.seek(0)
-            errors = temp_stderr.readlines()
+            errors = "".join(temp_stderr.readlines())
             logger.error(errors)
             raise SparkJobError('Spark job failed', err=errors)
 
@@ -362,6 +370,6 @@ class PySpark1xJob(Spark1xJob):
                                 .format(app_id))
         elif return_code != 0:
             temp_stderr.seek(0)
-            errors = temp_stderr.readlines()
+            errors = "".join(temp_stderr.readlines())
             logger.error(errors)
             raise SparkJobError('Spark job failed', err=errors)
