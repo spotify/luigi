@@ -17,7 +17,6 @@ import lock
 import logging
 import logging.config
 import rpc
-import optparse
 import scheduler
 import warnings
 import configuration
@@ -328,109 +327,14 @@ class DynamicArgParseInterface(ArgParseInterface):
         return self.parse_task(cmdline_args, main_task_cls)
 
 
-class PassThroughOptionParser(optparse.OptionParser):
-    '''
-    An unknown option pass-through implementation of OptionParser.
-
-    When unknown arguments are encountered, bundle with largs and try again,
-    until rargs is depleted.
-
-    sys.exit(status) will still be called if a known argument is passed
-    incorrectly (e.g. missing arguments or bad argument types, etc.)
-    '''
-    def _process_args(self, largs, rargs, values):
-        while rargs:
-            try:
-                optparse.OptionParser._process_args(self, largs, rargs, values)
-            except (optparse.BadOptionError, optparse.AmbiguousOptionError), e:
-                largs.append(e.opt_str)
-
-
-class OptParseInterface(Interface):
-    ''' Supported for legacy reasons where it's necessary to interact with an existing parser.
-
-    Takes the task using --task. All parameters to all possible tasks will be defined globally
-    in a big unordered soup.
-    '''
-    def __init__(self, existing_optparse):
-        self.__existing_optparse = existing_optparse
-
-    def parse(self, cmdline_args=None, main_task_cls=None):
-        global_params = list(Register.get_global_params())
-
-        parser = PassThroughOptionParser()
-
-        def add_task_option(p):
-            if main_task_cls:
-                p.add_option('--task', help='Task to run (one of ' + Register.tasks_str() + ') [default: %default]', default=main_task_cls.task_family)
-            else:
-                p.add_option('--task', help='Task to run (one of %s)' % Register.tasks_str())
-
-        def _add_parameter(parser, param_name, param):
-            description = [param_name]
-            if param.description:
-                description.append(param.description)
-            if param.has_value:
-                description.append(" [default: %s]" % (param.value,))
-
-            if param.is_list:
-                action = "append"
-            elif param.is_boolean:
-                action = "store_true"
-            else:
-                action = "store"
-            parser.add_option('--' + param_name.replace('_', '-'),
-                              help=' '.join(description),
-                              default=None,
-                              action=action)
-
-        for param_name, param in global_params:
-            _add_parameter(parser, param_name, param)
-
-        add_task_option(parser)
-        options, args = parser.parse_args(args=cmdline_args)
-
-        task_cls_name = options.task
-        if self.__existing_optparse:
-            parser = self.__existing_optparse
-        else:
-            parser = optparse.OptionParser()
-        add_task_option(parser)
-
-        task_cls = Register.get_task_cls(task_cls_name)
-
-        # Register all parameters as a big mess
-        params = task_cls.get_nonglobal_params()
-
-        for param_name, param in global_params:
-            _add_parameter(parser, param_name, param)
-
-        for param_name, param in params:
-            _add_parameter(parser, param_name, param)
-
-        # Parse and run
-        options, args = parser.parse_args(args=cmdline_args)
-
-        params = {}
-        for k, v in vars(options).iteritems():
-            if k != 'task':
-                params[k] = v
-
-        task = task_cls.from_str_params(params, global_params)
-
-        return [task]
-
-
-def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, worker_scheduler_factory=None, use_dynamic_argparse=False):
+def run(cmdline_args=None, main_task_cls=None, worker_scheduler_factory=None, use_dynamic_argparse=False):
     ''' Run from cmdline.
 
     The default parser uses argparse.
     However for legacy reasons we support optparse that optionally allows for
     overriding an existing option parser with new args.
     '''
-    if use_optparse:
-        interface = OptParseInterface(existing_optparse)
-    elif use_dynamic_argparse:
+    if use_dynamic_argparse:
         interface = DynamicArgParseInterface()
     else:
         interface = ArgParseInterface()
