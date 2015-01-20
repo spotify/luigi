@@ -111,7 +111,7 @@ class SparkTest(unittest.TestCase):
             job = TestJob()
             job.run()
         except SparkJobError as e:
-            self.assertEqual(e.err, ['stderr'])
+            self.assertEqual(e.err, 'stderr')
         else:
             self.fail("Should have thrown SparkJobError")
         finally:
@@ -217,7 +217,7 @@ class Spark1xTest(unittest.TestCase):
             job = Test1xJob()
             job.run()
         except SparkJobError as e:
-            self.assertEqual(e.err, ['stderr'])
+            self.assertEqual(e.err, 'stderr')
         else:
             self.fail("Should have thrown SparkJobError")
         finally:
@@ -319,7 +319,7 @@ class PySpark1xTest(unittest.TestCase):
             job = TestPySpark1xJob()
             job.run()
         except SparkJobError as e:
-            self.assertEqual(e.err, ['stderr'])
+            self.assertEqual(e.err, 'stderr')
         else:
             self.fail("Should have thrown SparkJobError")
         finally:
