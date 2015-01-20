@@ -52,33 +52,6 @@ def setup_interface_logging(conf_file=None):
     setup_interface_logging.has_run = True
 
 
-def load_task(parent_task, task_name, params):
-    """ Imports task and uses ArgParseInterface to initialize it
-    """
-    # How the module is represented depends on if Luigi was started from
-    # that file or if the module was imported later on
-    module = sys.modules[parent_task.__module__]
-    if module.__name__ == '__main__':
-        parent_module_path = os.path.abspath(module.__file__)
-        for p in sys.path:
-            if parent_module_path.startswith(p):
-                end = parent_module_path.rfind('.py')
-                actual_module = parent_module_path[len(p):end].strip(
-                    '/').replace('/', '.')
-                break
-    else:
-        actual_module = module.__name__
-    return init_task(actual_module, task_name, params, {})
-
-
-def init_task(module_name, task, str_params, global_str_params):
-    __import__(module_name)
-    module = sys.modules[module_name]
-    Task = getattr(module, task)
-
-    return Task.from_str_params(str_params, global_str_params)
-
-
 class EnvironmentParamsContainer(task.Task):
     ''' Keeps track of a bunch of environment params.
 
@@ -394,6 +367,13 @@ class OptParseInterface(Interface):
         task = task_cls.from_str_params(params, global_params)
 
         return [task]
+
+
+def load_task(module, task_name, params_str):
+    """ Imports task dynamically given a module and a task name"""
+    __import__(module)
+    task_cls = Register.get_task_cls(task_name)
+    return task_cls.from_str_params(params_str)
 
 
 def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, worker_scheduler_factory=None, use_dynamic_argparse=False):

@@ -290,6 +290,12 @@ class Task(object):
                     pass
 
     @property
+    def task_module(self):
+        # Returns what Python module to import to get access to this class
+        # TODO(erikbern): we should think about a language-agnostic mechanism
+        return self.__class__.__module__
+
+    @property
     def task_family(self):
         """Convenience method since a property on the metaclass isn't directly
         accessible through the class instances.
@@ -407,7 +413,7 @@ class Task(object):
         return hasattr(self, 'task_id')
 
     @classmethod
-    def from_str_params(cls, params_str, global_params):
+    def from_str_params(cls, params_str={}, global_params=[]):
         """Creates an instance from a str->str hash
 
         This method is for parsing of command line arguments or other
