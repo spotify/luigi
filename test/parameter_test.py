@@ -193,12 +193,6 @@ class ParameterTest(EmailTest):
         self.assertEqual(h.global_param, 124)
         self.assertEqual(h.global_bool_param, False)
 
-    def test_global_param_dep_cmdline_optparse(self):
-        luigi.run(['--local-scheduler', '--no-lock', '--task', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'], use_optparse=True)
-        h = HasGlobalParam(x='xyz')
-        self.assertEqual(h.global_param, 124)
-        self.assertEqual(h.global_bool_param, False)
-
     def test_global_param_dep_cmdline_bool(self):
         luigi.run(['--local-scheduler', '--no-lock', 'HasGlobalParamDep', '--x', 'xyz', '--global-bool-param'])
         h = HasGlobalParam(x='xyz')
@@ -363,7 +357,3 @@ class OverrideEnvStuff(unittest.TestCase):
     def testOverrideSchedulerPort(self):
         env_params = luigi.interface.EnvironmentParamsContainer.env_params()
         self.assertEqual(env_params.scheduler_port, 6543)
-
-
-if __name__ == '__main__':
-    luigi.run(use_optparse=True)
