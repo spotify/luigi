@@ -250,34 +250,14 @@ class ArgParseInterface(Interface):
     ''' Takes the task as the command, with parameters specific to it
     '''
     @classmethod
-    def add_parameter(cls, parser, param_name, param, prefix=None):
-        description = []
-        if prefix:
-            description.append('%s.%s' % (prefix, param_name))
-        else:
-            description.append(param_name)
-        if param.description:
-            description.append(param.description)
-        if param.has_value:
-            description.append(" [default: %s]" % (param.value,))
-
-        if param.is_list:
-            action = "append"
-        elif param.is_boolean:
-            action = "store_true"
-        else:
-            action = "store"
-        parser.add_argument('--' + param_name.replace('_', '-'), help=' '.join(description), default=None, action=action)
-
-    @classmethod
     def add_task_parameters(cls, parser, task_cls):
         for param_name, param in task_cls.get_nonglobal_params():
-            cls.add_parameter(parser, param_name, param, task_cls.task_family)
+            param.add_to_cmdline_parser(parser, param_name, task_cls.task_family)
 
     @classmethod
     def add_global_parameters(cls, parser):
         for param_name, param in Register.get_global_params():
-            cls.add_parameter(parser, param_name, param)
+            param.add_to_cmdline_parser(parser, param_name)
 
     def parse_task(self, cmdline_args=None, main_task_cls=None):
         parser = ErrorWrappedArgumentParser()
@@ -379,26 +359,8 @@ class OptParseInterface(Interface):
             else:
                 p.add_option('--task', help='Task to run (one of %s)' % Register.tasks_str())
 
-        def _add_parameter(parser, param_name, param):
-            description = [param_name]
-            if param.description:
-                description.append(param.description)
-            if param.has_value:
-                description.append(" [default: %s]" % (param.value,))
-
-            if param.is_list:
-                action = "append"
-            elif param.is_boolean:
-                action = "store_true"
-            else:
-                action = "store"
-            parser.add_option('--' + param_name.replace('_', '-'),
-                              help=' '.join(description),
-                              default=None,
-                              action=action)
-
         for param_name, param in global_params:
-            _add_parameter(parser, param_name, param)
+            param.add_to_cmdline_parser(parser, param_name, optparse=True)
 
         add_task_option(parser)
         options, args = parser.parse_args(args=cmdline_args)
@@ -416,10 +378,10 @@ class OptParseInterface(Interface):
         params = task_cls.get_nonglobal_params()
 
         for param_name, param in global_params:
-            _add_parameter(parser, param_name, param)
+            param.add_to_cmdline_parser(parser, param_name, optparse=True)
 
         for param_name, param in params:
-            _add_parameter(parser, param_name, param)
+            param.add_to_cmdline_parser(parser, param_name, optparse=True)
 
         # Parse and run
         options, args = parser.parse_args(args=cmdline_args)

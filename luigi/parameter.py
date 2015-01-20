@@ -274,6 +274,32 @@ class Parameter(object):
         else:
             return self.serialize(x)
 
+    def add_to_cmdline_parser(self, parser, param_name, task_name=None, optparse=False):
+        description = []
+        if task_name:
+            description.append('%s.%s' % (task_name, param_name))
+        else:
+            description.append(param_name)
+        if self.description:
+            description.append(self.description)
+        if self.has_value:
+            description.append(" [default: %s]" % (self.value,))
+
+        if self.is_list:
+            action = "append"
+        elif self.is_boolean:
+            action = "store_true"
+        else:
+            action = "store"
+        if optparse:
+            f = parser.add_option
+        else:
+            f = parser.add_argument
+        f('--' + param_name.replace('_', '-'),
+          help=' '.join(description),
+          default=None,
+          action=action)
+
 
 class DateHourParameter(Parameter):
     """Parameter whose value is a :py:class:`~datetime.datetime` specified to the hour.
