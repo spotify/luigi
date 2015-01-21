@@ -106,6 +106,7 @@ class TaskProcess(multiprocessing.Process):
                                 (self.task.task_id, status, '', missing,
                                  new_deps))
                             next_send = getpaths(requires)
+                            new_deps = []
                         else:
                             logger.info(
                                 '[pid %s] Worker %s new requirements      %s',
