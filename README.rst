@@ -100,9 +100,8 @@ if you want to run Hadoop jobs since it makes debugging easier. See
 Getting Started
 ---------------
 
-The `Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_
-contains an overview of how to work with Luigi, including an `Example workflow
-<http://luigi.readthedocs.org/en/latest/example_top_artists.html>`_ and an `API overview
+Take a look at the `Example workflow
+<http://luigi.readthedocs.org/en/latest/example_top_artists.html>`_ and the `API overview
 <http://luigi.readthedocs.org/en/latest/api_overview.html>`_ which explains some of
 the most important concepts.
 
@@ -117,7 +116,7 @@ Getting Help
 External links
 --------------
 
-* `Documentation <http://luigi.readthedocs.org/>`_ (Read the Docs)
+* `Documentation <http://luigi.readthedocs.org/>`_, including the `Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_ (Read the Docs)
 * `Mailing List <https://groups.google.com/forum/#!forum/luigi-user>`_ (Google Groups)
 * `Releases <https://pypi.python.org/pypi/luigi>`_ (PyPi)
 * `Source code <https://github.com/spotify/luigi>`_ (Github)
