@@ -40,12 +40,6 @@ and local files that ensures all file system operations are atomic. This
 is important because it means your data pipeline will not crash in a
 state containing partial data.
 
-Luigi was built at `Spotify <http://www.spotify.com/>`_, mainly by
-`Erik Bernhardsson <https://github.com/erikbern>`_ and `Elias
-Freider <https://github.com/freider>`_, but many other people have
-contributed.
-
-
 Dependency graph example
 ------------------------
 
@@ -112,7 +106,6 @@ Getting Help
 * Subscribe to the `luigi-user <http://groups.google.com/group/luigi-user/>`_
   group and ask a question.
 
-
 External links
 --------------
 
@@ -120,3 +113,13 @@ External links
 * `Mailing List <https://groups.google.com/forum/#!forum/luigi-user>`_ (Google Groups)
 * `Releases <https://pypi.python.org/pypi/luigi>`_ (PyPi)
 * `Source code <https://github.com/spotify/luigi>`_ (Github)
+
+Authors
+-------
+
+Luigi was built at `Spotify <http://www.spotify.com/>`_, mainly by
+`Erik Bernhardsson <https://github.com/erikbern>`_ and `Elias
+Freider <https://github.com/freider>`_, but many other people have
+contributed.
+
+
