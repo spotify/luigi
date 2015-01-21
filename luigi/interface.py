@@ -99,8 +99,10 @@ class EnvironmentParamsContainer(task.Task):
     )
 
     @classmethod
-    def env_params(cls, override_defaults={}):
+    def env_params(cls, override_defaults=None):
         # Override any global parameter with whatever is in override_defaults
+        if override_defaults is None:
+            override_defaults = {}
         for param_name, param_obj in cls.get_global_params():
             if param_name in override_defaults:
                 param_obj.set_global(override_defaults[param_name])
@@ -125,7 +127,7 @@ class Interface(object):
         raise NotImplementedError
 
     @staticmethod
-    def run(tasks, worker_scheduler_factory=None, override_defaults={}):
+    def run(tasks, worker_scheduler_factory=None, override_defaults=None):
         """
         :return: True if all tasks and their dependencies were successfully run (or already completed)
         False if any error occurred
