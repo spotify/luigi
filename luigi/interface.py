@@ -72,10 +72,6 @@ class EnvironmentParamsContainer(task.Task):
         is_global=True, default=8082,
         description='Port of remote scheduler api process',
         config_path=dict(section='core', name='default-scheduler-port'))
-    lock = parameter.BooleanParameter(
-        is_global=True, default=False,
-        description='(Deprecated, replaced by no_lock)'
-                    'Do not run if similar process is already running')
     lock_size = parameter.IntParameter(
         is_global=True, default=1,
         description="Maximum number of workers running the same command")
@@ -148,15 +144,6 @@ class Interface(object):
         if not configuration.get_config().getboolean(
                 'core', 'no_configure_logging', False):
             setup_interface_logging(logging_conf)
-
-        if env_params.lock:
-            warnings.warn(
-                "The --lock flag is deprecated and will be removed."
-                "Locking is now the default behavior."
-                "Use --no-lock to override to not use lock",
-                DeprecationWarning,
-                stacklevel=3
-            )
 
         if (not env_params.no_lock and
                 not(lock.acquire_for(env_params.lock_pid_dir, env_params.lock_size))):
@@ -404,7 +391,8 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     the identical process lock. Otherwise, `build` would only be
     callable once from each process.
     '''
-    if "no_lock" not in env_params and "lock" not in env_params:
+    if "no_lock" not in env_params:
+        # TODO(erikbern): should we really override args here?
         env_params["no_lock"] = True
-        env_params["lock"] = False
+
     Interface.run(tasks, worker_scheduler_factory, env_params)
