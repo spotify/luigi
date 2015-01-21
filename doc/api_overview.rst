@@ -144,6 +144,26 @@ In this case, the DailyReport task depends on two inputs created
 earlier, one of which is the same class. requires can return other Tasks
 in any way wrapped up within dicts/lists/tuples/etc.
 
+Requiring another Task
+^^^^^^^^^^^^^^^^^^^^^^
+
+Note that requires() can *not* return a Target object. If you have a
+simple Target object that is created externally you can wrap it in a
+Task class like this:
+
+.. code:: python
+    class LogFiles(luigi.Task):
+        def output(self):
+            return luigi.hdfs.HdfsTarget('/log')
+
+This also makes it easier to add parameters:
+
+.. code:: python
+    class LogFiles(luigi.Task):
+        date = luigi.DateParameter()
+        def output(self):
+            return luigi.hdfs.HdfsTarget(self.date.strftime('/log/%Y-%m-%d'))
+
 Task.output
 ^^^^^^^^^^^
 
