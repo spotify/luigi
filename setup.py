@@ -45,7 +45,6 @@ install_requires = [
     'requests',
     'sqlalchemy',
     'tornado',
-    'whoops',
     'snakebite>=2.4.10',
 ]
 
