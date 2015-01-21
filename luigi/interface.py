@@ -216,15 +216,13 @@ def add_task_parameters(parser, task_cls, optparse=False):
 
 
 def add_global_parameters(parser, optparse=False):
-    seen_params = {}
+    seen_params = set()
     for task_name, param_name, param in Register.get_all_params():
         if param.is_global:
-            if param_name in seen_params:
-                if seen_params[param_name] != param:
-                    raise Exception("Global parameter '%s' registered by multiple classes" % param_name)
-            else:
-                seen_params[param_name] = param
-                param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse)
+            if param in seen_params:
+                continue
+            seen_params.add(param)
+            param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse)
 
 
 def get_task_parameters(task_cls, params_str):
