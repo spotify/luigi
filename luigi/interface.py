@@ -52,33 +52,6 @@ def setup_interface_logging(conf_file=None):
     setup_interface_logging.has_run = True
 
 
-def load_task(parent_task, task_name, params):
-    """ Imports task and uses ArgParseInterface to initialize it
-    """
-    # How the module is represented depends on if Luigi was started from
-    # that file or if the module was imported later on
-    module = sys.modules[parent_task.__module__]
-    if module.__name__ == '__main__':
-        parent_module_path = os.path.abspath(module.__file__)
-        for p in sys.path:
-            if parent_module_path.startswith(p):
-                end = parent_module_path.rfind('.py')
-                actual_module = parent_module_path[len(p):end].strip(
-                    '/').replace('/', '.')
-                break
-    else:
-        actual_module = module.__name__
-    return init_task(actual_module, task_name, params, {})
-
-
-def init_task(module_name, task, str_params, global_str_params):
-    __import__(module_name)
-    module = sys.modules[module_name]
-    Task = getattr(module, task)
-
-    return Task.from_str_params(str_params, global_str_params)
-
-
 class EnvironmentParamsContainer(task.Task):
     ''' Keeps track of a bunch of environment params.
 
@@ -250,34 +223,14 @@ class ArgParseInterface(Interface):
     ''' Takes the task as the command, with parameters specific to it
     '''
     @classmethod
-    def add_parameter(cls, parser, param_name, param, prefix=None):
-        description = []
-        if prefix:
-            description.append('%s.%s' % (prefix, param_name))
-        else:
-            description.append(param_name)
-        if param.description:
-            description.append(param.description)
-        if param.has_value:
-            description.append(" [default: %s]" % (param.value,))
-
-        if param.is_list:
-            action = "append"
-        elif param.is_boolean:
-            action = "store_true"
-        else:
-            action = "store"
-        parser.add_argument('--' + param_name.replace('_', '-'), help=' '.join(description), default=None, action=action)
-
-    @classmethod
     def add_task_parameters(cls, parser, task_cls):
         for param_name, param in task_cls.get_nonglobal_params():
-            cls.add_parameter(parser, param_name, param, task_cls.task_family)
+            param.add_to_cmdline_parser(parser, param_name, task_cls.task_family)
 
     @classmethod
     def add_global_parameters(cls, parser):
         for param_name, param in Register.get_global_params():
-            cls.add_parameter(parser, param_name, param)
+            param.add_to_cmdline_parser(parser, param_name)
 
     def parse_task(self, cmdline_args=None, main_task_cls=None):
         parser = ErrorWrappedArgumentParser()
@@ -379,26 +332,8 @@ class OptParseInterface(Interface):
             else:
                 p.add_option('--task', help='Task to run (one of %s)' % Register.tasks_str())
 
-        def _add_parameter(parser, param_name, param):
-            description = [param_name]
-            if param.description:
-                description.append(param.description)
-            if param.has_value:
-                description.append(" [default: %s]" % (param.value,))
-
-            if param.is_list:
-                action = "append"
-            elif param.is_boolean:
-                action = "store_true"
-            else:
-                action = "store"
-            parser.add_option('--' + param_name.replace('_', '-'),
-                              help=' '.join(description),
-                              default=None,
-                              action=action)
-
         for param_name, param in global_params:
-            _add_parameter(parser, param_name, param)
+            param.add_to_cmdline_parser(parser, param_name, optparse=True)
 
         add_task_option(parser)
         options, args = parser.parse_args(args=cmdline_args)
@@ -416,10 +351,10 @@ class OptParseInterface(Interface):
         params = task_cls.get_nonglobal_params()
 
         for param_name, param in global_params:
-            _add_parameter(parser, param_name, param)
+            param.add_to_cmdline_parser(parser, param_name, optparse=True)
 
         for param_name, param in params:
-            _add_parameter(parser, param_name, param)
+            param.add_to_cmdline_parser(parser, param_name, optparse=True)
 
         # Parse and run
         options, args = parser.parse_args(args=cmdline_args)
@@ -432,6 +367,13 @@ class OptParseInterface(Interface):
         task = task_cls.from_str_params(params, global_params)
 
         return [task]
+
+
+def load_task(module, task_name, params_str):
+    """ Imports task dynamically given a module and a task name"""
+    __import__(module)
+    task_cls = Register.get_task_cls(task_name)
+    return task_cls.from_str_params(params_str)
 
 
 def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, worker_scheduler_factory=None, use_dynamic_argparse=False):

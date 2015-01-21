@@ -99,7 +99,7 @@ class TaskProcess(multiprocessing.Process):
                         new_req = flatten(requires)
                         status = (RUNNING if all(t.complete() for t in new_req)
                                   else SUSPENDED)
-                        new_deps = [(t.task_family, t.to_str_params())
+                        new_deps = [(t.task_module, t.task_family, t.to_str_params())
                                     for t in new_req]
                         if status == RUNNING:
                             self.result_queue.put(
@@ -533,8 +533,8 @@ class Worker(object):
                 # Maybe it yielded something?
             new_deps = []
             if new_requirements:
-                new_req = [interface.load_task(task, name, params)
-                           for name, params in new_requirements]
+                new_req = [interface.load_task(module, name, params)
+                           for module, name, params in new_requirements]
                 for t in new_req:
                     self.add(t)
                 new_deps = [t.task_id for t in new_req]
