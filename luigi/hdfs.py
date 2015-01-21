@@ -765,7 +765,7 @@ class HdfsTarget(FileSystemTarget):
                 return self.format.pipe_writer(HdfsAtomicWritePipe(self.path))
 
     def remove(self, skip_trash=False, chicken=True):
-        remove(self.path, skip_trash=skip_trash, chicken=True)
+        remove(self.path, skip_trash=skip_trash, chicken=chicken)
 
     @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def rename(self, path, fail_if_exists=False):
