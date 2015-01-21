@@ -69,7 +69,7 @@ class inherits(object):
         self.task_to_inherit = task_to_inherit
 
     def __call__(self, task_that_inherits):
-        this_param_names = dict(task_that_inherits.get_nonglobal_params()).keys()
+        this_param_names = dict(task_that_inherits.get_params()).keys()
         for param_name, param_obj in self.task_to_inherit.get_params():
             if not hasattr(task_that_inherits, param_name):
                 setattr(task_that_inherits, param_name, param_obj)
@@ -195,12 +195,12 @@ def Derived(parent_cls):
     class DerivedCls(task.Task):
         def __init__(self, *args, **kwargs):
             param_values = {}
-            for k, v in self.get_param_values(self.get_nonglobal_params(), args, kwargs):
+            for k, v in self.get_param_values(self.get_params(), args, kwargs):
                 param_values[k] = v
 
             # Figure out which params the parent need (it's always a subset)
             parent_param_values = {}
-            for k, v in parent_cls.get_nonglobal_params():
+            for k, v in parent_cls.get_params():
                 parent_param_values[k] = param_values[k]
 
             self.parent_obj = parent_cls(**parent_param_values)
@@ -320,7 +320,7 @@ def previous(task):
     it is a DateParameter, DateHourParameter or DateIntervalParameter in which case
     it returns with the time decremented by 1 (hour, day or interval)
     """
-    params = task.get_nonglobal_params()
+    params = task.get_params()
     previous_params = {}
     previous_date_params = {}
 
