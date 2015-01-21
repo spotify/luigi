@@ -280,7 +280,10 @@ class Parameter(object):
         else:
             return self.serialize(x)
 
-    def add_to_cmdline_parser(self, parser, param_name, task_name=None, optparse=False):
+    def add_to_cmdline_parser(self, parser, param_name, task_name=None, optparse=False, glob=False):
+        if glob ^ self.is_global:
+            return
+
         description = []
         if task_name:
             description.append('%s.%s' % (task_name, param_name))
@@ -305,6 +308,16 @@ class Parameter(object):
           help=' '.join(description),
           default=None,
           action=action)
+
+    def parse_from_args(self, param_name, args, params):
+        if hasattr(args, param_name) and not self.is_global:
+            value = self.parse_from_input(param_name, getattr(args, param_name))
+            params[param_name] = value # Note: modifies arguments
+
+    def set_global_from_args(self, param_name, args):
+        if hasattr(args, param_name) and self.is_global:
+            value = self.parse_from_input(param_name, getattr(args, param_name))
+            self.set_global(value) # Note: side effects
 
 
 class DateHourParameter(Parameter):

@@ -214,35 +214,30 @@ class ErrorWrappedArgumentParser(argparse.ArgumentParser):
 
 def add_task_parameters(parser, task_cls, optparse=False):
     for param_name, param in task_cls.get_params():
-        if not param.is_global:
-            param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, optparse=optparse)
+        param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, optparse=optparse, glob=False)
 
 
 def add_global_parameters(parser, optparse=False):
     seen_params = set()
     for task_name, param_name, param in Register.get_all_params():
-        if param.is_global:
-            if param in seen_params:
-                continue
-            seen_params.add(param)
-            param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse)
+        if param in seen_params:
+            continue
+        seen_params.add(param)
+        param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse, glob=True)
 
 
-def get_task_parameters(task_cls, params_str):
+def get_task_parameters(task_cls, args):
     # Parse a str->str dict to the correct types
     params = {}
     for param_name, param in task_cls.get_params():
-        if param_name in params_str and not param.is_global:
-            params[param_name] = param.parse_from_input(param_name, params_str[param_name])
+        param.parse_from_args(param_name, args, params)
     return params
 
 
-def set_global_parameters(params_str):
+def set_global_parameters(args):
     # Note that this is not side effect free
     for task_name, param_name, param in Register.get_all_params():
-        if param_name in params_str and param.is_global:
-            value = param.parse_from_input(param_name, params_str[param_name])
-            param.set_global(value)
+        param.set_global_from_args(param_name, args)
 
 
 class ArgParseInterface(Interface):
@@ -281,8 +276,8 @@ class ArgParseInterface(Interface):
             task_cls = Register.get_task_cls(args.command)
 
         # Notice that this is not side effect free because it might set global params
-        set_global_parameters(vars(args))
-        task_params = get_task_parameters(task_cls, vars(args))
+        set_global_parameters(args)
+        task_params = get_task_parameters(task_cls, args)
 
         return [task_cls(**task_params)]
 
@@ -374,8 +369,8 @@ class OptParseInterface(Interface):
         # Parse and run
         options, args = parser.parse_args(args=cmdline_args)
 
-        set_global_parameters(vars(options))
-        task_params = get_task_parameters(task_cls, vars(options))
+        set_global_parameters(options)
+        task_params = get_task_parameters(task_cls, options)
 
         return [task_cls(**task_params)]
 
