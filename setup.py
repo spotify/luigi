@@ -40,10 +40,7 @@ with open('README.rst') as fobj:
     long_description = readme_note + fobj.read()
 
 install_requires = [
-    'boto',
     'pyparsing',
-    'requests',
-    'sqlalchemy',
     'tornado',
     'snakebite>=2.4.10',
 ]
