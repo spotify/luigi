@@ -40,12 +40,6 @@ and local files that ensures all file system operations are atomic. This
 is important because it means your data pipeline will not crash in a
 state containing partial data.
 
-Luigi was built at `Spotify <http://www.spotify.com/>`_, mainly by
-`Erik Bernhardsson <https://github.com/erikbern>`_ and `Elias
-Freider <https://github.com/freider>`_, but many other people have
-contributed.
-
-
 Dependency graph example
 ------------------------
 
@@ -105,13 +99,26 @@ Take a look at the `Example workflow
 <http://luigi.readthedocs.org/en/latest/api_overview.html>`_ which explains some of
 the most important concepts.
 
+Who uses Luigi?
+---------------
+
+Some companies that have talked about Luigi include:
+
+* `Spotify <http://www.slideshare.net/erikbern/luigi-presentation-nyc-data-science`_
+* `Foursquare <http://www.slideshare.net/OpenAnayticsMeetup/luigi-presentation-17-23199897>`_
+* `Mortar Data <https://help.mortardata.com/technologies/luigi>`_
+* `Stripe <http://www.slideshare.net/PyData/python-as-part-of-a-production-machine-learning-stack-by-michael-manapat-pydata-sv-2014>`_
+* `Asana <https://eng.asana.com/2014/11/stable-accessible-data-infrastructure-startup/>`_
+* `Buffer <https://overflow.bufferapp.com/2014/10/31/buffers-new-data-architecture/>`_
+
+Please let us know if your company wants to be featured on this list!
+
 Getting Help
 ------------
 
 * Find us on `#luigi` on freenode.
 * Subscribe to the `luigi-user <http://groups.google.com/group/luigi-user/>`_
   group and ask a question.
-
 
 External links
 --------------
@@ -120,3 +127,13 @@ External links
 * `Mailing List <https://groups.google.com/forum/#!forum/luigi-user>`_ (Google Groups)
 * `Releases <https://pypi.python.org/pypi/luigi>`_ (PyPi)
 * `Source code <https://github.com/spotify/luigi>`_ (Github)
+
+Authors
+-------
+
+Luigi was built at `Spotify <http://www.spotify.com/>`_, mainly by
+`Erik Bernhardsson <https://github.com/erikbern>`_ and `Elias
+Freider <https://github.com/freider>`_, but many other people have
+contributed.
+
+
