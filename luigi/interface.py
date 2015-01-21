@@ -27,6 +27,7 @@ import re
 import argparse
 import sys
 import os
+import tempfile
 from task import Register
 
 
@@ -79,7 +80,7 @@ class EnvironmentParamsContainer(task.Task):
         is_global=True, default=False,
         description='Ignore if similar process is already running')
     lock_pid_dir = parameter.Parameter(
-        is_global=True, default='/var/tmp/luigi',
+        is_global=True, default=os.path.join(tempfile.gettempdir(), 'luigi'),
         description='Directory to store the pid file')
     workers = parameter.IntParameter(
         is_global=True, default=1,
