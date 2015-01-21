@@ -52,7 +52,7 @@ class DynamicDummyTask(Task):
     def run(self):
         with self.output().open('w') as f:
             f.write('Done!')
-        time.sleep(0.1) # so we can benchmark & see if parallelization works
+        time.sleep(0.5) # so we can benchmark & see if parallelization works
 
 
 class DynamicDummyTaskWithNamespace(DynamicDummyTask):
@@ -539,7 +539,7 @@ class DynamicDependenciesTest(unittest.TestCase):
 
 class DynamicDependenciesWithMultipleWorkersTest(DynamicDependenciesTest):
     n_workers = 100
-    timeout = 0.5 # We run 7 tasks that take 0.1s each
+    timeout = 3.0 # We run 7 tasks that take 0.5s each so it should take less than 3.5s
 
 
 class WorkerPingThreadTests(unittest.TestCase):
