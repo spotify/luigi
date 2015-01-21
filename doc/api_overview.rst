@@ -152,6 +152,7 @@ simple Target object that is created externally you can wrap it in a
 Task class like this:
 
 .. code:: python
+
     class LogFiles(luigi.Task):
         def output(self):
             return luigi.hdfs.HdfsTarget('/log')
@@ -159,6 +160,7 @@ Task class like this:
 This also makes it easier to add parameters:
 
 .. code:: python
+
     class LogFiles(luigi.Task):
         date = luigi.DateParameter()
         def output(self):
