@@ -105,6 +105,51 @@ def list_path(path):
         return [path, ]
     return [str(path), ]
 
+def is_dangerous_rm_path(path):
+    """ Finds out if the path is too dangerous to remove.
+    * empty path
+    * / root path
+    * one level deep root path, i.e. /etc or /opt
+    :return boolean, True if too dangerous! Relative path is always ok
+
+    >>> is_dangerous_rm_path(None)
+    True
+    >>> is_dangerous_rm_path('')
+    True
+    >>> is_dangerous_rm_path(' ')
+    True
+    >>> is_dangerous_rm_path('/opt')
+    True
+    >>> try:
+    ...     is_dangerous_rm_path('//')
+    ... except ValueError:
+    ...     pass
+    >>> is_dangerous_rm_path('/opt/')
+    True
+    >>> is_dangerous_rm_path('/opt/foo/bar')
+    False
+    >>> is_dangerous_rm_path('my_relative')
+    False
+    """
+    if not path:
+        return True
+
+    if '//' in path:
+        raise ValueError('Funny path, double slash: %s' % path)
+
+    path = path.strip()
+
+    if path.endswith('/'):
+        path = path[:-1]
+
+    if not path:
+        return True
+
+    if path[0] == '/':
+        return len(path[1:].split('/')) <= 1
+    else:
+        return False # relative is ok
+
 class HdfsClient(FileSystem):
     """This client uses Apache 2.x syntax for file system commands, which also matched CDH4"""
 
@@ -138,9 +183,13 @@ class HdfsClient(FileSystem):
             warnings.warn("Renaming multiple files at once is not atomic.")
         call_check(load_hadoop_cmd() + ['fs', '-mv'] + path + [dest])
 
-    def remove(self, path, recursive=True, skip_trash=False):
+    def remove(self, path, recursive=True, skip_trash=False, chicken=True):
         if recursive:
             cmd = load_hadoop_cmd() + ['fs', '-rm', '-r']
+
+            if chicken and is_dangerous_rm_path(path):
+                raise ValueError("Too chicken to recursively "
+                        "delete '%s'" % path)
         else:
             cmd = load_hadoop_cmd() + ['fs', '-rm']
 
@@ -338,7 +387,7 @@ class SnakebiteHdfsClient(HdfsClient):
                 self.mkdir(dir_path, parents=True)
         return list(self.get_bite().rename(list_path(path), dest))
 
-    def remove(self, path, recursive=True, skip_trash=False):
+    def remove(self, path, recursive=True, skip_trash=False, chicken=True):
         """
         Use snakebite.delete, if available.
 
@@ -348,7 +397,9 @@ class SnakebiteHdfsClient(HdfsClient):
         :type recursive: boolean, default is True
         :param skip_trash: do or don't move deleted items into the trash first
         :type skip_trash: boolean, default is False (use trash)
-        :return: list of deleted items
+        :param chicken: enable safety checks before removing dangerous paths
+        :type chicken: boolean, default is True
+        :return: list of deleted items        
         """
         return list(self.get_bite().delete(list_path(path), recurse=recursive))
 
@@ -482,21 +533,28 @@ class SnakebiteHdfsClient(HdfsClient):
 
 class HdfsClientCdh3(HdfsClient):
     """This client uses CDH3 syntax for file system commands"""
-    def mkdir(self, path):
+    def mkdir(self, path, parents=False, raise_if_exists=False):
         '''
         No -p switch, so this will fail creating ancestors
+
+        :param parents: ignored
         '''
         try:
             call_check(load_hadoop_cmd() + ['fs', '-mkdir', path])
         except HDFSCliError, ex:
             if "File exists" in ex.stderr:
-                raise FileAlreadyExists(ex.stderr)
+                if raise_if_exists:
+                    raise FileAlreadyExists(ex.stderr)
             else:
                 raise
 
-    def remove(self, path, recursive=True, skip_trash=False):
+    def remove(self, path, recursive=True, skip_trash=False, chicken=True):
         if recursive:
             cmd = load_hadoop_cmd() + ['fs', '-rmr']
+
+            if chicken and is_dangerous_rm_path(path):
+                raise ValueError("Too chicken to recursively "
+                        "delete '%s'" % path)
         else:
             cmd = load_hadoop_cmd() + ['fs', '-rm']
 
@@ -706,8 +764,8 @@ class HdfsTarget(FileSystemTarget):
             except NotImplementedError:
                 return self.format.pipe_writer(HdfsAtomicWritePipe(self.path))
 
-    def remove(self, skip_trash=False):
-        remove(self.path, skip_trash=skip_trash)
+    def remove(self, skip_trash=False, chicken=True):
+        remove(self.path, skip_trash=skip_trash, chicken=True)
 
     @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def rename(self, path, fail_if_exists=False):
