@@ -512,7 +512,7 @@ class CentralPlannerScheduler(Scheduler):
             return True
 
         available_resources = self._resources or {}
-        for resource, amount in needed_resources.items():
+        for resource, amount in needed_resources.iteritems():
             if amount + used_resources[resource] > available_resources.get(resource, 1):
                 return False
         return True
@@ -522,7 +522,7 @@ class CentralPlannerScheduler(Scheduler):
         if self._resources is not None:
             for task in self._state.get_active_tasks():
                 if task.status == RUNNING and task.resources:
-                    for resource, amount in task.resources.items():
+                    for resource, amount in task.resources.iteritems():
                         used_resources[resource] += amount
         return used_resources
 
@@ -597,7 +597,7 @@ class CentralPlannerScheduler(Scheduler):
 
             if task.status == RUNNING and task.worker_running in greedy_workers:
                 greedy_workers[task.worker_running] -= 1
-                for resource, amount in (task.resources or {}).items():
+                for resource, amount in (task.resources or {}).iteritems():
                     greedy_resources[resource] += amount
 
             if not best_task and self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
@@ -611,7 +611,7 @@ class CentralPlannerScheduler(Scheduler):
                             greedy_workers[task_worker] -= 1
 
                             # keep track of the resources used in greedy scheduling
-                            for resource, amount in (task.resources or {}).items():
+                            for resource, amount in (task.resources or {}).iteritems():
                                 greedy_resources[resource] += amount
 
                             break

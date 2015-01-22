@@ -423,7 +423,7 @@ class TimeDeltaParameter(Parameter):
         if re_match:
             kwargs = {}
             has_val = False
-            for k,v in re_match.groupdict(default="0").items():
+            for k,v in re_match.groupdict(default="0").iteritems():
                 val = int(v)
                 has_val = has_val or val != 0
                 kwargs[k] = val
