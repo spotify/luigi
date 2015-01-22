@@ -148,7 +148,7 @@ not as a Hadoop job, but just as a plain old for-loop in Python.
 
     class Top10Artists(luigi.Task):
         date_interval = luigi.DateIntervalParameter()
-        use_hadoop = luigi.BooleanParameter()
+        use_hadoop = luigi.BoolParameter()
 
         def requires(self):
             if self.use_hadoop:
@@ -194,7 +194,7 @@ tasks.
 
     class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
         date_interval = luigi.DateIntervalParameter()
-        use_hadoop = luigi.BooleanParameter()
+        use_hadoop = luigi.BoolParameter()
 
         host = "localhost"
         database = "toplists"

@@ -113,7 +113,7 @@ class Parameter(object):
         self.__global = _no_value
 
         self.is_list = is_list
-        self.is_boolean = is_boolean and not is_list  # Only BooleanParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
+        self.is_boolean = is_boolean and not is_list  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
 
@@ -407,23 +407,20 @@ class FloatParameter(Parameter):
         return float(s)
 
 
-class BooleanParameter(Parameter):
+class BoolParameter(Parameter):
 
     """A Parameter whose value is a ``bool``."""
-    # TODO(erikbern): why do we call this "boolean" instead of "bool"?
-    # The integer parameter is called "int" so calling this "bool" would be
-    # more consistent, especially given the Python type names.
 
     def __init__(self, *args, **kwargs):
         """This constructor passes along args and kwargs to ctor for :py:class:`Parameter` but
         specifies ``is_boolean=True``.
         """
-        super(BooleanParameter, self).__init__(*args, is_boolean=True, **kwargs)
+        super(BoolParameter, self).__init__(*args, is_boolean=True, **kwargs)
 
     def parse(self, s):
         """Parses a ``boolean`` from the string, matching 'true' or 'false' ignoring case."""
         return {'true': True, 'false': False}[str(s).lower()]
-
+BooleanParameter = BoolParameter
 
 class DateIntervalParameter(Parameter):
 

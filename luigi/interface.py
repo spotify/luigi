@@ -61,7 +61,7 @@ class EnvironmentParamsContainer(task.Task):
     and get an object with all the environment variables set.
     This is arguably a bit of a hack.'''
 
-    local_scheduler = parameter.BooleanParameter(
+    local_scheduler = parameter.BoolParameter(
         is_global=True, default=False,
         description='Use local scheduling')
     scheduler_host = parameter.Parameter(
@@ -76,7 +76,7 @@ class EnvironmentParamsContainer(task.Task):
     lock_size = parameter.IntParameter(
         is_global=True, default=1,
         description="Maximum number of workers running the same command")
-    no_lock = parameter.BooleanParameter(
+    no_lock = parameter.BoolParameter(
         is_global=True, default=False,
         description='Ignore if similar process is already running')
     lock_pid_dir = parameter.Parameter(
@@ -92,7 +92,7 @@ class EnvironmentParamsContainer(task.Task):
     module = parameter.Parameter(
         is_global=True, default=None,
         description='Used for dynamic loading of modules')  # see DynamicArgParseInterface
-    parallel_scheduling = parameter.BooleanParameter(
+    parallel_scheduling = parameter.BoolParameter(
         is_global=True, default=False,
         description='Use multiprocessing to do scheduling in parallel.',
         config_path={'section': 'core', 'name': 'parallel-scheduling'},
