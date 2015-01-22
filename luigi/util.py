@@ -329,6 +329,8 @@ def previous(task):
 
         if isinstance(param_obj, parameter.DateParameter):
             previous_date_params[param_name] = param_value - datetime.timedelta(days=1)
+        elif isinstance(param_obj, parameter.DateMinuteParameter):
+            previous_date_params[param_name] = param_value - datetime.timedelta(minutes=1)
         elif isinstance(param_obj, parameter.DateHourParameter):
             previous_date_params[param_name] = param_value - datetime.timedelta(hours=1)
         elif isinstance(param_obj, parameter.DateIntervalParameter):
