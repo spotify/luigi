@@ -56,7 +56,7 @@ class LocalFileSystem(FileSystem):
     def exists(self, path):
         return os.path.exists(path)
 
-    def mkdir(self, path):
+    def mkdir(self, path, parents=True, raise_if_exists=False):
         os.makedirs(path)
 
     def isdir(self, path):
