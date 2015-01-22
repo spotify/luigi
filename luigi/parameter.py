@@ -309,20 +309,23 @@ class DateHourParameter(Parameter):
     19:00.
     """
 
+    date_format = '%Y-%m-%dT%H'  # ISO 8601 is to use 'T'
+
     def parse(self, s):
         """
         Parses a string to a :py:class:`~datetime.datetime` using the format string ``%Y-%m-%dT%H``.
         """
         # TODO(erikbern): we should probably use an internal class for arbitary
         # time intervals (similar to date_interval). Or what do you think?
-        return datetime.datetime.strptime(s, "%Y-%m-%dT%H")  # ISO 8601 is to use 'T'
+        return datetime.datetime.strptime(s, self.date_format)
 
     def serialize(self, dt):
         """
         Converts the datetime to a string usnig the format string ``%Y-%m-%dT%H``.
         """
-        if dt is None: return str(dt)
-        return dt.strftime('%Y-%m-%dT%H')
+        if dt is None:
+            return str(dt)
+        return dt.strftime(self.date_format)
 
 
 class DateParameter(Parameter):
