@@ -115,7 +115,7 @@ class Parameter(object):
         self.__global = _no_value
 
         self.is_list = is_list
-        self.is_boolean = is_boolean and not is_list  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
+        self.is_bool = is_boolean and not is_list  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
 
@@ -265,7 +265,7 @@ class Parameter(object):
         if not x:
             if self.has_value:
                 return self.value
-            elif self.is_boolean:
+            elif self.is_bool:
                 return False
             elif self.is_list:
                 return []
@@ -310,7 +310,7 @@ class Parameter(object):
 
         if self.is_list:
             action = "append"
-        elif self.is_boolean:
+        elif self.is_bool:
             action = "store_true"
         else:
             action = "store"
