@@ -128,6 +128,33 @@ order to support command line interaction and make sure to convert the
 input to the corresponding type (i.e. datetime.date instead of a
 string).
 
+Setting parameter value for other classes
+-----------------------------------------
+
+All parameters are also exposed on a class level on the command line
+interface. For instance, say you have classes TaskA and TaskB:
+
+.. code:: python
+
+    class TaskA(luigi.Task):
+        x = luigi.Parameter()
+
+    class TaskB(luigi.Task):
+        y = luigi.Parameter()
+
+
+You can run *TaskB* on the command line: *python script.py TaskB --y 42*.
+But you can also set the class value of *TaskA* by running *python script.py
+TaskB --y 42 --TaskA-x 43*. This sets the value of *TaskA.x* to 43 on a
+*class* level. It is still possible to override it inside Python if you
+instantiate *TaskA(x=44)*.
+
+Parameters are resolved in the following order of decreasing priority:
+1. Any value passed to the constructor, or task level value set on the command line
+2. Any class level value set on the command line
+3. Any configuration option (if using the *config_path* argument)
+4. Any default value provided to the parameter
+
 Task.requires
 ^^^^^^^^^^^^^
 
