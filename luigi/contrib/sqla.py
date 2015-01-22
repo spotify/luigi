@@ -168,8 +168,13 @@ class SQLAlchemyTarget(luigi.Target):
         """
         self.target_table = target_table
         self.update_id = update_id
-        self.engine = _get_engine(connection_string, echo)  #sqlalchemy.create_engine(connection_string, echo=echo)
+        self.connection_string = connection_string
+        self.echo = echo
         self.marker_table_bound = None
+
+    @property
+    def engine(self):
+        return _get_engine(self.connection_string, self.echo)
 
     def touch(self):
         """Mark this update as complete.
