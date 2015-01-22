@@ -399,7 +399,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :type skip_trash: boolean, default is False (use trash)
         :param chicken: enable safety checks before removing dangerous paths
         :type chicken: boolean, default is True
-        :return: list of deleted items        
+        :return: list of deleted items 
         """
         return list(self.get_bite().delete(list_path(path), recurse=recursive))
 
