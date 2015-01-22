@@ -207,7 +207,6 @@ class Parameter(object):
 
         :param value: the new global value.
         """
-        assert self.is_global
         self.__global = value
 
     def reset_global(self):
@@ -280,15 +279,26 @@ class Parameter(object):
         else:
             return self.serialize(x)
 
-    def add_to_cmdline_parser(self, parser, param_name, task_name=None, optparse=False, glob=False):
-        if glob ^ self.is_global:
+    def parser_dest(self, param_name, task_name, glob=False):
+        if self.is_global:
+            if glob:
+                return param_name
+            else:
+                return None
+        else:
+            if glob:
+                return task_name + '_' + param_name
+            else:
+                return param_name
+
+    def add_to_cmdline_parser(self, parser, param_name, task_name, optparse=False, glob=False):
+        dest = self.parser_dest(param_name, task_name, glob)
+        if not dest:
             return
+        flag = '--' + dest.replace('_', '-')
 
         description = []
-        if task_name:
-            description.append('%s.%s' % (task_name, param_name))
-        else:
-            description.append(param_name)
+        description.append('%s.%s' % (task_name, param_name))
         if self.description:
             description.append(self.description)
         if self.has_value:
@@ -304,20 +314,24 @@ class Parameter(object):
             f = parser.add_option
         else:
             f = parser.add_argument
-        f('--' + param_name.replace('_', '-'),
+        f(flag,
           help=' '.join(description),
           default=None,
-          action=action)
+          action=action,
+          dest=dest)
 
-    def parse_from_args(self, param_name, args, params):
-        if hasattr(args, param_name) and not self.is_global:
-            value = self.parse_from_input(param_name, getattr(args, param_name))
-            params[param_name] = value # Note: modifies arguments
+    def parse_from_args(self, param_name, task_name, args, params):
+        dest = self.parser_dest(param_name, task_name, glob=False)
+        if dest is not None:
+            value = getattr(args, dest, None)
+            params[param_name] = self.parse_from_input(param_name, value) # Note: modifies arguments
 
-    def set_global_from_args(self, param_name, args):
-        if hasattr(args, param_name) and self.is_global:
-            value = self.parse_from_input(param_name, getattr(args, param_name))
-            self.set_global(value) # Note: side effects
+    def set_global_from_args(self, param_name, task_name, args):
+        dest = self.parser_dest(param_name, task_name, glob=True)
+        if dest is not None:
+            value = getattr(args, dest, None)
+            if value is not None:
+                self.set_global(self.parse_from_input(param_name, value)) # Note: side effects
 
 
 class DateHourParameter(Parameter):
