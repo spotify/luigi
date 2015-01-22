@@ -112,6 +112,15 @@ class Parameter(object):
 
         if is_global and default == _no_value and config_path is None:
             raise ParameterException('Global parameters need default values')
+
+        if is_global:
+            warnings.warn(
+                'is_global is deprecated. All parameters support global overrides now.'
+                'Just invoke with eg. --MyTask-my-parameter 123',
+                DeprecationWarning,
+                stacklevel=2
+                )
+
         self.description = description
 
         if config_path is not None and ('section' not in config_path or 'name' not in config_path):
