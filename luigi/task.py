@@ -198,22 +198,16 @@ class Register(abc.ABCMeta):
         return task_cls
 
     @classmethod
-    def get_global_params(cls):
-        """Compiles and returns the global parameters for all :py:class:`Task`.
+    def get_all_params(cls):
+        """Compiles and returns all parameters for all :py:class:`Task`.
 
         :return: a ``dict`` of parameter name -> parameter.
         """
-        global_params = {}
-        for t_name, t_cls in cls.get_reg().iteritems():
-            if t_cls == cls.AMBIGUOUS_CLASS:
+        for task_name, task_cls in cls.get_reg().iteritems():
+            if task_cls == cls.AMBIGUOUS_CLASS:
                 continue
-            for param_name, param_obj in t_cls.get_global_params():
-                if param_name in global_params and global_params[param_name] != param_obj:
-                    # Could be registered multiple times in case there's subclasses
-                    raise Exception('Global parameter %r registered by multiple classes' % param_name)
-                global_params[param_name] = param_obj
-        return global_params.iteritems()
-
+            for param_name, param_obj in task_cls.get_params():
+                yield task_name, param_name, param_obj
 
 
 class Task(object):
@@ -319,16 +313,6 @@ class Task(object):
         return params
 
     @classmethod
-    def get_global_params(cls):
-        """Return the global parameters for this Task."""
-        return [(param_name, param_obj) for param_name, param_obj in cls.get_params() if param_obj.is_global]
-
-    @classmethod
-    def get_nonglobal_params(cls):
-        """Return the non-global parameters for this Task."""
-        return [(param_name, param_obj) for param_name, param_obj in cls.get_params() if not param_obj.is_global]
-
-    @classmethod
     def get_param_values(cls, params, args, kwargs):
         """Get the values of the parameters from the args and kwargs.
 
@@ -346,7 +330,7 @@ class Task(object):
         exc_desc = '%s[args=%s, kwargs=%s]' % (cls.__name__, args, kwargs)
 
         # Fill in the positional arguments
-        positional_params = [(n, p) for n, p in params if not p.is_global]
+        positional_params = [(n, p) for n, p in params]
         for i, arg in enumerate(args):
             if i >= len(positional_params):
                 raise parameter.UnknownParameterException('%s: takes at most %d parameters (%d given)' % (exc_desc, len(positional_params), len(args)))
@@ -413,28 +397,20 @@ class Task(object):
         return hasattr(self, 'task_id')
 
     @classmethod
-    def from_str_params(cls, params_str={}, global_params=[]):
+    def from_str_params(cls, params_str={}):
         """Creates an instance from a str->str hash
 
-        This method is for parsing of command line arguments or other
-        non-programmatic invocations.
-
         :param params_str: dict of param name -> value.
-        :param global_params: dict of param name -> value, the global params.
         """
-        for param_name, param in global_params:
-            value = param.parse_from_input(param_name, params_str[param_name])
-            param.set_global(value)
-
         kwargs = {}
-        for param_name, param in cls.get_nonglobal_params():
+        for param_name, param in cls.get_params():
             value = param.parse_from_input(param_name, params_str[param_name])
             kwargs[param_name] = value
 
         return cls(**kwargs)
 
     def to_str_params(self):
-        """Opposite of from_str_params"""
+        # Convert all parameters to a str->str hash
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in self.param_kwargs.iteritems():
@@ -456,7 +432,7 @@ class Task(object):
             cls = self.__class__
 
         new_k = {}
-        for param_name, param_class in cls.get_nonglobal_params():
+        for param_name, param_class in cls.get_params():
             if param_name in k:
                 new_k[param_name] = k[param_name]
 

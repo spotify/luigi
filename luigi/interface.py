@@ -103,7 +103,7 @@ class EnvironmentParamsContainer(task.Task):
         # Override any global parameter with whatever is in override_defaults
         if override_defaults is None:
             override_defaults = {}
-        for param_name, param_obj in cls.get_global_params():
+        for param_name, param_obj in cls.get_params():
             if param_name in override_defaults:
                 param_obj.set_global(override_defaults[param_name])
 
@@ -209,26 +209,49 @@ class ErrorWrappedArgumentParser(argparse.ArgumentParser):
             super(ErrorWrappedArgumentParser, self).error(message)
 
 
+def add_task_parameters(parser, task_cls, optparse=False):
+    for param_name, param in task_cls.get_params():
+        if not param.is_global:
+            param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, optparse=optparse)
+
+
+def add_global_parameters(parser, optparse=False):
+    seen_params = set()
+    for task_name, param_name, param in Register.get_all_params():
+        if param.is_global:
+            if param in seen_params:
+                continue
+            seen_params.add(param)
+            param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse)
+
+
+def get_task_parameters(task_cls, params_str):
+    # Parse a str->str dict to the correct types
+    params = {}
+    for param_name, param in task_cls.get_params():
+        if param_name in params_str and not param.is_global:
+            params[param_name] = param.parse_from_input(param_name, params_str[param_name])
+    return params
+
+
+def set_global_parameters(params_str):
+    # Note that this is not side effect free
+    for task_name, param_name, param in Register.get_all_params():
+        if param_name in params_str and param.is_global:
+            value = param.parse_from_input(param_name, params_str[param_name])
+            param.set_global(value)
+
+
 class ArgParseInterface(Interface):
     ''' Takes the task as the command, with parameters specific to it
     '''
-    @classmethod
-    def add_task_parameters(cls, parser, task_cls):
-        for param_name, param in task_cls.get_nonglobal_params():
-            param.add_to_cmdline_parser(parser, param_name, task_cls.task_family)
-
-    @classmethod
-    def add_global_parameters(cls, parser):
-        for param_name, param in Register.get_global_params():
-            param.add_to_cmdline_parser(parser, param_name)
-
     def parse_task(self, cmdline_args=None, main_task_cls=None):
         parser = ErrorWrappedArgumentParser()
 
-        self.add_global_parameters(parser)
+        add_global_parameters(parser)
 
         if main_task_cls:
-            self.add_task_parameters(parser, main_task_cls)
+            add_task_parameters(parser, main_task_cls)
 
         else:
             orderedtasks = '{%s}' % ','.join(sorted(Register.get_reg().keys()))
@@ -238,15 +261,14 @@ class ArgParseInterface(Interface):
                 subparser = subparsers.add_parser(name)
                 if cls == Register.AMBIGUOUS_CLASS:
                     continue
-                self.add_task_parameters(subparser, cls)
+                add_task_parameters(subparser, cls)
 
                 # Add global params here as well so that we can support both:
                 # test.py --global-param xyz Test --n 42
                 # test.py Test --n 42 --global-param xyz
-                self.add_global_parameters(subparser)
+                add_global_parameters(subparser)
 
         args = parser.parse_args(args=cmdline_args)
-        params = vars(args)  # convert to a str -> str hash
 
         if main_task_cls:
             task_cls = main_task_cls
@@ -254,9 +276,10 @@ class ArgParseInterface(Interface):
             task_cls = Register.get_task_cls(args.command)
 
         # Notice that this is not side effect free because it might set global params
-        task = task_cls.from_str_params(params, Register.get_global_params())
+        set_global_parameters(vars(args))
+        task_params = get_task_parameters(task_cls, vars(args))
 
-        return [task]
+        return [task_cls(**task_params)]
 
     def parse(self, cmdline_args=None, main_task_cls=None):
         return self.parse_task(cmdline_args, main_task_cls)
@@ -274,7 +297,7 @@ class DynamicArgParseInterface(ArgParseInterface):
     def parse(self, cmdline_args=None, main_task_cls=None):
         parser = ErrorWrappedArgumentParser()
 
-        self.add_global_parameters(parser)
+        add_global_parameters(parser)
 
         args, unknown = parser.parse_known_args(args=cmdline_args)
         module = args.module
@@ -312,8 +335,6 @@ class OptParseInterface(Interface):
         self.__existing_optparse = existing_optparse
 
     def parse(self, cmdline_args=None, main_task_cls=None):
-        global_params = list(Register.get_global_params())
-
         parser = PassThroughOptionParser()
 
         def add_task_option(p):
@@ -322,8 +343,7 @@ class OptParseInterface(Interface):
             else:
                 p.add_option('--task', help='Task to run (one of %s)' % Register.tasks_str())
 
-        for param_name, param in global_params:
-            param.add_to_cmdline_parser(parser, param_name, optparse=True)
+        add_global_parameters(parser, optparse=True)
 
         add_task_option(parser)
         options, args = parser.parse_args(args=cmdline_args)
@@ -338,25 +358,16 @@ class OptParseInterface(Interface):
         task_cls = Register.get_task_cls(task_cls_name)
 
         # Register all parameters as a big mess
-        params = task_cls.get_nonglobal_params()
-
-        for param_name, param in global_params:
-            param.add_to_cmdline_parser(parser, param_name, optparse=True)
-
-        for param_name, param in params:
-            param.add_to_cmdline_parser(parser, param_name, optparse=True)
+        add_global_parameters(parser, optparse=True)
+        add_task_parameters(parser, task_cls, optparse=True)
 
         # Parse and run
         options, args = parser.parse_args(args=cmdline_args)
 
-        params = {}
-        for k, v in vars(options).iteritems():
-            if k != 'task':
-                params[k] = v
+        set_global_parameters(vars(options))
+        task_params = get_task_parameters(task_cls, vars(options))
 
-        task = task_cls.from_str_params(params, global_params)
-
-        return [task]
+        return [task_cls(**task_params)]
 
 
 def load_task(module, task_name, params_str):
