@@ -40,6 +40,7 @@ build = interface.build
 
 # TODO: how can we get rid of these?
 DateHourParameter = parameter.DateHourParameter
+DateMinuteParameter = parameter.DateMinuteParameter
 DateParameter = parameter.DateParameter
 IntParameter = parameter.IntParameter
 FloatParameter = parameter.FloatParameter
