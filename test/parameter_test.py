@@ -100,6 +100,17 @@ class SharedGlobalParamB(luigi.Task):
     shared_global_param = _shared_global_param
 
 
+class BananaDep(luigi.Task):
+    ppp = luigi.Parameter()
+    qqq = luigi.Parameter()
+
+
+class Banana(luigi.Task):
+    ppp = luigi.Parameter()
+    def requires(self):
+        return BananaDep(self.ppp)
+
+
 class ParameterTest(EmailTest):
     def setUp(self):
         super(ParameterTest, self).setUp()
@@ -217,6 +228,9 @@ class ParameterTest(EmailTest):
 
         t = InsignificantParameterTask(foo='x', bar='y')
         self.assertEqual(t.task_id, 'InsignificantParameterTask(bar=y)')
+
+    def test_override_parameter_globally(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--ppp', '42', '--BananaDep-qqq', '73'])
 
 
 class TestParamWithDefaultFromConfig(unittest.TestCase):
