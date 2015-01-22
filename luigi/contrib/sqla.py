@@ -130,8 +130,24 @@ import luigi
 import datetime
 import itertools
 import sqlalchemy
-
+from threading import Lock
 logger = logging.getLogger('luigi-interface')
+
+_engine_hash={}
+_mutex = Lock()
+def _get_engine(connection_string, echo):
+    global _engine_hash
+    engine = None
+    _mutex.acquire()
+    try:
+        if connection_string in _engine_hash.keys():
+            engine = _engine_hash[connection_string]
+        else:
+            engine = sqlalchemy.create_engine(connection_string, echo=echo)
+            _engine_hash[connection_string] = engine
+    finally:
+        _mutex.release()
+    return engine
 
 
 class SQLAlchemyTarget(luigi.Target):
@@ -151,7 +167,7 @@ class SQLAlchemyTarget(luigi.Target):
         """
         self.target_table = target_table
         self.update_id = update_id
-        self.engine = sqlalchemy.create_engine(connection_string, echo=echo)
+        self.engine = _get_engine(connection_string, echo)  #sqlalchemy.create_engine(connection_string, echo=echo)
         self.marker_table_bound = None
 
     def touch(self):
