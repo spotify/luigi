@@ -305,7 +305,7 @@ class S3Client(FileSystem):
         except NoSectionError:
             return {}
         # So what ports etc can be read without us having to specify all dtypes
-        for k, v in config.items():
+        for k, v in config.iteritems():
             try:
                 config[k] = int(v)
             except ValueError:

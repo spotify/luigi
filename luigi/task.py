@@ -426,7 +426,7 @@ class Task(object):
         - There's task inheritance and some logic is on the base class
         '''
         k = self.param_kwargs.copy()
-        k.update(kwargs.items())
+        k.update(kwargs.iteritems())
 
         if cls is None:
             cls = self.__class__
