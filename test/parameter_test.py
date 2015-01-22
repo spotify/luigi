@@ -23,6 +23,7 @@ from luigi.parameter import ParameterException
 luigi.notifications.DEBUG = True
 import unittest
 from helpers import with_config
+from luigi.mock import MockFile, MockFileSystem
 
 EMAIL_CONFIG = {"core": {"error-email": "not-a-real-email-address-for-test-only"}}
 
@@ -102,14 +103,38 @@ class SharedGlobalParamB(luigi.Task):
 
 
 class BananaDep(luigi.Task):
-    ppp = luigi.Parameter()
-    qqq = luigi.Parameter()
+    x = luigi.Parameter()
+    y = luigi.Parameter(default='def')
+
+    def output(self):
+        return MockFile('banana-dep-%s-%s' % (self.x, self.y))
+
+    def run(self):
+        self.output().open('w').close()
 
 
 class Banana(luigi.Task):
-    ppp = luigi.Parameter()
+    x = luigi.Parameter()
+    y = luigi.Parameter()
+    style = luigi.Parameter(default=None)
+
     def requires(self):
-        return BananaDep(self.ppp)
+        if self.style is None:
+            return BananaDep() # will fail
+        elif self.style == 'x-arg':
+            return BananaDep(self.x)
+        elif self.style == 'y-kwarg':
+            return BananaDep(y=self.y)
+        elif self.style == 'x-arg-y-arg':
+            return BananaDep(self.x, self.y)
+        else:
+            raise Exception('unknown style')
+
+    def output(self):
+        return MockFile('banana-%s-%s' % (self.x, self.y))
+
+    def run(self):
+        self.output().open('w').close()
 
 
 class ParameterTest(EmailTest):
@@ -231,8 +256,51 @@ class ParameterTest(EmailTest):
         t = InsignificantParameterTask(foo='x', bar='y')
         self.assertEqual(t.task_id, 'InsignificantParameterTask(bar=y)')
 
-    def test_override_parameter_globally(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--ppp', '42', '--BananaDep-qqq', '73'])
+
+class TestNewStyleGlobalParameters(EmailTest):
+    def setUp(self):
+        super(TestNewStyleGlobalParameters, self).setUp()
+        MockFile.fs.clear()
+        BananaDep.y.reset_global()
+
+    def expect_keys(self, expected):
+        self.assertEquals(set(MockFile.fs.get_all_data().keys()), set(expected))
+
+    def test_x_arg(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-def'])
+
+    def test_x_arg_override(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg', '--BananaDep-y', 'xyz'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-xyz'])
+
+    def test_x_arg_override_stupid(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg', '--BananaDep-x', 'blabla'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-def'])
+
+    def test_x_arg_y_arg(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg-y-arg'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-bar'])
+
+    def test_x_arg_y_arg_override(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg-y-arg', '--BananaDep-y', 'xyz'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-bar'])
+
+    def test_x_arg_y_arg_override_all(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg-y-arg', '--BananaDep-y', 'xyz', '--BananaDep-x', 'blabla'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-bar'])
+
+    def test_y_arg_override(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-xyz-bar'])
+
+    def test_y_arg_override_both(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz', '--BananaDep-y', 'blah'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-xyz-bar'])
+
+    def test_y_arg_override_banana(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz', '--Banana-x', 'baz'])
+        self.expect_keys(['banana-baz-bar', 'banana-dep-xyz-bar'])
 
 
 class TestParamWithDefaultFromConfig(unittest.TestCase):

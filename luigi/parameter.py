@@ -118,6 +118,7 @@ class Parameter(object):
 
         if is_global and default == _no_value and config_path is None:
             raise ParameterException('Global parameters need default values')
+
         self.description = description
 
         if config_path is not None and ('section' not in config_path or 'name' not in config_path):
