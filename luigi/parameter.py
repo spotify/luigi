@@ -15,6 +15,7 @@
 import configuration
 import datetime
 import warnings
+from deprecate_kwarg import deprecate_kwarg
 from ConfigParser import NoSectionError, NoOptionError
 
 _no_value = object()
@@ -81,6 +82,7 @@ class Parameter(object):
     counter = 0
     """non-atomically increasing counter used for ordering parameters."""
 
+    @deprecate_kwarg('is_boolean', 'is_bool', False)
     def __init__(self, default=_no_value, is_list=False, is_boolean=False, is_global=False, significant=True, description=None,
                  config_path=None):
         """
@@ -91,8 +93,8 @@ class Parameter(object):
         :param bool is_list: specify ``True`` if the parameter should allow a list of values rather
                              than a single value. Default: ``False``. A list has an implicit default
                              value of ``[]``.
-        :param bool is_boolean: specify ``True`` if the parameter is a boolean value. Default:
-                                ``False``. Boolean's have an implicit default value of ``False``.
+        :param bool is_bool: specify ``True`` if the parameter is a bool value. Default:
+                                ``False``. Bool's have an implicit default value of ``False``.
         :param bool is_global: specify ``True`` if the parameter is global (i.e. used by multiple
                                Tasks). Default: ``False``.
         :param bool significant: specify ``False`` if the parameter should not be treated as part of
@@ -413,12 +415,12 @@ class BoolParameter(Parameter):
 
     def __init__(self, *args, **kwargs):
         """This constructor passes along args and kwargs to ctor for :py:class:`Parameter` but
-        specifies ``is_boolean=True``.
+        specifies ``is_bool=True``.
         """
-        super(BoolParameter, self).__init__(*args, is_boolean=True, **kwargs)
+        super(BoolParameter, self).__init__(*args, is_bool=True, **kwargs)
 
     def parse(self, s):
-        """Parses a ``boolean`` from the string, matching 'true' or 'false' ignoring case."""
+        """Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case."""
         return {'true': True, 'false': False}[str(s).lower()]
 BooleanParameter = BoolParameter
 
