@@ -422,7 +422,15 @@ class BoolParameter(Parameter):
     def parse(self, s):
         """Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case."""
         return {'true': True, 'false': False}[str(s).lower()]
-BooleanParameter = BoolParameter
+
+class BooleanParameter(BoolParameter):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            'BooleanParameter is deprecated, use BoolParameter instead',
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super(BooleanParameter, self).__init__(*args, **kwargs)
 
 class DateIntervalParameter(Parameter):
 
