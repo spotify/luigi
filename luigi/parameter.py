@@ -332,8 +332,8 @@ class DateMinuteParameter(DateHourParameter):
     """Parameter whose value is a :py:class:`~datetime.datetime` specified to the minute.
 
     A DateMinuteParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
-    date and time specified to the minute. For example, ``2013-07-10T19H42`` specifies July 10, 2013 at
-    19:42.
+    date and time specified to the minute. For example, ``2013-07-10T19H07`` specifies July 10, 2013 at
+    19:07.
     """
 
     date_format = '%Y-%m-%dT%HH%M'  # ISO 8601 is to use 'T' and 'H'
