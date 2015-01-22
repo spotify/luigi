@@ -44,7 +44,8 @@ DateMinuteParameter = parameter.DateMinuteParameter
 DateParameter = parameter.DateParameter
 IntParameter = parameter.IntParameter
 FloatParameter = parameter.FloatParameter
-BooleanParameter = parameter.BooleanParameter
+BooleanParameter = parameter.BoolParameter  # backward compatibility
+BoolParameter = parameter.BoolParameter
 DateIntervalParameter = parameter.DateIntervalParameter
 TimeDeltaParameter = parameter.TimeDeltaParameter
 

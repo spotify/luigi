@@ -56,7 +56,7 @@ class FactorTask(luigi.Task):
 
 
 class BadReqTask(luigi.Task):
-    succeed = luigi.BooleanParameter()
+    succeed = luigi.BoolParameter()
 
     def requires(self):
         assert self.succeed

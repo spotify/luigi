@@ -92,7 +92,7 @@ class AggregateArtistsHadoop(luigi.hadoop.JobTask):
 
 class Top10Artists(luigi.Task):
     date_interval = luigi.DateIntervalParameter()
-    use_hadoop = luigi.BooleanParameter()
+    use_hadoop = luigi.BoolParameter()
 
     def requires(self):
         if self.use_hadoop:
@@ -124,7 +124,7 @@ class Top10Artists(luigi.Task):
 
 class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
     date_interval = luigi.DateIntervalParameter()
-    use_hadoop = luigi.BooleanParameter()
+    use_hadoop = luigi.BoolParameter()
 
     host = "localhost"
     database = "toplists"

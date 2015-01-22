@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 class DummyTask(luigi.Task):
 
     param = luigi.Parameter()
-    bool_param = luigi.BooleanParameter()
+    bool_param = luigi.BoolParameter()
     int_param = luigi.IntParameter()
     float_param = luigi.FloatParameter()
     date_param = luigi.DateParameter()
