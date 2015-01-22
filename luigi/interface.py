@@ -230,14 +230,14 @@ def get_task_parameters(task_cls, args):
     # Parse a str->str dict to the correct types
     params = {}
     for param_name, param in task_cls.get_params():
-        param.parse_from_args(param_name, args, params)
+        param.parse_from_args(param_name, task_cls.task_family, args, params)
     return params
 
 
 def set_global_parameters(args):
     # Note that this is not side effect free
     for task_name, param_name, param in Register.get_all_params():
-        param.set_global_from_args(param_name, args)
+        param.set_global_from_args(param_name, task_name, args)
 
 
 class ArgParseInterface(Interface):
