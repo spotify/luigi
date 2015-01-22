@@ -28,6 +28,7 @@ from luigi.target import FileSystemTarget
 from luigi.task import Register, flatten_output
 import re
 import time
+import operator
 
 logger = logging.getLogger('luigi-interface')
 
@@ -214,7 +215,7 @@ def most_common(items):
     for i in items:
         counts.setdefault(i, 0)
         counts[i] += 1
-    return sorted(counts.items(), key=lambda x: x[1])[-1]
+    return max(counts.iteritems(), key=operator.itemgetter(1))
 
 
 def _get_per_location_glob(tasks, outputs, regexes):
