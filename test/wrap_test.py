@@ -15,7 +15,7 @@
 import luigi
 from luigi.mock import MockFile
 import unittest
-from luigi.util import Derived
+from luigi.util import inherits
 import datetime
 import luigi.notifications
 luigi.notifications.DEBUG = True
@@ -45,9 +45,10 @@ class B(luigi.Task):
 
 
 def XMLWrapper(cls):
-    class XMLWrapperCls(Derived(cls)):
+    @inherits(cls)
+    class XMLWrapperCls(luigi.Task):
         def requires(self):
-            return self.parent_obj
+            return self.clone_parent()
 
         def run(self):
             f = self.input().open('r')
