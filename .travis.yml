@@ -21,6 +21,8 @@ cache:
 install:
   - pip install tox
 
-script: tox -e $TOX_ENV
+script:
+  - tox -e $TOX_ENV
 
-after_failure: cat /home/travis/build/spotify/luigi/.tox/cdh/log/cdh-1.log
+after_failure:
+  - cat /home/travis/build/spotify/luigi/.tox/cdh/log/cdh-1.log
