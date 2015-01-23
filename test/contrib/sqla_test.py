@@ -264,3 +264,53 @@ class TestSQLA(unittest.TestCase):
         task1, task2 = ModBaseTask(), ModSQLATask()
         luigi.build([task1, task2], local_scheduler=True)
         self._check_entries(self.engine)
+
+    def test_update_rows_test(self):
+        class ModBaseTask(luigi.Task):
+
+            def output(self):
+                return MockFile("BaseTask",  mirror_on_stderr=True)
+
+            def run(self):
+                out = self.output().open("w")
+                for task in TASK_LIST:
+                    out.write("dummy_"+task)
+                    #out.write(task)
+                out.close()
+
+        class ModSQLATask(sqla.CopyToTable):
+            connection_string = CONNECTION_STRING
+            table = "item_property"
+            columns = [
+                (["item", sqlalchemy.String(64)], {}),
+                (["property", sqlalchemy.String(64)], {})
+            ]
+
+            def requires(self):
+                return ModBaseTask()
+
+
+        class UpdateSQLATask(sqla.CopyToTable):
+            connection_string = CONNECTION_STRING
+            table = "item_property"
+            reflect = True
+
+            def requires(self):
+                return ModSQLATask()
+
+            def copy(self, conn, ins_rows, table_bound):
+                for row in ins_rows:
+                    ins = table_bound.update().\
+                        where(table_bound.c.property == row["property"]).\
+                        values({table_bound.c.item: row["item"]})
+                    conn.execute(ins)
+
+            def rows(self):
+                for task in TASK_LIST:
+                    yield task.strip("\n").split("\t")
+
+        # Running only task1, and task2 should fail
+        task1, task2, task3 = ModBaseTask(), ModSQLATask(), UpdateSQLATask()
+        luigi.build([task1, task2, task3], local_scheduler=True)
+        self._check_entries(self.engine)
+

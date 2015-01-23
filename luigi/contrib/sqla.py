@@ -322,11 +322,15 @@ class CopyToTable(luigi.Task):
             ins_rows = [dict(zip((c.key for c in self.table_bound.c), row))
                         for row in itertools.islice(rows, self.chunk_size)]
             while ins_rows:
-                ins = self.table_bound.insert()
-                conn.execute(ins, ins_rows)
+                self.copy(conn, ins_rows, self.table_bound)
                 ins_rows = [dict(zip((c.key for c in self.table_bound.c), row))
                             for row in itertools.islice(rows, self.chunk_size)]
                 logger.info("Finished inserting %d rows into SQLAlchemy target" % len(ins_rows))
+
         output.touch()
         logger.info("Finished inserting rows into SQLAlchemy target")
+
+    def copy(self, conn, ins_rows, table_bound):
+        ins = table_bound.insert()
+        conn.execute(ins, ins_rows)
 
