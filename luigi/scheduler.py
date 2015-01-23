@@ -389,9 +389,7 @@ class CentralPlannerScheduler(Scheduler):
             max_shown_tasks=max_shown_tasks,
         )
 
-        self._task_history = task_history or history.NopHistory()
         self._state = SimpleTaskState(state_path)
-
         self._task_history = task_history or history.NopHistory()
         self._resources = resources
         self._make_task = functools.partial(
