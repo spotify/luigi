@@ -126,10 +126,10 @@ class TaskProcess(multiprocessing.Process):
             raise
         except BaseException as ex:
             status = FAILED
-            logger.exception("[pid %s][host %] Worker %s failed    %s", os.getpid(), self.host, self.worker_id, self.task)
+            logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
             error_message = notifications.wrap_traceback(self.task.on_failure(ex))
             self.task.trigger_event(Event.FAILURE, self.task, ex)
-            subject = "Luigi: %s FAILED - Host: %s" % (self.task, self.host)
+            subject = "Luigi: %s FAILED" % self.task
             notifications.send_error_email(subject, error_message)
         finally:
             self.result_queue.put(
