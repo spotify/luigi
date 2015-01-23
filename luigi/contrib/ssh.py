@@ -210,7 +210,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
     ssh commands streaming data over the network.
     """
     def __init__(self, path, host, format=None, username=None, key_file=None):
-        self.path = path
+        super(RemoteTarget, self).__init__(path)
         self.format = format
         self._fs = RemoteFileSystem(host, username, key_file)
 
