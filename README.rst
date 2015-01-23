@@ -110,6 +110,7 @@ Several companies have written blog posts or presentation about Luigi:
 * `Stripe <http://www.slideshare.net/PyData/python-as-part-of-a-production-machine-learning-stack-by-michael-manapat-pydata-sv-2014>`_
 * `Asana <https://eng.asana.com/2014/11/stable-accessible-data-infrastructure-startup/>`_
 * `Buffer <https://overflow.bufferapp.com/2014/10/31/buffers-new-data-architecture/>`_
+* `SeatGeek <http://chairnerd.seatgeek.com/building-out-the-seatgeek-data-pipeline/>`_
 
 Please let us know if your company wants to be featured on this list!
 
