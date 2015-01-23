@@ -631,7 +631,7 @@ class WorkerEmailTest(EmailTest):
         worker.add(a)
         self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
         self.assertNotEquals(self.last_email, None)
-        self.assertEqual(self.last_email[0], "Luigi: Framework error while scheduling %s" % (a,))
+        self.assertTrue(self.last_email[0].startswith("Luigi: Framework error while scheduling %s" % (a,)))
         worker.stop()
 
     @with_config(EMAIL_CONFIG)
@@ -643,9 +643,9 @@ class WorkerEmailTest(EmailTest):
         a = A()
         self.assertEqual(self.last_email, None)
         self.worker.add(a)
-        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
         self.worker.run()
-        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
         self.assertFalse(a.has_run)
 
     @with_config(EMAIL_CONFIG)
@@ -657,9 +657,9 @@ class WorkerEmailTest(EmailTest):
         a = A()
         self.assertEqual(self.last_email, None)
         self.worker.add(a)
-        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
         self.worker.run()
-        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
         self.assertFalse(a.has_run)
 
     @with_config(EMAIL_CONFIG)
