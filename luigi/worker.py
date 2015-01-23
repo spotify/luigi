@@ -126,10 +126,10 @@ class TaskProcess(multiprocessing.Process):
             raise
         except BaseException as ex:
             status = FAILED
-            logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
+            logger.exception("[pid %s][host %] Worker %s failed    %s", os.getpid(), self.host, self.worker_id, self.task)
             error_message = notifications.wrap_traceback(self.task.on_failure(ex))
             self.task.trigger_event(Event.FAILURE, self.task, ex)
-            subject = "Luigi: %s FAILED" % self.task
+            subject = "Luigi: %s FAILED - Host: %s" % (self.task, self.host)
             notifications.send_error_email(subject, error_message)
         finally:
             self.result_queue.put(
@@ -321,13 +321,13 @@ class Worker(object):
     def _email_complete_error(self, task, formatted_traceback):
           # like logger.exception but with WARNING level
         formatted_traceback = notifications.wrap_traceback(formatted_traceback)
-        subject = "Luigi: {task} failed scheduling".format(task=task)
+        subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
         message = "Will not schedule {task} or any dependencies due to error in complete() method:\n{traceback}".format(task=task, traceback=formatted_traceback)
         notifications.send_error_email(subject, message)
 
     def _email_unexpected_error(self, task, formatted_traceback):
         formatted_traceback = notifications.wrap_traceback(formatted_traceback)
-        subject = "Luigi: Framework error while scheduling {task}".format(task=task)
+        subject = "Luigi: Framework error while scheduling {task}. Host: {host}".format(task=task, host=self.host)
         message = "Luigi framework error:\n{traceback}".format(traceback=formatted_traceback)
         notifications.send_error_email(subject, message)
 
