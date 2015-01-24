@@ -288,7 +288,7 @@ class SnakebiteHdfsClient(HdfsClient):
             client_kwargs = dict(filter(lambda (k, v): v is not None and v != '',  {
                 'hadoop_version': self.config.getint("hdfs", "client_version", None),
                 'effective_user': self.config.get("hdfs", "effective_user", None)
-            }.items()))
+            }.iteritems()))
             if self.config.getboolean("hdfs", "snakebite_autoconfig", False):
                 """
                 This is fully backwards compatible with the vanilla Client and can be used for a non HA cluster as well.
