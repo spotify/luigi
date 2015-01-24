@@ -99,13 +99,14 @@ class TaskProcess(multiprocessing.Process):
                         new_req = flatten(requires)
                         status = (RUNNING if all(t.complete() for t in new_req)
                                   else SUSPENDED)
-                        new_deps = [(t.task_family, t.to_str_params())
+                        new_deps = [(t.task_module, t.task_family, t.to_str_params())
                                     for t in new_req]
                         if status == RUNNING:
                             self.result_queue.put(
                                 (self.task.task_id, status, '', missing,
                                  new_deps))
                             next_send = getpaths(requires)
+                            new_deps = []
                         else:
                             logger.info(
                                 '[pid %s] Worker %s new requirements      %s',
@@ -320,13 +321,13 @@ class Worker(object):
     def _email_complete_error(self, task, formatted_traceback):
           # like logger.exception but with WARNING level
         formatted_traceback = notifications.wrap_traceback(formatted_traceback)
-        subject = "Luigi: {task} failed scheduling".format(task=task)
+        subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
         message = "Will not schedule {task} or any dependencies due to error in complete() method:\n{traceback}".format(task=task, traceback=formatted_traceback)
         notifications.send_error_email(subject, message)
 
     def _email_unexpected_error(self, task, formatted_traceback):
         formatted_traceback = notifications.wrap_traceback(formatted_traceback)
-        subject = "Luigi: Framework error while scheduling {task}".format(task=task)
+        subject = "Luigi: Framework error while scheduling {task}. Host: {host}".format(task=task, host=self.host)
         message = "Luigi framework error:\n{traceback}".format(traceback=formatted_traceback)
         notifications.send_error_email(subject, message)
 
@@ -533,8 +534,8 @@ class Worker(object):
                 # Maybe it yielded something?
             new_deps = []
             if new_requirements:
-                new_req = [interface.load_task(task, name, params)
-                           for name, params in new_requirements]
+                new_req = [interface.load_task(module, name, params)
+                           for module, name, params in new_requirements]
                 for t in new_req:
                     self.add(t)
                 new_deps = [t.task_id for t in new_req]

@@ -56,6 +56,29 @@ class DateHourTaskOkTest(unittest.TestCase):
         self.assertEqual(None, prev)
 
 
+class DateMinuteTaskOk(luigi.Task):
+    minute = luigi.DateMinuteParameter()
+
+    def complete(self):
+        # test against 2000.03.01T02H03
+        return self.minute in [datetime.datetime(2000, 3, 1, 2, 0), datetime.datetime(2000, 3, 1, 2, 3), datetime.datetime(2000, 3, 1, 2, 4)]
+
+class DateMinuteTaskOkTest(unittest.TestCase):
+    def test_previous(self):
+        task = DateMinuteTaskOk(datetime.datetime(2000, 3, 1, 2, 3))
+        prev = previous(task)
+        self.assertEqual(prev.minute, datetime.datetime(2000, 3, 1, 2, 2))
+
+    def test_get_previous_completed(self):
+        task = DateMinuteTaskOk(datetime.datetime(2000, 3, 1, 2, 3))
+        prev = get_previous_completed(task, 3)
+        self.assertEqual(prev.minute, datetime.datetime(2000, 3, 1, 2, 0))
+
+    def test_get_previous_completed_not_found(self):
+        task = DateMinuteTaskOk(datetime.datetime(2000, 3, 1, 2, 3))
+        prev = get_previous_completed(task, 2)
+        self.assertEqual(None, prev)
+
 class DateIntervalTaskOk(luigi.Task):
     interval = luigi.DateIntervalParameter()
 

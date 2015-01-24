@@ -6,7 +6,6 @@ dist
 luigi.egg-info
 packages.tar
 test/data
-hadoop_test.py
 .nicesetup
 .tox
 *.pickle

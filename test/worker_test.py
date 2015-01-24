@@ -52,6 +52,48 @@ class DynamicDummyTask(Task):
     def run(self):
         with self.output().open('w') as f:
             f.write('Done!')
+        time.sleep(0.5) # so we can benchmark & see if parallelization works
+
+
+class DynamicDummyTaskWithNamespace(DynamicDummyTask):
+    task_namespace = 'banana'
+
+
+class DynamicRequires(Task):
+    p = luigi.Parameter()
+    use_banana_task = luigi.BooleanParameter(default=False)
+
+    def output(self):
+        return luigi.LocalTarget(os.path.join(self.p, 'parent'))
+
+    def run(self):
+        if self.use_banana_task:
+            task_cls = DynamicDummyTaskWithNamespace
+        else:
+            task_cls = DynamicDummyTask
+        dummy_targets = yield [task_cls(os.path.join(self.p, str(i)))
+                               for i in range(5)]
+        dummy_targets += yield [task_cls(os.path.join(self.p, str(i)))
+                                for i in range(5, 7)]
+        with self.output().open('w') as f:
+            for i, d in enumerate(dummy_targets):
+                for line in d.open('r'):
+                    print >>f, '%d: %s' % (i, line.strip())
+
+
+class DynamicRequiresOtherModule(Task):
+    p = luigi.Parameter()
+
+    def output(self):
+        return luigi.LocalTarget(os.path.join(self.p, 'baz'))
+
+    def run(self):
+        import other_module
+        other_target_foo = yield other_module.OtherModuleTask(os.path.join(self.p, 'foo'))
+        other_target_bar = yield other_module.OtherModuleTask(os.path.join(self.p, 'bar'))
+        
+        with self.output().open('w') as f:
+            f.write('Done!')
 
 
 class WorkerTest(unittest.TestCase):
@@ -222,37 +264,6 @@ class WorkerTest(unittest.TestCase):
         self.w.run()
         self.assertTrue(a.complete())
         self.assertTrue(b.complete())
-
-    def test_dynamic_dependencies(self):
-
-        class DynamicRequires(Task):
-            p = luigi.Parameter()
-
-            def output(self):
-                return luigi.LocalTarget(os.path.join(self.p, 'parent'))
-
-            def run(self):
-                dummy_targets = yield [DynamicDummyTask(os.path.join(self.p, str(i)))
-                                     for i in range(5)]
-                dummy_targets += yield [DynamicDummyTask(os.path.join(self.p, str(i)))
-                                       for i in range(5, 7)]
-                with self.output().open('w') as f:
-                    for i, d in enumerate(dummy_targets):
-                        for line in d.open('r'):
-                            print >>f, '%d: %s' % (i, line.strip())
-
-        p = tempfile.mkdtemp()
-        try:
-            t = DynamicRequires(p=p)
-            luigi.build([t], local_scheduler=True)
-            self.assertTrue(t.complete())
-
-            # loop through output and verify
-            f = t.output().open('r')
-            for i in xrange(7):
-                self.assertEqual(f.readline().strip(), '%d: Done!' % i)
-        finally:
-            shutil.rmtree(p)
 
     def test_avoid_infinite_reschedule(self):
         class A(Task):
@@ -493,6 +504,44 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(a.has_run)
         w.stop()
 
+
+class DynamicDependenciesTest(unittest.TestCase):
+    n_workers = 1
+    timeout = float('inf')
+
+    def setUp(self):
+        self.p = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.p)
+
+    def test_dynamic_dependencies(self, use_banana_task=False):
+        t0 = time.time()
+        t = DynamicRequires(p=self.p, use_banana_task=use_banana_task)
+        luigi.build([t], local_scheduler=True, workers=self.n_workers)
+        self.assertTrue(t.complete())
+        
+        # loop through output and verify
+        f = t.output().open('r')
+        for i in xrange(7):
+            self.assertEqual(f.readline().strip(), '%d: Done!' % i)
+
+        self.assertTrue(time.time() - t0 < self.timeout)
+
+    def test_dynamic_dependencies_with_namespace(self):
+        self.test_dynamic_dependencies(use_banana_task=True)
+
+    def test_dynamic_dependencies_other_module(self):
+        t = DynamicRequiresOtherModule(p=self.p)
+        luigi.build([t], local_scheduler=True, workers=self.n_workers)
+        self.assertTrue(t.complete())
+
+
+class DynamicDependenciesWithMultipleWorkersTest(DynamicDependenciesTest):
+    n_workers = 100
+    timeout = 3.0 # We run 7 tasks that take 0.5s each so it should take less than 3.5s
+
+
 class WorkerPingThreadTests(unittest.TestCase):
     def test_ping_retry(self):
         """ Worker ping fails once. Ping continues to try to connect to scheduler
@@ -582,7 +631,7 @@ class WorkerEmailTest(EmailTest):
         worker.add(a)
         self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
         self.assertNotEquals(self.last_email, None)
-        self.assertEqual(self.last_email[0], "Luigi: Framework error while scheduling %s" % (a,))
+        self.assertTrue(self.last_email[0].startswith("Luigi: Framework error while scheduling %s" % (a,)))
         worker.stop()
 
     @with_config(EMAIL_CONFIG)
@@ -594,9 +643,9 @@ class WorkerEmailTest(EmailTest):
         a = A()
         self.assertEqual(self.last_email, None)
         self.worker.add(a)
-        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
         self.worker.run()
-        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
         self.assertFalse(a.has_run)
 
     @with_config(EMAIL_CONFIG)
@@ -608,9 +657,9 @@ class WorkerEmailTest(EmailTest):
         a = A()
         self.assertEqual(self.last_email, None)
         self.worker.add(a)
-        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
         self.worker.run()
-        self.assertEqual(("Luigi: %s failed scheduling" % (a,)), self.last_email[0])
+        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
         self.assertFalse(a.has_run)
 
     @with_config(EMAIL_CONFIG)
@@ -739,4 +788,4 @@ class MultipleWorkersTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    luigi.run()

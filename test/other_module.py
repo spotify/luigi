@@ -12,7 +12,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import warnings
-warnings.warn("luigi.scalding has now moved to luigi.contrib.scalding", DeprecationWarning, stacklevel=3)
+import luigi
 
-from luigi.contrib.scalding import *
+class OtherModuleTask(luigi.Task):
+    p = luigi.Parameter()
+
+    def output(self):
+        return luigi.LocalTarget(self.p)
+
+    def run(self):
+        with self.output().open('w') as f:
+            f.write('Done!')

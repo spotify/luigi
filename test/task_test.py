@@ -35,7 +35,7 @@ class TaskTest(unittest.TestCase):
             list_param=['in', 'flames'])
 
         original = DummyTask(**params)
-        other = DummyTask.from_str_params(original.to_str_params(), {})
+        other = DummyTask.from_str_params(original.to_str_params())
         self.assertEqual(original, other)
 
     def test_id_to_name_and_params(self):
