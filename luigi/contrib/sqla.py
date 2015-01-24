@@ -199,7 +199,8 @@ class SQLAlchemyTarget(luigi.Target):
             self.create_marker_table()
         with self.engine.begin() as conn:
             table = self.marker_table_bound
-            s = sqlalchemy.select([table]).where(table.c.update_id == self.update_id).limit(1)
+            s = sqlalchemy.select([table]).where(sqlalchemy.and_(table.c.update_id == self.update_id,
+                                                 table.c.target_table == self.target_table)).limit(1)
             row = conn.execute(s).fetchone()
         return row is not None
 
@@ -319,7 +320,7 @@ class CopyToTable(luigi.Task):
         self.create_table(output.engine)
         with output.engine.begin() as conn:
             rows = iter(self.rows())
-            ins_rows = [dict(zip((c.key for c in self.table_bound.c), row))
+            ins_rows = [dict(zip(("_"+c.key for c in self.table_bound.c), row))
                         for row in itertools.islice(rows, self.chunk_size)]
             while ins_rows:
                 self.copy(conn, ins_rows, self.table_bound)
@@ -331,6 +332,16 @@ class CopyToTable(luigi.Task):
         logger.info("Finished inserting rows into SQLAlchemy target")
 
     def copy(self, conn, ins_rows, table_bound):
-        ins = table_bound.insert()
+        """ This method does the actual insertion of the rows of data given by ins_rows into the
+        database. A task that needs row updates instead of insertions should overload this method.
+        :param conn: The sqlalchemy connection object
+        :param ins_rows: The dictionary of rows with the keys in the format _<column_name>. For example
+                         if you have a table with a column name "property", then the key in the dictionary
+                         would be "_property". This format is consistent with the bindparam usage in sqlalchemy.
+        :param table_bound: The object referring to the table
+        :return:
+        """
+        bound_cols = {c: sqlalchemy.bindparam("_"+c.key) for c in table_bound.columns}
+        ins = table_bound.insert().values(bound_cols)
         conn.execute(ins, ins_rows)
 

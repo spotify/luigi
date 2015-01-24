@@ -299,11 +299,10 @@ class TestSQLA(unittest.TestCase):
                 return ModSQLATask()
 
             def copy(self, conn, ins_rows, table_bound):
-                for row in ins_rows:
-                    ins = table_bound.update().\
-                        where(table_bound.c.property == row["property"]).\
-                        values({table_bound.c.item: row["item"]})
-                    conn.execute(ins)
+                ins = table_bound.update().\
+                    where(table_bound.c.property == sqlalchemy.bindparam("_property")).\
+                    values({{table_bound.c.item: sqlalchemy.bindparam("_item")}})
+                conn.execute(ins, ins_rows)
 
             def rows(self):
                 for task in TASK_LIST:
