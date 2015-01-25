@@ -112,19 +112,12 @@ class RemoteScheduler(Scheduler):
         })
 
     def get_work(self, worker, host=None):
-        ''' Ugly work around for an older scheduler version, where get_work doesn't have a host argument. Try once passing
-            host to it, falling back to the old version. Should be removed once people have had time to update everything
-        '''
-        try:
-            return self._request(
-                '/api/get_work',
-                {'worker': worker, 'host': host},
-                log_exceptions=False,
-                attempts=1
+        return self._request(
+            '/api/get_work',
+            {'worker': worker, 'host': host},
+            log_exceptions=False,
+            attempts=1
             )
-        except:
-            logger.info("get_work RPC call failed, is it possible that you need to update your scheduler?")
-            raise
 
     def graph(self):
         return self._request('/api/graph', {})
