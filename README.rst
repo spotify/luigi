@@ -35,7 +35,7 @@ so that you can focus on the tasks themselves and their dependencies.
 You can build pretty much any task you want, but Luigi also comes with a
 *toolbox* of several common task templates that you use. It includes
 native Python support for running mapreduce jobs in Hadoop, as well as
-Pig and Jar jobs. It also comes with filesystem abstractions for HDFS
+Hive and Jar jobs. It also comes with filesystem abstractions for HDFS
 and local files that ensures all file system operations are atomic. This
 is important because it means your data pipeline will not crash in a
 state containing partial data.
