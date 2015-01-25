@@ -6,5 +6,3 @@ if [ -z "$HADOOP_HOME" ]; then
 fi
 
 echo "Using ${HADOOP_DISTRO} distribution of Hadoop from ${HADOOP_HOME}"
-
-python test/runtests.py -v $@
