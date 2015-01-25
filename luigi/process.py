@@ -132,7 +132,6 @@ def fork_linked_workers(num_processes):
                 os.waitpid(c, 0)
             except OSError:
                 print "Child %d is already dead" % c
-                pass
         os._exit(0)  # exit without calling exit handler again...
 
     sigs = [signal.SIGINT, signal.SIGTERM, signal.SIGQUIT]
