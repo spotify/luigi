@@ -127,7 +127,7 @@ worker-count-uniques
 worker-keep-alive
   If true, workers will stay alive when they run out of jobs to run, as
   long as they have some pending job waiting to be run. Defaults to
-  true.
+  false.
 
 worker-ping-interval
   Number of seconds to wait between pinging scheduler to let it know
