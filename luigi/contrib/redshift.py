@@ -1,6 +1,5 @@
 import abc
 import logging
-import luigi.postgres
 import luigi
 import json
 from luigi.contrib import rdbms
