@@ -19,6 +19,7 @@ except ImportError:
 
 
 class RedshiftTarget(postgres.PostgresTarget):
+
     """
     Target for a resource in Redshift.
 
@@ -30,6 +31,7 @@ class RedshiftTarget(postgres.PostgresTarget):
 
 
 class S3CopyToTable(rdbms.CopyToTable):
+
     """
     Template task for inserting a data set into Redshift from s3.
 
@@ -124,15 +126,16 @@ class S3CopyToTable(rdbms.CopyToTable):
         Normally you don't override this.
         """
         return RedshiftTarget(
-                host=self.host,
-                database=self.database,
-                user=self.user,
-                password=self.password,
-                table=self.table,
-                update_id=self.update_id())
+            host=self.host,
+            database=self.database,
+            user=self.user,
+            password=self.password,
+            table=self.table,
+            update_id=self.update_id())
 
 
 class S3CopyJSONToTable(S3CopyToTable):
+
     """
     Template task for inserting a JSON data set into Redshift from s3.
 
@@ -172,6 +175,7 @@ class S3CopyJSONToTable(S3CopyToTable):
 
 
 class RedshiftManifestTask(S3PathTask):
+
     """
     Generic task to generate a manifest file that can be used
     in S3CopyToTable in order to copy multiple files from your

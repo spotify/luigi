@@ -29,6 +29,7 @@ import traceback
 
 
 class Runner(object):
+
     """Run the mapper or reducer on hadoop nodes."""
 
     def __init__(self, job=None):
@@ -73,7 +74,7 @@ def main(args=sys.argv, stdin=sys.stdin, stdout=sys.stdout, print_exception=prin
     try:
         # Set up logging.
         logging.basicConfig(level=logging.WARN)
-    
+
         kind = args[1]
         Runner().run(kind, stdin=stdin, stdout=stdout)
     except Exception, exc:

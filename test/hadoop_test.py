@@ -32,6 +32,7 @@ File = MockFile
 
 luigi.hadoop.attach(minicluster)
 
+
 class OutputMixin(luigi.Task):
     use_hdfs = luigi.BooleanParameter(default=False)
 
@@ -43,6 +44,7 @@ class OutputMixin(luigi.Task):
 
 
 class HadoopJobTask(luigi.hadoop.JobTask, OutputMixin):
+
     def job_runner(self):
         if self.use_hdfs:
             return minicluster.MiniClusterHadoopJobRunner()
@@ -51,6 +53,7 @@ class HadoopJobTask(luigi.hadoop.JobTask, OutputMixin):
 
 
 class Words(OutputMixin):
+
     def output(self):
         return self.get_output('words')
 
@@ -62,6 +65,7 @@ class Words(OutputMixin):
 
 
 class WordCountJob(HadoopJobTask):
+
     def mapper(self, line):
         for word in line.strip().split():
             self.incr_counter('word', word, 1)
@@ -78,6 +82,7 @@ class WordCountJob(HadoopJobTask):
 
 
 class WordFreqJob(HadoopJobTask):
+
     def init_local(self):
         self.n = 0
         for line in self.input_local().open('r'):
@@ -105,6 +110,7 @@ class WordFreqJob(HadoopJobTask):
 
 
 class MapOnlyJob(HadoopJobTask):
+
     def mapper(self, line):
         for word in line.strip().split():
             yield (word,)
@@ -117,6 +123,7 @@ class MapOnlyJob(HadoopJobTask):
 
 
 class UnicodeJob(HadoopJobTask):
+
     def mapper(self, line):
         yield u'test', 1
         yield 'test', 1
@@ -136,6 +143,7 @@ class FailingJobException(Exception):
 
 
 class FailingJob(HadoopJobTask):
+
     def init_hadoop(self):
         raise FailingJobException('failure')
 
@@ -152,6 +160,7 @@ def read_wordcount_output(p):
 
 
 class CommonTests(object):
+
     @staticmethod
     def test_run(test_case):
         job = WordCountJob(use_hdfs=test_case.use_hdfs)
@@ -221,6 +230,7 @@ class MapreduceLocalTest(unittest.TestCase):
 
 @attr('minicluster')
 class MapreduceIntegrationTest(minicluster.MiniClusterTestCase):
+
     """ Uses the Minicluster functionality to test this against Hadoop """
     use_hdfs = True
 
@@ -239,7 +249,9 @@ class MapreduceIntegrationTest(minicluster.MiniClusterTestCase):
     def test_failing_job(self):
         CommonTests.test_failing_job(self)
 
+
 class CreatePackagesArchive(unittest.TestCase):
+
     def setUp(self):
         sys.path.append(os.path.join('test', 'create_packages_archive_root'))
 

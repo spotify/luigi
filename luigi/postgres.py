@@ -29,8 +29,10 @@ try:
 except ImportError:
     logger.warning("Loading postgres module without psycopg2 installed. Will crash at runtime if postgres functionality is used.")
 
+
 class MultiReplacer(object):
     # TODO: move to misc/util module
+
     """Object for one-pass replace of multiple words
 
     Substituted parts will not be matched against other replace patterns, as opposed to when using multipass replace.
@@ -50,6 +52,7 @@ class MultiReplacer(object):
     >>> MultiReplacer(replace_pairs)("ab")
     'xb'
     """
+
     def __init__(self, replace_pairs):
         replace_list = list(replace_pairs)  # make a copy in case input is iterable
         self._replace_dict = dict(replace_list)
@@ -78,6 +81,7 @@ default_escape = MultiReplacer([('\\', '\\\\'),
 
 
 class PostgresTarget(luigi.Target):
+
     """Target for a resource in Postgres.
 
     This will rarely have to be directly instantiated by the user"""
@@ -125,14 +129,14 @@ class PostgresTarget(luigi.Target):
                 """INSERT INTO {marker_table} (update_id, target_table)
                    VALUES (%s, %s)
                 """.format(marker_table=self.marker_table),
-                    (self.update_id, self.table))
+                (self.update_id, self.table))
         else:
             connection.cursor().execute(
-                    """INSERT INTO {marker_table} (update_id, target_table, inserted)
+                """INSERT INTO {marker_table} (update_id, target_table, inserted)
                          VALUES (%s, %s, %s);
                     """.format(marker_table=self.marker_table),
-                            (self.update_id, self.table,
-                            datetime.datetime.now()))
+                (self.update_id, self.table,
+                 datetime.datetime.now()))
 
         # make sure update is properly marked
         assert self.exists(connection)
@@ -146,8 +150,8 @@ class PostgresTarget(luigi.Target):
             cursor.execute("""SELECT 1 FROM {marker_table}
                 WHERE update_id = %s
                 LIMIT 1""".format(marker_table=self.marker_table),
-                (self.update_id,)
-            )
+                           (self.update_id,)
+                           )
             row = cursor.fetchone()
         except psycopg2.ProgrammingError, e:
             if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
@@ -200,6 +204,7 @@ class PostgresTarget(luigi.Target):
 
 
 class CopyToTable(rdbms.CopyToTable):
+
     """
     Template task for inserting a data set into Postgres
 
@@ -245,8 +250,7 @@ class CopyToTable(rdbms.CopyToTable):
             password=self.password,
             table=self.table,
             update_id=self.update_id()
-         )
-
+        )
 
     def copy(self, cursor, file):
         if isinstance(self.columns[0], basestring):

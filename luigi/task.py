@@ -77,6 +77,7 @@ def id_to_name_and_params(task_id):
 
 
 class Register(abc.ABCMeta):
+
     """
     The Metaclass of :py:class:`Task`. Acts as a global registry of Tasks with
     the following properties:
@@ -116,7 +117,7 @@ class Register(abc.ABCMeta):
 
         h = Register.__instance_cache
 
-        if h == None:  # disabled
+        if h is None:  # disabled
             return instantiate()
 
         params = cls.get_params()
@@ -211,6 +212,7 @@ class Register(abc.ABCMeta):
 
 
 class Task(object):
+
     """
     This is the base class of all Luigi Tasks, the base unit of work in Luigi.
 
@@ -569,6 +571,7 @@ def externalize(task):
 
 
 class ExternalTask(Task):
+
     """Subclass for references to external dependencies.
 
     An ExternalTask's does not have a `run` implementation, which signifies to
@@ -579,9 +582,11 @@ class ExternalTask(Task):
 
 
 class WrapperTask(Task):
+
     """Use for tasks that only wrap other tasks and that by definition are done
     if all their requirements exist.
     """
+
     def complete(self):
         return all(r.complete() for r in flatten(self.requires()))
 

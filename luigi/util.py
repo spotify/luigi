@@ -30,9 +30,9 @@ def common_params(task_instance, task_cls):
 
     task_instance_param_names = dict(task_instance.get_params()).keys()
     task_cls_param_names = dict(task_cls.get_params()).keys()
-    common_param_names = list(set.intersection(set(task_instance_param_names),set(task_cls_param_names)))
-    common_param_vals = [(key,dict(task_cls.get_params())[key]) for key in common_param_names]
-    common_kwargs = dict([(key,task_instance.param_kwargs[key]) for key in common_param_names])
+    common_param_names = list(set.intersection(set(task_instance_param_names), set(task_cls_param_names)))
+    common_param_vals = [(key, dict(task_cls.get_params())[key]) for key in common_param_names]
+    common_kwargs = dict([(key, task_instance.param_kwargs[key]) for key in common_param_names])
     vals = dict(task_instance.get_param_values(common_param_vals, [], common_kwargs))
     return vals
 
@@ -47,6 +47,7 @@ def task_wraps(P):
 
 
 class inherits(object):
+
     '''Task inheritance.
 
     Usage::
@@ -64,6 +65,7 @@ class inherits(object):
                print self.n # this will be defined
                # ...
     '''
+
     def __init__(self, task_to_inherit):
         super(inherits, self).__init__()
         self.task_to_inherit = task_to_inherit
@@ -77,6 +79,7 @@ class inherits(object):
         # Modify task_that_inherits by subclassing it and adding methods
         @task_wraps(task_that_inherits)
         class Wrapped(task_that_inherits):
+
             def clone_parent(_self, **args):
                 return _self.clone(cls=self.task_to_inherit, **args)
 
@@ -84,8 +87,10 @@ class inherits(object):
 
 
 class requires(object):
+
     ''' Same as @inherits, but also auto-defines the requires method
     '''
+
     def __init__(self, task_to_require):
         super(requires, self).__init__()
         self.inherit_decorator = inherits(task_to_require)
@@ -96,6 +101,7 @@ class requires(object):
         # Modify task_that_requres by subclassing it and adding methods
         @task_wraps(task_that_requires)
         class Wrapped(task_that_requires):
+
             def requires(_self):
                 return _self.clone_parent()
 
@@ -103,6 +109,7 @@ class requires(object):
 
 
 class copies(object):
+
     ''' Auto-copies a task
 
     Usage::
@@ -112,6 +119,7 @@ class copies(object):
             def output(self):
                return LocalTarget(self.date.strftime('/var/xyz/report-%Y-%m-%d'))
     '''
+
     def __init__(self, task_to_copy):
         super(copies, self).__init__()
         self.requires_decorator = requires(task_to_copy)
@@ -122,6 +130,7 @@ class copies(object):
         # Modify task_that_copies by subclassing it and adding methods
         @task_wraps(task_that_copies)
         class Wrapped(task_that_copies):
+
             def run(_self):
                 i, o = _self.input(), _self.output()
                 f = o.open('w')  # TODO: assert that i, o are Target objects and not complex datastructures
@@ -130,6 +139,7 @@ class copies(object):
                 f.close()
 
         return Wrapped
+
 
 def delegates(task_that_delegates):
     ''' Lets a task call methods on subtask(s).
@@ -157,6 +167,7 @@ def delegates(task_that_delegates):
 
     @task_wraps(task_that_delegates)
     class Wrapped(task_that_delegates):
+
         def deps(self):
             # Overrides method in base class
             return task.flatten(self.requires()) + task.flatten([t.deps() for t in task.flatten(self.subtasks())])

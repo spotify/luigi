@@ -38,7 +38,7 @@ TASK_LIST = ["item%d\tproperty%d\n" % (i, i) for i in range(10)]
 class BaseTask(luigi.Task):
 
     def output(self):
-        return MockFile("BaseTask",  mirror_on_stderr=True)
+        return MockFile("BaseTask", mirror_on_stderr=True)
 
     def run(self):
         out = self.output().open("w")
@@ -76,7 +76,6 @@ class TestSQLA(unittest.TestCase):
         self._clear_tables()
         if os.path.exists(TEMPDIR):
             shutil.rmtree(TEMPDIR)
-
 
     def test_create_table(self):
         """
@@ -128,7 +127,7 @@ class TestSQLA(unittest.TestCase):
             table = meta.tables[SQLATask.table]
             s = sqlalchemy.select([sqlalchemy.func.count(table.c.item)])
             result = conn.execute(s).fetchone()
-            self.assertEqual(len(TASK_LIST),  result[0])
+            self.assertEqual(len(TASK_LIST), result[0])
             s = sqlalchemy.select([table]).order_by(table.c.item)
             result = conn.execute(s).fetchall()
             for i in range(len(TASK_LIST)):
@@ -166,7 +165,7 @@ class TestSQLA(unittest.TestCase):
         """
         task, task0 = SQLATask(), BaseTask()
         self.engine = sqlalchemy.create_engine(task.connection_string)
-        task.chunk_size = 2 # change chunk size and check it runs ok
+        task.chunk_size = 2  # change chunk size and check it runs ok
         luigi.build([task, task0], local_scheduler=True)
         self._check_entries(self.engine)
 
@@ -189,7 +188,6 @@ class TestSQLA(unittest.TestCase):
         luigi.build([task0, task1, task2], local_scheduler=True)
         self._check_entries(self.engine)
 
-
     def test_create_marker_table(self):
         """
         Is the marker table created as expected for the SQLAlchemyTarget
@@ -209,7 +207,6 @@ class TestSQLA(unittest.TestCase):
         self.assertFalse(target.exists())
         target.touch()
         self.assertTrue(target.exists())
-
 
     def test_row_overload(self):
         """Overload the rows method and we should be able to insert data into database"""
@@ -233,13 +230,12 @@ class TestSQLA(unittest.TestCase):
         luigi.build([task], local_scheduler=True)
         self._check_entries(self.engine)
 
-
     def test_column_row_separator(self):
 
         class ModBaseTask(luigi.Task):
 
             def output(self):
-                return MockFile("ModBaseTask",  mirror_on_stderr=True)
+                return MockFile("ModBaseTask", mirror_on_stderr=True)
 
             def run(self):
                 out = self.output().open("w")
@@ -247,7 +243,6 @@ class TestSQLA(unittest.TestCase):
                 for task in tasks:
                     out.write(task)
                 out.close()
-
 
         class ModSQLATask(sqla.CopyToTable):
             columns = [

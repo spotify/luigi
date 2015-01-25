@@ -100,6 +100,7 @@ def mock_listdir(_, glob):
 
 
 class ConstrainGlobTest(unittest.TestCase):
+
     def test_limit(self):
         glob = '/[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]/[0-9][0-9]'
         paths = [(datetime.datetime(2013, 12, 31, 5) + datetime.timedelta(hours=h)).strftime('/%Y/%m/%d/%H') for h in xrange(40)]
@@ -147,9 +148,11 @@ class RangeHourlyBaseTest(unittest.TestCase):
         @RangeHourlyBase.event_handler(RangeEvent.DELAY)
         def callback_delay(*args):
             self.events.setdefault(RangeEvent.DELAY, []).append(args)
+
         @RangeHourlyBase.event_handler(RangeEvent.COMPLETE_COUNT)
         def callback_complete_count(*args):
             self.events.setdefault(RangeEvent.COMPLETE_COUNT, []).append(args)
+
         @RangeHourlyBase.event_handler(RangeEvent.COMPLETE_FRACTION)
         def callback_complete_fraction(*args):
             self.events.setdefault(RangeEvent.COMPLETE_FRACTION, []).append(args)
@@ -159,6 +162,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeHourlyDerived(RangeHourlyBase):
+
             def missing_datehours(*args):
                 calls.append(args)
                 return args[-1][:5]
@@ -198,6 +202,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeHourlyDerived(RangeHourlyBase):
+
             def missing_datehours(*args):
                 calls.append(args)
                 return args[-1][:7]
@@ -302,6 +307,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
 
 
 class RangeHourlyTest(unittest.TestCase):
+
     def _test_filesystems_and_globs(self, task_cls, expected):
         actual = list(_get_filesystems_and_globs(task_cls))
         self.assertEqual(len(actual), len(expected))

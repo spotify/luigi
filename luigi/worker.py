@@ -25,7 +25,7 @@ import traceback
 import logging
 import notifications
 import getpass
-import multiprocessing # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
+import multiprocessing  # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
 import Queue
 import types
 import interface
@@ -50,9 +50,11 @@ class TaskException(Exception):
 
 
 class TaskProcess(multiprocessing.Process):
+
     ''' Wrap all task execution in this class.
 
     Mainly for convenience since this is run in a separate process. '''
+
     def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0):
         super(TaskProcess, self).__init__()
         self.task = task
@@ -137,6 +139,7 @@ class TaskProcess(multiprocessing.Process):
 
 
 class SingleProcessPool(object):
+
     """ Dummy process pool for using a single processor
 
     Imitates the api of multiprocessing.Pool using single-processor equivalents
@@ -147,6 +150,7 @@ class SingleProcessPool(object):
 
 
 class DequeQueue(collections.deque):
+
     """ deque wrapper implementing the Queue interface """
 
     put = collections.deque.append
@@ -154,13 +158,17 @@ class DequeQueue(collections.deque):
 
 
 class AsyncCompletionException(Exception):
+
     """ Exception indicating that something went wrong with checking complete """
+
     def __init__(self, trace):
         self.trace = trace
 
 
 class TracebackWrapper(object):
+
     """ Class to wrap tracebacks so we can know they're not just strings """
+
     def __init__(self, trace):
         self.trace = trace
 
@@ -176,6 +184,7 @@ def check_complete(task, out_queue):
 
 
 class Worker(object):
+
     """ Worker object communicates with a scheduler.
 
     Simple class that talks to a scheduler and:
@@ -234,7 +243,9 @@ class Worker(object):
         self.unfulfilled_counts = collections.defaultdict(int)
 
         class KeepAliveThread(threading.Thread):
+
             """ Periodically tell the scheduler that the worker still lives """
+
             def __init__(self):
                 super(KeepAliveThread, self).__init__()
                 self._should_stop = threading.Event()
@@ -316,10 +327,10 @@ class Worker(object):
         logger.warning(log_msg)
 
     def _log_unexpected_error(self, task):
-        logger.exception("Luigi unexpected framework error while scheduling %s", task) # needs to be called from within except clause
+        logger.exception("Luigi unexpected framework error while scheduling %s", task)  # needs to be called from within except clause
 
     def _email_complete_error(self, task, formatted_traceback):
-          # like logger.exception but with WARNING level
+        # like logger.exception but with WARNING level
         formatted_traceback = notifications.wrap_traceback(formatted_traceback)
         subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
         message = "Will not schedule {task} or any dependencies due to error in complete() method:\n{traceback}".format(task=task, traceback=formatted_traceback)
@@ -418,7 +429,7 @@ class Worker(object):
             for d in deps:
                 self._validate_dependency(d)
                 task.trigger_event(Event.DEPENDENCY_DISCOVERED, task, d)
-                yield d # return additional tasks to add
+                yield d  # return additional tasks to add
 
             deps = [d.task_id for d in deps]
 
@@ -507,7 +518,6 @@ class Worker(object):
 
             logger.info(error_msg)
             self._task_result_queue.put((task_id, FAILED, error_msg, [], []))
-
 
     def _handle_next_task(self):
         ''' We have to catch three ways a task can be "done"

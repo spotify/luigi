@@ -22,6 +22,7 @@ import warnings
 import subprocess
 import os
 
+
 class SomeTask(luigi.Task):
     n = luigi.IntParameter()
 
@@ -47,23 +48,27 @@ class NonAmbiguousClass(luigi.ExternalTask):
 
 
 class NonAmbiguousClass(luigi.Task):
+
     def run(self):
         NonAmbiguousClass.has_run = True
 
 
 class TaskWithSameName(luigi.Task):
+
     def run(self):
         self.x = 42
 
 
 class TaskWithSameName(luigi.Task):
     # there should be no ambiguity
+
     def run(self):
         self.x = 43
 
 
 class WriteToFile(luigi.Task):
     filename = luigi.Parameter()
+
     def output(self):
         return luigi.LocalTarget(self.filename)
 
@@ -74,6 +79,7 @@ class WriteToFile(luigi.Task):
 
 
 class CmdlineTest(unittest.TestCase):
+
     def setUp(self):
         global File
         File = MockFile

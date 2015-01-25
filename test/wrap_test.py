@@ -23,6 +23,7 @@ File = MockFile
 
 
 class A(luigi.Task):
+
     def output(self):
         return File('/tmp/a.txt')
 
@@ -47,6 +48,7 @@ class B(luigi.Task):
 def XMLWrapper(cls):
     @inherits(cls)
     class XMLWrapperCls(luigi.Task):
+
         def requires(self):
             return self.clone_parent()
 
@@ -62,20 +64,24 @@ def XMLWrapper(cls):
 
 
 class AXML(XMLWrapper(A)):
+
     def output(self):
         return File('/tmp/a.xml')
 
 
 class BXML(XMLWrapper(B)):
+
     def output(self):
         return File(self.date.strftime('/tmp/b-%Y-%m-%d.xml'))
 
 
 class WrapperTest(unittest.TestCase):
+
     ''' This test illustrates how a task class can wrap another task class by modifying its behavior.
 
     See instance_wrap_test.py for an example of how instances can wrap each other. '''
     workers = 1
+
     def setUp(self):
         MockFile.fs.clear()
 

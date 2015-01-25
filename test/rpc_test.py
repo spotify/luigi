@@ -20,6 +20,7 @@ import server_test
 
 
 class RPCTest(server_test.ServerTestBase):
+
     def _get_sch(self):
         sch = luigi.rpc.RemoteScheduler(host='localhost', port=self._api_port)
         sch._wait = lambda: None
@@ -40,4 +41,3 @@ class RPCTest(server_test.ServerTestBase):
 
 if __name__ == '__main__':
     unittest.main()
-

@@ -54,7 +54,7 @@ class TaskTest(unittest.TestCase):
         task_id = "InputText(date=2014-12-29,foo=[bar,baz-foo])"
         (name, params) = luigi.task.id_to_name_and_params(task_id)
         self.assertEquals(name, "InputText")
-        self.assertEquals(params, dict(date="2014-12-29", foo=["bar","baz-foo"]))
+        self.assertEquals(params, dict(date="2014-12-29", foo=["bar", "baz-foo"]))
 
 if __name__ == '__main__':
     unittest.main()

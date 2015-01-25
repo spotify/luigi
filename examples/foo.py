@@ -5,16 +5,18 @@ import shutil
 
 
 class MyExternal(luigi.ExternalTask):
+
     def complete(self):
         return False
 
 
 class Foo(luigi.Task):
+
     def run(self):
         print "Running Foo"
 
     def requires(self):
-#        yield MyExternal()
+        #        yield MyExternal()
         for i in xrange(10):
             yield Bar(i)
 

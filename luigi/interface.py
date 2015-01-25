@@ -53,6 +53,7 @@ def setup_interface_logging(conf_file=None):
 
 
 class EnvironmentParamsContainer(task.Task):
+
     ''' Keeps track of a bunch of environment params.
 
     Uses the internal luigi parameter mechanism.
@@ -90,7 +91,7 @@ class EnvironmentParamsContainer(task.Task):
         config_path=dict(section='core', name='logging_conf_file'))
     module = parameter.Parameter(
         is_global=True, default=None,
-        description='Used for dynamic loading of modules') # see DynamicArgParseInterface
+        description='Used for dynamic loading of modules')  # see DynamicArgParseInterface
     parallel_scheduling = parameter.BooleanParameter(
         is_global=True, default=False,
         description='Use multiprocessing to do scheduling in parallel.',
@@ -110,6 +111,7 @@ class EnvironmentParamsContainer(task.Task):
 
 
 class WorkerSchedulerFactory(object):
+
     def create_local_scheduler(self):
         return scheduler.CentralPlannerScheduler()
 
@@ -122,6 +124,7 @@ class WorkerSchedulerFactory(object):
 
 
 class Interface(object):
+
     def parse(self):
         raise NotImplementedError
 
@@ -172,6 +175,7 @@ class Interface(object):
 
 
 class ErrorWrappedArgumentParser(argparse.ArgumentParser):
+
     ''' Wraps ArgumentParser's error message to suggested similar tasks
     '''
 
@@ -242,8 +246,10 @@ def set_global_parameters(params_str):
 
 
 class ArgParseInterface(Interface):
+
     ''' Takes the task as the command, with parameters specific to it
     '''
+
     def parse_task(self, cmdline_args=None, main_task_cls=None):
         parser = ErrorWrappedArgumentParser()
 
@@ -285,6 +291,7 @@ class ArgParseInterface(Interface):
 
 
 class DynamicArgParseInterface(ArgParseInterface):
+
     ''' Uses --module as a way to load modules dynamically
 
     Usage:
@@ -307,6 +314,7 @@ class DynamicArgParseInterface(ArgParseInterface):
 
 
 class PassThroughOptionParser(optparse.OptionParser):
+
     '''
     An unknown option pass-through implementation of OptionParser.
 
@@ -316,6 +324,7 @@ class PassThroughOptionParser(optparse.OptionParser):
     sys.exit(status) will still be called if a known argument is passed
     incorrectly (e.g. missing arguments or bad argument types, etc.)
     '''
+
     def _process_args(self, largs, rargs, values):
         while rargs:
             try:
@@ -325,11 +334,13 @@ class PassThroughOptionParser(optparse.OptionParser):
 
 
 class OptParseInterface(Interface):
+
     ''' Supported for legacy reasons where it's necessary to interact with an existing parser.
 
     Takes the task using --task. All parameters to all possible tasks will be defined globally
     in a big unordered soup.
     '''
+
     def __init__(self, existing_optparse):
         self.__existing_optparse = existing_optparse
 

@@ -7,9 +7,11 @@ SSH_HOST = "some.accessible.host"
 
 
 class CreateRemoteData(luigi.Task):
+
     """ Dump info on running processes on remote host.
     Data is still stored on the remote host
     """
+
     def output(self):
         return RemoteTarget(
             "/tmp/stuff",
@@ -24,11 +26,13 @@ class CreateRemoteData(luigi.Task):
 
 
 class ProcessRemoteData(luigi.Task):
+
     """ Create a toplist of users based on how many running processes they have
         on a remote machine
 
     In this example the processed data is stored in a MockFile
     """
+
     def requires(self):
         return CreateRemoteData()
 

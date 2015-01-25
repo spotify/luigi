@@ -18,6 +18,7 @@ import subprocess
 
 
 class TestMockedRemoteContext(unittest.TestCase):
+
     def test_subprocess_delegation(self):
         """ Test subprocess call structure using mock module """
         orig_Popen = subprocess.Popen

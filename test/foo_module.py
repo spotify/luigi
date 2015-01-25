@@ -14,5 +14,6 @@
 
 import luigi
 
+
 class FooTask(luigi.Task):
     x = luigi.IntParameter()

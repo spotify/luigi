@@ -17,6 +17,7 @@ import datetime
 
 
 class DateInterval(object):
+
     def __init__(self, date_a, date_b):
         # Represents all date d such that date_a <= d < date_b
         self.date_a = date_a
@@ -86,6 +87,7 @@ class DateInterval(object):
 
 
 class Date(DateInterval):
+
     def __init__(self, y, m, d):
         a = datetime.date(y, m, d)
         b = datetime.date(y, m, d) + datetime.timedelta(1)
@@ -105,6 +107,7 @@ class Date(DateInterval):
 
 
 class Week(DateInterval):
+
     def __init__(self, y, w):
         # Python datetime does not have a method to convert from ISO weeks!
         for d in xrange(-10, 370):
@@ -132,6 +135,7 @@ class Week(DateInterval):
 
 
 class Month(DateInterval):
+
     def __init__(self, y, m):
         date_a = datetime.date(y, m, 1)
         date_b = datetime.date(y + m / 12, 1 + m % 12, 1)
@@ -152,6 +156,7 @@ class Month(DateInterval):
 
 
 class Year(DateInterval):
+
     def __init__(self, y):
         date_a = datetime.date(y, 1, 1)
         date_b = datetime.date(y + 1, 1, 1)
@@ -171,6 +176,7 @@ class Year(DateInterval):
 
 
 class Custom(DateInterval):
+
     def to_string(self):
         return '-'.join([d.strftime('%Y-%m-%d') for d in (self.date_a, self.date_b)])
 

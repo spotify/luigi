@@ -17,23 +17,24 @@ import luigi
 import luigi.notifications
 luigi.notifications.DEBUG = True
 
+
 class LinearSum(luigi.Task):
     lo = luigi.IntParameter()
     hi = luigi.IntParameter()
 
     def requires(self):
         if self.hi > self.lo:
-            return self.clone(hi=self.hi-1)
+            return self.clone(hi=self.hi - 1)
 
     def run(self):
         if self.hi > self.lo:
             self.s = self.requires().s + self.f(self.hi - 1)
         else:
             self.s = 0
-        self.complete = lambda: True # workaround since we don't write any output
+        self.complete = lambda: True  # workaround since we don't write any output
 
     complete = lambda self: False
-    
+
     def f(self, x):
         return x
 
@@ -50,6 +51,7 @@ class PowerSum2(PowerSum):
 
 
 class CloneTest(unittest.TestCase):
+
     def test_args(self):
         t = LinearSum(lo=42, hi=45)
         self.assertEqual(t.param_args, (42, 45))
@@ -63,9 +65,9 @@ class CloneTest(unittest.TestCase):
     def test_inheritance(self):
         t = PowerSum(lo=42, hi=45, p=2)
         luigi.build([t], local_scheduler=True)
-        self.assertEqual(t.s, 42**2 + 43**2 + 44**2)
+        self.assertEqual(t.s, 42 ** 2 + 43 ** 2 + 44 ** 2)
 
     def test_inheritance_and_global(self):
         t = PowerSum2(lo=42, hi=45, p=2)
         luigi.build([t], local_scheduler=True)
-        self.assertEqual(t.s, 42**2 + 43**2 + 44**2)
+        self.assertEqual(t.s, 42 ** 2 + 43 ** 2 + 44 ** 2)

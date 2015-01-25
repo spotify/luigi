@@ -11,6 +11,7 @@ logger = logging.getLogger('luigi-interface')
 
 
 class CopyToTable(luigi.Task):
+
     """
     An abstract task for inserting a data set into RDBMS
 
@@ -51,7 +52,6 @@ class CopyToTable(luigi.Task):
 
     column_separator = "\t"  # how columns are separated in the file copied into postgres
 
-
     def create_table(self, connection):
         """ Override to provide code for creating the target table.
 
@@ -70,7 +70,6 @@ class CopyToTable(luigi.Task):
             )
             query = "CREATE TABLE {table} ({coldefs})".format(table=self.table, coldefs=coldefs)
             connection.cursor().execute(query)
-
 
     def update_id(self):
         """This update id will be a unique identifier for this insert on this table."""

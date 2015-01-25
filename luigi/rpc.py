@@ -24,12 +24,14 @@ logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 
 
 class RPCError(Exception):
+
     def __init__(self, message, sub_exception=None):
         super(RPCError, self).__init__(message)
         self.sub_exception = sub_exception
 
 
 class RemoteScheduler(Scheduler):
+
     ''' Scheduler proxy object. Talks to a RemoteSchedulerResponder '''
 
     def __init__(self, host='localhost', port=8082, connect_timeout=None):
@@ -93,7 +95,7 @@ class RemoteScheduler(Scheduler):
         self._request('/api/ping', {'worker': worker}, attempts=1)
 
     def add_task(self, worker, task_id, status=PENDING, runnable=False,
-                 deps=None, new_deps=None, expl=None, resources={},priority=0,
+                 deps=None, new_deps=None, expl=None, resources={}, priority=0,
                  family='', params={}):
         self._request('/api/add_task', {
             'task_id': task_id,
@@ -150,6 +152,7 @@ class RemoteScheduler(Scheduler):
 
 
 class RemoteSchedulerResponder(object):
+
     """ Use on the server side for responding to requests
 
     The kwargs are there for forwards compatibility in case workers add

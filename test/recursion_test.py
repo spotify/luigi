@@ -40,6 +40,7 @@ class Popularity(luigi.Task):
 
 
 class RecursionTest(unittest.TestCase):
+
     def setUp(self):
         MockFile.fs.get_all_data()['/tmp/popularity/2009-01-01.txt'] = '0\n'
 

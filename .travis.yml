@@ -10,6 +10,7 @@ env:
   global:
     - PIP_DOWNLOAD_CACHE=$HOME/.pip-cache
   matrix:
+    - TOX_ENV=pep8
     - TOX_ENV=cdh
     - TOX_ENV=hdp
 

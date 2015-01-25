@@ -5,7 +5,9 @@ import datetime
 import json
 import luigi
 
+
 class FakeDocuments(luigi.Task):
+
     """ Generate some documents to index. """
 
     date = luigi.DateParameter(default=datetime.date.today())
@@ -23,7 +25,9 @@ class FakeDocuments(luigi.Task):
     def output(self):
         return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.date)
 
+
 class IndexDocuments(CopyToIndex):
+
     """
     Run
 

@@ -12,11 +12,16 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi, luigi.scheduler, luigi.task_history, luigi.worker
+import luigi
+import luigi.scheduler
+import luigi.task_history
+import luigi.worker
 import unittest
 luigi.notifications.DEBUG = True
 
+
 class SimpleTaskHistory(luigi.task_history.TaskHistory):
+
     def __init__(self):
         self.actions = []
 
@@ -31,6 +36,7 @@ class SimpleTaskHistory(luigi.task_history.TaskHistory):
 
 
 class TaskHistoryTest(unittest.TestCase):
+
     def setUp(self):
         self.th = SimpleTaskHistory()
         self.sch = luigi.scheduler.CentralPlannerScheduler(task_history=self.th)

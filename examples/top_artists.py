@@ -1,10 +1,14 @@
 import random
-import luigi, luigi.hdfs, luigi.hadoop
+import luigi
+import luigi.hdfs
+import luigi.hadoop
 import luigi.postgres
 from heapq import nlargest
 from collections import defaultdict
 
+
 class ExternalStreams(luigi.ExternalTask):
+
     ''' Example of a possible external data dump
 
     To depend on external targets (typically at the top of your dependency graph), you can define
@@ -16,7 +20,9 @@ class ExternalStreams(luigi.ExternalTask):
         return luigi.hdfs.HdfsTarget(self.date.strftime(
             'data/streams_%Y-%m-%d.tsv'))
 
+
 class Streams(luigi.Task):
+
     ''' Faked version right now, just generates bogus data.
     '''
     date = luigi.DateParameter()
@@ -33,9 +39,12 @@ class Streams(luigi.Task):
         return luigi.LocalTarget(self.date.strftime(
             'data/streams_%Y_%m_%d_faked.tsv'))
 
+
 class StreamsHdfs(Streams):
+
     def output(self):
         return luigi.hdfs.HdfsTarget(self.date.strftime('data/streams_%Y_%m_%d_faked.tsv'))
+
 
 class AggregateArtists(luigi.Task):
     date_interval = luigi.DateIntervalParameter()
@@ -60,6 +69,7 @@ class AggregateArtists(luigi.Task):
             for artist, count in artist_count.iteritems():
                 out_file.write('{}\t{}\n'.format(artist, count))
 
+
 class AggregateArtistsHadoop(luigi.hadoop.JobTask):
     date_interval = luigi.DateIntervalParameter()
 
@@ -78,6 +88,7 @@ class AggregateArtistsHadoop(luigi.hadoop.JobTask):
 
     def reducer(self, key, values):
         yield key, sum(values)
+
 
 class Top10Artists(luigi.Task):
     date_interval = luigi.DateIntervalParameter()
@@ -109,6 +120,7 @@ class Top10Artists(luigi.Task):
             for line in in_file:
                 artist, streams = line.strip().split()
                 yield int(streams), artist
+
 
 class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
     date_interval = luigi.DateIntervalParameter()

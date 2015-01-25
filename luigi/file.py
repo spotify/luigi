@@ -24,6 +24,7 @@ from luigi.format import FileWrapper
 class atomic_file(file):
     # Simple class that writes to a temp file and moves it on close()
     # Also cleans up the temp file if close is not invoked
+
     def __init__(self, path):
         self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         self.path = path
@@ -49,10 +50,12 @@ class atomic_file(file):
 
 
 class LocalFileSystem(FileSystem):
+
     """ Wrapper for access to file system operations
 
     Work in progress - add things as needed
     """
+
     def exists(self, path):
         return os.path.exists(path)
 

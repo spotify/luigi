@@ -22,6 +22,7 @@ luigi.notifications.DEBUG = True
 
 
 class SchedulerTest(unittest.TestCase):
+
     def test_load_old_state(self):
         tasks = {}
         active_workers = {'Worker1': 1e9, 'Worker2': time.time()}
@@ -31,7 +32,7 @@ class SchedulerTest(unittest.TestCase):
                 state = (tasks, active_workers)
                 pickle.dump(state, fobj)
 
-            state= luigi.scheduler.SimpleTaskState(
+            state = luigi.scheduler.SimpleTaskState(
                 state_path=fn.name)
             state.load()
 

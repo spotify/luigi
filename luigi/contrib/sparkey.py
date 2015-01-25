@@ -16,7 +16,9 @@ from __future__ import absolute_import
 
 import luigi
 
+
 class SparkeyExportTask(luigi.Task):
+
     """ A luigi task that writes to a local sparkey log file.
 
     Subclasses should implement the requires and output methods. The output
@@ -55,4 +57,3 @@ class SparkeyExportTask(luigi.Task):
 
         # move finished sparkey file to final destination
         temp_output.move(outfile.path)
-

@@ -25,11 +25,12 @@ DEFAULT_TERASORT_OUT = '/tmp/terasort-out'
 
 
 class TeraGen(luigi.hadoop_jar.HadoopJarJobTask):
+
     """Runs TeraGen, by default with 1TB of data (10B records)"""
     records = luigi.Parameter(default="10000000000",
-        description="Number of records, each record is 100 Bytes")
+                              description="Number of records, each record is 100 Bytes")
     terasort_in = luigi.Parameter(default=DEFAULT_TERASORT_IN,
-        description="directory to store terasort input into.")
+                                  description="directory to store terasort input into.")
 
     def output(self):
         return luigi.hdfs.HdfsTarget(self.terasort_in)
@@ -46,12 +47,13 @@ class TeraGen(luigi.hadoop_jar.HadoopJarJobTask):
 
 
 class TeraSort(luigi.hadoop_jar.HadoopJarJobTask):
+
     """Runs TeraGent, by default using """
 
     terasort_in = luigi.Parameter(default=DEFAULT_TERASORT_IN,
-        description="directory to store terasort input into.")
+                                  description="directory to store terasort input into.")
     terasort_out = luigi.Parameter(default=DEFAULT_TERASORT_OUT,
-        description="directory to store terasort output into.")
+                                   description="directory to store terasort output into.")
 
     def requires(self):
         return TeraGen(terasort_in=self.terasort_in)
