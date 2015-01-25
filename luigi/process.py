@@ -140,7 +140,7 @@ def fork_linked_workers(num_processes):
         signal.signal(s, shutdown_handler)
         signal.signal(s, shutdown_handler)
         signal.signal(s, shutdown_handler)
-    #haven't found a way to unregister: atexit.register(shutdown_handler) #
+    # haven't found a way to unregister: atexit.register(shutdown_handler) #
 
     def fork_child(child_id, attempt):
         child_pid = os.fork()

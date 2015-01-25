@@ -21,6 +21,7 @@ import multiprocessing
 
 
 class MockFileSystem(target.FileSystem):
+
     """MockFileSystem inspects/modifies _data to simulate
     file system operations"""
     _data = None
@@ -40,7 +41,7 @@ class MockFileSystem(target.FileSystem):
     def remove(self, path, recursive=True, skip_trash=True):
         """Removes the given mockfile. skip_trash doesn't have any meaning."""
         if recursive:
-            to_delete=[]
+            to_delete = []
             for s in self.get_all_data().keys():
                 if s.startswith(path):
                     to_delete.append(s)
@@ -92,6 +93,7 @@ class MockFile(target.FileSystemTarget):
 
         class StringBuffer(StringIO.StringIO):
             # Just to be able to do writing + reading from the same buffer
+
             def write(self2, data):
                 if self._mirror_on_stderr:
                     self2.seek(-1, os.SEEK_END)

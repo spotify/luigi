@@ -72,6 +72,7 @@ class CurrencyExchanger(luigi.Task):
 
 
 class InstanceWrapperTest(unittest.TestCase):
+
     ''' This test illustrates that tasks can have tasks as parameters
 
     This is a more complicated variant of factorial_test.py which is an example of
@@ -84,6 +85,7 @@ class InstanceWrapperTest(unittest.TestCase):
     pretty handy to be able to do that. I'm adding it as a unit test to make sure that
     new code doesn't break the expected behavior.
     '''
+
     def test(self):
         d = datetime.date(2012, 1, 1)
         r = ReportReader(d)

@@ -33,6 +33,7 @@ logger = logging.getLogger('luigi-interface')
 
 
 class RangeEvent(luigi.Event):  # Not sure if subclassing currently serves a purpose. Stringly typed, events are.
+
     """Events communicating useful metrics.
 
     COMPLETE_COUNT would normally be nondecreasing, and its derivative would
@@ -54,6 +55,7 @@ class RangeEvent(luigi.Event):  # Not sure if subclassing currently serves a pur
 
 
 class RangeHourlyBase(luigi.WrapperTask):
+
     """Produces a contiguous completed range of a hourly recurring task.
 
     Made for the common use case where a task is parameterized by datehour and
@@ -67,25 +69,25 @@ class RangeHourlyBase(luigi.WrapperTask):
 
     of = luigi.Parameter(
         description="task name to be completed. The task must take a single datehour parameter")
-        # TODO lift the single parameter constraint by passing unknown parameters through WrapperTask?
+    # TODO lift the single parameter constraint by passing unknown parameters through WrapperTask?
     start = luigi.DateHourParameter(
         default=None,
         description="beginning datehour, inclusive. Default: None - work backward forever (requires reverse=True)")
     stop = luigi.DateHourParameter(
         default=None,
         description="ending datehour, exclusive. Default: None - work forward forever")
-        # wanted to name them "from" and "to", but "from" is a reserved word :/ So named after https://docs.python.org/2/library/functions.html#range arguments
+    # wanted to name them "from" and "to", but "from" is a reserved word :/ So named after https://docs.python.org/2/library/functions.html#range arguments
     reverse = luigi.BooleanParameter(
         default=False,
         description="specifies the preferred order for catching up. False - work from the oldest missing outputs onward; True - from the newest backward")
     task_limit = luigi.IntParameter(
         default=50,
         description="how many of 'of' tasks to require. Guards against scheduling insane amounts of tasks in one go")
-        # TODO vary based on cluster load (time of day)? Resources feature suits that better though
+    # TODO vary based on cluster load (time of day)? Resources feature suits that better though
     hours_back = luigi.IntParameter(
         default=100 * 24,  # slightly more than three months
         description="extent to which contiguousness is to be assured into past, in hours from current time. Prevents infinite loop when start is none. If the dataset has limited retention (i.e. old outputs get removed), this should be set shorter to that, too, to prevent the oldest outputs flapping. Increase freely if you intend to process old dates - worker's memory is the limit")
-        # TODO always entire interval for reprocessings (fixed start and stop)?
+    # TODO always entire interval for reprocessings (fixed start and stop)?
     hours_forward = luigi.IntParameter(
         default=0,
         description="extent to which contiguousness is to be assured into future, in hours from current time. Prevents infinite loop when stop is none")
@@ -226,7 +228,7 @@ def _get_per_location_glob(tasks, outputs, regexes):
     don't even have to retrofit existing tasks anyhow.
     """
     paths = [o.path for o in outputs]
-    matches = [r.search(p) for r, p in zip(regexes, paths)]  #  naive, because some matches could be confused by numbers earlier in path, e.g. /foo/fifa2000k/bar/2000-12-31/00
+    matches = [r.search(p) for r, p in zip(regexes, paths)]  # naive, because some matches could be confused by numbers earlier in path, e.g. /foo/fifa2000k/bar/2000-12-31/00
 
     for m, p, t in zip(matches, paths, tasks):
         if m is None:
@@ -309,12 +311,14 @@ def _infer_bulk_complete_from_fs(task_cls, finite_datehours):
 
 
 class RangeHourly(RangeHourlyBase):
+
     """Benefits from bulk_complete information to efficiently cover gaps.
 
     Convenient to use even from command line, like:
 
         luigi --module your.module RangeHourly --of YourActualTask --start 2014-01-01T00
     """
+
     def missing_datehours(self, task_cls, finite_datehours):
         try:
             return set(finite_datehours) - set(task_cls.bulk_complete(finite_datehours))

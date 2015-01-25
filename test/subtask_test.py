@@ -20,7 +20,9 @@
 import abc
 import luigi
 import unittest
-import random, tempfile, os
+import random
+import tempfile
+import os
 
 
 class AbstractTask(luigi.Task):
@@ -39,6 +41,7 @@ class AbstractTask(luigi.Task):
 
 
 class Implementation(AbstractTask):
+
     @property
     def foo(self):
         return "bar"
@@ -48,6 +51,7 @@ class Implementation(AbstractTask):
 
 
 class AbstractSubclassTest(unittest.TestCase):
+
     def test_instantiate_abstract(self):
         def try_instantiate():
             AbstractTask(k=1)
@@ -59,4 +63,3 @@ class AbstractSubclassTest(unittest.TestCase):
 
 if __name__ == '__main__':
     luigi.run()
-

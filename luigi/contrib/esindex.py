@@ -85,12 +85,13 @@ except ImportError:
 
 
 class ElasticsearchTarget(luigi.Target):
+
     """ Target for a resource in Elasticsearch. """
 
     marker_index = luigi.configuration.get_config().get('elasticsearch',
-                                        'marker-index', 'update_log')
+                                                        'marker-index', 'update_log')
     marker_doc_type = luigi.configuration.get_config().get('elasticsearch',
-                                        'marker-doc-type', 'entry')
+                                                           'marker-doc-type', 'entry')
 
     def __init__(self, host, port, index, doc_type, update_id,
                  marker_index_hist_size=0, http_auth=None):
@@ -133,9 +134,9 @@ class ElasticsearchTarget(luigi.Target):
         self.create_marker_index()
         self.es.index(index=self.marker_index, doc_type=self.marker_doc_type,
                       id=self.marker_index_document_id(), body={
-                      'update_id': self.update_id, 'target_index': self.index,
-                      'target_doc_type': self.doc_type,
-                      'date': datetime.datetime.now()})
+                          'update_id': self.update_id, 'target_index': self.index,
+                          'target_doc_type': self.doc_type,
+                          'date': datetime.datetime.now()})
         self.es.indices.flush(index=self.marker_index)
         self.ensure_hist_size()
 
@@ -177,6 +178,7 @@ class ElasticsearchTarget(luigi.Target):
 
 
 class CopyToIndex(luigi.Task):
+
     """
     Template task for inserting a data set into Elasticsearch.
 
@@ -339,7 +341,7 @@ class CopyToIndex(luigi.Task):
             doc_type=self.doc_type,
             update_id=self.update_id(),
             marker_index_hist_size=self.marker_index_hist_size
-         )
+        )
 
     def run(self):
         """ Purge existing index, if requested (`purge_existing_index`).

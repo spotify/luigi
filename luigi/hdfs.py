@@ -29,6 +29,7 @@ logger = logging.getLogger('luigi-interface')
 
 
 class HDFSCliError(Exception):
+
     def __init__(self, command, returncode, stdout, stderr):
         self.returncode = returncode
         self.stdout = stdout
@@ -66,37 +67,38 @@ def tmppath(path=None, include_unix_username=True):
     addon = "luigitemp-%08d" % random.randrange(1e9)
     temp_dir = '/tmp'  # default tmp dir if none is specified in config
 
-    #1. Figure out to which temporary directory to place
+    # 1. Figure out to which temporary directory to place
     configured_hdfs_tmp_dir = configuration.get_config().get('core', 'hdfs-tmp-dir', None)
     if configured_hdfs_tmp_dir is not None:
-        #config is superior
+        # config is superior
         base_dir = configured_hdfs_tmp_dir
     elif path is not None:
-        #need to copy correct schema and network location
+        # need to copy correct schema and network location
         parsed = urlparse.urlparse(path)
         base_dir = urlparse.urlunparse((parsed.scheme, parsed.netloc, temp_dir, '', '', ''))
     else:
-        #just system temporary directory
+        # just system temporary directory
         base_dir = temp_dir
 
-    #2. Figure out what to place
+    # 2. Figure out what to place
     if path is not None:
         if path.startswith(temp_dir + '/'):
-            #Not 100%, but some protection from directories like /tmp/tmp/file
+            # Not 100%, but some protection from directories like /tmp/tmp/file
             subdir = path[len(temp_dir):]
         else:
-            #Protection from /tmp/hdfs:/dir/file
+            # Protection from /tmp/hdfs:/dir/file
             parsed = urlparse.urlparse(path)
             subdir = parsed.path
         subdir = subdir.lstrip('/') + '-'
     else:
-        #just return any random temporary location
+        # just return any random temporary location
         subdir = ''
 
     if include_unix_username:
         subdir = os.path.join(getpass.getuser(), subdir)
 
     return os.path.join(base_dir, subdir + addon)
+
 
 def list_path(path):
     if isinstance(path, list) or isinstance(path, tuple):
@@ -105,7 +107,9 @@ def list_path(path):
         return [path, ]
     return [str(path), ]
 
+
 class HdfsClient(FileSystem):
+
     """This client uses Apache 2.x syntax for file system commands, which also matched CDH4"""
 
     recursive_listdir_cmd = ['-ls', '-R']
@@ -177,7 +181,7 @@ class HdfsClient(FileSystem):
             if line.startswith("OpenJDK 64-Bit Server VM warning") or line.startswith("It's highly recommended") or not line:
                 lines.pop(lines.index(line))
             else:
-               (dir_count, file_count, content_size, ppath) = stdout.split() 
+                (dir_count, file_count, content_size, ppath) = stdout.split()
         results = {'content_size': content_size, 'dir_count': dir_count, 'file_count': file_count}
         return results
 
@@ -254,11 +258,14 @@ class HdfsClient(FileSystem):
             else:
                 yield file
 
+
 class SnakebiteHdfsClient(HdfsClient):
+
     """
     This client uses Spotify's snakebite client whenever possible.
     @author: Alan Brenner <alan@magnetic.com> github.com/alanbbr
     """
+
     def __init__(self):
         super(SnakebiteHdfsClient, self).__init__()
         try:
@@ -285,7 +292,7 @@ class SnakebiteHdfsClient(HdfsClient):
         If Luigi has forked, we have a different PID, and need to reconnect.
         """
         if self.pid != os.getpid() or not self._bite:
-            client_kwargs = dict(filter(lambda (k, v): v is not None and v != '',  {
+            client_kwargs = dict(filter(lambda (k, v): v is not None and v != '', {
                 'hadoop_version': self.config.getint("hdfs", "client_version", None),
                 'effective_user': self.config.get("hdfs", "effective_user", None)
             }.iteritems()))
@@ -359,7 +366,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :return: list of all changed items
         """
         return list(self.get_bite().chmod(list_path(path),
-                                         permissions, recursive))
+                                          permissions, recursive))
 
     def chown(self, path, owner, group, recursive=False):
         """
@@ -474,8 +481,11 @@ class SnakebiteHdfsClient(HdfsClient):
             else:
                 yield rval[0]
 
+
 class HdfsClientCdh3(HdfsClient):
+
     """This client uses CDH3 syntax for file system commands"""
+
     def mkdir(self, path):
         '''
         No -p switch, so this will fail creating ancestors
@@ -500,7 +510,9 @@ class HdfsClientCdh3(HdfsClient):
         cmd = cmd + [path]
         call_check(cmd)
 
+
 class HdfsClientApache1(HdfsClientCdh3):
+
     """This client uses Apache 1.x syntax for file system commands,
     which are similar to CDH3 except for the file existence check"""
 
@@ -560,6 +572,7 @@ def create_hadoopcli_client():
         raise Exception("Error: Unknown version specified in Hadoop version"
                         "configuration parameter")
 
+
 def get_autoconfig_client(show_warnings=True):
     """Creates the client as specified in the `client.cfg` configuration"""
     configured_client = get_configured_hdfs_client(show_warnings=show_warnings)
@@ -582,11 +595,13 @@ listdir = client.listdir
 
 
 class HdfsReadPipe(luigi.format.InputPipeProcessWrapper):
+
     def __init__(self, path):
         super(HdfsReadPipe, self).__init__(load_hadoop_cmd() + ['fs', '-cat', path])
 
 
 class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
+
     """ File like object for writing to HDFS
 
     The referenced file is first written to a temporary location and then
@@ -607,7 +622,7 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
 
     def abort(self):
         logger.info("Aborting %s('%s'). Removing temporary file '%s'",
-                self.__class__.__name__, self.path, self.tmppath)
+                    self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWritePipe, self).abort()
         remove(self.tmppath)
 
@@ -617,7 +632,9 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
 
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
+
     """ Writes a data<data_extension> file to a directory at <path> """
+
     def __init__(self, path, data_extension=""):
         self.path = path
         self.tmppath = tmppath(self.path)
@@ -626,7 +643,7 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
 
     def abort(self):
         logger.info("Aborting %s('%s'). Removing temporary dir '%s'",
-                self.__class__.__name__, self.path, self.tmppath)
+                    self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWriteDirPipe, self).abort()
         remove(self.tmppath)
 
@@ -636,6 +653,7 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
 
 
 class Plain(luigi.format.Format):
+
     @classmethod
     def hdfs_reader(cls, path):
         return HdfsReadPipe(path)
@@ -646,6 +664,7 @@ class Plain(luigi.format.Format):
 
 
 class PlainDir(luigi.format.Format):
+
     @classmethod
     def hdfs_reader(cls, path):
         # exclude underscore-prefixedfiles/folders (created by MapReduce)
@@ -671,7 +690,7 @@ class HdfsTarget(FileSystemTarget):
         self._fs = fs or get_autoconfig_client()
 
     def __del__(self):
-        #TODO: not sure is_tmp belongs in Targets construction arguments
+        # TODO: not sure is_tmp belongs in Targets construction arguments
         if self.is_tmp and self.exists():
             self.remove()
 

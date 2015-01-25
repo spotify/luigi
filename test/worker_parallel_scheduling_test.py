@@ -9,6 +9,7 @@ from luigi.worker import Worker
 
 
 class SlowCompleteWrapper(luigi.WrapperTask):
+
     def requires(self):
         return [SlowCompleteTask(i) for i in range(4)]
 
@@ -29,20 +30,23 @@ class OverlappingSelfDependenciesTask(luigi.Task):
         return self.n < self.k or self.k == 0
 
     def requires(self):
-        return [OverlappingSelfDependenciesTask(self.n-1, k) for k in range(self.k+1)]
+        return [OverlappingSelfDependenciesTask(self.n - 1, k) for k in range(self.k + 1)]
 
 
 class ExceptionCompleteTask(luigi.Task):
+
     def complete(self):
         assert False
 
 
 class ExceptionRequiresTask(luigi.Task):
+
     def requires(self):
         assert False
 
 
 class UnpicklableExceptionTask(luigi.Task):
+
     def complete(self):
         class UnpicklableException(Exception):
             pass
@@ -50,6 +54,7 @@ class UnpicklableExceptionTask(luigi.Task):
 
 
 class ParallelSchedulingTest(unittest.TestCase):
+
     def setUp(self):
         self.sch = mock.Mock()
         self.w = Worker(scheduler=self.sch, worker_id='x')

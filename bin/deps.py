@@ -61,6 +61,7 @@ def dfs_paths(start_task, goal_task_name, path=None):
 
 
 class UpstreamArg(luigi.Task):
+
     'Used to provide the global parameter -- upstream'
     upstream = luigi.Parameter(is_global=True, default=None)
 
@@ -93,14 +94,14 @@ if __name__ == '__main__':
         task_name = d
         task_output = "n/a"
         if isinstance(d.output(), RemoteTarget):
-            task_output="[SSH] {0}:{1}".format(d.output()._fs.remote_context.host, d.output().path)
+            task_output = "[SSH] {0}:{1}".format(d.output()._fs.remote_context.host, d.output().path)
         elif isinstance(d.output(), S3Target):
-            task_output="[S3] {0}".format(d.output().path)
-        elif isinstance(d.output(),FileSystemTarget):
-            task_output="[FileSystem] {0}".format(d.output().path)
-        elif isinstance (d.output(), PostgresTarget):
-            task_output="[DB] {0}:{1}".format(d.output().host, d.output().table)
+            task_output = "[S3] {0}".format(d.output().path)
+        elif isinstance(d.output(), FileSystemTarget):
+            task_output = "[FileSystem] {0}".format(d.output().path)
+        elif isinstance(d.output(), PostgresTarget):
+            task_output = "[DB] {0}:{1}".format(d.output().host, d.output().table)
         else:
-            task_output= "to be determined"
+            task_output = "to be determined"
         print """   TASK: {0}
                        : {1}""".format(task_name, task_output)

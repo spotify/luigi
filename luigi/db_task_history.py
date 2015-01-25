@@ -31,6 +31,7 @@ logger = logging.getLogger('luigi-interface')
 
 
 class DbTaskHistory(task_history.TaskHistory):
+
     """ Task History that writes to a database using sqlalchemy. Also has methods for useful db queries
     """
     @contextmanager
@@ -134,6 +135,7 @@ class DbTaskHistory(task_history.TaskHistory):
 
 
 class TaskParameter(Base):
+
     """ Table to track luigi.Parameter()s of a Task
     """
     __tablename__ = 'task_parameters'
@@ -146,6 +148,7 @@ class TaskParameter(Base):
 
 
 class TaskEvent(Base):
+
     """ Table to track when a task is scheduled, starts, finishes, and fails
     """
     __tablename__ = 'task_events'
@@ -159,6 +162,7 @@ class TaskEvent(Base):
 
 
 class TaskRecord(Base):
+
     """ Base table to track information about a luigi.Task. References to other tables are available through
     task.events, task.parameters, etc.
     """

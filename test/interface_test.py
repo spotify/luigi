@@ -10,6 +10,7 @@ luigi.notifications.DEBUG = True
 
 
 class InterfaceTest(unittest.TestCase):
+
     def setUp(self):
         self.worker = Worker()
         self.worker.stop = Mock()

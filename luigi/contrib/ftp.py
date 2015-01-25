@@ -17,6 +17,7 @@ from luigi.format import FileWrapper
 
 
 class RemoteFileSystem(luigi.target.FileSystem):
+
     def __init__(self, host, username=None, password=None):
         self.host = host
         self.username = username
@@ -82,7 +83,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
             self._rm_recursive(self.ftpcon, path)
         else:
             try:
-                #try delete file
+                # try delete file
                 self.ftpcon.delete(path)
             except ftplib.all_errors:
                 # it is a folder, delete it
@@ -125,16 +126,18 @@ class RemoteFileSystem(luigi.target.FileSystem):
         tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         # download file
         self._connect()
-        self.ftpcon.retrbinary('RETR %s' % path,  open(tmp_local_path, 'wb').write)
+        self.ftpcon.retrbinary('RETR %s' % path, open(tmp_local_path, 'wb').write)
         self.ftpcon.quit()
 
         os.rename(tmp_local_path, local_path)
 
 
 class AtomicFtpfile(file):
+
     """ Simple class that writes to a temp file and upload to ftp on close().
      Also cleans up the temp file if close is not invoked.
     """
+
     def __init__(self, fs, path):
         self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         self._fs = fs
@@ -170,10 +173,12 @@ class AtomicFtpfile(file):
 
 
 class RemoteTarget(luigi.target.FileSystemTarget):
+
     """
     Target used for reading from remote files. The target is implemented using
     ssh commands streaming data over the network.
     """
+
     def __init__(self, path, host, format=None, username=None, password=None):
         self.path = path
         self.format = format

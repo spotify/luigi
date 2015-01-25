@@ -60,6 +60,7 @@ def _create_scheduler():
 
 
 class RPCHandler(tornado.web.RequestHandler):
+
     """ Handle remote scheduling calls using rpc.RemoteSchedulerResponder"""
 
     def initialize(self, api):
@@ -79,6 +80,7 @@ class RPCHandler(tornado.web.RequestHandler):
 
 
 class BaseTaskHistoryHandler(tornado.web.RequestHandler):
+
     def initialize(self, api):
         self._api = api
 
@@ -87,24 +89,28 @@ class BaseTaskHistoryHandler(tornado.web.RequestHandler):
 
 
 class RecentRunHandler(BaseTaskHistoryHandler):
+
     def get(self):
         tasks = self._api.task_history.find_latest_runs()
         self.render("recent.html", tasks=tasks)
 
 
 class ByNameHandler(BaseTaskHistoryHandler):
+
     def get(self, name):
         tasks = self._api.task_history.find_all_by_name(name)
         self.render("recent.html", tasks=tasks)
 
 
 class ByIdHandler(BaseTaskHistoryHandler):
+
     def get(self, id):
         task = self._api.task_history.find_task_by_id(id)
         self.render("show.html", task=task)
 
 
 class ByParamsHandler(BaseTaskHistoryHandler):
+
     def get(self, name):
         payload = self.get_argument('data', default="{}")
         arguments = json.loads(payload)
@@ -113,6 +119,7 @@ class ByParamsHandler(BaseTaskHistoryHandler):
 
 
 class StaticFileHandler(tornado.web.RequestHandler):
+
     def get(self, path):
         # Path checking taken from Flask's safe_join function:
         # https://github.com/mitsuhiko/flask/blob/1d55b8983/flask/helpers.py#L563-L587
@@ -128,6 +135,7 @@ class StaticFileHandler(tornado.web.RequestHandler):
 
 
 class RootPathHandler(tornado.web.RequestHandler):
+
     def get(self):
         self.redirect("/static/visualiser/index.html")
 
@@ -177,9 +185,9 @@ def run(api_port=8082, address=None, scheduler=None, responder=None):
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
     if os.name == 'nt':
-            signal.signal(signal.SIGBREAK, shutdown_handler)
+        signal.signal(signal.SIGBREAK, shutdown_handler)
     else:
-            signal.signal(signal.SIGQUIT, shutdown_handler)
+        signal.signal(signal.SIGQUIT, shutdown_handler)
     atexit.register(shutdown_handler)
 
     logger.info("Scheduler starting up")
@@ -192,6 +200,7 @@ def run_api_threaded(api_port=8082, address=None):
     sock_names = _init_api(_create_scheduler(), None, api_port, address)
 
     import threading
+
     def scheduler_thread():
         # this is wrapped in a function so we get the instance
         # from the scheduler thread and not from the main thread

@@ -8,9 +8,11 @@ DIR = "/"
 
 
 class ExperimentTask(luigi.ExternalTask):
+
     ''' This class represents something that was created elsewhere by an external process,
     so all we want to do is to implement the output method.
     '''
+
     def output(self):
         return RemoteTarget('/experiment/output1.txt', HOST, username=USER, password=PWD)
 
@@ -23,9 +25,11 @@ class ExperimentTask(luigi.ExternalTask):
 
 
 class ProcessingTask(luigi.Task):
+
     ''' This class represents something that was created elsewhere by an external process,
     so all we want to do is to implement the output method.
     '''
+
     def requires(self):
         return ExperimentTask()
 

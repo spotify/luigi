@@ -47,7 +47,7 @@ def attach(*packages):
 
 def dereference(file):
     if os.path.islink(file):
-        #by joining with the dirname we are certain to get the absolute path
+        # by joining with the dirname we are certain to get the absolute path
         return dereference(os.path.join(os.path.dirname(file), os.readlink(file)))
     else:
         return file
@@ -164,6 +164,7 @@ def flatten(sequence):
 
 
 class HadoopRunContext(object):
+
     def __init__(self):
         self.job_id = None
 
@@ -187,6 +188,7 @@ class HadoopRunContext(object):
 
 
 class HadoopJobError(RuntimeError):
+
     def __init__(self, message, out=None, err=None):
         super(HadoopJobError, self).__init__(message, out, err)
         self.message = message
@@ -319,10 +321,12 @@ class JobRunner(object):
 
 
 class HadoopJobRunner(JobRunner):
+
     ''' Takes care of uploading & executing a Hadoop job using Hadoop streaming
 
     TODO: add code to support Elastic Mapreduce (using boto) and local execution.
     '''
+
     def __init__(self, streaming_jar, modules=[], streaming_args=[], libjars=[], libjars_in_hdfs=[], jobconfs={}, input_format=None, output_format=None):
         self.streaming_jar = streaming_jar
         self.modules = modules
@@ -348,10 +352,10 @@ class HadoopJobRunner(JobRunner):
 
         base_tmp_dir = configuration.get_config().get('core', 'tmp-dir', None)
         if base_tmp_dir:
-            warnings.warn("The core.tmp-dir configuration item is"\
-                          " deprecated, please use the TMPDIR"\
-                          " environment variable if you wish"\
-                          " to control where luigi.hadoop may"\
+            warnings.warn("The core.tmp-dir configuration item is"
+                          " deprecated, please use the TMPDIR"
+                          " environment variable if you wish"
+                          " to control where luigi.hadoop may"
                           " create temporary files and directories.")
             self.tmp_dir = os.path.join(base_tmp_dir, 'hadoop_job_%016x' % random.getrandbits(64))
             os.makedirs(self.tmp_dir)
@@ -452,7 +456,9 @@ class HadoopJobRunner(JobRunner):
 
 
 class DefaultHadoopJobRunner(HadoopJobRunner):
+
     ''' The default job runner just reads from config and sets stuff '''
+
     def __init__(self):
         config = configuration.get_config()
         streaming_jar = config.get('hadoop', 'streaming-jar')
@@ -461,12 +467,14 @@ class DefaultHadoopJobRunner(HadoopJobRunner):
 
 
 class LocalJobRunner(JobRunner):
+
     ''' Will run the job locally
 
     This is useful for debugging and also unit testing. Tries to mimic Hadoop Streaming.
 
     TODO: integrate with JobTask
     '''
+
     def __init__(self, samplelines=None):
         self.samplelines = samplelines
 
@@ -552,7 +560,6 @@ class BaseHadoopJobTask(luigi.Task):
             elif scheduler_type == 'capacity':
                 jcs.append('mapred.job.queue.name=%s' % pool)
         return jcs
-
 
     def init_local(self):
         ''' Implement any work to setup any internal datastructure etc here.
@@ -683,7 +690,7 @@ class JobTask(BaseHadoopJobTask):
         ct = self._counter_dict.get(key, 0)
         ct += count
         if ct >= threshold:
-            new_arg = list(key)+[ct]
+            new_arg = list(key) + [ct]
             self._incr_counter(*new_arg)
             ct = 0
         self._counter_dict[key] = ct

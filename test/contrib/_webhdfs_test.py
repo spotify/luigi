@@ -8,6 +8,7 @@ from luigi.contrib import webhdfs
 
 
 class TestWebHdfsTarget(unittest.TestCase):
+
     '''
     This test requires a running Hadoop cluster with WebHdfs enabled
     This test requires the client.cfg file to have a `hdfs` section

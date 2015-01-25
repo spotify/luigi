@@ -41,6 +41,7 @@ Example configuration section in client.cfg::
 
 
 class ScaldingJobRunner(luigi.hadoop.JobRunner):
+
     """JobRunner for `pyscald` commands. Used to run a ScaldingJobTask"""
 
     def __init__(self):
@@ -204,6 +205,7 @@ class ScaldingJobRunner(luigi.hadoop.JobRunner):
 
 
 class ScaldingJobTask(luigi.hadoop.BaseHadoopJobTask):
+
     """A job task for Scalding that define a scala source and (optional) main
     method
 

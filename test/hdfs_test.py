@@ -27,12 +27,14 @@ try:
 except ImportError:
     import unittest
 
+
 class TestException(Exception):
     pass
 
 
 @attr('minicluster')
 class ErrorHandling(MiniClusterTestCase):
+
     def test_connection_refused(self):
         """ The point of this test is to see if file existence checks
         can distinguish file non-existence from errors
@@ -60,6 +62,7 @@ class ErrorHandling(MiniClusterTestCase):
 
 @attr('minicluster')
 class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
+
     def test_atomicity(self):
         testpath = self._test_dir()
         if self.fs.exists(testpath):
@@ -103,6 +106,7 @@ class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
 
 @attr('minicluster')
 class HdfsAtomicWriteDirPipeTests(MiniClusterTestCase):
+
     def setUp(self):
         super(HdfsAtomicWriteDirPipeTests, self).setUp()
         self.path = self._test_file()
@@ -369,7 +373,7 @@ class HdfsTargetTests(MiniClusterTestCase):
             raise self.failureException(msg)
 
     def test_tmppath_not_configured(self):
-        #Given: several target paths to test
+        # Given: several target paths to test
         path1 = "/dir1/dir2/file"
         path2 = "hdfs:///dir1/dir2/file"
         path3 = "hdfs://somehost/dir1/dir2/file"
@@ -380,7 +384,7 @@ class HdfsTargetTests(MiniClusterTestCase):
         path8 = None
         path9 = "/tmpdir/file"
 
-        #When: I create a temporary path for targets
+        # When: I create a temporary path for targets
         res1 = hdfs.tmppath(path1, include_unix_username=False)
         res2 = hdfs.tmppath(path2, include_unix_username=False)
         res3 = hdfs.tmppath(path3, include_unix_username=False)
@@ -391,26 +395,28 @@ class HdfsTargetTests(MiniClusterTestCase):
         res8 = hdfs.tmppath(path8, include_unix_username=False)
         res9 = hdfs.tmppath(path9, include_unix_username=False)
 
-        #Then: I should get correct results relative to Luigi temporary directory
-        self.assertRegexpMatches(res1,"^/tmp/dir1/dir2/file-luigitemp-\d+")
-        #it would be better to see hdfs:///path instead of hdfs:/path, but single slash also works well
+        # Then: I should get correct results relative to Luigi temporary directory
+        self.assertRegexpMatches(res1, "^/tmp/dir1/dir2/file-luigitemp-\d+")
+        # it would be better to see hdfs:///path instead of hdfs:/path, but single slash also works well
         self.assertRegexpMatches(res2, "^hdfs:/tmp/dir1/dir2/file-luigitemp-\d+")
         self.assertRegexpMatches(res3, "^hdfs://somehost/tmp/dir1/dir2/file-luigitemp-\d+")
         self.assertRegexpMatches(res4, "^file:///tmp/dir1/dir2/file-luigitemp-\d+")
         self.assertRegexpMatches(res5, "^/tmp/dir/file-luigitemp-\d+")
-        #known issue with duplicated "tmp" if schema is present
+        # known issue with duplicated "tmp" if schema is present
         self.assertRegexpMatches(res6, "^file:///tmp/tmp/dir/file-luigitemp-\d+")
-        #known issue with duplicated "tmp" if schema is present
+        # known issue with duplicated "tmp" if schema is present
         self.assertRegexpMatches(res7, "^hdfs://somehost/tmp/tmp/dir/file-luigitemp-\d+")
         self.assertRegexpMatches(res8, "^/tmp/luigitemp-\d+")
-        self.assertRegexpMatches(res9,  "/tmp/tmpdir/file")
+        self.assertRegexpMatches(res9, "/tmp/tmpdir/file")
 
     def test_tmppath_username(self):
         self.assertRegexpMatches(hdfs.tmppath('/path/to/stuff', include_unix_username=True),
                                  "^/tmp/[a-z0-9_]+/path/to/stuff-luigitemp-\d+")
 
 
-TIMESTAMP_DELAY = 60 # Big enough for `hadoop fs`?
+TIMESTAMP_DELAY = 60  # Big enough for `hadoop fs`?
+
+
 @attr('minicluster')
 class _HdfsClientTest(MiniClusterTestCase):
 
@@ -632,7 +638,7 @@ class _HdfsClientTest(MiniClusterTestCase):
         self.assertEqual(2, len(entries[0]), msg="%r" % entries)
         self.assertEqual(path + '/file1.dat', entries[0][0], msg="%r" % entries)
         self.assertTrue(timegm(datetime.now().timetuple()) -
-                        timegm(entries[0][1].timetuple()) < TIMESTAMP_DELAY) 
+                        timegm(entries[0][1].timetuple()) < TIMESTAMP_DELAY)
 
     def test_listdir_full_list_get_everything(self):
         """Verify we get all the values, even if we can't fully check them."""
@@ -699,4 +705,3 @@ if __name__ == "__main__":
 #     suite = unittest.TestSuite()
 #     suite.addTest(unittest.makeSuite(HdfsTargetTests, prefix='test_tmppath'))
 #     return suite
-

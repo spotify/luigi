@@ -51,6 +51,7 @@ class Fib(luigi.Task):
 
 
 class FibTestBase(unittest.TestCase):
+
     def setUp(self):
         global File
         File = MockFile
@@ -58,6 +59,7 @@ class FibTestBase(unittest.TestCase):
 
 
 class FibTest(FibTestBase):
+
     def test_invoke(self):
         w = luigi.worker.Worker()
         w.add(Fib(100))

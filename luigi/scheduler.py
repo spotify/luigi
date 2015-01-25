@@ -28,6 +28,7 @@ from task_status import PENDING, FAILED, DONE, RUNNING, SUSPENDED, UNKNOWN, DISA
 
 
 class Scheduler(object):
+
     ''' Abstract base class
 
     Note that the methods all take string arguments, not Task objects...
@@ -59,9 +60,9 @@ STATUS_TO_UPSTREAM_MAP = {
 
 # We're passing around this config a lot, so let's put it on an object
 SchedulerConfig = collections.namedtuple('SchedulerConfig', [
-        'retry_delay', 'remove_delay', 'worker_disconnect_delay',
-        'disable_failures', 'disable_window', 'disable_persist', 'disable_time',
-        'max_shown_tasks',
+    'retry_delay', 'remove_delay', 'worker_disconnect_delay',
+    'disable_failures', 'disable_window', 'disable_persist', 'disable_time',
+    'max_shown_tasks',
 ])
 
 
@@ -75,6 +76,7 @@ def fix_time(x):
 
 
 class Failures(object):
+
     """ This class tracks the number of failures in a given time window
 
     Failures added are marked with the current timestamp, and this class counts
@@ -109,6 +111,7 @@ class Failures(object):
 
 
 class Task(object):
+
     def __init__(self, id, status, deps, resources={}, priority=0, family='', params={},
                  disable_failures=None, disable_window=None):
         self.id = id
@@ -147,7 +150,9 @@ class Task(object):
 
 
 class Worker(object):
+
     """ Structure for tracking worker activity and keeping their references """
+
     def __init__(self, id, last_active=None):
         self.id = id
         self.reference = None  # reference to the worker in the real world. (Currently a dict containing just the host)
@@ -173,6 +178,7 @@ class Worker(object):
 
 
 class SimpleTaskState(object):
+
     ''' Keep track of the current state and handle persistance
 
     The point of this class is to enable other ways to keep state, eg. by using a database
@@ -344,7 +350,7 @@ class SimpleTaskState(object):
             yield worker
 
     def get_worker_ids(self):
-        return self._active_workers.keys() # only used for unit tests
+        return self._active_workers.keys()  # only used for unit tests
 
     def get_worker(self, worker_id):
         return self._active_workers.setdefault(worker_id, Worker(worker_id))
@@ -361,6 +367,7 @@ class SimpleTaskState(object):
 
 
 class CentralPlannerScheduler(Scheduler):
+
     ''' Async scheduler that can handle multiple workers etc
 
     Can be run locally or on a server (using RemoteScheduler + server.Server).
@@ -451,8 +458,8 @@ class CentralPlannerScheduler(Scheduler):
         self.update(worker)
 
         task = self._state.get_task(task_id, setdefault=self._make_task(
-                id=task_id, status=PENDING, deps=deps, resources=resources,
-                priority=priority, family=family, params=params))
+            id=task_id, status=PENDING, deps=deps, resources=resources,
+            priority=priority, family=family, params=params))
 
         # for setting priority, we'll sometimes create tasks with unset family and params
         if not task.family:
@@ -527,6 +534,7 @@ class CentralPlannerScheduler(Scheduler):
     def _rank(self):
         ''' Return worker's rank function for task scheduling '''
         dependents = collections.defaultdict(int)
+
         def not_done(t):
             task = self._state.get_task(t, default=None)
             return task is None or task.status != DONE
@@ -719,7 +727,7 @@ class CentralPlannerScheduler(Scheduler):
         upstream_status_table = {}  # used to memoize upstream status
         for task in self._state.get_active_tasks(status):
             if (task.status != PENDING or not upstream_status or
-                upstream_status == self._upstream_status(task.id, upstream_status_table)):
+                    upstream_status == self._upstream_status(task.id, upstream_status_table)):
                 serialized = self._serialize_task(task.id, False)
                 result[task.id] = serialized
         if limit and len(result) > self._config.max_shown_tasks:

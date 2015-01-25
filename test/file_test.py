@@ -13,7 +13,7 @@
 # the License.
 
 from luigi import File
-from luigi.file import LocalFileSystem 
+from luigi.file import LocalFileSystem
 import unittest
 import os
 import gzip
@@ -117,7 +117,6 @@ class FileTest(unittest.TestCase):
         self.assertTrue(test_data == f.read())
         f.close()
 
-
     def test_copy(self):
         t = File(self.path)
         f = t.open('w')
@@ -133,6 +132,7 @@ class FileTest(unittest.TestCase):
 
     def test_format_injection(self):
         class CustomFormat(luigi.format.Format):
+
             def pipe_reader(self, input_pipe):
                 input_pipe.foo = "custom read property"
                 return input_pipe
@@ -173,6 +173,7 @@ class FileRelativeTest(FileTest):
 
 
 class TmpFileTest(unittest.TestCase):
+
     def test_tmp(self):
         t = File(is_tmp=True)
         self.assertFalse(t.exists())

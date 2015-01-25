@@ -78,6 +78,7 @@ class FailingTask(luigi.Task):
 
 class SchedulerVisualisationTest(unittest.TestCase):
     # The following 2 are required to retain compatibility with python 2.6
+
     def assertGreaterEqual(self, a, b):
         self.assertTrue(a >= b)
 
@@ -240,22 +241,27 @@ class SchedulerVisualisationTest(unittest.TestCase):
             pass
 
         class B(luigi.ExternalTask):
+
             def complete(self):
                 return True
 
         class C(luigi.Task):
+
             def requires(self):
                 return [A(), B()]
 
         class F(luigi.Task):
+
             def run(self):
                 raise Exception()
 
         class D(luigi.Task):
+
             def requires(self):
                 return [F()]
 
         class E(luigi.Task):
+
             def requires(self):
                 return [C(), D()]
 
@@ -327,6 +333,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
             pass
 
         class Y(luigi.Task):
+
             def requires(self):
                 return [X()]
 
@@ -337,6 +344,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
                 return [Y()]
 
         class ZZ(luigi.Task):
+
             def requires(self):
                 return [Z(1), Z(2)]
 
@@ -356,6 +364,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
     def test_simple_worker_list(self):
         class X(luigi.Task):
+
             def run(self):
                 self._complete = True
 
@@ -376,10 +385,12 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
     def test_worker_list_pending_uniques(self):
         class X(luigi.Task):
+
             def complete(self):
                 return False
 
         class Y(X):
+
             def requires(self):
                 return X()
 
@@ -420,7 +431,6 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(3, worker['num_running'])
         self.assertEqual(1, worker['num_pending'])
         self.assertEqual(1, worker['num_uniques'])
-
 
 
 if __name__ == '__main__':

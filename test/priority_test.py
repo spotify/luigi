@@ -17,6 +17,7 @@ import luigi
 import luigi.notifications
 luigi.notifications.DEBUG = True
 
+
 class PrioTask(luigi.Task):
     prio = luigi.Parameter()
     run_counter = 0
@@ -27,7 +28,7 @@ class PrioTask(luigi.Task):
 
     def requires(self):
         if self.prio > 10:
-            return PrioTask(self.prio-10)
+            return PrioTask(self.prio - 10)
 
     def run(self):
         self.t = PrioTask.run_counter
@@ -36,12 +37,13 @@ class PrioTask(luigi.Task):
     def complete(self):
         return hasattr(self, 't')
 
+
 class PriorityTest(unittest.TestCase):
+
     def test_priority(self):
         p, q, r = PrioTask(1), PrioTask(2), PrioTask(3)
         luigi.build([p, q, r], local_scheduler=True)
         self.assertTrue(r.t < q.t < p.t)
-
 
     def test_priority_w_dep(self):
         x, y, z = PrioTask(25), PrioTask(15), PrioTask(5)
