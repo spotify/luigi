@@ -283,7 +283,6 @@ class Task(object):
                     return
                 except:
                     logger.exception("Error in event callback for %r", event)
-                    pass
 
     @property
     def task_module(self):
