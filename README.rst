@@ -6,12 +6,6 @@
 About Luigi
 -----------
 
-.. image:: https://img.shields.io/travis/spotify/luigi/master.svg?style=flat
-    :target: https://travis-ci.org/spotify/luigi
-
-.. image:: https://img.shields.io/coveralls/spotify/luigi/master.svg?style=flat
-    :target: https://coveralls.io/r/spotify/luigi?branch=master
-
 Luigi is a Python package that helps you build complex pipelines of
 batch jobs. It handles dependency resolution, workflow management,
 visualization, handling failures, command line integration, and much
@@ -140,4 +134,15 @@ Luigi was built at `Spotify <http://www.spotify.com/>`_, mainly by
 Freider <https://github.com/freider>`_, but many other people have
 contributed.
 
+Current status
+--------------
+
+.. image:: https://img.shields.io/travis/spotify/luigi/master.svg?style=flat
+    :target: https://travis-ci.org/spotify/luigi
+
+.. image:: https://img.shields.io/coveralls/spotify/luigi/master.svg?style=flat
+    :target: https://coveralls.io/r/spotify/luigi?branch=master
+
+.. image:: https://landscape.io/github/spotify/luigi/master/landscape.svg?style=flat
+   :target: https://landscape.io/github/spotify/luigi/master
 
