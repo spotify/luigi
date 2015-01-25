@@ -19,6 +19,7 @@ import datetime
 
 
 class DateIntervalTest(unittest.TestCase):
+
     def test_date(self):
         di = DI().parse('2012-01-01')
         self.assertEqual(di.dates(), [datetime.date(2012, 1, 1)])

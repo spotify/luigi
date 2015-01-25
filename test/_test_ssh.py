@@ -31,6 +31,7 @@ conn.sendall('hello')
 
 
 class TestRemoteContext(unittest.TestCase):
+
     def setUp(self):
         self.context = RemoteContext(working_ssh_host)
 
@@ -71,9 +72,11 @@ class TestRemoteContext(unittest.TestCase):
 
 
 class TestRemoteTarget(unittest.TestCase):
+
     """ These tests assume RemoteContext working
     in order for setUp and tearDown to work
     """
+
     def setUp(self):
         self.ctx = RemoteContext(working_ssh_host)
         self.filepath = "/tmp/luigi_remote_test.dat"

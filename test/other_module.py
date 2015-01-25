@@ -14,6 +14,7 @@
 
 import luigi
 
+
 class OtherModuleTask(luigi.Task):
     p = luigi.Parameter()
 

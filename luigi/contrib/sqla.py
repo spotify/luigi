@@ -135,6 +135,7 @@ logger = logging.getLogger('luigi-interface')
 
 
 class SQLAlchemyTarget(luigi.Target):
+
     """Database target using SQLAlchemy. This will rarely have to be
     directly instantiated by the user. Typical usage would be to override
     `luigi.contrib.sqla.CopyToTable` class to create a task to write to
@@ -206,6 +207,7 @@ class SQLAlchemyTarget(luigi.Target):
 
 
 class CopyToTable(luigi.Task):
+
     """
     An abstract task for inserting a data set into SQLAlchemy RDBMS
 
@@ -282,7 +284,7 @@ class CopyToTable(luigi.Task):
             target_table=self.table,
             update_id=self.update_id(),
             echo=self.echo
-            )
+        )
 
     def rows(self):
         """Return/yield tuples or lists corresponding to each row to be inserted. This method
@@ -307,4 +309,3 @@ class CopyToTable(luigi.Task):
                 logger.info("Finished inserting %d rows into SQLAlchemy target" % len(ins_rows))
         output.touch()
         logger.info("Finished inserting rows into SQLAlchemy target")
-

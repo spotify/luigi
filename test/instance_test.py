@@ -20,6 +20,7 @@ luigi.notifications.DEBUG = True
 
 
 class InstanceTest(unittest.TestCase):
+
     def test_simple(self):
         class DummyTask(luigi.Task):
             x = luigi.Parameter()
@@ -35,6 +36,7 @@ class InstanceTest(unittest.TestCase):
         test = self
 
         class A(luigi.Task):
+
             def __init__(self):
                 self.has_run = False
                 super(A, self).__init__()

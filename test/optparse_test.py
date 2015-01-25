@@ -18,6 +18,7 @@ from fib_test import FibTestBase
 
 
 class OptParseTest(FibTestBase):
+
     def test_cmdline_optparse(self):
         luigi.run(['--local-scheduler', '--task', 'Fib', '--n', '100'], use_optparse=True)
 

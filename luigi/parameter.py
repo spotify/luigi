@@ -21,31 +21,37 @@ _no_value = object()
 
 
 class ParameterException(Exception):
+
     """Base exception."""
     pass
 
 
 class MissingParameterException(ParameterException):
+
     """Exception signifying that there was a missing Parameter."""
     pass
 
 
 class UnknownParameterException(ParameterException):
+
     """Exception signifying that an unknown Parameter was supplied."""
     pass
 
 
 class DuplicateParameterException(ParameterException):
+
     """Exception signifying that a Parameter was specified multiple times."""
     pass
 
 
 class UnknownConfigException(ParameterException):
+
     """Exception signifying that the ``config_path`` for the Parameter could not be found."""
     pass
 
 
 class Parameter(object):
+
     """An untyped Parameter
 
     Parameters are objects set on the Task class level to make it possible to parameterize tasks.
@@ -108,7 +114,7 @@ class Parameter(object):
         self.is_list = is_list
         self.is_boolean = is_boolean and not is_list  # Only BooleanParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
-        self.significant = significant # Whether different values for this parameter will differentiate otherwise equal tasks
+        self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
 
         if is_global and default == _no_value and config_path is None:
             raise ParameterException('Global parameters need default values')
@@ -233,7 +239,7 @@ class Parameter(object):
         """
         return x  # default impl
 
-    def serialize(self, x): # opposite of parse
+    def serialize(self, x):  # opposite of parse
         """Opposite of :py:meth:`parse`.
 
         Converts the value ``x`` to a string.
@@ -261,8 +267,8 @@ class Parameter(object):
             elif self.is_list:
                 return []
             else:
-                raise MissingParameterException("No value for '%s' (%s) submitted and no default value has been assigned." % \
-                    (param_name, "--" + param_name.replace('_', '-')))
+                raise MissingParameterException("No value for '%s' (%s) submitted and no default value has been assigned." %
+                                                (param_name, "--" + param_name.replace('_', '-')))
         elif self.is_list:
             return tuple(self.parse(p) for p in x)
         else:
@@ -302,6 +308,7 @@ class Parameter(object):
 
 
 class DateHourParameter(Parameter):
+
     """Parameter whose value is a :py:class:`~datetime.datetime` specified to the hour.
 
     A DateHourParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
@@ -329,6 +336,7 @@ class DateHourParameter(Parameter):
 
 
 class DateMinuteParameter(DateHourParameter):
+
     """Parameter whose value is a :py:class:`~datetime.datetime` specified to the minute.
 
     A DateMinuteParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
@@ -340,33 +348,43 @@ class DateMinuteParameter(DateHourParameter):
 
 
 class DateParameter(Parameter):
+
     """Parameter whose value is a :py:class:`~datetime.date`.
 
     A DateParameter is a Date string formatted ``YYYY-MM-DD``. For example, ``2013-07-10`` specifies
     July 10, 2013.
     """
+
     def parse(self, s):
         """Parses a date string formatted as ``YYYY-MM-DD``."""
         return datetime.date(*map(int, s.split('-')))
 
 
 class IntParameter(Parameter):
+
     """Parameter whose value is an ``int``."""
+
     def parse(self, s):
         """Parses an ``int`` from the string using ``int()``."""
         return int(s)
 
+
 class FloatParameter(Parameter):
+
     """Parameter whose value is a ``float``."""
+
     def parse(self, s):
         """Parses a ``float`` from the string using ``float()``."""
         return float(s)
 
+
 class BooleanParameter(Parameter):
+
     """A Parameter whose value is a ``bool``."""
     # TODO(erikbern): why do we call this "boolean" instead of "bool"?
     # The integer parameter is called "int" so calling this "bool" would be
     # more consistent, especially given the Python type names.
+
     def __init__(self, *args, **kwargs):
         """This constructor passes along args and kwargs to ctor for :py:class:`Parameter` but
         specifies ``is_boolean=True``.
@@ -379,6 +397,7 @@ class BooleanParameter(Parameter):
 
 
 class DateIntervalParameter(Parameter):
+
     """A Parameter whose value is a :py:class:`~luigi.date_interval.DateInterval`.
 
     Date Intervals are specified using the ISO 8601 `Time Interval
@@ -406,6 +425,7 @@ class DateIntervalParameter(Parameter):
 
 
 class TimeDeltaParameter(Parameter):
+
     """Class that maps to timedelta using strings in any of the following forms:
 
      - ``n {w[eek[s]]|d[ay[s]]|h[our[s]]|m[inute[s]|s[second[s]]}`` (e.g. "1 week 2 days" or "1 h")
@@ -423,7 +443,7 @@ class TimeDeltaParameter(Parameter):
         if re_match:
             kwargs = {}
             has_val = False
-            for k,v in re_match.groupdict(default="0").iteritems():
+            for k, v in re_match.groupdict(default="0").iteritems():
                 val = int(v)
                 has_val = has_val or val != 0
                 kwargs[k] = val
@@ -433,11 +453,12 @@ class TimeDeltaParameter(Parameter):
     def _parseIso8601(self, input):
         def field(key):
             return "(?P<%s>\d+)%s" % (key, key[0].upper())
+
         def optional_field(key):
             return "(%s)?" % field(key)
         # A little loose: ISO 8601 does not allow weeks in combination with other fields, but this regex does (as does python timedelta)
         regex = "P(%s|%s(T%s)?)" % (field("weeks"), optional_field("days"), "".join([optional_field(key) for key in ["hours", "minutes", "seconds"]]))
-        return self._apply_regex(regex,input)
+        return self._apply_regex(regex, input)
 
     def _parseSimple(self, input):
         keys = ["weeks", "days", "hours", "minutes", "seconds"]

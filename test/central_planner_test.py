@@ -21,6 +21,7 @@ WORKER = 'myworker'
 
 
 class CentralPlannerTest(unittest.TestCase):
+
     def setUp(self):
         self.sch = CentralPlannerScheduler(retry_delay=100,
                                            remove_delay=1000,

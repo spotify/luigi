@@ -18,10 +18,10 @@ except ImportError:
 
 @attr('minicluster')
 class TestSnakebiteClient(MiniClusterTestCase):
+
     """This test requires a snakebite -- it finds it from your
     client.cfg"""
     snakebite = None
-
 
     def get_client(self):
         return SnakebiteHdfsClient()

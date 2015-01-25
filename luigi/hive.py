@@ -25,6 +25,7 @@ logger = logging.getLogger('luigi-interface')
 
 
 class HiveCommandError(RuntimeError):
+
     def __init__(self, message, out=None, err=None):
         super(HiveCommandError, self).__init__(message, out, err)
         self.message = message
@@ -100,7 +101,9 @@ class HiveClient(object):  # interface
 
 
 class HiveCommandClient(HiveClient):
+
     """ Uses `hive` invocations to find information """
+
     def table_location(self, table, database='default', partition={}):
         cmd = "use {0}; describe formatted {1}".format(database, table)
         if partition:
@@ -139,10 +142,12 @@ class HiveCommandClient(HiveClient):
 
 
 class ApacheHiveCommandClient(HiveCommandClient):
+
     """
     A subclass for the HiveCommandClient to (in some cases) ignore the return code from
     the hive command so that we can just parse the output.
     """
+
     def table_schema(self, table, database='default'):
         describe = run_hive_cmd("use {0}; describe {1}".format(database, table), False)
         if not describe or "Table not found" in describe:
@@ -151,6 +156,7 @@ class ApacheHiveCommandClient(HiveCommandClient):
 
 
 class MetastoreClient(HiveClient):
+
     def table_location(self, table, database='default', partition={}):
         with HiveThriftContext() as client:
             if partition:
@@ -188,7 +194,9 @@ class MetastoreClient(HiveClient):
 
 
 class HiveThriftContext(object):
+
     """ Context manager for hive metastore client """
+
     def __enter__(self):
         try:
             from thrift import Thrift
@@ -222,6 +230,7 @@ client = default_client
 
 
 class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
+
     """ Task to run a hive query """
     # by default, we let hive figure these out.
     n_reduce_tasks = None
@@ -273,6 +282,7 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
 
 
 class HiveQueryRunner(luigi.hadoop.JobRunner):
+
     """ Runs a HiveQueryTask by shelling out to hive """
 
     def prepare_outputs(self, job):
@@ -314,6 +324,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
 
 
 class HiveTableTarget(luigi.Target):
+
     """ exists returns true if the table exists """
 
     def __init__(self, table, database='default', client=default_client):
@@ -339,6 +350,7 @@ class HiveTableTarget(luigi.Target):
 
 
 class HivePartitionTarget(luigi.Target):
+
     """ exists returns true if the table's partition exists """
 
     def __init__(self, table, partition, database='default', fail_missing_table=True, client=default_client):
@@ -377,6 +389,7 @@ class HivePartitionTarget(luigi.Target):
 
 
 class ExternalHiveTask(luigi.ExternalTask):
+
     """ External task that depends on a Hive table/partition """
 
     database = luigi.Parameter(default='default')

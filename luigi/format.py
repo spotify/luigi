@@ -17,6 +17,7 @@ import signal
 
 
 class FileWrapper(object):
+
     """Wrap `file` in a "real" so stuff can be added to it after creation
     """
 
@@ -42,6 +43,7 @@ class FileWrapper(object):
 
 
 class InputPipeProcessWrapper(object):
+
     def __init__(self, command, input_pipe=None):
         '''
         @param command a subprocess.Popen instance with stdin=input_pipe and
@@ -182,6 +184,7 @@ class OutputPipeProcessWrapper(object):
 
 
 class Format(object):
+
     """ Interface for format specifications """
 
     # TODO Move this to somewhere else?
@@ -204,6 +207,7 @@ class Format(object):
 
 
 class Gzip(Format):
+
     @classmethod
     def pipe_reader(cls, input_pipe):
         return InputPipeProcessWrapper(['gunzip'], input_pipe)
@@ -214,6 +218,7 @@ class Gzip(Format):
 
 
 class Bzip2(Format):
+
     @classmethod
     def pipe_reader(cls, input_pipe):
         return InputPipeProcessWrapper(['bzcat'], input_pipe)
@@ -221,4 +226,3 @@ class Bzip2(Format):
     @classmethod
     def pipe_writer(cls, output_pipe):
         return OutputPipeProcessWrapper(['bzip2'], output_pipe)
-

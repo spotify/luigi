@@ -12,11 +12,13 @@ from helpers import with_config
 
 
 class HdfsJob(luigi.ExternalTask):
+
     def output(self):
         return luigi.hdfs.HdfsTarget('test')
 
 
 class TestJob(SparkJob):
+
     def requires_hadoop(self):
         return HdfsJob()
 
@@ -51,6 +53,7 @@ class SparkTest(unittest.TestCase):
             arglist_result.append(arglist)
 
             class P(object):
+
                 def wait(self):
                     pass
 
@@ -83,6 +86,7 @@ class SparkTest(unittest.TestCase):
     def test_handle_failed_job(self):
         def Popen_fake(arglist, stdout=None, stderr=None, env=None, close_fds=True):
             class P(object):
+
                 def wait(self):
                     pass
 
@@ -91,7 +95,6 @@ class SparkTest(unittest.TestCase):
 
                 def communicate(self):
                     return 'end'
-
 
             p = P()
             p.returncode = 1
@@ -119,6 +122,7 @@ class SparkTest(unittest.TestCase):
 
 
 class Test1xJob(Spark1xJob):
+
     def requires_hadoop(self):
         return HdfsJob()
 
@@ -155,6 +159,7 @@ class Spark1xTest(unittest.TestCase):
             arglist_result.append(arglist)
 
             class P(object):
+
                 def wait(self):
                     pass
 
@@ -189,6 +194,7 @@ class Spark1xTest(unittest.TestCase):
         def Popen_fake(arglist, stdout=None, stderr=None, env=None,
                        close_fds=True):
             class P(object):
+
                 def wait(self):
                     pass
 
@@ -197,7 +203,6 @@ class Spark1xTest(unittest.TestCase):
 
                 def communicate(self):
                     return 'end'
-
 
             p = P()
             p.returncode = 1
@@ -225,6 +230,7 @@ class Spark1xTest(unittest.TestCase):
 
 
 class TestPySpark1xJob(PySpark1xJob):
+
     def requires_hadoop(self):
         return HdfsJob()
 
@@ -258,6 +264,7 @@ class PySpark1xTest(unittest.TestCase):
             arglist_result.append(arglist)
 
             class P(object):
+
                 def wait(self):
                     pass
 
@@ -281,7 +288,7 @@ class PySpark1xTest(unittest.TestCase):
             job.run()
             self.assertEqual(len(arglist_result), 1)
             self.assertEqual(arglist_result[0][0:6],
-                             [self.ss,'--master', 'yarn-client', job.program()])
+                             [self.ss, '--master', 'yarn-client', job.program()])
         finally:
             luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
 
@@ -291,6 +298,7 @@ class PySpark1xTest(unittest.TestCase):
         def Popen_fake(arglist, stdout=None, stderr=None, env=None,
                        close_fds=True):
             class P(object):
+
                 def wait(self):
                     pass
 
@@ -299,7 +307,6 @@ class PySpark1xTest(unittest.TestCase):
 
                 def communicate(self):
                     return 'end'
-
 
             p = P()
             p.returncode = 1

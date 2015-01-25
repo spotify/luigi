@@ -3,7 +3,9 @@ import logging
 import types
 logger = logging.getLogger('luigi-interface')
 
+
 class CascadingClient():
+
     """
     A FilesystemClient that will cascade failing function calls through a list
     of clients. Which clients are used are specified at time of construction.
@@ -47,4 +49,4 @@ class CascadingClient():
                     logger.exception(
                         'The {0} failed to {1}, using fallback class {2}'
                         .format(client.__class__.__name__, method_name,
-                                self.clients[i+1].__class__.__name__))
+                                self.clients[i + 1].__class__.__name__))

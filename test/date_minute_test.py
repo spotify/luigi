@@ -9,6 +9,7 @@ class DateMinuteTask(luigi.Task):
 
 
 class DateMinuteTest(unittest.TestCase):
+
     def test_parse(self):
         dh = luigi.DateMinuteParameter().parse('2013-01-01T18H42')
         self.assertEqual(dh, datetime.datetime(2013, 1, 1, 18, 42, 0))

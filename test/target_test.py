@@ -4,6 +4,7 @@ import luigi.target
 
 
 class TargetTest(unittest.TestCase):
+
     def test_cannot_instantiate(self):
         def instantiate_target():
             luigi.target.Target()
@@ -21,6 +22,7 @@ class TargetTest(unittest.TestCase):
 
     def test_instantiate_subclass(self):
         class GoodTarget(luigi.target.Target):
+
             def exists(self):
                 return True
 

@@ -64,6 +64,7 @@ class ForgotParam(luigi.Task):
 
 
 class ForgotParamDep(luigi.Task):
+
     def requires(self):
         return ForgotParam()
 
@@ -101,6 +102,7 @@ class SharedGlobalParamB(luigi.Task):
 
 
 class ParameterTest(EmailTest):
+
     def setUp(self):
         super(ParameterTest, self).setUp()
         # Need to restore some defaults for the global params since they are overriden
@@ -265,32 +267,32 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
     @with_config({"foo": {"bar": "1 day"}})
     def testTimeDelta(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(days = 1), p.value)
+        self.assertEqual(timedelta(days=1), p.value)
 
     @with_config({"foo": {"bar": "2 seconds"}})
     def testTimeDeltaPlural(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(seconds = 2), p.value)
+        self.assertEqual(timedelta(seconds=2), p.value)
 
     @with_config({"foo": {"bar": "3w 4h 5m"}})
     def testTimeDeltaMultiple(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(weeks = 3, hours = 4, minutes = 5), p.value)
+        self.assertEqual(timedelta(weeks=3, hours=4, minutes=5), p.value)
 
     @with_config({"foo": {"bar": "P4DT12H30M5S"}})
     def testTimeDelta8601(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(days = 4, hours = 12, minutes = 30, seconds = 5), p.value)
+        self.assertEqual(timedelta(days=4, hours=12, minutes=30, seconds=5), p.value)
 
     @with_config({"foo": {"bar": "P5D"}})
     def testTimeDelta8601NoTimeComponent(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(days = 5), p.value)
+        self.assertEqual(timedelta(days=5), p.value)
 
     @with_config({"foo": {"bar": "P5W"}})
     def testTimeDelta8601Weeks(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(weeks = 5), p.value)
+        self.assertEqual(timedelta(weeks=5), p.value)
 
     @with_config({"foo": {"bar": "P3Y6M4DT12H30M5S"}})
     def testTimeDelta8601YearMonthNotSupported(self):
@@ -301,7 +303,7 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
     @with_config({"foo": {"bar": "PT6M"}})
     def testTimeDelta8601MAfterT(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(minutes = 6), p.value)
+        self.assertEqual(timedelta(minutes=6), p.value)
 
     @with_config({"foo": {"bar": "P6M"}})
     def testTimeDelta8601MBeforeT(self):
@@ -334,7 +336,7 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
     @with_config({"foo": {"bar": "baz"}})
     def testWithDefault(self):
         p = luigi.Parameter(config_path=dict(section="foo", name="bar"), default='blah')
-        self.assertEqual('baz', p.value) # config overrides default
+        self.assertEqual('baz', p.value)  # config overrides default
 
     def testWithDefaultAndMissing(self):
         p = luigi.Parameter(config_path=dict(section="foo", name="bar"), default='blah')
@@ -355,6 +357,7 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
 
 
 class OverrideEnvStuff(unittest.TestCase):
+
     def setUp(self):
         env_params_cls = luigi.interface.EnvironmentParamsContainer
         env_params_cls.scheduler_port.reset_global()

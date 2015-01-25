@@ -39,6 +39,7 @@ class WebHdfsTarget(FileSystemTarget):
 
 
 class ReadableWebHdfsFile(object):
+
     def __init__(self, path, client):
         self.path = path
         self.client = client
@@ -74,9 +75,11 @@ class ReadableWebHdfsFile(object):
 
 
 class AtomicWebHdfsFile(file):
+
     """
     An Hdfs file that writes to a temp file and put to WebHdfs on close.
     """
+
     def __init__(self, path, client):
         unique_name = 'luigi-webhdfs-tmp-%09d' % random.randrange(0, 1e10)
         self.tmp_path = os.path.join(tempfile.gettempdir(), unique_name)

@@ -21,6 +21,7 @@ class CascadingClientTest(unittest.TestCase):
 
     def setUp(self):
         class FirstClient:
+
             def exists(self, pos_arg, kw_arg='first'):
                 if pos_arg < 10:
                     return pos_arg
@@ -32,6 +33,7 @@ class CascadingClientTest(unittest.TestCase):
                     raise Exception()
 
         class SecondClient:
+
             def exists(self, pos_arg, other_kw_arg='second',
                        kw_arg='for-backwards-compatibility'):
                 if pos_arg < 30:

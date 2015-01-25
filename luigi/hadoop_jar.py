@@ -33,6 +33,7 @@ def fix_paths(job):
 
 
 class HadoopJarJobRunner(luigi.hadoop.JobRunner):
+
     """JobRunner for `hadoop jar` commands. Used to run a HadoopJarJobTask"""
 
     def __init__(self):
@@ -43,7 +44,7 @@ class HadoopJarJobRunner(luigi.hadoop.JobRunner):
         # hadoop.HadoopJobRunner
         if not job.jar() or not os.path.exists(job.jar()):
             logger.error("Can't find jar: {0}, full path {1}".format(job.jar(),
-                         os.path.abspath(job.jar())))
+                                                                     os.path.abspath(job.jar())))
             raise Exception("job jar does not exist")
         arglist = luigi.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
         if job.main():
@@ -65,6 +66,7 @@ class HadoopJarJobRunner(luigi.hadoop.JobRunner):
 
 
 class HadoopJarJobTask(luigi.hadoop.BaseHadoopJobTask):
+
     """A job task for `hadoop jar` commands that define a jar and (optional)
     main method"""
 

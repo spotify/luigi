@@ -31,7 +31,7 @@ class HiveTest(unittest.TestCase):
         pre_count = self.count
         res = luigi.hive.run_hive_cmd("foo")
         self.assertEqual(["-e", "foo"], self.last_hive_cmd)
-        self.assertEqual("statement{0}".format(pre_count+1), res)
+        self.assertEqual("statement{0}".format(pre_count + 1), res)
 
     def test_run_hive_script_not_exists(self):
         def test():
@@ -43,12 +43,13 @@ class HiveTest(unittest.TestCase):
             pre_count = self.count
             res = luigi.hive.run_hive_script(f.name)
             self.assertEqual(["-f", f.name], self.last_hive_cmd)
-            self.assertEqual("statement{0}".format(pre_count+1), res)
+            self.assertEqual("statement{0}".format(pre_count + 1), res)
 
     def test_create_parent_dirs(self):
         dirname = "/tmp/hive_task_test_dir"
 
         class FooHiveTask(object):
+
             def output(self):
                 return LocalTarget(os.path.join(dirname, "foo"))
 
@@ -56,7 +57,9 @@ class HiveTest(unittest.TestCase):
         runner.prepare_outputs(FooHiveTask())
         self.assertTrue(os.path.exists(dirname))
 
+
 class HiveCommandClientTest(unittest.TestCase):
+
     """Note that some of these tests are really for the CDH releases of Hive, to which I do not currently have access.
     Hopefully there are no significant differences in the expected output"""
 
@@ -91,11 +94,11 @@ class HiveCommandClientTest(unittest.TestCase):
                                    "day=2013-07-07/hour=2\n"
         self.client.partition_spec = mock.Mock(name="partition_spec")
         self.client.partition_spec.return_value = "somepart"
-        returned = self.client.table_exists("mytable", partition={'a':'b'})
+        returned = self.client.table_exists("mytable", partition={'a': 'b'})
         self.assertTrue(returned)
 
         run_command.return_value = ""
-        returned = self.client.table_exists("mytable", partition={'a':'b'})
+        returned = self.client.table_exists("mytable", partition={'a': 'b'})
         self.assertFalse(returned)
 
     @mock.patch("luigi.hive.run_hive_cmd")
@@ -151,11 +154,11 @@ class HiveCommandClientTest(unittest.TestCase):
                                    "day=2013-07-07/hour=2\n"
         self.apacheclient.partition_spec = mock.Mock(name="partition_spec")
         self.apacheclient.partition_spec.return_value = "somepart"
-        returned = self.apacheclient.table_exists("mytable", partition={'a':'b'})
+        returned = self.apacheclient.table_exists("mytable", partition={'a': 'b'})
         self.assertTrue(returned)
 
         run_command.return_value = ""
-        returned = self.apacheclient.table_exists("mytable", partition={'a':'b'})
+        returned = self.apacheclient.table_exists("mytable", partition={'a': 'b'})
         self.assertFalse(returned)
 
     @mock.patch("luigi.hive.run_hive_cmd")
@@ -198,7 +201,6 @@ class HiveCommandClientTest(unittest.TestCase):
         client_mock.return_value = client_mock
         thrift_context.__enter__ = client_mock
         client_mock.get_partition_names = mock.Mock(return_value=["p1=x/p2=y", "p1=a/p2=b"])
-
 
         partition_spec = OrderedDict([("p1", "a"), ("p2", "b")])
         self.assertTrue(self.metastoreclient.table_exists("table", "default", partition_spec))

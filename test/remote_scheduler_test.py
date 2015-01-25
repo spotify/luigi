@@ -21,6 +21,7 @@ import server_test
 
 tempdir = tempfile.mkdtemp()
 
+
 class DummyTask(luigi.Task):
     id = luigi.Parameter()
 
@@ -33,6 +34,7 @@ class DummyTask(luigi.Task):
 
 
 class RemoteSchedulerTest(server_test.ServerTestBase):
+
     def _test_run(self, workers):
         tasks = [DummyTask(id) for id in xrange(20)]
         luigi.build(tasks, scheduler_host='localhost', scheduler_port=self._api_port, workers=workers)
@@ -49,4 +51,3 @@ class RemoteSchedulerTest(server_test.ServerTestBase):
 
 if __name__ == '__main__':
     unittest.main()
-

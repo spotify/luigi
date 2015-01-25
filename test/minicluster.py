@@ -19,8 +19,10 @@ from luigi import hdfs, hadoop
 import os
 import getpass
 
+
 @attr('minicluster')
 class MiniClusterTestCase(unittest.TestCase):
+
     """ Base class for test cases that rely on Hadoop's minicluster functionality. This
     in turn depends on Snakebite's minicluster setup:
 
@@ -59,10 +61,12 @@ class MiniClusterTestCase(unittest.TestCase):
 
 
 class MiniClusterHadoopJobRunner(hadoop.HadoopJobRunner):
+
     ''' The default job runner just reads from config and sets stuff '''
+
     def __init__(self):
         # Locate the hadoop streaming jar in the hadoop directory
-        hadoop_tools_lib = os.path.join(os.environ['HADOOP_HOME'], 'share/hadoop/tools/lib')        
+        hadoop_tools_lib = os.path.join(os.environ['HADOOP_HOME'], 'share/hadoop/tools/lib')
 
         for path in os.listdir(hadoop_tools_lib):
             if path.startswith('hadoop-streaming') and path.endswith('.jar'):

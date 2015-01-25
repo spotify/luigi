@@ -36,6 +36,7 @@ hadoop-conf-dir: /etc/hadoop/conf
 
 
 class SparkRunContext(object):
+
     def __init__(self):
         self.app_id = None
 
@@ -66,6 +67,7 @@ class SparkRunContext(object):
 
 
 class SparkJobError(RuntimeError):
+
     def __init__(self, message, out=None, err=None):
         super(SparkJobError, self).__init__(message, out, err)
         self.message = message
@@ -324,7 +326,6 @@ class Spark1xJob(luigi.Task):
                 self.spark_heartbeat(s, context)
         logger.info(proc.communicate()[0])
         return proc.returncode, final_state, app_id
-
 
 
 class PySpark1xJob(Spark1xJob):

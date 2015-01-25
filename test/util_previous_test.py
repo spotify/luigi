@@ -15,6 +15,7 @@ class DateTaskOk(luigi.Task):
 
 
 class DateTaskOkTest(unittest.TestCase):
+
     def test_previous(self):
         task = DateTaskOk(datetime.date(2000, 3, 1))
         prev = previous(task)
@@ -27,7 +28,7 @@ class DateTaskOkTest(unittest.TestCase):
 
     def test_get_previous_completed_not_found(self):
         task = DateTaskOk(datetime.date(2000, 3, 1))
-        prev = get_previous_completed(task,4)
+        prev = get_previous_completed(task, 4)
         self.assertEqual(None, prev)
 
 
@@ -40,6 +41,7 @@ class DateHourTaskOk(luigi.Task):
 
 
 class DateHourTaskOkTest(unittest.TestCase):
+
     def test_previous(self):
         task = DateHourTaskOk(datetime.datetime(2000, 3, 1, 2))
         prev = previous(task)
@@ -63,7 +65,9 @@ class DateMinuteTaskOk(luigi.Task):
         # test against 2000.03.01T02H03
         return self.minute in [datetime.datetime(2000, 3, 1, 2, 0), datetime.datetime(2000, 3, 1, 2, 3), datetime.datetime(2000, 3, 1, 2, 4)]
 
+
 class DateMinuteTaskOkTest(unittest.TestCase):
+
     def test_previous(self):
         task = DateMinuteTaskOk(datetime.datetime(2000, 3, 1, 2, 3))
         prev = previous(task)
@@ -79,6 +83,7 @@ class DateMinuteTaskOkTest(unittest.TestCase):
         prev = get_previous_completed(task, 2)
         self.assertEqual(None, prev)
 
+
 class DateIntervalTaskOk(luigi.Task):
     interval = luigi.DateIntervalParameter()
 
@@ -87,6 +92,7 @@ class DateIntervalTaskOk(luigi.Task):
 
 
 class DateIntervalTaskOkTest(unittest.TestCase):
+
     def test_previous(self):
         task = DateIntervalTaskOk(luigi.date_interval.Week(2000, 1))
         prev = previous(task)
@@ -109,6 +115,7 @@ class ExtendedDateTaskOk(DateTaskOk):
 
 
 class ExtendedDateTaskOkTest(unittest.TestCase):
+
     def test_previous(self):
         task = ExtendedDateTaskOk(datetime.date(2000, 3, 1), "some value")
         prev = previous(task)
@@ -123,6 +130,7 @@ class MultiTemporalTaskNok(luigi.Task):
 
 
 class MultiTemporalTaskNokTest(unittest.TestCase):
+
     def test_previous(self):
         task = MultiTemporalTaskNok(datetime.date(2000, 1, 1), datetime.datetime(2000, 1, 1, 1))
         self.assertRaises(NotImplementedError, previous, task)
@@ -134,6 +142,7 @@ class NoTemporalTaskNok(luigi.Task):
 
 
 class NoTemporalTaskNokTest(unittest.TestCase):
+
     def test_previous(self):
         task = NoTemporalTaskNok("some value")
         self.assertRaises(NotImplementedError, previous, task)

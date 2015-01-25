@@ -31,6 +31,7 @@ class ParamTask(luigi.Task):
 
 
 class DbTaskHistoryTest(unittest.TestCase):
+
     @helpers.with_config(dict(task_history=dict(db_connection='sqlite:///:memory:')))
     def setUp(self):
         self.history = DbTaskHistory()

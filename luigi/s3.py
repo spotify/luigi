@@ -54,6 +54,7 @@ class FileNotFoundException(FileSystemException):
 
 
 class S3Client(FileSystem):
+
     """
     boto-powered S3 client.
     """
@@ -166,7 +167,7 @@ class S3Client(FileSystem):
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
         # grab and validate the bucket
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
-        
+
         # put the content
         s3_key = Key(s3_bucket)
         s3_key.key = key
@@ -194,14 +195,14 @@ class S3Client(FileSystem):
         # grab and validate the bucket
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
 
-        # calculate the number of parts (int division). 
+        # calculate the number of parts (int division).
         # use modulo to avoid float precision issues
         # for exactly-sized fits
         num_parts = \
             (source_size / part_size) \
             if source_size % part_size == 0 \
             else (source_size / part_size) + 1
-        
+
         mp = None
         try:
             mp = s3_bucket.initiate_multipart_upload(key)
@@ -211,9 +212,9 @@ class S3Client(FileSystem):
                 offset = part_size * i
                 bytes = min(part_size, source_size - offset)
                 with open(local_path, 'rb') as fp:
-                    part_num = i+1
-                    logger.info('Uploading part %s/%s to %s' % \
-                        (part_num, num_parts, destination_s3_path))
+                    part_num = i + 1
+                    logger.info('Uploading part %s/%s to %s' %
+                                (part_num, num_parts, destination_s3_path))
                     fp.seek(offset)
                     mp.upload_part_from_file(fp, part_num=part_num, size=bytes)
 
@@ -221,12 +222,11 @@ class S3Client(FileSystem):
             mp.complete_upload()
         except:
             if mp:
-                logger.info('Canceling multipart s3 upload for %s' %  destination_s3_path)
+                logger.info('Canceling multipart s3 upload for %s' % destination_s3_path)
                 # cancel the upload so we don't get charged for
                 # storage consumed by uploaded parts
                 mp.cancel_upload()
             raise
-
 
     def copy(self, source_path, destination_path):
         """
@@ -327,9 +327,11 @@ class S3Client(FileSystem):
 
 
 class AtomicS3File(file):
+
     """
     An S3 file that writes to a temp file and put to S3 on close.
     """
+
     def __init__(self, path, s3_client):
         self.__tmp_path = \
             os.path.join(tempfile.gettempdir(),
@@ -420,6 +422,7 @@ class ReadableS3File(object):
 
 
 class S3Target(FileSystemTarget):
+
     """
     """
 
@@ -463,6 +466,7 @@ class S3Target(FileSystemTarget):
 
 
 class S3FlagTarget(S3Target):
+
     """
     Defines a target directory with a flag-file (defaults to `_SUCCESS`) used
     to signify job success.
@@ -495,15 +499,18 @@ class S3FlagTarget(S3Target):
 
 
 class S3EmrTarget(S3FlagTarget):
+
     """
     Deprecated. Use :py:class:`S3FlagTarget`
     """
+
     def __init__(self, *args, **kwargs):
         warnings.warn("S3EmrTarget is deprecated. Please use S3FlagTarget")
         super(S3EmrTarget, self).__init__(*args, **kwargs)
 
 
 class S3PathTask(ExternalTask):
+
     """
     A external task that to require existence of
     a path in S3.
@@ -515,6 +522,7 @@ class S3PathTask(ExternalTask):
 
 
 class S3EmrTask(ExternalTask):
+
     """
     An external task that requires the existence of EMR output in S3
     """
@@ -525,6 +533,7 @@ class S3EmrTask(ExternalTask):
 
 
 class S3FlagTask(ExternalTask):
+
     """
     An external task that requires the existence of EMR output in S3
     """
