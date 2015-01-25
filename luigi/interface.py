@@ -19,7 +19,6 @@ import logging.config
 import rpc
 import optparse
 import scheduler
-import warnings
 import configuration
 import task
 import parameter
