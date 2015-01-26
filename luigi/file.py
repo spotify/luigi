@@ -17,6 +17,7 @@ import random
 import tempfile
 import shutil
 import luigi.util
+import gzip
 from target import FileSystem, FileSystemTarget
 from luigi.format import FileWrapper
 
@@ -49,6 +50,44 @@ class atomic_file(file):
         return file.__exit__(self, exc_type, exc, traceback)
 
 
+class atomic_gzip_file(gzip.GzipFile):
+    # Simple class that writes to a temp file and moves it on close()
+    # Also cleans up the temp file if close is not invoked
+    def __init__(self, path):
+        self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        self.path = path
+        super(atomic_gzip_file, self).__init__(self.__tmp_path, 'w')
+
+    def _write_gzip_header(self):
+        #
+        # GzipFile automatically writes file header for files opened with 'w'. But it is a problem for us as it writes
+        # temporary filename than i.e. '*-luigi-tmp-%09d' something. We override GzipFile private method (ouch!) to
+        # change self.name property to the desired one.
+        #
+        # Somehow fragile but works.
+        #
+        self.name = self.path
+        super(atomic_gzip_file, self)._write_gzip_header()
+
+    def close(self):
+        super(atomic_gzip_file, self).close()
+        os.rename(self.__tmp_path, self.path)
+
+    def __del__(self):
+        if os.path.exists(self.__tmp_path):
+            os.remove(self.__tmp_path)
+
+    @property
+    def tmp_path(self):
+        return self.__tmp_path
+
+    def __exit__(self, exc_type, exc, traceback):
+        " Close/commit the file if there are no exception "
+        if exc_type:
+            return
+        self.close()
+
+
 class LocalFileSystem(FileSystem):
 
     """ Wrapper for access to file system operations
@@ -74,6 +113,8 @@ class LocalFileSystem(FileSystem):
 
 class File(FileSystemTarget):
     fs = LocalFileSystem()
+    atomic_class = atomic_file
+    opener = staticmethod(open)
 
     def __init__(self, path=None, format=None, is_tmp=False):
         if not path:
@@ -84,21 +125,23 @@ class File(FileSystemTarget):
         self.format = format
         self.is_tmp = is_tmp
 
+    def mkdirs(self):
+        """Create all parent folders if they do not exist."""
+        normpath = os.path.normpath(self.path)
+        parentfolder = os.path.dirname(normpath)
+        if parentfolder and not os.path.exists(parentfolder):
+            os.makedirs(parentfolder)
+
     def open(self, mode='r'):
         if mode == 'w':
-            # Create folder if it does not exist
-            normpath = os.path.normpath(self.path)
-            parentfolder = os.path.dirname(normpath)
-            if parentfolder and not os.path.exists(parentfolder):
-                os.makedirs(parentfolder)
-
+            self.mkdirs()
             if self.format:
-                return self.format.pipe_writer(atomic_file(self.path))
+                return self.format.pipe_writer(self.atomic_class(self.path))
             else:
-                return atomic_file(self.path)
+                return self.atomic_class(self.path)
 
         elif mode == 'r':
-            fileobj = FileWrapper(open(self.path, 'r'))
+            fileobj = FileWrapper(self.opener(self.path, 'r'))
             if self.format:
                 return self.format.pipe_reader(fileobj)
             return fileobj
@@ -124,8 +167,8 @@ class File(FileSystemTarget):
     def copy(self, new_path, fail_if_exists=False):
         if fail_if_exists and os.path.exists(new_path):
             raise RuntimeError('Destination exists: %s' % new_path)
-        tmp = File(new_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10), is_tmp=True)
-        tmp.open('w')
+        tmp = self.__class__.__call__(new_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10), is_tmp=True)
+        tmp.mkdirs()
         shutil.copy(self.path, tmp.fn)
         tmp.move(new_path)
 
@@ -136,3 +179,7 @@ class File(FileSystemTarget):
     def __del__(self):
         if self.is_tmp and self.exists():
             self.remove()
+
+class GzipFile(File):
+    atomic_class = atomic_gzip_file
+    opener = staticmethod(gzip.open)

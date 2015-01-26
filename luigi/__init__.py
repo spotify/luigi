@@ -31,6 +31,7 @@ Target = target.Target
 
 File = file.File  # TODO: remove, should be LocalTarget
 LocalTarget = File
+LocalGzipTarget = file.GzipFile
 Parameter = parameter.Parameter
 RemoteScheduler = rpc.RemoteScheduler
 RPCError = rpc.RPCError
