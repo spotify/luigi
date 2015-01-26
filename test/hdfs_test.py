@@ -12,7 +12,6 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-from calendar import timegm
 from datetime import datetime
 import luigi
 from luigi import hdfs
@@ -414,11 +413,8 @@ class HdfsTargetTests(MiniClusterTestCase):
                                  "^/tmp/[a-z0-9_]+/path/to/stuff-luigitemp-\d+")
 
 
-TIMESTAMP_DELAY = 60  # Big enough for `hadoop fs`?
-
-
 @attr('minicluster')
-class _HdfsClientTest(MiniClusterTestCase):
+class HdfsClientTest(MiniClusterTestCase):
 
     def create_file(self, target):
         fobj = target.open("w")
@@ -637,8 +633,6 @@ class _HdfsClientTest(MiniClusterTestCase):
         self.assertEqual(4, len(entries), msg="%r" % entries)
         self.assertEqual(2, len(entries[0]), msg="%r" % entries)
         self.assertEqual(path + '/file1.dat', entries[0][0], msg="%r" % entries)
-        self.assertTrue(timegm(datetime.now().timetuple()) -
-                        timegm(entries[0][1].timetuple()) < TIMESTAMP_DELAY)
 
     def test_listdir_full_list_get_everything(self):
         """Verify we get all the values, even if we can't fully check them."""
@@ -653,8 +647,6 @@ class _HdfsClientTest(MiniClusterTestCase):
         self.assertEqual(path + '/file1.dat', entries[0][0], msg="%r" % entries)
         self.assertEqual(0, entries[0][1], msg="%r" % entries)
         self.assertTrue(re.match(r'[-f]', entries[0][2]), msg="%r" % entries)
-        self.assertTrue(timegm(datetime.now().timetuple()) -
-                        timegm(entries[0][3].timetuple()) < TIMESTAMP_DELAY)
         self.assertEqual(4, len(entries[1]), msg="%r" % entries)
         self.assertEqual(path + '/file2.dat', entries[1][0], msg="%r" % entries)
         self.assertEqual(4, len(entries[2]), msg="%r" % entries)
@@ -670,10 +662,10 @@ class _HdfsClientTest(MiniClusterTestCase):
     def test_cdh3_client(self, call_check):
         cdh3_client = luigi.hdfs.HdfsClientCdh3()
         cdh3_client.remove("/some/path/here")
-        call_check.assert_called_once_with(['hadoop', 'fs', '-rmr', '/some/path/here'])
+        self.assertEqual(['fs', '-rmr', '/some/path/here'], call_check.call_args[0][0][-3:])
 
         cdh3_client.remove("/some/path/here", recursive=False)
-        self.assertEqual(mock.call(['hadoop', 'fs', '-rm', '/some/path/here']), call_check.call_args_list[-1])
+        self.assertEqual(['fs', '-rm', '/some/path/here'], call_check.call_args[0][0][-3:])
 
     @mock.patch('subprocess.Popen')
     def test_apache1_client(self, popen):
@@ -695,13 +687,3 @@ class _HdfsClientTest(MiniClusterTestCase):
 
         preturn.returncode = 13
         self.assertRaises(luigi.hdfs.HDFSCliError, apache_client.exists, "/some/path/somewhere")
-
-if __name__ == "__main__":
-    unittest.main()
-    # Uncomment to run a single test
-    # unittest.TextTestRunner(failfast=True, verbosity=2).run(suite())
-
-# def suite():
-#     suite = unittest.TestSuite()
-#     suite.addTest(unittest.makeSuite(HdfsTargetTests, prefix='test_tmppath'))
-#     return suite
