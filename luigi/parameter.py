@@ -69,13 +69,14 @@ class Parameter(object):
     The ``config_path`` argument lets you specify a place where the parameter is read from config
     in case no value is provided.
 
-    Providing ``is_global=True`` changes the behavior of the parameter so that the value is shared
-    across all instances of the task. Global parameters can be provided in several ways. In
-    falling order of precedence:
+    When a task is instantiated, it will first use any argument as the value of the parameter, eg.
+    if you instantiate a = TaskA(x=44) then a.x == 44. If this does not exist, it will use the value
+    of the Parameter object, which is defined on a class level. This will be resolved in this
+    order of falling priority:
 
-    * A value provided on the command line (eg. ``--my-global-value xyz``)
-    * A value provided via config (using the ``config_path`` argument)
-    * A default value set using the ``default`` flag.
+    * Any value provided on the command line on the class level (eg. ``--TaskA-param xyz``)
+    * Any value provided via config (using the ``config_path`` argument)
+    * Any default value set using the ``default`` flag.
     """
     counter = 0
     """non-atomically increasing counter used for ordering parameters."""
@@ -118,6 +119,7 @@ class Parameter(object):
 
         if is_global and default == _no_value and config_path is None:
             raise ParameterException('Global parameters need default values')
+
         self.description = description
 
         if config_path is not None and ('section' not in config_path or 'name' not in config_path):
@@ -207,7 +209,6 @@ class Parameter(object):
 
         :param value: the new global value.
         """
-        assert self.is_global
         self.__global = value
 
     def reset_global(self):
@@ -280,12 +281,26 @@ class Parameter(object):
         else:
             return self.serialize(x)
 
-    def add_to_cmdline_parser(self, parser, param_name, task_name=None, optparse=False):
-        description = []
-        if task_name:
-            description.append('%s.%s' % (task_name, param_name))
+    def parser_dest(self, param_name, task_name, glob=False):
+        if self.is_global:
+            if glob:
+                return param_name
+            else:
+                return None
         else:
-            description.append(param_name)
+            if glob:
+                return task_name + '_' + param_name
+            else:
+                return param_name
+
+    def add_to_cmdline_parser(self, parser, param_name, task_name, optparse=False, glob=False):
+        dest = self.parser_dest(param_name, task_name, glob)
+        if not dest:
+            return
+        flag = '--' + dest.replace('_', '-')
+
+        description = []
+        description.append('%s.%s' % (task_name, param_name))
         if self.description:
             description.append(self.description)
         if self.has_value:
@@ -301,10 +316,24 @@ class Parameter(object):
             f = parser.add_option
         else:
             f = parser.add_argument
-        f('--' + param_name.replace('_', '-'),
+        f(flag,
           help=' '.join(description),
           default=None,
-          action=action)
+          action=action,
+          dest=dest)
+
+    def parse_from_args(self, param_name, task_name, args, params):
+        dest = self.parser_dest(param_name, task_name, glob=False)
+        if dest is not None:
+            value = getattr(args, dest, None)
+            params[param_name] = self.parse_from_input(param_name, value) # Note: modifies arguments
+
+    def set_global_from_args(self, param_name, task_name, args):
+        dest = self.parser_dest(param_name, task_name, glob=True)
+        if dest is not None:
+            value = getattr(args, dest, None)
+            if value is not None:
+                self.set_global(self.parse_from_input(param_name, value)) # Note: side effects
 
 
 class DateHourParameter(Parameter):
