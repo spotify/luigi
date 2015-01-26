@@ -84,14 +84,16 @@ class File(FileSystemTarget):
         self.format = format
         self.is_tmp = is_tmp
 
+    def makedirs(self):
+        """Create all parent folders if they do not exist."""
+        normpath = os.path.normpath(self.path)
+        parentfolder = os.path.dirname(normpath)
+        if parentfolder and not os.path.exists(parentfolder):
+            os.makedirs(parentfolder)
+
     def open(self, mode='r'):
         if mode == 'w':
-            # Create folder if it does not exist
-            normpath = os.path.normpath(self.path)
-            parentfolder = os.path.dirname(normpath)
-            if parentfolder and not os.path.exists(parentfolder):
-                os.makedirs(parentfolder)
-
+            self.makedirs()
             if self.format:
                 return self.format.pipe_writer(atomic_file(self.path))
             else:
@@ -125,7 +127,7 @@ class File(FileSystemTarget):
         if fail_if_exists and os.path.exists(new_path):
             raise RuntimeError('Destination exists: %s' % new_path)
         tmp = File(new_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10), is_tmp=True)
-        tmp.open('w')
+        tmp.makedirs()
         shutil.copy(self.path, tmp.fn)
         tmp.move(new_path)
 
