@@ -16,13 +16,11 @@ import mock
 import os
 import sys
 import unittest
-import subprocess
 import luigi
 import luigi.hadoop
 import luigi.hdfs
 import luigi.mrrunner
 from luigi.mock import MockFile
-import StringIO
 import luigi.notifications
 from nose.plugins.attrib import attr
 import minicluster
@@ -159,9 +157,88 @@ def read_wordcount_output(p):
     return count
 
 
-class WordFreqEventsJob(WordFreqJob):
+class SingleLineInput(OutputMixin):
+    def run(self):
+        with self.output().open('w') as f:
+            f.write("hello\n")
+
     def output(self):
-        return self.get_output('wordcount_events')
+        return self.get_output("single_line")
+
+
+class EventTesterJob(HadoopJobTask):
+    local_events = []
+    hadoop_events = []
+    mapper_events = []
+    combiner_events = []
+    reducer_events = []
+
+    def mapper(self, line):
+        print self.local_events
+        for i, e in enumerate(self.local_events):
+            yield None, (i, e)
+        for i, e in enumerate(self.hadoop_events, 1):
+            yield None, (i, e)
+        for i, e in enumerate(self.mapper_events, 2):
+            yield None, (i, e)
+
+    def combiner(self, key, values):
+        for v in values:
+            yield key, v
+        for i, e in enumerate(self.hadoop_events, 3):
+            yield None, (i, e)
+        for i, e in enumerate(self.combiner_events, 4):
+            yield None, (i, e)
+
+    def reducer(self, key, values):
+        for v in values:
+            yield v
+        for i, e in enumerate(self.hadoop_events, 5):
+            yield (i, e)
+        for i, e in enumerate(self.reducer_events, 6):
+            yield (i, e)
+
+    def output(self):
+        return self.get_output('events')
+
+    def requires(self):
+        return SingleLineInput(self.use_hdfs)
+
+
+@EventTesterJob.event_handler(luigi.hadoop.Event.INIT_LOCAL)
+def init_local(self, *args, **kwargs):
+    self.local_events.append("local")
+
+
+@EventTesterJob.event_handler(luigi.hadoop.Event.INIT_HADOOP)
+def init_hadoop(self, *args, **kwargs):
+    # resetting hadoop_events here because LocalRunner
+    # doesn't reset instances between stages in MR
+    # like running on a cluster does
+    # TODO: make LocalRunner behave like cluster MR by pickling
+    # the "local" instance on the worker and unpickling before each stage
+    self.hadoop_events = ["hadoop"]
+
+
+@EventTesterJob.event_handler(luigi.hadoop.Event.INIT_MAPPER)
+def init_mapper(self, *args, **kwargs):
+    self.mapper_events.append("mapper")
+
+
+@EventTesterJob.event_handler(luigi.hadoop.Event.INIT_COMBINER)
+def init_combiner(self, *args, **kwargs):
+    self.combiner_events.append("combiner")
+
+
+@EventTesterJob.event_handler(luigi.hadoop.Event.INIT_REDUCER)
+def init_reducer(self, *args, **kwargs):
+    self.reducer_events.append("reducer")
+
+
+def read_event_tester_output(p):
+    for line in p.open('r'):
+        i, e = line.strip().split()
+        yield int(i), e
 
 
 class CommonTests(object):
@@ -175,31 +252,20 @@ class CommonTests(object):
 
     @staticmethod
     def test_events(test_case):
-        triggered = []
-
-        @WordFreqEventsJob.event_handler(luigi.hadoop.Event.INIT_LOCAL)
-        def init_local(*args, **kwargs):
-            triggered.append("local")
-
-        @WordFreqEventsJob.event_handler(luigi.hadoop.Event.INIT_HADOOP)
-        def init_hadoop(*args, **kwargs):
-            triggered.append("hadoop")
-
-        @WordFreqEventsJob.event_handler(luigi.hadoop.Event.INIT_MAPPER)
-        def init_mapper(*args, **kwargs):
-            triggered.append("mapper")
-
-        @WordFreqEventsJob.event_handler(luigi.hadoop.Event.INIT_COMBINER)
-        def init_combiner(*args, **kwargs):
-            triggered.append("combiner")
-
-        @WordFreqEventsJob.event_handler(luigi.hadoop.Event.INIT_REDUCER)
-        def init_reducer(*args, **kwargs):
-            triggered.append("reducer")
-
-        job = WordFreqEventsJob(use_hdfs=test_case.use_hdfs)
+        job = EventTesterJob(use_hdfs=test_case.use_hdfs)
         luigi.build([job], local_scheduler=True)
-        test_case.assertEquals(triggered, ["local", "hadoop", "mapper", "hadoop", "combiner", "hadoop", "reducer"])
+        sorted_results = sorted(read_event_tester_output(job.output()))
+        test_case.assertEquals(
+            sorted_results,
+            [(0, "local"),
+             (1, "hadoop"),
+             (2, "mapper"),
+             (3, "hadoop"),
+             (4, "combiner"),
+             (5, "hadoop"),
+             (6, "reducer")
+             ]
+        )
 
     @staticmethod
     def test_run_2(test_case):
