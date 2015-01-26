@@ -18,7 +18,6 @@ import parameter
 import warnings
 import traceback
 import itertools
-import pyparsing as pp
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -36,44 +35,9 @@ def namespace(namespace=None):
 
 
 def id_to_name_and_params(task_id):
-    ''' Turn a task_id into a (task_family, {params}) tuple.
-        E.g. calling with ``Foo(bar=bar, baz=baz)`` returns
-        ``('Foo', {'bar': 'bar', 'baz': 'baz'})``
-    '''
-    name_chars = pp.alphanums + '_'
-    # modified version of pp.printables. Removed '[]', '()', ','
-    value_chars = pp.alphanums + '\'!"#$%&*+-./:;<=>?@\\^_`{|}~'
-    parameter = (
-        (pp.Word(name_chars) +
-         pp.Literal('=').suppress() +
-         ((pp.Literal('(').suppress() | pp.Literal('[').suppress()) +
-          pp.ZeroOrMore(pp.Word(value_chars) +
-                        pp.ZeroOrMore(pp.Literal(',')).suppress()) +
-          (pp.Literal(')').suppress() |
-           pp.Literal(']').suppress()))).setResultsName('list_params',
-                                                        listAllMatches=True) |
-        (pp.Word(name_chars) +
-         pp.Literal('=').suppress() +
-         pp.Word(value_chars)).setResultsName('params', listAllMatches=True))
-
-    parser = (
-        pp.Word(name_chars).setResultsName('task') +
-        pp.Literal('(').suppress() +
-        pp.ZeroOrMore(parameter + (pp.Literal(',')).suppress()) +
-        pp.ZeroOrMore(parameter) +
-        pp.Literal(')').suppress())
-
-    parsed = parser.parseString(task_id).asDict()
-    task_name = parsed['task']
-
-    params = {}
-    if 'params' in parsed:
-        for k, v in parsed['params']:
-            params[k] = v
-    if 'list_params' in parsed:
-        for x in parsed['list_params']:
-            params[x[0]] = x[1:]
-    return task_name, params
+    # DEPRECATED
+    import luigi.tools.parse_task
+    return luigi.tools.parse_task.id_to_name_and_params(task_id)
 
 
 class Register(abc.ABCMeta):
