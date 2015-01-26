@@ -445,7 +445,7 @@ class CentralPlannerScheduler(Scheduler):
             if t is not None and prio > t.priority:
                 self._update_priority(t, prio, worker)
 
-    def add_task(self, worker, task_id, status=PENDING, runnable=True,
+    def add_task(self, worker_id, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', params={}):
         """
@@ -455,7 +455,7 @@ class CentralPlannerScheduler(Scheduler):
         * Add additional workers/stakeholders
         * Update priority when needed
         """
-        self.update(worker)
+        self.update(worker_id)
 
         task = self._state.get_task(task_id, setdefault=self._make_task(
             id=task_id, status=PENDING, deps=deps, resources=resources,
@@ -487,19 +487,19 @@ class CentralPlannerScheduler(Scheduler):
         if new_deps is not None:
             task.deps.update(new_deps)
 
-        task.stakeholders.add(worker)
+        task.stakeholders.add(worker_id)
         task.resources = resources
 
         # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
         # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
         for dep in task.deps or []:
             t = self._state.get_task(dep, setdefault=self._make_task(id=dep, status=UNKNOWN, deps=None, priority=priority))
-            t.stakeholders.add(worker)
+            t.stakeholders.add(worker_id)
 
-        self._update_priority(task, priority, worker)
+        self._update_priority(task, priority, worker_id)
 
         if runnable:
-            task.workers.add(worker)
+            task.workers.add(worker_id)
 
         if expl is not None:
             task.expl = expl
