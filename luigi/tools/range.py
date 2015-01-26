@@ -385,12 +385,19 @@ def _get_filesystems_and_globs(task_cls):
 
 
 def _list_existing(filesystem, glob, paths):
+    """Get all the paths that do in fact exist. Returns a set of all existing
+    paths.
+
+    Takes a luigi.target.FileSystem object, a str which represents a glob
+    and a list of strings representing paths.
+    """
     globs = _constrain_glob(glob, paths)
     time_start = time.time()
     listing = []
     for g in sorted(globs):
         logger.debug('Listing %s' % g)
-        listing.extend(filesystem.listdir(g))
+        if filesystem.exists(g):
+            listing.extend(filesystem.listdir(g))
     logger.debug('%d %s listings took %f s to return %d items' % (len(globs), filesystem.__class__.__name__, time.time() - time_start, len(listing)))
     return set(listing)
 
