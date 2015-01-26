@@ -120,7 +120,7 @@ class Banana(luigi.Task):
 
     def requires(self):
         if self.style is None:
-            return BananaDep() # will fail
+            return BananaDep()  # will fail
         elif self.style == 'x-arg':
             return BananaDep(self.x)
         elif self.style == 'y-kwarg':
