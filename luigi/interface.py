@@ -382,7 +382,7 @@ def load_task(module, task_name, params_str):
     return task_cls.from_str_params(params_str)
 
 
-def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, worker_scheduler_factory=None, use_dynamic_argparse=False):
+def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, worker_scheduler_factory=None, use_dynamic_argparse=False, local_scheduler=False):
     ''' Run from cmdline.
 
     The default parser uses argparse.
@@ -396,7 +396,10 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task
     else:
         interface = ArgParseInterface()
     tasks = interface.parse(cmdline_args, main_task_cls=main_task_cls)
-    return interface.run(tasks, worker_scheduler_factory)
+    override_defaults = {}
+    if local_scheduler:
+        override_defaults['local_scheduler'] = True
+    return interface.run(tasks, worker_scheduler_factory, override_defaults=override_defaults)
 
 
 def build(tasks, worker_scheduler_factory=None, **env_params):
