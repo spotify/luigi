@@ -44,14 +44,14 @@ class Foo(luigi.Task):
 
 
 class Bar(luigi.Task):
-    multibool = luigi.BooleanParameter(is_list=True)
+    multibool = luigi.BoolParameter(is_list=True)
 
     def run(self):
         Bar._val = self.multibool
 
 
 class Baz(luigi.Task):
-    bool = luigi.BooleanParameter()
+    bool = luigi.BoolParameter()
 
     def run(self):
         Baz._val = self.bool
@@ -76,7 +76,7 @@ class ForgotParamDep(luigi.Task):
 class HasGlobalParam(luigi.Task):
     x = luigi.Parameter()
     global_param = luigi.IntParameter(is_global=True, default=123)  # global parameters need default values
-    global_bool_param = luigi.BooleanParameter(is_global=True, default=False)
+    global_bool_param = luigi.BoolParameter(is_global=True, default=False)
 
     def run(self):
         self.complete = lambda: True
@@ -337,7 +337,7 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
 
     @with_config({"foo": {"bar": "true"}})
     def testBool(self):
-        p = luigi.BooleanParameter(config_path=dict(section="foo", name="bar"))
+        p = luigi.BoolParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(True, p.value)
 
     @with_config({"foo": {"bar": "2001-02-03-2001-02-28"}})

@@ -12,7 +12,7 @@ class DummyException(Exception):
 
 
 class EmptyTask(Task):
-    fail = luigi.BooleanParameter()
+    fail = luigi.BoolParameter()
 
     def run(self):
         if self.fail:

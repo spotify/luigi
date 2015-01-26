@@ -78,7 +78,7 @@ class RangeHourlyBase(luigi.WrapperTask):
         default=None,
         description="ending datehour, exclusive. Default: None - work forward forever")
     # wanted to name them "from" and "to", but "from" is a reserved word :/ So named after https://docs.python.org/2/library/functions.html#range arguments
-    reverse = luigi.BooleanParameter(
+    reverse = luigi.BoolParameter(
         default=False,
         description="specifies the preferred order for catching up. False - work from the oldest missing outputs onward; True - from the newest backward")
     task_limit = luigi.IntParameter(

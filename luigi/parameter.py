@@ -15,6 +15,7 @@
 import configuration
 import datetime
 import warnings
+from deprecate_kwarg import deprecate_kwarg
 from ConfigParser import NoSectionError, NoOptionError
 
 _no_value = object()
@@ -81,6 +82,7 @@ class Parameter(object):
     counter = 0
     """non-atomically increasing counter used for ordering parameters."""
 
+    @deprecate_kwarg('is_boolean', 'is_bool', False)
     def __init__(self, default=_no_value, is_list=False, is_boolean=False, is_global=False, significant=True, description=None,
                  config_path=None):
         """
@@ -91,8 +93,8 @@ class Parameter(object):
         :param bool is_list: specify ``True`` if the parameter should allow a list of values rather
                              than a single value. Default: ``False``. A list has an implicit default
                              value of ``[]``.
-        :param bool is_boolean: specify ``True`` if the parameter is a boolean value. Default:
-                                ``False``. Boolean's have an implicit default value of ``False``.
+        :param bool is_bool: specify ``True`` if the parameter is a bool value. Default:
+                                ``False``. Bool's have an implicit default value of ``False``.
         :param bool is_global: specify ``True`` if the parameter is global (i.e. used by multiple
                                Tasks). Default: ``False``.
         :param bool significant: specify ``False`` if the parameter should not be treated as part of
@@ -113,7 +115,7 @@ class Parameter(object):
         self.__global = _no_value
 
         self.is_list = is_list
-        self.is_boolean = is_boolean and not is_list  # Only BooleanParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
+        self.is_bool = is_boolean and not is_list  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
 
@@ -263,7 +265,7 @@ class Parameter(object):
         if not x:
             if self.has_value:
                 return self.value
-            elif self.is_boolean:
+            elif self.is_bool:
                 return False
             elif self.is_list:
                 return []
@@ -308,7 +310,7 @@ class Parameter(object):
 
         if self.is_list:
             action = "append"
-        elif self.is_boolean:
+        elif self.is_bool:
             action = "store_true"
         else:
             action = "store"
@@ -409,23 +411,28 @@ class FloatParameter(Parameter):
         return float(s)
 
 
-class BooleanParameter(Parameter):
+class BoolParameter(Parameter):
 
     """A Parameter whose value is a ``bool``."""
-    # TODO(erikbern): why do we call this "boolean" instead of "bool"?
-    # The integer parameter is called "int" so calling this "bool" would be
-    # more consistent, especially given the Python type names.
 
     def __init__(self, *args, **kwargs):
         """This constructor passes along args and kwargs to ctor for :py:class:`Parameter` but
-        specifies ``is_boolean=True``.
+        specifies ``is_bool=True``.
         """
-        super(BooleanParameter, self).__init__(*args, is_boolean=True, **kwargs)
+        super(BoolParameter, self).__init__(*args, is_bool=True, **kwargs)
 
     def parse(self, s):
-        """Parses a ``boolean`` from the string, matching 'true' or 'false' ignoring case."""
+        """Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case."""
         return {'true': True, 'false': False}[str(s).lower()]
 
+class BooleanParameter(BoolParameter):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            'BooleanParameter is deprecated, use BoolParameter instead',
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super(BooleanParameter, self).__init__(*args, **kwargs)
 
 class DateIntervalParameter(Parameter):
 

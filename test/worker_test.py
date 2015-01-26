@@ -62,7 +62,7 @@ class DynamicDummyTaskWithNamespace(DynamicDummyTask):
 
 class DynamicRequires(Task):
     p = luigi.Parameter()
-    use_banana_task = luigi.BooleanParameter(default=False)
+    use_banana_task = luigi.BoolParameter(default=False)
 
     def output(self):
         return luigi.LocalTarget(os.path.join(self.p, 'parent'))

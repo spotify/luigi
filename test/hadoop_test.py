@@ -34,7 +34,7 @@ luigi.hadoop.attach(minicluster)
 
 
 class OutputMixin(luigi.Task):
-    use_hdfs = luigi.BooleanParameter(default=False)
+    use_hdfs = luigi.BoolParameter(default=False)
 
     def get_output(self, fn):
         if self.use_hdfs:
