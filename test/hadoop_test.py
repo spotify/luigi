@@ -159,6 +159,11 @@ def read_wordcount_output(p):
     return count
 
 
+class WordFreqEventsJob(WordFreqJob):
+    def output(self):
+        return self.get_output('wordcount_events')
+
+
 class CommonTests(object):
 
     @staticmethod
@@ -167,6 +172,34 @@ class CommonTests(object):
         luigi.build([job], local_scheduler=True)
         c = read_wordcount_output(job.output())
         test_case.assertEqual(int(c['jk']), 6)
+
+    @staticmethod
+    def test_events(test_case):
+        triggered = []
+
+        @WordFreqEventsJob.event_handler(luigi.hadoop.Event.INIT_LOCAL)
+        def init_local(*args, **kwargs):
+            triggered.append("local")
+
+        @WordFreqEventsJob.event_handler(luigi.hadoop.Event.INIT_HADOOP)
+        def init_hadoop(*args, **kwargs):
+            triggered.append("hadoop")
+
+        @WordFreqEventsJob.event_handler(luigi.hadoop.Event.INIT_MAPPER)
+        def init_mapper(*args, **kwargs):
+            triggered.append("mapper")
+
+        @WordFreqEventsJob.event_handler(luigi.hadoop.Event.INIT_COMBINER)
+        def init_combiner(*args, **kwargs):
+            triggered.append("combiner")
+
+        @WordFreqEventsJob.event_handler(luigi.hadoop.Event.INIT_REDUCER)
+        def init_reducer(*args, **kwargs):
+            triggered.append("reducer")
+
+        job = WordFreqEventsJob(use_hdfs=test_case.use_hdfs)
+        luigi.build([job], local_scheduler=True)
+        test_case.assertEquals(triggered, ["local", "hadoop", "mapper", "hadoop", "combiner", "hadoop", "reducer"])
 
     @staticmethod
     def test_run_2(test_case):
@@ -224,6 +257,9 @@ class MapreduceLocalTest(unittest.TestCase):
     def test_failing_job(self):
         CommonTests.test_failing_job(self)
 
+    def test_events(self):
+        CommonTests.test_events(self)
+
     def setUp(self):
         MockFile.fs.clear()
 
@@ -242,6 +278,9 @@ class MapreduceIntegrationTest(minicluster.MiniClusterTestCase):
 
     def test_map_only(self):
         CommonTests.test_map_only(self)
+
+    def test_events(self):
+        CommonTests.test_events(self)
 
     # TODO(erikbern): some really annoying issue with minicluster causes
     # test_unicode_job to hang
@@ -319,7 +358,3 @@ class CreatePackagesArchive(unittest.TestCase):
         package_subpackage_submodule = __import__("package.subpackage.submodule", None, None, 'dummy')
         luigi.hadoop.create_packages_archive([package_subpackage_submodule], '/dev/null')
         self._assert_package_subpackage(tar.return_value.add)
-
-
-if __name__ == '__main__':
-    HadoopJobTest.test_run_real()
