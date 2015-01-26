@@ -447,7 +447,7 @@ class CentralPlannerScheduler(Scheduler):
 
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
-                 priority=0, family='', params={}):
+                 priority=0, family='', params={}, **kwargs):
         """
         * Add task identified by task_id if it doesn't exist
         * If deps is not None, update dependency list
@@ -504,7 +504,7 @@ class CentralPlannerScheduler(Scheduler):
         if expl is not None:
             task.expl = expl
 
-    def add_worker(self, worker, info):
+    def add_worker(self, worker, info, **kwargs):
         self._state.get_worker(worker).add_info(info)
 
     def update_resources(self, **resources):
@@ -556,7 +556,7 @@ class CentralPlannerScheduler(Scheduler):
                 return False
         return True
 
-    def get_work(self, worker, host=None):
+    def get_work(self, worker, host=None, **kwargs):
         # TODO: remove any expired nodes
 
         # Algo: iterate over all nodes, find the highest priority node no dependencies and available
@@ -633,7 +633,7 @@ class CentralPlannerScheduler(Scheduler):
                 'task_id': best_task_id,
                 'running_tasks': running_tasks}
 
-    def ping(self, worker):
+    def ping(self, worker, **kwargs):
         self.update(worker)
 
     def _upstream_status(self, task_id, upstream_status_table):
@@ -680,7 +680,7 @@ class CentralPlannerScheduler(Scheduler):
             ret['deps'] = list(task.deps)
         return ret
 
-    def graph(self):
+    def graph(self, **kwargs):
         self.prune()
         serialized = {}
         for task in self._state.get_active_tasks():
@@ -713,14 +713,14 @@ class CentralPlannerScheduler(Scheduler):
                 for dep in task.deps:
                     self._recurse_deps(dep, serialized)
 
-    def dep_graph(self, task_id):
+    def dep_graph(self, task_id, **kwargs):
         self.prune()
         serialized = {}
         if self._state.has_task(task_id):
             self._recurse_deps(task_id, serialized)
         return serialized
 
-    def task_list(self, status, upstream_status, limit=True):
+    def task_list(self, status, upstream_status, limit=True, **kwargs):
         ''' query for a subset of tasks by status '''
         self.prune()
         result = {}
@@ -734,7 +734,7 @@ class CentralPlannerScheduler(Scheduler):
             return {'num_tasks': len(result)}
         return result
 
-    def worker_list(self, include_running=True):
+    def worker_list(self, include_running=True, **kwargs):
         self.prune()
         workers = [
             dict(
@@ -764,7 +764,7 @@ class CentralPlannerScheduler(Scheduler):
                 worker['running'] = tasks
         return workers
 
-    def inverse_dependencies(self, task_id):
+    def inverse_dependencies(self, task_id, **kwargs):
         self.prune()
         serialized = {}
         if self._state.has_task(task_id):
@@ -784,7 +784,7 @@ class CentralPlannerScheduler(Scheduler):
                         serialized[task.id]["deps"] = []
                         stack.append(task.id)
 
-    def task_search(self, task_str):
+    def task_search(self, task_str, **kwargs):
         ''' query for a subset of tasks by task_id '''
         self.prune()
         result = collections.defaultdict(dict)
@@ -802,7 +802,7 @@ class CentralPlannerScheduler(Scheduler):
             serialized = self._serialize_task(task_id)
         return serialized
 
-    def fetch_error(self, task_id):
+    def fetch_error(self, task_id, **kwargs):
         if self._state.has_task(task_id):
             return {"taskId": task_id, "error": self._state.get_task(task_id).expl}
         else:
