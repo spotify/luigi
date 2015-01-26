@@ -323,17 +323,19 @@ class Parameter(object):
           dest=dest)
 
     def parse_from_args(self, param_name, task_name, args, params):
+        # Note: modifies arguments
         dest = self.parser_dest(param_name, task_name, glob=False)
         if dest is not None:
             value = getattr(args, dest, None)
-            params[param_name] = self.parse_from_input(param_name, value) # Note: modifies arguments
+            params[param_name] = self.parse_from_input(param_name, value)
 
     def set_global_from_args(self, param_name, task_name, args):
+        # Note: side effects
         dest = self.parser_dest(param_name, task_name, glob=True)
         if dest is not None:
             value = getattr(args, dest, None)
             if value is not None:
-                self.set_global(self.parse_from_input(param_name, value)) # Note: side effects
+                self.set_global(self.parse_from_input(param_name, value))
 
 
 class DateHourParameter(Parameter):
