@@ -27,7 +27,6 @@ import configuration
 import scheduler
 import pkg_resources
 import signal
-from rpc import RemoteSchedulerResponder
 import task_history
 import logging
 logger = logging.getLogger("luigi.server")
@@ -60,18 +59,20 @@ def _create_scheduler():
 
 
 class RPCHandler(tornado.web.RequestHandler):
-
     """ Handle remote scheduling calls using rpc.RemoteSchedulerResponder"""
-
-    def initialize(self, api):
-        self._api = api
+    def initialize(self, scheduler):
+        self._scheduler = scheduler
 
     def get(self, method):
         payload = self.get_argument('data', default="{}")
         arguments = json.loads(payload)
 
-        if hasattr(self._api, method):
-            result = getattr(self._api, method)(**arguments)
+        # TODO: we should probably denote all methods on the scheduler that are "API-level"
+        # versus internal methods. Right now you can do a REST method call to any method
+        # defined on the scheduler, which is pretty bad from a security point of view.
+
+        if hasattr(self._scheduler, method):
+            result = getattr(self._scheduler, method)(**arguments)
             self.write({"response": result})  # wrap all json response in a dictionary
         else:
             self.send_error(404)
@@ -81,8 +82,8 @@ class RPCHandler(tornado.web.RequestHandler):
 
 class BaseTaskHistoryHandler(tornado.web.RequestHandler):
 
-    def initialize(self, api):
-        self._api = api
+    def initialize(self, scheduler):
+        self._scheduler = scheduler
 
     def get_template_path(self):
         return pkg_resources.resource_filename(__name__, 'templates')
@@ -91,21 +92,21 @@ class BaseTaskHistoryHandler(tornado.web.RequestHandler):
 class RecentRunHandler(BaseTaskHistoryHandler):
 
     def get(self):
-        tasks = self._api.task_history.find_latest_runs()
+        tasks = self._scheduler.task_history.find_latest_runs()
         self.render("recent.html", tasks=tasks)
 
 
 class ByNameHandler(BaseTaskHistoryHandler):
 
     def get(self, name):
-        tasks = self._api.task_history.find_all_by_name(name)
+        tasks = self._scheduler.task_history.find_all_by_name(name)
         self.render("recent.html", tasks=tasks)
 
 
 class ByIdHandler(BaseTaskHistoryHandler):
 
     def get(self, id):
-        task = self._api.task_history.find_task_by_id(id)
+        task = self._scheduler.task_history.find_task_by_id(id)
         self.render("show.html", task=task)
 
 
@@ -114,7 +115,7 @@ class ByParamsHandler(BaseTaskHistoryHandler):
     def get(self, name):
         payload = self.get_argument('data', default="{}")
         arguments = json.loads(payload)
-        tasks = self._api.task_history.find_all_by_parameters(name, session=None, **arguments)
+        tasks = self._scheduler.task_history.find_all_by_parameters(name, session=None, **arguments)
         self.render("recent.html", tasks=tasks)
 
 
@@ -140,23 +141,24 @@ class RootPathHandler(tornado.web.RequestHandler):
         self.redirect("/static/visualiser/index.html")
 
 
-def app(api):
+def app(scheduler):
     handlers = [
-        (r'/api/(.*)', RPCHandler, {"api": api}),
+        (r'/api/(.*)', RPCHandler, {"scheduler": scheduler}),
         (r'/static/(.*)', StaticFileHandler),
         (r'/', RootPathHandler),
-        (r'/history', RecentRunHandler, {'api': api}),
-        (r'/history/by_name/(.*?)', ByNameHandler, {'api': api}),
-        (r'/history/by_id/(.*?)', ByIdHandler, {'api': api}),
-        (r'/history/by_params/(.*?)', ByParamsHandler, {'api': api})
+        (r'/history', RecentRunHandler, {'scheduler': scheduler}),
+        (r'/history/by_name/(.*?)', ByNameHandler, {'scheduler': scheduler}),
+        (r'/history/by_id/(.*?)', ByIdHandler, {'scheduler': scheduler}),
+        (r'/history/by_params/(.*?)', ByParamsHandler, {'scheduler': scheduler})
     ]
     api_app = tornado.web.Application(handlers)
     return api_app
 
 
-def _init_api(sched, responder, api_port, address):
-    api = responder or RemoteSchedulerResponder(sched)
-    api_app = app(api)
+def _init_api(sched, responder=None, api_port=None, address=None):
+    if responder:
+        raise Exception('The "responder" argument is no longer supported')
+    api_app = app(sched)
     api_sockets = tornado.netutil.bind_sockets(api_port, address=address)
     server = tornado.httpserver.HTTPServer(api_app)
     server.add_sockets(api_sockets)
