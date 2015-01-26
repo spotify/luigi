@@ -116,8 +116,7 @@ class RemoteScheduler(Scheduler):
             '/api/get_work',
             {'worker': worker, 'host': host},
             log_exceptions=False,
-            attempts=1
-            )
+            attempts=1)
 
     def graph(self):
         return self._request('/api/graph', {})
