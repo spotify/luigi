@@ -7,14 +7,21 @@ where x = luigi and y = spotify.
 Running Unit Tests
 ~~~~~~~~~~~~~~~~~~
 
-1. Install required packages: ``pip install -r test/requirements.txt``
-2. From the top directory, run
-   `Nose <http://nose.readthedocs.org>`__: ``nosetests``
+You can see in ``.travis.yml`` how Travis CI runs the tests. Essentially, what
+you do is first ``pip install tox``, then you can run any of these examples and
+change them to your needs.
 
-   -  To run all tests within individual files:
-      ``nosetests test/parameter_test.py test/fib_test.py ...``
-   -  To run named tests within individual files:
-      ``nosetests -m '(testDate.*|testInt)' test/parameter_test.py ...``
+
+.. code-block:: bash
+
+    # Run all nonhdfs tests
+    export TOX_ENV=nonhdfs; export PYTHONPATH=''; tox -e $TOX_ENV test
+
+    # Run specific nonhdfs tests
+    export TOX_ENV=nonhdfs; export PYTHONPATH=''; tox -e $TOX_ENV test/test_ssh.py
+
+    # Run specific hdp tests with hdp hadoop distrubtion
+    export TOX_ENV=hdp; export PYTHONPATH=''; JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64 tox -e $TOX_ENV test/snakebite_test.py
 
 Future Ideas
 ~~~~~~~~~~~~
