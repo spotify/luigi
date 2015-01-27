@@ -40,6 +40,14 @@ logger = logging.getLogger('luigi-interface')
 _attached_packages = []
 
 
+class Event:
+    INIT_LOCAL = "event.mapreduce.init_local"
+    INIT_HADOOP = "event.mapreduce.init_hadoop"
+    INIT_MAPPER = "event.mapreduce.init_mapper"
+    INIT_COMBINER = "event.mapreduce.init_combiner"
+    INIT_REDUCER = "event.mapreduce.init_reducer"
+
+
 def attach(*packages):
     """ Attach a python package to hadoop map reduce tarballs to make those packages available on the hadoop cluster"""
     _attached_packages.extend(packages)
@@ -574,6 +582,7 @@ class BaseHadoopJobTask(luigi.Task):
         pass
 
     def run(self):
+        self.trigger_event(Event.INIT_LOCAL, self)
         self.init_local()
         self.job_runner().run_job(self)
 
@@ -791,7 +800,9 @@ class JobTask(BaseHadoopJobTask):
 
     def _run_mapper(self, stdin=sys.stdin, stdout=sys.stdout):
         """Run the mapper on the hadoop node."""
+        self.trigger_event(Event.INIT_HADOOP, self, stdin, stdout)
         self.init_hadoop()
+        self.trigger_event(Event.INIT_MAPPER, self, stdin, stdout)
         self.init_mapper()
         outputs = self._map_input((line[:-1] for line in stdin))
         if self.reducer == NotImplemented:
@@ -801,13 +812,17 @@ class JobTask(BaseHadoopJobTask):
 
     def _run_reducer(self, stdin=sys.stdin, stdout=sys.stdout):
         """Run the reducer on the hadoop node."""
+        self.trigger_event(Event.INIT_HADOOP, self, stdin, stdout)
         self.init_hadoop()
+        self.trigger_event(Event.INIT_REDUCER, self, stdin, stdout)
         self.init_reducer()
         outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.reducer, self.final_reducer)
         self.writer(outputs, stdout)
 
     def _run_combiner(self, stdin=sys.stdin, stdout=sys.stdout):
+        self.trigger_event(Event.INIT_HADOOP, self, stdin, stdout)
         self.init_hadoop()
+        self.trigger_event(Event.INIT_COMBINER, self, stdin, stdout)
         self.init_combiner()
         outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.combiner, self.final_combiner)
         self.internal_writer(outputs, stdout)

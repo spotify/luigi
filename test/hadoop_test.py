@@ -16,13 +16,11 @@ import mock
 import os
 import sys
 import unittest
-import subprocess
 import luigi
 import luigi.hadoop
 import luigi.hdfs
 import luigi.mrrunner
 from luigi.mock import MockFile
-import StringIO
 import luigi.notifications
 from nose.plugins.attrib import attr
 import minicluster
@@ -159,6 +157,90 @@ def read_wordcount_output(p):
     return count
 
 
+class SingleLineInput(OutputMixin):
+    def run(self):
+        with self.output().open('w') as f:
+            f.write("hello\n")
+
+    def output(self):
+        return self.get_output("single_line")
+
+
+class EventTesterJob(HadoopJobTask):
+    local_events = []
+    hadoop_events = []
+    mapper_events = []
+    combiner_events = []
+    reducer_events = []
+
+    def mapper(self, line):
+        print self.local_events
+        for i, e in enumerate(self.local_events):
+            yield None, (i, e)
+        for i, e in enumerate(self.hadoop_events, 1):
+            yield None, (i, e)
+        for i, e in enumerate(self.mapper_events, 2):
+            yield None, (i, e)
+
+    def combiner(self, key, values):
+        for v in values:
+            yield key, v
+        for i, e in enumerate(self.hadoop_events, 3):
+            yield None, (i, e)
+        for i, e in enumerate(self.combiner_events, 4):
+            yield None, (i, e)
+
+    def reducer(self, key, values):
+        for v in values:
+            yield v
+        for i, e in enumerate(self.hadoop_events, 5):
+            yield (i, e)
+        for i, e in enumerate(self.reducer_events, 6):
+            yield (i, e)
+
+    def output(self):
+        return self.get_output('events')
+
+    def requires(self):
+        return SingleLineInput(self.use_hdfs)
+
+
+@EventTesterJob.event_handler(luigi.hadoop.Event.INIT_LOCAL)
+def init_local(self, *args, **kwargs):
+    self.local_events.append("local")
+
+
+@EventTesterJob.event_handler(luigi.hadoop.Event.INIT_HADOOP)
+def init_hadoop(self, *args, **kwargs):
+    # resetting hadoop_events here because LocalRunner
+    # doesn't reset instances between stages in MR
+    # like running on a cluster does
+    # TODO: make LocalRunner behave like cluster MR by pickling
+    # the "local" instance on the worker and unpickling before each stage
+    self.hadoop_events = ["hadoop"]
+
+
+@EventTesterJob.event_handler(luigi.hadoop.Event.INIT_MAPPER)
+def init_mapper(self, *args, **kwargs):
+    self.mapper_events.append("mapper")
+
+
+@EventTesterJob.event_handler(luigi.hadoop.Event.INIT_COMBINER)
+def init_combiner(self, *args, **kwargs):
+    self.combiner_events.append("combiner")
+
+
+@EventTesterJob.event_handler(luigi.hadoop.Event.INIT_REDUCER)
+def init_reducer(self, *args, **kwargs):
+    self.reducer_events.append("reducer")
+
+
+def read_event_tester_output(p):
+    for line in p.open('r'):
+        i, e = line.strip().split()
+        yield int(i), e
+
+
 class CommonTests(object):
 
     @staticmethod
@@ -167,6 +249,23 @@ class CommonTests(object):
         luigi.build([job], local_scheduler=True)
         c = read_wordcount_output(job.output())
         test_case.assertEqual(int(c['jk']), 6)
+
+    @staticmethod
+    def test_events(test_case):
+        job = EventTesterJob(use_hdfs=test_case.use_hdfs)
+        luigi.build([job], local_scheduler=True)
+        sorted_results = sorted(read_event_tester_output(job.output()))
+        test_case.assertEquals(
+            sorted_results,
+            [(0, "local"),
+             (1, "hadoop"),
+             (2, "mapper"),
+             (3, "hadoop"),
+             (4, "combiner"),
+             (5, "hadoop"),
+             (6, "reducer")
+             ]
+        )
 
     @staticmethod
     def test_run_2(test_case):
@@ -224,6 +323,9 @@ class MapreduceLocalTest(unittest.TestCase):
     def test_failing_job(self):
         CommonTests.test_failing_job(self)
 
+    def test_events(self):
+        CommonTests.test_events(self)
+
     def setUp(self):
         MockFile.fs.clear()
 
@@ -242,6 +344,9 @@ class MapreduceIntegrationTest(minicluster.MiniClusterTestCase):
 
     def test_map_only(self):
         CommonTests.test_map_only(self)
+
+    def test_events(self):
+        CommonTests.test_events(self)
 
     # TODO(erikbern): some really annoying issue with minicluster causes
     # test_unicode_job to hang
@@ -319,7 +424,3 @@ class CreatePackagesArchive(unittest.TestCase):
         package_subpackage_submodule = __import__("package.subpackage.submodule", None, None, 'dummy')
         luigi.hadoop.create_packages_archive([package_subpackage_submodule], '/dev/null')
         self._assert_package_subpackage(tar.return_value.add)
-
-
-if __name__ == '__main__':
-    HadoopJobTest.test_run_real()
