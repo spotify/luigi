@@ -425,6 +425,7 @@ class BoolParameter(Parameter):
         """Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case."""
         return {'true': True, 'false': False}[str(s).lower()]
 
+
 class BooleanParameter(BoolParameter):
     def __init__(self, *args, **kwargs):
         warnings.warn(
@@ -433,6 +434,7 @@ class BooleanParameter(BoolParameter):
             stacklevel=2
         )
         super(BooleanParameter, self).__init__(*args, **kwargs)
+
 
 class DateIntervalParameter(Parameter):
 
