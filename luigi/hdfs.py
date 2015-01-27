@@ -142,6 +142,22 @@ class HdfsClient(FileSystem):
             warnings.warn("Renaming multiple files at once is not atomic.")
         call_check(load_hadoop_cmd() + ['fs', '-mv'] + path + [dest])
 
+    def rename_dont_move(self, path, dest):
+        """
+        Override this method with an implementation that uses rename2, which is
+        a rename operation that never moves. For instance, `rename2 a b` never
+        moves `a` into `b` folder.  Currently, the hadoop cli does not support
+        this operation.  We keep the interface simple by just aliasing this to
+        normal rename and let individual implementations redefine the method.
+
+        rename2: https://github.com/apache/hadoop/blob/ae91b13/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocol/ClientProtocol.java#L483-L523
+        """
+        warnings.warn("Configured HDFS client doesn't support rename_dont_move, using normal mv operation instead.")
+        if self.exists(dest):
+            return False
+        self.rename(path, dest)
+        return True
+
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
             cmd = load_hadoop_cmd() + ['fs', '-rm', '-r']
@@ -338,6 +354,24 @@ class SnakebiteHdfsClient(HdfsClient):
             if not self.exists(dir_path):
                 self.mkdir(dir_path, parents=True)
         return list(self.get_bite().rename(list_path(path), dest))
+
+    def rename_dont_move(self, path, dest):
+        """
+        Use snakebite.rename_dont_move, if available.
+
+        :param path: source path (single input)
+        :type path: string
+        :param dest: destination path
+        :type dest: string
+        :return: True if succeeded
+        :raises: snakebite.errors.FileAlreadyExistsException
+        """
+        from snakebite.errors import FileAlreadyExistsException
+        try:
+            self.get_bite().rename2(path, dest, overwriteDest=False)
+            return True
+        except FileAlreadyExistsException:
+            return False
 
     def remove(self, path, recursive=True, skip_trash=False):
         """
@@ -743,12 +777,18 @@ class HdfsTarget(FileSystemTarget):
         self.rename(path, raise_if_exists=fail_if_exists)
 
     def move_dir(self, path):
-        # mkdir will fail if directory already exists, thereby ensuring atomicity
-        if isinstance(path, HdfsTarget):
-            path = path.path
-        mkdir(path, parents=False, raise_if_exists=True)
-        rename(self.path + '/*', path)
-        self.remove()
+        """ Rename a directory. The implementation uses `rename_dont_move`,
+        which on some clients is just a normal `mv` operation, which can cause
+        nested directories.
+
+        One could argue that the implementation should use the
+        mkdir+raise_if_exists approach, but we at Spotify have had more trouble
+        with that over just using plain mv.  See spotify/luigi#557
+        """
+        move_succeeded = self.fs.rename_dont_move(self.path, path)
+        if move_succeeded:
+            self.path = path
+        return move_succeeded
 
     def is_writable(self):
         if "/" in self.path:
