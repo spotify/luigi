@@ -51,63 +51,51 @@ def setup_interface_logging(conf_file=None):
     setup_interface_logging.has_run = True
 
 
-class EnvironmentParamsContainer(task.Task):
-    """
-    Keeps track of a bunch of environment params.
+class EnvironmentParamsContainer(task.Config):
+
+    ''' Keeps track of a bunch of environment params.
 
     Uses the internal luigi parameter mechanism.
     The nice thing is that we can instantiate this class
     and get an object with all the environment variables set.
     This is arguably a bit of a hack.
-    """
+    '''
 
     local_scheduler = parameter.BoolParameter(
-        is_global=True, default=False,
+        default=False,
         description='Use local scheduling')
     scheduler_host = parameter.Parameter(
-        is_global=True,
         default='localhost',
         description='Hostname of machine running remote scheduler',
         config_path=dict(section='core', name='default-scheduler-host'))
     scheduler_port = parameter.IntParameter(
-        is_global=True, default=8082,
+        default=8082,
         description='Port of remote scheduler api process',
         config_path=dict(section='core', name='default-scheduler-port'))
     lock_size = parameter.IntParameter(
-        is_global=True, default=1,
+        default=1,
         description="Maximum number of workers running the same command")
     no_lock = parameter.BoolParameter(
-        is_global=True, default=False,
+        default=False,
         description='Ignore if similar process is already running')
     lock_pid_dir = parameter.Parameter(
-        is_global=True, default=os.path.join(tempfile.gettempdir(), 'luigi'),
+        default=os.path.join(tempfile.gettempdir(), 'luigi'),
         description='Directory to store the pid file')
     workers = parameter.IntParameter(
-        is_global=True, default=1,
+        default=1,
         description='Maximum number of parallel tasks to run')
     logging_conf_file = parameter.Parameter(
-        is_global=True, default=None,
+        default=None,
         description='Configuration file for logging',
         config_path=dict(section='core', name='logging_conf_file'))
     module = parameter.Parameter(
-        is_global=True, default=None,
+        default=None,
         description='Used for dynamic loading of modules')  # see DynamicArgParseInterface
     parallel_scheduling = parameter.BoolParameter(
-        is_global=True, default=False,
+        default=False,
         description='Use multiprocessing to do scheduling in parallel.',
         config_path={'section': 'core', 'name': 'parallel-scheduling'},
     )
-
-    @classmethod
-    def env_params(cls, override_defaults=None):
-        # Override any global parameter with whatever is in override_defaults
-        if override_defaults is None:
-            override_defaults = {}
-        for param_name, param_obj in cls.get_params():
-            if param_name in override_defaults:
-                param_obj.set_global(override_defaults[param_name])
-
-        return cls()  # instantiate an object with the global params set on it
 
 
 class WorkerSchedulerFactory(object):
@@ -137,7 +125,7 @@ class Interface(object):
 
         if worker_scheduler_factory is None:
             worker_scheduler_factory = WorkerSchedulerFactory()
-        env_params = EnvironmentParamsContainer.env_params(override_defaults)
+        env_params = EnvironmentParamsContainer(**override_defaults)
         # search for logging configuration path first on the command line, then
         # in the application config file
         logging_conf = env_params.logging_conf_file
@@ -211,11 +199,11 @@ def add_task_parameters(parser, task_cls, optparse=False):
 
 def add_global_parameters(parser, optparse=False):
     seen_params = set()
-    for task_name, param_name, param in Register.get_all_params():
+    for task_name, is_config, param_name, param in Register.get_all_params():
         if param in seen_params:
             continue
         seen_params.add(param)
-        param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse, glob=True)
+        param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse, glob=True, is_config=is_config)
 
 
 def get_task_parameters(task_cls, args):
@@ -228,8 +216,8 @@ def get_task_parameters(task_cls, args):
 
 def set_global_parameters(args):
     # Note that this is not side effect free
-    for task_name, param_name, param in Register.get_all_params():
-        param.set_global_from_args(param_name, task_name, args)
+    for task_name, is_config, param_name, param in Register.get_all_params():
+        param.set_global_from_args(param_name, task_name, args, is_config=is_config)
 
 
 class ArgParseInterface(Interface):
