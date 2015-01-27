@@ -39,13 +39,13 @@ def setup_interface_logging(conf_file=None):
         logger = logging.getLogger('luigi-interface')
         logger.setLevel(logging.DEBUG)
 
-        streamHandler = logging.StreamHandler()
-        streamHandler.setLevel(logging.DEBUG)
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
 
         formatter = logging.Formatter('%(levelname)s: %(message)s')
-        streamHandler.setFormatter(formatter)
+        stream_handler.setFormatter(formatter)
 
-        logger.addHandler(streamHandler)
+        logger.addHandler(stream_handler)
     else:
         logging.config.fileConfig(conf_file, disable_existing_loggers=False)
 
