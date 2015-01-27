@@ -45,7 +45,7 @@ class ServerTest(ServerTestBase):
         req = urllib2.Request(uri)
         try:
             response = urllib2.urlopen(req, timeout=10)
-        except urllib2.HTTPError, http_exc:
+        except urllib2.HTTPError as http_exc:
             pass
 
         self.assertEqual(http_exc.code, 404)

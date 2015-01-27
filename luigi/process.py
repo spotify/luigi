@@ -160,7 +160,7 @@ def fork_linked_workers(num_processes):
 
     assert len(children) == num_processes
 
-    while 1:
+    while True:
         pid, status = os.wait()
         if status != 0:
             # unclean exit, restart process

@@ -265,7 +265,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
 
         try:
             task_failures = fetch_task_failures(tracking_url)
-        except Exception, e:
+        except Exception as e:
             raise HadoopJobError(message + 'Additionally, an error occurred when fetching data from %s: %s' %
                                  (tracking_url, e), out, err)
 
@@ -305,7 +305,7 @@ def fetch_task_failures(tracking_url):
         try:
             r = b2.open(task_url, timeout=timeout)
             data = r.read()
-        except Exception, e:
+        except Exception as e:
             logger.debug('Error fetching data from %s: %s', task_url, e)
             continue
         # Try to get the hex-encoded traceback back from the output

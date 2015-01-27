@@ -133,7 +133,7 @@ class WebHdfsClient(object):
         try:
             self.webhdfs.status(path)
             return True
-        except webhdfs.util.HdfsError, e:
+        except webhdfs.util.HdfsError as e:
             if str(e).startswith('File does not exist: '):
                 return False
             else:

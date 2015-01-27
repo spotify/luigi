@@ -229,8 +229,7 @@ class PlainDirFormatTest(_HdfsFormatTest, MiniClusterTestCase):
         self.assertTrue(invisible.exists())
         self.assertTrue(self.target.exists())
         with self.target.open('r') as fobj:
-            parts = fobj.read().strip('\n').split('\n')
-            parts.sort()
+            parts = sorted(fobj.read().strip('\n').split('\n'))
         self.assertEqual(tuple(parts), ('bar', 'foo'))
 
 

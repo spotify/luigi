@@ -71,7 +71,7 @@ class DateInterval(object):
         return hash(repr(self))
 
     def __cmp__(self, other):
-        if type(self) != type(other):
+        if not isinstance(self, type(other)):
             # doing this because it's not well defined if eg. 2012-01-01-2013-01-01 == 2012
             raise TypeError('Date interval type mismatch')
         return cmp((self.date_a, self.date_b), (other.date_a, other.date_b))

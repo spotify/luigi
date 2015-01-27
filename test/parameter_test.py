@@ -258,6 +258,7 @@ class ParameterTest(EmailTest):
 
 
 class TestNewStyleGlobalParameters(EmailTest):
+
     def setUp(self):
         super(TestNewStyleGlobalParameters, self).setUp()
         MockFile.fs.clear()

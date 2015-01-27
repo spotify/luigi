@@ -153,7 +153,7 @@ class PostgresTarget(luigi.Target):
                            (self.update_id,)
                            )
             row = cursor.fetchone()
-        except psycopg2.ProgrammingError, e:
+        except psycopg2.ProgrammingError as e:
             if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
                 row = None
             else:
@@ -192,7 +192,7 @@ class PostgresTarget(luigi.Target):
                   """.format(marker_table=self.marker_table)
         try:
             cursor.execute(sql)
-        except psycopg2.ProgrammingError, e:
+        except psycopg2.ProgrammingError as e:
             if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
                 pass
             else:
@@ -295,7 +295,7 @@ class CopyToTable(rdbms.CopyToTable):
                 cursor = connection.cursor()
                 self.init_copy(connection)
                 self.copy(cursor, tmp_file)
-            except psycopg2.ProgrammingError, e:
+            except psycopg2.ProgrammingError as e:
                 if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
                     # if first attempt fails with "relation not found", try creating table
                     logger.info("Creating table %s", self.table)
