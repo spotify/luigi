@@ -101,12 +101,12 @@ class Register(abc.ABCMeta):
         return h[k]
 
     @classmethod
-    def clear_instance_cache(self):
+    def clear_instance_cache(cls):
         """Clear/Reset the instance cache."""
         Register.__instance_cache = {}
 
     @classmethod
-    def disable_instance_cache(self):
+    def disable_instance_cache(cls):
         """Disables the instance cache."""
         Register.__instance_cache = None
 
