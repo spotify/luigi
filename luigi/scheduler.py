@@ -49,7 +49,7 @@ UPSTREAM_SEVERITY_ORDER = (
     UPSTREAM_FAILED,
     UPSTREAM_DISABLED,
 )
-UPSTREAM_SEVERITY_KEY = lambda st: UPSTREAM_SEVERITY_ORDER.index(st)
+UPSTREAM_SEVERITY_KEY = UPSTREAM_SEVERITY_ORDER.index
 STATUS_TO_UPSTREAM_MAP = {
     FAILED: UPSTREAM_FAILED,
     RUNNING: UPSTREAM_RUNNING,
@@ -110,11 +110,18 @@ class Failures(object):
         self.failures.clear()
 
 
+def _get_default(x, default):
+    if x is not None:
+        return x
+    else:
+        return default
+
+
 class Task(object):
 
-    def __init__(self, id, status, deps, resources={}, priority=0, family='', params={},
+    def __init__(self, task_id, status, deps, resources=None, priority=0, family='', params=None,
                  disable_failures=None, disable_window=None):
-        self.id = id
+        self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
         if deps is None:
@@ -129,9 +136,9 @@ class Task(object):
         self.time_running = None  # Timestamp when picked up by worker
         self.expl = None
         self.priority = priority
-        self.resources = resources
+        self.resources = _get_default(resources, {})
         self.family = family
-        self.params = params
+        self.params = _get_default(params, {})
         self.disable_failures = disable_failures
         self.failures = Failures(disable_window)
         self.scheduler_disable_time = None
@@ -153,8 +160,8 @@ class Worker(object):
 
     """ Structure for tracking worker activity and keeping their references """
 
-    def __init__(self, id, last_active=None):
-        self.id = id
+    def __init__(self, worker_id, last_active=None):
+        self.id = worker_id
         self.reference = None  # reference to the worker in the real world. (Currently a dict containing just the host)
         self.last_active = last_active  # seconds since epoch
         self.started = time.time()  # seconds since epoch
@@ -223,7 +230,7 @@ class SimpleTaskState(object):
             # Every time we add an attribute to the Worker class, this code needs to be updated
             for k, v in self._active_workers.iteritems():
                 if isinstance(v, float):
-                    self._active_workers[k] = Worker(id=k, last_active=v)
+                    self._active_workers[k] = Worker(worker_id=k, last_active=v)
         else:
             logger.info("No prior state file exists at %s. Starting with clean slate", self._state_path)
 
@@ -447,7 +454,7 @@ class CentralPlannerScheduler(Scheduler):
 
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
-                 priority=0, family='', params={}, **kwargs):
+                 priority=0, family='', params=None, **kwargs):
         """
         * Add task identified by task_id if it doesn't exist
         * If deps is not None, update dependency list
@@ -458,14 +465,14 @@ class CentralPlannerScheduler(Scheduler):
         self.update(worker)
 
         task = self._state.get_task(task_id, setdefault=self._make_task(
-            id=task_id, status=PENDING, deps=deps, resources=resources,
+            task_id=task_id, status=PENDING, deps=deps, resources=resources,
             priority=priority, family=family, params=params))
 
         # for setting priority, we'll sometimes create tasks with unset family and params
         if not task.family:
             task.family = family
         if not task.params:
-            task.params = params
+            task.params = _get_default(params, {})
 
         if task.remove is not None:
             task.remove = None  # unmark task for removal so it isn't removed after being added
@@ -493,7 +500,7 @@ class CentralPlannerScheduler(Scheduler):
         # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
         # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
         for dep in task.deps or []:
-            t = self._state.get_task(dep, setdefault=self._make_task(id=dep, status=UNKNOWN, deps=None, priority=priority))
+            t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
             t.stakeholders.add(worker)
 
         self._update_priority(task, priority, worker)
@@ -656,7 +663,7 @@ class CentralPlannerScheduler(Scheduler):
                     elif upstream_status_table[dep_id] == '' and dep.deps:
                         # This is the postorder update step when we set the
                         # status based on the previously calculated child elements
-                        upstream_status = [upstream_status_table.get(id, '') for id in dep.deps]
+                        upstream_status = [upstream_status_table.get(task_id, '') for task_id in dep.deps]
                         upstream_status.append('')  # to handle empty list
                         status = max(upstream_status, key=UPSTREAM_SEVERITY_KEY)
                         upstream_status_table[dep_id] = status

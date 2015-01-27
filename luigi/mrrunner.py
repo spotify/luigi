@@ -39,11 +39,11 @@ class Runner(object):
 
     def run(self, kind, stdin=sys.stdin, stdout=sys.stdout):
         if kind == "map":
-            self.job._run_mapper(stdin, stdout)
+            self.job.run_mapper(stdin, stdout)
         elif kind == "combiner":
-            self.job._run_combiner(stdin, stdout)
+            self.job.run_combiner(stdin, stdout)
         elif kind == "reduce":
-            self.job._run_reducer(stdin, stdout)
+            self.job.run_reducer(stdin, stdout)
         else:
             raise Exception('weird command: %s' % kind)
 
@@ -64,7 +64,7 @@ def print_exception(exc):
     print >> sys.stderr, 'luigi-exc-hex=%s' % tb.encode('hex')
 
 
-def main(args=sys.argv, stdin=sys.stdin, stdout=sys.stdout, print_exception=print_exception):
+def main(args=None, stdin=sys.stdin, stdout=sys.stdout, print_exception=print_exception):
     """Run either the mapper or the reducer from the class instance in the file "job-instance.pickle".
 
     Arguments:
@@ -75,7 +75,7 @@ def main(args=sys.argv, stdin=sys.stdin, stdout=sys.stdout, print_exception=prin
         # Set up logging.
         logging.basicConfig(level=logging.WARN)
 
-        kind = args[1]
+        kind = args is not None and args[1] or sys.argv[1]
         Runner().run(kind, stdin=stdin, stdout=stdout)
     except Exception as exc:
         # Dump encoded data that we will try to fetch using mechanize

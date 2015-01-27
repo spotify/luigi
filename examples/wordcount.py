@@ -23,8 +23,8 @@ class WordCount(luigi.Task):
 
     def run(self):
         count = {}
-        for file in self.input():  # The input() method is a wrapper around requires() that returns Target objects
-            for line in file.open('r'):  # Target objects are a file system/format abstraction and this will return a file stream object
+        for f in self.input():  # The input() method is a wrapper around requires() that returns Target objects
+            for line in f.open('r'):  # Target objects are a file system/format abstraction and this will return a file stream object
                 for word in line.strip().split():
                     count[word] = count.get(word, 0) + 1
 

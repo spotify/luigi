@@ -362,11 +362,13 @@ class Task(object):
         return hasattr(self, 'task_id')
 
     @classmethod
-    def from_str_params(cls, params_str={}):
+    def from_str_params(cls, params_str=None):
         """Creates an instance from a str->str hash
 
         :param params_str: dict of param name -> value.
         """
+        if params_str is None:
+            params_str = {}
         kwargs = {}
         for param_name, param in cls.get_params():
             value = param.parse_from_input(param_name, params_str[param_name])

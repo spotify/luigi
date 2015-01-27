@@ -56,7 +56,7 @@ class MockFileSystem(target.FileSystem):
         return [s for s in self.get_all_data().keys()
                 if s.startswith(path)]
 
-    def mkdir(self, path):
+    def mkdir(self, path, parents=True, raise_if_exists=False):
         """mkdir is a noop"""
         pass
 
@@ -81,9 +81,6 @@ class MockFile(target.FileSystemTarget):
         contents = self.fs.get_all_data().pop(self._fn)
         self.fs.get_all_data()[path] = contents
 
-    def move_dir(self, path):
-        self.move(path, raise_if_exists=True)
-
     @property
     def path(self):
         return self._fn
@@ -107,8 +104,8 @@ class MockFile(target.FileSystemTarget):
                     self.fs.get_all_data()[fn] = self2.getvalue()
                 StringIO.StringIO.close(self2)
 
-            def __exit__(self, type, value, traceback):
-                if not type:
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                if not exc_type:
                     self.close()
 
             def __enter__(self):

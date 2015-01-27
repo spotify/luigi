@@ -76,7 +76,7 @@ class LuigiConfigParser(ConfigParser):
         except NoSectionError:
             return {}
 
-    def set(self, section, option, value):
+    def set(self, section, option, value=None):
         if not ConfigParser.has_section(self, section):
             ConfigParser.add_section(self, section)
 

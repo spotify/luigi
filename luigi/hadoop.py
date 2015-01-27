@@ -34,6 +34,7 @@ import warnings
 import mrrunner
 import json
 import glob
+import abc
 
 logger = logging.getLogger('luigi-interface')
 
@@ -45,12 +46,12 @@ def attach(*packages):
     _attached_packages.extend(packages)
 
 
-def dereference(file):
-    if os.path.islink(file):
+def dereference(f):
+    if os.path.islink(f):
         # by joining with the dirname we are certain to get the absolute path
-        return dereference(os.path.join(os.path.dirname(file), os.readlink(file)))
+        return dereference(os.path.join(os.path.dirname(f), os.readlink(f)))
     else:
-        return file
+        return f
 
 
 def get_extra_files(extra_files):
@@ -66,8 +67,8 @@ def get_extra_files(extra_files):
         if os.path.isdir(src):
             src_prefix = os.path.join(src, '')
             for base, dirs, files in os.walk(src):
-                for file in files:
-                    f_src = os.path.join(base, file)
+                for f in files:
+                    f_src = os.path.join(base, f)
                     f_src_stripped = f_src[len(src_prefix):]
                     f_dst = os.path.join(dst, f_src_stripped)
                     result.append((f_src, f_dst))
@@ -327,13 +328,15 @@ class HadoopJobRunner(JobRunner):
     TODO: add code to support Elastic Mapreduce (using boto) and local execution.
     '''
 
-    def __init__(self, streaming_jar, modules=[], streaming_args=[], libjars=[], libjars_in_hdfs=[], jobconfs={}, input_format=None, output_format=None):
+    def __init__(self, streaming_jar, modules=None, streaming_args=None, libjars=None, libjars_in_hdfs=None, jobconfs=None, input_format=None, output_format=None):
+        def get(x, default):
+            return x is not None and x or default
         self.streaming_jar = streaming_jar
-        self.modules = modules
-        self.streaming_args = streaming_args
-        self.libjars = libjars
-        self.libjars_in_hdfs = libjars_in_hdfs
-        self.jobconfs = jobconfs
+        self.modules = get(modules, [])
+        self.streaming_args = get(streaming_args, [])
+        self.libjars = get(libjars, [])
+        self.libjars_in_hdfs = get(libjars_in_hdfs, [])
+        self.jobconfs = get(jobconfs, {})
         self.input_format = input_format
         self.output_format = output_format
         self.tmp_dir = False
@@ -396,7 +399,7 @@ class HadoopJobRunner(JobRunner):
             dst_tmp = '%s_%09d' % (dst.replace('/', '_'), random.randint(0, 999999999))
             files += ['%s#%s' % (src, dst_tmp)]
             # -files doesn't support subdirectories, so we need to create the dst_tmp -> dst manually
-            job._add_link(dst_tmp, dst)
+            job.add_link(dst_tmp, dst)
 
         if files:
             arglist += ['-files', ','.join(files)]
@@ -438,7 +441,7 @@ class HadoopJobRunner(JobRunner):
         # submit job
         create_packages_archive(packages, self.tmp_dir + '/packages.tar')
 
-        job._dump(self.tmp_dir)
+        job.dump(self.tmp_dir)
 
         run_and_track_hadoop_job(arglist)
 
@@ -478,20 +481,20 @@ class LocalJobRunner(JobRunner):
     def __init__(self, samplelines=None):
         self.samplelines = samplelines
 
-    def sample(self, input, n, output):
-        for i, line in enumerate(input):
+    def sample(self, input_stream, n, output):
+        for i, line in enumerate(input_stream):
             if n is not None and i >= n:
                 break
             output.write(line)
 
-    def group(self, input):
+    def group(self, input_stream):
         output = StringIO.StringIO()
         lines = []
-        for i, line in enumerate(input):
+        for i, line in enumerate(input_stream):
             parts = line.rstrip('\n').split('\t')
             blob = md5(str(i)).hexdigest()  # pseudo-random blob to make sure the input isn't sorted
             lines.append((parts[:-1], blob, line))
-        for k, _, line in sorted(lines):
+        for _, _, line in sorted(lines):
             output.write(line)
         output.seek(0)
         return output
@@ -507,14 +510,14 @@ class LocalJobRunner(JobRunner):
         if job.reducer == NotImplemented:
             # Map only job; no combiner, no reducer
             map_output = job.output().open('w')
-            job._run_mapper(map_input, map_output)
+            job.run_mapper(map_input, map_output)
             map_output.close()
             return
 
         job.init_mapper()
         # run job now...
         map_output = StringIO.StringIO()
-        job._run_mapper(map_input, map_output)
+        job.run_mapper(map_input, map_output)
         map_output.seek(0)
 
         if job.combiner == NotImplemented:
@@ -522,13 +525,13 @@ class LocalJobRunner(JobRunner):
         else:
             combine_input = self.group(map_output)
             combine_output = StringIO.StringIO()
-            job._run_combiner(combine_input, combine_output)
+            job.run_combiner(combine_input, combine_output)
             combine_output.seek(0)
             reduce_input = self.group(combine_output)
 
         job.init_reducer()
         reduce_output = job.output().open('w')
-        job._run_reducer(reduce_input, reduce_output)
+        job.run_reducer(reduce_input, reduce_output)
         reduce_output.close()
 
 
@@ -545,6 +548,10 @@ class BaseHadoopJobTask(luigi.Task):
 
     _counter_dict = {}
     task_id = None
+
+    @abc.abstractmethod
+    def job_runner(self):
+        pass
 
     def jobconfs(self):
         jcs = []
@@ -729,7 +736,7 @@ class JobTask(BaseHadoopJobTask):
         '''
         return []
 
-    def _add_link(self, src, dst):
+    def add_link(self, src, dst):
         if not hasattr(self, '_links'):
             self._links = []
         self._links.append((src, dst))
@@ -753,9 +760,9 @@ class JobTask(BaseHadoopJobTask):
                     'Missing files for distributed cache: ' +
                     ', '.join(missing))
 
-    def _dump(self, dir=''):
+    def dump(self, directory=''):
         """Dump instance to file."""
-        file_name = os.path.join(dir, 'job-instance.pickle')
+        file_name = os.path.join(directory, 'job-instance.pickle')
         if self.__module__ == '__main__':
             d = pickle.dumps(self)
             module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
@@ -789,7 +796,7 @@ class JobTask(BaseHadoopJobTask):
                 yield output
         self._flush_batch_incr_counter()
 
-    def _run_mapper(self, stdin=sys.stdin, stdout=sys.stdout):
+    def run_mapper(self, stdin=sys.stdin, stdout=sys.stdout):
         """Run the mapper on the hadoop node."""
         self.init_hadoop()
         self.init_mapper()
@@ -799,14 +806,14 @@ class JobTask(BaseHadoopJobTask):
         else:
             self.internal_writer(outputs, stdout)
 
-    def _run_reducer(self, stdin=sys.stdin, stdout=sys.stdout):
+    def run_reducer(self, stdin=sys.stdin, stdout=sys.stdout):
         """Run the reducer on the hadoop node."""
         self.init_hadoop()
         self.init_reducer()
         outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.reducer, self.final_reducer)
         self.writer(outputs, stdout)
 
-    def _run_combiner(self, stdin=sys.stdin, stdout=sys.stdout):
+    def run_combiner(self, stdin=sys.stdin, stdout=sys.stdout):
         self.init_hadoop()
         self.init_combiner()
         outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.combiner, self.final_combiner)
@@ -815,8 +822,8 @@ class JobTask(BaseHadoopJobTask):
     def internal_reader(self, input_stream):
         """Reader which uses python eval on each part of a tab separated string.
         Yields a tuple of python objects."""
-        for input in input_stream:
-            yield map(eval, input.split("\t"))
+        for input_line in input_stream:
+            yield map(eval, input_line.split("\t"))
 
     def internal_writer(self, outputs, stdout):
         """Writer which outputs the python repr for each item"""

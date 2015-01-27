@@ -29,7 +29,7 @@ class Streams(luigi.Task):
 
     def run(self):
         with self.output().open('w') as output:
-            for i in xrange(1000):
+            for _ in xrange(1000):
                 output.write('{} {} {}\n'.format(
                     random.randint(0, 999),
                     random.randint(0, 999),
@@ -59,10 +59,10 @@ class AggregateArtists(luigi.Task):
     def run(self):
         artist_count = defaultdict(int)
 
-        for input in self.input():
-            with input.open('r') as in_file:
+        for t in self.input():
+            with t.open('r') as in_file:
                 for line in in_file:
-                    timestamp, artist, track = line.strip().split()
+                    _, artist, track = line.strip().split()
                     artist_count[artist] += 1
 
         with self.output().open('w') as out_file:

@@ -20,8 +20,10 @@ class CascadingClient(object):
                         'rename_dont_move',
                         ]
 
-    def __init__(self, clients, method_names=ALL_METHOD_NAMES):
+    def __init__(self, clients, method_names=None):
         self.clients = clients
+        if method_names is None:
+            method_names = self.ALL_METHOD_NAMES
 
         for method_name in method_names:
             new_method = self._make_method(method_name)
