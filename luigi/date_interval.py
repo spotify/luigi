@@ -53,11 +53,11 @@ class DateInterval(object):
         raise NotImplementedError
 
     @classmethod
-    def from_date(self, d):
+    def from_date(cls, d):
         raise NotImplementedError
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         raise NotImplementedError
 
     def __contains__(self, date):
@@ -97,11 +97,11 @@ class Date(DateInterval):
         return self.date_a.strftime('%Y-%m-%d')
 
     @classmethod
-    def from_date(self, d):
+    def from_date(cls, d):
         return Date(d.year, d.month, d.day)
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         if re.match(r'\d\d\d\d\-\d\d\-\d\d$', s):
             return Date(*map(int, s.split('-')))
 
@@ -124,11 +124,11 @@ class Week(DateInterval):
         return '%d-W%02d' % self.date_a.isocalendar()[:2]
 
     @classmethod
-    def from_date(self, d):
+    def from_date(cls, d):
         return Week(*d.isocalendar()[:2])
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         if re.match(r'\d\d\d\d\-W\d\d$', s):
             y, w = map(int, s.split('-W'))
             return Week(y, w)
@@ -145,11 +145,11 @@ class Month(DateInterval):
         return self.date_a.strftime('%Y-%m')
 
     @classmethod
-    def from_date(self, d):
+    def from_date(cls, d):
         return Month(d.year, d.month)
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         if re.match(r'\d\d\d\d\-\d\d$', s):
             y, m = map(int, s.split('-'))
             return Month(y, m)
@@ -166,11 +166,11 @@ class Year(DateInterval):
         return self.date_a.strftime('%Y')
 
     @classmethod
-    def from_date(self, d):
+    def from_date(cls, d):
         return Year(d.year)
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         if re.match(r'\d\d\d\d$', s):
             return Year(int(s))
 
@@ -181,7 +181,7 @@ class Custom(DateInterval):
         return '-'.join([d.strftime('%Y-%m-%d') for d in (self.date_a, self.date_b)])
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         if re.match('\d\d\d\d\-\d\d\-\d\d\-\d\d\d\d\-\d\d\-\d\d$', s):
             # Actually the ISO 8601 specifies <start>/<end> as the time interval format
             # Not sure if this goes for date intervals as well. In any case slashes will
