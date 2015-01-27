@@ -101,7 +101,7 @@ class Parameter(object):
         :param bool is_bool: specify ``True`` if the parameter is a bool value. Default:
                                 ``False``. Bool's have an implicit default value of ``False``.
         :param bool is_global: specify ``True`` if the parameter is global (i.e. used by multiple
-                               Tasks). Default: ``False``.
+                               Tasks). Default: ``False``. DEPRECATED.
         :param bool significant: specify ``False`` if the parameter should not be treated as part of
                                  the unique identifier for a Task. An insignificant Parameter might
                                  also be used to specify a password or other sensitive information
@@ -123,6 +123,14 @@ class Parameter(object):
         self.is_bool = is_boolean and not is_list  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
+
+        if is_global:
+            warnings.warn(
+                'is_global is deprecated and will be removed. Please use either '
+                ' (a) class level config (eg. --MyTask-my-param 42)'
+                ' (b) a separate Config class with global settings on it',
+                DeprecationWarning,
+                stacklevel=2)
 
         if is_global and default == _no_value and config_path is None:
             raise ParameterException('Global parameters need default values')
