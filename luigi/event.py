@@ -13,7 +13,7 @@
 # the License.
 
 
-class Event:
+class Event(object):
     # TODO nice descriptive subclasses of Event instead of strings? pass their instances to the callback instead of an undocumented arg list?
     DEPENDENCY_DISCOVERED = "event.core.dependency.discovered"  # triggered for every (task, upstream task) pair discovered in a jobflow
     DEPENDENCY_MISSING = "event.core.dependency.missing"

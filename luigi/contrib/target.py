@@ -4,7 +4,7 @@ import types
 logger = logging.getLogger('luigi-interface')
 
 
-class CascadingClient():
+class CascadingClient(object):
 
     """
     A FilesystemClient that will cascade failing function calls through a list
