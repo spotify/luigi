@@ -25,6 +25,7 @@ import event
 Event = event.Event
 
 Task = task.Task
+Config = task.Config
 ExternalTask = task.ExternalTask
 WrapperTask = task.WrapperTask
 Target = target.Target

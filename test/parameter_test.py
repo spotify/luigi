@@ -485,7 +485,7 @@ class OverrideEnvStuff(unittest.TestCase):
 
     @with_config({"core": {"default-scheduler-port": '6543'}})
     def testOverrideSchedulerPort(self):
-        env_params = luigi.interface.EnvironmentParamsContainer.env_params()
+        env_params = luigi.interface.EnvironmentParamsContainer()
         self.assertEqual(env_params.scheduler_port, 6543)
 
 
