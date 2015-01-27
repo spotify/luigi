@@ -77,7 +77,7 @@ def main(args=sys.argv, stdin=sys.stdin, stdout=sys.stdout, print_exception=prin
 
         kind = args[1]
         Runner().run(kind, stdin=stdin, stdout=stdout)
-    except Exception, exc:
+    except Exception as exc:
         # Dump encoded data that we will try to fetch using mechanize
         print_exception(exc)
         raise

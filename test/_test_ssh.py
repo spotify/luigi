@@ -126,7 +126,7 @@ class TestRemoteTargetAtomicity(unittest.TestCase):
     def _exists(self, path):
         try:
             self.ctx.check_output(["test", "-e", path])
-        except subprocess.CalledProcessError, e:
+        except subprocess.CalledProcessError as e:
             if e.returncode == 1:
                 return False
             else:

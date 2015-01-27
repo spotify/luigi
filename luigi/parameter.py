@@ -142,7 +142,7 @@ class Parameter(object):
 
         try:
             value = conf.get(section, name)
-        except (NoSectionError, NoOptionError), e:
+        except (NoSectionError, NoOptionError) as e:
             return _no_value
 
         if self.is_list:
@@ -427,6 +427,7 @@ class BoolParameter(Parameter):
 
 
 class BooleanParameter(BoolParameter):
+
     def __init__(self, *args, **kwargs):
         warnings.warn(
             'BooleanParameter is deprecated, use BoolParameter instead',

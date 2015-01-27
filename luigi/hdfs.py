@@ -225,7 +225,7 @@ class HdfsClient(FileSystem):
                    (['-p'] if parents else []) +
                    [path])
             call_check(cmd)
-        except HDFSCliError, ex:
+        except HDFSCliError as ex:
             if "File exists" in ex.stderr:
                 if raise_if_exists:
                     raise FileAlreadyExists(ex.stderr)
@@ -308,7 +308,7 @@ class SnakebiteHdfsClient(HdfsClient):
         If Luigi has forked, we have a different PID, and need to reconnect.
         """
         if self.pid != os.getpid() or not self._bite:
-            client_kwargs = dict(filter(lambda (k, v): v is not None and v != '', {
+            client_kwargs = dict(filter(lambda k_v: k_v[1] is not None and k_v[1] != '', {
                 'hadoop_version': self.config.getint("hdfs", "client_version", None),
                 'effective_user': self.config.get("hdfs", "effective_user", None)
             }.iteritems()))
@@ -454,7 +454,7 @@ class SnakebiteHdfsClient(HdfsClient):
         return list(self.get_bite().copyToLocal(list_path(path),
                                                 local_destination))
 
-    def mkdir(self, path, parents=True, mode=0755, raise_if_exists=False):
+    def mkdir(self, path, parents=True, mode=0o755, raise_if_exists=False):
         """
         Use snakebite.mkdir, if available.
 
@@ -526,7 +526,7 @@ class HdfsClientCdh3(HdfsClient):
         '''
         try:
             call_check(load_hadoop_cmd() + ['fs', '-mkdir', path])
-        except HDFSCliError, ex:
+        except HDFSCliError as ex:
             if "File exists" in ex.stderr:
                 raise FileAlreadyExists(ex.stderr)
             else:

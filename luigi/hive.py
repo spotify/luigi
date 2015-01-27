@@ -216,7 +216,7 @@ class HiveThriftContext(object):
             transport.open()
             self.transport = transport
             return ThriftHiveMetastore.Client(protocol)
-        except ImportError, e:
+        except ImportError as e:
             raise Exception('Could not import Hive thrift library:' + str(e))
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -311,7 +311,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
             arglist = [load_hive_cmd(), '-f', f.name]
             hiverc = job.hiverc()
             if hiverc:
-                if type(hiverc) == str:
+                if isinstance(hiverc, str):
                     hiverc = [hiverc]
                 for rcfile in hiverc:
                     arglist += ['-i', rcfile]
@@ -365,7 +365,7 @@ class HivePartitionTarget(luigi.Target):
         try:
             logger.debug("Checking Hive table '{d}.{t}' for partition {p}".format(d=self.database, t=self.table, p=str(self.partition)))
             return self.client.table_exists(self.table, self.database, self.partition)
-        except HiveCommandError, e:
+        except HiveCommandError as e:
             if self.fail_missing_table:
                 raise
             else:

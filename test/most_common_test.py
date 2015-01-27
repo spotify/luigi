@@ -4,6 +4,7 @@ from luigi.tools.range import most_common
 
 
 class MostCommonTest(unittest.TestCase):
+
     def setUp(self):
         self.runs = [
             ([1], (1, 1)),

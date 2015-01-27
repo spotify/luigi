@@ -59,7 +59,9 @@ def _create_scheduler():
 
 
 class RPCHandler(tornado.web.RequestHandler):
+
     """ Handle remote scheduling calls using rpc.RemoteSchedulerResponder"""
+
     def initialize(self, scheduler):
         self._scheduler = scheduler
 

@@ -48,7 +48,7 @@ def acquire_for(pid_dir, num_available=1):
     # Check if there is a pid file corresponding to this name
     if not os.path.exists(pid_dir):
         os.mkdir(pid_dir)
-        os.chmod(pid_dir, 0777)
+        os.chmod(pid_dir, 0o777)
 
     pids = set()
     pid_cmds = {}
@@ -78,6 +78,6 @@ def acquire_for(pid_dir, num_available=1):
     else:
         s = os.stat(pid_file)
         if os.getuid() == s.st_uid:
-            os.chmod(pid_file, s.st_mode | 0777)
+            os.chmod(pid_file, s.st_mode | 0o777)
 
     return True
