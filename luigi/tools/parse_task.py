@@ -15,6 +15,7 @@
 import pyparsing as pp
 import warnings
 
+
 def id_to_name_and_params(task_id):
     ''' Turn a task_id into a (task_family, {params}) tuple.
         E.g. calling with ``Foo(bar=bar, baz=baz)`` returns
@@ -26,8 +27,7 @@ def id_to_name_and_params(task_id):
         'Please don\'t use task names as a serialization mechanism. Rather, store '
         'the task family and the parameters as separate strings',
         DeprecationWarning,
-        stacklevel=2
-        )
+        stacklevel=2)
 
     name_chars = pp.alphanums + '_'
     # modified version of pp.printables. Removed '[]', '()', ','
