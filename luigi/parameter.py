@@ -150,6 +150,14 @@ class Parameter(object):
         else:
             return self.parse(value)
 
+    def _get_value(self):
+        values = [self.__global, self._get_value_from_config(), self.__default]
+        for value in values:
+            if value != _no_value:
+                return value
+        else:
+            return _no_value
+
     @property
     def has_value(self):
         """``True`` if a default was specified or if config_path references a valid entry in the conf.
@@ -161,23 +169,7 @@ class Parameter(object):
 
         Any Task instance can have its own value set that overrides this.
         """
-        values = [self.__global, self._get_value_from_config(), self.__default]
-        for value in values:
-            if value != _no_value:
-                return True
-        else:
-            return False
-
-    @property
-    def has_default(self):
-        """Don't use this function - see has_value instead"""
-        warnings.warn(
-            'Use has_value rather than has_default. The meaning of '
-            '"default" has changed',
-            DeprecationWarning,
-            stacklevel=2
-        )
-        return self.has_value
+        return self._get_value() != _no_value
 
     @property
     def value(self):
@@ -189,22 +181,11 @@ class Parameter(object):
         :raises MissingParameterException: if a value is not set.
         :return: the parsed value.
         """
-        values = [self.__global, self._get_value_from_config(), self.__default]
-        for value in values:
-            if value != _no_value:
-                return value
-        else:
+        value = self._get_value()
+        if value == _no_value:
             raise MissingParameterException("No default specified")
-
-    @property
-    def default(self):
-        warnings.warn(
-            'Use value rather than default. The meaning of '
-            '"default" has changed',
-            DeprecationWarning,
-            stacklevel=2
-        )
-        return self.value
+        else:
+            return value
 
     def set_global(self, value):
         """Set the global value of this Parameter.
@@ -215,19 +196,6 @@ class Parameter(object):
 
     def reset_global(self):
         self.__global = _no_value
-
-    def set_default(self, value):
-        """Set the default value of this Parameter.
-
-        :param value: the new default value.
-        """
-        warnings.warn(
-            'Use set_global rather than set_default. The meaning of '
-            '"default" has changed',
-            DeprecationWarning,
-            stacklevel=2
-        )
-        self.__default = value
 
     def parse(self, x):
         """Parse an individual value from the input.
