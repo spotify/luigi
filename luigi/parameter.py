@@ -131,14 +131,17 @@ class Parameter(object):
         self.counter = Parameter.counter  # We need to keep track of this to get the order right (see Task class)
         Parameter.counter += 1
 
-    def _get_value_from_config(self):
+    def _get_value_from_config(self, task_name, param_name):
         """Loads the default from the config. Returns _no_value if it doesn't exist"""
 
-        if not self.__config:
+        if self.__config:
+            section, name = self.__config['section'], self.__config['name']
+        elif task_name is not None and param_name is not None:
+            section, name = task_name, param_name
+        else:
             return _no_value
 
         conf = configuration.get_config()
-        (section, name) = (self.__config['section'], self.__config['name'])
 
         try:
             value = conf.get(section, name)
@@ -150,8 +153,8 @@ class Parameter(object):
         else:
             return self.parse(value)
 
-    def _get_value(self):
-        values = [self.__global, self._get_value_from_config(), self.__default]
+    def _get_value(self, task_name=None, param_name=None):
+        values = [self.__global, self._get_value_from_config(task_name, param_name), self.__default]
         for value in values:
             if value != _no_value:
                 return value
@@ -182,6 +185,16 @@ class Parameter(object):
         :return: the parsed value.
         """
         value = self._get_value()
+        if value == _no_value:
+            raise MissingParameterException("No default specified")
+        else:
+            return value
+
+    def has_task_value(self, task_name, param_name):
+        return self._get_value(task_name, param_name) != _no_value
+
+    def task_value(self, task_name, param_name):
+        value = self._get_value(task_name, param_name)
         if value == _no_value:
             raise MissingParameterException("No default specified")
         else:
