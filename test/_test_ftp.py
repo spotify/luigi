@@ -12,7 +12,9 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import datetime
 import os
+import time
 from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
 
 import ftplib
@@ -163,6 +165,15 @@ class TestRemoteTarget(unittest.TestCase):
 
         # file is successfuly created
         self.assertTrue(os.path.exists(local_filepath))
+
+        # test RemoteTarget with mtime
+        ts = datetime.datetime.now() - datetime.timedelta(minutes=2)
+        delayed_remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD, mtime=ts)
+        self.assertTrue(delayed_remotetarget.exists())
+
+        ts = datetime.datetime.now() + datetime.timedelta(minutes=2)
+        delayed_remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD, mtime=ts)
+        self.assertFalse(delayed_remotetarget.exists())
 
         # clean
         os.remove(local_filepath)
