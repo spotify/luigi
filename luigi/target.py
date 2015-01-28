@@ -80,7 +80,7 @@ class FileSystem(object):
         pass
 
     @abc.abstractmethod
-    def remove(self, path, recursive=True):
+    def remove(self, path, recursive=True, skip_trash=True):
         """ Remove file or directory at location ``path``
 
         :param str path: a path within the FileSystem to remove.

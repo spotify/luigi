@@ -71,7 +71,6 @@ class inherits(object):
         self.task_to_inherit = task_to_inherit
 
     def __call__(self, task_that_inherits):
-        this_param_names = dict(task_that_inherits.get_params()).keys()
         for param_name, param_obj in self.task_to_inherit.get_params():
             if not hasattr(task_that_inherits, param_name):
                 setattr(task_that_inherits, param_name, param_obj)
@@ -217,9 +216,9 @@ def previous(task):
 
 def get_previous_completed(task, max_steps=10):
     prev = task
-    for i in xrange(max_steps):
+    for _ in xrange(max_steps):
         prev = previous(prev)
-        logger.debug("Checking if %s is complete" % prev.task_id)
+        logger.debug("Checking if %s is complete", prev.task_id)
         if prev.complete():
             return prev
     return None

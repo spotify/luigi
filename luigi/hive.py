@@ -74,7 +74,7 @@ class HiveClient(object):  # interface
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def table_location(self, table, database='default', partition={}):
+    def table_location(self, table, database='default', partition=None):
         """
         Returns location of db.table (or db.table.partition). partition is a dict of partition key to
         value.
@@ -87,7 +87,7 @@ class HiveClient(object):  # interface
         pass
 
     @abc.abstractmethod
-    def table_exists(self, table, database='default', partition={}):
+    def table_exists(self, table, database='default', partition=None):
         """
         Returns true iff db.table (or db.table.partition) exists. partition is a dict of partition key to
         value.
@@ -104,9 +104,9 @@ class HiveCommandClient(HiveClient):
 
     """ Uses `hive` invocations to find information """
 
-    def table_location(self, table, database='default', partition={}):
+    def table_location(self, table, database='default', partition=None):
         cmd = "use {0}; describe formatted {1}".format(database, table)
-        if partition:
+        if partition is not None:
             cmd += " PARTITION ({0})".format(self.partition_spec(partition))
 
         stdout = run_hive_cmd(cmd)
@@ -115,8 +115,8 @@ class HiveCommandClient(HiveClient):
             if "Location:" in line:
                 return line.split("\t")[1]
 
-    def table_exists(self, table, database='default', partition={}):
-        if not partition:
+    def table_exists(self, table, database='default', partition=None):
+        if partition is None:
             stdout = run_hive_cmd('use {0}; show tables like "{1}";'.format(database, table))
 
             return stdout and table in stdout
@@ -157,18 +157,18 @@ class ApacheHiveCommandClient(HiveCommandClient):
 
 class MetastoreClient(HiveClient):
 
-    def table_location(self, table, database='default', partition={}):
+    def table_location(self, table, database='default', partition=None):
         with HiveThriftContext() as client:
-            if partition:
+            if partition is not None:
                 partition_str = self.partition_spec(partition)
                 thrift_table = client.get_partition_by_name(database, table, partition_str)
             else:
                 thrift_table = client.get_table(database, table)
             return thrift_table.sd.location
 
-    def table_exists(self, table, database='default', partition={}):
+    def table_exists(self, table, database='default', partition=None):
         with HiveThriftContext() as client:
-            if not partition:
+            if partition is None:
                 return table in client.get_all_tables(database)
             else:
                 return partition in self._existing_partitions(table, database, client)
