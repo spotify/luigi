@@ -438,6 +438,22 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
         p.set_global('meh')
         self.assertEqual('meh', p.value)
 
+    @with_config({"A": {"p": "p_default"}})
+    def testDefaultFromTaskName(self):
+        class A(luigi.Task):
+            p = luigi.Parameter()
+
+        self.assertEqual("p_default", A().p)
+        self.assertEqual("boo", A(p="boo").p)
+
+    @with_config({"A": {"p": "p_default"}, "foo": {"bar": "baz"}})
+    def testDefaultFromConfigWithTaskNameToo(self):
+        class A(luigi.Task):
+            p = luigi.Parameter(config_path=dict(section="foo", name="bar"))
+
+        self.assertEqual("baz", A().p)
+        self.assertEqual("boo", A(p="boo").p)
+
 
 class OverrideEnvStuff(unittest.TestCase):
 
