@@ -189,7 +189,9 @@ class SQLAlchemyTarget(luigi.Target):
                 ins = table.insert().values(update_id=self.update_id, target_table=self.target_table,
                                             inserted=datetime.datetime.now())
             else:
-                ins = table.update().values(update_id=self.update_id, target_table=self.target_table,
+                ins = table.update().where(sqlalchemy.and_(table.c.update_id == self.update_id,
+                                                 table.c.target_table == self.target_table)).\
+                    values(update_id=self.update_id, target_table=self.target_table,
                                             inserted=datetime.datetime.now())
             conn.execute(ins)
         assert self.exists()
