@@ -324,7 +324,7 @@ class CopyToTable(luigi.Task):
                         for row in itertools.islice(rows, self.chunk_size)]
             while ins_rows:
                 self.copy(conn, ins_rows, self.table_bound)
-                ins_rows = [dict(zip((c.key for c in self.table_bound.c), row))
+                ins_rows = [dict(zip(("_"+c.key for c in self.table_bound.c), row))
                             for row in itertools.islice(rows, self.chunk_size)]
                 logger.info("Finished inserting %d rows into SQLAlchemy target" % len(ins_rows))
 
