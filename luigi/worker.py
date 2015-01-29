@@ -478,7 +478,7 @@ class Worker(object):
         elif task.run == NotImplemented:
             deps = None
             status = PENDING
-            runnable = True
+            runnable = configuration.get_config().getboolean('core', 'retry-external-tasks', False)
 
             task.trigger_event(Event.DEPENDENCY_MISSING, task)
             logger.warning('Task %s is not complete and run() is not implemented. Probably a missing external dependency.', task.task_id)

@@ -86,6 +86,17 @@ parallel-scheduling
   parallel using multiprocessing. This can significantly speed up
   scheduling, but requires that all tasks can be pickled.
 
+retry-external-tasks
+  If true, incomplete external tasks (i.e. tasks where the `run()` method is
+  NotImplemented) will be retested for completion while Luigi is running.
+  This means that if external dependencies are satisfied after a workflow has
+  started, any tasks dependent on that resource will be eligible for running.
+  If false, external tasks will only be evaluated when Luigi is first invoked.
+  In this case, Luigi will not check whether external dependencies are
+  satisfied  while a workflow is in progress, so dependent tasks will remain
+  PENDING until the workflow is reinvoked.
+  Defaults to false for backwards compatibility.
+
 rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0
