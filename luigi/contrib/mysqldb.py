@@ -13,6 +13,7 @@ except ImportError as e:
 
 
 class MySqlTarget(luigi.Target):
+
     """Target for a resource in MySql"""
 
     marker_table = luigi.configuration.get_config().get('mysql', 'marker-table', 'table_updates')
@@ -71,11 +72,11 @@ class MySqlTarget(luigi.Target):
             cursor.execute("""SELECT 1 FROM {marker_table}
                 WHERE update_id = %s
                 LIMIT 1""".format(marker_table=self.marker_table),
-                (self.update_id,)
-            )
+                           (self.update_id,)
+                           )
             row = cursor.fetchone()
         except mysql.connector.Error as e:
-            if e.errno ==  errorcode.ER_NO_SUCH_TABLE:
+            if e.errno == errorcode.ER_NO_SUCH_TABLE:
                 row = None
             else:
                 raise

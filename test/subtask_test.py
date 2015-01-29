@@ -20,31 +20,9 @@
 import abc
 import luigi
 import unittest
-import random, tempfile, os
-from luigi.util import CompositionTask
-
-
-class F(luigi.Task):
-    k = luigi.IntParameter()
-
-    def f(self, x):
-        return x ** self.k
-
-
-class SubtaskTask(CompositionTask):
-    def subtasks(self):
-        return [F(1), F(2)]
-
-    def run(self):
-        self.run_subtasks()
-
-        for t in self.subtasks():
-            t.f(42)
-
-
-class SubtaskTest(unittest.TestCase):
-    def test_multiple_workers(self):
-        luigi.build([SubtaskTask()], local_scheduler=True)
+import random
+import tempfile
+import os
 
 
 class AbstractTask(luigi.Task):
@@ -63,6 +41,7 @@ class AbstractTask(luigi.Task):
 
 
 class Implementation(AbstractTask):
+
     @property
     def foo(self):
         return "bar"
@@ -72,6 +51,7 @@ class Implementation(AbstractTask):
 
 
 class AbstractSubclassTest(unittest.TestCase):
+
     def test_instantiate_abstract(self):
         def try_instantiate():
             AbstractTask(k=1)
@@ -83,4 +63,3 @@ class AbstractSubclassTest(unittest.TestCase):
 
 if __name__ == '__main__':
     luigi.run()
-

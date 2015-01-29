@@ -15,37 +15,44 @@
 import configuration
 import datetime
 import warnings
+from deprecate_kwarg import deprecate_kwarg
 from ConfigParser import NoSectionError, NoOptionError
 
 _no_value = object()
 
 
 class ParameterException(Exception):
+
     """Base exception."""
     pass
 
 
 class MissingParameterException(ParameterException):
+
     """Exception signifying that there was a missing Parameter."""
     pass
 
 
 class UnknownParameterException(ParameterException):
+
     """Exception signifying that an unknown Parameter was supplied."""
     pass
 
 
 class DuplicateParameterException(ParameterException):
+
     """Exception signifying that a Parameter was specified multiple times."""
     pass
 
 
 class UnknownConfigException(ParameterException):
-    """Exception signifying that the ``default_from_config`` for the Parameter could not be found."""
+
+    """Exception signifying that the ``config_path`` for the Parameter could not be found."""
     pass
 
 
 class Parameter(object):
+
     """An untyped Parameter
 
     Parameters are objects set on the Task class level to make it possible to parameterize tasks.
@@ -63,19 +70,21 @@ class Parameter(object):
     The ``config_path`` argument lets you specify a place where the parameter is read from config
     in case no value is provided.
 
-    Providing ``is_global=True`` changes the behavior of the parameter so that the value is shared
-    across all instances of the task. Global parameters can be provided in several ways. In
-    falling order of precedence:
+    When a task is instantiated, it will first use any argument as the value of the parameter, eg.
+    if you instantiate a = TaskA(x=44) then a.x == 44. If this does not exist, it will use the value
+    of the Parameter object, which is defined on a class level. This will be resolved in this
+    order of falling priority:
 
-    * A value provided on the command line (eg. ``--my-global-value xyz``)
-    * A value provided via config (using the ``config_path`` argument)
-    * A default value set using the ``default`` flag.
+    * Any value provided on the command line on the class level (eg. ``--TaskA-param xyz``)
+    * Any value provided via config (using the ``config_path`` argument)
+    * Any default value set using the ``default`` flag.
     """
     counter = 0
     """non-atomically increasing counter used for ordering parameters."""
 
+    @deprecate_kwarg('is_boolean', 'is_bool', False)
     def __init__(self, default=_no_value, is_list=False, is_boolean=False, is_global=False, significant=True, description=None,
-                 config_path=None, default_from_config=None):
+                 config_path=None):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -84,8 +93,8 @@ class Parameter(object):
         :param bool is_list: specify ``True`` if the parameter should allow a list of values rather
                              than a single value. Default: ``False``. A list has an implicit default
                              value of ``[]``.
-        :param bool is_boolean: specify ``True`` if the parameter is a boolean value. Default:
-                                ``False``. Boolean's have an implicit default value of ``False``.
+        :param bool is_bool: specify ``True`` if the parameter is a bool value. Default:
+                                ``False``. Bool's have an implicit default value of ``False``.
         :param bool is_global: specify ``True`` if the parameter is global (i.e. used by multiple
                                Tasks). Default: ``False``.
         :param bool significant: specify ``False`` if the parameter should not be treated as part of
@@ -106,20 +115,13 @@ class Parameter(object):
         self.__global = _no_value
 
         self.is_list = is_list
-        self.is_boolean = is_boolean and not is_list  # Only BooleanParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
+        self.is_bool = is_boolean and not is_list  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
-        self.significant = significant # Whether different values for this parameter will differentiate otherwise equal tasks
-
-        if default_from_config is not None:
-            warnings.warn(
-                "Use config_path parameter, not default_from_config",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            config_path = default_from_config
+        self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
 
         if is_global and default == _no_value and config_path is None:
             raise ParameterException('Global parameters need default values')
+
         self.description = description
 
         if config_path is not None and ('section' not in config_path or 'name' not in config_path):
@@ -140,13 +142,21 @@ class Parameter(object):
 
         try:
             value = conf.get(section, name)
-        except (NoSectionError, NoOptionError), e:
+        except (NoSectionError, NoOptionError) as e:
             return _no_value
 
         if self.is_list:
             return tuple(self.parse(p.strip()) for p in value.strip().split('\n'))
         else:
             return self.parse(value)
+
+    def _get_value(self):
+        values = [self.__global, self._get_value_from_config(), self.__default]
+        for value in values:
+            if value != _no_value:
+                return value
+        else:
+            return _no_value
 
     @property
     def has_value(self):
@@ -159,23 +169,7 @@ class Parameter(object):
 
         Any Task instance can have its own value set that overrides this.
         """
-        values = [self.__global, self._get_value_from_config(), self.__default]
-        for value in values:
-            if value != _no_value:
-                return True
-        else:
-            return False
-
-    @property
-    def has_default(self):
-        """Don't use this function - see has_value instead"""
-        warnings.warn(
-            'Use has_value rather than has_default. The meaning of '
-            '"default" has changed',
-            DeprecationWarning,
-            stacklevel=2
-        )
-        return self.has_value
+        return self._get_value() != _no_value
 
     @property
     def value(self):
@@ -187,46 +181,21 @@ class Parameter(object):
         :raises MissingParameterException: if a value is not set.
         :return: the parsed value.
         """
-        values = [self.__global, self._get_value_from_config(), self.__default]
-        for value in values:
-            if value != _no_value:
-                return value
-        else:
+        value = self._get_value()
+        if value == _no_value:
             raise MissingParameterException("No default specified")
-
-    @property
-    def default(self):
-        warnings.warn(
-            'Use value rather than default. The meaning of '
-            '"default" has changed',
-            DeprecationWarning,
-            stacklevel=2
-        )
-        return self.value
+        else:
+            return value
 
     def set_global(self, value):
         """Set the global value of this Parameter.
 
         :param value: the new global value.
         """
-        assert self.is_global
         self.__global = value
 
     def reset_global(self):
         self.__global = _no_value
-
-    def set_default(self, value):
-        """Set the default value of this Parameter.
-
-        :param value: the new default value.
-        """
-        warnings.warn(
-            'Use set_global rather than set_default. The meaning of '
-            '"default" has changed',
-            DeprecationWarning,
-            stacklevel=2
-        )
-        self.__default = value
 
     def parse(self, x):
         """Parse an individual value from the input.
@@ -241,7 +210,7 @@ class Parameter(object):
         """
         return x  # default impl
 
-    def serialize(self, x): # opposite of parse
+    def serialize(self, x):  # opposite of parse
         """Opposite of :py:meth:`parse`.
 
         Converts the value ``x`` to a string.
@@ -264,13 +233,13 @@ class Parameter(object):
         if not x:
             if self.has_value:
                 return self.value
-            elif self.is_boolean:
+            elif self.is_bool:
                 return False
             elif self.is_list:
                 return []
             else:
-                raise MissingParameterException("No value for '%s' (%s) submitted and no default value has been assigned." % \
-                    (param_name, "--" + param_name.replace('_', '-')))
+                raise MissingParameterException("No value for '%s' (%s) submitted and no default value has been assigned." %
+                                                (param_name, "--" + param_name.replace('_', '-')))
         elif self.is_list:
             return tuple(self.parse(p) for p in x)
         else:
@@ -282,8 +251,65 @@ class Parameter(object):
         else:
             return self.serialize(x)
 
+    def parser_dest(self, param_name, task_name, glob=False):
+        if self.is_global:
+            if glob:
+                return param_name
+            else:
+                return None
+        else:
+            if glob:
+                return task_name + '_' + param_name
+            else:
+                return param_name
+
+    def add_to_cmdline_parser(self, parser, param_name, task_name, optparse=False, glob=False):
+        dest = self.parser_dest(param_name, task_name, glob)
+        if not dest:
+            return
+        flag = '--' + dest.replace('_', '-')
+
+        description = []
+        description.append('%s.%s' % (task_name, param_name))
+        if self.description:
+            description.append(self.description)
+        if self.has_value:
+            description.append(" [default: %s]" % (self.value,))
+
+        if self.is_list:
+            action = "append"
+        elif self.is_bool:
+            action = "store_true"
+        else:
+            action = "store"
+        if optparse:
+            f = parser.add_option
+        else:
+            f = parser.add_argument
+        f(flag,
+          help=' '.join(description),
+          default=None,
+          action=action,
+          dest=dest)
+
+    def parse_from_args(self, param_name, task_name, args, params):
+        # Note: modifies arguments
+        dest = self.parser_dest(param_name, task_name, glob=False)
+        if dest is not None:
+            value = getattr(args, dest, None)
+            params[param_name] = self.parse_from_input(param_name, value)
+
+    def set_global_from_args(self, param_name, task_name, args):
+        # Note: side effects
+        dest = self.parser_dest(param_name, task_name, glob=True)
+        if dest is not None:
+            value = getattr(args, dest, None)
+            if value is not None:
+                self.set_global(self.parse_from_input(param_name, value))
+
 
 class DateHourParameter(Parameter):
+
     """Parameter whose value is a :py:class:`~datetime.datetime` specified to the hour.
 
     A DateHourParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
@@ -291,62 +317,96 @@ class DateHourParameter(Parameter):
     19:00.
     """
 
+    date_format = '%Y-%m-%dT%H'  # ISO 8601 is to use 'T'
+
     def parse(self, s):
         """
         Parses a string to a :py:class:`~datetime.datetime` using the format string ``%Y-%m-%dT%H``.
         """
         # TODO(erikbern): we should probably use an internal class for arbitary
         # time intervals (similar to date_interval). Or what do you think?
-        return datetime.datetime.strptime(s, "%Y-%m-%dT%H")  # ISO 8601 is to use 'T'
+        return datetime.datetime.strptime(s, self.date_format)
 
     def serialize(self, dt):
         """
         Converts the datetime to a string usnig the format string ``%Y-%m-%dT%H``.
         """
-        if dt is None: return str(dt)
-        return dt.strftime('%Y-%m-%dT%H')
+        if dt is None:
+            return str(dt)
+        return dt.strftime(self.date_format)
+
+
+class DateMinuteParameter(DateHourParameter):
+
+    """Parameter whose value is a :py:class:`~datetime.datetime` specified to the minute.
+
+    A DateMinuteParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
+    date and time specified to the minute. For example, ``2013-07-10T19H07`` specifies July 10, 2013 at
+    19:07.
+    """
+
+    date_format = '%Y-%m-%dT%HH%M'  # ISO 8601 is to use 'T' and 'H'
 
 
 class DateParameter(Parameter):
+
     """Parameter whose value is a :py:class:`~datetime.date`.
 
     A DateParameter is a Date string formatted ``YYYY-MM-DD``. For example, ``2013-07-10`` specifies
     July 10, 2013.
     """
+
     def parse(self, s):
         """Parses a date string formatted as ``YYYY-MM-DD``."""
         return datetime.date(*map(int, s.split('-')))
 
 
 class IntParameter(Parameter):
+
     """Parameter whose value is an ``int``."""
+
     def parse(self, s):
         """Parses an ``int`` from the string using ``int()``."""
         return int(s)
 
+
 class FloatParameter(Parameter):
+
     """Parameter whose value is a ``float``."""
+
     def parse(self, s):
         """Parses a ``float`` from the string using ``float()``."""
         return float(s)
 
-class BooleanParameter(Parameter):
+
+class BoolParameter(Parameter):
+
     """A Parameter whose value is a ``bool``."""
-    # TODO(erikbern): why do we call this "boolean" instead of "bool"?
-    # The integer parameter is called "int" so calling this "bool" would be
-    # more consistent, especially given the Python type names.
+
     def __init__(self, *args, **kwargs):
         """This constructor passes along args and kwargs to ctor for :py:class:`Parameter` but
-        specifies ``is_boolean=True``.
+        specifies ``is_bool=True``.
         """
-        super(BooleanParameter, self).__init__(*args, is_boolean=True, **kwargs)
+        super(BoolParameter, self).__init__(*args, is_bool=True, **kwargs)
 
     def parse(self, s):
-        """Parses a ``boolean`` from the string, matching 'true' or 'false' ignoring case."""
+        """Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case."""
         return {'true': True, 'false': False}[str(s).lower()]
 
 
+class BooleanParameter(BoolParameter):
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            'BooleanParameter is deprecated, use BoolParameter instead',
+            DeprecationWarning,
+            stacklevel=2
+        )
+        super(BooleanParameter, self).__init__(*args, **kwargs)
+
+
 class DateIntervalParameter(Parameter):
+
     """A Parameter whose value is a :py:class:`~luigi.date_interval.DateInterval`.
 
     Date Intervals are specified using the ISO 8601 `Time Interval
@@ -374,6 +434,7 @@ class DateIntervalParameter(Parameter):
 
 
 class TimeDeltaParameter(Parameter):
+
     """Class that maps to timedelta using strings in any of the following forms:
 
      - ``n {w[eek[s]]|d[ay[s]]|h[our[s]]|m[inute[s]|s[second[s]]}`` (e.g. "1 week 2 days" or "1 h")
@@ -391,7 +452,7 @@ class TimeDeltaParameter(Parameter):
         if re_match:
             kwargs = {}
             has_val = False
-            for k,v in re_match.groupdict(default="0").items():
+            for k, v in re_match.groupdict(default="0").iteritems():
                 val = int(v)
                 has_val = has_val or val != 0
                 kwargs[k] = val
@@ -401,11 +462,12 @@ class TimeDeltaParameter(Parameter):
     def _parseIso8601(self, input):
         def field(key):
             return "(?P<%s>\d+)%s" % (key, key[0].upper())
+
         def optional_field(key):
             return "(%s)?" % field(key)
         # A little loose: ISO 8601 does not allow weeks in combination with other fields, but this regex does (as does python timedelta)
         regex = "P(%s|%s(T%s)?)" % (field("weeks"), optional_field("days"), "".join([optional_field(key) for key in ["hours", "minutes", "seconds"]]))
-        return self._apply_regex(regex,input)
+        return self._apply_regex(regex, input)
 
     def _parseSimple(self, input):
         keys = ["weeks", "days", "hours", "minutes", "seconds"]

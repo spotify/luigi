@@ -28,7 +28,9 @@ HOST = "some_host"
 USER = "luigi"
 PWD = "some_password"
 
+
 class TestFTPFilesystem(unittest.TestCase):
+
     def setUp(self):
         """ Creates structure
 
@@ -81,6 +83,7 @@ class TestFTPFilesystem(unittest.TestCase):
 
 
 class TestFTPFilesystemUpload(unittest.TestCase):
+
     def test_single(self):
         """ Test upload file with creation of intermediate folders """
         ftp_path = "/test/nest/luigi-test"
@@ -110,6 +113,7 @@ class TestFTPFilesystemUpload(unittest.TestCase):
 
 
 class TestRemoteTarget(unittest.TestCase):
+
     def test_put(self):
         """ Test RemoteTarget put method with uploading to an FTP """
         local_filepath = "/tmp/luigi-remotetarget-write-test"

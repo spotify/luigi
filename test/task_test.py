@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 class DummyTask(luigi.Task):
 
     param = luigi.Parameter()
-    bool_param = luigi.BooleanParameter()
+    bool_param = luigi.BoolParameter()
     int_param = luigi.IntParameter()
     float_param = luigi.FloatParameter()
     date_param = luigi.DateParameter()
@@ -35,9 +35,26 @@ class TaskTest(unittest.TestCase):
             list_param=['in', 'flames'])
 
         original = DummyTask(**params)
-        other = DummyTask.from_str_params(original.to_str_params(), {})
+        other = DummyTask.from_str_params(original.to_str_params())
         self.assertEqual(original, other)
 
+    def test_id_to_name_and_params(self):
+        task_id = "InputText(date=2014-12-29)"
+        (name, params) = luigi.task.id_to_name_and_params(task_id)
+        self.assertEquals(name, "InputText")
+        self.assertEquals(params, dict(date="2014-12-29"))
+
+    def test_id_to_name_and_params_multiple_args(self):
+        task_id = "InputText(date=2014-12-29,foo=bar)"
+        (name, params) = luigi.task.id_to_name_and_params(task_id)
+        self.assertEquals(name, "InputText")
+        self.assertEquals(params, dict(date="2014-12-29", foo="bar"))
+
+    def test_id_to_name_and_params_list_args(self):
+        task_id = "InputText(date=2014-12-29,foo=[bar,baz-foo])"
+        (name, params) = luigi.task.id_to_name_and_params(task_id)
+        self.assertEquals(name, "InputText")
+        self.assertEquals(params, dict(date="2014-12-29", foo=["bar", "baz-foo"]))
 
 if __name__ == '__main__':
     unittest.main()

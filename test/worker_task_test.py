@@ -19,13 +19,17 @@ import luigi.notifications
 from luigi.worker import TaskException
 luigi.notifications.DEBUG = True
 
+
 class MyTask(luigi.Task):
     # Test overriding the constructor without calling the superconstructor
     # This is a simple mistake but caused an error that was very hard to understand
+
     def __init__(self):
         pass
 
+
 class WorkerTaskTest(unittest.TestCase):
+
     def test_constructor(self):
         def f():
             luigi.build([MyTask()], local_scheduler=True)

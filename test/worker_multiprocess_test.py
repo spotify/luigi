@@ -41,6 +41,7 @@ class DummyTask(Task):
 
 
 class MultiprocessWorkerTest(unittest.TestCase):
+
     def setUp(self):
         self.scheduler = RemoteScheduler()
         self.scheduler.add_worker = Mock()
@@ -55,6 +56,7 @@ class MultiprocessWorkerTest(unittest.TestCase):
         b = DummyTask("b")
 
         class MultipleRequirementTask(DummyTask):
+
             def requires(self):
                 return [a, b]
 
@@ -69,6 +71,7 @@ class MultiprocessWorkerTest(unittest.TestCase):
 
     def test_path_with_task_failures(self):
         class FailingTask(DummyTask):
+
             def run(self):
                 raise Exception("I am failing")
 
@@ -76,6 +79,7 @@ class MultiprocessWorkerTest(unittest.TestCase):
         b = FailingTask("b")
 
         class MultipleRequirementTask(DummyTask):
+
             def requires(self):
                 return [a, b]
 

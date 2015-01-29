@@ -12,15 +12,18 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi, luigi.interface
+import luigi
+import luigi.interface
 import unittest
 import datetime
+
 
 class DateHourTask(luigi.Task):
     dh = luigi.DateHourParameter()
 
 
 class DateHourTest(unittest.TestCase):
+
     def test_parse(self):
         dh = luigi.DateHourParameter().parse('2013-01-01T18')
         self.assertEqual(dh, datetime.datetime(2013, 1, 1, 18, 0, 0))

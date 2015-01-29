@@ -10,8 +10,10 @@ env:
   global:
     - PIP_DOWNLOAD_CACHE=$HOME/.pip-cache
   matrix:
+    - TOX_ENV=pep8
     - TOX_ENV=cdh
     - TOX_ENV=hdp
+    - TOX_ENV=nonhdfs
 
 sudo: false
 
@@ -21,6 +23,8 @@ cache:
 install:
   - pip install tox
 
-script: tox -e $TOX_ENV
+script:
+  - tox -e $TOX_ENV
 
-after_failure: cat /home/travis/build/spotify/luigi/.tox/cdh/log/cdh-1.log
+after_failure:
+  - cat /home/travis/build/spotify/luigi/.tox/cdh/log/cdh-1.log

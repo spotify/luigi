@@ -25,6 +25,7 @@ logger = logging.getLogger('luigi-interface')
 
 
 class HiveCommandError(RuntimeError):
+
     def __init__(self, message, out=None, err=None):
         super(HiveCommandError, self).__init__(message, out, err)
         self.message = message
@@ -73,7 +74,7 @@ class HiveClient(object):  # interface
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def table_location(self, table, database='default', partition={}):
+    def table_location(self, table, database='default', partition=None):
         """
         Returns location of db.table (or db.table.partition). partition is a dict of partition key to
         value.
@@ -86,7 +87,7 @@ class HiveClient(object):  # interface
         pass
 
     @abc.abstractmethod
-    def table_exists(self, table, database='default', partition={}):
+    def table_exists(self, table, database='default', partition=None):
         """
         Returns true iff db.table (or db.table.partition) exists. partition is a dict of partition key to
         value.
@@ -100,10 +101,12 @@ class HiveClient(object):  # interface
 
 
 class HiveCommandClient(HiveClient):
+
     """ Uses `hive` invocations to find information """
-    def table_location(self, table, database='default', partition={}):
+
+    def table_location(self, table, database='default', partition=None):
         cmd = "use {0}; describe formatted {1}".format(database, table)
-        if partition:
+        if partition is not None:
             cmd += " PARTITION ({0})".format(self.partition_spec(partition))
 
         stdout = run_hive_cmd(cmd)
@@ -112,8 +115,8 @@ class HiveCommandClient(HiveClient):
             if "Location:" in line:
                 return line.split("\t")[1]
 
-    def table_exists(self, table, database='default', partition={}):
-        if not partition:
+    def table_exists(self, table, database='default', partition=None):
+        if partition is None:
             stdout = run_hive_cmd('use {0}; show tables like "{1}";'.format(database, table))
 
             return stdout and table in stdout
@@ -135,14 +138,16 @@ class HiveCommandClient(HiveClient):
     def partition_spec(self, partition):
         """ Turns a dict into the a Hive partition specification string """
         return ','.join(["{0}='{1}'".format(k, v) for (k, v) in
-                         sorted(partition.items(), key=operator.itemgetter(0))])
+                         sorted(partition.iteritems(), key=operator.itemgetter(0))])
 
 
 class ApacheHiveCommandClient(HiveCommandClient):
+
     """
     A subclass for the HiveCommandClient to (in some cases) ignore the return code from
     the hive command so that we can just parse the output.
     """
+
     def table_schema(self, table, database='default'):
         describe = run_hive_cmd("use {0}; describe {1}".format(database, table), False)
         if not describe or "Table not found" in describe:
@@ -151,18 +156,19 @@ class ApacheHiveCommandClient(HiveCommandClient):
 
 
 class MetastoreClient(HiveClient):
-    def table_location(self, table, database='default', partition={}):
+
+    def table_location(self, table, database='default', partition=None):
         with HiveThriftContext() as client:
-            if partition:
+            if partition is not None:
                 partition_str = self.partition_spec(partition)
                 thrift_table = client.get_partition_by_name(database, table, partition_str)
             else:
                 thrift_table = client.get_table(database, table)
             return thrift_table.sd.location
 
-    def table_exists(self, table, database='default', partition={}):
+    def table_exists(self, table, database='default', partition=None):
         with HiveThriftContext() as client:
-            if not partition:
+            if partition is None:
                 return table in client.get_all_tables(database)
             else:
                 return partition in self._existing_partitions(table, database, client)
@@ -184,11 +190,13 @@ class MetastoreClient(HiveClient):
             return [(field_schema.name, field_schema.type) for field_schema in client.get_schema(database, table)]
 
     def partition_spec(self, partition):
-        return "/".join("%s=%s" % (k, v) for (k, v) in sorted(partition.items(), key=operator.itemgetter(0)))
+        return "/".join("%s=%s" % (k, v) for (k, v) in sorted(partition.iteritems(), key=operator.itemgetter(0)))
 
 
 class HiveThriftContext(object):
+
     """ Context manager for hive metastore client """
+
     def __enter__(self):
         try:
             from thrift import Thrift
@@ -208,7 +216,7 @@ class HiveThriftContext(object):
             transport.open()
             self.transport = transport
             return ThriftHiveMetastore.Client(protocol)
-        except ImportError, e:
+        except ImportError as e:
             raise Exception('Could not import Hive thrift library:' + str(e))
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -222,6 +230,7 @@ client = default_client
 
 
 class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
+
     """ Task to run a hive query """
     # by default, we let hive figure these out.
     n_reduce_tasks = None
@@ -273,6 +282,7 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
 
 
 class HiveQueryRunner(luigi.hadoop.JobRunner):
+
     """ Runs a HiveQueryTask by shelling out to hive """
 
     def prepare_outputs(self, job):
@@ -301,7 +311,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
             arglist = [load_hive_cmd(), '-f', f.name]
             hiverc = job.hiverc()
             if hiverc:
-                if type(hiverc) == str:
+                if isinstance(hiverc, str):
                     hiverc = [hiverc]
                 for rcfile in hiverc:
                     arglist += ['-i', rcfile]
@@ -314,6 +324,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
 
 
 class HiveTableTarget(luigi.Target):
+
     """ exists returns true if the table exists """
 
     def __init__(self, table, database='default', client=default_client):
@@ -339,6 +350,7 @@ class HiveTableTarget(luigi.Target):
 
 
 class HivePartitionTarget(luigi.Target):
+
     """ exists returns true if the table's partition exists """
 
     def __init__(self, table, partition, database='default', fail_missing_table=True, client=default_client):
@@ -353,7 +365,7 @@ class HivePartitionTarget(luigi.Target):
         try:
             logger.debug("Checking Hive table '{d}.{t}' for partition {p}".format(d=self.database, t=self.table, p=str(self.partition)))
             return self.client.table_exists(self.table, self.database, self.partition)
-        except HiveCommandError, e:
+        except HiveCommandError as e:
             if self.fail_missing_table:
                 raise
             else:
@@ -377,6 +389,7 @@ class HivePartitionTarget(luigi.Target):
 
 
 class ExternalHiveTask(luigi.ExternalTask):
+
     """ External task that depends on a Hive table/partition """
 
     database = luigi.Parameter(default='default')

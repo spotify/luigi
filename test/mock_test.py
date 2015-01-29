@@ -17,6 +17,7 @@ import unittest
 
 
 class MockFileTest(unittest.TestCase):
+
     def test_1(self):
         t = MockFile('test')
         p = t.open('w')

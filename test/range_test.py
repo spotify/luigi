@@ -15,7 +15,7 @@
 import fnmatch
 import datetime
 import luigi
-from luigi.tools.range import RangeEvent, RangeHourly, RangeHourlyBase, _constrain_glob
+from luigi.tools.range import RangeEvent, RangeHourly, RangeHourlyBase, _constrain_glob, _get_filesystems_and_globs
 from luigi.mock import MockFile, MockFileSystem
 import mock
 import time
@@ -100,6 +100,7 @@ def mock_listdir(_, glob):
 
 
 class ConstrainGlobTest(unittest.TestCase):
+
     def test_limit(self):
         glob = '/[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]/[0-9][0-9]'
         paths = [(datetime.datetime(2013, 12, 31, 5) + datetime.timedelta(hours=h)).strftime('/%Y/%m/%d/%H') for h in xrange(40)]
@@ -147,9 +148,11 @@ class RangeHourlyBaseTest(unittest.TestCase):
         @RangeHourlyBase.event_handler(RangeEvent.DELAY)
         def callback_delay(*args):
             self.events.setdefault(RangeEvent.DELAY, []).append(args)
+
         @RangeHourlyBase.event_handler(RangeEvent.COMPLETE_COUNT)
         def callback_complete_count(*args):
             self.events.setdefault(RangeEvent.COMPLETE_COUNT, []).append(args)
+
         @RangeHourlyBase.event_handler(RangeEvent.COMPLETE_FRACTION)
         def callback_complete_fraction(*args):
             self.events.setdefault(RangeEvent.COMPLETE_FRACTION, []).append(args)
@@ -159,6 +162,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeHourlyDerived(RangeHourlyBase):
+
             def missing_datehours(*args):
                 calls.append(args)
                 return args[-1][:5]
@@ -198,6 +202,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeHourlyDerived(RangeHourlyBase):
+
             def missing_datehours(*args):
                 calls.append(args)
                 return args[-1][:7]
@@ -302,8 +307,9 @@ class RangeHourlyBaseTest(unittest.TestCase):
 
 
 class RangeHourlyTest(unittest.TestCase):
+
     def _test_filesystems_and_globs(self, task_cls, expected):
-        actual = list(RangeHourly._get_filesystems_and_globs(task_cls))
+        actual = list(_get_filesystems_and_globs(task_cls))
         self.assertEqual(len(actual), len(expected))
         for (actual_filesystem, actual_glob), (expected_filesystem, expected_glob) in zip(actual, expected):
             self.assertTrue(isinstance(actual_filesystem, expected_filesystem))
@@ -338,3 +344,27 @@ class RangeHourlyTest(unittest.TestCase):
                            hours_back=30 * 365 * 24)
         actual = [t.task_id for t in task.requires()]
         self.assertEqual(actual, expected_wrapper)
+
+    def test_bulk_complete_correctly_interfaced(self):
+        class BulkCompleteTask(luigi.Task):
+            dh = luigi.DateHourParameter()
+
+            @classmethod
+            def bulk_complete(cls, parameter_tuples):
+                return parameter_tuples[:-2]
+
+            def output(self):
+                raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
+
+        task = RangeHourly(now=datetime_to_epoch(datetime.datetime(2015, 12, 1)),
+                           of='BulkCompleteTask',
+                           start=datetime.datetime(2015, 11, 1),
+                           stop=datetime.datetime(2015, 12, 1))
+
+        expected = [
+            'BulkCompleteTask(dh=2015-11-30T22)',
+            'BulkCompleteTask(dh=2015-11-30T23)',
+        ]
+
+        actual = [t.task_id for t in task.requires()]
+        self.assertEqual(actual, expected)

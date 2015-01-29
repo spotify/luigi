@@ -35,6 +35,7 @@ exit 1
 
 
 class TestSigpipe(TestCase):
+
     def setUp(self):
         with open("/tmp/luigi_test_sigpipe.sh", "w") as fp:
             fp.write(BASH_SCRIPT)
@@ -61,6 +62,7 @@ class TestSigpipe(TestCase):
 
 
 class TestSubprocessException(TestCase):
+
     def setUp(self):
         with open("/tmp/luigi_test_sigpipe.sh", "w") as fp:
             fp.write(FAIL_SCRIPT)

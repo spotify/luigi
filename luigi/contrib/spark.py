@@ -36,6 +36,7 @@ hadoop-conf-dir: /etc/hadoop/conf
 
 
 class SparkRunContext(object):
+
     def __init__(self):
         self.app_id = None
 
@@ -66,11 +67,20 @@ class SparkRunContext(object):
 
 
 class SparkJobError(RuntimeError):
+
     def __init__(self, message, out=None, err=None):
         super(SparkJobError, self).__init__(message, out, err)
         self.message = message
         self.out = out
         self.err = err
+
+    def __str__(self):
+        info = self.message
+        if self.out:
+            info += "\nSTDOUT: " + str(self.out)
+        if self.err:
+            info += "\nSTDERR: " + str(self.err)
+        return info
 
 
 class SparkJob(luigi.Task):
@@ -158,7 +168,7 @@ class SparkJob(luigi.Task):
             raise SparkJobError('Spark job failed: see yarn logs for %s' % app_id)
         else:
             temp_stderr.seek(0)
-            errors = temp_stderr.readlines()
+            errors = "".join(temp_stderr.readlines())
             logger.error(errors)
             raise SparkJobError('Spark job failed', err=errors)
 
@@ -268,7 +278,7 @@ class Spark1xJob(luigi.Task):
                                 .format(app_id))
         elif return_code != 0:
             temp_stderr.seek(0)
-            errors = temp_stderr.readlines()
+            errors = "".join(temp_stderr.readlines())
             logger.error(errors)
             raise SparkJobError('Spark job failed', err=errors)
 
@@ -318,7 +328,6 @@ class Spark1xJob(luigi.Task):
         return proc.returncode, final_state, app_id
 
 
-
 class PySpark1xJob(Spark1xJob):
 
     num_executors = None
@@ -362,6 +371,6 @@ class PySpark1xJob(Spark1xJob):
                                 .format(app_id))
         elif return_code != 0:
             temp_stderr.seek(0)
-            errors = temp_stderr.readlines()
+            errors = "".join(temp_stderr.readlines())
             logger.error(errors)
             raise SparkJobError('Spark job failed', err=errors)

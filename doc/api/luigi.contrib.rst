@@ -20,6 +20,14 @@ luigi.contrib.ftp module
     :undoc-members:
     :show-inheritance:
 
+luigi.contrib.sqla module
+-------------------------
+
+.. automodule:: luigi.contrib.sqla
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 luigi.contrib.mysqldb module
 ----------------------------
 
@@ -48,6 +56,14 @@ luigi.contrib.spark module
 --------------------------
 
 .. automodule:: luigi.contrib.spark
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+luigi.contrib.scalding module
+--------------------------
+
+.. automodule:: luigi.contrib.scalding
     :members:
     :undoc-members:
     :show-inheritance:

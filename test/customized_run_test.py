@@ -38,6 +38,7 @@ class DummyTask(luigi.Task):
 
 
 class CustomizedLocalScheduler(luigi.scheduler.CentralPlannerScheduler):
+
     def __init__(self, *args, **kwargs):
         super(CustomizedLocalScheduler, self).__init__(*args, **kwargs)
         self.has_run = False
@@ -52,6 +53,7 @@ class CustomizedLocalScheduler(luigi.scheduler.CentralPlannerScheduler):
 
 
 class CustomizedRemoteScheduler(luigi.rpc.RemoteScheduler):
+
     def __init__(self, *args, **kwargs):
         super(CustomizedRemoteScheduler, self).__init__(*args, **kwargs)
         self.has_run = False
@@ -66,6 +68,7 @@ class CustomizedRemoteScheduler(luigi.rpc.RemoteScheduler):
 
 
 class CustomizedWorker(luigi.worker.Worker):
+
     def __init__(self, *args, **kwargs):
         super(CustomizedWorker, self).__init__(*args, **kwargs)
         self.has_run = False
@@ -79,6 +82,7 @@ class CustomizedWorker(luigi.worker.Worker):
 
 
 class CustomizedWorkerSchedulerFactory(object):
+
     def __init__(self, *args, **kwargs):
         self.scheduler = CustomizedLocalScheduler()
         self.worker = CustomizedWorker(self.scheduler)
@@ -94,7 +98,9 @@ class CustomizedWorkerSchedulerFactory(object):
 
 
 class CustomizedWorkerTest(unittest.TestCase):
+
     ''' Test that luigi's build method (and ultimately the run method) can accept a customized worker and scheduler '''
+
     def setUp(self):
         self.worker_scheduler_factory = CustomizedWorkerSchedulerFactory()
         self.time = time.time

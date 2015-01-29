@@ -23,6 +23,7 @@ from luigi.parameter import ParameterException
 luigi.notifications.DEBUG = True
 import unittest
 from helpers import with_config
+from luigi.mock import MockFile, MockFileSystem
 
 EMAIL_CONFIG = {"core": {"error-email": "not-a-real-email-address-for-test-only"}}
 
@@ -43,14 +44,14 @@ class Foo(luigi.Task):
 
 
 class Bar(luigi.Task):
-    multibool = luigi.BooleanParameter(is_list=True)
+    multibool = luigi.BoolParameter(is_list=True)
 
     def run(self):
         Bar._val = self.multibool
 
 
 class Baz(luigi.Task):
-    bool = luigi.BooleanParameter()
+    bool = luigi.BoolParameter()
 
     def run(self):
         Baz._val = self.bool
@@ -64,6 +65,7 @@ class ForgotParam(luigi.Task):
 
 
 class ForgotParamDep(luigi.Task):
+
     def requires(self):
         return ForgotParam()
 
@@ -74,7 +76,7 @@ class ForgotParamDep(luigi.Task):
 class HasGlobalParam(luigi.Task):
     x = luigi.Parameter()
     global_param = luigi.IntParameter(is_global=True, default=123)  # global parameters need default values
-    global_bool_param = luigi.BooleanParameter(is_global=True, default=False)
+    global_bool_param = luigi.BoolParameter(is_global=True, default=False)
 
     def run(self):
         self.complete = lambda: True
@@ -100,7 +102,43 @@ class SharedGlobalParamB(luigi.Task):
     shared_global_param = _shared_global_param
 
 
+class BananaDep(luigi.Task):
+    x = luigi.Parameter()
+    y = luigi.Parameter(default='def')
+
+    def output(self):
+        return MockFile('banana-dep-%s-%s' % (self.x, self.y))
+
+    def run(self):
+        self.output().open('w').close()
+
+
+class Banana(luigi.Task):
+    x = luigi.Parameter()
+    y = luigi.Parameter()
+    style = luigi.Parameter(default=None)
+
+    def requires(self):
+        if self.style is None:
+            return BananaDep()  # will fail
+        elif self.style == 'x-arg':
+            return BananaDep(self.x)
+        elif self.style == 'y-kwarg':
+            return BananaDep(y=self.y)
+        elif self.style == 'x-arg-y-arg':
+            return BananaDep(self.x, self.y)
+        else:
+            raise Exception('unknown style')
+
+    def output(self):
+        return MockFile('banana-%s-%s' % (self.x, self.y))
+
+    def run(self):
+        self.output().open('w').close()
+
+
 class ParameterTest(EmailTest):
+
     def setUp(self):
         super(ParameterTest, self).setUp()
         # Need to restore some defaults for the global params since they are overriden
@@ -142,32 +180,32 @@ class ParameterTest(EmailTest):
         self.assertEqual(f.not_a_param, "lol")
 
     def test_multibool(self):
-        luigi.run(['--local-scheduler', 'Bar', '--multibool', 'true', '--multibool', 'false'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Bar', '--multibool', 'true', '--multibool', 'false'])
         self.assertEqual(Bar._val, (True, False))
 
     def test_multibool_empty(self):
-        luigi.run(['--local-scheduler', 'Bar'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Bar'])
         self.assertEqual(Bar._val, tuple())
 
     def test_bool_false(self):
-        luigi.run(['--local-scheduler', 'Baz'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Baz'])
         self.assertEqual(Baz._val, False)
 
     def test_bool_true(self):
-        luigi.run(['--local-scheduler', 'Baz', '--bool'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Baz', '--bool'])
         self.assertEqual(Baz._val, True)
 
     def test_forgot_param(self):
-        self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', 'ForgotParam'],)
+        self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', '--no-lock', 'ForgotParam'],)
 
     @with_config(EMAIL_CONFIG)
     def test_forgot_param_in_dep(self):
         # A programmatic missing parameter will cause an error email to be sent
-        luigi.run(['--local-scheduler', 'ForgotParamDep'])
+        luigi.run(['--local-scheduler', '--no-lock', 'ForgotParamDep'])
         self.assertNotEquals(self.last_email, None)
 
     def test_default_param_cmdline(self):
-        luigi.run(['--local-scheduler', 'WithDefault'])
+        luigi.run(['--local-scheduler', '--no-lock', 'WithDefault'])
         self.assertEqual(WithDefault().x, 'xyz')
 
     def test_global_param_defaults(self):
@@ -176,36 +214,37 @@ class ParameterTest(EmailTest):
         self.assertEqual(h.global_bool_param, False)
 
     def test_global_param_cmdline(self):
-        luigi.run(['--local-scheduler', 'HasGlobalParam', '--x', 'xyz', '--global-param', '124'])
+        luigi.run(['--local-scheduler', '--no-lock', 'HasGlobalParam', '--x', 'xyz', '--global-param', '124'])
         h = HasGlobalParam(x='xyz')
         self.assertEqual(h.global_param, 124)
         self.assertEqual(h.global_bool_param, False)
 
     def test_global_param_override(self):
-        def f():
-            return HasGlobalParam(x='xyz', global_param=124)
-        self.assertRaises(luigi.parameter.ParameterException, f)  # can't override a global parameter
+        h1 = HasGlobalParam(x='xyz', global_param=124)
+        h2 = HasGlobalParam(x='xyz')
+        self.assertEquals(h1.global_param, 124)
+        self.assertEquals(h2.global_param, 123)
 
     def test_global_param_dep_cmdline(self):
-        luigi.run(['--local-scheduler', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'])
+        luigi.run(['--local-scheduler', '--no-lock', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'])
         h = HasGlobalParam(x='xyz')
         self.assertEqual(h.global_param, 124)
         self.assertEqual(h.global_bool_param, False)
 
     def test_global_param_dep_cmdline_optparse(self):
-        luigi.run(['--local-scheduler', '--task', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'], use_optparse=True)
+        luigi.run(['--local-scheduler', '--no-lock', '--task', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'], use_optparse=True)
         h = HasGlobalParam(x='xyz')
         self.assertEqual(h.global_param, 124)
         self.assertEqual(h.global_bool_param, False)
 
     def test_global_param_dep_cmdline_bool(self):
-        luigi.run(['--local-scheduler', 'HasGlobalParamDep', '--x', 'xyz', '--global-bool-param'])
+        luigi.run(['--local-scheduler', '--no-lock', 'HasGlobalParamDep', '--x', 'xyz', '--global-bool-param'])
         h = HasGlobalParam(x='xyz')
         self.assertEqual(h.global_param, 123)
         self.assertEqual(h.global_bool_param, True)
 
     def test_global_param_shared(self):
-        luigi.run(['--local-scheduler', 'SharedGlobalParamA', '--shared-global-param', 'abc'])
+        luigi.run(['--local-scheduler', '--no-lock', 'SharedGlobalParamA', '--shared-global-param', 'abc'])
         b = SharedGlobalParamB()
         self.assertEqual(b.shared_global_param, 'abc')
 
@@ -216,6 +255,53 @@ class ParameterTest(EmailTest):
 
         t = InsignificantParameterTask(foo='x', bar='y')
         self.assertEqual(t.task_id, 'InsignificantParameterTask(bar=y)')
+
+
+class TestNewStyleGlobalParameters(EmailTest):
+
+    def setUp(self):
+        super(TestNewStyleGlobalParameters, self).setUp()
+        MockFile.fs.clear()
+        BananaDep.y.reset_global()
+
+    def expect_keys(self, expected):
+        self.assertEquals(set(MockFile.fs.get_all_data().keys()), set(expected))
+
+    def test_x_arg(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-def'])
+
+    def test_x_arg_override(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg', '--BananaDep-y', 'xyz'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-xyz'])
+
+    def test_x_arg_override_stupid(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg', '--BananaDep-x', 'blabla'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-def'])
+
+    def test_x_arg_y_arg(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg-y-arg'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-bar'])
+
+    def test_x_arg_y_arg_override(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg-y-arg', '--BananaDep-y', 'xyz'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-bar'])
+
+    def test_x_arg_y_arg_override_all(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg-y-arg', '--BananaDep-y', 'xyz', '--BananaDep-x', 'blabla'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-foo-bar'])
+
+    def test_y_arg_override(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-xyz-bar'])
+
+    def test_y_arg_override_both(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz', '--BananaDep-y', 'blah'])
+        self.expect_keys(['banana-foo-bar', 'banana-dep-xyz-bar'])
+
+    def test_y_arg_override_banana(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz', '--Banana-x', 'baz'])
+        self.expect_keys(['banana-baz-bar', 'banana-dep-xyz-bar'])
 
 
 class TestParamWithDefaultFromConfig(unittest.TestCase):
@@ -231,16 +317,6 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
     def testDefault(self):
         class A(luigi.Task):
             p = luigi.Parameter(config_path=dict(section="foo", name="bar"))
-
-        self.assertEqual("baz", A().p)
-        self.assertEqual("boo", A(p="boo").p)
-
-
-    @with_config({"foo": {"bar": "baz"}})
-    def testDefaultFromConfig(self):
-        # Use deprecated argument for "config_path"
-        class A(luigi.Task):
-            p = luigi.Parameter(default_from_config=dict(section="foo", name="bar"))
 
         self.assertEqual("baz", A().p)
         self.assertEqual("boo", A(p="boo").p)
@@ -262,7 +338,7 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
 
     @with_config({"foo": {"bar": "true"}})
     def testBool(self):
-        p = luigi.BooleanParameter(config_path=dict(section="foo", name="bar"))
+        p = luigi.BoolParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(True, p.value)
 
     @with_config({"foo": {"bar": "2001-02-03-2001-02-28"}})
@@ -274,32 +350,32 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
     @with_config({"foo": {"bar": "1 day"}})
     def testTimeDelta(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(days = 1), p.value)
+        self.assertEqual(timedelta(days=1), p.value)
 
     @with_config({"foo": {"bar": "2 seconds"}})
     def testTimeDeltaPlural(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(seconds = 2), p.value)
+        self.assertEqual(timedelta(seconds=2), p.value)
 
     @with_config({"foo": {"bar": "3w 4h 5m"}})
     def testTimeDeltaMultiple(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(weeks = 3, hours = 4, minutes = 5), p.value)
+        self.assertEqual(timedelta(weeks=3, hours=4, minutes=5), p.value)
 
     @with_config({"foo": {"bar": "P4DT12H30M5S"}})
     def testTimeDelta8601(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(days = 4, hours = 12, minutes = 30, seconds = 5), p.value)
+        self.assertEqual(timedelta(days=4, hours=12, minutes=30, seconds=5), p.value)
 
     @with_config({"foo": {"bar": "P5D"}})
     def testTimeDelta8601NoTimeComponent(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(days = 5), p.value)
+        self.assertEqual(timedelta(days=5), p.value)
 
     @with_config({"foo": {"bar": "P5W"}})
     def testTimeDelta8601Weeks(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(weeks = 5), p.value)
+        self.assertEqual(timedelta(weeks=5), p.value)
 
     @with_config({"foo": {"bar": "P3Y6M4DT12H30M5S"}})
     def testTimeDelta8601YearMonthNotSupported(self):
@@ -310,7 +386,7 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
     @with_config({"foo": {"bar": "PT6M"}})
     def testTimeDelta8601MAfterT(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(timedelta(minutes = 6), p.value)
+        self.assertEqual(timedelta(minutes=6), p.value)
 
     @with_config({"foo": {"bar": "P6M"}})
     def testTimeDelta8601MBeforeT(self):
@@ -343,7 +419,7 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
     @with_config({"foo": {"bar": "baz"}})
     def testWithDefault(self):
         p = luigi.Parameter(config_path=dict(section="foo", name="bar"), default='blah')
-        self.assertEqual('baz', p.value) # config overrides default
+        self.assertEqual('baz', p.value)  # config overrides default
 
     def testWithDefaultAndMissing(self):
         p = luigi.Parameter(config_path=dict(section="foo", name="bar"), default='blah')
@@ -364,6 +440,7 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
 
 
 class OverrideEnvStuff(unittest.TestCase):
+
     def setUp(self):
         env_params_cls = luigi.interface.EnvironmentParamsContainer
         env_params_cls.scheduler_port.reset_global()

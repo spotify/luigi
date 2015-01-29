@@ -3,7 +3,9 @@ import logging
 import types
 logger = logging.getLogger('luigi-interface')
 
-class CascadingClient():
+
+class CascadingClient(object):
+
     """
     A FilesystemClient that will cascade failing function calls through a list
     of clients. Which clients are used are specified at time of construction.
@@ -14,10 +16,14 @@ class CascadingClient():
     # created, pass the kwarg to the constructor.
     ALL_METHOD_NAMES = ['exists', 'rename', 'remove', 'chmod', 'chown',
                         'count', 'copy', 'get', 'put', 'mkdir', 'listdir',
-                        'isdir']
+                        'isdir',
+                        'rename_dont_move',
+                        ]
 
-    def __init__(self, clients, method_names=ALL_METHOD_NAMES):
+    def __init__(self, clients, method_names=None):
         self.clients = clients
+        if method_names is None:
+            method_names = self.ALL_METHOD_NAMES
 
         for method_name in method_names:
             new_method = self._make_method(method_name)
@@ -47,4 +53,4 @@ class CascadingClient():
                     logger.exception(
                         'The {0} failed to {1}, using fallback class {2}'
                         .format(client.__class__.__name__, method_name,
-                                self.clients[i+1].__class__.__name__))
+                                self.clients[i + 1].__class__.__name__))

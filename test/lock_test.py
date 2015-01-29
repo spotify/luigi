@@ -25,6 +25,7 @@ luigi.notifications.DEBUG = True
 
 
 class TestCmd(unittest.TestCase):
+
     def test_getpcmd(self):
         p = subprocess.Popen(["sleep", "1"])
         self.assertTrue(
@@ -62,7 +63,7 @@ class LockTest(unittest.TestCase):
         self.assertTrue(acquired)
 
         s = os.stat(self.pid_file)
-        self.assertEqual(s.st_mode & 0777, 0777)
+        self.assertEqual(s.st_mode & 0o777, 0o777)
 
     def test_acquiring_lock_from_missing_process(self):
         fake_pid = 99999
@@ -73,4 +74,4 @@ class LockTest(unittest.TestCase):
         self.assertTrue(acquired)
 
         s = os.stat(self.pid_file)
-        self.assertEqual(s.st_mode & 0777, 0777)
+        self.assertEqual(s.st_mode & 0o777, 0o777)

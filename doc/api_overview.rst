@@ -128,6 +128,33 @@ order to support command line interaction and make sure to convert the
 input to the corresponding type (i.e. datetime.date instead of a
 string).
 
+Setting parameter value for other classes
+-----------------------------------------
+
+All parameters are also exposed on a class level on the command line
+interface. For instance, say you have classes TaskA and TaskB:
+
+.. code:: python
+
+    class TaskA(luigi.Task):
+        x = luigi.Parameter()
+
+    class TaskB(luigi.Task):
+        y = luigi.Parameter()
+
+
+You can run *TaskB* on the command line: *python script.py TaskB --y 42*.
+But you can also set the class value of *TaskA* by running *python script.py
+TaskB --y 42 --TaskA-x 43*. This sets the value of *TaskA.x* to 43 on a
+*class* level. It is still possible to override it inside Python if you
+instantiate *TaskA(x=44)*.
+
+Parameters are resolved in the following order of decreasing priority:
+1. Any value passed to the constructor, or task level value set on the command line
+2. Any class level value set on the command line
+3. Any configuration option (if using the *config_path* argument)
+4. Any default value provided to the parameter
+
 Task.requires
 ^^^^^^^^^^^^^
 
@@ -143,6 +170,28 @@ implementation could be
 In this case, the DailyReport task depends on two inputs created
 earlier, one of which is the same class. requires can return other Tasks
 in any way wrapped up within dicts/lists/tuples/etc.
+
+Requiring another Task
+^^^^^^^^^^^^^^^^^^^^^^
+
+Note that requires() can *not* return a Target object. If you have a
+simple Target object that is created externally you can wrap it in a
+Task class like this:
+
+.. code:: python
+
+    class LogFiles(luigi.Task):
+        def output(self):
+            return luigi.hdfs.HdfsTarget('/log')
+
+This also makes it easier to add parameters:
+
+.. code:: python
+
+    class LogFiles(luigi.Task):
+        date = luigi.DateParameter()
+        def output(self):
+            return luigi.hdfs.HdfsTarget(self.date.strftime('/log/%Y-%m-%d'))
 
 Task.output
 ^^^^^^^^^^^
@@ -166,12 +215,12 @@ objects.)
 Task.run
 ^^^^^^^^
 
-The *run* method now contains the actual code that is run. Note that
-Luigi breaks down everything into two stages. First it figures out all
-dependencies between tasks, then it runs everything. The *input()*
-method is an internal helper method that just replaces all Task objects
-in requires with their corresponding output. For instance, in this
-example
+The *run* method now contains the actual code that is run. When you are
+using *requires()* and *run()*, Luigi breaks down everything into two
+stages. First it figures out all dependencies between tasks, then it
+runs everything. The *input()* method is an internal helper method that
+just replaces all Task objects in requires with their corresponding
+output. An example:
 
 .. code:: python
 
@@ -193,6 +242,37 @@ example
                 g.write('%s\n', ''.join(reversed(line.strip().split()))
             g.close() # needed because files are atomic
 
+
+Dynamic dependencies
+^^^^^^^^^^^^^^^^^^^^
+
+Sometimes you might not now exactly what other tasks to depend on until
+runtime. In that case, Luigi provides a mechanism to specify dynamic
+dependencies. If you yield another Task in the run() method, the current
+task will be suspended and the other task will be run. You can also return
+a list of tasks.
+
+.. code:: python
+
+    class MyTask(luigi.Task):
+        def run(self):
+            other_target = yield OtherTask()
+
+	    # dynamic dependencies resolve into targets
+	    f = other_target.open('r')
+
+
+This mechanism is an alternative to *requires()* in case you are not able
+to build up the full dependency graph before running the task. It does
+come with some constraints: the run() method will resume from scratch
+each time a new task is yielded. In other words, you should make sure
+your run() method is idempotent. (This is good practice for all Tasks
+in Luigi, but especially so for tasks with dynamic dependencies).
+
+For an example of a workflow using dynamic dependencies, see
+`examples/dynamic_requirements.py <https://github.com/spotify/luigi/blob/master/examples/dynamic_requirements.py>`_.
+
+
 Events and callbacks
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -205,14 +285,14 @@ from a specific class (e.g. for hadoop jobs).
 
 .. code:: python
 
-    @luigi.Task.event_handler(luigi.Event.SUCCESS):
+    @luigi.Task.event_handler(luigi.Event.SUCCESS)
     def celebrate_success(task):
         """Will be called directly after a successful execution
            of `run` on any Task subclass (i.e. all luigi Tasks)
         """
         ...
 
-    @luigi.hadoop.JobTask.event_handler(luigi.Event.FAILURE):
+    @luigi.hadoop.JobTask.event_handler(luigi.Event.FAILURE)
     def mourn_failure(task, exception):
         """Will be called directly after a failed execution
            of `run` on any JobTask subclass

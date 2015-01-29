@@ -132,7 +132,6 @@ def fork_linked_workers(num_processes):
                 os.waitpid(c, 0)
             except OSError:
                 print "Child %d is already dead" % c
-                pass
         os._exit(0)  # exit without calling exit handler again...
 
     sigs = [signal.SIGINT, signal.SIGTERM, signal.SIGQUIT]
@@ -140,7 +139,7 @@ def fork_linked_workers(num_processes):
         signal.signal(s, shutdown_handler)
         signal.signal(s, shutdown_handler)
         signal.signal(s, shutdown_handler)
-    #haven't found a way to unregister: atexit.register(shutdown_handler) #
+    # haven't found a way to unregister: atexit.register(shutdown_handler) #
 
     def fork_child(child_id, attempt):
         child_pid = os.fork()
@@ -161,7 +160,7 @@ def fork_linked_workers(num_processes):
 
     assert len(children) == num_processes
 
-    while 1:
+    while True:
         pid, status = os.wait()
         if status != 0:
             # unclean exit, restart process

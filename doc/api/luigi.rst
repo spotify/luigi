@@ -163,14 +163,6 @@ luigi.s3 module
     :undoc-members:
     :show-inheritance:
 
-luigi.scalding module
----------------------
-
-.. automodule:: luigi.scalding
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 luigi.scheduler module
 ----------------------
 

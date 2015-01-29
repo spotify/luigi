@@ -19,6 +19,7 @@ import luigi.server
 
 
 class ServerTestBase(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         # Pass IPv4 localhost to ensure that only a single address, and therefore single port, is bound
@@ -31,6 +32,7 @@ class ServerTestBase(unittest.TestCase):
 
 
 class ServerTest(ServerTestBase):
+
     def test_visualizer(self):
         uri = 'http://localhost:%d' % self._api_port
         req = urllib2.Request(uri)
@@ -43,7 +45,7 @@ class ServerTest(ServerTestBase):
         req = urllib2.Request(uri)
         try:
             response = urllib2.urlopen(req, timeout=10)
-        except urllib2.HTTPError, http_exc:
+        except urllib2.HTTPError as http_exc:
             pass
 
         self.assertEqual(http_exc.code, 404)
@@ -57,4 +59,3 @@ class ServerTest(ServerTestBase):
 
 if __name__ == '__main__':
     unittest.main()
-

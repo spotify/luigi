@@ -1,3 +1,17 @@
+# Copyright (c) 2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+
 import sys
 import logging
 import socket
@@ -78,6 +92,7 @@ def send_email_ses(config, sender, subject, message, recipients, image_png):
                        source=msg_root['From'],
                        destinations=msg_root['To'])
 
+
 def send_email_sendgrid(config, sender, subject, message, recipients, image_png):
     import sendgrid
     client = sendgrid.SendGridClient(config.get('email', 'SENDGRID_USERNAME', None),
@@ -95,6 +110,7 @@ def send_email_sendgrid(config, sender, subject, message, recipients, image_png)
         to_send.add_attachment(image_png)
 
     client.send(to_send)
+
 
 def send_email(subject, message, sender, recipients, image_png=None):
     subject = _prefix(subject)

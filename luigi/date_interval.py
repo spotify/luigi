@@ -17,6 +17,7 @@ import datetime
 
 
 class DateInterval(object):
+
     def __init__(self, date_a, date_b):
         # Represents all date d such that date_a <= d < date_b
         self.date_a = date_a
@@ -52,11 +53,11 @@ class DateInterval(object):
         raise NotImplementedError
 
     @classmethod
-    def from_date(self, d):
+    def from_date(cls, d):
         raise NotImplementedError
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         raise NotImplementedError
 
     def __contains__(self, date):
@@ -70,7 +71,7 @@ class DateInterval(object):
         return hash(repr(self))
 
     def __cmp__(self, other):
-        if type(self) != type(other):
+        if not isinstance(self, type(other)):
             # doing this because it's not well defined if eg. 2012-01-01-2013-01-01 == 2012
             raise TypeError('Date interval type mismatch')
         return cmp((self.date_a, self.date_b), (other.date_a, other.date_b))
@@ -86,6 +87,7 @@ class DateInterval(object):
 
 
 class Date(DateInterval):
+
     def __init__(self, y, m, d):
         a = datetime.date(y, m, d)
         b = datetime.date(y, m, d) + datetime.timedelta(1)
@@ -95,16 +97,17 @@ class Date(DateInterval):
         return self.date_a.strftime('%Y-%m-%d')
 
     @classmethod
-    def from_date(self, d):
+    def from_date(cls, d):
         return Date(d.year, d.month, d.day)
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         if re.match(r'\d\d\d\d\-\d\d\-\d\d$', s):
             return Date(*map(int, s.split('-')))
 
 
 class Week(DateInterval):
+
     def __init__(self, y, w):
         # Python datetime does not have a method to convert from ISO weeks!
         for d in xrange(-10, 370):
@@ -121,17 +124,18 @@ class Week(DateInterval):
         return '%d-W%02d' % self.date_a.isocalendar()[:2]
 
     @classmethod
-    def from_date(self, d):
+    def from_date(cls, d):
         return Week(*d.isocalendar()[:2])
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         if re.match(r'\d\d\d\d\-W\d\d$', s):
             y, w = map(int, s.split('-W'))
             return Week(y, w)
 
 
 class Month(DateInterval):
+
     def __init__(self, y, m):
         date_a = datetime.date(y, m, 1)
         date_b = datetime.date(y + m / 12, 1 + m % 12, 1)
@@ -141,17 +145,18 @@ class Month(DateInterval):
         return self.date_a.strftime('%Y-%m')
 
     @classmethod
-    def from_date(self, d):
+    def from_date(cls, d):
         return Month(d.year, d.month)
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         if re.match(r'\d\d\d\d\-\d\d$', s):
             y, m = map(int, s.split('-'))
             return Month(y, m)
 
 
 class Year(DateInterval):
+
     def __init__(self, y):
         date_a = datetime.date(y, 1, 1)
         date_b = datetime.date(y + 1, 1, 1)
@@ -161,21 +166,22 @@ class Year(DateInterval):
         return self.date_a.strftime('%Y')
 
     @classmethod
-    def from_date(self, d):
+    def from_date(cls, d):
         return Year(d.year)
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         if re.match(r'\d\d\d\d$', s):
             return Year(int(s))
 
 
 class Custom(DateInterval):
+
     def to_string(self):
         return '-'.join([d.strftime('%Y-%m-%d') for d in (self.date_a, self.date_b)])
 
     @classmethod
-    def parse(self, s):
+    def parse(cls, s):
         if re.match('\d\d\d\d\-\d\d\-\d\d\-\d\d\d\d\-\d\d\-\d\d$', s):
             # Actually the ISO 8601 specifies <start>/<end> as the time interval format
             # Not sure if this goes for date intervals as well. In any case slashes will

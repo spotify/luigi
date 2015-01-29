@@ -1,3 +1,16 @@
+# Copyright (c) 2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
 
 import logging
 import os
@@ -33,6 +46,7 @@ def fix_paths(job):
 
 
 class HadoopJarJobRunner(luigi.hadoop.JobRunner):
+
     """JobRunner for `hadoop jar` commands. Used to run a HadoopJarJobTask"""
 
     def __init__(self):
@@ -43,7 +57,7 @@ class HadoopJarJobRunner(luigi.hadoop.JobRunner):
         # hadoop.HadoopJobRunner
         if not job.jar() or not os.path.exists(job.jar()):
             logger.error("Can't find jar: {0}, full path {1}".format(job.jar(),
-                         os.path.abspath(job.jar())))
+                                                                     os.path.abspath(job.jar())))
             raise Exception("job jar does not exist")
         arglist = luigi.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
         if job.main():
@@ -65,6 +79,7 @@ class HadoopJarJobRunner(luigi.hadoop.JobRunner):
 
 
 class HadoopJarJobTask(luigi.hadoop.BaseHadoopJobTask):
+
     """A job task for `hadoop jar` commands that define a jar and (optional)
     main method"""
 

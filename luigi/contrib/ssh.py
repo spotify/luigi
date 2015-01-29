@@ -41,6 +41,7 @@ import contextlib
 
 
 class RemoteContext(object):
+
     def __init__(self, host, username=None, key_file=None, connect_timeout=None):
         self.host = host
         self.username = username
@@ -115,6 +116,7 @@ class RemoteContext(object):
 
 
 class RemoteFileSystem(luigi.target.FileSystem):
+
     def __init__(self, host, username=None, key_file=None):
         self.remote_context = RemoteContext(host, username, key_file)
 
@@ -122,7 +124,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         """ Return `True` if file or directory at `path` exist, False otherwise """
         try:
             self.remote_context.check_output(["test", "-e", path])
-        except subprocess.CalledProcessError, e:
+        except subprocess.CalledProcessError as e:
             if e.returncode == 1:
                 return False
             else:
@@ -172,6 +174,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
 
 class AtomicRemoteFileWriter(luigi.format.OutputPipeProcessWrapper):
+
     def __init__(self, fs, path):
         self._fs = fs
         self.path = path
@@ -205,12 +208,14 @@ class AtomicRemoteFileWriter(luigi.format.OutputPipeProcessWrapper):
 
 
 class RemoteTarget(luigi.target.FileSystemTarget):
+
     """
     Target used for reading from remote files. The target is implemented using
     ssh commands streaming data over the network.
     """
+
     def __init__(self, path, host, format=None, username=None, key_file=None):
-        self.path = path
+        super(RemoteTarget, self).__init__(path)
         self.format = format
         self._fs = RemoteFileSystem(host, username, key_file)
 

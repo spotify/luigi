@@ -21,6 +21,7 @@ import multiprocessing
 
 
 class MockFileSystem(target.FileSystem):
+
     """MockFileSystem inspects/modifies _data to simulate
     file system operations"""
     _data = None
@@ -40,7 +41,7 @@ class MockFileSystem(target.FileSystem):
     def remove(self, path, recursive=True, skip_trash=True):
         """Removes the given mockfile. skip_trash doesn't have any meaning."""
         if recursive:
-            to_delete=[]
+            to_delete = []
             for s in self.get_all_data().keys():
                 if s.startswith(path):
                     to_delete.append(s)
@@ -55,7 +56,7 @@ class MockFileSystem(target.FileSystem):
         return [s for s in self.get_all_data().keys()
                 if s.startswith(path)]
 
-    def mkdir(self, path):
+    def mkdir(self, path, parents=True, raise_if_exists=False):
         """mkdir is a noop"""
         pass
 
@@ -80,9 +81,6 @@ class MockFile(target.FileSystemTarget):
         contents = self.fs.get_all_data().pop(self._fn)
         self.fs.get_all_data()[path] = contents
 
-    def move_dir(self, path):
-        self.move(path, raise_if_exists=True)
-
     @property
     def path(self):
         return self._fn
@@ -92,6 +90,7 @@ class MockFile(target.FileSystemTarget):
 
         class StringBuffer(StringIO.StringIO):
             # Just to be able to do writing + reading from the same buffer
+
             def write(self2, data):
                 if self._mirror_on_stderr:
                     self2.seek(-1, os.SEEK_END)
@@ -105,8 +104,8 @@ class MockFile(target.FileSystemTarget):
                     self.fs.get_all_data()[fn] = self2.getvalue()
                 StringIO.StringIO.close(self2)
 
-            def __exit__(self, type, value, traceback):
-                if not type:
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                if not exc_type:
                     self.close()
 
             def __enter__(self):

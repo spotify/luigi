@@ -12,7 +12,8 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-class Event:
+
+class Event(object):
     # TODO nice descriptive subclasses of Event instead of strings? pass their instances to the callback instead of an undocumented arg list?
     DEPENDENCY_DISCOVERED = "event.core.dependency.discovered"  # triggered for every (task, upstream task) pair discovered in a jobflow
     DEPENDENCY_MISSING = "event.core.dependency.missing"
@@ -22,5 +23,3 @@ class Event:
     FAILURE = "event.core.failure"
     SUCCESS = "event.core.success"
     PROCESSING_TIME = "event.core.processing_time"
-
-

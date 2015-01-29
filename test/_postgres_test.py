@@ -17,6 +17,8 @@ Typical use cases that should be tested:
 """
 
 # to avoid copying:
+
+
 class CopyToTestDB(postgres.CopyToTable):
     host = 'localhost'
     database = 'spotify'
@@ -29,11 +31,11 @@ class TestPostgresTask(CopyToTestDB):
     columns = (('test_text', 'text'),
                ('test_int', 'int'),
                ('test_float', 'float'))
-    
+
     def create_table(self, connection):
         connection.cursor().execute(
             "CREATE TABLE {table} (id SERIAL PRIMARY KEY, test_text TEXT, test_int INT, test_float FLOAT)"
-        .format(table=self.table))
+            .format(table=self.table))
 
     def rows(self):
         yield 'foo', 123, 123.45
@@ -41,12 +43,11 @@ class TestPostgresTask(CopyToTestDB):
         yield '\t\n\r\\N', 0, 0
 
 
-
 class MetricBase(CopyToTestDB):
     table = 'metrics'
     columns = [('metric', 'text'),
                ('value', 'int')
-              ]
+               ]
 
 
 class Metric1(MetricBase):
@@ -56,6 +57,7 @@ class Metric1(MetricBase):
         yield 'metric1', 1
         yield 'metric1', 2
         yield 'metric1', 3
+
 
 class Metric2(MetricBase):
     param = luigi.Parameter()
@@ -67,12 +69,13 @@ class Metric2(MetricBase):
 
 
 class TestPostgresImportTask(TestCase):
+
     def test_default_escape(self):
         self.assertEqual(postgres.default_escape('foo'), 'foo')
         self.assertEqual(postgres.default_escape('\n'), '\\n')
         self.assertEqual(postgres.default_escape('\\\n'), '\\\\\\n')
         self.assertEqual(postgres.default_escape('\n\r\\\t\\N\\'),
-                                                 '\\n\\r\\\\\\t\\\\N\\\\')
+                         '\\n\\r\\\\\\t\\\\N\\\\')
 
     def test_repeat(self):
         task = TestPostgresTask()
@@ -83,7 +86,7 @@ class TestPostgresImportTask(TestCase):
         cursor.execute('DROP TABLE IF EXISTS {marker_table}'.format(marker_table=postgres.PostgresTarget.marker_table))
 
         luigi.build([task], local_scheduler=True)
-        luigi.build([task], local_scheduler=True) # try to schedule twice
+        luigi.build([task], local_scheduler=True)  # try to schedule twice
 
         cursor.execute("""SELECT test_text, test_int, test_float
                           FROM test_table
@@ -111,6 +114,7 @@ class TestPostgresImportTask(TestCase):
 
     def test_clear(self):
         class Metric2Copy(Metric2):
+
             def init_copy(self, connection):
                 query = "TRUNCATE {0}".format(self.table)
                 connection.cursor().execute(query)

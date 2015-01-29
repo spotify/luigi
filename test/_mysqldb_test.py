@@ -24,6 +24,7 @@ target = MySqlTarget(host, database, username, password, '', 'update_id')
 
 
 class MySqlTargetTest(unittest.TestCase):
+
     def test_touch_and_exists(self):
         drop()
         self.assertFalse(target.exists(),

@@ -15,7 +15,7 @@
 import luigi
 from luigi.mock import MockFile
 import unittest
-from luigi.util import Derived
+from luigi.util import inherits
 import datetime
 import luigi.notifications
 luigi.notifications.DEBUG = True
@@ -23,6 +23,7 @@ File = MockFile
 
 
 class A(luigi.Task):
+
     def output(self):
         return File('/tmp/a.txt')
 
@@ -45,9 +46,11 @@ class B(luigi.Task):
 
 
 def XMLWrapper(cls):
-    class XMLWrapperCls(Derived(cls)):
+    @inherits(cls)
+    class XMLWrapperCls(luigi.Task):
+
         def requires(self):
-            return self.parent_obj
+            return self.clone_parent()
 
         def run(self):
             f = self.input().open('r')
@@ -61,20 +64,24 @@ def XMLWrapper(cls):
 
 
 class AXML(XMLWrapper(A)):
+
     def output(self):
         return File('/tmp/a.xml')
 
 
 class BXML(XMLWrapper(B)):
+
     def output(self):
         return File(self.date.strftime('/tmp/b-%Y-%m-%d.xml'))
 
 
 class WrapperTest(unittest.TestCase):
+
     ''' This test illustrates how a task class can wrap another task class by modifying its behavior.
 
     See instance_wrap_test.py for an example of how instances can wrap each other. '''
     workers = 1
+
     def setUp(self):
         MockFile.fs.clear()
 

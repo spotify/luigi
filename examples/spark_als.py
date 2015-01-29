@@ -48,7 +48,6 @@ class SparkALS(SparkJob):
             '%s/als-output/*' % self.item_type, format=luigi.format.Gzip)
 
 
-
 '''
 // Corresponding example Spark Job, a wrapper around the MLLib ALS job.
 // This class would have to be jarred into my-spark-assembly.jar

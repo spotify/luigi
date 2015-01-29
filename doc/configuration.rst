@@ -127,7 +127,7 @@ worker-count-uniques
 worker-keep-alive
   If true, workers will stay alive when they run out of jobs to run, as
   long as they have some pending job waiting to be run. Defaults to
-  true.
+  false.
 
 worker-ping-interval
   Number of seconds to wait between pinging scheduler to let it know
@@ -217,6 +217,9 @@ client
 
 client_version
   Optionally specifies hadoop client version for snakebite.
+
+effective_user
+  Optionally specifies the effective user for snakebite.
 
 namenode_host
   The hostname of the namenode. Needed for snakebite if
@@ -333,6 +336,8 @@ scalding-libjars
   Libjars directory for scalding on your machine. Defaults to either
   SCALDING_HOME/libjars or /usr/share/scalding/libjars
 
+
+.. _scheduler-config:
 
 [scheduler]
 -----------

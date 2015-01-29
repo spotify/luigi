@@ -15,7 +15,9 @@
 import luigi
 import unittest
 
+
 class Factorial(luigi.Task):
+
     ''' This calculates factorials *online* and does not write its results anywhere
 
     Demonstrates the ability for dependencies between Tasks and not just between their output.
@@ -24,7 +26,7 @@ class Factorial(luigi.Task):
 
     def requires(self):
         if self.n > 1:
-            return Factorial(self.n-1)
+            return Factorial(self.n - 1)
 
     def run(self):
         if self.n > 1:
@@ -36,11 +38,12 @@ class Factorial(luigi.Task):
     def complete(self):
         return False
 
+
 class FactorialTest(unittest.TestCase):
+
     def test_invoke(self):
         luigi.build([Factorial(100)], local_scheduler=True)
         self.assertEqual(Factorial(42).value, 1405006117752879898543142606244511569936384000000000)
 
 if __name__ == '__main__':
     luigi.run()
-
