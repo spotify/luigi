@@ -106,49 +106,32 @@ def list_path(path):
     return [str(path), ]
 
 def is_dangerous_rm_path(path):
-    """ Finds out if the path is too dangerous to remove.
-    * empty path
-    * / root path
-    * one level deep root path, i.e. /etc or /opt
-    :return boolean, True if too dangerous! Relative path is always ok
+    """ Determines if it is dangerous to remove such a path:
 
-    >>> is_dangerous_rm_path(None)
-    True
-    >>> is_dangerous_rm_path('')
-    True
-    >>> is_dangerous_rm_path(' ')
-    True
-    >>> is_dangerous_rm_path('/opt')
-    True
+    * blanks
+    * top level root, e.g. /
+    * absolute path that is one level deep, e.g. /etc or /opt
+    * tilde, e.g. ~
+
+    :return bool: True if too dangerous
+
+    >>> for danger in ['~', '~/', ' ', '/', '/opt', '/etc/', '/etc//',
+    ...                '//', ' /opt ', ' /opt// ', '//opt']:
+    ...     assert is_dangerous_rm_path(danger), 'expected dangerous: %r' % danger
+    >>> for safe in ['~/foo', '/foo/bar', 'foo', ' foo ', 'bar/', 'silly//']:
+    ...     assert not is_dangerous_rm_path(safe), 'expected safe: %r' % safe
     >>> try:
-    ...     is_dangerous_rm_path('//')
-    ... except ValueError:
+    ...     is_dangerous_rm_path(None)
+    ... except AttributeError:
     ...     pass
-    >>> is_dangerous_rm_path('/opt/')
-    True
-    >>> is_dangerous_rm_path('/opt/foo/bar')
-    False
-    >>> is_dangerous_rm_path('my_relative')
-    False
     """
-    if not path:
-        return True
+    path = path.strip().rstrip('/')
 
-    if '//' in path:
-        raise ValueError('Funny path, double slash: %s' % path)
-
-    path = path.strip()
-
-    if path.endswith('/'):
-        path = path[:-1]
-
-    if not path:
-        return True
-
-    if path[0] == '/':
-        return len(path[1:].split('/')) <= 1
+    if path.startswith('/'):
+        path = path.lstrip('/')
+        return len(path.split('/')) <= 1
     else:
-        return False # relative is ok
+        return path in ('', '~')
 
 class HdfsClient(FileSystem):
     """This client uses Apache 2.x syntax for file system commands, which also matched CDH4"""
@@ -226,7 +209,7 @@ class HdfsClient(FileSystem):
             if line.startswith("OpenJDK 64-Bit Server VM warning") or line.startswith("It's highly recommended") or not line:
                 lines.pop(lines.index(line))
             else:
-               (dir_count, file_count, content_size, ppath) = stdout.split() 
+               (dir_count, file_count, content_size, ppath) = stdout.split()
         results = {'content_size': content_size, 'dir_count': dir_count, 'file_count': file_count}
         return results
 
@@ -399,7 +382,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :type skip_trash: boolean, default is False (use trash)
         :param chicken: enable safety checks before removing dangerous paths
         :type chicken: boolean, default is True
-        :return: list of deleted items        
+        :return: list of deleted items
         """
         return list(self.get_bite().delete(list_path(path), recurse=recursive))
 
