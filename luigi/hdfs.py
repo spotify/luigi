@@ -108,8 +108,9 @@ def list_path(path):
     return [str(path), ]
 
 def is_dangerous_rm_path(path):
-    """ Determines if it is dangerous to remove such a path:
+    """ Determines if it is risky to remove such a path.
 
+    Examples:
     * blanks
     * top level root, e.g. /
     * absolute path that is one level deep, e.g. /etc or /opt
