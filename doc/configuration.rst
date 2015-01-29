@@ -91,6 +91,9 @@ retry-external-tasks
   NotImplemented) will be retested for completion while Luigi is running.
   This means that if external dependencies are satisfied after a workflow has
   started, any tasks dependent on that resource will be eligible for running.
+  Note: Every time the task remains incomplete, it will count as FAILED, so
+  normal retry logic applies (see: `disable-num-failures` and `retry-delay`).
+  This setting works best with `worker-keep-alive: true`.
   If false, external tasks will only be evaluated when Luigi is first invoked.
   In this case, Luigi will not check whether external dependencies are
   satisfied  while a workflow is in progress, so dependent tasks will remain
