@@ -20,7 +20,7 @@ datehours.
 TODO foolproof against that kind of misuse?
 """
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import itertools
 import logging
 import luigi
@@ -69,7 +69,7 @@ class RangeBase(luigi.WrapperTask):
     At least one of start and stop needs to be specified.
 
     (This is quite an abstract base class for subclasses with different
-    datetime_parameter_cls, e.g. DateParameter, DateHourParameter, ..., and
+    datetime parameter class, e.g. DateParameter, DateHourParameter, ..., and
     different parameter naming, e.g. days_back/forward, hours_back/forward,
     ..., as well as different documentation wording, for good user experience.)
     """
@@ -93,7 +93,10 @@ class RangeBase(luigi.WrapperTask):
         description="set to override current time. In seconds since epoch")
 
     # a bunch of datetime arithmetic building blocks that need to be provided in subclasses
-    def datetime_parameter_cls(self):
+    def datetime_to_parameter(self, dt):
+        raise NotImplementedError
+
+    def parameter_to_datetime(self, p):
         raise NotImplementedError
 
     def moving_start(self, now):
@@ -121,8 +124,8 @@ class RangeBase(luigi.WrapperTask):
         respective to the finite simplification.
         """
         datetimes = self.finite_datetimes(
-            finite_start if self.start is None else min(finite_start, self.start),
-            finite_stop if self.stop is None else max(finite_stop, self.stop))
+            finite_start if self.start is None else min(finite_start, self.parameter_to_datetime(self.start)),
+            finite_stop if self.stop is None else max(finite_stop, self.parameter_to_datetime(self.stop)))
 
         delay_in_jobs = len(datetimes) - datetimes.index(missing_datetimes[0]) if datetimes and missing_datetimes else 0
         self.trigger_event(RangeEvent.DELAY, self.of, delay_in_jobs)
@@ -132,9 +135,12 @@ class RangeBase(luigi.WrapperTask):
         self.trigger_event(RangeEvent.COMPLETE_COUNT, self.of, complete_count)
         self.trigger_event(RangeEvent.COMPLETE_FRACTION, self.of, float(complete_count) / expected_count if expected_count else 1)
 
+    def _format_datetime(self, dt):
+        return self.datetime_to_parameter(dt)
+
     def _format_range(self, datetimes):
-        param_first = self.datetime_parameter_cls()().serialize(datetimes[0])
-        param_last = self.datetime_parameter_cls()().serialize(datetimes[-1])
+        param_first = self._format_datetime(datetimes[0])
+        param_last = self._format_datetime(datetimes[-1])
         return '[%s, %s]' % (param_first, param_last)
 
     def requires(self):
@@ -153,9 +159,9 @@ class RangeBase(luigi.WrapperTask):
         now = datetime.utcfromtimestamp(time.time() if self.now is None else self.now)
 
         moving_start = self.moving_start(now)
-        finite_start = moving_start if self.start is None else max(self.start, moving_start)
+        finite_start = moving_start if self.start is None else max(self.parameter_to_datetime(self.start), moving_start)
         moving_stop = self.moving_stop(now)
-        finite_stop = moving_stop if self.stop is None else min(self.stop, moving_stop)
+        finite_stop = moving_stop if self.stop is None else min(self.parameter_to_datetime(self.stop), moving_stop)
 
         datetimes = self.finite_datetimes(finite_start, finite_stop) if finite_start <= finite_stop else []
 
@@ -179,7 +185,7 @@ class RangeBase(luigi.WrapperTask):
         if self.reverse:
             required_datetimes.reverse()  # TODO priorities, so that within the batch tasks are ordered too
 
-        self._cached_requires = [task_cls(d) for d in required_datetimes]
+        self._cached_requires = [task_cls(self.datetime_to_parameter(d)) for d in required_datetimes]
         return self._cached_requires
 
     def missing_datetimes(self, task_cls, finite_datetimes):
@@ -188,7 +194,48 @@ class RangeBase(luigi.WrapperTask):
         This is a conservative base implementation that brutally checks
         completeness, instance by instance. Inadvisable as it may be slow.
         """
-        return [d for d in finite_datetimes if not task_cls(d).complete()]
+        return [d for d in finite_datetimes if not task_cls(self.datetime_to_parameter(d)).complete()]
+
+
+class RangeDailyBase(RangeBase):
+    """Produces a contiguous completed range of a daily recurring task.
+    """
+    start = luigi.DateParameter(
+        default=None,
+        description="beginning date, inclusive. Default: None - work backward forever (requires reverse=True)")
+    stop = luigi.DateParameter(
+        default=None,
+        description="ending date, exclusive. Default: None - work forward forever")
+    days_back = luigi.IntParameter(
+        default=100,  # slightly more than three months
+        description="extent to which contiguousness is to be assured into past, in days from current time. Prevents infinite loop when start is none. If the dataset has limited retention (i.e. old outputs get removed), this should be set shorter to that, too, to prevent the oldest outputs flapping. Increase freely if you intend to process old dates - worker's memory is the limit")
+    days_forward = luigi.IntParameter(
+        default=0,
+        description="extent to which contiguousness is to be assured into future, in days from current time. Prevents infinite loop when stop is none")
+
+    def datetime_to_parameter(self, dt):
+        return dt.date()
+
+    def parameter_to_datetime(self, p):
+        return datetime(p.year, p.month, p.day)
+
+    def moving_start(self, now):
+        return now - timedelta(days=self.days_back)
+
+    def moving_stop(self, now):
+        return now + timedelta(days=self.days_forward)
+
+    def finite_datetimes(self, finite_start, finite_stop):
+        """Simply returns the points in time that correspond to turn of day.
+        """
+        date_start = datetime(finite_start.year, finite_start.month, finite_start.day)
+        dates = []
+        for i in itertools.count():
+            t = date_start + timedelta(days=i)
+            if t >= finite_stop:
+                return dates
+            if t >= finite_start:
+                dates.append(t)
 
 
 class RangeHourlyBase(RangeBase):
@@ -208,8 +255,11 @@ class RangeHourlyBase(RangeBase):
         default=0,
         description="extent to which contiguousness is to be assured into future, in hours from current time. Prevents infinite loop when stop is none")
 
-    def datetime_parameter_cls(self):
-        return luigi.DateHourParameter
+    def datetime_to_parameter(self, dt):
+        return dt
+
+    def parameter_to_datetime(self, p):
+        return p
 
     def moving_start(self, now):
         return now - timedelta(hours=self.hours_back)
@@ -370,8 +420,23 @@ def infer_bulk_complete_from_fs(task_cls, finite_datehours):
     return missing_datehours
 
 
+class RangeDaily(RangeDailyBase):
+    """Efficiently produces a contiguous completed range of a daily recurring task.
+
+    Benefits from bulk_complete information to efficiently cover gaps. Falls
+    back to infer it from output filesystem listing to facilitate the common
+    case usage. (FIXME the latter not implemented yet)
+
+    Convenient to use even from command line, like:
+
+        luigi --module your.module RangeDaily --of YourActualTask --start 2014-01-01
+    """
+    def missing_datetimes(self, task_cls, finite_datetimes):
+        return set(finite_datetimes) - set(task_cls.bulk_complete(finite_datetimes))
+
+
 class RangeHourly(RangeHourlyBase):
-    """Efficiently produces a contiguous completed range of a hourly recurring task.
+    """Efficiently produces a contiguous completed range of an hourly recurring task.
 
     Benefits from bulk_complete information to efficiently cover gaps. Falls
     back to infer it from output filesystem listing to facilitate the common
