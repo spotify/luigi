@@ -162,8 +162,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeHourlyDerived(RangeHourlyBase):
-
-            def missing_datehours(*args):
+            def missing_datetimes(*args):
                 calls.append(args)
                 return args[-1][:5]
 
@@ -172,7 +171,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
         self.assertEqual(task.requires(), [])
         self.assertEqual(calls, [])
         self.assertEqual(task.requires(), [])
-        self.assertEqual(calls, [])  # subsequent requires() should return the cached result, never call missing_datehours
+        self.assertEqual(calls, [])  # subsequent requires() should return the cached result, never call missing_datetimes
         self.assertEqual(self.events, expected_events)
         self.assertTrue(task.complete())
 
@@ -187,7 +186,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
             },
             {
                 'event.tools.range.delay': [
-                    ('CommonDateHourTask', 0.),
+                    ('CommonDateHourTask', 0),
                 ],
                 'event.tools.range.complete.count': [
                     ('CommonDateHourTask', 0),
@@ -198,12 +197,11 @@ class RangeHourlyBaseTest(unittest.TestCase):
             }
         )
 
-    def _nonempty_subcase(self, kwargs, expected_finite_datehours_range, expected_requires, expected_events):
+    def _nonempty_subcase(self, kwargs, expected_finite_datetimes_range, expected_requires, expected_events):
         calls = []
 
         class RangeHourlyDerived(RangeHourlyBase):
-
-            def missing_datehours(*args):
+            def missing_datetimes(*args):
                 calls.append(args)
                 return args[-1][:7]
 
@@ -211,9 +209,9 @@ class RangeHourlyBaseTest(unittest.TestCase):
                                   **kwargs)
         self.assertEqual(map(str, task.requires()), expected_requires)
         self.assertEqual(calls[0][1], CommonDateHourTask)
-        self.assertEqual((min(calls[0][2]), max(calls[0][2])), expected_finite_datehours_range)
+        self.assertEqual((min(calls[0][2]), max(calls[0][2])), expected_finite_datetimes_range)
         self.assertEqual(map(str, task.requires()), expected_requires)
-        self.assertEqual(len(calls), 1)  # subsequent requires() should return the cached result, not call missing_datehours again
+        self.assertEqual(len(calls), 1)  # subsequent requires() should return the cached result, not call missing_datetimes again
         self.assertEqual(self.events, expected_events)
         self.assertFalse(task.complete())
 
@@ -225,7 +223,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
                 'hours_back': 5,
                 'hours_forward': 20,
             },
-            (datetime.datetime(1999, 12, 31, 23), datetime.datetime(2000, 1, 2, 0)),
+            (datetime.datetime(1999, 12, 31, 23), datetime.datetime(2000, 1, 1, 23)),
             [
                 'CommonDateHourTask(dh=1999-12-31T23)',
                 'CommonDateHourTask(dh=2000-01-01T00)',
@@ -237,13 +235,13 @@ class RangeHourlyBaseTest(unittest.TestCase):
             ],
             {
                 'event.tools.range.delay': [
-                    ('CommonDateHourTask', 26.),  # because of short hours_back we're oblivious to those 40 preceding years
+                    ('CommonDateHourTask', 25),  # because of short hours_back we're oblivious to those 40 preceding years
                 ],
                 'event.tools.range.complete.count': [
-                    ('CommonDateHourTask', 349193),
+                    ('CommonDateHourTask', 349192),
                 ],
                 'event.tools.range.complete.fraction': [
-                    ('CommonDateHourTask', 349193. / (349193 + 7)),
+                    ('CommonDateHourTask', 349192. / (349192 + 7)),
                 ],
             }
         )
@@ -265,7 +263,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
             ],
             {
                 'event.tools.range.delay': [
-                    ('CommonDateHourTask', 5180.),
+                    ('CommonDateHourTask', 5180),
                 ],
                 'event.tools.range.complete.count': [
                     ('CommonDateHourTask', 5173),
@@ -285,16 +283,16 @@ class RangeHourlyBaseTest(unittest.TestCase):
                 'hours_back': 3 * 365 * 24,
                 'hours_forward': 3 * 365 * 24,
             },
-            (datetime.datetime(2014, 10, 23, 12), datetime.datetime(2020, 10, 21, 12)),
+            (datetime.datetime(2014, 10, 23, 13), datetime.datetime(2020, 10, 21, 12)),
             [
-                'CommonDateHourTask(dh=2014-10-23T12)',
                 'CommonDateHourTask(dh=2014-10-23T13)',
                 'CommonDateHourTask(dh=2014-10-23T14)',
                 'CommonDateHourTask(dh=2014-10-23T15)',
+                'CommonDateHourTask(dh=2014-10-23T16)',
             ],
             {
                 'event.tools.range.delay': [
-                    ('CommonDateHourTask', 52561.),
+                    ('CommonDateHourTask', 52560),
                 ],
                 'event.tools.range.complete.count': [
                     ('CommonDateHourTask', 84061),
@@ -330,7 +328,7 @@ class RangeHourlyTest(unittest.TestCase):
                            of='TaskA',
                            start=datetime.datetime(2014, 3, 20, 17),
                            task_limit=3,
-                           hours_back=30 * 365 * 24)  # this test takes around a minute for me. Since stop is not defined, finite_datehours constitute many years to consider
+                           hours_back=30 * 365 * 24)  # this test takes around a minute for me. Since stop is not defined, finite_datetimes constitute many years to consider
         actual = [t.task_id for t in task.requires()]
         self.assertEqual(str(actual), str(expected_a))
         self.assertEqual(actual, expected_a)
