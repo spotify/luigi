@@ -182,8 +182,8 @@ class SQLAlchemyTarget(luigi.Target):
             self.create_marker_table()
 
         table = self.marker_table_bound
+        id_exists = self.exists()
         with self.engine.begin() as conn:
-            id_exists = self.exists()
             if not id_exists:
                 ins = table.insert().values(update_id=self.update_id, target_table=self.target_table,
                                             inserted=datetime.datetime.now())
