@@ -234,6 +234,27 @@ class SimpleTaskState(object):
         else:
             logger.info("No prior state file exists at %s. Starting with clean slate", self._state_path)
 
+    def cascade_disabled_state(self, tasks):
+
+        """ Iterate through all pending tasks, setting the status to DISABLED
+        if at least one of it's dependencies is DISABLED and the rest are
+        either DONE or DISABLED. """
+
+        for task in tasks:
+            if task.status != PENDING:
+                continue
+
+            any_disabled = False
+            should_disable = True
+            for dep in task.deps:
+                t = self.get_task(dep)
+                if t.status == DISABLED:
+                    any_disabled = True
+                should_disable &= (t.status == DISABLED or t.status == DONE)
+
+            if any_disabled and should_disable:
+                self.set_status(task, DISABLED)
+
     def get_active_tasks(self, status=None):
         if status:
             for task in self._status_tasks[status].itervalues():
@@ -591,6 +612,7 @@ class CentralPlannerScheduler(Scheduler):
                               for worker in self._state.get_active_workers())
 
         tasks = list(self._state.get_pending_tasks())
+        self._state.cascade_disabled_state(tasks)
         tasks.sort(key=self._rank(), reverse=True)
 
         for task in tasks:
