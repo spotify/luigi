@@ -279,6 +279,9 @@ class RangeHourlyBase(RangeBase):
             if t >= finite_start:
                 datehours.append(t)
 
+    def _format_datetime(self, dt):
+        return luigi.DateHourParameter().serialize(dt)
+
 
 def _constrain_glob(glob, paths, limit=5):
     """Tweaks glob into a list of more specific globs that together still cover
