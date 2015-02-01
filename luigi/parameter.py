@@ -283,8 +283,8 @@ class Parameter(object):
         else:
             return self.serialize(x)
 
-    def parser_dest(self, param_name, task_name, glob=False, is_config=False):
-        if self.is_global or is_config:
+    def parser_dest(self, param_name, task_name, glob=False, is_without_section=False):
+        if self.is_global or is_without_section:
             if glob:
                 return param_name
             else:
@@ -295,8 +295,8 @@ class Parameter(object):
             else:
                 return param_name
 
-    def add_to_cmdline_parser(self, parser, param_name, task_name, optparse=False, glob=False, is_config=False):
-        dest = self.parser_dest(param_name, task_name, glob, is_config=is_config)
+    def add_to_cmdline_parser(self, parser, param_name, task_name, optparse=False, glob=False, is_without_section=False):
+        dest = self.parser_dest(param_name, task_name, glob, is_without_section=is_without_section)
         if not dest:
             return
         flag = '--' + dest.replace('_', '-')
@@ -330,9 +330,9 @@ class Parameter(object):
             value = getattr(args, dest, None)
             params[param_name] = self.parse_from_input(param_name, value)
 
-    def set_global_from_args(self, param_name, task_name, args, is_config=False):
+    def set_global_from_args(self, param_name, task_name, args, is_without_section=False):
         # Note: side effects
-        dest = self.parser_dest(param_name, task_name, glob=True, is_config=is_config)
+        dest = self.parser_dest(param_name, task_name, glob=True, is_without_section=is_without_section)
         if dest is not None:
             value = getattr(args, dest, None)
             if value is not None:
