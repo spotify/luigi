@@ -290,9 +290,11 @@ class Task(object):
 
         params_dict = dict(params)
 
+        task_name = cls.task_family
+
         # In case any exceptions are thrown, create a helpful description of how the Task was invoked
         # TODO: should we detect non-reprable arguments? These will lead to mysterious errors
-        exc_desc = '%s[args=%s, kwargs=%s]' % (cls.__name__, args, kwargs)
+        exc_desc = '%s[args=%s, kwargs=%s]' % (task_name, args, kwargs)
 
         # Fill in the positional arguments
         positional_params = [(n, p) for n, p in params]
@@ -313,9 +315,9 @@ class Task(object):
         # Then use the defaults for anything not filled in
         for param_name, param_obj in params:
             if param_name not in result:
-                if not param_obj.has_value:
+                if not param_obj.has_task_value(task_name, param_name):
                     raise parameter.MissingParameterException("%s: requires the '%s' parameter to be set" % (exc_desc, param_name))
-                result[param_name] = param_obj.value
+                result[param_name] = param_obj.task_value(task_name, param_name)
 
         def list_to_tuple(x):
             """ Make tuples out of lists and sets to allow hashing """
