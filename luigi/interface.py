@@ -51,7 +51,7 @@ def setup_interface_logging(conf_file=None):
     setup_interface_logging.has_run = True
 
 
-class EnvironmentParamsContainer(task.Config):
+class EnvironmentParamsContainer(task.ConfigWithoutSection):
 
     ''' Keeps track of a bunch of environment params.
 
@@ -199,11 +199,11 @@ def add_task_parameters(parser, task_cls, optparse=False):
 
 def add_global_parameters(parser, optparse=False):
     seen_params = set()
-    for task_name, is_config, param_name, param in Register.get_all_params():
+    for task_name, is_without_section, param_name, param in Register.get_all_params():
         if param in seen_params:
             continue
         seen_params.add(param)
-        param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse, glob=True, is_config=is_config)
+        param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse, glob=True, is_without_section=is_without_section)
 
 
 def get_task_parameters(task_cls, args):
@@ -216,8 +216,8 @@ def get_task_parameters(task_cls, args):
 
 def set_global_parameters(args):
     # Note that this is not side effect free
-    for task_name, is_config, param_name, param in Register.get_all_params():
-        param.set_global_from_args(param_name, task_name, args, is_config=is_config)
+    for task_name, is_without_section, param_name, param in Register.get_all_params():
+        param.set_global_from_args(param_name, task_name, args, is_without_section=is_without_section)
 
 
 class ArgParseInterface(Interface):

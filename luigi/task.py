@@ -134,7 +134,7 @@ class Register(abc.ABCMeta):
             return "%s.%s" % (cls.task_namespace, cls.__name__)
 
     @classmethod
-    def get_reg(cls, include_config=False):
+    def get_reg(cls, include_config_without_section=False):
         """Return all of the registery classes.
 
         :return:  a ``dict`` of task_family -> class
@@ -144,7 +144,7 @@ class Register(abc.ABCMeta):
         for cls in cls._reg:
             if cls.run == NotImplemented:
                 continue
-            if issubclass(cls, Config) and not include_config:
+            if issubclass(cls, ConfigWithoutSection) and not include_config_without_section:
                 continue
             name = cls.task_family
 
@@ -186,11 +186,11 @@ class Register(abc.ABCMeta):
 
         :return: a ``dict`` of parameter name -> parameter.
         """
-        for task_name, task_cls in cls.get_reg(include_config=True).iteritems():
+        for task_name, task_cls in cls.get_reg(include_config_without_section=True).iteritems():
             if task_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in task_cls.get_params():
-                yield task_name, issubclass(task_cls, Config), param_name, param_obj
+                yield task_name, issubclass(task_cls, ConfigWithoutSection), param_name, param_obj
 
 
 class Task(object):
@@ -609,7 +609,19 @@ class WrapperTask(Task):
 
 class Config(Task):
 
-    """Used for global config that's not specific to a certain task
+    """Used for configuration that's not specific to a certain task
+
+    TODO: let's refactor Task & Config so that it inherits from a common
+    ParamContainer base class
+    """
+    pass
+
+
+class ConfigWithoutSection(Task):
+
+    """Used for configuration that doesn't have a particular section
+
+    (eg. --n-workers)
     """
     pass
 
