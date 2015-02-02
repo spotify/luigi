@@ -20,7 +20,7 @@ from fib_test import FibTestBase
 class OptParseTest(FibTestBase):
 
     def test_cmdline_optparse(self):
-        luigi.run(['--local-scheduler', '--task', 'Fib', '--n', '100'], use_optparse=True)
+        luigi.run(['--local-scheduler', '--no-lock', '--task', 'Fib', '--n', '100'], use_optparse=True)
 
         self.assertEqual(MockFile.fs.get_data('/tmp/fib_10'), '55\n')
         self.assertEqual(MockFile.fs.get_data('/tmp/fib_100'), '354224848179261915075\n')
@@ -30,7 +30,7 @@ class OptParseTest(FibTestBase):
         parser = optparse.OptionParser()
         parser.add_option('--blaha')
 
-        luigi.run(['--local-scheduler', '--task', 'Fib', '--n', '100'], use_optparse=True, existing_optparse=parser)
+        luigi.run(['--local-scheduler', '--no-lock', '--task', 'Fib', '--n', '100'], use_optparse=True, existing_optparse=parser)
 
         self.assertEqual(MockFile.fs.get_data('/tmp/fib_10'), '55\n')
         self.assertEqual(MockFile.fs.get_data('/tmp/fib_100'), '354224848179261915075\n')
