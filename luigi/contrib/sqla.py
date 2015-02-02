@@ -213,7 +213,9 @@ class SQLAlchemyTarget(luigi.Target):
         if self.marker_table is None:
             self.marker_table = luigi.configuration.get_config().get('sqlalchemy', 'marker-table', 'table_updates')
 
-        with self.engine.begin() as con:
+        engine = self.engine
+
+        with engine.begin() as con:
             metadata = sqlalchemy.MetaData()
             if not con.dialect.has_table(con, self.marker_table):
                 self.marker_table_bound = sqlalchemy.Table(
@@ -221,9 +223,9 @@ class SQLAlchemyTarget(luigi.Target):
                     sqlalchemy.Column("update_id", sqlalchemy.String(128), primary_key=True),
                     sqlalchemy.Column("target_table", sqlalchemy.String(128)),
                     sqlalchemy.Column("inserted", sqlalchemy.DateTime, default=datetime.datetime.now()))
-                metadata.create_all(self.engine)
+                metadata.create_all(engine)
             else:
-                metadata.reflect(bind=self.engine)
+                metadata.reflect(bind=engine)
                 self.marker_table_bound = metadata.tables[self.marker_table]
 
     def open(self, mode):
@@ -321,8 +323,9 @@ class CopyToTable(luigi.Task):
     def run(self):
         self._logger.info("Running task copy to table for update id %s for table %s" % (self.update_id(), self.table))
         output = self.output()
-        self.create_table(output.engine)
-        with output.engine.begin() as conn:
+        engine = output.engine
+        self.create_table(engine)
+        with engine.begin() as conn:
             rows = iter(self.rows())
             ins_rows = [dict(zip(("_"+c.key for c in self.table_bound.c), row))
                         for row in itertools.islice(rows, self.chunk_size)]
