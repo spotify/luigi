@@ -28,11 +28,11 @@ from task_status import PENDING, FAILED, DONE, RUNNING, SUSPENDED, UNKNOWN, DISA
 
 
 class Scheduler(object):
-
-    ''' Abstract base class
+    """
+    Abstract base class.
 
     Note that the methods all take string arguments, not Task objects...
-    '''
+    """""
     add_task = NotImplemented
     get_work = NotImplemented
     ping = NotImplemented
@@ -76,28 +76,32 @@ def fix_time(x):
 
 
 class Failures(object):
-
-    """ This class tracks the number of failures in a given time window
+    """
+    This class tracks the number of failures in a given time window.
 
     Failures added are marked with the current timestamp, and this class counts
     the number of failures in a sliding time window ending at the present.
-
     """
 
     def __init__(self, window):
-        """ Initialize with the given window
+        """
+        Initialize with the given window.
 
-        :param window: how long to track failures for, as a float (number of seconds)
+        :param window: how long to track failures for, as a float (number of seconds).
         """
         self.window = window
         self.failures = collections.deque()
 
     def add_failure(self):
-        """ Add a failure event with the current timestamp """
+        """
+        Add a failure event with the current timestamp.
+        """
         self.failures.append(time.time())
 
     def num_failures(self):
-        """ Return the number of failures in the window """
+        """
+        Return the number of failures in the window.
+        """
         min_time = time.time() - self.window
 
         while self.failures and fix_time(self.failures[0]) < min_time:
@@ -106,7 +110,9 @@ class Failures(object):
         return len(self.failures)
 
     def clear(self):
-        """ Clear the failure queue """
+        """
+        Clear the failure queue.
+        """
         self.failures.clear()
 
 
@@ -157,8 +163,9 @@ class Task(object):
 
 
 class Worker(object):
-
-    """ Structure for tracking worker activity and keeping their references """
+    """
+    Structure for tracking worker activity and keeping their references.
+    """
 
     def __init__(self, worker_id, last_active=None):
         self.id = worker_id
@@ -185,13 +192,13 @@ class Worker(object):
 
 
 class SimpleTaskState(object):
-
-    ''' Keep track of the current state and handle persistance
+    """
+    Keep track of the current state and handle persistance.
 
     The point of this class is to enable other ways to keep state, eg. by using a database
     These will be implemented by creating an abstract base class that this and other classes
     inherit from.
-    '''
+    """
 
     def __init__(self, state_path):
         self._state_path = state_path
@@ -374,24 +381,24 @@ class SimpleTaskState(object):
 
 
 class CentralPlannerScheduler(Scheduler):
-
-    ''' Async scheduler that can handle multiple workers etc
+    """
+    Async scheduler that can handle multiple workers, etc.
 
     Can be run locally or on a server (using RemoteScheduler + server.Server).
-    '''
+    """
 
     def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0,
                  state_path='/var/lib/luigi-server/state.pickle', task_history=None,
                  resources=None, disable_persist=0, disable_window=0, disable_failures=None,
                  max_shown_tasks=100000):
-        '''
+        """
         (all arguments are in seconds)
         Keyword Arguments:
-        retry_delay -- How long after a Task fails to try it again, or -1 to never retry
-        remove_delay -- How long after a Task finishes to remove it from the scheduler
-        state_path -- Path to state file (tasks and active workers)
-        worker_disconnect_delay -- If a worker hasn't communicated for this long, remove it from active workers
-        '''
+        :param retry_delay: how long after a Task fails to try it again, or -1 to never retry.
+        :param remove_delay: how long after a Task finishes to remove it from the scheduler.
+        :param state_path: path to state file (tasks and active workers).
+        :param worker_disconnect_delay: if a worker hasn't communicated for this long, remove it from active workers.
+        """
         self._config = SchedulerConfig(
             retry_delay=retry_delay,
             remove_delay=remove_delay,
@@ -436,15 +443,18 @@ class CentralPlannerScheduler(Scheduler):
         logger.info("Done pruning task graph")
 
     def update(self, worker_id, worker_reference=None):
-        """ Keep track of whenever the worker was last active """
+        """
+        Keep track of whenever the worker was last active.
+        """
         worker = self._state.get_worker(worker_id)
         worker.update(worker_reference)
 
     def _update_priority(self, task, prio, worker):
-        """ Update priority of the given task
+        """
+        Update priority of the given task.
 
-        Priority can only be increased. If the task doesn't exist, a placeholder
-        task is created to preserve priority when the task is later scheduled.
+        Priority can only be increased.
+        If the task doesn't exist, a placeholder task is created to preserve priority when the task is later scheduled.
         """
         task.priority = prio = max(prio, task.priority)
         for dep in task.deps or []:
@@ -456,11 +466,11 @@ class CentralPlannerScheduler(Scheduler):
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', params=None, **kwargs):
         """
-        * Add task identified by task_id if it doesn't exist
-        * If deps is not None, update dependency list
-        * Update status of task
-        * Add additional workers/stakeholders
-        * Update priority when needed
+        * add task identified by task_id if it doesn't exist
+        * if deps is not None, update dependency list
+        * update status of task
+        * add additional workers/stakeholders
+        * update priority when needed
         """
         self.update(worker)
 
@@ -539,7 +549,11 @@ class CentralPlannerScheduler(Scheduler):
         return used_resources
 
     def _rank(self):
-        ''' Return worker's rank function for task scheduling '''
+        """
+        Return worker's rank function for task scheduling.
+
+        :return:
+        """
         dependents = collections.defaultdict(int)
 
         def not_done(t):
@@ -728,7 +742,9 @@ class CentralPlannerScheduler(Scheduler):
         return serialized
 
     def task_list(self, status, upstream_status, limit=True, **kwargs):
-        ''' query for a subset of tasks by status '''
+        """
+        Query for a subset of tasks by status.
+        """
         self.prune()
         result = {}
         upstream_status_table = {}  # used to memoize upstream status
@@ -792,7 +808,12 @@ class CentralPlannerScheduler(Scheduler):
                         stack.append(task.id)
 
     def task_search(self, task_str, **kwargs):
-        ''' query for a subset of tasks by task_id '''
+        """
+        Query for a subset of tasks by task_id.
+
+        :param task_str:
+        :return:
+        """
         self.prune()
         result = collections.defaultdict(dict)
         for task in self._state.get_active_tasks():

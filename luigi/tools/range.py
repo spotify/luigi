@@ -12,11 +12,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-"""Produces contiguous completed ranges of recurring tasks.
+"""
+Produces contiguous completed ranges of recurring tasks.
 
 Caveat - if gap causes (missing dependencies) aren't acted upon, then this will
 eventually schedule the same gaps again and again and make no progress to other
 datehours.
+
 TODO foolproof against that kind of misuse?
 """
 
@@ -35,8 +37,8 @@ logger = logging.getLogger('luigi-interface')
 
 
 class RangeEvent(luigi.Event):  # Not sure if subclassing currently serves a purpose. Stringly typed, events are.
-
-    """Events communicating useful metrics.
+    """
+    Events communicating useful metrics.
 
     COMPLETE_COUNT would normally be nondecreasing, and its derivative would
     describe performance (how many instances complete
@@ -58,7 +60,8 @@ class RangeEvent(luigi.Event):  # Not sure if subclassing currently serves a pur
 
 
 class RangeBase(luigi.WrapperTask):
-    """Produces a contiguous completed range of a recurring task.
+    """
+    Produces a contiguous completed range of a recurring task.
 
     Made for the common use case where a task is parameterized by e.g.
     DateParameter, and assurance is needed that any gaps arising from downtime
@@ -100,28 +103,32 @@ class RangeBase(luigi.WrapperTask):
         raise NotImplementedError
 
     def moving_start(self, now):
-        """Returns a datetime from which to ensure contiguousness in the case
-        when start is None or unfeasibly far back.
+        """
+        Returns a datetime from which to ensure contiguousness in the case when
+        start is None or unfeasibly far back.
         """
         raise NotImplementedError
 
     def moving_stop(self, now):
-        """Returns a datetime till which to ensure contiguousness in the case
-        when stop is None or unfeasibly far forward.
+        """
+        Returns a datetime till which to ensure contiguousness in the case when
+        stop is None or unfeasibly far forward.
         """
         raise NotImplementedError
 
     def finite_datetimes(self, finite_start, finite_stop):
-        """Returns the individual datetimes in interval [finite_start,
-        finite_stop) for which task completeness should be required, as a
-        sorted list.
+        """
+        Returns the individual datetimes in interval [finite_start, finite_stop)
+        for which task completeness should be required, as a sorted list.
         """
         raise NotImplementedError
 
     def _emit_metrics(self, missing_datetimes, finite_start, finite_stop):
-        """For consistent metrics one should consider the entire range, but it
-        is open (infinite) if stop or start is None. Hence make do with metrics
-        respective to the finite simplification.
+        """
+        For consistent metrics one should consider the entire range, but
+        it is open (infinite) if stop or start is None.
+
+        Hence make do with metrics respective to the finite simplification.
         """
         datetimes = self.finite_datetimes(
             finite_start if self.start is None else min(finite_start, self.parameter_to_datetime(self.start)),
@@ -189,16 +196,21 @@ class RangeBase(luigi.WrapperTask):
         return self._cached_requires
 
     def missing_datetimes(self, task_cls, finite_datetimes):
-        """Override in subclasses to do bulk checks. Returns a sorted list.
+        """
+        Override in subclasses to do bulk checks.
 
-        This is a conservative base implementation that brutally checks
-        completeness, instance by instance. Inadvisable as it may be slow.
+        Returns a sorted list.
+
+        This is a conservative base implementation that brutally checks completeness, instance by instance.
+
+        Inadvisable as it may be slow.
         """
         return [d for d in finite_datetimes if not task_cls(self.datetime_to_parameter(d)).complete()]
 
 
 class RangeDailyBase(RangeBase):
-    """Produces a contiguous completed range of a daily recurring task.
+    """
+    Produces a contiguous completed range of a daily recurring task.
     """
     start = luigi.DateParameter(
         default=None,
@@ -226,7 +238,8 @@ class RangeDailyBase(RangeBase):
         return now + timedelta(days=self.days_forward)
 
     def finite_datetimes(self, finite_start, finite_stop):
-        """Simply returns the points in time that correspond to turn of day.
+        """
+        Simply returns the points in time that correspond to turn of day.
         """
         date_start = datetime(finite_start.year, finite_start.month, finite_start.day)
         dates = []
@@ -239,7 +252,8 @@ class RangeDailyBase(RangeBase):
 
 
 class RangeHourlyBase(RangeBase):
-    """Produces a contiguous completed range of an hourly recurring task.
+    """
+    Produces a contiguous completed range of an hourly recurring task.
     """
     start = luigi.DateHourParameter(
         default=None,
@@ -268,7 +282,8 @@ class RangeHourlyBase(RangeBase):
         return now + timedelta(hours=self.hours_forward)
 
     def finite_datetimes(self, finite_start, finite_stop):
-        """Simply returns the points in time that correspond to whole hours.
+        """
+        Simply returns the points in time that correspond to whole hours.
         """
         datehour_start = datetime(finite_start.year, finite_start.month, finite_start.day, finite_start.hour)
         datehours = []
@@ -284,8 +299,8 @@ class RangeHourlyBase(RangeBase):
 
 
 def _constrain_glob(glob, paths, limit=5):
-    """Tweaks glob into a list of more specific globs that together still cover
-    paths and not too much extra.
+    """
+    Tweaks glob into a list of more specific globs that together still cover paths and not too much extra.
 
     Saves us minutes long listings for long dataset histories.
 
@@ -295,7 +310,8 @@ def _constrain_glob(glob, paths, limit=5):
     """
 
     def digit_set_wildcard(chars):
-        """Makes a wildcard expression for the set, a bit readable. E.g. [1-5]
+        """
+        Makes a wildcard expression for the set, a bit readable, e.g. [1-5].
         """
         chars = sorted(chars)
         if len(chars) > 1 and ord(chars[-1]) - ord(chars[0]) == len(chars) - 1:
@@ -323,7 +339,8 @@ def _constrain_glob(glob, paths, limit=5):
 
 
 def most_common(items):
-    """Wanted functionality from Counters (new in Python 2.7)
+    """
+    Wanted functionality from Counters (new in Python 2.7).
     """
     counts = {}
     for i in items:
@@ -333,7 +350,8 @@ def most_common(items):
 
 
 def _get_per_location_glob(tasks, outputs, regexes):
-    """Builds a glob listing existing output paths.
+    """
+    Builds a glob listing existing output paths.
 
     Esoteric reverse engineering, but worth it given that (compared to an
     equivalent contiguousness guarantee by naive complete() checks)
@@ -356,12 +374,13 @@ def _get_per_location_glob(tasks, outputs, regexes):
 
 
 def _get_filesystems_and_globs(task_cls):
-    """Yields a (filesystem, glob) tuple per every output location of
-    task_cls.
+    """
+    Yields a (filesystem, glob) tuple per every output location of task_cls.
 
-    task_cls can have one or several FileSystemTarget outputs. For
-    convenience, task_cls can be a wrapper task, in which case outputs of
-    all its dependencies are considered.
+    task_cls can have one or several FileSystemTarget outputs.
+
+    For convenience, task_cls can be a wrapper task,
+    in which case outputs of all its dependencies are considered.
     """
     # probe some scattered datehours unlikely to all occur in paths, other than by being sincere datehour parameter's representations
     # TODO limit to [self.start, self.stop) so messages are less confusing? Done trivially it can kill correctness
@@ -385,11 +404,11 @@ def _get_filesystems_and_globs(task_cls):
 
 
 def _list_existing(filesystem, glob, paths):
-    """Get all the paths that do in fact exist. Returns a set of all existing
-    paths.
+    """
+    Get all the paths that do in fact exist. Returns a set of all existing paths.
 
-    Takes a luigi.target.FileSystem object, a str which represents a glob
-    and a list of strings representing paths.
+    Takes a luigi.target.FileSystem object, a str which represents a glob and
+    a list of strings representing paths.
     """
     globs = _constrain_glob(glob, paths)
     time_start = time.time()
@@ -403,7 +422,8 @@ def _list_existing(filesystem, glob, paths):
 
 
 def infer_bulk_complete_from_fs(task_cls, finite_datehours):
-    """Efficiently determines missing datehours by filesystem listing.
+    """
+    Efficiently determines missing datehours by filesystem listing.
 
     The current implementation works for the common case of a task writing
     output to a FileSystemTarget whose path is built using strftime with format
@@ -431,13 +451,18 @@ def infer_bulk_complete_from_fs(task_cls, finite_datehours):
 
 
 class RangeDaily(RangeDailyBase):
-    """Efficiently produces a contiguous completed range of a daily recurring task.
+    """
+    Efficiently produces a contiguous completed range of a daily recurring task.
 
-    Benefits from bulk_complete information to efficiently cover gaps. Falls
-    back to infer it from output filesystem listing to facilitate the common
-    case usage. (FIXME the latter not implemented yet)
+    Benefits from bulk_complete information to efficiently cover gaps.
+
+    Falls back to infer it from output filesystem listing to facilitate the common
+    case usage.
+    (FIXME the latter not implemented yet)
 
     Convenient to use even from command line, like:
+
+    .. code-block:: console
 
         luigi --module your.module RangeDaily --of YourActualTask --start 2014-01-01
     """
@@ -446,13 +471,16 @@ class RangeDaily(RangeDailyBase):
 
 
 class RangeHourly(RangeHourlyBase):
-    """Efficiently produces a contiguous completed range of an hourly recurring task.
+    """
+    Efficiently produces a contiguous completed range of an hourly recurring task.
 
-    Benefits from bulk_complete information to efficiently cover gaps. Falls
-    back to infer it from output filesystem listing to facilitate the common
-    case usage.
+    Benefits from bulk_complete information to efficiently cover gaps.
+
+    Falls back to infer it from output filesystem listing to facilitate the common case usage.
 
     Convenient to use even from command line, like:
+
+    .. code-block:: console
 
         luigi --module your.module RangeHourly --of YourActualTask --start 2014-01-01T00
     """

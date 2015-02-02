@@ -31,8 +31,9 @@ class RPCError(Exception):
 
 
 class RemoteScheduler(Scheduler):
-
-    ''' Scheduler proxy object. Talks to a RemoteSchedulerResponder '''
+    """
+    Scheduler proxy object. Talks to a RemoteSchedulerResponder.
+    """
 
     def __init__(self, host='localhost', port=8082, connect_timeout=None):
         self._host = host

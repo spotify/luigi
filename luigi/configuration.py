@@ -44,9 +44,12 @@ class LuigiConfigParser(ConfigParser):
         return cls.instance().read(cls._config_paths)
 
     def _get_with_default(self, method, section, option, default, expected_type=None):
-        """ Gets the value of the section/option using method. Returns default if value
-        is not found. Raises an exception if the default value is not None and doesn't match
-        the expected_type.
+        """
+        Gets the value of the section/option using method.
+
+        Returns default if value is not found.
+
+        Raises an exception if the default value is not None and doesn't match the expected_type.
         """
         try:
             return method(self, section, option)
@@ -84,5 +87,7 @@ class LuigiConfigParser(ConfigParser):
 
 
 def get_config():
-    """ Convenience method (for backwards compatibility) for accessing config singleton """
+    """
+    Convenience method (for backwards compatibility) for accessing config singleton.
+    """
     return LuigiConfigParser.instance()
