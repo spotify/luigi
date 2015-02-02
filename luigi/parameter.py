@@ -301,7 +301,6 @@ class Parameter(object):
             f = parser.add_argument
         f(flag,
           help=' '.join(description),
-          default=None,
           action=action,
           dest=dest)
 
@@ -319,6 +318,8 @@ class Parameter(object):
             value = getattr(args, dest, None)
             if value is not None:
                 self.set_global(self.parse_from_input(param_name, value))
+            else:
+                self.reset_global()
 
 
 class DateHourParameter(Parameter):
