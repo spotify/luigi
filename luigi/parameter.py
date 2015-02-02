@@ -319,6 +319,8 @@ class Parameter(object):
             value = getattr(args, dest, None)
             if value is not None:
                 self.set_global(self.parse_from_input(param_name, value))
+            else:
+                self.reset_global()
 
 
 class DateHourParameter(Parameter):

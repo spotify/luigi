@@ -44,4 +44,4 @@ class CmdlineTest(unittest.TestCase):
     def test_run(self):
         # TODO: this needs to run after the existing module, since by now foo_module is already imported
 
-        luigi.run(['--local-scheduler', '--module', 'foo_module', 'FooTask', '--x', '100'], use_dynamic_argparse=True)
+        luigi.run(['--local-scheduler', '--no-lock', '--module', 'foo_module', 'FooTask', '--x', '100'], use_dynamic_argparse=True)
