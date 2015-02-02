@@ -131,23 +131,6 @@ import datetime
 import itertools
 import sqlalchemy
 from threading import Lock
-logger = logging.getLogger('luigi-interface')
-
-_engine_hash={}
-_mutex = Lock()
-def _get_engine(connection_string, echo):
-    global _engine_hash
-    engine = None
-    _mutex.acquire()
-    try:
-        if connection_string in _engine_hash.keys():
-            engine = _engine_hash[connection_string]
-        else:
-            engine = sqlalchemy.create_engine(connection_string, echo=echo)
-            _engine_hash[connection_string] = engine
-    finally:
-        _mutex.release()
-    return engine
 
 
 class SQLAlchemyTarget(luigi.Target):
@@ -156,6 +139,23 @@ class SQLAlchemyTarget(luigi.Target):
     `luigi.contrib.sqla.CopyToTable` class to create a task to write to
     the database."""
     marker_table = None
+
+    _engine_hash={}
+    _mutex = Lock()
+
+    @classmethod
+    def _get_engine(cls, connection_string, echo):
+        engine = None
+        cls._mutex.acquire()
+        try:
+            if connection_string in cls._engine_hash.keys():
+                engine = cls._engine_hash[connection_string]
+            else:
+                engine = sqlalchemy.create_engine(connection_string, echo=echo)
+                cls._engine_hash[connection_string] = engine
+        finally:
+            cls._mutex.release()
+        return engine
 
     def __init__(self, connection_string, target_table, update_id, echo=False):
         """ Constructor for the SQLAlchemyTarget
@@ -173,7 +173,7 @@ class SQLAlchemyTarget(luigi.Target):
 
     @property
     def engine(self):
-        return _get_engine(self.connection_string, self.echo)
+        return self._get_engine(self.connection_string, self.echo)
 
     def touch(self):
         """Mark this update as complete.
@@ -237,6 +237,8 @@ class CopyToTable(luigi.Task):
     Usage:
     Subclass and override the required `connection_string`, `table` and `columns` attributes.
     """
+    _logger = logging.getLogger('luigi-interface')
+
     echo = False
 
     @abc.abstractmethod
@@ -295,7 +297,7 @@ class CopyToTable(luigi.Task):
                         metadata.reflect(bind=engine)
                         self.table_bound = metadata.tables[self.table]
                 except Exception as e:
-                    logger.exception(self.table + str(e))
+                    self._logger.exception(self.table + str(e))
 
     def update_id(self):
         """This update id will be a unique identifier for this insert on this table."""
@@ -317,7 +319,7 @@ class CopyToTable(luigi.Task):
                 yield line.strip("\n").split(self.column_separator)
 
     def run(self):
-        logger.info("Running task copy to table for update id %s for table %s" % (self.update_id(), self.table))
+        self._logger.info("Running task copy to table for update id %s for table %s" % (self.update_id(), self.table))
         output = self.output()
         self.create_table(output.engine)
         with output.engine.begin() as conn:
@@ -328,10 +330,10 @@ class CopyToTable(luigi.Task):
                 self.copy(conn, ins_rows, self.table_bound)
                 ins_rows = [dict(zip(("_"+c.key for c in self.table_bound.c), row))
                             for row in itertools.islice(rows, self.chunk_size)]
-                logger.info("Finished inserting %d rows into SQLAlchemy target" % len(ins_rows))
+                self._logger.info("Finished inserting %d rows into SQLAlchemy target" % len(ins_rows))
 
         output.touch()
-        logger.info("Finished inserting rows into SQLAlchemy target")
+        self._logger.info("Finished inserting rows into SQLAlchemy target")
 
     def copy(self, conn, ins_rows, table_bound):
         """ This method does the actual insertion of the rows of data given by ins_rows into the
