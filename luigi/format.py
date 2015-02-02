@@ -17,8 +17,8 @@ import signal
 
 
 class FileWrapper(object):
-
-    """Wrap `file` in a "real" so stuff can be added to it after creation
+    """
+    Wrap `file` in a "real" so stuff can be added to it after creation.
     """
 
     def __init__(self, file_object):
@@ -45,11 +45,13 @@ class FileWrapper(object):
 class InputPipeProcessWrapper(object):
 
     def __init__(self, command, input_pipe=None):
-        '''
-        @param command a subprocess.Popen instance with stdin=input_pipe and
-        stdout=subprocess.PIPE. Alternatively, just its args argument as a
-        convenience.
-        '''
+        """
+        Initializes a InputPipeProcessWrapper instance.
+
+        :param command: a subprocess.Popen instance with stdin=input_pipe and
+                        stdout=subprocess.PIPE.
+                        Alternatively, just its args argument as a convenience.
+        """
         self._command = command
         self._input_pipe = input_pipe
         self._process = command if isinstance(command, subprocess.Popen) else self.create_subprocess(command)
@@ -96,7 +98,9 @@ class InputPipeProcessWrapper(object):
         return self
 
     def _abort(self):
-        "Call _finish, but eat the exception (if any)."
+        """
+        Call _finish, but eat the exception (if any).
+        """
         try:
             self._finish()
         except KeyboardInterrupt:
@@ -146,7 +150,9 @@ class OutputPipeProcessWrapper(object):
         self.write(line + '\n')
 
     def _finish(self):
-        """ Closes and waits for subprocess to exit """
+        """
+        Closes and waits for subprocess to exit.
+        """
         if self._process.returncode is None:
             self._process.stdin.flush()
             self._process.stdin.close()
@@ -184,8 +190,9 @@ class OutputPipeProcessWrapper(object):
 
 
 class Format(object):
-
-    """ Interface for format specifications """
+    """
+    Interface for format specifications.
+    """
 
     # TODO Move this to somewhere else?
     @classmethod

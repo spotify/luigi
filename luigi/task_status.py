@@ -9,8 +9,10 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under
 # the License.
-''' Possible values for a Task's status in the Scheduler
-'''
+"""
+Possible values for a Task's status in the Scheduler
+"""
+
 PENDING = 'PENDING'
 FAILED = 'FAILED'
 DONE = 'DONE'

@@ -61,7 +61,7 @@ luigi.contrib.spark module
     :show-inheritance:
 
 luigi.contrib.scalding module
---------------------------
+-----------------------------
 
 .. automodule:: luigi.contrib.scalding
     :members:

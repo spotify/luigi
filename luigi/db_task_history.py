@@ -31,8 +31,9 @@ logger = logging.getLogger('luigi-interface')
 
 
 class DbTaskHistory(task_history.TaskHistory):
-
-    """ Task History that writes to a database using sqlalchemy. Also has methods for useful db queries
+    """
+    Task History that writes to a database using sqlalchemy.
+    Also has methods for useful db queries.
     """
     @contextmanager
     def _session(self, session=None):
@@ -102,8 +103,9 @@ class DbTaskHistory(task_history.TaskHistory):
         task.record_id = task_record.id
 
     def find_all_by_parameters(self, task_name, session=None, **task_params):
-        ''' Find tasks with the given task_name and the same parameters as the kwargs
-        '''
+        """
+        Find tasks with the given task_name and the same parameters as the kwargs.
+        """
         with self._session(session) as session:
             tasks = session.query(TaskRecord).join(TaskEvent).filter(TaskRecord.name == task_name).order_by(TaskEvent.ts).all()
             for task in tasks:
@@ -111,13 +113,15 @@ class DbTaskHistory(task_history.TaskHistory):
                     yield task
 
     def find_all_by_name(self, task_name, session=None):
-        ''' Find all tasks with the given task_name
-        '''
+        """
+        Find all tasks with the given task_name.
+        """
         return self.find_all_by_parameters(task_name, session)
 
     def find_latest_runs(self, session=None):
-        ''' Return tasks that have been updated in the past 24 hours.
-        '''
+        """
+        Return tasks that have been updated in the past 24 hours.
+        """
         with self._session(session) as session:
             yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
             return session.query(TaskRecord).\
@@ -128,15 +132,16 @@ class DbTaskHistory(task_history.TaskHistory):
                 all()
 
     def find_task_by_id(self, id, session=None):
-        ''' Find task with the given record ID
-        '''
+        """
+        Find task with the given record ID.
+        """
         with self._session(session) as session:
             return session.query(TaskRecord).get(id)
 
 
 class TaskParameter(Base):
-
-    """ Table to track luigi.Parameter()s of a Task
+    """
+    Table to track luigi.Parameter()s of a Task.
     """
     __tablename__ = 'task_parameters'
     task_id = Column(Integer, ForeignKey('tasks.id'), primary_key=True)
@@ -148,8 +153,8 @@ class TaskParameter(Base):
 
 
 class TaskEvent(Base):
-
-    """ Table to track when a task is scheduled, starts, finishes, and fails
+    """
+    Table to track when a task is scheduled, starts, finishes, and fails.
     """
     __tablename__ = 'task_events'
     id = Column(Integer, primary_key=True)
@@ -162,9 +167,10 @@ class TaskEvent(Base):
 
 
 class TaskRecord(Base):
+    """
+    Base table to track information about a luigi.Task.
 
-    """ Base table to track information about a luigi.Task. References to other tables are available through
-    task.events, task.parameters, etc.
+    References to other tables are available through task.events, task.parameters, etc.
     """
     __tablename__ = 'tasks'
     id = Column(Integer, primary_key=True)
