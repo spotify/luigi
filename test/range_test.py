@@ -18,7 +18,6 @@ import luigi
 from luigi.tools.range import RangeEvent, RangeDaily, RangeDailyBase, RangeHourly, RangeHourlyBase, _constrain_glob, _get_filesystems_and_globs
 from luigi.mock import MockFile, MockFileSystem
 import mock
-import time
 import unittest
 
 
@@ -36,7 +35,7 @@ class CommonDateTask(luigi.Task):
         return MockFile(self.d.strftime('/n2000y01a05n/%Y_%m-_-%daww/21mm01dara21/ooo'))
 
 
-mock_contents = [
+task_a_paths = [
     'TaskA/2014-03-20/18',
     'TaskA/2014-03-20/21',
     'TaskA/2014-03-20/23',
@@ -53,12 +52,18 @@ mock_contents = [
     'TaskA/2014-03-21/04.attempt-temp-2014-03-21T13-23-09.078249',
     'TaskA/2014-03-21/12',
     'TaskA/2014-03-23/12',
+]
+
+task_b_paths = [
     'TaskB/no/worries2014-03-20/23',
     'TaskB/no/worries2014-03-21/01',
     'TaskB/no/worries2014-03-21/03',
     'TaskB/no/worries2014-03-21/04.attempt-yadayada',
     'TaskB/no/worries2014-03-21/05',
 ]
+
+mock_contents = task_a_paths + task_b_paths
+
 
 expected_a = [
     'TaskA(dh=2014-03-20T17)',
@@ -93,6 +98,13 @@ class TaskB(luigi.Task):
         return MockFile(self.dh.strftime('TaskB/%%s%Y-%m-%d/%H') % self.complicator)
 
 
+class TaskC(luigi.Task):
+    dh = luigi.DateHourParameter()
+
+    def output(self):
+        return MockFile(self.dh.strftime('not/a/real/path/%Y-%m-%d/%H'))
+
+
 class CommonWrapperTask(luigi.WrapperTask):
     dh = luigi.DateHourParameter()
 
@@ -104,6 +116,14 @@ class CommonWrapperTask(luigi.WrapperTask):
 def mock_listdir(_, glob):
     for path in fnmatch.filter(mock_contents, glob + '*'):
         yield path
+
+
+def mock_exists_always_true(_, _2):
+    yield True
+
+
+def mock_exists_always_false(_, _2):
+    yield False
 
 
 class ConstrainGlobTest(unittest.TestCase):
@@ -475,23 +495,29 @@ class RangeHourlyTest(unittest.TestCase):
         ])
 
     @mock.patch('luigi.mock.MockFileSystem.listdir', new=mock_listdir)  # fishy to mock the mock, but MockFileSystem doesn't support globs yet
+    @mock.patch('luigi.mock.MockFileSystem.exists',
+                new=mock_exists_always_true)
     def test_missing_tasks_correctly_required(self):
+        for task_path in task_a_paths:
+            MockFile(task_path)
         task = RangeHourly(now=datetime_to_epoch(datetime.datetime(2040, 4, 1)),
                            of='TaskA',
                            start=datetime.datetime(2014, 3, 20, 17),
                            task_limit=3,
                            hours_back=30 * 365 * 24)  # this test takes around a minute for me. Since stop is not defined, finite_datetimes constitute many years to consider
         actual = [t.task_id for t in task.requires()]
-        self.assertEqual(str(actual), str(expected_a))
         self.assertEqual(actual, expected_a)
 
     @mock.patch('luigi.mock.MockFileSystem.listdir', new=mock_listdir)
+    @mock.patch('luigi.mock.MockFileSystem.exists',
+                new=mock_exists_always_true)
     def test_missing_wrapper_tasks_correctly_required(self):
-        task = RangeHourly(now=datetime_to_epoch(datetime.datetime(2040, 4, 1)),
-                           of='CommonWrapperTask',
-                           start=datetime.datetime(2014, 3, 20, 23),
-                           stop=datetime.datetime(2014, 3, 21, 6),
-                           hours_back=30 * 365 * 24)
+        task = RangeHourly(
+            now=datetime_to_epoch(datetime.datetime(2040, 4, 1)),
+            of='CommonWrapperTask',
+            start=datetime.datetime(2014, 3, 20, 23),
+            stop=datetime.datetime(2014, 3, 21, 6),
+            hours_back=30 * 365 * 24)
         actual = [t.task_id for t in task.requires()]
         self.assertEqual(actual, expected_wrapper)
 
@@ -518,3 +544,17 @@ class RangeHourlyTest(unittest.TestCase):
 
         actual = [t.task_id for t in task.requires()]
         self.assertEqual(actual, expected)
+
+    @mock.patch('luigi.mock.MockFileSystem.exists',
+                new=mock_exists_always_false)
+    def test_missing_directory(self):
+        task = RangeHourly(now=datetime_to_epoch(
+                           datetime.datetime(2014, 4, 1)),
+                           of='TaskC',
+                           start=datetime.datetime(2014, 3, 20, 23),
+                           stop=datetime.datetime(2014, 3, 21, 1))
+        self.assertFalse(task.complete())
+        expected = [
+            'TaskC(dh=2014-03-20T23)',
+            'TaskC(dh=2014-03-21T00)']
+        self.assertEqual([t.task_id for t in task.requires()], expected)
