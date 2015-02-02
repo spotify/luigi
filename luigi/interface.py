@@ -250,6 +250,8 @@ class ArgParseInterface(Interface):
 
         add_global_parameters(parser)
 
+        subparsers_by_name = {}
+
         if main_task_cls:
             add_task_parameters(parser, main_task_cls)
 
@@ -258,22 +260,23 @@ class ArgParseInterface(Interface):
             subparsers = parser.add_subparsers(dest='command', metavar=orderedtasks)
 
             for name, cls in Register.get_reg().iteritems():
-                subparser = subparsers.add_parser(name)
+                subparsers_by_name[name] = subparsers.add_parser(name)
                 if cls == Register.AMBIGUOUS_CLASS:
                     continue
-                add_task_parameters(subparser, cls)
-
-                # Add global params here as well so that we can support both:
-                # test.py --global-param xyz Test --n 42
-                # test.py Test --n 42 --global-param xyz
-                add_global_parameters(subparser)
-
-        args = parser.parse_args(args=cmdline_args)
+                add_task_parameters(subparsers_by_name[name], cls)
 
         if main_task_cls:
+            args = parser.parse_args(args=cmdline_args)
             task_cls = main_task_cls
         else:
+            args, unknown = parser.parse_known_args(args=cmdline_args)
             task_cls = Register.get_task_cls(args.command)
+
+            # Add global params here as well so that we can support both:
+            # test.py --global-param xyz Test --n 42
+            # test.py Test --n 42 --global-param xyz
+            add_global_parameters(subparsers_by_name[args.command])
+            args = parser.parse_args(args=cmdline_args)
 
         # Notice that this is not side effect free because it might set global params
         set_global_parameters(args)
