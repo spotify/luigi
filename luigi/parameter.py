@@ -301,7 +301,6 @@ class Parameter(object):
             f = parser.add_argument
         f(flag,
           help=' '.join(description),
-          default=None,
           action=action,
           dest=dest)
 
