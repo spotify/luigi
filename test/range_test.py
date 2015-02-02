@@ -500,11 +500,11 @@ class RangeHourlyTest(unittest.TestCase):
     def test_missing_tasks_correctly_required(self):
         for task_path in task_a_paths:
             MockFile(task_path)
-        task = RangeHourly(now=datetime_to_epoch(datetime.datetime(2040, 4, 1)),
+        task = RangeHourly(now=datetime_to_epoch(datetime.datetime(2016, 4, 1)),
                            of='TaskA',
                            start=datetime.datetime(2014, 3, 20, 17),
                            task_limit=3,
-                           hours_back=30 * 365 * 24)  # this test takes around a minute for me. Since stop is not defined, finite_datetimes constitute many years to consider
+                           hours_back=3 * 365 * 24)  # this test takes a few seconds. Since stop is not defined, finite_datetimes constitute many years to consider
         actual = [t.task_id for t in task.requires()]
         self.assertEqual(actual, expected_a)
 
