@@ -180,9 +180,9 @@ class SQLAlchemyTarget(luigi.Target):
                                             inserted=datetime.datetime.now())
             else:
                 ins = table.update().where(sqlalchemy.and_(table.c.update_id == self.update_id,
-                                                 table.c.target_table == self.target_table)).\
+                                                           table.c.target_table == self.target_table)).\
                     values(update_id=self.update_id, target_table=self.target_table,
-                                            inserted=datetime.datetime.now())
+                           inserted=datetime.datetime.now())
             conn.execute(ins)
         assert self.exists()
 
@@ -193,7 +193,7 @@ class SQLAlchemyTarget(luigi.Target):
         with self.engine.begin() as conn:
             table = self.marker_table_bound
             s = sqlalchemy.select([table]).where(sqlalchemy.and_(table.c.update_id == self.update_id,
-                                                 table.c.target_table == self.target_table)).limit(1)
+                                                                 table.c.target_table == self.target_table)).limit(1)
             row = conn.execute(s).fetchone()
         return row is not None
 
@@ -301,8 +301,7 @@ class CopyToTable(luigi.Task):
             connection_string=self.connection_string,
             target_table=self.table,
             update_id=self.update_id(),
-            echo=self.echo
-            )
+            echo=self.echo)
 
     def rows(self):
         """Return/yield tuples or lists corresponding to each row to be inserted. This method
@@ -318,11 +317,11 @@ class CopyToTable(luigi.Task):
         self.create_table(engine)
         with engine.begin() as conn:
             rows = iter(self.rows())
-            ins_rows = [dict(zip(("_"+c.key for c in self.table_bound.c), row))
+            ins_rows = [dict(zip(("_" + c.key for c in self.table_bound.c), row))
                         for row in itertools.islice(rows, self.chunk_size)]
             while ins_rows:
                 self.copy(conn, ins_rows, self.table_bound)
-                ins_rows = [dict(zip(("_"+c.key for c in self.table_bound.c), row))
+                ins_rows = [dict(zip(("_" + c.key for c in self.table_bound.c), row))
                             for row in itertools.islice(rows, self.chunk_size)]
                 self._logger.info("Finished inserting %d rows into SQLAlchemy target" % len(ins_rows))
 
@@ -339,7 +338,6 @@ class CopyToTable(luigi.Task):
         :param table_bound: The object referring to the table
         :return:
         """
-        bound_cols = {c: sqlalchemy.bindparam("_"+c.key) for c in table_bound.columns}
+        bound_cols = {c: sqlalchemy.bindparam("_" + c.key) for c in table_bound.columns}
         ins = table_bound.insert().values(bound_cols)
         conn.execute(ins, ins_rows)
-
