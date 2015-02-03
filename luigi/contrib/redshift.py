@@ -15,7 +15,8 @@ try:
     import psycopg2
     import psycopg2.errorcodes
 except ImportError:
-    logger.warning("Loading postgres module without psycopg2 installed. Will crash at runtime if postgres functionality is used.")
+    logger.warning("Loading postgres module without psycopg2 installed. "
+                   "Will crash at runtime if postgres functionality is used.")
 
 
 class RedshiftTarget(postgres.PostgresTarget):
@@ -25,7 +26,10 @@ class RedshiftTarget(postgres.PostgresTarget):
 
     Redshift is similar to postgres with a few adjustments required by redshift
     """
-    marker_table = luigi.configuration.get_config().get('redshift', 'marker-table', 'table_updates')
+    marker_table = luigi.configuration.get_config().get(
+        'redshift',
+        'marker-table',
+        'table_updates')
 
     use_db_timestamps = False
 
@@ -124,7 +128,9 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         Determine whether the table already exists.
         """
-        query = "select 1 as table_exists from pg_table_def where tablename = %s limit 1"
+        query = ("select 1 as table_exists "
+                 "from pg_table_def "
+                 "where tablename = %s limit 1")
         cursor = connection.cursor()
         try:
             cursor.execute(query, (self.table,))
@@ -133,8 +139,8 @@ class S3CopyToTable(rdbms.CopyToTable):
         finally:
             cursor.close()
 
-class S3CopyJSONToTable(S3CopyToTable):
 
+class S3CopyJSONToTable(S3CopyToTable):
     """
     Template task for inserting a JSON data set into Redshift from s3.
 
@@ -188,12 +194,14 @@ class RedshiftManifestTask(S3PathTask):
         path - s3 path to the generated manifest file, including the
                name of the generated file
                       to be copied into a redshift table
-        folder_paths - s3 paths to the folders containing files you wish to be copied
+        folder_paths - s3 paths to the folders containing files
+                       you wish to be copied
     Output:
         generated manifest file
     """
 
-    # should be over ridden to point to a variety of folders you wish to copy from
+    # should be over ridden to point to a variety
+    # of folders you wish to copy from
     folder_paths = luigi.Parameter()
 
     def run(self):
