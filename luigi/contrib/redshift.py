@@ -15,7 +15,8 @@ try:
     import psycopg2
     import psycopg2.errorcodes
 except ImportError:
-    logger.warning("Loading postgres module without psycopg2 installed. Will crash at runtime if postgres functionality is used.")
+    logger.warning("Loading postgres module without psycopg2 installed. "
+                   "Will crash at runtime if postgres functionality is used.")
 
 
 class RedshiftTarget(postgres.PostgresTarget):
@@ -24,7 +25,10 @@ class RedshiftTarget(postgres.PostgresTarget):
 
     Redshift is similar to postgres with a few adjustments required by redshift.
     """
-    marker_table = luigi.configuration.get_config().get('redshift', 'marker-table', 'table_updates')
+    marker_table = luigi.configuration.get_config().get(
+        'redshift',
+        'marker-table',
+        'table_updates')
 
     use_db_timestamps = False
 
@@ -87,31 +91,18 @@ class S3CopyToTable(rdbms.CopyToTable):
         if not (self.table):
             raise Exception("table need to be specified")
 
-        connection = self.output().connect()
-
         path = self.s3_load_path()
+        connection = self.output().connect()
+        if not self.does_table_exist(connection):
+            # try creating table
+            logger.info("Creating table %s", self.table)
+            connection.reset()
+            self.create_table(connection)
+
         logger.info("Inserting file: %s", path)
-
-        # attempt to copy the data into postgres
-        # if it fails because the target table doesn't exist
-        # try to create it by running self.create_table
-        for attempt in xrange(2):
-            try:
-                cursor = connection.cursor()
-                self.init_copy(connection)
-                self.copy(cursor, path)
-            except psycopg2.ProgrammingError as e:
-                if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
-                    # if first attempt fails with "relation not found",
-                    # try creating table
-                    logger.info("Creating table %s", self.table)
-                    connection.reset()
-                    self.create_table(connection)
-                else:
-                    raise
-            else:
-                break
-
+        cursor = connection.cursor()
+        self.init_copy(connection)
+        self.copy(cursor, path)
         self.output().touch(connection)
         connection.commit()
 
@@ -146,6 +137,20 @@ class S3CopyToTable(rdbms.CopyToTable):
             table=self.table,
             update_id=self.update_id())
 
+    def does_table_exist(self, connection):
+        """
+        Determine whether the table already exists.
+        """
+        query = ("select 1 as table_exists "
+                 "from pg_table_def "
+                 "where tablename = %s limit 1")
+        cursor = connection.cursor()
+        try:
+            cursor.execute(query, (self.table,))
+            result = cursor.fetchone()
+            return bool(result)
+        finally:
+            cursor.close()
 
 class S3CopyJSONToTable(S3CopyToTable):
     """
@@ -215,13 +220,15 @@ class RedshiftManifestTask(S3PathTask):
         path - s3 path to the generated manifest file, including the
                name of the generated file
                       to be copied into a redshift table
-        folder_paths - s3 paths to the folders containing files you wish to be copied
+        folder_paths - s3 paths to the folders containing files
+                       you wish to be copied
 
     Output:
         generated manifest file
     """
 
-    # should be over ridden to point to a variety of folders you wish to copy from
+    # should be over ridden to point to a variety
+    # of folders you wish to copy from
     folder_paths = luigi.Parameter()
 
     def run(self):
