@@ -166,7 +166,9 @@ class HdfsClient(FileSystem):
         We keep the interface simple by just aliasing this to
         normal rename and let individual implementations redefine the method.
 
-        rename2: https://github.com/apache/hadoop/blob/ae91b13/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocol/ClientProtocol.java#L483-L523
+        rename2 -
+        https://github.com/apache/hadoop/blob/ae91b13/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocol/ClientProtocol.java
+        (lines 483-523)
         """
         warnings.warn("Configured HDFS client doesn't support rename_dont_move, using normal mv operation instead.")
         if self.exists(dest):

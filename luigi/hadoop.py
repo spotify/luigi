@@ -308,7 +308,7 @@ def fetch_task_failures(tracking_url):
     If it does not, it's not the end of the world.
 
     TODO: Yarn has a REST API that we should probably use instead:
-    http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html
+    http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/WebServicesIntro.html
     """
     import mechanize
     timeout = 3.0

@@ -21,15 +21,17 @@ class MySqlTarget(luigi.Target):
 
     def __init__(self, host, database, user, password, table, update_id):
         """
+        Initializes a MySqlTarget instance.
+
         :param host: MySql server address. Possibly a host:port string.
         :type host: str
-        :param database: Database name
+        :param database: database name.
         :type database: str
-        :param user: Database user
+        :param user: database user
         :type user: str
-        :param password : Password for specified user
+        :param password: password for specified user.
         :type password: str
-        :param update_id: An identifier for this data set
+        :param update_id: an identifier for this data set.
         :type update_id: str
         """
         if ':' in host:
@@ -48,7 +50,7 @@ class MySqlTarget(luigi.Target):
         """
         Mark this update as complete.
 
-        Important: If the marker table doesn't exist,
+        IMPORTANT, If the marker table doesn't exist,
         the connection transaction will be aborted and the connection reset.
         Then the marker table will be created.
         """

@@ -47,11 +47,11 @@ To enable the task history,
 specify ``record_task_history = True`` in the
 ``[scheduler]`` section of ``client.cfg`` and
 specify ``db_connection`` under ``[task_history]``.
-The ``db_connection`` string is to used to configure the
-`SQLAlchemy engine<http://docs.sqlalchemy.org/en/rel_0_9/core/engines.html>`_.
+The ``db_connection`` string is to used to configure the `SQLAlchemy engine
+<http://docs.sqlalchemy.org/en/rel_0_9/core/engines.html>`_.
 When starting up,
-``luigid`` will create all the necessary tables using
-`create_all<http://docs.sqlalchemy.org/en/rel_0_9/core/metadata.html#sqlalchemy.schema.MetaData.create_all>`_.
+``luigid`` will create all the necessary tables using `create_all
+<http://docs.sqlalchemy.org/en/rel_0_9/core/metadata.html#sqlalchemy.schema.MetaData.create_all>`_.
 
 Example configuration::
 
