@@ -219,6 +219,12 @@ class ParameterTest(EmailTest):
         self.assertEqual(h.global_param, 124)
         self.assertEqual(h.global_bool_param, False)
 
+    def test_global_param_cmdline_flipped(self):
+        luigi.run(['--local-scheduler', '--no-lock', '--global-param', '125', 'HasGlobalParam', '--x', 'xyz'])
+        h = HasGlobalParam(x='xyz')
+        self.assertEqual(h.global_param, 125)
+        self.assertEqual(h.global_bool_param, False)
+
     def test_global_param_override(self):
         h1 = HasGlobalParam(x='xyz', global_param=124)
         h2 = HasGlobalParam(x='xyz')
