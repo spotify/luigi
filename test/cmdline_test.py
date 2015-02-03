@@ -144,5 +144,9 @@ class CmdlineTest(unittest.TestCase):
         subprocess.check_call(cmd, env=env, stderr=subprocess.STDOUT)
         self.assertTrue(t.exists())
 
+    @mock.patch('argparse.ArgumentParser.print_usage')
+    def test_no_task(self, print_usage):
+        self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', '--no-lock'])
+
 if __name__ == '__main__':
     unittest.main()

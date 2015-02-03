@@ -22,7 +22,6 @@ import scheduler
 import configuration
 import task
 import parameter
-import re
 import argparse
 import sys
 import os
@@ -174,42 +173,34 @@ class Interface(object):
         return success
 
 
-class ErrorWrappedArgumentParser(argparse.ArgumentParser):
+# Simple unweighted Levenshtein distance
+def _editdistance(a, b):
+    r0 = range(0, len(b) + 1)
+    r1 = [0] * (len(b) + 1)
 
-    ''' Wraps ArgumentParser's error message to suggested similar tasks
-    '''
+    for i in range(0, len(a)):
+        r1[0] = i + 1
 
-    # Simple unweighted Levenshtein distance
-    def _editdistance(self, a, b):
-        r0 = range(0, len(b) + 1)
-        r1 = [0] * (len(b) + 1)
+        for j in range(0, len(b)):
+            c = 0 if a[i] is b[j] else 1
+            r1[j + 1] = min(r1[j] + 1, r0[j + 1] + 1, r0[j] + c)
 
-        for i in range(0, len(a)):
-            r1[0] = i + 1
+        r0 = r1[:]
 
-            for j in range(0, len(b)):
-                c = 0 if a[i] is b[j] else 1
-                r1[j + 1] = min(r1[j] + 1, r0[j + 1] + 1, r0[j] + c)
+    return r1[len(b)]
 
-            r0 = r1[:]
 
-        return r1[len(b)]
+def error_task_names(task_name, task_names):
+    weighted_tasks = [(_editdistance(task_name, task_name_2), task_name_2) for task_name_2 in task_names]
+    ordered_tasks = sorted(weighted_tasks, key=lambda pair: pair[0])
+    candidates = [task for (dist, task) in ordered_tasks if dist <= 5 and dist < len(task)]
+    display_string = ""
+    if candidates:
+        display_string = "No task %s. Did you mean:\n%s" % (task_name, '\n'.join(candidates))
+    else:
+        display_string = "No task %s." % task_name
 
-    def error(self, message):
-        result = re.match("argument .+: invalid choice: '(\w+)'.+", message)
-        if result:
-            arg = result.group(1)
-            weightedTasks = [(self._editdistance(arg, task), task) for task in Register.get_reg().keys()]
-            orderedTasks = sorted(weightedTasks, key=lambda pair: pair[0])
-            candidates = [task for (dist, task) in orderedTasks if dist <= 5 and dist < len(task)]
-            displaystring = ""
-            if candidates:
-                displaystring = "No task %s. Did you mean:\n%s" % (arg, '\n'.join(candidates))
-            else:
-                displaystring = "No task %s." % arg
-            super(ErrorWrappedArgumentParser, self).error(displaystring)
-        else:
-            super(ErrorWrappedArgumentParser, self).error(message)
+    raise SystemExit(display_string)
 
 
 def add_task_parameters(parser, task_cls, optparse=False):
@@ -246,37 +237,46 @@ class ArgParseInterface(Interface):
     '''
 
     def parse_task(self, cmdline_args=None, main_task_cls=None):
-        parser = ErrorWrappedArgumentParser()
+        parser = argparse.ArgumentParser()
 
         add_global_parameters(parser)
-
-        subparsers_by_name = {}
 
         if main_task_cls:
             add_task_parameters(parser, main_task_cls)
 
-        else:
-            orderedtasks = '{%s}' % ','.join(sorted(Register.get_reg().keys()))
-            subparsers = parser.add_subparsers(dest='command', metavar=orderedtasks)
-
-            for name, cls in Register.get_reg().iteritems():
-                subparsers_by_name[name] = subparsers.add_parser(name)
-                if cls == Register.AMBIGUOUS_CLASS:
-                    continue
-                add_task_parameters(subparsers_by_name[name], cls)
-
-        if main_task_cls:
             args = parser.parse_args(args=cmdline_args)
             task_cls = main_task_cls
         else:
-            args, unknown = parser.parse_known_args(args=cmdline_args)
-            task_cls = Register.get_task_cls(args.command)
+            task_names = sorted(Register.get_reg().keys())
 
-            # Add global params here as well so that we can support both:
+            # Parse global arguments and pull out the task name.
+            # We used to do this using subparsers+command, but some issues with
+            # argparse across different versions of Python (2.7.9) made it hard.
+            args, unknown = parser.parse_known_args(args=cmdline_args)
+            if len(unknown) == 0:
+                raise SystemExit('No task specified')
+            task_name = unknown[0]
+            if task_name not in task_names:
+                error_task_names(task_name, task_names)
+
+            task_cls = Register.get_task_cls(task_name)
+
+            # Add a subparser to parse task-specific arguments
+            subparsers = parser.add_subparsers(dest='command')
+            subparser = subparsers.add_parser(task_name)
+
+            # Add both task and global params here so that we can support both:
             # test.py --global-param xyz Test --n 42
             # test.py Test --n 42 --global-param xyz
-            add_global_parameters(subparsers_by_name[args.command])
-            args = parser.parse_args(args=cmdline_args)
+            add_global_parameters(subparser)
+            add_task_parameters(subparser, task_cls)
+
+            # Workaround for bug in argparse for Python 2.7.9
+            # See https://mail.python.org/pipermail/python-dev/2015-January/137699.html
+            subargs = parser.parse_args(args=cmdline_args)
+            for key, value in vars(subargs).items():
+                if value:  # Either True (for boolean args) or non-None (everything else)
+                    setattr(args, key, value)
 
         # Notice that this is not side effect free because it might set global params
         set_global_parameters(args)
@@ -299,7 +299,7 @@ class DynamicArgParseInterface(ArgParseInterface):
     '''
 
     def parse(self, cmdline_args=None, main_task_cls=None):
-        parser = ErrorWrappedArgumentParser()
+        parser = argparse.ArgumentParser()
 
         add_global_parameters(parser)
 
