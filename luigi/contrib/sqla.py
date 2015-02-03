@@ -140,23 +140,6 @@ class SQLAlchemyTarget(luigi.Target):
     the database."""
     marker_table = None
 
-    _engine_hash={}
-    _mutex = Lock()
-
-    @classmethod
-    def _get_engine(cls, connection_string, echo):
-        engine = None
-        cls._mutex.acquire()
-        try:
-            if connection_string in cls._engine_hash.keys():
-                engine = cls._engine_hash[connection_string]
-            else:
-                engine = sqlalchemy.create_engine(connection_string, echo=echo)
-                cls._engine_hash[connection_string] = engine
-        finally:
-            cls._mutex.release()
-        return engine
-
     def __init__(self, connection_string, target_table, update_id, echo=False):
         """ Constructor for the SQLAlchemyTarget
         :param connection_string: (str) SQLAlchemy connection string
@@ -170,10 +153,18 @@ class SQLAlchemyTarget(luigi.Target):
         self.connection_string = connection_string
         self.echo = echo
         self.marker_table_bound = None
+        self._engine = None
+        self._mutex = Lock()
 
     @property
     def engine(self):
-        return self._get_engine(self.connection_string, self.echo)
+        self._mutex.acquire()
+        try:
+            if self._engine is None:
+                self._engine = sqlalchemy.create_engine(self.connection_string, echo=self.echo)
+        finally:
+            self._mutex.release()
+        return self._engine
 
     def touch(self):
         """Mark this update as complete.
