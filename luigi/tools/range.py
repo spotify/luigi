@@ -466,6 +466,7 @@ class RangeDaily(RangeDailyBase):
 
         luigi --module your.module RangeDaily --of YourActualTask --start 2014-01-01
     """
+
     def missing_datetimes(self, task_cls, finite_datetimes):
         return set(finite_datetimes) - set(task_cls.bulk_complete(finite_datetimes))
 
@@ -484,6 +485,7 @@ class RangeHourly(RangeHourlyBase):
 
         luigi --module your.module RangeHourly --of YourActualTask --start 2014-01-01T00
     """
+
     def missing_datetimes(self, task_cls, finite_datetimes):
         try:
             return set(finite_datetimes) - set(task_cls.bulk_complete(finite_datetimes))
