@@ -167,7 +167,14 @@ class AtomicFtpfile(file):
     """
 
     def __init__(self, fs, path):
-        self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        """
+        Initializes an AtomicFtpfile instance.
+
+        :param fs:
+        :param path:
+        :type path: str
+        """
+        self.__tmp_path = '%s-luigi-tmp-%09d' % (path, random.randrange(0, 1e10))
         self._fs = fs
         self.path = path
         super(AtomicFtpfile, self).__init__(self.__tmp_path, 'w')
