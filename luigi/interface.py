@@ -173,6 +173,7 @@ class Interface(object):
         w.stop()
         return success
 
+
 # Simple unweighted Levenshtein distance
 def _editdistance(a, b):
     r0 = range(0, len(b) + 1)
