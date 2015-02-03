@@ -119,8 +119,11 @@ class Interface(object):
     @staticmethod
     def run(tasks, worker_scheduler_factory=None, override_defaults=None):
         """
-        :return: True if all tasks and their dependencies were successfully run (or already completed)
-        False if any error occurred
+        :param tasks:
+        :param worker_scheduler_factory:
+        :param override_defaults:
+        :return: True if all tasks and their dependencies were successfully run (or already completed);
+                 False if any error occurred.
         """
 
         if worker_scheduler_factory is None:
@@ -307,8 +310,7 @@ class PassThroughOptionParser(optparse.OptionParser):
     """
     An unknown option pass-through implementation of OptionParser.
 
-    When unknown arguments are encountered, bundle with largs and try again,
-    until rargs is depleted.
+    When unknown arguments are encountered, bundle with largs and try again, until rargs is depleted.
 
     sys.exit(status) will still be called if a known argument is passed
     incorrectly (e.g. missing arguments or bad argument types, etc.)
@@ -378,13 +380,21 @@ def load_task(module, task_name, params_str):
     return task_cls.from_str_params(params_str)
 
 
-def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, worker_scheduler_factory=None, use_dynamic_argparse=False, local_scheduler=False):
+def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None,
+        worker_scheduler_factory=None, use_dynamic_argparse=False, local_scheduler=False):
     """
     Run from cmdline.
 
-    The default parser uses argparse.
-    However for legacy reasons we support optparse that optionally allows for
-    overriding an existing option parser with new args.
+    The default parser uses argparse however, for legacy reasons,
+    we support optparse that optionally allows for overriding an existing option parser with new args.
+
+    :param cmdline_args:
+    :param existing_optparse:
+    :param use_optparse:
+    :param main_task_cls:
+    :param worker_scheduler_factory:
+    :param use_dynamic_argparse:
+    :param local_scheduler:
     """
     if use_optparse:
         interface = OptParseInterface(existing_optparse)
@@ -404,8 +414,11 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     Run internally, bypassing the cmdline parsing.
 
     Useful if you have some luigi code that you want to run internally.
-    Example
-    luigi.build([MyTask1(), MyTask2()], local_scheduler=True)
+    Example:
+
+    .. code-block:: python
+
+        luigi.build([MyTask1(), MyTask2()], local_scheduler=True)
 
     One notable difference is that `build` defaults to not using
     the identical process lock. Otherwise, `build` would only be

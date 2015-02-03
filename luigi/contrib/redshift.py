@@ -39,17 +39,17 @@ class S3CopyToTable(rdbms.CopyToTable):
     Template task for inserting a data set into Redshift from s3.
 
     Usage:
-        Subclass and override the required attributes:
 
-        * `host`,
-        * `database`,
-        * `user`,
-        * `password`,
-        * `table`,
-        * `columns`,
-        * `aws_access_key_id`,
-        * `aws_secret_access_key`,
-        * `s3_load_path`.
+    * Subclass and override the required attributes:
+      * `host`,
+      * `database`,
+      * `user`,
+      * `password`,
+      * `table`,
+      * `columns`,
+      * `aws_access_key_id`,
+      * `aws_secret_access_key`,
+      * `s3_load_path`.
     """
 
     @abc.abstractproperty
@@ -217,19 +217,19 @@ class S3CopyJSONToTable(S3CopyToTable):
 
     Usage:
 
-        Subclass and override the required attributes:
+        * Subclass and override the required attributes:
 
-        * `host`,
-        * `database`,
-        * `user`,
-        * `password`,
-        * `table`,
-        * `columns`,
-        * `aws_access_key_id`,
-        * `aws_secret_access_key`,
-        * `s3_load_path`,
-        * `jsonpath`,
-        * `copy_json_options`.
+            * `host`,
+            * `database`,
+            * `user`,
+            * `password`,
+            * `table`,
+            * `columns`,
+            * `aws_access_key_id`,
+            * `aws_secret_access_key`,
+            * `s3_load_path`,
+            * `jsonpath`,
+            * `copy_json_options`.
     """
 
     @abc.abstractproperty
@@ -270,20 +270,20 @@ class RedshiftManifestTask(S3PathTask):
     in S3CopyToTable in order to copy multiple files from your
     s3 folder into a redshift table at once.
 
-    For full description on how to use the manifest file see:
+    For full description on how to use the manifest file see
     http://docs.aws.amazon.com/redshift/latest/dg/loading-data-files-using-manifest.html
 
     Usage:
 
-    Requires parameters
-        path - s3 path to the generated manifest file, including the
-               name of the generated file
-                      to be copied into a redshift table
-        folder_paths - s3 paths to the folders containing files
-                       you wish to be copied
+        * requires parameters
+            * path - s3 path to the generated manifest file, including the
+                     name of the generated file
+                     to be copied into a redshift table
+            * folder_paths - s3 paths to the folders containing files you wish to be copied
 
     Output:
-        generated manifest file
+
+        * generated manifest file
     """
 
     # should be over ridden to point to a variety

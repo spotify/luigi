@@ -21,7 +21,6 @@ def getpcmd(pid):
     Returns command of process.
 
     :param pid:
-    :return
     """
     cmd = 'ps -p %s -o command=' % (pid,)
     p = os.popen(cmd, 'r')

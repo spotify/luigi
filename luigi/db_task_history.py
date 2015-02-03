@@ -12,20 +12,23 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import task_history
 import configuration
 import datetime
 import logging
 
+import sqlalchemy
+import sqlalchemy.ext.declarative
+import sqlalchemy.orm
+import sqlalchemy.orm.collections
+
+import task_history
+
+
 from contextlib import contextmanager
 from task_status import PENDING, FAILED, DONE, RUNNING
 
-from sqlalchemy.orm.collections import attribute_mapped_collection
-from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
 
-Base = declarative_base()
+Base = sqlalchemy.ext.declarative.declarative_base()
 
 logger = logging.getLogger('luigi-interface')
 
@@ -52,8 +55,8 @@ class DbTaskHistory(task_history.TaskHistory):
     def __init__(self):
         config = configuration.get_config()
         connection_string = config.get('task_history', 'db_connection')
-        self.engine = create_engine(connection_string)
-        self.session_factory = sessionmaker(bind=self.engine, expire_on_commit=False)
+        self.engine = sqlalchemy.create_engine(connection_string)
+        self.session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
         self.tasks = {}  # task_id -> TaskRecord
 
@@ -144,9 +147,9 @@ class TaskParameter(Base):
     Table to track luigi.Parameter()s of a Task.
     """
     __tablename__ = 'task_parameters'
-    task_id = Column(Integer, ForeignKey('tasks.id'), primary_key=True)
-    name = Column(String(128), primary_key=True)
-    value = Column(String(256))
+    task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'), primary_key=True)
+    name = sqlalchemy.Column(sqlalchemy.String(128), primary_key=True)
+    value = sqlalchemy.Column(sqlalchemy.String(256))
 
     def __repr__(self):
         return "TaskParameter(task_id=%d, name=%s, value=%s)" % (self.task_id, self.name, self.value)
@@ -157,10 +160,10 @@ class TaskEvent(Base):
     Table to track when a task is scheduled, starts, finishes, and fails.
     """
     __tablename__ = 'task_events'
-    id = Column(Integer, primary_key=True)
-    task_id = Column(Integer, ForeignKey('tasks.id'))
-    event_name = Column(String(20))
-    ts = Column(TIMESTAMP, index=True)
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
+    task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'))
+    event_name = sqlalchemy.Column(sqlalchemy.String(20))
+    ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP, index=True)
 
     def __repr__(self):
         return "TaskEvent(task_id=%s, event_name=%s, ts=%s" % (self.task_id, self.event_name, self.ts)
@@ -173,12 +176,17 @@ class TaskRecord(Base):
     References to other tables are available through task.events, task.parameters, etc.
     """
     __tablename__ = 'tasks'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(128), index=True)
-    host = Column(String(128))
-    parameters = relationship('TaskParameter', collection_class=attribute_mapped_collection('name'),
-                              cascade="all, delete-orphan")
-    events = relationship("TaskEvent", order_by=lambda: TaskEvent.ts.desc(), backref="task")
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
+    name = sqlalchemy.Column(sqlalchemy.String(128), index=True)
+    host = sqlalchemy.Column(sqlalchemy.String(128))
+    parameters = sqlalchemy.orm.relationship(
+        'TaskParameter',
+        collection_class=sqlalchemy.orm.collections.attribute_mapped_collection('name'),
+        cascade="all, delete-orphan")
+    events = sqlalchemy.orm.relationship(
+        'TaskEvent',
+        order_by=lambda: TaskEvent.ts.desc(),
+        backref='task')
 
     def __repr__(self):
         return "TaskRecord(name=%s, host=%s)" % (self.name, self.host)

@@ -130,7 +130,7 @@ support command line interaction and make sure to convert the input to
 the corresponding type (i.e. datetime.date instead of a string).
 
 Setting parameter value for other classes
------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 All parameters are also exposed on a class level on the command line interface.
 For instance, say you have classes TaskA and TaskB:
