@@ -1,14 +1,15 @@
 Example Workflow – Top Artists
 ------------------------------
 
-This is a very simplified case of something we do at Spotify a lot. All
-user actions are logged to HDFS where we run a bunch of Hadoop jobs to
-transform the data. At some point we might end up with a smaller data
-set that we can bulk ingest into Cassandra, Postgres, or some other
-format.
+This is a very simplified case of something we do at Spotify a lot.
+All user actions are logged to HDFS where
+we run a bunch of Hadoop jobs to transform the data.
+At some point we might end up with
+a smaller data set that we can bulk ingest into Cassandra, Postgres, or
+some other format.
 
-For the purpose of this exercise, we want to aggregate all streams, and
-find the top 10 artists. We will then put it into Postgres.
+For the purpose of this exercise, we want to aggregate all streams,
+find the top 10 artists and then put the results into Postgres.
 
 This example is also available in ``examples/top_artists.py``
 
@@ -40,10 +41,10 @@ Step 1 - Aggregate Artist Streams
                     print >> out_file, artist, count
 
 Note that this is just a portion of the file *examples/top\_artists.py*.
-In particular, ``Streams`` is defined as a ``luigi.Task``, acting as a
-dependency for ``AggregateArtists``. In addition, ``luigi.run()`` is
-called if the script is executed directly, allowing it to be run from
-the command line.
+In particular, ``Streams`` is defined as a ``luigi.Task``,
+acting as a dependency for ``AggregateArtists``.
+In addition, ``luigi.run()`` is called if the script is executed directly,
+allowing it to be run from the command line.
 
 There are several pieces of this snippet that deserve more explanation.
 
@@ -96,10 +97,12 @@ overview of the options:
                             AggregateArtists.date_interval
 
 Running the command again will do nothing because the output file is
-already created. In that sense, any task in Luigi is *idempotent*
+already created.
+In that sense, any task in Luigi is *idempotent*
 because running it many times gives the same outcome as running it once.
 Note that unlike Makefile, the output will not be recreated when any of
-the input files is modified. You need to delete the output file
+the input files is modified.
+You need to delete the output file
 manually.
 
 The *--local-scheduler* flag tells Luigi not to connect to a scheduler
@@ -137,12 +140,13 @@ Note that ``luigi.hadoop.JobTask`` doesn't require you to implement a
 Step 2 – Find the Top Artists
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-At this point, we've counted the number of streams for each artists, for
-the full time period. We are left with a large file that contains
-mappings of artist -> count data, and we want to find the top 10
-artists. Since we only have a few hundred thousand artists, and
-calculating artists is nontrivial to parallelize, we choose to do this
-not as a Hadoop job, but just as a plain old for-loop in Python.
+At this point, we've counted the number of streams for each artists,
+for the full time period.
+We are left with a large file that contains
+mappings of artist -> count data, and we want to find the top 10 artists.
+Since we only have a few hundred thousand artists, and
+calculating artists is nontrivial to parallelize,
+we choose to do this not as a Hadoop job, but just as a plain old for-loop in Python.
 
 .. code:: python
 
@@ -172,9 +176,9 @@ not as a Hadoop job, but just as a plain old for-loop in Python.
                     yield int(streams), int(artist)
 
 The most interesting thing here is that this task (*Top10Artists*)
-defines a dependency on the previous task (*AggregateArtists*). This
-means that if the output of *AggregateArtists* does not exist, the task
-will run before *Top10Artists*.
+defines a dependency on the previous task (*AggregateArtists*).
+This means that if the output of *AggregateArtists* does not exist,
+the task will run before *Top10Artists*.
 
 ::
 
@@ -186,9 +190,9 @@ Step 3 - Insert into Postgres
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This mainly serves as an example of a specific subclass *Task* that
-doesn't require any code to be written. It's also an example of how you
-can define task templates that you can reuse for a lot of different
-tasks.
+doesn't require any code to be written.
+It's also an example of how you can define task templates that
+you can reuse for a lot of different tasks.
 
 .. code:: python
 
@@ -217,17 +221,18 @@ building all its upstream dependencies.
 Using the Central Planner
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The *--local-scheduler* flag tells Luigi not to connect to a central
-scheduler. This is recommended in order to get started and or for
-development purposes. At the point where you start putting things in
-production we strongly recommend running the central scheduler server.
-In addition to providing locking so the same task is not run by multiple
-processes at the same time, this server also provides a pretty nice
-visualization of your current work flow.
+The *--local-scheduler* flag tells Luigi not to connect to a central scheduler.
+This is recommended in order to get started and or for development purposes.
+At the point where you start putting things in production
+we strongly recommend running the central scheduler server.
+In addition to providing locking
+so that the same task is not run by multiple processes at the same time,
+this server also provides a pretty nice visualization of your current work flow.
 
-If you drop the *--local-scheduler* flag, your script will try to
-connect to the central planner, by default at localhost port 8082. If
-you run
+If you drop the *--local-scheduler* flag,
+your script will try to connect to the central planner,
+by default at localhost port 8082.
+If you run
 
 ::
 
@@ -240,8 +245,8 @@ in the background and then run
     $ python wordcount.py --date 2012-W03
 
 then in fact your script will now do the scheduling through a
-centralized server. You need `Tornado <http://www.tornadoweb.org/>`__
-for this to work.
+centralized server.
+You need `Tornado <http://www.tornadoweb.org/>`__ for this to work.
 
 Launching *http://localhost:8082* should show something like this:
 
@@ -249,16 +254,17 @@ Launching *http://localhost:8082* should show something like this:
    :alt: Web server screenshot
 
    Web server screenshot
-Looking at the dependency graph for any of the tasks yields something
-like this:
+Looking at the dependency graph
+for any of the tasks yields something like this:
 
 .. figure:: aggregate_artists.png
    :alt: Aggregate artists screenshot
 
    Aggregate artists screenshot
-In case your job crashes remotely due to any Python exception, Luigi
-will try to fetch the traceback and print it on standard output. You
-need `Mechanize <http://wwwsearch.sourceforge.net/mechanize/>`__ for it
+In case your job crashes remotely due to any Python exception,
+Luigi will try to fetch the traceback and print it on standard output.
+You need `Mechanize <http://wwwsearch.sourceforge.net/mechanize/>`__ for it
 to work and you also need connectivity to your tasktrackers.
 
-In production, you'll want to run the centralized scheduler. See: :doc:`central_scheduler` for more information.
+In production, you'll want to run the centralized scheduler.
+See: :doc:`central_scheduler` for more information.

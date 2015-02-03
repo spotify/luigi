@@ -109,13 +109,15 @@ def list_path(path):
 
 
 class HdfsClient(FileSystem):
-
-    """This client uses Apache 2.x syntax for file system commands, which also matched CDH4"""
+    """
+    This client uses Apache 2.x syntax for file system commands, which also matched CDH4.
+    """
 
     recursive_listdir_cmd = ['-ls', '-R']
 
     def exists(self, path):
-        """ Use ``hadoop fs -stat`` to check file existence
+        """
+        Use ``hadoop fs -stat`` to check file existence.
         """
 
         cmd = load_hadoop_cmd() + ['fs', '-stat', path]
@@ -144,10 +146,14 @@ class HdfsClient(FileSystem):
 
     def rename_dont_move(self, path, dest):
         """
-        Override this method with an implementation that uses rename2, which is
-        a rename operation that never moves. For instance, `rename2 a b` never
-        moves `a` into `b` folder.  Currently, the hadoop cli does not support
-        this operation.  We keep the interface simple by just aliasing this to
+        Override this method with an implementation that uses rename2,
+        which is a rename operation that never moves.
+
+        For instance, `rename2 a b` never moves `a` into `b` folder.
+
+        Currently, the hadoop cli does not support this operation.
+
+        We keep the interface simple by just aliasing this to
         normal rename and let individual implementations redefine the method.
 
         rename2: https://github.com/apache/hadoop/blob/ae91b13/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocol/ClientProtocol.java#L483-L523
@@ -276,9 +282,9 @@ class HdfsClient(FileSystem):
 
 
 class SnakebiteHdfsClient(HdfsClient):
-
     """
     This client uses Spotify's snakebite client whenever possible.
+
     @author: Alan Brenner <alan@magnetic.com> github.com/alanbbr
     """
 
@@ -517,13 +523,14 @@ class SnakebiteHdfsClient(HdfsClient):
 
 
 class HdfsClientCdh3(HdfsClient):
-
-    """This client uses CDH3 syntax for file system commands"""
+    """
+    This client uses CDH3 syntax for file system commands.
+    """
 
     def mkdir(self, path):
-        '''
-        No -p switch, so this will fail creating ancestors
-        '''
+        """
+        No -p switch, so this will fail creating ancestors.
+        """
         try:
             call_check(load_hadoop_cmd() + ['fs', '-mkdir', path])
         except HDFSCliError as ex:
@@ -546,9 +553,10 @@ class HdfsClientCdh3(HdfsClient):
 
 
 class HdfsClientApache1(HdfsClientCdh3):
-
-    """This client uses Apache 1.x syntax for file system commands,
-    which are similar to CDH3 except for the file existence check"""
+    """
+    This client uses Apache 1.x syntax for file system commands,
+    which are similar to CDH3 except for the file existence check.
+    """
 
     recursive_listdir_cmd = ['-lsr']
 
@@ -567,17 +575,21 @@ class HdfsClientApache1(HdfsClientCdh3):
 def get_configured_hadoop_version():
     """
     CDH4 (hadoop 2+) has a slightly different syntax for interacting with hdfs
-    via the command line. The default version is CDH4, but one can override
+    via the command line.
+
+    The default version is CDH4, but one can override
     this setting with "cdh3" or "apache1" in the hadoop section of the config
-    in order to use the old syntax
+    in order to use the old syntax.
     """
     return configuration.get_config().get("hadoop", "version", "cdh4").lower()
 
 
 def get_configured_hdfs_client(show_warnings=True):
-    """ This is a helper that fetches the configuration value for 'client' in
+    """
+    This is a helper that fetches the configuration value for 'client' in
     the [hdfs] section. It will return the client that retains backwards
-    compatibility when 'client' isn't configured. """
+    compatibility when 'client' isn't configured.
+    """
     config = configuration.get_config()
     custom = config.get("hdfs", "client", None)
     if custom:
@@ -593,8 +605,10 @@ def get_configured_hdfs_client(show_warnings=True):
 
 
 def create_hadoopcli_client():
-    """ Given that we want one of the hadoop cli clients (unlike snakebite),
-    this one will return the right one """
+    """
+    Given that we want one of the hadoop cli clients (unlike snakebite),
+    this one will return the right one.
+    """
     version = get_configured_hadoop_version()
     if version == "cdh4":
         return HdfsClient()
@@ -608,7 +622,9 @@ def create_hadoopcli_client():
 
 
 def get_autoconfig_client(show_warnings=True):
-    """Creates the client as specified in the `client.cfg` configuration"""
+    """
+    Creates the client as specified in the `client.cfg` configuration.
+    """
     configured_client = get_configured_hdfs_client(show_warnings=show_warnings)
     if configured_client == "snakebite":
         return SnakebiteHdfsClient()
@@ -635,8 +651,8 @@ class HdfsReadPipe(luigi.format.InputPipeProcessWrapper):
 
 
 class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
-
-    """ File like object for writing to HDFS
+    """
+    File like object for writing to HDFS
 
     The referenced file is first written to a temporary location and then
     renamed to final location on close(). If close() isn't called
@@ -666,8 +682,9 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
 
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
-
-    """ Writes a data<data_extension> file to a directory at <path> """
+    """
+    Writes a data<data_extension> file to a directory at <path>.
+    """
 
     def __init__(self, path, data_extension=""):
         self.path = path
@@ -758,7 +775,8 @@ class HdfsTarget(FileSystemTarget):
 
     @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def rename(self, path, fail_if_exists=False):
-        """ Rename does not change self.path, so be careful with assumptions
+        """
+        Rename does not change self.path, so be careful with assumptions.
 
         Not recommendeed for directories. Use move_dir.  spotify/luigi#522
         """
@@ -770,14 +788,18 @@ class HdfsTarget(FileSystemTarget):
 
     @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def move(self, path, fail_if_exists=False):
-        """ Move does not change self.path, so be careful with assumptions
+        """
+        Move does not change self.path, so be careful with assumptions.
 
         Not recommendeed for directories. Use move_dir.  spotify/luigi#522
         """
         self.rename(path, raise_if_exists=fail_if_exists)
 
     def move_dir(self, path):
-        """ Rename a directory. The implementation uses `rename_dont_move`,
+        """
+        Rename a directory.
+
+        The implementation uses `rename_dont_move`,
         which on some clients is just a normal `mv` operation, which can cause
         nested directories.
 

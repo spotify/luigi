@@ -21,9 +21,9 @@ import multiprocessing
 
 
 class MockFileSystem(target.FileSystem):
-
-    """MockFileSystem inspects/modifies _data to simulate
-    file system operations"""
+    """
+    MockFileSystem inspects/modifies _data to simulate file system operations.
+    """
     _data = None
 
     def get_all_data(self):
@@ -39,7 +39,9 @@ class MockFileSystem(target.FileSystem):
         return MockFile(path).exists()
 
     def remove(self, path, recursive=True, skip_trash=True):
-        """Removes the given mockfile. skip_trash doesn't have any meaning."""
+        """
+        Removes the given mockfile. skip_trash doesn't have any meaning.
+        """
         if recursive:
             to_delete = []
             for s in self.get_all_data().keys():
@@ -51,13 +53,16 @@ class MockFileSystem(target.FileSystem):
             self.get_all_data().pop(path)
 
     def listdir(self, path):
-        """listdir does a prefix match of self.get_all_data(), but
-        doesn't yet support globs"""
+        """
+        listdir does a prefix match of self.get_all_data(), but doesn't yet support globs.
+        """
         return [s for s in self.get_all_data().keys()
                 if s.startswith(path)]
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
-        """mkdir is a noop"""
+        """
+        mkdir is a noop.
+        """
         pass
 
     def clear(self):
@@ -118,7 +123,9 @@ class MockFile(target.FileSystemTarget):
 
 
 def skip(func):
-    """ Sort of a substitute for unittest.skip*, which is 2.7+ """
+    """
+    Sort of a substitute for unittest.skip*, which is 2.7+.
+    """
     def wrapper():
         pass
     return wrapper

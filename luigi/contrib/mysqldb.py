@@ -13,20 +13,24 @@ except ImportError as e:
 
 
 class MySqlTarget(luigi.Target):
-
-    """Target for a resource in MySql"""
+    """
+    Target for a resource in MySql.
+    """
 
     marker_table = luigi.configuration.get_config().get('mysql', 'marker-table', 'table_updates')
 
     def __init__(self, host, database, user, password, table, update_id):
         """
-        Args:
-            host (str): MySql server address. Possibly a host:port string.
-            database (str): Database name
-            user (str): Database user
-            password (str): Password for specified user
-            update_id (str): An identifier for this data set
-
+        :param host: MySql server address. Possibly a host:port string.
+        :type host: str
+        :param database: Database name
+        :type database: str
+        :param user: Database user
+        :type user: str
+        :param password : Password for specified user
+        :type password: str
+        :param update_id: An identifier for this data set
+        :type update_id: str
         """
         if ':' in host:
             self.host, self.port = host.split(':')
@@ -41,10 +45,12 @@ class MySqlTarget(luigi.Target):
         self.update_id = update_id
 
     def touch(self, connection=None):
-        """Mark this update as complete.
+        """
+        Mark this update as complete.
 
-        Important: If the marker table doesn't exist, the connection transaction will be aborted
-        and the connection reset. Then the marker table will be created.
+        Important: If the marker table doesn't exist,
+        the connection transaction will be aborted and the connection reset.
+        Then the marker table will be created.
         """
         self.create_marker_table()
 
@@ -92,9 +98,11 @@ class MySqlTarget(luigi.Target):
         return connection
 
     def create_marker_table(self):
-        """Create marker table if it doesn't exist.
+        """
+        Create marker table if it doesn't exist.
 
-        Using a separate connection since the transaction might have to be reset"""
+        Using a separate connection since the transaction might have to be reset.
+        """
         connection = self.connect(autocommit=True)
         cursor = connection.cursor()
         try:

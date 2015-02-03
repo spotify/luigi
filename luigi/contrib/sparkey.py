@@ -18,16 +18,17 @@ import luigi
 
 
 class SparkeyExportTask(luigi.Task):
-
-    """ A luigi task that writes to a local sparkey log file.
+    """
+    A luigi task that writes to a local sparkey log file.
 
     Subclasses should implement the requires and output methods. The output
     must be a luigi.LocalTarget.
 
     The resulting sparkey log file will contain one entry for every line in
     the input, mapping from the first value to a tab-separated list of the
-    rest of the line. To generate a simple key-value index, yield "key", "value"
-    pairs from the input(s) to this task.
+    rest of the line.
+
+    To generate a simple key-value index, yield "key", "value" pairs from the input(s) to this task.
     """
 
     # the separator used to split input lines

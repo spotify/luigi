@@ -31,9 +31,8 @@ except ImportError:
 
 
 class MultiReplacer(object):
-    # TODO: move to misc/util module
-
-    """Object for one-pass replace of multiple words
+    """
+    Object for one-pass replace of multiple words
 
     Substituted parts will not be matched against other replace patterns, as opposed to when using multipass replace.
     The order of the items in the replace_pairs input will dictate replacement precedence.
@@ -42,18 +41,28 @@ class MultiReplacer(object):
     replace_pairs -- list of 2-tuples which hold strings to be replaced and replace string
 
     Usage:
-    >>> replace_pairs = [("a", "b"), ("b", "c")]
-    >>> MultiReplacer(replace_pairs)("abcd")
-    'bccd'
-    >>> replace_pairs = [("ab", "x"), ("a", "x")]
-    >>> MultiReplacer(replace_pairs)("ab")
-    'x'
-    >>> replace_pairs.reverse()
-    >>> MultiReplacer(replace_pairs)("ab")
-    'xb'
+
+    .. code-block:: python
+
+        >>> replace_pairs = [("a", "b"), ("b", "c")]
+        >>> MultiReplacer(replace_pairs)("abcd")
+        'bccd'
+        >>> replace_pairs = [("ab", "x"), ("a", "x")]
+        >>> MultiReplacer(replace_pairs)("ab")
+        'x'
+        >>> replace_pairs.reverse()
+        >>> MultiReplacer(replace_pairs)("ab")
+        'xb'
     """
+# TODO: move to misc/util module
 
     def __init__(self, replace_pairs):
+        """
+        Initializes a MultiReplacer instance.
+
+        :param replace_pairs: list of 2-tuples which hold strings to be replaced and replace string.
+        :type replace_pairs: tuple
+        """
         replace_list = list(replace_pairs)  # make a copy in case input is iterable
         self._replace_dict = dict(replace_list)
         pattern = '|'.join(re.escape(x) for x, y in replace_list)
@@ -81,10 +90,11 @@ default_escape = MultiReplacer([('\\', '\\\\'),
 
 
 class PostgresTarget(luigi.Target):
+    """
+    Target for a resource in Postgres.
 
-    """Target for a resource in Postgres.
-
-    This will rarely have to be directly instantiated by the user"""
+    This will rarely have to be directly instantiated by the user.
+    """
     marker_table = luigi.configuration.get_config().get('postgres', 'marker-table', 'table_updates')
 
     # Use DB side timestamps or client side timestamps in the marker_table
@@ -112,10 +122,12 @@ class PostgresTarget(luigi.Target):
         self.update_id = update_id
 
     def touch(self, connection=None):
-        """Mark this update as complete.
+        """
+        Mark this update as complete.
 
         Important: If the marker table doesn't exist, the connection transaction will be aborted
-        and the connection reset. Then the marker table will be created.
+        and the connection reset.
+        Then the marker table will be created.
         """
         self.create_marker_table()
 
@@ -161,7 +173,9 @@ class PostgresTarget(luigi.Target):
         return row is not None
 
     def connect(self):
-        "Get a psycopg2 connection object to the database where the table is"
+        """
+        Get a psycopg2 connection object to the database where the table is.
+        """
         connection = psycopg2.connect(
             host=self.host,
             port=self.port,
@@ -172,9 +186,11 @@ class PostgresTarget(luigi.Target):
         return connection
 
     def create_marker_table(self):
-        """Create marker table if it doesn't exist.
+        """
+        Create marker table if it doesn't exist.
 
-        Using a separate connection since the transaction might have to be reset"""
+        Using a separate connection since the transaction might have to be reset.
+        """
         connection = self.connect()
         connection.autocommit = True
         cursor = connection.cursor()
@@ -204,7 +220,6 @@ class PostgresTarget(luigi.Target):
 
 
 class CopyToTable(rdbms.CopyToTable):
-
     """
     Template task for inserting a data set into Postgres
 
@@ -214,19 +229,21 @@ class CopyToTable(rdbms.CopyToTable):
 
     To customize how to access data from an input task, override the `rows` method
     with a generator that yields each row as a tuple with fields ordered according to `columns`.
-
     """
 
     def rows(self):
-        """Return/yield tuples or lists corresponding to each row to be inserted """
+        """
+        Return/yield tuples or lists corresponding to each row to be inserted.
+        """
         with self.input().open('r') as fobj:
             for line in fobj:
                 yield line.strip('\n').split('\t')
 
     def map_column(self, value):
-        """Applied to each column of every row returned by `rows`
+        """
+        Applied to each column of every row returned by `rows`.
 
-        Default behaviour is to escape special characters and identify any self.null_values
+        Default behaviour is to escape special characters and identify any self.null_values.
         """
         if value in self.null_values:
             return '\N'
@@ -235,11 +252,11 @@ class CopyToTable(rdbms.CopyToTable):
         else:
             return default_escape(str(value))
 
-
 # everything below will rarely have to be overridden
 
     def output(self):
-        """Returns a PostgresTarget representing the inserted dataset.
+        """
+        Returns a PostgresTarget representing the inserted dataset.
 
         Normally you don't override this.
         """
@@ -262,7 +279,8 @@ class CopyToTable(rdbms.CopyToTable):
         cursor.copy_from(file, self.table, null='\N', sep=self.column_separator, columns=column_names)
 
     def run(self):
-        """Inserts data generated by rows() into target table.
+        """
+        Inserts data generated by rows() into target table.
 
         If the target table doesn't exist, self.create_table will be called to attempt to create the table.
 

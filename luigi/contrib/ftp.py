@@ -1,5 +1,6 @@
 """
-This library is a wrapper of ftplib. It is convenient to move data from/to FTP.
+This library is a wrapper of ftplib.
+It is convenient to move data from/to FTP.
 
 There is an example on how to use it (example/ftp_experiment_outputs.py)
 
@@ -27,7 +28,9 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.tls = tls
 
     def _connect(self):
-        """ Log in to ftp """
+        """
+        Log in to ftp.
+        """
         if self.tls:
             self.ftpcon = ftplib.FTP_TLS()
         else:
@@ -38,9 +41,12 @@ class RemoteFileSystem(luigi.target.FileSystem):
             self.ftpcon.prot_p()
 
     def exists(self, path, mtime=None):
-        """ Return `True` if file or directory at `path` exist, False otherwise
-            Additional check on modified time when mtime is passed in. Return
-            False if the file's modified time is older mtime.
+        """
+        Return `True` if file or directory at `path` exist, False otherwise.
+
+        Additional check on modified time when mtime is passed in.
+
+        Return False if the file's modified time is older mtime.
         """
         self._connect()
         files = self.ftpcon.nlst(path)
@@ -89,11 +95,14 @@ class RemoteFileSystem(luigi.target.FileSystem):
             print('_rm_recursive: Could not remove {0}: {1}'.format(path, e))
 
     def remove(self, path, recursive=True):
-        """ Remove file or directory at location ``path``
+        """
+        Remove file or directory at location ``path``.
 
-        :param str path: a path within the FileSystem to remove.
-        :param bool recursive: if the path is a directory, recursively remove the directory and all
-                               of its descendants. Defaults to ``True``.
+        :param path: a path within the FileSystem to remove.
+        :type path: str
+        :param recursive: if the path is a directory, recursively remove the directory and
+                          all of its descendants. Defaults to ``True``.
+        :type recursive: bool
         """
         self._connect()
 
@@ -151,9 +160,10 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
 
 class AtomicFtpfile(file):
+    """
+    Simple class that writes to a temp file and upload to ftp on close().
 
-    """ Simple class that writes to a temp file and upload to ftp on close().
-     Also cleans up the temp file if close is not invoked.
+    Also cleans up the temp file if close is not invoked.
     """
 
     def __init__(self, fs, path):
@@ -183,6 +193,7 @@ class AtomicFtpfile(file):
     def __exit__(self, exc_type, exc, traceback):
         """
         Close/commit the file if there are no exception
+
         Upload file to ftp
         """
         if exc_type:
@@ -191,10 +202,10 @@ class AtomicFtpfile(file):
 
 
 class RemoteTarget(luigi.target.FileSystemTarget):
-
     """
-    Target used for reading from remote files. The target is implemented using
-    ssh commands streaming data over the network.
+    Target used for reading from remote files.
+
+    The target is implemented using ssh commands streaming data over the network.
     """
 
     def __init__(self, path, host, format=None, username=None, password=None, port=21, mtime=None, tls=False):
@@ -209,14 +220,16 @@ class RemoteTarget(luigi.target.FileSystemTarget):
         return self._fs
 
     def open(self, mode):
-        """Open the FileSystem target.
+        """
+        Open the FileSystem target.
 
         This method returns a file-like object which can either be read from or written to depending
         on the specified mode.
 
-        :param str mode: the mode `r` opens the FileSystemTarget in read-only mode, whereas `w` will
-                         open the FileSystemTarget in write mode. Subclasses can implement
-                         additional options.
+        :param mode: the mode `r` opens the FileSystemTarget in read-only mode, whereas `w` will
+                     open the FileSystemTarget in write mode. Subclasses can implement
+                     additional options.
+        :type mode: str
         """
         if mode == 'w':
             if self.format:

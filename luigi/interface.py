@@ -52,13 +52,14 @@ def setup_interface_logging(conf_file=None):
 
 
 class EnvironmentParamsContainer(task.Task):
-
-    ''' Keeps track of a bunch of environment params.
+    """
+    Keeps track of a bunch of environment params.
 
     Uses the internal luigi parameter mechanism.
     The nice thing is that we can instantiate this class
     and get an object with all the environment variables set.
-    This is arguably a bit of a hack.'''
+    This is arguably a bit of a hack.
+    """
 
     local_scheduler = parameter.BoolParameter(
         is_global=True, default=False,
@@ -232,9 +233,9 @@ def set_global_parameters(args):
 
 
 class ArgParseInterface(Interface):
-
-    ''' Takes the task as the command, with parameters specific to it
-    '''
+    """
+    Takes the task as the command, with parameters specific to it.
+    """
 
     def parse_task(self, cmdline_args=None, main_task_cls=None):
         parser = argparse.ArgumentParser()
@@ -289,14 +290,17 @@ class ArgParseInterface(Interface):
 
 
 class DynamicArgParseInterface(ArgParseInterface):
-
-    ''' Uses --module as a way to load modules dynamically
+    """
+    Uses --module as a way to load modules dynamically
 
     Usage:
-    python whatever.py --module foo_module FooTask --blah xyz --x 123
 
-    This will dynamically import foo_module and then try to create FooTask from this
-    '''
+    .. code-block:: console
+
+        python whatever.py --module foo_module FooTask --blah xyz --x 123
+
+    This will dynamically import foo_module and then try to create FooTask from this.
+    """
 
     def parse(self, cmdline_args=None, main_task_cls=None):
         parser = argparse.ArgumentParser()
@@ -312,8 +316,7 @@ class DynamicArgParseInterface(ArgParseInterface):
 
 
 class PassThroughOptionParser(optparse.OptionParser):
-
-    '''
+    """
     An unknown option pass-through implementation of OptionParser.
 
     When unknown arguments are encountered, bundle with largs and try again,
@@ -321,7 +324,7 @@ class PassThroughOptionParser(optparse.OptionParser):
 
     sys.exit(status) will still be called if a known argument is passed
     incorrectly (e.g. missing arguments or bad argument types, etc.)
-    '''
+    """
 
     def _process_args(self, largs, rargs, values):
         while rargs:
@@ -332,12 +335,12 @@ class PassThroughOptionParser(optparse.OptionParser):
 
 
 class OptParseInterface(Interface):
-
-    ''' Supported for legacy reasons where it's necessary to interact with an existing parser.
+    """
+    Supported for legacy reasons where it's necessary to interact with an existing parser.
 
     Takes the task using --task. All parameters to all possible tasks will be defined globally
     in a big unordered soup.
-    '''
+    """
 
     def __init__(self, existing_optparse):
         self.__existing_optparse = existing_optparse
@@ -379,19 +382,22 @@ class OptParseInterface(Interface):
 
 
 def load_task(module, task_name, params_str):
-    """ Imports task dynamically given a module and a task name"""
+    """
+    Imports task dynamically given a module and a task name.
+    """
     __import__(module)
     task_cls = Register.get_task_cls(task_name)
     return task_cls.from_str_params(params_str)
 
 
 def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, worker_scheduler_factory=None, use_dynamic_argparse=False, local_scheduler=False):
-    ''' Run from cmdline.
+    """
+    Run from cmdline.
 
     The default parser uses argparse.
     However for legacy reasons we support optparse that optionally allows for
     overriding an existing option parser with new args.
-    '''
+    """
     if use_optparse:
         interface = OptParseInterface(existing_optparse)
     elif use_dynamic_argparse:
@@ -406,7 +412,8 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task
 
 
 def build(tasks, worker_scheduler_factory=None, **env_params):
-    ''' Run internally, bypassing the cmdline parsing.
+    """
+    Run internally, bypassing the cmdline parsing.
 
     Useful if you have some luigi code that you want to run internally.
     Example
@@ -415,7 +422,12 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     One notable difference is that `build` defaults to not using
     the identical process lock. Otherwise, `build` would only be
     callable once from each process.
-    '''
+
+    :param tasks:
+    :param worker_scheduler_factory:
+    :param env_params:
+    :return:
+    """
     if "no_lock" not in env_params:
         # TODO(erikbern): should we really override args here?
         env_params["no_lock"] = True
