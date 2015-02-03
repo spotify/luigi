@@ -84,6 +84,20 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
+    def do_truncate_table(self):
+        """
+        Return True if table should be truncated before copying new data in.
+        """
+        return False
+
+    def truncate_table(self, connection):
+        query = "truncate %s" % self.table
+        cursor = connection.cursor()
+        try:
+            cursor.execute(query)
+        finally:
+            cursor.close()
+
     def run(self):
         """
         If the target table doesn't exist, self.create_table will be called to attempt to create the table.
@@ -98,6 +112,9 @@ class S3CopyToTable(rdbms.CopyToTable):
             logger.info("Creating table %s", self.table)
             connection.reset()
             self.create_table(connection)
+        elif self.do_truncate_table():
+            logger.info("Truncating table %s", self.table)
+            self.truncate_table(connection)
 
         logger.info("Inserting file: %s", path)
         cursor = connection.cursor()
