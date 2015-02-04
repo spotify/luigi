@@ -17,15 +17,13 @@ from datetime import timedelta
 import luigi.date_interval
 import luigi
 import luigi.interface
-from worker_test import EmailTest
+from worker_test import email_patch
 import luigi.notifications
 from luigi.parameter import ParameterException
 luigi.notifications.DEBUG = True
 import unittest
 from helpers import with_config
 from luigi.mock import MockFile, MockFileSystem
-
-EMAIL_CONFIG = {"core": {"error-email": "not-a-real-email-address-for-test-only"}}
 
 
 class A(luigi.Task):
@@ -151,7 +149,7 @@ class NoopTask(luigi.Task):
     pass
 
 
-class ParameterTest(EmailTest):
+class ParameterTest(unittest.TestCase):
 
     def setUp(self):
         super(ParameterTest, self).setUp()
@@ -212,11 +210,11 @@ class ParameterTest(EmailTest):
     def test_forgot_param(self):
         self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', '--no-lock', 'ForgotParam'],)
 
-    @with_config(EMAIL_CONFIG)
-    def test_forgot_param_in_dep(self):
+    @email_patch
+    def test_forgot_param_in_dep(self, emails):
         # A programmatic missing parameter will cause an error email to be sent
         luigi.run(['--local-scheduler', '--no-lock', 'ForgotParamDep'])
-        self.assertNotEquals(self.last_email, None)
+        self.assertNotEquals(emails, [])
 
     def test_default_param_cmdline(self):
         luigi.run(['--local-scheduler', '--no-lock', 'WithDefault'])
@@ -277,7 +275,7 @@ class ParameterTest(EmailTest):
         self.assertEqual(t.task_id, 'InsignificantParameterTask(bar=y)')
 
 
-class TestNewStyleGlobalParameters(EmailTest):
+class TestNewStyleGlobalParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestNewStyleGlobalParameters, self).setUp()
@@ -324,7 +322,7 @@ class TestNewStyleGlobalParameters(EmailTest):
         self.expect_keys(['banana-baz-bar', 'banana-dep-xyz-bar'])
 
 
-class TestRemoveGlobalParameters(EmailTest):
+class TestRemoveGlobalParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestRemoveGlobalParameters, self).setUp()
