@@ -130,7 +130,6 @@ import luigi
 import datetime
 import itertools
 import sqlalchemy
-from threading import Lock
 
 
 class SQLAlchemyTarget(luigi.Target):
@@ -139,6 +138,7 @@ class SQLAlchemyTarget(luigi.Target):
     `luigi.contrib.sqla.CopyToTable` class to create a task to write to
     the database."""
     marker_table = None
+    _engine = None
 
     def __init__(self, connection_string, target_table, update_id, echo=False):
         """ Constructor for the SQLAlchemyTarget
@@ -153,18 +153,12 @@ class SQLAlchemyTarget(luigi.Target):
         self.connection_string = connection_string
         self.echo = echo
         self.marker_table_bound = None
-        self._engine = None
-        self._mutex = Lock()
 
     @property
     def engine(self):
-        self._mutex.acquire()
-        try:
-            if self._engine is None:
-                self._engine = sqlalchemy.create_engine(self.connection_string, echo=self.echo)
-        finally:
-            self._mutex.release()
-        return self._engine
+        if SQLAlchemyTarget._engine is None:
+            SQLAlchemyTarget._engine = sqlalchemy.create_engine(self.connection_string, echo=self.echo)
+        return SQLAlchemyTarget._engine
 
     def touch(self):
         """Mark this update as complete.
