@@ -13,103 +13,137 @@
 # the License.
 
 import luigi
+from luigi.file import File
+from luigi.scheduler import CentralPlannerScheduler
+import luigi.server
+import luigi.worker
 import unittest
-from mock import Mock
+from mock import patch
 from helpers import with_config
+import os
+import tempfile
 
 
-test_task_has_run = False
+class TestExternalFileTask(luigi.ExternalTask):
+    """ Mocking tasks is a pain, so touch a file instead """
+    path = luigi.Parameter()
+    times_to_call = luigi.Parameter()
+
+    def __init__(self, *args, **kwargs):
+        super(TestExternalFileTask, self).__init__(*args, **kwargs)
+        self.times_called = 0
+
+    def complete(self):
+        """
+        Create the file we need after a number of preconfigured attempts
+        """
+        self.times_called += 1
+
+        if self.times_called >= self.times_to_call:
+            open(self.path, 'a').close()
+
+        return os.path.exists(self.path)
+
+    def output(self):
+        return File(path=self.path)
 
 
 class TestTask(luigi.Task):
     """
     Requires a single file dependency
     """
-    external_task = luigi.Parameter()
+    tempdir = luigi.Parameter()
+    complete_after = luigi.Parameter()
 
     def __init__(self, *args, **kwargs):
         super(TestTask, self).__init__(*args, **kwargs)
-        global test_task_has_run
-        test_task_has_run = False
+        self.output_path = os.path.join(self.tempdir, "test.output")
+        self.dep_path = os.path.join(self.tempdir, "test.dep")
+        self.dependency = TestExternalFileTask(path=self.dep_path,
+                                               times_to_call=self.complete_after)
 
     def requires(self):
-        return self.external_task
+        yield self.dependency
 
     def output(self):
-        mock_target = Mock(spec=luigi.Target)
-        # the return is False so that this task will be scheduled
-        mock_target.exists.return_value = False
-        return mock_target
+        return File(
+            path=self.output_path)
 
     def run(self):
-        global test_task_has_run
-        test_task_has_run = True
+        open(self.output_path, 'a').close()
 
 
 class WorkerExternalTaskTest(unittest.TestCase):
 
-    def _build_mocks(self, external_task_completion):
-        mock_external_task_target = Mock(spec=luigi.Target)
-        mock_external_task_target.task_id = 'mock_external_task_target'
-        mock_external_task_target.exists.return_value = True
+    def setUp(self):
+        self.scheduler = CentralPlannerScheduler(retry_delay=0.01,
+                                       remove_delay=3,
+                                       worker_disconnect_delay=3,
+                                       disable_persist=3,
+                                       disable_window=5,
+                                       disable_failures=2)
 
-        mock_external_task = Mock(spec=luigi.ExternalTask)
-        mock_external_task.task_id = 'mock_external_task'
-        mock_external_task.deps = lambda : []
-        mock_external_task.disabled = False
-        mock_external_task.complete.side_effect = external_task_completion
-        mock_external_task.output.return_value = mock_external_task_target
+    def _assert_complete(self, tasks):
+        for t in tasks:
+            self.assert_(t.complete())
 
-        return mock_external_task
+    def _build(self, tasks):
+        w = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1)
+        for t in tasks:
+            w.add(t)
+        w.run()
+        w.stop()
 
-    @with_config({'core': {'retry-external-tasks': 'true',
-                           'disable-num-failures': '2',
-                           'retry-delay': '0.001'}})
     def test_external_dependency_already_complete(self):
         """
+        Test that the test task completes when its dependency exists at the
+        start of the execution.
+        """
+        tempdir = tempfile.mkdtemp(prefix='luigi-test-')
+        test_task = TestTask(tempdir=tempdir, complete_after=1)
+        luigi.build([test_task], local_scheduler=True)
+
+        assert os.path.exists(test_task.dep_path)
+        assert os.path.exists(test_task.output_path)
+
+        os.unlink(test_task.dep_path)
+        os.unlink(test_task.output_path)
+        os.rmdir(tempdir)
+
+        # complete() is called once per failure, twice per success
+        assert test_task.dependency.times_called == 2
+
+
+    @with_config({'core': {'retry-external-tasks': 'true',
+                           'disable-num-failures': '4',
+                           'max-reschedules': '4',
+                           'worker-keep-alive': 'true',
+                           'retry-delay': '0.01'}})
+    def test_external_dependency_completes_later(self):
+        """
         Test that an external dependency that is not `complete` when luigi is invoked, but \
-        becomes `complete` while the workflow is executing is re-evaluated.
+        becomes `complete` while the workflow is executing is re-evaluated and
+        allows dependencies to run.
         """
         assert luigi.configuration.get_config().getboolean('core',
                                                            'retry-external-tasks',
                                                            False) == True
 
-        # `complete` is called twice per iteration, so duplicate each return code. The
-        # following corresponds to 3 iterations - True.
-        mock_external_task = self._build_mocks(external_task_completion=[True, True])
+        tempdir = tempfile.mkdtemp(prefix='luigi-test-')
 
-        test_task = TestTask(external_task=mock_external_task)
-        luigi.build([test_task], local_scheduler=True)
+        with patch('random.randint', return_value=0.1):
+            test_task = TestTask(tempdir=tempdir, complete_after=3)
+            self._build([test_task])
 
-        # assert mock_external_task.runnable == True
-        assert test_task_has_run == True
-        assert mock_external_task.complete.call_count == 2
+        assert os.path.exists(test_task.dep_path)
+        assert os.path.exists(test_task.output_path)
 
+        os.unlink(test_task.dep_path)
+        os.unlink(test_task.output_path)
+        os.rmdir(tempdir)
 
-    # @with_config({'core': {'retry-external-tasks': 'true',
-    #                        'disable-num-failures': '2',
-    #                        'retry-delay': '0.001'}})
-    # def test_external_dependency_completes_later_successfully(self):
-    #     """
-    #     Test that an external dependency that is not `complete` when luigi is invoked, but \
-    #     becomes `complete` while the workflow is executing is re-evaluated.
-    #     """
-    #     assert luigi.configuration.get_config().getboolean('core',
-    #                                                        'retry-external-tasks',
-    #                                                        False) == True
-    #
-    #     # `complete` is called twice per iteration, so duplicate each return code. The
-    #     # following corresponds to 3 iterations - False, False, True.
-    #     mock_external_task = self._build_mocks(external_task_completion=[False, False,
-    #                                                                      False, False,
-    #                                                                      True, True])
-    #
-    #     test_task = TestTask()
-    #     luigi.build([test_task], local_scheduler=True)
-    #
-    #     # assert mock_external_task.runnable == True
-    #     assert test_task_has_run == True
-    #     assert mock_external_task.complete.call_count == 6
+        # complete() is called once per failure, twice per success
+        assert test_task.dependency.times_called == 4
 
 
 if __name__ == '__main__':
