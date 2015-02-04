@@ -14,12 +14,21 @@
 
 import luigi
 import unittest
-from mock import Mock, patch
+from mock import Mock
 from helpers import with_config
 
+mock_external_task_target = Mock(spec=luigi.Target)
+mock_external_task_target.task_id = 'mock_external_task_target'
+mock_external_task_target.exists.return_value = True
 
 mock_external_task = Mock(spec=luigi.ExternalTask)
-mock_external_task.complete.side_effect = [False, False, True]
+mock_external_task.task_id = 'mock_external_task'
+mock_external_task.deps = lambda : []
+mock_external_task.disabled = False
+mock_external_task.complete.side_effect = [True, True, False, False, True, True]
+mock_external_task.output.return_value = mock_external_task_target
+
+test_task_has_run = False
 
 class TestTask(luigi.Task):
     """
@@ -27,7 +36,8 @@ class TestTask(luigi.Task):
     """
     def __init__(self):
         super(TestTask, self).__init__()
-        self.has_run = False
+        global test_task_has_run
+        test_task_has_run = False
     
     def requires(self):
         return mock_external_task
@@ -36,15 +46,19 @@ class TestTask(luigi.Task):
         mock_target = Mock(spec=luigi.Target)
         # the return is False so that this task will be scheduled
         mock_target.exists.return_value = False
+        return mock_target
 
     def run(self):
-        self.has_run = True
+        global test_task_has_run
+        test_task_has_run = True
 
 
 class WorkerExternalTaskTest(unittest.TestCase):
 
-    @with_config({'core': {'retry-external-tasks': 'true'}})
-    def test_external_dependency_satisified_later(self):
+    @with_config({'core': {'retry-external-tasks': 'true',
+                           'disable-num-failures': '2',
+                           'retry-delay': '0.001'}})
+    def test_external_dependency_completes_later_successfully(self):
         """
         Test that an external dependency that is not `complete` when luigi is invoked, but \
         becomes `complete` while the workflow is executing is re-evaluated.
@@ -56,8 +70,9 @@ class WorkerExternalTaskTest(unittest.TestCase):
         test_task = TestTask()
         luigi.build([test_task], local_scheduler=True)
 
-        assert test_task.has_run == True
-        assert mock_external_task.complete.call_count == 3
+        # assert mock_external_task.runnable == True
+        assert test_task_has_run == True
+        assert mock_external_task.complete.call_count == 2
 
 
 if __name__ == '__main__':
