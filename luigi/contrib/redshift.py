@@ -376,8 +376,7 @@ class KillOpenRedshiftSessions(luigi.Task):
                  "and user_name != 'rdsdb' "
                  "and process != pg_backend_pid()")
         cursor = connection.cursor()
-        logger.info("Killing all open Redshift sessions "
-                    "for database: %s" % self.database)
+        logger.info('Killing all open Redshift sessions for database: %s', self.database)
         try:
             cursor.execute(query, (self.database,))
             cursor.close()
@@ -388,11 +387,9 @@ class KillOpenRedshiftSessions(luigi.Task):
                 # rebuild the connection. Need to pause for 30-60 seconds
                 # before Redshift will allow us back in.
                 connection.close()
-                logger.info("Pausing %s seconds for Redshift to "
-                            "reset connection" %
-                            self.connection_reset_wait_seconds)
+                logger.info('Pausing %s seconds for Redshift to reset connection', self.connection_reset_wait_seconds)
                 time.sleep(self.connection_reset_wait_seconds)
-                logger.info("Reconnecting to Redshift")
+                logger.info('Reconnecting to Redshift')
                 connection = self.output().connect()
             else:
                 raise
@@ -403,5 +400,4 @@ class KillOpenRedshiftSessions(luigi.Task):
         finally:
             connection.close()
 
-        logger.info("Done killing all open Redshift sessions "
-                    "for database: %s" % self.database)
+        logger.info('Done killing all open Redshift sessions for database: %s', self.database)
