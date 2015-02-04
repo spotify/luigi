@@ -253,14 +253,14 @@ Launching *http://localhost:8082* should show something like this:
 .. figure:: web_server.png
    :alt: Web server screenshot
 
-   Web server screenshot
+Web server screenshot
 Looking at the dependency graph
 for any of the tasks yields something like this:
 
 .. figure:: aggregate_artists.png
    :alt: Aggregate artists screenshot
 
-   Aggregate artists screenshot
+Aggregate artists screenshot
 In case your job crashes remotely due to any Python exception,
 Luigi will try to fetch the traceback and print it on standard output.
 You need `Mechanize <http://wwwsearch.sourceforge.net/mechanize/>`__ for it
