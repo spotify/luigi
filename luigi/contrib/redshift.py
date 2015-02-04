@@ -311,7 +311,7 @@ class KillOpenRedshiftSessions(luigi.Task):
     """
     An task for killing any open Redshift sessions
     in a given database. This is necessary to prevent open user sessions
-    with transactions against the table from blocking drop or truncate 
+    with transactions against the table from blocking drop or truncate
     table commands.
 
     Usage:
