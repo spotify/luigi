@@ -18,7 +18,9 @@ supported by SQLAlchemy. The user would be responsible for installing the
 required database driver to connect using SQLAlchemy.
 
 Minimal example of a job to copy data to database using SQLAlchemy is as shown
-below::
+below:
+
+.. code-block:: python
 
     from sqlalchemy import String
     import luigi
@@ -46,7 +48,9 @@ below::
 
 If the target table where the data needs to be copied already exists, then
 the column schema definition can be skipped and instead the reflect flag
-can be set as True. Here is a modified version of the above example::
+can be set as True. Here is a modified version of the above example:
+
+.. code-block:: python
 
     from sqlalchemy import String
     import luigi
@@ -70,7 +74,9 @@ can be set as True. Here is a modified version of the above example::
 
 In the above examples, the data that needs to be copied was directly provided by
 overriding the rows method. Alternately, if the data comes from another task, the
-modified example would look as shown below::
+modified example would look as shown below:
+
+.. code-block:: python
 
     from sqlalchemy import String
     import luigi
@@ -135,15 +141,20 @@ logger = logging.getLogger('luigi-interface')
 
 
 class SQLAlchemyTarget(luigi.Target):
+    """
+    Database target using SQLAlchemy.
 
-    """Database target using SQLAlchemy. This will rarely have to be
-    directly instantiated by the user. Typical usage would be to override
-    `luigi.contrib.sqla.CopyToTable` class to create a task to write to
-    the database."""
+    This will rarely have to be directly instantiated by the user.
+
+    Typical usage would be to override `luigi.contrib.sqla.CopyToTable` class
+    to create a task to write to the database.
+    """
     marker_table = None
 
     def __init__(self, connection_string, target_table, update_id, echo=False):
-        """ Constructor for the SQLAlchemyTarget
+        """
+        Constructor for the SQLAlchemyTarget.
+
         :param connection_string: (str) SQLAlchemy connection string
         :param target_table: (str) The table name for the data
         :param update_id: (str) An identifier for this data set
@@ -156,7 +167,8 @@ class SQLAlchemyTarget(luigi.Target):
         self.marker_table_bound = None
 
     def touch(self):
-        """Mark this update as complete.
+        """
+        Mark this update as complete.
         """
         if self.marker_table_bound is None:
             self.create_marker_table()
@@ -183,9 +195,11 @@ class SQLAlchemyTarget(luigi.Target):
         return row is not None
 
     def create_marker_table(self):
-        """Create marker table if it doesn't exist.
+        """
+        Create marker table if it doesn't exist.
 
-        Using a separate connection since the transaction might have to be reset"""
+        Using a separate connection since the transaction might have to be reset.
+        """
         if self.marker_table is None:
             self.marker_table = luigi.configuration.get_config().get('sqlalchemy', 'marker-table', 'table_updates')
 
@@ -207,12 +221,12 @@ class SQLAlchemyTarget(luigi.Target):
 
 
 class CopyToTable(luigi.Task):
-
     """
     An abstract task for inserting a data set into SQLAlchemy RDBMS
 
     Usage:
-    Subclass and override the required `connection_string`, `table` and `columns` attributes.
+
+    * subclass and override the required `connection_string`, `table` and `columns` attributes.
     """
     echo = False
 
@@ -243,10 +257,11 @@ class CopyToTable(luigi.Task):
     reflect = False  # Set this to true only if the table has already been created by alternate means
 
     def create_table(self, engine):
-        """ Override to provide code for creating the target table.
+        """
+        Override to provide code for creating the target table.
 
-        By default it will be created using types specified in columns. If the table
-        exists, then it binds to the existing table.
+        By default it will be created using types specified in columns.
+        If the table exists, then it binds to the existing table.
 
         If overridden, use the provided connection object for setting up the table in order to
         create the table and insert data using the same transaction.
@@ -275,7 +290,9 @@ class CopyToTable(luigi.Task):
                     logger.exception(self.table + str(e))
 
     def update_id(self):
-        """This update id will be a unique identifier for this insert on this table."""
+        """
+        This update id will be a unique identifier for this insert on this table.
+        """
         return self.task_id
 
     def output(self):
@@ -287,8 +304,11 @@ class CopyToTable(luigi.Task):
         )
 
     def rows(self):
-        """Return/yield tuples or lists corresponding to each row to be inserted. This method
-         can be overridden for custom file types or formats."""
+        """
+        Return/yield tuples or lists corresponding to each row to be inserted.
+
+        This method can be overridden for custom file types or formats.
+        """
         with self.input().open('r') as fobj:
             for line in fobj:
                 yield line.strip("\n").split(self.column_separator)

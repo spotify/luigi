@@ -6,9 +6,10 @@ Support for Elasticsearch (1.0.0 or newer).
 Provides an `ElasticsearchTarget` and a `CopyToIndex` template task.
 
 Modeled after `luigi.contrib.rdbms.CopyToTable`.
-----
 
 A minimal example (assuming elasticsearch is running on localhost:9200):
+
+.. code-block:: python
 
     class ExampleIndex(CopyToIndex):
         index = 'example'
@@ -20,9 +21,9 @@ A minimal example (assuming elasticsearch is running on localhost:9200):
         task = ExampleIndex()
         luigi.build([task], local_scheduler=True)
 
-----
-
 All options:
+
+.. code-block:: python
 
     class ExampleIndex(CopyToIndex):
         host = 'localhost'
@@ -39,21 +40,24 @@ All options:
         task = ExampleIndex()
         luigi.build([task], local_scheduler=True)
 
-----
-
 `Host`, `port`, `index`, `doc_type` parameters are standard elasticsearch.
 
 `purge_existing_index` will delete the index, whenever an update is required.
-This is useful, when one deals with "dumps" that represent the whole data,
-not just updates.
+This is useful, when one deals with "dumps" that represent the whole data, not just updates.
 
 `marker_index_hist_size` sets the maximum number of entries in the 'marker'
-index. Keep all updates by default (0). Use 1 to only remember the most recent
-update to the index. This can be useful, if an index needs to recreated, even
-though the corresponding indexing task has been run sometime in the past - but
+index:
+
+* 0 (default) keeps all updates,
+* 1 to only remember the most recent update to the index.
+
+This can be useful, if an index needs to recreated, even though
+the corresponding indexing task has been run sometime in the past - but
 a later indexing task might have altered the index in the meantime.
 
 There are a two luigi `client.cfg` configuration options:
+
+.. code-block:: ini
 
     [elasticsearch]
 
@@ -85,8 +89,7 @@ except ImportError:
 
 
 class ElasticsearchTarget(luigi.Target):
-
-    """ Target for a resource in Elasticsearch. """
+    """ Target for a resource in Elasticsearch."""
 
     marker_index = luigi.configuration.get_config().get('elasticsearch',
                                                         'marker-index', 'update_log')
@@ -96,13 +99,18 @@ class ElasticsearchTarget(luigi.Target):
     def __init__(self, host, port, index, doc_type, update_id,
                  marker_index_hist_size=0, http_auth=None):
         """
-        Args:
-            host (str): Elasticsearch server host
-            port (int): Elasticsearch server port
-            index (str): Index name
-            doc_type (str): Doctype name
-            update_id (str): An identifier for this data set
-            marker_index_hist_size (int): List of changes to the index to remember
+        :param host: Elasticsearch server host
+        :type host: str
+        :param port: Elasticsearch server port
+        :type port: int
+        :param index: index name
+        :type index: str
+        :param doc_type: doctype name
+        :type doc_type: str
+        :param update_id: an identifier for this data set
+        :type update_id: str
+        :param marker_index_hist_size: list of changes to the index to remember
+        :type marker_index_hist_size: int
         """
         self.host = host
         self.port = port
@@ -120,28 +128,34 @@ class ElasticsearchTarget(luigi.Target):
         )
 
     def marker_index_document_id(self):
-        """ Generate an id for the indicator document. """
+        """
+        Generate an id for the indicator document.
+        """
         params = '%s:%s:%s' % (self.index, self.doc_type, self.update_id)
         return hashlib.sha1(params).hexdigest()
 
     def touch(self):
-        """ Mark this update as complete. The document id would be sufficent,
-        but we index the parameters
+        """
+        Mark this update as complete.
 
-            (update_id, target_index, target_doc_type, date)
-
-        as well for documentation. """
+        The document id would be sufficent but,
+        for documentation,
+        we index the parameters `update_id`, `target_index`, `target_doc_type` and `date` as well.
+        """
         self.create_marker_index()
         self.es.index(index=self.marker_index, doc_type=self.marker_doc_type,
                       id=self.marker_index_document_id(), body={
-                          'update_id': self.update_id, 'target_index': self.index,
+                          'update_id': self.update_id,
+                          'target_index': self.index,
                           'target_doc_type': self.doc_type,
                           'date': datetime.datetime.now()})
         self.es.indices.flush(index=self.marker_index)
         self.ensure_hist_size()
 
     def exists(self):
-        """ Test, if this task has been run. """
+        """
+        Test, if this task has been run.
+        """
         try:
             _ = self.es.get(index=self.marker_index,
                             doc_type=self.marker_doc_type,
@@ -154,13 +168,17 @@ class ElasticsearchTarget(luigi.Target):
         return False
 
     def create_marker_index(self):
-        """ Create the index that will keep track of the tasks if necessary. """
+        """
+        Create the index that will keep track of the tasks if necessary.
+        """
         if not self.es.indices.exists(index=self.marker_index):
             self.es.indices.create(index=self.marker_index)
 
     def ensure_hist_size(self):
-        """ Shrink the history of updates for a `index/doc_type` combination
-        down to `self.marker_index_hist_size`. """
+        """
+        Shrink the history of updates for
+        a `index/doc_type` combination down to `self.marker_index_hist_size`.
+        """
         if self.marker_index_hist_size == 0:
             return
         result = self.es.search(index=self.marker_index,
@@ -178,7 +196,6 @@ class ElasticsearchTarget(luigi.Target):
 
 
 class CopyToIndex(luigi.Task):
-
     """
     Template task for inserting a data set into Elasticsearch.
 
@@ -186,10 +203,10 @@ class CopyToIndex(luigi.Task):
 
     1. Subclass and override the required `index` attribute.
 
-    2. Implement a custom `docs` method, that returns an iterable over
-    the documents. A document can be a JSON string, e.g. from
-    a newline-delimited JSON (ldj) file (default implementation) or some
-    dictionary.
+    2. Implement a custom `docs` method, that returns an iterable over the documents.
+       A document can be a JSON string,
+       e.g. from a newline-delimited JSON (ldj) file (default implementation)
+       or some dictionary.
 
     Optional attributes:
 
@@ -208,71 +225,97 @@ class CopyToIndex(luigi.Task):
 
     @property
     def host(self):
-        """ ES hostname """
+        """
+        ES hostname.
+        """
         return 'localhost'
 
     @property
     def port(self):
-        """ ES port """
+        """
+        ES port.
+        """
         return 9200
 
     @property
     def http_auth(self):
         """
-        ES optional http auth information
-        as either ‘:’ separated string or a tuple.
-        eg: ` ('user', 'pass') `  or ` "user:pass" `
+        ES optional http auth information as either ‘:’ separated string or a tuple,
+        e.g. `('user', 'pass')` or `"user:pass"`.
         """
         return None
 
     @abc.abstractproperty
     def index(self):
-        """ The target index. May exists or not. """
+        """
+        The target index.
+
+        May exist or not.
+        """
         return None
 
     @property
     def doc_type(self):
-        """ The target doc_type. """
+        """
+        The target doc_type.
+        """
         return 'default'
 
     @property
     def mapping(self):
-        """ Dictionary with custom mapping or `None`. """
+        """
+        Dictionary with custom mapping or `None`.
+        """
         return None
 
     @property
     def settings(self):
-        """ Settings to be used at index creation time. """
+        """
+        Settings to be used at index creation time.
+        """
         return {'settings': {}}
 
     @property
     def chunk_size(self):
-        """ Single API call for this number of docs. """
+        """
+        Single API call for this number of docs.
+        """
         return 2000
 
     @property
     def raise_on_error(self):
-        """ Whether to fail fast. """
+        """
+        Whether to fail fast.
+        """
         return True
 
     @property
     def purge_existing_index(self):
-        """ Whether to delete the `index` completely before any indexing. """
+        """
+        Whether to delete the `index` completely before any indexing.
+        """
         return False
 
     @property
     def marker_index_hist_size(self):
-        """ Number of event log entries in the marker index. 0: unlimited. """
+        """
+        Number of event log entries in the marker index. 0: unlimited.
+        """
         return 0
 
     @property
     def timeout(self):
-        """ Timeout. """
+        """
+        Timeout.
+        """
         return 10
 
     def docs(self):
-        """ Return the documents to be indexed. Beside the user defined
-        fields, the document may contain an `_index`, `_type` and `_id`. """
+        """
+        Return the documents to be indexed.
+
+        Beside the user defined fields, the document may contain an `_index`, `_type` and `_id`.
+        """
         with self.input().open('r') as fobj:
             for line in fobj:
                 yield line
@@ -280,8 +323,9 @@ class CopyToIndex(luigi.Task):
 # everything below will rarely have to be overridden
 
     def _docs(self):
-        """ Since `self.docs` may yield documents that do not explicitly
-        contain `_index` or `_type`, add those attributes here, if necessary.
+        """
+        Since `self.docs` may yield documents that do not explicitly contain `_index` or `_type`,
+        add those attributes here, if necessary.
         """
         first = iter(self.docs()).next()
         needs_parsing = False
@@ -310,7 +354,8 @@ class CopyToIndex(luigi.Task):
         )
 
     def create_index(self):
-        """ Override to provide code for creating the target index.
+        """
+        Override to provide code for creating the target index.
 
         By default it will be created without any special settings or mappings.
         """
@@ -319,17 +364,22 @@ class CopyToIndex(luigi.Task):
             es.indices.create(index=self.index, body=self.settings)
 
     def delete_index(self):
-        """ Delete the index, if it exists. """
+        """
+        Delete the index, if it exists.
+        """
         es = self._init_connection()
         if es.indices.exists(index=self.index):
             es.indices.delete(index=self.index)
 
     def update_id(self):
-        """ This id will be a unique identifier for this indexing task."""
+        """
+        This id will be a unique identifier for this indexing task.
+        """
         return self.task_id
 
     def output(self):
-        """ Returns a ElasticsearchTarget representing the inserted dataset.
+        """
+        Returns a ElasticsearchTarget representing the inserted dataset.
 
         Normally you don't override this.
         """
@@ -344,12 +394,17 @@ class CopyToIndex(luigi.Task):
         )
 
     def run(self):
-        """ Purge existing index, if requested (`purge_existing_index`).
-        Create the index, if missing. Apply mappings, if given.
-        Set refresh interval to -1 (disable) for performance reasons.
-        Bulk index in batches of size `chunk_size` (2000).
-        Set refresh interval to 1s. Refresh Elasticsearch.
-        Create entry in marker index.
+        """
+        Run task, namely:
+
+        * purge existing index, if requested (`purge_existing_index`),
+        * create the index, if missing,
+        * apply mappings, if given,
+        * set refresh interval to -1 (disable) for performance reasons,
+        * bulk index in batches of size `chunk_size` (2000),
+        * set refresh interval to 1s,
+        * refresh Elasticsearch,
+        * create entry in marker index.
         """
         if self.purge_existing_index:
             self.delete_index()

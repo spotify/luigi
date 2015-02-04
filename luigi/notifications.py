@@ -149,9 +149,10 @@ def send_email(subject, message, sender, recipients, image_png=None):
 
 
 def send_error_email(subject, message):
-    """ Sends an email to the configured error-email.
+    """
+    Sends an email to the configured error-email.
 
-    If no error-email is configured, then a message is logged
+    If no error-email is configured, then a message is logged.
     """
     config = configuration.get_config()
     receiver = config.get('core', 'error-email', None)
@@ -171,8 +172,9 @@ def send_error_email(subject, message):
 
 
 def _prefix(subject):
-    """If the config has a special prefix for emails then this function adds
-    this prefix
+    """
+    If the config has a special prefix for emails then this function adds
+    this prefix.
     """
     config = configuration.get_config()
     email_prefix = config.get('core', 'email-prefix', None)

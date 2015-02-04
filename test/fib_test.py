@@ -69,7 +69,7 @@ class FibTest(FibTestBase):
         self.assertEqual(MockFile.fs.get_data('/tmp/fib_100'), '354224848179261915075\n')
 
     def test_cmdline(self):
-        luigi.run(['--local-scheduler', 'Fib', '--n', '100'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Fib', '--n', '100'])
 
         self.assertEqual(MockFile.fs.get_data('/tmp/fib_10'), '55\n')
         self.assertEqual(MockFile.fs.get_data('/tmp/fib_100'), '354224848179261915075\n')

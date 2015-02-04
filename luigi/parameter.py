@@ -22,38 +22,43 @@ _no_value = object()
 
 
 class ParameterException(Exception):
-
-    """Base exception."""
+    """
+    Base exception.
+    """
     pass
 
 
 class MissingParameterException(ParameterException):
-
-    """Exception signifying that there was a missing Parameter."""
+    """
+    Exception signifying that there was a missing Parameter.
+    """
     pass
 
 
 class UnknownParameterException(ParameterException):
-
-    """Exception signifying that an unknown Parameter was supplied."""
+    """
+    Exception signifying that an unknown Parameter was supplied.
+    """
     pass
 
 
 class DuplicateParameterException(ParameterException):
-
-    """Exception signifying that a Parameter was specified multiple times."""
+    """
+    Exception signifying that a Parameter was specified multiple times.
+    """
     pass
 
 
 class UnknownConfigException(ParameterException):
-
-    """Exception signifying that the ``config_path`` for the Parameter could not be found."""
+    """
+    Exception signifying that the ``config_path`` for the Parameter could not be found.
+    """
     pass
 
 
 class Parameter(object):
-
-    """An untyped Parameter
+    """
+    An untyped Parameter
 
     Parameters are objects set on the Task class level to make it possible to parameterize tasks.
     For instance:
@@ -96,7 +101,7 @@ class Parameter(object):
         :param bool is_bool: specify ``True`` if the parameter is a bool value. Default:
                                 ``False``. Bool's have an implicit default value of ``False``.
         :param bool is_global: specify ``True`` if the parameter is global (i.e. used by multiple
-                               Tasks). Default: ``False``.
+                               Tasks). Default: ``False``. DEPRECATED.
         :param bool significant: specify ``False`` if the parameter should not be treated as part of
                                  the unique identifier for a Task. An insignificant Parameter might
                                  also be used to specify a password or other sensitive information
@@ -119,6 +124,14 @@ class Parameter(object):
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
 
+        if is_global:
+            warnings.warn(
+                'is_global is deprecated and will be removed. Please use either '
+                ' (a) class level config (eg. --MyTask-my-param 42)'
+                ' (b) a separate Config class with global settings on it',
+                DeprecationWarning,
+                stacklevel=2)
+
         if is_global and default == _no_value and config_path is None:
             raise ParameterException('Global parameters need default values')
 
@@ -131,14 +144,17 @@ class Parameter(object):
         self.counter = Parameter.counter  # We need to keep track of this to get the order right (see Task class)
         Parameter.counter += 1
 
-    def _get_value_from_config(self):
+    def _get_value_from_config(self, task_name, param_name):
         """Loads the default from the config. Returns _no_value if it doesn't exist"""
 
-        if not self.__config:
+        if self.__config:
+            section, name = self.__config['section'], self.__config['name']
+        elif task_name is not None and param_name is not None:
+            section, name = task_name, param_name
+        else:
             return _no_value
 
         conf = configuration.get_config()
-        (section, name) = (self.__config['section'], self.__config['name'])
 
         try:
             value = conf.get(section, name)
@@ -150,8 +166,8 @@ class Parameter(object):
         else:
             return self.parse(value)
 
-    def _get_value(self):
-        values = [self.__global, self._get_value_from_config(), self.__default]
+    def _get_value(self, task_name=None, param_name=None):
+        values = [self.__global, self._get_value_from_config(task_name, param_name), self.__default]
         for value in values:
             if value != _no_value:
                 return value
@@ -160,9 +176,11 @@ class Parameter(object):
 
     @property
     def has_value(self):
-        """``True`` if a default was specified or if config_path references a valid entry in the conf.
+        """
+        ``True`` if a default was specified or if config_path references a valid entry in the conf.
 
         Note that "value" refers to the Parameter object itself - it can be either
+
         1. The default value for this parameter
         2. A value read from the config
         3. A global value
@@ -173,7 +191,8 @@ class Parameter(object):
 
     @property
     def value(self):
-        """The value for this Parameter.
+        """
+        The value for this Parameter.
 
         This refers to any value defined by a default, a config option, or
         a global value.
@@ -187,8 +206,19 @@ class Parameter(object):
         else:
             return value
 
+    def has_task_value(self, task_name, param_name):
+        return self._get_value(task_name, param_name) != _no_value
+
+    def task_value(self, task_name, param_name):
+        value = self._get_value(task_name, param_name)
+        if value == _no_value:
+            raise MissingParameterException("No default specified")
+        else:
+            return value
+
     def set_global(self, value):
-        """Set the global value of this Parameter.
+        """
+        Set the global value of this Parameter.
 
         :param value: the new global value.
         """
@@ -198,7 +228,8 @@ class Parameter(object):
         self.__global = _no_value
 
     def parse(self, x):
-        """Parse an individual value from the input.
+        """
+        Parse an individual value from the input.
 
         The default implementation is an identify (it returns ``x``), but subclasses should override
         this method for specialized parsing. This method is called by :py:meth:`parse_from_input`
@@ -211,7 +242,8 @@ class Parameter(object):
         return x  # default impl
 
     def serialize(self, x):  # opposite of parse
-        """Opposite of :py:meth:`parse`.
+        """
+        Opposite of :py:meth:`parse`.
 
         Converts the value ``x`` to a string.
 
@@ -251,8 +283,8 @@ class Parameter(object):
         else:
             return self.serialize(x)
 
-    def parser_dest(self, param_name, task_name, glob=False):
-        if self.is_global:
+    def parser_dest(self, param_name, task_name, glob=False, is_without_section=False):
+        if self.is_global or is_without_section:
             if glob:
                 return param_name
             else:
@@ -263,8 +295,8 @@ class Parameter(object):
             else:
                 return param_name
 
-    def add_to_cmdline_parser(self, parser, param_name, task_name, optparse=False, glob=False):
-        dest = self.parser_dest(param_name, task_name, glob)
+    def add_to_cmdline_parser(self, parser, param_name, task_name, optparse=False, glob=False, is_without_section=False):
+        dest = self.parser_dest(param_name, task_name, glob, is_without_section=is_without_section)
         if not dest:
             return
         flag = '--' + dest.replace('_', '-')
@@ -288,7 +320,6 @@ class Parameter(object):
             f = parser.add_argument
         f(flag,
           help=' '.join(description),
-          default=None,
           action=action,
           dest=dest)
 
@@ -299,18 +330,20 @@ class Parameter(object):
             value = getattr(args, dest, None)
             params[param_name] = self.parse_from_input(param_name, value)
 
-    def set_global_from_args(self, param_name, task_name, args):
+    def set_global_from_args(self, param_name, task_name, args, is_without_section=False):
         # Note: side effects
-        dest = self.parser_dest(param_name, task_name, glob=True)
+        dest = self.parser_dest(param_name, task_name, glob=True, is_without_section=is_without_section)
         if dest is not None:
             value = getattr(args, dest, None)
             if value is not None:
                 self.set_global(self.parse_from_input(param_name, value))
+            else:
+                self.reset_global()
 
 
 class DateHourParameter(Parameter):
-
-    """Parameter whose value is a :py:class:`~datetime.datetime` specified to the hour.
+    """
+    Parameter whose value is a :py:class:`~datetime.datetime` specified to the hour.
 
     A DateHourParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
     date and time specified to the hour. For example, ``2013-07-10T19`` specifies July 10, 2013 at
@@ -337,8 +370,8 @@ class DateHourParameter(Parameter):
 
 
 class DateMinuteParameter(DateHourParameter):
-
-    """Parameter whose value is a :py:class:`~datetime.datetime` specified to the minute.
+    """
+    Parameter whose value is a :py:class:`~datetime.datetime` specified to the minute.
 
     A DateMinuteParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
     date and time specified to the minute. For example, ``2013-07-10T19H07`` specifies July 10, 2013 at
@@ -349,8 +382,8 @@ class DateMinuteParameter(DateHourParameter):
 
 
 class DateParameter(Parameter):
-
-    """Parameter whose value is a :py:class:`~datetime.date`.
+    """
+    Parameter whose value is a :py:class:`~datetime.date`.
 
     A DateParameter is a Date string formatted ``YYYY-MM-DD``. For example, ``2013-07-10`` specifies
     July 10, 2013.
@@ -362,35 +395,45 @@ class DateParameter(Parameter):
 
 
 class IntParameter(Parameter):
-
-    """Parameter whose value is an ``int``."""
+    """
+    Parameter whose value is an ``int``.
+    """
 
     def parse(self, s):
-        """Parses an ``int`` from the string using ``int()``."""
+        """
+        Parses an ``int`` from the string using ``int()``.
+        """
         return int(s)
 
 
 class FloatParameter(Parameter):
-
-    """Parameter whose value is a ``float``."""
+    """
+    Parameter whose value is a ``float``.
+    """
 
     def parse(self, s):
-        """Parses a ``float`` from the string using ``float()``."""
+        """
+        Parses a ``float`` from the string using ``float()``.
+        """
         return float(s)
 
 
 class BoolParameter(Parameter):
-
-    """A Parameter whose value is a ``bool``."""
+    """
+    A Parameter whose value is a ``bool``.
+    """
 
     def __init__(self, *args, **kwargs):
-        """This constructor passes along args and kwargs to ctor for :py:class:`Parameter` but
+        """
+        This constructor passes along args and kwargs to ctor for :py:class:`Parameter` but
         specifies ``is_bool=True``.
         """
         super(BoolParameter, self).__init__(*args, is_bool=True, **kwargs)
 
     def parse(self, s):
-        """Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case."""
+        """
+        Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case.
+        """
         return {'true': True, 'false': False}[str(s).lower()]
 
 
@@ -406,8 +449,8 @@ class BooleanParameter(BoolParameter):
 
 
 class DateIntervalParameter(Parameter):
-
-    """A Parameter whose value is a :py:class:`~luigi.date_interval.DateInterval`.
+    """
+    A Parameter whose value is a :py:class:`~luigi.date_interval.DateInterval`.
 
     Date Intervals are specified using the ISO 8601 `Time Interval
     <http://en.wikipedia.org/wiki/ISO_8601#Time_intervals>`_ notation.
@@ -416,7 +459,8 @@ class DateIntervalParameter(Parameter):
     # Also gives some helpful interval algebra
 
     def parse(self, s):
-        """Parses a `:py:class:`~luigi.date_interval.DateInterval` from the input.
+        """
+        Parses a `:py:class:`~luigi.date_interval.DateInterval` from the input.
 
         see :py:mod:`luigi.date_interval`
           for details on the parsing of DateIntervals.
@@ -434,13 +478,13 @@ class DateIntervalParameter(Parameter):
 
 
 class TimeDeltaParameter(Parameter):
+    """
+    Class that maps to timedelta using strings in any of the following forms:
 
-    """Class that maps to timedelta using strings in any of the following forms:
-
-     - ``n {w[eek[s]]|d[ay[s]]|h[our[s]]|m[inute[s]|s[second[s]]}`` (e.g. "1 week 2 days" or "1 h")
+     * ``n {w[eek[s]]|d[ay[s]]|h[our[s]]|m[inute[s]|s[second[s]]}`` (e.g. "1 week 2 days" or "1 h")
         Note: multiple arguments must be supplied in longest to shortest unit order
-     - ISO 8601 duration ``PnDTnHnMnS`` (each field optional, years and months not supported)
-     - ISO 8601 duration ``PnW``
+     * ISO 8601 duration ``PnDTnHnMnS`` (each field optional, years and months not supported)
+     * ISO 8601 duration ``PnW``
 
     See https://en.wikipedia.org/wiki/ISO_8601#Durations
     """
@@ -477,7 +521,8 @@ class TimeDeltaParameter(Parameter):
         return self._apply_regex(regex, input)
 
     def parse(self, input):
-        """Parses a time delta from the input.
+        """
+        Parses a time delta from the input.
 
         See :py:class:`TimeDeltaParameter` for details on supported formats.
         """

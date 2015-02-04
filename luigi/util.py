@@ -24,7 +24,9 @@ logger = logging.getLogger('luigi-interface')
 
 
 def common_params(task_instance, task_cls):
-    """Grab all the values in task_instance that are found in task_cls"""
+    """
+    Grab all the values in task_instance that are found in task_cls.
+    """
     if not isinstance(task_cls, task.Register):
         raise TypeError("task_cls must be an uninstantiated Task")
 
@@ -47,10 +49,12 @@ def task_wraps(P):
 
 
 class inherits(object):
+    """
+    Task inheritance.
 
-    '''Task inheritance.
+    Usage:
 
-    Usage::
+    .. code-block:: python
 
         class AnotherTask(luigi.Task):
             n = luigi.IntParameter()
@@ -64,7 +68,7 @@ class inherits(object):
             def run(self):
                print self.n # this will be defined
                # ...
-    '''
+    """
 
     def __init__(self, task_to_inherit):
         super(inherits, self).__init__()
@@ -86,9 +90,9 @@ class inherits(object):
 
 
 class requires(object):
-
-    ''' Same as @inherits, but also auto-defines the requires method
-    '''
+    """
+    Same as @inherits, but also auto-defines the requires method.
+    """
 
     def __init__(self, task_to_require):
         super(requires, self).__init__()
@@ -108,16 +112,18 @@ class requires(object):
 
 
 class copies(object):
+    """
+    Auto-copies a task.
 
-    ''' Auto-copies a task
+    Usage:
 
-    Usage::
+    .. code-block:: python
 
         @copies(MyTask):
         class CopyOfMyTask(luigi.Task):
             def output(self):
                return LocalTarget(self.date.strftime('/var/xyz/report-%Y-%m-%d'))
-    '''
+    """
 
     def __init__(self, task_to_copy):
         super(copies, self).__init__()
@@ -141,13 +147,16 @@ class copies(object):
 
 
 def delegates(task_that_delegates):
-    ''' Lets a task call methods on subtask(s).
+    """ Lets a task call methods on subtask(s).
 
-    The way this works is that the subtask is run as a part of the task, but the task itself doesn't have
-    to care about the requirements of the subtasks. The subtask doesn't exist from the scheduler's point
-    of view, and its dependencies are instead required by the main task.
+    The way this works is that the subtask is run as a part of the task, but
+    the task itself doesn't have to care about the requirements of the subtasks.
+    The subtask doesn't exist from the scheduler's point of view, and
+    its dependencies are instead required by the main task.
 
-    Example::
+    Example:
+
+    .. code-block:: python
 
         class PowersOfN(luigi.Task):
             n = luigi.IntParameter()
@@ -157,7 +166,7 @@ def delegates(task_that_delegates):
         class T(luigi.Task):
             def subtasks(self): return PowersOfN(5)
             def run(self): print self.subtasks().f(42)
-    '''
+    """
     if not hasattr(task_that_delegates, 'subtasks'):
         # This method can (optionally) define a couple of delegate tasks that
         # will be accessible as interfaces, meaning that the task can access
@@ -180,7 +189,8 @@ def delegates(task_that_delegates):
 
 
 def previous(task):
-    """Return a previous Task of the same family.
+    """
+    Return a previous Task of the same family.
 
     By default checks if this task family only has one non-global parameter and if
     it is a DateParameter, DateHourParameter or DateIntervalParameter in which case

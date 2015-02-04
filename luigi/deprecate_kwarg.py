@@ -4,20 +4,23 @@ import warnings
 
 
 def deprecate_kwarg(old_name, new_name, kw_value):
-    """ Rename keyword arguments, but keep backwards compatibility.
+    """
+    Rename keyword arguments, but keep backwards compatibility.
 
     Usage:
 
-    >>> @deprecate_kwarg('old', 'new', 'defval')
-    ... def some_func(old='defval'):
-    ...     print(old)
-    ...
-    >>> some_func(new='yay')
-    yay
-    >>> some_func(old='yaay')
-    yaay
-    >>> some_func()
-    defval
+    .. code-block: python
+
+        >>> @deprecate_kwarg('old', 'new', 'defval')
+        ... def some_func(old='defval'):
+        ...     print(old)
+        ...
+        >>> some_func(new='yay')
+        yay
+        >>> some_func(old='yaay')
+        yaay
+        >>> some_func()
+        defval
 
     """
     def real_decorator(function):

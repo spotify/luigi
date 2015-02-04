@@ -42,7 +42,10 @@ _attached_packages = []
 
 
 def attach(*packages):
-    """ Attach a python package to hadoop map reduce tarballs to make those packages available on the hadoop cluster"""
+    """
+    Attach a python package to hadoop map reduce tarballs to make those packages available
+    on the hadoop cluster.
+    """
     _attached_packages.extend(packages)
 
 
@@ -79,7 +82,9 @@ def get_extra_files(extra_files):
 
 
 def create_packages_archive(packages, filename):
-    """Create a tar archive which will contain the files for the packages listed in packages. """
+    """
+    Create a tar archive which will contain the files for the packages listed in packages.
+    """
     import tarfile
     tar = tarfile.open(filename, "w")
 
@@ -150,11 +155,15 @@ def create_packages_archive(packages, filename):
 
 
 def flatten(sequence):
-    """A simple generator which flattens a sequence.
+    """
+    A simple generator which flattens a sequence.
 
-    Only one level is flattned.
+    Only one level is flattened.
 
-    (1, (2, 3), 4) -> (1, 2, 3, 4)
+    .. code-block:: python
+
+        (1, (2, 3), 4) -> (1, 2, 3, 4)
+
     """
     for item in sequence:
         if hasattr(item, "__iter__"):
@@ -198,17 +207,26 @@ class HadoopJobError(RuntimeError):
 
 
 def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
-    ''' Runs the job by invoking the command from the given arglist. Finds tracking urls from the output and attempts to fetch
-    errors using those urls if the job fails. Throws HadoopJobError with information about the error (including stdout and stderr
-    from the process) on failure and returns normally otherwise.
-    '''
+    """
+    Runs the job by invoking the command from the given arglist.
+    Finds tracking urls from the output and attempts to fetch errors using those urls if the job fails.
+    Throws HadoopJobError with information about the error
+    (including stdout and stderr from the process)
+    on failure and returns normally otherwise.
+
+    :param arglist:
+    :param tracking_url_callback:
+    :param env:
+    :return:
+    """
     logger.info('%s', ' '.join(arglist))
 
     def write_luigi_history(arglist, history):
-        '''
+        """
         Writes history to a file in the job's output directory in JSON format.
-        Currently just for tracking the job ID in a configuration where no history is stored in the output directory by Hadoop.
-        '''
+        Currently just for tracking the job ID in a configuration where
+        no history is stored in the output directory by Hadoop.
+        """
         history_filename = configuration.get_config().get('core', 'history-filename', '')
         if history_filename and '-output' in arglist:
             output_dir = arglist[arglist.index('-output') + 1]
@@ -282,14 +300,16 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
 
 
 def fetch_task_failures(tracking_url):
-    ''' Uses mechanize to fetch the actual task logs from the task tracker.
+    """
+    Uses mechanize to fetch the actual task logs from the task tracker.
 
-    This is highly opportunistic, and we might not succeed. So we set a low timeout and hope it works.
+    This is highly opportunistic, and we might not succeed.
+    So we set a low timeout and hope it works.
     If it does not, it's not the end of the world.
 
     TODO: Yarn has a REST API that we should probably use instead:
     http://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html
-    '''
+    """
     import mechanize
     timeout = 3.0
     failures_url = tracking_url.replace('jobdetails.jsp', 'jobfailures.jsp') + '&cause=failed'
@@ -322,11 +342,11 @@ class JobRunner(object):
 
 
 class HadoopJobRunner(JobRunner):
-
-    ''' Takes care of uploading & executing a Hadoop job using Hadoop streaming
+    """
+    Takes care of uploading & executing a Hadoop job using Hadoop streaming.
 
     TODO: add code to support Elastic Mapreduce (using boto) and local execution.
-    '''
+    """
 
     def __init__(self, streaming_jar, modules=None, streaming_args=None, libjars=None, libjars_in_hdfs=None, jobconfs=None, input_format=None, output_format=None):
         def get(x, default):
@@ -459,8 +479,9 @@ class HadoopJobRunner(JobRunner):
 
 
 class DefaultHadoopJobRunner(HadoopJobRunner):
-
-    ''' The default job runner just reads from config and sets stuff '''
+    """
+    The default job runner just reads from config and sets stuff.
+    """
 
     def __init__(self):
         config = configuration.get_config()
@@ -470,13 +491,13 @@ class DefaultHadoopJobRunner(HadoopJobRunner):
 
 
 class LocalJobRunner(JobRunner):
-
-    ''' Will run the job locally
+    """
+    Will run the job locally.
 
     This is useful for debugging and also unit testing. Tries to mimic Hadoop Streaming.
 
     TODO: integrate with JobTask
-    '''
+    """
 
     def __init__(self, samplelines=None):
         self.samplelines = samplelines
@@ -569,12 +590,13 @@ class BaseHadoopJobTask(luigi.Task):
         return jcs
 
     def init_local(self):
-        ''' Implement any work to setup any internal datastructure etc here.
+        """
+        Implement any work to setup any internal datastructure etc here.
 
         You can add extra input using the requires_local/input_local methods.
 
         Anything you set on the object will be pickled and available on the Hadoop nodes.
-        '''
+        """
         pass
 
     def init_hadoop(self):
@@ -585,7 +607,9 @@ class BaseHadoopJobTask(luigi.Task):
         self.job_runner().run_job(self)
 
     def requires_local(self):
-        ''' Default impl - override this method if you need any local input to be accessible in init() '''
+        """
+        Default impl - override this method if you need any local input to be accessible in init().
+        """
         return []
 
     def requires_hadoop(self):
@@ -642,9 +666,12 @@ class JobTask(BaseHadoopJobTask):
 
     def job_runner(self):
         # We recommend that you define a subclass, override this method and set up your own config
-        """ Get the MapReduce runner for this job
+        """
+        Get the MapReduce runner for this job.
 
-        If all outputs are HdfsTargets, the DefaultHadoopJobRunner will be used. Otherwise, the LocalJobRunner which streams all data through the local machine will be used (great for testing).
+        If all outputs are HdfsTargets, the DefaultHadoopJobRunner will be used.
+        Otherwise, the LocalJobRunner which streams all data through the local machine
+        will be used (great for testing).
         """
         outputs = luigi.task.flatten(self.output())
         for output in outputs:
@@ -656,15 +683,20 @@ class JobTask(BaseHadoopJobTask):
             return DefaultHadoopJobRunner()
 
     def reader(self, input_stream):
-        """Reader is a method which iterates over input lines and outputs records.
-           The default implementation yields one argument containing the line for each line in the input."""
+        """
+        Reader is a method which iterates over input lines and outputs records.
+
+        The default implementation yields one argument containing the line for each line in the input."""
         for line in input_stream:
             yield line,
 
     def writer(self, outputs, stdout, stderr=sys.stderr):
-        """Writer format is a method which iterates over the output records from the reducer and formats
-           them for output.
-           The default implementation outputs tab separated items"""
+        """
+        Writer format is a method which iterates over the output records
+        from the reducer and formats them for output.
+
+        The default implementation outputs tab separated items.
+        """
         for output in outputs:
             try:
                 print >> stdout, "\t".join(map(str, flatten(output)))
@@ -673,15 +705,18 @@ class JobTask(BaseHadoopJobTask):
                 raise
 
     def mapper(self, item):
-        """Re-define to process an input item (usually a line of input data)
+        """
+        Re-define to process an input item (usually a line of input data).
 
-        Defaults to identity mapper that sends all lines to the same reducer"""
+        Defaults to identity mapper that sends all lines to the same reducer.
+        """
         yield None, item
 
     combiner = NotImplemented
 
     def incr_counter(self, *args, **kwargs):
-        """ Increments a Hadoop counter
+        """
+        Increments a Hadoop counter.
 
         Since counters can be a bit slow to update, this batches the updates.
         """
@@ -703,7 +738,8 @@ class JobTask(BaseHadoopJobTask):
         self._counter_dict[key] = ct
 
     def _flush_batch_incr_counter(self):
-        """ Increments any unflushed counter values
+        """
+        Increments any unflushed counter values.
         """
         for key, count in self._counter_dict.iteritems():
             if count == 0:
@@ -712,9 +748,12 @@ class JobTask(BaseHadoopJobTask):
             self._incr_counter(*args)
 
     def _incr_counter(self, *args):
-        """ Increments a Hadoop counter
+        """
+        Increments a Hadoop counter.
 
-        Note that this seems to be a bit slow, ~1 ms. Don't overuse this function by updating very frequently.
+        Note that this seems to be a bit slow, ~1 ms
+
+        Don't overuse this function by updating very frequently.
         """
         if len(args) == 2:
             # backwards compatibility with existing hadoop jobs
@@ -728,12 +767,16 @@ class JobTask(BaseHadoopJobTask):
         return []  # can be overridden in subclass
 
     def extra_files(self):
-        '''
-        Can be overriden in subclass. Each element is either a string, or a pair of two strings (src, dst).
-        src can be a directory (in which case everything will be copied recursively).
-        dst can include subdirectories (foo/bar/baz.txt etc)
+        """
+        Can be overriden in subclass.
+
+        Each element is either a string, or a pair of two strings (src, dst).
+
+        * `src` can be a directory (in which case everything will be copied recursively).
+        * `dst` can include subdirectories (foo/bar/baz.txt etc)
+
         Uses Hadoop's -files option so that the same file is reused across tasks.
-        '''
+        """
         return []
 
     def add_link(self, src, dst):
@@ -761,7 +804,9 @@ class JobTask(BaseHadoopJobTask):
                     ', '.join(missing))
 
     def dump(self, directory=''):
-        """Dump instance to file."""
+        """
+        Dump instance to file.
+        """
         file_name = os.path.join(directory, 'job-instance.pickle')
         if self.__module__ == '__main__':
             d = pickle.dumps(self)
@@ -773,11 +818,14 @@ class JobTask(BaseHadoopJobTask):
             pickle.dump(self, open(file_name, "w"))
 
     def _map_input(self, input_stream):
-        """Iterate over input and call the mapper for each item.
-           If the job has a parser defined, the return values from the parser will
-           be passed as arguments to the mapper.
+        """
+        Iterate over input and call the mapper for each item.
+        If the job has a parser defined, the return values from the parser will
+        be passed as arguments to the mapper.
 
-           If the input is coded output from a previous run, the arguments will be splitted in key and value."""
+        If the input is coded output from a previous run,
+        the arguments will be splitted in key and value.
+        """
         for record in self.reader(input_stream):
             for output in self.mapper(*record):
                 yield output
@@ -787,7 +835,9 @@ class JobTask(BaseHadoopJobTask):
         self._flush_batch_incr_counter()
 
     def _reduce_input(self, inputs, reducer, final=NotImplemented):
-        """Iterate over input, collect values with the same key, and call the reducer for each uniqe key."""
+        """
+        Iterate over input, collect values with the same key, and call the reducer for each unique key.
+        """
         for key, values in groupby(inputs, key=lambda x: repr(x[0])):
             for output in reducer(eval(key), (v[1] for v in values)):
                 yield output
@@ -797,7 +847,9 @@ class JobTask(BaseHadoopJobTask):
         self._flush_batch_incr_counter()
 
     def run_mapper(self, stdin=sys.stdin, stdout=sys.stdout):
-        """Run the mapper on the hadoop node."""
+        """
+        Run the mapper on the hadoop node.
+        """
         self.init_hadoop()
         self.init_mapper()
         outputs = self._map_input((line[:-1] for line in stdin))
@@ -807,7 +859,9 @@ class JobTask(BaseHadoopJobTask):
             self.internal_writer(outputs, stdout)
 
     def run_reducer(self, stdin=sys.stdin, stdout=sys.stdout):
-        """Run the reducer on the hadoop node."""
+        """
+        Run the reducer on the hadoop node.
+        """
         self.init_hadoop()
         self.init_reducer()
         outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.reducer, self.final_reducer)
@@ -820,13 +874,17 @@ class JobTask(BaseHadoopJobTask):
         self.internal_writer(outputs, stdout)
 
     def internal_reader(self, input_stream):
-        """Reader which uses python eval on each part of a tab separated string.
-        Yields a tuple of python objects."""
+        """
+        Reader which uses python eval on each part of a tab separated string.
+        Yields a tuple of python objects.
+        """
         for input_line in input_stream:
             yield map(eval, input_line.split("\t"))
 
     def internal_writer(self, outputs, stdout):
-        """Writer which outputs the python repr for each item"""
+        """
+        Writer which outputs the python repr for each item.
+        """
         for output in outputs:
             print >> stdout, "\t".join(map(repr, output))
 

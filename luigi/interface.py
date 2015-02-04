@@ -22,7 +22,6 @@ import scheduler
 import configuration
 import task
 import parameter
-import re
 import argparse
 import sys
 import os
@@ -52,62 +51,51 @@ def setup_interface_logging(conf_file=None):
     setup_interface_logging.has_run = True
 
 
-class EnvironmentParamsContainer(task.Task):
+class EnvironmentParamsContainer(task.ConfigWithoutSection):
 
     ''' Keeps track of a bunch of environment params.
 
     Uses the internal luigi parameter mechanism.
     The nice thing is that we can instantiate this class
     and get an object with all the environment variables set.
-    This is arguably a bit of a hack.'''
+    This is arguably a bit of a hack.
+    '''
 
     local_scheduler = parameter.BoolParameter(
-        is_global=True, default=False,
+        default=False,
         description='Use local scheduling')
     scheduler_host = parameter.Parameter(
-        is_global=True,
         default='localhost',
         description='Hostname of machine running remote scheduler',
         config_path=dict(section='core', name='default-scheduler-host'))
     scheduler_port = parameter.IntParameter(
-        is_global=True, default=8082,
+        default=8082,
         description='Port of remote scheduler api process',
         config_path=dict(section='core', name='default-scheduler-port'))
     lock_size = parameter.IntParameter(
-        is_global=True, default=1,
+        default=1,
         description="Maximum number of workers running the same command")
     no_lock = parameter.BoolParameter(
-        is_global=True, default=False,
+        default=False,
         description='Ignore if similar process is already running')
     lock_pid_dir = parameter.Parameter(
-        is_global=True, default=os.path.join(tempfile.gettempdir(), 'luigi'),
+        default=os.path.join(tempfile.gettempdir(), 'luigi'),
         description='Directory to store the pid file')
     workers = parameter.IntParameter(
-        is_global=True, default=1,
+        default=1,
         description='Maximum number of parallel tasks to run')
     logging_conf_file = parameter.Parameter(
-        is_global=True, default=None,
+        default=None,
         description='Configuration file for logging',
         config_path=dict(section='core', name='logging_conf_file'))
     module = parameter.Parameter(
-        is_global=True, default=None,
+        default=None,
         description='Used for dynamic loading of modules')  # see DynamicArgParseInterface
     parallel_scheduling = parameter.BoolParameter(
-        is_global=True, default=False,
+        default=False,
         description='Use multiprocessing to do scheduling in parallel.',
         config_path={'section': 'core', 'name': 'parallel-scheduling'},
     )
-
-    @classmethod
-    def env_params(cls, override_defaults=None):
-        # Override any global parameter with whatever is in override_defaults
-        if override_defaults is None:
-            override_defaults = {}
-        for param_name, param_obj in cls.get_params():
-            if param_name in override_defaults:
-                param_obj.set_global(override_defaults[param_name])
-
-        return cls()  # instantiate an object with the global params set on it
 
 
 class WorkerSchedulerFactory(object):
@@ -137,7 +125,7 @@ class Interface(object):
 
         if worker_scheduler_factory is None:
             worker_scheduler_factory = WorkerSchedulerFactory()
-        env_params = EnvironmentParamsContainer.env_params(override_defaults)
+        env_params = EnvironmentParamsContainer(**override_defaults)
         # search for logging configuration path first on the command line, then
         # in the application config file
         logging_conf = env_params.logging_conf_file
@@ -174,42 +162,34 @@ class Interface(object):
         return success
 
 
-class ErrorWrappedArgumentParser(argparse.ArgumentParser):
+# Simple unweighted Levenshtein distance
+def _editdistance(a, b):
+    r0 = range(0, len(b) + 1)
+    r1 = [0] * (len(b) + 1)
 
-    ''' Wraps ArgumentParser's error message to suggested similar tasks
-    '''
+    for i in range(0, len(a)):
+        r1[0] = i + 1
 
-    # Simple unweighted Levenshtein distance
-    def _editdistance(self, a, b):
-        r0 = range(0, len(b) + 1)
-        r1 = [0] * (len(b) + 1)
+        for j in range(0, len(b)):
+            c = 0 if a[i] is b[j] else 1
+            r1[j + 1] = min(r1[j] + 1, r0[j + 1] + 1, r0[j] + c)
 
-        for i in range(0, len(a)):
-            r1[0] = i + 1
+        r0 = r1[:]
 
-            for j in range(0, len(b)):
-                c = 0 if a[i] is b[j] else 1
-                r1[j + 1] = min(r1[j] + 1, r0[j + 1] + 1, r0[j] + c)
+    return r1[len(b)]
 
-            r0 = r1[:]
 
-        return r1[len(b)]
+def error_task_names(task_name, task_names):
+    weighted_tasks = [(_editdistance(task_name, task_name_2), task_name_2) for task_name_2 in task_names]
+    ordered_tasks = sorted(weighted_tasks, key=lambda pair: pair[0])
+    candidates = [task for (dist, task) in ordered_tasks if dist <= 5 and dist < len(task)]
+    display_string = ""
+    if candidates:
+        display_string = "No task %s. Did you mean:\n%s" % (task_name, '\n'.join(candidates))
+    else:
+        display_string = "No task %s." % task_name
 
-    def error(self, message):
-        result = re.match("argument .+: invalid choice: '(\w+)'.+", message)
-        if result:
-            arg = result.group(1)
-            weightedTasks = [(self._editdistance(arg, task), task) for task in Register.get_reg().keys()]
-            orderedTasks = sorted(weightedTasks, key=lambda pair: pair[0])
-            candidates = [task for (dist, task) in orderedTasks if dist <= 5 and dist < len(task)]
-            displaystring = ""
-            if candidates:
-                displaystring = "No task %s. Did you mean:\n%s" % (arg, '\n'.join(candidates))
-            else:
-                displaystring = "No task %s." % arg
-            super(ErrorWrappedArgumentParser, self).error(displaystring)
-        else:
-            super(ErrorWrappedArgumentParser, self).error(message)
+    raise SystemExit(display_string)
 
 
 def add_task_parameters(parser, task_cls, optparse=False):
@@ -219,11 +199,11 @@ def add_task_parameters(parser, task_cls, optparse=False):
 
 def add_global_parameters(parser, optparse=False):
     seen_params = set()
-    for task_name, param_name, param in Register.get_all_params():
+    for task_name, is_without_section, param_name, param in Register.get_all_params():
         if param in seen_params:
             continue
         seen_params.add(param)
-        param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse, glob=True)
+        param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse, glob=True, is_without_section=is_without_section)
 
 
 def get_task_parameters(task_cls, args):
@@ -236,44 +216,56 @@ def get_task_parameters(task_cls, args):
 
 def set_global_parameters(args):
     # Note that this is not side effect free
-    for task_name, param_name, param in Register.get_all_params():
-        param.set_global_from_args(param_name, task_name, args)
+    for task_name, is_without_section, param_name, param in Register.get_all_params():
+        param.set_global_from_args(param_name, task_name, args, is_without_section=is_without_section)
 
 
 class ArgParseInterface(Interface):
-
-    ''' Takes the task as the command, with parameters specific to it
-    '''
+    """
+    Takes the task as the command, with parameters specific to it.
+    """
 
     def parse_task(self, cmdline_args=None, main_task_cls=None):
-        parser = ErrorWrappedArgumentParser()
+        parser = argparse.ArgumentParser()
 
         add_global_parameters(parser)
 
         if main_task_cls:
             add_task_parameters(parser, main_task_cls)
 
-        else:
-            orderedtasks = '{%s}' % ','.join(sorted(Register.get_reg().keys()))
-            subparsers = parser.add_subparsers(dest='command', metavar=orderedtasks)
-
-            for name, cls in Register.get_reg().iteritems():
-                subparser = subparsers.add_parser(name)
-                if cls == Register.AMBIGUOUS_CLASS:
-                    continue
-                add_task_parameters(subparser, cls)
-
-                # Add global params here as well so that we can support both:
-                # test.py --global-param xyz Test --n 42
-                # test.py Test --n 42 --global-param xyz
-                add_global_parameters(subparser)
-
-        args = parser.parse_args(args=cmdline_args)
-
-        if main_task_cls:
+            args = parser.parse_args(args=cmdline_args)
             task_cls = main_task_cls
         else:
-            task_cls = Register.get_task_cls(args.command)
+            task_names = sorted(Register.get_reg().keys())
+
+            # Parse global arguments and pull out the task name.
+            # We used to do this using subparsers+command, but some issues with
+            # argparse across different versions of Python (2.7.9) made it hard.
+            args, unknown = parser.parse_known_args(args=cmdline_args)
+            if len(unknown) == 0:
+                raise SystemExit('No task specified')
+            task_name = unknown[0]
+            if task_name not in task_names:
+                error_task_names(task_name, task_names)
+
+            task_cls = Register.get_task_cls(task_name)
+
+            # Add a subparser to parse task-specific arguments
+            subparsers = parser.add_subparsers(dest='command')
+            subparser = subparsers.add_parser(task_name)
+
+            # Add both task and global params here so that we can support both:
+            # test.py --global-param xyz Test --n 42
+            # test.py Test --n 42 --global-param xyz
+            add_global_parameters(subparser)
+            add_task_parameters(subparser, task_cls)
+
+            # Workaround for bug in argparse for Python 2.7.9
+            # See https://mail.python.org/pipermail/python-dev/2015-January/137699.html
+            subargs = parser.parse_args(args=cmdline_args)
+            for key, value in vars(subargs).items():
+                if value:  # Either True (for boolean args) or non-None (everything else)
+                    setattr(args, key, value)
 
         # Notice that this is not side effect free because it might set global params
         set_global_parameters(args)
@@ -286,17 +278,20 @@ class ArgParseInterface(Interface):
 
 
 class DynamicArgParseInterface(ArgParseInterface):
-
-    ''' Uses --module as a way to load modules dynamically
+    """
+    Uses --module as a way to load modules dynamically
 
     Usage:
-    python whatever.py --module foo_module FooTask --blah xyz --x 123
 
-    This will dynamically import foo_module and then try to create FooTask from this
-    '''
+    .. code-block:: console
+
+        python whatever.py --module foo_module FooTask --blah xyz --x 123
+
+    This will dynamically import foo_module and then try to create FooTask from this.
+    """
 
     def parse(self, cmdline_args=None, main_task_cls=None):
-        parser = ErrorWrappedArgumentParser()
+        parser = argparse.ArgumentParser()
 
         add_global_parameters(parser)
 
@@ -309,8 +304,7 @@ class DynamicArgParseInterface(ArgParseInterface):
 
 
 class PassThroughOptionParser(optparse.OptionParser):
-
-    '''
+    """
     An unknown option pass-through implementation of OptionParser.
 
     When unknown arguments are encountered, bundle with largs and try again,
@@ -318,7 +312,7 @@ class PassThroughOptionParser(optparse.OptionParser):
 
     sys.exit(status) will still be called if a known argument is passed
     incorrectly (e.g. missing arguments or bad argument types, etc.)
-    '''
+    """
 
     def _process_args(self, largs, rargs, values):
         while rargs:
@@ -329,12 +323,12 @@ class PassThroughOptionParser(optparse.OptionParser):
 
 
 class OptParseInterface(Interface):
-
-    ''' Supported for legacy reasons where it's necessary to interact with an existing parser.
+    """
+    Supported for legacy reasons where it's necessary to interact with an existing parser.
 
     Takes the task using --task. All parameters to all possible tasks will be defined globally
     in a big unordered soup.
-    '''
+    """
 
     def __init__(self, existing_optparse):
         self.__existing_optparse = existing_optparse
@@ -376,19 +370,22 @@ class OptParseInterface(Interface):
 
 
 def load_task(module, task_name, params_str):
-    """ Imports task dynamically given a module and a task name"""
+    """
+    Imports task dynamically given a module and a task name.
+    """
     __import__(module)
     task_cls = Register.get_task_cls(task_name)
     return task_cls.from_str_params(params_str)
 
 
 def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None, worker_scheduler_factory=None, use_dynamic_argparse=False, local_scheduler=False):
-    ''' Run from cmdline.
+    """
+    Run from cmdline.
 
     The default parser uses argparse.
     However for legacy reasons we support optparse that optionally allows for
     overriding an existing option parser with new args.
-    '''
+    """
     if use_optparse:
         interface = OptParseInterface(existing_optparse)
     elif use_dynamic_argparse:
@@ -403,7 +400,8 @@ def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task
 
 
 def build(tasks, worker_scheduler_factory=None, **env_params):
-    ''' Run internally, bypassing the cmdline parsing.
+    """
+    Run internally, bypassing the cmdline parsing.
 
     Useful if you have some luigi code that you want to run internally.
     Example
@@ -412,7 +410,12 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     One notable difference is that `build` defaults to not using
     the identical process lock. Otherwise, `build` would only be
     callable once from each process.
-    '''
+
+    :param tasks:
+    :param worker_scheduler_factory:
+    :param env_params:
+    :return:
+    """
     if "no_lock" not in env_params:
         # TODO(erikbern): should we really override args here?
         env_params["no_lock"] = True
