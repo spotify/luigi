@@ -1,7 +1,9 @@
 from unittest import TestCase
+
 import luigi
-from luigi import postgres
 import luigi.notifications
+from luigi import postgres
+
 luigi.notifications.DEBUG = True
 luigi.namespace('postgres_test')
 

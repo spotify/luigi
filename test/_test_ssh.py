@@ -3,12 +3,12 @@ import gc
 import gzip
 import os
 import random
-import luigi.format
-
-from luigi.contrib.ssh import RemoteContext, RemoteTarget
-import unittest
-import subprocess
 import socket
+import subprocess
+import unittest
+
+import luigi.format
+from luigi.contrib.ssh import RemoteContext, RemoteTarget
 
 working_ssh_host = None  # set this to a working ssh host string (e.g. "localhost") to activate integration tests
 # The following tests require a working ssh server at `working_ssh_host`

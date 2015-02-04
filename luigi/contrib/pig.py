@@ -10,18 +10,16 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import datetime
+import logging
 import os
+import select
 import signal
+import subprocess
+import tempfile
 
 import luigi
 from luigi import configuration
-
-
-import tempfile
-import datetime
-import logging
-import subprocess
-import select
 
 logger = logging.getLogger('luigi-interface')
 

@@ -3,12 +3,12 @@ import os
 import re
 import subprocess
 
-from luigi import LocalTarget
-from luigi.task import flatten
 import luigi.configuration
 import luigi.hadoop
 import luigi.hadoop_jar
 import luigi.hdfs
+from luigi import LocalTarget
+from luigi.task import flatten
 
 logger = logging.getLogger('luigi-interface')
 

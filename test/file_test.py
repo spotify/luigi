@@ -12,16 +12,17 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import bz2
+import gc
+import gzip
+import os
+import random
+import shutil
+import unittest
+
+import luigi.format
 from luigi import File
 from luigi.file import LocalFileSystem
-import unittest
-import os
-import gzip
-import bz2
-import luigi.format
-import random
-import gc
-import shutil
 
 
 class FileTest(unittest.TestCase):

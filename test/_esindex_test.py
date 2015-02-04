@@ -17,15 +17,15 @@ Example running tests against port 9201 with basic auth:
 """
 
 # pylint: disable=C0103,E1101,F0401
-from elasticsearch.connection import Urllib3HttpConnection
-from luigi.contrib.esindex import ElasticsearchTarget, CopyToIndex
 import collections
 import datetime
-import elasticsearch
-import luigi
 import os
 import unittest
 
+import elasticsearch
+import luigi
+from elasticsearch.connection import Urllib3HttpConnection
+from luigi.contrib.esindex import CopyToIndex, ElasticsearchTarget
 
 HOST = os.getenv('ESINDEX_TEST_HOST', 'localhost')
 PORT = os.getenv('ESINDEX_TEST_PORT', 9200)

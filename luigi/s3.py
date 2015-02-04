@@ -17,17 +17,15 @@ import os
 import os.path
 import random
 import tempfile
-import warnings
 import urlparse
+import warnings
+from ConfigParser import NoSectionError
 
 import configuration
-from ConfigParser import NoSectionError
-from luigi.parameter import Parameter
-from luigi.target import FileSystem
-from luigi.target import FileSystemTarget
-from luigi.target import FileSystemException
-from luigi.task import ExternalTask
 from luigi.format import FileWrapper
+from luigi.parameter import Parameter
+from luigi.target import FileSystem, FileSystemException, FileSystemTarget
+from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
 

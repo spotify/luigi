@@ -12,9 +12,10 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-from luigi.contrib.ssh import RemoteContext
-import unittest
 import subprocess
+import unittest
+
+from luigi.contrib.ssh import RemoteContext
 
 
 class TestMockedRemoteContext(unittest.TestCase):

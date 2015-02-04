@@ -18,11 +18,12 @@
 # you might end up running tasks in different processes
 
 import abc
-import luigi
-import unittest
+import os
 import random
 import tempfile
-import os
+import unittest
+
+import luigi
 
 
 class AbstractTask(luigi.Task):

@@ -17,14 +17,15 @@ This file implements unit test cases for luigi/contrib/sqla.py
 Author: Gouthaman Balaraman
 Date: 01/02/2015
 """
-import unittest
-import sqlalchemy
-import luigi
 import os
 import shutil
 import tempfile
-from luigi.mock import MockFile
+import unittest
+
+import luigi
+import sqlalchemy
 from luigi.contrib import sqla
+from luigi.mock import MockFile
 
 #################################
 # Globals part of the test case #

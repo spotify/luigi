@@ -1,13 +1,15 @@
-import unittest
-import luigi
-import luigi.notifications
 import datetime
 import pickle
-from luigi.parameter import MissingParameterException
-luigi.notifications.DEBUG = True
-from luigi.util import inherits, common_params, requires, copies, delegates
-from luigi.mock import MockFile
+import unittest
+
+import luigi
+import luigi.notifications
 from luigi.interface import ArgParseInterface
+from luigi.mock import MockFile
+from luigi.parameter import MissingParameterException
+from luigi.util import common_params, copies, delegates, inherits, requires
+
+luigi.notifications.DEBUG = True
 
 
 class A(luigi.Task):

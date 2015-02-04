@@ -14,11 +14,12 @@
 
 import os
 import random
-import tempfile
 import shutil
+import tempfile
+
 import luigi.util
-from target import FileSystem, FileSystemTarget
 from luigi.format import FileWrapper
+from target import FileSystem, FileSystemTarget
 
 
 class atomic_file(file):

@@ -22,16 +22,17 @@ datehours.
 TODO foolproof against that kind of misuse?
 """
 
-from datetime import date, datetime, timedelta
 import itertools
 import logging
+import operator
+import re
+import time
+from datetime import date, datetime, timedelta
+
 import luigi
 from luigi.parameter import ParameterException
 from luigi.target import FileSystemTarget
 from luigi.task import Register, flatten_output
-import re
-import time
-import operator
 
 logger = logging.getLogger('luigi-interface')
 

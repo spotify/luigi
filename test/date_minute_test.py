@@ -1,7 +1,8 @@
+import datetime
+import unittest
+
 import luigi
 import luigi.interface
-import unittest
-import datetime
 
 
 class DateMinuteTask(luigi.Task):

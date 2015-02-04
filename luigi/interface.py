@@ -12,20 +12,21 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import worker
-import lock
+import argparse
 import logging
 import logging.config
-import rpc
 import optparse
-import scheduler
-import configuration
-import task
-import parameter
-import argparse
-import sys
 import os
+import sys
 import tempfile
+
+import configuration
+import lock
+import parameter
+import rpc
+import scheduler
+import task
+import worker
 from task import Register
 
 

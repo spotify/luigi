@@ -12,12 +12,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import os
-import signal
-import random
 import datetime
 import logging
 import logging.handlers
+import os
+import random
+import signal
+
 rootlogger = logging.getLogger()
 server_logger = logging.getLogger("luigi.server")
 

@@ -1,6 +1,8 @@
-import luigi.target
 import logging
 import types
+
+import luigi.target
+
 logger = logging.getLogger('luigi-interface')
 
 

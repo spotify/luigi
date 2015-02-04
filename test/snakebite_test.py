@@ -2,13 +2,15 @@ import datetime
 import os
 import posixpath
 import time
+
+from snakebite.client import AutoConfigClient as SnakebiteAutoConfigClient
+from snakebite.minicluster import MiniCluster
+
 import luigi.hdfs
 import luigi.interface
 from luigi.hdfs import SnakebiteHdfsClient
-from snakebite.client import AutoConfigClient as SnakebiteAutoConfigClient
-from nose.plugins.attrib import attr
-from snakebite.minicluster import MiniCluster
 from minicluster import MiniClusterTestCase
+from nose.plugins.attrib import attr
 
 try:
     import unittest2 as unittest

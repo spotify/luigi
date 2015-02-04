@@ -1,10 +1,11 @@
-from unittest import TestCase
-from mock import patch
 import random
-from luigi import Task, build, Event
+from unittest import TestCase
+
+import luigi
+from luigi import Event, Task, build
 from luigi.mock import MockFile, MockFileSystem
 from luigi.task import flatten
-import luigi
+from mock import patch
 
 
 class DummyException(Exception):

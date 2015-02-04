@@ -12,15 +12,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi
 import unittest
+
+import luigi
+import namespace_test_helper  # declares another Foo in namespace mynamespace
 
 
 class Foo(luigi.Task):
     pass
-
-
-import namespace_test_helper  # declares another Foo in namespace mynamespace
 
 
 class FooSubclass(Foo):

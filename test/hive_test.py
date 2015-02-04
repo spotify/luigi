@@ -2,13 +2,13 @@ try:
     from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict
-import mock
 import os
 import sys
 import tempfile
 import unittest
 
 import luigi.hive
+import mock
 from luigi import LocalTarget
 
 

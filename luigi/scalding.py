@@ -13,6 +13,7 @@
 # the License.
 
 import warnings
-warnings.warn("luigi.scalding has now moved to luigi.contrib.scalding", DeprecationWarning, stacklevel=3)
 
 from luigi.contrib.scalding import *
+
+warnings.warn("luigi.scalding has now moved to luigi.contrib.scalding", DeprecationWarning, stacklevel=3)

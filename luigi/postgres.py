@@ -14,8 +14,8 @@
 
 import datetime
 import logging
-import tempfile
 import re
+import tempfile
 
 import luigi
 from luigi.contrib import rdbms

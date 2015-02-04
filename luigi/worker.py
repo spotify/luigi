@@ -12,26 +12,26 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import random
-from scheduler import (CentralPlannerScheduler, PENDING, RUNNING, FAILED,
-                       SUSPENDED, DONE, DISABLED)
 import collections
+import getpass
+import logging
+import multiprocessing  # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
+import os
+import Queue
+import random
+import socket
 import threading
 import time
-import os
-import socket
-import configuration
 import traceback
-import logging
-import notifications
-import getpass
-import multiprocessing  # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
-import Queue
 import types
+
+import configuration
 import interface
+import notifications
+from event import Event
+from scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
 from target import Target
 from task import Task, flatten, getpaths
-from event import Event
 
 try:
     import simplejson as json

@@ -13,13 +13,13 @@
 # the License.
 
 import datetime
+import ftplib
 import os
 import time
-from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
-
-import ftplib
 import unittest
 from cStringIO import StringIO
+
+from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
 
 # dumb files
 FILE1 = """this is file1"""

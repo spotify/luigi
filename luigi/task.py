@@ -13,11 +13,12 @@
 # the License.
 
 import abc
-import logging
-import parameter
-import warnings
-import traceback
 import itertools
+import logging
+import traceback
+import warnings
+
+import parameter
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
