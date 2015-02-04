@@ -134,26 +134,29 @@ class Register(abc.ABCMeta):
             return "%s.%s" % (cls.task_namespace, cls.__name__)
 
     @classmethod
-    def get_reg(cls):
-        """
-        Return all of the registery classes.
+    def get_reg(cls, include_config_without_section=False):
+        """Return all of the registery classes.
 
         :return:  a ``dict`` of task_family -> class
         """
         # We have to do this on-demand in case task names have changed later
         reg = {}
         for cls in cls._reg:
-            if cls.run != NotImplemented:
-                name = cls.task_family
-                if name in reg and reg[name] != cls and \
-                        reg[name] != cls.AMBIGUOUS_CLASS and \
-                        not issubclass(cls, reg[name]):
-                    # Registering two different classes - this means we can't instantiate them by name
-                    # The only exception is if one class is a subclass of the other. In that case, we
-                    # instantiate the most-derived class (this fixes some issues with decorator wrappers).
-                    reg[name] = cls.AMBIGUOUS_CLASS
-                else:
-                    reg[name] = cls
+            if cls.run == NotImplemented:
+                continue
+            if issubclass(cls, ConfigWithoutSection) and not include_config_without_section:
+                continue
+            name = cls.task_family
+
+            if name in reg and reg[name] != cls and \
+                    reg[name] != cls.AMBIGUOUS_CLASS and \
+                    not issubclass(cls, reg[name]):
+                # Registering two different classes - this means we can't instantiate them by name
+                # The only exception is if one class is a subclass of the other. In that case, we
+                # instantiate the most-derived class (this fixes some issues with decorator wrappers).
+                reg[name] = cls.AMBIGUOUS_CLASS
+            else:
+                reg[name] = cls
 
         return reg
 
@@ -183,11 +186,11 @@ class Register(abc.ABCMeta):
 
         :return: a ``dict`` of parameter name -> parameter.
         """
-        for task_name, task_cls in cls.get_reg().iteritems():
+        for task_name, task_cls in cls.get_reg(include_config_without_section=True).iteritems():
             if task_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in task_cls.get_params():
-                yield task_name, param_name, param_obj
+                yield task_name, issubclass(task_cls, ConfigWithoutSection), param_name, param_obj
 
 
 class Task(object):
@@ -602,6 +605,25 @@ class WrapperTask(Task):
 
     def complete(self):
         return all(r.complete() for r in flatten(self.requires()))
+
+
+class Config(Task):
+
+    """Used for configuration that's not specific to a certain task
+
+    TODO: let's refactor Task & Config so that it inherits from a common
+    ParamContainer base class
+    """
+    pass
+
+
+class ConfigWithoutSection(Task):
+
+    """Used for configuration that doesn't have a particular section
+
+    (eg. --n-workers)
+    """
+    pass
 
 
 def getpaths(struct):

@@ -137,6 +137,20 @@ class Banana(luigi.Task):
         self.output().open('w').close()
 
 
+class MyConfig(luigi.Config):
+    mc_p = luigi.IntParameter()
+    mc_q = luigi.IntParameter(default=73)
+
+
+class MyConfigWithoutSection(luigi.ConfigWithoutSection):
+    mc_r = luigi.IntParameter()
+    mc_s = luigi.IntParameter(default=99)
+
+
+class NoopTask(luigi.Task):
+    pass
+
+
 class ParameterTest(EmailTest):
 
     def setUp(self):
@@ -308,6 +322,68 @@ class TestNewStyleGlobalParameters(EmailTest):
     def test_y_arg_override_banana(self):
         luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz', '--Banana-x', 'baz'])
         self.expect_keys(['banana-baz-bar', 'banana-dep-xyz-bar'])
+
+
+class TestRemoveGlobalParameters(EmailTest):
+
+    def setUp(self):
+        super(TestRemoveGlobalParameters, self).setUp()
+        MyConfig.mc_p.reset_global()
+        MyConfig.mc_q.reset_global()
+        MyConfigWithoutSection.mc_r.reset_global()
+        MyConfigWithoutSection.mc_s.reset_global()
+
+    def test_use_config_class_1(self):
+        luigi.run(['--local-scheduler', '--no-lock', '--MyConfig-mc-p', '99', '--mc-r', '55', 'NoopTask'])
+        self.assertEqual(MyConfig().mc_p, 99)
+        self.assertEqual(MyConfig().mc_q, 73)
+        self.assertEqual(MyConfigWithoutSection().mc_r, 55)
+        self.assertEqual(MyConfigWithoutSection().mc_s, 99)
+
+    def test_use_config_class_2(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'NoopTask', '--MyConfig-mc-p', '99', '--mc-r', '55'])
+        self.assertEqual(MyConfig().mc_p, 99)
+        self.assertEqual(MyConfig().mc_q, 73)
+        self.assertEqual(MyConfigWithoutSection().mc_r, 55)
+        self.assertEqual(MyConfigWithoutSection().mc_s, 99)
+
+    def test_use_config_class_more_args(self):
+        luigi.run(['--local-scheduler', '--no-lock', '--MyConfig-mc-p', '99', '--mc-r', '55', 'NoopTask', '--mc-s', '123', '--MyConfig-mc-q', '42'])
+        self.assertEqual(MyConfig().mc_p, 99)
+        self.assertEqual(MyConfig().mc_q, 42)
+        self.assertEqual(MyConfigWithoutSection().mc_r, 55)
+        self.assertEqual(MyConfigWithoutSection().mc_s, 123)
+
+    @with_config({"MyConfig": {"mc_p": "666", "mc_q": "777"}})
+    def test_use_config_class_with_configuration(self):
+        luigi.run(['--local-scheduler', '--no-lock', '--mc-r', '555', 'NoopTask'])
+        self.assertEqual(MyConfig().mc_p, 666)
+        self.assertEqual(MyConfig().mc_q, 777)
+        self.assertEqual(MyConfigWithoutSection().mc_r, 555)
+        self.assertEqual(MyConfigWithoutSection().mc_s, 99)
+
+    @with_config({"MyConfigWithoutSection": {"mc_r": "999", "mc_s": "888"}})
+    def test_use_config_class_with_configuration_2(self):
+        luigi.run(['--local-scheduler', '--no-lock', 'NoopTask', '--MyConfig-mc-p', '222', '--mc-r', '555'])
+        self.assertEqual(MyConfig().mc_p, 222)
+        self.assertEqual(MyConfig().mc_q, 73)
+        self.assertEqual(MyConfigWithoutSection().mc_r, 555)
+        self.assertEqual(MyConfigWithoutSection().mc_s, 888)
+
+    def test_misc_1(self):
+        class Dogs(luigi.Config):
+            n_dogs = luigi.IntParameter()
+
+        class CatsWithoutSection(luigi.ConfigWithoutSection):
+            n_cats = luigi.IntParameter()
+
+        luigi.run(['--local-scheduler', '--no-lock', '--n-cats', '123', '--Dogs-n-dogs', '456', 'WithDefault'])
+        self.assertEqual(Dogs().n_dogs, 456)
+        self.assertEqual(CatsWithoutSection().n_cats, 123)
+
+        luigi.run(['--local-scheduler', '--no-lock', 'WithDefault', '--n-cats', '321', '--Dogs-n-dogs', '654'])
+        self.assertEqual(Dogs().n_dogs, 654)
+        self.assertEqual(CatsWithoutSection().n_cats, 321)
 
 
 class TestParamWithDefaultFromConfig(unittest.TestCase):
@@ -485,7 +561,7 @@ class OverrideEnvStuff(unittest.TestCase):
 
     @with_config({"core": {"default-scheduler-port": '6543'}})
     def testOverrideSchedulerPort(self):
-        env_params = luigi.interface.EnvironmentParamsContainer.env_params()
+        env_params = luigi.interface.EnvironmentParamsContainer()
         self.assertEqual(env_params.scheduler_port, 6543)
 
 

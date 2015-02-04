@@ -101,7 +101,7 @@ class Parameter(object):
         :param bool is_bool: specify ``True`` if the parameter is a bool value. Default:
                                 ``False``. Bool's have an implicit default value of ``False``.
         :param bool is_global: specify ``True`` if the parameter is global (i.e. used by multiple
-                               Tasks). Default: ``False``.
+                               Tasks). Default: ``False``. DEPRECATED.
         :param bool significant: specify ``False`` if the parameter should not be treated as part of
                                  the unique identifier for a Task. An insignificant Parameter might
                                  also be used to specify a password or other sensitive information
@@ -123,6 +123,14 @@ class Parameter(object):
         self.is_bool = is_boolean and not is_list  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
+
+        if is_global:
+            warnings.warn(
+                'is_global is deprecated and will be removed. Please use either '
+                ' (a) class level config (eg. --MyTask-my-param 42)'
+                ' (b) a separate Config class with global settings on it',
+                DeprecationWarning,
+                stacklevel=2)
 
         if is_global and default == _no_value and config_path is None:
             raise ParameterException('Global parameters need default values')
@@ -275,8 +283,8 @@ class Parameter(object):
         else:
             return self.serialize(x)
 
-    def parser_dest(self, param_name, task_name, glob=False):
-        if self.is_global:
+    def parser_dest(self, param_name, task_name, glob=False, is_without_section=False):
+        if self.is_global or is_without_section:
             if glob:
                 return param_name
             else:
@@ -287,8 +295,8 @@ class Parameter(object):
             else:
                 return param_name
 
-    def add_to_cmdline_parser(self, parser, param_name, task_name, optparse=False, glob=False):
-        dest = self.parser_dest(param_name, task_name, glob)
+    def add_to_cmdline_parser(self, parser, param_name, task_name, optparse=False, glob=False, is_without_section=False):
+        dest = self.parser_dest(param_name, task_name, glob, is_without_section=is_without_section)
         if not dest:
             return
         flag = '--' + dest.replace('_', '-')
@@ -322,9 +330,9 @@ class Parameter(object):
             value = getattr(args, dest, None)
             params[param_name] = self.parse_from_input(param_name, value)
 
-    def set_global_from_args(self, param_name, task_name, args):
+    def set_global_from_args(self, param_name, task_name, args, is_without_section=False):
         # Note: side effects
-        dest = self.parser_dest(param_name, task_name, glob=True)
+        dest = self.parser_dest(param_name, task_name, glob=True, is_without_section=is_without_section)
         if dest is not None:
             value = getattr(args, dest, None)
             if value is not None:

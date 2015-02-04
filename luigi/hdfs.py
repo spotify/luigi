@@ -22,10 +22,20 @@ import datetime
 import re
 import warnings
 from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
-import configuration
 import logging
 import getpass
 logger = logging.getLogger('luigi-interface')
+
+
+class hdfs(luigi.Config):
+    client_version = luigi.IntParameter(default=None)
+    effective_user = luigi.Parameter(default=None)
+    snakebite_autoconfig = luigi.BoolParameter()
+    namenode_host = luigi.Parameter(default=None)
+    namenode_port = luigi.IntParameter(default=None)
+    client = luigi.Parameter(default=None)
+    use_snakebite = luigi.BoolParameter(default=None)
+    tmp_dir = luigi.Parameter(config_path=dict(section='core', name='hdfs-tmp-dir'), default=None)
 
 
 class HDFSCliError(Exception):
@@ -68,7 +78,7 @@ def tmppath(path=None, include_unix_username=True):
     temp_dir = '/tmp'  # default tmp dir if none is specified in config
 
     # 1. Figure out to which temporary directory to place
-    configured_hdfs_tmp_dir = configuration.get_config().get('core', 'hdfs-tmp-dir', None)
+    configured_hdfs_tmp_dir = hdfs().tmp_dir
     if configured_hdfs_tmp_dir is not None:
         # config is superior
         base_dir = configured_hdfs_tmp_dir
@@ -292,7 +302,6 @@ class SnakebiteHdfsClient(HdfsClient):
         super(SnakebiteHdfsClient, self).__init__()
         try:
             from snakebite.client import Client
-            self.config = configuration.get_config()
             self._bite = None
             self.pid = -1
         except Exception as err:    # IGNORE:broad-except
@@ -313,12 +322,13 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         If Luigi has forked, we have a different PID, and need to reconnect.
         """
+        config = hdfs()
         if self.pid != os.getpid() or not self._bite:
             client_kwargs = dict(filter(lambda k_v: k_v[1] is not None and k_v[1] != '', {
-                'hadoop_version': self.config.getint("hdfs", "client_version", None),
-                'effective_user': self.config.get("hdfs", "effective_user", None)
+                'hadoop_version': config.client_version,
+                'effective_user': config.effective_user,
             }.iteritems()))
-            if self.config.getboolean("hdfs", "snakebite_autoconfig", False):
+            if config.snakebite_autoconfig:
                 """
                 This is fully backwards compatible with the vanilla Client and can be used for a non HA cluster as well.
                 This client tries to read ``${HADOOP_PATH}/conf/hdfs-site.xml`` to get the address of the namenode.
@@ -328,7 +338,7 @@ class SnakebiteHdfsClient(HdfsClient):
                 self._bite = AutoConfigClient(**client_kwargs)
             else:
                 from snakebite.client import Client
-                self._bite = Client(self.config.get("hdfs", "namenode_host"), self.config.getint("hdfs", "namenode_port"), **client_kwargs)
+                self._bite = Client(config.namenode_host, config.namenode_port, **client_kwargs)
         return self._bite
 
     def exists(self, path):
@@ -581,7 +591,7 @@ def get_configured_hadoop_version():
     this setting with "cdh3" or "apache1" in the hadoop section of the config
     in order to use the old syntax.
     """
-    return configuration.get_config().get("hadoop", "version", "cdh4").lower()
+    return luigi.configuration.get_config().get("hadoop", "version", "cdh4").lower()
 
 
 def get_configured_hdfs_client(show_warnings=True):
@@ -590,12 +600,12 @@ def get_configured_hdfs_client(show_warnings=True):
     the [hdfs] section. It will return the client that retains backwards
     compatibility when 'client' isn't configured.
     """
-    config = configuration.get_config()
-    custom = config.get("hdfs", "client", None)
+    config = hdfs()
+    custom = config.client
     if custom:
         # Eventually this should be the only valid code path
         return custom
-    if config.getboolean("hdfs", "use_snakebite", False):
+    if config.use_snakebite:
         if show_warnings:
             warnings.warn("Deprecated: Just specify 'client: snakebite' in config")
         return "snakebite"
