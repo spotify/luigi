@@ -604,8 +604,6 @@ class CentralPlannerScheduler(Scheduler):
         greedy_workers = dict((worker.id, worker.info.get('workers', 1))
                               for worker in self._state.get_active_workers())
 
-        self.prune()
-
         tasks = list(self._state.get_pending_tasks())
         tasks.sort(key=self._rank(), reverse=True)
 

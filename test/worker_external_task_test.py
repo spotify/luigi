@@ -129,6 +129,15 @@ class WorkerExternalTaskTest(unittest.TestCase):
                                                            'retry-external-tasks',
                                                            False) == True
 
+        original_get_work = self.scheduler.get_work
+
+        def decorated_get_work(*args, **kwargs):
+            # need to call `prune()` to make the scheduler run the retry logic
+            self.scheduler.prune()
+            return original_get_work(*args, **kwargs)
+
+        self.scheduler.get_work = decorated_get_work
+
         tempdir = tempfile.mkdtemp(prefix='luigi-test-')
 
         with patch('random.randint', return_value=0.1):
