@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-#
+# -*- coding: utf-8 -*-
+#
 # Copyright 2012-2015 Spotify AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,28 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+Apache Pig support.
+Example configuration section in client.cfg:
+[pig]
+# pig home directory
+home: /usr/share/pig
+"""
 
-import datetime
 import logging
 import os
 import select
 import signal
 import subprocess
+import sys
 import tempfile
 
 import luigi
 from luigi import configuration
 
 logger = logging.getLogger('luigi-interface')
-
-"""
-Apache Pig support.
-
-Example configuration section in client.cfg:
-[pig]
-# pig home directory
-home: /usr/share/pig
-"""
 
 
 class PigJobTask(luigi.Task):
