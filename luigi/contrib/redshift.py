@@ -2,6 +2,7 @@ import abc
 import logging
 import luigi
 import json
+import time
 from luigi.contrib import rdbms
 from luigi import postgres
 
@@ -304,3 +305,103 @@ class RedshiftManifestTask(S3PathTask):
         target = self.output().open('w')
         target.write(json.dumps(manifest))
         target.close()
+
+
+class KillOpenRedshiftSessions(luigi.Task):
+    """
+    An task for killing any open Redshift sessions
+    in a given database. This is necessary to prevent open user sessions
+    with transactions against the table from blocking drop or truncate 
+    table commands.
+
+    Usage:
+
+    Subclass and override the required `host`, `database`,
+    `user`, and `password` attributes.
+    """
+
+    # time in seconds to wait before
+    # reconnecting to Redshift if our session is killed too.
+    # 30 seconds is usually fine; 60 is conservative
+    connection_reset_wait_seconds = luigi.IntParameter(default=60)
+
+    @abc.abstractproperty
+    def host(self):
+        return None
+
+    @abc.abstractproperty
+    def database(self):
+        return None
+
+    @abc.abstractproperty
+    def user(self):
+        return None
+
+    @abc.abstractproperty
+    def password(self):
+        return None
+
+    def update_id(self):
+        """
+        This update id will be a unique identifier
+        for this insert on this table.
+        """
+        return self.task_id
+
+    def output(self):
+        """
+        Returns a RedshiftTarget representing the inserted dataset.
+
+        Normally you don't override this.
+        """
+        # uses class name as a meta-table
+        return RedshiftTarget(
+            host=self.host,
+            database=self.database,
+            user=self.user,
+            password=self.password,
+            table=self.__class__.__name__,
+            update_id=self.update_id())
+
+    def run(self):
+        """
+        Kill any open Redshift sessions for the given database.
+        """
+        connection = self.output().connect()
+        # kill any sessions other than ours and
+        # internal Redshift sessions (rdsdb)
+        query = ("select pg_terminate_backend(process) "
+                 "from STV_SESSIONS "
+                 "where db_name=%s "
+                 "and user_name != 'rdsdb' "
+                 "and process != pg_backend_pid()")
+        cursor = connection.cursor()
+        logger.info("Killing all open Redshift sessions "
+                    "for database: %s" % self.database)
+        try:
+            cursor.execute(query, (self.database,))
+            cursor.close()
+            connection.commit()
+        except psycopg2.DatabaseError, e:
+            if e.message and 'EOF' in e.message:
+                # sometimes this operation kills the current session.
+                # rebuild the connection. Need to pause for 30-60 seconds
+                # before Redshift will allow us back in.
+                connection.close()
+                logger.info("Pausing %s seconds for Redshift to "
+                            "reset connection" %
+                            self.connection_reset_wait_seconds)
+                time.sleep(self.connection_reset_wait_seconds)
+                logger.info("Reconnecting to Redshift")
+                connection = self.output().connect()
+            else:
+                raise
+
+        try:
+            self.output().touch(connection)
+            connection.commit()
+        finally:
+            connection.close()
+
+        logger.info("Done killing all open Redshift sessions "
+                    "for database: %s" % self.database)
