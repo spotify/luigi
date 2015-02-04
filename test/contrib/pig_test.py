@@ -1,14 +1,12 @@
-import subprocess
 import StringIO
+import subprocess
+import tempfile
 import unittest
 
-from mock import patch
-
 import luigi
-from luigi.contrib.pig import PigJobTask, PigJobError
 from helpers import with_config
-
-import tempfile
+from luigi.contrib.pig import PigJobError, PigJobTask
+from mock import patch
 
 
 class SimpleTestJob(PigJobTask):

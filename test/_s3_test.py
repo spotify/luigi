@@ -13,18 +13,16 @@
 # the License.
 
 import gc
-import tempfile
 import os
 import sys
+import tempfile
 import unittest
 
-from luigi import configuration
-from luigi.s3 import (S3Target, S3Client, InvalidDeleteException,
-                      FileNotFoundException)
 import luigi.format
-
-from boto.s3 import key
 from boto.exception import S3ResponseError
+from boto.s3 import key
+from luigi import configuration
+from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
 
 # moto does not yet work with
 # python 2.6. Until it does,

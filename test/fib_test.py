@@ -12,9 +12,10 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import unittest
+
 import luigi
 import luigi.interface
-import unittest
 from luigi.mock import MockFile
 
 File = MockFile

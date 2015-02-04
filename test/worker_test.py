@@ -12,22 +12,24 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import mock
-import shutil
-import time
-from luigi.scheduler import CentralPlannerScheduler
-import luigi.worker
-from luigi.worker import Worker
-from luigi import Task, ExternalTask, RemoteScheduler
-from helpers import with_config
-import unittest
-import logging
-import threading
-import os
-import signal
-import luigi.notifications
-import tempfile
 import functools
+import logging
+import os
+import shutil
+import signal
+import tempfile
+import threading
+import time
+import unittest
+
+import luigi.notifications
+import luigi.worker
+import mock
+from helpers import with_config
+from luigi import ExternalTask, RemoteScheduler, Task
+from luigi.scheduler import CentralPlannerScheduler
+from luigi.worker import Worker
+
 luigi.notifications.DEBUG = True
 
 

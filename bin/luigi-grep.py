@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
-from collections import defaultdict
-
 import argparse
 import json
 import urllib2
-
+from collections import defaultdict
 
 parser = argparse.ArgumentParser(
     "luigi-grep is used to search for workflows using the luigi scheduler's json api")

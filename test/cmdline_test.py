@@ -14,13 +14,14 @@
 
 import ConfigParser
 import logging
-import luigi
-from luigi.mock import MockFile
-import mock
+import os
+import subprocess
 import unittest
 import warnings
-import subprocess
-import os
+
+import luigi
+import mock
+from luigi.mock import MockFile
 
 
 class SomeTask(luigi.Task):

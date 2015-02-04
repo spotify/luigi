@@ -12,13 +12,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import json
+import logging
+import time
 import urllib
 import urllib2
-import logging
-import json
-import time
-from scheduler import Scheduler, PENDING
+
 import configuration
+from scheduler import PENDING, Scheduler
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 

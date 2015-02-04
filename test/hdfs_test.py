@@ -12,15 +12,16 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-from datetime import datetime
-import luigi
-from luigi import hdfs
-import mock
-import re
 import functools
+import re
+from datetime import datetime
+
+import helpers
+import luigi
+import mock
+from luigi import hdfs
 from minicluster import MiniClusterTestCase
 from nose.plugins.attrib import attr
-import helpers
 
 try:
     import unittest2 as unittest

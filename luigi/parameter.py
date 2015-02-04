@@ -12,11 +12,12 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import configuration
 import datetime
 import warnings
+from ConfigParser import NoOptionError, NoSectionError
+
+import configuration
 from deprecate_kwarg import deprecate_kwarg
-from ConfigParser import NoSectionError, NoOptionError
 
 _no_value = object()
 

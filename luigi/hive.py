@@ -13,12 +13,13 @@
 import abc
 import logging
 import operator
-import luigi
-import luigi.hadoop
-from luigi.target import FileSystemTarget, FileAlreadyExists
 import os
 import subprocess
 import tempfile
+
+import luigi
+import luigi.hadoop
+from luigi.target import FileAlreadyExists, FileSystemTarget
 from luigi.task import flatten
 
 logger = logging.getLogger('luigi-interface')

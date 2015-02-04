@@ -12,29 +12,30 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import random
-import sys
-import os
-import datetime
-import subprocess
-import tempfile
-from itertools import groupby
-import pickle
+import abc
 import binascii
+import datetime
+import glob
+import json
 import logging
-import StringIO
+import os
+import pickle
+import random
 import re
 import shutil
 import signal
+import StringIO
+import subprocess
+import sys
+import tempfile
+import warnings
 from hashlib import md5
+from itertools import groupby
+
+import configuration
 import luigi
 import luigi.hdfs
-import configuration
-import warnings
 import mrrunner
-import json
-import glob
-import abc
 
 logger = logging.getLogger('luigi-interface')
 

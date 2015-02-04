@@ -12,10 +12,11 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import datetime
+import unittest
+
 import luigi
 from luigi.parameter import DateIntervalParameter as DI
-import unittest
-import datetime
 
 
 class DateIntervalTest(unittest.TestCase):

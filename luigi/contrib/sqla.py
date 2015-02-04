@@ -131,10 +131,11 @@ Date: 01/02/2015
 
 
 import abc
-import logging
-import luigi
 import datetime
 import itertools
+import logging
+
+import luigi
 import sqlalchemy
 
 logger = logging.getLogger('luigi-interface')

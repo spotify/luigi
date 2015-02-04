@@ -12,13 +12,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import logging
 import datetime
-from luigi import parameter
-import task
 import functools
-from luigi.deprecate_kwarg import deprecate_kwarg
+import logging
 
+import task
+from luigi import parameter
+from luigi.deprecate_kwarg import deprecate_kwarg
 
 logger = logging.getLogger('luigi-interface')
 

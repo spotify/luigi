@@ -1,7 +1,8 @@
-import luigi
-import time
 import os
 import shutil
+import time
+
+import luigi
 
 
 class MyExternal(luigi.ExternalTask):

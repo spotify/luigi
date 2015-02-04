@@ -1,6 +1,7 @@
-import luigi
 import random as rnd
 import time
+
+import luigi
 
 
 class Config(luigi.Task):

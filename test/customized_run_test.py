@@ -12,14 +12,15 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi
-import luigi.scheduler
-import luigi.rpc
-import luigi.worker
-import luigi.hadoop
-import unittest
-import time
 import logging
+import time
+import unittest
+
+import luigi
+import luigi.hadoop
+import luigi.rpc
+import luigi.scheduler
+import luigi.worker
 
 
 class DummyTask(luigi.Task):

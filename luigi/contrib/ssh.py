@@ -33,14 +33,14 @@ in the integration part of unittests).
 This can be super convenient when you want secure communication using a non-secure
 protocol or circumvent firewalls (as long as they are open for ssh traffic).
 """
+import contextlib
 import os
 import random
+import subprocess
 
 import luigi
-import luigi.target
 import luigi.format
-import subprocess
-import contextlib
+import luigi.target
 
 
 class RemoteContext(object):

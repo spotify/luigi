@@ -1,10 +1,11 @@
 import random
-import luigi
-import luigi.hdfs
-import luigi.hadoop
-import luigi.postgres
-from heapq import nlargest
 from collections import defaultdict
+from heapq import nlargest
+
+import luigi
+import luigi.hadoop
+import luigi.hdfs
+import luigi.postgres
 
 
 class ExternalStreams(luigi.ExternalTask):

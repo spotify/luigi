@@ -12,13 +12,12 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import helpers
 import unittest
 
+import helpers
 import luigi
-
-from luigi.task_status import PENDING, RUNNING, DONE
 from luigi.db_task_history import DbTaskHistory
+from luigi.task_status import DONE, PENDING, RUNNING
 
 
 class DummyTask(luigi.Task):

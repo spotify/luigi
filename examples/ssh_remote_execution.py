@@ -1,4 +1,5 @@
 from collections import defaultdict
+
 import luigi
 from luigi.contrib.ssh import RemoteContext, RemoteTarget
 from luigi.mock import MockFile

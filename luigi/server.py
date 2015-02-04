@@ -13,22 +13,25 @@
 # the License.
 
 # Simple REST server that takes commands in a JSON payload
-import json
-import os
 import atexit
+import json
+import logging
 import mimetypes
+import os
 import posixpath
+import signal
+
+import pkg_resources
+import tornado.httpclient
+import tornado.httpserver
 import tornado.ioloop
 import tornado.netutil
 import tornado.web
-import tornado.httpclient
-import tornado.httpserver
+
 import configuration
 import scheduler
-import pkg_resources
-import signal
 import task_history
-import logging
+
 logger = logging.getLogger("luigi.server")
 
 

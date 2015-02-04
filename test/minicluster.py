@@ -12,12 +12,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import unittest
-from nose.plugins.attrib import attr
-from snakebite.minicluster import MiniCluster
-from luigi import hdfs, hadoop
-import os
 import getpass
+import os
+import unittest
+
+from snakebite.minicluster import MiniCluster
+
+from luigi import hadoop, hdfs
+from nose.plugins.attrib import attr
 
 
 @attr('minicluster')
