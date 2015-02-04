@@ -91,7 +91,9 @@ class SparkJob(luigi.Task):
     temp_hadoop_output_file = None
 
     def requires_local(self):
-        ''' Default impl - override this method if you need any local input to be accessible in init() '''
+        """
+        Default impl - override this method if you need any local input to be accessible in init().
+        """
         return []
 
     def requires_hadoop(self):
@@ -223,7 +225,9 @@ class Spark1xJob(luigi.Task):
                                   "containing job_class")
 
     def dependency_jars(self):
-        """Override to provide a list of dependency jars."""
+        """
+        Override to provide a list of dependency jars.
+        """
         return []
 
     def job_class(self):
@@ -284,10 +288,9 @@ class Spark1xJob(luigi.Task):
 
     def track_progress(self, proc):
         """
-        The Spark client currently outputs a multiline status to stdout every
-        second while the application is running. This instead captures status
-        data and updates a single line of output until the application
-        finishes.
+        The Spark client currently outputs a multiline status to stdout every second while the application is running.
+
+        This instead captures status data and updates a single line of output until the application finishes.
         """
         app_id = None
         app_status = 'N/A'
@@ -339,7 +342,9 @@ class PySpark1xJob(Spark1xJob):
         raise NotImplementedError("subclass should define Spark .py file")
 
     def py_files(self):
-        """Override to provide a list of py files."""
+        """
+        Override to provide a list of py files.
+        """
         return []
 
     def run(self):

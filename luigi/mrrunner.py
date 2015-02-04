@@ -14,7 +14,8 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-"""The hadoop runner.
+"""
+The hadoop runner.
 
 This module contains the main() method which will be used to run the
 mapper and reducer on the Hadoop nodes.
@@ -29,8 +30,9 @@ import traceback
 
 
 class Runner(object):
-
-    """Run the mapper or reducer on hadoop nodes."""
+    """
+    Run the mapper or reducer on hadoop nodes.
+    """
 
     def __init__(self, job=None):
         self.extract_packages_archive()
@@ -65,7 +67,8 @@ def print_exception(exc):
 
 
 def main(args=None, stdin=sys.stdin, stdout=sys.stdout, print_exception=print_exception):
-    """Run either the mapper or the reducer from the class instance in the file "job-instance.pickle".
+    """
+    Run either the mapper or the reducer from the class instance in the file "job-instance.pickle".
 
     Arguments:
 

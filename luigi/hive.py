@@ -42,12 +42,13 @@ def get_hive_syntax():
 
 
 def run_hive(args, check_return_code=True):
-    """Runs the `hive` from the command line, passing in the given args, and
-       returning stdout.
+    """
+    Runs the `hive` from the command line, passing in the given args, and
+    returning stdout.
 
-       With the apache release of Hive, so of the table existence checks
-       (which are done using DESCRIBE do not exit with a return code of 0
-       so we need an option to ignore the return code and just return stdout for parsing
+    With the apache release of Hive, so of the table existence checks
+    (which are done using DESCRIBE do not exit with a return code of 0
+    so we need an option to ignore the return code and just return stdout for parsing
     """
     cmd = [load_hive_cmd()] + args
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -59,12 +60,16 @@ def run_hive(args, check_return_code=True):
 
 
 def run_hive_cmd(hivecmd, check_return_code=True):
-    """Runs the given hive query and returns stdout"""
+    """
+    Runs the given hive query and returns stdout.
+    """
     return run_hive(['-e', hivecmd], check_return_code)
 
 
 def run_hive_script(script):
-    """Runs the contents of the given script in hive and returns stdout"""
+    """
+    Runs the contents of the given script in hive and returns stdout.
+    """
     if not os.path.isfile(script):
         raise RuntimeError("Hive script: {0} does not exist.".format(script))
     return run_hive(['-f', script])
@@ -83,13 +88,15 @@ class HiveClient(object):  # interface
 
     @abc.abstractmethod
     def table_schema(self, table, database='default'):
-        """ Returns list of [(name, type)] for each column in database.table """
+        """
+        Returns list of [(name, type)] for each column in database.table.
+        """
         pass
 
     @abc.abstractmethod
     def table_exists(self, table, database='default', partition=None):
         """
-        Returns true iff db.table (or db.table.partition) exists. partition is a dict of partition key to
+        Returns true if db.table (or db.table.partition) exists. partition is a dict of partition key to
         value.
         """
         pass
@@ -101,8 +108,9 @@ class HiveClient(object):  # interface
 
 
 class HiveCommandClient(HiveClient):
-
-    """ Uses `hive` invocations to find information """
+    """
+    Uses `hive` invocations to find information.
+    """
 
     def table_location(self, table, database='default', partition=None):
         cmd = "use {0}; describe formatted {1}".format(database, table)
@@ -136,13 +144,14 @@ class HiveCommandClient(HiveClient):
         return [tuple([x.strip() for x in line.strip().split("\t")]) for line in describe.strip().split("\n")]
 
     def partition_spec(self, partition):
-        """ Turns a dict into the a Hive partition specification string """
+        """
+        Turns a dict into the a Hive partition specification string.
+        """
         return ','.join(["{0}='{1}'".format(k, v) for (k, v) in
                          sorted(partition.iteritems(), key=operator.itemgetter(0))])
 
 
 class ApacheHiveCommandClient(HiveCommandClient):
-
     """
     A subclass for the HiveCommandClient to (in some cases) ignore the return code from
     the hive command so that we can just parse the output.
@@ -194,8 +203,9 @@ class MetastoreClient(HiveClient):
 
 
 class HiveThriftContext(object):
-
-    """ Context manager for hive metastore client """
+    """
+    Context manager for hive metastore client.
+    """
 
     def __enter__(self):
         try:
@@ -230,8 +240,10 @@ client = default_client
 
 
 class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
+    """
+    Task to run a hive query.
+    """
 
-    """ Task to run a hive query """
     # by default, we let hive figure these out.
     n_reduce_tasks = None
     bytes_per_reducer = None
@@ -243,10 +255,12 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
         raise RuntimeError("Must implement query!")
 
     def hiverc(self):
-        """ Location of an rc file to run before the query
-            if hiverc-location key is specified in client.cfg, will default to the value there
-            otherwise returns None
-            Returning a list of rc files will load all of them in order.
+        """
+        Location of an rc file to run before the query
+        if hiverc-location key is specified in client.cfg, will default to the value there
+        otherwise returns None.
+
+        Returning a list of rc files will load all of them in order.
         """
         return luigi.configuration.get_config().get('hive', 'hiverc-location', default=None)
 
@@ -255,6 +269,7 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
         Returns an dict of key=value settings to be passed along
         to the hive command line via --hiveconf. By default, sets
         mapred.job.name to task_id and if not None, sets:
+
         * mapred.reduce.tasks (n_reduce_tasks)
         * mapred.fairscheduler.pool (pool) or mapred.job.queue.name (pool)
         * hive.exec.reducers.bytes.per.reducer (bytes_per_reducer)
@@ -282,11 +297,13 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
 
 
 class HiveQueryRunner(luigi.hadoop.JobRunner):
-
-    """ Runs a HiveQueryTask by shelling out to hive """
+    """
+    Runs a HiveQueryTask by shelling out to hive.
+    """
 
     def prepare_outputs(self, job):
-        """ Called before job is started
+        """
+        Called before job is started.
 
         If output is a `FileSystemTarget`, create parent directories so the hive command won't fail
         """
@@ -324,8 +341,9 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
 
 
 class HiveTableTarget(luigi.Target):
-
-    """ exists returns true if the table exists """
+    """
+    exists returns true if the table exists.
+    """
 
     def __init__(self, table, database='default', client=default_client):
         self.database = database
@@ -339,7 +357,9 @@ class HiveTableTarget(luigi.Target):
 
     @property
     def path(self):
-        """Returns the path to this table in HDFS"""
+        """
+        Returns the path to this table in HDFS.
+        """
         location = self.client.table_location(self.table, self.database)
         if not location:
             raise Exception("Couldn't find location for table: {0}".format(str(self)))
@@ -350,8 +370,9 @@ class HiveTableTarget(luigi.Target):
 
 
 class HivePartitionTarget(luigi.Target):
-
-    """ exists returns true if the table's partition exists """
+    """
+    exists returns true if the table's partition exists.
+    """
 
     def __init__(self, table, partition, database='default', fail_missing_table=True, client=default_client):
         self.database = database
@@ -378,7 +399,9 @@ class HivePartitionTarget(luigi.Target):
 
     @property
     def path(self):
-        """Returns the path for this HiveTablePartitionTarget's data"""
+        """
+        Returns the path for this HiveTablePartitionTarget's data.
+        """
         location = self.client.table_location(self.table, self.database, self.partition)
         if not location:
             raise Exception("Couldn't find location for table: {0}".format(str(self)))
@@ -389,8 +412,9 @@ class HivePartitionTarget(luigi.Target):
 
 
 class ExternalHiveTask(luigi.ExternalTask):
-
-    """ External task that depends on a Hive table/partition """
+    """
+    External task that depends on a Hive table/partition.
+    """
 
     database = luigi.Parameter(default='default')
     table = luigi.Parameter()

@@ -13,11 +13,14 @@
 # the License.
 
 """
-Light-weight remote execution library and utilities
+Light-weight remote execution library and utilities.
 
-There are some examples in the unittest, but I added another more luigi-specific in the examples directory (examples/ssh_remote_execution.py
+There are some examples in the unittest, but
+I added another more luigi-specific in the examples directory (examples/ssh_remote_execution.py
 
-contrib.ssh.RemoteContext is meant to provide functionality similar to that of the standard library subprocess module, but where the commands executed are run on a remote machine instead, without the user having to think about prefixing everything with "ssh" and credentials etc.
+contrib.ssh.RemoteContext is meant to provide functionality similar to that of the standard library subprocess module,
+but where the commands executed are run on a remote machine instead,
+without the user having to think about prefixing everything with "ssh" and credentials etc.
 
 Using this mini library (which is just a convenience wrapper for subprocess),
 RemoteTarget is created to let you stream data from a remotely stored file using
@@ -78,14 +81,17 @@ class RemoteContext(object):
         return connection_cmd + cmd
 
     def Popen(self, cmd, **kwargs):
-        """ Remote Popen """
+        """
+        Remote Popen.
+        """
         prefixed_cmd = self._prepare_cmd(cmd)
         return subprocess.Popen(prefixed_cmd, **kwargs)
 
     def check_output(self, cmd):
-        """ Execute a shell command remotely and return the output
+        """
+        Execute a shell command remotely and return the output.
 
-        Simplified version of Popen when you only want the output as a string and detect any errors
+        Simplified version of Popen when you only want the output as a string and detect any errors.
         """
         p = self.Popen(cmd, stdout=subprocess.PIPE)
         output, _ = p.communicate()
@@ -95,7 +101,8 @@ class RemoteContext(object):
 
     @contextlib.contextmanager
     def tunnel(self, local_port, remote_port=None, remote_host="localhost"):
-        """ Open a tunnel between localhost:local_port and remote_host:remote_port via the host specified by this context
+        """
+        Open a tunnel between localhost:local_port and remote_host:remote_port via the host specified by this context.
 
         Remember to close() the returned "tunnel" object in order to clean up
         after yourself when you are done with the tunnel.
@@ -121,7 +128,9 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.remote_context = RemoteContext(host, username, key_file)
 
     def exists(self, path):
-        """ Return `True` if file or directory at `path` exist, False otherwise """
+        """
+        Return `True` if file or directory at `path` exist, False otherwise.
+        """
         try:
             self.remote_context.check_output(["test", "-e", path])
         except subprocess.CalledProcessError as e:
@@ -132,7 +141,9 @@ class RemoteFileSystem(luigi.target.FileSystem):
         return True
 
     def remove(self, path, recursive=True):
-        """ Remove file or directory at location `path` """
+        """
+        Remove file or directory at location `path`.
+        """
         if recursive:
             cmd = ["rm", "-r", path]
         else:
@@ -208,10 +219,10 @@ class AtomicRemoteFileWriter(luigi.format.OutputPipeProcessWrapper):
 
 
 class RemoteTarget(luigi.target.FileSystemTarget):
-
     """
-    Target used for reading from remote files. The target is implemented using
-    ssh commands streaming data over the network.
+    Target used for reading from remote files.
+
+    The target is implemented using ssh commands streaming data over the network.
     """
 
     def __init__(self, path, host, format=None, username=None, key_file=None):

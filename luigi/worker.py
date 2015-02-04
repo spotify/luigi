@@ -50,10 +50,11 @@ class TaskException(Exception):
 
 
 class TaskProcess(multiprocessing.Process):
+    """
+    Wrap all task execution in this class.
 
-    ''' Wrap all task execution in this class.
-
-    Mainly for convenience since this is run in a separate process. '''
+    Mainly for convenience since this is run in a separate process.
+    """
 
     def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0):
         super(TaskProcess, self).__init__()
@@ -139,10 +140,10 @@ class TaskProcess(multiprocessing.Process):
 
 
 class SingleProcessPool(object):
+    """
+    Dummy process pool for using a single processor.
 
-    """ Dummy process pool for using a single processor
-
-    Imitates the api of multiprocessing.Pool using single-processor equivalents
+    Imitates the api of multiprocessing.Pool using single-processor equivalents.
     """
 
     def apply_async(self, function, args):
@@ -150,31 +151,36 @@ class SingleProcessPool(object):
 
 
 class DequeQueue(collections.deque):
-
-    """ deque wrapper implementing the Queue interface """
+    """
+    deque wrapper implementing the Queue interface.
+    """
 
     put = collections.deque.append
     get = collections.deque.pop
 
 
 class AsyncCompletionException(Exception):
-
-    """ Exception indicating that something went wrong with checking complete """
+    """
+    Exception indicating that something went wrong with checking complete.
+    """
 
     def __init__(self, trace):
         self.trace = trace
 
 
 class TracebackWrapper(object):
-
-    """ Class to wrap tracebacks so we can know they're not just strings """
+    """
+    Class to wrap tracebacks so we can know they're not just strings.
+    """
 
     def __init__(self, trace):
         self.trace = trace
 
 
 def check_complete(task, out_queue):
-    """ Checks if task is complete, puts the result to out_queue """
+    """
+    Checks if task is complete, puts the result to out_queue.
+    """
     logger.debug("Checking if %s is complete", task)
     try:
         is_complete = task.complete()
@@ -184,12 +190,13 @@ def check_complete(task, out_queue):
 
 
 class Worker(object):
-
-    """ Worker object communicates with a scheduler.
+    """
+    Worker object communicates with a scheduler.
 
     Simple class that talks to a scheduler and:
-    - Tells the scheduler what it has to do + its dependencies
-    - Asks for stuff to do (pulls it in a loop and runs it)
+
+    * tells the scheduler what it has to do + its dependencies
+    * asks for stuff to do (pulls it in a loop and runs it)
     """
 
     def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None,
@@ -243,8 +250,9 @@ class Worker(object):
         self.unfulfilled_counts = collections.defaultdict(int)
 
         class KeepAliveThread(threading.Thread):
-
-            """ Periodically tell the scheduler that the worker still lives """
+            """
+            Periodically tell the scheduler that the worker still lives.
+            """
 
             def __init__(self):
                 super(KeepAliveThread, self).__init__()
@@ -276,13 +284,16 @@ class Worker(object):
         self._running_tasks = {}
 
     def stop(self):
-        """ Stop the KeepAliveThread associated with this Worker
-            This should be called whenever you are done with a worker instance to clean up
+        """
+        Stop the KeepAliveThread associated with this Worker.
+
+        This should be called whenever you are done with a worker instance to clean up.
 
         Warning: this should _only_ be performed if you are sure this worker
         is not performing any work or will perform any work after this has been called
 
         TODO: also kill all currently running tasks
+
         TODO (maybe): Worker should be/have a context manager to enforce calling this
             whenever you stop using a Worker instance
         """
@@ -343,8 +354,11 @@ class Worker(object):
         notifications.send_error_email(subject, message)
 
     def add(self, task, multiprocess=False):
-        """ Add a Task for the worker to check and possibly schedule and run.
-         Returns True if task and its dependencies were successfully scheduled or completed before"""
+        """
+        Add a Task for the worker to check and possibly schedule and run.
+
+        Returns True if task and its dependencies were successfully scheduled or completed before.
+        """
         if self._first_task is None and hasattr(task, 'task_id'):
             self._first_task = task.task_id
         self.add_succeeded = True
@@ -506,7 +520,11 @@ class Worker(object):
             p.run()
 
     def _purge_children(self):
-        ''' Find dead children and put a response on the result queue '''
+        """
+        Find dead children and put a response on the result queue.
+
+        :return:
+        """
         for task_id, p in self._running_tasks.iteritems():
             if not p.is_alive() and p.exitcode:
                 error_msg = 'Worker task %s died unexpectedly with exit code %s' % (task_id, p.exitcode)
@@ -520,13 +538,14 @@ class Worker(object):
             self._task_result_queue.put((task_id, FAILED, error_msg, [], []))
 
     def _handle_next_task(self):
-        ''' We have to catch three ways a task can be "done"
-        1. Normal execution: the task runs/fails and puts a result back on the
-           queue
-        2. New dependencies: the task yielded new deps that were not complete
-           and will be rescheduled and dependencies added.
-        3. Child process dies: we need to catch this separately
-        '''
+        """
+        We have to catch three ways a task can be "done":
+
+        1. normal execution: the task runs/fails and puts a result back on the queue,
+        2. new dependencies: the task yielded new deps that were not complete and
+           will be rescheduled and dependencies added,
+        3. child process dies: we need to catch this separately.
+        """
         while True:
             self._purge_children()  # Deal with subprocess failures
 
@@ -589,17 +608,22 @@ class Worker(object):
             yield
 
     def _keep_alive(self, n_pending_tasks, n_unique_pending):
-        """ Returns true if a worker should stay alive given
+        """
+        Returns true if a worker should stay alive given.
 
-        If worker-keep-alive is not set, this will always return false. Otherwise, it will return
-        true for nonzero n_pending_tasks. If worker-count-uniques is true, it will also
+        If worker-keep-alive is not set, this will always return false.
+        Otherwise, it will return true for nonzero n_pending_tasks.
+
+        If worker-count-uniques is true, it will also
         require that one of the tasks is unique to this worker.
         """
         return (self.__keep_alive and n_pending_tasks
                 and (n_unique_pending or not self.__count_uniques))
 
     def run(self):
-        """Returns True if all scheduled tasks were executed successfully"""
+        """
+        Returns True if all scheduled tasks were executed successfully.
+        """
         logger.info('Running Worker with %d processes', self.worker_processes)
 
         sleeper = self._sleeper()

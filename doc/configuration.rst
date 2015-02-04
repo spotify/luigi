@@ -98,6 +98,7 @@ max-reschedules
 
 max-shown-tasks
   .. versionadded:: 1.0.20
+
   The maximum number of tasks returned in a task_list api call. This
   will restrict the number of tasks shown in any section in the
   visualiser. Small values can alleviate frozen browsers when there are
@@ -160,6 +161,7 @@ worker-ping-interval
 
 worker-timeout
   .. versionadded:: 1.0.20
+
   Number of seconds after which to kill a task which has been running
   for too long. This provides a default value for all tasks, which can
   be overridden by setting the worker-timeout property in any task. This

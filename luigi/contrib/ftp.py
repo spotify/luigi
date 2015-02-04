@@ -1,5 +1,6 @@
 """
-This library is a wrapper of ftplib. It is convenient to move data from/to FTP.
+This library is a wrapper of ftplib.
+It is convenient to move data from/to FTP.
 
 There is an example on how to use it (example/ftp_experiment_outputs.py)
 
@@ -7,6 +8,7 @@ You can also find unittest for each class.
 
 Be aware that normal ftp do not provide secure communication.
 """
+import datetime
 import os
 import random
 import ftplib
@@ -18,27 +20,49 @@ from luigi.format import FileWrapper
 
 class RemoteFileSystem(luigi.target.FileSystem):
 
-    def __init__(self, host, username=None, password=None):
+    def __init__(self, host, username=None, password=None, port=21, tls=False):
         self.host = host
         self.username = username
         self.password = password
+        self.port = port
+        self.tls = tls
 
     def _connect(self):
-        """ Log in to ftp """
-        self.ftpcon = ftplib.FTP(self.host, self.username, self.password)
+        """
+        Log in to ftp.
+        """
+        if self.tls:
+            self.ftpcon = ftplib.FTP_TLS()
+        else:
+            self.ftpcon = ftplib.FTP()
+        self.ftpcon.connect(self.host, self.port)
+        self.ftpcon.login(self.username, self.password)
+        if self.tls:
+            self.ftpcon.prot_p()
 
-    def exists(self, path):
-        """ Return `True` if file or directory at `path` exist, False otherwise """
+    def exists(self, path, mtime=None):
+        """
+        Return `True` if file or directory at `path` exist, False otherwise.
+
+        Additional check on modified time when mtime is passed in.
+
+        Return False if the file's modified time is older mtime.
+        """
         self._connect()
         files = self.ftpcon.nlst(path)
 
-        # empty list, means do not exists
-        if not files:
-            return False
+        result = False
+        if files:
+            if mtime:
+                mdtm = self.ftpcon.sendcmd('MDTM ' + path)
+                modified = datetime.datetime.strptime(mdtm[4:], "%Y%m%d%H%M%S")
+                result = modified > mtime
+            else:
+                result = True
 
         self.ftpcon.quit()
 
-        return True
+        return result
 
     def _rm_recursive(self, ftp, path):
         """
@@ -71,11 +95,14 @@ class RemoteFileSystem(luigi.target.FileSystem):
             print('_rm_recursive: Could not remove {0}: {1}'.format(path, e))
 
     def remove(self, path, recursive=True):
-        """ Remove file or directory at location ``path``
+        """
+        Remove file or directory at location ``path``.
 
-        :param str path: a path within the FileSystem to remove.
-        :param bool recursive: if the path is a directory, recursively remove the directory and all
-                               of its descendants. Defaults to ``True``.
+        :param path: a path within the FileSystem to remove.
+        :type path: str
+        :param recursive: if the path is a directory, recursively remove the directory and
+                          all of its descendants. Defaults to ``True``.
+        :type recursive: bool
         """
         self._connect()
 
@@ -133,13 +160,21 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
 
 class AtomicFtpfile(file):
+    """
+    Simple class that writes to a temp file and upload to ftp on close().
 
-    """ Simple class that writes to a temp file and upload to ftp on close().
-     Also cleans up the temp file if close is not invoked.
+    Also cleans up the temp file if close is not invoked.
     """
 
     def __init__(self, fs, path):
-        self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        """
+        Initializes an AtomicFtpfile instance.
+
+        :param fs:
+        :param path:
+        :type path: str
+        """
+        self.__tmp_path = '%s-luigi-tmp-%09d' % (path, random.randrange(0, 1e10))
         self._fs = fs
         self.path = path
         super(AtomicFtpfile, self).__init__(self.__tmp_path, 'w')
@@ -165,6 +200,7 @@ class AtomicFtpfile(file):
     def __exit__(self, exc_type, exc, traceback):
         """
         Close/commit the file if there are no exception
+
         Upload file to ftp
         """
         if exc_type:
@@ -173,30 +209,34 @@ class AtomicFtpfile(file):
 
 
 class RemoteTarget(luigi.target.FileSystemTarget):
-
     """
-    Target used for reading from remote files. The target is implemented using
-    ssh commands streaming data over the network.
+    Target used for reading from remote files.
+
+    The target is implemented using ssh commands streaming data over the network.
     """
 
-    def __init__(self, path, host, format=None, username=None, password=None):
+    def __init__(self, path, host, format=None, username=None, password=None, port=21, mtime=None, tls=False):
         self.path = path
+        self.mtime = mtime
         self.format = format
-        self._fs = RemoteFileSystem(host, username, password)
+        self.tls = tls
+        self._fs = RemoteFileSystem(host, username, password, port, tls)
 
     @property
     def fs(self):
         return self._fs
 
     def open(self, mode):
-        """Open the FileSystem target.
+        """
+        Open the FileSystem target.
 
         This method returns a file-like object which can either be read from or written to depending
         on the specified mode.
 
-        :param str mode: the mode `r` opens the FileSystemTarget in read-only mode, whereas `w` will
-                         open the FileSystemTarget in write mode. Subclasses can implement
-                         additional options.
+        :param mode: the mode `r` opens the FileSystemTarget in read-only mode, whereas `w` will
+                     open the FileSystemTarget in write mode. Subclasses can implement
+                     additional options.
+        :type mode: str
         """
         if mode == 'w':
             if self.format:
@@ -216,6 +256,9 @@ class RemoteTarget(luigi.target.FileSystemTarget):
             return fileobj
         else:
             raise Exception('mode must be r/w')
+
+    def exists(self):
+        return self.fs.exists(self.path, self.mtime)
 
     def put(self, local_path):
         self.fs.put(local_path, self.path)

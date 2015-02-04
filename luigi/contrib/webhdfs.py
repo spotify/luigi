@@ -75,7 +75,6 @@ class ReadableWebHdfsFile(object):
 
 
 class AtomicWebHdfsFile(file):
-
     """
     An Hdfs file that writes to a temp file and put to WebHdfs on close.
     """
@@ -96,13 +95,17 @@ class AtomicWebHdfsFile(file):
         return self
 
     def __exit__(self, exc_type, exc, traceback):
-        """Close/commit the file if there are no exception"""
+        """
+        Close/commit the file if there are no exception.
+        """
         if exc_type:
             return
         return file.__exit__(self, exc_type, exc, traceback)
 
     def __del__(self):
-        """Remove the temporary directory"""
+        """
+        Remove the temporary directory.
+        """
         if os.path.exists(self.tmp_path):
             os.remove(self.tmp_path)
 
@@ -129,7 +132,9 @@ class WebHdfsClient(object):
         return self.webhdfs.walk(path, depth=depth)
 
     def exists(self, path):
-        """Returns true if the path exists and false otherwise"""
+        """
+        Returns true if the path exists and false otherwise.
+        """
         try:
             self.webhdfs.status(path)
             return True

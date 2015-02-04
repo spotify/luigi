@@ -17,10 +17,11 @@ import warnings
 
 
 def id_to_name_and_params(task_id):
-    ''' Turn a task_id into a (task_family, {params}) tuple.
-        E.g. calling with ``Foo(bar=bar, baz=baz)`` returns
-        ``('Foo', {'bar': 'bar', 'baz': 'baz'})``
-    '''
+    """
+    Turn a task_id into a (task_family, {params}) tuple.
+
+    E.g. calling with ``Foo(bar=bar, baz=baz)`` returns ``('Foo', {'bar': 'bar', 'baz': 'baz'})``.
+    """
 
     warnings.warn(
         'id_to_name_and_params is deprecated (and moved to luigi.tools.parse_task). '

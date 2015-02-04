@@ -54,7 +54,6 @@ class FileNotFoundException(FileSystemException):
 
 
 class S3Client(FileSystem):
-
     """
     boto-powered S3 client.
     """
@@ -327,7 +326,6 @@ class S3Client(FileSystem):
 
 
 class AtomicS3File(file):
-
     """
     An S3 file that writes to a temp file and put to S3 on close.
     """
@@ -355,7 +353,9 @@ class AtomicS3File(file):
             os.remove(self.__tmp_path)
 
     def __exit__(self, exc_type, exc, traceback):
-        " Close/commit the file if there are no exception "
+        """
+        Close/commit the file if there are no exception.
+        """
         if exc_type:
             return
         return file.__exit__(self, exc_type, exc, traceback)
@@ -422,7 +422,6 @@ class ReadableS3File(object):
 
 
 class S3Target(FileSystemTarget):
-
     """
     """
 
@@ -466,25 +465,38 @@ class S3Target(FileSystemTarget):
 
 
 class S3FlagTarget(S3Target):
-
     """
     Defines a target directory with a flag-file (defaults to `_SUCCESS`) used
     to signify job success.
 
-    This checks for two things:  that the path exists (just like the S3Target)
-    and that the _SUCCESS file exists within the directory.  Because Hadoop
-    outputs into a directory and not a single file, the path is assume to be a
-    directory.
+    This checks for two things:
 
-    This is meant to be a handy alternative to AtomicS3File.  The AtomicFile
-    approach can be burdensome for S3 since there are no directories, per se.
-    If we have 1,000,000 output files, then we have to rename 1,000,000
-    objects.
+    * the path exists (just like the S3Target)
+    * the _SUCCESS file exists within the directory.
+
+    Because Hadoop outputs into a directory and not a single file,
+    the path is assumed to be a directory.
+
+    This is meant to be a handy alternative to AtomicS3File.
+
+    The AtomicFile approach can be burdensome for S3 since there are no directories, per se.
+
+    If we have 1,000,000 output files, then we have to rename 1,000,000 objects.
     """
 
     fs = None
 
     def __init__(self, path, format=None, client=None, flag='_SUCCESS'):
+        """
+        Initializes a S3FlagTarget.
+
+        :param path: the directory where the files are stored.
+        :type path: str
+        :param client:
+        :type client:
+        :param flag:
+        :type flag: str
+        """
         if path[-1] is not "/":
             raise ValueError("S3FlagTarget requires the path to be to a "
                              "directory.  It must end with a slash ( / ).")
@@ -499,7 +511,6 @@ class S3FlagTarget(S3Target):
 
 
 class S3EmrTarget(S3FlagTarget):
-
     """
     Deprecated. Use :py:class:`S3FlagTarget`
     """
@@ -510,10 +521,8 @@ class S3EmrTarget(S3FlagTarget):
 
 
 class S3PathTask(ExternalTask):
-
     """
-    A external task that to require existence of
-    a path in S3.
+    A external task that to require existence of a path in S3.
     """
     path = Parameter()
 
@@ -522,9 +531,8 @@ class S3PathTask(ExternalTask):
 
 
 class S3EmrTask(ExternalTask):
-
     """
-    An external task that requires the existence of EMR output in S3
+    An external task that requires the existence of EMR output in S3.
     """
     path = Parameter()
 
@@ -533,9 +541,8 @@ class S3EmrTask(ExternalTask):
 
 
 class S3FlagTask(ExternalTask):
-
     """
-    An external task that requires the existence of EMR output in S3
+    An external task that requires the existence of EMR output in S3.
     """
     path = Parameter()
     flag = Parameter(default=None)

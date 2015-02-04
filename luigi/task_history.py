@@ -20,9 +20,9 @@ logger = logging.getLogger('luigi-interface')
 
 
 class Task(object):
-
-    ''' Interface for methods on TaskHistory
-    '''
+    """
+    Interface for methods on TaskHistory
+    """
 
     def __init__(self, task_id, status, host=None):
         self.task_family, self.parameters = task.id_to_name_and_params(task_id)
@@ -32,9 +32,9 @@ class Task(object):
 
 
 class TaskHistory(object):
-
-    ''' Abstract Base Class for updating the run history of a task
-    '''
+    """
+    Abstract Base Class for updating the run history of a task
+    """
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
