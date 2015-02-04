@@ -23,7 +23,8 @@ class RedshiftTarget(postgres.PostgresTarget):
     """
     Target for a resource in Redshift.
 
-    Redshift is similar to postgres with a few adjustments required by redshift.
+    Redshift is similar to postgres with a few adjustments
+    required by redshift.
     """
     marker_table = luigi.configuration.get_config().get(
         'redshift',
@@ -84,6 +85,14 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
+    def table_attributes(self):
+        '''Add extra table attributes, for example:
+        DISTSTYLE KEY
+        DISTKEY (MY_FIELD)
+        SORTKEY (MY_FIELD_2, MY_FIELD_3)
+        '''
+        return ''
+
     def do_truncate_table(self):
         """
         Return True if table should be truncated before copying new data in.
@@ -98,9 +107,41 @@ class S3CopyToTable(rdbms.CopyToTable):
         finally:
             cursor.close()
 
+    def create_table(self, connection):
+        """
+        Override to provide code for creating the target table.
+
+        By default it will be created using types (optionally)
+        specified in columns.
+
+        If overridden, use the provided connection object for
+        setting up the table in order to create the table and
+        insert data using the same transaction.
+        """
+        if len(self.columns[0]) == 1:
+            # only names of columns specified, no types
+            raise NotImplementedError("create_table() not implemented "
+                                      "for %r and columns types not "
+                                      "specified" % self.table)
+        elif len(self.columns[0]) == 2:
+            # if columns is specified as (name, type) tuples
+            coldefs = ','.join(
+                '{name} {type}'.format(
+                    name=name,
+                    type=type) for name, type in self.columns
+            )
+            query = ("CREATE TABLE "
+                     "{table} ({coldefs}) "
+                     "{table_attributes}").format(
+                table=self.table,
+                coldefs=coldefs,
+                table_attributes=self.table_attributes())
+            connection.cursor().execute(query)
+
     def run(self):
         """
-        If the target table doesn't exist, self.create_table will be called to attempt to create the table.
+        If the target table doesn't exist, self.create_table
+        will be called to attempt to create the table.
         """
         if not (self.table):
             raise Exception("table need to be specified")
@@ -168,6 +209,7 @@ class S3CopyToTable(rdbms.CopyToTable):
             return bool(result)
         finally:
             cursor.close()
+
 
 class S3CopyJSONToTable(S3CopyToTable):
     """
