@@ -12,12 +12,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi
-from luigi.mock import MockFile
-import unittest
-from luigi.util import inherits
 import datetime
+import unittest
+
+import luigi
 import luigi.notifications
+from luigi.mock import MockFile
+from luigi.util import inherits
+
 luigi.notifications.DEBUG = True
 File = MockFile
 

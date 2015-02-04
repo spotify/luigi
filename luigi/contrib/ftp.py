@@ -9,12 +9,13 @@ You can also find unittest for each class.
 Be aware that normal ftp do not provide secure communication.
 """
 import datetime
+import ftplib
 import os
 import random
-import ftplib
+
 import luigi
-import luigi.target
 import luigi.format
+import luigi.target
 from luigi.format import FileWrapper
 
 

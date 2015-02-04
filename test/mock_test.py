@@ -12,8 +12,9 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-from luigi.mock import MockFile, MockFileSystem
 import unittest
+
+from luigi.mock import MockFile, MockFileSystem
 
 
 class MockFileTest(unittest.TestCase):

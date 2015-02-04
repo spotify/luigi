@@ -1,5 +1,5 @@
-import os
 import datetime
+import os
 import posixpath
 import time
 import unittest

@@ -13,8 +13,10 @@
 # the License.
 
 import unittest
+
 import luigi
 import luigi.notifications
+
 luigi.notifications.DEBUG = True
 
 

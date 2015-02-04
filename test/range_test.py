@@ -12,13 +12,15 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import fnmatch
 import datetime
-import luigi
-from luigi.tools.range import RangeEvent, RangeDaily, RangeDailyBase, RangeHourly, RangeHourlyBase, _constrain_glob, _get_filesystems_and_globs
-from luigi.mock import MockFile, MockFileSystem
-import mock
+import fnmatch
 import unittest
+
+import luigi
+import mock
+from luigi.mock import MockFile, MockFileSystem
+from luigi.tools.range import (RangeDaily, RangeDailyBase, RangeEvent, RangeHourly, RangeHourlyBase, _constrain_glob,
+                               _get_filesystems_and_globs)
 
 
 class CommonDateHourTask(luigi.Task):

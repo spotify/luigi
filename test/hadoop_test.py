@@ -12,20 +12,21 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import mock
 import os
+import StringIO
+import subprocess
 import sys
 import unittest
-import subprocess
+
 import luigi
 import luigi.hadoop
 import luigi.hdfs
 import luigi.mrrunner
-from luigi.mock import MockFile
-import StringIO
 import luigi.notifications
-from nose.plugins.attrib import attr
 import minicluster
+import mock
+from luigi.mock import MockFile
+from nose.plugins.attrib import attr
 
 luigi.notifications.DEBUG = True
 File = MockFile

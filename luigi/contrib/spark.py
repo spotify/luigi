@@ -3,8 +3,8 @@ import logging
 import os
 import random
 import re
-import subprocess
 import signal
+import subprocess
 import sys
 import tempfile
 import time
@@ -13,7 +13,6 @@ import luigi
 import luigi.format
 import luigi.hdfs
 from luigi import configuration
-
 
 logger = logging.getLogger('luigi-interface')
 

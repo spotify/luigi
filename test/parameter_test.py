@@ -13,17 +13,19 @@
 # the License.
 
 import datetime
-from datetime import timedelta
-import luigi.date_interval
-import luigi
-import luigi.interface
-from worker_test import email_patch
-import luigi.notifications
-from luigi.parameter import ParameterException
-luigi.notifications.DEBUG = True
 import unittest
+from datetime import timedelta
+
+import luigi
+import luigi.date_interval
+import luigi.interface
+import luigi.notifications
 from helpers import with_config
 from luigi.mock import MockFile, MockFileSystem
+from luigi.parameter import ParameterException
+from worker_test import email_patch
+
+luigi.notifications.DEBUG = True
 
 
 class A(luigi.Task):

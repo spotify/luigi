@@ -12,12 +12,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import StringIO
-import target
-import sys
-import os
-import luigi.util
 import multiprocessing
+import os
+import StringIO
+import sys
+
+import luigi.util
+import target
 
 
 class MockFileSystem(target.FileSystem):

@@ -12,11 +12,12 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import tempfile
-import luigi.scheduler
 import pickle
-import unittest
+import tempfile
 import time
+import unittest
+
+import luigi.scheduler
 
 luigi.notifications.DEBUG = True
 

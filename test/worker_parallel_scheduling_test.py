@@ -1,10 +1,9 @@
 import pickle
 import time
 import unittest
-import mock
 
 import luigi
-
+import mock
 from luigi.worker import Worker
 
 

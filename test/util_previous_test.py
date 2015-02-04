@@ -1,9 +1,9 @@
-import unittest
 import datetime
+import unittest
 
 import luigi
 import luigi.date_interval
-from luigi.util import previous, get_previous_completed
+from luigi.util import get_previous_completed, previous
 
 
 class DateTaskOk(luigi.Task):

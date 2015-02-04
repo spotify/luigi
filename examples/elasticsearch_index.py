@@ -1,9 +1,10 @@
 # coding: utf-8
 
-from luigi.contrib.esindex import CopyToIndex
 import datetime
 import json
+
 import luigi
+from luigi.contrib.esindex import CopyToIndex
 
 
 class FakeDocuments(luigi.Task):

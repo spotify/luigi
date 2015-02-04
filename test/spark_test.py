@@ -1,14 +1,13 @@
-import subprocess
 import StringIO
+import subprocess
 import unittest
-
-from mock import patch
 
 import luigi
 import luigi.hdfs
-from luigi.mock import MockFile
-from luigi.contrib.spark import SparkJobError, SparkJob, Spark1xJob, PySpark1xJob
 from helpers import with_config
+from luigi.contrib.spark import PySpark1xJob, Spark1xJob, SparkJob, SparkJobError
+from luigi.mock import MockFile
+from mock import patch
 
 
 class HdfsJob(luigi.ExternalTask):

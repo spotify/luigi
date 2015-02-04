@@ -13,18 +13,19 @@
 # the License.
 
 import collections
+import cPickle as pickle
 import datetime
 import functools
 import itertools
-import notifications
-import os
 import logging
+import os
 import time
-import cPickle as pickle
-import task_history as history
-logger = logging.getLogger("luigi.server")
 
-from task_status import PENDING, FAILED, DONE, RUNNING, SUSPENDED, UNKNOWN, DISABLED
+import notifications
+import task_history as history
+from task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN
+
+logger = logging.getLogger("luigi.server")
 
 
 class Scheduler(object):

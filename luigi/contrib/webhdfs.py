@@ -4,9 +4,9 @@ python [hdfs](https://pypi.python.org/pypi/hdfs/) library.
 """
 from __future__ import absolute_import
 
+import logging
 import os
 import random
-import logging
 import tempfile
 
 from luigi import configuration

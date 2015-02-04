@@ -13,8 +13,8 @@
 # the License.
 
 import luigi
-from luigi.mock import MockFile
 from fib_test import FibTestBase
+from luigi.mock import MockFile
 
 
 class OptParseTest(FibTestBase):

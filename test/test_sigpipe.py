@@ -14,7 +14,9 @@
 
 import os
 from unittest import TestCase
+
 from luigi.format import InputPipeProcessWrapper
+
 
 BASH_SCRIPT = """
 #!/bin/bash

@@ -12,18 +12,20 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import subprocess
+import datetime
+import getpass
+import logging
 import os
 import random
-import urlparse
-import luigi.format
-import luigi.contrib.target
-import datetime
 import re
+import subprocess
+import urlparse
 import warnings
-from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
-import logging
-import getpass
+
+import luigi.contrib.target
+import luigi.format
+from luigi.target import FileAlreadyExists, FileSystem, FileSystemTarget
+
 logger = logging.getLogger('luigi-interface')
 
 

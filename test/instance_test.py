@@ -12,10 +12,12 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import unittest
+
 import luigi
 import luigi.date_interval
-import unittest
 import luigi.notifications
+
 luigi.notifications.DEBUG = True
 
 

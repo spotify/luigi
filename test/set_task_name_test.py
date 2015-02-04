@@ -12,8 +12,9 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi
 import unittest
+
+import luigi
 
 
 def create_class(cls_name):

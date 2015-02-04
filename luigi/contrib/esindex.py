@@ -72,6 +72,7 @@ import datetime
 import hashlib
 import json
 import logging
+
 import luigi
 
 logger = logging.getLogger('luigi-interface')
