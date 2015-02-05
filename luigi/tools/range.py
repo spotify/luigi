@@ -15,10 +15,12 @@
 """
 Produces contiguous completed ranges of recurring tasks.
 
-Caveat - if gap causes (missing dependencies) aren't acted upon, then this will
-eventually schedule the same gaps again and again and make no progress to other
-datehours.
+See RangeDaily and RangeHourly for basic usage.
 
+Caveat - if gaps accumulate, their causes (e.g. missing dependencies) going
+unmonitored/unmitigated, then this will eventually keep retrying the same gaps
+over and over and make no progress to more recent times. (See 'task_limit' and
+'reverse' parameters.)
 TODO foolproof against that kind of misuse?
 """
 
@@ -452,10 +454,8 @@ def infer_bulk_complete_from_fs(task_cls, finite_datehours):
 
 
 class RangeDaily(RangeDailyBase):
-    """
-    Efficiently produces a contiguous completed range of a daily recurring task.
-
-    Benefits from bulk_complete information to efficiently cover gaps.
+    """Efficiently produces a contiguous completed range of a daily recurring
+    task that takes a single DateParameter.
 
     Falls back to infer it from output filesystem listing to facilitate the common
     case usage.
@@ -473,8 +473,8 @@ class RangeDaily(RangeDailyBase):
 
 
 class RangeHourly(RangeHourlyBase):
-    """
-    Efficiently produces a contiguous completed range of an hourly recurring task.
+    """Efficiently produces a contiguous completed range of an hourly recurring
+    task that takes a single DateHourParameter.
 
     Benefits from bulk_complete information to efficiently cover gaps.
 
