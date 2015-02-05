@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#
 # Copyright (c) 2015 Gouthaman Balaraman
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -11,7 +13,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under
 # the License.
-
+#
 """
 This file implements unit test cases for luigi/contrib/sqla.py
 Author: Gouthaman Balaraman
