@@ -12,20 +12,32 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import subprocess
+import datetime
+import getpass
+import logging
 import os
 import random
-import urlparse
-import luigi.format
-import luigi.contrib.target
-import datetime
 import re
+import subprocess
+import urlparse
 import warnings
-from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
-import configuration
-import logging
-import getpass
+
+import luigi.contrib.target
+import luigi.format
+from luigi.target import FileAlreadyExists, FileSystem, FileSystemTarget
+
 logger = logging.getLogger('luigi-interface')
+
+
+class hdfs(luigi.Config):
+    client_version = luigi.IntParameter(default=None)
+    effective_user = luigi.Parameter(default=None)
+    snakebite_autoconfig = luigi.BoolParameter()
+    namenode_host = luigi.Parameter(default=None)
+    namenode_port = luigi.IntParameter(default=None)
+    client = luigi.Parameter(default=None)
+    use_snakebite = luigi.BoolParameter(default=None)
+    tmp_dir = luigi.Parameter(config_path=dict(section='core', name='hdfs-tmp-dir'), default=None)
 
 
 class HDFSCliError(Exception):
@@ -68,7 +80,7 @@ def tmppath(path=None, include_unix_username=True):
     temp_dir = '/tmp'  # default tmp dir if none is specified in config
 
     # 1. Figure out to which temporary directory to place
-    configured_hdfs_tmp_dir = configuration.get_config().get('core', 'hdfs-tmp-dir', None)
+    configured_hdfs_tmp_dir = hdfs().tmp_dir
     if configured_hdfs_tmp_dir is not None:
         # config is superior
         base_dir = configured_hdfs_tmp_dir
@@ -137,13 +149,15 @@ def is_dangerous_rm_path(path):
         return path in ('', '~')
 
 class HdfsClient(FileSystem):
-
-    """This client uses Apache 2.x syntax for file system commands, which also matched CDH4"""
+    """
+    This client uses Apache 2.x syntax for file system commands, which also matched CDH4.
+    """
 
     recursive_listdir_cmd = ['-ls', '-R']
 
     def exists(self, path):
-        """ Use ``hadoop fs -stat`` to check file existence
+        """
+        Use ``hadoop fs -stat`` to check file existence.
         """
 
         cmd = load_hadoop_cmd() + ['fs', '-stat', path]
@@ -172,13 +186,19 @@ class HdfsClient(FileSystem):
 
     def rename_dont_move(self, path, dest):
         """
-        Override this method with an implementation that uses rename2, which is
-        a rename operation that never moves. For instance, `rename2 a b` never
-        moves `a` into `b` folder.  Currently, the hadoop cli does not support
-        this operation.  We keep the interface simple by just aliasing this to
+        Override this method with an implementation that uses rename2,
+        which is a rename operation that never moves.
+
+        For instance, `rename2 a b` never moves `a` into `b` folder.
+
+        Currently, the hadoop cli does not support this operation.
+
+        We keep the interface simple by just aliasing this to
         normal rename and let individual implementations redefine the method.
 
-        rename2: https://github.com/apache/hadoop/blob/ae91b13/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocol/ClientProtocol.java#L483-L523
+        rename2 -
+        https://github.com/apache/hadoop/blob/ae91b13/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocol/ClientProtocol.java
+        (lines 483-523)
         """
         warnings.warn("Configured HDFS client doesn't support rename_dont_move, using normal mv operation instead.")
         if self.exists(dest):
@@ -308,9 +328,9 @@ class HdfsClient(FileSystem):
 
 
 class SnakebiteHdfsClient(HdfsClient):
-
     """
     This client uses Spotify's snakebite client whenever possible.
+
     @author: Alan Brenner <alan@magnetic.com> github.com/alanbbr
     """
 
@@ -318,7 +338,6 @@ class SnakebiteHdfsClient(HdfsClient):
         super(SnakebiteHdfsClient, self).__init__()
         try:
             from snakebite.client import Client
-            self.config = configuration.get_config()
             self._bite = None
             self.pid = -1
         except Exception as err:    # IGNORE:broad-except
@@ -339,12 +358,13 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         If Luigi has forked, we have a different PID, and need to reconnect.
         """
+        config = hdfs()
         if self.pid != os.getpid() or not self._bite:
             client_kwargs = dict(filter(lambda k_v: k_v[1] is not None and k_v[1] != '', {
-                'hadoop_version': self.config.getint("hdfs", "client_version", None),
-                'effective_user': self.config.get("hdfs", "effective_user", None)
+                'hadoop_version': config.client_version,
+                'effective_user': config.effective_user,
             }.iteritems()))
-            if self.config.getboolean("hdfs", "snakebite_autoconfig", False):
+            if config.snakebite_autoconfig:
                 """
                 This is fully backwards compatible with the vanilla Client and can be used for a non HA cluster as well.
                 This client tries to read ``${HADOOP_PATH}/conf/hdfs-site.xml`` to get the address of the namenode.
@@ -354,7 +374,7 @@ class SnakebiteHdfsClient(HdfsClient):
                 self._bite = AutoConfigClient(**client_kwargs)
             else:
                 from snakebite.client import Client
-                self._bite = Client(self.config.get("hdfs", "namenode_host"), self.config.getint("hdfs", "namenode_port"), **client_kwargs)
+                self._bite = Client(config.namenode_host, config.namenode_port, **client_kwargs)
         return self._bite
 
     def exists(self, path):
@@ -551,8 +571,10 @@ class SnakebiteHdfsClient(HdfsClient):
 
 
 class HdfsClientCdh3(HdfsClient):
+    """
+    This client uses CDH3 syntax for file system commands.
+    """
 
-    """This client uses CDH3 syntax for file system commands"""
     def mkdir(self, path, parents=False, raise_if_exists=False):
         '''
         No -p switch, so this will fail creating ancestors
@@ -586,9 +608,10 @@ class HdfsClientCdh3(HdfsClient):
 
 
 class HdfsClientApache1(HdfsClientCdh3):
-
-    """This client uses Apache 1.x syntax for file system commands,
-    which are similar to CDH3 except for the file existence check"""
+    """
+    This client uses Apache 1.x syntax for file system commands,
+    which are similar to CDH3 except for the file existence check.
+    """
 
     recursive_listdir_cmd = ['-lsr']
 
@@ -607,23 +630,27 @@ class HdfsClientApache1(HdfsClientCdh3):
 def get_configured_hadoop_version():
     """
     CDH4 (hadoop 2+) has a slightly different syntax for interacting with hdfs
-    via the command line. The default version is CDH4, but one can override
+    via the command line.
+
+    The default version is CDH4, but one can override
     this setting with "cdh3" or "apache1" in the hadoop section of the config
-    in order to use the old syntax
+    in order to use the old syntax.
     """
-    return configuration.get_config().get("hadoop", "version", "cdh4").lower()
+    return luigi.configuration.get_config().get("hadoop", "version", "cdh4").lower()
 
 
 def get_configured_hdfs_client(show_warnings=True):
-    """ This is a helper that fetches the configuration value for 'client' in
+    """
+    This is a helper that fetches the configuration value for 'client' in
     the [hdfs] section. It will return the client that retains backwards
-    compatibility when 'client' isn't configured. """
-    config = configuration.get_config()
-    custom = config.get("hdfs", "client", None)
+    compatibility when 'client' isn't configured.
+    """
+    config = hdfs()
+    custom = config.client
     if custom:
         # Eventually this should be the only valid code path
         return custom
-    if config.getboolean("hdfs", "use_snakebite", False):
+    if config.use_snakebite:
         if show_warnings:
             warnings.warn("Deprecated: Just specify 'client: snakebite' in config")
         return "snakebite"
@@ -633,8 +660,10 @@ def get_configured_hdfs_client(show_warnings=True):
 
 
 def create_hadoopcli_client():
-    """ Given that we want one of the hadoop cli clients (unlike snakebite),
-    this one will return the right one """
+    """
+    Given that we want one of the hadoop cli clients (unlike snakebite),
+    this one will return the right one.
+    """
     version = get_configured_hadoop_version()
     if version == "cdh4":
         return HdfsClient()
@@ -648,7 +677,9 @@ def create_hadoopcli_client():
 
 
 def get_autoconfig_client(show_warnings=True):
-    """Creates the client as specified in the `client.cfg` configuration"""
+    """
+    Creates the client as specified in the `client.cfg` configuration.
+    """
     configured_client = get_configured_hdfs_client(show_warnings=show_warnings)
     if configured_client == "snakebite":
         return SnakebiteHdfsClient()
@@ -675,8 +706,8 @@ class HdfsReadPipe(luigi.format.InputPipeProcessWrapper):
 
 
 class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
-
-    """ File like object for writing to HDFS
+    """
+    File like object for writing to HDFS
 
     The referenced file is first written to a temporary location and then
     renamed to final location on close(). If close() isn't called
@@ -706,8 +737,9 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
 
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
-
-    """ Writes a data<data_extension> file to a directory at <path> """
+    """
+    Writes a data<data_extension> file to a directory at <path>.
+    """
 
     def __init__(self, path, data_extension=""):
         self.path = path
@@ -798,7 +830,8 @@ class HdfsTarget(FileSystemTarget):
 
     @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def rename(self, path, fail_if_exists=False):
-        """ Rename does not change self.path, so be careful with assumptions
+        """
+        Rename does not change self.path, so be careful with assumptions.
 
         Not recommendeed for directories. Use move_dir.  spotify/luigi#522
         """
@@ -810,14 +843,18 @@ class HdfsTarget(FileSystemTarget):
 
     @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def move(self, path, fail_if_exists=False):
-        """ Move does not change self.path, so be careful with assumptions
+        """
+        Move does not change self.path, so be careful with assumptions.
 
         Not recommendeed for directories. Use move_dir.  spotify/luigi#522
         """
         self.rename(path, raise_if_exists=fail_if_exists)
 
     def move_dir(self, path):
-        """ Rename a directory. The implementation uses `rename_dont_move`,
+        """
+        Rename a directory.
+
+        The implementation uses `rename_dont_move`,
         which on some clients is just a normal `mv` operation, which can cause
         nested directories.
 

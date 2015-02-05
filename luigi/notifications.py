@@ -12,10 +12,12 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import sys
 import logging
 import socket
+import sys
+
 from luigi import configuration
+
 logger = logging.getLogger("luigi-interface")
 
 
@@ -113,6 +115,8 @@ def send_email_sendgrid(config, sender, subject, message, recipients, image_png)
 
 
 def send_email(subject, message, sender, recipients, image_png=None):
+    config = configuration.get_config()
+
     subject = _prefix(subject)
     logger.debug("Emailing:\n"
                  "-------------\n"
@@ -124,11 +128,9 @@ def send_email(subject, message, sender, recipients, image_png=None):
                  "-------------", recipients, sender, subject, message)
     if not recipients or recipients == (None,):
         return
-    if sys.stdout.isatty() or DEBUG:
+    if (sys.stdout.isatty() or DEBUG) and (not config.getboolean('email', 'force-send', False)):
         logger.info("Not sending email when running from a tty or in debug mode")
         return
-
-    config = configuration.get_config()
 
     # Clean the recipients lists to allow multiple error-email addresses, comma
     # separated in client.cfg
@@ -149,9 +151,10 @@ def send_email(subject, message, sender, recipients, image_png=None):
 
 
 def send_error_email(subject, message):
-    """ Sends an email to the configured error-email.
+    """
+    Sends an email to the configured error-email.
 
-    If no error-email is configured, then a message is logged
+    If no error-email is configured, then a message is logged.
     """
     config = configuration.get_config()
     receiver = config.get('core', 'error-email', None)
@@ -171,8 +174,9 @@ def send_error_email(subject, message):
 
 
 def _prefix(subject):
-    """If the config has a special prefix for emails then this function adds
-    this prefix
+    """
+    If the config has a special prefix for emails then this function adds
+    this prefix.
     """
     config = configuration.get_config()
     email_prefix = config.get('core', 'email-prefix', None)

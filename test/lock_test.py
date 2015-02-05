@@ -12,14 +12,15 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import hashlib
+import os
+import subprocess
+import tempfile
 import unittest
+
 import luigi
 import luigi.lock
 import luigi.notifications
-import tempfile
-import os
-import hashlib
-import subprocess
 
 luigi.notifications.DEBUG = True
 

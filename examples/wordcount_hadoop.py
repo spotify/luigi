@@ -2,6 +2,7 @@ import luigi
 import luigi.hadoop
 import luigi.hdfs
 
+
 # To make this run, you probably want to edit /etc/luigi/client.cfg and add something like:
 #
 # [hadoop]

@@ -13,8 +13,9 @@
 # the License.
 
 import unittest
-from luigi.contrib.target import CascadingClient
+
 import luigi.target
+from luigi.contrib.target import CascadingClient
 
 
 class CascadingClientTest(unittest.TestCase):

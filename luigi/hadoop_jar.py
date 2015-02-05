@@ -23,10 +23,14 @@ logger = logging.getLogger('luigi-interface')
 
 
 def fix_paths(job):
-    """Coerce input arguments to use temporary files when used for output.
+    """
+    Coerce input arguments to use temporary files when used for output.
+
     Return a list of temporary file pairs (tmpfile, destination path) and
-    a list of arguments. Converts each HdfsTarget to a string for the
-    path."""
+    a list of arguments.
+
+    Converts each HdfsTarget to a string for the path.
+    """
     tmp_files = []
     args = []
     for x in job.args():
@@ -46,8 +50,9 @@ def fix_paths(job):
 
 
 class HadoopJarJobRunner(luigi.hadoop.JobRunner):
-
-    """JobRunner for `hadoop jar` commands. Used to run a HadoopJarJobTask"""
+    """
+    JobRunner for `hadoop jar` commands. Used to run a HadoopJarJobTask.
+    """
 
     def __init__(self):
         pass
@@ -79,16 +84,20 @@ class HadoopJarJobRunner(luigi.hadoop.JobRunner):
 
 
 class HadoopJarJobTask(luigi.hadoop.BaseHadoopJobTask):
-
-    """A job task for `hadoop jar` commands that define a jar and (optional)
-    main method"""
+    """
+    A job task for `hadoop jar` commands that define a jar and (optional) main method.
+    """
 
     def jar(self):
-        """Path to the jar for this Hadoop Job"""
+        """
+        Path to the jar for this Hadoop Job.
+        """
         return None
 
     def main(self):
-        """optional main method for this Hadoop Job"""
+        """
+        optional main method for this Hadoop Job.
+        """
         return None
 
     def job_runner(self):
@@ -96,10 +105,14 @@ class HadoopJarJobTask(luigi.hadoop.BaseHadoopJobTask):
         return HadoopJarJobRunner()
 
     def atomic_output(self):
-        """If True, then rewrite output arguments to be temp locations and
-        atomically move them into place after the job finishes"""
+        """
+        If True, then rewrite output arguments to be temp locations and
+        atomically move them into place after the job finishes.
+        """
         return True
 
     def args(self):
-        """returns an array of args to pass to the job (after hadoop jar <jar> <main>)."""
+        """
+        Returns an array of args to pass to the job (after hadoop jar <jar> <main>).
+        """
         return []

@@ -12,13 +12,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import json
+import logging
+import time
 import urllib
 import urllib2
-import logging
-import json
-import time
-from scheduler import Scheduler, PENDING
+
 import configuration
+from scheduler import PENDING, Scheduler
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 
@@ -31,8 +32,9 @@ class RPCError(Exception):
 
 
 class RemoteScheduler(Scheduler):
-
-    ''' Scheduler proxy object. Talks to a RemoteSchedulerResponder '''
+    """
+    Scheduler proxy object. Talks to a RemoteSchedulerResponder.
+    """
 
     def __init__(self, host='localhost', port=8082, connect_timeout=None):
         self._host = host

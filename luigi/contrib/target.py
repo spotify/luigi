@@ -1,14 +1,16 @@
-import luigi.target
 import logging
 import types
+
+import luigi.target
+
 logger = logging.getLogger('luigi-interface')
 
 
 class CascadingClient(object):
-
     """
-    A FilesystemClient that will cascade failing function calls through a list
-    of clients. Which clients are used are specified at time of construction.
+    A FilesystemClient that will cascade failing function calls through a list of clients.
+
+    Which clients are used are specified at time of construction.
     """
 
     # This constant member is supposed to include all methods, feel free to add

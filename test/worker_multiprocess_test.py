@@ -12,12 +12,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi.worker
-from luigi.worker import Worker
-from luigi import Task, RemoteScheduler, Parameter
-import unittest
 import logging
+import unittest
+
 import luigi.notifications
+import luigi.worker
+from luigi import Parameter, RemoteScheduler, Task
+from luigi.worker import Worker
 from mock import Mock
 
 luigi.notifications.DEBUG = True

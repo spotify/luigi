@@ -12,12 +12,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import os
-from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
-
+import datetime
 import ftplib
+import os
+import time
 import unittest
 from cStringIO import StringIO
+
+from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
 
 # dumb files
 FILE1 = """this is file1"""
@@ -163,6 +165,15 @@ class TestRemoteTarget(unittest.TestCase):
 
         # file is successfuly created
         self.assertTrue(os.path.exists(local_filepath))
+
+        # test RemoteTarget with mtime
+        ts = datetime.datetime.now() - datetime.timedelta(minutes=2)
+        delayed_remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD, mtime=ts)
+        self.assertTrue(delayed_remotetarget.exists())
+
+        ts = datetime.datetime.now() + datetime.timedelta(minutes=2)
+        delayed_remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD, mtime=ts)
+        self.assertFalse(delayed_remotetarget.exists())
 
         # clean
         os.remove(local_filepath)

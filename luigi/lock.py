@@ -12,13 +12,16 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import os
 import hashlib
+import os
 
 
 def getpcmd(pid):
-    ''' Returns command of process
-    '''
+    """
+    Returns command of process.
+
+    :param pid:
+    """
     cmd = 'ps -p %s -o command=' % (pid,)
     p = os.popen(cmd, 'r')
     return p.readline().strip()
@@ -35,13 +38,14 @@ def get_info(pid_dir):
 
 
 def acquire_for(pid_dir, num_available=1):
-    ''' Makes sure the process is only run once at the same time with the same name.
+    """
+    Makes sure the process is only run once at the same time with the same name.
 
     Notice that we since we check the process name, different parameters to the same
     command can spawn multiple processes at the same time, i.e. running
     "/usr/bin/my_process" does not prevent anyone from launching
     "/usr/bin/my_process --foo bar".
-    '''
+    """
 
     my_pid, my_cmd, pid_file = get_info(pid_dir)
 

@@ -13,22 +13,25 @@
 # the License.
 
 # Simple REST server that takes commands in a JSON payload
-import json
-import os
 import atexit
+import json
+import logging
 import mimetypes
+import os
 import posixpath
+import signal
+
+import pkg_resources
+import tornado.httpclient
+import tornado.httpserver
 import tornado.ioloop
 import tornado.netutil
 import tornado.web
-import tornado.httpclient
-import tornado.httpserver
+
 import configuration
 import scheduler
-import pkg_resources
-import signal
 import task_history
-import logging
+
 logger = logging.getLogger("luigi.server")
 
 
@@ -59,8 +62,9 @@ def _create_scheduler():
 
 
 class RPCHandler(tornado.web.RequestHandler):
-
-    """ Handle remote scheduling calls using rpc.RemoteSchedulerResponder"""
+    """
+    Handle remote scheduling calls using rpc.RemoteSchedulerResponder.
+    """
 
     def initialize(self, scheduler):
         self._scheduler = scheduler
@@ -170,7 +174,9 @@ def _init_api(sched, responder=None, api_port=None, address=None):
 
 
 def run(api_port=8082, address=None, scheduler=None, responder=None):
-    """ Runs one instance of the API server """
+    """
+    Runs one instance of the API server.
+    """
     sched = scheduler or _create_scheduler()
     # load scheduler state
     sched.load()
@@ -200,7 +206,13 @@ def run(api_port=8082, address=None, scheduler=None, responder=None):
 
 
 def run_api_threaded(api_port=8082, address=None):
-    ''' For integration tests'''
+    """
+    For integration tests.
+
+    :param api_port:
+    :param address:
+    :return:
+    """
     sock_names = _init_api(_create_scheduler(), None, api_port, address)
 
     import threading

@@ -12,14 +12,15 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import time
-import tempfile
 import os
+import tempfile
+import time
+import unittest
+
 import luigi
+import luigi.notifications
 import luigi.server
 import luigi.worker
-import unittest
-import luigi.notifications
 
 luigi.notifications.DEBUG = True
 

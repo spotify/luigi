@@ -12,12 +12,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import os
-import signal
-import random
 import datetime
 import logging
 import logging.handlers
+import os
+import random
+import signal
+
 rootlogger = logging.getLogger()
 server_logger = logging.getLogger("luigi.server")
 
@@ -110,7 +111,8 @@ def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None):
 
 
 def fork_linked_workers(num_processes):
-    """ Forks num_processes child processes.
+    """
+    Forks num_processes child processes.
 
     Returns an id between 0 and num_processes - 1 for each child process.
     Will consume the parent process and kill it and all child processes as soon as one child exits with status 0

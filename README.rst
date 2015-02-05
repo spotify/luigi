@@ -68,7 +68,7 @@ build up data files.
 Background
 ----------
 
-We use Luigi internally at `Spotify <http://www.spotify.com/>`_ to run
+We use Luigi internally at `Spotify <https://www.spotify.com/us/>`_ to run
 thousands of tasks every day, organized in complex dependency graphs.
 Most of these tasks are Hadoop jobs. Luigi provides an infrastructure
 that powers all kinds of stuff including recommendations, toplists, A/B
@@ -80,7 +80,7 @@ can help programmers focus on the most important bits and leave the rest
 Conceptually, Luigi is similar to `GNU
 Make <http://www.gnu.org/software/make/>`_ where you have certain tasks
 and these tasks in turn may have dependencies on other tasks. There are
-also some similarities to `Oozie <http://incubator.apache.org/oozie/>`_
+also some similarities to `Oozie <http://oozie.apache.org/>`_
 and `Azkaban <http://data.linkedin.com/opensource/azkaban>`_. One major
 difference is that Luigi is not just built specifically for Hadoop, and
 it's easy to extend it with other kinds of tasks.
@@ -115,7 +115,7 @@ Who uses Luigi?
 
 Several companies have written blog posts or presentation about Luigi:
 
-* `Spotify <http://www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`_
+* `Spotify : NYC Data Science <http://www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`_
 * `Foursquare <http://www.slideshare.net/OpenAnayticsMeetup/luigi-presentation-17-23199897>`_
 * `Mortar Data <https://help.mortardata.com/technologies/luigi>`_
 * `Stripe <http://www.slideshare.net/PyData/python-as-part-of-a-production-machine-learning-stack-by-michael-manapat-pydata-sv-2014>`_
@@ -136,14 +136,14 @@ External links
 --------------
 
 * `Documentation <http://luigi.readthedocs.org/>`_, including the `Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_ (Read the Docs)
-* `Mailing List <https://groups.google.com/forum/#!forum/luigi-user>`_ (Google Groups)
+* `Mailing List <https://groups.google.com/d/forum/luigi-user/>`_ (Google Groups)
 * `Releases <https://pypi.python.org/pypi/luigi>`_ (PyPi)
 * `Source code <https://github.com/spotify/luigi>`_ (Github)
 
 Authors
 -------
 
-Luigi was built at `Spotify <http://www.spotify.com/>`_, mainly by
+Luigi was built at `Spotify <https://www.spotify.com/us/>`_, mainly by
 `Erik Bernhardsson <https://github.com/erikbern>`_ and `Elias
 Freider <https://github.com/freider>`_, but many other people have
 contributed.

@@ -12,12 +12,14 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi
-from luigi.mock import MockFile
-import unittest
-import decimal
 import datetime
+import decimal
+import unittest
+
+import luigi
 import luigi.notifications
+from luigi.mock import MockFile
+
 luigi.notifications.DEBUG = True
 File = MockFile
 

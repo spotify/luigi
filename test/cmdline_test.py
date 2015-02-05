@@ -14,13 +14,14 @@
 
 import ConfigParser
 import logging
-import luigi
-from luigi.mock import MockFile
-import mock
+import os
+import subprocess
 import unittest
 import warnings
-import subprocess
-import os
+
+import luigi
+import mock
+from luigi.mock import MockFile
 
 
 class SomeTask(luigi.Task):
@@ -119,7 +120,7 @@ class CmdlineTest(unittest.TestCase):
     @mock.patch("warnings.warn")
     @mock.patch("luigi.interface.setup_interface_logging")
     def test_cmdline_logger(self, setup_mock, warn):
-        with mock.patch("luigi.interface.EnvironmentParamsContainer.env_params") as env_params:
+        with mock.patch("luigi.interface.EnvironmentParamsContainer") as env_params:
             env_params.return_value.logging_conf_file = None
             luigi.run(['SomeTask', '--n', '7', '--local-scheduler', '--no-lock'])
             self.assertEqual([mock.call(None)], setup_mock.call_args_list)
@@ -143,6 +144,10 @@ class CmdlineTest(unittest.TestCase):
         env['PYTHONPATH'] = env.get('PYTHONPATH', '') + ':.:test'
         subprocess.check_call(cmd, env=env, stderr=subprocess.STDOUT)
         self.assertTrue(t.exists())
+
+    @mock.patch('argparse.ArgumentParser.print_usage')
+    def test_no_task(self, print_usage):
+        self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', '--no-lock'])
 
 if __name__ == '__main__':
     unittest.main()

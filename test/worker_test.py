@@ -12,21 +12,24 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import mock
-import shutil
-import time
-from luigi.scheduler import CentralPlannerScheduler
-import luigi.worker
-from luigi.worker import Worker
-from luigi import Task, ExternalTask, RemoteScheduler
-from helpers import with_config
-import unittest
+import functools
 import logging
-import threading
 import os
+import shutil
 import signal
-import luigi.notifications
 import tempfile
+import threading
+import time
+import unittest
+
+import luigi.notifications
+import luigi.worker
+import mock
+from helpers import with_config
+from luigi import ExternalTask, RemoteScheduler, Task
+from luigi.scheduler import CentralPlannerScheduler
+from luigi.worker import Worker
+
 luigi.notifications.DEBUG = True
 
 
@@ -611,26 +614,24 @@ class WorkerPingThreadTests(unittest.TestCase):
         self.assertFalse(w._keep_alive_thread.is_alive())
 
 
-EMAIL_CONFIG = {"core": {"error-email": "not-a-real-email-address-for-test-only"}}
+def email_patch(test_func):
+    EMAIL_CONFIG = {"core": {"error-email": "not-a-real-email-address-for-test-only"}, "email": {"force-send": "true"}}
+    emails = []
+
+    def mock_send_email(sender, recipients, msg):
+        emails.append(msg)
+
+    @with_config(EMAIL_CONFIG)
+    @functools.wraps(test_func)
+    @mock.patch('smtplib.SMTP')
+    def run_test(self, smtp):
+        smtp().sendmail.side_effect = mock_send_email
+        test_func(self, emails)
+
+    return run_test
 
 
-class EmailTest(unittest.TestCase):
-
-    def setUp(self):
-        super(EmailTest, self).setUp()
-
-        self.send_email = luigi.notifications.send_email
-        self.last_email = None
-
-        def mock_send_email(subject, message, sender, recipients, image_png=None):
-            self.last_email = (subject, message, sender, recipients, image_png)
-        luigi.notifications.send_email = mock_send_email
-
-    def tearDown(self):
-        luigi.notifications.send_email = self.send_email
-
-
-class WorkerEmailTest(EmailTest):
+class WorkerEmailTest(unittest.TestCase):
 
     def setUp(self):
         super(WorkerEmailTest, self).setUp()
@@ -640,8 +641,8 @@ class WorkerEmailTest(EmailTest):
     def tearDown(self):
         self.worker.stop()
 
-    @with_config(EMAIL_CONFIG)
-    def test_connection_error(self):
+    @email_patch
+    def test_connection_error(self, emails):
         sch = RemoteScheduler(host="this_host_doesnt_exist", port=1337, connect_timeout=1)
         worker = Worker(scheduler=sch)
 
@@ -656,45 +657,45 @@ class WorkerEmailTest(EmailTest):
             pass
 
         a = A()
-        self.assertEqual(self.last_email, None)
+        self.assertEqual(emails, [])
         worker.add(a)
         self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
-        self.assertNotEquals(self.last_email, None)
-        self.assertTrue(self.last_email[0].startswith("Luigi: Framework error while scheduling %s" % (a,)))
+        self.assertNotEquals(emails, [])
+        self.assertTrue(emails[0].find("Luigi: Framework error while scheduling %s" % (a,)) != -1)
         worker.stop()
 
-    @with_config(EMAIL_CONFIG)
-    def test_complete_error(self):
+    @email_patch
+    def test_complete_error(self, emails):
         class A(DummyTask):
 
             def complete(self):
                 raise Exception("b0rk")
 
         a = A()
-        self.assertEqual(self.last_email, None)
+        self.assertEqual(emails, [])
         self.worker.add(a)
-        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
+        self.assertTrue(emails[0].find("Luigi: %s failed scheduling" % (a,)) != -1)
         self.worker.run()
-        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
+        self.assertTrue(emails[0].find("Luigi: %s failed scheduling" % (a,)) != -1)
         self.assertFalse(a.has_run)
 
-    @with_config(EMAIL_CONFIG)
-    def test_complete_return_value(self):
+    @email_patch
+    def test_complete_return_value(self, emails):
         class A(DummyTask):
 
             def complete(self):
                 pass  # no return value should be an error
 
         a = A()
-        self.assertEqual(self.last_email, None)
+        self.assertEqual(emails, [])
         self.worker.add(a)
-        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
+        self.assertTrue(emails[0].find("Luigi: %s failed scheduling" % (a,)) != -1)
         self.worker.run()
-        self.assertTrue(self.last_email[0].startswith("Luigi: %s failed scheduling" % (a,)))
+        self.assertTrue(emails[0].find("Luigi: %s failed scheduling" % (a,)) != -1)
         self.assertFalse(a.has_run)
 
-    @with_config(EMAIL_CONFIG)
-    def test_run_error(self):
+    @email_patch
+    def test_run_error(self, emails):
         class A(luigi.Task):
 
             def complete(self):
@@ -705,19 +706,20 @@ class WorkerEmailTest(EmailTest):
 
         a = A()
         self.worker.add(a)
-        self.assertEqual(self.last_email, None)
+        self.assertEqual(emails, [])
         self.worker.run()
-        self.assertEqual(("Luigi: %s FAILED" % (a,)), self.last_email[0])
+        self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
 
-    def test_no_error(self):
+    @email_patch
+    def test_no_error(self, emails):
         class A(DummyTask):
             pass
         a = A()
-        self.assertEqual(self.last_email, None)
+        self.assertEqual(emails, [])
         self.worker.add(a)
-        self.assertEqual(self.last_email, None)
+        self.assertEqual(emails, [])
         self.worker.run()
-        self.assertEqual(self.last_email, None)
+        self.assertEqual(emails, [])
         self.assertTrue(a.complete())
 
 

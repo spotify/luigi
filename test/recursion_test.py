@@ -12,12 +12,13 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import sys
 import datetime
+import sys
+import unittest
+
 import luigi
 import luigi.interface
 from luigi.mock import MockFile
-import unittest
 
 File = MockFile
 

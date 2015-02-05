@@ -12,8 +12,9 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import luigi
 import unittest
+
+import luigi
 
 
 def create_class(cls_name):
@@ -37,7 +38,7 @@ class SetTaskNameTest(unittest.TestCase):
     to resolve the issue. '''
 
     def test_set_task_name(self):
-        luigi.run(['--local-scheduler', 'MyNewTask'])
+        luigi.run(['--local-scheduler', '--no-lock', 'MyNewTask'])
 
 
 if __name__ == '__main__':

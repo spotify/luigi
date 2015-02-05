@@ -1,9 +1,9 @@
 import doctest
 import unittest
-
-import luigi.task
-import luigi
 from datetime import datetime, timedelta
+
+import luigi
+import luigi.task
 
 
 class DummyTask(luigi.Task):

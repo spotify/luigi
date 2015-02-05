@@ -1,1 +1,3 @@
-"""Package containing optional and-on functionality."""
+"""
+Package containing optional and-on functionality.
+"""

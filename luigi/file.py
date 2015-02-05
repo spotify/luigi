@@ -14,11 +14,12 @@
 
 import os
 import random
-import tempfile
 import shutil
+import tempfile
+
 import luigi.util
-from target import FileSystem, FileSystemTarget
 from luigi.format import FileWrapper
+from target import FileSystem, FileSystemTarget
 
 
 class atomic_file(file):
@@ -50,10 +51,10 @@ class atomic_file(file):
 
 
 class LocalFileSystem(FileSystem):
+    """
+    Wrapper for access to file system operations.
 
-    """ Wrapper for access to file system operations
-
-    Work in progress - add things as needed
+    Work in progress - add things as needed.
     """
 
     def exists(self, path):
@@ -85,7 +86,9 @@ class File(FileSystemTarget):
         self.is_tmp = is_tmp
 
     def makedirs(self):
-        """Create all parent folders if they do not exist."""
+        """
+        Create all parent folders if they do not exist.
+        """
         normpath = os.path.normpath(self.path)
         parentfolder = os.path.dirname(normpath)
         if parentfolder and not os.path.exists(parentfolder):

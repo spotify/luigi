@@ -13,8 +13,9 @@
 # the License.
 
 import unittest
-from luigi import notifications
+
 from helpers import with_config
+from luigi import notifications
 
 
 class TestEmail(unittest.TestCase):

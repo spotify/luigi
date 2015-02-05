@@ -1,8 +1,9 @@
-import luigi
 import json
+from unittest import TestCase
+
+import luigi
 import luigi.notifications
 
-from unittest import TestCase
 try:
     from luigi.contrib import redshift
     from moto import mock_s3
