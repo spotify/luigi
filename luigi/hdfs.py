@@ -64,7 +64,7 @@ def call_check(command):
 
 
 def load_hadoop_cmd():
-    return [luigi.configuration.get_config().get('hadoop', 'command', 'hadoop')]
+    return luigi.configuration.get_config().get('hadoop', 'command', 'hadoop').split()
 
 
 def tmppath(path=None, include_unix_username=True):

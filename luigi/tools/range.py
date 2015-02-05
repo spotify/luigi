@@ -85,7 +85,7 @@ class RangeBase(luigi.WrapperTask):
     # define here generically without dark magic. Refer to the overrides.
     start = luigi.Parameter()
     stop = luigi.Parameter()
-    reverse = luigi.BooleanParameter(
+    reverse = luigi.BoolParameter(
         default=False,
         description="specifies the preferred order for catching up. False - work from the oldest missing outputs onward; True - from the newest backward")
     task_limit = luigi.IntParameter(
