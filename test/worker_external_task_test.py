@@ -77,11 +77,11 @@ class WorkerExternalTaskTest(unittest.TestCase):
 
     def setUp(self):
         self.scheduler = CentralPlannerScheduler(retry_delay=0.01,
-                                       remove_delay=3,
-                                       worker_disconnect_delay=3,
-                                       disable_persist=3,
-                                       disable_window=5,
-                                       disable_failures=2)
+                                                 remove_delay=3,
+                                                 worker_disconnect_delay=3,
+                                                 disable_persist=3,
+                                                 disable_window=5,
+                                                 disable_failures=2)
 
     def _assert_complete(self, tasks):
         for t in tasks:
@@ -113,7 +113,6 @@ class WorkerExternalTaskTest(unittest.TestCase):
         # complete() is called once per failure, twice per success
         assert test_task.dependency.times_called == 2
 
-
     @with_config({'core': {'retry-external-tasks': 'true',
                            'disable-num-failures': '4',
                            'max-reschedules': '4',
@@ -127,7 +126,7 @@ class WorkerExternalTaskTest(unittest.TestCase):
         """
         assert luigi.configuration.get_config().getboolean('core',
                                                            'retry-external-tasks',
-                                                           False) == True
+                                                           False) is True
 
         original_get_work = self.scheduler.get_work
 
