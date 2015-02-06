@@ -126,7 +126,7 @@ class TestSQLA(unittest.TestCase):
         with engine.begin() as conn:
             meta = sqlalchemy.MetaData()
             meta.reflect(bind=engine)
-            self.assertSetEqual(set([u'table_updates', u'item_property']), set(meta.tables.keys()))
+            self.assertEqual(set([u'table_updates', u'item_property']), set(meta.tables.keys()))
             table = meta.tables[SQLATask.table]
             s = sqlalchemy.select([sqlalchemy.func.count(table.c.item)])
             result = conn.execute(s).fetchone()
@@ -136,7 +136,7 @@ class TestSQLA(unittest.TestCase):
             for i in range(len(TASK_LIST)):
                 given = TASK_LIST[i].strip("\n").split("\t")
                 given = (unicode(given[0]), unicode(given[1]))
-                self.assertTupleEqual(given, tuple(result[i]))
+                self.assertEqual(given, tuple(result[i]))
 
     def test_rows(self):
         task, task0 = SQLATask(), BaseTask()
@@ -144,7 +144,7 @@ class TestSQLA(unittest.TestCase):
 
         for i, row in enumerate(task.rows()):
             given = TASK_LIST[i].strip("\n").split("\t")
-            self.assertListEqual(row, given)
+            self.assertEqual(row, given)
 
     def test_run(self):
         """
