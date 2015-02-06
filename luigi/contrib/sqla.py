@@ -125,6 +125,10 @@ The other option to `sqla.CopyToTable` that can be of help with performance aspe
 a transaction at a time. Depending on the size of the inserts, this value can be tuned
 for performance.
 
+See here for a `tutorial on building task pipelines using luigi
+<http://gouthamanbalaraman.com/blog/building-luigi-task-pipeline.html>`_ and
+using `SQLAlchemy in workflow pipelines <http://gouthamanbalaraman.com/blog/sqlalchemy-luigi-workflow-pipeline.html>`_.
+
 Author: Gouthaman Balaraman
 Date: 01/02/2015
 """
@@ -136,6 +140,10 @@ import luigi
 import datetime
 import itertools
 import sqlalchemy
+import multiprocessing
+
+_engine = None
+_pid = multiprocessing.current_process().pid
 
 
 class SQLAlchemyTarget(luigi.Target):
@@ -148,7 +156,6 @@ class SQLAlchemyTarget(luigi.Target):
     to create a task to write to the database.
     """
     marker_table = None
-    _engine = None
 
     def __init__(self, connection_string, target_table, update_id, echo=False):
         """
@@ -168,9 +175,12 @@ class SQLAlchemyTarget(luigi.Target):
 
     @property
     def engine(self):
-        if SQLAlchemyTarget._engine is None:
-            SQLAlchemyTarget._engine = sqlalchemy.create_engine(self.connection_string, echo=self.echo)
-        return SQLAlchemyTarget._engine
+        global _engine, _pid
+        pid = multiprocessing.current_process().pid
+        if (_engine is None) or (_pid != pid):
+            _engine = sqlalchemy.create_engine(self.connection_string, echo=self.echo)
+            _pid = pid
+        return _engine
 
     def touch(self):
         """

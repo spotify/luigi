@@ -188,6 +188,16 @@ class TestSQLA(unittest.TestCase):
             def requires(self):
                 return SQLATask()
 
+            def copy(self, conn, ins_rows, table_bound):
+                ins = table_bound.update().\
+                    where(table_bound.c.property == sqlalchemy.bindparam("_property")).\
+                    values({table_bound.c.item: sqlalchemy.bindparam("_item")})
+                conn.execute(ins, ins_rows)
+
+            def rows(self):
+                for line in TASK_LIST:
+                    yield line.strip("\n").split("\t")
+
         task0, task1, task2 = AnotherSQLATask(), SQLATask(), BaseTask()
         luigi.build([task0, task1, task2], local_scheduler=True, workers=self.NUM_WORKERS)
         self._check_entries(self.engine)
@@ -236,7 +246,10 @@ class TestSQLA(unittest.TestCase):
         self._check_entries(self.engine)
 
     def test_column_row_separator(self):
-
+        """
+        Test alternate column row separator works
+        :return:
+        """
         class ModBaseTask(luigi.Task):
 
             def output(self):
@@ -267,6 +280,10 @@ class TestSQLA(unittest.TestCase):
         self._check_entries(self.engine)
 
     def test_update_rows_test(self):
+        """
+        Overload the copy() method and implement an update action.
+        :return:
+        """
         class ModBaseTask(luigi.Task):
 
             def output(self):
@@ -276,7 +293,6 @@ class TestSQLA(unittest.TestCase):
                 out = self.output().open("w")
                 for task in TASK_LIST:
                     out.write("dummy_" + task)
-                    #out.write(task)
                 out.close()
 
         class ModSQLATask(sqla.CopyToTable):
@@ -303,7 +319,7 @@ class TestSQLA(unittest.TestCase):
             def copy(self, conn, ins_rows, table_bound):
                 ins = table_bound.update().\
                     where(table_bound.c.property == sqlalchemy.bindparam("_property")).\
-                    values({{table_bound.c.item: sqlalchemy.bindparam("_item")}})
+                    values({table_bound.c.item: sqlalchemy.bindparam("_item")})
                 conn.execute(ins, ins_rows)
 
             def rows(self):
@@ -313,6 +329,35 @@ class TestSQLA(unittest.TestCase):
         # Running only task1, and task2 should fail
         task1, task2, task3 = ModBaseTask(), ModSQLATask(), UpdateSQLATask()
         luigi.build([task1, task2, task3], local_scheduler=True, workers=self.NUM_WORKERS)
+        self._check_entries(self.engine)
+
+    def test_multiple_tasks(self):
+        """
+        Test a case where there are multiple tasks
+        :return:
+        """
+        class SmallSQLATask(sqla.CopyToTable):
+            item = luigi.Parameter()
+            property = luigi.Parameter()
+            columns = [
+                (["item", sqlalchemy.String(64)], {}),
+                (["property", sqlalchemy.String(64)], {})
+            ]
+            connection_string = CONNECTION_STRING
+            table = "item_property"
+            chunk_size = 1
+
+            def rows(self):
+                yield (self.item, self.property)
+
+        class ManyBaseTask(luigi.Task):
+            def requires(self):
+                for t in TASK_LIST:
+                    item, property = t.strip().split("\t")
+                    yield SmallSQLATask(item=item, property=property)
+
+        task2 = ManyBaseTask()
+        luigi.build([task2], local_scheduler=True, workers=self.NUM_WORKERS)
         self._check_entries(self.engine)
 
 
