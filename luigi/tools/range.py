@@ -30,7 +30,7 @@ import logging
 import operator
 import re
 import time
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 import luigi
 from luigi.parameter import ParameterException
@@ -178,12 +178,14 @@ class RangeBase(luigi.WrapperTask):
 
         task_cls = Register.get_task_cls(self.of)
         if datetimes:
-            logger.debug('Actually checking if range %s of %s is complete' % (self._format_range(datetimes), self.of))
+            logger.debug('Actually checking if range %s of %s is complete',
+                         self._format_range(datetimes), self.of)
             missing_datetimes = sorted(self.missing_datetimes(task_cls, datetimes))
-            logger.debug('Range %s lacked %d of expected %d %s instances' % (self._format_range(datetimes), len(missing_datetimes), len(datetimes), self.of))
+            logger.debug('Range %s lacked %d of expected %d %s instances',
+                         self._format_range(datetimes), len(missing_datetimes), len(datetimes), self.of)
         else:
             missing_datetimes = []
-            logger.debug('Empty range. No %s instances expected' % (self.of, ))
+            logger.debug('Empty range. No %s instances expected', self.of)
 
         self._emit_metrics(missing_datetimes, finite_start, finite_stop)
 
@@ -192,7 +194,8 @@ class RangeBase(luigi.WrapperTask):
         else:
             required_datetimes = missing_datetimes[:self.task_limit]
         if required_datetimes:
-            logger.debug('Requiring %d missing %s instances in range %s' % (len(required_datetimes), self.of, self._format_range(required_datetimes)))
+            logger.debug('Requiring %d missing %s instances in range %s',
+                         len(required_datetimes), self.of, self._format_range(required_datetimes))
         if self.reverse:
             required_datetimes.reverse()  # TODO priorities, so that within the batch tasks are ordered too
 
@@ -418,10 +421,11 @@ def _list_existing(filesystem, glob, paths):
     time_start = time.time()
     listing = []
     for g in sorted(globs):
-        logger.debug('Listing %s' % g)
+        logger.debug('Listing %s', g)
         if filesystem.exists(g):
             listing.extend(filesystem.listdir(g))
-    logger.debug('%d %s listings took %f s to return %d items' % (len(globs), filesystem.__class__.__name__, time.time() - time_start, len(listing)))
+    logger.debug('%d %s listings took %f s to return %d items',
+                 len(globs), filesystem.__class__.__name__, time.time() - time_start, len(listing))
     return set(listing)
 
 

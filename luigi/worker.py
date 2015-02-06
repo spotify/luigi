@@ -95,9 +95,7 @@ class ExternalTaskProcess(AbstractTaskProcess):
             status = None
             try:
                 status = DONE if self.task.complete() else FAILED
-                logger.debug("[pid %s] Task %s has status %s" % (os.getpid(),
-                                                                 self.task,
-                                                                 status))
+                logger.debug('[pid %s] Task %s has status %s', os.getpid(), self.task, status)
             finally:
                 self.task.trigger_event(
                     Event.PROCESSING_TIME, self.task, time.time() - t0)
@@ -111,15 +109,13 @@ class ExternalTaskProcess(AbstractTaskProcess):
             raise
         except BaseException as ex:
             status = FAILED
-            logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
+            logger.exception('[pid %s] Worker %s failed    %s', os.getpid(), self.worker_id, self.task)
             error_message = notifications.wrap_traceback(self.task.on_failure(ex))
             self.task.trigger_event(Event.FAILURE, self.task, ex)
             subject = "Luigi: %s FAILED" % self.task
             notifications.send_error_email(subject, error_message)
         finally:
-            logger.debug("Putting result into queue: %s %s %s" % (self.task.task_id,
-                                                                  status,
-                                                                  error_message))
+            logger.debug('Putting result into queue: %s %s %s', self.task.task_id, status, error_message)
             self.result_queue.put(
                 (self.task.task_id, status, error_message, [], []))
 
@@ -252,7 +248,7 @@ def check_complete(task, out_queue):
     logger.debug("Checking if %s is complete", task)
     try:
         is_complete = task.complete()
-    except:
+    except BaseException:
         is_complete = TracebackWrapper(traceback.format_exc())
     out_queue.put((task, is_complete))
 
@@ -375,21 +371,21 @@ class Worker(object):
                 ('workers', self.worker_processes)]
         try:
             args += [('host', socket.gethostname())]
-        except:
+        except BaseException:
             pass
         try:
             args += [('username', getpass.getuser())]
-        except:
+        except BaseException:
             pass
         try:
             args += [('pid', os.getpid())]
-        except:
+        except BaseException:
             pass
         try:
             sudo_user = os.getenv("SUDO_USER")
             if sudo_user:
                 args.append(('sudo_user', sudo_user))
-        except:
+        except BaseException:
             pass
         return args
 
@@ -471,7 +467,7 @@ class Worker(object):
             raise
         except AsyncCompletionException as ex:
             formatted_traceback = ex.trace
-        except:
+        except BaseException:
             formatted_traceback = traceback.format_exc()
 
         if formatted_traceback is not None:
@@ -540,7 +536,7 @@ class Worker(object):
         self._worker_info.append(('first_task', self._first_task))
         try:
             self._scheduler.add_worker(self._id, self._worker_info)
-        except:
+        except BaseException:
             logger.exception('Exception adding worker - scheduler might be running an older version')
 
     def _log_remote_tasks(self, running_tasks, n_pending_tasks, n_unique_pending):

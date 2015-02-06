@@ -149,8 +149,7 @@ class ScaldingJobRunner(luigi.hadoop.JobRunner):
         job_jar = job.jar()
         if job_jar:
             if not os.path.exists(job_jar):
-                logger.error("Can't find jar: {0}, full path {1}".format(
-                             job_jar, os.path.abspath(job_jar)))
+                logger.error("Can't find jar: %s, full path %s", job_jar, os.path.abspath(job_jar))
                 raise Exception("job jar does not exist")
             if not job.job_class():
                 logger.error("Undefined job_class()")
@@ -162,8 +161,7 @@ class ScaldingJobRunner(luigi.hadoop.JobRunner):
             logger.error("Both source() and jar() undefined")
             raise Exception("Both source() and jar() undefined")
         if not os.path.exists(job_src):
-            logger.error("Can't find source: {0}, full path {1}".format(
-                         job_src, os.path.abspath(job_src)))
+            logger.error("Can't find source: %s, full path %s", job_src, os.path.abspath(job_src))
             raise Exception("job source does not exist")
 
         job_src = job.source()

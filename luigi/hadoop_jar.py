@@ -44,7 +44,7 @@ def fix_paths(job):
                 x_path_no_slash = x.path[:-1] if x.path[-1] == '/' else x.path
                 y = luigi.hdfs.HdfsTarget(x_path_no_slash + '-luigi-tmp-%09d' % random.randrange(0, 1e10))
                 tmp_files.append((y, x_path_no_slash))
-                logger.info("Using temp path: {0} for path {1}".format(y.path, x.path))
+                logger.info('Using temp path: %s for path %s', y.path, x.path)
                 args.append(y.path)
         else:
             args.append(str(x))
@@ -64,8 +64,7 @@ class HadoopJarJobRunner(luigi.hadoop.JobRunner):
         # TODO(jcrobak): libjars, files, etc. Can refactor out of
         # hadoop.HadoopJobRunner
         if not job.jar() or not os.path.exists(job.jar()):
-            logger.error("Can't find jar: {0}, full path {1}".format(job.jar(),
-                                                                     os.path.abspath(job.jar())))
+            logger.error("Can't find jar: %s, full path %s", job.jar(), os.path.abspath(job.jar()))
             raise Exception("job jar does not exist")
         arglist = luigi.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
         if job.main():

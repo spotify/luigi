@@ -392,7 +392,7 @@ class HivePartitionTarget(luigi.Target):
         try:
             logger.debug("Checking Hive table '{d}.{t}' for partition {p}".format(d=self.database, t=self.table, p=str(self.partition)))
             return self.client.table_exists(self.table, self.database, self.partition)
-        except HiveCommandError as e:
+        except HiveCommandError:
             if self.fail_missing_table:
                 raise
             else:

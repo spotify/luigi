@@ -179,7 +179,7 @@ class FileSystemTarget(Target):
         path = self.path
         if '*' in path or '?' in path or '[' in path or '{' in path:
             logger.warning("Using wildcards in path %s might lead to processing of an incomplete dataset; "
-                           "override exists() to suppress the warning." % path)
+                           "override exists() to suppress the warning.", path)
         return self.fs.exists(path)
 
     def remove(self):

@@ -214,16 +214,15 @@ class S3Client(FileSystem):
                 bytes = min(part_size, source_size - offset)
                 with open(local_path, 'rb') as fp:
                     part_num = i + 1
-                    logger.info('Uploading part %s/%s to %s' %
-                                (part_num, num_parts, destination_s3_path))
+                    logger.info('Uploading part %s/%s to %s', part_num, num_parts, destination_s3_path)
                     fp.seek(offset)
                     mp.upload_part_from_file(fp, part_num=part_num, size=bytes)
 
             # finish the upload, making the file available in S3
             mp.complete_upload()
-        except:
+        except BaseException:
             if mp:
-                logger.info('Canceling multipart s3 upload for %s' % destination_s3_path)
+                logger.info('Canceling multipart s3 upload for %s', destination_s3_path)
                 # cancel the upload so we don't get charged for
                 # storage consumed by uploaded parts
                 mp.cancel_upload()
