@@ -121,14 +121,6 @@ def send_email(subject, message, sender, recipients, image_png=None):
     config = configuration.get_config()
 
     subject = _prefix(subject)
-    logger.debug("Emailing:\n"
-                 "-------------\n"
-                 "To: %s\n"
-                 "From: %s\n"
-                 "Subject: %s\n"
-                 "Message:\n"
-                 "%s\n"
-                 "-------------", recipients, sender, subject, message)
     if not recipients or recipients == (None,):
         return
     if (sys.stdout.isatty() or DEBUG) and (not config.getboolean('email', 'force-send', False)):
