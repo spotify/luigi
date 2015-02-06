@@ -355,7 +355,8 @@ class CopyToTable(luigi.Task):
         self._logger.info("Finished inserting rows into SQLAlchemy target")
 
     def copy(self, conn, ins_rows, table_bound):
-        """ This method does the actual insertion of the rows of data given by ins_rows into the
+        """
+        This method does the actual insertion of the rows of data given by ins_rows into the
         database. A task that needs row updates instead of insertions should overload this method.
         :param conn: The sqlalchemy connection object
         :param ins_rows: The dictionary of rows with the keys in the format _<column_name>. For example
@@ -364,6 +365,6 @@ class CopyToTable(luigi.Task):
         :param table_bound: The object referring to the table
         :return:
         """
-        bound_cols = {c: sqlalchemy.bindparam("_" + c.key) for c in table_bound.columns}
+        bound_cols = dict((c, sqlalchemy.bindparam("_" + c.key)) for c in table_bound.columns)
         ins = table_bound.insert().values(bound_cols)
         conn.execute(ins, ins_rows)
