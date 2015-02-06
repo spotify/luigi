@@ -1,3 +1,20 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import random
 from collections import defaultdict
 from heapq import nlargest
@@ -9,26 +26,35 @@ import luigi.postgres
 
 
 class ExternalStreams(luigi.ExternalTask):
-
-    ''' Example of a possible external data dump
+    """
+    Example of a possible external data dump
 
     To depend on external targets (typically at the top of your dependency graph), you can define
     an ExternalTask like this.
-    '''
+    """
     date = luigi.DateParameter()
 
     def output(self):
-        return luigi.hdfs.HdfsTarget(self.date.strftime(
-            'data/streams_%Y-%m-%d.tsv'))
+        """
+        Returns the target output for this task.
+        In this case, it expects a file to be present in HDFS.
+
+        :return: the target output for this task.
+        :rtype: object (:py:class:`luigi.target.Target`)
+        """
+        return luigi.hdfs.HdfsTarget(self.date.strftime('data/streams_%Y-%m-%d.tsv'))
 
 
 class Streams(luigi.Task):
-
-    ''' Faked version right now, just generates bogus data.
-    '''
+    """
+    Faked version right now, just generates bogus data.
+    """
     date = luigi.DateParameter()
 
     def run(self):
+        """
+        Generates bogus data and writes it into the :py:meth:`~.Streams.output` target.
+        """
         with self.output().open('w') as output:
             for _ in xrange(1000):
                 output.write('{} {} {}\n'.format(
@@ -37,24 +63,61 @@ class Streams(luigi.Task):
                     random.randint(0, 999)))
 
     def output(self):
-        return luigi.LocalTarget(self.date.strftime(
-            'data/streams_%Y_%m_%d_faked.tsv'))
+        """
+        Returns the target output for this task.
+        In this case, a successful execution of this task will create a file in the local file system.
+
+        :return: the target output for this task.
+        :rtype: object (:py:class:`luigi.target.Target`)
+        """
+        return luigi.LocalTarget(self.date.strftime('data/streams_%Y_%m_%d_faked.tsv'))
 
 
 class StreamsHdfs(Streams):
+    """
+    This task performs the same work as :py:class:`~.Streams` but its output is written to HDFS.
+
+    This class uses :py:meth:`~.Streams.run` and
+    overrides :py:meth:`~.Streams.output` so redefine HDFS as its target.
+    """
 
     def output(self):
+        """
+        Returns the target output for this task.
+        In this case, a successful execution of this task will create a file in HDFS.
+
+        :return: the target output for this task.
+        :rtype: object (:py:class:`luigi.target.Target`)
+        """
         return luigi.hdfs.HdfsTarget(self.date.strftime('data/streams_%Y_%m_%d_faked.tsv'))
 
 
 class AggregateArtists(luigi.Task):
+    """
+    This task runs over the target data returned by :py:meth:`~/.Streams.output` and
+    writes the result into its :py:meth:`~.AggregateArtists.output` target (local file).
+    """
+
     date_interval = luigi.DateIntervalParameter()
 
     def output(self):
-        return luigi.LocalTarget("data/artist_streams_{}.tsv".format(
-            self.date_interval))
+        """
+        Returns the target output for this task.
+        In this case, a successful execution of this task will create a file on the local filesystem.
+
+        :return: the target output for this task.
+        :rtype: object (:py:class:`luigi.target.Target`)
+        """
+        return luigi.LocalTarget("data/artist_streams_{}.tsv".format(self.date_interval))
 
     def requires(self):
+        """
+        This task's dependencies:
+
+        * :py:class:`~.Streams`
+
+        :return: list of object (:py:class:`luigi.task.Task`)
+        """
         return [Streams(date) for date in self.date_interval]
 
     def run(self):
@@ -72,36 +135,92 @@ class AggregateArtists(luigi.Task):
 
 
 class AggregateArtistsHadoop(luigi.hadoop.JobTask):
+    """
+    This task runs a :py:class:`luigi.hadoop.JobTask` task
+    over each target data returned by :py:meth:`~/.StreamsHdfs.output` and
+    writes the result into its :py:meth:`~.AggregateArtistsHadoop.output` target (a file in HDFS).
+
+    This class uses :py:meth:`luigi.contrib.spark.SparkJob.run`.
+    """
+
     date_interval = luigi.DateIntervalParameter()
 
     def output(self):
+        """
+        Returns the target output for this task.
+        In this case, a successful execution of this task will create a file in HDFS.
+
+        :return: the target output for this task.
+        :rtype: object (:py:class:`luigi.target.Target`)
+        """
         return luigi.hdfs.HdfsTarget(
             "data/artist_streams_%s.tsv" % self.date_interval,
             format=luigi.hdfs.PlainDir
         )
 
     def requires(self):
+        """
+        This task's dependencies:
+
+        * :py:class:`~.StreamsHdfs`
+
+        :return: list of object (:py:class:`luigi.task.Task`)
+        """
         return [StreamsHdfs(date) for date in self.date_interval]
 
     def mapper(self, line):
+        """
+        The implementation of the map phase of the Hadoop job.
+
+        :param line: the input.
+        :return: tuple ((key, value) or, in this case, (artist, 1 stream count))
+        """
         _, artist, _ = line.strip().split()
         yield artist, 1
 
     def reducer(self, key, values):
+        """
+        The implementation of the reducer phase of the Hadoop job.
+
+        :param key: the artist.
+        :param values: the stream count.
+        :return: tuple (artist, count of streams)
+        """
         yield key, sum(values)
 
 
 class Top10Artists(luigi.Task):
+    """
+    This task runs over the target data returned by :py:meth:`~/.AggregateArtists.output` or
+    :py:meth:`~/.AggregateArtistsHadoop.output` in case :py:attr:`~/.Top10Artists.use_hadoop` is set and
+    writes the result into its :py:meth:`~.Top10Artists.output` target (a file in local filesystem).
+    """
+
     date_interval = luigi.DateIntervalParameter()
     use_hadoop = luigi.BoolParameter()
 
     def requires(self):
+        """
+        This task's dependencies:
+
+        * :py:class:`~.AggregateArtists` or
+        * :py:class:`~.AggregateArtistsHadoop` if :py:attr:`~/.Top10Artists.use_hadoop` is set.
+
+        :return: object (:py:class:`luigi.task.Task`)
+        """
         if self.use_hadoop:
             return AggregateArtistsHadoop(self.date_interval)
         else:
             return AggregateArtists(self.date_interval)
 
     def output(self):
+        """
+        Returns the target output for this task.
+        In this case, a successful execution of this task will create a file on the local filesystem.
+
+        :return: the target output for this task.
+        :rtype: object (:py:class:`luigi.target.Target`)
+        """
         return luigi.LocalTarget("data/top_artists_%s.tsv" % self.date_interval)
 
     def run(self):
@@ -124,6 +243,15 @@ class Top10Artists(luigi.Task):
 
 
 class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
+    """
+    This task runs a :py:class:`luigi.postgres.CopyToTable` task
+    over the target data returned by :py:meth:`~/.Top10Artists.output` and
+    writes the result into its :py:meth:`~.ArtistToplistToDatabase.output` target which,
+    by default, is :py:class:`luigi.postgres.PostgresTarget` (a table in PostgreSQL).
+
+    This class uses :py:meth:`luigi.postgres.CopyToTable.run` and :py:meth:`luigi.postgres.CopyToTable.output`.
+    """
+
     date_interval = luigi.DateIntervalParameter()
     use_hadoop = luigi.BoolParameter()
 
@@ -139,8 +267,14 @@ class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
                ("streams", "INT")]
 
     def requires(self):
-        return Top10Artists(self.date_interval, self.use_hadoop)
+        """
+        This task's dependencies:
 
+        * :py:class:`~.Top10Artists`
+
+        :return: list of object (:py:class:`luigi.task.Task`)
+        """
+        return Top10Artists(self.date_interval, self.use_hadoop)
 
 if __name__ == "__main__":
     luigi.run()
