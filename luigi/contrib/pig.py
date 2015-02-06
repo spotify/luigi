@@ -120,7 +120,7 @@ class PigJobTask(luigi.Task):
         reads = [proc.stderr.fileno(), proc.stdout.fileno()]
         # tracking the possible problems with this job
         err_lines = []
-        with PigRunContext() as pig_context:
+        with PigRunContext():
             while proc.poll() is None:
                 ret = select.select(reads, [], [])
                 for fd in ret[0]:

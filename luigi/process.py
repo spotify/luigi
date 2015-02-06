@@ -32,7 +32,7 @@ def check_pid(pidfile):
             pid = int(open(pidfile).read().strip())
             os.kill(pid, 0)
             return pid
-        except:
+        except BaseException:
             return 0
     return 0
 

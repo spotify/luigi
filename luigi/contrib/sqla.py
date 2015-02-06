@@ -317,7 +317,7 @@ class CopyToTable(luigi.Task):
                 yield line.strip("\n").split(self.column_separator)
 
     def run(self):
-        logger.info("Running task copy to table for update id %s for table %s" % (self.update_id(), self.table))
+        logger.info('Running task copy to table for update id %s for table %s', self.update_id(), self.table)
         output = self.output()
         self.create_table(output.engine)
         with output.engine.begin() as conn:
@@ -329,6 +329,6 @@ class CopyToTable(luigi.Task):
                 conn.execute(ins, ins_rows)
                 ins_rows = [dict(zip((c.key for c in self.table_bound.c), row))
                             for row in itertools.islice(rows, self.chunk_size)]
-                logger.info("Finished inserting %d rows into SQLAlchemy target" % len(ins_rows))
+                logger.info('Finished inserting %d rows into SQLAlchemy target', len(ins_rows))
         output.touch()
         logger.info("Finished inserting rows into SQLAlchemy target")

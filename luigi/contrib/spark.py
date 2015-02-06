@@ -150,7 +150,7 @@ class SparkJob(luigi.Task):
         for a in self.job_args():
             if a == self.output().path:
                 # pass temporary output path to job args
-                logger.info("Using temp path: {0} for path {1}".format(tmp_output.path, original_output_path))
+                logger.info('Using temp path: %s for path %s', tmp_output.path, original_output_path)
                 args += ['--args', tmp_output.path]
             else:
                 args += ['--args', str(a)]
@@ -175,7 +175,7 @@ class SparkJob(luigi.Task):
         spark_class = configuration.get_config().get('spark', 'spark-class')
 
         temp_stderr = tempfile.TemporaryFile()
-        logger.info('Running: %s %s' % (spark_class, ' '.join(args)))
+        logger.info('Running: %s %s', spark_class, ' '.join(args))
         proc = subprocess.Popen([spark_class] + args, stdout=subprocess.PIPE,
                                 stderr=temp_stderr, env=env, close_fds=True)
 
@@ -289,7 +289,7 @@ class Spark1xJob(luigi.Task):
         args = map(str, args)
         env = os.environ.copy()
         temp_stderr = tempfile.TemporaryFile()
-        logger.info('Running: {0}'.format(repr(args)))
+        logger.info('Running: %s', repr(args))
         proc = subprocess.Popen(args, stdout=subprocess.PIPE,
                                 stderr=temp_stderr, env=env, close_fds=True)
         return_code, final_state, app_id = self.track_progress(proc)
@@ -383,13 +383,12 @@ class PySpark1xJob(Spark1xJob):
         args = map(str, args)
         env = os.environ.copy()
         temp_stderr = tempfile.TemporaryFile()
-        logger.info('Running: {0}'.format(repr(args)))
+        logger.info('Running: %s', repr(args))
         proc = subprocess.Popen(args, stdout=subprocess.PIPE,
                                 stderr=temp_stderr, env=env, close_fds=True)
         return_code, final_state, app_id = self.track_progress(proc)
         if final_state == 'FAILED':
-            raise SparkJobError('Spark job failed: see yarn logs for {0}'
-                                .format(app_id))
+            raise SparkJobError('Spark job failed: see yarn logs for %s', app_id)
         elif return_code != 0:
             temp_stderr.seek(0)
             errors = "".join(temp_stderr.readlines())

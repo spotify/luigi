@@ -162,7 +162,7 @@ class Parameter(object):
 
         try:
             value = conf.get(section, name)
-        except (NoSectionError, NoOptionError) as e:
+        except (NoSectionError, NoOptionError):
             return _no_value
 
         if self.is_list:

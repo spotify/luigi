@@ -227,7 +227,7 @@ class SimpleTaskState(object):
             try:
                 with open(self._state_path) as fobj:
                     state = pickle.load(fobj)
-            except:
+            except BaseException:
                 logger.exception("Error when loading state. Starting from clean slate.")
                 return
 
@@ -722,7 +722,7 @@ class CentralPlannerScheduler(Scheduler):
                 try:
                     family, _, param_str = task_id.rstrip(')').partition('(')
                     params = dict(param.split('=') for param in param_str.split(', '))
-                except:
+                except BaseException:
                     family, params = '', {}
                 serialized[task_id] = {
                     'deps': [],
@@ -849,8 +849,8 @@ class CentralPlannerScheduler(Scheduler):
                 self._task_history.task_scheduled(task_id)
             elif status == RUNNING:
                 self._task_history.task_started(task_id, host)
-        except:
-            logger.warning("Error saving Task history", exc_info=1)
+        except BaseException:
+            logger.warning("Error saving Task history", exc_info=True)
 
     @property
     def task_history(self):

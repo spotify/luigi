@@ -172,9 +172,7 @@ class ElasticsearchTarget(luigi.Target):
         Test, if this task has been run.
         """
         try:
-            _ = self.es.get(index=self.marker_index,
-                            doc_type=self.marker_doc_type,
-                            id=self.marker_index_document_id())
+            self.es.get(index=self.marker_index, doc_type=self.marker_doc_type, id=self.marker_index_document_id())
             return True
         except elasticsearch.NotFoundError:
             logger.debug('Marker document not found.')

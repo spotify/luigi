@@ -108,7 +108,7 @@ class InputPipeProcessWrapper(object):
             self._finish()
         except KeyboardInterrupt:
             raise
-        except:
+        except BaseException:
             pass
 
     def __exit__(self, type, value, traceback):

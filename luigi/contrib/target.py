@@ -64,12 +64,10 @@ class CascadingClient(object):
             except luigi.target.FileSystemException:
                 # For exceptions that are semantical, we must throw along
                 raise
-            except:
+            except BaseException:
                 is_last_iteration = (i + 1) >= len(self.clients)
                 if is_last_iteration:
                     raise
                 else:
-                    logger.exception(
-                        'The {0} failed to {1}, using fallback class {2}'
-                        .format(client.__class__.__name__, method_name,
-                                self.clients[i + 1].__class__.__name__))
+                    logger.exception('The %s failed to %s, using fallback class %s',
+                                     client.__class__.__name__, method_name, self.clients[i + 1].__class__.__name__)

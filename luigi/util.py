@@ -21,7 +21,7 @@ import logging
 
 import task
 from luigi import parameter
-from luigi.deprecate_kwarg import deprecate_kwarg
+from luigi.deprecate_kwarg import deprecate_kwarg  # removing this breaks code
 
 logger = logging.getLogger('luigi-interface')
 

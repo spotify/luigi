@@ -271,7 +271,7 @@ class Task(object):
                     callback(*args, **kwargs)
                 except KeyboardInterrupt:
                     return
-                except:
+                except BaseException:
                     logger.exception("Error in event callback for %r", event)
 
     @property
