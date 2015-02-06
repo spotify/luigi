@@ -238,11 +238,15 @@ class HiveThriftContext(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.transport.close()
 
-if get_hive_syntax() == "apache":
-    default_client = ApacheHiveCommandClient()
-else:
-    default_client = HiveCommandClient()
-client = default_client
+
+def get_default_client():
+    if get_hive_syntax() == "apache":
+        return ApacheHiveCommandClient()
+    else:
+        return HiveCommandClient()
+
+
+client = get_default_client()
 
 
 class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
@@ -351,10 +355,12 @@ class HiveTableTarget(luigi.Target):
     exists returns true if the table exists.
     """
 
-    def __init__(self, table, database='default', client=default_client):
+    def __init__(self, table, database='default', client=None):
         self.database = database
         self.table = table
         self.hive_cmd = load_hive_cmd()
+        if client is None:
+            client = get_default_client()
         self.client = client
 
     def exists(self):
@@ -380,10 +386,12 @@ class HivePartitionTarget(luigi.Target):
     exists returns true if the table's partition exists.
     """
 
-    def __init__(self, table, partition, database='default', fail_missing_table=True, client=default_client):
+    def __init__(self, table, partition, database='default', fail_missing_table=True, client=None):
         self.database = database
         self.table = table
         self.partition = partition
+        if client is None:
+            client = get_default_client()
         self.client = client
 
         self.fail_missing_table = fail_missing_table

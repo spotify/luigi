@@ -237,20 +237,16 @@ class HiveCommandClientTest(unittest.TestCase):
     @mock.patch("luigi.configuration")
     def test_client_def(self, hive_syntax):
         hive_syntax.get_config.return_value.get.return_value = "cdh4"
-
-        del sys.modules['hive']
-        import hive
-        self.assertEqual(luigi.contrib.hive.HiveCommandClient, type(luigi.contrib.hive.client))
+        client = luigi.contrib.hive.get_default_client()
+        self.assertEqual(luigi.contrib.hive.HiveCommandClient, type(client))
 
         hive_syntax.get_config.return_value.get.return_value = "cdh3"
-        del sys.modules['hive']
-        import hive
-        self.assertEqual(luigi.contrib.hive.HiveCommandClient, type(luigi.contrib.hive.client))
+        client = luigi.contrib.hive.get_default_client()
+        self.assertEqual(luigi.contrib.hive.HiveCommandClient, type(client))
 
         hive_syntax.get_config.return_value.get.return_value = "apache"
-        del sys.modules['hive']
-        import hive
-        self.assertEqual(luigi.contrib.hive.ApacheHiveCommandClient, type(luigi.contrib.hive.client))
+        client = luigi.contrib.hive.get_default_client()
+        self.assertEqual(luigi.contrib.hive.ApacheHiveCommandClient, type(client))
 
     @mock.patch('subprocess.Popen')
     def test_run_hive_command(self, popen):
@@ -277,16 +273,25 @@ class HiveCommandClientTest(unittest.TestCase):
 
 class TestHiveMisc(unittest.TestCase):
 
-    def test_error_cmd(self):
-        self.assertRaises(luigi.contrib.hive.HiveCommandError, luigi.contrib.hive.run_hive_cmd, "this is a bogus command and should cause an error;")
-
-    def test_ok_cmd(self):
-        "Test that SHOW TABLES doesn't throw an error"
-        luigi.contrib.hive.run_hive_cmd("SHOW TABLES;")
-
     def test_import_old(self):
         import luigi.hive
-        self.assertEquals(luigi.hive, luigi.contrib.hive)
+        self.assertEquals(luigi.hive.HiveQueryTask, luigi.contrib.hive.HiveQueryTask)
+
+
+class MyHiveTask(luigi.contrib.hive.HiveQueryTask):
+    param = luigi.Parameter()
+
+    def query(self):
+        return 'banana banana %s' % self.param
+
+
+class TestHiveTask(unittest.TestCase):
+
+    @mock.patch('luigi.hadoop.run_and_track_hadoop_job')
+    def test_run(self, run_and_track_hadoop_job):
+        success = luigi.run(['MyHiveTask', '--param', 'foo', '--local-scheduler', '--no-lock'])
+        self.assertTrue(success)
+        self.assertEquals('hive', run_and_track_hadoop_job.call_args[0][0][0])
 
 
 if __name__ == '__main__':
