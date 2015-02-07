@@ -19,6 +19,7 @@ import unittest
 import urllib2
 
 import luigi.server
+from helpers import with_config
 
 
 class ServerTestBase(unittest.TestCase):

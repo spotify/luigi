@@ -357,7 +357,7 @@ class TestRemoveGlobalParameters(unittest.TestCase):
         self.assertEqual(MyConfigWithoutSection().mc_r, 55)
         self.assertEqual(MyConfigWithoutSection().mc_s, 123)
 
-    @with_config({"MyConfig": {"mc_p": "666", "mc_q": "777"}})
+    @with_config({"MyConfig": {"mc-p": "666", "mc-q": "777"}})
     def test_use_config_class_with_configuration(self):
         luigi.run(['--local-scheduler', '--no-lock', '--mc-r', '555', 'NoopTask'])
         self.assertEqual(MyConfig().mc_p, 666)
@@ -365,7 +365,7 @@ class TestRemoveGlobalParameters(unittest.TestCase):
         self.assertEqual(MyConfigWithoutSection().mc_r, 555)
         self.assertEqual(MyConfigWithoutSection().mc_s, 99)
 
-    @with_config({"MyConfigWithoutSection": {"mc_r": "999", "mc_s": "888"}})
+    @with_config({"MyConfigWithoutSection": {"mc-r": "999", "mc-s": "888"}})
     def test_use_config_class_with_configuration_2(self):
         luigi.run(['--local-scheduler', '--no-lock', 'NoopTask', '--MyConfig-mc-p', '222', '--mc-r', '555'])
         self.assertEqual(MyConfig().mc_p, 222)

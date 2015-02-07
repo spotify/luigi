@@ -154,7 +154,7 @@ class Parameter(object):
         if self.__config:
             section, name = self.__config['section'], self.__config['name']
         elif task_name is not None and param_name is not None:
-            section, name = task_name, param_name
+            section, name = task_name.replace('_', '-'), param_name.replace('_', '-')
         else:
             return _no_value
 

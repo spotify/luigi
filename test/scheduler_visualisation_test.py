@@ -22,7 +22,7 @@ import unittest
 
 import luigi
 import luigi.notifications
-import luigi.server
+import luigi.scheduler
 import luigi.worker
 
 luigi.notifications.DEBUG = True
@@ -90,7 +90,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertTrue(a <= b)
 
     def setUp(self):
-        self.scheduler = luigi.server._create_scheduler()
+        self.scheduler = luigi.scheduler.CentralPlannerScheduler()
 
     def tearDown(self):
         pass
