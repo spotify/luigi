@@ -31,37 +31,9 @@ import tornado.ioloop
 import tornado.netutil
 import tornado.web
 
-import configuration
 import scheduler
-import task_history
 
 logger = logging.getLogger("luigi.server")
-
-
-def _create_scheduler():
-    config = configuration.get_config()
-    retry_delay = config.getfloat('scheduler', 'retry-delay', 900.0)
-    remove_delay = config.getfloat('scheduler', 'remove-delay', 600.0)
-    worker_disconnect_delay = config.getfloat('scheduler', 'worker-disconnect-delay', 60.0)
-    state_path = config.get('scheduler', 'state-path', '/var/lib/luigi-server/state.pickle')
-
-    # Jobs are disabled if we see more than disable_failures failures in disable_window seconds.
-    # These disables last for disable_persist seconds.
-    disable_window = config.getint('scheduler', 'disable-window-seconds', 3600)
-    disable_failures = config.getint('scheduler', 'disable-num-failures', None)
-    disable_persist = config.getint('scheduler', 'disable-persist-seconds', 86400)
-    max_shown_tasks = config.getint('scheduler', 'max-shown-tasks', 100000)
-
-    resources = config.getintdict('resources')
-    if config.getboolean('scheduler', 'record_task_history', False):
-        import db_task_history  # Needs sqlalchemy, thus imported here
-        task_history_impl = db_task_history.DbTaskHistory()
-    else:
-        task_history_impl = task_history.NopHistory()
-    return scheduler.CentralPlannerScheduler(
-        retry_delay, remove_delay, worker_disconnect_delay, state_path, task_history_impl,
-        resources, disable_persist, disable_window, disable_failures, max_shown_tasks,
-    )
 
 
 class RPCHandler(tornado.web.RequestHandler):
@@ -180,7 +152,7 @@ def run(api_port=8082, address=None, scheduler=None, responder=None):
     """
     Runs one instance of the API server.
     """
-    sched = scheduler or _create_scheduler()
+    sched = scheduler or scheduler.CentralPlannerScheduler()
     # load scheduler state
     sched.load()
 
@@ -216,7 +188,7 @@ def run_api_threaded(api_port=8082, address=None):
     :param address:
     :return:
     """
-    sock_names = _init_api(_create_scheduler(), None, api_port, address)
+    sock_names = _init_api(scheduler.CentralPlannerScheduler(), None, api_port, address)
 
     import threading
 
