@@ -544,7 +544,7 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
         class A(luigi.Task):
             p = luigi.Parameter(config_path=dict(section="foo", name="bar"))
 
-        self.assertEqual("baz", A().p)
+        self.assertEqual("p_default", A().p)
         self.assertEqual("boo", A(p="boo").p)
 
     @with_config({"A": {"p": "p_default_2"}})

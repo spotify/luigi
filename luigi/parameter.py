@@ -116,7 +116,7 @@ class Parameter(object):
                                 shown to users. Default: ``None``.
         :param dict config_path: a dictionary with entries ``section`` and ``name``
                                  specifying a config file entry from which to read the
-                                 default value for this parameter.
+                                 default value for this parameter. DEPRECATED.
                                  Default: ``None``.
         """
         # The default default is no default
@@ -148,15 +148,8 @@ class Parameter(object):
         self.counter = Parameter.counter  # We need to keep track of this to get the order right (see Task class)
         Parameter.counter += 1
 
-    def _get_value_from_config(self, task_name, param_name):
+    def _get_value_from_config(self, section, name):
         """Loads the default from the config. Returns _no_value if it doesn't exist"""
-
-        if self.__config:
-            section, name = self.__config['section'], self.__config['name']
-        elif task_name is not None and param_name is not None:
-            section, name = task_name, param_name
-        else:
-            return _no_value
 
         conf = configuration.get_config()
 
@@ -171,12 +164,25 @@ class Parameter(object):
             return self.parse(value)
 
     def _get_value(self, task_name=None, param_name=None):
-        values = [self.__global, self._get_value_from_config(task_name, param_name), self.__default]
-        for value in values:
-            if value != _no_value:
-                return value
-        else:
-            return _no_value
+        if self.__global != _no_value:
+            return self.__global
+        if task_name and param_name:
+            v = self._get_value_from_config(task_name, param_name)
+            if v != _no_value:
+                return v
+        if self.__config:
+            v = self._get_value_from_config(self.__config['section'], self.__config['name'])
+            if v != _no_value and task_name and param_name:
+                warnings.warn(
+                    'The use of the configuration %s>%s is deprecated. Please use %s>%s' %
+                    (self.__config['section'], self.__config['name'], task_name, param_name),
+                    DeprecationWarning, stacklevel=2)
+            if v != _no_value:
+                return v
+        if self.__default != _no_value:
+            return self.__default
+
+        return _no_value
 
     @property
     def has_value(self):
