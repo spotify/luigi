@@ -21,6 +21,7 @@ import time
 import unittest
 
 import luigi.scheduler
+from helpers import with_config
 
 luigi.notifications.DEBUG = True
 
@@ -53,6 +54,23 @@ class SchedulerTest(unittest.TestCase):
             state.load()  # bad if this crashes
 
             self.assertEqual(list(state.get_worker_ids()), [])
+
+    @with_config({'scheduler': {'disable-num-failures': '44', 'worker-disconnect-delay': '55'}})
+    def test_scheduler_with_config(self):
+        cps = luigi.scheduler.CentralPlannerScheduler()
+        self.assertEqual(44, cps._config.disable_failures)
+        self.assertEqual(55, cps._config.worker_disconnect_delay)
+
+        # Override
+        cps = luigi.scheduler.CentralPlannerScheduler(disable_failures=66,
+                                                      worker_disconnect_delay=77)
+        self.assertEqual(66, cps._config.disable_failures)
+        self.assertEqual(77, cps._config.worker_disconnect_delay)
+
+    @with_config({'resources': {'a': '100', 'b': '200'}})
+    def test_scheduler_with_resources(self):
+        cps = luigi.scheduler.CentralPlannerScheduler()
+        self.assertEqual({'a': 100, 'b': 200}, cps._resources)
 
 
 if __name__ == '__main__':
