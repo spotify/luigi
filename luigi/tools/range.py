@@ -474,7 +474,7 @@ class RangeDaily(RangeDailyBase):
     """
 
     def missing_datetimes(self, task_cls, finite_datetimes):
-        return set(finite_datetimes) - set(task_cls.bulk_complete(finite_datetimes))
+        return set(finite_datetimes) - set(map(self.parameter_to_datetime, task_cls.bulk_complete(map(self.datetime_to_parameter, finite_datetimes))))
 
 
 class RangeHourly(RangeHourlyBase):
@@ -494,6 +494,6 @@ class RangeHourly(RangeHourlyBase):
 
     def missing_datetimes(self, task_cls, finite_datetimes):
         try:
-            return set(finite_datetimes) - set(task_cls.bulk_complete(finite_datetimes))
+            return set(finite_datetimes) - set(map(self.parameter_to_datetime, task_cls.bulk_complete(map(self.datetime_to_parameter, finite_datetimes))))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(task_cls, finite_datetimes)

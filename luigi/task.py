@@ -581,6 +581,19 @@ class Task(object):
         pass
 
 
+class MixinNaiveBulkComplete(object):
+    """
+    Enables a Task to be efficiently scheduled with e.g. range tools, by providing a bulk_complete implementation which checks completeness in a loop.
+
+    Applicable to tasks whose completeness checking is cheap.
+
+    This doesn't exploit output location specific APIs for speed advantage, nevertheless removes redundant scheduler roundtrips.
+    """
+    @classmethod
+    def bulk_complete(cls, parameter_tuples):
+        return [t for t in parameter_tuples if cls(t).complete()]
+
+
 def externalize(task):
     """
     Returns an externalized version of the Task.
