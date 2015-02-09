@@ -1,5 +1,6 @@
 mock
 moto
 nose
+psycopg2
 boto
 sqlalchemy

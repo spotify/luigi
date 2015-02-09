@@ -22,11 +22,12 @@ import abc
 import logging
 
 import luigi
+import luigi.task
 
 logger = logging.getLogger('luigi-interface')
 
 
-class CopyToTable(luigi.Task):
+class CopyToTable(luigi.task.MixinNaiveBulkComplete, luigi.Task):
     """
     An abstract task for inserting a data set into RDBMS.
 
