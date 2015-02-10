@@ -116,7 +116,7 @@ class S3CopyToTable(rdbms.CopyToTable):
 
         if not self.does_table_exist(connection):
             # try creating table
-            logger.info("Creating table %s with columns %s", (self.table, self.columns))
+            logger.info("Creating table %s with columns %s" % (self.table, self.columns))
             connection.reset()
             self.create_table(connection)
         elif self.do_truncate_table():
