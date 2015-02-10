@@ -55,7 +55,7 @@ def setup_interface_logging(conf_file=None):
     setup_interface_logging.has_run = True
 
 
-class EnvironmentParamsContainer(task.ConfigWithoutSection):
+class core(task.ConfigWithoutSection):
 
     ''' Keeps track of a bunch of environment params.
 
@@ -90,8 +90,7 @@ class EnvironmentParamsContainer(task.ConfigWithoutSection):
         description='Maximum number of parallel tasks to run')
     logging_conf_file = parameter.Parameter(
         default=None,
-        description='Configuration file for logging',
-        config_path=dict(section='core', name='logging_conf_file'))
+        description='Configuration file for logging')
     module = parameter.Parameter(
         default=None,
         description='Used for dynamic loading of modules')  # see DynamicArgParseInterface
@@ -132,7 +131,7 @@ class Interface(object):
 
         if worker_scheduler_factory is None:
             worker_scheduler_factory = WorkerSchedulerFactory()
-        env_params = EnvironmentParamsContainer(**override_defaults)
+        env_params = core(**override_defaults)
         # search for logging configuration path first on the command line, then
         # in the application config file
         logging_conf = env_params.logging_conf_file
