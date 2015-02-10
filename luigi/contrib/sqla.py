@@ -140,13 +140,9 @@ import abc
 import datetime
 import itertools
 import logging
-
 import luigi
 import sqlalchemy
-import multiprocessing
-
-_engine = None
-_pid = multiprocessing.current_process().pid
+import os
 
 
 class SQLAlchemyTarget(luigi.Target):
@@ -159,15 +155,21 @@ class SQLAlchemyTarget(luigi.Target):
     to create a task to write to the database.
     """
     marker_table = None
+    _engine = None  # sqlalchemy engine
+    _pid = None  # the pid of the sqlalchemy engine object
 
     def __init__(self, connection_string, target_table, update_id, echo=False):
         """
         Constructor for the SQLAlchemyTarget.
 
-        :param connection_string: (str) SQLAlchemy connection string
-        :param target_table: (str) The table name for the data
-        :param update_id: (str) An identifier for this data set
-        :param echo: (bool) Flag to setup SQLAlchemy logging
+        :param connection_string: SQLAlchemy connection string
+        :type connection_string: str
+        :param target_table: The table name for the data
+        :type target_table: str
+        :param update_id: An identifier for this data set
+        :type update_id: str
+        :param echo: Flag to setup SQLAlchemy logging
+        :type echo: bool
         :return:
         """
         self.target_table = target_table
@@ -178,12 +180,11 @@ class SQLAlchemyTarget(luigi.Target):
 
     @property
     def engine(self):
-        global _engine, _pid
-        pid = multiprocessing.current_process().pid
-        if (_engine is None) or (_pid != pid):
-            _engine = sqlalchemy.create_engine(self.connection_string, echo=self.echo)
-            _pid = pid
-        return _engine
+        pid = os.getpid()
+        if (SQLAlchemyTarget._engine is None) or (SQLAlchemyTarget._pid != pid):
+            SQLAlchemyTarget._engine = sqlalchemy.create_engine(self.connection_string, echo=self.echo)
+            SQLAlchemyTarget._pid = pid
+        return SQLAlchemyTarget._engine
 
     def touch(self):
         """
