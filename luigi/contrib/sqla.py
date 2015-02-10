@@ -292,6 +292,8 @@ class CopyToTable(luigi.Task):
 
         If overridden, use the provided connection object for setting up the table in order to
         create the table and insert data using the same transaction.
+        :param engine: The sqlalchemy engine instance
+        :type engine: object
         """
         def construct_sqla_columns(columns):
             retval = [sqlalchemy.Column(*c[0], **c[1]) for c in columns]
@@ -362,8 +364,8 @@ class CopyToTable(luigi.Task):
         database. A task that needs row updates instead of insertions should overload this method.
         :param conn: The sqlalchemy connection object
         :param ins_rows: The dictionary of rows with the keys in the format _<column_name>. For example
-                         if you have a table with a column name "property", then the key in the dictionary
-                         would be "_property". This format is consistent with the bindparam usage in sqlalchemy.
+         if you have a table with a column name "property", then the key in the dictionary
+         would be "_property". This format is consistent with the bindparam usage in sqlalchemy.
         :param table_bound: The object referring to the table
         :return:
         """
