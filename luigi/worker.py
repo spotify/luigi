@@ -1,37 +1,41 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-import random
-from scheduler import (CentralPlannerScheduler, PENDING, RUNNING, FAILED,
-                       SUSPENDED, DONE, DISABLED)
+import abc
 import collections
+import getpass
+import logging
+import multiprocessing  # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
+import os
+import Queue
+import random
+import socket
 import threading
 import time
-import os
-import socket
-import configuration
 import traceback
-import logging
-import notifications
-import getpass
-import multiprocessing  # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
-import Queue
 import types
+
+import configuration
 import interface
+import notifications
+from event import Event
+from scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
 from target import Target
 from task import Task, flatten, getpaths
-from event import Event
 
 try:
     import simplejson as json
@@ -49,15 +53,14 @@ class TaskException(Exception):
     pass
 
 
-class TaskProcess(multiprocessing.Process):
-    """
-    Wrap all task execution in this class.
+class AbstractTaskProcess(multiprocessing.Process):
 
-    Mainly for convenience since this is run in a separate process.
-    """
+    """ Abstract super-class for tasks run in a separate process. """
+
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0):
-        super(TaskProcess, self).__init__()
+        super(AbstractTaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
         self.result_queue = result_queue
@@ -65,6 +68,65 @@ class TaskProcess(multiprocessing.Process):
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
+
+    @abc.abstractmethod
+    def run(self):
+        pass
+
+
+class ExternalTaskProcess(AbstractTaskProcess):
+
+    """ Checks whether an external task (i.e. one that hasn't implemented
+    `run()`) has completed. This allows us to re-evaluate the completion of
+    external dependencies after Luigi has been invoked. """
+
+    def run(self):
+        logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task.task_id)
+
+        if self.random_seed:
+            # Need to have different random seeds if running in separate processes
+            random.seed((os.getpid(), time.time()))
+
+        status = FAILED
+        error_message = ''
+        try:
+            self.task.trigger_event(Event.START, self.task)
+            t0 = time.time()
+            status = None
+            try:
+                status = DONE if self.task.complete() else FAILED
+                logger.debug('[pid %s] Task %s has status %s', os.getpid(), self.task, status)
+            finally:
+                self.task.trigger_event(
+                    Event.PROCESSING_TIME, self.task, time.time() - t0)
+
+            error_message = json.dumps(self.task.on_success())
+            logger.info('[pid %s] Worker %s done      %s', os.getpid(),
+                        self.worker_id, self.task.task_id)
+            self.task.trigger_event(Event.SUCCESS, self.task)
+
+        except KeyboardInterrupt:
+            raise
+        except BaseException as ex:
+            status = FAILED
+            logger.exception('[pid %s] Worker %s failed    %s', os.getpid(), self.worker_id, self.task)
+            error_message = notifications.wrap_traceback(self.task.on_failure(ex))
+            self.task.trigger_event(Event.FAILURE, self.task, ex)
+            subject = "Luigi: %s FAILED" % self.task
+            notifications.send_error_email(subject, error_message)
+        finally:
+            logger.debug('Putting result into queue: %s %s %s', self.task.task_id, status, error_message)
+            self.result_queue.put(
+                (self.task.task_id, status, error_message, [], []))
+
+AbstractTaskProcess.register(ExternalTaskProcess)
+
+
+class TaskProcess(AbstractTaskProcess):
+
+    """ Wrap all task execution in this class.
+
+    Mainly for convenience since this is run in a separate process. """
 
     def run(self):
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task.task_id)
@@ -138,6 +200,8 @@ class TaskProcess(multiprocessing.Process):
             self.result_queue.put(
                 (self.task.task_id, status, error_message, missing, new_deps))
 
+AbstractTaskProcess.register(TaskProcess)
+
 
 class SingleProcessPool(object):
     """
@@ -184,7 +248,7 @@ def check_complete(task, out_queue):
     logger.debug("Checking if %s is complete", task)
     try:
         is_complete = task.complete()
-    except:
+    except BaseException:
         is_complete = TracebackWrapper(traceback.format_exc())
     out_queue.put((task, is_complete))
 
@@ -307,21 +371,21 @@ class Worker(object):
                 ('workers', self.worker_processes)]
         try:
             args += [('host', socket.gethostname())]
-        except:
+        except BaseException:
             pass
         try:
             args += [('username', getpass.getuser())]
-        except:
+        except BaseException:
             pass
         try:
             args += [('pid', os.getpid())]
-        except:
+        except BaseException:
             pass
         try:
             sudo_user = os.getenv("SUDO_USER")
             if sudo_user:
                 args.append(('sudo_user', sudo_user))
-        except:
+        except BaseException:
             pass
         return args
 
@@ -403,7 +467,7 @@ class Worker(object):
             raise
         except AsyncCompletionException as ex:
             formatted_traceback = ex.trace
-        except:
+        except BaseException:
             formatted_traceback = traceback.format_exc()
 
         if formatted_traceback is not None:
@@ -426,7 +490,7 @@ class Worker(object):
         elif task.run == NotImplemented:
             deps = None
             status = PENDING
-            runnable = False
+            runnable = configuration.get_config().getboolean('core', 'retry-external-tasks', False)
 
             task.trigger_event(Event.DEPENDENCY_MISSING, task)
             logger.warning('Task %s is not complete and run() is not implemented. Probably a missing external dependency.', task.task_id)
@@ -472,7 +536,7 @@ class Worker(object):
         self._worker_info.append(('first_task', self._first_task))
         try:
             self._scheduler.add_worker(self._id, self._worker_info)
-        except:
+        except BaseException:
             logger.exception('Exception adding worker - scheduler might be running an older version')
 
     def _log_remote_tasks(self, running_tasks, n_pending_tasks, n_unique_pending):
@@ -504,9 +568,16 @@ class Worker(object):
 
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
-        p = TaskProcess(task, self._id, self._task_result_queue,
-                        random_seed=bool(self.worker_processes > 1),
-                        worker_timeout=self.__worker_timeout)
+
+        if task.run == NotImplemented:
+            p = ExternalTaskProcess(task, self._id, self._task_result_queue,
+                                    random_seed=bool(self.worker_processes > 1),
+                                    worker_timeout=self.__worker_timeout)
+        else:
+            p = TaskProcess(task, self._id, self._task_result_queue,
+                            random_seed=bool(self.worker_processes > 1),
+                            worker_timeout=self.__worker_timeout)
+
         self._running_tasks[task_id] = p
 
         if self.worker_processes > 1:

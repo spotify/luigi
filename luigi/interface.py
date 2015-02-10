@@ -1,31 +1,35 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-import worker
-import lock
+import argparse
 import logging
 import logging.config
-import rpc
 import optparse
-import scheduler
-import configuration
-import task
-import parameter
-import argparse
-import sys
 import os
+import sys
 import tempfile
+
+import configuration
+import lock
+import parameter
+import rpc
+import scheduler
+import task
+import worker
 from task import Register
 
 
@@ -51,7 +55,7 @@ def setup_interface_logging(conf_file=None):
     setup_interface_logging.has_run = True
 
 
-class EnvironmentParamsContainer(task.ConfigWithoutSection):
+class core(task.ConfigWithoutSection):
 
     ''' Keeps track of a bunch of environment params.
 
@@ -86,8 +90,7 @@ class EnvironmentParamsContainer(task.ConfigWithoutSection):
         description='Maximum number of parallel tasks to run')
     logging_conf_file = parameter.Parameter(
         default=None,
-        description='Configuration file for logging',
-        config_path=dict(section='core', name='logging_conf_file'))
+        description='Configuration file for logging')
     module = parameter.Parameter(
         default=None,
         description='Used for dynamic loading of modules')  # see DynamicArgParseInterface
@@ -128,7 +131,7 @@ class Interface(object):
 
         if worker_scheduler_factory is None:
             worker_scheduler_factory = WorkerSchedulerFactory()
-        env_params = EnvironmentParamsContainer(**override_defaults)
+        env_params = core(**override_defaults)
         # search for logging configuration path first on the command line, then
         # in the application config file
         logging_conf = env_params.logging_conf_file

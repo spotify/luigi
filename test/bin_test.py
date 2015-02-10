@@ -14,14 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""
-Possible values for a Task's status in the Scheduler
-"""
 
-PENDING = 'PENDING'
-FAILED = 'FAILED'
-DONE = 'DONE'
-RUNNING = 'RUNNING'
-SUSPENDED = 'SUSPENDED'
-UNKNOWN = 'UNKNOWN'
-DISABLED = 'DISABLED'
+import imp
+import mock
+from server_test import ServerTest
+
+
+class LuigidTest(ServerTest):
+
+    def run_server(self):
+        luigid = imp.load_source('luigid', 'bin/luigid')
+        luigid.main(['--port', str(self._api_port)])
+
+
+class LuigidDaemonTest(ServerTest):
+
+    @mock.patch('daemon.DaemonContext')
+    def run_server(self, daemon_context):
+        luigid = imp.load_source('luigid', 'bin/luigid')
+        luigid.main(['--port', str(self._api_port), '--background', '--logdir', '.'])

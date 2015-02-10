@@ -1,5 +1,19 @@
-# coding: utf-8
-
+# -*- coding: utf-8 -*-
+#
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """
 Tests for Elasticsearch index (esindex) target and indexing.
 
@@ -17,15 +31,15 @@ Example running tests against port 9201 with basic auth:
 """
 
 # pylint: disable=C0103,E1101,F0401
-from elasticsearch.connection import Urllib3HttpConnection
-from luigi.contrib.esindex import ElasticsearchTarget, CopyToIndex
 import collections
 import datetime
-import elasticsearch
-import luigi
 import os
 import unittest
 
+import elasticsearch
+import luigi
+from elasticsearch.connection import Urllib3HttpConnection
+from luigi.contrib.esindex import CopyToIndex, ElasticsearchTarget
 
 HOST = os.getenv('ESINDEX_TEST_HOST', 'localhost')
 PORT = os.getenv('ESINDEX_TEST_PORT', 9200)

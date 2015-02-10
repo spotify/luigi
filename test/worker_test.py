@@ -1,33 +1,38 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-import mock
-import shutil
-import time
-from luigi.scheduler import CentralPlannerScheduler
-import luigi.worker
-from luigi.worker import Worker
-from luigi import Task, ExternalTask, RemoteScheduler
-from helpers import with_config
-import unittest
-import logging
-import threading
-import os
-import signal
-import luigi.notifications
-import tempfile
 import functools
+import logging
+import os
+import shutil
+import signal
+import tempfile
+import threading
+import time
+import unittest
+
+import luigi.notifications
+import luigi.worker
+import mock
+from helpers import with_config
+from luigi import ExternalTask, RemoteScheduler, Task
+from luigi.scheduler import CentralPlannerScheduler
+from luigi.worker import Worker
+
 luigi.notifications.DEBUG = True
 
 

@@ -1,30 +1,37 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 import collections
+import cPickle as pickle
 import datetime
 import functools
 import itertools
-import notifications
-import os
 import logging
+import os
 import time
-import cPickle as pickle
-import task_history as history
-logger = logging.getLogger("luigi.server")
 
-from task_status import PENDING, FAILED, DONE, RUNNING, SUSPENDED, UNKNOWN, DISABLED
+import configuration
+import notifications
+import parameter
+import task_history as history
+from task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN
+from task import Config
+
+logger = logging.getLogger("luigi.server")
 
 
 class Scheduler(object):
@@ -58,12 +65,30 @@ STATUS_TO_UPSTREAM_MAP = {
 }
 
 
-# We're passing around this config a lot, so let's put it on an object
-SchedulerConfig = collections.namedtuple('SchedulerConfig', [
-    'retry_delay', 'remove_delay', 'worker_disconnect_delay',
-    'disable_failures', 'disable_window', 'disable_persist', 'disable_time',
-    'max_shown_tasks',
-])
+class scheduler(Config):
+    # TODO(erikbern): the config_path is needed for backwards compatilibity. We should drop the compatibility
+    # at some point (in particular this would force users to replace all dashes with underscores in the config)
+    retry_delay = parameter.FloatParameter(default=900.0,
+                                           config_path=dict(section='scheduler', name='retry-delay'))
+    remove_delay = parameter.FloatParameter(default=600.0,
+                                            config_path=dict(section='scheduler', name='remote-delay'))
+    worker_disconnect_delay = parameter.FloatParameter(default=60.0,
+                                                       config_path=dict(section='scheduler', name='worker-disconnect-delay'))
+    state_path = parameter.Parameter(default='/var/lib/luigi-server/state.pickle',
+                                     config_path=dict(section='scheduler', name='state-path'))
+
+    # Jobs are disabled if we see more than disable_failures failures in disable_window seconds.
+    # These disables last for disable_persist seconds.
+    disable_window = parameter.IntParameter(default=3600,
+                                            config_path=dict(section='scheduler', name='disable-window-seconds'))
+    disable_failures = parameter.IntParameter(default=None,
+                                              config_path=dict(section='scheduler', name='disable-num-failures'))
+    disable_persist = parameter.IntParameter(default=86400,
+                                             config_path=dict(section='scheduler', name='disable-persist-seconds'))
+    max_shown_tasks = parameter.IntParameter(default=100000,
+                                             config_path=dict(section='scheduler', name='max-shown-task'))
+
+    record_task_history = parameter.BoolParameter(default=False)
 
 
 def fix_time(x):
@@ -223,7 +248,7 @@ class SimpleTaskState(object):
             try:
                 with open(self._state_path) as fobj:
                     state = pickle.load(fobj)
-            except:
+            except BaseException:
                 logger.exception("Error when loading state. Starting from clean slate.")
                 return
 
@@ -335,7 +360,7 @@ class SimpleTaskState(object):
 
         # Re-enable task after the disable time expires
         if task.status == DISABLED and task.scheduler_disable_time:
-            if time.time() - fix_time(task.scheduler_disable_time) > config.disable_time:
+            if time.time() - fix_time(task.scheduler_disable_time) > config.disable_persist:
                 self.re_enable(task, config)
 
         # Remove tasks that have no stakeholders
@@ -387,10 +412,7 @@ class CentralPlannerScheduler(Scheduler):
     Can be run locally or on a server (using RemoteScheduler + server.Server).
     """
 
-    def __init__(self, retry_delay=900.0, remove_delay=600.0, worker_disconnect_delay=60.0,
-                 state_path='/var/lib/luigi-server/state.pickle', task_history=None,
-                 resources=None, disable_persist=0, disable_window=0, disable_failures=None,
-                 max_shown_tasks=100000):
+    def __init__(self, config=None, resources=None, task_history=None, **kwargs):
         """
         (all arguments are in seconds)
         Keyword Arguments:
@@ -399,23 +421,19 @@ class CentralPlannerScheduler(Scheduler):
         :param state_path: path to state file (tasks and active workers).
         :param worker_disconnect_delay: if a worker hasn't communicated for this long, remove it from active workers.
         """
-        self._config = SchedulerConfig(
-            retry_delay=retry_delay,
-            remove_delay=remove_delay,
-            worker_disconnect_delay=worker_disconnect_delay,
-            disable_failures=disable_failures,
-            disable_window=disable_window,
-            disable_persist=disable_persist,
-            disable_time=disable_persist,
-            max_shown_tasks=max_shown_tasks,
-        )
-
-        self._state = SimpleTaskState(state_path)
-        self._task_history = task_history or history.NopHistory()
-        self._resources = resources
+        self._config = config or scheduler(**kwargs)
+        self._state = SimpleTaskState(self._config.state_path)
+        if task_history:
+            self._task_history = task_history
+        elif self._config.record_task_history:
+            import db_task_history  # Needs sqlalchemy, thus imported here
+            self._task_history = db_task_history.DbTaskHistory()
+        else:
+            self._task_history = history.NopHistory()
+        self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
         self._make_task = functools.partial(
-            Task, disable_failures=disable_failures,
-            disable_window=disable_window)
+            Task, disable_failures=self._config.disable_failures,
+            disable_window=self._config.disable_window)
 
     def load(self):
         self._state.load()
@@ -718,7 +736,7 @@ class CentralPlannerScheduler(Scheduler):
                 try:
                     family, _, param_str = task_id.rstrip(')').partition('(')
                     params = dict(param.split('=') for param in param_str.split(', '))
-                except:
+                except BaseException:
                     family, params = '', {}
                 serialized[task_id] = {
                     'deps': [],
@@ -845,8 +863,8 @@ class CentralPlannerScheduler(Scheduler):
                 self._task_history.task_scheduled(task_id)
             elif status == RUNNING:
                 self._task_history.task_started(task_id, host)
-        except:
-            logger.warning("Error saving Task history", exc_info=1)
+        except BaseException:
+            logger.warning("Error saving Task history", exc_info=True)
 
     @property
     def task_history(self):

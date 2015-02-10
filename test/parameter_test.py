@@ -1,29 +1,34 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 import datetime
-from datetime import timedelta
-import luigi.date_interval
-import luigi
-import luigi.interface
-from worker_test import email_patch
-import luigi.notifications
-from luigi.parameter import ParameterException
-luigi.notifications.DEBUG = True
 import unittest
+from datetime import timedelta
+
+import luigi
+import luigi.date_interval
+import luigi.interface
+import luigi.notifications
 from helpers import with_config
 from luigi.mock import MockFile, MockFileSystem
+from luigi.parameter import ParameterException
+from worker_test import email_patch
+
+luigi.notifications.DEBUG = True
 
 
 class A(luigi.Task):
@@ -539,7 +544,7 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
         class A(luigi.Task):
             p = luigi.Parameter(config_path=dict(section="foo", name="bar"))
 
-        self.assertEqual("baz", A().p)
+        self.assertEqual("p_default", A().p)
         self.assertEqual("boo", A(p="boo").p)
 
     @with_config({"A": {"p": "p_default_2"}})
@@ -554,12 +559,12 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
 class OverrideEnvStuff(unittest.TestCase):
 
     def setUp(self):
-        env_params_cls = luigi.interface.EnvironmentParamsContainer
+        env_params_cls = luigi.interface.core
         env_params_cls.scheduler_port.reset_global()
 
     @with_config({"core": {"default-scheduler-port": '6543'}})
     def testOverrideSchedulerPort(self):
-        env_params = luigi.interface.EnvironmentParamsContainer()
+        env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6543)
 
 

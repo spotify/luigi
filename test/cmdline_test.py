@@ -1,26 +1,30 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 import ConfigParser
 import logging
-import luigi
-from luigi.mock import MockFile
-import mock
+import os
+import subprocess
 import unittest
 import warnings
-import subprocess
-import os
+
+import luigi
+import mock
+from luigi.mock import MockFile
 
 
 class SomeTask(luigi.Task):
@@ -119,7 +123,7 @@ class CmdlineTest(unittest.TestCase):
     @mock.patch("warnings.warn")
     @mock.patch("luigi.interface.setup_interface_logging")
     def test_cmdline_logger(self, setup_mock, warn):
-        with mock.patch("luigi.interface.EnvironmentParamsContainer") as env_params:
+        with mock.patch("luigi.interface.core") as env_params:
             env_params.return_value.logging_conf_file = None
             luigi.run(['SomeTask', '--n', '7', '--local-scheduler', '--no-lock'])
             self.assertEqual([mock.call(None)], setup_mock.call_args_list)

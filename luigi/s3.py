@@ -1,33 +1,35 @@
-# Copyright (c) 2013 Mortar Data
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import itertools
 import logging
 import os
 import os.path
 import random
 import tempfile
-import warnings
 import urlparse
+import warnings
+from ConfigParser import NoSectionError
 
 import configuration
-from ConfigParser import NoSectionError
-from luigi.parameter import Parameter
-from luigi.target import FileSystem
-from luigi.target import FileSystemTarget
-from luigi.target import FileSystemException
-from luigi.task import ExternalTask
 from luigi.format import FileWrapper
+from luigi.parameter import Parameter
+from luigi.target import FileSystem, FileSystemException, FileSystemTarget
+from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
 
@@ -212,16 +214,15 @@ class S3Client(FileSystem):
                 bytes = min(part_size, source_size - offset)
                 with open(local_path, 'rb') as fp:
                     part_num = i + 1
-                    logger.info('Uploading part %s/%s to %s' %
-                                (part_num, num_parts, destination_s3_path))
+                    logger.info('Uploading part %s/%s to %s', part_num, num_parts, destination_s3_path)
                     fp.seek(offset)
                     mp.upload_part_from_file(fp, part_num=part_num, size=bytes)
 
             # finish the upload, making the file available in S3
             mp.complete_upload()
-        except:
+        except BaseException:
             if mp:
-                logger.info('Canceling multipart s3 upload for %s' % destination_s3_path)
+                logger.info('Canceling multipart s3 upload for %s', destination_s3_path)
                 # cancel the upload so we don't get charged for
                 # storage consumed by uploaded parts
                 mp.cancel_upload()

@@ -1,13 +1,29 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import abc
-import logging
-import luigi
 import json
+import logging
 import time
-from luigi.contrib import rdbms
+
+import luigi
 from luigi import postgres
-
+from luigi.contrib import rdbms
 from luigi.s3 import S3PathTask, S3Target
-
 
 logger = logging.getLogger('luigi-interface')
 
@@ -376,8 +392,7 @@ class KillOpenRedshiftSessions(luigi.Task):
                  "and user_name != 'rdsdb' "
                  "and process != pg_backend_pid()")
         cursor = connection.cursor()
-        logger.info("Killing all open Redshift sessions "
-                    "for database: %s" % self.database)
+        logger.info('Killing all open Redshift sessions for database: %s', self.database)
         try:
             cursor.execute(query, (self.database,))
             cursor.close()
@@ -388,11 +403,9 @@ class KillOpenRedshiftSessions(luigi.Task):
                 # rebuild the connection. Need to pause for 30-60 seconds
                 # before Redshift will allow us back in.
                 connection.close()
-                logger.info("Pausing %s seconds for Redshift to "
-                            "reset connection" %
-                            self.connection_reset_wait_seconds)
+                logger.info('Pausing %s seconds for Redshift to reset connection', self.connection_reset_wait_seconds)
                 time.sleep(self.connection_reset_wait_seconds)
-                logger.info("Reconnecting to Redshift")
+                logger.info('Reconnecting to Redshift')
                 connection = self.output().connect()
             else:
                 raise
@@ -403,5 +416,4 @@ class KillOpenRedshiftSessions(luigi.Task):
         finally:
             connection.close()
 
-        logger.info("Done killing all open Redshift sessions "
-                    "for database: %s" % self.database)
+        logger.info('Done killing all open Redshift sessions for database: %s', self.database)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2015 Spotify AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -12,8 +13,9 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import pyparsing as pp
 import warnings
+
+import pyparsing as pp
 
 
 def id_to_name_and_params(task_id):

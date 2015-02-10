@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2014 Spotify AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -15,23 +16,26 @@
 """
 Produces contiguous completed ranges of recurring tasks.
 
-Caveat - if gap causes (missing dependencies) aren't acted upon, then this will
-eventually schedule the same gaps again and again and make no progress to other
-datehours.
+See RangeDaily and RangeHourly for basic usage.
 
+Caveat - if gaps accumulate, their causes (e.g. missing dependencies) going
+unmonitored/unmitigated, then this will eventually keep retrying the same gaps
+over and over and make no progress to more recent times. (See 'task_limit' and
+'reverse' parameters.)
 TODO foolproof against that kind of misuse?
 """
 
-from datetime import date, datetime, timedelta
 import itertools
 import logging
+import operator
+import re
+import time
+from datetime import datetime, timedelta
+
 import luigi
 from luigi.parameter import ParameterException
 from luigi.target import FileSystemTarget
 from luigi.task import Register, flatten_output
-import re
-import time
-import operator
 
 logger = logging.getLogger('luigi-interface')
 
@@ -84,7 +88,7 @@ class RangeBase(luigi.WrapperTask):
     # define here generically without dark magic. Refer to the overrides.
     start = luigi.Parameter()
     stop = luigi.Parameter()
-    reverse = luigi.BooleanParameter(
+    reverse = luigi.BoolParameter(
         default=False,
         description="specifies the preferred order for catching up. False - work from the oldest missing outputs onward; True - from the newest backward")
     task_limit = luigi.IntParameter(
@@ -174,12 +178,14 @@ class RangeBase(luigi.WrapperTask):
 
         task_cls = Register.get_task_cls(self.of)
         if datetimes:
-            logger.debug('Actually checking if range %s of %s is complete' % (self._format_range(datetimes), self.of))
+            logger.debug('Actually checking if range %s of %s is complete',
+                         self._format_range(datetimes), self.of)
             missing_datetimes = sorted(self.missing_datetimes(task_cls, datetimes))
-            logger.debug('Range %s lacked %d of expected %d %s instances' % (self._format_range(datetimes), len(missing_datetimes), len(datetimes), self.of))
+            logger.debug('Range %s lacked %d of expected %d %s instances',
+                         self._format_range(datetimes), len(missing_datetimes), len(datetimes), self.of)
         else:
             missing_datetimes = []
-            logger.debug('Empty range. No %s instances expected' % (self.of, ))
+            logger.debug('Empty range. No %s instances expected', self.of)
 
         self._emit_metrics(missing_datetimes, finite_start, finite_stop)
 
@@ -188,7 +194,8 @@ class RangeBase(luigi.WrapperTask):
         else:
             required_datetimes = missing_datetimes[:self.task_limit]
         if required_datetimes:
-            logger.debug('Requiring %d missing %s instances in range %s' % (len(required_datetimes), self.of, self._format_range(required_datetimes)))
+            logger.debug('Requiring %d missing %s instances in range %s',
+                         len(required_datetimes), self.of, self._format_range(required_datetimes))
         if self.reverse:
             required_datetimes.reverse()  # TODO priorities, so that within the batch tasks are ordered too
 
@@ -414,10 +421,11 @@ def _list_existing(filesystem, glob, paths):
     time_start = time.time()
     listing = []
     for g in sorted(globs):
-        logger.debug('Listing %s' % g)
+        logger.debug('Listing %s', g)
         if filesystem.exists(g):
             listing.extend(filesystem.listdir(g))
-    logger.debug('%d %s listings took %f s to return %d items' % (len(globs), filesystem.__class__.__name__, time.time() - time_start, len(listing)))
+    logger.debug('%d %s listings took %f s to return %d items',
+                 len(globs), filesystem.__class__.__name__, time.time() - time_start, len(listing))
     return set(listing)
 
 
@@ -451,10 +459,8 @@ def infer_bulk_complete_from_fs(task_cls, finite_datehours):
 
 
 class RangeDaily(RangeDailyBase):
-    """
-    Efficiently produces a contiguous completed range of a daily recurring task.
-
-    Benefits from bulk_complete information to efficiently cover gaps.
+    """Efficiently produces a contiguous completed range of a daily recurring
+    task that takes a single DateParameter.
 
     Falls back to infer it from output filesystem listing to facilitate the common
     case usage.
@@ -468,12 +474,12 @@ class RangeDaily(RangeDailyBase):
     """
 
     def missing_datetimes(self, task_cls, finite_datetimes):
-        return set(finite_datetimes) - set(task_cls.bulk_complete(finite_datetimes))
+        return set(finite_datetimes) - set(map(self.parameter_to_datetime, task_cls.bulk_complete(map(self.datetime_to_parameter, finite_datetimes))))
 
 
 class RangeHourly(RangeHourlyBase):
-    """
-    Efficiently produces a contiguous completed range of an hourly recurring task.
+    """Efficiently produces a contiguous completed range of an hourly recurring
+    task that takes a single DateHourParameter.
 
     Benefits from bulk_complete information to efficiently cover gaps.
 
@@ -488,6 +494,6 @@ class RangeHourly(RangeHourlyBase):
 
     def missing_datetimes(self, task_cls, finite_datetimes):
         try:
-            return set(finite_datetimes) - set(task_cls.bulk_complete(finite_datetimes))
+            return set(finite_datetimes) - set(map(self.parameter_to_datetime, task_cls.bulk_complete(map(self.datetime_to_parameter, finite_datetimes))))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(task_cls, finite_datetimes)

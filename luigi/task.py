@@ -1,23 +1,27 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 import abc
-import logging
-import parameter
-import warnings
-import traceback
 import itertools
+import logging
+import traceback
+import warnings
+
+import parameter
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -267,7 +271,7 @@ class Task(object):
                     callback(*args, **kwargs)
                 except KeyboardInterrupt:
                     return
-                except:
+                except BaseException:
                     logger.exception("Error in event callback for %r", event)
 
     @property
@@ -575,6 +579,19 @@ class Task(object):
 
         Default behavior is to send an None value"""
         pass
+
+
+class MixinNaiveBulkComplete(object):
+    """
+    Enables a Task to be efficiently scheduled with e.g. range tools, by providing a bulk_complete implementation which checks completeness in a loop.
+
+    Applicable to tasks whose completeness checking is cheap.
+
+    This doesn't exploit output location specific APIs for speed advantage, nevertheless removes redundant scheduler roundtrips.
+    """
+    @classmethod
+    def bulk_complete(cls, parameter_tuples):
+        return [t for t in parameter_tuples if cls(t).complete()]
 
 
 def externalize(task):

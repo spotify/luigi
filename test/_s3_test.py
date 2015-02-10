@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#
 # Copyright (c) 2013 Mortar Data
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -11,20 +13,19 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under
 # the License.
+#
 
 import gc
-import tempfile
 import os
 import sys
+import tempfile
 import unittest
 
-from luigi import configuration
-from luigi.s3 import (S3Target, S3Client, InvalidDeleteException,
-                      FileNotFoundException)
 import luigi.format
-
-from boto.s3 import key
 from boto.exception import S3ResponseError
+from boto.s3 import key
+from luigi import configuration
+from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
 
 # moto does not yet work with
 # python 2.6. Until it does,

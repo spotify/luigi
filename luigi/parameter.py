@@ -1,22 +1,26 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-import configuration
 import datetime
 import warnings
+from ConfigParser import NoOptionError, NoSectionError
+
+import configuration
 from deprecate_kwarg import deprecate_kwarg
-from ConfigParser import NoSectionError, NoOptionError
 
 _no_value = object()
 
@@ -112,7 +116,7 @@ class Parameter(object):
                                 shown to users. Default: ``None``.
         :param dict config_path: a dictionary with entries ``section`` and ``name``
                                  specifying a config file entry from which to read the
-                                 default value for this parameter.
+                                 default value for this parameter. DEPRECATED.
                                  Default: ``None``.
         """
         # The default default is no default
@@ -144,21 +148,14 @@ class Parameter(object):
         self.counter = Parameter.counter  # We need to keep track of this to get the order right (see Task class)
         Parameter.counter += 1
 
-    def _get_value_from_config(self, task_name, param_name):
+    def _get_value_from_config(self, section, name):
         """Loads the default from the config. Returns _no_value if it doesn't exist"""
-
-        if self.__config:
-            section, name = self.__config['section'], self.__config['name']
-        elif task_name is not None and param_name is not None:
-            section, name = task_name, param_name
-        else:
-            return _no_value
 
         conf = configuration.get_config()
 
         try:
             value = conf.get(section, name)
-        except (NoSectionError, NoOptionError) as e:
+        except (NoSectionError, NoOptionError):
             return _no_value
 
         if self.is_list:
@@ -167,12 +164,25 @@ class Parameter(object):
             return self.parse(value)
 
     def _get_value(self, task_name=None, param_name=None):
-        values = [self.__global, self._get_value_from_config(task_name, param_name), self.__default]
-        for value in values:
-            if value != _no_value:
-                return value
-        else:
-            return _no_value
+        if self.__global != _no_value:
+            return self.__global
+        if task_name and param_name:
+            v = self._get_value_from_config(task_name, param_name)
+            if v != _no_value:
+                return v
+        if self.__config:
+            v = self._get_value_from_config(self.__config['section'], self.__config['name'])
+            if v != _no_value and task_name and param_name:
+                warnings.warn(
+                    'The use of the configuration %s>%s is deprecated. Please use %s>%s' %
+                    (self.__config['section'], self.__config['name'], task_name, param_name),
+                    DeprecationWarning, stacklevel=2)
+            if v != _no_value:
+                return v
+        if self.__default != _no_value:
+            return self.__default
+
+        return _no_value
 
     @property
     def has_value(self):

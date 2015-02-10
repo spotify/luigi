@@ -1,17 +1,24 @@
-# Copyright (c) 2013 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
+import mock
+import random
+import time
+import threading
 import unittest
 import urllib2
 
@@ -20,15 +27,27 @@ import luigi.server
 
 class ServerTestBase(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
+    def run_server(self):
         # Pass IPv4 localhost to ensure that only a single address, and therefore single port, is bound
-        sock_names = luigi.server.run_api_threaded(0, address='127.0.0.1')
-        _, cls._api_port = sock_names[0]
+        luigi.server.run(api_port=self._api_port, address='127.0.0.1')
 
-    @classmethod
-    def tearDownClass(cls):
+    def setUp(self):
+        self._api_port = random.randint(1000, 9999)
+
+        @mock.patch('signal.signal')
+        def scheduler_thread(signal):
+            # this is wrapped in a function so we get the instance
+            # from the scheduler thread and not from the main thread
+
+            self.run_server()
+
+        self._thread = threading.Thread(target=scheduler_thread)
+        self._thread.start()
+        time.sleep(0.1)  # wait for server to start
+
+    def tearDown(self):
         luigi.server.stop()
+        self._thread.join()
 
 
 class ServerTest(ServerTestBase):

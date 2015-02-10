@@ -1,14 +1,31 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import logging
 import os
 import re
 import subprocess
 
-from luigi import LocalTarget
-from luigi.task import flatten
 import luigi.configuration
 import luigi.hadoop
 import luigi.hadoop_jar
 import luigi.hdfs
+from luigi import LocalTarget
+from luigi.task import flatten
 
 logger = logging.getLogger('luigi-interface')
 
@@ -132,8 +149,7 @@ class ScaldingJobRunner(luigi.hadoop.JobRunner):
         job_jar = job.jar()
         if job_jar:
             if not os.path.exists(job_jar):
-                logger.error("Can't find jar: {0}, full path {1}".format(
-                             job_jar, os.path.abspath(job_jar)))
+                logger.error("Can't find jar: %s, full path %s", job_jar, os.path.abspath(job_jar))
                 raise Exception("job jar does not exist")
             if not job.job_class():
                 logger.error("Undefined job_class()")
@@ -145,8 +161,7 @@ class ScaldingJobRunner(luigi.hadoop.JobRunner):
             logger.error("Both source() and jar() undefined")
             raise Exception("Both source() and jar() undefined")
         if not os.path.exists(job_src):
-            logger.error("Can't find source: {0}, full path {1}".format(
-                         job_src, os.path.abspath(job_src)))
+            logger.error("Can't find source: %s, full path %s", job_src, os.path.abspath(job_src))
             raise Exception("job source does not exist")
 
         job_src = job.source()

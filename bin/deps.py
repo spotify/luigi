@@ -37,12 +37,12 @@
 #
 
 
-from luigi.task import flatten
 import luigi.interface
-from luigi.target import FileSystemTarget
-from luigi.postgres import PostgresTarget
 from luigi.contrib.ssh import RemoteTarget
+from luigi.postgres import PostgresTarget
 from luigi.s3 import S3Target
+from luigi.target import FileSystemTarget
+from luigi.task import flatten
 
 
 def get_task_requires(task):

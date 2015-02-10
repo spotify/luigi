@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#
 # Copyright (c) 2015 Gouthaman Balaraman
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -11,7 +13,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under
 # the License.
-
+#
 """
 Support for SQLAlchmey. Provides SQLAlchemyTarget for storing in databases
 supported by SQLAlchemy. The user would be responsible for installing the
@@ -135,10 +137,11 @@ Date: 01/02/2015
 
 
 import abc
-import logging
-import luigi
 import datetime
 import itertools
+import logging
+
+import luigi
 import sqlalchemy
 import multiprocessing
 
@@ -350,7 +353,6 @@ class CopyToTable(luigi.Task):
                 ins_rows = [dict(zip(("_" + c.key for c in self.table_bound.c), row))
                             for row in itertools.islice(rows, self.chunk_size)]
                 self._logger.info("Finished inserting %d rows into SQLAlchemy target" % len(ins_rows))
-
         output.touch()
         self._logger.info("Finished inserting rows into SQLAlchemy target")
 

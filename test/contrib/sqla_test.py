@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+#
 # Copyright (c) 2015 Gouthaman Balaraman
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -11,20 +13,21 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under
 # the License.
-
+#
 """
 This file implements unit test cases for luigi/contrib/sqla.py
 Author: Gouthaman Balaraman
 Date: 01/02/2015
 """
-import unittest
-import sqlalchemy
-import luigi
 import os
 import shutil
 import tempfile
-from luigi.mock import MockFile
+import unittest
+
+import luigi
+import sqlalchemy
 from luigi.contrib import sqla
+from luigi.mock import MockFile
 
 #################################
 # Globals part of the test case #
@@ -127,7 +130,7 @@ class TestSQLA(unittest.TestCase):
         with engine.begin() as conn:
             meta = sqlalchemy.MetaData()
             meta.reflect(bind=engine)
-            self.assertSetEqual(set([u'table_updates', u'item_property']), set(meta.tables.keys()))
+            self.assertEqual(set([u'table_updates', u'item_property']), set(meta.tables.keys()))
             table = meta.tables[SQLATask.table]
             s = sqlalchemy.select([sqlalchemy.func.count(table.c.item)])
             result = conn.execute(s).fetchone()
@@ -137,7 +140,7 @@ class TestSQLA(unittest.TestCase):
             for i in range(len(TASK_LIST)):
                 given = TASK_LIST[i].strip("\n").split("\t")
                 given = (unicode(given[0]), unicode(given[1]))
-                self.assertTupleEqual(given, tuple(result[i]))
+                self.assertEqual(given, tuple(result[i]))
 
     def test_rows(self):
         task, task0 = SQLATask(), BaseTask()
@@ -145,7 +148,7 @@ class TestSQLA(unittest.TestCase):
 
         for i, row in enumerate(task.rows()):
             given = TASK_LIST[i].strip("\n").split("\t")
-            self.assertListEqual(row, given)
+            self.assertEqual(row, given)
 
     def test_run(self):
         """

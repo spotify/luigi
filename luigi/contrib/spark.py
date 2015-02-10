@@ -1,10 +1,27 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import datetime
 import logging
 import os
 import random
 import re
-import subprocess
 import signal
+import subprocess
 import sys
 import tempfile
 import time
@@ -13,7 +30,6 @@ import luigi
 import luigi.format
 import luigi.hdfs
 from luigi import configuration
-
 
 logger = logging.getLogger('luigi-interface')
 
@@ -134,7 +150,7 @@ class SparkJob(luigi.Task):
         for a in self.job_args():
             if a == self.output().path:
                 # pass temporary output path to job args
-                logger.info("Using temp path: {0} for path {1}".format(tmp_output.path, original_output_path))
+                logger.info('Using temp path: %s for path %s', tmp_output.path, original_output_path)
                 args += ['--args', tmp_output.path]
             else:
                 args += ['--args', str(a)]
@@ -159,7 +175,7 @@ class SparkJob(luigi.Task):
         spark_class = configuration.get_config().get('spark', 'spark-class')
 
         temp_stderr = tempfile.TemporaryFile()
-        logger.info('Running: %s %s' % (spark_class, ' '.join(args)))
+        logger.info('Running: %s %s', spark_class, ' '.join(args))
         proc = subprocess.Popen([spark_class] + args, stdout=subprocess.PIPE,
                                 stderr=temp_stderr, env=env, close_fds=True)
 
@@ -273,7 +289,7 @@ class Spark1xJob(luigi.Task):
         args = map(str, args)
         env = os.environ.copy()
         temp_stderr = tempfile.TemporaryFile()
-        logger.info('Running: {0}'.format(repr(args)))
+        logger.info('Running: %s', repr(args))
         proc = subprocess.Popen(args, stdout=subprocess.PIPE,
                                 stderr=temp_stderr, env=env, close_fds=True)
         return_code, final_state, app_id = self.track_progress(proc)
@@ -367,13 +383,12 @@ class PySpark1xJob(Spark1xJob):
         args = map(str, args)
         env = os.environ.copy()
         temp_stderr = tempfile.TemporaryFile()
-        logger.info('Running: {0}'.format(repr(args)))
+        logger.info('Running: %s', repr(args))
         proc = subprocess.Popen(args, stdout=subprocess.PIPE,
                                 stderr=temp_stderr, env=env, close_fds=True)
         return_code, final_state, app_id = self.track_progress(proc)
         if final_state == 'FAILED':
-            raise SparkJobError('Spark job failed: see yarn logs for {0}'
-                                .format(app_id))
+            raise SparkJobError('Spark job failed: see yarn logs for %s', app_id)
         elif return_code != 0:
             temp_stderr.seek(0)
             errors = "".join(temp_stderr.readlines())

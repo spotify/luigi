@@ -12,7 +12,6 @@ env:
   matrix:
     - TOX_ENV=pep8
     - TOX_ENV=cdh
-    - TOX_ENV=hdp
     - TOX_ENV=nonhdfs
     - TOX_ENV=docs
 

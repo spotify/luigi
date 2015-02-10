@@ -1,40 +1,45 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-import subprocess
+import datetime
+import getpass
+import logging
 import os
 import random
-import urlparse
-import luigi.format
-import luigi.contrib.target
-import datetime
 import re
+import subprocess
+import urlparse
 import warnings
-from luigi.target import FileSystem, FileSystemTarget, FileAlreadyExists
-import logging
-import getpass
+
+import luigi.contrib.target
+import luigi.format
+from luigi.target import FileAlreadyExists, FileSystem, FileSystemTarget
+
 logger = logging.getLogger('luigi-interface')
 
 
 class hdfs(luigi.Config):
     client_version = luigi.IntParameter(default=None)
     effective_user = luigi.Parameter(default=None)
-    snakebite_autoconfig = luigi.BoolParameter()
+    snakebite_autoconfig = luigi.BoolParameter(default=False)
     namenode_host = luigi.Parameter(default=None)
     namenode_port = luigi.IntParameter(default=None)
     client = luigi.Parameter(default=None)
-    use_snakebite = luigi.BoolParameter(default=None)
+    use_snakebite = luigi.BoolParameter(default=False)
     tmp_dir = luigi.Parameter(config_path=dict(section='core', name='hdfs-tmp-dir'), default=None)
 
 
@@ -62,7 +67,7 @@ def call_check(command):
 
 
 def load_hadoop_cmd():
-    return [luigi.configuration.get_config().get('hadoop', 'command', 'hadoop')]
+    return luigi.configuration.get_config().get('hadoop', 'command', 'hadoop').split()
 
 
 def tmppath(path=None, include_unix_username=True):
@@ -131,7 +136,7 @@ class HdfsClient(FileSystem):
         """
 
         cmd = load_hadoop_cmd() + ['fs', '-stat', path]
-        logger.debug('Running file existence check: %s' % u' '.join(cmd))
+        logger.debug('Running file existence check: %s', u' '.join(cmd))
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         stdout, stderr = p.communicate()
         if p.returncode == 0:
