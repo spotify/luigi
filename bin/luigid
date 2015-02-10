@@ -16,9 +16,7 @@ def main(argv):
     parser.add_option('--state-path', help='Pickled state file')
     parser.add_option('--address', help='Listening interface')
     parser.add_option('--port', default=8082, help='Listening port')
-
-    if argv is None:
-        argv = sys.argv[1:]
+        
     opts, args = parser.parse_args(argv)
 
     if opts.state_path:
@@ -39,4 +37,4 @@ def main(argv):
         luigi.server.run(api_port=opts.port, address=opts.address)
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
