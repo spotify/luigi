@@ -559,12 +559,12 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
 class OverrideEnvStuff(unittest.TestCase):
 
     def setUp(self):
-        env_params_cls = luigi.interface.EnvironmentParamsContainer
+        env_params_cls = luigi.interface.core
         env_params_cls.scheduler_port.reset_global()
 
     @with_config({"core": {"default-scheduler-port": '6543'}})
     def testOverrideSchedulerPort(self):
-        env_params = luigi.interface.EnvironmentParamsContainer()
+        env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6543)
 
 
