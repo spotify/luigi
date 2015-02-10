@@ -261,10 +261,6 @@ for any of the tasks yields something like this:
    :alt: Aggregate artists screenshot
 
 Aggregate artists screenshot
-In case your job crashes remotely due to any Python exception,
-Luigi will try to fetch the traceback and print it on standard output.
-You need `Mechanize <http://wwwsearch.sourceforge.net/mechanize/>`__ for it
-to work and you also need connectivity to your tasktrackers.
 
 In production, you'll want to run the centralized scheduler.
 See: :doc:`central_scheduler` for more information.
