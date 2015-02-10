@@ -15,6 +15,10 @@
 # limitations under the License.
 #
 
+import mock
+import random
+import time
+import threading
 import unittest
 import urllib2
 
@@ -23,15 +27,27 @@ import luigi.server
 
 class ServerTestBase(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
+    def run_server(self):
         # Pass IPv4 localhost to ensure that only a single address, and therefore single port, is bound
-        sock_names = luigi.server.run_api_threaded(0, address='127.0.0.1')
-        _, cls._api_port = sock_names[0]
+        luigi.server.run(api_port=self._api_port, address='127.0.0.1')
 
-    @classmethod
-    def tearDownClass(cls):
+    def setUp(self):
+        self._api_port = random.randint(1000, 9999)
+
+        @mock.patch('signal.signal')
+        def scheduler_thread(signal):
+            # this is wrapped in a function so we get the instance
+            # from the scheduler thread and not from the main thread
+
+            self.run_server()
+
+        self._thread = threading.Thread(target=scheduler_thread)
+        self._thread.start()
+        time.sleep(0.1)  # wait for server to start
+
+    def tearDown(self):
         luigi.server.stop()
+        self._thread.join()
 
 
 class ServerTest(ServerTestBase):

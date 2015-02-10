@@ -6,29 +6,37 @@ import os
 import luigi.configuration
 import optparse
 import logging
+import sys
 
-parser = optparse.OptionParser()
-parser.add_option('--background', help='Run in background mode', action='store_true')
-parser.add_option('--pidfile', help='Write pidfile')
-parser.add_option('--logdir', help='log directory')
-parser.add_option('--state-path', help='Pickled state file')
-parser.add_option('--address', help='Listening interface')
-parser.add_option('--port', default=8082, help='Listening port')
-opts, args = parser.parse_args()
+def main(argv):
+    parser = optparse.OptionParser()
+    parser.add_option('--background', help='Run in background mode', action='store_true')
+    parser.add_option('--pidfile', help='Write pidfile')
+    parser.add_option('--logdir', help='log directory')
+    parser.add_option('--state-path', help='Pickled state file')
+    parser.add_option('--address', help='Listening interface')
+    parser.add_option('--port', default=8082, help='Listening port')
 
-if opts.state_path:
-    config = luigi.configuration.get_config()
-    config.set('scheduler', 'state-path', opts.state_path)
+    if argv is None:
+        argv = sys.argv[1:]
+    opts, args = parser.parse_args(argv)
 
-if opts.background:
-    # daemonize sets up logging to spooled log files
-    logging.getLogger().setLevel(logging.INFO)
-    luigi.process.daemonize(luigi.server.run, api_port=opts.port,
-                            address=opts.address, pidfile=opts.pidfile,
-                            logdir=opts.logdir)
-else:
-    if opts.logdir:
-        logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format(), filename=os.path.join(opts.logdir, "luigi-server.log"))
+    if opts.state_path:
+        config = luigi.configuration.get_config()
+        config.set('scheduler', 'state-path', opts.state_path)
+
+    if opts.background:
+        # daemonize sets up logging to spooled log files
+        logging.getLogger().setLevel(logging.INFO)
+        luigi.process.daemonize(luigi.server.run, api_port=opts.port,
+                                address=opts.address, pidfile=opts.pidfile,
+                                logdir=opts.logdir)
     else:
-        logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format())
-    luigi.server.run(api_port=opts.port, address=opts.address)
+        if opts.logdir:
+            logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format(), filename=os.path.join(opts.logdir, "luigi-server.log"))
+        else:
+            logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format())
+        luigi.server.run(api_port=opts.port, address=opts.address)
+
+if __name__ == '__main__':
+    main()

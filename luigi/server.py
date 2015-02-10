@@ -31,7 +31,7 @@ import tornado.ioloop
 import tornado.netutil
 import tornado.web
 
-import scheduler
+from scheduler import CentralPlannerScheduler
 
 logger = logging.getLogger("luigi.server")
 
@@ -136,10 +136,10 @@ def app(scheduler):
     return api_app
 
 
-def _init_api(sched, responder=None, api_port=None, address=None):
+def _init_api(scheduler, responder=None, api_port=None, address=None):
     if responder:
         raise Exception('The "responder" argument is no longer supported')
-    api_app = app(sched)
+    api_app = app(scheduler)
     api_sockets = tornado.netutil.bind_sockets(api_port, address=address)
     server = tornado.httpserver.HTTPServer(api_app)
     server.add_sockets(api_sockets)
@@ -152,19 +152,21 @@ def run(api_port=8082, address=None, scheduler=None, responder=None):
     """
     Runs one instance of the API server.
     """
-    sched = scheduler or scheduler.CentralPlannerScheduler()
-    # load scheduler state
-    sched.load()
+    if scheduler is None:
+        scheduler = CentralPlannerScheduler()
 
-    _init_api(sched, responder, api_port, address)
+    # load scheduler state
+    scheduler.load()
+
+    _init_api(scheduler, responder, api_port, address)
 
     # prune work DAG every 60 seconds
-    pruner = tornado.ioloop.PeriodicCallback(sched.prune, 60000)
+    pruner = tornado.ioloop.PeriodicCallback(scheduler.prune, 60000)
     pruner.start()
 
     def shutdown_handler(foo=None, bar=None):
         logger.info("Scheduler instance shutting down")
-        sched.dump()
+        scheduler.dump()
         os._exit(0)
 
     signal.signal(signal.SIGINT, shutdown_handler)
@@ -180,29 +182,9 @@ def run(api_port=8082, address=None, scheduler=None, responder=None):
     tornado.ioloop.IOLoop.instance().start()
 
 
-def run_api_threaded(api_port=8082, address=None):
-    """
-    For integration tests.
-
-    :param api_port:
-    :param address:
-    :return:
-    """
-    sock_names = _init_api(scheduler.CentralPlannerScheduler(), None, api_port, address)
-
-    import threading
-
-    def scheduler_thread():
-        # this is wrapped in a function so we get the instance
-        # from the scheduler thread and not from the main thread
-        tornado.ioloop.IOLoop.instance().start()
-
-    threading.Thread(target=scheduler_thread).start()
-    return sock_names
-
-
 def stop():
     tornado.ioloop.IOLoop.instance().stop()
+
 
 if __name__ == "__main__":
     run()
