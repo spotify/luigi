@@ -97,9 +97,7 @@ Installing
 ----------
 
 Downloading and running ``python setup.py install`` should be enough. Note
-that you probably want `Tornado <http://www.tornadoweb.org/>`_. Also
-`Mechanize <http://wwwsearch.sourceforge.net/mechanize/>`_ is optional
-if you want to run Hadoop jobs since it makes debugging easier. See
+that you probably want `Tornado <http://www.tornadoweb.org/>`_. See
 `Configuration <http://luigi.readthedocs.org/en/latest/configuration.html>`_ for how to configure Luigi.
 
 Getting Started
