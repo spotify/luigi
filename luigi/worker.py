@@ -263,10 +263,14 @@ class Worker(object):
     * asks for stuff to do (pulls it in a loop and runs it)
     """
 
-    def __init__(self, scheduler=CentralPlannerScheduler(), worker_id=None,
+    def __init__(self, scheduler=None, worker_id=None,
                  worker_processes=1, ping_interval=None, keep_alive=None,
                  wait_interval=None, max_reschedules=None, count_uniques=None,
                  worker_timeout=None):
+
+        if scheduler is None:
+            scheduler = CentralPlannerScheduler()
+
         self.worker_processes = int(worker_processes)
         self._worker_info = self._generate_worker_info()
 

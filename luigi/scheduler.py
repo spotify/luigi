@@ -412,19 +412,18 @@ class CentralPlannerScheduler(Scheduler):
     Can be run locally or on a server (using RemoteScheduler + server.Server).
     """
 
-    def __init__(self, config=None, resources=None, task_history=None, **kwargs):
+    def __init__(self, config=None, resources=None, task_history_impl=None, **kwargs):
         """
-        (all arguments are in seconds)
         Keyword Arguments:
-        :param retry_delay: how long after a Task fails to try it again, or -1 to never retry.
-        :param remove_delay: how long after a Task finishes to remove it from the scheduler.
-        :param state_path: path to state file (tasks and active workers).
-        :param worker_disconnect_delay: if a worker hasn't communicated for this long, remove it from active workers.
+        :param config: an object of class "scheduler" or None (in which the global instance will be used)
+        :param resources: a dict of str->int constraints
+        :param task_history_override: ignore config and use this object as the task history
         """
         self._config = config or scheduler(**kwargs)
         self._state = SimpleTaskState(self._config.state_path)
-        if task_history:
-            self._task_history = task_history
+
+        if task_history_impl:
+            self._task_history = task_history_impl
         elif self._config.record_task_history:
             import db_task_history  # Needs sqlalchemy, thus imported here
             self._task_history = db_task_history.DbTaskHistory()
