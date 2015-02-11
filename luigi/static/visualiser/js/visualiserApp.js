@@ -228,7 +228,7 @@ function visualiserApp(luigi) {
             groupCount = 0;
 
             // update each task family
-            taskFamilies = $(taskGroups[i]).find('.taskFamily:visible');
+            taskFamilies = $(taskGroups[i]).find('.taskFamily');
             for (j=0; j<taskFamilies.length; j++) {
                 cnt = $(taskFamilies[j]).find('.taskRow:not(.hidden)').length;
                 groupCount += cnt;
