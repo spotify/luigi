@@ -44,7 +44,7 @@ class TaskHistoryTest(unittest.TestCase):
 
     def setUp(self):
         self.th = SimpleTaskHistory()
-        self.sch = luigi.scheduler.CentralPlannerScheduler(task_history=self.th)
+        self.sch = luigi.scheduler.CentralPlannerScheduler(task_history_impl=self.th)
         self.w = luigi.worker.Worker(scheduler=self.sch)
 
     def tearDown(self):
