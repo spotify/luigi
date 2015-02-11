@@ -326,7 +326,7 @@ class Task(object):
         exc_desc = '%s[args=%s, kwargs=%s]' % (task_name, args, kwargs)
 
         # Fill in the positional arguments
-        positional_params = [(n, p) for n, p in params]
+        positional_params = [(n, p) for n, p in params if p.significant]
         for i, arg in enumerate(args):
             if i >= len(positional_params):
                 raise parameter.UnknownParameterException('%s: takes at most %d parameters (%d given)' % (exc_desc, len(positional_params), len(args)))
