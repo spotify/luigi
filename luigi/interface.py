@@ -29,6 +29,8 @@ from luigi import parameter
 from luigi import rpc
 from luigi import scheduler
 from luigi import task
+from luigi import worker
+from luigi.task import Register
 
 
 def load_task(module, task_name, params_str):
@@ -36,11 +38,9 @@ def load_task(module, task_name, params_str):
     Imports task dynamically given a module and a task name.
     """
     __import__(module)
-    task_cls = task.Register.get_task_cls(task_name)
+    task_cls = Register.get_task_cls(task_name)
     return task_cls.from_str_params(params_str)
 
-
-from luigi import worker
 
 def setup_interface_logging(conf_file=None):
     # use a variable in the function object to determine if it has run before
@@ -353,9 +353,9 @@ class OptParseInterface(Interface):
 
         def add_task_option(p):
             if main_task_cls:
-                p.add_option('--task', help='Task to run (one of ' + task.Register.tasks_str() + ') [default: %default]', default=main_task_cls.task_family)
+                p.add_option('--task', help='Task to run (one of ' + Register.tasks_str() + ') [default: %default]', default=main_task_cls.task_family)
             else:
-                p.add_option('--task', help='Task to run (one of %s)' % task.Register.tasks_str())
+                p.add_option('--task', help='Task to run (one of %s)' % Register.tasks_str())
 
         add_global_parameters(parser, optparse=True)
 
@@ -369,7 +369,7 @@ class OptParseInterface(Interface):
             parser = optparse.OptionParser()
         add_task_option(parser)
 
-        task_cls = task.Register.get_task_cls(task_cls_name)
+        task_cls = Register.get_task_cls(task_cls_name)
 
         # Register all parameters as a big mess
         add_global_parameters(parser, optparse=True)

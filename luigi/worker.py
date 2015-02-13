@@ -30,7 +30,6 @@ import traceback
 import types
 
 from luigi import configuration
-from luigi.interface import load_task
 from luigi import notifications
 from luigi.event import Event
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
@@ -617,6 +616,7 @@ class Worker(object):
            will be rescheduled and dependencies added,
         3. child process dies: we need to catch this separately.
         """
+        from luigi import interface
         while True:
             self._purge_children()  # Deal with subprocess failures
 
@@ -634,7 +634,7 @@ class Worker(object):
                 # Maybe it yielded something?
             new_deps = []
             if new_requirements:
-                new_req = [load_task(module, name, params)
+                new_req = [interface.load_task(module, name, params)
                            for module, name, params in new_requirements]
                 for t in new_req:
                     self.add(t)
