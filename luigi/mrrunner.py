@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 """
 The hadoop runner.
@@ -68,7 +69,7 @@ class Runner(object):
 
 def print_exception(exc):
     tb = traceback.format_exc(exc)
-    print >> sys.stderr, 'luigi-exc-hex=%s' % tb.encode('hex')
+    print('luigi-exc-hex=%s' % tb.encode('hex'), file=sys.stderr)
 
 
 def main(args=None, stdin=sys.stdin, stdout=sys.stdout, print_exception=print_exception):

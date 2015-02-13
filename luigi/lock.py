@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import hashlib
 import os
@@ -67,7 +68,7 @@ def acquire_for(pid_dir, num_available=1):
 
         if len(matching_pids) >= num_available:
             # We are already running under a different pid
-            print 'Pid(s)', ', '.join(matching_pids), 'already running'
+            print('Pid(s)', ', '.join(matching_pids), 'already running')
             return False
         else:
             # The pid belongs to something else, we could

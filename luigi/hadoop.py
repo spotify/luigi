@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import abc
 import binascii
@@ -703,9 +704,9 @@ class JobTask(BaseHadoopJobTask):
         """
         for output in outputs:
             try:
-                print >> stdout, "\t".join(map(str, flatten(output)))
+                print("\t".join(map(str, flatten(output))), file=stdout)
             except:
-                print >> stderr, output
+                print(output, file=stderr)
                 raise
 
     def mapper(self, item):
@@ -762,10 +763,10 @@ class JobTask(BaseHadoopJobTask):
         if len(args) == 2:
             # backwards compatibility with existing hadoop jobs
             group_name, count = args
-            print >> sys.stderr, 'reporter:counter:%s,%s' % (group_name, count)
+            print('reporter:counter:%s,%s' % (group_name, count), file=sys.stderr)
         else:
             group, name, count = args
-            print >> sys.stderr, 'reporter:counter:%s,%s,%s' % (group, name, count)
+            print('reporter:counter:%s,%s,%s' % (group, name, count), file=sys.stderr)
 
     def extra_modules(self):
         return []  # can be overridden in subclass
@@ -890,7 +891,7 @@ class JobTask(BaseHadoopJobTask):
         Writer which outputs the python repr for each item.
         """
         for output in outputs:
-            print >> stdout, "\t".join(map(repr, output))
+            print("\t".join(map(repr, output)), file=stdout)
 
 
 def pickle_reader(job, input_stream):
@@ -905,4 +906,4 @@ def pickle_writer(job, outputs, stdout):
     def encode(item):
         return binascii.b2a_base64(pickle.dumps(item))[:-1]  # remove trailing newline
     for keyval in outputs:
-        print >> stdout, "\t".join(map(encode, keyval))
+        print("\t".join(map(encode, keyval)), file=stdout)
