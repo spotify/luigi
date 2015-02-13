@@ -30,7 +30,7 @@ import traceback
 import types
 
 from luigi import configuration
-from luigi import interface
+from luigi.interface import load_task
 from luigi import notifications
 from luigi.event import Event
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
@@ -634,7 +634,7 @@ class Worker(object):
                 # Maybe it yielded something?
             new_deps = []
             if new_requirements:
-                new_req = [interface.load_task(module, name, params)
+                new_req = [load_task(module, name, params)
                            for module, name, params in new_requirements]
                 for t in new_req:
                     self.add(t)
