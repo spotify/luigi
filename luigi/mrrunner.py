@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from __future__ import print_function
 
 """
 The hadoop runner.
@@ -23,6 +22,8 @@ The hadoop runner.
 This module contains the main() method which will be used to run the
 mapper and reducer on the Hadoop nodes.
 """
+
+from __future__ import print_function
 
 try:
     import cPickle as pickle
