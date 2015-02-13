@@ -21,13 +21,18 @@ import getpass
 import logging
 import multiprocessing  # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
 import os
-import Queue
+try:
+    import Queue
+except ImportError:
+    import queue as Queue
 import random
 import socket
 import threading
 import time
 import traceback
 import types
+
+import six
 
 from luigi import configuration
 from luigi import notifications
@@ -52,6 +57,7 @@ class TaskException(Exception):
     pass
 
 
+@six.add_metaclass(abc.ABCMeta)
 class AbstractTaskProcess(multiprocessing.Process):
 
     """ Abstract super-class for tasks run in a separate process. """

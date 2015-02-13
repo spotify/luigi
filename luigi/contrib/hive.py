@@ -22,6 +22,8 @@ import os
 import subprocess
 import tempfile
 
+import six
+
 import luigi
 import luigi.hadoop
 from luigi.target import FileAlreadyExists, FileSystemTarget
@@ -81,8 +83,8 @@ def run_hive_script(script):
     return run_hive(['-f', script])
 
 
+@six.add_metaclass(abc.ABCMeta)
 class HiveClient(object):  # interface
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def table_location(self, table, database='default', partition=None):
