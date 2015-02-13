@@ -21,6 +21,7 @@ import six
 
 logger = logging.getLogger('luigi-interface')
 
+
 @six.add_metaclass(abc.ABCMeta)
 class Target(object):
     """
