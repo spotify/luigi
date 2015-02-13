@@ -21,6 +21,8 @@ import logging
 import traceback
 import warnings
 
+import six
+
 from luigi import parameter
 
 Parameter = parameter.Parameter
@@ -334,7 +336,7 @@ class Task(object):
             result[param_name] = arg
 
         # Then the optional arguments
-        for param_name, arg in kwargs.iteritems():
+        for param_name, arg in six.iteritems(kwargs):
             if param_name in result:
                 raise parameter.DuplicateParameterException('%s: parameter %s was already set as a positional parameter' % (exc_desc, param_name))
             if param_name not in params_dict:
