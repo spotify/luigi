@@ -19,23 +19,24 @@ import os
 import random
 import shutil
 import tempfile
+import io
 
 import luigi.util
 from luigi.format import FileWrapper
 from luigi.target import FileSystem, FileSystemTarget
 
 
-class atomic_file(file):
+class atomic_file(io.TextIOWrapper):
     # Simple class that writes to a temp file and moves it on close()
     # Also cleans up the temp file if close is not invoked
 
     def __init__(self, path):
         self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         self.path = path
-        super(atomic_file, self).__init__(self.__tmp_path, 'w')
+        super(atomic_file, self).__init__(open(self.__tmp_path, 'w').detach())
 
     def close(self):
-        super(atomic_file, self).close()
+        self.__file.close()
         os.rename(self.__tmp_path, self.path)
 
     def __del__(self):
@@ -50,7 +51,7 @@ class atomic_file(file):
         " Close/commit the file if there are no exception "
         if exc_type:
             return
-        return file.__exit__(self, exc_type, exc, traceback)
+        return super(atomic_file, self).__exit__(exc_type, exc, traceback)
 
 
 class LocalFileSystem(FileSystem):
