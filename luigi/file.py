@@ -22,7 +22,7 @@ import tempfile
 
 import luigi.util
 from luigi.format import FileWrapper
-from target import FileSystem, FileSystemTarget
+from luigi.target import FileSystem, FileSystemTarget
 
 
 class atomic_file(file):

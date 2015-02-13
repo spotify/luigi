@@ -35,10 +35,10 @@ import warnings
 from hashlib import md5
 from itertools import groupby
 
-import configuration
+from luigi import configuration
 import luigi
 import luigi.hdfs
-import mrrunner
+from luigi import mrrunner
 
 logger = logging.getLogger('luigi-interface')
 

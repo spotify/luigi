@@ -21,7 +21,7 @@ import StringIO
 import sys
 
 import luigi.util
-import target
+from luigi import target
 
 
 class MockFileSystem(target.FileSystem):

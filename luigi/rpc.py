@@ -21,8 +21,8 @@ import time
 import urllib
 import urllib2
 
-import configuration
-from scheduler import PENDING, Scheduler
+from luigi import configuration
+from luigi.scheduler import PENDING, Scheduler
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 

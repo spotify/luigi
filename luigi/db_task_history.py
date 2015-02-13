@@ -19,13 +19,13 @@ import datetime
 import logging
 from contextlib import contextmanager
 
-import configuration
+from luigi import configuration
 import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
-import task_history
-from task_status import DONE, FAILED, PENDING, RUNNING
+from luigi import task_history
+from luigi.task_status import DONE, FAILED, PENDING, RUNNING
 
 Base = sqlalchemy.ext.declarative.declarative_base()
 

@@ -17,7 +17,10 @@
 
 import logging
 import os
-from ConfigParser import ConfigParser, NoOptionError, NoSectionError
+try:
+    from ConfigParser import ConfigParser, NoOptionError, NoSectionError
+except ImportError:
+    from configparser import ConfigParser, NoOptionError, NoSectionError
 
 
 class LuigiConfigParser(ConfigParser):

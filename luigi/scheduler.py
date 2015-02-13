@@ -24,12 +24,12 @@ import logging
 import os
 import time
 
-import configuration
-import notifications
-import parameter
-import task_history as history
-from task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN
-from task import Config
+from luigi import configuration
+from luigi import notifications
+from luigi import parameter
+from luigi import task_history as history
+from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN
+from luigi.task import Config
 
 logger = logging.getLogger("luigi.server")
 

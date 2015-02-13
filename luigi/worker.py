@@ -29,13 +29,13 @@ import time
 import traceback
 import types
 
-import configuration
-import interface
-import notifications
-from event import Event
-from scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
-from target import Target
-from task import Task, flatten, getpaths
+from luigi import configuration
+from luigi import interface
+from luigi import notifications
+from luigi.event import Event
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
+from luigi.target import Target
+from luigi.task import Task, flatten, getpaths
 
 try:
     import simplejson as json

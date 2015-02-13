@@ -17,10 +17,13 @@
 
 import datetime
 import warnings
-from ConfigParser import NoOptionError, NoSectionError
+try:
+    from ConfigParser import NoOptionError, NoSectionError
+except ImportError:
+    from configparser import NoOptionError, NoSectionError
 
-import configuration
-from deprecate_kwarg import deprecate_kwarg
+from luigi import configuration
+from luigi.deprecate_kwarg import deprecate_kwarg
 
 _no_value = object()
 

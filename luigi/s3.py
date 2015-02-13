@@ -23,9 +23,12 @@ import random
 import tempfile
 import urlparse
 import warnings
-from ConfigParser import NoSectionError
+try:
+    from ConfigParser import NoSectionError
+except ImportError:
+    from configparser import NoSectionError
 
-import configuration
+from luigi import configuration
 from luigi.format import FileWrapper
 from luigi.parameter import Parameter
 from luigi.target import FileSystem, FileSystemException, FileSystemTarget

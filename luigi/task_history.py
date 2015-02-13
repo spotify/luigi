@@ -18,7 +18,7 @@
 import abc
 import logging
 
-import task
+from luigi import task
 
 logger = logging.getLogger('luigi-interface')
 

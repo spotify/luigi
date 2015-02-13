@@ -19,7 +19,7 @@ import datetime
 import functools
 import logging
 
-import task
+from luigi import task
 from luigi import parameter
 from luigi.deprecate_kwarg import deprecate_kwarg  # removing this breaks code
 

@@ -31,7 +31,7 @@ import tornado.ioloop
 import tornado.netutil
 import tornado.web
 
-import scheduler
+from luigi import scheduler
 
 logger = logging.getLogger("luigi.server")
 

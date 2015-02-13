@@ -23,14 +23,14 @@ import os
 import sys
 import tempfile
 
-import configuration
-import lock
-import parameter
-import rpc
-import scheduler
-import task
-import worker
-from task import Register
+from luigi import configuration
+from luigi import lock
+from luigi import parameter
+from luigi import rpc
+from luigi import scheduler
+from luigi import task
+from luigi import worker
+from lugi.task import Register
 
 
 def setup_interface_logging(conf_file=None):

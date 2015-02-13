@@ -21,7 +21,7 @@ import logging
 import traceback
 import warnings
 
-import parameter
+from luigi import parameter
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
