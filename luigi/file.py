@@ -26,17 +26,17 @@ from luigi.format import FileWrapper
 from luigi.target import FileSystem, FileSystemTarget
 
 
-class atomic_file(io.TextIOWrapper):
+class atomic_file(io.BufferedWriter):
     # Simple class that writes to a temp file and moves it on close()
     # Also cleans up the temp file if close is not invoked
 
     def __init__(self, path):
         self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         self.path = path
-        super(atomic_file, self).__init__(open(self.__tmp_path, 'w').detach())
+        super(atomic_file, self).__init__(io.open(self.__tmp_path, 'wb').detach())
 
     def close(self):
-        self.__file.close()
+        super(atomic_file, self).close()
         os.rename(self.__tmp_path, self.path)
 
     def __del__(self):
