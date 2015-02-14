@@ -199,6 +199,7 @@ class Register(abc.ABCMeta):
                 yield task_name, issubclass(task_cls, ConfigWithoutSection), param_name, param_obj
 
 
+@six.add_metaclass(Register)
 class Task(object):
     """
     This is the base class of all Luigi Tasks, the base unit of work in Luigi.
@@ -233,7 +234,6 @@ class Task(object):
     ``Task._parameters``
       list of ``(parameter_name, parameter)`` tuples for this task class
     """
-    __metaclass__ = Register
 
     _event_callbacks = {}
 

@@ -62,8 +62,6 @@ class AbstractTaskProcess(multiprocessing.Process):
 
     """ Abstract super-class for tasks run in a separate process. """
 
-    __metaclass__ = abc.ABCMeta
-
     def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0):
         super(AbstractTaskProcess, self).__init__()
         self.task = task
