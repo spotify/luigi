@@ -16,7 +16,10 @@
 #
 
 import abc
-import itertools
+try:
+    from itertools import imap as map
+except ImportError:
+    pass
 import logging
 import traceback
 import warnings
@@ -474,7 +477,7 @@ class Task(object):
             )
             return False
 
-        return all(itertools.imap(lambda output: output.exists(), outputs))
+        return all(map(lambda output: output.exists(), outputs))
 
     @classmethod
     def bulk_complete(cls, parameter_tuples):
@@ -688,7 +691,7 @@ def flatten(struct):
         for _, result in six.iteritems(struct):
             flat += flatten(result)
         return flat
-    if isinstance(struct, basestring):
+    if isinstance(struct, six.string_types):
         return [struct]
 
     try:
