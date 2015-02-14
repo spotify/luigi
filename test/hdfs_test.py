@@ -732,9 +732,9 @@ class SnakebiteConfigTest(unittest.TestCase):
         # See #743
         self.assertEqual(hdfs.hdfs().snakebite_autoconfig, True)
 
-        class MyTask(luigi.Task):
+        class DummyTestTask(luigi.Task):
             pass
 
-        luigi.run(['--local-scheduler', '--no-lock', 'MyTask'])
+        luigi.run(['--local-scheduler', '--no-lock', 'DummyTestTask'])
 
         self.assertEqual(hdfs.hdfs().snakebite_autoconfig, True)

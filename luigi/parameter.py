@@ -345,9 +345,9 @@ class Parameter(object):
         dest = self.parser_dest(param_name, task_name, glob=True, is_without_section=is_without_section)
         if dest is not None:
             value = getattr(args, dest, None)
-            if value is not None:
+            if value:
                 self.set_global(self.parse_from_input(param_name, value))
-            else:
+            else:  # either False (bools) or None (everything else)
                 self.reset_global()
 
 
