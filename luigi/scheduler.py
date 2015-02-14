@@ -584,7 +584,7 @@ class CentralPlannerScheduler(Scheduler):
             return task is None or task.status != DONE
         for task in self._state.get_pending_tasks():
             if task.status != DONE:
-                deps = filter(not_done, task.deps)
+                deps = list(filter(not_done, task.deps))
                 inverse_num_deps = 1.0 / max(len(deps), 1)
                 for dep in deps:
                     dependents[dep] += inverse_num_deps
