@@ -33,7 +33,7 @@ class atomic_file(io.BufferedWriter):
     def __init__(self, path):
         self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         self.path = path
-        super(atomic_file, self).__init__(io.open(self.__tmp_path, 'wb').detach())
+        super(atomic_file, self).__init__(io.FileIO(self.__tmp_path, 'wb'))
 
     def close(self):
         super(atomic_file, self).close()
