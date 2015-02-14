@@ -28,13 +28,18 @@ import random
 import re
 import shutil
 import signal
-import StringIO
+try:
+    import StringIO
+except ImportError:
+    from io import StringIO
 import subprocess
 import sys
 import tempfile
 import warnings
 from hashlib import md5
 from itertools import groupby
+
+import six
 
 from luigi import configuration
 import luigi
@@ -431,7 +436,7 @@ class HadoopJobRunner(JobRunner):
 
         jobconfs = job.jobconfs()
 
-        for k, v in self.jobconfs.iteritems():
+        for k, v in six.iteritems(self.jobconfs):
             jobconfs.append('%s=%s' % (k, v))
 
         for conf in jobconfs:
@@ -746,7 +751,7 @@ class JobTask(BaseHadoopJobTask):
         """
         Increments any unflushed counter values.
         """
-        for key, count in self._counter_dict.iteritems():
+        for key, count in six.iteritems(self._counter_dict):
             if count == 0:
                 continue
             args = list(key) + [count]

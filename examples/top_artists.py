@@ -19,6 +19,8 @@ import random
 from collections import defaultdict
 from heapq import nlargest
 
+import six
+
 import luigi
 import luigi.hadoop
 import luigi.hdfs
@@ -130,7 +132,7 @@ class AggregateArtists(luigi.Task):
                     artist_count[artist] += 1
 
         with self.output().open('w') as out_file:
-            for artist, count in artist_count.iteritems():
+            for artist, count in six.iteritems(artist_count):
                 out_file.write('{}\t{}\n'.format(artist, count))
 
 

@@ -22,7 +22,10 @@ import os
 import random
 import re
 import subprocess
-import urlparse
+try:
+    import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 import warnings
 
 import six

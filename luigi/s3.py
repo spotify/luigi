@@ -21,12 +21,18 @@ import os
 import os.path
 import random
 import tempfile
-import urlparse
+import io
+try:
+    import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 import warnings
 try:
     from ConfigParser import NoSectionError
 except ImportError:
     from configparser import NoSectionError
+
+import six
 
 from luigi import configuration
 from luigi.format import FileWrapper
@@ -308,7 +314,7 @@ class S3Client(FileSystem):
         except NoSectionError:
             return {}
         # So what ports etc can be read without us having to specify all dtypes
-        for k, v in config.iteritems():
+        for k, v in six.iteritems(config):
             try:
                 config[k] = int(v)
             except ValueError:
@@ -329,7 +335,7 @@ class S3Client(FileSystem):
         return key if key[-1:] == '/' else key + '/'
 
 
-class AtomicS3File(file):
+class AtomicS3File(io.BufferedWriter):
     """
     An S3 file that writes to a temp file and put to S3 on close.
     """
@@ -340,7 +346,7 @@ class AtomicS3File(file):
                          'luigi-s3-tmp-%09d' % random.randrange(0, 1e10))
         self.path = path
         self.s3_client = s3_client
-        super(AtomicS3File, self).__init__(self.__tmp_path, 'w')
+        super(AtomicS3File, self).__init__(io.FileIO(self.__tmp_path, 'wb'))
 
     def close(self):
         """
@@ -362,7 +368,7 @@ class AtomicS3File(file):
         """
         if exc_type:
             return
-        return file.__exit__(self, exc_type, exc, traceback)
+        return super(AtomicS3File, self).__exit__(exc_type, exc, traceback)
 
 
 class ReadableS3File(object):

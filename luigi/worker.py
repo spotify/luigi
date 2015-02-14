@@ -601,7 +601,7 @@ class Worker(object):
 
         :return:
         """
-        for task_id, p in self._running_tasks.iteritems():
+        for task_id, p in six.iteritems(self._running_tasks):
             if not p.is_alive() and p.exitcode:
                 error_msg = 'Worker task %s died unexpectedly with exit code %s' % (task_id, p.exitcode)
             elif p.timeout_time is not None and time.time() > p.timeout_time and p.is_alive():

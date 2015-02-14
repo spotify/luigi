@@ -27,6 +27,8 @@ import logging
 import os
 import time
 
+import six
+
 from luigi import configuration
 from luigi import notifications
 from luigi import parameter
@@ -263,7 +265,7 @@ class SimpleTaskState(object):
             # Convert from old format
             # TODO: this is really ugly, we need something more future-proof
             # Every time we add an attribute to the Worker class, this code needs to be updated
-            for k, v in self._active_workers.iteritems():
+            for k, v in six.iteritems(self._active_workers):
                 if isinstance(v, float):
                     self._active_workers[k] = Worker(worker_id=k, last_active=v)
         else:
@@ -555,7 +557,7 @@ class CentralPlannerScheduler(Scheduler):
             return True
 
         available_resources = self._resources or {}
-        for resource, amount in needed_resources.iteritems():
+        for resource, amount in six.iteritems(needed_resources):
             if amount + used_resources[resource] > available_resources.get(resource, 1):
                 return False
         return True
@@ -565,7 +567,7 @@ class CentralPlannerScheduler(Scheduler):
         if self._resources is not None:
             for task in self._state.get_active_tasks():
                 if task.status == RUNNING and task.resources:
-                    for resource, amount in task.resources.iteritems():
+                    for resource, amount in six.iteritems(task.resources):
                         used_resources[resource] += amount
         return used_resources
 
@@ -645,7 +647,7 @@ class CentralPlannerScheduler(Scheduler):
 
             if task.status == RUNNING and task.worker_running in greedy_workers:
                 greedy_workers[task.worker_running] -= 1
-                for resource, amount in (task.resources or {}).iteritems():
+                for resource, amount in six.iteritems((task.resources or {})):
                     greedy_resources[resource] += amount
 
             if not best_task and self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
@@ -659,7 +661,7 @@ class CentralPlannerScheduler(Scheduler):
                             greedy_workers[task_worker] -= 1
 
                             # keep track of the resources used in greedy scheduling
-                            for resource, amount in (task.resources or {}).iteritems():
+                            for resource, amount in six.iteritems((task.resources or {})):
                                 greedy_resources[resource] += amount
 
                             break

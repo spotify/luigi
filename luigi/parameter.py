@@ -22,6 +22,8 @@ try:
 except ImportError:
     from configparser import NoOptionError, NoSectionError
 
+import six
+
 from luigi import configuration
 from luigi.deprecate_kwarg import deprecate_kwarg
 
@@ -509,7 +511,7 @@ class TimeDeltaParameter(Parameter):
         if re_match:
             kwargs = {}
             has_val = False
-            for k, v in re_match.groupdict(default="0").iteritems():
+            for k, v in six.iteritems(re_match.groupdict(default="0")):
                 val = int(v)
                 has_val = has_val or val != 0
                 kwargs[k] = val

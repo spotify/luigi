@@ -21,6 +21,8 @@ import sys
 import tempfile
 import unittest
 
+import six
+
 import luigi.format
 from boto.exception import S3ResponseError
 from boto.s3 import key
@@ -188,7 +190,7 @@ class TestS3Client(unittest.TestCase):
             self._s3_config_path = f.name
             f.write('[s3]\n{}\n'.format(
                 '\n'.join(['{}: {}'.format(k, v)
-                           for k, v in self.s3_config.iteritems()])))
+                           for k, v in six.iteritems(self.s3_config)])))
         self._old_config_paths = configuration.LuigiConfigParser._config_paths
         configuration.LuigiConfigParser._config_paths = self._s3_config_path
 

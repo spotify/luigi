@@ -5,6 +5,8 @@ import json
 import urllib2
 from collections import defaultdict
 
+import six
+
 parser = argparse.ArgumentParser(
     "luigi-grep is used to search for workflows using the luigi scheduler's json api")
 parser.add_argument(
@@ -71,7 +73,7 @@ if __name__ == '__main__':
 
     for job in results:
         print "{name}: {status}, Dependencies:".format(name=job['name'], status=job['status'])
-        for (status, jobs) in job['deps_by_status'].iteritems():
+        for (status, jobs) in six.iteritems(job['deps_by_status']):
             print "  status={status}".format(status=status)
             for job in jobs:
                 print "    {job}".format(job=job)

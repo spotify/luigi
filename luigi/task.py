@@ -192,7 +192,7 @@ class Register(abc.ABCMeta):
 
         :return: a ``dict`` of parameter name -> parameter.
         """
-        for task_name, task_cls in cls.get_reg(include_config_without_section=True).iteritems():
+        for task_name, task_cls in six.iteritems(cls.get_reg(include_config_without_section=True)):
             if task_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in task_cls.get_params():
@@ -419,7 +419,7 @@ class Task(object):
         # Convert all parameters to a str->str hash
         params_str = {}
         params = dict(self.get_params())
-        for param_name, param_value in self.param_kwargs.iteritems():
+        for param_name, param_value in six.iteritems(self.param_kwargs):
             params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
@@ -438,7 +438,7 @@ class Task(object):
         :return:
         """
         k = self.param_kwargs.copy()
-        k.update(kwargs.iteritems())
+        k.update(six.iteritems(kwargs))
 
         if cls is None:
             cls = self.__class__
@@ -653,7 +653,7 @@ def getpaths(struct):
         return struct.output()
     elif isinstance(struct, dict):
         r = {}
-        for k, v in struct.iteritems():
+        for k, v in six.iteritems(struct):
             r[k] = getpaths(v)
         return r
     else:
@@ -685,7 +685,7 @@ def flatten(struct):
         return []
     flat = []
     if isinstance(struct, dict):
-        for key, result in struct.iteritems():
+        for key, result in six.iteritems(struct):
             flat += flatten(result)
         return flat
     if isinstance(struct, basestring):
