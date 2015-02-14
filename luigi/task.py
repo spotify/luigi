@@ -685,7 +685,7 @@ def flatten(struct):
         return []
     flat = []
     if isinstance(struct, dict):
-        for key, result in six.iteritems(struct):
+        for _, result in six.iteritems(struct):
             flat += flatten(result)
         return flat
     if isinstance(struct, basestring):
