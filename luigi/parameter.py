@@ -482,7 +482,7 @@ class DateIntervalParameter(Parameter):
         """
         # TODO: can we use xml.utils.iso8601 or something similar?
 
-        import date_interval as d
+        from luigi import date_interval as d
 
         for cls in [d.Year, d.Month, d.Week, d.Date, d.Custom]:
             i = cls.parse(s)

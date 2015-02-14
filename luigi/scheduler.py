@@ -259,7 +259,7 @@ class SimpleTaskState(object):
 
             self._tasks, self._active_workers = state
             self._status_tasks = collections.defaultdict(dict)
-            for task in self._tasks.itervalues():
+            for task in six.itervalues(self._tasks):
                 self._status_tasks[task.status][task.id] = task
 
             # Convert from old format
@@ -273,17 +273,17 @@ class SimpleTaskState(object):
 
     def get_active_tasks(self, status=None):
         if status:
-            for task in self._status_tasks[status].itervalues():
+            for task in six.itervalues(self._status_tasks[status]):
                 yield task
         else:
-            for task in self._tasks.itervalues():
+            for task in six.itervalues(self._tasks):
                 yield task
 
     def get_running_tasks(self):
-        return self._status_tasks[RUNNING].itervalues()
+        return six.itervalues(self._status_tasks[RUNNING])
 
     def get_pending_tasks(self):
-        return itertools.chain.from_iterable(self._status_tasks[status].itervalues()
+        return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status])
                                              for status in [PENDING, RUNNING])
 
     def get_task(self, task_id, default=None, setdefault=None):
@@ -388,7 +388,7 @@ class SimpleTaskState(object):
             self._status_tasks[task_obj.status].pop(task)
 
     def get_active_workers(self, last_active_lt=None):
-        for worker in self._active_workers.itervalues():
+        for worker in six.itervalues(self._active_workers):
             if last_active_lt is not None and worker.last_active >= last_active_lt:
                 continue
             yield worker

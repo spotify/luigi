@@ -264,7 +264,7 @@ class Task(object):
         """
         Trigger that calls all of the specified events associated with this class.
         """
-        for event_class, event_callbacks in self._event_callbacks.iteritems():
+        for event_class, event_callbacks in six.iteritems(self._event_callbacks):
             if not isinstance(self, event_class):
                 continue
             for callback in event_callbacks.get(event, []):
