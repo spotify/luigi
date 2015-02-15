@@ -22,6 +22,20 @@ import six
 logger = logging.getLogger('luigi-interface')
 
 
+def get_char_mode(mode):
+    """determine if a target should be open in text or binary mode
+    """
+    if 'b' in mode:
+        return 'b'
+    if 't' in mode:
+        return 't'
+    if six.PY2:
+        # support mixed mode (binary but \n is converted to platform newline)
+        # retrocompatibility with python2 on windows
+        return 'm'
+    return 't'
+
+
 @six.add_metaclass(abc.ABCMeta)
 class Target(object):
     """

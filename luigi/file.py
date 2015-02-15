@@ -20,25 +20,36 @@ import random
 import shutil
 import tempfile
 import io
+import sys
+import locale
 
 import six
 
 import luigi.util
 from luigi.format import FileWrapper
-from luigi.target import FileSystem, FileSystemTarget
+from luigi.target import FileSystem, FileSystemTarget, get_char_mode
 
 
-class atomic_binary_file(io.BufferedWriter):
+if six.PY3:
+    unicode = str
+
+
+class abstract_atomic_file(object):
     # Simple class that writes to a temp file and moves it on close()
     # Also cleans up the temp file if close is not invoked
+    # This is an abstract class see atomic_file for text file,
+    # atomic_binary_file for binary file
 
     def __init__(self, path):
         self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         self.path = path
-        super(atomic_binary_file, self).__init__(io.FileIO(self.__tmp_path, 'wb'))
+        super(abstract_atomic_file, self).__init__(self.get_file_io(self.__tmp_path))
+
+    def get_file_io(self, path):
+        return io.FileIO(path, 'w')
 
     def close(self):
-        super(atomic_binary_file, self).close()
+        super(abstract_atomic_file, self).close()
         os.rename(self.__tmp_path, self.path)
 
     def __del__(self):
@@ -53,35 +64,34 @@ class atomic_binary_file(io.BufferedWriter):
         " Close/commit the file if there are no exception "
         if exc_type:
             return
-        return super(atomic_binary_file, self).__exit__(exc_type, exc, traceback)
+        return super(abstract_atomic_file, self).__exit__(exc_type, exc, traceback)
 
 
-class atomic_file(io.TextIOWrapper):
-    # Simple class that writes to a temp file and moves it on close()
-    # Also cleans up the temp file if close is not invoked
+class atomic_binary_file(abstract_atomic_file, io.BufferedWriter):
 
-    def __init__(self, path):
-        self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
-        self.path = path
-        super(atomic_file, self).__init__(io.FileIO(self.__tmp_path, 'w'))
+    def write(self, b):
+        if isinstance(b, unicode):
+            try:
+                enc = sys.getfilesystemencoding()
+                b = b.encode(enc)
+            except UnicodeEncodeError:
+                enc = 'utf8'
+                b = b.encode(enc)
+            raise UnicodeWarning('Writing unicode in binary file! Object was encoded with %s' % enc)
 
-    def close(self):
-        super(atomic_file, self).close()
-        os.rename(self.__tmp_path, self.path)
+        return super(atomic_binary_file, self).write(b)
 
-    def __del__(self):
-        if os.path.exists(self.__tmp_path):
-            os.remove(self.__tmp_path)
 
-    @property
-    def tmp_path(self):
-        return self.__tmp_path
+class atomic_file(abstract_atomic_file, io.TextIOWrapper):
+    pass
 
-    def __exit__(self, exc_type, exc, traceback):
-        " Close/commit the file if there are no exception "
-        if exc_type:
-            return
-        return super(atomic_file, self).__exit__(exc_type, exc, traceback)
+
+class atomic_mixed_file(abstract_atomic_file, io.TextIOWrapper):
+    # class to support python2 on system that doesn't use \n as newline
+    def write(self, b):
+        if not isinstance(b, unicode):
+            b = b.decode(locale.getpreferredencoding())
+        super(atomic_mixed_file, self).write(b)
 
 
 class LocalFileSystem(FileSystem):
@@ -129,28 +139,27 @@ class File(FileSystemTarget):
             os.makedirs(parentfolder)
 
     def open(self, mode='r'):
+        char_mode = get_char_mode(mode)
         if 'w' in mode:
             self.makedirs()
-            if 'b' in mode:
+            if char_mode == 'b':
                 atomic_type = atomic_binary_file
-            elif 't' in mode:
+            elif char_mode == 't':
                 atomic_type = atomic_file
-            elif six.PY2:
-                atomic_type = atomic_binary_file
             else:
-                atomic_type = atomic_file
+                atomic_type = atomic_mixed_file
             if self.format:
                 return self.format.pipe_writer(atomic_type(self.path))
             else:
                 return atomic_type(self.path)
 
         elif 'r' in mode:
-            if 't' in mode:
-                fileobj = FileWrapper(open(self.path, 'rt'))
-            elif 'b' in mode:
-                fileobj = FileWrapper(open(self.path, 'rb'))
+            if char_mode == 't':
+                fileobj = FileWrapper(io.TextIOWrapper(io.FileIO(self.path, 'r')))
+            elif char_mode == 'b':
+                fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
             else:
-                fileobj = FileWrapper(open(self.path, 'r'))
+                fileobj = FileWrapper(io.open(self.path, 'r'))
             if self.format:
                 return self.format.pipe_reader(fileobj)
             return fileobj

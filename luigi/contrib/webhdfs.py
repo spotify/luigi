@@ -25,9 +25,12 @@ import logging
 import os
 import random
 import tempfile
+import io
+
+import six
 
 from luigi import configuration
-from luigi.target import FileSystemTarget
+from luigi.target import FileSystemTarget, get_char_mode
 
 logger = logging.getLogger("luigi-interface")
 
@@ -47,27 +50,41 @@ class WebHdfsTarget(FileSystemTarget):
         self.fs = client or WebHdfsClient()
 
     def open(self, mode='r'):
-        if mode not in ('r', 'w'):
+        if 'r' not in mode and 'w' not in mode:
             raise ValueError("Unsupported open mode '%s'" % mode)
-        if mode == 'r':
-            return ReadableWebHdfsFile(path=self.path, client=self.fs)
-        elif mode == 'w':
-            return AtomicWebHdfsFile(path=self.path, client=self.fs)
+
+        char_mode = get_char_mode(mode)
+
+        if 'r' in mode:
+            return ReadableWebHdfsFile(path=self.path, client=self.fs, char_mode=char_mode)
+
+        if char_mode == 't':
+            atomic_type = AtomicWebHdfsFile
+        else:
+            atomic_type = AtomicBinaryWebHdfsFile
+
+        return atomic_type(path=self.path, client=self.fs)
 
 
 class ReadableWebHdfsFile(object):
 
-    def __init__(self, path, client):
+    def __init__(self, path, client, char_mode):
         self.path = path
         self.client = client
         self.generator = None
+        self.char_mode = char_mode
 
     def read(self):
         self.generator = self.client.read(self.path)
-        return list(self.generator)[0]
+        res = list(self.generator)[0]
+        if 't' in self.char_mode:
+            return res.decode('utf8')
+        return res
 
     def readlines(self, char='\n'):
         self.generator = self.client.read(self.path, buffer_char=char)
+        if 't' in self.char_mode:
+            return (x.decode('utf8') for x in self.generator)
         return self.generator
 
     def __enter__(self):
@@ -81,7 +98,7 @@ class ReadableWebHdfsFile(object):
         has_next = True
         while has_next:
             try:
-                chunk = self.generator.next()
+                chunk = six.next(self.generator)
                 yield chunk
             except StopIteration:
                 has_next = False
@@ -91,7 +108,7 @@ class ReadableWebHdfsFile(object):
         self.generator.close()
 
 
-class AtomicWebHdfsFile(file):
+class AbstractAtomicWebHdfsFile(object):
     """
     An Hdfs file that writes to a temp file and put to WebHdfs on close.
     """
@@ -101,7 +118,7 @@ class AtomicWebHdfsFile(file):
         self.tmp_path = os.path.join(tempfile.gettempdir(), unique_name)
         self.path = path
         self.client = client
-        super(AtomicWebHdfsFile, self).__init__(self.tmp_path, 'w')
+        super(AbstractAtomicWebHdfsFile, self).__init__(io.FileIO(self.tmp_path, 'w'))
 
     def close(self):
         super(AtomicWebHdfsFile, self).close()
@@ -117,7 +134,7 @@ class AtomicWebHdfsFile(file):
         """
         if exc_type:
             return
-        return file.__exit__(self, exc_type, exc, traceback)
+        return super(AtomicWebHdfsFile, self).__exit__(exc_type, exc, traceback)
 
     def __del__(self):
         """
@@ -125,6 +142,14 @@ class AtomicWebHdfsFile(file):
         """
         if os.path.exists(self.tmp_path):
             os.remove(self.tmp_path)
+
+
+class AtomicBinaryWebHdfsFile(AbstractAtomicWebHdfsFile, io.BufferedWriter):
+    pass
+
+
+class AtomicWebHdfsFile(AbstractAtomicWebHdfsFile, io.TextIOWrapper):
+    pass
 
 
 class WebHdfsClient(object):
