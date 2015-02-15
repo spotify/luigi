@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import division
 
 import os
 import tempfile
@@ -48,7 +49,7 @@ class FactorTask(luigi.Task):
         for factor in range(2, self.product):
             if self.product % factor == 0:
                 yield FactorTask(factor)
-                yield FactorTask(self.product / factor)
+                yield FactorTask(self.product // factor)
                 return
 
     def run(self):

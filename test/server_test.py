@@ -60,16 +60,16 @@ class ServerTest(ServerTestBase):
         uri = 'http://localhost:%d' % self._api_port
         req = Request(uri)
         response = urlopen(req, timeout=10)
-        page = response.read()
+        page = response.read().decode('utf8')
         self.assertTrue(page.find('<title>') != -1)
 
     def _test_404(self, path):
         uri = 'http://localhost:%d%s' % (self._api_port, path)
         req = Request(uri)
         try:
-            response = urlopen(req, timeout=10)
-        except HTTPError as http_exc:
-            pass
+            _ = urlopen(req, timeout=10)
+        except HTTPError as e:
+            http_exc = e
 
         self.assertEqual(http_exc.code, 404)
 

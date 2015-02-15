@@ -201,7 +201,7 @@ class Spark1xTest(unittest.TestCase):
             job = Test1xJob()
             job.run()
             self.assertEqual(len(arglist_result), 1)
-            self.assertEqual(arglist_result[0][0:6],
+            self.assertEqual(list(arglist_result[0])[0:6],
                              [self.ss, '--class', job.job_class(),
                               '--master', 'yarn-client', job.jar()])
         finally:

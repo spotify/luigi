@@ -26,6 +26,8 @@ import subprocess
 import unittest
 import warnings
 
+import six
+
 import luigi
 import mock
 from luigi.mock import MockFile
@@ -122,7 +124,11 @@ class CmdlineTest(unittest.TestCase):
             self.assertEqual([mock.call(handler.return_value)], logger.return_value.addHandler.call_args_list)
 
         with mock.patch("luigi.interface.setup_interface_logging.has_run", new=False):
-            self.assertRaises(ConfigParser.NoSectionError, luigi.interface.setup_interface_logging, '/blah')
+            if six.PY2:
+                error = ConfigParser.NoSectionError
+            else:
+                error = KeyError
+            self.assertRaises(error, luigi.interface.setup_interface_logging, '/blah')
 
     @mock.patch("warnings.warn")
     @mock.patch("luigi.interface.setup_interface_logging")
