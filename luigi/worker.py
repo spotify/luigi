@@ -158,7 +158,7 @@ class TaskProcess(AbstractTaskProcess):
                     while True:
                         try:
                             if next_send is None:
-                                requires = task_gen.next()
+                                requires = six.next(task_gen)
                             else:
                                 requires = task_gen.send(next_send)
                         except StopIteration:
@@ -717,7 +717,7 @@ class Worker(object):
                 self._log_remote_tasks(running_tasks, n_pending_tasks, n_unique_pending)
                 if len(self._running_tasks) == 0:
                     if self._keep_alive(n_pending_tasks, n_unique_pending):
-                        sleeper.next()
+                        six.next(sleeper)
                         continue
                     else:
                         break

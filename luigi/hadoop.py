@@ -29,7 +29,7 @@ import re
 import shutil
 import signal
 try:
-    import StringIO
+    from StringIO import StringIO
 except ImportError:
     from io import StringIO
 import subprocess
@@ -519,7 +519,7 @@ class LocalJobRunner(JobRunner):
             output.write(line)
 
     def group(self, input_stream):
-        output = StringIO.StringIO()
+        output = StringIO()
         lines = []
         for i, line in enumerate(input_stream):
             parts = line.rstrip('\n').split('\t')
@@ -531,7 +531,7 @@ class LocalJobRunner(JobRunner):
         return output
 
     def run_job(self, job):
-        map_input = StringIO.StringIO()
+        map_input = StringIO()
 
         for i in luigi.task.flatten(job.input_hadoop()):
             self.sample(i.open('r'), self.samplelines, map_input)
@@ -547,7 +547,7 @@ class LocalJobRunner(JobRunner):
 
         job.init_mapper()
         # run job now...
-        map_output = StringIO.StringIO()
+        map_output = StringIO()
         job.run_mapper(map_input, map_output)
         map_output.seek(0)
 
@@ -555,7 +555,7 @@ class LocalJobRunner(JobRunner):
             reduce_input = self.group(map_output)
         else:
             combine_input = self.group(map_output)
-            combine_output = StringIO.StringIO()
+            combine_output = StringIO()
             job.run_combiner(combine_input, combine_output)
             combine_output.seek(0)
             reduce_input = self.group(combine_output)

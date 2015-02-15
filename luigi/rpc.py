@@ -64,7 +64,7 @@ class RemoteScheduler(Scheduler):
 
     def _post(self, url, data):
         url = 'http://%s:%d%s' % (self._host, self._port, url)
-        return Request(url, urlencode(data))
+        return Request(url, urlencode(data).encode('utf8'))
 
     def _request(self, url, data, log_exceptions=True, attempts=3):
         data = {'data': json.dumps(data)}
