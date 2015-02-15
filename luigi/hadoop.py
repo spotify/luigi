@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import abc
 import binascii
@@ -27,7 +28,10 @@ import random
 import re
 import shutil
 import signal
-import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 import subprocess
 import sys
 import tempfile
@@ -35,11 +39,13 @@ import warnings
 from hashlib import md5
 from itertools import groupby
 
-import configuration
+import six
+
+from luigi import configuration
 import luigi
 import luigi.hdfs
 import luigi.s3
-import mrrunner
+from luigi import mrrunner
 
 logger = logging.getLogger('luigi-interface')
 
@@ -442,7 +448,7 @@ class HadoopJobRunner(JobRunner):
 
         jobconfs = job.jobconfs()
 
-        for k, v in self.jobconfs.iteritems():
+        for k, v in six.iteritems(self.jobconfs):
             jobconfs.append('%s=%s' % (k, v))
 
         for conf in jobconfs:
@@ -528,7 +534,7 @@ class LocalJobRunner(JobRunner):
             output.write(line)
 
     def group(self, input_stream):
-        output = StringIO.StringIO()
+        output = StringIO()
         lines = []
         for i, line in enumerate(input_stream):
             parts = line.rstrip('\n').split('\t')
@@ -540,7 +546,7 @@ class LocalJobRunner(JobRunner):
         return output
 
     def run_job(self, job):
-        map_input = StringIO.StringIO()
+        map_input = StringIO()
 
         for i in luigi.task.flatten(job.input_hadoop()):
             self.sample(i.open('r'), self.samplelines, map_input)
@@ -556,7 +562,7 @@ class LocalJobRunner(JobRunner):
 
         job.init_mapper()
         # run job now...
-        map_output = StringIO.StringIO()
+        map_output = StringIO()
         job.run_mapper(map_input, map_output)
         map_output.seek(0)
 
@@ -564,7 +570,7 @@ class LocalJobRunner(JobRunner):
             reduce_input = self.group(map_output)
         else:
             combine_input = self.group(map_output)
-            combine_output = StringIO.StringIO()
+            combine_output = StringIO()
             job.run_combiner(combine_input, combine_output)
             combine_output.seek(0)
             reduce_input = self.group(combine_output)
@@ -718,9 +724,9 @@ class JobTask(BaseHadoopJobTask):
         """
         for output in outputs:
             try:
-                print >> stdout, "\t".join(map(str, flatten(output)))
+                print("\t".join(map(str, flatten(output))), file=stdout)
             except:
-                print >> stderr, output
+                print(output, file=stderr)
                 raise
 
     def mapper(self, item):
@@ -760,7 +766,7 @@ class JobTask(BaseHadoopJobTask):
         """
         Increments any unflushed counter values.
         """
-        for key, count in self._counter_dict.iteritems():
+        for key, count in six.iteritems(self._counter_dict):
             if count == 0:
                 continue
             args = list(key) + [count]
@@ -777,10 +783,10 @@ class JobTask(BaseHadoopJobTask):
         if len(args) == 2:
             # backwards compatibility with existing hadoop jobs
             group_name, count = args
-            print >> sys.stderr, 'reporter:counter:%s,%s' % (group_name, count)
+            print('reporter:counter:%s,%s' % (group_name, count), file=sys.stderr)
         else:
             group, name, count = args
-            print >> sys.stderr, 'reporter:counter:%s,%s,%s' % (group, name, count)
+            print('reporter:counter:%s,%s,%s' % (group, name, count), file=sys.stderr)
 
     def extra_modules(self):
         return []  # can be overridden in subclass
@@ -905,7 +911,7 @@ class JobTask(BaseHadoopJobTask):
         Writer which outputs the python repr for each item.
         """
         for output in outputs:
-            print >> stdout, "\t".join(map(repr, output))
+            print("\t".join(map(repr, output)), file=stdout)
 
 
 def pickle_reader(job, input_stream):
@@ -920,4 +926,4 @@ def pickle_writer(job, outputs, stdout):
     def encode(item):
         return binascii.b2a_base64(pickle.dumps(item))[:-1]  # remove trailing newline
     for keyval in outputs:
-        print >> stdout, "\t".join(map(encode, keyval))
+        print("\t".join(map(encode, keyval)), file=stdout)

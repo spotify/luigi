@@ -22,8 +22,13 @@ import os
 import random
 import re
 import subprocess
-import urlparse
+try:
+    import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 import warnings
+
+import six
 
 import luigi.contrib.target
 import luigi.format
@@ -331,10 +336,12 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         config = hdfs()
         if self.pid != os.getpid() or not self._bite:
-            client_kwargs = dict(filter(lambda k_v: k_v[1] is not None and k_v[1] != '', {
-                'hadoop_version': config.client_version,
-                'effective_user': config.effective_user,
-            }.iteritems()))
+            client_kwargs = dict(filter(
+                lambda k_v: k_v[1] is not None and k_v[1] != '', six.iteritems({
+                    'hadoop_version': config.client_version,
+                    'effective_user': config.effective_user,
+                })
+            ))
             if config.snakebite_autoconfig:
                 """
                 This is fully backwards compatible with the vanilla Client and can be used for a non HA cluster as well.

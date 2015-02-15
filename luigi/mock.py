@@ -17,11 +17,14 @@
 
 import multiprocessing
 import os
-import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 import sys
 
 import luigi.util
-import target
+from luigi import target
 
 
 class MockFileSystem(target.FileSystem):
@@ -97,7 +100,7 @@ class MockFile(target.FileSystemTarget):
     def open(self, mode):
         fn = self._fn
 
-        class StringBuffer(StringIO.StringIO):
+        class StringBuffer(StringIO):
             # Just to be able to do writing + reading from the same buffer
 
             def write(self2, data):
@@ -106,12 +109,12 @@ class MockFile(target.FileSystemTarget):
                     if self2.tell() <= 0 or self2.read(1) == '\n':
                         sys.stderr.write(fn + ": ")
                     sys.stderr.write(data)
-                StringIO.StringIO.write(self2, data)
+                StringIO.write(self2, data)
 
             def close(self2):
                 if mode == 'w':
                     self.fs.get_all_data()[fn] = self2.getvalue()
-                StringIO.StringIO.close(self2)
+                StringIO.close(self2)
 
             def __exit__(self, exc_type, exc_val, exc_tb):
                 if not exc_type:

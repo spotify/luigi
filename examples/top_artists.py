@@ -19,6 +19,8 @@ import random
 from collections import defaultdict
 from heapq import nlargest
 
+import six
+
 import luigi
 import luigi.hadoop
 import luigi.hdfs
@@ -56,7 +58,7 @@ class Streams(luigi.Task):
         Generates bogus data and writes it into the :py:meth:`~.Streams.output` target.
         """
         with self.output().open('w') as output:
-            for _ in xrange(1000):
+            for _ in range(1000):
                 output.write('{} {} {}\n'.format(
                     random.randint(0, 999),
                     random.randint(0, 999),
@@ -130,7 +132,7 @@ class AggregateArtists(luigi.Task):
                     artist_count[artist] += 1
 
         with self.output().open('w') as out_file:
-            for artist, count in artist_count.iteritems():
+            for artist, count in six.iteritems(artist_count):
                 out_file.write('{}\t{}\n'.format(artist, count))
 
 
@@ -233,7 +235,7 @@ class Top10Artists(luigi.Task):
                     artist,
                     str(streams)
                 ])
-                out_file.write(out_line + '\n')
+                out_file.write((out_line + '\n'))
 
     def _input_iterator(self):
         with self.input().open('r') as in_file:

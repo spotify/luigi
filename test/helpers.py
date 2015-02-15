@@ -17,6 +17,8 @@
 
 import functools
 
+import six
+
 
 class with_config(object):
 
@@ -39,10 +41,10 @@ class with_config(object):
             orig_conf = luigi.configuration.get_config()
             luigi.configuration.LuigiConfigParser._instance = None
             conf = luigi.configuration.get_config()
-            for (section, settings) in self.config.iteritems():
+            for (section, settings) in six.iteritems(self.config):
                 if not conf.has_section(section):
                     conf.add_section(section)
-                for (name, value) in settings.iteritems():
+                for (name, value) in six.iteritems(settings):
                     conf.set(section, name, value)
             try:
                 return fun(*args, **kwargs)

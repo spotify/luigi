@@ -16,7 +16,10 @@
 #
 
 import collections
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import datetime
 import functools
 import itertools
@@ -24,12 +27,14 @@ import logging
 import os
 import time
 
-import configuration
-import notifications
-import parameter
-import task_history as history
-from task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN
-from task import Config
+import six
+
+from luigi import configuration
+from luigi import notifications
+from luigi import parameter
+from luigi import task_history as history
+from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN
+from luigi.task import Config
 
 logger = logging.getLogger("luigi.server")
 
@@ -254,13 +259,13 @@ class SimpleTaskState(object):
 
             self._tasks, self._active_workers = state
             self._status_tasks = collections.defaultdict(dict)
-            for task in self._tasks.itervalues():
+            for task in six.itervalues(self._tasks):
                 self._status_tasks[task.status][task.id] = task
 
             # Convert from old format
             # TODO: this is really ugly, we need something more future-proof
             # Every time we add an attribute to the Worker class, this code needs to be updated
-            for k, v in self._active_workers.iteritems():
+            for k, v in six.iteritems(self._active_workers):
                 if isinstance(v, float):
                     self._active_workers[k] = Worker(worker_id=k, last_active=v)
         else:
@@ -268,17 +273,17 @@ class SimpleTaskState(object):
 
     def get_active_tasks(self, status=None):
         if status:
-            for task in self._status_tasks[status].itervalues():
+            for task in six.itervalues(self._status_tasks[status]):
                 yield task
         else:
-            for task in self._tasks.itervalues():
+            for task in six.itervalues(self._tasks):
                 yield task
 
     def get_running_tasks(self):
-        return self._status_tasks[RUNNING].itervalues()
+        return six.itervalues(self._status_tasks[RUNNING])
 
     def get_pending_tasks(self):
-        return itertools.chain.from_iterable(self._status_tasks[status].itervalues()
+        return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status])
                                              for status in [PENDING, RUNNING])
 
     def get_task(self, task_id, default=None, setdefault=None):
@@ -383,7 +388,7 @@ class SimpleTaskState(object):
             self._status_tasks[task_obj.status].pop(task)
 
     def get_active_workers(self, last_active_lt=None):
-        for worker in self._active_workers.itervalues():
+        for worker in six.itervalues(self._active_workers):
             if last_active_lt is not None and worker.last_active >= last_active_lt:
                 continue
             yield worker
@@ -551,7 +556,7 @@ class CentralPlannerScheduler(Scheduler):
             return True
 
         available_resources = self._resources or {}
-        for resource, amount in needed_resources.iteritems():
+        for resource, amount in six.iteritems(needed_resources):
             if amount + used_resources[resource] > available_resources.get(resource, 1):
                 return False
         return True
@@ -561,7 +566,7 @@ class CentralPlannerScheduler(Scheduler):
         if self._resources is not None:
             for task in self._state.get_active_tasks():
                 if task.status == RUNNING and task.resources:
-                    for resource, amount in task.resources.iteritems():
+                    for resource, amount in six.iteritems(task.resources):
                         used_resources[resource] += amount
         return used_resources
 
@@ -578,7 +583,7 @@ class CentralPlannerScheduler(Scheduler):
             return task is None or task.status != DONE
         for task in self._state.get_pending_tasks():
             if task.status != DONE:
-                deps = filter(not_done, task.deps)
+                deps = list(filter(not_done, task.deps))
                 inverse_num_deps = 1.0 / max(len(deps), 1)
                 for dep in deps:
                     dependents[dep] += inverse_num_deps
@@ -641,7 +646,7 @@ class CentralPlannerScheduler(Scheduler):
 
             if task.status == RUNNING and task.worker_running in greedy_workers:
                 greedy_workers[task.worker_running] -= 1
-                for resource, amount in (task.resources or {}).iteritems():
+                for resource, amount in six.iteritems((task.resources or {})):
                     greedy_resources[resource] += amount
 
             if not best_task and self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
@@ -655,7 +660,7 @@ class CentralPlannerScheduler(Scheduler):
                             greedy_workers[task_worker] -= 1
 
                             # keep track of the resources used in greedy scheduling
-                            for resource, amount in (task.resources or {}).iteritems():
+                            for resource, amount in six.iteritems((task.resources or {})):
                                 greedy_resources[resource] += amount
 
                             break

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import hashlib
 import os
@@ -35,7 +36,7 @@ def get_info(pid_dir):
     my_pid = os.getpid()
     my_cmd = getpcmd(my_pid)
 
-    pid_file = os.path.join(pid_dir, hashlib.md5(my_cmd).hexdigest()) + '.pid'
+    pid_file = os.path.join(pid_dir, hashlib.md5(my_cmd.encode('utf8')).hexdigest()) + '.pid'
 
     return my_pid, my_cmd, pid_file
 
@@ -63,11 +64,11 @@ def acquire_for(pid_dir, num_available=1):
         # There is such a file - read the pid and look up its process name
         pids.update(filter(None, map(str.strip, open(pid_file))))
         pid_cmds = dict((pid, getpcmd(pid)) for pid in pids)
-        matching_pids = filter(lambda pid: pid_cmds[pid] == my_cmd, pids)
+        matching_pids = list(filter(lambda pid: pid_cmds[pid] == my_cmd, pids))
 
         if len(matching_pids) >= num_available:
             # We are already running under a different pid
-            print 'Pid(s)', ', '.join(matching_pids), 'already running'
+            print('Pid(s)', ', '.join(matching_pids), 'already running')
             return False
         else:
             # The pid belongs to something else, we could

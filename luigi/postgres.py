@@ -20,6 +20,8 @@ import logging
 import re
 import tempfile
 
+import six
+
 import luigi
 from luigi.contrib import rdbms
 
@@ -249,7 +251,9 @@ class CopyToTable(rdbms.CopyToTable):
         Default behaviour is to escape special characters and identify any self.null_values.
         """
         if value in self.null_values:
-            return '\N'
+            return r'\N'
+        elif six.PY3:
+            return default_escape(str(value))
         elif isinstance(value, unicode):
             return default_escape(value).encode('utf8')
         else:
@@ -279,7 +283,7 @@ class CopyToTable(rdbms.CopyToTable):
             column_names = zip(*self.columns)[0]
         else:
             raise Exception('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
-        cursor.copy_from(file, self.table, null='\N', sep=self.column_separator, columns=column_names)
+        cursor.copy_from(file, self.table, null=r'\N', sep=self.column_separator, columns=column_names)
 
     def run(self):
         """

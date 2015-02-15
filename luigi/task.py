@@ -16,12 +16,17 @@
 #
 
 import abc
-import itertools
+try:
+    from itertools import imap as map
+except ImportError:
+    pass
 import logging
 import traceback
 import warnings
 
-import parameter
+import six
+
+from luigi import parameter
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -190,13 +195,14 @@ class Register(abc.ABCMeta):
 
         :return: a ``dict`` of parameter name -> parameter.
         """
-        for task_name, task_cls in cls.get_reg(include_config_without_section=True).iteritems():
+        for task_name, task_cls in six.iteritems(cls.get_reg(include_config_without_section=True)):
             if task_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in task_cls.get_params():
                 yield task_name, issubclass(task_cls, ConfigWithoutSection), param_name, param_obj
 
 
+@six.add_metaclass(Register)
 class Task(object):
     """
     This is the base class of all Luigi Tasks, the base unit of work in Luigi.
@@ -231,7 +237,6 @@ class Task(object):
     ``Task._parameters``
       list of ``(parameter_name, parameter)`` tuples for this task class
     """
-    __metaclass__ = Register
 
     _event_callbacks = {}
 
@@ -262,7 +267,7 @@ class Task(object):
         """
         Trigger that calls all of the specified events associated with this class.
         """
-        for event_class, event_callbacks in self._event_callbacks.iteritems():
+        for event_class, event_callbacks in six.iteritems(self._event_callbacks):
             if not isinstance(self, event_class):
                 continue
             for callback in event_callbacks.get(event, []):
@@ -334,7 +339,7 @@ class Task(object):
             result[param_name] = arg
 
         # Then the optional arguments
-        for param_name, arg in kwargs.iteritems():
+        for param_name, arg in six.iteritems(kwargs):
             if param_name in result:
                 raise parameter.DuplicateParameterException('%s: parameter %s was already set as a positional parameter' % (exc_desc, param_name))
             if param_name not in params_dict:
@@ -417,7 +422,7 @@ class Task(object):
         # Convert all parameters to a str->str hash
         params_str = {}
         params = dict(self.get_params())
-        for param_name, param_value in self.param_kwargs.iteritems():
+        for param_name, param_value in six.iteritems(self.param_kwargs):
             params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
@@ -436,7 +441,7 @@ class Task(object):
         :return:
         """
         k = self.param_kwargs.copy()
-        k.update(kwargs.iteritems())
+        k.update(six.iteritems(kwargs))
 
         if cls is None:
             cls = self.__class__
@@ -472,7 +477,7 @@ class Task(object):
             )
             return False
 
-        return all(itertools.imap(lambda output: output.exists(), outputs))
+        return all(map(lambda output: output.exists(), outputs))
 
     @classmethod
     def bulk_complete(cls, parameter_tuples):
@@ -651,7 +656,7 @@ def getpaths(struct):
         return struct.output()
     elif isinstance(struct, dict):
         r = {}
-        for k, v in struct.iteritems():
+        for k, v in six.iteritems(struct):
             r[k] = getpaths(v)
         return r
     else:
@@ -683,10 +688,10 @@ def flatten(struct):
         return []
     flat = []
     if isinstance(struct, dict):
-        for key, result in struct.iteritems():
+        for _, result in six.iteritems(struct):
             flat += flatten(result)
         return flat
-    if isinstance(struct, basestring):
+    if isinstance(struct, six.string_types):
         return [struct]
 
     try:

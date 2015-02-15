@@ -18,11 +18,16 @@
 import json
 import logging
 import time
-import urllib
-import urllib2
+try:
+    from urllib import urlencode
+    from urllib2 import urlopen, HTTPError, URLError, Request
+except ImportError:
+    from urllib.parse import urlencode
+    from urllib.request import Request, urlopen
+    from urllib.error import HTTPError, URLError
 
-import configuration
-from scheduler import PENDING, Scheduler
+from luigi import configuration
+from luigi.scheduler import PENDING, Scheduler
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 
@@ -54,12 +59,12 @@ class RemoteScheduler(Scheduler):
 
     def _get(self, url, data):
         url = 'http://%s:%d%s?%s' % \
-              (self._host, self._port, url, urllib.urlencode(data))
-        return urllib2.Request(url)
+              (self._host, self._port, url, urlencode(data))
+        return Request(url)
 
     def _post(self, url, data):
         url = 'http://%s:%d%s' % (self._host, self._port, url)
-        return urllib2.Request(url, urllib.urlencode(data))
+        return Request(url, urlencode(data).encode('utf8'))
 
     def _request(self, url, data, log_exceptions=True, attempts=3):
         data = {'data': json.dumps(data)}
@@ -73,10 +78,10 @@ class RemoteScheduler(Scheduler):
                 logger.info("Retrying...")
                 self._wait()  # wait for a bit and retry
             try:
-                response = urllib2.urlopen(req, None, self._connect_timeout)
+                response = urlopen(req, None, self._connect_timeout)
                 break
-            except urllib2.URLError as last_exception:
-                if isinstance(last_exception, urllib2.HTTPError) and last_exception.code == 405:
+            except URLError as last_exception:
+                if isinstance(last_exception, HTTPError) and last_exception.code == 405:
                     # TODO(f355): 2014-08-29 Remove this fallback after several weeks
                     logger.warning("POST requests are unsupported. Please upgrade scheduler ASAP. Falling back to GET for now.")
                     req = self._get(url, data)

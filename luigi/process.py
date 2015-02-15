@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import datetime
 import logging
@@ -127,16 +128,16 @@ def fork_linked_workers(num_processes):
     children = {}  # keep child indices
 
     def shutdown_handler(signum=None, frame=None):
-        print "Parent shutting down. Killing ALL THE children"
+        print("Parent shutting down. Killing ALL THE children")
         if not signum:
             signum = signal.SIGTERM
         for c in children:
-            print "Killing child %d" % c
+            print("Killing child %d" % c)
             try:
                 os.kill(c, signum)
                 os.waitpid(c, 0)
             except OSError:
-                print "Child %d is already dead" % c
+                print("Child %d is already dead" % c)
         os._exit(0)  # exit without calling exit handler again...
 
     sigs = [signal.SIGINT, signal.SIGTERM, signal.SIGQUIT]

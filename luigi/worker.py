@@ -21,7 +21,10 @@ import getpass
 import logging
 import multiprocessing  # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
 import os
-import Queue
+try:
+    import Queue
+except ImportError:
+    import queue as Queue
 import random
 import socket
 import threading
@@ -29,13 +32,14 @@ import time
 import traceback
 import types
 
-import configuration
-import interface
-import notifications
-from event import Event
-from scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
-from target import Target
-from task import Task, flatten, getpaths
+import six
+
+from luigi import configuration
+from luigi import notifications
+from luigi.event import Event
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
+from luigi.target import Target
+from luigi.task import Task, flatten, getpaths
 
 try:
     import simplejson as json
@@ -53,11 +57,10 @@ class TaskException(Exception):
     pass
 
 
+@six.add_metaclass(abc.ABCMeta)
 class AbstractTaskProcess(multiprocessing.Process):
 
     """ Abstract super-class for tasks run in a separate process. """
-
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0):
         super(AbstractTaskProcess, self).__init__()
@@ -155,7 +158,7 @@ class TaskProcess(AbstractTaskProcess):
                     while True:
                         try:
                             if next_send is None:
-                                requires = task_gen.next()
+                                requires = six.next(task_gen)
                             else:
                                 requires = task_gen.send(next_send)
                         except StopIteration:
@@ -600,7 +603,7 @@ class Worker(object):
 
         :return:
         """
-        for task_id, p in self._running_tasks.iteritems():
+        for task_id, p in six.iteritems(self._running_tasks):
             if not p.is_alive() and p.exitcode:
                 error_msg = 'Worker task %s died unexpectedly with exit code %s' % (task_id, p.exitcode)
             elif p.timeout_time is not None and time.time() > p.timeout_time and p.is_alive():
@@ -621,6 +624,7 @@ class Worker(object):
            will be rescheduled and dependencies added,
         3. child process dies: we need to catch this separately.
         """
+        from luigi import interface
         while True:
             self._purge_children()  # Deal with subprocess failures
 
@@ -717,7 +721,7 @@ class Worker(object):
                 self._log_remote_tasks(running_tasks, n_pending_tasks, n_unique_pending)
                 if len(self._running_tasks) == 0:
                     if self._keep_alive(n_pending_tasks, n_unique_pending):
-                        sleeper.next()
+                        six.next(sleeper)
                         continue
                     else:
                         break

@@ -17,7 +17,10 @@
 
 import logging
 import os
-from ConfigParser import ConfigParser, NoOptionError, NoSectionError
+try:
+    from ConfigParser import ConfigParser, NoOptionError, NoSectionError
+except ImportError:
+    from configparser import ConfigParser, NoOptionError, NoSectionError
 
 
 class LuigiConfigParser(ConfigParser):
@@ -46,7 +49,7 @@ class LuigiConfigParser(ConfigParser):
     def reload(cls):
         return cls.instance().read(cls._config_paths)
 
-    def _get_with_default(self, method, section, option, default, expected_type=None):
+    def _get_with_default(self, method, section, option, default, expected_type=None, **kwargs):
         """
         Gets the value of the section/option using method.
 
@@ -55,7 +58,7 @@ class LuigiConfigParser(ConfigParser):
         Raises an exception if the default value is not None and doesn't match the expected_type.
         """
         try:
-            return method(self, section, option)
+            return method(self, section, option, **kwargs)
         except (NoOptionError, NoSectionError):
             if default is LuigiConfigParser.NO_DEFAULT:
                 raise
@@ -64,8 +67,8 @@ class LuigiConfigParser(ConfigParser):
                 raise
             return default
 
-    def get(self, section, option, default=NO_DEFAULT):
-        return self._get_with_default(ConfigParser.get, section, option, default)
+    def get(self, section, option, default=NO_DEFAULT, **kwargs):
+        return self._get_with_default(ConfigParser.get, section, option, default, **kwargs)
 
     def getboolean(self, section, option, default=NO_DEFAULT):
         return self._get_with_default(ConfigParser.getboolean, section, option, default, bool)

@@ -3,6 +3,8 @@ language: python
 python:
   - "2.7"
   - "2.6"
+  - "3.3"
+  - "3.4"
 
 jdk: oraclejdk7
 
@@ -15,6 +17,10 @@ env:
     - TOX_ENV=nonhdfs
     - TOX_ENV=docs
 
+matrix:
+  allow_failures:
+    - python: "3.4"
+    - python: "3.3"
 sudo: false
 
 cache:

@@ -33,7 +33,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for (k, param) in task.parameters.iteritems() %}
+    {% for (k, param) in task.parameters.items() %}
       <tr>
         <td>{{k}}</td>
         <td>{{param.value}}</td>

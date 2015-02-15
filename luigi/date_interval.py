@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import division
 
 import datetime
 import re
@@ -141,7 +142,7 @@ class Month(DateInterval):
 
     def __init__(self, y, m):
         date_a = datetime.date(y, m, 1)
-        date_b = datetime.date(y + m / 12, 1 + m % 12, 1)
+        date_b = datetime.date(y + m // 12, 1 + m % 12, 1)
         super(Month, self).__init__(date_a, date_b)
 
     def to_string(self):

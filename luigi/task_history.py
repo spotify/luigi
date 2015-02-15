@@ -18,7 +18,9 @@
 import abc
 import logging
 
-import task
+import six
+
+from luigi import task
 
 logger = logging.getLogger('luigi-interface')
 
@@ -35,11 +37,11 @@ class Task(object):
         self.host = host
 
 
+@six.add_metaclass(abc.ABCMeta)
 class TaskHistory(object):
     """
     Abstract Base Class for updating the run history of a task
     """
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def task_scheduled(self, task_id):

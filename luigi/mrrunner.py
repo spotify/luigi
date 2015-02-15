@@ -23,7 +23,12 @@ This module contains the main() method which will be used to run the
 mapper and reducer on the Hadoop nodes.
 """
 
-import cPickle as pickle
+from __future__ import print_function
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import logging
 import os
 import sys
@@ -65,7 +70,7 @@ class Runner(object):
 
 def print_exception(exc):
     tb = traceback.format_exc(exc)
-    print >> sys.stderr, 'luigi-exc-hex=%s' % tb.encode('hex')
+    print('luigi-exc-hex=%s' % tb.encode('hex'), file=sys.stderr)
 
 
 def main(args=None, stdin=sys.stdin, stdout=sys.stdout, print_exception=print_exception):

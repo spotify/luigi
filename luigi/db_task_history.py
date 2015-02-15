@@ -19,13 +19,15 @@ import datetime
 import logging
 from contextlib import contextmanager
 
-import configuration
+import six
+
+from luigi import configuration
 import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
-import task_history
-from task_status import DONE, FAILED, PENDING, RUNNING
+from luigi import task_history
+from luigi.task_status import DONE, FAILED, PENDING, RUNNING
 
 Base = sqlalchemy.ext.declarative.declarative_base()
 
@@ -96,7 +98,7 @@ class DbTaskHistory(task_history.TaskHistory):
                 yield (task_record, session)
             else:
                 task_record = TaskRecord(name=task.task_family, host=task.host)
-                for (k, v) in task.parameters.iteritems():
+                for (k, v) in six.iteritems(task.parameters):
                     task_record.parameters[k] = TaskParameter(name=k, value=v)
                 session.add(task_record)
                 yield (task_record, session)
@@ -111,7 +113,7 @@ class DbTaskHistory(task_history.TaskHistory):
         with self._session(session) as session:
             tasks = session.query(TaskRecord).join(TaskEvent).filter(TaskRecord.name == task_name).order_by(TaskEvent.ts).all()
             for task in tasks:
-                if all(k in task.parameters and v == str(task.parameters[k].value) for (k, v) in task_params.iteritems()):
+                if all(k in task.parameters and v == str(task.parameters[k].value) for (k, v) in six.iteritems(task_params)):
                     yield task
 
     def find_all_by_name(self, task_name, session=None):

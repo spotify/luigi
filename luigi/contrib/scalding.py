@@ -20,6 +20,8 @@ import os
 import re
 import subprocess
 
+import six
+
 import luigi.configuration
 import luigi.hadoop
 import luigi.hadoop_jar
@@ -295,7 +297,7 @@ class ScaldingJobTask(luigi.hadoop.BaseHadoopJobTask):
         Returns an array of args to pass to the job.
         """
         arglist = []
-        for k, v in self.requires_hadoop().iteritems():
+        for k, v in six.iteritems(self.requires_hadoop()):
             arglist.append('--' + k)
             arglist.extend([t.output().path for t in flatten(v)])
         arglist.extend(['--output', self.output()])
