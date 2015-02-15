@@ -62,7 +62,7 @@ class Streams(luigi.Task):
                 output.write('{} {} {}\n'.format(
                     random.randint(0, 999),
                     random.randint(0, 999),
-                    random.randint(0, 999)).encode('utf8'))
+                    random.randint(0, 999)))
 
     def output(self):
         """
@@ -133,7 +133,7 @@ class AggregateArtists(luigi.Task):
 
         with self.output().open('w') as out_file:
             for artist, count in six.iteritems(artist_count):
-                out_file.write('{}\t{}\n'.format(artist, count).encode('utf8'))
+                out_file.write('{}\t{}\n'.format(artist, count))
 
 
 class AggregateArtistsHadoop(luigi.hadoop.JobTask):
@@ -235,7 +235,7 @@ class Top10Artists(luigi.Task):
                     artist,
                     str(streams)
                 ])
-                out_file.write((out_line + '\n').encode('utf8'))
+                out_file.write((out_line + '\n'))
 
     def _input_iterator(self):
         with self.input().open('r') as in_file:

@@ -20,6 +20,8 @@ import logging
 import re
 import tempfile
 
+import six
+
 import luigi
 from luigi.contrib import rdbms
 
@@ -250,6 +252,8 @@ class CopyToTable(rdbms.CopyToTable):
         """
         if value in self.null_values:
             return r'\N'
+        elif six.PY3:
+            return default_escape(str(value))
         elif isinstance(value, unicode):
             return default_escape(value).encode('utf8')
         else:

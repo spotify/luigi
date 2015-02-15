@@ -21,19 +21,49 @@ import shutil
 import tempfile
 import io
 
+import six
+
 import luigi.util
 from luigi.format import FileWrapper
 from luigi.target import FileSystem, FileSystemTarget
 
 
-class atomic_file(io.BufferedWriter):
+class atomic_binary_file(io.BufferedWriter):
     # Simple class that writes to a temp file and moves it on close()
     # Also cleans up the temp file if close is not invoked
 
     def __init__(self, path):
         self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         self.path = path
-        super(atomic_file, self).__init__(io.FileIO(self.__tmp_path, 'wb'))
+        super(atomic_binary_file, self).__init__(io.FileIO(self.__tmp_path, 'wb'))
+
+    def close(self):
+        super(atomic_binary_file, self).close()
+        os.rename(self.__tmp_path, self.path)
+
+    def __del__(self):
+        if os.path.exists(self.__tmp_path):
+            os.remove(self.__tmp_path)
+
+    @property
+    def tmp_path(self):
+        return self.__tmp_path
+
+    def __exit__(self, exc_type, exc, traceback):
+        " Close/commit the file if there are no exception "
+        if exc_type:
+            return
+        return super(atomic_binary_file, self).__exit__(exc_type, exc, traceback)
+
+
+class atomic_file(io.TextIOWrapper):
+    # Simple class that writes to a temp file and moves it on close()
+    # Also cleans up the temp file if close is not invoked
+
+    def __init__(self, path):
+        self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        self.path = path
+        super(atomic_file, self).__init__(io.FileIO(self.__tmp_path, 'w'))
 
     def close(self):
         super(atomic_file, self).close()
@@ -99,15 +129,28 @@ class File(FileSystemTarget):
             os.makedirs(parentfolder)
 
     def open(self, mode='r'):
-        if mode == 'w':
+        if 'w' in mode:
             self.makedirs()
-            if self.format:
-                return self.format.pipe_writer(atomic_file(self.path))
+            if 'b' in mode:
+                atomic_type = atomic_binary_file
+            elif 't' in mode:
+                atomic_type = atomic_file
+            elif six.PY2:
+                atomic_type = atomic_binary_file
             else:
-                return atomic_file(self.path)
+                atomic_type = atomic_file
+            if self.format:
+                return self.format.pipe_writer(atomic_type(self.path))
+            else:
+                return atomic_type(self.path)
 
-        elif mode == 'r':
-            fileobj = FileWrapper(open(self.path, 'r'))
+        elif 'r' in mode:
+            if 't' in mode:
+                fileobj = FileWrapper(open(self.path, 'rt'))
+            elif 'b' in mode:
+                fileobj = FileWrapper(open(self.path, 'rb'))
+            else:
+                fileobj = FileWrapper(open(self.path, 'r'))
             if self.format:
                 return self.format.pipe_reader(fileobj)
             return fileobj
