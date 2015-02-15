@@ -34,7 +34,7 @@ class SchedulerTest(unittest.TestCase):
         active_workers = {'Worker1': 1e9, 'Worker2': time.time()}
 
         with tempfile.NamedTemporaryFile(delete=True) as fn:
-            with open(fn.name, 'w') as fobj:
+            with open(fn.name, 'wb') as fobj:
                 state = (tasks, active_workers)
                 pickle.dump(state, fobj)
 

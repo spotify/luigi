@@ -120,11 +120,11 @@ class SparkTest(unittest.TestCase):
             if stdout == subprocess.PIPE:
                 p.stdout = StringIO('stdout')
             else:
-                stdout.write('stdout')
+                stdout.write(b'stdout')
             if stderr == subprocess.PIPE:
                 p.stderr = StringIO('stderr')
             else:
-                stderr.write('stderr')
+                stderr.write(b'stderr')
             return p
 
         p = subprocess.Popen
@@ -228,11 +228,11 @@ class Spark1xTest(unittest.TestCase):
             if stdout == subprocess.PIPE:
                 p.stdout = StringIO('stdout')
             else:
-                stdout.write('stdout')
+                stdout.write(b'stdout')
             if stderr == subprocess.PIPE:
                 p.stderr = StringIO('stderr')
             else:
-                stderr.write('stderr')
+                stderr.write(b'stderr')
             return p
 
         p = subprocess.Popen
@@ -306,7 +306,7 @@ class PySpark1xTest(unittest.TestCase):
             job = TestPySpark1xJob()
             job.run()
             self.assertEqual(len(arglist_result), 1)
-            self.assertEqual(arglist_result[0][0:6],
+            self.assertEqual(list(arglist_result[0])[0:6],
                              [self.ss, '--master', 'yarn-client', job.program()])
         finally:
             luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
@@ -332,11 +332,11 @@ class PySpark1xTest(unittest.TestCase):
             if stdout == subprocess.PIPE:
                 p.stdout = StringIO('stdout')
             else:
-                stdout.write('stdout')
+                stdout.write(b'stdout')
             if stderr == subprocess.PIPE:
                 p.stderr = StringIO('stderr')
             else:
-                stderr.write('stderr')
+                stderr.write(b'stderr')
             return p
 
         p = subprocess.Popen

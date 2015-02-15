@@ -17,7 +17,9 @@
 
 import unittest
 
-import helpers
+import six
+
+from helpers import with_config
 import luigi
 from luigi.db_task_history import DbTaskHistory
 from luigi.task_status import DONE, PENDING, RUNNING
@@ -34,7 +36,7 @@ class ParamTask(luigi.Task):
 
 class DbTaskHistoryTest(unittest.TestCase):
 
-    @helpers.with_config(dict(task_history=dict(db_connection='sqlite:///:memory:')))
+    @with_config(dict(task_history=dict(db_connection='sqlite:///:memory:')))
     def setUp(self):
         self.history = DbTaskHistory()
 
@@ -72,7 +74,7 @@ class DbTaskHistoryTest(unittest.TestCase):
             self.assertEqual(len(records), 1)
             [record] = records
             self.assertEqual(task.task_family, record.name)
-            for param_name, param_value in task.param_kwargs.iteritems():
+            for param_name, param_value in six.iteritems(task.param_kwargs):
                 self.assertTrue(param_name in record.parameters)
                 self.assertEqual(str(param_value), record.parameters[param_name].value)
 

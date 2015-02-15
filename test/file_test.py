@@ -85,7 +85,7 @@ class FileTest(unittest.TestCase):
     def test_gzip(self):
         t = File(self.path, luigi.format.Gzip)
         p = t.open('w')
-        test_data = 'test'
+        test_data = b'test'
         p.write(test_data)
         print(self.path)
         self.assertFalse(os.path.exists(self.path))
@@ -105,7 +105,7 @@ class FileTest(unittest.TestCase):
     def test_bzip2(self):
         t = File(self.path, luigi.format.Bzip2)
         p = t.open('w')
-        test_data = 'test'
+        test_data = b'test'
         p.write(test_data)
         print(self.path)
         self.assertFalse(os.path.exists(self.path))

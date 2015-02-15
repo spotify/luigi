@@ -20,7 +20,11 @@ import random
 import time
 import threading
 import unittest
-import urllib2
+try:
+    from urllib2 import Request, urlopen, HTTPError
+except ImportError:
+    from urllib.request import Request, urlopen
+    from urllib.error import HTTPError
 
 import luigi.server
 
@@ -54,17 +58,17 @@ class ServerTest(ServerTestBase):
 
     def test_visualizer(self):
         uri = 'http://localhost:%d' % self._api_port
-        req = urllib2.Request(uri)
-        response = urllib2.urlopen(req, timeout=10)
+        req = Request(uri)
+        response = urlopen(req, timeout=10)
         page = response.read()
         self.assertTrue(page.find('<title>') != -1)
 
     def _test_404(self, path):
         uri = 'http://localhost:%d%s' % (self._api_port, path)
-        req = urllib2.Request(uri)
+        req = Request(uri)
         try:
-            response = urllib2.urlopen(req, timeout=10)
-        except urllib2.HTTPError as http_exc:
+            response = urlopen(req, timeout=10)
+        except HTTPError as http_exc:
             pass
 
         self.assertEqual(http_exc.code, 404)
