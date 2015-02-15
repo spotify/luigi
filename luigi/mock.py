@@ -110,13 +110,13 @@ class MockFile(target.FileSystemTarget):
 
             def write(self2, data):
                 if self._mirror_on_stderr:
-                    if self._write_line:
-                        sys.stderr.write((fn + ": ").encode('utf8'))
-                    sys.stderr.write(data.encode('utf8'))
+                    if self2._write_line:
+                        sys.stderr.write(fn + ": ")
+                    sys.stderr.write(data)
                     if (data[-1]) == '\n':
-                        self._write_line = True
+                        self2._write_line = True
                     else:
-                        self._write_line = False
+                        self2._write_line = False
                 StringIO.write(self2, data)
 
             def close(self2):

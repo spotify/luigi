@@ -80,7 +80,8 @@ class RemoteScheduler(Scheduler):
             try:
                 response = urlopen(req, None, self._connect_timeout)
                 break
-            except URLError as last_exception:
+            except URLError as e:
+                last_exception = e
                 if isinstance(last_exception, HTTPError) and last_exception.code == 405:
                     # TODO(f355): 2014-08-29 Remove this fallback after several weeks
                     logger.warning("POST requests are unsupported. Please upgrade scheduler ASAP. Falling back to GET for now.")
@@ -96,7 +97,7 @@ class RemoteScheduler(Scheduler):
                 (attempts, self._host),
                 last_exception
             )
-        page = response.read()
+        page = response.read().decode('utf8')
         result = json.loads(page)
         return result["response"]
 
