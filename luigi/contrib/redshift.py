@@ -397,7 +397,7 @@ class KillOpenRedshiftSessions(luigi.Task):
             cursor.execute(query, (self.database,))
             cursor.close()
             connection.commit()
-        except psycopg2.DatabaseError, e:
+        except psycopg2.DatabaseError as e:
             if e.message and 'EOF' in e.message:
                 # sometimes this operation kills the current session.
                 # rebuild the connection. Need to pause for 30-60 seconds

@@ -16,8 +16,13 @@
 #
 from __future__ import division
 
+import six
+
 import datetime
 import re
+
+if six.PY3:
+    xrange = range
 
 
 class DateInterval(object):
@@ -80,11 +85,33 @@ class DateInterval(object):
             raise TypeError('Date interval type mismatch')
         return cmp((self.date_a, self.date_b), (other.date_a, other.date_b))
 
+    def __lt__(self, other):
+        if not isinstance(self, type(other)):
+            raise TypeError('Date interval type mismatch')
+        return (self.date_a, self.date_b) < (other.date_a, other.date_b)
+
+    def __lte__(self, other):
+        if not isinstance(self, type(other)):
+            raise TypeError('Date interval type mismatch')
+        return (self.date_a, self.date_b) <= (other.date_a, other.date_b)
+
+    def __gt__(self, other):
+        if not isinstance(self, type(other)):
+            raise TypeError('Date interval type mismatch')
+        return (self.date_a, self.date_b) > (other.date_a, other.date_b)
+
+    def __gte__(self, other):
+        if not isinstance(self, type(other)):
+            raise TypeError('Date interval type mismatch')
+        return (self.date_a, self.date_b) >= (other.date_a, other.date_b)
+
     def __eq__(self, other):
         if not isinstance(other, DateInterval):
             return False
+        if not isinstance(self, type(other)):
+            raise TypeError('Date interval type mismatch')
         else:
-            return self.__cmp__(other) == 0
+            return (self.date_a, self.date_b) == (other.date_a, other.date_b)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -190,7 +217,7 @@ class Custom(DateInterval):
             # Actually the ISO 8601 specifies <start>/<end> as the time interval format
             # Not sure if this goes for date intervals as well. In any case slashes will
             # most likely cause problems with paths etc.
-            x = map(int, s.split('-'))
+            x = list(map(int, s.split('-')))
             date_a = datetime.date(*x[:3])
             date_b = datetime.date(*x[3:])
             return Custom(date_a, date_b)

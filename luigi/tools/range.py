@@ -330,7 +330,7 @@ def _constrain_glob(glob, paths, limit=5):
 
     current = {glob: paths}
     while True:
-        pos = current.keys()[0].find('[0-9]')
+        pos = list(current.keys())[0].find('[0-9]')
         if pos == -1:
             # no wildcard expressions left to specialize in the glob
             return current.keys()
@@ -476,7 +476,7 @@ class RangeDaily(RangeDailyBase):
     """
 
     def missing_datetimes(self, task_cls, finite_datetimes):
-        return set(finite_datetimes) - set(map(self.parameter_to_datetime, task_cls.bulk_complete(map(self.datetime_to_parameter, finite_datetimes))))
+        return set(finite_datetimes) - set(map(self.parameter_to_datetime, task_cls.bulk_complete(list(map(self.datetime_to_parameter, finite_datetimes)))))
 
 
 class RangeHourly(RangeHourlyBase):
