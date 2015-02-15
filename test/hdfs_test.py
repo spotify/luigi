@@ -724,3 +724,17 @@ class HdfsClientTest(MiniClusterTestCase):
 
         preturn.returncode = 13
         self.assertRaises(luigi.hdfs.HDFSCliError, apache_client.exists, "/some/path/somewhere")
+
+
+class SnakebiteConfigTest(unittest.TestCase):
+    @helpers.with_config({"hdfs": {"snakebite_autoconfig": "true"}})
+    def testBoolOverride(self):
+        # See #743
+        self.assertEqual(hdfs.hdfs().snakebite_autoconfig, True)
+
+        class DummyTestTask(luigi.Task):
+            pass
+
+        luigi.run(['--local-scheduler', '--no-lock', 'DummyTestTask'])
+
+        self.assertEqual(hdfs.hdfs().snakebite_autoconfig, True)

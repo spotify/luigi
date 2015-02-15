@@ -155,6 +155,10 @@ class FailingJob(HadoopJobTask):
         return self.get_output('failing')
 
 
+class MyStreamingJob(luigi.hadoop.JobTask):
+    param = luigi.Parameter()
+
+
 def read_wordcount_output(p):
     count = {}
     for line in p.open('r'):
@@ -227,6 +231,10 @@ class MapreduceLocalTest(unittest.TestCase):
 
     def test_failing_job(self):
         CommonTests.test_failing_job(self)
+
+    def test_instantiate_job(self):
+        # See https://github.com/spotify/luigi/issues/738
+        MyStreamingJob('param_value')
 
     def setUp(self):
         MockFile.fs.clear()

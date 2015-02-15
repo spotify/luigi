@@ -44,6 +44,7 @@ import six
 from luigi import configuration
 import luigi
 import luigi.hdfs
+import luigi.s3
 from luigi import mrrunner
 
 logger = logging.getLogger('luigi-interface')
@@ -358,7 +359,10 @@ class HadoopJobRunner(JobRunner):
     TODO: add code to support Elastic Mapreduce (using boto) and local execution.
     """
 
-    def __init__(self, streaming_jar, modules=None, streaming_args=None, libjars=None, libjars_in_hdfs=None, jobconfs=None, input_format=None, output_format=None):
+    def __init__(self, streaming_jar, modules=None, streaming_args=None,
+                 libjars=None, libjars_in_hdfs=None, jobconfs=None,
+                 input_format=None, output_format=None,
+                 end_job_with_atomic_move_dir=True):
         def get(x, default):
             return x is not None and x or default
         self.streaming_jar = streaming_jar
@@ -369,6 +373,7 @@ class HadoopJobRunner(JobRunner):
         self.jobconfs = get(jobconfs, {})
         self.input_format = input_format
         self.output_format = output_format
+        self.end_job_with_atomic_move_dir = end_job_with_atomic_move_dir
         self.tmp_dir = False
 
     def run_job(self, job):
@@ -404,10 +409,17 @@ class HadoopJobRunner(JobRunner):
         cmb_cmd = '{0} mrrunner.py combiner'.format(python_executable)
         red_cmd = '{0} mrrunner.py reduce'.format(python_executable)
 
-        # replace output with a temporary work directory
         output_final = job.output().path
-        output_tmp_fn = output_final + '-temp-' + datetime.datetime.now().isoformat().replace(':', '-')
-        tmp_target = luigi.hdfs.HdfsTarget(output_tmp_fn)
+        # atomic output: replace output with a temporary work directory
+        if self.end_job_with_atomic_move_dir:
+            if isinstance(job.output(), luigi.s3.S3FlagTarget):
+                raise TypeError("end_job_with_atomic_move_dir is not supported"
+                                " for S3FlagTarget")
+            output_hadoop = '{output}-temp-{time}'.format(
+                output=output_final,
+                time=datetime.datetime.now().isoformat().replace(':', '-'))
+        else:
+            output_hadoop = output_final
 
         arglist = luigi.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
 
@@ -460,13 +472,15 @@ class HadoopJobRunner(JobRunner):
             arglist += ['-inputformat', self.input_format]
 
         for target in luigi.task.flatten(job.input_hadoop()):
-            if not isinstance(target, luigi.hdfs.HdfsTarget):
-                raise TypeError('target must be an HdfsTarget')
+            if not isinstance(target, luigi.hdfs.HdfsTarget) \
+                    and not isinstance(target, luigi.s3.S3Target):
+                raise TypeError('target must be an HdfsTarget or S3Target')
             arglist += ['-input', target.path]
 
-        if not isinstance(job.output(), luigi.hdfs.HdfsTarget):
-            raise TypeError('outout must be an HdfsTarget')
-        arglist += ['-output', output_tmp_fn]
+        if not isinstance(job.output(), luigi.hdfs.HdfsTarget) \
+                and not isinstance(job.output(), luigi.s3.S3FlagTarget):
+            raise TypeError('output must be an HdfsTarget or S3FlagTarget')
+        arglist += ['-output', output_hadoop]
 
         # submit job
         create_packages_archive(packages, self.tmp_dir + '/packages.tar')
@@ -475,7 +489,8 @@ class HadoopJobRunner(JobRunner):
 
         run_and_track_hadoop_job(arglist)
 
-        tmp_target.move_dir(output_final)
+        if self.end_job_with_atomic_move_dir:
+            luigi.hdfs.HdfsTarget(output_hadoop).move_dir(output_final)
         self.finish()
 
     def finish(self):

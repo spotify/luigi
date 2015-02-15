@@ -273,11 +273,16 @@ class ParameterTest(unittest.TestCase):
 
     def test_insignificant_parameter(self):
         class InsignificantParameterTask(luigi.Task):
-            foo = luigi.Parameter(significant=False)
+            foo = luigi.Parameter(significant=False, default='foo_default')
             bar = luigi.Parameter()
 
-        t = InsignificantParameterTask(foo='x', bar='y')
-        self.assertEqual(t.task_id, 'InsignificantParameterTask(bar=y)')
+        t1 = InsignificantParameterTask(foo='x', bar='y')
+        self.assertEqual(t1.task_id, 'InsignificantParameterTask(bar=y)')
+
+        t2 = InsignificantParameterTask('z')
+        self.assertEqual(t2.foo, 'foo_default')
+        self.assertEqual(t2.bar, 'z')
+        self.assertEqual(t2.task_id, 'InsignificantParameterTask(bar=z)')
 
 
 class TestNewStyleGlobalParameters(unittest.TestCase):
@@ -559,12 +564,12 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
 class OverrideEnvStuff(unittest.TestCase):
 
     def setUp(self):
-        env_params_cls = luigi.interface.EnvironmentParamsContainer
+        env_params_cls = luigi.interface.core
         env_params_cls.scheduler_port.reset_global()
 
     @with_config({"core": {"default-scheduler-port": '6543'}})
     def testOverrideSchedulerPort(self):
-        env_params = luigi.interface.EnvironmentParamsContainer()
+        env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6543)
 
 

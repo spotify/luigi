@@ -20,7 +20,7 @@ import unittest
 import luigi
 import luigi.date_interval
 import luigi.notifications
-from luigi.interface import EnvironmentParamsContainer, Interface, WorkerSchedulerFactory
+from luigi.interface import core, Interface, WorkerSchedulerFactory
 from luigi.worker import Worker
 from mock import Mock
 

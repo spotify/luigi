@@ -123,7 +123,7 @@ class CmdlineTest(unittest.TestCase):
     @mock.patch("warnings.warn")
     @mock.patch("luigi.interface.setup_interface_logging")
     def test_cmdline_logger(self, setup_mock, warn):
-        with mock.patch("luigi.interface.EnvironmentParamsContainer") as env_params:
+        with mock.patch("luigi.interface.core") as env_params:
             env_params.return_value.logging_conf_file = None
             luigi.run(['SomeTask', '--n', '7', '--local-scheduler', '--no-lock'])
             self.assertEqual([mock.call(None)], setup_mock.call_args_list)

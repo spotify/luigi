@@ -127,6 +127,10 @@ The other option to `sqla.CopyToTable` that can be of help with performance aspe
 a transaction at a time. Depending on the size of the inserts, this value can be tuned
 for performance.
 
+See here for a `tutorial on building task pipelines using luigi
+<http://gouthamanbalaraman.com/blog/building-luigi-task-pipeline.html>`_ and
+using `SQLAlchemy in workflow pipelines <http://gouthamanbalaraman.com/blog/sqlalchemy-luigi-workflow-pipeline.html>`_.
+
 Author: Gouthaman Balaraman
 Date: 01/02/2015
 """
@@ -136,11 +140,9 @@ import abc
 import datetime
 import itertools
 import logging
-
 import luigi
 import sqlalchemy
-
-logger = logging.getLogger('luigi-interface')
+import os
 
 
 class SQLAlchemyTarget(luigi.Target):
@@ -153,21 +155,36 @@ class SQLAlchemyTarget(luigi.Target):
     to create a task to write to the database.
     """
     marker_table = None
+    _engine = None  # sqlalchemy engine
+    _pid = None  # the pid of the sqlalchemy engine object
 
     def __init__(self, connection_string, target_table, update_id, echo=False):
         """
         Constructor for the SQLAlchemyTarget.
 
-        :param connection_string: (str) SQLAlchemy connection string
-        :param target_table: (str) The table name for the data
-        :param update_id: (str) An identifier for this data set
-        :param echo: (bool) Flag to setup SQLAlchemy logging
+        :param connection_string: SQLAlchemy connection string
+        :type connection_string: str
+        :param target_table: The table name for the data
+        :type target_table: str
+        :param update_id: An identifier for this data set
+        :type update_id: str
+        :param echo: Flag to setup SQLAlchemy logging
+        :type echo: bool
         :return:
         """
         self.target_table = target_table
         self.update_id = update_id
-        self.engine = sqlalchemy.create_engine(connection_string, echo=echo)
+        self.connection_string = connection_string
+        self.echo = echo
         self.marker_table_bound = None
+
+    @property
+    def engine(self):
+        pid = os.getpid()
+        if (SQLAlchemyTarget._engine is None) or (SQLAlchemyTarget._pid != pid):
+            SQLAlchemyTarget._engine = sqlalchemy.create_engine(self.connection_string, echo=self.echo)
+            SQLAlchemyTarget._pid = pid
+        return SQLAlchemyTarget._engine
 
     def touch(self):
         """
@@ -177,13 +194,16 @@ class SQLAlchemyTarget(luigi.Target):
             self.create_marker_table()
 
         table = self.marker_table_bound
+        id_exists = self.exists()
         with self.engine.begin() as conn:
-            id_exists = self.exists()
             if not id_exists:
-                ins = table.insert().values(update_id=self.update_id, target_table=self.target_table)
-            else:
-                ins = table.update().values(update_id=self.update_id, target_table=self.target_table,
+                ins = table.insert().values(update_id=self.update_id, target_table=self.target_table,
                                             inserted=datetime.datetime.now())
+            else:
+                ins = table.update().where(sqlalchemy.and_(table.c.update_id == self.update_id,
+                                                           table.c.target_table == self.target_table)).\
+                    values(update_id=self.update_id, target_table=self.target_table,
+                           inserted=datetime.datetime.now())
             conn.execute(ins)
         assert self.exists()
 
@@ -193,7 +213,8 @@ class SQLAlchemyTarget(luigi.Target):
             self.create_marker_table()
         with self.engine.begin() as conn:
             table = self.marker_table_bound
-            s = sqlalchemy.select([table]).where(table.c.update_id == self.update_id).limit(1)
+            s = sqlalchemy.select([table]).where(sqlalchemy.and_(table.c.update_id == self.update_id,
+                                                                 table.c.target_table == self.target_table)).limit(1)
             row = conn.execute(s).fetchone()
         return row is not None
 
@@ -206,7 +227,9 @@ class SQLAlchemyTarget(luigi.Target):
         if self.marker_table is None:
             self.marker_table = luigi.configuration.get_config().get('sqlalchemy', 'marker-table', 'table_updates')
 
-        with self.engine.begin() as con:
+        engine = self.engine
+
+        with engine.begin() as con:
             metadata = sqlalchemy.MetaData()
             if not con.dialect.has_table(con, self.marker_table):
                 self.marker_table_bound = sqlalchemy.Table(
@@ -214,9 +237,9 @@ class SQLAlchemyTarget(luigi.Target):
                     sqlalchemy.Column("update_id", sqlalchemy.String(128), primary_key=True),
                     sqlalchemy.Column("target_table", sqlalchemy.String(128)),
                     sqlalchemy.Column("inserted", sqlalchemy.DateTime, default=datetime.datetime.now()))
-                metadata.create_all(self.engine)
+                metadata.create_all(engine)
             else:
-                metadata.reflect(bind=self.engine)
+                metadata.reflect(bind=engine)
                 self.marker_table_bound = metadata.tables[self.marker_table]
 
     def open(self, mode):
@@ -231,6 +254,8 @@ class CopyToTable(luigi.Task):
 
     * subclass and override the required `connection_string`, `table` and `columns` attributes.
     """
+    _logger = logging.getLogger('luigi-interface')
+
     echo = False
 
     @abc.abstractmethod
@@ -268,6 +293,8 @@ class CopyToTable(luigi.Task):
 
         If overridden, use the provided connection object for setting up the table in order to
         create the table and insert data using the same transaction.
+        :param engine: The sqlalchemy engine instance
+        :type engine: object
         """
         def construct_sqla_columns(columns):
             retval = [sqlalchemy.Column(*c[0], **c[1]) for c in columns]
@@ -290,7 +317,7 @@ class CopyToTable(luigi.Task):
                         metadata.reflect(bind=engine)
                         self.table_bound = metadata.tables[self.table]
                 except Exception as e:
-                    logger.exception(self.table + str(e))
+                    self._logger.exception(self.table + str(e))
 
     def update_id(self):
         """
@@ -303,8 +330,7 @@ class CopyToTable(luigi.Task):
             connection_string=self.connection_string,
             target_table=self.table,
             update_id=self.update_id(),
-            echo=self.echo
-        )
+            echo=self.echo)
 
     def rows(self):
         """
@@ -317,18 +343,33 @@ class CopyToTable(luigi.Task):
                 yield line.strip("\n").split(self.column_separator)
 
     def run(self):
-        logger.info('Running task copy to table for update id %s for table %s', self.update_id(), self.table)
+        self._logger.info("Running task copy to table for update id %s for table %s" % (self.update_id(), self.table))
         output = self.output()
-        self.create_table(output.engine)
-        with output.engine.begin() as conn:
+        engine = output.engine
+        self.create_table(engine)
+        with engine.begin() as conn:
             rows = iter(self.rows())
-            ins_rows = [dict(zip((c.key for c in self.table_bound.c), row))
+            ins_rows = [dict(zip(("_" + c.key for c in self.table_bound.c), row))
                         for row in itertools.islice(rows, self.chunk_size)]
             while ins_rows:
-                ins = self.table_bound.insert()
-                conn.execute(ins, ins_rows)
-                ins_rows = [dict(zip((c.key for c in self.table_bound.c), row))
+                self.copy(conn, ins_rows, self.table_bound)
+                ins_rows = [dict(zip(("_" + c.key for c in self.table_bound.c), row))
                             for row in itertools.islice(rows, self.chunk_size)]
-                logger.info('Finished inserting %d rows into SQLAlchemy target', len(ins_rows))
+                self._logger.info("Finished inserting %d rows into SQLAlchemy target" % len(ins_rows))
         output.touch()
-        logger.info("Finished inserting rows into SQLAlchemy target")
+        self._logger.info("Finished inserting rows into SQLAlchemy target")
+
+    def copy(self, conn, ins_rows, table_bound):
+        """
+        This method does the actual insertion of the rows of data given by ins_rows into the
+        database. A task that needs row updates instead of insertions should overload this method.
+        :param conn: The sqlalchemy connection object
+        :param ins_rows: The dictionary of rows with the keys in the format _<column_name>. For example
+        if you have a table with a column name "property", then the key in the dictionary
+        would be "_property". This format is consistent with the bindparam usage in sqlalchemy.
+        :param table_bound: The object referring to the table
+        :return:
+        """
+        bound_cols = dict((c, sqlalchemy.bindparam("_" + c.key)) for c in table_bound.columns)
+        ins = table_bound.insert().values(bound_cols)
+        conn.execute(ins, ins_rows)
