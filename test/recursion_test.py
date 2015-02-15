@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import datetime
 import sys
@@ -38,7 +39,7 @@ class Popularity(luigi.Task):
     def run(self):
         f = self.output().open('w')
         for line in self.input().open('r'):
-            print >> f, int(line.strip()) + 1
+            print(int(line.strip()) + 1, file=f)
 
         f.close()
 

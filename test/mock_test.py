@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import unittest
 
@@ -25,7 +26,7 @@ class MockFileTest(unittest.TestCase):
     def test_1(self):
         t = MockFile('test')
         p = t.open('w')
-        print >> p, 'test'
+        print('test', file=p)
         p.close()
 
         q = t.open('r')

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import ConfigParser
 import logging
@@ -78,7 +79,7 @@ class WriteToFile(luigi.Task):
 
     def run(self):
         f = self.output().open('w')
-        print >>f, 'foo'
+        print('foo', file=f)
         f.close()
 
 

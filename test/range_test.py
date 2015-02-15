@@ -135,7 +135,7 @@ class ConstrainGlobTest(unittest.TestCase):
 
     def test_limit(self):
         glob = '/[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]/[0-9][0-9]'
-        paths = [(datetime.datetime(2013, 12, 31, 5) + datetime.timedelta(hours=h)).strftime('/%Y/%m/%d/%H') for h in xrange(40)]
+        paths = [(datetime.datetime(2013, 12, 31, 5) + datetime.timedelta(hours=h)).strftime('/%Y/%m/%d/%H') for h in range(40)]
         self.assertEqual(sorted(_constrain_glob(glob, paths)), [
             '/2013/12/31/[0-2][0-9]',
             '/2014/01/01/[0-2][0-9]',
@@ -246,10 +246,10 @@ class RangeDailyBaseTest(unittest.TestCase):
 
         task = RangeDailyDerived(of='CommonDateTask',
                                  **kwargs)
-        self.assertEqual(map(str, task.requires()), expected_requires)
+        self.assertEqual(list(map(str, task.requires())), expected_requires)
         self.assertEqual(calls[0][1], CommonDateTask)
         self.assertEqual((min(calls[0][2]), max(calls[0][2])), expected_finite_datetimes_range)
-        self.assertEqual(map(str, task.requires()), expected_requires)
+        self.assertEqual(list(map(str, task.requires())), expected_requires)
         self.assertEqual(len(calls), 1)  # subsequent requires() should return the cached result, not call missing_datetimes again
         self.assertEqual(self.events, expected_events)
         self.assertFalse(task.complete())
@@ -358,10 +358,10 @@ class RangeHourlyBaseTest(unittest.TestCase):
 
         task = RangeHourlyDerived(of='CommonDateHourTask',
                                   **kwargs)
-        self.assertEqual(map(str, task.requires()), expected_requires)
+        self.assertEqual(list(map(str, task.requires())), expected_requires)
         self.assertEqual(calls[0][1], CommonDateHourTask)
         self.assertEqual((min(calls[0][2]), max(calls[0][2])), expected_finite_datetimes_range)
-        self.assertEqual(map(str, task.requires()), expected_requires)
+        self.assertEqual(list(map(str, task.requires())), expected_requires)
         self.assertEqual(len(calls), 1)  # subsequent requires() should return the cached result, not call missing_datetimes again
         self.assertEqual(self.events, expected_events)
         self.assertFalse(task.complete())

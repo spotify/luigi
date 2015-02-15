@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 #
+from __future__ import print_function
 
 import gc
 import os
@@ -65,7 +66,7 @@ class TestS3Target(unittest.TestCase):
         client.s3.create_bucket('mybucket')
         t = S3Target('s3://mybucket/test_file', client=client)
         p = t.open('w')
-        print >> p, 'test'
+        print('test', file=p)
         self.assertFalse(t.exists())
         p.close()
         self.assertTrue(t.exists())
@@ -76,7 +77,7 @@ class TestS3Target(unittest.TestCase):
         client.s3.create_bucket('mybucket')
         t = S3Target('s3://mybucket/test_del', client=client)
         p = t.open('w')
-        print >> p, 'test'
+        print('test', file=p)
         del p
         self.assertFalse(t.exists())
 

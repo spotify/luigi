@@ -40,7 +40,7 @@ class EmptyTask(Task):
 class TaskWithCallback(Task):
 
     def run(self):
-        print "Triggering event"
+        print("Triggering event")
         self.trigger_event("foo event")
 
 
@@ -51,7 +51,7 @@ class TestEventCallbacks(TestCase):
 
         @EmptyTask.event_handler(Event.START)
         def save_task(task):
-            print "Saving task..."
+            print("Saving task...")
             saved_tasks.append(task)
 
         t = EmptyTask(True)
@@ -63,7 +63,7 @@ class TestEventCallbacks(TestCase):
 
         @EmptyTask.event_handler(Event.SUCCESS)
         def save_task(task):
-            print "Saving task..."
+            print("Saving task...")
             saved_tasks.append(task)
 
         t = EmptyTask(False)
@@ -76,7 +76,7 @@ class TestEventCallbacks(TestCase):
 
         @EmptyTask.event_handler(Event.FAILURE)
         def save_task(task, exception):
-            print "Saving task and exception..."
+            print("Saving task and exception...")
             saved_tasks.append(task)
             exceptions.append(exception)
 

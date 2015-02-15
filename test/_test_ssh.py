@@ -18,6 +18,8 @@
 Integration tests for ssh module.
 """
 
+from __future__ import print_function
+
 import gc
 import gzip
 import os
@@ -63,31 +65,31 @@ class TestRemoteContext(unittest.TestCase):
         self.assertEqual(output, "luigi")
 
     def test_tunnel(self):
-        print "Setting up remote listener..."
+        print("Setting up remote listener...")
 
         remote_server_handle = self.context.Popen([
             "python", "-c", '"{0}"'.format(HELLO_SERVER_CMD)
         ], stdout=subprocess.PIPE)
 
-        print "Setting up tunnel"
+        print("Setting up tunnel")
         with self.context.tunnel(2135, 2134):
-            print "Tunnel up!"
+            print("Tunnel up!")
             # hack to make sure the listener process is up
             # and running before we write to it
             server_output = remote_server_handle.stdout.read(5)
             self.assertEqual(server_output, "ready")
-            print "Connecting to server via tunnel"
+            print("Connecting to server via tunnel")
             s = socket.socket()
             s.connect(("localhost", 2135))
-            print "Receiving...",
+            print("Receiving...",)
             response = s.recv(5)
             self.assertEqual(response, "hello")
-            print "Closing connection"
+            print("Closing connection")
             s.close()
-            print "Waiting for listener..."
+            print("Waiting for listener...")
             output, _ = remote_server_handle.communicate()
             self.assertEqual(remote_server_handle.returncode, 0)
-            print "Closing tunnel"
+            print("Closing tunnel")
 
 
 class TestRemoteTarget(unittest.TestCase):
@@ -166,7 +168,7 @@ class TestRemoteTargetAtomicity(unittest.TestCase):
     def test_close(self):
         t = RemoteTarget(self.path, working_ssh_host)
         p = t.open('w')
-        print >> p, 'test'
+        print('test', file=p)
         self.assertFalse(self._exists(self.path))
         p.close()
         self.assertTrue(self._exists(self.path))
@@ -174,7 +176,7 @@ class TestRemoteTargetAtomicity(unittest.TestCase):
     def test_del(self):
         t = RemoteTarget(self.path, working_ssh_host)
         p = t.open('w')
-        print >> p, 'test'
+        print('test', file=p)
         tp = p.tmp_path
         del p
 

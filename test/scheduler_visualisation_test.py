@@ -110,7 +110,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         return self.scheduler
 
     def _test_run(self, workers):
-        tasks = [DummyTask(i) for i in xrange(20)]
+        tasks = [DummyTask(i) for i in range(20)]
         self._build(tasks, workers=workers)
         self._assert_complete(tasks)
 

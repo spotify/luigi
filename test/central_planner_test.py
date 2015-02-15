@@ -95,7 +95,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(WORKER, 'A')
         self.assertEqual(self.sch.get_work(WORKER)['task_id'], 'A')
         self.sch.add_task(WORKER, 'A', FAILED)
-        for t in xrange(100):
+        for t in range(100):
             self.setTime(t)
             self.assertEqual(self.sch.get_work(WORKER)['task_id'], None)
             self.sch.ping(WORKER)
@@ -114,7 +114,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(task_id='A', worker='X')
         self.sch.add_task(task_id='A', worker='Y')
         self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
-        for t in xrange(200):
+        for t in range(200):
             self.setTime(t)
             self.sch.ping(worker='Y')
             if t % 10 == 0:
@@ -143,7 +143,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
         self.setTime(10000)
         self.sch.add_task(task_id='A', worker='Y')  # Will timeout X but not schedule A for removal
-        for i in xrange(2000):
+        for i in range(2000):
             self.setTime(10000 + i)
             self.sch.ping(worker='Y')
         self.sch.add_task(task_id='A', status=DONE, worker='Y')  # This used to raise an exception since A was removed

@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import bz2
 import gc
@@ -47,7 +48,7 @@ class FileTest(unittest.TestCase):
     def test_close(self):
         t = File(self.path)
         p = t.open('w')
-        print >> p, 'test'
+        print('test', file=p)
         self.assertFalse(os.path.exists(self.path))
         p.close()
         self.assertTrue(os.path.exists(self.path))
@@ -55,7 +56,7 @@ class FileTest(unittest.TestCase):
     def test_del(self):
         t = File(self.path)
         p = t.open('w')
-        print >> p, 'test'
+        print('test', file=p)
         tp = p.tmp_path
         del p
 
@@ -86,7 +87,7 @@ class FileTest(unittest.TestCase):
         p = t.open('w')
         test_data = 'test'
         p.write(test_data)
-        print self.path
+        print(self.path)
         self.assertFalse(os.path.exists(self.path))
         p.close()
         self.assertTrue(os.path.exists(self.path))
@@ -106,7 +107,7 @@ class FileTest(unittest.TestCase):
         p = t.open('w')
         test_data = 'test'
         p.write(test_data)
-        print self.path
+        print(self.path)
         self.assertFalse(os.path.exists(self.path))
         p.close()
         self.assertTrue(os.path.exists(self.path))
@@ -183,7 +184,7 @@ class TmpFileTest(unittest.TestCase):
         self.assertFalse(t.exists())
         self.assertFalse(os.path.exists(t.path))
         p = t.open('w')
-        print >> p, 'test'
+        print('test', file=p)
         self.assertFalse(t.exists())
         self.assertFalse(os.path.exists(t.path))
         p.close()

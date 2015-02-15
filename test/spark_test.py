@@ -15,7 +15,10 @@
 # limitations under the License.
 #
 
-import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 import subprocess
 import unittest
 
@@ -81,8 +84,8 @@ class SparkTest(unittest.TestCase):
 
             p = P()
             p.returncode = 0
-            p.stderr = StringIO.StringIO()
-            p.stdout = StringIO.StringIO()
+            p.stderr = StringIO()
+            p.stdout = StringIO()
             return p
 
         h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
@@ -115,11 +118,11 @@ class SparkTest(unittest.TestCase):
             p = P()
             p.returncode = 1
             if stdout == subprocess.PIPE:
-                p.stdout = StringIO.StringIO('stdout')
+                p.stdout = StringIO('stdout')
             else:
                 stdout.write('stdout')
             if stderr == subprocess.PIPE:
-                p.stderr = StringIO.StringIO('stderr')
+                p.stderr = StringIO('stderr')
             else:
                 stderr.write('stderr')
             return p
@@ -187,8 +190,8 @@ class Spark1xTest(unittest.TestCase):
 
             p = P()
             p.returncode = 0
-            p.stderr = StringIO.StringIO()
-            p.stdout = StringIO.StringIO()
+            p.stderr = StringIO()
+            p.stdout = StringIO()
             return p
 
         h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
@@ -223,11 +226,11 @@ class Spark1xTest(unittest.TestCase):
             p = P()
             p.returncode = 1
             if stdout == subprocess.PIPE:
-                p.stdout = StringIO.StringIO('stdout')
+                p.stdout = StringIO('stdout')
             else:
                 stdout.write('stdout')
             if stderr == subprocess.PIPE:
-                p.stderr = StringIO.StringIO('stderr')
+                p.stderr = StringIO('stderr')
             else:
                 stderr.write('stderr')
             return p
@@ -292,8 +295,8 @@ class PySpark1xTest(unittest.TestCase):
 
             p = P()
             p.returncode = 0
-            p.stderr = StringIO.StringIO()
-            p.stdout = StringIO.StringIO()
+            p.stderr = StringIO()
+            p.stdout = StringIO()
             return p
 
         h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
@@ -327,11 +330,11 @@ class PySpark1xTest(unittest.TestCase):
             p = P()
             p.returncode = 1
             if stdout == subprocess.PIPE:
-                p.stdout = StringIO.StringIO('stdout')
+                p.stdout = StringIO('stdout')
             else:
                 stdout.write('stdout')
             if stderr == subprocess.PIPE:
-                p.stderr = StringIO.StringIO('stderr')
+                p.stderr = StringIO('stderr')
             else:
                 stderr.write('stderr')
             return p

@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 
-import StringIO
 import subprocess
 import tempfile
 import unittest
