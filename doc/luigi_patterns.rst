@@ -73,7 +73,7 @@ RangeDailyBase, described above, is named like that because a more
 efficient subclass exists, RangeDaily (resp. RangeHourly), tailored for
 hundreds of task classes scheduled concurrently with contiguousness
 requirements spanning years (which would incur redundant completeness
-checks and sceduler overload using the naive looping approach.) Usage:
+checks and scheduler overload using the naive looping approach.) Usage:
 
 .. code:: console
 
