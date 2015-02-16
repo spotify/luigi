@@ -32,7 +32,7 @@ import time
 import traceback
 import types
 
-import six
+from luigi import six
 
 from luigi import configuration
 from luigi import notifications

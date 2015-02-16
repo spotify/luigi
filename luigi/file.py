@@ -21,7 +21,7 @@ import shutil
 import tempfile
 import io
 
-import six
+from luigi import six
 
 import luigi.util
 from luigi.format import FileWrapper

@@ -21,7 +21,7 @@ import sys
 import tempfile
 import unittest
 
-import six
+from luigi import six
 
 import luigi.format
 from boto.exception import S3ResponseError

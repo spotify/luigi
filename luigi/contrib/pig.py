@@ -30,7 +30,7 @@ import subprocess
 import sys
 import tempfile
 
-import six
+from luigi import six
 
 import luigi
 from luigi import configuration

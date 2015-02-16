@@ -27,7 +27,7 @@ import logging
 import os
 import time
 
-import six
+from luigi import six
 
 from luigi import configuration
 from luigi import notifications

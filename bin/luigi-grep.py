@@ -5,7 +5,7 @@ import json
 import urllib2
 from collections import defaultdict
 
-import six
+from luigi import six
 
 parser = argparse.ArgumentParser(
     "luigi-grep is used to search for workflows using the luigi scheduler's json api")

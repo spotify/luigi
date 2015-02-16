@@ -19,7 +19,7 @@ import random
 from collections import defaultdict
 from heapq import nlargest
 
-import six
+from luigi import six
 
 import luigi
 import luigi.hadoop

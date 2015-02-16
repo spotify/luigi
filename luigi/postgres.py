@@ -20,7 +20,7 @@ import logging
 import re
 import tempfile
 
-import six
+from luigi import six
 
 import luigi
 from luigi.contrib import rdbms

@@ -17,7 +17,7 @@
 
 from collections import defaultdict
 
-import six
+from luigi import six
 
 import luigi
 from luigi.contrib.ssh import RemoteContext, RemoteTarget

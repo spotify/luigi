@@ -28,7 +28,7 @@ except ImportError:
     from urllib.parse import urlparse
 import warnings
 
-import six
+from luigi import six
 
 import luigi.contrib.target
 import luigi.format

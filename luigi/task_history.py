@@ -18,7 +18,7 @@
 import abc
 import logging
 
-import six
+from luigi import six
 
 from luigi import task
 
