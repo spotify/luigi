@@ -247,7 +247,7 @@ An example:
 Dynamic dependencies
 ^^^^^^^^^^^^^^^^^^^^
 
-Sometimes you might not now exactly what other tasks to depend on until runtime.
+Sometimes you might not know exactly what other tasks to depend on until runtime.
 In that case, Luigi provides a mechanism to specify dynamic dependencies.
 If you yield another Task in the run() method,
 the current task will be suspended and the other task will be run.
