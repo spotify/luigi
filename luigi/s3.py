@@ -32,7 +32,7 @@ try:
 except ImportError:
     from configparser import NoSectionError
 
-import six
+from luigi import six
 
 from luigi import configuration
 from luigi.format import FileWrapper

@@ -17,7 +17,7 @@
 
 import functools
 
-import six
+from luigi import six
 
 
 class with_config(object):

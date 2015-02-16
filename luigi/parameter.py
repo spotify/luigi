@@ -22,7 +22,7 @@ try:
 except ImportError:
     from configparser import NoOptionError, NoSectionError
 
-import six
+from luigi import six
 
 from luigi import configuration
 from luigi.deprecate_kwarg import deprecate_kwarg

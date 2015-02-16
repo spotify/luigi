@@ -22,7 +22,7 @@ import os
 import subprocess
 import tempfile
 
-import six
+from luigi import six
 
 import luigi
 import luigi.hadoop

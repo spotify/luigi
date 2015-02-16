@@ -32,7 +32,7 @@ import re
 import time
 from datetime import datetime, timedelta
 
-import six
+from luigi import six
 
 import luigi
 from luigi.parameter import ParameterException

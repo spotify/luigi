@@ -17,7 +17,7 @@
 
 import abc
 import logging
-import six
+from luigi import six
 
 logger = logging.getLogger('luigi-interface')
 

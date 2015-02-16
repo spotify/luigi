@@ -32,7 +32,7 @@ import time
 import traceback
 import types
 
-import six
+from luigi import six
 
 from luigi import configuration
 from luigi import notifications
@@ -696,8 +696,8 @@ class Worker(object):
         If worker-count-uniques is true, it will also
         require that one of the tasks is unique to this worker.
         """
-        return (self.__keep_alive and n_pending_tasks
-                and (n_unique_pending or not self.__count_uniques))
+        return (self.__keep_alive and n_pending_tasks and
+                (n_unique_pending or not self.__count_uniques))
 
     def run(self):
         """

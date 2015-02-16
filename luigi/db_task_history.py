@@ -19,7 +19,7 @@ import datetime
 import logging
 from contextlib import contextmanager
 
-import six
+from luigi import six
 
 from luigi import configuration
 import sqlalchemy

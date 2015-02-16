@@ -24,7 +24,7 @@ import logging
 import traceback
 import warnings
 
-import six
+from luigi import six
 
 from luigi import parameter
 

@@ -20,7 +20,7 @@ import os
 import re
 import subprocess
 
-import six
+from luigi import six
 
 import luigi.configuration
 import luigi.hadoop
