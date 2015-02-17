@@ -17,11 +17,14 @@
 
 import multiprocessing
 import os
+from io import BytesIO
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
 import sys
+
+import six
 
 import luigi.util
 from luigi import target
@@ -103,16 +106,21 @@ class MockFile(target.FileSystemTarget):
         class StringBuffer(StringIO):
             # Just to be able to do writing + reading from the same buffer
 
+            _write_line = True
+
             def write(self2, data):
                 if self._mirror_on_stderr:
-                    self2.seek(-1, os.SEEK_END)
-                    if self2.tell() <= 0 or self2.read(1) == '\n':
+                    if self2._write_line:
                         sys.stderr.write(fn + ": ")
                     sys.stderr.write(data)
+                    if (data[-1]) == '\n':
+                        self2._write_line = True
+                    else:
+                        self2._write_line = False
                 StringIO.write(self2, data)
 
             def close(self2):
-                if mode == 'w':
+                if 'w' in mode:
                     self.fs.get_all_data()[fn] = self2.getvalue()
                 StringIO.close(self2)
 
@@ -123,10 +131,39 @@ class MockFile(target.FileSystemTarget):
             def __enter__(self):
                 return self
 
-        if mode == 'w':
-            return StringBuffer()
+        class BinaryBuffer(BytesIO):
+            # Just to be able to do writing + reading from the same buffer
+
+            def write(self2, data):
+                if self._mirror_on_stderr:
+                    self2.seek(-1, os.SEEK_END)
+                    if self2.tell() <= 0 or self2.read(1) == '\n':
+                        sys.stderr.write(fn + ": ")
+                    sys.stderr.write(data)
+                BytesIO.write(self2, data)
+
+            def close(self2):
+                if 'w' in mode:
+                    self.fs.get_all_data()[fn] = self2.getvalue()
+                BytesIO.close(self2)
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                if not exc_type:
+                    self.close()
+
+            def __enter__(self):
+                return self
+
+        char_mode = target.get_char_mode(mode)
+        if char_mode == 't':
+            atomic_type = StringBuffer
         else:
-            return StringBuffer(self.fs.get_all_data()[fn])
+            atomic_type = BinaryBuffer
+
+        if 'w' in mode:
+            return atomic_type()
+        else:
+            return atomic_type(self.fs.get_all_data()[fn])
 
 
 def skip(func):

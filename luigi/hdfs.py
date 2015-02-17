@@ -23,9 +23,9 @@ import random
 import re
 import subprocess
 try:
-    import urlparse
+    from urlparse import urlparse, urlsplit, urlunparse
 except ImportError:
-    from urllib.parse import urlparse
+    from urllib.parse import urlparse, urlsplit, urlunparse
 import warnings
 
 from luigi import six
@@ -94,8 +94,8 @@ def tmppath(path=None, include_unix_username=True):
         base_dir = configured_hdfs_tmp_dir
     elif path is not None:
         # need to copy correct schema and network location
-        parsed = urlparse.urlparse(path)
-        base_dir = urlparse.urlunparse((parsed.scheme, parsed.netloc, temp_dir, '', '', ''))
+        parsed = urlparse(path)
+        base_dir = urlunparse((parsed.scheme, parsed.netloc, temp_dir, '', '', ''))
     else:
         # just system temporary directory
         base_dir = temp_dir
@@ -107,7 +107,7 @@ def tmppath(path=None, include_unix_username=True):
             subdir = path[len(temp_dir):]
         else:
             # Protection from /tmp/hdfs:/dir/file
-            parsed = urlparse.urlparse(path)
+            parsed = urlparse(path)
             subdir = parsed.path
         subdir = subdir.lstrip('/') + '-'
     else:
@@ -759,7 +759,7 @@ class HdfsTarget(FileSystemTarget):
         super(HdfsTarget, self).__init__(path)
         self.format = format
         self.is_tmp = is_tmp
-        (scheme, netloc, path, query, fragment) = urlparse.urlsplit(path)
+        (scheme, netloc, path, query, fragment) = urlsplit(path)
         if ":" in path:
             raise ValueError('colon is not allowed in hdfs filenames')
         self._fs = fs or get_autoconfig_client()

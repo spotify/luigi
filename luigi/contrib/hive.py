@@ -29,6 +29,9 @@ import luigi.hadoop
 from luigi.target import FileAlreadyExists, FileSystemTarget
 from luigi.task import flatten
 
+if six.PY3:
+    unicode = str
+
 logger = logging.getLogger('luigi-interface')
 
 
@@ -335,7 +338,10 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
     def run_job(self, job):
         self.prepare_outputs(job)
         with tempfile.NamedTemporaryFile() as f:
-            f.write(job.query())
+            query = job.query()
+            if isinstance(query, unicode):
+                query = query.encode('utf8')
+            f.write(query)
             f.flush()
             arglist = [load_hive_cmd(), '-f', f.name]
             hiverc = job.hiverc()

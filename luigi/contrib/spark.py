@@ -186,7 +186,7 @@ class SparkJob(luigi.Task):
             raise SparkJobError('Spark job failed: see yarn logs for %s' % app_id)
         else:
             temp_stderr.seek(0)
-            errors = "".join(temp_stderr.readlines())
+            errors = "".join((x.decode('utf8') for x in temp_stderr.readlines()))
             logger.error(errors)
             raise SparkJobError('Spark job failed', err=errors)
 
@@ -298,7 +298,7 @@ class Spark1xJob(luigi.Task):
                                 .format(app_id))
         elif return_code != 0:
             temp_stderr.seek(0)
-            errors = "".join(temp_stderr.readlines())
+            errors = "".join((x.decode('utf8') for x in temp_stderr.readlines()))
             logger.error(errors)
             raise SparkJobError('Spark job failed', err=errors)
 
@@ -391,6 +391,6 @@ class PySpark1xJob(Spark1xJob):
             raise SparkJobError('Spark job failed: see yarn logs for %s', app_id)
         elif return_code != 0:
             temp_stderr.seek(0)
-            errors = "".join(temp_stderr.readlines())
+            errors = "".join((x.decode('utf8') for x in temp_stderr.readlines()))
             logger.error(errors)
             raise SparkJobError('Spark job failed', err=errors)

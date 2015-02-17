@@ -251,7 +251,7 @@ class SimpleTaskState(object):
         if os.path.exists(self._state_path):
             logger.info("Attempting to load state from %s", self._state_path)
             try:
-                with open(self._state_path) as fobj:
+                with open(self._state_path, 'rb') as fobj:
                     state = pickle.load(fobj)
             except BaseException:
                 logger.exception("Error when loading state. Starting from clean slate.")

@@ -606,7 +606,7 @@ class Worker(object):
         for task_id, p in six.iteritems(self._running_tasks):
             if not p.is_alive() and p.exitcode:
                 error_msg = 'Worker task %s died unexpectedly with exit code %s' % (task_id, p.exitcode)
-            elif p.timeout_time is not None and time.time() > p.timeout_time and p.is_alive():
+            elif p.timeout_time is not None and time.time() > float(p.timeout_time) and p.is_alive():
                 p.terminate()
                 error_msg = 'Worker task %s timed out and was terminated.' % task_id
             else:

@@ -127,10 +127,10 @@ class PigJobTask(luigi.Task):
                 ret = select.select(reads, [], [])
                 for fd in ret[0]:
                     if fd == proc.stderr.fileno():
-                        line = proc.stderr.readline()
+                        line = proc.stderr.readline().decode('utf8')
                         err_lines.append(line)
                     if fd == proc.stdout.fileno():
-                        line = proc.stdout.readline()
+                        line = proc.stdout.readline().decode('utf8')
                         temp_stdout.write(line)
 
                 err_line = line.lower()
@@ -142,7 +142,7 @@ class PigJobTask(luigi.Task):
                         logger.info(t)
 
         # Read the rest + stdout
-        err = ''.join(err_lines + [err_line for err_line in proc.stderr])
+        err = ''.join(err_lines + [err_line.decode('utf8') for err_line in proc.stderr])
         if proc.returncode == 0:
             logger.info("Job completed successfully!")
         else:
