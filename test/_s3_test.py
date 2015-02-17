@@ -42,6 +42,13 @@ except ImportError:
     from luigi.mock import skip
     mock_s3 = skip
 
+
+if sys.version_info[:2] == (3, 4):
+    # moto break stuff under python3.4
+    from luigi.mock import skip
+    mock_s3 = skip
+
+
 AWS_ACCESS_KEY = "XXXXXXXXXXXXXXXXXXXX"
 AWS_SECRET_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 

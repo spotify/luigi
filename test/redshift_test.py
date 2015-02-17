@@ -18,6 +18,8 @@
 import json
 from unittest import TestCase
 
+import sys
+
 import luigi
 import luigi.notifications
 
@@ -28,6 +30,12 @@ try:
     from luigi.s3 import S3Client
 except ImportError:
     print('Skipping %s, requires s3 stuff' % __file__)
+    from luigi.mock import skip
+    mock_s3 = skip
+
+
+if sys.version_info[:2] == (3, 4):
+    # moto break stuff under python3.4
     from luigi.mock import skip
     mock_s3 = skip
 
@@ -73,7 +81,7 @@ class TestRedshiftManifestTask(TestCase):
 
         output = t.output().open('r').read()
         expected_manifest_output = json.dumps(generate_manifest_json(folder_paths, FILES))
-        self.assertEqual(output, expected_manifest_output)
+        self.assertEqual(output.decode('utf8'), expected_manifest_output)
 
     @mock_s3
     def test_run_multiple_paths(self):
@@ -95,4 +103,4 @@ class TestRedshiftManifestTask(TestCase):
 
         output = t.output().open('r').read()
         expected_manifest_output = json.dumps(generate_manifest_json(folder_paths, FILES))
-        self.assertEqual(output, expected_manifest_output)
+        self.assertEqual(output.decode('utf8'), expected_manifest_output)
