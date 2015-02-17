@@ -165,6 +165,16 @@ class FileTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.path))
         self.assertTrue(os.path.exists(self.copy))
 
+    def test_unicode(self):
+        t = File(self.path)
+        a = u'我éçф'
+        f = t.open('wt')
+        f.write(a)
+        f.close()
+        f = t.open('rt')
+        b = f.read()
+        self.assertEqual(a, b)
+
 
 class FileCreateDirectoriesTest(FileTest):
     path = '/tmp/%s/xyz/test.txt' % random.randint(0, 999999999)
