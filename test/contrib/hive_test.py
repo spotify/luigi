@@ -275,7 +275,7 @@ class TestHiveMisc(unittest.TestCase):
 
     def test_import_old(self):
         import luigi.hive
-        self.assertEquals(luigi.hive.HiveQueryTask, luigi.contrib.hive.HiveQueryTask)
+        self.assertEqual(luigi.hive.HiveQueryTask, luigi.contrib.hive.HiveQueryTask)
 
 
 class MyHiveTask(luigi.contrib.hive.HiveQueryTask):
@@ -291,7 +291,7 @@ class TestHiveTask(unittest.TestCase):
     def test_run(self, run_and_track_hadoop_job):
         success = luigi.run(['MyHiveTask', '--param', 'foo', '--local-scheduler', '--no-lock'])
         self.assertTrue(success)
-        self.assertEquals('hive', run_and_track_hadoop_job.call_args[0][0][0])
+        self.assertEqual('hive', run_and_track_hadoop_job.call_args[0][0][0])
 
 
 if __name__ == '__main__':

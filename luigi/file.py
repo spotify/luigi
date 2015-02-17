@@ -20,8 +20,6 @@ import random
 import shutil
 import tempfile
 import io
-import sys
-import locale
 
 from luigi import six
 
@@ -43,10 +41,11 @@ class abstract_atomic_file(object):
     def __init__(self, path):
         self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         self.path = path
-        super(abstract_atomic_file, self).__init__(self.get_file_io(self.__tmp_path))
+        init_args = self.get_init_args(self.__tmp_path)
+        super(abstract_atomic_file, self).__init__(*init_args)
 
-    def get_file_io(self, path):
-        return io.FileIO(path, 'w')
+    def get_init_args(self, path):
+        return (io.FileIO(path, 'w'),)
 
     def close(self):
         super(abstract_atomic_file, self).close()
@@ -68,30 +67,18 @@ class abstract_atomic_file(object):
 
 
 class atomic_binary_file(abstract_atomic_file, io.BufferedWriter):
-
-    def write(self, b):
-        if isinstance(b, unicode):
-            try:
-                enc = sys.getfilesystemencoding()
-                b = b.encode(enc)
-            except UnicodeEncodeError:
-                enc = 'utf8'
-                b = b.encode(enc)
-            raise UnicodeWarning('Writing unicode in binary file! Object was encoded with %s' % enc)
-
-        return super(atomic_binary_file, self).write(b)
-
-
-class atomic_file(abstract_atomic_file, io.TextIOWrapper):
     pass
 
 
-class atomic_mixed_file(abstract_atomic_file, io.TextIOWrapper):
-    # class to support python2 on system that doesn't use \n as newline
-    def write(self, b):
-        if not isinstance(b, unicode):
-            b = b.decode(locale.getpreferredencoding())
-        super(atomic_mixed_file, self).write(b)
+class atomic_text_file(abstract_atomic_file, io.TextIOWrapper):
+    pass
+
+
+if six.PY2:
+    class atomic_file(abstract_atomic_file, file):
+        # for compatibility (bytes file with universal newline)
+        def get_init_args(self, path):
+            return (path, 'w')
 
 
 class LocalFileSystem(FileSystem):
@@ -142,12 +129,14 @@ class File(FileSystemTarget):
         char_mode = get_char_mode(mode)
         if 'w' in mode:
             self.makedirs()
+
             if char_mode == 'b':
                 atomic_type = atomic_binary_file
             elif char_mode == 't':
-                atomic_type = atomic_file
+                atomic_type = atomic_text_file
             else:
-                atomic_type = atomic_mixed_file
+                atomic_type = atomic_file
+
             if self.format:
                 return self.format.pipe_writer(atomic_type(self.path))
             else:
@@ -159,9 +148,11 @@ class File(FileSystemTarget):
             elif char_mode == 'b':
                 fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
             else:
-                fileobj = FileWrapper(io.open(self.path, 'r'))
+                fileobj = FileWrapper(open(self.path, 'r'))
+
             if self.format:
                 return self.format.pipe_reader(fileobj)
+
             return fileobj
         else:
             raise Exception('mode must be r/w')

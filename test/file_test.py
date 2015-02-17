@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import bz2
 import gc
@@ -47,7 +48,7 @@ class FileTest(unittest.TestCase):
     def test_close(self):
         t = File(self.path)
         p = t.open('w')
-        print >> p, 'test'
+        print('test', file=p)
         self.assertFalse(os.path.exists(self.path))
         p.close()
         self.assertTrue(os.path.exists(self.path))
@@ -55,7 +56,7 @@ class FileTest(unittest.TestCase):
     def test_del(self):
         t = File(self.path)
         p = t.open('w')
-        print >> p, 'test'
+        print('test', file=p)
         tp = p.tmp_path
         del p
 
@@ -84,9 +85,9 @@ class FileTest(unittest.TestCase):
     def test_gzip(self):
         t = File(self.path, luigi.format.Gzip)
         p = t.open('w')
-        test_data = 'test'
+        test_data = b'test'
         p.write(test_data)
-        print self.path
+        print(self.path)
         self.assertFalse(os.path.exists(self.path))
         p.close()
         self.assertTrue(os.path.exists(self.path))
@@ -104,9 +105,9 @@ class FileTest(unittest.TestCase):
     def test_bzip2(self):
         t = File(self.path, luigi.format.Bzip2)
         p = t.open('w')
-        test_data = 'test'
+        test_data = b'test'
         p.write(test_data)
-        print self.path
+        print(self.path)
         self.assertFalse(os.path.exists(self.path))
         p.close()
         self.assertTrue(os.path.exists(self.path))
@@ -164,6 +165,16 @@ class FileTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.path))
         self.assertTrue(os.path.exists(self.copy))
 
+    def test_unicode(self):
+        t = File(self.path)
+        a = u'我éçф'
+        f = t.open('wt')
+        f.write(a)
+        f.close()
+        f = t.open('rt')
+        b = f.read()
+        self.assertEqual(a, b)
+
 
 class FileCreateDirectoriesTest(FileTest):
     path = '/tmp/%s/xyz/test.txt' % random.randint(0, 999999999)
@@ -183,7 +194,7 @@ class TmpFileTest(unittest.TestCase):
         self.assertFalse(t.exists())
         self.assertFalse(os.path.exists(t.path))
         p = t.open('w')
-        print >> p, 'test'
+        print('test', file=p)
         self.assertFalse(t.exists())
         self.assertFalse(os.path.exists(t.path))
         p.close()

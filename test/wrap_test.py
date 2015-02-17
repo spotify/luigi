@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import datetime
 import unittest
@@ -34,7 +35,7 @@ class A(luigi.Task):
 
     def run(self):
         f = self.output().open('w')
-        print >>f, 'hello, world'
+        print('hello, world', file=f)
         f.close()
 
 
@@ -46,7 +47,7 @@ class B(luigi.Task):
 
     def run(self):
         f = self.output().open('w')
-        print >>f, 'goodbye, space'
+        print('goodbye, space', file=f)
         f.close()
 
 
@@ -60,9 +61,9 @@ def XMLWrapper(cls):
         def run(self):
             f = self.input().open('r')
             g = self.output().open('w')
-            print >>g, '<?xml version="1.0" ?>'
+            print('<?xml version="1.0" ?>', file=g)
             for line in f:
-                print >>g, '<dummy-xml>' + line.strip() + '</dummy-xml>'
+                print('<dummy-xml>' + line.strip() + '</dummy-xml>', file=g)
             g.close()
 
     return XMLWrapperCls

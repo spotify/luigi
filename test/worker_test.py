@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import functools
 import logging
@@ -85,7 +86,7 @@ class DynamicRequires(Task):
         with self.output().open('w') as f:
             for i, d in enumerate(dummy_targets):
                 for line in d.open('r'):
-                    print >>f, '%d: %s' % (i, line.strip())
+                    print('%d: %s' % (i, line.strip()), file=f)
 
 
 class DynamicRequiresOtherModule(Task):
@@ -555,7 +556,7 @@ class DynamicDependenciesTest(unittest.TestCase):
 
         # loop through output and verify
         f = t.output().open('r')
-        for i in xrange(7):
+        for i in range(7):
             self.assertEqual(f.readline().strip(), '%d: Done!' % i)
 
         self.assertTrue(time.time() - t0 < self.timeout)
@@ -765,7 +766,7 @@ class MultipleWorkersTest(unittest.TestCase):
                 time.sleep(0.1)
 
         t0 = time.time()
-        luigi.build([MyDynamicTask(i) for i in xrange(100)], workers=100, local_scheduler=True)
+        luigi.build([MyDynamicTask(i) for i in range(100)], workers=100, local_scheduler=True)
         self.assertTrue(time.time() < t0 + 5.0)  # should ideally take exactly 0.1s, but definitely less than 10.0
 
     def test_system_exit(self):

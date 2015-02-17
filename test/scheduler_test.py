@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import pickle
 import tempfile
@@ -33,7 +34,7 @@ class SchedulerTest(unittest.TestCase):
         active_workers = {'Worker1': 1e9, 'Worker2': time.time()}
 
         with tempfile.NamedTemporaryFile(delete=True) as fn:
-            with open(fn.name, 'w') as fobj:
+            with open(fn.name, 'wb') as fobj:
                 state = (tasks, active_workers)
                 pickle.dump(state, fobj)
 
@@ -47,7 +48,7 @@ class SchedulerTest(unittest.TestCase):
     def test_load_broken_state(self):
         with tempfile.NamedTemporaryFile(delete=True) as fn:
             with open(fn.name, 'w') as fobj:
-                print >> fobj, "b0rk"
+                print("b0rk", file=fobj)
 
             state = luigi.scheduler.SimpleTaskState(
                 state_path=fn.name)

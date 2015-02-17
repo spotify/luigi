@@ -14,13 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
-import ConfigParser
+try:
+    import ConfigParser
+except ImportError:
+    import configparser as ConfigParser
 import logging
 import os
 import subprocess
 import unittest
 import warnings
+
+import six
 
 import luigi
 import mock
@@ -78,7 +84,7 @@ class WriteToFile(luigi.Task):
 
     def run(self):
         f = self.output().open('w')
-        print >>f, 'foo'
+        print('foo', file=f)
         f.close()
 
 
@@ -118,7 +124,11 @@ class CmdlineTest(unittest.TestCase):
             self.assertEqual([mock.call(handler.return_value)], logger.return_value.addHandler.call_args_list)
 
         with mock.patch("luigi.interface.setup_interface_logging.has_run", new=False):
-            self.assertRaises(ConfigParser.NoSectionError, luigi.interface.setup_interface_logging, '/blah')
+            if six.PY2:
+                error = ConfigParser.NoSectionError
+            else:
+                error = KeyError
+            self.assertRaises(error, luigi.interface.setup_interface_logging, '/blah')
 
     @mock.patch("warnings.warn")
     @mock.patch("luigi.interface.setup_interface_logging")

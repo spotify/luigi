@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 
-import StringIO
 import subprocess
 import tempfile
 import unittest
@@ -82,7 +81,8 @@ class SimplePigTest(unittest.TestCase):
             job = SimpleTestJob()
             job.run()
             self.assertEqual([['/usr/share/pig/bin/pig', '-f', 'my_simple_pig_script.pig']], arglist_result)
-        except PigJobError as p:
+        except PigJobError as e:
+            p = e
             self.assertEqual('stderr', p.err)
         else:
             self.fail("Should have thrown PigJobError")
@@ -123,7 +123,8 @@ class ComplexPigTest(unittest.TestCase):
         try:
             job = ComplexTestJob()
             job.run()
-        except PigJobError as p:
+        except PigJobError as e:
+            p = e
             self.assertEqual('stderr', p.err)
             self.assertEqual([['/usr/share/pig/bin/pig', '-x', 'local', '-p', 'YOUR_PARAM_NAME=Your param value', '-propertyFile', 'pig_property_file', '-f', 'my_complex_pig_script.pig']], arglist_result)
 
@@ -162,8 +163,8 @@ def _get_fake_Popen(arglist_result, return_code, *args, **kwargs):
         p.stderr = tempfile.TemporaryFile()
         p.stdout = tempfile.TemporaryFile()
 
-        p.stdout.write('stdout')
-        p.stderr.write('stderr')
+        p.stdout.write(b'stdout')
+        p.stderr.write(b'stderr')
 
         # Reset temp files so the output can be read.
         p.stdout.seek(0)

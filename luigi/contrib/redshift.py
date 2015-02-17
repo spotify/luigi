@@ -319,7 +319,7 @@ class RedshiftManifestTask(S3PathTask):
                 })
         manifest = {'entries': entries}
         target = self.output().open('w')
-        target.write(json.dumps(manifest))
+        target.write(json.dumps(manifest).encode('utf8'))
         target.close()
 
 

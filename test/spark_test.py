@@ -15,7 +15,10 @@
 # limitations under the License.
 #
 
-import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 import subprocess
 import unittest
 
@@ -81,8 +84,8 @@ class SparkTest(unittest.TestCase):
 
             p = P()
             p.returncode = 0
-            p.stderr = StringIO.StringIO()
-            p.stdout = StringIO.StringIO()
+            p.stderr = StringIO()
+            p.stdout = StringIO()
             return p
 
         h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
@@ -115,13 +118,13 @@ class SparkTest(unittest.TestCase):
             p = P()
             p.returncode = 1
             if stdout == subprocess.PIPE:
-                p.stdout = StringIO.StringIO('stdout')
+                p.stdout = StringIO('stdout')
             else:
-                stdout.write('stdout')
+                stdout.write(b'stdout')
             if stderr == subprocess.PIPE:
-                p.stderr = StringIO.StringIO('stderr')
+                p.stderr = StringIO('stderr')
             else:
-                stderr.write('stderr')
+                stderr.write(b'stderr')
             return p
 
         p = subprocess.Popen
@@ -187,8 +190,8 @@ class Spark1xTest(unittest.TestCase):
 
             p = P()
             p.returncode = 0
-            p.stderr = StringIO.StringIO()
-            p.stdout = StringIO.StringIO()
+            p.stderr = StringIO()
+            p.stdout = StringIO()
             return p
 
         h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
@@ -198,7 +201,7 @@ class Spark1xTest(unittest.TestCase):
             job = Test1xJob()
             job.run()
             self.assertEqual(len(arglist_result), 1)
-            self.assertEqual(arglist_result[0][0:6],
+            self.assertEqual(list(arglist_result[0])[0:6],
                              [self.ss, '--class', job.job_class(),
                               '--master', 'yarn-client', job.jar()])
         finally:
@@ -223,13 +226,13 @@ class Spark1xTest(unittest.TestCase):
             p = P()
             p.returncode = 1
             if stdout == subprocess.PIPE:
-                p.stdout = StringIO.StringIO('stdout')
+                p.stdout = StringIO('stdout')
             else:
-                stdout.write('stdout')
+                stdout.write(b'stdout')
             if stderr == subprocess.PIPE:
-                p.stderr = StringIO.StringIO('stderr')
+                p.stderr = StringIO('stderr')
             else:
-                stderr.write('stderr')
+                stderr.write(b'stderr')
             return p
 
         p = subprocess.Popen
@@ -292,8 +295,8 @@ class PySpark1xTest(unittest.TestCase):
 
             p = P()
             p.returncode = 0
-            p.stderr = StringIO.StringIO()
-            p.stdout = StringIO.StringIO()
+            p.stderr = StringIO()
+            p.stdout = StringIO()
             return p
 
         h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
@@ -303,7 +306,7 @@ class PySpark1xTest(unittest.TestCase):
             job = TestPySpark1xJob()
             job.run()
             self.assertEqual(len(arglist_result), 1)
-            self.assertEqual(arglist_result[0][0:6],
+            self.assertEqual(list(arglist_result[0])[0:6],
                              [self.ss, '--master', 'yarn-client', job.program()])
         finally:
             luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
@@ -327,13 +330,13 @@ class PySpark1xTest(unittest.TestCase):
             p = P()
             p.returncode = 1
             if stdout == subprocess.PIPE:
-                p.stdout = StringIO.StringIO('stdout')
+                p.stdout = StringIO('stdout')
             else:
-                stdout.write('stdout')
+                stdout.write(b'stdout')
             if stderr == subprocess.PIPE:
-                p.stderr = StringIO.StringIO('stderr')
+                p.stderr = StringIO('stderr')
             else:
-                stderr.write('stderr')
+                stderr.write(b'stderr')
             return p
 
         p = subprocess.Popen

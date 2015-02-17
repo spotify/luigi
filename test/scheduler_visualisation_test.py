@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import division
 
 import os
 import tempfile
@@ -48,7 +49,7 @@ class FactorTask(luigi.Task):
         for factor in range(2, self.product):
             if self.product % factor == 0:
                 yield FactorTask(factor)
-                yield FactorTask(self.product / factor)
+                yield FactorTask(self.product // factor)
                 return
 
     def run(self):
@@ -110,7 +111,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         return self.scheduler
 
     def _test_run(self, workers):
-        tasks = [DummyTask(i) for i in xrange(20)]
+        tasks = [DummyTask(i) for i in range(20)]
         self._build(tasks, workers=workers)
         self._assert_complete(tasks)
 

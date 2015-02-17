@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import print_function
 
 import datetime
 import pickle
@@ -294,7 +295,7 @@ class P(luigi.Task):
 
     def run(self):
         f = self.output().open('w')
-        print >>f, 'hello, world'
+        print('hello, world', file=f)
         f.close()
 
 

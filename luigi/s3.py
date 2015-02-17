@@ -23,9 +23,9 @@ import random
 import tempfile
 import io
 try:
-    import urlparse
+    from urlparse import urlsplit
 except ImportError:
-    from urllib.parse import urlparse
+    from urllib.parse import urlsplit
 import warnings
 try:
     from ConfigParser import NoSectionError
@@ -324,7 +324,7 @@ class S3Client(FileSystem):
         return config
 
     def _path_to_bucket_and_key(self, path):
-        (scheme, netloc, path, query, fragment) = urlparse.urlsplit(path)
+        (scheme, netloc, path, query, fragment) = urlsplit(path)
         path_without_initial_slash = path[1:]
         return netloc, path_without_initial_slash
 

@@ -29,11 +29,14 @@ import datetime
 import ftplib
 import os
 import random
+import io
 
 import luigi
+import luigi.file
 import luigi.format
 import luigi.target
 from luigi.format import FileWrapper
+import six
 
 
 class RemoteFileSystem(luigi.target.FileSystem):
@@ -177,7 +180,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         os.rename(tmp_local_path, local_path)
 
 
-class AtomicFtpfile(file):
+class AbstractAtomicFtpFile(object):
     """
     Simple class that writes to a temp file and upload to ftp on close().
 
@@ -187,7 +190,6 @@ class AtomicFtpfile(file):
     def __init__(self, fs, path):
         """
         Initializes an AtomicFtpfile instance.
-
         :param fs:
         :param path:
         :type path: str
@@ -195,11 +197,15 @@ class AtomicFtpfile(file):
         self.__tmp_path = '%s-luigi-tmp-%09d' % (path, random.randrange(0, 1e10))
         self._fs = fs
         self.path = path
-        super(AtomicFtpfile, self).__init__(self.__tmp_path, 'w')
+        init_args = self.get_init_args(self.__tmp_path)
+        super(AbstractAtomicFtpFile, self).__init__(*init_args)
+
+    def get_init_args(self, path):
+        return (io.FileIO(path, 'w'),)
 
     def close(self):
         # close and upload file to ftp
-        super(AtomicFtpfile, self).close()
+        super(AbstractAtomicFtpFile, self).close()
         self._fs.put(self.__tmp_path, self.path)
         os.remove(self.__tmp_path)
 
@@ -218,12 +224,24 @@ class AtomicFtpfile(file):
     def __exit__(self, exc_type, exc, traceback):
         """
         Close/commit the file if there are no exception
-
         Upload file to ftp
         """
         if exc_type:
             return
         return file.__exit__(self, exc_type, exc, traceback)
+
+
+class AtomicFtpTextFile(AbstractAtomicFtpFile, io.TextIOWrapper):
+    pass
+
+
+class AtomicFtpBinaryFile(AbstractAtomicFtpFile, io.BufferedWriter):
+    pass
+
+if six.PY2:
+    class AtomicFtpfile(AbstractAtomicFtpFile, file):
+        def get_init_args(self, path):
+            return (path, 'w')
 
 
 class RemoteTarget(luigi.target.FileSystemTarget):
@@ -256,19 +274,34 @@ class RemoteTarget(luigi.target.FileSystemTarget):
                      additional options.
         :type mode: str
         """
-        if mode == 'w':
-            if self.format:
-                return self.format.pipe_writer(AtomicFtpfile(self._fs, self.path))
-            else:
-                return AtomicFtpfile(self._fs, self.path)
+        char_mode = luigi.target.get_char_mode(mode)
+        if 'w' in mode:
 
-        elif mode == 'r':
+            if char_mode == 'b':
+                atomic_type = AtomicFtpBinaryFile
+            elif char_mode == 't':
+                atomic_type = AtomicFtpTextFile
+            else:
+                atomic_type = AtomicFtpfile
+
+            if self.format:
+                return self.format.pipe_writer(atomic_type(self._fs, self.path))
+            else:
+                return atomic_type(self._fs, self.path)
+
+        elif 'r' in mode:
             self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
             # download file to local
             self._fs.get(self.path, self.__tmp_path)
 
             # manage tmp file
-            fileobj = FileWrapper(open(self.__tmp_path, 'r'))
+            if char_mode == 't':
+                fileobj = FileWrapper(io.TextIOWrapper(io.FileIO(self.path, 'r')))
+            elif char_mode == 'b':
+                fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
+            else:
+                fileobj = FileWrapper(open(self.path, 'r'))
+
             if self.format:
                 return self.format.pipe_reader(fileobj)
             return fileobj

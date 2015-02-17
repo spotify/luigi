@@ -24,10 +24,15 @@ import shutil
 import tempfile
 import unittest
 
+import six
+
 import luigi
 import sqlalchemy
 from luigi.contrib import sqla
 from luigi.mock import MockFile
+
+if six.PY3:
+    unicode = str
 
 #################################
 # Globals part of the test case #
