@@ -354,7 +354,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
                 return [Z(1), Z(2)]
 
         self._build([ZZ()])
-        dep_graph = self._remote().inverse_dependencies('X()')
+        dep_graph = self._remote().inverse_dep_graph('X()')
 
         def assert_has_deps(task_id, deps):
             self.assertTrue(task_id in dep_graph, '%s not in dep_graph %s' % (task_id, dep_graph))
