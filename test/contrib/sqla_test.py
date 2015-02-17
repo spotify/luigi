@@ -28,6 +28,7 @@ import luigi
 import sqlalchemy
 from luigi.contrib import sqla
 from luigi.mock import MockFile
+from nose.plugins.attrib import attr
 
 #################################
 # Globals part of the test case #
@@ -63,6 +64,7 @@ class SQLATask(sqla.CopyToTable):
         return BaseTask()
 
 
+@attr('sqlalchemy')
 class TestSQLA(unittest.TestCase):
     NUM_WORKERS = 1
 
@@ -364,6 +366,7 @@ class TestSQLA(unittest.TestCase):
         self._check_entries(self.engine)
 
 
+@attr('sqlalchemy')
 class TestSQLA2(TestSQLA):
     """ 2 workers version
     """
