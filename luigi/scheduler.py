@@ -809,7 +809,7 @@ class CentralPlannerScheduler(Scheduler):
                 worker['running'] = tasks
         return workers
 
-    def inverse_dependencies(self, task_id, **kwargs):
+    def inverse_dep_graph(self, task_id, **kwargs):
         self.prune()
         serialized = {}
         if self._state.has_task(task_id):
