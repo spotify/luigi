@@ -92,16 +92,16 @@ if __name__ == '__main__':
     deps = find_deps_cli()
     for d in deps:
         task_name = d
-        task_output = "n/a"
+        task_output = u"n/a"
         if isinstance(d.output(), RemoteTarget):
-            task_output = "[SSH] {0}:{1}".format(d.output()._fs.remote_context.host, d.output().path)
+            task_output = u"[SSH] {0}:{1}".format(d.output()._fs.remote_context.host, d.output().path)
         elif isinstance(d.output(), S3Target):
-            task_output = "[S3] {0}".format(d.output().path)
+            task_output = u"[S3] {0}".format(d.output().path)
         elif isinstance(d.output(), FileSystemTarget):
-            task_output = "[FileSystem] {0}".format(d.output().path)
+            task_output = u"[FileSystem] {0}".format(d.output().path)
         elif isinstance(d.output(), PostgresTarget):
-            task_output = "[DB] {0}:{1}".format(d.output().host, d.output().table)
+            task_output = u"[DB] {0}:{1}".format(d.output().host, d.output().table)
         else:
             task_output = "to be determined"
-        print """   TASK: {0}
-                       : {1}""".format(task_name, task_output)
+        print(u"""   TASK: {0}
+                       : {1}""".format(task_name, task_output))

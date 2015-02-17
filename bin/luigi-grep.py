@@ -72,8 +72,8 @@ if __name__ == '__main__':
         results = grep.status_search(args.status)
 
     for job in results:
-        print "{name}: {status}, Dependencies:".format(name=job['name'], status=job['status'])
+        print("{name}: {status}, Dependencies:".format(name=job['name'], status=job['status']))
         for (status, jobs) in six.iteritems(job['deps_by_status']):
-            print "  status={status}".format(status=status)
+            print("  status={status}".format(status=status))
             for job in jobs:
-                print "    {job}".format(job=job)
+                print("    {job}".format(job=job))
