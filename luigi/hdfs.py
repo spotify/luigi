@@ -616,6 +616,14 @@ def get_configured_hdfs_client(show_warnings=True):
     """
     config = hdfs()
     custom = config.client
+    if six.PY3 and (custom == "snakebite" or config.use_snakebite):
+        if show_warnings:
+            warnings.warn(
+                "snakebite client not compatible with python3 at the moment"
+                "falling back on hadoopcli",
+                stacklevle=2
+            )
+        return "hadoopcli"
     if custom:
         # Eventually this should be the only valid code path
         return custom
