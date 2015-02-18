@@ -17,6 +17,7 @@
 
 import signal
 import subprocess
+import io
 
 
 class FileWrapper(object):
@@ -214,6 +215,35 @@ class Format(object):
     @classmethod
     def pipe_writer(cls, output_pipe):
         raise NotImplementedError()
+
+
+class Chain(Format):
+
+    def __init__(self, *args):
+        self.args = args
+
+    def pipe_reader(self, input_pipe):
+        for x in self.args:
+            input_pipe = x.pipereader(input_pipe)
+        return input_pipe
+
+    def pipe_writer(self, output_pipe):
+        for x in reversed(self.args):
+            output_pipe = x.pipe_writer(output_pipe)
+        return output_pipe
+
+
+class Text(Format):
+
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def pipe_reader(self, input_pipe):
+        return io.TextIOWrapper(input_pipe, *self.args, **self.kwargs)
+
+    def pipe_writer(self, output_pipe):
+        return io.TextIOWrapper(output_pipe, *self.args, **self.kwargs)
 
 
 class Gzip(Format):
