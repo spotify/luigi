@@ -128,6 +128,15 @@ class InputPipeProcessWrapper(object):
             yield line
         self._finish()
 
+    def readable(self):
+        return True
+
+    def writable(self):
+        return False
+
+    def seekable(self):
+        return False
+
 
 class OutputPipeProcessWrapper(object):
     WRITES_BEFORE_FLUSH = 10000
@@ -192,6 +201,15 @@ class OutputPipeProcessWrapper(object):
             raise AttributeError(name)
         return getattr(self._process.stdin, name)
 
+    def readable(self):
+        return False
+
+    def writable(self):
+        return True
+
+    def seekable(self):
+        return False
+
 
 class Format(object):
     """
@@ -216,6 +234,9 @@ class Format(object):
     def pipe_writer(cls, output_pipe):
         raise NotImplementedError()
 
+    def __rshift__(a, b):
+        return Chain(a, b)
+
 
 class Chain(Format):
 
@@ -233,7 +254,7 @@ class Chain(Format):
         return output_pipe
 
 
-class Text(Format):
+class TextWrapper(Format):
 
     def __init__(self, *args, **kwargs):
         self.args = args
@@ -246,23 +267,30 @@ class Text(Format):
         return io.TextIOWrapper(output_pipe, *self.args, **self.kwargs)
 
 
-class Gzip(Format):
+class GzipWrapper(Format):
 
-    @classmethod
-    def pipe_reader(cls, input_pipe):
+    def __init__(self, compression_level=None):
+        self.compression_level = compression_level
+
+    def pipe_reader(self, input_pipe):
         return InputPipeProcessWrapper(['gunzip'], input_pipe)
 
-    @classmethod
-    def pipe_writer(cls, output_pipe):
-        return OutputPipeProcessWrapper(['gzip'], output_pipe)
+    def pipe_writer(self, output_pipe):
+        args = ['gzip']
+        if self.compression_level is not None:
+            args.append('-' + str(int(self.compression_level)))
+        return OutputPipeProcessWrapper(args, output_pipe)
 
 
-class Bzip2(Format):
+class Bzip2Wrapper(Format):
 
-    @classmethod
-    def pipe_reader(cls, input_pipe):
+    def pipe_reader(self, input_pipe):
         return InputPipeProcessWrapper(['bzcat'], input_pipe)
 
-    @classmethod
-    def pipe_writer(cls, output_pipe):
+    def pipe_writer(self, output_pipe):
         return OutputPipeProcessWrapper(['bzip2'], output_pipe)
+
+Text = TextWrapper()
+UTF8 = TextWrapper(encoding='utf8')
+Gzip = GzipWrapper()
+Bzip2 = Bzip2Wrapper()
