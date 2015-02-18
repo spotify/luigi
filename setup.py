@@ -43,6 +43,7 @@ install_requires = [
     'pyparsing',
     'tornado',
     'snakebite>=2.5.0',
+    'python-daemon',
 ]
 
 if sys.version_info[:2] < (2, 7):

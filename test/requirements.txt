@@ -4,5 +4,4 @@ nose
 psycopg2
 boto
 sqlalchemy
-python-daemon
 ipdb
