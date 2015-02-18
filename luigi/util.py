@@ -19,7 +19,7 @@ import datetime
 import functools
 import logging
 
-import six
+from luigi import six
 
 from luigi import task
 from luigi import parameter

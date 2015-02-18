@@ -16,7 +16,7 @@
 #
 from __future__ import division
 
-import six
+from luigi import six
 
 import datetime
 import re

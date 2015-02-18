@@ -24,7 +24,7 @@ except ImportError:
     from io import StringIO
 import sys
 
-import six
+from luigi import six
 
 import luigi.util
 from luigi import target
