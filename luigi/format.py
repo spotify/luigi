@@ -223,8 +223,8 @@ class Chain(Format):
         self.args = args
 
     def pipe_reader(self, input_pipe):
-        for x in self.args:
-            input_pipe = x.pipereader(input_pipe)
+        for x in reversed(self.args):
+            input_pipe = x.pipe_reader(input_pipe)
         return input_pipe
 
     def pipe_writer(self, output_pipe):

@@ -166,16 +166,45 @@ class FileTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.path))
         self.assertTrue(os.path.exists(self.copy))
 
-    @mock.patch("locale.getpreferredencoding", return_value="utf8")
-    def test_unicode(self, mock_encoding):
-        t = File(self.path)
+    def test_text(self):
+        t = File(self.path, luigi.format.Text(encoding='utf8'))
         a = u'我éçф'
-        f = t.open('wt')
-        f.write(a)
-        f.close()
-        f = t.open('rt')
-        b = f.read()
+        with t.open('wb') as f:
+            f.write(a)
+        with t.open('rb') as f:
+            b = f.read()
         self.assertEqual(a, b)
+
+    def test_format_chain(self):
+        chain = luigi.format.Chain(
+            luigi.format.Text(encoding='utf8', newline='\r\n'),
+            luigi.format.Gzip,
+        )
+        t = File(self.path, chain)
+        a = u'我é\nçф'
+
+        with t.open('wb') as f:
+            f.write(a)
+
+        with gzip.open(self.path, 'rb') as f:
+            b = f.read()
+
+        self.assertEqual(b'\xe6\x88\x91\xc3\xa9\r\n\xc3\xa7\xd1\x84', b)
+
+    def test_format_chain_reverse(self):
+        chain = luigi.format.Chain(
+            luigi.format.Text(encoding='utf8'),
+            luigi.format.Gzip,
+        )
+        t = File(self.path, chain)
+
+        with gzip.open(self.path, 'wb') as f:
+            f.write(b'\xe6\x88\x91\xc3\xa9\r\n\xc3\xa7\xd1\x84')
+
+        with t.open('rb') as f:
+            b = f.read()
+
+        self.assertEqual(u'我é\nçф', b)
 
 
 class FileCreateDirectoriesTest(FileTest):
