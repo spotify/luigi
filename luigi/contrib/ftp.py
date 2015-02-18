@@ -93,8 +93,17 @@ class RemoteFileSystem(luigi.target.FileSystem):
         """
         wd = ftp.pwd()
 
+        # check if it is a file first, because some FTP servers don't return
+        # correctly on ftp.nlst(file)
         try:
-            names = ftp.nlst(path)
+            ftp.cwd(path)
+        except ftplib.all_errors:
+            # this is a file, we will just delete the file
+            ftp.delete(path)
+            return
+
+        try:
+            names = ftp.nlst()
         except ftplib.all_errors as e:
             # some FTP servers complain when you try and list non-existent paths
             return
