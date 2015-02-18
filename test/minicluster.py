@@ -17,12 +17,19 @@
 
 import getpass
 import os
-import unittest
+
+from luigi import hadoop, hdfs, six
+from nose.plugins.attrib import attr
+
+try:
+    import unittest2 as unittest
+except ImportError:
+    import unittest
+
+if six.PY3:
+    raise unittest.SkipTest("snakebite doesn't work on Python yet.")
 
 from snakebite.minicluster import MiniCluster
-
-from luigi import hadoop, hdfs
-from nose.plugins.attrib import attr
 
 
 @attr('minicluster')
