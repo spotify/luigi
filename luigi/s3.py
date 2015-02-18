@@ -507,7 +507,7 @@ class S3FlagTarget(S3Target):
         :param flag:
         :type flag: str
         """
-        if path[-1] is not "/":
+        if path[-1] != "/":
             raise ValueError("S3FlagTarget requires the path to be to a "
                              "directory.  It must end with a slash ( / ).")
         super(S3Target, self).__init__(path)
