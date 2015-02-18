@@ -26,10 +26,8 @@ try:
 except ImportError:
     import unittest
 
-if six.PY3:
-    raise unittest.SkipTest("snakebite doesn't work on Python yet.")
-
-from snakebite.minicluster import MiniCluster
+if six.PY2:
+    from snakebite.minicluster import MiniCluster
 
 
 @attr('minicluster')

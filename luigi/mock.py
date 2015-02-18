@@ -24,7 +24,6 @@ except ImportError:
     from io import StringIO
 import sys
 
-from luigi import six
 
 import luigi.util
 from luigi import target
@@ -164,12 +163,3 @@ class MockFile(target.FileSystemTarget):
             return atomic_type()
         else:
             return atomic_type(self.fs.get_all_data()[fn])
-
-
-def skip(func):
-    """
-    Sort of a substitute for unittest.skip*, which is 2.7+.
-    """
-    def wrapper():
-        pass
-    return wrapper
