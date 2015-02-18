@@ -4,4 +4,3 @@ nose
 psycopg2
 boto
 sqlalchemy
-ipdb
