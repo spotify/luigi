@@ -26,7 +26,7 @@ import subprocess
 import unittest
 import warnings
 
-import six
+from luigi import six
 
 import luigi
 import mock

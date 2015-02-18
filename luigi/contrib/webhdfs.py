@@ -27,7 +27,7 @@ import random
 import tempfile
 import io
 
-import six
+from luigi import six
 
 from luigi import configuration
 from luigi.target import FileSystemTarget, get_char_mode

@@ -17,7 +17,7 @@
 
 import logging
 
-import six
+from luigi import six
 
 import luigi.target
 

@@ -36,7 +36,7 @@ import luigi.file
 import luigi.format
 import luigi.target
 from luigi.format import FileWrapper
-import six
+from luigi import six
 
 
 class RemoteFileSystem(luigi.target.FileSystem):

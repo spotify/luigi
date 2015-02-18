@@ -24,7 +24,7 @@ import shutil
 import tempfile
 import unittest
 
-import six
+from luigi import six
 
 import luigi
 import sqlalchemy

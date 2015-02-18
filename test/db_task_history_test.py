@@ -17,7 +17,7 @@
 
 import unittest
 
-import six
+from luigi import six
 
 from helpers import with_config
 import luigi
