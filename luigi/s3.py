@@ -23,9 +23,7 @@ import itertools
 import logging
 import os
 import os.path
-import random
 import tempfile
-import io
 try:
     from urlparse import urlsplit
 except ImportError:
@@ -39,9 +37,9 @@ except ImportError:
 from luigi import six
 
 from luigi import configuration
-from luigi.format import FileWrapper
+from luigi.format import FileWrapper, get_default_format
 from luigi.parameter import Parameter
-from luigi.target import FileSystem, FileSystemException, FileSystemTarget
+from luigi.target import FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile
 from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
@@ -339,40 +337,17 @@ class S3Client(FileSystem):
         return key if key[-1:] == '/' else key + '/'
 
 
-class AtomicS3File(io.BufferedWriter):
+class AtomicS3File(AtomicLocalFile):
     """
     An S3 file that writes to a temp file and put to S3 on close.
     """
 
     def __init__(self, path, s3_client):
-        self.__tmp_path = \
-            os.path.join(tempfile.gettempdir(),
-                         'luigi-s3-tmp-%09d' % random.randrange(0, 1e10))
-        self.path = path
         self.s3_client = s3_client
-        super(AtomicS3File, self).__init__(io.FileIO(self.__tmp_path, 'wb'))
+        super(AtomicS3File, self).__init__(path)
 
-    def close(self):
-        """
-        Close the file.
-        """
-        super(AtomicS3File, self).close()
-
-        # store the contents in S3
-        self.s3_client.put_multipart(self.__tmp_path, self.path)
-
-    def __del__(self):
-        # remove the temporary directory
-        if os.path.exists(self.__tmp_path):
-            os.remove(self.__tmp_path)
-
-    def __exit__(self, exc_type, exc, traceback):
-        """
-        Close/commit the file if there are no exception.
-        """
-        if exc_type:
-            return
-        return super(AtomicS3File, self).__exit__(exc_type, exc, traceback)
+    def move_to_final_destination(self):
+        self.s3_client.put_multipart(self.tmp_path, self.path)
 
 
 class ReadableS3File(object):
@@ -400,7 +375,7 @@ class ReadableS3File(object):
         self.buffer.append(line)
 
     def _flush_buffer(self):
-        output = ''.join(self.buffer)
+        output = b''.join(self.buffer)
         self.buffer = []
         return output
 
@@ -443,6 +418,8 @@ class S3Target(FileSystemTarget):
 
     def __init__(self, path, format=None, client=None):
         super(S3Target, self).__init__(path)
+        if format is None:
+            format = get_default_format()
         self.format = format
         self.fs = client or S3Client()
 
@@ -454,28 +431,13 @@ class S3Target(FileSystemTarget):
 
         if mode == 'r':
             s3_key = self.fs.get_key(self.path)
-            if s3_key:
-                fileobj = ReadableS3File(s3_key)
-                if self.format:
-                    self._tmp_extract_path = tempfile.mktemp(
-                        prefix='luigi_s3_')
-                    with open(self._tmp_extract_path, 'w') as f:
-                        f.write(fileobj.read())
-                    try:
-                        with open(self._tmp_extract_path) as f:
-                            return self.format.pipe_reader(FileWrapper(f))
-                    finally:
-                        os.remove(self._tmp_extract_path)
-                return fileobj
-            else:
-                raise FileNotFoundException(
-                    "Could not find file at %s" % self.path)
+            if not s3_key:
+                raise FileNotFoundException("Could not find file at %s" % self.path)
+
+            fileobj = ReadableS3File(s3_key)
+            return self.format.pipe_reader(fileobj)
         else:
-            if self.format:
-                return self.format.pipe_writer(
-                    AtomicS3File(self.path, self.fs))
-            else:
-                return AtomicS3File(self.path, self.fs)
+            return self.format.pipe_writer(AtomicS3File(self.path, self.fs))
 
 
 class S3FlagTarget(S3Target):
@@ -511,6 +473,9 @@ class S3FlagTarget(S3Target):
         :param flag:
         :type flag: str
         """
+        if format is None:
+            format = get_default_format()
+
         if path[-1] != "/":
             raise ValueError("S3FlagTarget requires the path to be to a "
                              "directory.  It must end with a slash ( / ).")

@@ -20,17 +20,13 @@ The main purpose is unit testing workflows without writing to disk.
 """
 
 import multiprocessing
-import os
 from io import BytesIO
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-import sys
 
+import sys
 
 import luigi.util
 from luigi import target
+from luigi.format import get_default_format
 
 
 class MockFileSystem(target.FileSystem):
@@ -85,9 +81,12 @@ class MockFileSystem(target.FileSystem):
 class MockFile(target.FileSystemTarget):
     fs = MockFileSystem()
 
-    def __init__(self, fn, is_tmp=None, mirror_on_stderr=False):
+    def __init__(self, fn, is_tmp=None, mirror_on_stderr=False, format=None):
         self._mirror_on_stderr = mirror_on_stderr
         self._fn = fn
+        if format is None:
+            format = get_default_format()
+        self.format = format
 
     def exists(self,):
         return self._fn in self.fs.get_all_data()
@@ -106,10 +105,13 @@ class MockFile(target.FileSystemTarget):
     def open(self, mode):
         fn = self._fn
 
-        class StringBuffer(StringIO):
+        class Buffer(BytesIO):
             # Just to be able to do writing + reading from the same buffer
 
             _write_line = True
+
+            def set_wrapper(self, wrapper):
+                self.wrapper = wrapper
 
             def write(self2, data):
                 if self._mirror_on_stderr:
@@ -120,12 +122,16 @@ class MockFile(target.FileSystemTarget):
                         self2._write_line = True
                     else:
                         self2._write_line = False
-                StringIO.write(self2, data)
+                super(Buffer, self2).write(data)
 
             def close(self2):
-                if 'w' in mode:
+                if mode == 'w':
+                    try:
+                        self.wrapper.flush()
+                    except AttributeError:
+                        pass
                     self.fs.get_all_data()[fn] = self2.getvalue()
-                StringIO.close(self2)
+                super(Buffer, self2).close()
 
             def __exit__(self, exc_type, exc_val, exc_tb):
                 if not exc_type:
@@ -134,36 +140,9 @@ class MockFile(target.FileSystemTarget):
             def __enter__(self):
                 return self
 
-        class BinaryBuffer(BytesIO):
-            # Just to be able to do writing + reading from the same buffer
-
-            def write(self2, data):
-                if self._mirror_on_stderr:
-                    self2.seek(-1, os.SEEK_END)
-                    if self2.tell() <= 0 or self2.read(1) == '\n':
-                        sys.stderr.write(fn + ": ")
-                    sys.stderr.write(data)
-                BytesIO.write(self2, data)
-
-            def close(self2):
-                if 'w' in mode:
-                    self.fs.get_all_data()[fn] = self2.getvalue()
-                BytesIO.close(self2)
-
-            def __exit__(self, exc_type, exc_val, exc_tb):
-                if not exc_type:
-                    self.close()
-
-            def __enter__(self):
-                return self
-
-        char_mode = target.get_char_mode(mode)
-        if char_mode == 't':
-            atomic_type = StringBuffer
+        if mode == 'w':
+            wrapper = self.format.pipe_writer(Buffer())
+            wrapper.set_wrapper(wrapper)
+            return wrapper
         else:
-            atomic_type = BinaryBuffer
-
-        if 'w' in mode:
-            return atomic_type()
-        else:
-            return atomic_type(self.fs.get_all_data()[fn])
+            return Buffer(self.fs.get_all_data()[fn])
