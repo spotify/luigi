@@ -23,6 +23,7 @@ import os
 import random
 import shutil
 import unittest
+import mock
 
 import luigi.format
 from luigi import File
@@ -165,7 +166,8 @@ class FileTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.path))
         self.assertTrue(os.path.exists(self.copy))
 
-    def test_unicode(self):
+    @mock.patch("locale.getpreferredencoding", return_value="utf8")
+    def test_unicode(self, mock_encoding):
         t = File(self.path)
         a = u'我éçф'
         f = t.open('wt')
