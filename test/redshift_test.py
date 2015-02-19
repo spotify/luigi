@@ -76,7 +76,7 @@ class TestRedshiftManifestTask(unittest.TestCase):
 
         output = t.output().open('r').read()
         expected_manifest_output = json.dumps(generate_manifest_json(folder_paths, FILES))
-        self.assertEqual(output.decode('utf8'), expected_manifest_output)
+        self.assertEqual(output, expected_manifest_output)
 
     @mock_s3
     def test_run_multiple_paths(self):
@@ -98,4 +98,4 @@ class TestRedshiftManifestTask(unittest.TestCase):
 
         output = t.output().open('r').read()
         expected_manifest_output = json.dumps(generate_manifest_json(folder_paths, FILES))
-        self.assertEqual(output.decode('utf8'), expected_manifest_output)
+        self.assertEqual(output, expected_manifest_output)

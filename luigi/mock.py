@@ -24,6 +24,7 @@ from io import BytesIO
 
 import sys
 
+from luigi import six
 import luigi.util
 from luigi import target
 from luigi.format import get_default_format
@@ -114,10 +115,14 @@ class MockFile(target.FileSystemTarget):
                 self.wrapper = wrapper
 
             def write(self2, data):
+                if six.PY3:
+                    stderrbytes = sys.stderr.buffer
+                else:
+                    stderrbytes = sys.stderr
                 if self._mirror_on_stderr:
                     if self2._write_line:
                         sys.stderr.write(fn + ": ")
-                    sys.stderr.write(data)
+                    stderrbytes.write(data)
                     if (data[-1]) == '\n':
                         self2._write_line = True
                     else:
@@ -137,12 +142,21 @@ class MockFile(target.FileSystemTarget):
                 if not exc_type:
                     self.close()
 
-            def __enter__(self):
-                return self
+            def __enter__(self2):
+                return self2
+
+            def readable(self2):
+                return mode == 'r'
+
+            def writeable(self2):
+                return mode == 'w'
+
+            def seekable(self2):
+                return False
 
         if mode == 'w':
             wrapper = self.format.pipe_writer(Buffer())
             wrapper.set_wrapper(wrapper)
             return wrapper
         else:
-            return Buffer(self.fs.get_all_data()[fn])
+            return self.format.pipe_reader(Buffer(self.fs.get_all_data()[fn]))

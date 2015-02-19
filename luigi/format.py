@@ -365,7 +365,7 @@ class ChainFormat(Format):
         return output_pipe
 
 
-class TextWrapper(BaseWrapper, io.TextIOWrapper):
+class TextWrapper(io.TextIOWrapper):
 
     def __exit__(self, *args):
         # io.TextIOWrapper close the file on __exit__, let the underlying file decide
@@ -383,6 +383,22 @@ class TextWrapper(BaseWrapper, io.TextIOWrapper):
             self._stream.__del__(*args)
         except AttributeError:
             pass
+
+    def __init__(self, stream, *args, **kwargs):
+        self._stream = stream
+        try:
+            super(TextWrapper, self).__init__(stream, *args, **kwargs)
+        except TypeError:
+            pass
+
+    def __getattr__(self, name):
+        if name == '_stream':
+            raise AttributeError(name)
+        return getattr(self._stream, name)
+
+    def __enter__(self):
+        self._stream.__enter__()
+        return self
 
 
 class NopFormat(Format):
