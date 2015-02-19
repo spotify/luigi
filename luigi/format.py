@@ -21,6 +21,7 @@ import io
 import os
 import re
 import locale
+import tempfile
 
 from luigi import six
 
@@ -65,7 +66,23 @@ class InputPipeProcessWrapper(object):
                         Alternatively, just its args argument as a convenience.
         """
         self._command = command
+
         self._input_pipe = input_pipe
+        self._original_input = True
+
+        if input_pipe is not None:
+            try:
+                input_pipe.fileno()
+            except AttributeError:
+                # subprocess require a fileno to work, if not reprsent we copy to disk first
+                self._original_input = False
+                f = tempfile.NamedTemporaryFile('wb', prefix='luigi-process_tmp', delete=False)
+                self._tmp_file = f.name
+                f.write(input_pipe.read())
+                input_pipe.close()
+                f.close()
+                self._input_pipe = FileWrapper(io.BufferedReader(io.FileIO(self._tmp_file, 'r')))
+
         self._process = command if isinstance(command, subprocess.Popen) else self.create_subprocess(command)
         # we want to keep a circular reference to avoid garbage collection
         # when the object is used in, e.g., pipe.read()
@@ -90,6 +107,8 @@ class InputPipeProcessWrapper(object):
     def _finish(self):
         # Need to close this before input_pipe to get all SIGPIPE messages correctly
         self._process.stdout.close()
+        if not self._original_input and os.path.exists(self._tmp_file):
+            os.remove(self._tmp_file)
 
         if self._input_pipe is not None:
             self._input_pipe.close()
@@ -239,6 +258,11 @@ class BaseWrapper(object):
 
     def __exit__(self, *args):
         self._stream.__exit__(*args)
+
+    def __iter__(self):
+        for line in self._stream:
+            yield line
+        self.close()
 
 
 class NewlineWrapper(BaseWrapper):
