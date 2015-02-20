@@ -20,7 +20,6 @@ import subprocess
 import io
 import os
 import re
-import locale
 import tempfile
 
 from luigi import six
@@ -306,22 +305,6 @@ class NewlineWrapper(BaseWrapper):
         self._stream.write(re.sub(b'(\n|\r\n|\r)', newline, b))
 
 
-class MixedUnicodeBytesWrapper(BaseWrapper):
-    """
-    """
-
-    def write(self, b):
-        if isinstance(b, unicode):
-            b = b.encode(locale.getpreferredencoding())
-        self._stream.write(b)
-
-    def writelines(self, lines):
-        for x in range(len(lines)):
-            if isinstance(lines[x]):
-                lines[x] = lines[x].encode(locale.getpreferredencoding())
-        self._stream.writelines(lines)
-
-
 class Format(object):
     """
     Interface for format specifications.
@@ -456,8 +439,6 @@ Text = TextFormat()
 UTF8 = TextFormat(encoding='utf8')
 Nop = NopFormat()
 SysNewLine = WrappedFormat(NewlineWrapper)
-#: format to reproduce the default behavior of python2 (accept both unicode and bytes)
-MixedUnicodeBytes = WrappedFormat(MixedUnicodeBytesWrapper)
 Gzip = GzipFormat()
 Bzip2 = Bzip2Format()
 
@@ -466,6 +447,6 @@ def get_default_format():
     if six.PY3:
         return Text
     elif os.linesep == '\n':
-        return MixedUnicodeBytes
+        return Nop
     else:
-        return MixedUnicodeBytes >> SysNewLine
+        return SysNewLine
