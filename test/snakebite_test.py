@@ -20,19 +20,24 @@ import os
 import posixpath
 import time
 
-from snakebite.client import AutoConfigClient as SnakebiteAutoConfigClient
-from snakebite.minicluster import MiniCluster
-
 import luigi.hdfs
 import luigi.interface
-from luigi.hdfs import SnakebiteHdfsClient
-from minicluster import MiniClusterTestCase
+from luigi import six
 from nose.plugins.attrib import attr
 
 try:
     import unittest2 as unittest
 except ImportError:
     import unittest
+
+if six.PY3:
+    raise unittest.SkipTest("snakebite doesn't work on Python yet.")
+
+from luigi.hdfs import SnakebiteHdfsClient
+from minicluster import MiniClusterTestCase
+
+from snakebite.client import AutoConfigClient as SnakebiteAutoConfigClient
+from snakebite.minicluster import MiniCluster
 
 
 @attr('minicluster')
