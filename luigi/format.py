@@ -310,18 +310,8 @@ class Format(object):
     Interface for format specifications.
     """
 
-    # TODO Move this to somewhere else?
-    @classmethod
-    def hdfs_reader(cls, path):
-        raise NotImplementedError()
-
     @classmethod
     def pipe_reader(cls, input_pipe):
-        raise NotImplementedError()
-
-    # TODO Move this to somewhere else?
-    @classmethod
-    def hdfs_writer(cls, path):
         raise NotImplementedError()
 
     @classmethod
@@ -334,8 +324,32 @@ class Format(object):
 
 class ChainFormat(Format):
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         self.args = args
+        try:
+            self.input = args[0].input
+        except AttributeError:
+            pass
+        try:
+            self.output = args[-1].output
+        except AttributeError:
+            pass
+        if not kwargs.get('check_consistency', True):
+            return
+        for x in range(len(args) - 1):
+            try:
+                if args[x].output != args[x + 1].input:
+                    raise TypeError(
+                        'The format chaining is not valid, %s expect %s'
+                        'but %s provide %s' % (
+                            args[x].__class__.__name__,
+                            args[x].input,
+                            args[x + 1].__class__.__name__,
+                            args[x + 1].output,
+                        )
+                    )
+            except AttributeError:
+                pass
 
     def pipe_reader(self, input_pipe):
         for x in reversed(self.args):
@@ -394,8 +408,7 @@ class NopFormat(Format):
 
 class WrappedFormat(Format):
 
-    def __init__(self, wrapper_cls, *args, **kwargs):
-        self.wrapper_cls = wrapper_cls
+    def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
 
@@ -408,11 +421,22 @@ class WrappedFormat(Format):
 
 class TextFormat(WrappedFormat):
 
-    def __init__(self, *args, **kwargs):
-        super(TextFormat, self).__init__(TextWrapper, *args, **kwargs)
+    input = 'unicode'
+    output = 'bytes'
+    wrapper_cls = TextWrapper
+
+
+class NewlineFormat(WrappedFormat):
+
+    input = 'bytes'
+    output = 'bytes'
+    wrapper_cls = NewlineWrapper
 
 
 class GzipFormat(Format):
+
+    input = 'bytes'
+    output = 'bytes'
 
     def __init__(self, compression_level=None):
         self.compression_level = compression_level
@@ -429,6 +453,9 @@ class GzipFormat(Format):
 
 class Bzip2Format(Format):
 
+    input = 'bytes'
+    output = 'bytes'
+
     def pipe_reader(self, input_pipe):
         return InputPipeProcessWrapper(['bzcat'], input_pipe)
 
@@ -438,7 +465,7 @@ class Bzip2Format(Format):
 Text = TextFormat()
 UTF8 = TextFormat(encoding='utf8')
 Nop = NopFormat()
-SysNewLine = WrappedFormat(NewlineWrapper)
+SysNewLine = NewlineFormat()
 Gzip = GzipFormat()
 Bzip2 = Bzip2Format()
 
