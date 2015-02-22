@@ -180,7 +180,7 @@ def flatten(sequence):
 
     """
     for item in sequence:
-        if hasattr(item, "__iter__"):
+        if hasattr(item, "__iter__") and not isinstance(item, str) and not isinstance(item, bytes):
             for i in item:
                 yield i
         else:
