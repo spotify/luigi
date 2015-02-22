@@ -18,6 +18,14 @@
 import signal
 import subprocess
 import io
+import os
+import re
+import tempfile
+
+from luigi import six
+
+if six.PY3:
+    unicode = str
 
 
 class FileWrapper(object):
@@ -57,7 +65,23 @@ class InputPipeProcessWrapper(object):
                         Alternatively, just its args argument as a convenience.
         """
         self._command = command
+
         self._input_pipe = input_pipe
+        self._original_input = True
+
+        if input_pipe is not None:
+            try:
+                input_pipe.fileno()
+            except AttributeError:
+                # subprocess require a fileno to work, if not reprsent we copy to disk first
+                self._original_input = False
+                f = tempfile.NamedTemporaryFile('wb', prefix='luigi-process_tmp', delete=False)
+                self._tmp_file = f.name
+                f.write(input_pipe.read())
+                input_pipe.close()
+                f.close()
+                self._input_pipe = FileWrapper(io.BufferedReader(io.FileIO(self._tmp_file, 'r')))
+
         self._process = command if isinstance(command, subprocess.Popen) else self.create_subprocess(command)
         # we want to keep a circular reference to avoid garbage collection
         # when the object is used in, e.g., pipe.read()
@@ -82,6 +106,8 @@ class InputPipeProcessWrapper(object):
     def _finish(self):
         # Need to close this before input_pipe to get all SIGPIPE messages correctly
         self._process.stdout.close()
+        if not self._original_input and os.path.exists(self._tmp_file):
+            os.remove(self._tmp_file)
 
         if self._input_pipe is not None:
             self._input_pipe.close()
@@ -211,6 +237,75 @@ class OutputPipeProcessWrapper(object):
         return False
 
 
+class BaseWrapper(object):
+
+    def __init__(self, stream, *args, **kwargs):
+        self._stream = stream
+        try:
+            super(BaseWrapper, self).__init__(stream, *args, **kwargs)
+        except TypeError:
+            pass
+
+    def __getattr__(self, name):
+        if name == '_stream':
+            raise AttributeError(name)
+        return getattr(self._stream, name)
+
+    def __enter__(self):
+        self._stream.__enter__()
+        return self
+
+    def __exit__(self, *args):
+        self._stream.__exit__(*args)
+
+    def __iter__(self):
+        for line in self._stream:
+            yield line
+        self.close()
+
+
+class NewlineWrapper(BaseWrapper):
+
+    def __init__(self, stream, newline=None):
+        if newline is None:
+            self.newline = newline
+        else:
+            self.newline = newline.encode('ascii')
+
+        if self.newline not in (b'', b'\r\n', b'\n', b'\r', None):
+            raise ValueError("newline need to be one of {b'', b'\r\n', b'\n', b'\r', None}")
+        super(NewlineWrapper, self).__init__(stream)
+
+    def read(self, n=-1):
+        b = self._stream.read(n)
+
+        if self.newline == b'':
+            return b
+
+        if self.newline is None:
+            newline = b'\n'
+
+        return re.sub(b'(\n|\r\n|\r)', newline, b)
+
+    def writelines(self, lines):
+        if self.newline is None or self.newline == '':
+            newline = os.linesep.encode('ascii')
+        else:
+            newline = self.newline
+
+        self._stream.writelines(
+            [re.sub(b'(\n|\r\n|\r)', newline, line) for line in lines]
+        )
+
+    def write(self, b):
+        if self.newline is None or self.newline == '':
+            newline = os.linesep.encode('ascii')
+        else:
+            newline = self.newline
+
+        self._stream.write(re.sub(b'(\n|\r\n|\r)', newline, b))
+
+
 class Format(object):
     """
     Interface for format specifications.
@@ -235,10 +330,10 @@ class Format(object):
         raise NotImplementedError()
 
     def __rshift__(a, b):
-        return Chain(a, b)
+        return ChainFormat(a, b)
 
 
-class Chain(Format):
+class ChainFormat(Format):
 
     def __init__(self, *args):
         self.args = args
@@ -254,20 +349,71 @@ class Chain(Format):
         return output_pipe
 
 
-class TextWrapper(Format):
+class TextWrapper(io.TextIOWrapper):
 
-    def __init__(self, *args, **kwargs):
+    def __exit__(self, *args):
+        # io.TextIOWrapper close the file on __exit__, let the underlying file decide
+        if not self.closed:
+            super(TextWrapper, self).flush()
+
+        self._stream.__exit__(*args)
+
+    def __del__(self, *args):
+        # io.TextIOWrapper close the file on __del__, let the underlying file decide
+        if not self.closed:
+            super(TextWrapper, self).flush()
+
+        try:
+            self._stream.__del__(*args)
+        except AttributeError:
+            pass
+
+    def __init__(self, stream, *args, **kwargs):
+        self._stream = stream
+        try:
+            super(TextWrapper, self).__init__(stream, *args, **kwargs)
+        except TypeError:
+            pass
+
+    def __getattr__(self, name):
+        if name == '_stream':
+            raise AttributeError(name)
+        return getattr(self._stream, name)
+
+    def __enter__(self):
+        self._stream.__enter__()
+        return self
+
+
+class NopFormat(Format):
+    def pipe_reader(self, input_pipe):
+        return input_pipe
+
+    def pipe_writer(self, output_pipe):
+        return output_pipe
+
+
+class WrappedFormat(Format):
+
+    def __init__(self, wrapper_cls, *args, **kwargs):
+        self.wrapper_cls = wrapper_cls
         self.args = args
         self.kwargs = kwargs
 
     def pipe_reader(self, input_pipe):
-        return io.TextIOWrapper(input_pipe, *self.args, **self.kwargs)
+        return self.wrapper_cls(input_pipe, *self.args, **self.kwargs)
 
     def pipe_writer(self, output_pipe):
-        return io.TextIOWrapper(output_pipe, *self.args, **self.kwargs)
+        return self.wrapper_cls(output_pipe, *self.args, **self.kwargs)
 
 
-class GzipWrapper(Format):
+class TextFormat(WrappedFormat):
+
+    def __init__(self, *args, **kwargs):
+        super(TextFormat, self).__init__(TextWrapper, *args, **kwargs)
+
+
+class GzipFormat(Format):
 
     def __init__(self, compression_level=None):
         self.compression_level = compression_level
@@ -282,7 +428,7 @@ class GzipWrapper(Format):
         return OutputPipeProcessWrapper(args, output_pipe)
 
 
-class Bzip2Wrapper(Format):
+class Bzip2Format(Format):
 
     def pipe_reader(self, input_pipe):
         return InputPipeProcessWrapper(['bzcat'], input_pipe)
@@ -290,7 +436,18 @@ class Bzip2Wrapper(Format):
     def pipe_writer(self, output_pipe):
         return OutputPipeProcessWrapper(['bzip2'], output_pipe)
 
-Text = TextWrapper()
-UTF8 = TextWrapper(encoding='utf8')
-Gzip = GzipWrapper()
-Bzip2 = Bzip2Wrapper()
+Text = TextFormat()
+UTF8 = TextFormat(encoding='utf8')
+Nop = NopFormat()
+SysNewLine = WrappedFormat(NewlineWrapper)
+Gzip = GzipFormat()
+Bzip2 = Bzip2Format()
+
+
+def get_default_format():
+    if six.PY3:
+        return Text
+    elif os.linesep == '\n':
+        return Nop
+    else:
+        return SysNewLine
