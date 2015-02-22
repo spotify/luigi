@@ -14,6 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+Locking functionality when launching things from the command line.
+Uses a pidfile.
+This prevents multiple identical workflows to be launched simultaneously.
+"""
 from __future__ import print_function
 
 import hashlib

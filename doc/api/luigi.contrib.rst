@@ -20,10 +20,10 @@ luigi.contrib.ftp module
     :undoc-members:
     :show-inheritance:
 
-luigi.contrib.sqla module
+luigi.contrib.hive module
 -------------------------
 
-.. automodule:: luigi.contrib.sqla
+.. automodule:: luigi.contrib.hive
     :members:
     :undoc-members:
     :show-inheritance:
@@ -32,6 +32,14 @@ luigi.contrib.mysqldb module
 ----------------------------
 
 .. automodule:: luigi.contrib.mysqldb
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+luigi.contrib.pig module
+------------------------
+
+.. automodule:: luigi.contrib.pig
     :members:
     :undoc-members:
     :show-inheritance:
@@ -52,6 +60,14 @@ luigi.contrib.redshift module
     :undoc-members:
     :show-inheritance:
 
+luigi.contrib.scalding module
+-----------------------------
+
+.. automodule:: luigi.contrib.scalding
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 luigi.contrib.spark module
 --------------------------
 
@@ -60,10 +76,10 @@ luigi.contrib.spark module
     :undoc-members:
     :show-inheritance:
 
-luigi.contrib.scalding module
------------------------------
+luigi.contrib.sqla module
+-------------------------
 
-.. automodule:: luigi.contrib.scalding
+.. automodule:: luigi.contrib.sqla
     :members:
     :undoc-members:
     :show-inheritance:
@@ -88,6 +104,14 @@ luigi.contrib.target module
 ---------------------------
 
 .. automodule:: luigi.contrib.target
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+luigi.contrib.webhdfs module
+----------------------------
+
+.. automodule:: luigi.contrib.webhdfs
     :members:
     :undoc-members:
     :show-inheritance:
