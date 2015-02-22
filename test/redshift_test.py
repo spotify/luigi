@@ -16,10 +16,7 @@
 #
 
 import json
-try:
-    import unitest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import sys
 

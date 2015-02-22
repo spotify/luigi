@@ -17,10 +17,7 @@
 
 import os
 import sys
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import luigi
 import luigi.hadoop
@@ -29,7 +26,6 @@ import luigi.mrrunner
 import luigi.notifications
 import minicluster
 import mock
-from luigi import six
 from luigi.mock import MockFile
 from nose.plugins.attrib import attr
 
@@ -248,22 +244,18 @@ class MapreduceIntegrationTest(minicluster.MiniClusterTestCase):
     """ Uses the Minicluster functionality to test this against Hadoop """
     use_hdfs = True
 
-    @unittest.skipIf(six.PY3, "snakebite minicluster is not supported in python3 yet.")
     def test_run(self):
         CommonTests.test_run(self)
 
-    @unittest.skipIf(six.PY3, "snakebite minicluster is not supported in python3 yet.")
     def test_run_2(self):
         CommonTests.test_run_2(self)
 
-    @unittest.skipIf(six.PY3, "snakebite minicluster is not supported in python3 yet.")
     def test_map_only(self):
         CommonTests.test_map_only(self)
 
     # TODO(erikbern): some really annoying issue with minicluster causes
     # test_unicode_job to hang
 
-    @unittest.skipIf(six.PY3, "snakebite minicluster is not supported in python3 yet.")
     def test_failing_job(self):
         CommonTests.test_failing_job(self)
 
