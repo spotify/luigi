@@ -257,7 +257,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
             self._fs.get(self.path, self.__tmp_path)
 
             return self.format.pipe_reader(
-                FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
+                FileWrapper(io.BufferedReader(io.FileIO(self.__tmp_path, 'r')))
             )
         else:
             raise Exception('mode must be r/w')
