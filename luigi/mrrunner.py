@@ -43,7 +43,7 @@ class Runner(object):
 
     def __init__(self, job=None):
         self.extract_packages_archive()
-        self.job = job or pickle.load(open("job-instance.pickle"))
+        self.job = job or pickle.load(open("job-instance.pickle", "rb"))
         self.job._setup_remote()
 
     def run(self, kind, stdin=sys.stdin, stdout=sys.stdout):
@@ -69,7 +69,7 @@ class Runner(object):
 
 
 def print_exception(exc):
-    tb = traceback.format_exc(exc)
+    tb = traceback.format_exc()
     print('luigi-exc-hex=%s' % tb.encode('hex'), file=sys.stderr)
 
 

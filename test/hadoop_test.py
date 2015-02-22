@@ -20,6 +20,7 @@ import sys
 import unittest
 
 import luigi
+import luigi.format
 import luigi.hadoop
 import luigi.hdfs
 import luigi.mrrunner
@@ -40,7 +41,7 @@ class OutputMixin(luigi.Task):
 
     def get_output(self, fn):
         if self.use_hdfs:
-            return luigi.hdfs.HdfsTarget('/tmp/' + fn, format=luigi.hdfs.PlainDir)
+            return luigi.hdfs.HdfsTarget('/tmp/' + fn, format=luigi.format.get_default_format() >> luigi.hdfs.PlainDir)
         else:
             return File(fn)
 
