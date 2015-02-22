@@ -17,6 +17,7 @@
 
 import functools
 import re
+import unittest
 from datetime import datetime
 
 import helpers
@@ -25,11 +26,6 @@ import mock
 from luigi import hdfs
 from minicluster import MiniClusterTestCase
 from nose.plugins.attrib import attr
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
 
 
 class TestException(Exception):

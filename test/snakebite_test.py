@@ -19,16 +19,12 @@ import datetime
 import os
 import posixpath
 import time
+import unittest
 
 import luigi.hdfs
 import luigi.interface
 from luigi import six
 from nose.plugins.attrib import attr
-
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
 
 if six.PY3:
     raise unittest.SkipTest("snakebite doesn't work on Python yet.")

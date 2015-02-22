@@ -16,7 +16,6 @@
 #
 
 import os
-import subprocess
 import sys
 import unittest
 
@@ -129,7 +128,7 @@ class UnicodeJob(HadoopJobTask):
 
     def mapper(self, line):
         yield u'test', 1
-        yield 'test', 1
+        yield b'test', 1
 
     def reducer(self, word, occurences):
         yield word, sum(occurences)

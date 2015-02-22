@@ -16,28 +16,23 @@
 #
 
 import json
-from unittest import TestCase
+import unittest
 
 import sys
 
 import luigi
 import luigi.notifications
 
-try:
-    from luigi.contrib import redshift
-    from moto import mock_s3
-    from boto.s3.key import Key
-    from luigi.s3 import S3Client
-except ImportError:
-    print('Skipping %s, requires s3 stuff' % __file__)
-    from luigi.mock import skip
-    mock_s3 = skip
+from luigi.contrib import redshift
+from moto import mock_s3
+from boto.s3.key import Key
+from luigi.s3 import S3Client
 
 
 if sys.version_info[:2] == (3, 4):
-    # moto break stuff under python3.4
-    from luigi.mock import skip
-    mock_s3 = skip
+    # spulec/moto#308
+    mock_s3 = unittest.skip('moto mock doesn\'t work with python3.4')
+
 
 luigi.notifications.DEBUG = True
 
@@ -61,7 +56,7 @@ def generate_manifest_json(path_to_folders, file_names):
     return {'entries': entries}
 
 
-class TestRedshiftManifestTask(TestCase):
+class TestRedshiftManifestTask(unittest.TestCase):
 
     @mock_s3
     def test_run(self):

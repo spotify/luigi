@@ -17,12 +17,6 @@ env:
     - TOX_ENV=nonhdfs
     - TOX_ENV=docs
 
-matrix:
-  allow_failures:
-    - python: "3.4"
-      env: TOX_ENV=cdh
-    - python: "3.3"
-      env: TOX_ENV=cdh
 sudo: false
 
 cache:

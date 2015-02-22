@@ -27,26 +27,13 @@ from luigi import six
 import luigi.format
 from boto.exception import S3ResponseError
 from boto.s3 import key
+from moto import mock_s3
 from luigi import configuration
 from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
 
-# moto does not yet work with
-# python 2.6. Until it does,
-# disable these tests in python2.6
-try:
-    from moto import mock_s3
-except ImportError:
-    # https://github.com/spulec/moto/issues/29
-    print('Skipping %s because moto does not install properly before '
-          'python2.7' % __file__)
-    from luigi.mock import skip
-    mock_s3 = skip
-
-
 if sys.version_info[:2] == (3, 4):
-    # moto break stuff under python3.4
-    from luigi.mock import skip
-    mock_s3 = skip
+    # spulec/moto#308
+    mock_s3 = unittest.skip('moto mock doesn\'t work with python3.4')
 
 
 AWS_ACCESS_KEY = "XXXXXXXXXXXXXXXXXXXX"

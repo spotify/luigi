@@ -47,6 +47,9 @@ import luigi.hdfs
 import luigi.s3
 from luigi import mrrunner
 
+if six.PY2:
+    from itertools import imap as map
+
 logger = logging.getLogger('luigi-interface')
 
 _attached_packages = []
@@ -177,7 +180,7 @@ def flatten(sequence):
 
     """
     for item in sequence:
-        if hasattr(item, "__iter__"):
+        if hasattr(item, "__iter__") and not isinstance(item, str) and not isinstance(item, bytes):
             for i in item:
                 yield i
         else:
@@ -538,7 +541,7 @@ class LocalJobRunner(JobRunner):
         lines = []
         for i, line in enumerate(input_stream):
             parts = line.rstrip('\n').split('\t')
-            blob = md5(str(i)).hexdigest()  # pseudo-random blob to make sure the input isn't sorted
+            blob = md5(str(i).encode('ascii')).hexdigest()  # pseudo-random blob to make sure the input isn't sorted
             lines.append((parts[:-1], blob, line))
         for _, _, line in sorted(lines):
             output.write(line)
@@ -904,7 +907,7 @@ class JobTask(BaseHadoopJobTask):
         Yields a tuple of python objects.
         """
         for input_line in input_stream:
-            yield map(eval, input_line.split("\t"))
+            yield list(map(eval, input_line.split("\t")))
 
     def internal_writer(self, outputs, stdout):
         """
@@ -919,7 +922,7 @@ def pickle_reader(job, input_stream):
         return pickle.loads(binascii.a2b_base64(item))
     for line in input_stream:
         items = line.split('\t')
-        yield map(decode, items)
+        yield list(map(decode, items))
 
 
 def pickle_writer(job, outputs, stdout):
