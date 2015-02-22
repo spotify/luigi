@@ -24,6 +24,7 @@ import helpers
 import luigi
 import mock
 from luigi import hdfs
+from luigi import six
 from minicluster import MiniClusterTestCase
 from nose.plugins.attrib import attr
 
@@ -116,7 +117,7 @@ class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
                 self.fs.remove(self._test_dir(), skip_trash=True)
 
         with hdfs.HdfsAtomicWritePipe(testpath) as fobj:
-            fobj.write('hej')
+            fobj.write(b'hej')
 
         self.assertTrue(self.fs.exists(testpath))
 
@@ -131,7 +132,7 @@ class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
 
         def foo():
             with hdfs.HdfsAtomicWritePipe(testpath) as fobj:
-                fobj.write('hej')
+                fobj.write(b'hej')
                 raise TestException('Test triggered exception')
         self.assertRaises(TestException, foo)
         self.assertFalse(self.fs.exists(testpath))
@@ -155,7 +156,7 @@ class HdfsAtomicWriteDirPipeTests(MiniClusterTestCase):
     def test_readback(self):
         pipe = hdfs.HdfsAtomicWriteDirPipe(self.path)
         self.assertFalse(self.fs.exists(self.path))
-        pipe.write("foo\nbar")
+        pipe.write(b"foo\nbar")
         pipe.close()
         self.assertTrue(hdfs.exists(self.path))
         dirlist = hdfs.listdir(self.path)
@@ -163,18 +164,18 @@ class HdfsAtomicWriteDirPipeTests(MiniClusterTestCase):
         returnlist = [d for d in dirlist]
         self.assertTrue(returnlist[0].endswith(datapath))
         pipe = hdfs.HdfsReadPipe(datapath)
-        self.assertEqual(pipe.read(), "foo\nbar")
+        self.assertEqual(pipe.read(), b"foo\nbar")
 
     def test_with_close(self):
         with hdfs.HdfsAtomicWritePipe(self.path) as fobj:
-            fobj.write('hej')
+            fobj.write(b'hej')
 
         self.assertTrue(self.fs.exists(self.path))
 
     def test_with_noclose(self):
         def foo():
             with hdfs.HdfsAtomicWritePipe(self.path) as fobj:
-                fobj.write('hej')
+                fobj.write(b'hej')
                 raise TestException('Test triggered exception')
         self.assertRaises(TestException, foo)
         self.assertFalse(self.fs.exists(self.path))
@@ -193,13 +194,13 @@ class _HdfsFormatTest(object):
 
     def test_with_write_success(self):
         with self.target.open('w') as fobj:
-            fobj.write('foo')
+            fobj.write(b'foo')
         self.assertTrue(self.target.exists())
 
     def test_with_write_failure(self):
         def dummy():
             with self.target.open('w') as fobj:
-                fobj.write('foo')
+                fobj.write(b'foo')
                 raise TestException()
 
         self.assertRaises(TestException, dummy)
@@ -217,20 +218,20 @@ class PlainDirFormatTest(_HdfsFormatTest, MiniClusterTestCase):
 
     def test_multifile(self):
         with self.target.open('w') as fobj:
-            fobj.write('foo\n')
+            fobj.write(b'foo\n')
         second = hdfs.HdfsTarget(self.target.path + '/data2', format=hdfs.Plain)
 
         with second.open('w') as fobj:
-            fobj.write('bar\n')
+            fobj.write(b'bar\n')
         invisible = hdfs.HdfsTarget(self.target.path + '/_SUCCESS', format=hdfs.Plain)
         with invisible.open('w') as fobj:
-            fobj.write('b0rk\n')
+            fobj.write(b'b0rk\n')
         self.assertTrue(second.exists())
         self.assertTrue(invisible.exists())
         self.assertTrue(self.target.exists())
         with self.target.open('r') as fobj:
-            parts = sorted(fobj.read().strip('\n').split('\n'))
-        self.assertEqual(tuple(parts), ('bar', 'foo'))
+            parts = sorted(fobj.read().strip(b'\n').split(b'\n'))
+        self.assertEqual(tuple(parts), (b'bar', b'foo'))
 
 
 @attr('minicluster')
@@ -397,7 +398,7 @@ class HdfsTargetTests(MiniClusterTestCase):
 
     def assertRegexpMatches(self, text, expected_regexp, msg=None):
         """Python 2.7 backport."""
-        if isinstance(expected_regexp, basestring):
+        if isinstance(expected_regexp, six.string_types):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(text):
             msg = msg or "Regexp didn't match"
