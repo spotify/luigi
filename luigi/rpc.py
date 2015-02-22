@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+Implementation of the REST interface between the workers and the server.
+rpc.py implements the client side of it, server.py implements the server side.
+"""
 
 import json
 import logging

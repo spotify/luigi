@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+Implements a sublass of :py:class:`~luigi.target.Target` that writes data to Postgres.
+Also provides a helper task to copy data into a Postgres table.
+"""
 
 import datetime
 import logging
