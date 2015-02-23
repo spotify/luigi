@@ -279,10 +279,31 @@ class ParameterTest(unittest.TestCase):
         t1 = InsignificantParameterTask(foo='x', bar='y')
         self.assertEqual(t1.task_id, 'InsignificantParameterTask(bar=y)')
 
-        t2 = InsignificantParameterTask('z')
-        self.assertEqual(t2.foo, 'foo_default')
+        t2 = InsignificantParameterTask('u', 'z')
+        self.assertEqual(t2.foo, 'u')
         self.assertEqual(t2.bar, 'z')
         self.assertEqual(t2.task_id, 'InsignificantParameterTask(bar=z)')
+
+    def test_local_significant_param(self):
+        """ Obviously, if anything should be positional, so should local
+        significant parameters """
+        class MyTask(luigi.Task):
+            # This could typically be "--label-company=disney"
+            x = luigi.Parameter(significant=True)
+
+        MyTask('arg')
+        self.assertRaises(luigi.parameter.MissingParameterException,
+                          lambda: MyTask())
+
+    def test_local_insignificant_param(self):
+        """ Ensure we have the same behavior as in before a78338c  """
+        class MyTask(luigi.Task):
+            # This could typically be "--num-threads=True"
+            x = luigi.Parameter(significant=False)
+
+        MyTask('arg')
+        self.assertRaises(luigi.parameter.MissingParameterException,
+                          lambda: MyTask())
 
 
 class TestNewStyleGlobalParameters(unittest.TestCase):
@@ -341,22 +362,27 @@ class TestRemoveGlobalParameters(unittest.TestCase):
         MyConfigWithoutSection.mc_r.reset_global()
         MyConfigWithoutSection.mc_s.reset_global()
 
+    def run_and_check(self, args):
+        run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
+        self.assertTrue(run_exit_status)
+        return run_exit_status
+
     def test_use_config_class_1(self):
-        luigi.run(['--local-scheduler', '--no-lock', '--MyConfig-mc-p', '99', '--mc-r', '55', 'NoopTask'])
+        self.run_and_check(['--MyConfig-mc-p', '99', '--mc-r', '55', 'NoopTask'])
         self.assertEqual(MyConfig().mc_p, 99)
         self.assertEqual(MyConfig().mc_q, 73)
         self.assertEqual(MyConfigWithoutSection().mc_r, 55)
         self.assertEqual(MyConfigWithoutSection().mc_s, 99)
 
     def test_use_config_class_2(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'NoopTask', '--MyConfig-mc-p', '99', '--mc-r', '55'])
+        self.run_and_check(['NoopTask', '--MyConfig-mc-p', '99', '--mc-r', '55'])
         self.assertEqual(MyConfig().mc_p, 99)
         self.assertEqual(MyConfig().mc_q, 73)
         self.assertEqual(MyConfigWithoutSection().mc_r, 55)
         self.assertEqual(MyConfigWithoutSection().mc_s, 99)
 
     def test_use_config_class_more_args(self):
-        luigi.run(['--local-scheduler', '--no-lock', '--MyConfig-mc-p', '99', '--mc-r', '55', 'NoopTask', '--mc-s', '123', '--MyConfig-mc-q', '42'])
+        self.run_and_check(['--MyConfig-mc-p', '99', '--mc-r', '55', 'NoopTask', '--mc-s', '123', '--MyConfig-mc-q', '42'])
         self.assertEqual(MyConfig().mc_p, 99)
         self.assertEqual(MyConfig().mc_q, 42)
         self.assertEqual(MyConfigWithoutSection().mc_r, 55)
@@ -364,7 +390,7 @@ class TestRemoveGlobalParameters(unittest.TestCase):
 
     @with_config({"MyConfig": {"mc_p": "666", "mc_q": "777"}})
     def test_use_config_class_with_configuration(self):
-        luigi.run(['--local-scheduler', '--no-lock', '--mc-r', '555', 'NoopTask'])
+        self.run_and_check(['--mc-r', '555', 'NoopTask'])
         self.assertEqual(MyConfig().mc_p, 666)
         self.assertEqual(MyConfig().mc_q, 777)
         self.assertEqual(MyConfigWithoutSection().mc_r, 555)
@@ -372,7 +398,7 @@ class TestRemoveGlobalParameters(unittest.TestCase):
 
     @with_config({"MyConfigWithoutSection": {"mc_r": "999", "mc_s": "888"}})
     def test_use_config_class_with_configuration_2(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'NoopTask', '--MyConfig-mc-p', '222', '--mc-r', '555'])
+        self.run_and_check(['NoopTask', '--MyConfig-mc-p', '222', '--mc-r', '555'])
         self.assertEqual(MyConfig().mc_p, 222)
         self.assertEqual(MyConfig().mc_q, 73)
         self.assertEqual(MyConfigWithoutSection().mc_r, 555)
@@ -385,13 +411,63 @@ class TestRemoveGlobalParameters(unittest.TestCase):
         class CatsWithoutSection(luigi.ConfigWithoutSection):
             n_cats = luigi.IntParameter()
 
-        luigi.run(['--local-scheduler', '--no-lock', '--n-cats', '123', '--Dogs-n-dogs', '456', 'WithDefault'])
+        self.run_and_check(['--n-cats', '123', '--Dogs-n-dogs', '456', 'WithDefault'])
         self.assertEqual(Dogs().n_dogs, 456)
         self.assertEqual(CatsWithoutSection().n_cats, 123)
 
-        luigi.run(['--local-scheduler', '--no-lock', 'WithDefault', '--n-cats', '321', '--Dogs-n-dogs', '654'])
+        self.run_and_check(['WithDefault', '--n-cats', '321', '--Dogs-n-dogs', '654'])
         self.assertEqual(Dogs().n_dogs, 654)
         self.assertEqual(CatsWithoutSection().n_cats, 321)
+
+    def test_global_significant_param(self):
+        """ We don't want any kind of global param to be positional """
+        class MyTask(luigi.Task):
+            # This could typically be called "--test-dry-run"
+            x_g1 = luigi.Parameter(default='y', is_global=True, significant=True)
+
+        self.assertRaises(luigi.parameter.UnknownParameterException,
+                          lambda: MyTask('arg'))
+
+    def test_global_insignificant_param(self):
+        """ We don't want any kind of global param to be positional """
+        class MyTask(luigi.Task):
+            # This could typically be "--yarn-pool=development"
+            x_g2 = luigi.Parameter(default='y', is_global=True, significant=False)
+
+        self.assertRaises(luigi.parameter.UnknownParameterException,
+                          lambda: MyTask('arg'))
+
+    def test_mixed_params(self):
+        """ Essentially for what broke in a78338c and was reported in #738 """
+        class MyTask(luigi.Task):
+            # This could typically be "--num-threads=True"
+            x_g3 = luigi.Parameter(default='y', is_global=True)
+            local_param = luigi.Parameter()
+
+        MyTask('setting_local_param')
+
+    def test_mixed_params_inheritence(self):
+        """ A slightly more real-world like test case """
+        class TaskWithOneGlobalParam(luigi.Task):
+            non_positional_param = luigi.Parameter(default='y', is_global=True)
+
+        class TaskWithOnePositionalParam(TaskWithOneGlobalParam):
+            """ Try to mess with positional parameters by subclassing """
+            only_positional_param = luigi.Parameter()
+
+            def complete(self):
+                return True
+
+        class PositionalParamsRequirer(luigi.Task):
+
+            def requires(self):
+                return TaskWithOnePositionalParam('only_positional_value')
+
+            def run(self):
+                pass
+
+        self.run_and_check(['PositionalParamsRequirer'])
+        self.run_and_check(['PositionalParamsRequirer', '--non-positional-param', 'z'])
 
 
 class TestParamWithDefaultFromConfig(unittest.TestCase):
