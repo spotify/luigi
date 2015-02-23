@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""
-The system for scheduling tasks and executing them in order.
-Deals with dependencies, priorities, resources, etc.
-The :py:class:`~luigi.worker.Worker` pulls tasks from the scheduler (usually over the REST interface) and executes them.
-"""
 
 import collections
 try:

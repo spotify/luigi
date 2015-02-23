@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""
-luigi.scalding has moved to luigi.contrib.scalding
-"""
 
 import warnings
 

@@ -14,20 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-"""
-luigi.date_interval provides convenient classes for date algebra.
-There is a corresponding :class:`luigi.parameter.DateIntervalParameter` that you can use to parse date intervals.
-Everything uses ISO 8601 notation, i.e. YYYY-MM-DD for dates, etc.
-
-Example::
-
-    class MyTask(luigi.Task):
-        date_interval = luigi.DateIntervalParameter()
-
-Now, you can launch this from the command line using ``--date-interval 2014-05-10`` or ``--date-interval 2014-W26`` (using week notation) or ``--date-interval 2014`` (for a year) and some other notations.
-"""
-
 from __future__ import division
 
 from luigi import six

@@ -14,10 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""
-Implementation of Simple Storage Service support.
-:py:class:`S3Target` is a subclass of the Target class to support S3 file system operations
-"""
 
 import itertools
 import logging

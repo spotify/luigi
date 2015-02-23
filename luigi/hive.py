@@ -15,10 +15,6 @@
 # limitations under the License.
 #
 
-"""
-The hive module has been moved to ``luigi.contrib.hive``
-"""
-
 import warnings
 
 from luigi.contrib.hive import *
