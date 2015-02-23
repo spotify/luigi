@@ -281,10 +281,10 @@ class CopyToTable(rdbms.CopyToTable):
         )
 
     def copy(self, cursor, file):
-        if isinstance(self.columns[0], basestring):
+        if isinstance(self.columns[0], six.string_types):
             column_names = self.columns
         elif len(self.columns[0]) == 2:
-            column_names = zip(*self.columns)[0]
+            column_names = [c[0] for c in self.columns]
         else:
             raise Exception('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
         cursor.copy_from(file, self.table, null=r'\N', sep=self.column_separator, columns=column_names)
@@ -311,7 +311,8 @@ class CopyToTable(rdbms.CopyToTable):
             if n % 100000 == 0:
                 logger.info("Wrote %d lines", n)
             rowstr = self.column_separator.join(self.map_column(val) for val in row)
-            tmp_file.write(rowstr + '\n')
+            rowstr += "\n"
+            tmp_file.write(rowstr.encode('utf-8'))
 
         logger.info("Done writing, importing at %s", datetime.datetime.now())
         tmp_file.seek(0)
@@ -319,7 +320,7 @@ class CopyToTable(rdbms.CopyToTable):
         # attempt to copy the data into postgres
         # if it fails because the target table doesn't exist
         # try to create it by running self.create_table
-        for attempt in xrange(2):
+        for attempt in range(2):
             try:
                 cursor = connection.cursor()
                 self.init_copy(connection)
