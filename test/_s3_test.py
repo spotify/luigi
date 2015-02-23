@@ -168,7 +168,6 @@ class TestS3Target(unittest.TestCase):
             result = f.read()
 
         self.assertEqual(test_data, result)
-        self.assertFalse(os.path.exists(t._tmp_extract_path))
 
 
 class TestS3Client(unittest.TestCase):

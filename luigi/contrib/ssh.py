@@ -230,6 +230,8 @@ class RemoteTarget(luigi.target.FileSystemTarget):
 
     def __init__(self, path, host, format=None, username=None, key_file=None):
         super(RemoteTarget, self).__init__(path)
+        if format is None:
+            format = luigi.format.get_default_format()
         self.format = format
         self._fs = RemoteFileSystem(host, username, key_file)
 

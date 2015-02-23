@@ -94,7 +94,7 @@ class FileTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.path))
 
         # Using gzip module as validation
-        f = gzip.open(self.path, 'rb')
+        f = gzip.open(self.path, 'r')
         self.assertTrue(test_data == f.read())
         f.close()
 
@@ -114,7 +114,7 @@ class FileTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.path))
 
         # Using bzip module as validation
-        f = bz2.BZ2File(self.path, 'rb')
+        f = bz2.BZ2File(self.path, 'r')
         self.assertTrue(test_data == f.read())
         f.close()
 
@@ -169,18 +169,18 @@ class FileTest(unittest.TestCase):
     def test_text(self):
         t = File(self.path, luigi.format.UTF8)
         a = u'我éçф'
-        with t.open('wb') as f:
+        with t.open('w') as f:
             f.write(a)
-        with t.open('rb') as f:
+        with t.open('r') as f:
             b = f.read()
         self.assertEqual(a, b)
 
     def test_format_chain(self):
-        UTF8WIN = luigi.format.TextWrapper(encoding='utf8', newline='\r\n')
+        UTF8WIN = luigi.format.TextFormat(encoding='utf8', newline='\r\n')
         t = File(self.path, UTF8WIN >> luigi.format.Gzip)
         a = u'我é\nçф'
 
-        with t.open('wb') as f:
+        with t.open('w') as f:
             f.write(a)
 
         f = gzip.open(self.path, 'rb')
@@ -196,10 +196,36 @@ class FileTest(unittest.TestCase):
         f.write(b'\xe6\x88\x91\xc3\xa9\r\n\xc3\xa7\xd1\x84')
         f.close()
 
-        with t.open('rb') as f:
+        with t.open('r') as f:
             b = f.read()
 
         self.assertEqual(u'我é\nçф', b)
+
+    @mock.patch('os.linesep', '\r\n')
+    def test_format_newline(self):
+        t = File(self.path, luigi.format.SysNewLine)
+
+        with t.open('w') as f:
+            f.write(b'a\rb\nc\r\nd')
+
+        with t.open('r') as f:
+            b = f.read()
+
+        with open(self.path, 'rb') as f:
+            c = f.read()
+
+        self.assertEqual(b'a\nb\nc\nd', b)
+        self.assertEqual(b'a\r\nb\r\nc\r\nd', c)
+
+    def test_del_with_Text(self):
+        t = File(self.path, luigi.format.UTF8)
+        p = t.open('w')
+        print(u'test', file=p)
+        tp = p.tmp_path
+        del p
+
+        self.assertFalse(os.path.exists(tp))
+        self.assertFalse(os.path.exists(self.path))
 
 
 class FileCreateDirectoriesTest(FileTest):

@@ -25,66 +25,21 @@ import shutil
 import tempfile
 import io
 
-from luigi import six
-
 import luigi.util
-from luigi.format import FileWrapper
-from luigi.target import FileSystem, FileSystemTarget, get_char_mode
+from luigi.format import FileWrapper, get_default_format
+from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
 
 
-if six.PY3:
-    unicode = str
-
-
-class abstract_atomic_file(object):
-    """
-    Simple class that writes to a temp file and moves it on close()
+class atomic_file(AtomicLocalFile):
+    """Simple class that writes to a temp file and moves it on close()
     Also cleans up the temp file if close is not invoked
-    This is an abstract class see atomic_file for text file,
-    atomic_binary_file for binary file
     """
 
-    def __init__(self, path):
-        self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
-        self.path = path
-        init_args = self.get_init_args(self.__tmp_path)
-        super(abstract_atomic_file, self).__init__(*init_args)
+    def move_to_final_destination(self):
+        os.rename(self.tmp_path, self.path)
 
-    def get_init_args(self, path):
-        return (io.FileIO(path, 'w'),)
-
-    def close(self):
-        super(abstract_atomic_file, self).close()
-        os.rename(self.__tmp_path, self.path)
-
-    def __del__(self):
-        if os.path.exists(self.__tmp_path):
-            os.remove(self.__tmp_path)
-
-    @property
-    def tmp_path(self):
-        return self.__tmp_path
-
-    def __exit__(self, exc_type, exc, traceback):
-        " Close/commit the file if there are no exception "
-        if exc_type:
-            return
-        return super(abstract_atomic_file, self).__exit__(exc_type, exc, traceback)
-
-
-class atomic_binary_file(abstract_atomic_file, io.BufferedWriter):
-    pass
-
-
-class atomic_text_file(abstract_atomic_file, io.TextIOWrapper):
-    pass
-
-
-if six.PY2:
-    class atomic_file(abstract_atomic_file, file):
-        # for compatibility (bytes file with universal newline)
-        def get_init_args(self, path):
-            return (path, 'w')
+    def generate_tmp_path(self, path):
+        return path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
 
 
 class LocalFileSystem(FileSystem):
@@ -114,6 +69,8 @@ class File(FileSystemTarget):
     fs = LocalFileSystem()
 
     def __init__(self, path=None, format=None, is_tmp=False):
+        if format is None:
+            format = get_default_format()
         if not path:
             if not is_tmp:
                 raise Exception('path or is_tmp must be set')
@@ -132,34 +89,14 @@ class File(FileSystemTarget):
             os.makedirs(parentfolder)
 
     def open(self, mode='r'):
-        char_mode = get_char_mode(mode)
-        if 'w' in mode:
+        if mode == 'w':
             self.makedirs()
+            return self.format.pipe_writer(atomic_file(self.path))
 
-            if char_mode == 'b':
-                atomic_type = atomic_binary_file
-            elif char_mode == 't':
-                atomic_type = atomic_text_file
-            else:
-                atomic_type = atomic_file
+        elif mode == 'r':
+            fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
+            return self.format.pipe_reader(fileobj)
 
-            if self.format:
-                return self.format.pipe_writer(atomic_type(self.path))
-            else:
-                return atomic_type(self.path)
-
-        elif 'r' in mode:
-            if char_mode == 't':
-                fileobj = FileWrapper(io.TextIOWrapper(io.FileIO(self.path, 'r')))
-            elif char_mode == 'b':
-                fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
-            else:
-                fileobj = FileWrapper(open(self.path, 'r'))
-
-            if self.format:
-                return self.format.pipe_reader(fileobj)
-
-            return fileobj
         else:
             raise Exception('mode must be r/w')
 
