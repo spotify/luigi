@@ -14,15 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""
-The worker communicates with the scheduler and does two things:
-
-1. Sends all tasks that has to be run
-2. Gets tasks from the scheduler that should be run
-
-When running in local mode, the worker talks directly to a :py:class:`~luigi.scheduler.CentralPlannerScheduler` instance.
-When you run a central server, the worker will talk to the scheduler using a :py:class:`~luigi.rpc.RemoteScheduler` instance.
-"""
 
 import abc
 import collections

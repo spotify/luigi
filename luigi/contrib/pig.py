@@ -16,11 +16,10 @@
 #
 """
 Apache Pig support.
-Example configuration section in client.cfg::
-
-    [pig]
-    # pig home directory
-    home: /usr/share/pig
+Example configuration section in client.cfg:
+[pig]
+# pig home directory
+home: /usr/share/pig
 """
 
 import logging
@@ -51,7 +50,7 @@ class PigJobTask(luigi.Task):
         """
         Dictionary of environment variables that should be set when running Pig.
 
-        Ex::
+        Ex:
             return { 'PIG_CLASSPATH': '/your/path' }
         """
         return {}
@@ -60,8 +59,7 @@ class PigJobTask(luigi.Task):
         """
         Dictionary of properties that should be set when running Pig.
 
-        Example::
-
+        Ex:
             return { 'pig.additional.jars':'/path/to/your/jar' }
         """
         return {}
@@ -69,9 +67,7 @@ class PigJobTask(luigi.Task):
     def pig_parameters(self):
         """
         Dictionary of parameters that should be set for the Pig job.
-
-        Example::
-
+        Ex:
             return { 'YOUR_PARAM_NAME':'Your param value' }
         """
         return {}
@@ -79,9 +75,7 @@ class PigJobTask(luigi.Task):
     def pig_options(self):
         """
         List of options that will be appended to the Pig command.
-
-        Example::
-
+        Ex:
             return ['-x', 'local']
         """
         return []

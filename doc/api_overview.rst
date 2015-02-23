@@ -21,10 +21,10 @@ You can probably get pretty far with the ``LocalTarget`` and ``hdfs.HdfsTarget``
 classes that are available out of the box.
 These directly map to a file on the local drive or a file in HDFS, respectively.
 In addition these also wrap the underlying operations to make them atomic.
-They both implement the ``open(mode)`` method which returns a stream object that
-could be read (``mode='r'``) from or written to (``mode='w'``).
+They both implement the *open(flag)* method which returns a stream object that
+could be read (flag = 'r') from or written to (flag = 'w').
 Both LocalTarget and hdfs.HdfsTarget also optionally take a format parameter.
-Luigi comes with Gzip support by providing ``format=format.Gzip``.
+Luigi comes with Gzip support by providing *format=format.Gzip*.
 Adding support for other formats is pretty simple.
 
 Task

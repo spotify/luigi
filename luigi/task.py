@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""
-The abstract :py:class:`Task` class.
-It is a central concept of Luigi and represents the state of the workflow.
-See `/api_overview` for an overview.
-"""
 
 import abc
 try:

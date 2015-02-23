@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""
-Provides functionality to run a Hadoop job using a Jar
-"""
 
 import logging
 import os

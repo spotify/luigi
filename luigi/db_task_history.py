@@ -15,11 +15,6 @@
 # limitations under the License.
 #
 
-"""
-Provides a database backend to the central scheduler. This lets you see historical runs.
-See :doc:`/central_scheduler` for information about how to turn out the task history feature.
-"""
-
 import datetime
 import logging
 from contextlib import contextmanager
