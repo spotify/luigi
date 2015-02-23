@@ -27,4 +27,7 @@ if __name__ == '__main__':
             message='(.*)outputs has no custom(.*)',
             category=UserWarning
         )
-        nose.main()
+        success = nose.run()
+
+    if not success:
+        raise Exception('The tests failed!')
