@@ -509,10 +509,12 @@ class FilesystemInferenceTest(unittest.TestCase):
                         'spl': MockFile(base + '/something.spl'),
                     }
 
-        with self.assertRaises(NotImplementedError):
+        def test_raise_not_implemented():
             list(_get_filesystems_and_globs(
                 lambda d: InconsistentlyOutputtingDateHourTask(d),
                 lambda d: d.strftime('(%Y).*(%m).*(%d).*(%H)')))
+
+        self.assertRaises(NotImplementedError, test_raise_not_implemented)
 
     def test_wrapped_inconsistent_datehour_globs_not_inferred(self):
         class InconsistentlyParameterizedWrapperTask(luigi.WrapperTask):
@@ -522,10 +524,12 @@ class FilesystemInferenceTest(unittest.TestCase):
                 yield TaskA(dh=self.dh - datetime.timedelta(days=1))
                 yield TaskB(dh=self.dh, complicator='no/worries')
 
-        with self.assertRaises(NotImplementedError):
+        def test_raise_not_implemented():
             list(_get_filesystems_and_globs(
                 lambda d: InconsistentlyParameterizedWrapperTask(d),
                 lambda d: d.strftime('(%Y).*(%m).*(%d).*(%H)')))
+
+        self.assertRaises(NotImplementedError, test_raise_not_implemented)
 
 
 class RangeDailyTest(unittest.TestCase):
@@ -536,7 +540,7 @@ class RangeDailyTest(unittest.TestCase):
 
             @classmethod
             def bulk_complete(self, parameter_tuples):
-                return parameter_tuples[:-2]
+                return list(parameter_tuples)[:-2]
 
             def output(self):
                 raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
