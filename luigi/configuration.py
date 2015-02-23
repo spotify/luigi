@@ -15,6 +15,20 @@
 # limitations under the License.
 #
 
+"""
+luigi.configuration provides some convenience wrappers around Python's
+ConfigParser to get configuration options from config files.
+
+The default location for configuration files is client.cfg in the current
+working directory, then /etc/luigi/client.cfg.
+
+Configuration has largely been superseded by parameters since they can
+do essentially everything configuration can do, plus a tighter integration
+with the rest of Luigi.
+
+See :doc:`/configuration` for more info.
+"""
+
 import logging
 import os
 try:

@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+Abstract class for task history.
+Currently the only subclass is :py:class:`~luigi.db_task_history.DbTaskHistory`.
+"""
 
 import abc
 import logging

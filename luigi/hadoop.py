@@ -14,6 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+"""
+Run Hadoop Mapreduce jobs using Hadoop Streaming.
+To run a job, you need to subclass :py:class:`luigi.hadoop.JobTask` and implement a ``mapper`` and ``reducer`` methods.
+See :doc:`/example_top_artists` for an example of how to run a Hadoop job.
+"""
+
 from __future__ import print_function
 
 import abc
