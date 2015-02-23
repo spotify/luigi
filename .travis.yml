@@ -30,3 +30,7 @@ script:
 
 after_failure:
   - cat /home/travis/build/spotify/luigi/.tox/cdh/log/cdh-1.log
+
+branches:
+  only:
+    - master
