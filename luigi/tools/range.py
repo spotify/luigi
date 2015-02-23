@@ -374,28 +374,29 @@ def _get_per_location_glob(tasks, outputs, regexes):
         if m is None:
             raise NotImplementedError("Couldn't deduce datehour representation in output path %r of task %s" % (p, t))
 
-    positions = [most_common((m.start(i), m.end(i)) for m in matches)[0] for i in range(1, 5)]  # the most common position of every group is likely to be conclusive hit or miss
+    n_groups = len(matches[0].groups())
+    positions = [most_common((m.start(i), m.end(i)) for m in matches)[0] for i in range(1, n_groups + 1)]  # the most common position of every group is likely to be conclusive hit or miss
 
-    glob = list(paths[0])  # TODO sanity check that it's the same for all paths?
+    glob = list(paths[0])  # FIXME sanity check that it's the same for all paths
     for start, end in positions:
         glob = glob[:start] + ['[0-9]'] * (end - start) + glob[end:]
     return ''.join(glob).rsplit('/', 1)[0]  # chop off the last path item (wouldn't need to if `hadoop fs -ls -d` equivalent were available)
 
 
-def _get_filesystems_and_globs(task_cls):
+def _get_filesystems_and_globs(datetime_to_task, datetime_to_re):
     """
-    Yields a (filesystem, glob) tuple per every output location of task_cls.
+    Yields a (filesystem, glob) tuple per every output location of task.
 
-    task_cls can have one or several FileSystemTarget outputs.
+    The task can have one or several FileSystemTarget outputs.
 
-    For convenience, task_cls can be a wrapper task,
+    For convenience, the task can be a luigi.WrapperTask,
     in which case outputs of all its dependencies are considered.
     """
-    # probe some scattered datehours unlikely to all occur in paths, other than by being sincere datehour parameter's representations
+    # probe some scattered datetimes unlikely to all occur in paths, other than by being sincere datetime parameter's representations
     # TODO limit to [self.start, self.stop) so messages are less confusing? Done trivially it can kill correctness
-    sample_datehours = [datetime(y, m, d, h) for y in range(2000, 2050, 10) for m in range(1, 4) for d in range(5, 8) for h in range(21, 24)]
-    regexes = [re.compile('(%04d).*(%02d).*(%02d).*(%02d)' % (d.year, d.month, d.day, d.hour)) for d in sample_datehours]
-    sample_tasks = [task_cls(d) for d in sample_datehours]
+    sample_datetimes = [datetime(y, m, d, h) for y in range(2000, 2050, 10) for m in range(1, 4) for d in range(5, 8) for h in range(21, 24)]
+    regexes = [re.compile(datetime_to_re(d)) for d in sample_datetimes]
+    sample_tasks = [datetime_to_task(d) for d in sample_datetimes]
     sample_outputs = [flatten_output(t) for t in sample_tasks]
 
     for o, t in zip(sample_outputs, sample_tasks):
@@ -407,7 +408,7 @@ def _get_filesystems_and_globs(task_cls):
             if not isinstance(target, FileSystemTarget):
                 raise NotImplementedError("Output targets must be instances of FileSystemTarget; was %r for %r" % (target, t))
 
-    for o in zip(*sample_outputs):  # transposed, so here we're iterating over logical outputs, not datehours
+    for o in zip(*sample_outputs):  # transposed, so here we're iterating over logical outputs, not datetimes
         glob = _get_per_location_glob(sample_tasks, o, regexes)
         yield o[0].fs, glob
 
@@ -431,9 +432,9 @@ def _list_existing(filesystem, glob, paths):
     return set(listing)
 
 
-def infer_bulk_complete_from_fs(task_cls, finite_datehours):
+def infer_bulk_complete_from_fs(datetimes, datetime_to_task, datetime_to_re):
     """
-    Efficiently determines missing datehours by filesystem listing.
+    Efficiently determines missing datetimes by filesystem listing.
 
     The current implementation works for the common case of a task writing
     output to a FileSystemTarget whose path is built using strftime with format
@@ -442,31 +443,28 @@ def infer_bulk_complete_from_fs(task_cls, finite_datehours):
     (Eventually Luigi could have ranges of completion as first-class citizens.
     Then this listing business could be factored away/be provided for
     explicitly in target API or some kind of a history server.)
-
-    TODO support RangeDaily
     """
-    filesystems_and_globs_by_location = _get_filesystems_and_globs(task_cls)
-    paths_by_datehour = [[o.path for o in flatten_output(task_cls(d))] for d in finite_datehours]
+    filesystems_and_globs_by_location = _get_filesystems_and_globs(datetime_to_task, datetime_to_re)
+    paths_by_datetime = [[o.path for o in flatten_output(datetime_to_task(d))] for d in datetimes]
     listing = set()
-    for (f, g), p in zip(filesystems_and_globs_by_location, zip(*paths_by_datehour)):  # transposed, so here we're iterating over logical outputs, not datehours
+    for (f, g), p in zip(filesystems_and_globs_by_location, zip(*paths_by_datetime)):  # transposed, so here we're iterating over logical outputs, not datetimes
         listing |= _list_existing(f, g, p)
 
     # quickly learn everything that's missing
-    missing_datehours = []
-    for d, p in zip(finite_datehours, paths_by_datehour):
+    missing_datetimes = []
+    for d, p in zip(datetimes, paths_by_datetime):
         if not set(p) <= listing:
-            missing_datehours.append(d)
+            missing_datetimes.append(d)
 
-    return missing_datehours
+    return missing_datetimes
 
 
 class RangeDaily(RangeDailyBase):
     """Efficiently produces a contiguous completed range of a daily recurring
     task that takes a single DateParameter.
 
-    Falls back to infer it from output filesystem listing to facilitate the common
-    case usage.
-    (FIXME the latter not implemented yet)
+    Falls back to infer it from output filesystem listing to facilitate the
+    common case usage.
 
     Convenient to use even from command line, like:
 
@@ -476,7 +474,13 @@ class RangeDaily(RangeDailyBase):
     """
 
     def missing_datetimes(self, task_cls, finite_datetimes):
-        return set(finite_datetimes) - set(map(self.parameter_to_datetime, task_cls.bulk_complete(list(map(self.datetime_to_parameter, finite_datetimes)))))
+        try:
+            return set(finite_datetimes) - set(map(self.parameter_to_datetime, task_cls.bulk_complete(map(self.datetime_to_parameter, finite_datetimes))))
+        except NotImplementedError:
+            return infer_bulk_complete_from_fs(
+                finite_datetimes,
+                lambda d: task_cls(self.datetime_to_parameter(d)),
+                lambda d: d.strftime('(%Y).*(%m).*(%d)'))
 
 
 class RangeHourly(RangeHourlyBase):
@@ -485,7 +489,8 @@ class RangeHourly(RangeHourlyBase):
 
     Benefits from bulk_complete information to efficiently cover gaps.
 
-    Falls back to infer it from output filesystem listing to facilitate the common case usage.
+    Falls back to infer it from output filesystem listing to facilitate the
+    common case usage.
 
     Convenient to use even from command line, like:
 
@@ -498,4 +503,7 @@ class RangeHourly(RangeHourlyBase):
         try:
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, task_cls.bulk_complete(list(map(self.datetime_to_parameter, finite_datetimes)))))
         except NotImplementedError:
-            return infer_bulk_complete_from_fs(task_cls, finite_datetimes)
+            return infer_bulk_complete_from_fs(
+                finite_datetimes,
+                lambda d: task_cls(self.datetime_to_parameter(d)),
+                lambda d: d.strftime('(%Y).*(%m).*(%d).*(%H)'))
