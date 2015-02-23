@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+luigi.interface contains the bindings for command line integration and dynamic loading of tasks
+"""
 
 import argparse
 import logging

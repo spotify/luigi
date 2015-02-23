@@ -15,6 +15,10 @@
 # limitations under the License.
 #
 
+"""
+Provides a concrete implementation of a :py:class:`~luigi.target.Target` class that uses files on the local file system
+"""
+
 import os
 import random
 import shutil
@@ -33,10 +37,12 @@ if six.PY3:
 
 
 class abstract_atomic_file(object):
-    # Simple class that writes to a temp file and moves it on close()
-    # Also cleans up the temp file if close is not invoked
-    # This is an abstract class see atomic_file for text file,
-    # atomic_binary_file for binary file
+    """
+    Simple class that writes to a temp file and moves it on close()
+    Also cleans up the temp file if close is not invoked
+    This is an abstract class see atomic_file for text file,
+    atomic_binary_file for binary file
+    """
 
     def __init__(self, path):
         self.__tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)

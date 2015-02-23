@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+Contains some helper functions to run luigid in daemon mode
+"""
 from __future__ import print_function
 
 import datetime
