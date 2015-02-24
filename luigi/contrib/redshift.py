@@ -306,6 +306,7 @@ class RedshiftManifestTask(S3PathTask):
     # should be over ridden to point to a variety
     # of folders you wish to copy from
     folder_paths = luigi.Parameter()
+    text_target = True
 
     def run(self):
         entries = []
@@ -319,7 +320,10 @@ class RedshiftManifestTask(S3PathTask):
                 })
         manifest = {'entries': entries}
         target = self.output().open('w')
-        target.write(json.dumps(manifest).encode('utf8'))
+        dump = json.dumps(manifest)
+        if not self.text_target:
+            dump = dump.encode('utf8')
+        target.write(dump)
         target.close()
 
 

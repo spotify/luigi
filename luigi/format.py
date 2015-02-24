@@ -366,14 +366,14 @@ class TextWrapper(io.TextIOWrapper):
 
     def __exit__(self, *args):
         # io.TextIOWrapper close the file on __exit__, let the underlying file decide
-        if not self.closed:
+        if not self.closed and self.writable():
             super(TextWrapper, self).flush()
 
         self._stream.__exit__(*args)
 
     def __del__(self, *args):
         # io.TextIOWrapper close the file on __del__, let the underlying file decide
-        if not self.closed:
+        if not self.closed and self.writable():
             super(TextWrapper, self).flush()
 
         try:
