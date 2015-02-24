@@ -15,10 +15,9 @@
 # limitations under the License.
 #
 
-import mock
+import multiprocessing
 import random
 import time
-import threading
 import unittest
 try:
     from urllib2 import Request, urlopen, HTTPError
@@ -29,29 +28,21 @@ except ImportError:
 import luigi.server
 
 
+def run_server(api_port):
+    luigi.server.run(api_port=api_port, address='127.0.0.1')
+
+
 class ServerTestBase(unittest.TestCase):
 
-    def run_server(self):
-        # Pass IPv4 localhost to ensure that only a single address, and therefore single port, is bound
-        luigi.server.run(api_port=self._api_port, address='127.0.0.1')
-
     def setUp(self):
-        self._api_port = random.randint(1000, 9999)
-
-        @mock.patch('signal.signal')
-        def scheduler_thread(signal):
-            # this is wrapped in a function so we get the instance
-            # from the scheduler thread and not from the main thread
-
-            self.run_server()
-
-        self._thread = threading.Thread(target=scheduler_thread)
-        self._thread.start()
+        self._api_port = random.randint(1024, 9999)
+        self._process = multiprocessing.Process(target=run_server, args=(self._api_port,))
+        self._process.start()
         time.sleep(0.1)  # wait for server to start
 
     def tearDown(self):
-        luigi.server.stop()
-        self._thread.join()
+        self._process.terminate()
+        self._process.join()
 
 
 class ServerTest(ServerTestBase):
