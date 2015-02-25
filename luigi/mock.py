@@ -119,6 +119,7 @@ class MockFile(target.FileSystemTarget):
                     stderrbytes = sys.stderr.buffer
                 else:
                     stderrbytes = sys.stderr
+
                 if self._mirror_on_stderr:
                     if self2._write_line:
                         sys.stderr.write(fn + ": ")

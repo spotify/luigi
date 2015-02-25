@@ -41,6 +41,16 @@ class MockFileTest(unittest.TestCase):
         with t.open('r') as b:
             self.assertEqual(list(b), ['bar'])
 
+    # That should work in python2 because of the autocast
+    # That should work in python3 because the default format is Text
+    def test_unicode(self):
+        t = MockFile("foo")
+        with t.open('w') as b:
+            b.write(u"bar")
+
+        with t.open('r') as b:
+            self.assertEqual(b.read(), u'bar')
+
 
 class MockFileSystemTest(unittest.TestCase):
     fs = MockFileSystem()

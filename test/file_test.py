@@ -166,6 +166,14 @@ class FileTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.path))
         self.assertTrue(os.path.exists(self.copy))
 
+    def test_unicode(self):
+        t = File(self.path)
+        with t.open('w') as b:
+            b.write(u"bar")
+
+        with t.open('r') as b:
+            self.assertEqual(b.read(), u'bar')
+
     def test_text(self):
         t = File(self.path, luigi.format.UTF8)
         a = u'我éçф'
