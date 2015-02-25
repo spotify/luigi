@@ -20,7 +20,9 @@ import subprocess
 import io
 import os
 import re
+import locale
 import tempfile
+import warnings
 
 from luigi import six
 
@@ -305,6 +307,29 @@ class NewlineWrapper(BaseWrapper):
         self._stream.write(re.sub(b'(\n|\r\n|\r)', newline, b))
 
 
+class MixedUnicodeBytesWrapper(BaseWrapper):
+    """
+    """
+
+    def __init__(self, stream, encoding=None):
+        if encoding is None:
+            encoding = locale.getpreferredencoding()
+        self.encoding = encoding
+        super(MixedUnicodeBytesWrapper, self).__init__(stream)
+
+    def write(self, b):
+        self._stream.write(self._convert(b))
+
+    def writelines(self, lines):
+        self._stream.writelines((self.convert(line) for line in lines))
+
+    def _convert(self, b):
+        if isinstance(b, six.text_type):
+            b = b.encode(self.encoding)
+            warnings.warn('Writing unicode to byte stream', stacklevel=2)
+        return b
+
+
 class Format(object):
     """
     Interface for format specifications.
@@ -426,6 +451,12 @@ class TextFormat(WrappedFormat):
     wrapper_cls = TextWrapper
 
 
+class MixedUnicodeBytesFormat(WrappedFormat):
+
+    output = 'bytes'
+    wrapper_cls = MixedUnicodeBytesWrapper
+
+
 class NewlineFormat(WrappedFormat):
 
     input = 'bytes'
@@ -468,6 +499,7 @@ Nop = NopFormat()
 SysNewLine = NewlineFormat()
 Gzip = GzipFormat()
 Bzip2 = Bzip2Format()
+MixedUnicodeBytes = MixedUnicodeBytesFormat()
 
 
 def get_default_format():
