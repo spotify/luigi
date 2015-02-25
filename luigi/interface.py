@@ -143,6 +143,8 @@ class Interface(object):
 
         if worker_scheduler_factory is None:
             worker_scheduler_factory = WorkerSchedulerFactory()
+        if override_defaults is None:
+            override_defaults = {}
         env_params = core(**override_defaults)
         # search for logging configuration path first on the command line, then
         # in the application config file
