@@ -506,6 +506,6 @@ def get_default_format():
     if six.PY3:
         return Text
     elif os.linesep == '\n':
-        return MixedUnicodeBytes
+        return Nop
     else:
-        return MixedUnicodeBytes >> SysNewLine
+        return SysNewLine

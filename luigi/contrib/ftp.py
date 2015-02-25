@@ -28,6 +28,7 @@ Be aware that normal ftp do not provide secure communication.
 import datetime
 import ftplib
 import os
+import sys
 import random
 import io
 
@@ -35,7 +36,7 @@ import luigi
 import luigi.file
 import luigi.format
 import luigi.target
-from luigi.format import FileWrapper
+from luigi.format import FileWrapper, MixedUnicodeBytes
 
 
 class RemoteFileSystem(luigi.target.FileSystem):
@@ -226,6 +227,11 @@ class RemoteTarget(luigi.target.FileSystemTarget):
     ):
         if format is None:
             format = luigi.format.get_default_format()
+
+        # Allow to write unicode in file for retrocompatibility
+        if sys.version_info[:2] <= (2, 6):
+            format = format >> MixedUnicodeBytes
+
         self.path = path
         self.mtime = mtime
         self.format = format
