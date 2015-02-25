@@ -19,6 +19,8 @@ Implementation of Simple Storage Service support.
 :py:class:`S3Target` is a subclass of the Target class to support S3 file system operations
 """
 
+from __future__ import division
+
 import itertools
 import logging
 import os
@@ -35,6 +37,7 @@ except ImportError:
     from configparser import NoSectionError
 
 from luigi import six
+from luigi.six.moves import range
 
 from luigi import configuration
 from luigi.format import FileWrapper, get_default_format, MixedUnicodeBytes
@@ -211,15 +214,15 @@ class S3Client(FileSystem):
         # use modulo to avoid float precision issues
         # for exactly-sized fits
         num_parts = \
-            (source_size / part_size) \
+            (source_size // part_size) \
             if source_size % part_size == 0 \
-            else (source_size / part_size) + 1
+            else (source_size // part_size) + 1
 
         mp = None
         try:
             mp = s3_bucket.initiate_multipart_upload(key)
 
-            for i in xrange(num_parts):
+            for i in range(num_parts):
                 # upload a part at a time to S3
                 offset = part_size * i
                 bytes = min(part_size, source_size - offset)
@@ -355,12 +358,14 @@ class ReadableS3File(object):
     def __init__(self, s3_key):
         self.s3_key = s3_key
         self.buffer = []
+        self.closed = False
 
     def read(self, size=0):
         return self.s3_key.read(size=size)
 
     def close(self):
         self.s3_key.close()
+        self.closed = True
 
     def __del__(self):
         self.close()
@@ -378,6 +383,15 @@ class ReadableS3File(object):
         output = b''.join(self.buffer)
         self.buffer = []
         return output
+
+    def readable(self):
+        return True
+
+    def writable(self):
+        return False
+
+    def seekable(self):
+        return False
 
     def __iter__(self):
         key_iter = self.s3_key.__iter__()
@@ -484,7 +498,7 @@ class S3FlagTarget(S3Target):
         if path[-1] != "/":
             raise ValueError("S3FlagTarget requires the path to be to a "
                              "directory.  It must end with a slash ( / ).")
-        super(S3Target, self).__init__(path)
+        super(S3FlagTarget, self).__init__(path)
         self.format = format
         self.fs = client or S3Client()
         self.flag = flag
