@@ -31,6 +31,7 @@ import luigi.worker
 import mock
 from helpers import with_config
 from luigi import ExternalTask, RemoteScheduler, Task
+from luigi.mock import MockFile, MockFileSystem
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
 from luigi import six
@@ -836,6 +837,54 @@ class MultipleWorkersTest(unittest.TestCase):
         mock_time.time.return_value = 11
         w._handle_next_task()
         self.assertEqual(0, len(w._running_tasks))
+
+
+class ForkBombTask(luigi.Task):
+    depth = luigi.IntParameter()
+    breadth = luigi.IntParameter()
+    p = luigi.Parameter(default=(0, ))  # ehm for some weird reason [0] becomes a tuple...?
+
+    def output(self):
+        return MockFile('.'.join(map(str, self.p)))
+
+    def run(self):
+        with self.output().open('w') as f:
+            f.write('Done!')
+
+    def requires(self):
+        if len(self.p) < self.depth:
+            for i in range(self.breadth):
+                yield ForkBombTask(self.depth, self.breadth, self.p + (i, ))
+
+
+class TaskLimitTest(unittest.TestCase):
+    def tearDown(self):
+        MockFileSystem().remove('')
+
+    @with_config({'core': {'worker-task-limit': '6'}})
+    def test_task_limit_exceeded(self):
+        w = Worker()
+        t = ForkBombTask(3, 2)
+        w.add(t)
+        w.run()
+        self.assertFalse(t.complete())
+        leaf_tasks = [ForkBombTask(3, 2, branch) for branch in [(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1)]]
+        self.assertEquals(3, sum(t.complete() for t in leaf_tasks), "should have gracefully completed as much as possible even though the single last leaf didn't get scheduled")
+
+    @with_config({'core': {'worker-task-limit': '7'}})
+    def test_task_limit_not_exceeded(self):
+        w = Worker()
+        t = ForkBombTask(3, 2)
+        w.add(t)
+        w.run()
+        self.assertTrue(t.complete())
+
+    def test_no_task_limit(self):
+        w = Worker()
+        t = ForkBombTask(4, 2)
+        w.add(t)
+        w.run()
+        self.assertTrue(t.complete())
 
 
 if __name__ == '__main__':
