@@ -23,10 +23,25 @@ from datetime import datetime
 import helpers
 import luigi
 import mock
+import luigi.format
 from luigi import hdfs
 from luigi import six
 from minicluster import MiniClusterTestCase
 from nose.plugins.attrib import attr
+
+
+class ComplexOldFormat(luigi.format.Format):
+    """Should take unicode but output bytes
+    """
+
+    def hdfs_writer(self, output_pipe):
+        return self.pipe_writer(luigi.hdfs.Plain.hdfs_writer(output_pipe))
+
+    def pipe_writer(self, output_pipe):
+        return luigi.format.UTF8.pipe_writer(output_pipe)
+
+    def pipe_reader(self, output_pipe):
+        return output_pipe
 
 
 class TestException(Exception):
@@ -232,6 +247,28 @@ class PlainDirFormatTest(_HdfsFormatTest, MiniClusterTestCase):
         with self.target.open('r') as fobj:
             parts = sorted(fobj.read().strip(b'\n').split(b'\n'))
         self.assertEqual(tuple(parts), (b'bar', b'foo'))
+
+
+@attr('minicluster')
+class ComplexOldFormatTest(MiniClusterTestCase):
+    format = ComplexOldFormat()
+
+    def setUp(self):
+        super(ComplexOldFormatTest, self).setUp()
+        self.target = hdfs.HdfsTarget(self._test_file(), format=self.format)
+        if self.target.exists():
+            self.target.remove(skip_trash=True)
+
+    def test_with_write_success(self):
+        with self.target.open('w') as fobj:
+            fobj.write(u'foo')
+        self.assertTrue(self.target.exists())
+
+        with self.target.open('r') as fobj:
+            a = fobj.read()
+
+        self.assertFalse(isinstance(a, six.text_type))
+        self.assertEqual(a, b'foo')
 
 
 @attr('minicluster')

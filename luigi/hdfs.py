@@ -746,12 +746,17 @@ class PlainFormat(luigi.format.Format):
     input = 'bytes'
     output = 'hdfs'
 
-    def pipe_reader(cls, path):
+    def hdfs_writer(self, path):
+        return self.pipe_writer(path)
+
+    def hdfs_reader(self, path):
+        return self.pipe_reader(path)
+
+    def pipe_reader(self, path):
         return HdfsReadPipe(path)
 
     def pipe_writer(self, output_pipe):
         return HdfsAtomicWritePipe(output_pipe)
-        return output_pipe
 
 
 class PlainDirFormat(luigi.format.Format):
@@ -759,16 +764,46 @@ class PlainDirFormat(luigi.format.Format):
     input = 'bytes'
     output = 'hdfs'
 
-    def pipe_reader(cls, path):
+    def hdfs_writer(self, path):
+        return self.pipe_writer(path)
+
+    def hdfs_reader(self, path):
+        return self.pipe_reader(path)
+
+    def pipe_reader(self, path):
         # exclude underscore-prefixedfiles/folders (created by MapReduce)
         return HdfsReadPipe("%s/[^_]*" % path)
 
-    def pipe_writer(cls, path):
+    def pipe_writer(self, path):
         return HdfsAtomicWriteDirPipe(path)
 
 
 Plain = PlainFormat()
 PlainDir = PlainDirFormat()
+
+
+class CompatibleHdfsFormat(luigi.format.Format):
+
+    output = 'hdfs'
+
+    def __init__(self, writer, reader, input=None):
+        if input is not None:
+            self.input = input
+
+        self.reader = reader
+        self.writer = writer
+
+    def pipe_writer(self, output):
+        return self.writer(output)
+
+    def pipe_reader(self, input):
+        return self.reader(input)
+
+    def hdfs_writer(self, output):
+        return self.writer(output)
+
+    def hdfs_reader(self, input):
+        return self.reader(input)
 
 
 class HdfsTarget(FileSystemTarget):
@@ -778,31 +813,52 @@ class HdfsTarget(FileSystemTarget):
             assert is_tmp
             path = tmppath()
         super(HdfsTarget, self).__init__(path)
+
         if format is None:
             format = luigi.format.get_default_format() >> Plain
 
-        if hasattr(format, 'hdfs_writer'):
-            warnings.warn(
-                'hdfs_writer method for format is deprecated, specify the'
-                'property output of your format as \'hdfs\' instead',
-                DeprecationWarning,
-                stacklevel=2
-            )
-            format.pipe_writer = format.hdfs_writer
-            format.output = 'hdfs'
+        old_format = (
+            (
+                hasattr(format, 'hdfs_writer') or
+                hasattr(format, 'hdfs_reader')
+            ) and
+            not hasattr(format, 'output')
+        )
 
-        if hasattr(format, 'hdfs_reader'):
-            warnings.warn(
-                'hdfs_reader method for format is deprecated, specify the'
-                'property output of your format as \'hdfs\' instead',
-                DeprecationWarning,
-                stacklevel=2
-            )
-            format.pipe_reader = format.hdfs_reader
-            format.output = 'hdfs'
-
-        if not hasattr(format, 'output') or format.output != 'hdfs':
+        if not old_format and getattr(format, 'output', '') != 'hdfs':
             format = format >> Plain
+
+        if old_format:
+            warnings.warn(
+                'hdfs_writer and hdfs_reader method for format is deprecated,'
+                'specify the property output of your format as \'hdfs\' instead',
+                DeprecationWarning,
+                stacklevel=2
+            )
+
+            if hasattr(format, 'hdfs_writer'):
+                format_writer = format.hdfs_writer
+            else:
+                w_format = format >> Plain
+                format_writer = w_format.pipe_writer
+
+            if hasattr(format, 'hdfs_reader'):
+                format_reader = format.hdfs_reader
+            else:
+                r_format = format >> Plain
+                format_reader = r_format.pipe_reader
+
+            format = CompatibleHdfsFormat(
+                format_writer,
+                format_reader,
+            )
+
+        else:
+            format = CompatibleHdfsFormat(
+                format.pipe_writer,
+                format.pipe_reader,
+                getattr(format, 'input', None),
+            )
 
         self.format = format
 
