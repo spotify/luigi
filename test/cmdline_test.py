@@ -140,7 +140,7 @@ class CmdlineTest(unittest.TestCase):
 
         with mock.patch("luigi.configuration.get_config") as getconf:
             getconf.return_value.get.side_effect = ConfigParser.NoOptionError(section='foo', option='bar')
-            getconf.return_value.get_boolean.return_value = True
+            getconf.return_value.getint.return_value = 0
 
             luigi.interface.setup_interface_logging.call_args_list = []
             luigi.run(['SomeTask', '--n', '42', '--local-scheduler', '--no-lock'])

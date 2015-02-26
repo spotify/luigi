@@ -278,7 +278,7 @@ class Worker(object):
     def __init__(self, scheduler=None, worker_id=None,
                  worker_processes=1, ping_interval=None, keep_alive=None,
                  wait_interval=None, max_reschedules=None, count_uniques=None,
-                 worker_timeout=None):
+                 worker_timeout=None, task_limit=None):
 
         if scheduler is None:
             scheduler = CentralPlannerScheduler()
@@ -313,8 +313,12 @@ class Worker(object):
         self.__max_reschedules = max_reschedules
 
         if worker_timeout is None:
-            worker_timeout = configuration.get_config().getint('core', 'worker-timeout', 0)
+            worker_timeout = config.getint('core', 'worker-timeout', 0)
         self.__worker_timeout = worker_timeout
+
+        if task_limit is None:
+            task_limit = config.getint('core', 'worker-task-limit', None)
+        self.__task_limit = task_limit
 
         self._id = worker_id
         self._scheduler = scheduler
@@ -476,6 +480,10 @@ class Worker(object):
         return self.add_succeeded
 
     def _add(self, task, is_complete):
+        if self.__task_limit is not None and len(self._scheduled_tasks) >= self.__task_limit:
+            logger.warning('Will not schedule %s or any dependencies due to exceeded task-limit of %d', task, self.__task_limit)
+            return
+
         formatted_traceback = None
         try:
             self._check_complete_value(is_complete)

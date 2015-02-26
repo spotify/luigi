@@ -173,6 +173,14 @@ worker-ping-interval
   Number of seconds to wait between pinging scheduler to let it know
   that the worker is still alive. Defaults to 1.0.
 
+worker-task-limit
+  .. versionadded:: 1.0.25
+
+  Maximum number of tasks to schedule per invocation. Upon exceeding it,
+  the worker will issue a warning and proceed with the workflow obtained
+  thus far. Prevents incidents due to spamming of the scheduler, usually
+  accidental. Default: no limit.
+
 worker-timeout
   .. versionadded:: 1.0.20
 
