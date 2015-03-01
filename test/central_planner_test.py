@@ -16,7 +16,7 @@
 #
 
 import time
-import unittest
+from helpers import unittest
 
 import luigi.notifications
 from luigi.scheduler import DISABLED, DONE, FAILED, CentralPlannerScheduler

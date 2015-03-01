@@ -17,7 +17,7 @@
 
 import logging
 import time
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.hadoop

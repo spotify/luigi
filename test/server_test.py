@@ -18,7 +18,7 @@
 import multiprocessing
 import random
 import time
-import unittest
+from helpers import unittest
 try:
     from urllib2 import Request, urlopen, HTTPError
 except ImportError:

@@ -23,7 +23,7 @@ except ImportError:
 import logging
 import os
 import subprocess
-import unittest
+from helpers import unittest
 import warnings
 
 from luigi import six

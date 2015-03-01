@@ -16,7 +16,7 @@
 #
 
 import datetime
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.date_interval

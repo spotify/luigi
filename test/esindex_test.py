@@ -34,12 +34,7 @@ Example running tests against port 9201 with basic auth:
 import collections
 import datetime
 import os
-import unittest
-
-try:
-    from unittest import SkipTest
-except ImportError:
-    from unittest2 import SkipTest
+from helpers import unittest
 
 import elasticsearch
 import luigi
@@ -63,8 +58,8 @@ def _create_test_index():
 
 try:
     _create_test_index()
-except:
-    raise SkipTest('Unable to connect to ElasticSearch')
+except Exception:
+    raise unittest.SkipTest('Unable to connect to ElasticSearch')
 
 target = ElasticsearchTarget(HOST, PORT, INDEX, DOC_TYPE, 'update_id', http_auth=HTTP_AUTH)
 target.marker_index = MARKER_INDEX

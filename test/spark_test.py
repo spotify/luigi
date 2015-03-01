@@ -20,7 +20,7 @@ try:
 except ImportError:
     from io import StringIO
 import subprocess
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.hdfs

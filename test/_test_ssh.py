@@ -26,7 +26,7 @@ import os
 import random
 import socket
 import subprocess
-import unittest
+from helpers import unittest
 
 import luigi.format
 from luigi.contrib.ssh import RemoteContext, RemoteTarget

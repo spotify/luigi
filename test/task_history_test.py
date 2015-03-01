@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.scheduler

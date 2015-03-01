@@ -17,9 +17,8 @@ from luigi.file import File
 from luigi.scheduler import CentralPlannerScheduler
 import luigi.server
 import luigi.worker
-import unittest
 from mock import patch
-from helpers import with_config
+from helpers import with_config, unittest
 import os
 import tempfile
 

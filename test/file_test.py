@@ -21,7 +21,7 @@ import gzip
 import os
 import random
 import shutil
-import unittest
+from helpers import unittest
 import mock
 
 import luigi.format

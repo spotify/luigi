@@ -24,7 +24,7 @@ import signal
 import tempfile
 import threading
 import time
-import unittest
+from helpers import unittest
 
 import luigi.notifications
 import luigi.worker
@@ -35,11 +35,6 @@ from luigi.mock import MockFile, MockFileSystem
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
 from luigi import six
-
-try:
-    from unittest import skipIf
-except:
-    from unittest2 import skipIf
 
 luigi.notifications.DEBUG = True
 
@@ -762,7 +757,7 @@ class MultipleWorkersTest(unittest.TestCase):
 
     # This pass under python3 when run as `nosetests test/worker_test.py`
     # but not as `nosetests test`. Probably some side effect on previous tests
-    @skipIf(six.PY3, 'This test fail on python3 when run with tox.')
+    @unittest.skipIf(six.PY3, 'This test fail on python3 when run with tox.')
     def test_multiple_workers(self):
         # Test using multiple workers
         # Also test generating classes dynamically since this may reflect issues with

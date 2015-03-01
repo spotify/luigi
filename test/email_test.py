@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-import unittest
+from helpers import unittest
 
 from helpers import with_config
 from luigi import notifications

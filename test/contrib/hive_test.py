@@ -22,7 +22,7 @@ except ImportError:
 import os
 import sys
 import tempfile
-import unittest
+from helpers import unittest
 
 import luigi.contrib.hive
 import mock

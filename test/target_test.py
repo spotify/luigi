@@ -16,7 +16,7 @@
 #
 from __future__ import print_function
 
-import unittest
+from helpers import unittest
 
 import luigi.target
 import luigi.format

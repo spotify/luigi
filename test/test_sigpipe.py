@@ -16,7 +16,7 @@
 #
 
 import os
-from unittest import TestCase
+from helpers import unittest
 
 from luigi.format import InputPipeProcessWrapper
 
@@ -39,7 +39,7 @@ exit 1
 """
 
 
-class TestSigpipe(TestCase):
+class TestSigpipe(unittest.TestCase):
 
     def setUp(self):
         with open("/tmp/luigi_test_sigpipe.sh", "w") as fp:
@@ -66,7 +66,7 @@ class TestSigpipe(TestCase):
         self.assertFalse(os.path.exists("/tmp/luigi_sigpipe.marker"))
 
 
-class TestSubprocessException(TestCase):
+class TestSubprocessException(unittest.TestCase):
 
     def setUp(self):
         with open("/tmp/luigi_test_sigpipe.sh", "w") as fp:
