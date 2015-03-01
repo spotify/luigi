@@ -36,6 +36,11 @@ import datetime
 import os
 import unittest
 
+try:
+    from unittest import SkipTest
+except ImportError:
+    from unittest2 import SkipTest
+
 import elasticsearch
 import luigi
 from elasticsearch.connection import Urllib3HttpConnection
@@ -56,8 +61,11 @@ def _create_test_index():
     if not es.indices.exists(INDEX):
         es.indices.create(INDEX)
 
+try:
+    _create_test_index()
+except:
+    raise SkipTest('Unable to connect to ElasticSearch')
 
-_create_test_index()
 target = ElasticsearchTarget(HOST, PORT, INDEX, DOC_TYPE, 'update_id', http_auth=HTTP_AUTH)
 target.marker_index = MARKER_INDEX
 target.marker_doc_type = MARKER_DOC_TYPE
@@ -237,9 +245,14 @@ class MarkerIndexTest(unittest.TestCase):
         _cleanup()
 
     def test_update_marker(self):
-        with self.assertRaises(elasticsearch.NotFoundError):
-            result = self.es.count(index=MARKER_INDEX, doc_type=MARKER_DOC_TYPE,
-                                   body={'query': {'match_all': {}}})
+        def will_raise():
+            self.es.count(
+                index=MARKER_INDEX,
+                doc_type=MARKER_DOC_TYPE,
+                body={'query': {'match_all': {}}}
+            )
+
+        self.assertRaises(elasticsearch.NotFoundError, will_raise)
 
         task1 = IndexingTask1()
         luigi.build([task1], local_scheduler=True)
@@ -275,8 +288,8 @@ class MarkerIndexTest(unittest.TestCase):
             dates_update_id.append(Entry(date, update_id))
 
         it = iter(sorted(dates_update_id))
-        first = it.next()
-        second = it.next()
+        first = next(it)
+        second = next(it)
         self.assertTrue(first.date < second.date)
         self.assertEqual(first.update_id, 'IndexingTask1()')
         self.assertEqual(second.update_id, 'IndexingTask2()')
