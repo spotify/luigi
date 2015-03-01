@@ -25,6 +25,9 @@ cache:
 install:
   - pip install tox
 
+before_script:
+  - psql -c 'create database spotify;' -U postgres
+
 script:
   - tox -e $TOX_ENV
 
