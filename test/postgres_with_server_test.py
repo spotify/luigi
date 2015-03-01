@@ -14,8 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 
 from unittest import TestCase
+
+try:
+    from unittest import SkipTest
+except ImportError:
+    from unittest2 import SkipTest
 
 import luigi
 import luigi.notifications
@@ -35,14 +41,37 @@ Typical use cases that should be tested:
 
 """
 
+TRAVIS = os.getenv('TRAVIS', 'false') == 'true'
+
+host = 'localhost'
+database = 'spotify'
+user = 'spotify'
+password = 'guest'
+
+if TRAVIS:
+    user = 'postgres'
+
+
+try:
+    import psycopg2
+    conn = psycopg2.connect(
+        user=user,
+        host=host,
+        database=database,
+        password=password,
+    )
+    conn.close()
+except:
+    raise SkipTest('Unable to connect to postgres')
+
+
 # to avoid copying:
 
-
 class CopyToTestDB(postgres.CopyToTable):
-    host = 'localhost'
-    database = 'spotify'
-    user = 'spotify'
-    password = 'guest'
+    host = host
+    database = database
+    user = user
+    password = password
 
 
 class TestPostgresTask(CopyToTestDB):
