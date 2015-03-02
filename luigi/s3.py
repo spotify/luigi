@@ -359,9 +359,20 @@ class ReadableS3File(object):
         self.s3_key = s3_key
         self.buffer = []
         self.closed = False
+        self.finished = False
 
     def read(self, size=0):
-        return self.s3_key.read(size=size)
+        f = self.s3_key.read(size=size)
+
+        # boto will loop on the key forever and it's not what is expected by
+        # the python io interface
+        # boto/boto#2805
+        if f == b'':
+            self.finished = True
+        if self.finished:
+            return b''
+
+        return f
 
     def close(self):
         self.s3_key.close()
@@ -400,7 +411,7 @@ class ReadableS3File(object):
         while has_next:
             try:
                 # grab the next chunk
-                chunk = key_iter.next()
+                chunk = next(key_iter)
 
                 # split on newlines, preserving the newline
                 for line in chunk.splitlines(True):
