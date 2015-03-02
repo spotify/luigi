@@ -22,7 +22,6 @@ See :ref:`TaskHistory` for information about how to turn out the task history fe
 
 import datetime
 import logging
-import warnings
 from contextlib import contextmanager
 
 from luigi import six
@@ -31,16 +30,11 @@ from luigi import configuration
 from luigi import task_history
 from luigi.task_status import DONE, FAILED, PENDING, RUNNING
 
-
-try:
-    import sqlalchemy
-    import sqlalchemy.ext.declarative
-    import sqlalchemy.orm
-    import sqlalchemy.orm.collections
-    Base = sqlalchemy.ext.declarative.declarative_base()
-except ImportError:
-    # Don't fail on import because we want the documentation to be generated
-    warnings.warn("sqlalchemy could not be imported, db_task_history will not work", ImportWarning, stacklevel=3)
+import sqlalchemy
+import sqlalchemy.ext.declarative
+import sqlalchemy.orm
+import sqlalchemy.orm.collections
+Base = sqlalchemy.ext.declarative.declarative_base()
 
 logger = logging.getLogger('luigi-interface')
 

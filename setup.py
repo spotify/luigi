@@ -46,6 +46,10 @@ install_requires = [
     'python-daemon',
 ]
 
+if os.environ.get('READTHEDOCS', None) == 'True':
+    install_requires.append('sqlalchemy')
+    # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
+
 if sys.version_info[:2] < (2, 7):
     install_requires.extend(['argparse', 'ordereddict'])
 
