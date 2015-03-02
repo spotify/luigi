@@ -16,7 +16,7 @@
 #
 
 ''' Parameters are one of the core concepts of Luigi.
-All Parameters sit on :class:`~luigi.Task` classes.
+All Parameters sit on :class:`~luigi.task.Task` classes.
 See :ref:`Parameter` for more info on how to define parameters.
 '''
 

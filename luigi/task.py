@@ -227,6 +227,7 @@ class Task(object):
         class MyTask(luigi.Task):
             count = luigi.IntParameter()
 
+
     Each Task exposes a constructor accepting all :py:class:`Parameter` (and
     values) as kwargs. e.g. ``MyTask(count=10)`` would instantiate `MyTask`.
 
@@ -245,17 +246,18 @@ class Task(object):
 
     _event_callbacks = {}
 
-    # Priority of the task: the scheduler should favor available
-    # tasks with higher priority values first.
+    #: Priority of the task: the scheduler should favor available
+    #: tasks with higher priority values first.
     priority = 0
     disabled = False
 
-    # Resources used by the task. Should be formatted like {"scp": 1} to indicate that the
-    # task requires 1 unit of the scp resource.
+    #: Resources used by the task. Should be formatted like {"scp": 1} to indicate that the
+    #: task requires 1 unit of the scp resource.
     resources = {}
 
-    # Number of seconds after which to time out the run function. No timeout if set to 0. Defaults
-    # to 0 or value in client.cfg
+    #: Number of seconds after which to time out the run function.
+    #: No timeout if set to 0.
+    #: Defaults to 0 or value in client.cfg
     worker_timeout = None
 
     @classmethod
@@ -286,7 +288,7 @@ class Task(object):
 
     @property
     def task_module(self):
-        # Returns what Python module to import to get access to this class
+        ''' Returns what Python module to import to get access to this class. '''
         # TODO(erikbern): we should think about a language-agnostic mechanism
         return self.__class__.__module__
 
@@ -424,7 +426,7 @@ class Task(object):
         return cls(**kwargs)
 
     def to_str_params(self):
-        # Convert all parameters to a str->str hash
+        ''' Convert all parameters to a str->str hash.'''
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):

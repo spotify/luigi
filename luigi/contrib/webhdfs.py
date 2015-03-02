@@ -15,8 +15,8 @@
 # limitations under the License.
 #
 """
-Provides a WebHdfsTarget and WebHdfsClient using the
-python [hdfs](https://pypi.python.org/pypi/hdfs/) library.
+Provides a :class:`WebHdfsTarget` and :class:`WebHdfsClient` using the
+`Python hdfs <https://pypi.python.org/pypi/hdfs/>`_
 """
 
 from __future__ import absolute_import

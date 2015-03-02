@@ -113,7 +113,7 @@ Who uses Luigi?
 
 Several companies have written blog posts or presentation about Luigi:
 
-* `Spotify : NYC Data Science <http://www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`_
+* `Spotify (NYC Data Science) <http://www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`_
 * `Foursquare <http://www.slideshare.net/OpenAnayticsMeetup/luigi-presentation-17-23199897>`_
 * `Mortar Data <https://help.mortardata.com/technologies/luigi>`_
 * `Stripe <http://www.slideshare.net/PyData/python-as-part-of-a-production-machine-learning-stack-by-michael-manapat-pydata-sv-2014>`_
