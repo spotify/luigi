@@ -17,7 +17,6 @@
 from __future__ import print_function
 
 import bz2
-import gc
 import gzip
 import os
 import random
@@ -28,9 +27,10 @@ import mock
 import luigi.format
 from luigi import File
 from luigi.file import LocalFileSystem
+from target_test import FileSystemTargetTestMixin
 
 
-class FileTest(unittest.TestCase):
+class FileTest(unittest.TestCase, FileSystemTargetTestMixin):
     path = '/tmp/test.txt'
     copy = '/tmp/test.copy.txt'
 
@@ -46,44 +46,20 @@ class FileTest(unittest.TestCase):
         if os.path.exists(self.copy):
             os.remove(self.copy)
 
-    def test_close(self):
-        t = File(self.path)
+    def create_target(self, format=None):
+        return File(self.path, format=format)
+
+    def assertCleanUp(self, tmp_path=''):
+        self.assertFalse(os.path.exists(tmp_path))
+
+    def test_exists(self):
+        t = self.create_target()
         p = t.open('w')
-        print('test', file=p)
-        self.assertFalse(os.path.exists(self.path))
+        self.assertEqual(t.exists(), os.path.exists(self.path))
         p.close()
-        self.assertTrue(os.path.exists(self.path))
+        self.assertEqual(t.exists(), os.path.exists(self.path))
 
-    def test_del(self):
-        t = File(self.path)
-        p = t.open('w')
-        print('test', file=p)
-        tp = p.tmp_path
-        del p
-
-        self.assertFalse(os.path.exists(tp))
-        self.assertFalse(os.path.exists(self.path))
-
-    def test_write_cleanup_no_close(self):
-        t = File(self.path)
-
-        def context():
-            f = t.open('w')
-            f.write('stuff')
-        context()
-        gc.collect()  # force garbage collection of f variable
-        self.assertFalse(t.exists())
-
-    def test_write_cleanup_with_error(self):
-        t = File(self.path)
-        try:
-            with t.open('w'):
-                raise Exception('something broke')
-        except:
-            pass
-        self.assertFalse(t.exists())
-
-    def test_gzip(self):
+    def test_gzip_with_module(self):
         t = File(self.path, luigi.format.Gzip)
         p = t.open('w')
         test_data = b'test'
@@ -136,24 +112,6 @@ class FileTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.copy))
         self.assertEqual(t.open('r').read(), File(self.copy).open('r').read())
 
-    def test_format_injection(self):
-        class CustomFormat(luigi.format.Format):
-
-            def pipe_reader(self, input_pipe):
-                input_pipe.foo = "custom read property"
-                return input_pipe
-
-            def pipe_writer(self, output_pipe):
-                output_pipe.foo = "custom write property"
-                return output_pipe
-
-        t = File(self.path, format=CustomFormat())
-        with t.open("w") as f:
-            self.assertEqual(f.foo, "custom write property")
-
-        with t.open("r") as f:
-            self.assertEqual(f.foo, "custom read property")
-
     def test_move(self):
         t = File(self.path)
         f = t.open('w')
@@ -165,23 +123,6 @@ class FileTest(unittest.TestCase):
         t.move(self.copy)
         self.assertFalse(os.path.exists(self.path))
         self.assertTrue(os.path.exists(self.copy))
-
-    def test_unicode(self):
-        t = File(self.path)
-        with t.open('w') as b:
-            b.write(u"bar")
-
-        with t.open('r') as b:
-            self.assertEqual(b.read(), u'bar')
-
-    def test_text(self):
-        t = File(self.path, luigi.format.UTF8)
-        a = u'我éçф'
-        with t.open('w') as f:
-            f.write(a)
-        with t.open('r') as f:
-            b = f.read()
-        self.assertEqual(a, b)
 
     def test_format_chain(self):
         UTF8WIN = luigi.format.TextFormat(encoding='utf8', newline='\r\n')
@@ -224,16 +165,6 @@ class FileTest(unittest.TestCase):
 
         self.assertEqual(b'a\nb\nc\nd', b)
         self.assertEqual(b'a\r\nb\r\nc\r\nd', c)
-
-    def test_del_with_Text(self):
-        t = File(self.path, luigi.format.UTF8)
-        p = t.open('w')
-        print(u'test', file=p)
-        tp = p.tmp_path
-        del p
-
-        self.assertFalse(os.path.exists(tp))
-        self.assertFalse(os.path.exists(self.path))
 
 
 class FileCreateDirectoriesTest(FileTest):

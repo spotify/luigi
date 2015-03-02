@@ -321,7 +321,7 @@ class MixedUnicodeBytesWrapper(BaseWrapper):
         self._stream.write(self._convert(b))
 
     def writelines(self, lines):
-        self._stream.writelines((self.convert(line) for line in lines))
+        self._stream.writelines((self._convert(line) for line in lines))
 
     def _convert(self, b):
         if isinstance(b, six.text_type):
