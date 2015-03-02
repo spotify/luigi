@@ -40,8 +40,10 @@ general you want to allow some form of parametrization of it.
 For instance, if your Task class runs a Hadoop job to create a report every night,
 you probably want to make the date a parameter of the class.
 
+.. _Parameter:
+
 Parameter
-^^^^^^^^^
+~~~~~~~~~
 
 In Python this is generally done by adding arguments to the constructor,
 but Luigi requires you to declare these parameters instantiating
@@ -158,7 +160,7 @@ Parameters are resolved in the following order of decreasing priority:
 4. Any default value provided to the parameter
 
 Task.requires
-^^^^^^^^^^^^^
+~~~~~~~~~~~~~
 
 The ``requires`` method is used to specify dependencies on other Task object,
 which might even be of the same class.
@@ -174,7 +176,7 @@ one of which is the same class.
 requires can return other Tasks in any way wrapped up within dicts/lists/tuples/etc.
 
 Requiring another Task
-^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~
 
 Note that ``requires()`` can *not* return a Target object.
 If you have a simple Target object that is created externally
@@ -196,7 +198,7 @@ This also makes it easier to add parameters:
             return luigi.hdfs.HdfsTarget(self.date.strftime('/log/%Y-%m-%d'))
 
 Task.output
-^^^^^^^^^^^
+~~~~~~~~~~~
 
 The ``output`` method returns one or more ``Target`` objects.
 Similarly to requires, can return wrap them up in any way that's convenient for you.
@@ -214,7 +216,7 @@ atomicity will be lost unless the ``Task`` itself can ensure that each ``Target`
         # ...
 
 Task.run
-^^^^^^^^
+~~~~~~~~
 
 The ``run`` method now contains the actual code that is run.
 When you are using ``requires()`` and ``run()``, Luigi breaks down everything into two stages.
@@ -245,7 +247,7 @@ An example:
             g.close() # needed because files are atomic
 
 Task.input: getting dependencies
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As seen in the example above, ``Task`` is a wrapper around ``requires()`` that
 returns the corresponding Target objects instead of Task objects.
@@ -265,7 +267,7 @@ This can be useful if you have many dependencies:
 
 
 Dynamic dependencies
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~
 
 Sometimes you might not know exactly what other tasks to depend on until runtime.
 In that case, Luigi provides a mechanism to specify dynamic dependencies.
@@ -293,9 +295,10 @@ In other words, you should make sure your ``run()`` method is idempotent.
 For an example of a workflow using dynamic dependencies, see
 `examples/dynamic_requirements.py <https://github.com/spotify/luigi/blob/master/examples/dynamic_requirements.py>`_.
 
+.. _Events:
 
 Events and callbacks
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~
 
 Luigi has a built-in event system that
 allows you to register callbacks to events and trigger them from your own tasks.
@@ -325,7 +328,7 @@ This allows you to effortlessly subscribe to events only from a specific class (
 
 
 But I just want to run a Hadoop job?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The Hadoop code is integrated in the rest of the Luigi code because
 we really believe almost all Hadoop jobs benefit from being part of some sort of workflow.
@@ -348,7 +351,7 @@ You can use the hdfs.HdfsTarget class anywhere by just instantiating it:
 
 
 Task priority
-^^^^^^^^^^^^^
+~~~~~~~~~~~~~
 
 The scheduler decides which task to run next from
 the set of all task that have all their dependencies met.
@@ -390,7 +393,7 @@ task B will be picked first.
 
 
 Instance caching
-^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~
 
 In addition to the stuff mentioned above,
 Luigi also does some metaclass logic so that

@@ -17,24 +17,30 @@
 
 """
 Provides a database backend to the central scheduler. This lets you see historical runs.
-See :doc:`/central_scheduler` for information about how to turn out the task history feature.
+See :ref:`TaskHistory` for information about how to turn out the task history feature.
 """
 
 import datetime
 import logging
+import warnings
 from contextlib import contextmanager
 
 from luigi import six
 
 from luigi import configuration
-import sqlalchemy
-import sqlalchemy.ext.declarative
-import sqlalchemy.orm
-import sqlalchemy.orm.collections
 from luigi import task_history
 from luigi.task_status import DONE, FAILED, PENDING, RUNNING
 
-Base = sqlalchemy.ext.declarative.declarative_base()
+
+try:
+    import sqlalchemy
+    import sqlalchemy.ext.declarative
+    import sqlalchemy.orm
+    import sqlalchemy.orm.collections
+    Base = sqlalchemy.ext.declarative.declarative_base()
+except ImportError:
+    # Don't fail on import because we want the documentation to be generated
+    warnings.warn("sqlalchemy could not be imported, db_task_history will not work", warnings.ImportWarning, stacklevel=3)
 
 logger = logging.getLogger('luigi-interface')
 

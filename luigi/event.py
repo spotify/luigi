@@ -15,6 +15,8 @@
 # limitations under the License.
 #
 
+''' Definitions needed for events. See :ref:`Events` for info on how to use it.'''
+
 
 class Event(object):
     # TODO nice descriptive subclasses of Event instead of strings? pass their instances to the callback instead of an undocumented arg list?

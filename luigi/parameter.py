@@ -15,6 +15,11 @@
 # limitations under the License.
 #
 
+''' Parameters are one of the core concepts of Luigi.
+All Parameters sit on :class:`~luigi.Task` classes.
+See :ref:`Parameter` for more info on how to define parameters.
+'''
+
 import datetime
 import warnings
 try:

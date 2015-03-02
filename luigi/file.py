@@ -16,7 +16,7 @@
 #
 
 """
-Provides a concrete implementation of a :py:class:`~luigi.target.Target` class that uses files on the local file system
+:class:`LocalTarget` provides a concrete implementation of a :py:class:`~luigi.target.Target` class that uses files on the local file system
 """
 
 import os

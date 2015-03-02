@@ -35,6 +35,8 @@ see the :ref:`scheduler configuration section <scheduler-config>`.
 Note that ``luigid`` uses the same configuration files as the luigi client
 (i.e. ``client.cfg`` or ``/etc/luigi/client.cfg`` by default).
 
+.. _TaskHistory:
+
 Enabling Task History
 ~~~~~~~~~~~~~~~~~~~~~
 

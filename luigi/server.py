@@ -17,6 +17,7 @@
 """
 Simple REST server that takes commands in a JSON payload.
 Interface to the :py:class:`~luigi.scheduler.CentralPlannerScheduler` class.
+See :doc:`/central_scheduler` for more info.
 """
 
 import atexit
