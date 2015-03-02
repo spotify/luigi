@@ -2,10 +2,10 @@ API Overview
 ------------
 
 There are two fundamental building blocks of Luigi -
-the ``Task`` class and the ``Target`` class.
+the :class:`~luigi.task.Task` class and the :class:`~luigi.target.Target` class.
 Both are abstract classes and expect a few methods to be implemented.
 In addition to those two concepts,
-the ``Parameter`` class is an important concept that governs how a Task is run.
+the :class:`~luigi.parameter.Parameter` class is an important concept that governs how a Task is run.
 
 Target
 ~~~~~~
@@ -17,20 +17,20 @@ Actually, the only method that Targets have to implement is the *exists*
 method which returns True if and only if the Target exists.
 
 In practice, implementing Target subclasses is rarely needed.
-You can probably get pretty far with the ``LocalTarget`` and ``hdfs.HdfsTarget``
+You can probably get pretty far with the :class:`~luigi.file.LocalTarget` and :class:`~luigi.hdfs.HdfsTarget`
 classes that are available out of the box.
 These directly map to a file on the local drive or a file in HDFS, respectively.
 In addition these also wrap the underlying operations to make them atomic.
 They both implement the ``open(mode)`` method which returns a stream object that
 could be read (``mode='r'``) from or written to (``mode='w'``).
-Both LocalTarget and hdfs.HdfsTarget also optionally take a format parameter.
+Both :class:`~luigi.file.LocalTarget` and :class:`~luigi.hdfs.HdfsTarget` also optionally take a format parameter.
 Luigi comes with Gzip support by providing ``format=format.Gzip``.
 Adding support for other formats is pretty simple.
 
 Task
 ~~~~
 
-The ``Task`` class is a bit more conceptually interesting because this is
+The :class:`~luigi.task.Task` class is a bit more conceptually interesting because this is
 where computation is done.
 There are a few methods that can be implemented to alter its behavior,
 most notably ``run``, ``output`` and ``requires``.
@@ -47,7 +47,7 @@ Parameter
 
 In Python this is generally done by adding arguments to the constructor,
 but Luigi requires you to declare these parameters instantiating
-Parameter objects on the class scope:
+:class:`~luigi.parameter.Parameter` objects on the class scope:
 
 .. code:: python
 
@@ -126,8 +126,8 @@ are not the same instance:
 
 Python is not a strongly typed language and you don't have to specify the types
 of any of your parameters.
-You can simply use ``luigi.Parameter`` if you don't care.
-In fact, the reason DateParameter et al exist is just in order to
+You can simply use the base class :class:`~luigi.parameter.Parameter` if you don't care.
+In fact, the reason :class:`~DateParameter` et al exist is just in order to
 support command line interaction and make sure to convert the input to
 the corresponding type (i.e. datetime.date instead of a string).
 
@@ -149,15 +149,29 @@ For instance, say you have classes TaskA and TaskB:
 You can run ``TaskB`` on the command line: ``python script.py TaskB --y 42``.
 But you can also set the class value of ``TaskA`` by running
 ``python script.py TaskB --y 42 --TaskA-x 43``.
-This sets the value of ``TaskA.x`` to 43 on a ``class`` level.
+This sets the value of ``TaskA.x`` to 43 on a *class* level.
 It is still possible to override it inside Python if you instantiate ``TaskA(x=44)``.
+
+All parameters can also be set from the configuration file.
+For instance, you can put this in the config:
+
+.. code:: console
+
+    [TaskA]
+    x: 45
+
+
+Just as in the previous case, this will set the value of ``TaskA.x`` to 45 on the *class* level.
+And likewise, it is still possible to override it inside Python if you instantiate ``TaskA(x=44)``.
 
 Parameters are resolved in the following order of decreasing priority:
 
-1. Any value passed to the constructor, or task level value set on the command line
-2. Any class level value set on the command line
-3. Any configuration option (if using the ``config_path`` argument)
-4. Any default value provided to the parameter
+1. Any value passed to the constructor, or task level value set on the command line (applies on an instance level)
+2. Any value set on the command line (applies on a class level)
+3. Any configuration option (applies on a class level)
+4. Any default value provided to the parameter (applies on a class level)
+
+See the :class:`~luigi.parameter.Parameter` class for more information.
 
 Task.requires
 ~~~~~~~~~~~~~
@@ -200,12 +214,12 @@ This also makes it easier to add parameters:
 Task.output
 ~~~~~~~~~~~
 
-The ``output`` method returns one or more ``Target`` objects.
+The ``output`` method returns one or more :class:`~luigi.target.Target` objects.
 Similarly to requires, can return wrap them up in any way that's convenient for you.
-However we recommend that any ``Task`` only return one single ``Target`` in output.
+However we recommend that any :class:`~luigi.task.Task` only return one single :class:`~luigi.target.Target` in output.
 If multiple outputs are returned,
-atomicity will be lost unless the ``Task`` itself can ensure that each ``Target`` is atomically created.
-(If atomicity is not of concern, then it is safe to return multiple ``Target`` objects.)
+atomicity will be lost unless the :class:`~luigi.task.Task` itself can ensure that each :class:`~luigi.target.Target` is atomically created.
+(If atomicity is not of concern, then it is safe to return multiple :class:`~luigi.target.Target` objects.)
 
 .. code:: python
 
@@ -249,7 +263,7 @@ An example:
 Task.input: getting dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-As seen in the example above, ``Task`` is a wrapper around ``requires()`` that
+As seen in the example above, :class:`~luigi.task.Task` is a wrapper around ``requires()`` that
 returns the corresponding Target objects instead of Task objects.
 Anything returned by ``requires()`` will be transformed, including lists,
 nested dicts, etc.
@@ -271,7 +285,7 @@ Dynamic dependencies
 
 Sometimes you might not know exactly what other tasks to depend on until runtime.
 In that case, Luigi provides a mechanism to specify dynamic dependencies.
-If you yield another ``Task`` in the ``run()`` method,
+If you yield another :class:`~luigi.task.Task` in the ``run()`` method,
 the current task will be suspended and the other task will be run.
 You can also return a list of tasks.
 
