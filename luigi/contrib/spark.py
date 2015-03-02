@@ -378,6 +378,9 @@ class PySpark1xJob(Spark1xJob):
         py_files = self.py_files()
         if py_files != []:
             options += ['--py-files', ','.join(py_files)]
+        dependency_jars = self.dependency_jars()
+        if dependency_jars != []:
+            options += ['--jars', ','.join(dependency_jars)]
         args = [spark_submit] + options + self.spark_options() + \
             [self.program()] + list(self.job_args())
         args = map(str, args)
