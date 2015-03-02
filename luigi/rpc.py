@@ -17,6 +17,7 @@
 """
 Implementation of the REST interface between the workers and the server.
 rpc.py implements the client side of it, server.py implements the server side.
+See :doc:`/central_scheduler` for more info.
 """
 
 import json

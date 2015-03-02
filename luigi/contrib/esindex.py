@@ -17,9 +17,9 @@
 """
 Support for Elasticsearch (1.0.0 or newer).
 
-Provides an `ElasticsearchTarget` and a `CopyToIndex` template task.
+Provides an :class:`ElasticsearchTarget` and a :class:`CopyToIndex` template task.
 
-Modeled after `luigi.contrib.rdbms.CopyToTable`.
+Modeled after :class:`luigi.contrib.rdbms.CopyToTable`.
 
 A minimal example (assuming elasticsearch is running on localhost:9200):
 

@@ -15,7 +15,8 @@
 # limitations under the License.
 #
 """
-Implementation of a :py:class:`~luigi.target.Target` class that contains all data in-memory.
+This moduel provides a class :class:`MockFile`, an implementation of :py:class:`~luigi.target.Target`.
+:class:`MockFile` contains all data in-memory.
 The main purpose is unit testing workflows without writing to disk.
 """
 

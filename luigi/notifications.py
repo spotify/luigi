@@ -15,6 +15,18 @@
 # limitations under the License.
 #
 
+''' Supports sending emails when tasks fail.
+
+This needs some more documentation.
+See :doc:`/configuration` for configuration options.
+In particular using the config `error-email` should set up Luigi so that it will send emails when tasks fail.
+
+::
+
+    [core]
+    error-email: foo@bar.baz
+'''
+
 import logging
 import socket
 import sys

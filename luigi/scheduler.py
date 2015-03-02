@@ -18,6 +18,7 @@
 The system for scheduling tasks and executing them in order.
 Deals with dependencies, priorities, resources, etc.
 The :py:class:`~luigi.worker.Worker` pulls tasks from the scheduler (usually over the REST interface) and executes them.
+See :doc:`/central_scheduler` for more info.
 """
 
 import collections
