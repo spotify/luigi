@@ -45,6 +45,15 @@ def namespace(namespace=None):
     is reset, which is recommended to do at the end of any file where the
     namespace is set to avoid unintentionally setting namespace on tasks outside
     of the scope of the current file.
+
+    The namespace of a Task can also be changed by specifying the property
+    ``task_namespace``. This solution has the advantage that the namespace
+    doesn't have to be restored.
+
+    .. code-block:: python
+
+        class Task2(luigi.Task):
+            task_namespace = 'namespace2'
     """
     Register._default_namespace = namespace
 
