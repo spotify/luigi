@@ -142,13 +142,7 @@ import itertools
 import logging
 import luigi
 import os
-import warnings
-
-try:
-    import sqlalchemy
-except ImportError:
-    # Don't fail on import because we want the documentation to be generated
-    warnings.warn("sqlalchemy could not be imported, db_task_history will not work", ImportWarning, stacklevel=3)
+import sqlalchemy
 
 
 class SQLAlchemyTarget(luigi.Target):
