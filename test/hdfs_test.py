@@ -29,6 +29,8 @@ from luigi import six
 from minicluster import MiniClusterTestCase
 from nose.plugins.attrib import attr
 
+from target_test import FileSystemTargetTestMixin
+
 
 class ComplexOldFormat(luigi.format.Format):
     """Should take unicode but output bytes
@@ -272,7 +274,13 @@ class ComplexOldFormatTest(MiniClusterTestCase):
 
 
 @attr('minicluster')
-class HdfsTargetTests(MiniClusterTestCase):
+class HdfsTargetTests(MiniClusterTestCase, FileSystemTargetTestMixin):
+
+    def create_target(self, format=None):
+        target = hdfs.HdfsTarget(self._test_file(), format=format)
+        if target.exists():
+            target.remove(skip_trash=True)
+        return target
 
     def test_slow_exists(self):
         target = hdfs.HdfsTarget(self._test_file())
@@ -292,52 +300,6 @@ class HdfsTargetTests(MiniClusterTestCase):
         def should_raise_2():
             self.fs.exists("hdfs://_doesnotexist_/foo")
         self.assertRaises(hdfs.HDFSCliError, should_raise_2)
-
-    def test_atomicity(self):
-        target = hdfs.HdfsTarget(self._test_file())
-        if target.exists():
-            target.remove(skip_trash=True)
-
-        fobj = target.open("w")
-        self.assertFalse(target.exists())
-        fobj.close()
-        self.assertTrue(target.exists())
-
-    def test_readback(self):
-        target = hdfs.HdfsTarget(self._test_file())
-        if target.exists():
-            target.remove(skip_trash=True)
-
-        origdata = 'lol\n'
-        fobj = target.open("w")
-        fobj.write(origdata)
-        fobj.close()
-
-        fobj = target.open('r')
-        data = fobj.read()
-        self.assertEqual(origdata, data)
-
-    def test_with_close(self):
-        target = hdfs.HdfsTarget(self._test_file())
-        if target.exists():
-            target.remove(skip_trash=True)
-
-        with target.open('w') as fobj:
-            fobj.write('hej\n')
-
-        self.assertTrue(target.exists())
-
-    def test_with_exception(self):
-        target = hdfs.HdfsTarget(self._test_file())
-        if target.exists():
-            target.remove(skip_trash=True)
-
-        def foo():
-            with target.open('w') as fobj:
-                fobj.write('hej\n')
-                raise TestException('Test triggered exception')
-        self.assertRaises(TestException, foo)
-        self.assertFalse(target.exists())
 
     def test_create_ancestors(self):
         parent = self._test_dir()

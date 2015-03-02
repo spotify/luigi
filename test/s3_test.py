@@ -24,6 +24,7 @@ import unittest
 
 from luigi import six
 from helpers import with_config
+from target_test import FileSystemTargetTestMixin
 
 import luigi.format
 from boto.exception import S3ResponseError
@@ -33,20 +34,20 @@ from luigi import configuration
 from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
 
 try:
-    from unittest import skip
+    from unittest import skip, SkipTest
 except ImportError:
-    from unittest2 import skip
+    from unittest2 import skip, SkipTest
 
 if sys.version_info[:2] == (3, 4):
     # spulec/moto#308
-    mock_s3 = unittest.skip('moto mock doesn\'t work with python3.4')
+    raise SkipTest('moto mock doesn\'t work with python3.4')
 
 
 AWS_ACCESS_KEY = "XXXXXXXXXXXXXXXXXXXX"
 AWS_SECRET_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 
-class TestS3Target(unittest.TestCase):
+class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
 
     def setUp(self):
         f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
@@ -56,32 +57,18 @@ class TestS3Target(unittest.TestCase):
         self.tempFilePath = f.name
         f.write(self.tempFileContents)
         f.close()
+        self.mock_s3 = mock_s3()
+        self.mock_s3.start()
 
     def tearDown(self):
         os.remove(self.tempFilePath)
+        self.mock_s3.stop()
 
-    @mock_s3
-    def test_close(self):
+    def create_target(self, format=None):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         client.s3.create_bucket('mybucket')
-        t = S3Target('s3://mybucket/test_file', client=client)
-        p = t.open('w')
-        print('test', file=p)
-        self.assertFalse(t.exists())
-        p.close()
-        self.assertTrue(t.exists())
+        return S3Target('s3://mybucket/test_file', client=client, format=format)
 
-    @mock_s3
-    def test_del(self):
-        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        client.s3.create_bucket('mybucket')
-        t = S3Target('s3://mybucket/test_del', client=client)
-        p = t.open('w')
-        print('test', file=p)
-        del p
-        self.assertFalse(t.exists())
-
-    @mock_s3
     def test_read(self):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         client.s3.create_bucket('mybucket')
@@ -91,91 +78,36 @@ class TestS3Target(unittest.TestCase):
         file_str = read_file.read()
         self.assertEqual(self.tempFileContents, file_str.encode('utf-8'))
 
-    @mock_s3
     def test_read_no_file(self):
-        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        client.s3.create_bucket('mybucket')
-        t = S3Target('s3://mybucket/tempfile', client=client)
+        t = self.create_target()
         self.assertRaises(FileNotFoundException, t.open)
 
-    @skip('Take for ever!')
-    @mock_s3
-    def test_read_iterator(self):
+    def test_read_iterator_long(self):
         # write a file that is 5X the boto buffersize
         # to test line buffering
-        tempf = tempfile.NamedTemporaryFile(mode='wb', delete=False)
-        temppath = tempf.name
-        firstline = ''.zfill(key.Key.BufferSize * 5) + os.linesep
-        contents = firstline + 'line two' + os.linesep + 'line three'
-        tempf.write(contents.encode('utf-8'))
-        tempf.close()
+        old_buffer = key.Key.BufferSize
+        key.Key.BufferSize = 2
+        try:
+            tempf = tempfile.NamedTemporaryFile(mode='wb', delete=False)
+            temppath = tempf.name
+            firstline = ''.zfill(key.Key.BufferSize * 5) + os.linesep
+            contents = firstline + 'line two' + os.linesep + 'line three'
+            tempf.write(contents.encode('utf-8'))
+            tempf.close()
 
-        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        client.s3.create_bucket('mybucket')
-        client.put(temppath, 's3://mybucket/largetempfile')
-        t = S3Target('s3://mybucket/largetempfile', client=client)
-        with t.open() as read_file:
-            lines = [line for line in read_file]
+            client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+            client.s3.create_bucket('mybucket')
+            client.put(temppath, 's3://mybucket/largetempfile')
+            t = S3Target('s3://mybucket/largetempfile', client=client)
+            with t.open() as read_file:
+                lines = [line for line in read_file]
+        finally:
+            key.Key.BufferSize = old_buffer
+
         self.assertEqual(3, len(lines))
         self.assertEqual(firstline, lines[0])
         self.assertEqual("line two" + os.linesep, lines[1])
         self.assertEqual("line three", lines[2])
-
-    @mock_s3
-    def test_write_cleanup_no_close(self):
-        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        client.s3.create_bucket('mybucket')
-        t = S3Target('s3://mybucket/test_cleanup', client=client)
-
-        def context():
-            f = t.open('w')
-            f.write('stuff')
-
-        context()
-        gc.collect()
-        self.assertFalse(t.exists())
-
-    @mock_s3
-    def test_write_cleanup_with_error(self):
-        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        client.s3.create_bucket('mybucket')
-        t = S3Target('s3://mybucket/test_cleanup2', client=client)
-        try:
-            with t.open('w'):
-                raise Exception('something broke')
-        except:
-            pass
-        self.assertFalse(t.exists())
-
-    @skip('moto assume text data')
-    @mock_s3
-    def test_gzip(self):
-        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        client.s3.create_bucket('mybucket')
-        t = S3Target('s3://mybucket/gzip_test', luigi.format.Gzip,
-                     client=client)
-        p = t.open('w')
-        test_data = b'test'
-        p.write(test_data)
-        self.assertFalse(t.exists())
-        p.close()
-        self.assertTrue(t.exists())
-
-    @skip('moto assume text data')
-    @mock_s3
-    def test_gzip_works_and_cleans_up(self):
-        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        client.s3.create_bucket('mybucket')
-        t = S3Target('s3://mybucket/gzip_test', luigi.format.Gzip,
-                     client=client)
-        test_data = b'123testing'
-        with t.open('w') as f:
-            f.write(test_data)
-
-        with t.open() as f:
-            result = f.read()
-
-        self.assertEqual(test_data, result)
 
 
 class TestS3Client(unittest.TestCase):
@@ -185,9 +117,12 @@ class TestS3Client(unittest.TestCase):
         self.tempFilePath = f.name
         f.write(b"I'm a temporary file for testing\n")
         f.close()
+        self.mock_s3 = mock_s3()
+        self.mock_s3.start()
 
     def tearDown(self):
         os.remove(self.tempFilePath)
+        self.mock_s3.stop()
 
     def test_init_with_environment_variables(self):
         os.environ['AWS_ACCESS_KEY_ID'] = 'foo'
@@ -203,27 +138,23 @@ class TestS3Client(unittest.TestCase):
         self.assertEqual(s3_client.s3.gs_secret_access_key, 'bar')
 
     @with_config({'s3': {'aws_access_key_id': 'foo', 'aws_secret_access_key': 'bar'}})
-    @mock_s3
     def test_init_with_config(self):
         s3_client = S3Client()
         self.assertEqual(s3_client.s3.access_key, 'foo')
         self.assertEqual(s3_client.s3.secret_key, 'bar')
 
-    @mock_s3
     def test_put(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
         s3_client.put(self.tempFilePath, 's3://mybucket/putMe')
         self.assertTrue(s3_client.exists('s3://mybucket/putMe'))
 
-    @mock_s3
     def test_put_string(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
         s3_client.put_string("SOMESTRING", 's3://mybucket/putString')
         self.assertTrue(s3_client.exists('s3://mybucket/putString'))
 
-    @mock_s3
     def test_put_multipart_multiple_parts_non_exact_fit(self):
         """
         Test a multipart put with two parts, where the parts are not exactly the split size.
@@ -233,7 +164,6 @@ class TestS3Client(unittest.TestCase):
         file_size = (part_size * 2) - 5000
         self._run_multipart_test(part_size, file_size)
 
-    @mock_s3
     def test_put_multipart_multiple_parts_exact_fit(self):
         """
         Test a multipart put with multiple parts, where the parts are exactly the split size.
@@ -243,7 +173,6 @@ class TestS3Client(unittest.TestCase):
         file_size = part_size * 2
         self._run_multipart_test(part_size, file_size)
 
-    @mock_s3
     def test_put_multipart_less_than_split_size(self):
         """
         Test a multipart put with a file smaller than split size; should revert to regular put.
@@ -253,7 +182,6 @@ class TestS3Client(unittest.TestCase):
         file_size = 5000
         self._run_multipart_test(part_size, file_size)
 
-    @mock_s3
     def test_put_multipart_empty_file(self):
         """
         Test a multipart put with an empty file.
@@ -263,7 +191,6 @@ class TestS3Client(unittest.TestCase):
         file_size = 0
         self._run_multipart_test(part_size, file_size)
 
-    @mock_s3
     def test_exists(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
@@ -287,7 +214,6 @@ class TestS3Client(unittest.TestCase):
         self.assertTrue(s3_client.exists('s3://mybucket/tempdir2'))
         self.assertFalse(s3_client.exists('s3://mybucket/tempdir'))
 
-    @mock_s3
     def test_get_key(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
@@ -295,7 +221,6 @@ class TestS3Client(unittest.TestCase):
         self.assertTrue(s3_client.get_key('s3://mybucket/key_to_find'))
         self.assertFalse(s3_client.get_key('s3://mybucket/does_not_exist'))
 
-    @mock_s3
     def test_is_dir(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
@@ -310,7 +235,6 @@ class TestS3Client(unittest.TestCase):
         s3_client.put(self.tempFilePath, 's3://mybucket/key')
         self.assertFalse(s3_client.is_dir('s3://mybucket/key'))
 
-    @mock_s3
     def test_remove(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
