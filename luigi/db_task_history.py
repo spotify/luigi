@@ -40,7 +40,7 @@ try:
     Base = sqlalchemy.ext.declarative.declarative_base()
 except ImportError:
     # Don't fail on import because we want the documentation to be generated
-    warnings.warn("sqlalchemy could not be imported, db_task_history will not work", warnings.ImportWarning, stacklevel=3)
+    warnings.warn("sqlalchemy could not be imported, db_task_history will not work", ImportWarning, stacklevel=3)
 
 logger = logging.getLogger('luigi-interface')
 
