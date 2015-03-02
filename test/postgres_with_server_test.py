@@ -41,15 +41,10 @@ Typical use cases that should be tested:
 
 """
 
-TRAVIS = os.getenv('TRAVIS', 'false') == 'true'
-
 host = 'localhost'
 database = 'spotify'
-user = 'spotify'
+user = os.getenv('POSTGRES_USER', 'spotify')
 password = 'guest'
-
-if TRAVIS:
-    user = 'postgres'
 
 
 try:
@@ -61,7 +56,7 @@ try:
         password=password,
     )
     conn.close()
-except:
+except Exception:
     raise SkipTest('Unable to connect to postgres')
 
 
