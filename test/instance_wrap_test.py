@@ -24,7 +24,7 @@ import luigi.notifications
 from luigi.mock import MockFile
 
 luigi.notifications.DEBUG = True
-File = MockFile
+LocalTarget = MockFile
 
 
 class Report(luigi.Task):
@@ -38,7 +38,7 @@ class Report(luigi.Task):
         f.close()
 
     def output(self):
-        return File(self.date.strftime('/tmp/report-%Y-%m-%d'))
+        return LocalTarget(self.date.strftime('/tmp/report-%Y-%m-%d'))
 
 
 class ReportReader(luigi.Task):

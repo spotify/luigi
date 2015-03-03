@@ -37,7 +37,7 @@ WrapperTask = task.WrapperTask
 Target = target.Target
 
 File = file.File  # TODO: remove, should be LocalTarget
-LocalTarget = File
+LocalTarget = file.LocalTarget
 Parameter = parameter.Parameter
 RemoteScheduler = rpc.RemoteScheduler
 RPCError = rpc.RPCError

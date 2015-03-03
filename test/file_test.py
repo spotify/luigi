@@ -25,12 +25,12 @@ import unittest
 import mock
 
 import luigi.format
-from luigi import File
+from luigi import LocalTarget
 from luigi.file import LocalFileSystem
 from target_test import FileSystemTargetTestMixin
 
 
-class FileTest(unittest.TestCase, FileSystemTargetTestMixin):
+class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
     path = '/tmp/test.txt'
     copy = '/tmp/test.copy.txt'
 
@@ -47,7 +47,7 @@ class FileTest(unittest.TestCase, FileSystemTargetTestMixin):
             os.remove(self.copy)
 
     def create_target(self, format=None):
-        return File(self.path, format=format)
+        return LocalTarget(self.path, format=format)
 
     def assertCleanUp(self, tmp_path=''):
         self.assertFalse(os.path.exists(tmp_path))
@@ -60,7 +60,7 @@ class FileTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual(t.exists(), os.path.exists(self.path))
 
     def test_gzip_with_module(self):
-        t = File(self.path, luigi.format.Gzip)
+        t = LocalTarget(self.path, luigi.format.Gzip)
         p = t.open('w')
         test_data = b'test'
         p.write(test_data)
@@ -75,12 +75,12 @@ class FileTest(unittest.TestCase, FileSystemTargetTestMixin):
         f.close()
 
         # Verifying our own gzip reader
-        f = File(self.path, luigi.format.Gzip).open('r')
+        f = LocalTarget(self.path, luigi.format.Gzip).open('r')
         self.assertTrue(test_data == f.read())
         f.close()
 
     def test_bzip2(self):
-        t = File(self.path, luigi.format.Bzip2)
+        t = LocalTarget(self.path, luigi.format.Bzip2)
         p = t.open('w')
         test_data = b'test'
         p.write(test_data)
@@ -95,12 +95,12 @@ class FileTest(unittest.TestCase, FileSystemTargetTestMixin):
         f.close()
 
         # Verifying our own bzip2 reader
-        f = File(self.path, luigi.format.Bzip2).open('r')
+        f = LocalTarget(self.path, luigi.format.Bzip2).open('r')
         self.assertTrue(test_data == f.read())
         f.close()
 
     def test_copy(self):
-        t = File(self.path)
+        t = LocalTarget(self.path)
         f = t.open('w')
         test_data = 'test'
         f.write(test_data)
@@ -110,10 +110,10 @@ class FileTest(unittest.TestCase, FileSystemTargetTestMixin):
         t.copy(self.copy)
         self.assertTrue(os.path.exists(self.path))
         self.assertTrue(os.path.exists(self.copy))
-        self.assertEqual(t.open('r').read(), File(self.copy).open('r').read())
+        self.assertEqual(t.open('r').read(), LocalTarget(self.copy).open('r').read())
 
     def test_move(self):
-        t = File(self.path)
+        t = LocalTarget(self.path)
         f = t.open('w')
         test_data = 'test'
         f.write(test_data)
@@ -126,7 +126,7 @@ class FileTest(unittest.TestCase, FileSystemTargetTestMixin):
 
     def test_format_chain(self):
         UTF8WIN = luigi.format.TextFormat(encoding='utf8', newline='\r\n')
-        t = File(self.path, UTF8WIN >> luigi.format.Gzip)
+        t = LocalTarget(self.path, UTF8WIN >> luigi.format.Gzip)
         a = u'我é\nçф'
 
         with t.open('w') as f:
@@ -139,7 +139,7 @@ class FileTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual(b'\xe6\x88\x91\xc3\xa9\r\n\xc3\xa7\xd1\x84', b)
 
     def test_format_chain_reverse(self):
-        t = File(self.path, luigi.format.UTF8 >> luigi.format.Gzip)
+        t = LocalTarget(self.path, luigi.format.UTF8 >> luigi.format.Gzip)
 
         f = gzip.open(self.path, 'wb')
         f.write(b'\xe6\x88\x91\xc3\xa9\r\n\xc3\xa7\xd1\x84')
@@ -152,7 +152,7 @@ class FileTest(unittest.TestCase, FileSystemTargetTestMixin):
 
     @mock.patch('os.linesep', '\r\n')
     def test_format_newline(self):
-        t = File(self.path, luigi.format.SysNewLine)
+        t = LocalTarget(self.path, luigi.format.SysNewLine)
 
         with t.open('w') as f:
             f.write(b'a\rb\nc\r\nd')
@@ -167,12 +167,12 @@ class FileTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual(b'a\r\nb\r\nc\r\nd', c)
 
 
-class FileCreateDirectoriesTest(FileTest):
+class LocalTargetCreateDirectoriesTest(LocalTargetTest):
     path = '/tmp/%s/xyz/test.txt' % random.randint(0, 999999999)
     copy = '/tmp/%s/xyz_2/copy.txt' % random.randint(0, 999999999)
 
 
-class FileRelativeTest(FileTest):
+class LocalTargetRelativeTest(LocalTargetTest):
     # We had a bug that caused relative file paths to fail, adding test for it
     path = 'test.txt'
     copy = 'copy.txt'
@@ -181,7 +181,7 @@ class FileRelativeTest(FileTest):
 class TmpFileTest(unittest.TestCase):
 
     def test_tmp(self):
-        t = File(is_tmp=True)
+        t = LocalTarget(is_tmp=True)
         self.assertFalse(t.exists())
         self.assertFalse(os.path.exists(t.path))
         p = t.open('w')
@@ -220,3 +220,10 @@ class TestFileSystem(unittest.TestCase):
         self.assertFalse(self.fs.exists(self.path))
         os.mkdir(self.path)
         self.assertTrue(self.fs.exists(self.path))
+
+
+class TestImportFile(unittest.TestCase):
+
+    def test_file(self):
+        from luigi.file import File
+        self.assertTrue(issubclass(File, LocalTarget))

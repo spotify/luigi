@@ -31,7 +31,7 @@ from luigi.mock import MockFile
 from nose.plugins.attrib import attr
 
 luigi.notifications.DEBUG = True
-File = MockFile
+LocalTarget = MockFile
 
 luigi.hadoop.attach(minicluster)
 
@@ -43,7 +43,7 @@ class OutputMixin(luigi.Task):
         if self.use_hdfs:
             return luigi.hdfs.HdfsTarget('/tmp/' + fn, format=luigi.format.get_default_format() >> luigi.hdfs.PlainDir)
         else:
-            return File(fn)
+            return LocalTarget(fn)
 
 
 class HadoopJobTask(luigi.hadoop.JobTask, OutputMixin):

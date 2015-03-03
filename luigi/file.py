@@ -25,6 +25,7 @@ import shutil
 import tempfile
 import io
 import sys
+import warnings
 
 import luigi.util
 from luigi.format import FileWrapper, get_default_format, MixedUnicodeBytes
@@ -66,7 +67,7 @@ class LocalFileSystem(FileSystem):
             os.remove(path)
 
 
-class File(FileSystemTarget):
+class LocalTarget(FileSystemTarget):
     fs = LocalFileSystem()
 
     def __init__(self, path=None, format=None, is_tmp=False):
@@ -81,7 +82,7 @@ class File(FileSystemTarget):
             if not is_tmp:
                 raise Exception('path or is_tmp must be set')
             path = os.path.join(tempfile.gettempdir(), 'luigi-tmp-%09d' % random.randint(0, 999999999))
-        super(File, self).__init__(path)
+        super(LocalTarget, self).__init__(path)
         self.format = format
         self.is_tmp = is_tmp
 
@@ -125,7 +126,7 @@ class File(FileSystemTarget):
     def copy(self, new_path, fail_if_exists=False):
         if fail_if_exists and os.path.exists(new_path):
             raise RuntimeError('Destination exists: %s' % new_path)
-        tmp = File(new_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10), is_tmp=True)
+        tmp = LocalTarget(new_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10), is_tmp=True)
         tmp.makedirs()
         shutil.copy(self.path, tmp.fn)
         tmp.move(new_path)
@@ -137,3 +138,9 @@ class File(FileSystemTarget):
     def __del__(self):
         if self.is_tmp and self.exists():
             self.remove()
+
+
+class File(LocalTarget):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("File has been renamed LocalTarget", DeprecationWarning, stacklevel=2)
+        super(File, self).__init__(*args, **kwargs)
