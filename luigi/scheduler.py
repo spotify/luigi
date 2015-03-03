@@ -82,7 +82,7 @@ class scheduler(Config):
     retry_delay = parameter.FloatParameter(default=900.0,
                                            config_path=dict(section='scheduler', name='retry-delay'))
     remove_delay = parameter.FloatParameter(default=600.0,
-                                            config_path=dict(section='scheduler', name='remote-delay'))
+                                            config_path=dict(section='scheduler', name='remove-delay'))
     worker_disconnect_delay = parameter.FloatParameter(default=60.0,
                                                        config_path=dict(section='scheduler', name='worker-disconnect-delay'))
     state_path = parameter.Parameter(default='/var/lib/luigi-server/state.pickle',
