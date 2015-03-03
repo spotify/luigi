@@ -22,9 +22,6 @@ import luigi
 import luigi.notifications
 from luigi import postgres
 
-luigi.notifications.DEBUG = True
-luigi.namespace('postgres_test')
-
 """
 Typical use cases that should be tested:
 
@@ -168,5 +165,3 @@ class TestPostgresImportTask(unittest.TestCase):
         cursor = conn.cursor()
         cursor.execute('select count(*) from {table}'.format(table=clearer.table))
         self.assertEqual(tuple(cursor), ((3,),))
-
-luigi.namespace()
