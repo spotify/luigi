@@ -16,7 +16,7 @@
 #
 
 import random
-from unittest import TestCase
+from helpers import unittest
 
 import luigi
 from luigi import Event, Task, build
@@ -44,7 +44,7 @@ class TaskWithCallback(Task):
         self.trigger_event("foo event")
 
 
-class TestEventCallbacks(TestCase):
+class TestEventCallbacks(unittest.TestCase):
 
     def test_start_handler(self):
         saved_tasks = []
@@ -170,7 +170,7 @@ class A(HappyTestFriend):
         return [B(1), B(2)]
 
 
-class TestDependencyEvents(TestCase):
+class TestDependencyEvents(unittest.TestCase):
 
     def tearDown(self):
         MockFileSystem().remove('')

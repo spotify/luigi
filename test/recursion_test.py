@@ -18,7 +18,7 @@ from __future__ import print_function
 
 import datetime
 import sys
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.interface

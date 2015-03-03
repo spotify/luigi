@@ -23,6 +23,8 @@ from nose.plugins.attrib import attr
 
 import unittest
 
+# Doesn't use helpers.unittest because it makes fail some test
+# see: https://github.com/spotify/luigi/pull/796#issuecomment-76617218
 try:
     from unittest import skipIf
 except ImportError:

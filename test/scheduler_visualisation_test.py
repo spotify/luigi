@@ -19,7 +19,7 @@ from __future__ import division
 import os
 import tempfile
 import time
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.notifications

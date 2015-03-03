@@ -16,7 +16,7 @@
 #
 
 import json
-import unittest
+from helpers import unittest
 
 import sys
 

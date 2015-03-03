@@ -19,7 +19,7 @@ from __future__ import print_function
 import pickle
 import tempfile
 import time
-import unittest
+from helpers import unittest
 
 import luigi.scheduler
 from helpers import with_config

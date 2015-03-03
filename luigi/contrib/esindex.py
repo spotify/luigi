@@ -89,6 +89,8 @@ import logging
 
 import luigi
 
+from luigi import six
+
 logger = logging.getLogger('luigi-interface')
 
 try:
@@ -147,7 +149,7 @@ class ElasticsearchTarget(luigi.Target):
         Generate an id for the indicator document.
         """
         params = '%s:%s:%s' % (self.index, self.doc_type, self.update_id)
-        return hashlib.sha1(params).hexdigest()
+        return hashlib.sha1(params.encode('utf-8')).hexdigest()
 
     def touch(self):
         """
@@ -340,9 +342,9 @@ class CopyToIndex(luigi.Task):
         Since `self.docs` may yield documents that do not explicitly contain `_index` or `_type`,
         add those attributes here, if necessary.
         """
-        first = iter(self.docs()).next()
+        first = next(iter(self.docs()))
         needs_parsing = False
-        if isinstance(first, basestring):
+        if isinstance(first, six.string_types):
             needs_parsing = True
         elif isinstance(first, dict):
             pass

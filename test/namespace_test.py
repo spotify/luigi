@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-import unittest
+from helpers import unittest
 
 import luigi
 import namespace_test_helper  # declares another Foo in namespace mynamespace

@@ -16,7 +16,7 @@
 #
 
 import logging
-import unittest
+from helpers import unittest
 
 import luigi.notifications
 import luigi.worker

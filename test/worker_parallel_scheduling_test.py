@@ -17,7 +17,7 @@
 
 import pickle
 import time
-import unittest
+from helpers import unittest
 
 import luigi
 import mock

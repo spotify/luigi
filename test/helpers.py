@@ -16,8 +16,18 @@
 #
 
 import functools
+import sys
 
 from luigi import six
+
+# import unittest on python 2.6 for support of test skip
+if sys.version_info[:2] <= (2, 6):
+    try:
+        import unittest2 as unittest
+    except ImportError:
+        import unittest
+else:
+    import unittest
 
 
 class with_config(object):

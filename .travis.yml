@@ -8,6 +8,9 @@ python:
 
 jdk: oraclejdk7
 
+services:
+  - elasticsearch
+
 env:
   global:
     - PIP_DOWNLOAD_CACHE=$HOME/.pip-cache

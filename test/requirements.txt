@@ -6,3 +6,4 @@ psycopg2
 unittest2
 boto
 sqlalchemy
+elasticsearch

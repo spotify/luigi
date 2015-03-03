@@ -17,7 +17,7 @@
 from __future__ import print_function
 
 import datetime
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.notifications

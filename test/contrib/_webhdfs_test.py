@@ -19,7 +19,7 @@ import datetime
 import os
 import posixpath
 import time
-import unittest
+from helpers import unittest
 
 from luigi.contrib import webhdfs
 

@@ -19,7 +19,7 @@ import datetime
 import ftplib
 import os
 import time
-import unittest
+from helpers import unittest
 try:
     from cStringIO import StringIO
 except ImportError:

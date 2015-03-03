@@ -16,12 +16,7 @@
 #
 import os
 
-from unittest import TestCase
-
-try:
-    from unittest import SkipTest
-except ImportError:
-    from unittest2 import SkipTest
+from helpers import unittest
 
 import luigi
 import luigi.notifications
@@ -57,7 +52,7 @@ try:
     )
     conn.close()
 except Exception:
-    raise SkipTest('Unable to connect to postgres')
+    raise unittest.SkipTest('Unable to connect to postgres')
 
 
 # to avoid copying:
@@ -111,7 +106,7 @@ class Metric2(MetricBase):
         yield 'metric2', 3
 
 
-class TestPostgresImportTask(TestCase):
+class TestPostgresImportTask(unittest.TestCase):
 
     def test_default_escape(self):
         self.assertEqual(postgres.default_escape('foo'), 'foo')

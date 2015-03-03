@@ -19,7 +19,7 @@ import hashlib
 import os
 import subprocess
 import tempfile
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.lock

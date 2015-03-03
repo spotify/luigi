@@ -19,7 +19,7 @@ import abc
 import os
 import random
 import tempfile
-import unittest
+from helpers import unittest
 
 import luigi
 
