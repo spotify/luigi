@@ -21,7 +21,7 @@ import luigi
 import luigi.interface
 from luigi.mock import MockFile
 
-File = MockFile
+LocalTarget = MockFile
 
 # Calculates Fibonacci numbers :)
 
@@ -36,7 +36,7 @@ class Fib(luigi.Task):
             return []
 
     def output(self):
-        return File('/tmp/fib_%d' % self.n)
+        return LocalTarget('/tmp/fib_%d' % self.n)
 
     def run(self):
         if self.n == 0:
@@ -57,8 +57,8 @@ class Fib(luigi.Task):
 class FibTestBase(unittest.TestCase):
 
     def setUp(self):
-        global File
-        File = MockFile
+        global LocalTarget
+        LocalTarget = MockFile
         MockFile.fs.clear()
 
 

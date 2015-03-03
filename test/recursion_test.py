@@ -24,14 +24,14 @@ import luigi
 import luigi.interface
 from luigi.mock import MockFile
 
-File = MockFile
+LocalTarget = MockFile
 
 
 class Popularity(luigi.Task):
     date = luigi.DateParameter(default=datetime.date.today() - datetime.timedelta(1))
 
     def output(self):
-        return File('/tmp/popularity/%s.txt' % self.date.strftime('%Y-%m-%d'))
+        return LocalTarget('/tmp/popularity/%s.txt' % self.date.strftime('%Y-%m-%d'))
 
     def requires(self):
         return Popularity(self.date - datetime.timedelta(1))

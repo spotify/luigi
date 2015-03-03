@@ -37,7 +37,7 @@ class SomeTask(luigi.Task):
     n = luigi.IntParameter()
 
     def output(self):
-        return File('/tmp/test_%d' % self.n)
+        return LocalTarget('/tmp/test_%d' % self.n)
 
     def run(self):
         f = self.output().open('w')
@@ -91,8 +91,8 @@ class WriteToFile(luigi.Task):
 class CmdlineTest(unittest.TestCase):
 
     def setUp(self):
-        global File
-        File = MockFile
+        global LocalTarget
+        LocalTarget = MockFile
         MockFile.fs.clear()
 
     @mock.patch("logging.getLogger")
