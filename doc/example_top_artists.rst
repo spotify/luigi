@@ -41,28 +41,30 @@ Step 1 - Aggregate Artist Streams
                     print >> out_file, artist, count
 
 Note that this is just a portion of the file *examples/top\_artists.py*.
-In particular, ``Streams`` is defined as a ``luigi.Task``,
+In particular, ``Streams`` is defined as a :class:`~luigi.task.Task`,
 acting as a dependency for ``AggregateArtists``.
 In addition, ``luigi.run()`` is called if the script is executed directly,
 allowing it to be run from the command line.
 
 There are several pieces of this snippet that deserve more explanation.
 
--  Any *Task* may be customized by instantiating one or more *Parameter*
-   objects on the class level.
--  The *output* method tells Luigi where the result of running the task
-   will end up. The path can be some function of the parameters.
--  The *requires* tasks specifies other tasks that we need to perform
-   this task. In this case it's an external dump named *Streams* which
-   takes the date as the argument.
--  For plain Tasks, the *run* method implements the task. This could be
-   anything, including calling subprocesses, performing long running
-   number crunching, etc. For some subclasses of *Task* you don't have
-   to implement the *run* method. For instance, for the *HadoopJobTask*
+-  Any :class:`~luigi.task.Task` may be customized by instantiating one
+   or more :class:`~luigi.parameter.Parameter` objects on the class level.
+-  The :func:`~luigi.task.Task.output` method tells Luigi where the result
+   of running the task will end up. The path can be some function of the
+   parameters.
+-  The :func:`~luigi.task.Task.requires` tasks specifies other tasks that
+   we need to perform this task. In this case it's an external dump named
+   *Streams* which takes the date as the argument.
+-  For plain Tasks, the :func:`~luigi.task.Task.run` method implements the
+   task. This could be anything, including calling subprocesses, performing
+   long running number crunching, etc. For some subclasses of
+   :class:`~luigi.task.Task` you don't have to implement the ``run``
+   method. For instance, for the :class:`~luigi.hadoop.JobTask`
    subclass you implement a *mapper* and *reducer* instead.
--  *HdfsTarget* is a built in class that makes it easy to read/write
-   from/to HDFS. It also makes all file operations atomic, which is nice
-   in case your script crashes for any reason.
+-  :class:`~luigi.hdfs.HdfsTarget` is a built in class that makes it
+   easy to read/write from/to HDFS. It also makes all file operations
+   atomic, which is nice in case your script crashes for any reason.
 
 Running this Locally
 ~~~~~~~~~~~~~~~~~~~~
