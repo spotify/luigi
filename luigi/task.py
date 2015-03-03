@@ -257,6 +257,7 @@ class Task(object):
 
     #: Priority of the task: the scheduler should favor available
     #: tasks with higher priority values first.
+    #: See :ref:`Task.priority`
     priority = 0
     disabled = False
 
@@ -518,6 +519,8 @@ class Task(object):
           If running multiple workers, the output must be a resource that is accessible
           by all workers, such as a DFS or database. Otherwise, workers might compute
           the same output since they don't see the work done by other workers.
+
+        See :ref:`Task.output`
         """
         return []  # default impl
 
@@ -530,6 +533,8 @@ class Task(object):
         override this method. Otherwise, a Subclasses can override this method
         to return a single Task, a list of Task instances, or a dict whose
         values are Task instances.
+
+        See :ref:`Task.requires`
         """
         return []  # default impl
 
@@ -557,6 +562,8 @@ class Task(object):
         """
         Returns the outputs of the Tasks returned by :py:meth:`requires`
 
+        See :ref:`Task.input`
+
         :return: a list of :py:class:`Target` objects which are specified as
                  outputs of all required Tasks.
         """
@@ -574,6 +581,8 @@ class Task(object):
     def run(self):
         """
         The task run method, to be overridden in a subclass.
+
+        See :ref:`Task.run`
         """
         pass  # default impl
 

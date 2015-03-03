@@ -21,7 +21,7 @@ You can probably get pretty far with the :class:`~luigi.file.LocalTarget` and :c
 classes that are available out of the box.
 These directly map to a file on the local drive or a file in HDFS, respectively.
 In addition these also wrap the underlying operations to make them atomic.
-They both implement the ``open(mode)`` method which returns a stream object that
+They both implement the :func:`~luigi.file.LocalTarget.open` method which returns a stream object that
 could be read (``mode='r'``) from or written to (``mode='w'``).
 Both :class:`~luigi.file.LocalTarget` and :class:`~luigi.hdfs.HdfsTarget` also optionally take a format parameter.
 Luigi comes with Gzip support by providing ``format=format.Gzip``.
@@ -33,17 +33,17 @@ Task
 The :class:`~luigi.task.Task` class is a bit more conceptually interesting because this is
 where computation is done.
 There are a few methods that can be implemented to alter its behavior,
-most notably ``run``, ``output`` and ``requires``.
-
-The Task class corresponds to some type of job that is run, but in
-general you want to allow some form of parametrization of it.
-For instance, if your Task class runs a Hadoop job to create a report every night,
-you probably want to make the date a parameter of the class.
+most notably :func:`~luigi.task.Task.run`, :func:`~luigi.task.Task.output` and :func:`~luigi.task.Task.requires`.
 
 .. _Parameter:
 
 Parameter
 ~~~~~~~~~
+
+The Task class corresponds to some type of job that is run, but in
+general you want to allow some form of parametrization of it.
+For instance, if your Task class runs a Hadoop job to create a report every night,
+you probably want to make the date a parameter of the class.
 
 In Python this is generally done by adding arguments to the constructor,
 but Luigi requires you to declare these parameters instantiating
@@ -127,7 +127,7 @@ are not the same instance:
 Python is not a strongly typed language and you don't have to specify the types
 of any of your parameters.
 You can simply use the base class :class:`~luigi.parameter.Parameter` if you don't care.
-In fact, the reason :class:`~DateParameter` et al exist is just in order to
+In fact, the reason :class:`~luigi.parameter.DateParameter` et al exist is just in order to
 support command line interaction and make sure to convert the input to
 the corresponding type (i.e. datetime.date instead of a string).
 
@@ -173,10 +173,12 @@ Parameters are resolved in the following order of decreasing priority:
 
 See the :class:`~luigi.parameter.Parameter` class for more information.
 
+.. _Task.requires:
+
 Task.requires
 ~~~~~~~~~~~~~
 
-The ``requires`` method is used to specify dependencies on other Task object,
+The :func:`~luigi.task.Task.requires` method is used to specify dependencies on other Task object,
 which might even be of the same class.
 For instance, an example implementation could be
 
@@ -192,7 +194,7 @@ requires can return other Tasks in any way wrapped up within dicts/lists/tuples/
 Requiring another Task
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Note that ``requires()`` can *not* return a Target object.
+Note that :func:`~luigi.task.Task.requires` can *not* return a :class:`~luigi.target.Target` object.
 If you have a simple Target object that is created externally
 you can wrap it in a Task class like this:
 
@@ -211,10 +213,12 @@ This also makes it easier to add parameters:
         def output(self):
             return luigi.hdfs.HdfsTarget(self.date.strftime('/log/%Y-%m-%d'))
 
+.. _Task.output:
+
 Task.output
 ~~~~~~~~~~~
 
-The ``output`` method returns one or more :class:`~luigi.target.Target` objects.
+The :func:`~luigi.task.Task.output` method returns one or more :class:`~luigi.target.Target` objects.
 Similarly to requires, can return wrap them up in any way that's convenient for you.
 However we recommend that any :class:`~luigi.task.Task` only return one single :class:`~luigi.target.Target` in output.
 If multiple outputs are returned,
@@ -229,14 +233,16 @@ atomicity will be lost unless the :class:`~luigi.task.Task` itself can ensure th
             return luigi.hdfs.HdfsTarget(self.date.strftime('/reports/%Y-%m-%d'))
         # ...
 
+.. _Task.run:
+
 Task.run
 ~~~~~~~~
 
-The ``run`` method now contains the actual code that is run.
-When you are using ``requires()`` and ``run()``, Luigi breaks down everything into two stages.
+The :func:`~luigi.task.Task.run` method now contains the actual code that is run.
+When you are using Task.requires_ and Task.run_ Luigi breaks down everything into two stages.
 First it figures out all dependencies between tasks,
 then it runs everything.
-The ``input()`` method is an internal helper method that just replaces all Task objects in requires
+The :func:`~luigi.task.Task.input` method is an internal helper method that just replaces all Task objects in requires
 with their corresponding output.
 An example:
 
@@ -260,12 +266,14 @@ An example:
                 g.write('%s\n', ''.join(reversed(line.strip().split()))
             g.close() # needed because files are atomic
 
-Task.input: getting dependencies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _Task.input:
 
-As seen in the example above, :class:`~luigi.task.Task` is a wrapper around ``requires()`` that
+Task.input
+~~~~~~~~~~
+
+As seen in the example above, :class:`~luigi.task.Task` is a wrapper around Task.requires_ that
 returns the corresponding Target objects instead of Task objects.
-Anything returned by ``requires()`` will be transformed, including lists,
+Anything returned by Task.requires_ will be transformed, including lists,
 nested dicts, etc.
 This can be useful if you have many dependencies:
 
@@ -285,7 +293,7 @@ Dynamic dependencies
 
 Sometimes you might not know exactly what other tasks to depend on until runtime.
 In that case, Luigi provides a mechanism to specify dynamic dependencies.
-If you yield another :class:`~luigi.task.Task` in the ``run()`` method,
+If you yield another :class:`~luigi.task.Task` in the Task.run_ method,
 the current task will be suspended and the other task will be run.
 You can also return a list of tasks.
 
@@ -299,11 +307,11 @@ You can also return a list of tasks.
 	    f = other_target.open('r')
 
 
-This mechanism is an alternative to ``requires()`` in case
+This mechanism is an alternative to Task.requires_ in case
 you are not able to build up the full dependency graph before running the task.
 It does come with some constraints:
-the ``run()`` method will resume from scratch each time a new task is yielded.
-In other words, you should make sure your ``run()`` method is idempotent.
+the Task.run_ method will resume from scratch each time a new task is yielded.
+In other words, you should make sure your Task.run_ method is idempotent.
 (This is good practice for all Tasks in Luigi, but especially so for tasks with dynamic dependencies).
 
 For an example of a workflow using dynamic dependencies, see
@@ -346,7 +354,7 @@ But I just want to run a Hadoop job?
 
 The Hadoop code is integrated in the rest of the Luigi code because
 we really believe almost all Hadoop jobs benefit from being part of some sort of workflow.
-However, in theory, nothing stops you from using the ``hadoop.JobTask`` class (and also ``hdfs.HdfsTarget``)
+However, in theory, nothing stops you from using the :class:`~luigi.hadoop.JobTask` class (and also :class:`~luigi.hdfs.HdfsTarget`)
 without using the rest of Luigi.
 You can simply run it manually using
 
@@ -363,6 +371,7 @@ You can use the hdfs.HdfsTarget class anywhere by just instantiating it:
     # ...
     f.close() # needed
 
+.. _Task.priority:
 
 Task priority
 ~~~~~~~~~~~~~
