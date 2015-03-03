@@ -234,7 +234,7 @@ class Spark1xJob(luigi.Task):
     executor_cores = None
     deploy_mode = None
     queue = None
-    spark_master = "yarn-client"
+    spark_master = configuration.get_config().get("spark", "spark-master", "yarn-client")
 
     def jar(self):
         raise NotImplementedError("subclass should define jar "
@@ -366,7 +366,7 @@ class PySpark1xJob(Spark1xJob):
     def run(self):
         spark_submit = configuration.get_config().get('spark', 'spark-submit',
                                                       'spark-submit')
-        options = ['--master', 'yarn-client']
+        options = ['--master', self.spark_master]
         if self.num_executors is not None:
             options += ['--num-executors', self.num_executors]
         if self.driver_memory is not None:
@@ -378,6 +378,9 @@ class PySpark1xJob(Spark1xJob):
         py_files = self.py_files()
         if py_files != []:
             options += ['--py-files', ','.join(py_files)]
+        dependency_jars = self.dependency_jars()
+        if dependency_jars != []:
+            options += ['--jars', ','.join(dependency_jars)]
         args = [spark_submit] + options + self.spark_options() + \
             [self.program()] + list(self.job_args())
         args = map(str, args)

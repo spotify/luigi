@@ -463,6 +463,9 @@ spark-class
 spark-submit
   Command to run in order to submit spark jobs. Default: spark-submit
 
+spark-master
+  Master url to use for spark-submit. Example: local[*]. Default: yarn-client
+
 
 [task_history]
 --------------
