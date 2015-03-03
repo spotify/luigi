@@ -97,7 +97,7 @@ class CustomizedWorkerSchedulerFactory(object):
     def create_remote_scheduler(self, host, port):
         return CustomizedRemoteScheduler(host=host, port=port)
 
-    def create_worker(self, scheduler, worker_processes=None):
+    def create_worker(self, scheduler, worker_processes=None, assistant=False):
         return self.worker
 
 
