@@ -834,6 +834,33 @@ class MultipleWorkersTest(unittest.TestCase):
         self.assertEqual(0, len(w._running_tasks))
 
 
+class Dummy2Task(Task):
+    p = luigi.Parameter()
+
+    def output(self):
+        return MockFile(self.p)
+
+    def run(self):
+        f = self.output().open('w')
+        f.write('test')
+        f.close()
+
+
+class AssistantTest(unittest.TestCase):
+    def setUp(self):
+        self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        self.w = Worker(scheduler=self.sch, worker_id='X')
+        self.assistant = Worker(scheduler=self.sch, worker_id='Y', assistant=True)
+
+    def test_get_work(self):
+        d = Dummy2Task('123')
+        self.w.add(d)
+
+        self.assertFalse(d.complete())
+        self.assistant.run()
+        self.assertTrue(d.complete())
+
+
 class ForkBombTask(luigi.Task):
     depth = luigi.IntParameter()
     breadth = luigi.IntParameter()
