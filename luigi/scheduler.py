@@ -99,7 +99,8 @@ class scheduler(Config):
     max_shown_tasks = parameter.IntParameter(default=100000,
                                              config_path=dict(section='scheduler', name='max-shown-task'))
 
-    record_task_history = parameter.BoolParameter(default=False)
+    record_task_history = parameter.BoolParameter(default=False,
+                                                  config_path=dict(section='scheduler', name='record_task_history'))
 
 
 def fix_time(x):
