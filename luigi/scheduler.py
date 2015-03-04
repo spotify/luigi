@@ -245,7 +245,7 @@ class SimpleTaskState(object):
     def dump(self):
         state = (self._tasks, self._active_workers)
         try:
-            with open(self._state_path, 'w') as fobj:
+            with open(self._state_path, 'wb') as fobj:
                 pickle.dump(state, fobj)
         except IOError:
             logger.warning("Failed saving scheduler state", exc_info=1)

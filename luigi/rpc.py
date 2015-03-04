@@ -110,9 +110,9 @@ class RemoteScheduler(Scheduler):
         # just one attemtps, keep-alive thread will keep trying anyway
         self._request('/api/ping', {'worker': worker}, attempts=1)
 
-    def add_task(self, worker, task_id, status=PENDING, runnable=False,
-                 deps=None, new_deps=None, expl=None, resources={}, priority=0,
-                 family='', params={}):
+    def add_task(self, worker, task_id, status=PENDING, runnable=True,
+                 deps=None, new_deps=None, expl=None, resources=None, priority=0,
+                 family='', params=None):
         self._request('/api/add_task', {
             'task_id': task_id,
             'worker': worker,
@@ -157,3 +157,12 @@ class RemoteScheduler(Scheduler):
 
     def add_worker(self, worker, info):
         return self._request('/api/add_worker', {'worker': worker, 'info': info})
+
+    def update_resources(self, **resources):
+        return self._request('/api/update_resources', resources)
+
+    def prune(self):
+        return self._request('/api/prune', {})
+
+    def re_enable_task(self, task_id):
+        return self._request('/api/re_enable_task', {'task_id': task_id})
