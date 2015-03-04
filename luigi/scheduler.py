@@ -224,6 +224,10 @@ class Worker(object):
         if self.last_active + config.worker_disconnect_delay < time.time():
             return True
 
+    @property
+    def assistant(self):
+        return self.info.get('assistant', False)
+
     def __str__(self):
         return self.id
 
@@ -351,7 +355,7 @@ class SimpleTaskState(object):
         self._status_tasks[new_status][task.id] = task
         task.status = new_status
 
-    def prune(self, task, config):
+    def prune(self, task, config, assistants):
         remove = False
 
         # Mark tasks with no remaining active stakeholders for deletion
@@ -362,7 +366,7 @@ class SimpleTaskState(object):
                 task.remove = time.time() + config.remove_delay
 
         # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
-        if task.status == RUNNING and task.worker_running and task.worker_running not in task.stakeholders:
+        if task.status == RUNNING and task.worker_running and task.worker_running not in task.stakeholders | assistants:
             logger.info("Task %r is marked as running by disconnected worker %r -> marking as "
                         "FAILED with retry delay of %rs", task.id, task.worker_running,
                         config.retry_delay)
@@ -399,6 +403,9 @@ class SimpleTaskState(object):
             if last_active_lt is not None and worker.last_active >= last_active_lt:
                 continue
             yield worker
+
+    def get_assistants(self, last_active_lt=None):
+        return filter(lambda w: w.assistant, self.get_active_workers(last_active_lt))
 
     def get_worker_ids(self):
         return self._active_workers.keys()  # only used for unit tests
@@ -462,9 +469,10 @@ class CentralPlannerScheduler(Scheduler):
 
         self._state.inactivate_workers(remove_workers)
 
+        assistant_ids = set(w.id for w in self._state.get_assistants())
         remove_tasks = []
         for task in self._state.get_active_tasks():
-            if self._state.prune(task, self._config):
+            if self._state.prune(task, self._config, assistant_ids):
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)
@@ -622,6 +630,8 @@ class CentralPlannerScheduler(Scheduler):
 
         # Return remaining tasks that have no FAILED descendents
         self.update(worker, {'host': host})
+        if assistant:
+            self.add_worker(worker, [('assistant', assistant)])
         best_task = None
         locally_pending_tasks = 0
         running_tasks = []

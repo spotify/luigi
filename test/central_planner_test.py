@@ -168,6 +168,31 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(s['task_id'], 'A')
         self.assertEqual(s['worker'], 'X')
 
+    def test_assistant_get_work(self):
+        self.sch.add_task(worker='X', task_id='A')
+        self.sch.add_worker('Y', [])
+
+        self.assertEqual(self.sch.get_work('Y', assistant=True)['task_id'], 'A')
+
+        # check that the scheduler recognizes tasks as running
+        running_tasks = self.sch.task_list('RUNNING', '')
+        self.assertEqual(len(running_tasks), 1)
+        self.assertEqual(list(running_tasks.keys()), ['A'])
+        self.assertEqual(running_tasks['A']['worker_running'], 'Y')
+
+    def test_task_fails_when_assistant_dies(self):
+        self.setTime(0)
+        self.sch.add_task(worker='X', task_id='A')
+        self.sch.add_worker('Y', [])
+
+        self.assertEqual(self.sch.get_work('Y', assistant=True)['task_id'], 'A')
+        self.assertEqual(list(self.sch.task_list('RUNNING', '').keys()), ['A'])
+
+        # Y dies for 50 seconds, X stays alive
+        self.setTime(50)
+        self.sch.ping('X')
+        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), ['A'])
+
     def test_scheduler_resources_none_allow_one(self):
         self.sch.add_task(worker='X', task_id='A', resources={'R1': 1})
         self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
