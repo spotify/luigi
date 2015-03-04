@@ -20,7 +20,7 @@ import random
 import luigi
 import luigi.format
 import luigi.hdfs
-from luigi.contrib.spark import SparkJob
+from luigi.contrib.spark import SparkSubmitTask
 
 
 class UserItemMatrix(luigi.Task):
@@ -57,19 +57,33 @@ class UserItemMatrix(luigi.Task):
         return luigi.hdfs.HdfsTarget('data-matrix', format=luigi.format.Gzip)
 
 
-class SparkALS(SparkJob):
+class SparkALS(SparkSubmitTask):
     """
-    This task runs a :py:class:`luigi.contrib.spark.SparkJob` task
+    This task runs a :py:class:`luigi.contrib.spark.SparkSubmitTask` task
     over the target data returned by :py:meth:`~/.UserItemMatrix.output` and
     writes the result into its :py:meth:`~.SparkALS.output` target (a file in HDFS).
 
-    This class uses :py:meth:`luigi.contrib.spark.SparkJob.run`.
-    """
+    This class uses :py:meth:`luigi.contrib.spark.SparkSubmitTask.run`.
 
+    Example luigi configuration::
+
+        [spark]
+        spark-submit: /usr/local/spark/bin/spark-submit
+        master: yarn-client
+
+    """
     data_size = luigi.IntParameter(default=1000)
-    spark_workers = '100'
-    spark_master_memory = '2g'
-    spark_worker_memory = '3g'
+
+    driver_memory = '2g'
+    executor_memory = '3g'
+    num_executors = luigi.IntParameter(default=100)
+
+    app = 'my-spark-assembly.jar'
+    entry_class = 'com.spotify.spark.ImplicitALS'
+
+    def app_options(self):
+        # These are passed to the Spark main args in the defined order.
+        return [self.input().path, self.output().path]
 
     def requires(self):
         """
@@ -81,18 +95,6 @@ class SparkALS(SparkJob):
         """
         return UserItemMatrix(self.data_size)
 
-    def jar(self):
-        # Jar containing job_class.
-        return 'my-spark-assembly.jar'
-
-    def job_class(self):
-        # The name of the Spark job object.
-        return 'com.spotify.spark.ImplicitALS'
-
-    def job_args(self):
-        # These are passed to the Spark main args in the defined order.
-        return ['yarn-standalone', self.input().path, self.output().path]
-
     def output(self):
         """
         Returns the target output for this task.
@@ -102,8 +104,7 @@ class SparkALS(SparkJob):
         :rtype: object (:py:class:`~luigi.target.Target`)
         """
         # The corresponding Spark job outputs as GZip format.
-        return luigi.hdfs.HdfsTarget(
-            '%s/als-output/*' % self.item_type, format=luigi.format.Gzip)
+        return luigi.hdfs.HdfsTarget('%s/als-output/*' % self.item_type, format=luigi.format.Gzip)
 
 
 '''
