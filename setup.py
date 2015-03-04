@@ -51,7 +51,7 @@ if os.environ.get('READTHEDOCS', None) == 'True':
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
 
 if sys.version_info[:2] < (2, 7):
-    install_requires.extend(['argparse', 'ordereddict'])
+    install_requires.extend(['argparse', 'ordereddict', 'importlib'])
 
 setup(
     name='luigi',
