@@ -40,7 +40,7 @@ class RemoteSchedulerTest(server_test.ServerTestBase):
 
     def _test_run(self, workers):
         tasks = [DummyTask(id) for id in range(20)]
-        luigi.build(tasks, scheduler_host='localhost', scheduler_port=self._api_port, workers=workers)
+        luigi.build(tasks, workers=workers)
 
         for t in tasks:
             self.assertEqual(t.complete(), True)

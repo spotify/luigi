@@ -152,16 +152,15 @@ def _init_api(scheduler, responder=None, api_port=None, address=None):
     return [s.getsockname() for s in api_sockets]
 
 
-def run(api_port=8082, address=None, scheduler=None, responder=None, load=True):
+def run(api_port=8082, address=None, scheduler=None, responder=None):
     """
     Runs one instance of the API server.
     """
     if scheduler is None:
         scheduler = CentralPlannerScheduler()
 
-    if load:
-        # load scheduler state
-        scheduler.load()
+    # load scheduler state
+    scheduler.load()
 
     _init_api(scheduler, responder, api_port, address)
 

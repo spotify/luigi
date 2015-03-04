@@ -15,46 +15,26 @@
 # limitations under the License.
 #
 
-import time
 from helpers import unittest
 
 import luigi.rpc
 from luigi.scheduler import CentralPlannerScheduler
 from central_planner_test import CentralPlannerTest
-import random
-import multiprocessing
 import luigi.server
+from server_test import ServerTestBase
 
 
-def run_server(api_port):
-    sch = CentralPlannerScheduler(
-        retry_delay=100,
-        remove_delay=1000,
-        worker_disconnect_delay=10,
-        disable_persist=10,
-        disable_window=10,
-        disable_failures=3
-    )
-    luigi.server.run(api_port=api_port, address='127.0.0.1', scheduler=sch, load=False)
+class RPCTest(CentralPlannerTest, ServerTestBase):
 
-
-class RPCTest(CentralPlannerTest):
+    def get_app(self):
+        conf = self.get_scheduler_config()
+        sch = CentralPlannerScheduler(**conf)
+        return luigi.server.app(sch)
 
     def setUp(self):
-        self.time = time.time
-        self._api_port = random.randint(1024, 9999)
-        self._process = multiprocessing.Process(target=run_server, args=(self._api_port,))
-        self._process.start()
-        time.sleep(0.1)  # wait for server to start
-        self.sch = luigi.rpc.RemoteScheduler(host='localhost', port=self._api_port)
+        super(RPCTest, self).setUp()
+        self.sch = luigi.rpc.RemoteScheduler()
         self.sch._wait = lambda: None
-
-    def tearDown(self):
-        self._process.terminate()
-        self._process.join()
-
-    def setTime(self, t):
-        raise unittest.SkipTest('Not able to set time of remote process')
 
     def test_ping(self):
         self.sch.ping(worker='xyz')
