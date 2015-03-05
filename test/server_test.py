@@ -32,25 +32,6 @@ class ServerTestBase(AsyncHTTPTestCase):
     def get_app(self):
         return luigi.server.app(CentralPlannerScheduler())
 
-    def setUp(self):
-        super(ServerTestBase, self).setUp()
-
-        self._old_fetch = luigi.rpc.RemoteScheduler._fetch
-
-        def _fetch(obj, url, body, *args, **kwargs):
-            response = self.fetch(url, body=body, method='POST')
-            if response.code >= 400:
-                raise luigi.rpc.RPCError(
-                    'Errror when connecting to remote scheduler'
-                )
-            return response.body.decode('utf-8')
-
-        luigi.rpc.RemoteScheduler._fetch = _fetch
-
-    def tearDown(self):
-        super(ServerTestBase, self).tearDown()
-        luigi.rpc.RemoteScheduler._fetch = self._old_fetch
-
 
 class ServerTest(ServerTestBase):
 
@@ -70,11 +51,6 @@ class ServerTest(ServerTestBase):
         self._test_404('/api/foo')
 
 
-@with_config({'scheduler': {'state_path': '/tmp/luigi-test-server-state'}})
-def run_server(api_port):
-    luigi.server.run(api_port=api_port, address='127.0.0.1')
-
-
 class ServerTestRun(unittest.TestCase):
     """Test to start and stop the server in a more "standard" way
     """
@@ -83,9 +59,13 @@ class ServerTestRun(unittest.TestCase):
         if os.path.exists('/tmp/luigi-test-server-state'):
             os.remove('/tmp/luigi-test-server-state')
 
+    @with_config({'scheduler': {'state_path': '/tmp/luigi-test-server-state'}})
+    def run_server(self):
+        luigi.server.run(api_port=self._api_port, address='127.0.0.1')
+
     def start_server(self):
         self._api_port = random.randint(1024, 9999)
-        self._process = multiprocessing.Process(target=run_server, args=(self._api_port,))
+        self._process = multiprocessing.Process(target=self.run_server)
         self._process.start()
         time.sleep(0.1)  # wait for server to start
         self.sch = luigi.rpc.RemoteScheduler(host='localhost', port=self._api_port)
