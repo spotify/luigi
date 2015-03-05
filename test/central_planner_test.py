@@ -28,15 +28,23 @@ WORKER = 'myworker'
 class CentralPlannerTest(unittest.TestCase):
 
     def setUp(self):
-        self.sch = CentralPlannerScheduler(retry_delay=100,
-                                           remove_delay=1000,
-                                           worker_disconnect_delay=10,
-                                           disable_persist=10,
-                                           disable_window=10,
-                                           disable_failures=3)
+        super(CentralPlannerTest, self).setUp()
+        conf = self.get_scheduler_config()
+        self.sch = CentralPlannerScheduler(**conf)
         self.time = time.time
 
+    def get_scheduler_config(self):
+        return {
+            'retry_delay': 100,
+            'remove_delay': 1000,
+            'worker_disconnect_delay': 10,
+            'disable_persist': 10,
+            'disable_window': 10,
+            'disable_failures': 3,
+        }
+
     def tearDown(self):
+        super(CentralPlannerTest, self).tearDown()
         if time.time != self.time:
             time.time = self.time
 

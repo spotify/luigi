@@ -40,10 +40,11 @@ class RemoteSchedulerTest(server_test.ServerTestBase):
 
     def _test_run(self, workers):
         tasks = [DummyTask(id) for id in range(20)]
-        luigi.build(tasks, scheduler_host='localhost', scheduler_port=self._api_port, workers=workers)
+        luigi.build(tasks, workers=workers, scheduler_port=self.get_http_port())
 
         for t in tasks:
             self.assertEqual(t.complete(), True)
+            self.assertTrue(os.path.exists(t.output().path))
 
     def test_single_worker(self):
         self._test_run(workers=1)

@@ -18,27 +18,32 @@
 from helpers import unittest
 
 import luigi.rpc
-import server_test
+from luigi.scheduler import CentralPlannerScheduler
+import central_planner_test
+import luigi.server
+from server_test import ServerTestBase
 
 
-class RPCTest(server_test.ServerTestBase):
+class RPCTest(central_planner_test.CentralPlannerTest, ServerTestBase):
 
-    def _get_sch(self):
-        sch = luigi.rpc.RemoteScheduler(host='localhost', port=self._api_port)
-        sch._wait = lambda: None
-        return sch
+    def get_app(self):
+        conf = self.get_scheduler_config()
+        sch = CentralPlannerScheduler(**conf)
+        return luigi.server.app(sch)
+
+    def setUp(self):
+        super(RPCTest, self).setUp()
+        self.sch = luigi.rpc.RemoteScheduler(port=self.get_http_port())
+        self.sch._wait = lambda: None
 
     def test_ping(self):
-        sch = self._get_sch()
-        sch.ping(worker='xyz')
+        self.sch.ping(worker='xyz')
 
     def test_raw_ping(self):
-        sch = self._get_sch()
-        sch._request('/api/ping', {'worker': 'xyz'})
+        self.sch._request('/api/ping', {'worker': 'xyz'})
 
     def test_raw_ping_extended(self):
-        sch = self._get_sch()
-        sch._request('/api/ping', {'worker': 'xyz', 'foo': 'bar'})
+        self.sch._request('/api/ping', {'worker': 'xyz', 'foo': 'bar'})
 
 
 if __name__ == '__main__':
