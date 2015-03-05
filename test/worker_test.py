@@ -860,6 +860,18 @@ class AssistantTest(unittest.TestCase):
         self.assistant.run()
         self.assertTrue(d.complete())
 
+    def test_bad_job_type(self):
+        class Dummy3Task(Dummy2Task):
+            task_family = 'UnknownTaskFamily'
+
+        d = Dummy3Task('123')
+        self.w.add(d)
+
+        self.assertFalse(d.complete())
+        self.assertFalse(self.assistant.run())
+        self.assertFalse(d.complete())
+        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), [str(d)])
+
 
 class ForkBombTask(luigi.Task):
     depth = luigi.IntParameter()

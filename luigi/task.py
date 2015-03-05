@@ -197,9 +197,10 @@ class Register(abc.ABCMeta):
         """
         task_cls = Register.get_reg().get(name)
         if not task_cls:
-            raise Exception('Task %r not found. Candidates are: %s' % (name, Register.tasks_str()))
+            raise TaskClassException('Task %r not found. Candidates are: %s' % (name, Register.tasks_str()))
+
         if task_cls == Register.AMBIGUOUS_CLASS:
-            raise Exception('Task %r is ambiguous' % name)
+            raise TaskClassException('Task %r is ambiguous' % name)
         return task_cls
 
     @classmethod
@@ -214,6 +215,10 @@ class Register(abc.ABCMeta):
                 continue
             for param_name, param_obj in task_cls.get_params():
                 yield task_name, issubclass(task_cls, ConfigWithoutSection), param_name, param_obj
+
+
+class TaskClassException(Exception):
+    pass
 
 
 @six.add_metaclass(Register)
