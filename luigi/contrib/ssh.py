@@ -119,7 +119,7 @@ class RemoteContext(object):
         )
         # make sure to get the data so we know the connection is established
         ready = proc.stdout.read(5)
-        assert ready == "ready", "Didn't get ready from remote echo"
+        assert ready == b"ready", "Didn't get ready from remote echo"
         yield  # user code executed here
         proc.communicate()
         assert proc.returncode == 0, "Tunnel process did an unclean exit (returncode %s)" % (proc.returncode,)
