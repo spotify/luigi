@@ -120,7 +120,7 @@ class RemoteScheduler(Scheduler):
             'params': params,
         })
 
-    def get_work(self, worker, assistant=False, host=None):
+    def get_work(self, worker, host=None, assistant=False):
         return self._request(
             '/api/get_work',
             {'worker': worker, 'host': host, 'assistant': assistant},

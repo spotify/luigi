@@ -45,25 +45,6 @@ class RPCTest(CentralPlannerTest, ServerTestBase):
     def test_raw_ping_extended(self):
         self.sch._request('/api/ping', {'worker': 'xyz', 'foo': 'bar'})
 
-    # FIXME: Those are test that are currently failing
-    def test_multiple_resources_lock(self):
-        raise unittest.SkipTest('Not working!!!')
-
-    def test_lock_resources_while_running_lower_priority(self):
-        raise unittest.SkipTest('Not working!!!')
-
-    def test_lock_resources_when_one_of_multiple_workers_is_ready(self):
-        raise unittest.SkipTest('Not working!!!')
-
-    def test_lock_resources_for_second_worker(self):
-        raise unittest.SkipTest('Not working!!!')
-
-    def test_do_not_lock_resources_while_running_higher_priority(self):
-        raise unittest.SkipTest('Not working!!!')
-
-    def test_broken_dep(self):
-        raise unittest.SkipTest('Not working!!!')
-
 
 if __name__ == '__main__':
     unittest.main()
