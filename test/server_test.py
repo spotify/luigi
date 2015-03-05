@@ -119,10 +119,10 @@ class ServerTestRun(unittest.TestCase):
     def test_save_state(self):
         self.sch.add_task('X', 'B', deps=('A',))
         self.sch.add_task('X', 'A')
-        self.assertEqual(self.sch.get_work('X', 'localhost')['task_id'], 'A')
+        self.assertEqual(self.sch.get_work('X')['task_id'], 'A')
         self.stop_server()
         self.start_server()
-        work = self.sch.get_work('X', 'localhost')['running_tasks'][0]
+        work = self.sch.get_work('X')['running_tasks'][0]
         self.assertEqual(work['task_id'], 'A')
 
 
