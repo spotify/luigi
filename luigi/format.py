@@ -146,7 +146,10 @@ class InputPipeProcessWrapper(object):
     def __getattr__(self, name):
         if name == '_process':
             raise AttributeError(name)
-        return getattr(self._process.stdout, name)
+        try:
+            return getattr(self._process.stdout, name)
+        except AttributeError:
+            return getattr(self._input_pipe, name)
 
     def __iter__(self):
         for line in self._process.stdout:
@@ -224,7 +227,10 @@ class OutputPipeProcessWrapper(object):
     def __getattr__(self, name):
         if name == '_process':
             raise AttributeError(name)
-        return getattr(self._process.stdin, name)
+        try:
+            return getattr(self._process.stdin, name)
+        except AttributeError:
+            return getattr(self._output_pipe, name)
 
     def readable(self):
         return False

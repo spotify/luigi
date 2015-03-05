@@ -20,18 +20,17 @@ Integration tests for ssh module.
 
 from __future__ import print_function
 
-import gc
-import gzip
 import os
 import random
 import socket
 import subprocess
 from helpers import unittest
+import target_test
 
-import luigi.format
 from luigi.contrib.ssh import RemoteContext, RemoteTarget
 
-working_ssh_host = None  # set this to a working ssh host string (e.g. "localhost") to activate integration tests
+working_ssh_host = 'localhost'
+# set this to a working ssh host string (e.g. "localhost") to activate integration tests
 # The following tests require a working ssh server at `working_ssh_host`
 # the test runner can ssh into using password-less authentication
 
@@ -47,8 +46,18 @@ listener.listen(1)
 sys.stdout.write('ready')
 sys.stdout.flush()
 conn = listener.accept()[0]
-conn.sendall('hello')
+conn.sendall(b'hello')
 """
+
+try:
+    x = subprocess.check_output(
+        "ssh %s -S none -o BatchMode=yes 'echo 1'" % working_ssh_host,
+        shell=True
+    )
+    if x != b'1\n':
+        raise unittest.SkipTest('Not able to connect to ssh server')
+except Exception:
+    raise unittest.SkipTest('Not able to connect to ssh server')
 
 
 class TestRemoteContext(unittest.TestCase):
@@ -56,18 +65,24 @@ class TestRemoteContext(unittest.TestCase):
     def setUp(self):
         self.context = RemoteContext(working_ssh_host)
 
+    def tearDown(self):
+        try:
+            self.remote_server_handle.terminate()
+        except Exception:
+            pass
+
     def test_check_output(self):
         """ Test check_output ssh
 
         Assumes the running user can ssh to working_ssh_host
         """
         output = self.context.check_output(["echo", "-n", "luigi"])
-        self.assertEqual(output, "luigi")
+        self.assertEqual(output, b"luigi")
 
     def test_tunnel(self):
         print("Setting up remote listener...")
 
-        remote_server_handle = self.context.Popen([
+        self.remote_server_handle = self.context.Popen([
             "python", "-c", '"{0}"'.format(HELLO_SERVER_CMD)
         ], stdout=subprocess.PIPE)
 
@@ -76,19 +91,19 @@ class TestRemoteContext(unittest.TestCase):
             print("Tunnel up!")
             # hack to make sure the listener process is up
             # and running before we write to it
-            server_output = remote_server_handle.stdout.read(5)
-            self.assertEqual(server_output, "ready")
+            server_output = self.remote_server_handle.stdout.read(5)
+            self.assertEqual(server_output, b"ready")
             print("Connecting to server via tunnel")
             s = socket.socket()
             s.connect(("localhost", 2135))
             print("Receiving...",)
             response = s.recv(5)
-            self.assertEqual(response, "hello")
+            self.assertEqual(response, b"hello")
             print("Closing connection")
             s.close()
             print("Waiting for listener...")
-            output, _ = remote_server_handle.communicate()
-            self.assertEqual(remote_server_handle.returncode, 0)
+            output, _ = self.remote_server_handle.communicate()
+            self.assertEqual(self.remote_server_handle.returncode, 0)
             print("Closing tunnel")
 
 
@@ -140,9 +155,12 @@ class TestRemoteTarget(unittest.TestCase):
         self.assertEqual(file_content, "hello")
 
 
-class TestRemoteTargetAtomicity(unittest.TestCase):
+class TestRemoteTargetAtomicity(unittest.TestCase, target_test.FileSystemTargetTestMixin):
     path = '/tmp/luigi_remote_atomic_test.txt'
     ctx = RemoteContext(working_ssh_host)
+
+    def create_target(self, format=None):
+        return RemoteTarget(self.path, working_ssh_host, format=format)
 
     def _exists(self, path):
         try:
@@ -154,6 +172,9 @@ class TestRemoteTargetAtomicity(unittest.TestCase):
                 raise
         return True
 
+    def assertCleanUp(self, tp):
+        self.assertFalse(self._exists(tp))
+
     def setUp(self):
         self.ctx.check_output(["rm", "-rf", self.path])
         self.local_file = '/tmp/local_luigi_remote_atomic_test.txt'
@@ -164,70 +185,6 @@ class TestRemoteTargetAtomicity(unittest.TestCase):
         self.ctx.check_output(["rm", "-rf", self.path])
         if os.path.exists(self.local_file):
             os.remove(self.local_file)
-
-    def test_close(self):
-        t = RemoteTarget(self.path, working_ssh_host)
-        p = t.open('w')
-        print('test', file=p)
-        self.assertFalse(self._exists(self.path))
-        p.close()
-        self.assertTrue(self._exists(self.path))
-
-    def test_del(self):
-        t = RemoteTarget(self.path, working_ssh_host)
-        p = t.open('w')
-        print('test', file=p)
-        tp = p.tmp_path
-        del p
-
-        self.assertFalse(self._exists(tp))
-        self.assertFalse(self._exists(self.path))
-
-    def test_write_cleanup_no_close(self):
-        t = RemoteTarget(self.path, working_ssh_host)
-
-        def context():
-            f = t.open('w')
-            f.write('stuff')
-        context()
-        gc.collect()  # force garbage collection of f variable
-        self.assertFalse(t.exists())
-
-    def test_write_cleanup_with_error(self):
-        t = RemoteTarget(self.path, working_ssh_host)
-        try:
-            with t.open('w'):
-                raise Exception('something broke')
-        except:
-            pass
-        self.assertFalse(t.exists())
-
-    def test_write_with_success(self):
-        t = RemoteTarget(self.path, working_ssh_host)
-        with t.open('w') as p:
-            p.write("hello")
-        self.assertTrue(t.exists())
-
-    def test_gzip(self):
-        t = RemoteTarget(self.path, working_ssh_host, luigi.format.Gzip)
-        p = t.open('w')
-        test_data = 'test'
-        p.write(test_data)
-        self.assertFalse(self._exists(self.path))
-        p.close()
-        self.assertTrue(self._exists(self.path))
-
-        # Using gzip module as validation
-        cmd = 'scp -q %s:%s %s' % (working_ssh_host, self.path, self.local_file)
-        assert os.system(cmd) == 0
-        f = gzip.open(self.local_file, 'rb')
-        self.assertTrue(test_data == f.read())
-        f.close()
-
-        # Verifying our own gzip remote reader
-        f = RemoteTarget(self.path, working_ssh_host, luigi.format.Gzip).open('r')
-        self.assertTrue(test_data == f.read())
-        f.close()
 
     def test_put(self):
         f = open(self.local_file, 'w')
