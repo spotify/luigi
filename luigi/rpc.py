@@ -111,7 +111,7 @@ class RemoteScheduler(Scheduler):
 
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None, priority=0,
-                 family='', params=None):
+                 family='', module=None, params=None):
         self._request('/api/add_task', {
             'task_id': task_id,
             'worker': worker,
@@ -123,6 +123,7 @@ class RemoteScheduler(Scheduler):
             'resources': resources,
             'priority': priority,
             'family': family,
+            'module': module,
             'params': params,
         })
 

@@ -542,7 +542,8 @@ class Worker(object):
                                  deps=deps, runnable=runnable, priority=task.priority,
                                  resources=task.process_resources(),
                                  params=task.to_str_params(),
-                                 family=task.task_family)
+                                 family=task.task_family,
+                                 module=task.task_module)
 
         logger.info('Scheduled %s (%s)', task.task_id, status)
 
@@ -597,7 +598,7 @@ class Worker(object):
             try:
                 # TODO: we should obtain the module name from the server!
                 self._scheduled_tasks[task_id] = \
-                    load_task(module=None,
+                    load_task(module=r.get('task_module'),
                               task_name=r['task_family'],
                               params_str=r['task_params'])
             except TaskClassException as ex:
@@ -695,6 +696,7 @@ class Worker(object):
                                      runnable=None,
                                      params=task.to_str_params(),
                                      family=task.task_family,
+                                     module=task.task_module,
                                      new_deps=new_deps)
 
             if status == RUNNING:
