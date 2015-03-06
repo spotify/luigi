@@ -872,6 +872,24 @@ class AssistantTest(unittest.TestCase):
         self.assertFalse(d.complete())
         self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), [str(d)])
 
+    def test_unimported_job_type(self):
+        class NotImportedTask(luigi.Task):
+            task_family = 'UnimportedTask'
+            task_module = None
+
+        task = NotImportedTask()
+
+        # verify that it can't run the task without the module info necessary to import it
+        self.w.add(task)
+        self.assertFalse(self.assistant.run())
+        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), ['UnimportedTask()'])
+
+        # check that it can import with the right module
+        task.task_module = 'dummy_test_module.not_imported'
+        self.w.add(task)
+        self.assertTrue(self.assistant.run())
+        self.assertEqual(list(self.sch.task_list('DONE', '').keys()), ['UnimportedTask()'])
+
 
 class ForkBombTask(luigi.Task):
     depth = luigi.IntParameter()
