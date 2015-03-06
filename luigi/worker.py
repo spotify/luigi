@@ -323,6 +323,7 @@ class Worker(object):
 
         self._id = worker_id
         self._scheduler = scheduler
+        self._assistant = assistant
 
         self.host = socket.gethostname()
         self._scheduled_tasks = {}
@@ -333,8 +334,6 @@ class Worker(object):
         self.add_succeeded = True
         self.run_succeeded = True
         self.unfulfilled_counts = collections.defaultdict(int)
-
-        self.assistant = assistant
 
         class KeepAliveThread(threading.Thread):
             """
@@ -579,7 +578,7 @@ class Worker(object):
 
     def _get_work(self):
         logger.debug("Asking scheduler for work...")
-        r = self._scheduler.get_work(worker=self._id, host=self.host, assistant=self.assistant)
+        r = self._scheduler.get_work(worker=self._id, host=self.host, assistant=self._assistant)
         # Support old version of scheduler
         if isinstance(r, tuple) or isinstance(r, list):
             n_pending_tasks, task_id = r
@@ -731,13 +730,18 @@ class Worker(object):
         Returns true if a worker should stay alive given.
 
         If worker-keep-alive is not set, this will always return false.
+        For an assistant, it will always return the value of worker-keep-alive.
         Otherwise, it will return true for nonzero n_pending_tasks.
 
         If worker-count-uniques is true, it will also
         require that one of the tasks is unique to this worker.
         """
-        return (self.__keep_alive and n_pending_tasks and
-                (n_unique_pending or not self.__count_uniques))
+        if not self.__keep_alive:
+            return False
+        elif self._assistant:
+            return True
+        else:
+            return n_pending_tasks and (n_unique_pending or not self.__count_uniques)
 
     def run(self):
         """
