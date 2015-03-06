@@ -17,6 +17,7 @@
 import os
 import multiprocessing
 import random
+import signal
 import time
 
 from helpers import unittest, with_config
@@ -73,7 +74,9 @@ class ServerTestRun(unittest.TestCase):
 
     def stop_server(self):
         self._process.terminate()
-        self._process.join()
+        self._process.join(1)
+        if self._process.is_alive():
+            os.kill(self._process.pid, signal.SIGKILL)
 
     def setUp(self):
         self.remove_state()
