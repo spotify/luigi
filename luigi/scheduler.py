@@ -533,14 +533,18 @@ class CentralPlannerScheduler(Scheduler):
         if new_deps is not None:
             task.deps.update(new_deps)
 
-        task.stakeholders.add(worker)
-        task.resources = resources
+        if resources is not None:
+            task.resources = resources
 
-        # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
-        # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
-        for dep in task.deps or []:
-            t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
-            t.stakeholders.add(worker)
+        # only assistants should normally schedule tasks as FAILED and not runnable
+        if runnable or status != FAILED:
+            task.stakeholders.add(worker)
+
+            # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
+            # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
+            for dep in task.deps or []:
+                t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
+                t.stakeholders.add(worker)
 
         self._update_priority(task, priority, worker)
 

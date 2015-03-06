@@ -49,7 +49,7 @@ from luigi.event import Event
 from luigi.interface import load_task
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
 from luigi.target import Target
-from luigi.task import Task, flatten, getpaths
+from luigi.task import Task, flatten, getpaths, TaskClassException
 
 try:
     import simplejson as json
@@ -594,11 +594,22 @@ class Worker(object):
 
         if task_id is not None and task_id not in self._scheduled_tasks:
             logger.info('Did not schedule %s, will load it dynamically', task_id)
-            # TODO: we should obtain the module name from the server!
-            self._scheduled_tasks[task_id] = \
-                load_task(module=None,
-                          task_name=r['task_family'],
-                          params_str=r['task_params'])
+
+            try:
+                # TODO: we should obtain the module name from the server!
+                self._scheduled_tasks[task_id] = \
+                    load_task(module=None,
+                              task_name=r['task_family'],
+                              params_str=r['task_params'])
+            except TaskClassException as ex:
+                msg = 'Cannot find task for %s' % task_id
+                logger.exception(msg)
+                subject = 'Luigi: %s' % msg
+                error_message = notifications.wrap_traceback(ex)
+                notifications.send_error_email(subject, error_message)
+                self._scheduler.add_task(self._id, task_id, status=FAILED, runnable=False)
+                task_id = None
+                self.run_succeeded = False
 
         return task_id, running_tasks, n_pending_tasks, n_unique_pending
 
