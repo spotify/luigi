@@ -67,7 +67,7 @@ class RemoteScheduler(Scheduler):
             port=self._port,
             url=url,
         )
-        req = Request(full_url, body)
+
         last_exception = None
         attempt = 0
         while attempt < attempts:
@@ -76,7 +76,7 @@ class RemoteScheduler(Scheduler):
                 logger.info("Retrying...")
                 self._wait()  # wait for a bit and retry
             try:
-                response = urlopen(req)
+                response = urlopen(full_url, body, self._connect_timeout)
                 break
             except URLError as e:
                 last_exception = e
