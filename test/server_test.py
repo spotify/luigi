@@ -33,6 +33,25 @@ class ServerTestBase(AsyncHTTPTestCase):
     def get_app(self):
         return luigi.server.app(CentralPlannerScheduler())
 
+    def setUp(self):
+        super(ServerTestBase, self).setUp()
+
+        self._old_fetch = luigi.rpc.RemoteScheduler._fetch
+
+        def _fetch(obj, url, body, *args, **kwargs):
+            response = self.fetch(url, body=body, method='POST')
+            if response.code >= 400:
+                raise luigi.rpc.RPCError(
+                    'Errror when connecting to remote scheduler'
+                )
+            return response.body.decode('utf-8')
+
+        luigi.rpc.RemoteScheduler._fetch = _fetch
+
+    def tearDown(self):
+        super(ServerTestBase, self).tearDown()
+        luigi.rpc.RemoteScheduler._fetch = self._old_fetch
+
 
 class ServerTest(ServerTestBase):
 
