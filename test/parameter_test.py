@@ -140,6 +140,14 @@ class Banana(luigi.Task):
         self.output().open('w').close()
 
 
+class FooBaseClass(luigi.Task):
+    x = luigi.Parameter()
+
+
+class FooSubClass(FooBaseClass):
+    pass
+
+
 class MyConfig(luigi.Config):
     mc_p = luigi.IntParameter()
     mc_q = luigi.IntParameter(default=73)
@@ -351,6 +359,13 @@ class TestNewStyleGlobalParameters(unittest.TestCase):
     def test_y_arg_override_banana(self):
         luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz', '--Banana-x', 'baz'])
         self.expect_keys(['banana-baz-bar', 'banana-dep-xyz-bar'])
+
+    def test_multiple_subclasses(self):
+        # This should work
+        luigi.run(['--local-scheduler', '--no-lock', 'FooSubClass', '--x', 'xyz', '--FooBaseClass-x', 'xyz'])
+
+        # This won't work because --FooSubClass-x doesn't exist
+        self.assertRaises(BaseException, luigi.run, (['--local-scheduler', '--no-lock', 'FooBaseClass', '--x', 'xyz', '--FooSubClass-x', 'xyz'],))
 
 
 class TestRemoveGlobalParameters(unittest.TestCase):

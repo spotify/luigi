@@ -29,6 +29,11 @@ import logging
 import traceback
 import warnings
 
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
+
 from luigi import six
 
 from luigi import parameter
@@ -160,10 +165,11 @@ class Register(abc.ABCMeta):
     def get_reg(cls, include_config_without_section=False):
         """Return all of the registery classes.
 
-        :return:  a ``dict`` of task_family -> class
+        :return:  an ``collections.OrderedDict`` of task_family -> class
         """
         # We have to do this on-demand in case task names have changed later
-        reg = {}
+        # We return this in a topologically sorted list of inheritance: this is useful in some cases (#822)
+        reg = OrderedDict()
         for cls in cls._reg:
             if cls.run == NotImplemented:
                 continue
