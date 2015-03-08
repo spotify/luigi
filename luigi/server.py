@@ -27,6 +27,7 @@ import mimetypes
 import os
 import posixpath
 import signal
+import sys
 
 import pkg_resources
 import tornado.httpclient
@@ -168,10 +169,15 @@ def run(api_port=8082, address=None, scheduler=None, responder=None):
     pruner = tornado.ioloop.PeriodicCallback(scheduler.prune, 60000)
     pruner.start()
 
-    def shutdown_handler(foo=None, bar=None):
+    def shutdown_handler(signum, frame):
+        exit_handler()
+        sys.exit(0)
+
+    @atexit.register
+    def exit_handler():
         logger.info("Scheduler instance shutting down")
         scheduler.dump()
-        os._exit(0)
+        stop()
 
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
@@ -179,7 +185,6 @@ def run(api_port=8082, address=None, scheduler=None, responder=None):
         signal.signal(signal.SIGBREAK, shutdown_handler)
     else:
         signal.signal(signal.SIGQUIT, shutdown_handler)
-    atexit.register(shutdown_handler)
 
     logger.info("Scheduler starting up")
 
