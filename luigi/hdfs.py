@@ -134,6 +134,36 @@ def list_path(path):
     return [str(path), ]
 
 
+def is_dangerous_rm_path(path):
+    """ Determines if it is risky to remove such a path.
+
+    Examples:
+    * blanks
+    * top level root, e.g. /
+    * absolute path that is one level deep, e.g. /etc or /opt
+    * tilde, e.g. ~
+
+    :return bool: True if too dangerous
+
+    >>> for danger in ['~', '~/', ' ', '/', '/opt', '/etc/', '/etc//',
+    ...                '//', ' /opt ', ' /opt// ', '//opt']:
+    ...     assert is_dangerous_rm_path(danger), 'expected dangerous: %r' % danger
+    >>> for safe in ['~/foo', '/foo/bar', 'foo', ' foo ', 'bar/', 'silly//']:
+    ...     assert not is_dangerous_rm_path(safe), 'expected safe: %r' % safe
+    >>> try:
+    ...     is_dangerous_rm_path(None)
+    ... except AttributeError:
+    ...     pass
+    """
+    path = path.strip().rstrip('/')
+
+    if path.startswith('/'):
+        path = path.lstrip('/')
+        return len(path.split('/')) <= 1
+    else:
+        return path in ('', '~')
+
+
 class HdfsClient(FileSystem):
     """
     This client uses Apache 2.x syntax for file system commands, which also matched CDH4.
@@ -192,9 +222,13 @@ class HdfsClient(FileSystem):
         self.rename(path, dest)
         return True
 
-    def remove(self, path, recursive=True, skip_trash=False):
+    def remove(self, path, recursive=True, skip_trash=False, chicken=True):
         if recursive:
             cmd = load_hadoop_cmd() + ['fs', '-rm', '-r']
+
+            if chicken and is_dangerous_rm_path(path):
+                raise ValueError("Too chicken to recursively "
+                    "delete '%s'" % path)
         else:
             cmd = load_hadoop_cmd() + ['fs', '-rm']
 
@@ -409,7 +443,7 @@ class SnakebiteHdfsClient(HdfsClient):
         except FileAlreadyExistsException:
             return False
 
-    def remove(self, path, recursive=True, skip_trash=False):
+    def remove(self, path, recursive=True, skip_trash=False, chicken=None):
         """
         Use snakebite.delete, if available.
 
@@ -419,6 +453,8 @@ class SnakebiteHdfsClient(HdfsClient):
         :type recursive: boolean, default is True
         :param skip_trash: do or don't move deleted items into the trash first
         :type skip_trash: boolean, default is False (use trash)
+        :param chicken: ignored
+        :type chicken: ignored
         :return: list of deleted items
         """
         return list(self.get_bite().delete(list_path(path), recurse=recursive))
@@ -557,21 +593,28 @@ class HdfsClientCdh3(HdfsClient):
     This client uses CDH3 syntax for file system commands.
     """
 
-    def mkdir(self, path):
+    def mkdir(self, path, parents=False, raise_if_exists=False):
         """
         No -p switch, so this will fail creating ancestors.
+
+        :param parents: ignored
         """
         try:
             call_check(load_hadoop_cmd() + ['fs', '-mkdir', path])
         except HDFSCliError as ex:
             if "File exists" in ex.stderr:
-                raise FileAlreadyExists(ex.stderr)
+                if raise_if_exists:
+                    raise FileAlreadyExists(ex.stderr)
             else:
                 raise
 
-    def remove(self, path, recursive=True, skip_trash=False):
+    def remove(self, path, recursive=True, skip_trash=False, chicken=True):
         if recursive:
             cmd = load_hadoop_cmd() + ['fs', '-rmr']
+
+            if chicken and is_dangerous_rm_path(path):
+                raise ValueError("Too chicken to recursively "
+                    "delete '%s'" % path)
         else:
             cmd = load_hadoop_cmd() + ['fs', '-rm']
 
@@ -896,8 +939,8 @@ class HdfsTarget(FileSystemTarget):
         else:
             return self.format.pipe_writer(self.path)
 
-    def remove(self, skip_trash=False):
-        remove(self.path, skip_trash=skip_trash)
+    def remove(self, skip_trash=False, chicken=True):
+        remove(self.path, skip_trash=skip_trash, chicken=chicken)
 
     @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
     def rename(self, path, fail_if_exists=False):
