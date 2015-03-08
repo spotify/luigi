@@ -24,7 +24,7 @@ import luigi.date_interval
 import luigi.interface
 import luigi.notifications
 from helpers import with_config
-from luigi.mock import MockFile, MockFileSystem
+from luigi.mock import MockTarget, MockFileSystem
 from luigi.parameter import ParameterException
 from worker_test import email_patch
 
@@ -110,7 +110,7 @@ class BananaDep(luigi.Task):
     y = luigi.Parameter(default='def')
 
     def output(self):
-        return MockFile('banana-dep-%s-%s' % (self.x, self.y))
+        return MockTarget('banana-dep-%s-%s' % (self.x, self.y))
 
     def run(self):
         self.output().open('w').close()
@@ -134,7 +134,7 @@ class Banana(luigi.Task):
             raise Exception('unknown style')
 
     def output(self):
-        return MockFile('banana-%s-%s' % (self.x, self.y))
+        return MockTarget('banana-%s-%s' % (self.x, self.y))
 
     def run(self):
         self.output().open('w').close()
@@ -318,11 +318,11 @@ class TestNewStyleGlobalParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestNewStyleGlobalParameters, self).setUp()
-        MockFile.fs.clear()
+        MockTarget.fs.clear()
         BananaDep.y.reset_global()
 
     def expect_keys(self, expected):
-        self.assertEquals(set(MockFile.fs.get_all_data().keys()), set(expected))
+        self.assertEquals(set(MockTarget.fs.get_all_data().keys()), set(expected))
 
     def test_x_arg(self):
         luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg'])

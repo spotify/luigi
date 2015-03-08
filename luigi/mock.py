@@ -15,8 +15,8 @@
 # limitations under the License.
 #
 """
-This moduel provides a class :class:`MockFile`, an implementation of :py:class:`~luigi.target.Target`.
-:class:`MockFile` contains all data in-memory.
+This moduel provides a class :class:`MockTarget`, an implementation of :py:class:`~luigi.target.Target`.
+:class:`MockTarget` contains all data in-memory.
 The main purpose is unit testing workflows without writing to disk.
 """
 
@@ -24,6 +24,7 @@ import multiprocessing
 from io import BytesIO
 
 import sys
+import warnings
 
 from luigi import six
 import luigi.util
@@ -47,7 +48,7 @@ class MockFileSystem(target.FileSystem):
         return self.get_all_data()[fn]
 
     def exists(self, path):
-        return MockFile(path).exists()
+        return MockTarget(path).exists()
 
     def remove(self, path, recursive=True, skip_trash=True):
         """
@@ -80,7 +81,7 @@ class MockFileSystem(target.FileSystem):
         self.get_all_data().clear()
 
 
-class MockFile(target.FileSystemTarget):
+class MockTarget(target.FileSystemTarget):
     fs = MockFileSystem()
 
     def __init__(self, fn, is_tmp=None, mirror_on_stderr=False, format=None):
@@ -167,3 +168,9 @@ class MockFile(target.FileSystemTarget):
             return wrapper
         else:
             return self.format.pipe_reader(Buffer(self.fs.get_all_data()[fn]))
+
+
+class MockFile(MockTarget):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("MockFile has been renamed MockTarget", DeprecationWarning, stacklevel=2)
+        super(MockFile, self).__init__(*args, **kwargs)

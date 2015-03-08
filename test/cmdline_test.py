@@ -30,14 +30,14 @@ from luigi import six
 
 import luigi
 import mock
-from luigi.mock import MockFile
+from luigi.mock import MockTarget
 
 
 class SomeTask(luigi.Task):
     n = luigi.IntParameter()
 
     def output(self):
-        return LocalTarget('/tmp/test_%d' % self.n)
+        return MockTarget('/tmp/test_%d' % self.n)
 
     def run(self):
         f = self.output().open('w')
@@ -91,19 +91,17 @@ class WriteToFile(luigi.Task):
 class CmdlineTest(unittest.TestCase):
 
     def setUp(self):
-        global LocalTarget
-        LocalTarget = MockFile
-        MockFile.fs.clear()
+        MockTarget.fs.clear()
 
     @mock.patch("logging.getLogger")
     def test_cmdline_main_task_cls(self, logger):
         luigi.run(['--local-scheduler', '--no-lock', '--n', '100'], main_task_cls=SomeTask)
-        self.assertEqual(dict(MockFile.fs.get_all_data()), {'/tmp/test_100': b'done'})
+        self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_100': b'done'})
 
     @mock.patch("logging.getLogger")
     def test_cmdline_other_task(self, logger):
         luigi.run(['--local-scheduler', '--no-lock', 'SomeTask', '--n', '1000'])
-        self.assertEqual(dict(MockFile.fs.get_all_data()), {'/tmp/test_1000': b'done'})
+        self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_1000': b'done'})
 
     @mock.patch("logging.getLogger")
     def test_cmdline_ambiguous_class(self, logger):

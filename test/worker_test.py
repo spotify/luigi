@@ -31,7 +31,7 @@ import luigi.worker
 import mock
 from helpers import with_config
 from luigi import ExternalTask, RemoteScheduler, Task
-from luigi.mock import MockFile, MockFileSystem
+from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
 from luigi import six
@@ -838,7 +838,7 @@ class Dummy2Task(Task):
     p = luigi.Parameter()
 
     def output(self):
-        return MockFile(self.p)
+        return MockTarget(self.p)
 
     def run(self):
         f = self.output().open('w')
@@ -897,7 +897,7 @@ class ForkBombTask(luigi.Task):
     p = luigi.Parameter(default=(0, ))  # ehm for some weird reason [0] becomes a tuple...?
 
     def output(self):
-        return MockFile('.'.join(map(str, self.p)))
+        return MockTarget('.'.join(map(str, self.p)))
 
     def run(self):
         with self.output().open('w') as f:
