@@ -622,7 +622,11 @@ def get_configured_hdfs_client(show_warnings=True):
     """
     config = hdfs()
     custom = config.client
-    if six.PY3 and (custom == "snakebite" or config.use_snakebite):
+    conf_usinf_snakebite = [
+        "snakebite_with_hadoopcli_fallback",
+        "snakebite",
+    ]
+    if six.PY3 and (custom in conf_usinf_snakebite or config.use_snakebite):
         if show_warnings:
             warnings.warn(
                 "snakebite client not compatible with python3 at the moment"
