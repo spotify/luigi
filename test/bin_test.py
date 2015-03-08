@@ -29,7 +29,7 @@ class LuigidTest(server_test.ServerTestRun):
         luigid.main(['--port', str(self._api_port)])
 
 
-class LuigidDaemonTest(server_test.ServerTest):
+class LuigidDaemonTest(server_test.ServerTestRun):
 
     @with_config({'scheduler': {'state_path': '/tmp/luigi-test-server-state'}})
     @mock.patch('daemon.DaemonContext')
