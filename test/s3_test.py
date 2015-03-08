@@ -16,23 +16,20 @@
 #
 from __future__ import print_function
 
-import gc
 import os
 import sys
 import tempfile
 
-from luigi import six
 from target_test import FileSystemTargetTestMixin
 from helpers import with_config, unittest
 
-import luigi.format
 from boto.exception import S3ResponseError
 from boto.s3 import key
 from moto import mock_s3
 from luigi import configuration
 from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
 
-if sys.version_info[:2] == (3, 4):
+if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
     # spulec/moto#308
     raise unittest.SkipTest('moto mock doesn\'t work with python3.4')
 

@@ -7,3 +7,4 @@ unittest2
 boto
 sqlalchemy
 elasticsearch
+snakebite>=2.5.2
