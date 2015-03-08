@@ -45,6 +45,10 @@ class MiniClusterTestCase(unittest.TestCase):
     https://github.com/spotify/snakebite"""
     cluster = None
 
+    # See: http://nose.readthedocs.org/en/latest/doc_tests/test_multiprocess/multiprocess.html
+    # Travis run tests in parallel, but we want to avoid doing the costly setup multiple times
+    _multiprocess_shared_ = True
+
     @skipIf(six.PY3, 'Minicluster is not supported on python3')
     @classmethod
     def setupClass(cls):
