@@ -19,9 +19,7 @@ from helpers import unittest
 
 import luigi
 import luigi.interface
-from luigi.mock import MockFile
-
-LocalTarget = MockFile
+from luigi.mock import MockTarget
 
 # Calculates Fibonacci numbers :)
 
@@ -36,7 +34,7 @@ class Fib(luigi.Task):
             return []
 
     def output(self):
-        return LocalTarget('/tmp/fib_%d' % self.n)
+        return MockTarget('/tmp/fib_%d' % self.n)
 
     def run(self):
         if self.n == 0:
@@ -57,9 +55,7 @@ class Fib(luigi.Task):
 class FibTestBase(unittest.TestCase):
 
     def setUp(self):
-        global LocalTarget
-        LocalTarget = MockFile
-        MockFile.fs.clear()
+        MockTarget.fs.clear()
 
 
 class FibTest(FibTestBase):
@@ -69,20 +65,20 @@ class FibTest(FibTestBase):
         w.add(Fib(100))
         w.run()
         w.stop()
-        self.assertEqual(MockFile.fs.get_data('/tmp/fib_10'), b'55\n')
-        self.assertEqual(MockFile.fs.get_data('/tmp/fib_100'), b'354224848179261915075\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/fib_10'), b'55\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/fib_100'), b'354224848179261915075\n')
 
     def test_cmdline(self):
         luigi.run(['--local-scheduler', '--no-lock', 'Fib', '--n', '100'])
 
-        self.assertEqual(MockFile.fs.get_data('/tmp/fib_10'), b'55\n')
-        self.assertEqual(MockFile.fs.get_data('/tmp/fib_100'), b'354224848179261915075\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/fib_10'), b'55\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/fib_100'), b'354224848179261915075\n')
 
     def test_build_internal(self):
         luigi.build([Fib(100)], local_scheduler=True)
 
-        self.assertEqual(MockFile.fs.get_data('/tmp/fib_10'), b'55\n')
-        self.assertEqual(MockFile.fs.get_data('/tmp/fib_100'), b'354224848179261915075\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/fib_10'), b'55\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/fib_100'), b'354224848179261915075\n')
 
 if __name__ == '__main__':
     luigi.run()

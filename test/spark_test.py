@@ -26,7 +26,7 @@ import luigi
 import luigi.hdfs
 from helpers import with_config
 from luigi.contrib.spark import PySpark1xJob, Spark1xJob, SparkJob, SparkJobError
-from luigi.mock import MockFile
+from luigi.mock import MockTarget
 from mock import patch
 
 
@@ -89,9 +89,9 @@ class SparkTest(unittest.TestCase):
             return p
 
         h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
-        luigi.hdfs.HdfsTarget, subprocess.Popen = MockFile, Popen_fake
+        luigi.hdfs.HdfsTarget, subprocess.Popen = MockTarget, Popen_fake
         try:
-            MockFile.move = lambda *args, **kwargs: None
+            MockTarget.move = lambda *args, **kwargs: None
             job = TestJob()
             job.run()
             self.assertEqual(len(arglist_result), 1)
@@ -195,9 +195,9 @@ class Spark1xTest(unittest.TestCase):
             return p
 
         h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
-        luigi.hdfs.HdfsTarget, subprocess.Popen = MockFile, Popen_fake
+        luigi.hdfs.HdfsTarget, subprocess.Popen = MockTarget, Popen_fake
         try:
-            MockFile.move = lambda *args, **kwargs: None
+            MockTarget.move = lambda *args, **kwargs: None
             job = Test1xJob()
             job.run()
             self.assertEqual(len(arglist_result), 1)
@@ -300,9 +300,9 @@ class PySpark1xTest(unittest.TestCase):
             return p
 
         h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
-        luigi.hdfs.HdfsTarget, subprocess.Popen = MockFile, Popen_fake
+        luigi.hdfs.HdfsTarget, subprocess.Popen = MockTarget, Popen_fake
         try:
-            MockFile.move = lambda *args, **kwargs: None
+            MockTarget.move = lambda *args, **kwargs: None
             job = TestPySpark1xJob()
             job.run()
             self.assertEqual(len(arglist_result), 1)

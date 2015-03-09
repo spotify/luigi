@@ -226,4 +226,4 @@ class TestImportFile(unittest.TestCase):
 
     def test_file(self):
         from luigi.file import File
-        self.assertTrue(issubclass(File, LocalTarget))
+        self.assertTrue(isinstance(File('foo'), LocalTarget))

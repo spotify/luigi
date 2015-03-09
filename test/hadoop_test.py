@@ -27,11 +27,10 @@ import luigi.mrrunner
 import luigi.notifications
 import minicluster
 import mock
-from luigi.mock import MockFile
+from luigi.mock import MockTarget
 from nose.plugins.attrib import attr
 
 luigi.notifications.DEBUG = True
-LocalTarget = MockFile
 
 luigi.hadoop.attach(minicluster)
 
@@ -43,7 +42,7 @@ class OutputMixin(luigi.Task):
         if self.use_hdfs:
             return luigi.hdfs.HdfsTarget('/tmp/' + fn, format=luigi.format.get_default_format() >> luigi.hdfs.PlainDir)
         else:
-            return LocalTarget(fn)
+            return MockTarget(fn)
 
 
 class HadoopJobTask(luigi.hadoop.JobTask, OutputMixin):
@@ -236,7 +235,7 @@ class MapreduceLocalTest(unittest.TestCase):
         MyStreamingJob('param_value')
 
     def setUp(self):
-        MockFile.fs.clear()
+        MockTarget.fs.clear()
 
 
 @attr('minicluster')

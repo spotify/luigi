@@ -20,7 +20,7 @@ from helpers import unittest
 
 import luigi
 from luigi import Event, Task, build
-from luigi.mock import MockFile, MockFileSystem
+from luigi.mock import MockTarget, MockFileSystem
 from luigi.task import flatten
 from mock import patch
 
@@ -131,7 +131,7 @@ class ConsistentMockOutput(object):
     param = luigi.IntParameter(default=1)
 
     def output(self):
-        return MockFile('/%s/%u' % (self.__class__.__name__, self.param))
+        return MockTarget('/%s/%u' % (self.__class__.__name__, self.param))
 
     def produce_output(self):
         with self.output().open('w') as o:
