@@ -69,10 +69,14 @@ setup(
     package_data={
         'luigi': luigi_package_data
     },
-    scripts=[
-        'bin/luigid',
-        'bin/luigi'
-    ],
+    entry_points={
+        'console_scripts': [
+            'luigi = luigi.cmdline:luigi_run',
+            'luigid = luigi.cmdline:luigid',
+            'luigi-grep = luigi.tools.luigi_grep:main',
+            'luigi-deps = luigi.tools.deps:main',
+        ]
+    },
     install_requires=install_requires,
     classifiers=[
         'Development Status :: 5 - Production/Stable',

@@ -7,15 +7,6 @@ from collections import defaultdict
 
 from luigi import six
 
-parser = argparse.ArgumentParser(
-    "luigi-grep is used to search for workflows using the luigi scheduler's json api")
-parser.add_argument(
-    "--scheduler-host", default="localhost", help="hostname of the luigi scheduler")
-parser.add_argument(
-    "--scheduler-port", default="8082", help="port of the luigi scheduler")
-parser.add_argument("--prefix", help="prefix of a task query to search for", default=None)
-parser.add_argument("--status", help="search for jobs with the given status", default=None)
-
 
 class LuigiGrep(object):
 
@@ -29,7 +20,7 @@ class LuigiGrep(object):
 
     def _fetch_json(self):
         """Returns the json representation of the dep graph"""
-        print "Fetching from url: " + self.graph_url
+        print("Fetching from url: " + self.graph_url)
         resp = urllib2.urlopen(self.graph_url).read()
         return json.loads(resp)
 
@@ -61,7 +52,17 @@ class LuigiGrep(object):
             if job_info['status'].lower() == status.lower():
                 yield self._build_results(jobs, job)
 
-if __name__ == '__main__':
+
+def main():
+    parser = argparse.ArgumentParser(
+        "luigi-grep is used to search for workflows using the luigi scheduler's json api")
+    parser.add_argument(
+        "--scheduler-host", default="localhost", help="hostname of the luigi scheduler")
+    parser.add_argument(
+        "--scheduler-port", default="8082", help="port of the luigi scheduler")
+    parser.add_argument("--prefix", help="prefix of a task query to search for", default=None)
+    parser.add_argument("--status", help="search for jobs with the given status", default=None)
+
     args = parser.parse_args()
     grep = LuigiGrep(args.scheduler_host, args.scheduler_port)
 
@@ -77,3 +78,6 @@ if __name__ == '__main__':
             print("  status={status}".format(status=status))
             for job in jobs:
                 print("    {job}".format(job=job))
+
+if __name__ == '__main__':
+    main()

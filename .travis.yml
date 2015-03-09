@@ -27,6 +27,7 @@ cache:
   - $HOME/.pip-cache
 
 install:
+  - pip install .
   - pip install tox
 
 before_script:

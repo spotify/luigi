@@ -238,7 +238,7 @@ If you run
 
 ::
 
-    PYTHONPATH=. python bin/luigid
+    luigid
 
 in the background and then run
 

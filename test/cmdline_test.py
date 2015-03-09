@@ -177,6 +177,12 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         self._run_cmdline(args)
         self.assertTrue(t.exists())
 
+    def test_console_script_luigi(self):
+        t = luigi.LocalTarget(is_tmp=True)
+        args = ['luigi', '--module', 'cmdline_test', 'WriteToFile', '--filename', t.path, '--local-scheduler', '--no-lock']
+        self._run_cmdline(args)
+        self.assertTrue(t.exists())
+
     def test_direct_python(self):
         t = luigi.LocalTarget(is_tmp=True)
         args = ['python', 'test/cmdline_test.py', 'WriteToFile', '--filename', t.path, '--local-scheduler', '--no-lock']
