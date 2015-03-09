@@ -220,12 +220,17 @@ def add_task_parameters(parser, task_cls, optparse=False):
         param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, optparse=optparse, glob=False)
 
 
-def add_global_parameters(parser, optparse=False):
+def get_global_parameters():
     seen_params = set()
     for task_name, is_without_section, param_name, param in Register.get_all_params():
         if param in seen_params:
             continue
         seen_params.add(param)
+        yield task_name, is_without_section, param_name, param
+
+
+def add_global_parameters(parser, optparse=False):
+    for task_name, is_without_section, param_name, param in get_global_parameters():
         param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse, glob=True, is_without_section=is_without_section)
 
 
@@ -239,7 +244,7 @@ def get_task_parameters(task_cls, args):
 
 def set_global_parameters(args):
     # Note that this is not side effect free
-    for task_name, is_without_section, param_name, param in Register.get_all_params():
+    for task_name, is_without_section, param_name, param in get_global_parameters():
         param.set_global_from_args(param_name, task_name, args, is_without_section=is_without_section)
 
 
