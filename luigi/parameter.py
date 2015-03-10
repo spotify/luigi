@@ -321,12 +321,18 @@ class Parameter(object):
             return
         flag = '--' + dest.replace('_', '-')
 
+        default = None
+        if self.has_task_value(task_name, param_name):
+            default = self.task_value(task_name, param_name)
+            if default is not None:
+                default = self.serialize(default)
+
         description = []
         description.append('%s.%s' % (task_name, param_name))
         if self.description:
             description.append(self.description)
-        if self.has_value:
-            description.append(" [default: %s]" % (self.value,))
+        if default is not None:
+            description.append(" [default: %s]" % (default,))
 
         if self.is_list:
             action = "append"
@@ -341,6 +347,7 @@ class Parameter(object):
         f(flag,
           help=' '.join(description),
           action=action,
+          default=default,
           dest=dest)
 
     def parse_from_args(self, param_name, task_name, args, params):
