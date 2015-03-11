@@ -42,7 +42,6 @@ with open('README.rst') as fobj:
 install_requires = [
     'pyparsing',
     'tornado',
-    'snakebite>=2.5.0',
     'python-daemon',
 ]
 
