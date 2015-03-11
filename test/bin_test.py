@@ -35,4 +35,4 @@ class LuigidDaemonTest(server_test.ServerTestRun):
     @mock.patch('daemon.DaemonContext')
     def run_server(self, daemon_context):
         luigid = imp.load_source('luigid', 'bin/luigid')
-        luigid.main(['--port', str(self._api_port), '--background', '--logdir', '.'])
+        luigid.main(['--port', str(self._api_port), '--background', '--logdir', '.', '--pidfile', 'test.pid'])
