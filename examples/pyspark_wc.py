@@ -16,12 +16,48 @@
 #
 import luigi
 from luigi.s3 import S3Target
-from luigi.contrib.spark import SparkSubmitTask
+from luigi.contrib.spark import SparkSubmitTask, PySparkTask
+
+
+class InlinePySparkWordCount(PySparkTask):
+    """
+    This task runs a :py:class:`luigi.contrib.spark.PySparkTask` task
+    over the target data in :py:meth:`wordcount.input` (a file in S3) and
+    writes the result into its :py:meth:`wordcount.output` target (a file in S3).
+
+    This class uses :py:meth:`luigi.contrib.spark.PySparkTask.main`.
+
+    Example luigi configuration::
+
+        [spark]
+        spark-submit: /usr/local/spark/bin/spark-submit
+        master: spark://spark.example.org:7077
+        # py-packages: numpy, pandas
+
+    """
+    driver_memory = '2g'
+    executor_memory = '3g'
+
+    def input(self):
+        return S3Target("s3n://bucket.example.org/wordcount.input")
+
+    def output(self):
+        return S3Target('s3n://bucket.example.org/wordcount.output')
+
+    def main(self, sc, *args):
+        sc.textFile(self.input().path) \
+          .flatMap(lambda line: line.split()) \
+          .map(lambda word: (word, 1)) \
+          .reduceByKey(lambda a, b: a + b) \
+          .saveAsTextFile(self.output().path)
 
 
 class PySparkWordCount(SparkSubmitTask):
     """
-    This task runs a :py:class:`luigi.contrib.spark.SparkSubmitTask` task
+    This task is the same as :py:class:`InlinePySparkWordCount` above but uses
+    an external python driver file specified in :py:meth:`app`
+
+    It runs a :py:class:`luigi.contrib.spark.SparkSubmitTask` task
     over the target data in :py:meth:`wordcount.input` (a file in S3) and
     writes the result into its :py:meth:`wordcount.output` target (a file in S3).
 
@@ -53,7 +89,7 @@ class PySparkWordCount(SparkSubmitTask):
         return S3Target('s3n://bucket.example.org/wordcount.output')
 
 
-"""
+'''
 // Corresponding example Spark Job, running Word count with Spark's Python API
 // This file would have to be saved into wordcount.py
 
@@ -68,5 +104,4 @@ if __name__ == "__main__":
       .map(lambda word: (word, 1)) \
       .reduceByKey(lambda a, b: a + b) \
       .saveAsTextFile(sys.argv[2])
-
-"""
+'''

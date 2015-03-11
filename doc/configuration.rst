@@ -446,10 +446,10 @@ worker-disconnect-delay
 [spark]
 -------
 
-Parameters controlling the default execution of ``SparkSubmitTask``:
+Parameters controlling the default execution of ``SparkSubmitTask`` and ``PySparkTask``:
 
 .. deprecated:: 1.1.1
-   ``SparkJob``, ``Spark1xJob`` and ``PySpark1xJob`` are deprecated. Please use ``SparkSubmitTask``.
+   ``SparkJob``, ``Spark1xJob`` and ``PySpark1xJob`` are deprecated. Please use ``SparkSubmitTask`` or ``PySparkTask``.
 
 spark-submit
   Command to run in order to submit spark jobs. Default: spark-submit
@@ -517,16 +517,21 @@ num-executors
 archives
     Comma separated list of archives to be extracted into the working directory of each executor. Default: Spark default
 
+hadoop-conf-dir
+  Location of the hadoop conf dir. Sets HADOOP_CONF_DIR environment variable
+  when running spark. Example: /etc/hadoop/conf
+
+*Extra configuration for PySparkTask jobs:*
+
+py-packages
+    Comma-separated list of local packages (in your python path) to be distributed to the cluster.
+
 *Parameters controlling the execution of SparkJob jobs (deprecated):*
 
 spark-jar
   Location of the spark jar. Sets SPARK_JAR environment variable when
   running spark. Example:
   /usr/share/spark/jars/spark-assembly-0.8.1-incubating-hadoop2.2.0.jar
-
-hadoop-conf-dir
-  Location of hadoop conf dir. Sets HADOOP_CONF_DIR environment variable
-  when running spark. Example: /etc/hadoop/conf
 
 spark-class
   Location of script to invoke. Example: /usr/share/spark/spark-class

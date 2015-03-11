@@ -15,19 +15,30 @@
 # limitations under the License.
 #
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-import subprocess
 from helpers import unittest
-
+import os
 import luigi
 import luigi.hdfs
-from helpers import with_config
-from luigi.contrib.spark import PySpark1xJob, Spark1xJob, SparkJob, SparkJobError, SparkSubmitTask
+from luigi import six
 from luigi.mock import MockTarget
-from mock import patch
+from helpers import with_config
+from luigi.contrib.spark import SparkJobError, SparkSubmitTask, PySparkTask, PySpark1xJob, Spark1xJob, SparkJob
+from mock import patch, MagicMock
+
+BytesIO = six.BytesIO
+
+
+def poll_generator():
+    yield None
+    yield 1
+
+
+def setup_run_process(proc):
+    poll_gen = poll_generator()
+    proc.return_value.poll = lambda: next(poll_gen)
+    proc.return_value.returncode = 0
+    proc.return_value.stdout = BytesIO()
+    proc.return_value.stderr = BytesIO()
 
 
 class TestSparkSubmitTask(SparkSubmitTask):
@@ -67,127 +78,16 @@ class TestDefaultSparkSubmitTask(SparkSubmitTask):
         return luigi.LocalTarget('output')
 
 
-class SparkSubmitTest(unittest.TestCase):
-    ss = 'ss-stub'
+class TestPySparkTask(PySparkTask):
 
-    @with_config({'spark': {'spark-submit': ss, 'spark-master': "local[*]"}})
-    @patch('subprocess.Popen')
-    def test_run(self, mock):
-        arglist_result = []
+    def input(self):
+        return MockTarget('input')
 
-        def Popen_fake(arglist, stdout=None, stderr=None, env=None, close_fds=True):
-            arglist_result.append(arglist)
+    def output(self):
+        return MockTarget('output')
 
-            class P(object):
-
-                def wait(self):
-                    pass
-
-                def poll(self):
-                    return 0
-
-                def communicate(self):
-                    return 'end'
-
-            p = P()
-            p.returncode = 0
-            p.stderr = StringIO()
-            p.stdout = StringIO()
-            return p
-
-        h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
-        luigi.hdfs.HdfsTarget, subprocess.Popen = MockTarget, Popen_fake
-        try:
-            MockTarget.move = lambda *args, **kwargs: None
-            job = TestSparkSubmitTask()
-            job.run()
-            self.assertEqual(len(arglist_result), 1)
-            self.assertEqual(list(arglist_result[0]),
-                             ['ss-stub', '--deploy-mode', 'client', '--name', 'AppName', '--class', 'org.test.MyClass',
-                              '--jars', 'jars/my.jar', '--py-files', 'file1.py,file2.py', '--files', 'file1,file2',
-                              '--archives', 'archive1,archive2', '--conf', 'Prop="Value"', '--properties-file', 'conf/spark-defaults.conf',
-                              '--driver-memory', '4G', '--driver-java-options', '-Xopt', '--driver-library-path', 'library/path',
-                              '--driver-class-path', 'class/path', '--executor-memory', '8G', '--driver-cores', '8', '--supervise',
-                              '--total-executor-cores', '150', '--executor-cores', '10', '--queue', 'queue', '--num-executors', '2',
-                              'file', 'arg1', 'arg2'])
-        finally:
-            luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
-
-    @with_config({'spark': {'spark-submit': ss}})
-    def test_handle_failed_job(self):
-        def Popen_fake(arglist, stdout=None, stderr=None, env=None, close_fds=True):
-            class P(object):
-
-                def wait(self):
-                    pass
-
-                def poll(self):
-                    return 1
-
-                def communicate(self):
-                    return 'end'
-
-            p = P()
-            p.returncode = 1
-            if stdout == subprocess.PIPE:
-                p.stdout = StringIO('stdout')
-            else:
-                stdout.write(b'stdout')
-            if stderr == subprocess.PIPE:
-                p.stderr = StringIO('stderr')
-            else:
-                stderr.write(b'stderr')
-            return p
-
-        p = subprocess.Popen
-        subprocess.Popen = Popen_fake
-        try:
-            job = TestSparkSubmitTask()
-            job.run()
-        except SparkJobError as e:
-            self.assertEqual(e.err, 'stderr')
-        else:
-            self.fail("Should have thrown SparkJobError")
-        finally:
-            subprocess.Popen = p
-
-    @with_config({'spark': {'spark-submit': ss, 'master': 'spark://host:7077', 'conf': 'prop1=val1', 'jars': 'jar1.jar,jar2.jar',
-                            'files': 'file1,file2', 'py-files': 'file1.py,file2.py', 'archives': 'archive1'}})
-    def test_configuration(self):
-        arglist_result = []
-
-        def Popen_fake(arglist, stdout=None, stderr=None, env=None, close_fds=True):
-            arglist_result.append(arglist)
-
-            class P(object):
-
-                def wait(self):
-                    pass
-
-                def poll(self):
-                    return 0
-
-                def communicate(self):
-                    return 'end'
-
-            p = P()
-            p.returncode = 0
-            p.stderr = StringIO()
-            p.stdout = StringIO()
-            return p
-
-        h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
-        luigi.hdfs.HdfsTarget, subprocess.Popen = MockTarget, Popen_fake
-        try:
-            MockTarget.move = lambda *args, **kwargs: None
-            job = TestDefaultSparkSubmitTask()
-            job.run()
-            self.assertEqual(len(arglist_result), 1)
-            self.assertEqual(list(arglist_result[0]), ['ss-stub', '--master', 'spark://host:7077', '--jars', 'jar1.jar,jar2.jar',
-                                                       '--py-files', 'file1.py,file2.py', '--files', 'file1,file2', '--archives', 'archive1',
-                                                       '--conf', 'prop1="val1"', 'test.py'])
-        finally:
-            luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
+    def main(self, sc, *args):
+        sc.textFile(self.input().path).saveAsTextFile(self.output().path)
 
 
 class HdfsJob(luigi.ExternalTask):
@@ -196,7 +96,11 @@ class HdfsJob(luigi.ExternalTask):
         return luigi.hdfs.HdfsTarget('test')
 
 
-class TestJob(SparkJob):
+class TestSparkJob(SparkJob):
+
+    spark_workers = '2'
+    spark_master_memory = '1g'
+    spark_worker_memory = '1g'
 
     def requires_hadoop(self):
         return HdfsJob()
@@ -211,93 +115,7 @@ class TestJob(SparkJob):
         return luigi.LocalTarget('output')
 
 
-class SparkTest(unittest.TestCase):
-    hcd = 'hcd-stub'
-    ycd = 'ycd-stub'
-    sj = 'sj-stub'
-    sc = 'sc-sub'
-
-    @with_config({'spark': {'hadoop-conf-dir': hcd, 'yarn-conf-dir': ycd, 'spark-jar': sj, 'spark-class': sc}})
-    @patch('subprocess.Popen')
-    def test_run(self, mock):
-        arglist_result = []
-
-        def Popen_fake(arglist, stdout=None, stderr=None, env=None, close_fds=True):
-            arglist_result.append(arglist)
-
-            class P(object):
-
-                def wait(self):
-                    pass
-
-                def poll(self):
-                    return 0
-
-                def communicate(self):
-                    return 'end'
-
-            p = P()
-            p.returncode = 0
-            p.stderr = StringIO()
-            p.stdout = StringIO()
-            return p
-
-        h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
-        luigi.hdfs.HdfsTarget, subprocess.Popen = MockTarget, Popen_fake
-        try:
-            MockTarget.move = lambda *args, **kwargs: None
-            job = TestJob()
-            job.run()
-            self.assertEqual(len(arglist_result), 1)
-            self.assertEqual(arglist_result[0][0:6],
-                             [self.sc, 'org.apache.spark.deploy.yarn.Client', '--jar', job.jar(), '--class',
-                              job.job_class()])
-        finally:
-            luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
-
-    @with_config({'spark': {'hadoop-conf-dir': hcd, 'yarn-conf-dir': ycd, 'spark-jar': sj, 'spark-class': sc}})
-    def test_handle_failed_job(self):
-        def Popen_fake(arglist, stdout=None, stderr=None, env=None, close_fds=True):
-            class P(object):
-
-                def wait(self):
-                    pass
-
-                def poll(self):
-                    return 1
-
-                def communicate(self):
-                    return 'end'
-
-            p = P()
-            p.returncode = 1
-            if stdout == subprocess.PIPE:
-                p.stdout = StringIO('stdout')
-            else:
-                stdout.write(b'stdout')
-            if stderr == subprocess.PIPE:
-                p.stderr = StringIO('stderr')
-            else:
-                stderr.write(b'stderr')
-            return p
-
-        p = subprocess.Popen
-        subprocess.Popen = Popen_fake
-        try:
-            job = TestJob()
-            job.run()
-        except SparkJobError as e:
-            self.assertEqual(e.err, 'stderr')
-        else:
-            self.fail("Should have thrown SparkJobError")
-        finally:
-            subprocess.Popen = p
-
-
-class Test1xJob(Spark1xJob):
-
-    def requires_hadoop(self):
-        return HdfsJob()
+class TestSpark1xJob(Spark1xJob):
 
     def jar(self):
         return 'jar'
@@ -307,92 +125,9 @@ class Test1xJob(Spark1xJob):
 
     def output(self):
         return luigi.LocalTarget('output')
-
-
-class Spark1xTest(unittest.TestCase):
-    ss = 'ss-stub'
-
-    @with_config({'spark': {'spark-submit': ss}})
-    @patch('subprocess.Popen')
-    def test_run(self, mock):
-        arglist_result = []
-
-        def Popen_fake(arglist, stdout=None, stderr=None, env=None,
-                       close_fds=True):
-            arglist_result.append(arglist)
-
-            class P(object):
-
-                def wait(self):
-                    pass
-
-                def poll(self):
-                    return 0
-
-                def communicate(self):
-                    return 'end'
-
-            p = P()
-            p.returncode = 0
-            p.stderr = StringIO()
-            p.stdout = StringIO()
-            return p
-
-        h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
-        luigi.hdfs.HdfsTarget, subprocess.Popen = MockTarget, Popen_fake
-        try:
-            MockTarget.move = lambda *args, **kwargs: None
-            job = Test1xJob()
-            job.run()
-            self.assertEqual(len(arglist_result), 1)
-            self.assertEqual(list(arglist_result[0])[0:6], [self.ss, '--master', 'yarn-client', '--class', job.job_class(), job.jar()])
-        finally:
-            luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
-
-    @with_config({'spark': {'spark-submit': ss}})
-    def test_handle_failed_job(self):
-        def Popen_fake(arglist, stdout=None, stderr=None, env=None,
-                       close_fds=True):
-            class P(object):
-
-                def wait(self):
-                    pass
-
-                def poll(self):
-                    return 1
-
-                def communicate(self):
-                    return 'end'
-
-            p = P()
-            p.returncode = 1
-            if stdout == subprocess.PIPE:
-                p.stdout = StringIO('stdout')
-            else:
-                stdout.write(b'stdout')
-            if stderr == subprocess.PIPE:
-                p.stderr = StringIO('stderr')
-            else:
-                stderr.write(b'stderr')
-            return p
-
-        p = subprocess.Popen
-        subprocess.Popen = Popen_fake
-        try:
-            job = Test1xJob()
-            job.run()
-        except SparkJobError as e:
-            self.assertEqual(e.err, 'stderr')
-        else:
-            self.fail("Should have thrown SparkJobError")
-        finally:
-            subprocess.Popen = p
 
 
 class TestPySpark1xJob(PySpark1xJob):
-
-    def requires_hadoop(self):
-        return HdfsJob()
 
     def program(self):
         return 'python_file'
@@ -401,81 +136,187 @@ class TestPySpark1xJob(PySpark1xJob):
         return luigi.LocalTarget('output')
 
 
+class SparkSubmitTaskTest(unittest.TestCase):
+    ss = 'ss-stub'
+
+    @with_config({'spark': {'spark-submit': ss, 'master': "yarn-client", 'hadoop-conf-dir': 'path'}})
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_run(self, proc):
+        setup_run_process(proc)
+        job = TestSparkSubmitTask()
+        job.run()
+
+        self.assertEqual(proc.call_args[0][0],
+                         ['ss-stub', '--master', 'yarn-client', '--deploy-mode', 'client', '--name', 'AppName',
+                          '--class', 'org.test.MyClass', '--jars', 'jars/my.jar', '--py-files', 'file1.py,file2.py',
+                          '--files', 'file1,file2', '--archives', 'archive1,archive2', '--conf', '"Prop=Value"',
+                          '--properties-file', 'conf/spark-defaults.conf', '--driver-memory', '4G', '--driver-java-options', '-Xopt',
+                          '--driver-library-path', 'library/path', '--driver-class-path', 'class/path', '--executor-memory', '8G',
+                          '--driver-cores', '8', '--supervise', '--total-executor-cores', '150', '--executor-cores', '10',
+                          '--queue', 'queue', '--num-executors', '2', 'file', 'arg1', 'arg2'])
+
+    @with_config({'spark': {'spark-submit': ss, 'master': 'spark://host:7077', 'conf': 'prop1=val1', 'jars': 'jar1.jar,jar2.jar',
+                            'files': 'file1,file2', 'py-files': 'file1.py,file2.py', 'archives': 'archive1'}})
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_defaults(self, proc):
+        proc.return_value.returncode = 0
+        job = TestDefaultSparkSubmitTask()
+        job.run()
+        self.assertEqual(proc.call_args[0][0],
+                         ['ss-stub', '--master', 'spark://host:7077', '--jars', 'jar1.jar,jar2.jar',
+                          '--py-files', 'file1.py,file2.py', '--files', 'file1,file2', '--archives', 'archive1',
+                          '--conf', '"prop1=val1"', 'test.py'])
+
+    @patch('luigi.contrib.spark.tempfile.TemporaryFile')
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_handle_failed_job(self, proc, file):
+        proc.return_value.returncode = 1
+        file.return_value = BytesIO(b'stderr')
+        try:
+            job = TestSparkSubmitTask()
+            job.run()
+        except SparkJobError as e:
+            self.assertEqual(e.err, 'stderr')
+            self.assertTrue('STDERR: stderr' in six.text_type(e))
+        else:
+            self.fail("Should have thrown SparkJobError")
+
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_app_must_be_set(self, proc):
+        with self.assertRaises(NotImplementedError):
+            job = SparkSubmitTask()
+            job.run()
+
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_app_interruption(self, proc):
+
+        def interrupt():
+            raise KeyboardInterrupt()
+
+        proc.return_value.poll = interrupt
+        try:
+            job = TestSparkSubmitTask()
+            job.run()
+        except KeyboardInterrupt:
+            pass
+        proc.return_value.kill.assert_called()
+
+
+class PySparkTaskTest(unittest.TestCase):
+    ss = 'ss-stub'
+
+    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077"}})
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_run(self, proc):
+        setup_run_process(proc)
+        job = TestPySparkTask()
+        job.run()
+        proc_arg_list = proc.call_args[0][0]
+        self.assertEqual(proc_arg_list[0:7], ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'client', '--name', 'TestPySparkTask'])
+        self.assertTrue(os.path.exists(proc_arg_list[7]))
+        self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
+
+    @with_config({'spark': {'py-packages': 'dummy_test_module'}})
+    @patch.dict('sys.modules', {'pyspark': MagicMock()})
+    @patch('pyspark.SparkContext')
+    def test_pyspark_runner(self, spark_context):
+        sc = spark_context.return_value.__enter__.return_value
+
+        def mock_spark_submit(task):
+            from luigi.contrib.pyspark_runner import main
+            main(*task.app_command()[1:])
+            # Check py-package exists
+            self.assertTrue(os.path.exists(sc.addPyFile.call_args[0][0]))
+
+        with patch.object(SparkSubmitTask, 'run', mock_spark_submit):
+            job = TestPySparkTask()
+            job.run()
+
+        sc.textFile.assert_called_with('input')
+        sc.textFile.return_value.saveAsTextFile.assert_called_with('output')
+
+
+class SparkJobTest(unittest.TestCase):
+    hcd = 'hcd-stub'
+    ycd = 'ycd-stub'
+    sj = 'sj-stub'
+    sc = 'sc-sub'
+
+    @with_config({'spark': {'hadoop-conf-dir': hcd, 'yarn-conf-dir': ycd, 'spark-jar': sj, 'spark-class': sc}})
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    @patch('luigi.hdfs.HdfsTarget')
+    def test_run(self, target, proc):
+        setup_run_process(proc)
+        job = TestSparkJob()
+        job.run()
+        self.assertEqual(proc.call_args[0][0], [self.sc, 'org.apache.spark.deploy.yarn.Client', '--jar', job.jar(), '--class', job.job_class(),
+                                                '--num-workers', '2', '--master-memory', '1g', '--worker-memory', '1g'])
+
+    @with_config({'spark': {'hadoop-conf-dir': hcd, 'yarn-conf-dir': ycd, 'spark-jar': sj, 'spark-class': sc}})
+    @patch('luigi.contrib.spark.tempfile.TemporaryFile')
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_handle_failed_job(self, proc, file):
+        proc.return_value.returncode = 1
+        file.return_value = BytesIO(b'stderr')
+        try:
+            job = TestSparkJob()
+            job.run()
+        except SparkJobError as e:
+            self.assertEqual(e.err, 'stderr')
+            self.assertTrue('STDERR: stderr' in six.text_type(e))
+        else:
+            self.fail("Should have thrown SparkJobError")
+
+
+class Spark1xTest(unittest.TestCase):
+    ss = 'ss-stub'
+
+    @with_config({'spark': {'spark-submit': ss}})
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_run(self, proc):
+        setup_run_process(proc)
+        job = TestSpark1xJob()
+        job.run()
+        self.assertEqual(proc.call_args[0][0], [self.ss, '--master', 'yarn-client', '--class', job.job_class(), job.jar()])
+
+    @with_config({'spark': {'spark-submit': ss}})
+    @patch('luigi.contrib.spark.tempfile.TemporaryFile')
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_handle_failed_job(self, proc, file):
+        proc.return_value.returncode = 1
+        file.return_value = BytesIO(b'stderr')
+        try:
+            job = TestSpark1xJob()
+            job.run()
+        except SparkJobError as e:
+            self.assertEqual(e.err, 'stderr')
+            self.assertTrue('STDERR: stderr' in six.text_type(e))
+        else:
+            self.fail("Should have thrown SparkJobError")
+
+
 class PySpark1xTest(unittest.TestCase):
     ss = 'ss-stub'
 
     @with_config({'spark': {'spark-submit': ss}})
-    @patch('subprocess.Popen')
-    def test_run(self, mock):
-        arglist_result = []
-
-        def Popen_fake(arglist, stdout=None, stderr=None, env=None,
-                       close_fds=True):
-            arglist_result.append(arglist)
-
-            class P(object):
-
-                def wait(self):
-                    pass
-
-                def poll(self):
-                    return 0
-
-                def communicate(self):
-                    return 'end'
-
-            p = P()
-            p.returncode = 0
-            p.stderr = StringIO()
-            p.stdout = StringIO()
-            return p
-
-        h, p = luigi.hdfs.HdfsTarget, subprocess.Popen
-        luigi.hdfs.HdfsTarget, subprocess.Popen = MockTarget, Popen_fake
-        try:
-            MockTarget.move = lambda *args, **kwargs: None
-            job = TestPySpark1xJob()
-            job.run()
-            self.assertEqual(len(arglist_result), 1)
-            self.assertEqual(list(arglist_result[0])[0:6], [self.ss, '--master', 'yarn-client', job.program()])
-        finally:
-            luigi.hdfs.HdfsTarget, subprocess.Popen = h, p  # restore
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_run(self, proc):
+        setup_run_process(proc)
+        job = TestPySpark1xJob()
+        job.run()
+        self.assertEqual(proc.call_args[0][0], [self.ss, '--master', 'yarn-client', job.program()])
 
     @with_config({'spark': {'spark-submit': ss}})
-    def test_handle_failed_job(self):
-        def Popen_fake(arglist, stdout=None, stderr=None, env=None,
-                       close_fds=True):
-            class P(object):
-
-                def wait(self):
-                    pass
-
-                def poll(self):
-                    return 1
-
-                def communicate(self):
-                    return 'end'
-
-            p = P()
-            p.returncode = 1
-            if stdout == subprocess.PIPE:
-                p.stdout = StringIO('stdout')
-            else:
-                stdout.write(b'stdout')
-            if stderr == subprocess.PIPE:
-                p.stderr = StringIO('stderr')
-            else:
-                stderr.write(b'stderr')
-            return p
-
-        p = subprocess.Popen
-        subprocess.Popen = Popen_fake
+    @patch('luigi.contrib.spark.tempfile.TemporaryFile')
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_handle_failed_job(self, proc, file):
+        proc.return_value.returncode = 1
+        file.return_value = BytesIO(b'stderr')
         try:
             job = TestPySpark1xJob()
             job.run()
         except SparkJobError as e:
             self.assertEqual(e.err, 'stderr')
+            self.assertTrue('STDERR: stderr' in six.text_type(e))
         else:
             self.fail("Should have thrown SparkJobError")
-        finally:
-            subprocess.Popen = p
