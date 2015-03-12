@@ -75,6 +75,7 @@
                         <div class="span2">
                             <a href="#{{taskId}}" class="btn btn-info btn-small" data-action="drawGraph">Dependency Graph</a>
                             {{#error}}<a class="btn btn-primary btn-small error-trace-button" data-task-id="{{taskId}}">Show Error Trace</a>{{/error}}
+                            {{#re_enable}}<a class="btn btn-warning btn-small re-enable-button" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
                         </div>
                     </div>
                     {{/value}}
@@ -114,6 +115,7 @@
                     <div class="span2">
                         <a href="#{{taskId}}" class="btn btn-info btn-small" data-action="drawGraph">Dependency Graph</a>
                         {{#error}}<a class="btn btn-primary btn-small error-trace-button" data-task-id="{{taskId}}">Show Error Trace</a>{{/error}}
+                        {{#re_enable}}<a class="btn btn-warning btn-small re-enable-button" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
                     </div>
                 </div>
                 {{/tasks}}

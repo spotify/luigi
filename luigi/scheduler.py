@@ -750,6 +750,8 @@ class CentralPlannerScheduler(Scheduler):
             'priority': task.priority,
             'resources': task.resources,
         }
+        if task.status == DISABLED:
+            ret['re_enable_able'] = task.scheduler_disable_time is not None
         if include_deps:
             ret['deps'] = list(task.deps)
         return ret
