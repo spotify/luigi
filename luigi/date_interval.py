@@ -129,7 +129,7 @@ class DateInterval(object):
             raise TypeError('Date interval type mismatch')
         return (self.date_a, self.date_b) < (other.date_a, other.date_b)
 
-    def __lte__(self, other):
+    def __le__(self, other):
         if not isinstance(self, type(other)):
             raise TypeError('Date interval type mismatch')
         return (self.date_a, self.date_b) <= (other.date_a, other.date_b)
@@ -139,7 +139,7 @@ class DateInterval(object):
             raise TypeError('Date interval type mismatch')
         return (self.date_a, self.date_b) > (other.date_a, other.date_b)
 
-    def __gte__(self, other):
+    def __ge__(self, other):
         if not isinstance(self, type(other)):
             raise TypeError('Date interval type mismatch')
         return (self.date_a, self.date_b) >= (other.date_a, other.date_b)
