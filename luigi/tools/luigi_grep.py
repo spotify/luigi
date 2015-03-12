@@ -2,10 +2,10 @@
 
 import argparse
 import json
-import urllib2
 from collections import defaultdict
 
 from luigi import six
+from luigi.six.moves.urllib.request import urlopen
 
 
 class LuigiGrep(object):
@@ -21,8 +21,8 @@ class LuigiGrep(object):
     def _fetch_json(self):
         """Returns the json representation of the dep graph"""
         print("Fetching from url: " + self.graph_url)
-        resp = urllib2.urlopen(self.graph_url).read()
-        return json.loads(resp)
+        resp = urlopen(self.graph_url).read()
+        return json.loads(resp.decode('utf-8'))
 
     def _build_results(self, jobs, job):
         job_info = jobs[job]
