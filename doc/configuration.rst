@@ -446,16 +446,17 @@ worker-disconnect-delay
 [spark]
 -------
 
-Parameters controlling the default execution of ``SparkSubmitTask`` and ``PySparkTask``:
+Parameters controlling the default execution of :py:class:`~luigi.contrib.spark.SparkSubmitTask` and :py:class:`~luigi.contrib.spark.PySparkTask`:
 
 .. deprecated:: 1.1.1
-   ``SparkJob``, ``Spark1xJob`` and ``PySpark1xJob`` are deprecated. Please use ``SparkSubmitTask`` or ``PySparkTask``.
+   :py:class:`~luigi.contrib.spark.SparkJob`, :py:class:`~luigi.contrib.spark.Spark1xJob` and :py:class:`~luigi.contrib.spark.PySpark1xJob`
+    are deprecated. Please use :py:class:`~luigi.contrib.spark.SparkSubmitTask` or :py:class:`~luigi.contrib.spark.PySparkTask`.
 
 spark-submit
   Command to run in order to submit spark jobs. Default: spark-submit
 
 master
-  Master url to use for spark-submit. Example: local[*]. Default: Spark default (Prior to 1.1.0: yarn-client)
+  Master url to use for spark-submit. Example: local[*], spark://masterhost:7077. Default: Spark default (Prior to 1.1.1: yarn-client)
 
 deploy-mode
     Whether to launch the driver programs locally ("client") or on one of the worker machines inside the cluster ("cluster"). Default: Spark default
