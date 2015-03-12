@@ -110,6 +110,13 @@ class WordFreqJob(HadoopJobTask):
     def output(self):
         return self.get_output('luigitest-2')
 
+    def extra_files(self):
+        fn = os.listdir('.')[0]  # Just return some file, doesn't matter which
+        return [(fn, 'my_dir/my_file')]
+
+    def init_remote(self):
+        f = open('my_dir/my_file')  # make sure it exists
+
 
 class MapOnlyJob(HadoopJobTask):
 

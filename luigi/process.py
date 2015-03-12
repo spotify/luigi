@@ -44,7 +44,7 @@ def check_pid(pidfile):
 def write_pid(pidfile):
     server_logger.info("Writing pid file")
     piddir = os.path.dirname(pidfile)
-    if not os.path.exists(piddir):
+    if piddir != '' and not os.path.exists(piddir):
         os.makedirs(piddir)
 
     with open(pidfile, 'w') as fobj:
