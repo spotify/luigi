@@ -42,6 +42,7 @@ data processing, like `Hive <http://hive.apache.org/>`__,
 replace these. Instead it helps you stitch many tasks together, where
 each task can be a `Hive query <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.hive.html>`__,
 a `Hadoop job in Java <http://luigi.readthedocs.org/en/latest/api/luigi.hadoop_jar.html>`_,
+a  `Spark job in Scala or Python <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.spark.html>`_
 a Python snippet,
 `dumping a table <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.sqla.html>`_
 from a database, or anything else. It's easy to build up
