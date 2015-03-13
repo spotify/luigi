@@ -42,8 +42,6 @@ while test $# -gt 0; do
     esac
 done
 
-HADOOP_HOME=/tmp/hadoop-${HADOOP_DISTRO}
-
 if $ONLY_DOWNLOAD && $ONLY_EXTRACT; then
     echo "Both only-download and only-extract specified - abort" >&2
     exit 1
@@ -60,7 +58,7 @@ else
     exit 1
 fi
 
-if ! $ONLY_EXTRACT; then
+if ! $ONLY_EXTRACT && [ ! -e ${HADOOP_HOME}/hadoop.tar.gz ] ; then
     echo "Downloading Hadoop from $URL to ${HADOOP_HOME}/hadoop.tar.gz"
     curl -z ${HADOOP_HOME}/hadoop.tar.gz -o ${HADOOP_HOME}/hadoop.tar.gz -L $URL
 
