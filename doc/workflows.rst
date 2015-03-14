@@ -62,3 +62,19 @@ you probably want to make the date a parameter of the class.
 
     .. figure:: task_parameters.png
        :alt: Tasks with parameters
+
+Dependencies
+~~~~~~~~~~~~
+
+Using tasks, targets, and parameters, Luigi lets you express arbitrary dependencies in *code*, rather than using some kind of awkward config DSL.
+This is really useful because in the real world, dependencies are often very messy.
+For instance, some examples of the dependencies you might encounter:
+
+    .. figure:: parameters_date_algebra.png
+       :alt: Dependencies with date algebra
+
+    .. figure:: parameters_recursion.png
+       :alt: Dependencies with recursion
+
+    .. figure:: parameters_enum.png
+       :alt: Dependencies with enums

@@ -1,27 +1,15 @@
-.. figure:: https://raw.githubusercontent.com/spotify/luigi/master/doc/luigi.png
+.. figure:: luigi.png
    :alt: Luigi Logo
    :align: center
 
 About Luigi
 -----------
 
-.. image:: https://img.shields.io/travis/spotify/luigi/master.svg?style=flat
-    :target: https://travis-ci.org/spotify/luigi
 
-.. image:: https://img.shields.io/coveralls/spotify/luigi/master.svg?style=flat
-    :target: https://coveralls.io/r/spotify/luigi?branch=master
 
-.. image:: https://landscape.io/github/spotify/luigi/master/landscape.svg?style=flat
-   :target: https://landscape.io/github/spotify/luigi/master
 
-.. image:: https://img.shields.io/pypi/dm/luigi.svg?style=flat
-   :target: https://pypi.python.org/pypi/luigi
 
-.. image:: https://img.shields.io/pypi/l/luigi.svg?style=flat
-   :target: https://pypi.python.org/pypi/luigi
 
-.. image:: https://pypip.in/py_versions/luigi/badge.svg?style=flat
-   :target: https://pypi.python.org/pypi/luigi
 
 Luigi is a Python package that helps you build complex pipelines of
 batch jobs. It handles dependency resolution, workflow management,
@@ -74,7 +62,7 @@ completed whereas yellow tasks are yet to be run. Most of these tasks
 are Hadoop jobs, but there are also some things that run locally and
 build up data files.
 
-.. figure:: https://raw.githubusercontent.com/spotify/luigi/master/doc/user_recs.png
+.. figure:: user_recs.png
    :alt: Dependency graph
 
 Background
@@ -117,8 +105,8 @@ Getting Started
 ---------------
 
 Take a look at the `Example workflow
-<http://luigi.readthedocs.org/en/latest/example_top_artists.html>`_ and the `API overview
-<http://luigi.readthedocs.org/en/latest/api_overview.html>`_ which explains some of
+<http://luigi.readthedocs.org/en/latest/example_top_artists.html>`_ and `Building workflows
+<http://luigi.readthedocs.org/en/latest/workflows.html>`_ which explains some of
 the most important concepts.
 
 Who uses Luigi?
