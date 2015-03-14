@@ -17,6 +17,9 @@ There is no central process that automatically triggers job.
 This model may seem limited, but
 we believe that it makes things far more intuitive and easy to understand.
 
+.. figure:: user_recs.png
+   :alt: Dependency graph in the visualizer
+
 The luigid server
 ~~~~~~~~~~~~~~~~~
 

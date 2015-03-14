@@ -1,15 +1,27 @@
-.. figure:: luigi.png
+.. figure:: https://raw.githubusercontent.com/spotify/luigi/master/doc/luigi.png
    :alt: Luigi Logo
    :align: center
 
 About Luigi
 -----------
 
-
-
-
-
-
+.. image:: https://img.shields.io/travis/spotify/luigi/master.svg?style=flat
+    :target: https://travis-ci.org/spotify/luigi
+ 
+.. image:: https://img.shields.io/coveralls/spotify/luigi/master.svg?style=flat
+    :target: https://coveralls.io/r/spotify/luigi?branch=master
+ 
+.. image:: https://landscape.io/github/spotify/luigi/master/landscape.svg?style=flat
+   :target: https://landscape.io/github/spotify/luigi/master
+ 
+.. image:: https://img.shields.io/pypi/dm/luigi.svg?style=flat
+   :target: https://pypi.python.org/pypi/luigi
+ 
+.. image:: https://img.shields.io/pypi/l/luigi.svg?style=flat
+   :target: https://pypi.python.org/pypi/luigi
+ 
+.. image:: https://pypip.in/py_versions/luigi/badge.svg?style=flat
+   :target: https://pypi.python.org/pypi/luigi
 
 Luigi is a Python package that helps you build complex pipelines of
 batch jobs. It handles dependency resolution, workflow management,
@@ -62,7 +74,7 @@ completed whereas yellow tasks are yet to be run. Most of these tasks
 are Hadoop jobs, but there are also some things that run locally and
 build up data files.
 
-.. figure:: user_recs.png
+.. figure:: https://raw.githubusercontent.com/spotify/luigi/master/doc/user_recs.png
    :alt: Dependency graph
 
 Background
