@@ -20,7 +20,6 @@ Table of Contents
    luigi_patterns.rst
    configuration.rst
    more_info.rst
-   contributing.rst
 
 API Reference
 -------------

@@ -39,7 +39,7 @@ you want to use a specific section in the config.
 
 
 Configurable options
-====================
+--------------------
 
 Luigi comes with a lot of configurable options. Below, we describe each
 section and the parameters available within it.

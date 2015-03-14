@@ -10,8 +10,7 @@ the :class:`~luigi.parameter.Parameter` class is an important concept that gover
 Target
 ~~~~~~
 
-Broadly speaking,
-the Target class corresponds to a file on a disk,
+The :py:class:`~luigi.target.Target` class corresponds to a file on a disk,
 a file on HDFS or some kind of a checkpoint, like an entry in a database.
 Actually, the only method that Targets have to implement is the *exists*
 method which returns True if and only if the Target exists.
@@ -34,6 +33,22 @@ The :class:`~luigi.task.Task` class is a bit more conceptually interesting becau
 where computation is done.
 There are a few methods that can be implemented to alter its behavior,
 most notably :func:`~luigi.task.Task.run`, :func:`~luigi.task.Task.output` and :func:`~luigi.task.Task.requires`.
+
+Tasks consume Targets that were created by some other task. They usually also output targets:
+
+    .. figure:: task_with_targets.png
+       :alt: Task and targets
+
+You can define dependencies between *Tasks* using the Task.requires_ method.
+
+    .. figure:: tasks_with_dependencies.png
+       :alt: Tasks and dependencies
+
+Each task defines its outputs using the :py:meth:`~luigi.task.Task.output` method.
+Additionally, there is a helper method :py:meth:`~luigi.task.Task.input` that returns the corresponding Target classes for each Task dependency.
+
+    .. figure:: tasks_input_output_requires.png
+       :alt: Tasks and methods
 
 .. _Parameter:
 
