@@ -772,4 +772,7 @@ class TestCliMisc(MiniClusterTestCase, _MiscOperationsMixin):
 @attr('minicluster')
 class TestSnakebiteMisc(MiniClusterTestCase, _MiscOperationsMixin):
     def get_client(self):
+        if six.PY3:
+            raise unittest.SkipTest("snakebite doesn't work on Python yet.")
+
         return luigi.hdfs.SnakebiteHdfsClient()
