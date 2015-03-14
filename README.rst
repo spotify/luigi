@@ -121,6 +121,12 @@ Take a look at the `Example workflow
 <http://luigi.readthedocs.org/en/latest/workflows.html>`_ which explains some of
 the most important concepts.
 
+Documentation
+-------------
+
+Full `documentation <http://luigi.readthedocs.org/>`_ is available at Read the Docs, including the
+`Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_ (Read the Docs)
+
 Who uses Luigi?
 ---------------
 
@@ -147,7 +153,6 @@ Getting Help
 External links
 --------------
 
-* `Documentation <http://luigi.readthedocs.org/>`_, including the `Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_ (Read the Docs)
 * `Mailing List <https://groups.google.com/d/forum/luigi-user/>`_ (Google Groups)
 * `Releases <https://pypi.python.org/pypi/luigi>`_ (PyPi)
 * `Source code <https://github.com/spotify/luigi>`_ (Github)
