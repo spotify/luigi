@@ -12,7 +12,9 @@ Table of Contents
    :maxdepth: 2
 
    example_top_artists.rst
-   api_overview.rst
+   workflows.rst
+   tasks.rst
+   parameters.rst
    command_line.rst
    programmatic_execution.rst
    central_scheduler.rst

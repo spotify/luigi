@@ -17,7 +17,7 @@
 """
 The abstract :py:class:`Task` class.
 It is a central concept of Luigi and represents the state of the workflow.
-See :doc:`/api_overview` for an overview.
+See :doc:`/tasks` for an overview.
 """
 
 try:
