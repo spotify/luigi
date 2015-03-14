@@ -922,18 +922,3 @@ class JobTask(BaseHadoopJobTask):
         """
         for output in outputs:
             print("\t".join(map(repr, output)), file=stdout)
-
-
-def pickle_reader(job, input_stream):
-    def decode(item):
-        return pickle.loads(binascii.a2b_base64(item))
-    for line in input_stream:
-        items = line.split('\t')
-        yield list(map(decode, items))
-
-
-def pickle_writer(job, outputs, stdout):
-    def encode(item):
-        return binascii.b2a_base64(pickle.dumps(item))[:-1]  # remove trailing newline
-    for keyval in outputs:
-        print("\t".join(map(encode, keyval)), file=stdout)

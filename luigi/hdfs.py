@@ -435,6 +435,8 @@ class SnakebiteHdfsClient(HdfsClient):
         :type recursive: boolean, default is False
         :return: list of all changed items
         """
+        if type(permissions) == str:
+            permissions = int(permissions, 8)
         return list(self.get_bite().chmod(list_path(path),
                                           permissions, recursive))
 
@@ -471,8 +473,10 @@ class SnakebiteHdfsClient(HdfsClient):
         :return: dictionary with content_size, dir_count and file_count keys
         """
         try:
-            (dir_count, file_count, content_size, ppath) = \
-                self.get_bite().count(list_path(path)).next().split()
+            res = self.get_bite().count(list_path(path)).next()
+            dir_count = res['directoryCount']
+            file_count = res['fileCount']
+            content_size = res['spaceConsumed']
         except StopIteration:
             dir_count = file_count = content_size = 0
         return {'content_size': content_size, 'dir_count': dir_count,
