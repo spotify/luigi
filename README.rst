@@ -124,8 +124,8 @@ the most important concepts.
 Documentation
 -------------
 
-Full `documentation <http://luigi.readthedocs.org/>`_ is available at Read the Docs, including the
-`Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_ (Read the Docs)
+`Full documentation <http://luigi.readthedocs.org/>`_ is available at Read the Docs, including the
+`Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_.
 
 Who uses Luigi?
 ---------------
