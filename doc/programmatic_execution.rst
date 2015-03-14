@@ -1,5 +1,5 @@
-Programmatically Executing a Luigi Workflow
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Programmatic Execution
+^^^^^^^^^^^^^^^^^^^^^^
 
 As seen above, command line integration is achieved by simply adding
 
