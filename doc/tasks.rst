@@ -4,6 +4,11 @@ Tasks
 Tasks are where the execution takes place.
 Tasks depend on each other and output targets.
 
+An outline of how a task can look like:
+
+    .. figure:: task_breakdown.png
+       :alt: Task breakdown
+
 .. _Task.requires:
 
 Task.requires

@@ -1,11 +1,18 @@
 Execution Model
 ---------------
 
-Luigi has a quite simple model.
+Luigi has a quite simple model for execution and triggering.
+
+Workers and task execution
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The most important aspect is that *no execution is transferred*.
 When you run a Luigi workflow,
 the worker schedules all tasks, and
 also executes the tasks within the process.
+
+    .. figure:: execution_model.png
+       :alt: Execution model
 
 The benefit of this scheme is that
 it's super easy to debug since all execution takes place in the process.
@@ -15,21 +22,31 @@ you typically run the Luigi workflow from the command line,
 whereas when you deploy it,
 you can trigger it using crontab or any other scheduler.
 
-The downside is that Luigi doesn't give you scalability for free, but
-we think that should really be up to each Task to implement rather than
-relying on Luigi as a scalability engine.
-Another downside is that you have to rely on an external scheduler
-such as crontab to actually trigger the workflows.
+The downside is that Luigi doesn't give you scalability for free.
+In practice this is not a problem until you start running thousands of tasks.
 
 Isn't the point of Luigi to automate and schedule these workflows?
-Not necessarily.
-Luigi helps you *encode the dependencies* of tasks and
-build up chains.
+To some extent.
+Luigi helps you *encode the dependencies* of tasks and build up chains.
 Furthermore, Luigi's scheduler makes sure that there's centralized view of the dependency graph and
 that the same job will not be executed by multiple workers simultaneously.
 
-This means that scheduling a complex workflow is fairly trivial using eg. crontab.
-If you have an external data dump that arrives every day and that your workflow depends on it,
+Triggering tasks
+~~~~~~~~~~~~~~~~
+
+Luigi does not include its own triggering, so you have to rely on an external scheduler
+such as crontab to actually trigger the workflows.
+
+In practice it's not a big hurdle because Luigi avoids all the mess typically caused by it.
+Scheduling a complex workflow is fairly trivial using eg. crontab.
+
+In the future, Luigi might implement its own triggering.
+The dependency on crontab (or any external triggering mechanism) is a bit awkward and it would be nice to avoid.
+
+Trigger example
+^^^^^^^^^^^^^^^
+
+For instance, if you have an external data dump that arrives every day and that your workflow depends on it,
 you write a workflow that depends on this data dump.
 Crontab can then trigger this workflow *every minute* to check if the data has arrived.
 If it has, it will run the full dependency graph.
