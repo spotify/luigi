@@ -45,7 +45,7 @@ class Register(abc.ABCMeta):
     _default_namespace = None
     _reg = []
     AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
-    """If this value is returned by :py:meth:`get_reg` then there is an
+    """If this value is returned by :py:meth:`__get_reg` then there is an
     ambiguous task name (two :py:class:`Task` have the same name). This denotes
     an error."""
 
@@ -75,7 +75,7 @@ class Register(abc.ABCMeta):
         def instantiate():
             return super(Register, cls).__call__(*args, **kwargs)
 
-        h = Register.__instance_cache
+        h = cls.__instance_cache
 
         if h is None:  # disabled
             return instantiate()
@@ -101,14 +101,14 @@ class Register(abc.ABCMeta):
         """
         Clear/Reset the instance cache.
         """
-        Register.__instance_cache = {}
+        cls.__instance_cache = {}
 
     @classmethod
     def disable_instance_cache(cls):
         """
         Disables the instance cache.
         """
-        Register.__instance_cache = None
+        cls.__instance_cache = None
 
     @property
     def task_family(cls):
@@ -124,7 +124,7 @@ class Register(abc.ABCMeta):
             return "%s.%s" % (cls.task_namespace, cls.__name__)
 
     @classmethod
-    def get_reg(cls, include_config_without_section=False):
+    def __get_reg(cls, include_config_without_section=False):
         """Return all of the registered classes.
 
         :return:  an ``collections.OrderedDict`` of task_family -> class
@@ -152,22 +152,29 @@ class Register(abc.ABCMeta):
         return reg
 
     @classmethod
+    def task_names(cls):
+        """
+        List of task names as strings
+        """
+        return sorted(cls.__get_reg().keys())
+
+    @classmethod
     def tasks_str(cls):
         """
         Human-readable register contents dump.
         """
-        return repr(sorted(Register.get_reg().keys()))
+        return ','.join(cls.task_names())
 
     @classmethod
     def get_task_cls(cls, name):
         """
         Returns an unambiguous class or raises an exception.
         """
-        task_cls = Register.get_reg().get(name)
+        task_cls = cls.__get_reg().get(name)
         if not task_cls:
-            raise TaskClassException('Task %r not found. Candidates are: %s' % (name, Register.tasks_str()))
+            raise TaskClassException('Task %r not found. Candidates are: %s' % (name, cls.tasks_str()))
 
-        if task_cls == Register.AMBIGUOUS_CLASS:
+        if task_cls == cls.AMBIGUOUS_CLASS:
             raise TaskClassException('Task %r is ambiguous' % name)
         return task_cls
 
@@ -178,7 +185,7 @@ class Register(abc.ABCMeta):
 
         :return: a ``dict`` of parameter name -> parameter.
         """
-        for task_name, task_cls in six.iteritems(cls.get_reg(include_config_without_section=True)):
+        for task_name, task_cls in six.iteritems(cls.__get_reg(include_config_without_section=True)):
             if task_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in task_cls.get_params():

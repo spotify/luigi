@@ -264,7 +264,7 @@ class ArgParseInterface(Interface):
             args = parser.parse_args(args=cmdline_args)
             task_cls = main_task_cls
         else:
-            task_names = sorted(Register.get_reg().keys())
+            task_names = Register.task_names()
 
             # Parse global arguments and pull out the task name.
             # We used to do this using subparsers+command, but some issues with
