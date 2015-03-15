@@ -323,7 +323,9 @@ class Parameter(object):
 
         description = []
         description.append('%s.%s' % (task_name, param_name))
-        if self.description:
+        if glob:
+            description.append('for all instances of class %s' % task_name)
+        elif self.description:
             description.append(self.description)
         if self.has_value:
             description.append(" [default: %s]" % (self.value,))

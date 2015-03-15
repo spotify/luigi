@@ -16,12 +16,16 @@
 #
 from __future__ import print_function
 
+import os
+import sys
+sys.path.insert(0, os.getcwd())  # Something is weird with PYTHONPATH, so we need to do this
+
 try:
     import ConfigParser
 except ImportError:
     import configparser as ConfigParser
 import logging
-import os
+import mock
 import subprocess
 from helpers import unittest
 import warnings
@@ -29,7 +33,6 @@ import warnings
 from luigi import six
 
 import luigi
-import mock
 from luigi.mock import MockTarget
 
 
@@ -168,18 +171,11 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         env['PYTHONPATH'] = env.get('PYTHONPATH', '') + ':.:test'
         p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         stdout, stderr = p.communicate()  # Unfortunately subprocess.check_output is 2.7+
-        self.assertEquals(p.returncode, 0)
-        return stdout, stderr
+        return p.returncode, stdout, stderr
 
     def test_bin_luigi(self):
         t = luigi.LocalTarget(is_tmp=True)
-        args = ['./bin/luigi', '--module', 'cmdline_test', 'WriteToFile', '--filename', t.path, '--local-scheduler', '--no-lock']
-        self._run_cmdline(args)
-        self.assertTrue(t.exists())
-
-    def test_console_script_luigi(self):
-        t = luigi.LocalTarget(is_tmp=True)
-        args = ['luigi', '--module', 'cmdline_test', 'WriteToFile', '--filename', t.path, '--local-scheduler', '--no-lock']
+        args = ['./bin/luigi', '--module', 'test.cmdline_test', 'WriteToFile', '--filename', t.path, '--local-scheduler', '--no-lock']
         self._run_cmdline(args)
         self.assertTrue(t.exists())
 
@@ -189,14 +185,25 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         self._run_cmdline(args)
         self.assertTrue(t.exists())
 
-    def test_bin_luigi_help(self):
-        help_str = self._run_cmdline(['python', 'test/cmdline_test.py', 'FooBaseClass', '--help'])
-        # TODO(erikbern): we need to resolve this and fix this test!
-        # self.assertTrue(help_str.index('--x') != -1)
-
-    def test_bin_luigi_new_style_param_help(self):
-        stdout, stderr = self._run_cmdline(['python', 'test/cmdline_test.py', '--help'])
+    def test_direct_python_help(self):
+        returncode, stdout, stderr = self._run_cmdline(['python', 'test/cmdline_test.py', '--help'])
         self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
+        self.assertFalse(stdout.find(b'--x') != -1)
+
+    def test_direct_python_help_class(self):
+        returncode, stdout, stderr = self._run_cmdline(['python', 'test/cmdline_test.py', 'FooBaseClass', '--help'])
+        self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
+        self.assertTrue(stdout.find(b'--x') != -1)
+
+    def test_bin_luigi_help(self):
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'test.cmdline_test', '--help'])
+        self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
+        self.assertFalse(stdout.find(b'--x') != -1)
+
+    def test_bin_luigi_help_class(self):
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'test.cmdline_test', 'FooBaseClass', '--help'])
+        self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
+        self.assertTrue(stdout.find(b'--x') != -1)
 
 
 class NewStyleParameters822Test(unittest.TestCase):
@@ -220,4 +227,5 @@ class NewStyleParameters822Test(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    # Needed for one of the tests
     luigi.run()
