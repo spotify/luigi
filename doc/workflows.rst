@@ -16,13 +16,21 @@ Actually, the only method that Targets have to implement is the *exists*
 method which returns True if and only if the Target exists.
 
 In practice, implementing Target subclasses is rarely needed.
-You can probably get pretty far with the :class:`~luigi.file.LocalTarget` and :class:`~luigi.hdfs.HdfsTarget`
-classes that are available out of the box.
-These directly map to a file on the local drive or a file in HDFS, respectively.
+Luigi comes a toolbox of several useful Targets.
+In particular, :class:`~luigi.file.LocalTarget` and :class:`~luigi.hdfs.HdfsTarget`,
+but there is also support for
+:class:`S3 luigi.s3.S3Target`,
+:class:`SSH luigi.contrib.ssh.RemoteTarget`,
+:class:`FTP luigi.ftp.RemoteTarget`,
+:class:`MySQL luigi.contrib.mysqldb.MySqlTarget`,
+:class:`Redshift luigi.redshift.RedshiftTarget`, and several more.
+
+Most of these targets, are file system-like.
+For instance, :class:`~luigi.file.LocalTarget` and :class:`~luigi.hdfs.HdfsTarget` map to a file on the local drive or a file in HDFS.
 In addition these also wrap the underlying operations to make them atomic.
 They both implement the :func:`~luigi.file.LocalTarget.open` method which returns a stream object that
 could be read (``mode='r'``) from or written to (``mode='w'``).
-Both :class:`~luigi.file.LocalTarget` and :class:`~luigi.hdfs.HdfsTarget` also optionally take a format parameter.
+
 Luigi comes with Gzip support by providing ``format=format.Gzip``.
 Adding support for other formats is pretty simple.
 
@@ -59,6 +67,7 @@ The Task class corresponds to some type of job that is run, but in
 general you want to allow some form of parametrization of it.
 For instance, if your Task class runs a Hadoop job to create a report every night,
 you probably want to make the date a parameter of the class.
+See `/parameters` for more info.
 
     .. figure:: task_parameters.png
        :alt: Tasks with parameters
@@ -78,3 +87,5 @@ For instance, some examples of the dependencies you might encounter:
 
     .. figure:: parameters_enum.png
        :alt: Dependencies with enums
+
+(These diagrams are from a `Luigi presentation in late 2014 at NYC Data Science meetup <www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`)

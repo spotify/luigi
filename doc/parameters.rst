@@ -30,6 +30,11 @@ i.e.
 will return the same date that the object was constructed with.
 Same goes if you invoke Luigi on the command line.
 
+.. _Parameter-instance-caching:
+
+Instance caching
+^^^^^^^^^^^^^^^^
+
 Tasks are uniquely identified by their class name and values of their
 parameters.
 In fact, within the same worker, two tasks of the same class with
@@ -55,7 +60,10 @@ parameters of the same values are not just equal, but the same instance:
     >>> c is d
     True
 
-However, if a parameter is created with ``significant=False``,
+Insignificant parameters
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+If a parameter is created with ``significant=False``,
 it is ignored as far as the Task signature is concerned.
 Tasks created with only insignificant parameters differing have the same signature but
 are not the same instance:
@@ -80,11 +88,23 @@ are not the same instance:
     >>> hash(c) == hash(d)
     True
 
+Parameter types
+^^^^^^^^^^^^^^^
+
+In the examples above, the *type* of the parameter is determined by using different
+subclasses of :class:`~luigi.parameter.Parameter`. There are a few of them, like
+:class:`~luigi.parameter.DateParameter`,
+:class:`~luigi.parameter.DateIntervalParameter`,
+:class:`~luigi.parameter.IntParameter`,
+:class:`~luigi.parameter.FloatParameter`, etc.
+
 Python is not a strongly typed language and you don't have to specify the types
 of any of your parameters.
 You can simply use the base class :class:`~luigi.parameter.Parameter` if you don't care.
-In fact, the reason :class:`~luigi.parameter.DateParameter` et al exist is just in order to
-support command line interaction and make sure to convert the input to
+
+The reason you would use a subclass like :class:`~luigi.parameter.DateParameter` 
+is that Luigi needs to know its type for the command line interaction.
+That's how it knows how to convert a string provided on the command line to
 the corresponding type (i.e. datetime.date instead of a string).
 
 Setting parameter value for other classes
@@ -119,6 +139,9 @@ For instance, you can put this in the config:
 
 Just as in the previous case, this will set the value of ``TaskA.x`` to 45 on the *class* level.
 And likewise, it is still possible to override it inside Python if you instantiate ``TaskA(x=44)``.
+
+Parameter resolution order
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Parameters are resolved in the following order of decreasing priority:
 

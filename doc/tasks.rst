@@ -102,6 +102,7 @@ An example:
                 g.write('%s\n', ''.join(reversed(line.strip().split()))
             g.close() # needed because files are atomic
 
+
 .. _Task.input:
 
 Task.input
@@ -258,3 +259,4 @@ In addition to the stuff mentioned above,
 Luigi also does some metaclass logic so that
 if e.g. ``DailyReport(datetime.date(2012, 5, 10))`` is instantiated twice in the code,
 it will in fact result in the same object.
+See :ref:`Parameter-instance-caching` for more info

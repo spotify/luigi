@@ -20,7 +20,7 @@ We learned a lot from our mistakes and some design decisions include:
 -  A web server that renders the dependency graph and does locking etc for free.
 -  Trivial to extend with new file systems, file formats and job types.
    You can easily write jobs that inserts a Tokyo Cabinet into Cassandra.
-   Adding broad support S3, MySQL or Hive should be a stroll in the park.
+   Adding support for new systems is generally not very hard.
    (Feel free to send us a patch when you're done!)
 -  Date algebra included.
 -  Lots of unit tests of the most basic stuff
@@ -32,12 +32,14 @@ It wouldn't be fair not to mention some limitations with the current design:
 -  The assumption is that a each task is a sizable chunk of work.
    While you can probably schedule a few thousand jobs,
    it's not meant to scale beyond tens of thousands.
--  Luigi maintains a strict separation between scheduling tasks and running them.
-   Dynamic for-loops and branches are non-trivial to implement.
-   For instance, it's tricky to iterate a numerical computation task until it converges.
+-  Luigi does not support distribution of execution.
+   When you have workers running thousands of jobs daily, this starts to matter,
+   because the worker nodes get overloaded.
+   There are some ways to mitigate this (trigger from many nodes, use resources),
+   but none of them is ideal
+-  Luigi does not come with built-in triggering, and you still need to rely on something like
+   crontab to trigger workflows periodically.
 
-It should actually be noted that all these limitations are not fundamental in any way.
-However, it would take some major refactoring work.
 
 Also it should be mentioned that Luigi is named after the world's second most famous plumber.
 
