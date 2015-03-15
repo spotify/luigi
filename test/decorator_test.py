@@ -365,7 +365,7 @@ class SubtaskTest(unittest.TestCase):
         # Exposes issue where wrapped tasks are registered twice under
         # the same name
         from luigi.task import Register
-        self.assertEqual(Register.get_reg().get('SubtaskDelegator', None), SubtaskDelegator)
+        self.assertEqual(Register.get_task_cls('SubtaskDelegator'), SubtaskDelegator)
 
 
 if __name__ == '__main__':
