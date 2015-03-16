@@ -607,7 +607,8 @@ class Worker(object):
                 subject = 'Luigi: %s' % msg
                 error_message = notifications.wrap_traceback(ex)
                 notifications.send_error_email(subject, error_message)
-                self._scheduler.add_task(self._id, task_id, status=FAILED, runnable=False)
+                self._scheduler.add_task(self._id, task_id, status=FAILED, runnable=False,
+                                         assistant=self._assistant)
                 task_id = None
                 self.run_succeeded = False
 
@@ -697,7 +698,8 @@ class Worker(object):
                                      params=task.to_str_params(),
                                      family=task.task_family,
                                      module=task.task_module,
-                                     new_deps=new_deps)
+                                     new_deps=new_deps,
+                                     assistant=self._assistant)
 
             if status == RUNNING:
                 continue
