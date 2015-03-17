@@ -223,8 +223,8 @@ class PySparkTaskTest(unittest.TestCase):
         sc = spark_context.return_value.__enter__.return_value
 
         def mock_spark_submit(task):
-            from luigi.contrib.pyspark_runner import main
-            main(*task.app_command()[1:])
+            from luigi.contrib.pyspark_runner import PySparkRunner
+            PySparkRunner(*task.app_command()[1:]).run()
             # Check py-package exists
             self.assertTrue(os.path.exists(sc.addPyFile.call_args[0][0]))
 

@@ -238,9 +238,10 @@ class SparkSubmitTask(luigi.Task):
                 while proc.poll() is None:
                     pass
             logger.info(proc.communicate()[0])
+            tmp_stdout.seek(0)
+            stdout = "".join(map(lambda s: s.decode('utf-8'), tmp_stdout.readlines()))
+            logger.info("Spark job stdout:\n{0}".format(stdout))
             if proc.returncode != 0:
-                tmp_stdout.seek(0)
-                stdout = "".join(map(lambda s: s.decode('utf-8'), tmp_stdout.readlines()))
                 tmp_stderr.seek(0)
                 stderr = "".join(map(lambda s: s.decode('utf-8'), tmp_stderr.readlines()))
                 raise SparkJobError('Spark job failed {0}'.format(repr(args)), out=stdout, err=stderr)
@@ -305,12 +306,19 @@ class PySparkTask(SparkSubmitTask):
         if packages:
             return map(lambda s: s.strip(), packages.split(','))
 
+    def setup(self, conf):
+        """
+        Called by the pyspark_runner with a SparkConf instance that will be used to instantiate the SparkContext
+
+        :param conf: SparkConf
+        """
+
     def setup_remote(self, sc):
         self._setup_packages(sc)
 
     def main(self, sc, *args):
         """
-        Called by the pyspark_runner, passing a SparkContext and any arguments returned by ``app_options()``
+        Called by the pyspark_runner with a SparkContext and any arguments returned by ``app_options()``
 
         :param sc: SparkContext
         :param args: arguments list
