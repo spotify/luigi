@@ -25,6 +25,8 @@ except ImportError:
     from ordereddict import OrderedDict
 
 from luigi import six
+import logging
+logger = logging.getLogger('luigi-interface')
 
 
 class TaskClassException(Exception):
