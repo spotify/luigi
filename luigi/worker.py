@@ -552,10 +552,7 @@ class Worker(object):
 
     def _add_worker(self):
         self._worker_info.append(('first_task', self._first_task))
-        try:
-            self._scheduler.add_worker(self._id, self._worker_info)
-        except BaseException:
-            logger.exception('Exception adding worker - scheduler might be running an older version')
+        self._scheduler.add_worker(self._id, self._worker_info)
 
     def _log_remote_tasks(self, running_tasks, n_pending_tasks, n_unique_pending):
         logger.info("Done")
@@ -571,17 +568,10 @@ class Worker(object):
     def _get_work(self):
         logger.debug("Asking scheduler for work...")
         r = self._scheduler.get_work(worker=self._id, host=self.host, assistant=self._assistant)
-        # Support old version of scheduler
-        if isinstance(r, tuple) or isinstance(r, list):
-            n_pending_tasks, task_id = r
-            running_tasks = []
-            n_unique_pending = 0
-        else:
-            n_pending_tasks = r['n_pending_tasks']
-            task_id = r['task_id']
-            running_tasks = r['running_tasks']
-            # support old version of scheduler
-            n_unique_pending = r.get('n_unique_pending', 0)
+        n_pending_tasks = r['n_pending_tasks']
+        task_id = r['task_id']
+        running_tasks = r['running_tasks']
+        n_unique_pending = r['n_unique_pending']
 
         if task_id is not None and task_id not in self._scheduled_tasks:
             logger.info('Did not schedule %s, will load it dynamically', task_id)
