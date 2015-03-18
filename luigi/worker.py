@@ -49,7 +49,8 @@ from luigi.event import Event
 from luigi.interface import load_task
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
 from luigi.target import Target
-from luigi.task import Task, flatten, getpaths, TaskClassException
+from luigi.task import Task, flatten, getpaths, TaskClassException, Config
+from luigi.parameter import FloatParameter, IntParameter, BoolParameter
 
 try:
     import simplejson as json
@@ -266,6 +267,27 @@ def check_complete(task, out_queue):
     out_queue.put((task, is_complete))
 
 
+class worker(Config):
+
+    ping_interval = FloatParameter(default=1.0,
+                                   config_path=dict(section='core', name='retry-delay'))
+    keep_alive = BoolParameter(default=False,
+                               config_path=dict(section='core', name='worker-keep-alive'))
+    count_uniques = BoolParameter(default=False,
+                                  config_path=dict(section='core', name='worker-count-uniques'),
+                                  description='worker-count-uniques means that we will keep a '
+                                  'worker alive only if it has a unique pending task, as '
+                                  'well as having keep-alive true')
+    wait_interval = IntParameter(default=1,
+                                 config_path=dict(section='core', name='worker-wait-interval'))
+    max_reschedules = IntParameter(default=1,
+                                   config_path=dict(section='core', name='worker-max-reschedules'))
+    timeout = IntParameter(default=0,
+                           config_path=dict(section='core', name='worker-timeout'))
+    task_limit = IntParameter(default=None,
+                              config_path=dict(section='core', name='worker-task-limit'))
+
+
 class KeepAliveThread(threading.Thread):
     """
     Periodically tell the scheduler that the worker still lives.
@@ -304,11 +326,7 @@ class Worker(object):
     * asks for stuff to do (pulls it in a loop and runs it)
     """
 
-    def __init__(self, scheduler=None, worker_id=None,
-                 worker_processes=1, ping_interval=None, keep_alive=None,
-                 wait_interval=None, max_reschedules=None, count_uniques=None,
-                 worker_timeout=None, task_limit=None, assistant=False):
-
+    def __init__(self, scheduler=None, worker_id=None, worker_processes=1, assistant=False, **kwargs):
         if scheduler is None:
             scheduler = CentralPlannerScheduler()
 
@@ -318,36 +336,7 @@ class Worker(object):
         if not worker_id:
             worker_id = 'Worker(%s)' % ', '.join(['%s=%s' % (k, v) for k, v in self._worker_info])
 
-        config = configuration.get_config()
-
-        if ping_interval is None:
-            ping_interval = config.getfloat('core', 'worker-ping-interval', 1.0)
-
-        if keep_alive is None:
-            keep_alive = config.getboolean('core', 'worker-keep-alive', False)
-        self.__keep_alive = keep_alive
-
-        # worker-count-uniques means that we will keep a worker alive only if it has a unique
-        # pending task, as well as having keep-alive true
-        if count_uniques is None:
-            count_uniques = config.getboolean('core', 'worker-count-uniques', False)
-        self.__count_uniques = count_uniques
-
-        if wait_interval is None:
-            wait_interval = config.getint('core', 'worker-wait-interval', 1)
-        self.__wait_interval = wait_interval
-
-        if max_reschedules is None:
-            max_reschedules = config.getint('core', 'max-reschedules', 1)
-        self.__max_reschedules = max_reschedules
-
-        if worker_timeout is None:
-            worker_timeout = config.getint('core', 'worker-timeout', 0)
-        self.__worker_timeout = worker_timeout
-
-        if task_limit is None:
-            task_limit = config.getint('core', 'worker-task-limit', None)
-        self.__task_limit = task_limit
+        self._config = worker(**kwargs)
 
         self._id = worker_id
         self._scheduler = scheduler
@@ -363,7 +352,7 @@ class Worker(object):
         self.run_succeeded = True
         self.unfulfilled_counts = collections.defaultdict(int)
 
-        self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id, ping_interval)
+        self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id, self._config.ping_interval)
         self._keep_alive_thread.daemon = True
         self._keep_alive_thread.start()
 
@@ -484,8 +473,8 @@ class Worker(object):
         return self.add_succeeded
 
     def _add(self, task, is_complete):
-        if self.__task_limit is not None and len(self._scheduled_tasks) >= self.__task_limit:
-            logger.warning('Will not schedule %s or any dependencies due to exceeded task-limit of %d', task, self.__task_limit)
+        if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
+            logger.warning('Will not schedule %s or any dependencies due to exceeded task-limit of %d', task, self._config.task_limit)
             return
 
         formatted_traceback = None
@@ -621,11 +610,11 @@ class Worker(object):
         if task.run == NotImplemented:
             p = ExternalTaskProcess(task, self._id, self._task_result_queue,
                                     random_seed=bool(self.worker_processes > 1),
-                                    worker_timeout=self.__worker_timeout)
+                                    worker_timeout=self._config.timeout)
         else:
             p = TaskProcess(task, self._id, self._task_result_queue,
                             random_seed=bool(self.worker_processes > 1),
-                            worker_timeout=self.__worker_timeout)
+                            worker_timeout=self._config.timeout)
 
         self._running_tasks[task_id] = p
 
@@ -670,7 +659,7 @@ class Worker(object):
             try:
                 task_id, status, error_message, missing, new_requirements = (
                     self._task_result_queue.get(
-                        timeout=float(self.__wait_interval)))
+                        timeout=float(self._config.wait_interval)))
             except Queue.Empty:
                 return
 
@@ -710,7 +699,7 @@ class Worker(object):
                 for task_id in missing:
                     self.unfulfilled_counts[task_id] += 1
                     if (self.unfulfilled_counts[task_id] >
-                            self.__max_reschedules):
+                            self._config.max_reschedules):
                         reschedule = False
                 if reschedule:
                     self.add(task)
@@ -721,7 +710,7 @@ class Worker(object):
     def _sleeper(self):
         # TODO is exponential backoff necessary?
         while True:
-            wait_interval = self.__wait_interval + random.randint(1, 5)
+            wait_interval = self._config.wait_interval + random.randint(1, 5)
             logger.debug('Sleeping for %d seconds', wait_interval)
             time.sleep(wait_interval)
             yield
@@ -737,12 +726,12 @@ class Worker(object):
         If worker-count-uniques is true, it will also
         require that one of the tasks is unique to this worker.
         """
-        if not self.__keep_alive:
+        if not self._config.keep_alive:
             return False
         elif self._assistant:
             return True
         else:
-            return n_pending_tasks and (n_unique_pending or not self.__count_uniques)
+            return n_pending_tasks and (n_unique_pending or not self._config.count_uniques)
 
     def run(self):
         """
