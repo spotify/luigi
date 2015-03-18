@@ -54,7 +54,7 @@ if sys.version_info[:2] < (2, 7):
 
 setup(
     name='luigi',
-    version='1.1.2',
+    version='1.1.3',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='Erik Bernhardsson',
