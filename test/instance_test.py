@@ -18,6 +18,7 @@
 from helpers import unittest
 
 import luigi
+import luigi.worker
 import luigi.date_interval
 import luigi.notifications
 
@@ -86,6 +87,13 @@ class InstanceTest(unittest.TestCase):
 
         self.assertNotEqual(dummy_1, dummy_2)
         self.assertEqual(dummy_1, dummy_1b)
+
+    def test_unhashable_type(self):
+        # See #857
+        class DummyTask(luigi.Task):
+            x = luigi.Parameter()
+
+        dummy = DummyTask(x={})
 
 if __name__ == '__main__':
     unittest.main()
