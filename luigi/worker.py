@@ -287,13 +287,11 @@ class KeepAliveThread(threading.Thread):
             if self._should_stop.is_set():
                 logger.info("Worker %s was stopped. Shutting down Keep-Alive thread" % self._worker_id)
                 break
-            fork_lock.acquire()
-            try:
-                self._scheduler.ping(worker=self._worker_id)
-            except:  # httplib.BadStatusLine:
-                logger.warning('Failed pinging scheduler')
-            finally:
-                fork_lock.release()
+            with fork_lock:
+                try:
+                    self._scheduler.ping(worker=self._worker_id)
+                except:  # httplib.BadStatusLine:
+                    logger.warning('Failed pinging scheduler')
 
 
 class Worker(object):
@@ -632,11 +630,8 @@ class Worker(object):
         self._running_tasks[task_id] = p
 
         if self.worker_processes > 1:
-            fork_lock.acquire()
-            try:
+            with fork_lock:
                 p.start()
-            finally:
-                fork_lock.release()
         else:
             # Run in the same process
             p.run()
