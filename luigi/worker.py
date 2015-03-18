@@ -266,6 +266,36 @@ def check_complete(task, out_queue):
     out_queue.put((task, is_complete))
 
 
+class KeepAliveThread(threading.Thread):
+    """
+    Periodically tell the scheduler that the worker still lives.
+    """
+
+    def __init__(self, scheduler, worker_id, ping_interval):
+        super(KeepAliveThread, self).__init__()
+        self._should_stop = threading.Event()
+        self._scheduler = scheduler
+        self._worker_id = worker_id
+        self._ping_interval = ping_interval
+
+    def stop(self):
+        self._should_stop.set()
+
+    def run(self):
+        while True:
+            self._should_stop.wait(self._ping_interval)
+            if self._should_stop.is_set():
+                logger.info("Worker %s was stopped. Shutting down Keep-Alive thread" % self._worker_id)
+                break
+            fork_lock.acquire()
+            try:
+                self._scheduler.ping(worker=self._worker_id)
+            except:  # httplib.BadStatusLine:
+                logger.warning('Failed pinging scheduler')
+            finally:
+                fork_lock.release()
+
+
 class Worker(object):
     """
     Worker object communicates with a scheduler.
@@ -335,33 +365,7 @@ class Worker(object):
         self.run_succeeded = True
         self.unfulfilled_counts = collections.defaultdict(int)
 
-        class KeepAliveThread(threading.Thread):
-            """
-            Periodically tell the scheduler that the worker still lives.
-            """
-
-            def __init__(self):
-                super(KeepAliveThread, self).__init__()
-                self._should_stop = threading.Event()
-
-            def stop(self):
-                self._should_stop.set()
-
-            def run(self):
-                while True:
-                    self._should_stop.wait(ping_interval)
-                    if self._should_stop.is_set():
-                        logger.info("Worker %s was stopped. Shutting down Keep-Alive thread" % worker_id)
-                        break
-                    fork_lock.acquire()
-                    try:
-                        scheduler.ping(worker=worker_id)
-                    except:  # httplib.BadStatusLine:
-                        logger.warning('Failed pinging scheduler')
-                    finally:
-                        fork_lock.release()
-
-        self._keep_alive_thread = KeepAliveThread()
+        self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id, ping_interval)
         self._keep_alive_thread.daemon = True
         self._keep_alive_thread.start()
 
