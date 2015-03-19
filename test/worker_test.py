@@ -805,7 +805,7 @@ class MultipleWorkersTest(unittest.TestCase):
 
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_default_timeout_time(self, mock_time):
-        w = Worker(worker_processes=2, wait_interval=0.01, worker_timeout=5)
+        w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
         mock_time.time.return_value = 0
         w.add(HungWorker())
         w._run_task('HungWorker(worker_timeout=None)')
@@ -820,7 +820,7 @@ class MultipleWorkersTest(unittest.TestCase):
 
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_override_timeout_time(self, mock_time):
-        w = Worker(worker_processes=2, wait_interval=0.01, worker_timeout=5)
+        w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
         mock_time.time.return_value = 0
         w.add(HungWorker(10))
         w._run_task('HungWorker(worker_timeout=10)')
