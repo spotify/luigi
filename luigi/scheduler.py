@@ -653,7 +653,7 @@ class CentralPlannerScheduler(Scheduler):
         tasks.sort(key=self._rank(), reverse=True)
 
         for task in tasks:
-            in_workers = assistant or worker in task.workers
+            in_workers = (assistant and task.workers) or worker in task.workers
             if task.status == 'RUNNING' and in_workers:
                 # Return a list of currently running tasks to the client,
                 # makes it easier to troubleshoot

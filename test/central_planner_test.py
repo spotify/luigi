@@ -188,6 +188,10 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(list(running_tasks.keys()), ['A'])
         self.assertEqual(running_tasks['A']['worker_running'], 'Y')
 
+    def test_assistant_get_work_external_task(self):
+        self.sch.add_task('X', task_id='A', runnable=False)
+        self.assertTrue(self.sch.get_work('Y', assistant=True)['task_id'] is None)
+
     def test_task_fails_when_assistant_dies(self):
         self.setTime(0)
         self.sch.add_task(worker='X', task_id='A')
