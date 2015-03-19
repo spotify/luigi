@@ -201,6 +201,22 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.ping('X')
         self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), ['A'])
 
+    def test_prune_with_live_assistant(self):
+        self.setTime(0)
+        self.sch.add_task(worker='X', task_id='A')
+        self.sch.get_work('Y', assistant=True)
+        self.sch.add_task(worker='Y', task_id='A', status=DONE, assistant=True)
+
+        # worker X stops communicating, A should be marked for removal
+        self.setTime(600)
+        self.sch.ping('Y')
+        self.sch.prune()
+
+        # A will now be pruned
+        self.setTime(2000)
+        self.sch.prune()
+        self.assertFalse(list(self.sch.task_list('', '')))
+
     def test_scheduler_resources_none_allow_one(self):
         self.sch.add_task(worker='X', task_id='A', resources={'R1': 1})
         self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')

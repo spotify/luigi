@@ -502,7 +502,8 @@ class CentralPlannerScheduler(Scheduler):
 
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
-                 priority=0, family='', module=None, params=None, **kwargs):
+                 priority=0, family='', module=None, params=None,
+                 assistant=False, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -547,8 +548,7 @@ class CentralPlannerScheduler(Scheduler):
         if resources is not None:
             task.resources = resources
 
-        # only assistants should normally schedule tasks as FAILED and not runnable
-        if runnable or status != FAILED:
+        if not assistant:
             task.stakeholders.add(worker)
 
             # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
