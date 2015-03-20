@@ -192,3 +192,13 @@ class Register(abc.ABCMeta):
                 continue
             for param_name, param_obj in task_cls.get_params():
                 yield task_name, task_cls._config_without_section, param_name, param_obj
+
+
+def load_task(module, task_name, params_str):
+    """
+    Imports task dynamically given a module and a task name.
+    """
+    if module is not None:
+        __import__(module)
+    task_cls = Register.get_task_cls(task_name)
+    return task_cls.from_str_params(params_str)
