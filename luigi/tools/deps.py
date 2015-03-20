@@ -88,7 +88,7 @@ def find_deps_cli():
     return find_deps(task, upstream)
 
 
-if __name__ == '__main__':
+def main():
     deps = find_deps_cli()
     for d in deps:
         task_name = d
@@ -105,3 +105,7 @@ if __name__ == '__main__':
             task_output = "to be determined"
         print(u"""   TASK: {0}
                        : {1}""".format(task_name, task_output))
+
+
+if __name__ == '__main__':
+    main()

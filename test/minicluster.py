@@ -18,21 +18,12 @@
 import getpass
 import os
 
-from luigi import hadoop, hdfs, six
+from luigi import hadoop, hdfs
 from nose.plugins.attrib import attr
 
 import unittest
 
-# Doesn't use helpers.unittest because it makes fail some test
-# see: https://github.com/spotify/luigi/pull/796#issuecomment-76617218
-try:
-    from unittest import skipIf
-except ImportError:
-    from unittest2 import skipIf
-
-
-if six.PY2:
-    from snakebite.minicluster import MiniCluster
+from snakebite.minicluster import MiniCluster
 
 
 @attr('minicluster')
@@ -45,7 +36,6 @@ class MiniClusterTestCase(unittest.TestCase):
     https://github.com/spotify/snakebite"""
     cluster = None
 
-    @skipIf(six.PY3, 'Minicluster is not supported on python3')
     @classmethod
     def setupClass(cls):
         if not cls.cluster:

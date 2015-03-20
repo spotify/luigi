@@ -39,7 +39,7 @@ you want to use a specific section in the config.
 
 
 Configurable options
-====================
+--------------------
 
 Luigi comes with a lot of configurable options. Below, we describe each
 section and the parameters available within it.
@@ -446,25 +446,96 @@ worker-disconnect-delay
 [spark]
 -------
 
-Parameters controlling the running of Spark jobs
+Parameters controlling the default execution of :py:class:`~luigi.contrib.spark.SparkSubmitTask` and :py:class:`~luigi.contrib.spark.PySparkTask`:
+
+.. deprecated:: 1.1.1
+   :py:class:`~luigi.contrib.spark.SparkJob`, :py:class:`~luigi.contrib.spark.Spark1xJob` and :py:class:`~luigi.contrib.spark.PySpark1xJob`
+    are deprecated. Please use :py:class:`~luigi.contrib.spark.SparkSubmitTask` or :py:class:`~luigi.contrib.spark.PySparkTask`.
+
+spark-submit
+  Command to run in order to submit spark jobs. Default: spark-submit
+
+master
+  Master url to use for spark-submit. Example: local[*], spark://masterhost:7077. Default: Spark default (Prior to 1.1.1: yarn-client)
+
+deploy-mode
+    Whether to launch the driver programs locally ("client") or on one of the worker machines inside the cluster ("cluster"). Default: Spark default
+
+jars
+    Comma-separated list of local jars to include on the driver and executor classpaths. Default: Spark default
+
+py-files
+    Comma-separated list of .zip, .egg, or .py files to place on the PYTHONPATH for Python apps. Default: Spark default
+
+files
+    Comma-separated list of files to be placed in the working directory of each executor. Default: Spark default
+
+conf:
+    Arbitrary Spark configuration property in the form Prop=Value|Prop2=Value2. Default: Spark default
+
+properties-file
+    Path to a file from which to load extra properties. Default: Spark default
+
+driver-memory
+    Memory for driver (e.g. 1000M, 2G). Default: Spark default
+
+driver-java-options
+    Extra Java options to pass to the driver. Default: Spark default
+
+driver-library-path
+    Extra library path entries to pass to the driver. Default: Spark default
+
+driver-class-path
+    Extra class path entries to pass to the driver. Default: Spark default
+
+executor-memory
+    Memory per executor (e.g. 1000M, 2G). Default: Spark default
+
+*Configuration for Spark submit jobs on Spark standalone with cluster deploy mode only:*
+
+driver-cores
+    Cores for driver. Default: Spark default
+
+supervise
+    If given, restarts the driver on failure. Default: Spark default
+
+*Configuration for Spark submit jobs on Spark standalone and Mesos only:*
+
+total-executor-cores
+    Total cores for all executors. Default: Spark default
+
+*Configuration for Spark submit jobs on YARN only:*
+
+executor-cores
+    Number of cores per executor. Default: Spark default
+
+queue
+    The YARN queue to submit to. Default: Spark default
+
+num-executors
+    Number of executors to launch. Default: Spark default
+
+archives
+    Comma separated list of archives to be extracted into the working directory of each executor. Default: Spark default
+
+hadoop-conf-dir
+  Location of the hadoop conf dir. Sets HADOOP_CONF_DIR environment variable
+  when running spark. Example: /etc/hadoop/conf
+
+*Extra configuration for PySparkTask jobs:*
+
+py-packages
+    Comma-separated list of local packages (in your python path) to be distributed to the cluster.
+
+*Parameters controlling the execution of SparkJob jobs (deprecated):*
 
 spark-jar
   Location of the spark jar. Sets SPARK_JAR environment variable when
   running spark. Example:
   /usr/share/spark/jars/spark-assembly-0.8.1-incubating-hadoop2.2.0.jar
 
-hadoop-conf-dir
-  Location of hadoop conf dir. Sets HADOOP_CONF_DIR environment variable
-  when running spark. Example: /etc/hadoop/conf
-
 spark-class
   Location of script to invoke. Example: /usr/share/spark/spark-class
-
-spark-submit
-  Command to run in order to submit spark jobs. Default: spark-submit
-
-spark-master
-  Master url to use for spark-submit. Example: local[*]. Default: yarn-client
 
 
 [task_history]

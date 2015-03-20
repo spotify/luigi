@@ -55,6 +55,11 @@ class MultiprocessWorkerTest(unittest.TestCase):
     def tearDown(self):
         self.worker.stop()
 
+    def gw_res(self, pending, task_id):
+        return dict(n_pending_tasks=pending,
+                    task_id=task_id,
+                    running_tasks=0, n_unique_pending=0)
+
     def test_positive_path(self):
         a = DummyTask("a")
         b = DummyTask("b")
@@ -68,7 +73,11 @@ class MultiprocessWorkerTest(unittest.TestCase):
 
         self.assertTrue(self.worker.add(c))
 
-        self.scheduler.get_work = Mock(side_effect=[(3, str(a)), (2, str(b)), (1, str(c)), (0, None), (0, None)])
+        self.scheduler.get_work = Mock(side_effect=[self.gw_res(3, str(a)),
+                                                    self.gw_res(2, str(b)),
+                                                    self.gw_res(1, str(c)),
+                                                    self.gw_res(0, None),
+                                                    self.gw_res(0, None)])
 
         self.assertTrue(self.worker.run())
         self.assertTrue(c.has_run)
@@ -91,7 +100,11 @@ class MultiprocessWorkerTest(unittest.TestCase):
 
         self.assertTrue(self.worker.add(c))
 
-        self.scheduler.get_work = Mock(side_effect=[(3, str(a)), (2, str(b)), (1, str(c)), (0, None), (0, None)])
+        self.scheduler.get_work = Mock(side_effect=[self.gw_res(3, str(a)),
+                                                    self.gw_res(2, str(b)),
+                                                    self.gw_res(1, str(c)),
+                                                    self.gw_res(0, None),
+                                                    self.gw_res(0, None)])
 
         self.assertFalse(self.worker.run())
 

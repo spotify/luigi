@@ -23,7 +23,7 @@ from helpers import unittest
 import luigi
 import luigi.notifications
 from luigi.interface import ArgParseInterface
-from luigi.mock import MockFile
+from luigi.mock import MockTarget
 from luigi.parameter import MissingParameterException
 from luigi.util import common_params, copies, delegates, inherits, requires
 
@@ -291,7 +291,7 @@ class P(luigi.Task):
     date = luigi.DateParameter()
 
     def output(self):
-        return MockFile(self.date.strftime('/tmp/data-%Y-%m-%d.txt'))
+        return MockTarget(self.date.strftime('/tmp/data-%Y-%m-%d.txt'))
 
     def run(self):
         f = self.output().open('w')
@@ -303,15 +303,15 @@ class P(luigi.Task):
 class PCopy(luigi.Task):
 
     def output(self):
-        return MockFile(self.date.strftime('/tmp/copy-data-%Y-%m-%d.txt'))
+        return MockTarget(self.date.strftime('/tmp/copy-data-%Y-%m-%d.txt'))
 
 
 class CopyTest(unittest.TestCase):
 
     def test_copy(self):
         luigi.build([PCopy(date=datetime.date(2012, 1, 1))], local_scheduler=True)
-        self.assertEqual(MockFile.fs.get_data('/tmp/data-2012-01-01.txt'), b'hello, world\n')
-        self.assertEqual(MockFile.fs.get_data('/tmp/copy-data-2012-01-01.txt'), b'hello, world\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/data-2012-01-01.txt'), b'hello, world\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/copy-data-2012-01-01.txt'), b'hello, world\n')
 
 
 class PickleTest(unittest.TestCase):
@@ -323,8 +323,8 @@ class PickleTest(unittest.TestCase):
         p = pickle.loads(p_pickled)
 
         luigi.build([p], local_scheduler=True)
-        self.assertEqual(MockFile.fs.get_data('/tmp/data-2013-01-01.txt'), b'hello, world\n')
-        self.assertEqual(MockFile.fs.get_data('/tmp/copy-data-2013-01-01.txt'), b'hello, world\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/data-2013-01-01.txt'), b'hello, world\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/copy-data-2013-01-01.txt'), b'hello, world\n')
 
 
 class Subtask(luigi.Task):
@@ -365,7 +365,7 @@ class SubtaskTest(unittest.TestCase):
         # Exposes issue where wrapped tasks are registered twice under
         # the same name
         from luigi.task import Register
-        self.assertEqual(Register.get_reg().get('SubtaskDelegator', None), SubtaskDelegator)
+        self.assertEqual(Register.get_task_cls('SubtaskDelegator'), SubtaskDelegator)
 
 
 if __name__ == '__main__':

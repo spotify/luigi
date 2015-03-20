@@ -1,6 +1,14 @@
 #!/usr/bin/env python
 
-import luigi
+import sys
+import warnings
+import luigi.cmdline
+
+
+def main(argv):
+    warnings.warn("'bin/luigi' has moved to console script 'luigi'", DeprecationWarning)
+    luigi.cmdline.luigi_run(argv)
+
 
 if __name__ == '__main__':
-    luigi.run(use_dynamic_argparse=True)
+    main(sys.argv[1:])

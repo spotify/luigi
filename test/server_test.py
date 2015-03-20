@@ -17,6 +17,7 @@
 import os
 import multiprocessing
 import random
+import signal
 import time
 
 from helpers import unittest, with_config
@@ -31,6 +32,25 @@ class ServerTestBase(AsyncHTTPTestCase):
 
     def get_app(self):
         return luigi.server.app(CentralPlannerScheduler())
+
+    def setUp(self):
+        super(ServerTestBase, self).setUp()
+
+        self._old_fetch = luigi.rpc.RemoteScheduler._fetch
+
+        def _fetch(obj, url, body, *args, **kwargs):
+            response = self.fetch(url, body=body, method='POST')
+            if response.code >= 400:
+                raise luigi.rpc.RPCError(
+                    'Errror when connecting to remote scheduler'
+                )
+            return response.body.decode('utf-8')
+
+        luigi.rpc.RemoteScheduler._fetch = _fetch
+
+    def tearDown(self):
+        super(ServerTestBase, self).tearDown()
+        luigi.rpc.RemoteScheduler._fetch = self._old_fetch
 
 
 class ServerTest(ServerTestBase):
@@ -73,7 +93,9 @@ class ServerTestRun(unittest.TestCase):
 
     def stop_server(self):
         self._process.terminate()
-        self._process.join()
+        self._process.join(1)
+        if self._process.is_alive():
+            os.kill(self._process.pid, signal.SIGKILL)
 
     def setUp(self):
         self.remove_state()

@@ -17,10 +17,9 @@
 """
 The abstract :py:class:`Task` class.
 It is a central concept of Luigi and represents the state of the workflow.
-See :doc:`/api_overview` for an overview.
+See :doc:`/tasks` for an overview.
 """
 
-import abc
 try:
     from itertools import imap as map
 except ImportError:
@@ -32,6 +31,7 @@ import warnings
 from luigi import six
 
 from luigi import parameter
+from luigi.task_register import Register, TaskClassException
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -62,158 +62,6 @@ def id_to_name_and_params(task_id):
     # DEPRECATED
     import luigi.tools.parse_task
     return luigi.tools.parse_task.id_to_name_and_params(task_id)
-
-
-class Register(abc.ABCMeta):
-    """
-    The Metaclass of :py:class:`Task`.
-
-    Acts as a global registry of Tasks with the following properties:
-
-    1. Cache instances of objects so that eg. ``X(1, 2, 3)`` always returns the
-       same object.
-    2. Keep track of all subclasses of :py:class:`Task` and expose them.
-    """
-    __instance_cache = {}
-    _default_namespace = None
-    _reg = []
-    AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
-    """If this value is returned by :py:meth:`get_reg` then there is an
-    ambiguous task name (two :py:class:`Task` have the same name). This denotes
-    an error."""
-
-    def __new__(metacls, classname, bases, classdict):
-        """
-        Custom class creation for namespacing.
-
-        Also register all subclasses.
-
-        Set the task namespace to whatever the currently declared namespace is.
-        """
-        if "task_namespace" not in classdict:
-            classdict["task_namespace"] = metacls._default_namespace
-
-        cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
-        metacls._reg.append(cls)
-
-        return cls
-
-    def __call__(cls, *args, **kwargs):
-        """
-        Custom class instantiation utilizing instance cache.
-
-        If a Task has already been instantiated with the same parameters,
-        the previous instance is returned to reduce number of object instances.
-        """
-        def instantiate():
-            return super(Register, cls).__call__(*args, **kwargs)
-
-        h = Register.__instance_cache
-
-        if h is None:  # disabled
-            return instantiate()
-
-        params = cls.get_params()
-        param_values = cls.get_param_values(params, args, kwargs)
-
-        k = (cls, tuple(param_values))
-
-        try:
-            hash(k)
-        except TypeError:
-            logger.debug("Not all parameter values are hashable so instance isn't coming from the cache")
-            return instantiate()  # unhashable types in parameters
-
-        if k not in h:
-            h[k] = instantiate()
-
-        return h[k]
-
-    @classmethod
-    def clear_instance_cache(cls):
-        """
-        Clear/Reset the instance cache.
-        """
-        Register.__instance_cache = {}
-
-    @classmethod
-    def disable_instance_cache(cls):
-        """
-        Disables the instance cache.
-        """
-        Register.__instance_cache = None
-
-    @property
-    def task_family(cls):
-        """
-        The task family for the given class.
-
-        If ``cls.task_namespace is None`` then it's the name of the class.
-        Otherwise, ``<task_namespace>.`` is prefixed to the class name.
-        """
-        if cls.task_namespace is None:
-            return cls.__name__
-        else:
-            return "%s.%s" % (cls.task_namespace, cls.__name__)
-
-    @classmethod
-    def get_reg(cls, include_config_without_section=False):
-        """Return all of the registery classes.
-
-        :return:  a ``dict`` of task_family -> class
-        """
-        # We have to do this on-demand in case task names have changed later
-        reg = {}
-        for cls in cls._reg:
-            if cls.run == NotImplemented:
-                continue
-            if issubclass(cls, ConfigWithoutSection) and not include_config_without_section:
-                continue
-            name = cls.task_family
-
-            if name in reg and reg[name] != cls and \
-                    reg[name] != cls.AMBIGUOUS_CLASS and \
-                    not issubclass(cls, reg[name]):
-                # Registering two different classes - this means we can't instantiate them by name
-                # The only exception is if one class is a subclass of the other. In that case, we
-                # instantiate the most-derived class (this fixes some issues with decorator wrappers).
-                reg[name] = cls.AMBIGUOUS_CLASS
-            else:
-                reg[name] = cls
-
-        return reg
-
-    @classmethod
-    def tasks_str(cls):
-        """
-        Human-readable register contents dump.
-        """
-        return repr(sorted(Register.get_reg().keys()))
-
-    @classmethod
-    def get_task_cls(cls, name):
-        """
-        Returns an unambiguous class or raises an exception.
-        """
-        task_cls = Register.get_reg().get(name)
-        if not task_cls:
-            raise Exception('Task %r not found. Candidates are: %s' % (name, Register.tasks_str()))
-        if task_cls == Register.AMBIGUOUS_CLASS:
-            raise Exception('Task %r is ambiguous' % name)
-        return task_cls
-
-    @classmethod
-    def get_all_params(cls):
-        """
-        Compiles and returns all parameters for all :py:class:`Task`.
-
-        :return: a ``dict`` of parameter name -> parameter.
-        """
-        for task_name, task_cls in six.iteritems(cls.get_reg(include_config_without_section=True)):
-            if task_cls == cls.AMBIGUOUS_CLASS:
-                continue
-            for param_name, param_obj in task_cls.get_params():
-                yield task_name, issubclass(task_cls, ConfigWithoutSection), param_name, param_obj
 
 
 @six.add_metaclass(Register)
@@ -269,6 +117,9 @@ class Task(object):
     #: No timeout if set to 0.
     #: Defaults to 0 or value in client.cfg
     worker_timeout = None
+
+    #: See :class:`~ConfigWithoutSection`
+    _config_without_section = False
 
     @classmethod
     def event_handler(cls, event):
@@ -670,7 +521,7 @@ class ConfigWithoutSection(Task):
 
     (eg. --n-workers)
     """
-    pass
+    _config_without_section = True
 
 
 def getpaths(struct):

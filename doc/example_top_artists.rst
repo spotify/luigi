@@ -1,5 +1,5 @@
-Example Workflow – Top Artists
-------------------------------
+Example – Top Artists
+---------------------
 
 This is a very simplified case of something we do at Spotify a lot.
 All user actions are logged to HDFS where
@@ -238,7 +238,7 @@ If you run
 
 ::
 
-    PYTHONPATH=. python bin/luigid
+    luigid
 
 in the background and then run
 

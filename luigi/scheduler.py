@@ -162,8 +162,8 @@ def _get_default(x, default):
 
 class Task(object):
 
-    def __init__(self, task_id, status, deps, resources=None, priority=0, family='', params=None,
-                 disable_failures=None, disable_window=None):
+    def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
+                 params=None, disable_failures=None, disable_window=None):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -181,6 +181,7 @@ class Task(object):
         self.priority = priority
         self.resources = _get_default(resources, {})
         self.family = family
+        self.module = module
         self.params = _get_default(params, {})
         self.disable_failures = disable_failures
         self.failures = Failures(disable_window)
@@ -223,6 +224,10 @@ class Worker(object):
         # Delete workers that haven't said anything for a while (probably killed)
         if self.last_active + config.worker_disconnect_delay < time.time():
             return True
+
+    @property
+    def assistant(self):
+        return self.info.get('assistant', False)
 
     def __str__(self):
         return self.id
@@ -351,7 +356,7 @@ class SimpleTaskState(object):
         self._status_tasks[new_status][task.id] = task
         task.status = new_status
 
-    def prune(self, task, config):
+    def prune(self, task, config, assistants):
         remove = False
 
         # Mark tasks with no remaining active stakeholders for deletion
@@ -362,7 +367,7 @@ class SimpleTaskState(object):
                 task.remove = time.time() + config.remove_delay
 
         # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
-        if task.status == RUNNING and task.worker_running and task.worker_running not in task.stakeholders:
+        if task.status == RUNNING and task.worker_running and task.worker_running not in task.stakeholders | assistants:
             logger.info("Task %r is marked as running by disconnected worker %r -> marking as "
                         "FAILED with retry delay of %rs", task.id, task.worker_running,
                         config.retry_delay)
@@ -399,6 +404,9 @@ class SimpleTaskState(object):
             if last_active_lt is not None and worker.last_active >= last_active_lt:
                 continue
             yield worker
+
+    def get_assistants(self, last_active_lt=None):
+        return filter(lambda w: w.assistant, self.get_active_workers(last_active_lt))
 
     def get_worker_ids(self):
         return self._active_workers.keys()  # only used for unit tests
@@ -462,9 +470,10 @@ class CentralPlannerScheduler(Scheduler):
 
         self._state.inactivate_workers(remove_workers)
 
+        assistant_ids = set(w.id for w in self._state.get_assistants())
         remove_tasks = []
         for task in self._state.get_active_tasks():
-            if self._state.prune(task, self._config):
+            if self._state.prune(task, self._config, assistant_ids):
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)
@@ -493,7 +502,8 @@ class CentralPlannerScheduler(Scheduler):
 
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
-                 priority=0, family='', params=None, **kwargs):
+                 priority=0, family='', module=None, params=None,
+                 assistant=False, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -505,11 +515,13 @@ class CentralPlannerScheduler(Scheduler):
 
         task = self._state.get_task(task_id, setdefault=self._make_task(
             task_id=task_id, status=PENDING, deps=deps, resources=resources,
-            priority=priority, family=family, params=params))
+            priority=priority, family=family, module=module, params=params))
 
         # for setting priority, we'll sometimes create tasks with unset family and params
         if not task.family:
             task.family = family
+        if not getattr(task, 'module', None):
+            task.module = module
         if not task.params:
             task.params = _get_default(params, {})
 
@@ -533,14 +545,17 @@ class CentralPlannerScheduler(Scheduler):
         if new_deps is not None:
             task.deps.update(new_deps)
 
-        task.stakeholders.add(worker)
-        task.resources = resources
+        if resources is not None:
+            task.resources = resources
 
-        # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
-        # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
-        for dep in task.deps or []:
-            t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
-            t.stakeholders.add(worker)
+        if not assistant:
+            task.stakeholders.add(worker)
+
+            # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
+            # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
+            for dep in task.deps or []:
+                t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
+                t.stakeholders.add(worker)
 
         self._update_priority(task, priority, worker)
 
@@ -622,8 +637,9 @@ class CentralPlannerScheduler(Scheduler):
 
         # Return remaining tasks that have no FAILED descendents
         self.update(worker, {'host': host})
+        if assistant:
+            self.add_worker(worker, [('assistant', assistant)])
         best_task = None
-        best_task_id = None
         locally_pending_tasks = 0
         running_tasks = []
 
@@ -637,7 +653,8 @@ class CentralPlannerScheduler(Scheduler):
         tasks.sort(key=self._rank(), reverse=True)
 
         for task in tasks:
-            if task.status == 'RUNNING' and worker in task.workers:
+            in_workers = (assistant and task.workers) or worker in task.workers
+            if task.status == 'RUNNING' and in_workers:
                 # Return a list of currently running tasks to the client,
                 # makes it easier to troubleshoot
                 other_worker = self._state.get_worker(task.worker_running)
@@ -646,22 +663,22 @@ class CentralPlannerScheduler(Scheduler):
                     more_info.update(other_worker.info)
                     running_tasks.append(more_info)
 
-            if task.status == PENDING and (worker in task.workers or assistant):
+            if task.status == PENDING and in_workers:
                 locally_pending_tasks += 1
-                if len(task.workers) == 1:
+                if len(task.workers) == 1 and not assistant:
                     n_unique_pending += 1
 
-            if task.status == RUNNING and (task.worker_running in greedy_workers or assistant):
+            if task.status == RUNNING and (task.worker_running in greedy_workers):
                 greedy_workers[task.worker_running] -= 1
                 for resource, amount in six.iteritems((task.resources or {})):
                     greedy_resources[resource] += amount
 
             if not best_task and self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
-                if (worker in task.workers or assistant) and self._has_resources(task.resources, used_resources):
+                if in_workers and self._has_resources(task.resources, used_resources):
                     best_task = task
-                    best_task_id = task.id
                 else:
-                    for task_worker in task.workers:
+                    workers = itertools.chain(task.workers, [worker]) if assistant else task.workers
+                    for task_worker in workers:
                         if greedy_workers.get(task_worker, 0) > 0:
                             # use up a worker
                             greedy_workers[task_worker] -= 1
@@ -685,6 +702,7 @@ class CentralPlannerScheduler(Scheduler):
 
             reply['task_id'] = best_task.id
             reply['task_family'] = best_task.family
+            reply['task_module'] = getattr(best_task, 'module', None)
             reply['task_params'] = best_task.params
 
         return reply
@@ -732,6 +750,8 @@ class CentralPlannerScheduler(Scheduler):
             'priority': task.priority,
             'resources': task.resources,
         }
+        if task.status == DISABLED:
+            ret['re_enable_able'] = task.scheduler_disable_time is not None
         if include_deps:
             ret['deps'] = list(task.deps)
         return ret

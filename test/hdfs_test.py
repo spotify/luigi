@@ -19,6 +19,7 @@ import functools
 import re
 from helpers import unittest
 from datetime import datetime
+import random
 
 import helpers
 import luigi
@@ -734,3 +735,44 @@ class SnakebiteConfigTest(unittest.TestCase):
         luigi.run(['--local-scheduler', '--no-lock', 'DummyTestTask'])
 
         self.assertEqual(hdfs.hdfs().snakebite_autoconfig, True)
+
+
+class _MiscOperationsMixin(object):
+
+    # TODO: chown/chmod/count should really be methods on HdfsTarget rather than the client!
+
+    def get_target(self):
+        fn = '/tmp/foo-%09d' % random.randint(0, 999999999)
+        t = luigi.hdfs.HdfsTarget(fn)
+        with t.open('w') as f:
+            f.write('test')
+        return t
+
+    def test_count(self):
+        t = self.get_target()
+        res = self.get_client().count(t.path)
+        for key in ['content_size', 'dir_count', 'file_count']:
+            self.assertTrue(key in res)
+
+    def test_chmod(self):
+        t = self.get_target()
+        self.get_client().chmod(t.path, '777')
+
+    def test_chown(self):
+        t = self.get_target()
+        self.get_client().chown(t.path, 'root', 'root')
+
+
+@attr('minicluster')
+class TestCliMisc(MiniClusterTestCase, _MiscOperationsMixin):
+    def get_client(self):
+        return luigi.hdfs.create_hadoopcli_client()
+
+
+@attr('minicluster')
+class TestSnakebiteMisc(MiniClusterTestCase, _MiscOperationsMixin):
+    def get_client(self):
+        if six.PY3:
+            raise unittest.SkipTest("snakebite doesn't work on Python yet.")
+
+        return luigi.hdfs.SnakebiteHdfsClient()

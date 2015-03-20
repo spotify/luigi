@@ -65,6 +65,12 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.reEnable = function(taskId, callback) {
+        jsonRPC(this.urlRoot + "/re_enable_task", {task_id: taskId}, function(response) {
+            callback(response.response);
+        });
+    };
+
     LuigiAPI.prototype.getErrorTrace = function(taskId, callback) {
         jsonRPC(this.urlRoot + "/fetch_error", {task_id: taskId}, function(response) {
             callback(response.response);

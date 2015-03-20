@@ -21,17 +21,16 @@ from helpers import unittest
 
 import luigi
 import luigi.notifications
-from luigi.mock import MockFile
+from luigi.mock import MockTarget
 from luigi.util import inherits
 
 luigi.notifications.DEBUG = True
-LocalTarget = MockFile
 
 
 class A(luigi.Task):
 
     def output(self):
-        return LocalTarget('/tmp/a.txt')
+        return MockTarget('/tmp/a.txt')
 
     def run(self):
         f = self.output().open('w')
@@ -43,7 +42,7 @@ class B(luigi.Task):
     date = luigi.DateParameter()
 
     def output(self):
-        return LocalTarget(self.date.strftime('/tmp/b-%Y-%m-%d.txt'))
+        return MockTarget(self.date.strftime('/tmp/b-%Y-%m-%d.txt'))
 
     def run(self):
         f = self.output().open('w')
@@ -72,13 +71,13 @@ def XMLWrapper(cls):
 class AXML(XMLWrapper(A)):
 
     def output(self):
-        return LocalTarget('/tmp/a.xml')
+        return MockTarget('/tmp/a.xml')
 
 
 class BXML(XMLWrapper(B)):
 
     def output(self):
-        return LocalTarget(self.date.strftime('/tmp/b-%Y-%m-%d.xml'))
+        return MockTarget(self.date.strftime('/tmp/b-%Y-%m-%d.xml'))
 
 
 class WrapperTest(unittest.TestCase):
@@ -89,15 +88,15 @@ class WrapperTest(unittest.TestCase):
     workers = 1
 
     def setUp(self):
-        MockFile.fs.clear()
+        MockTarget.fs.clear()
 
     def test_a(self):
         luigi.build([AXML()], local_scheduler=True, no_lock=True, workers=self.workers)
-        self.assertEqual(MockFile.fs.get_data('/tmp/a.xml'), b'<?xml version="1.0" ?>\n<dummy-xml>hello, world</dummy-xml>\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/a.xml'), b'<?xml version="1.0" ?>\n<dummy-xml>hello, world</dummy-xml>\n')
 
     def test_b(self):
         luigi.build([BXML(datetime.date(2012, 1, 1))], local_scheduler=True, no_lock=True, workers=self.workers)
-        self.assertEqual(MockFile.fs.get_data('/tmp/b-2012-01-01.xml'), b'<?xml version="1.0" ?>\n<dummy-xml>goodbye, space</dummy-xml>\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/b-2012-01-01.xml'), b'<?xml version="1.0" ?>\n<dummy-xml>goodbye, space</dummy-xml>\n')
 
 
 class WrapperWithMultipleWorkersTest(WrapperTest):

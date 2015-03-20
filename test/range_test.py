@@ -21,7 +21,7 @@ from helpers import unittest
 
 import luigi
 import mock
-from luigi.mock import MockFile, MockFileSystem
+from luigi.mock import MockTarget, MockFileSystem
 from luigi.tools.range import (RangeDaily, RangeDailyBase, RangeEvent, RangeHourly, RangeHourlyBase, _constrain_glob,
                                _get_filesystems_and_globs)
 
@@ -30,14 +30,14 @@ class CommonDateHourTask(luigi.Task):
     dh = luigi.DateHourParameter()
 
     def output(self):
-        return MockFile(self.dh.strftime('/n2000y01a05n/%Y_%m-_-%daww/21mm%Hdara21/ooo'))
+        return MockTarget(self.dh.strftime('/n2000y01a05n/%Y_%m-_-%daww/21mm%Hdara21/ooo'))
 
 
 class CommonDateTask(luigi.Task):
     d = luigi.DateParameter()
 
     def output(self):
-        return MockFile(self.d.strftime('/n2000y01a05n/%Y_%m-_-%daww/21mm01dara21/ooo'))
+        return MockTarget(self.d.strftime('/n2000y01a05n/%Y_%m-_-%daww/21mm01dara21/ooo'))
 
 
 task_a_paths = [
@@ -92,7 +92,7 @@ class TaskA(luigi.Task):
     dh = luigi.DateHourParameter()
 
     def output(self):
-        return MockFile(self.dh.strftime('TaskA/%Y-%m-%d/%H'))
+        return MockTarget(self.dh.strftime('TaskA/%Y-%m-%d/%H'))
 
 
 class TaskB(luigi.Task):
@@ -100,14 +100,14 @@ class TaskB(luigi.Task):
     complicator = luigi.Parameter()
 
     def output(self):
-        return MockFile(self.dh.strftime('TaskB/%%s%Y-%m-%d/%H') % self.complicator)
+        return MockTarget(self.dh.strftime('TaskB/%%s%Y-%m-%d/%H') % self.complicator)
 
 
 class TaskC(luigi.Task):
     dh = luigi.DateHourParameter()
 
     def output(self):
-        return MockFile(self.dh.strftime('not/a/real/path/%Y-%m-%d/%H'))
+        return MockTarget(self.dh.strftime('not/a/real/path/%Y-%m-%d/%H'))
 
 
 class CommonWrapperTask(luigi.WrapperTask):
@@ -502,11 +502,11 @@ class FilesystemInferenceTest(unittest.TestCase):
             def output(self):
                 base = self.dh.strftime('/even/%Y%m%d%H')
                 if self.dh.hour % 2 == 0:
-                    return MockFile(base)
+                    return MockTarget(base)
                 else:
                     return {
-                        'spi': MockFile(base + '/something.spi'),
-                        'spl': MockFile(base + '/something.spl'),
+                        'spi': MockTarget(base + '/something.spi'),
+                        'spl': MockTarget(base + '/something.spl'),
                     }
 
         def test_raise_not_implemented():
@@ -571,7 +571,7 @@ class RangeDailyTest(unittest.TestCase):
             d = luigi.DateParameter()
 
             def output(self):
-                return MockFile(self.d.strftime('/data/2014/p/v/z/%Y_/_%m-_-%doctor/20/ZOOO'))
+                return MockTarget(self.d.strftime('/data/2014/p/v/z/%Y_/_%m-_-%doctor/20/ZOOO'))
 
         task = RangeDaily(now=datetime_to_epoch(datetime.datetime(2016, 4, 1)),
                           of='SomeDailyTask',
@@ -594,7 +594,7 @@ class RangeHourlyTest(unittest.TestCase):
                 new=mock_exists_always_true)
     def test_missing_tasks_correctly_required(self):
         for task_path in task_a_paths:
-            MockFile(task_path)
+            MockTarget(task_path)
         task = RangeHourly(now=datetime_to_epoch(datetime.datetime(2016, 4, 1)),
                            of='TaskA',
                            start=datetime.datetime(2014, 3, 20, 17),

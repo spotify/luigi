@@ -31,7 +31,7 @@ import luigi.worker
 import mock
 from helpers import with_config
 from luigi import ExternalTask, RemoteScheduler, Task
-from luigi.mock import MockFile, MockFileSystem
+from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
 from luigi import six
@@ -805,7 +805,7 @@ class MultipleWorkersTest(unittest.TestCase):
 
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_default_timeout_time(self, mock_time):
-        w = Worker(worker_processes=2, wait_interval=0.01, worker_timeout=5)
+        w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
         mock_time.time.return_value = 0
         w.add(HungWorker())
         w._run_task('HungWorker(worker_timeout=None)')
@@ -820,7 +820,7 @@ class MultipleWorkersTest(unittest.TestCase):
 
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_override_timeout_time(self, mock_time):
-        w = Worker(worker_processes=2, wait_interval=0.01, worker_timeout=5)
+        w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
         mock_time.time.return_value = 0
         w.add(HungWorker(10))
         w._run_task('HungWorker(worker_timeout=10)')
@@ -838,7 +838,7 @@ class Dummy2Task(Task):
     p = luigi.Parameter()
 
     def output(self):
-        return MockFile(self.p)
+        return MockTarget(self.p)
 
     def run(self):
         f = self.output().open('w')
@@ -860,6 +860,36 @@ class AssistantTest(unittest.TestCase):
         self.assistant.run()
         self.assertTrue(d.complete())
 
+    def test_bad_job_type(self):
+        class Dummy3Task(Dummy2Task):
+            task_family = 'UnknownTaskFamily'
+
+        d = Dummy3Task('123')
+        self.w.add(d)
+
+        self.assertFalse(d.complete())
+        self.assertFalse(self.assistant.run())
+        self.assertFalse(d.complete())
+        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), [str(d)])
+
+    def test_unimported_job_type(self):
+        class NotImportedTask(luigi.Task):
+            task_family = 'UnimportedTask'
+            task_module = None
+
+        task = NotImportedTask()
+
+        # verify that it can't run the task without the module info necessary to import it
+        self.w.add(task)
+        self.assertFalse(self.assistant.run())
+        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), ['UnimportedTask()'])
+
+        # check that it can import with the right module
+        task.task_module = 'dummy_test_module.not_imported'
+        self.w.add(task)
+        self.assertTrue(self.assistant.run())
+        self.assertEqual(list(self.sch.task_list('DONE', '').keys()), ['UnimportedTask()'])
+
 
 class ForkBombTask(luigi.Task):
     depth = luigi.IntParameter()
@@ -867,7 +897,7 @@ class ForkBombTask(luigi.Task):
     p = luigi.Parameter(default=(0, ))  # ehm for some weird reason [0] becomes a tuple...?
 
     def output(self):
-        return MockFile('.'.join(map(str, self.p)))
+        return MockTarget('.'.join(map(str, self.p)))
 
     def run(self):
         with self.output().open('w') as f:
