@@ -32,17 +32,8 @@ from luigi import parameter
 from luigi import rpc
 from luigi import scheduler
 from luigi import task
-from luigi.task import Register
-
-
-def load_task(module, task_name, params_str):
-    """
-    Imports task dynamically given a module and a task name.
-    """
-    if module is not None:
-        __import__(module)
-    task_cls = Register.get_task_cls(task_name)
-    return task_cls.from_str_params(params_str)
+from luigi import worker
+from luigi.task_register import Register
 
 
 def setup_interface_logging(conf_file=None):
@@ -124,7 +115,6 @@ class WorkerSchedulerFactory(object):
         return rpc.RemoteScheduler(host=host, port=port)
 
     def create_worker(self, scheduler, worker_processes, assistant=False):
-        from luigi import worker
         return worker.Worker(
             scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
 
