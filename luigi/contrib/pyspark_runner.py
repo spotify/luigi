@@ -38,19 +38,20 @@ import sys
 
 class PySparkRunner(object):
 
-    def __init__(self, job):
-        self.job = pickle.load(open(job, "rb"))
+    def __init__(self, job, *args):
+        with open(job, "rb") as fd:
+            self.job = pickle.load(fd)
+        self.args = args
 
-    def run(self, sc, *args):
-        self.job.setup_remote(sc)
-        self.job.main(sc, *args)
+    def run(self):
+        from pyspark import SparkContext, SparkConf
+        conf = SparkConf()
+        self.job.setup(conf)
+        with SparkContext(conf=conf) as sc:
+            self.job.setup_remote(sc)
+            self.job.main(sc, *self.args)
 
-
-def main(run_pickle, *args):
-    logging.basicConfig(level=logging.WARN)
-    from pyspark import SparkContext
-    with SparkContext() as sc:
-        PySparkRunner(run_pickle).run(sc, *args)
 
 if __name__ == '__main__':
-    main(*sys.argv[1:])
+    logging.basicConfig(level=logging.WARN)
+    PySparkRunner(*sys.argv[1:]).run()
