@@ -58,7 +58,7 @@ def setup_interface_logging(conf_file=None):
     setup_interface_logging.has_run = True
 
 
-class core(task.ConfigWithoutSection):
+class core(task.Config):
 
     ''' Keeps track of a bunch of environment params.
 
@@ -67,6 +67,7 @@ class core(task.ConfigWithoutSection):
     and get an object with all the environment variables set.
     This is arguably a bit of a hack.
     '''
+    use_cmdline_section = False
 
     local_scheduler = parameter.BoolParameter(
         default=False,

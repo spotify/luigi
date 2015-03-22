@@ -118,8 +118,11 @@ class Task(object):
     #: Defaults to 0 or value in client.cfg
     worker_timeout = None
 
-    #: See :class:`~ConfigWithoutSection`
-    _config_without_section = False
+    @property
+    def use_cmdline_section(self):
+        ''' Property used by core config such as `--workers` etc.
+        These will be exposed without the class as prefix.'''
+        return True
 
     @classmethod
     def event_handler(cls, event):
@@ -513,15 +516,6 @@ class Config(Task):
     ParamContainer base class
     """
     pass
-
-
-class ConfigWithoutSection(Task):
-
-    """Used for configuration that doesn't have a particular section
-
-    (eg. --n-workers)
-    """
-    _config_without_section = True
 
 
 def getpaths(struct):

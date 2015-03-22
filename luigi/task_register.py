@@ -183,13 +183,13 @@ class Register(abc.ABCMeta):
         """
         Compiles and returns all parameters for all :py:class:`Task`.
 
-        :return: a ``dict`` of parameter name -> parameter.
+        :return: a generator of tuples (TODO: we should make this more elegant)
         """
         for task_name, task_cls in six.iteritems(cls.__get_reg()):
             if task_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in task_cls.get_params():
-                yield task_name, task_cls._config_without_section, param_name, param_obj
+                yield task_name, (not task_cls.use_cmdline_section), param_name, param_obj
 
 
 def load_task(module, task_name, params_str):
