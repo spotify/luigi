@@ -126,7 +126,7 @@ class Register(abc.ABCMeta):
             return "%s.%s" % (cls.task_namespace, cls.__name__)
 
     @classmethod
-    def __get_reg(cls, include_config_without_section=False):
+    def __get_reg(cls):
         """Return all of the registered classes.
 
         :return:  an ``collections.OrderedDict`` of task_family -> class
@@ -136,8 +136,6 @@ class Register(abc.ABCMeta):
         reg = OrderedDict()
         for cls in cls._reg:
             if cls.run == NotImplemented:
-                continue
-            if cls._config_without_section and not include_config_without_section:
                 continue
             name = cls.task_family
 
@@ -187,7 +185,7 @@ class Register(abc.ABCMeta):
 
         :return: a ``dict`` of parameter name -> parameter.
         """
-        for task_name, task_cls in six.iteritems(cls.__get_reg(include_config_without_section=True)):
+        for task_name, task_cls in six.iteritems(cls.__get_reg()):
             if task_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in task_cls.get_params():
