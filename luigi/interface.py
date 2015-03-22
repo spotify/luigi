@@ -99,8 +99,7 @@ class core(task.ConfigWithoutSection):
         description='Used for dynamic loading of modules')  # see DynamicArgParseInterface
     parallel_scheduling = parameter.BoolParameter(
         default=False,
-        description='Use multiprocessing to do scheduling in parallel.',
-        config_path={'section': 'core', 'name': 'parallel-scheduling'})
+        description='Use multiprocessing to do scheduling in parallel.')
     assistant = parameter.BoolParameter(
         default=False,
         description='Run any task from the scheduler.')

@@ -648,6 +648,16 @@ class OverrideEnvStuff(unittest.TestCase):
         env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6543)
 
+    @with_config({"core": {"scheduler-port": '6544'}})
+    def testOverrideSchedulerPort2(self):
+        env_params = luigi.interface.core()
+        self.assertEqual(env_params.scheduler_port, 6544)
+
+    @with_config({"core": {"scheduler_port": '6545'}})
+    def testOverrideSchedulerPort3(self):
+        env_params = luigi.interface.core()
+        self.assertEqual(env_params.scheduler_port, 6545)
+
 
 if __name__ == '__main__':
     luigi.run(use_optparse=True)
