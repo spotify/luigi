@@ -180,11 +180,17 @@ class Parameter(object):
             v = self._get_value_from_config(task_name, param_name)
             if v != _no_value:
                 return v
+            v = self._get_value_from_config(task_name, param_name.replace('_', '-'))
+            if v != _no_value:
+                warnings.warn(
+                    'The use of the configuration [%s] %s (with dashes) should be avoided. Please use underscores.' %
+                    (task_name, param_name), DeprecationWarning, stacklevel=2)
+                return v
         if self.__config:
             v = self._get_value_from_config(self.__config['section'], self.__config['name'])
             if v != _no_value and task_name and param_name:
                 warnings.warn(
-                    'The use of the configuration %s>%s is deprecated. Please use %s>%s' %
+                    'The use of the configuration [%s] %s is deprecated. Please use [%s] %s' %
                     (self.__config['section'], self.__config['name'], task_name, param_name),
                     DeprecationWarning, stacklevel=2)
             if v != _no_value:

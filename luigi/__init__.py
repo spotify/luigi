@@ -31,7 +31,6 @@ Event = event.Event
 
 Task = task.Task
 Config = task.Config
-ConfigWithoutSection = task.ConfigWithoutSection
 ExternalTask = task.ExternalTask
 WrapperTask = task.WrapperTask
 Target = target.Target

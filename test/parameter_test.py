@@ -145,7 +145,8 @@ class MyConfig(luigi.Config):
     mc_q = luigi.IntParameter(default=73)
 
 
-class MyConfigWithoutSection(luigi.ConfigWithoutSection):
+class MyConfigWithoutSection(luigi.Config):
+    use_cmdline_section = False
     mc_r = luigi.IntParameter()
     mc_s = luigi.IntParameter(default=99)
 
@@ -408,7 +409,8 @@ class TestRemoveGlobalParameters(unittest.TestCase):
         class Dogs(luigi.Config):
             n_dogs = luigi.IntParameter()
 
-        class CatsWithoutSection(luigi.ConfigWithoutSection):
+        class CatsWithoutSection(luigi.Config):
+            use_cmdline_section = False
             n_cats = luigi.IntParameter()
 
         self.run_and_check(['--n-cats', '123', '--Dogs-n-dogs', '456', 'WithDefault'])
@@ -647,6 +649,16 @@ class OverrideEnvStuff(unittest.TestCase):
     def testOverrideSchedulerPort(self):
         env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6543)
+
+    @with_config({"core": {"scheduler-port": '6544'}})
+    def testOverrideSchedulerPort2(self):
+        env_params = luigi.interface.core()
+        self.assertEqual(env_params.scheduler_port, 6544)
+
+    @with_config({"core": {"scheduler_port": '6545'}})
+    def testOverrideSchedulerPort3(self):
+        env_params = luigi.interface.core()
+        self.assertEqual(env_params.scheduler_port, 6545)
 
 
 if __name__ == '__main__':

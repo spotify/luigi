@@ -58,7 +58,7 @@ def setup_interface_logging(conf_file=None):
     setup_interface_logging.has_run = True
 
 
-class core(task.ConfigWithoutSection):
+class core(task.Config):
 
     ''' Keeps track of a bunch of environment params.
 
@@ -67,6 +67,7 @@ class core(task.ConfigWithoutSection):
     and get an object with all the environment variables set.
     This is arguably a bit of a hack.
     '''
+    use_cmdline_section = False
 
     local_scheduler = parameter.BoolParameter(
         default=False,
@@ -99,8 +100,7 @@ class core(task.ConfigWithoutSection):
         description='Used for dynamic loading of modules')  # see DynamicArgParseInterface
     parallel_scheduling = parameter.BoolParameter(
         default=False,
-        description='Use multiprocessing to do scheduling in parallel.',
-        config_path={'section': 'core', 'name': 'parallel-scheduling'})
+        description='Use multiprocessing to do scheduling in parallel.')
     assistant = parameter.BoolParameter(
         default=False,
         description='Run any task from the scheduler.')
