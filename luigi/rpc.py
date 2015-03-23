@@ -46,9 +46,10 @@ class RemoteScheduler(Scheduler):
     Scheduler proxy object. Talks to a RemoteSchedulerResponder.
     """
 
-    def __init__(self, host='localhost', port=8082, connect_timeout=None):
+    def __init__(self, host='localhost', port=8082, connect_timeout=None, url_prefix=''):
         self._host = host
         self._port = port
+        self._url_prefix = url_prefix
 
         config = configuration.get_config()
 
@@ -61,13 +62,11 @@ class RemoteScheduler(Scheduler):
 
     def _fetch(self, url, body, log_exceptions=True, attempts=3):
 
-        full_url = '{protocol}://{domain}:{port}{url}'.format(
-            protocol='http',
-            domain=self._host,
+        full_url = 'http://{host}:{port:d}{prefix}{url}'.format(
+            host=self._host,
             port=self._port,
-            url=url,
-        )
-
+            prefix=self._url_prefix,
+            url=url)
         last_exception = None
         attempt = 0
         while attempt < attempts:
