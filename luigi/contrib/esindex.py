@@ -86,6 +86,7 @@ import datetime
 import hashlib
 import json
 import logging
+import itertools
 
 import luigi
 
@@ -114,7 +115,8 @@ class ElasticsearchTarget(luigi.Target):
                                                            'marker-doc-type', 'entry')
 
     def __init__(self, host, port, index, doc_type, update_id,
-                 marker_index_hist_size=0, http_auth=None):
+                 marker_index_hist_size=0, http_auth=None, timeout=10,
+                 extra_elasticsearch_args={}):
         """
         :param host: Elasticsearch server host
         :type host: str
@@ -128,6 +130,10 @@ class ElasticsearchTarget(luigi.Target):
         :type update_id: str
         :param marker_index_hist_size: list of changes to the index to remember
         :type marker_index_hist_size: int
+        :param timeout: Elasticsearch connection timeout
+        :type timeout: int
+        :param extra_elasticsearch_args: extra args for Elasticsearch
+        :type Extra: dict
         """
         self.host = host
         self.port = port
@@ -136,12 +142,16 @@ class ElasticsearchTarget(luigi.Target):
         self.doc_type = doc_type
         self.update_id = update_id
         self.marker_index_hist_size = marker_index_hist_size
+        self.timeout = timeout
+        self.extra_elasticsearch_args = extra_elasticsearch_args
 
         self.es = elasticsearch.Elasticsearch(
             connection_class=Urllib3HttpConnection,
             host=self.host,
             port=self.port,
-            http_auth=self.http_auth
+            http_auth=self.http_auth,
+            timeout=self.timeout,
+            **self.extra_elasticsearch_args
         )
 
     def marker_index_document_id(self):
@@ -325,6 +335,13 @@ class CopyToIndex(luigi.Task):
         """
         return 10
 
+    @property
+    def extra_elasticsearch_args(self):
+        """
+        Extra arguments to pass to the Elasticsearch constructor
+        """
+        return {}
+
     def docs(self):
         """
         Return the documents to be indexed.
@@ -342,7 +359,8 @@ class CopyToIndex(luigi.Task):
         Since `self.docs` may yield documents that do not explicitly contain `_index` or `_type`,
         add those attributes here, if necessary.
         """
-        first = next(iter(self.docs()))
+        iterdocs = iter(self.docs())
+        first = next(iterdocs)
         needs_parsing = False
         if isinstance(first, six.string_types):
             needs_parsing = True
@@ -350,7 +368,7 @@ class CopyToIndex(luigi.Task):
             pass
         else:
             raise RuntimeError('Document must be either JSON strings or dict.')
-        for doc in self.docs():
+        for doc in itertools.chain([first], iterdocs):
             if needs_parsing:
                 doc = json.loads(doc)
             if '_index' not in doc:
@@ -365,7 +383,8 @@ class CopyToIndex(luigi.Task):
             host=self.host,
             port=self.port,
             http_auth=self.http_auth,
-            timeout=self.timeout
+            timeout=self.timeout,
+            **self.extra_elasticsearch_args
         )
 
     def create_index(self):
@@ -405,7 +424,9 @@ class CopyToIndex(luigi.Task):
             index=self.index,
             doc_type=self.doc_type,
             update_id=self.update_id(),
-            marker_index_hist_size=self.marker_index_hist_size
+            marker_index_hist_size=self.marker_index_hist_size,
+            timeout=self.timeout,
+            extra_elasticsearch_args=self.extra_elasticsearch_args
         )
 
     def run(self):
