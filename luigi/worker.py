@@ -167,6 +167,7 @@ class TaskProcess(AbstractTaskProcess):
                 if isinstance(task_gen, types.GeneratorType):  # new deps
                     next_send = None
                     while True:
+                        new_deps = []
                         try:
                             if next_send is None:
                                 requires = six.next(task_gen)
@@ -176,14 +177,13 @@ class TaskProcess(AbstractTaskProcess):
                             break
 
                         new_req = flatten(requires)
-                        status = (RUNNING if all(t.complete() for t in new_req)
-                                  else SUSPENDED)
                         new_deps = [(t.task_module, t.task_family, t.to_str_params())
                                     for t in new_req]
-                        if status == RUNNING:
+                        if all(t.complete() for t in new_req):
+                            status = RUNNING
                             next_send = getpaths(requires)
-                            new_deps = []
                         else:
+                            status = SUSPENDED
                             logger.info(
                                 '[pid %s] Worker %s new requirements      %s',
                                 os.getpid(), self.worker_id, self.task.task_id)
