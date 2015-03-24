@@ -192,11 +192,11 @@ class TaskProcess(AbstractTaskProcess):
                 if status != SUSPENDED:
                     self.task.trigger_event(
                         Event.PROCESSING_TIME, self.task, time.time() - t0)
-            error_message = json.dumps(self.task.on_success())
-            logger.info('[pid %s] Worker %s done      %s', os.getpid(),
-                        self.worker_id, self.task.task_id)
-            self.task.trigger_event(Event.SUCCESS, self.task)
-            status = DONE
+                    error_message = json.dumps(self.task.on_success())
+                    logger.info('[pid %s] Worker %s done      %s', os.getpid(),
+                                self.worker_id, self.task.task_id)
+                    self.task.trigger_event(Event.SUCCESS, self.task)
+                    status = DONE
 
         except KeyboardInterrupt:
             raise
