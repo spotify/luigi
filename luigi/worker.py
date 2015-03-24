@@ -181,9 +181,6 @@ class TaskProcess(AbstractTaskProcess):
                         new_deps = [(t.task_module, t.task_family, t.to_str_params())
                                     for t in new_req]
                         if status == RUNNING:
-                            self.result_queue.put(
-                                (self.task.task_id, status, '', missing,
-                                 new_deps))
                             next_send = getpaths(requires)
                             new_deps = []
                         else:
