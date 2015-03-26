@@ -142,6 +142,29 @@ class TaskProcess(AbstractTaskProcess):
 
     Mainly for convenience since this is run in a separate process. """
 
+    def _run_get_new_deps(self):
+        task_gen = self.task.run()
+        if not isinstance(task_gen, types.GeneratorType):
+            return None
+
+        next_send = None
+        while True:
+            try:
+                if next_send is None:
+                    requires = six.next(task_gen)
+                else:
+                    requires = task_gen.send(next_send)
+            except StopIteration:
+                return None
+
+            new_req = flatten(requires)
+            new_deps = [(t.task_module, t.task_family, t.to_str_params())
+                        for t in new_req]
+            if all(t.complete() for t in new_req):
+                next_send = getpaths(requires)
+            else:
+                return new_deps
+
     def run(self):
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task.task_id)
 
@@ -163,43 +186,24 @@ class TaskProcess(AbstractTaskProcess):
             t0 = time.time()
             status = None
             try:
-                task_gen = self.task.run()
-                if isinstance(task_gen, types.GeneratorType):  # new deps
-                    next_send = None
-                    while True:
-                        try:
-                            if next_send is None:
-                                requires = six.next(task_gen)
-                            else:
-                                requires = task_gen.send(next_send)
-                        except StopIteration:
-                            break
-
-                        new_req = flatten(requires)
-                        status = (RUNNING if all(t.complete() for t in new_req)
-                                  else SUSPENDED)
-                        new_deps = [(t.task_module, t.task_family, t.to_str_params())
-                                    for t in new_req]
-                        if status == RUNNING:
-                            self.result_queue.put(
-                                (self.task.task_id, status, '', missing,
-                                 new_deps))
-                            next_send = getpaths(requires)
-                            new_deps = []
-                        else:
-                            logger.info(
-                                '[pid %s] Worker %s new requirements      %s',
-                                os.getpid(), self.worker_id, self.task.task_id)
-                            return
+                new_deps = self._run_get_new_deps()
+                if new_deps is None:
+                    status = RUNNING
+                else:
+                    status = SUSPENDED
+                    logger.info(
+                        '[pid %s] Worker %s new requirements      %s',
+                        os.getpid(), self.worker_id, self.task.task_id)
+                    return
             finally:
                 if status != SUSPENDED:
                     self.task.trigger_event(
                         Event.PROCESSING_TIME, self.task, time.time() - t0)
-            error_message = json.dumps(self.task.on_success())
-            logger.info('[pid %s] Worker %s done      %s', os.getpid(),
-                        self.worker_id, self.task.task_id)
-            self.task.trigger_event(Event.SUCCESS, self.task)
-            status = DONE
+                    error_message = json.dumps(self.task.on_success())
+                    logger.info('[pid %s] Worker %s done      %s', os.getpid(),
+                                self.worker_id, self.task.task_id)
+                    self.task.trigger_event(Event.SUCCESS, self.task)
+                    status = DONE
 
         except KeyboardInterrupt:
             raise
