@@ -585,6 +585,26 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(3, response['n_pending_tasks'])
         self.assertEqual(2, response['n_unique_pending'])
 
+    def test_pending_downstream_disable(self):
+        self.sch.add_task(WORKER, 'A', status=DISABLED)
+        self.sch.add_task(WORKER, 'B', deps=('A',))
+        self.sch.add_task(WORKER, 'C', deps=('B',))
+
+        response = self.sch.get_work(WORKER)
+        self.assertTrue(response['task_id'] is None)
+        self.assertEqual(0, response['n_pending_tasks'])
+        self.assertEqual(0, response['n_unique_pending'])
+
+    def test_pending_downstream_failure(self):
+        self.sch.add_task(WORKER, 'A', status=FAILED)
+        self.sch.add_task(WORKER, 'B', deps=('A',))
+        self.sch.add_task(WORKER, 'C', deps=('B',))
+
+        response = self.sch.get_work(WORKER)
+        self.assertTrue(response['task_id'] is None)
+        self.assertEqual(2, response['n_pending_tasks'])
+        self.assertEqual(2, response['n_unique_pending'])
+
     def test_prefer_more_dependents(self):
         self.sch.add_task(WORKER, 'A')
         self.sch.add_task(WORKER, 'B')

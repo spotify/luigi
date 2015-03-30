@@ -636,6 +636,7 @@ class CentralPlannerScheduler(Scheduler):
         best_task = None
         locally_pending_tasks = 0
         running_tasks = []
+        upstream_table = {}
 
         used_resources = self._used_resources()
         greedy_resources = collections.defaultdict(int)
@@ -647,6 +648,7 @@ class CentralPlannerScheduler(Scheduler):
         tasks.sort(key=self._rank(), reverse=True)
 
         for task in tasks:
+            upstream_status = self._upstream_status(task.id, upstream_table)
             in_workers = (assistant and task.workers) or worker in task.workers
             if task.status == 'RUNNING' and in_workers:
                 # Return a list of currently running tasks to the client,
@@ -657,7 +659,7 @@ class CentralPlannerScheduler(Scheduler):
                     more_info.update(other_worker.info)
                     running_tasks.append(more_info)
 
-            if task.status == PENDING and in_workers:
+            if task.status == PENDING and in_workers and upstream_status != UPSTREAM_DISABLED:
                 locally_pending_tasks += 1
                 if len(task.workers) == 1 and not assistant:
                     n_unique_pending += 1
