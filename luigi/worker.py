@@ -185,25 +185,23 @@ class TaskProcess(AbstractTaskProcess):
             self.task.trigger_event(Event.START, self.task)
             t0 = time.time()
             status = None
-            try:
-                new_deps = self._run_get_new_deps()
-                if new_deps is None:
-                    status = RUNNING
-                else:
-                    status = SUSPENDED
-                    logger.info(
-                        '[pid %s] Worker %s new requirements      %s',
-                        os.getpid(), self.worker_id, self.task.task_id)
-                    return
-            finally:
-                if status != SUSPENDED:
-                    self.task.trigger_event(
-                        Event.PROCESSING_TIME, self.task, time.time() - t0)
-                    error_message = json.dumps(self.task.on_success())
-                    logger.info('[pid %s] Worker %s done      %s', os.getpid(),
-                                self.worker_id, self.task.task_id)
-                    self.task.trigger_event(Event.SUCCESS, self.task)
-                    status = DONE
+
+            new_deps = self._run_get_new_deps()
+
+            if new_deps is None:
+                status = DONE
+                self.task.trigger_event(
+                    Event.PROCESSING_TIME, self.task, time.time() - t0)
+                error_message = json.dumps(self.task.on_success())
+                logger.info('[pid %s] Worker %s done      %s', os.getpid(),
+                            self.worker_id, self.task.task_id)
+                self.task.trigger_event(Event.SUCCESS, self.task)
+
+            else:
+                status = SUSPENDED
+                logger.info(
+                    '[pid %s] Worker %s new requirements      %s',
+                    os.getpid(), self.worker_id, self.task.task_id)
 
         except KeyboardInterrupt:
             raise

@@ -58,31 +58,35 @@ class TestEventCallbacks(unittest.TestCase):
         build([t], local_scheduler=True)
         self.assertEqual(saved_tasks, [t])
 
-    def test_success_handler(self):
-        saved_tasks = []
-
-        @EmptyTask.event_handler(Event.SUCCESS)
-        def save_task(task):
-            print("Saving task...")
-            saved_tasks.append(task)
-
-        t = EmptyTask(False)
-        build([t], local_scheduler=True)
-        self.assertEqual(saved_tasks, [t])
-
-    def test_failure_handler(self):
-        saved_tasks = []
+    def _run_empty_task(self, fail):
+        successes = []
+        failures = []
         exceptions = []
 
+        @EmptyTask.event_handler(Event.SUCCESS)
+        def success(task):
+            successes.append(task)
+
         @EmptyTask.event_handler(Event.FAILURE)
-        def save_task(task, exception):
-            print("Saving task and exception...")
-            saved_tasks.append(task)
+        def failure(task, exception):
+            failures.append(task)
             exceptions.append(exception)
 
-        t = EmptyTask(True)
+        t = EmptyTask(fail)
         build([t], local_scheduler=True)
-        self.assertEqual(saved_tasks, [t])
+        return t, successes, failures, exceptions
+
+    def test_success(self):
+        t, successes, failures, exceptions = self._run_empty_task(False)
+        self.assertEqual(successes, [t])
+        self.assertEqual(failures, [])
+        self.assertEqual(exceptions, [])
+
+    def test_failure(self):
+        t, successes, failures, exceptions = self._run_empty_task(True)
+        self.assertEqual(successes, [])
+        self.assertEqual(failures, [t])
+        self.assertEqual(len(exceptions), 1)
         self.assertTrue(isinstance(exceptions[0], DummyException))
 
     def test_custom_handler(self):
@@ -96,18 +100,31 @@ class TestEventCallbacks(unittest.TestCase):
         build([t], local_scheduler=True)
         self.assertEqual(dummies[0], "foo")
 
-    def test_processing_time_handler(self):
+    def _run_processing_time_handler(self, fail):
+        result = []
+
         @EmptyTask.event_handler(Event.PROCESSING_TIME)
         def save_task(task, processing_time):
-            self.result = task, processing_time
+            result.append((task, processing_time))
 
         times = [43.0, 1.0]
-        t = EmptyTask(random.choice([True, False]))
+        t = EmptyTask(fail)
         with patch('luigi.worker.time') as mock:
             mock.time = times.pop
             build([t], local_scheduler=True)
-        self.assertTrue(self.result[0] is t)
-        self.assertEqual(self.result[1], 42.0)
+
+        return t, result
+
+    def test_processing_time_handler_success(self):
+        t, result = self._run_processing_time_handler(False)
+        self.assertEqual(len(result), 1)
+        task, time = result[0]
+        self.assertTrue(task is t)
+        self.assertEqual(time, 42.0)
+
+    def test_processing_time_handler_failure(self):
+        t, result = self._run_processing_time_handler(True)
+        self.assertEqual(result, [])
 
 
 #        A
