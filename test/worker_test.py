@@ -24,21 +24,17 @@ import signal
 import tempfile
 import threading
 import time
-import unittest
+from helpers import unittest
 
 import luigi.notifications
 import luigi.worker
 import mock
 from helpers import with_config
 from luigi import ExternalTask, RemoteScheduler, Task
+from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
 from luigi import six
-
-try:
-    from unittest import skipIf
-except:
-    from unittest2 import skipIf
 
 luigi.notifications.DEBUG = True
 
@@ -761,7 +757,7 @@ class MultipleWorkersTest(unittest.TestCase):
 
     # This pass under python3 when run as `nosetests test/worker_test.py`
     # but not as `nosetests test`. Probably some side effect on previous tests
-    @skipIf(six.PY3, 'This test fail on python3 when run with tox.')
+    @unittest.skipIf(six.PY3, 'This test fail on python3 when run with tox.')
     def test_multiple_workers(self):
         # Test using multiple workers
         # Also test generating classes dynamically since this may reflect issues with
@@ -809,7 +805,7 @@ class MultipleWorkersTest(unittest.TestCase):
 
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_default_timeout_time(self, mock_time):
-        w = Worker(worker_processes=2, wait_interval=0.01, worker_timeout=5)
+        w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
         mock_time.time.return_value = 0
         w.add(HungWorker())
         w._run_task('HungWorker(worker_timeout=None)')
@@ -824,7 +820,7 @@ class MultipleWorkersTest(unittest.TestCase):
 
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_override_timeout_time(self, mock_time):
-        w = Worker(worker_processes=2, wait_interval=0.01, worker_timeout=5)
+        w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
         mock_time.time.return_value = 0
         w.add(HungWorker(10))
         w._run_task('HungWorker(worker_timeout=10)')
@@ -836,6 +832,111 @@ class MultipleWorkersTest(unittest.TestCase):
         mock_time.time.return_value = 11
         w._handle_next_task()
         self.assertEqual(0, len(w._running_tasks))
+
+
+class Dummy2Task(Task):
+    p = luigi.Parameter()
+
+    def output(self):
+        return MockTarget(self.p)
+
+    def run(self):
+        f = self.output().open('w')
+        f.write('test')
+        f.close()
+
+
+class AssistantTest(unittest.TestCase):
+    def setUp(self):
+        self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        self.w = Worker(scheduler=self.sch, worker_id='X')
+        self.assistant = Worker(scheduler=self.sch, worker_id='Y', assistant=True)
+
+    def test_get_work(self):
+        d = Dummy2Task('123')
+        self.w.add(d)
+
+        self.assertFalse(d.complete())
+        self.assistant.run()
+        self.assertTrue(d.complete())
+
+    def test_bad_job_type(self):
+        class Dummy3Task(Dummy2Task):
+            task_family = 'UnknownTaskFamily'
+
+        d = Dummy3Task('123')
+        self.w.add(d)
+
+        self.assertFalse(d.complete())
+        self.assertFalse(self.assistant.run())
+        self.assertFalse(d.complete())
+        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), [str(d)])
+
+    def test_unimported_job_type(self):
+        class NotImportedTask(luigi.Task):
+            task_family = 'UnimportedTask'
+            task_module = None
+
+        task = NotImportedTask()
+
+        # verify that it can't run the task without the module info necessary to import it
+        self.w.add(task)
+        self.assertFalse(self.assistant.run())
+        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), ['UnimportedTask()'])
+
+        # check that it can import with the right module
+        task.task_module = 'dummy_test_module.not_imported'
+        self.w.add(task)
+        self.assertTrue(self.assistant.run())
+        self.assertEqual(list(self.sch.task_list('DONE', '').keys()), ['UnimportedTask()'])
+
+
+class ForkBombTask(luigi.Task):
+    depth = luigi.IntParameter()
+    breadth = luigi.IntParameter()
+    p = luigi.Parameter(default=(0, ))  # ehm for some weird reason [0] becomes a tuple...?
+
+    def output(self):
+        return MockTarget('.'.join(map(str, self.p)))
+
+    def run(self):
+        with self.output().open('w') as f:
+            f.write('Done!')
+
+    def requires(self):
+        if len(self.p) < self.depth:
+            for i in range(self.breadth):
+                yield ForkBombTask(self.depth, self.breadth, self.p + (i, ))
+
+
+class TaskLimitTest(unittest.TestCase):
+    def tearDown(self):
+        MockFileSystem().remove('')
+
+    @with_config({'core': {'worker-task-limit': '6'}})
+    def test_task_limit_exceeded(self):
+        w = Worker()
+        t = ForkBombTask(3, 2)
+        w.add(t)
+        w.run()
+        self.assertFalse(t.complete())
+        leaf_tasks = [ForkBombTask(3, 2, branch) for branch in [(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1)]]
+        self.assertEquals(3, sum(t.complete() for t in leaf_tasks), "should have gracefully completed as much as possible even though the single last leaf didn't get scheduled")
+
+    @with_config({'core': {'worker-task-limit': '7'}})
+    def test_task_limit_not_exceeded(self):
+        w = Worker()
+        t = ForkBombTask(3, 2)
+        w.add(t)
+        w.run()
+        self.assertTrue(t.complete())
+
+    def test_no_task_limit(self):
+        w = Worker()
+        t = ForkBombTask(4, 2)
+        w.add(t)
+        w.run()
+        self.assertTrue(t.complete())
 
 
 if __name__ == '__main__':

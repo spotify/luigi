@@ -16,15 +16,15 @@
 #
 from __future__ import print_function
 
-import unittest
+from helpers import unittest
 
-from luigi.mock import MockFile, MockFileSystem
+from luigi.mock import MockTarget, MockFileSystem
 
 
 class MockFileTest(unittest.TestCase):
 
     def test_1(self):
-        t = MockFile('test')
+        t = MockTarget('test')
         p = t.open('w')
         print('test', file=p)
         p.close()
@@ -34,19 +34,29 @@ class MockFileTest(unittest.TestCase):
         q.close()
 
     def test_with(self):
-        t = MockFile("foo")
+        t = MockTarget("foo")
         with t.open('w') as b:
             b.write("bar")
 
         with t.open('r') as b:
             self.assertEqual(list(b), ['bar'])
 
+    # That should work in python2 because of the autocast
+    # That should work in python3 because the default format is Text
+    def test_unicode(self):
+        t = MockTarget("foo")
+        with t.open('w') as b:
+            b.write(u"bar")
+
+        with t.open('r') as b:
+            self.assertEqual(b.read(), u'bar')
+
 
 class MockFileSystemTest(unittest.TestCase):
     fs = MockFileSystem()
 
     def _touch(self, path):
-        t = MockFile(path)
+        t = MockTarget(path)
         with t.open('w'):
             pass
 
@@ -71,3 +81,10 @@ class MockFileSystemTest(unittest.TestCase):
 
     def test_listdir(self):
         self.assertEqual(sorted([self.path, self.path2]), sorted(self.fs.listdir("/tmp")))
+
+
+class TestImportMockFile(unittest.TestCase):
+
+    def test_mockfile(self):
+        from luigi.mock import MockFile
+        self.assertTrue(isinstance(MockFile('foo'), MockTarget))

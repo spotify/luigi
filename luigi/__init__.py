@@ -31,13 +31,12 @@ Event = event.Event
 
 Task = task.Task
 Config = task.Config
-ConfigWithoutSection = task.ConfigWithoutSection
 ExternalTask = task.ExternalTask
 WrapperTask = task.WrapperTask
 Target = target.Target
 
 File = file.File  # TODO: remove, should be LocalTarget
-LocalTarget = File
+LocalTarget = file.LocalTarget
 Parameter = parameter.Parameter
 RemoteScheduler = rpc.RemoteScheduler
 RPCError = rpc.RPCError

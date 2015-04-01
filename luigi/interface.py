@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 """
-luigi.interface contains the bindings for command line integration and dynamic loading of tasks
+This module contains the bindings for command line integration and dynamic loading of tasks
 """
 
 import argparse
@@ -33,16 +33,7 @@ from luigi import rpc
 from luigi import scheduler
 from luigi import task
 from luigi import worker
-from luigi.task import Register
-
-
-def load_task(module, task_name, params_str):
-    """
-    Imports task dynamically given a module and a task name.
-    """
-    __import__(module)
-    task_cls = Register.get_task_cls(task_name)
-    return task_cls.from_str_params(params_str)
+from luigi.task_register import Register
 
 
 def setup_interface_logging(conf_file=None):
@@ -67,7 +58,7 @@ def setup_interface_logging(conf_file=None):
     setup_interface_logging.has_run = True
 
 
-class core(task.ConfigWithoutSection):
+class core(task.Config):
 
     ''' Keeps track of a bunch of environment params.
 
@@ -76,6 +67,7 @@ class core(task.ConfigWithoutSection):
     and get an object with all the environment variables set.
     This is arguably a bit of a hack.
     '''
+    use_cmdline_section = False
 
     local_scheduler = parameter.BoolParameter(
         default=False,
@@ -108,9 +100,10 @@ class core(task.ConfigWithoutSection):
         description='Used for dynamic loading of modules')  # see DynamicArgParseInterface
     parallel_scheduling = parameter.BoolParameter(
         default=False,
-        description='Use multiprocessing to do scheduling in parallel.',
-        config_path={'section': 'core', 'name': 'parallel-scheduling'},
-    )
+        description='Use multiprocessing to do scheduling in parallel.')
+    assistant = parameter.BoolParameter(
+        default=False,
+        description='Run any task from the scheduler.')
 
 
 class WorkerSchedulerFactory(object):
@@ -121,9 +114,9 @@ class WorkerSchedulerFactory(object):
     def create_remote_scheduler(self, host, port):
         return rpc.RemoteScheduler(host=host, port=port)
 
-    def create_worker(self, scheduler, worker_processes):
+    def create_worker(self, scheduler, worker_processes, assistant=False):
         return worker.Worker(
-            scheduler=scheduler, worker_processes=worker_processes)
+            scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
 
 
 class Interface(object):
@@ -143,6 +136,8 @@ class Interface(object):
 
         if worker_scheduler_factory is None:
             worker_scheduler_factory = WorkerSchedulerFactory()
+        if override_defaults is None:
+            override_defaults = {}
         env_params = core(**override_defaults)
         # search for logging configuration path first on the command line, then
         # in the application config file
@@ -168,7 +163,7 @@ class Interface(object):
                 port=env_params.scheduler_port)
 
         w = worker_scheduler_factory.create_worker(
-            scheduler=sch, worker_processes=env_params.workers)
+            scheduler=sch, worker_processes=env_params.workers, assistant=env_params.assistant)
 
         success = True
         for t in tasks:
@@ -215,12 +210,17 @@ def add_task_parameters(parser, task_cls, optparse=False):
         param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, optparse=optparse, glob=False)
 
 
-def add_global_parameters(parser, optparse=False):
+def get_global_parameters():
     seen_params = set()
     for task_name, is_without_section, param_name, param in Register.get_all_params():
         if param in seen_params:
             continue
         seen_params.add(param)
+        yield task_name, is_without_section, param_name, param
+
+
+def add_global_parameters(parser, optparse=False):
+    for task_name, is_without_section, param_name, param in get_global_parameters():
         param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse, glob=True, is_without_section=is_without_section)
 
 
@@ -234,7 +234,7 @@ def get_task_parameters(task_cls, args):
 
 def set_global_parameters(args):
     # Note that this is not side effect free
-    for task_name, is_without_section, param_name, param in Register.get_all_params():
+    for task_name, is_without_section, param_name, param in get_global_parameters():
         param.set_global_from_args(param_name, task_name, args, is_without_section=is_without_section)
 
 
@@ -244,6 +244,9 @@ class ArgParseInterface(Interface):
     """
 
     def parse_task(self, cmdline_args=None, main_task_cls=None):
+        if cmdline_args is None:
+            cmdline_args = sys.argv[1:]
+
         parser = argparse.ArgumentParser()
 
         add_global_parameters(parser)
@@ -254,14 +257,17 @@ class ArgParseInterface(Interface):
             args = parser.parse_args(args=cmdline_args)
             task_cls = main_task_cls
         else:
-            task_names = sorted(Register.get_reg().keys())
+            task_names = Register.task_names()
 
             # Parse global arguments and pull out the task name.
             # We used to do this using subparsers+command, but some issues with
             # argparse across different versions of Python (2.7.9) made it hard.
-            args, unknown = parser.parse_known_args(args=cmdline_args)
+            args, unknown = parser.parse_known_args(args=[a for a in cmdline_args if a != '--help'])
             if len(unknown) == 0:
+                # In case it included a --help argument, run again
+                parser.parse_known_args(args=cmdline_args)
                 raise SystemExit('No task specified')
+
             task_name = unknown[0]
             if task_name not in task_names:
                 error_task_names(task_name, task_names)
@@ -309,11 +315,14 @@ class DynamicArgParseInterface(ArgParseInterface):
     """
 
     def parse(self, cmdline_args=None, main_task_cls=None):
+        if cmdline_args is None:
+            cmdline_args = sys.argv[1:]
+
         parser = argparse.ArgumentParser()
 
         add_global_parameters(parser)
 
-        args, unknown = parser.parse_known_args(args=cmdline_args)
+        args, unknown = parser.parse_known_args(args=[a for a in cmdline_args if a != '--help'])
         module = args.module
 
         __import__(module)

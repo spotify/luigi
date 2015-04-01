@@ -21,23 +21,23 @@ try:
 except ImportError:
     import configparser as ConfigParser
 import logging
+import mock
 import os
 import subprocess
-import unittest
+from helpers import unittest
 import warnings
 
 from luigi import six
 
 import luigi
-import mock
-from luigi.mock import MockFile
+from luigi.mock import MockTarget
 
 
 class SomeTask(luigi.Task):
     n = luigi.IntParameter()
 
     def output(self):
-        return File('/tmp/test_%d' % self.n)
+        return MockTarget('/tmp/test_%d' % self.n)
 
     def run(self):
         f = self.output().open('w')
@@ -88,22 +88,28 @@ class WriteToFile(luigi.Task):
         f.close()
 
 
+class FooBaseClass(luigi.Task):
+    x = luigi.Parameter(default='foo_base_default')
+
+
+class FooSubClass(FooBaseClass):
+    pass
+
+
 class CmdlineTest(unittest.TestCase):
 
     def setUp(self):
-        global File
-        File = MockFile
-        MockFile.fs.clear()
+        MockTarget.fs.clear()
 
     @mock.patch("logging.getLogger")
     def test_cmdline_main_task_cls(self, logger):
         luigi.run(['--local-scheduler', '--no-lock', '--n', '100'], main_task_cls=SomeTask)
-        self.assertEqual(dict(MockFile.fs.get_all_data()), {'/tmp/test_100': 'done'})
+        self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_100': b'done'})
 
     @mock.patch("logging.getLogger")
     def test_cmdline_other_task(self, logger):
         luigi.run(['--local-scheduler', '--no-lock', 'SomeTask', '--n', '1000'])
-        self.assertEqual(dict(MockFile.fs.get_all_data()), {'/tmp/test_1000': 'done'})
+        self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_1000': b'done'})
 
     @mock.patch("logging.getLogger")
     def test_cmdline_ambiguous_class(self, logger):
@@ -140,7 +146,7 @@ class CmdlineTest(unittest.TestCase):
 
         with mock.patch("luigi.configuration.get_config") as getconf:
             getconf.return_value.get.side_effect = ConfigParser.NoOptionError(section='foo', option='bar')
-            getconf.return_value.get_boolean.return_value = True
+            getconf.return_value.getint.return_value = 0
 
             luigi.interface.setup_interface_logging.call_args_list = []
             luigi.run(['SomeTask', '--n', '42', '--local-scheduler', '--no-lock'])
@@ -150,17 +156,73 @@ class CmdlineTest(unittest.TestCase):
     def test_non_existent_class(self, print_usage):
         self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', '--no-lock', 'XYZ'])
 
-    def test_bin_luigi(self):
-        t = luigi.LocalTarget(is_tmp=True)
-        cmd = ['./bin/luigi', '--module', 'cmdline_test', 'WriteToFile', '--filename', t.path, '--local-scheduler', '--no-lock']
-        env = os.environ.copy()
-        env['PYTHONPATH'] = env.get('PYTHONPATH', '') + ':.:test'
-        subprocess.check_call(cmd, env=env, stderr=subprocess.STDOUT)
-        self.assertTrue(t.exists())
-
     @mock.patch('argparse.ArgumentParser.print_usage')
     def test_no_task(self, print_usage):
         self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', '--no-lock'])
 
+
+class InvokeOverCmdlineTest(unittest.TestCase):
+
+    def _run_cmdline(self, args):
+        env = os.environ.copy()
+        env['PYTHONPATH'] = env.get('PYTHONPATH', '') + ':.:test'
+        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        stdout, stderr = p.communicate()  # Unfortunately subprocess.check_output is 2.7+
+        return p.returncode, stdout, stderr
+
+    def test_bin_luigi(self):
+        t = luigi.LocalTarget(is_tmp=True)
+        args = ['./bin/luigi', '--module', 'cmdline_test', 'WriteToFile', '--filename', t.path, '--local-scheduler', '--no-lock']
+        self._run_cmdline(args)
+        self.assertTrue(t.exists())
+
+    def test_direct_python(self):
+        t = luigi.LocalTarget(is_tmp=True)
+        args = ['python', 'test/cmdline_test.py', 'WriteToFile', '--filename', t.path, '--local-scheduler', '--no-lock']
+        self._run_cmdline(args)
+        self.assertTrue(t.exists())
+
+    def test_direct_python_help(self):
+        returncode, stdout, stderr = self._run_cmdline(['python', 'test/cmdline_test.py', '--help'])
+        self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
+        self.assertFalse(stdout.find(b'--x') != -1)
+
+    def test_direct_python_help_class(self):
+        returncode, stdout, stderr = self._run_cmdline(['python', 'test/cmdline_test.py', 'FooBaseClass', '--help'])
+        self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
+        self.assertTrue(stdout.find(b'--x') != -1)
+
+    def test_bin_luigi_help(self):
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'cmdline_test', '--help'])
+        self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
+        self.assertFalse(stdout.find(b'--x') != -1)
+
+    def test_bin_luigi_help_class(self):
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'cmdline_test', 'FooBaseClass', '--help'])
+        self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
+        self.assertTrue(stdout.find(b'--x') != -1)
+
+
+class NewStyleParameters822Test(unittest.TestCase):
+    # See https://github.com/spotify/luigi/issues/822
+
+    def test_subclasses(self):
+        ap = luigi.interface.ArgParseInterface()
+
+        task, = ap.parse(['--local-scheduler', '--no-lock', 'FooSubClass', '--x', 'xyz', '--FooBaseClass-x', 'xyz'])
+        self.assertEquals(task.x, 'xyz')
+
+        # This won't work because --FooSubClass-x doesn't exist
+        self.assertRaises(BaseException, ap.parse, (['--local-scheduler', '--no-lock', 'FooBaseClass', '--x', 'xyz', '--FooSubClass-x', 'xyz']))
+
+    def test_subclasses_2(self):
+        ap = luigi.interface.ArgParseInterface()
+
+        # https://github.com/spotify/luigi/issues/822#issuecomment-77782714
+        task, = ap.parse(['--local-scheduler', '--no-lock', 'FooBaseClass', '--FooBaseClass-x', 'xyz'])
+        self.assertEquals(task.x, 'xyz')
+
+
 if __name__ == '__main__':
-    unittest.main()
+    # Needed for one of the tests
+    luigi.run()

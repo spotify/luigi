@@ -15,22 +15,21 @@
 # limitations under the License.
 #
 """
-Provides a WebHdfsTarget and WebHdfsClient using the
-python [hdfs](https://pypi.python.org/pypi/hdfs/) library.
+Provides a :class:`WebHdfsTarget` and :class:`WebHdfsClient` using the
+`Python hdfs <https://pypi.python.org/pypi/hdfs/>`_
 """
 
 from __future__ import absolute_import
 
 import logging
 import os
-import random
-import tempfile
-import io
+import sys
 
 from luigi import six
 
 from luigi import configuration
-from luigi.target import FileSystemTarget, get_char_mode
+from luigi.target import FileSystemTarget, AtomicLocalFile
+from luigi.format import get_default_format, MixedUnicodeBytes
 
 logger = logging.getLogger("luigi-interface")
 
@@ -44,47 +43,47 @@ except ImportError:
 class WebHdfsTarget(FileSystemTarget):
     fs = None
 
-    def __init__(self, path, client=None):
+    def __init__(self, path, client=None, format=None):
         super(WebHdfsTarget, self).__init__(path)
         path = self.path
         self.fs = client or WebHdfsClient()
+        if format is None:
+            format = get_default_format()
+
+        # Allow to write unicode in file for retrocompatibility
+        if sys.version_info[:2] <= (2, 6):
+            format = format >> MixedUnicodeBytes
+
+        self.format = format
 
     def open(self, mode='r'):
-        if 'r' not in mode and 'w' not in mode:
+        if mode not in ('r', 'w'):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
-        char_mode = get_char_mode(mode)
+        if mode == 'r':
+            return self.format.pipe_reader(
+                ReadableWebHdfsFile(path=self.path, client=self.fs)
+            )
 
-        if 'r' in mode:
-            return ReadableWebHdfsFile(path=self.path, client=self.fs, char_mode=char_mode)
-
-        if char_mode == 't':
-            atomic_type = AtomicWebHdfsFile
-        else:
-            atomic_type = AtomicBinaryWebHdfsFile
-
-        return atomic_type(path=self.path, client=self.fs)
+        return self.format.pipe_writer(
+            AtomicWebHdfsFile(path=self.path, client=self.fs)
+        )
 
 
 class ReadableWebHdfsFile(object):
 
-    def __init__(self, path, client, char_mode):
+    def __init__(self, path, client):
         self.path = path
         self.client = client
         self.generator = None
-        self.char_mode = char_mode
 
     def read(self):
         self.generator = self.client.read(self.path)
         res = list(self.generator)[0]
-        if 't' in self.char_mode:
-            return res.decode('utf8')
         return res
 
     def readlines(self, char='\n'):
         self.generator = self.client.read(self.path, buffer_char=char)
-        if 't' in self.char_mode:
-            return (x.decode('utf8') for x in self.generator)
         return self.generator
 
     def __enter__(self):
@@ -108,48 +107,18 @@ class ReadableWebHdfsFile(object):
         self.generator.close()
 
 
-class AbstractAtomicWebHdfsFile(object):
+class AtomicWebHdfsFile(AtomicLocalFile):
     """
     An Hdfs file that writes to a temp file and put to WebHdfs on close.
     """
 
     def __init__(self, path, client):
-        unique_name = 'luigi-webhdfs-tmp-%09d' % random.randrange(0, 1e10)
-        self.tmp_path = os.path.join(tempfile.gettempdir(), unique_name)
-        self.path = path
         self.client = client
-        super(AbstractAtomicWebHdfsFile, self).__init__(io.FileIO(self.tmp_path, 'w'))
+        super(AtomicWebHdfsFile, self).__init__(path)
 
-    def close(self):
-        super(AtomicWebHdfsFile, self).close()
+    def move_to_final_destination(self):
         if not self.client.exists(self.path):
             self.client.upload(self.path, self.tmp_path)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc, traceback):
-        """
-        Close/commit the file if there are no exception.
-        """
-        if exc_type:
-            return
-        return super(AtomicWebHdfsFile, self).__exit__(exc_type, exc, traceback)
-
-    def __del__(self):
-        """
-        Remove the temporary directory.
-        """
-        if os.path.exists(self.tmp_path):
-            os.remove(self.tmp_path)
-
-
-class AtomicBinaryWebHdfsFile(AbstractAtomicWebHdfsFile, io.BufferedWriter):
-    pass
-
-
-class AtomicWebHdfsFile(AbstractAtomicWebHdfsFile, io.TextIOWrapper):
-    pass
 
 
 class WebHdfsClient(object):

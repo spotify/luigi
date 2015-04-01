@@ -70,7 +70,7 @@ class HDFSCliError(Exception):
 
 
 def call_check(command):
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, universal_newlines=True)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
         raise HDFSCliError(command, p.returncode, stdout, stderr)
@@ -148,7 +148,7 @@ class HdfsClient(FileSystem):
 
         cmd = load_hadoop_cmd() + ['fs', '-stat', path]
         logger.debug('Running file existence check: %s', u' '.join(cmd))
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, universal_newlines=True)
         stdout, stderr = p.communicate()
         if p.returncode == 0:
             return True
@@ -435,6 +435,8 @@ class SnakebiteHdfsClient(HdfsClient):
         :type recursive: boolean, default is False
         :return: list of all changed items
         """
+        if type(permissions) == str:
+            permissions = int(permissions, 8)
         return list(self.get_bite().chmod(list_path(path),
                                           permissions, recursive))
 
@@ -471,8 +473,10 @@ class SnakebiteHdfsClient(HdfsClient):
         :return: dictionary with content_size, dir_count and file_count keys
         """
         try:
-            (dir_count, file_count, content_size, ppath) = \
-                self.get_bite().count(list_path(path)).next().split()
+            res = self.get_bite().count(list_path(path)).next()
+            dir_count = res['directoryCount']
+            file_count = res['fileCount']
+            content_size = res['spaceConsumed']
         except StopIteration:
             dir_count = file_count = content_size = 0
         return {'content_size': content_size, 'dir_count': dir_count,
@@ -622,12 +626,16 @@ def get_configured_hdfs_client(show_warnings=True):
     """
     config = hdfs()
     custom = config.client
-    if six.PY3 and (custom == "snakebite" or config.use_snakebite):
+    conf_usinf_snakebite = [
+        "snakebite_with_hadoopcli_fallback",
+        "snakebite",
+    ]
+    if six.PY3 and (custom in conf_usinf_snakebite or config.use_snakebite):
         if show_warnings:
             warnings.warn(
                 "snakebite client not compatible with python3 at the moment"
                 "falling back on hadoopcli",
-                stacklevle=2
+                stacklevel=2
             )
         return "hadoopcli"
     if custom:
@@ -741,37 +749,127 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
         rename(self.tmppath, self.path)
 
 
-class Plain(luigi.format.Format):
+class PlainFormat(luigi.format.Format):
 
-    @classmethod
-    def hdfs_reader(cls, path):
+    input = 'bytes'
+    output = 'hdfs'
+
+    def hdfs_writer(self, path):
+        return self.pipe_writer(path)
+
+    def hdfs_reader(self, path):
+        return self.pipe_reader(path)
+
+    def pipe_reader(self, path):
         return HdfsReadPipe(path)
 
-    @classmethod
-    def pipe_writer(cls, output_pipe):
-        return output_pipe
+    def pipe_writer(self, output_pipe):
+        return HdfsAtomicWritePipe(output_pipe)
 
 
-class PlainDir(luigi.format.Format):
+class PlainDirFormat(luigi.format.Format):
 
-    @classmethod
-    def hdfs_reader(cls, path):
+    input = 'bytes'
+    output = 'hdfs'
+
+    def hdfs_writer(self, path):
+        return self.pipe_writer(path)
+
+    def hdfs_reader(self, path):
+        return self.pipe_reader(path)
+
+    def pipe_reader(self, path):
         # exclude underscore-prefixedfiles/folders (created by MapReduce)
         return HdfsReadPipe("%s/[^_]*" % path)
 
-    @classmethod
-    def hdfs_writer(cls, path):
+    def pipe_writer(self, path):
         return HdfsAtomicWriteDirPipe(path)
+
+
+Plain = PlainFormat()
+PlainDir = PlainDirFormat()
+
+
+class CompatibleHdfsFormat(luigi.format.Format):
+
+    output = 'hdfs'
+
+    def __init__(self, writer, reader, input=None):
+        if input is not None:
+            self.input = input
+
+        self.reader = reader
+        self.writer = writer
+
+    def pipe_writer(self, output):
+        return self.writer(output)
+
+    def pipe_reader(self, input):
+        return self.reader(input)
+
+    def hdfs_writer(self, output):
+        return self.writer(output)
+
+    def hdfs_reader(self, input):
+        return self.reader(input)
 
 
 class HdfsTarget(FileSystemTarget):
 
-    def __init__(self, path=None, format=Plain, is_tmp=False, fs=None):
+    def __init__(self, path=None, format=None, is_tmp=False, fs=None):
         if path is None:
             assert is_tmp
             path = tmppath()
         super(HdfsTarget, self).__init__(path)
+
+        if format is None:
+            format = luigi.format.get_default_format() >> Plain
+
+        old_format = (
+            (
+                hasattr(format, 'hdfs_writer') or
+                hasattr(format, 'hdfs_reader')
+            ) and
+            not hasattr(format, 'output')
+        )
+
+        if not old_format and getattr(format, 'output', '') != 'hdfs':
+            format = format >> Plain
+
+        if old_format:
+            warnings.warn(
+                'hdfs_writer and hdfs_reader method for format is deprecated,'
+                'specify the property output of your format as \'hdfs\' instead',
+                DeprecationWarning,
+                stacklevel=2
+            )
+
+            if hasattr(format, 'hdfs_writer'):
+                format_writer = format.hdfs_writer
+            else:
+                w_format = format >> Plain
+                format_writer = w_format.pipe_writer
+
+            if hasattr(format, 'hdfs_reader'):
+                format_reader = format.hdfs_reader
+            else:
+                r_format = format >> Plain
+                format_reader = r_format.pipe_reader
+
+            format = CompatibleHdfsFormat(
+                format_writer,
+                format_reader,
+            )
+
+        else:
+            format = CompatibleHdfsFormat(
+                format.pipe_writer,
+                format.pipe_reader,
+                getattr(format, 'input', None),
+            )
+
         self.format = format
+
         self.is_tmp = is_tmp
         (scheme, netloc, path, query, fragment) = urlsplit(path)
         if ":" in path:
@@ -798,15 +896,9 @@ class HdfsTarget(FileSystemTarget):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
         if mode == 'r':
-            try:
-                return self.format.hdfs_reader(self.path)
-            except NotImplementedError:
-                return self.format.pipe_reader(HdfsReadPipe(self.path))
+            return self.format.pipe_reader(self.path)
         else:
-            try:
-                return self.format.hdfs_writer(self.path)
-            except NotImplementedError:
-                return self.format.pipe_writer(HdfsAtomicWritePipe(self.path))
+            return self.format.pipe_writer(self.path)
 
     def remove(self, skip_trash=False):
         remove(self.path, skip_trash=skip_trash)

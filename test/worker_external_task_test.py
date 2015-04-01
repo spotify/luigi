@@ -13,13 +13,12 @@
 # the License.
 
 import luigi
-from luigi.file import File
+from luigi.file import LocalTarget
 from luigi.scheduler import CentralPlannerScheduler
 import luigi.server
 import luigi.worker
-import unittest
 from mock import patch
-from helpers import with_config
+from helpers import with_config, unittest
 import os
 import tempfile
 
@@ -45,7 +44,7 @@ class TestExternalFileTask(luigi.ExternalTask):
         return os.path.exists(self.path)
 
     def output(self):
-        return File(path=self.path)
+        return LocalTarget(path=self.path)
 
 
 class TestTask(luigi.Task):
@@ -66,7 +65,7 @@ class TestTask(luigi.Task):
         yield self.dependency
 
     def output(self):
-        return File(
+        return LocalTarget(
             path=self.output_path)
 
     def run(self):

@@ -16,7 +16,7 @@
 #
 
 import datetime
-import unittest
+from helpers import unittest
 from datetime import timedelta
 
 import luigi
@@ -24,7 +24,7 @@ import luigi.date_interval
 import luigi.interface
 import luigi.notifications
 from helpers import with_config
-from luigi.mock import MockFile, MockFileSystem
+from luigi.mock import MockTarget, MockFileSystem
 from luigi.parameter import ParameterException
 from worker_test import email_patch
 
@@ -110,7 +110,7 @@ class BananaDep(luigi.Task):
     y = luigi.Parameter(default='def')
 
     def output(self):
-        return MockFile('banana-dep-%s-%s' % (self.x, self.y))
+        return MockTarget('banana-dep-%s-%s' % (self.x, self.y))
 
     def run(self):
         self.output().open('w').close()
@@ -134,7 +134,7 @@ class Banana(luigi.Task):
             raise Exception('unknown style')
 
     def output(self):
-        return MockFile('banana-%s-%s' % (self.x, self.y))
+        return MockTarget('banana-%s-%s' % (self.x, self.y))
 
     def run(self):
         self.output().open('w').close()
@@ -145,7 +145,8 @@ class MyConfig(luigi.Config):
     mc_q = luigi.IntParameter(default=73)
 
 
-class MyConfigWithoutSection(luigi.ConfigWithoutSection):
+class MyConfigWithoutSection(luigi.Config):
+    use_cmdline_section = False
     mc_r = luigi.IntParameter()
     mc_s = luigi.IntParameter(default=99)
 
@@ -310,11 +311,11 @@ class TestNewStyleGlobalParameters(unittest.TestCase):
 
     def setUp(self):
         super(TestNewStyleGlobalParameters, self).setUp()
-        MockFile.fs.clear()
+        MockTarget.fs.clear()
         BananaDep.y.reset_global()
 
     def expect_keys(self, expected):
-        self.assertEquals(set(MockFile.fs.get_all_data().keys()), set(expected))
+        self.assertEquals(set(MockTarget.fs.get_all_data().keys()), set(expected))
 
     def test_x_arg(self):
         luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg'])
@@ -408,7 +409,8 @@ class TestRemoveGlobalParameters(unittest.TestCase):
         class Dogs(luigi.Config):
             n_dogs = luigi.IntParameter()
 
-        class CatsWithoutSection(luigi.ConfigWithoutSection):
+        class CatsWithoutSection(luigi.Config):
+            use_cmdline_section = False
             n_cats = luigi.IntParameter()
 
         self.run_and_check(['--n-cats', '123', '--Dogs-n-dogs', '456', 'WithDefault'])
@@ -647,6 +649,16 @@ class OverrideEnvStuff(unittest.TestCase):
     def testOverrideSchedulerPort(self):
         env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6543)
+
+    @with_config({"core": {"scheduler-port": '6544'}})
+    def testOverrideSchedulerPort2(self):
+        env_params = luigi.interface.core()
+        self.assertEqual(env_params.scheduler_port, 6544)
+
+    @with_config({"core": {"scheduler_port": '6545'}})
+    def testOverrideSchedulerPort3(self):
+        env_params = luigi.interface.core()
+        self.assertEqual(env_params.scheduler_port, 6545)
 
 
 if __name__ == '__main__':

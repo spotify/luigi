@@ -17,10 +17,9 @@
 
 import subprocess
 import tempfile
-import unittest
 
 import luigi
-from helpers import with_config
+from helpers import with_config, unittest
 from luigi.contrib.pig import PigJobError, PigJobTask
 from mock import patch
 

@@ -20,17 +20,17 @@ import sys
 import unittest
 
 import luigi
+import luigi.format
 import luigi.hadoop
 import luigi.hdfs
 import luigi.mrrunner
 import luigi.notifications
 import minicluster
 import mock
-from luigi.mock import MockFile
+from luigi.mock import MockTarget
 from nose.plugins.attrib import attr
 
 luigi.notifications.DEBUG = True
-File = MockFile
 
 luigi.hadoop.attach(minicluster)
 
@@ -40,9 +40,9 @@ class OutputMixin(luigi.Task):
 
     def get_output(self, fn):
         if self.use_hdfs:
-            return luigi.hdfs.HdfsTarget('/tmp/' + fn, format=luigi.hdfs.PlainDir)
+            return luigi.hdfs.HdfsTarget('/tmp/' + fn, format=luigi.format.get_default_format() >> luigi.hdfs.PlainDir)
         else:
-            return File(fn)
+            return MockTarget(fn)
 
 
 class HadoopJobTask(luigi.hadoop.JobTask, OutputMixin):
@@ -109,6 +109,13 @@ class WordFreqJob(HadoopJobTask):
 
     def output(self):
         return self.get_output('luigitest-2')
+
+    def extra_files(self):
+        fn = os.listdir('.')[0]  # Just return some file, doesn't matter which
+        return [(fn, 'my_dir/my_file')]
+
+    def init_remote(self):
+        f = open('my_dir/my_file')  # make sure it exists
 
 
 class MapOnlyJob(HadoopJobTask):
@@ -235,7 +242,7 @@ class MapreduceLocalTest(unittest.TestCase):
         MyStreamingJob('param_value')
 
     def setUp(self):
-        MockFile.fs.clear()
+        MockTarget.fs.clear()
 
 
 @attr('minicluster')

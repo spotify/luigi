@@ -16,7 +16,7 @@
 #
 
 import doctest
-import unittest
+from helpers import unittest
 from datetime import datetime, timedelta
 
 import luigi

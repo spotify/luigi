@@ -15,22 +15,21 @@
 # limitations under the License.
 #
 """
-Implementation of a :py:class:`~luigi.target.Target` class that contains all data in-memory.
+This moduel provides a class :class:`MockTarget`, an implementation of :py:class:`~luigi.target.Target`.
+:class:`MockTarget` contains all data in-memory.
 The main purpose is unit testing workflows without writing to disk.
 """
 
 import multiprocessing
-import os
 from io import BytesIO
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+
 import sys
+import warnings
 
-
+from luigi import six
 import luigi.util
 from luigi import target
+from luigi.format import get_default_format, MixedUnicodeBytes
 
 
 class MockFileSystem(target.FileSystem):
@@ -49,7 +48,7 @@ class MockFileSystem(target.FileSystem):
         return self.get_all_data()[fn]
 
     def exists(self, path):
-        return MockFile(path).exists()
+        return MockTarget(path).exists()
 
     def remove(self, path, recursive=True, skip_trash=True):
         """
@@ -82,12 +81,20 @@ class MockFileSystem(target.FileSystem):
         self.get_all_data().clear()
 
 
-class MockFile(target.FileSystemTarget):
+class MockTarget(target.FileSystemTarget):
     fs = MockFileSystem()
 
-    def __init__(self, fn, is_tmp=None, mirror_on_stderr=False):
+    def __init__(self, fn, is_tmp=None, mirror_on_stderr=False, format=None):
         self._mirror_on_stderr = mirror_on_stderr
         self._fn = fn
+        if format is None:
+            format = get_default_format()
+
+        # Allow to write unicode in file for retrocompatibility
+        if six.PY2:
+            format = format >> MixedUnicodeBytes
+
+        self.format = format
 
     def exists(self,):
         return self._fn in self.fs.get_all_data()
@@ -106,64 +113,64 @@ class MockFile(target.FileSystemTarget):
     def open(self, mode):
         fn = self._fn
 
-        class StringBuffer(StringIO):
+        class Buffer(BytesIO):
             # Just to be able to do writing + reading from the same buffer
 
             _write_line = True
 
+            def set_wrapper(self, wrapper):
+                self.wrapper = wrapper
+
             def write(self2, data):
+                if six.PY3:
+                    stderrbytes = sys.stderr.buffer
+                else:
+                    stderrbytes = sys.stderr
+
                 if self._mirror_on_stderr:
                     if self2._write_line:
                         sys.stderr.write(fn + ": ")
-                    sys.stderr.write(data)
+                    stderrbytes.write(data)
                     if (data[-1]) == '\n':
                         self2._write_line = True
                     else:
                         self2._write_line = False
-                StringIO.write(self2, data)
+                super(Buffer, self2).write(data)
 
             def close(self2):
-                if 'w' in mode:
+                if mode == 'w':
+                    try:
+                        self.wrapper.flush()
+                    except AttributeError:
+                        pass
                     self.fs.get_all_data()[fn] = self2.getvalue()
-                StringIO.close(self2)
+                super(Buffer, self2).close()
 
             def __exit__(self, exc_type, exc_val, exc_tb):
                 if not exc_type:
                     self.close()
 
-            def __enter__(self):
-                return self
+            def __enter__(self2):
+                return self2
 
-        class BinaryBuffer(BytesIO):
-            # Just to be able to do writing + reading from the same buffer
+            def readable(self2):
+                return mode == 'r'
 
-            def write(self2, data):
-                if self._mirror_on_stderr:
-                    self2.seek(-1, os.SEEK_END)
-                    if self2.tell() <= 0 or self2.read(1) == '\n':
-                        sys.stderr.write(fn + ": ")
-                    sys.stderr.write(data)
-                BytesIO.write(self2, data)
+            def writeable(self2):
+                return mode == 'w'
 
-            def close(self2):
-                if 'w' in mode:
-                    self.fs.get_all_data()[fn] = self2.getvalue()
-                BytesIO.close(self2)
+            def seekable(self2):
+                return False
 
-            def __exit__(self, exc_type, exc_val, exc_tb):
-                if not exc_type:
-                    self.close()
-
-            def __enter__(self):
-                return self
-
-        char_mode = target.get_char_mode(mode)
-        if char_mode == 't':
-            atomic_type = StringBuffer
+        if mode == 'w':
+            wrapper = self.format.pipe_writer(Buffer())
+            wrapper.set_wrapper(wrapper)
+            return wrapper
         else:
-            atomic_type = BinaryBuffer
+            return self.format.pipe_reader(Buffer(self.fs.get_all_data()[fn]))
 
-        if 'w' in mode:
-            return atomic_type()
-        else:
-            return atomic_type(self.fs.get_all_data()[fn])
+
+class MockFile(MockTarget):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("MockFile has been renamed MockTarget", DeprecationWarning, stacklevel=2)
+        super(MockFile, self).__init__(*args, **kwargs)

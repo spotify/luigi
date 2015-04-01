@@ -22,7 +22,7 @@ except ImportError:
 import os
 import sys
 import tempfile
-import unittest
+from helpers import unittest
 
 import luigi.contrib.hive
 import mock
@@ -292,6 +292,21 @@ class TestHiveTask(unittest.TestCase):
         success = luigi.run(['MyHiveTask', '--param', 'foo', '--local-scheduler', '--no-lock'])
         self.assertTrue(success)
         self.assertEqual('hive', run_and_track_hadoop_job.call_args[0][0][0])
+
+
+class TestHiveTarget(unittest.TestCase):
+
+    def test_hive_table_target(self):
+        client = mock.Mock()
+        target = luigi.contrib.hive.HiveTableTarget(database='db', table='foo', client=client)
+        target.exists()
+        client.table_exists.assert_called_with('foo', 'db')
+
+    def test_hive_partition_target(self):
+        client = mock.Mock()
+        target = luigi.contrib.hive.HivePartitionTarget(database='db', table='foo', partition='bar', client=client)
+        target.exists()
+        client.table_exists.assert_called_with('foo', 'db', 'bar')
 
 
 if __name__ == '__main__':

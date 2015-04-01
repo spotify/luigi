@@ -28,6 +28,7 @@ Be aware that normal ftp do not provide secure communication.
 import datetime
 import ftplib
 import os
+import sys
 import random
 import io
 
@@ -35,8 +36,7 @@ import luigi
 import luigi.file
 import luigi.format
 import luigi.target
-from luigi.format import FileWrapper
-from luigi import six
+from luigi.format import FileWrapper, MixedUnicodeBytes
 
 
 class RemoteFileSystem(luigi.target.FileSystem):
@@ -189,7 +189,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         os.rename(tmp_local_path, local_path)
 
 
-class AbstractAtomicFtpFile(object):
+class AtomicFtpFile(luigi.target.AtomicLocalFile):
     """
     Simple class that writes to a temp file and upload to ftp on close().
 
@@ -203,54 +203,15 @@ class AbstractAtomicFtpFile(object):
         :param path:
         :type path: str
         """
-        self.__tmp_path = '%s-luigi-tmp-%09d' % (path, random.randrange(0, 1e10))
         self._fs = fs
-        self.path = path
-        init_args = self.get_init_args(self.__tmp_path)
-        super(AbstractAtomicFtpFile, self).__init__(*init_args)
+        super(AtomicFtpFile, self).__init__(path)
 
-    def get_init_args(self, path):
-        return (io.FileIO(path, 'w'),)
-
-    def close(self):
-        # close and upload file to ftp
-        super(AbstractAtomicFtpFile, self).close()
-        self._fs.put(self.__tmp_path, self.path)
-        os.remove(self.__tmp_path)
-
-    def __del__(self):
-        if os.path.exists(self.__tmp_path):
-            os.remove(self.__tmp_path)
-
-    @property
-    def tmp_path(self):
-        return self.__tmp_path
+    def move_to_final_destination(self):
+        self._fs.put(self.tmp_path, self.path)
 
     @property
     def fs(self):
         return self._fs
-
-    def __exit__(self, exc_type, exc, traceback):
-        """
-        Close/commit the file if there are no exception
-        Upload file to ftp
-        """
-        if exc_type:
-            return
-        return file.__exit__(self, exc_type, exc, traceback)
-
-
-class AtomicFtpTextFile(AbstractAtomicFtpFile, io.TextIOWrapper):
-    pass
-
-
-class AtomicFtpBinaryFile(AbstractAtomicFtpFile, io.BufferedWriter):
-    pass
-
-if six.PY2:
-    class AtomicFtpfile(AbstractAtomicFtpFile, file):
-        def get_init_args(self, path):
-            return (path, 'w')
 
 
 class RemoteTarget(luigi.target.FileSystemTarget):
@@ -260,7 +221,17 @@ class RemoteTarget(luigi.target.FileSystemTarget):
     The target is implemented using ssh commands streaming data over the network.
     """
 
-    def __init__(self, path, host, format=None, username=None, password=None, port=21, mtime=None, tls=False):
+    def __init__(
+        self, path, host, format=None, username=None,
+        password=None, port=21, mtime=None, tls=False
+    ):
+        if format is None:
+            format = luigi.format.get_default_format()
+
+        # Allow to write unicode in file for retrocompatibility
+        if sys.version_info[:2] <= (2, 6):
+            format = format >> MixedUnicodeBytes
+
         self.path = path
         self.mtime = mtime
         self.format = format
@@ -283,37 +254,17 @@ class RemoteTarget(luigi.target.FileSystemTarget):
                      additional options.
         :type mode: str
         """
-        char_mode = luigi.target.get_char_mode(mode)
-        if 'w' in mode:
+        if mode == 'w':
+            return self.format.pipe_writer(AtomicFtpFile(self._fs, self.path))
 
-            if char_mode == 'b':
-                atomic_type = AtomicFtpBinaryFile
-            elif char_mode == 't':
-                atomic_type = AtomicFtpTextFile
-            else:
-                atomic_type = AtomicFtpfile
-
-            if self.format:
-                return self.format.pipe_writer(atomic_type(self._fs, self.path))
-            else:
-                return atomic_type(self._fs, self.path)
-
-        elif 'r' in mode:
+        elif mode == 'r':
             self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
             # download file to local
             self._fs.get(self.path, self.__tmp_path)
 
-            # manage tmp file
-            if char_mode == 't':
-                fileobj = FileWrapper(io.TextIOWrapper(io.FileIO(self.path, 'r')))
-            elif char_mode == 'b':
-                fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
-            else:
-                fileobj = FileWrapper(open(self.path, 'r'))
-
-            if self.format:
-                return self.format.pipe_reader(fileobj)
-            return fileobj
+            return self.format.pipe_reader(
+                FileWrapper(io.BufferedReader(io.FileIO(self.__tmp_path, 'r')))
+            )
         else:
             raise Exception('mode must be r/w')
 

@@ -1,7 +1,10 @@
 mock
 moto
+HTTPretty>=0.8.1
 nose
 psycopg2
 unittest2
 boto
 sqlalchemy
+elasticsearch
+snakebite>=2.5.2

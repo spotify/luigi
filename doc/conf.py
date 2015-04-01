@@ -15,6 +15,11 @@
 import sys
 import os
 
+if os.environ.get('READTHEDOCS', None) == 'True':
+    # Run sphinx-apidoc automatically in readthedocs
+    # Taken from this: https://lists.torproject.org/pipermail/tor-commits/2012-September/046695.html
+    os.system('sphinx-apidoc -o api -T ../luigi --separate')
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.

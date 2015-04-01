@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.date_interval
@@ -48,6 +48,12 @@ class InterfaceTest(unittest.TestCase):
         self.worker.run = Mock(return_value=True)
 
         self.assertTrue(self._run_interface())
+
+    def test_interface_default_override_defaults(self):
+        self.worker.add = Mock(side_effect=[True, True])
+        self.worker.run = Mock(return_value=True)
+
+        self.assertTrue(Interface.run([self.task_a, self.task_b], self.worker_scheduler_factory))
 
     def test_interface_run_with_add_failure(self):
         self.worker.add = Mock(side_effect=[True, False])

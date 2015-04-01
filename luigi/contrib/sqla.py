@@ -141,8 +141,8 @@ import datetime
 import itertools
 import logging
 import luigi
-import sqlalchemy
 import os
+import sqlalchemy
 
 
 class SQLAlchemyTarget(luigi.Target):

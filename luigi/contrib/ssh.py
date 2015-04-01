@@ -20,15 +20,15 @@ Light-weight remote execution library and utilities.
 There are some examples in the unittest, but
 I added another more luigi-specific in the examples directory (examples/ssh_remote_execution.py
 
-contrib.ssh.RemoteContext is meant to provide functionality similar to that of the standard library subprocess module,
+:class:`RemoteContext` is meant to provide functionality similar to that of the standard library subprocess module,
 but where the commands executed are run on a remote machine instead,
 without the user having to think about prefixing everything with "ssh" and credentials etc.
 
 Using this mini library (which is just a convenience wrapper for subprocess),
-RemoteTarget is created to let you stream data from a remotely stored file using
-the luigi FileSystemTarget semantics.
+:class:`RemoteTarget` is created to let you stream data from a remotely stored file using
+the luigi :class:`~luigi.target.FileSystemTarget` semantics.
 
-As a bonus, RemoteContext also provides a really cool feature that let's you
+As a bonus, :class:`RemoteContext` also provides a really cool feature that let's you
 set up ssh tunnels super easily using a python context manager (there is an example
 in the integration part of unittests).
 
@@ -119,7 +119,7 @@ class RemoteContext(object):
         )
         # make sure to get the data so we know the connection is established
         ready = proc.stdout.read(5)
-        assert ready == "ready", "Didn't get ready from remote echo"
+        assert ready == b"ready", "Didn't get ready from remote echo"
         yield  # user code executed here
         proc.communicate()
         assert proc.returncode == 0, "Tunnel process did an unclean exit (returncode %s)" % (proc.returncode,)
@@ -230,6 +230,8 @@ class RemoteTarget(luigi.target.FileSystemTarget):
 
     def __init__(self, path, host, format=None, username=None, key_file=None):
         super(RemoteTarget, self).__init__(path)
+        if format is None:
+            format = luigi.format.get_default_format()
         self.format = format
         self._fs = RemoteFileSystem(host, username, key_file)
 

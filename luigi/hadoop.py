@@ -257,8 +257,8 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
 
     def track_process(arglist, tracking_url_callback, env=None):
         # Dump stdout to a temp file, poll stderr and log it
-        temp_stdout = tempfile.TemporaryFile()
-        proc = subprocess.Popen(arglist, stdout=temp_stdout, stderr=subprocess.PIPE, env=env, close_fds=True)
+        temp_stdout = tempfile.TemporaryFile('w+t')
+        proc = subprocess.Popen(arglist, stdout=temp_stdout, stderr=subprocess.PIPE, env=env, close_fds=True, universal_newlines=True)
 
         # We parse the output to try to find the tracking URL.
         # This URL is useful for fetching the logs of the job.
@@ -846,11 +846,11 @@ class JobTask(BaseHadoopJobTask):
         if self.__module__ == '__main__':
             d = pickle.dumps(self)
             module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-            d = d.replace('(c__main__', "(c" + module_name)
-            open(file_name, "w").write(d)
+            d = d.replace(b'(c__main__', "(c" + module_name)
+            open(file_name, "wb").write(d)
 
         else:
-            pickle.dump(self, open(file_name, "w"))
+            pickle.dump(self, open(file_name, "wb"))
 
     def _map_input(self, input_stream):
         """
@@ -922,18 +922,3 @@ class JobTask(BaseHadoopJobTask):
         """
         for output in outputs:
             print("\t".join(map(repr, output)), file=stdout)
-
-
-def pickle_reader(job, input_stream):
-    def decode(item):
-        return pickle.loads(binascii.a2b_base64(item))
-    for line in input_stream:
-        items = line.split('\t')
-        yield list(map(decode, items))
-
-
-def pickle_writer(job, outputs, stdout):
-    def encode(item):
-        return binascii.b2a_base64(pickle.dumps(item))[:-1]  # remove trailing newline
-    for keyval in outputs:
-        print("\t".join(map(encode, keyval)), file=stdout)

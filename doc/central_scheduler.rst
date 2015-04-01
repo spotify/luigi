@@ -17,6 +17,9 @@ There is no central process that automatically triggers job.
 This model may seem limited, but
 we believe that it makes things far more intuitive and easy to understand.
 
+.. figure:: user_recs.png
+   :alt: Dependency graph in the visualizer
+
 The luigid server
 ~~~~~~~~~~~~~~~~~
 
@@ -24,7 +27,7 @@ To run the server as a daemon run:
 
 ::
 
-    PYTHONPATH=. python bin/luigid --background --pidfile <PATH_TO_PIDFILE> --logdir <PATH_TO_LOGDIR> --state-path <PATH_TO_STATEFILE>
+    luigid --background --pidfile <PATH_TO_PIDFILE> --logdir <PATH_TO_LOGDIR> --state-path <PATH_TO_STATEFILE>
 
 Note that this requires ``python-daemon``.
 By default, the server starts on port ``8082``
@@ -34,6 +37,8 @@ For a full list of configuration options and defaults,
 see the :ref:`scheduler configuration section <scheduler-config>`.
 Note that ``luigid`` uses the same configuration files as the luigi client
 (i.e. ``client.cfg`` or ``/etc/luigi/client.cfg`` by default).
+
+.. _TaskHistory:
 
 Enabling Task History
 ~~~~~~~~~~~~~~~~~~~~~

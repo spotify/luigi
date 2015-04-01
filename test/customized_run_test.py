@@ -17,7 +17,7 @@
 
 import logging
 import time
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.hadoop
@@ -47,7 +47,7 @@ class CustomizedLocalScheduler(luigi.scheduler.CentralPlannerScheduler):
         super(CustomizedLocalScheduler, self).__init__(*args, **kwargs)
         self.has_run = False
 
-    def get_work(self, worker, host=None):
+    def get_work(self, worker, host=None, **kwargs):
         r = super(CustomizedLocalScheduler, self).get_work(worker, host)
         self.has_run = True
         return r
@@ -97,7 +97,7 @@ class CustomizedWorkerSchedulerFactory(object):
     def create_remote_scheduler(self, host, port):
         return CustomizedRemoteScheduler(host=host, port=port)
 
-    def create_worker(self, scheduler, worker_processes=None):
+    def create_worker(self, scheduler, worker_processes=None, assistant=False):
         return self.worker
 
 

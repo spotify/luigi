@@ -5,6 +5,7 @@ client.cfg
 hadoop_test.py
 minicluster.py
 mrrunner.py
+pig_property_file
 
 packages.tar
 
@@ -70,7 +71,7 @@ coverage.xml
 *.log
 
 # Sphinx documentation
-docs/_build/
+doc/_build/
 
 # PyBuilder
 target/

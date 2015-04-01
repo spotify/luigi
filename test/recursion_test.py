@@ -18,20 +18,18 @@ from __future__ import print_function
 
 import datetime
 import sys
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.interface
-from luigi.mock import MockFile
-
-File = MockFile
+from luigi.mock import MockTarget
 
 
 class Popularity(luigi.Task):
     date = luigi.DateParameter(default=datetime.date.today() - datetime.timedelta(1))
 
     def output(self):
-        return File('/tmp/popularity/%s.txt' % self.date.strftime('%Y-%m-%d'))
+        return MockTarget('/tmp/popularity/%s.txt' % self.date.strftime('%Y-%m-%d'))
 
     def requires(self):
         return Popularity(self.date - datetime.timedelta(1))
@@ -47,7 +45,7 @@ class Popularity(luigi.Task):
 class RecursionTest(unittest.TestCase):
 
     def setUp(self):
-        MockFile.fs.get_all_data()['/tmp/popularity/2009-01-01.txt'] = '0\n'
+        MockTarget.fs.get_all_data()['/tmp/popularity/2009-01-01.txt'] = b'0\n'
 
     def test_invoke(self):
         w = luigi.worker.Worker()
@@ -55,4 +53,4 @@ class RecursionTest(unittest.TestCase):
         w.run()
         w.stop()
 
-        self.assertEqual(MockFile.fs.get_data('/tmp/popularity/2010-01-01.txt'), '365\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/popularity/2010-01-01.txt'), b'365\n')

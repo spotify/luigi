@@ -14,15 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import os
 
-from unittest import TestCase
+from helpers import unittest
 
 import luigi
 import luigi.notifications
 from luigi import postgres
-
-luigi.notifications.DEBUG = True
-luigi.namespace('postgres_test')
 
 """
 Typical use cases that should be tested:
@@ -35,14 +33,32 @@ Typical use cases that should be tested:
 
 """
 
+host = 'localhost'
+database = 'spotify'
+user = os.getenv('POSTGRES_USER', 'spotify')
+password = 'guest'
+
+
+try:
+    import psycopg2
+    conn = psycopg2.connect(
+        user=user,
+        host=host,
+        database=database,
+        password=password,
+    )
+    conn.close()
+except Exception:
+    raise unittest.SkipTest('Unable to connect to postgres')
+
+
 # to avoid copying:
 
-
 class CopyToTestDB(postgres.CopyToTable):
-    host = 'localhost'
-    database = 'spotify'
-    user = 'spotify'
-    password = 'guest'
+    host = host
+    database = database
+    user = user
+    password = password
 
 
 class TestPostgresTask(CopyToTestDB):
@@ -87,7 +103,7 @@ class Metric2(MetricBase):
         yield 'metric2', 3
 
 
-class TestPostgresImportTask(TestCase):
+class TestPostgresImportTask(unittest.TestCase):
 
     def test_default_escape(self):
         self.assertEqual(postgres.default_escape('foo'), 'foo')
@@ -149,5 +165,3 @@ class TestPostgresImportTask(TestCase):
         cursor = conn.cursor()
         cursor.execute('select count(*) from {table}'.format(table=clearer.table))
         self.assertEqual(tuple(cursor), ((3,),))
-
-luigi.namespace()

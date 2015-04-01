@@ -16,7 +16,7 @@
 #
 
 import json
-import unittest
+from helpers import unittest
 
 import sys
 
@@ -29,7 +29,7 @@ from boto.s3.key import Key
 from luigi.s3 import S3Client
 
 
-if sys.version_info[:2] == (3, 4):
+if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
     # spulec/moto#308
     mock_s3 = unittest.skip('moto mock doesn\'t work with python3.4')
 
@@ -76,7 +76,7 @@ class TestRedshiftManifestTask(unittest.TestCase):
 
         output = t.output().open('r').read()
         expected_manifest_output = json.dumps(generate_manifest_json(folder_paths, FILES))
-        self.assertEqual(output.decode('utf8'), expected_manifest_output)
+        self.assertEqual(output, expected_manifest_output)
 
     @mock_s3
     def test_run_multiple_paths(self):
@@ -98,4 +98,4 @@ class TestRedshiftManifestTask(unittest.TestCase):
 
         output = t.output().open('r').read()
         expected_manifest_output = json.dumps(generate_manifest_json(folder_paths, FILES))
-        self.assertEqual(output.decode('utf8'), expected_manifest_output)
+        self.assertEqual(output, expected_manifest_output)

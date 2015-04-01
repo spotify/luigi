@@ -17,14 +17,13 @@
 
 import datetime
 import decimal
-import unittest
+from helpers import unittest
 
 import luigi
 import luigi.notifications
-from luigi.mock import MockFile
+from luigi.mock import MockTarget
 
 luigi.notifications.DEBUG = True
-File = MockFile
 
 
 class Report(luigi.Task):
@@ -38,7 +37,7 @@ class Report(luigi.Task):
         f.close()
 
     def output(self):
-        return File(self.date.strftime('/tmp/report-%Y-%m-%d'))
+        return MockTarget(self.date.strftime('/tmp/report-%Y-%m-%d'))
 
 
 class ReportReader(luigi.Task):
