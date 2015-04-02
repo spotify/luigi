@@ -221,6 +221,42 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.prune()
         self.assertFalse(list(self.sch.task_list('', '')))
 
+    def test_prune_done_tasks(self, expected=None):
+        self.setTime(0)
+        self.sch.add_task(WORKER, task_id='A', status=DONE)
+        self.sch.add_task(WORKER, task_id='B', deps=['A'], status=DONE)
+        self.sch.add_task(WORKER, task_id='C', deps=['B'])
+
+        self.setTime(600)
+        self.sch.ping('ASSISTANT')
+        self.sch.prune()
+        self.setTime(2000)
+        self.sch.ping('ASSISTANT')
+        self.sch.prune()
+
+        self.assertEqual(set(expected or ()), set(self.sch.task_list('', '').keys()))
+
+    def test_keep_tasks_for_assistant(self):
+        self.sch.get_work('ASSISTANT', assistant=True)  # tell the scheduler this is an assistant
+        self.test_prune_done_tasks(['B', 'C'])
+
+    def test_keep_scheduler_disabled_tasks_for_assistant(self):
+        self.sch.get_work('ASSISTANT', assistant=True)  # tell the scheduler this is an assistant
+
+        # create a scheduler disabled task and a worker disabled task
+        for i in range(10):
+            self.sch.add_task(WORKER, 'D', status=FAILED)
+        self.sch.add_task(WORKER, 'E', status=DISABLED)
+
+        # scheduler prunes the worker disabled task
+        self.assertEqual(set(['D', 'E']), set(self.sch.task_list(DISABLED, '')))
+        self.test_prune_done_tasks(['B', 'C', 'D'])
+
+    def test_keep_failed_tasks_for_assistant(self):
+        self.sch.get_work('ASSISTANT', assistant=True)  # tell the scheduler this is an assistant
+        self.sch.add_task(WORKER, 'D', status=FAILED, deps='A')
+        self.test_prune_done_tasks(['A', 'B', 'C', 'D'])
+
     def test_scheduler_resources_none_allow_one(self):
         self.sch.add_task(worker='X', task_id='A', resources={'R1': 1})
         self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')

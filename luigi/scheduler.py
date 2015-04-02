@@ -93,6 +93,7 @@ class scheduler(Config):
     disable_persist = parameter.IntParameter(default=86400,
                                              config_path=dict(section='scheduler', name='disable-persist-seconds'))
     max_shown_tasks = parameter.IntParameter(default=100000)
+    prune_done_tasks = parameter.BoolParameter(default=False)
 
     record_task_history = parameter.BoolParameter(default=False)
 
@@ -418,6 +419,15 @@ class SimpleTaskState(object):
             task.stakeholders.difference_update(delete_workers)
             task.workers.difference_update(delete_workers)
 
+    def get_necessary_tasks(self):
+        necessary_tasks = set()
+        for task in self.get_active_tasks():
+            if task.status not in (DONE, DISABLED) or \
+                    getattr(task, 'scheduler_disable_time', None) is not None:
+                necessary_tasks.update(task.deps)
+                necessary_tasks.add(task.id)
+        return necessary_tasks
+
 
 class CentralPlannerScheduler(Scheduler):
     """
@@ -466,8 +476,14 @@ class CentralPlannerScheduler(Scheduler):
 
         assistant_ids = set(w.id for w in self._state.get_assistants())
         remove_tasks = []
+
+        if assistant_ids:
+            necessary_tasks = self._state.get_necessary_tasks()
+        else:
+            necessary_tasks = ()
+
         for task in self._state.get_active_tasks():
-            if self._state.prune(task, self._config, assistant_ids):
+            if task.id not in necessary_tasks and self._state.prune(task, self._config, assistant_ids):
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)
