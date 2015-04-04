@@ -170,7 +170,8 @@ class Interface(object):
             success &= w.add(t, env_params.parallel_scheduling)
         logger = logging.getLogger('luigi-interface')
         logger.info('Done scheduling tasks')
-        success &= w.run()
+        if env_params.workers != 0:
+            success &= w.run()
         w.stop()
         return success
 
