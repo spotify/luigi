@@ -1,0 +1,61 @@
+{% include "header.html" %}
+<div class="row">
+  <div class="span6">
+    <h3>Info</h3>
+    <table class="table table-striped table-bordered">
+      <tbody>
+        <tr>
+          <td>Task Id</td>
+          <td>{{task.id}}</td>
+        </tr>
+        <tr>
+          <td>Task Name</td>
+          <td>{{task.name}}</td>
+        </tr>
+        <tr>
+          <td>Host</td>
+          <td>{{task.host}}</td>
+        </tr>
+        <tr>
+          <td>More</td>
+          <td><a href="/history/by_name/{{task.name}}">All "{{task.name}}" runs</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+<h3>Parameters</h3>
+<table class="table table-striped table-bordered">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for (k, param) in task.parameters.items() %}
+      <tr>
+        <td>{{k}}</td>
+        <td>{{param.value}}</td>
+      </tr>
+    {% end %}
+  </tbody>
+</table>
+<h3>Actions</h3>
+<table class="table table-striped table-bordered">
+  <thead>
+    <tr>
+      <th>Status</th>
+      <th>Action Time</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for event in task.events %}
+      <tr>
+        <td>{{event.event_name}}</td>
+        <td>{{event.ts}}</td>
+      </tr>
+    {% end %}
+
+  </tbody>
+</table>
