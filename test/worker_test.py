@@ -540,6 +540,19 @@ class WorkerTest(unittest.TestCase):
         w.stop()
 
 
+class NoOutputTask(luigi.Task):
+    def run(self):
+        print('Yo ho ho and the bottle of rum!')
+
+    def output(self):
+        return []
+
+
+class EternityTask(luigi.Task):
+    def run(self):
+        yield NoOutputTask()
+
+
 class DynamicDependenciesTest(unittest.TestCase):
     n_workers = 1
     timeout = float('inf')
@@ -570,6 +583,10 @@ class DynamicDependenciesTest(unittest.TestCase):
         t = DynamicRequiresOtherModule(p=self.p)
         luigi.build([t], local_scheduler=True, workers=self.n_workers)
         self.assertTrue(t.complete())
+
+    def test_dependency_without_output(self):
+        # See 814
+        luigi.build([EternityTask()], local_scheduler=True, workers=self.n_workers)
 
 
 class DynamicDependenciesWithMultipleWorkersTest(DynamicDependenciesTest):
