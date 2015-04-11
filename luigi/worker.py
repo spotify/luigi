@@ -188,7 +188,13 @@ class TaskProcess(AbstractTaskProcess):
 
             new_deps = self._run_get_new_deps()
 
-            if new_deps is None:
+            if new_deps:
+                status = SUSPENDED
+                logger.info(
+                    '[pid %s] Worker %s new requirements      %s',
+                    os.getpid(), self.worker_id, self.task.task_id)
+
+            elif self.task.complete():
                 status = DONE
                 self.task.trigger_event(
                     Event.PROCESSING_TIME, self.task, time.time() - t0)
@@ -198,10 +204,7 @@ class TaskProcess(AbstractTaskProcess):
                 self.task.trigger_event(Event.SUCCESS, self.task)
 
             else:
-                status = SUSPENDED
-                logger.info(
-                    '[pid %s] Worker %s new requirements      %s',
-                    os.getpid(), self.worker_id, self.task.task_id)
+                raise TaskException('Task did not write output')
 
         except KeyboardInterrupt:
             raise
