@@ -68,13 +68,14 @@ class TaskException(Exception):
     pass
 
 
-@six.add_metaclass(abc.ABCMeta)
-class AbstractTaskProcess(multiprocessing.Process):
+class TaskProcess(multiprocessing.Process):
 
-    """ Abstract super-class for tasks run in a separate process. """
+    """ Wrap all task execution in this class.
+
+    Mainly for convenience since this is run in a separate process. """
 
     def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0):
-        super(AbstractTaskProcess, self).__init__()
+        super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
         self.result_queue = result_queue
@@ -82,65 +83,6 @@ class AbstractTaskProcess(multiprocessing.Process):
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
-
-    @abc.abstractmethod
-    def run(self):
-        pass
-
-
-class ExternalTaskProcess(AbstractTaskProcess):
-
-    """ Checks whether an external task (i.e. one that hasn't implemented
-    `run()`) has completed. This allows us to re-evaluate the completion of
-    external dependencies after Luigi has been invoked. """
-
-    def run(self):
-        logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task.task_id)
-
-        if self.random_seed:
-            # Need to have different random seeds if running in separate processes
-            random.seed((os.getpid(), time.time()))
-
-        status = FAILED
-        error_message = ''
-        try:
-            self.task.trigger_event(Event.START, self.task)
-            t0 = time.time()
-            status = None
-            try:
-                status = DONE if self.task.complete() else FAILED
-                logger.debug('[pid %s] Task %s has status %s', os.getpid(), self.task, status)
-            finally:
-                self.task.trigger_event(
-                    Event.PROCESSING_TIME, self.task, time.time() - t0)
-
-            error_message = json.dumps(self.task.on_success())
-            logger.info('[pid %s] Worker %s done      %s', os.getpid(),
-                        self.worker_id, self.task.task_id)
-            self.task.trigger_event(Event.SUCCESS, self.task)
-
-        except KeyboardInterrupt:
-            raise
-        except BaseException as ex:
-            status = FAILED
-            logger.exception('[pid %s] Worker %s failed    %s', os.getpid(), self.worker_id, self.task)
-            error_message = notifications.wrap_traceback(self.task.on_failure(ex))
-            self.task.trigger_event(Event.FAILURE, self.task, ex)
-            subject = "Luigi: %s FAILED" % self.task
-            notifications.send_error_email(subject, error_message)
-        finally:
-            logger.debug('Putting result into queue: %s %s %s', self.task.task_id, status, error_message)
-            self.result_queue.put(
-                (self.task.task_id, status, error_message, [], []))
-
-AbstractTaskProcess.register(ExternalTaskProcess)
-
-
-class TaskProcess(AbstractTaskProcess):
-
-    """ Wrap all task execution in this class.
-
-    Mainly for convenience since this is run in a separate process. """
 
     def _run_get_new_deps(self):
         task_gen = self.task.run()
@@ -186,22 +128,27 @@ class TaskProcess(AbstractTaskProcess):
             t0 = time.time()
             status = None
 
-            new_deps = self._run_get_new_deps()
+            if self.task.run == NotImplemented:
+                # External task
+                # TODO(erikbern): We should check for task completeness after non-external tasks too!
+                # This will resolve #814 and make things a lot more consistent
+                status = DONE if self.task.complete() else FAILED
+            else:
+                new_deps = self._run_get_new_deps()
+                status = DONE if not new_deps else SUSPENDED
 
-            if new_deps is None:
-                status = DONE
+            if status == SUSPENDED:
+                logger.info(
+                    '[pid %s] Worker %s new requirements      %s',
+                    os.getpid(), self.worker_id, self.task.task_id)
+
+            elif status == DONE:
                 self.task.trigger_event(
                     Event.PROCESSING_TIME, self.task, time.time() - t0)
                 error_message = json.dumps(self.task.on_success())
                 logger.info('[pid %s] Worker %s done      %s', os.getpid(),
                             self.worker_id, self.task.task_id)
                 self.task.trigger_event(Event.SUCCESS, self.task)
-
-            else:
-                status = SUSPENDED
-                logger.info(
-                    '[pid %s] Worker %s new requirements      %s',
-                    os.getpid(), self.worker_id, self.task.task_id)
 
         except KeyboardInterrupt:
             raise
@@ -215,8 +162,6 @@ class TaskProcess(AbstractTaskProcess):
         finally:
             self.result_queue.put(
                 (self.task.task_id, status, error_message, missing, new_deps))
-
-AbstractTaskProcess.register(TaskProcess)
 
 
 class SingleProcessPool(object):
@@ -600,14 +545,9 @@ class Worker(object):
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
 
-        if task.run == NotImplemented:
-            p = ExternalTaskProcess(task, self._id, self._task_result_queue,
-                                    random_seed=bool(self.worker_processes > 1),
-                                    worker_timeout=self._config.timeout)
-        else:
-            p = TaskProcess(task, self._id, self._task_result_queue,
-                            random_seed=bool(self.worker_processes > 1),
-                            worker_timeout=self._config.timeout)
+        p = TaskProcess(task, self._id, self._task_result_queue,
+                        random_seed=bool(self.worker_processes > 1),
+                        worker_timeout=self._config.timeout)
 
         self._running_tasks[task_id] = p
 
