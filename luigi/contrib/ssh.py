@@ -48,15 +48,16 @@ import luigi.target
 
 class RemoteContext(object):
 
-    def __init__(self, host, username=None, key_file=None, connect_timeout=None):
+    def __init__(self, host, username=None, key_file=None, connect_timeout=None, port=None):
         self.host = host
         self.username = username
         self.key_file = key_file
         self.connect_timeout = connect_timeout
+        self.port = port
 
     def __repr__(self):
-        return '%s(%r, %r, %r, %r)' % (
-            type(self).__name__, self.host, self.username, self.key_file, self.connect_timeout)
+        return '%s(%r, %r, %r, %r, %r)' % (
+            type(self).__name__, self.host, self.username, self.key_file, self.connect_timeout, self.port)
 
     def __eq__(self, other):
         return repr(self) == repr(other)
@@ -75,6 +76,8 @@ class RemoteContext(object):
                           "-S", "none",  # disable ControlMaster since it causes all sorts of weird behaviour with subprocesses...
                           "-o", "BatchMode=yes",  # no password prompts etc
                           ]
+        if self.port:
+            connection_cmd.extend(["-p", self.port])
 
         if self.connect_timeout is not None:
             connection_cmd += ['-o', 'ConnectTimeout=%d' % self.connect_timeout]
@@ -127,8 +130,8 @@ class RemoteContext(object):
 
 class RemoteFileSystem(luigi.target.FileSystem):
 
-    def __init__(self, host, username=None, key_file=None):
-        self.remote_context = RemoteContext(host, username, key_file)
+    def __init__(self, host, username=None, key_file=None, port=None):
+        self.remote_context = RemoteContext(host, username, key_file, port)
 
     def exists(self, path):
         """
@@ -158,6 +161,8 @@ class RemoteFileSystem(luigi.target.FileSystem):
         cmd = ["scp", "-q", "-B", "-C", "-o", "ControlMaster=no"]
         if self.remote_context.key_file:
             cmd.extend(["-i", self.remote_context.key_file])
+        if self.remote_context.port:
+            cmd.extend(["-P", self.remote_context.port])
         cmd.extend([src, dest])
         p = subprocess.Popen(cmd)
         output, _ = p.communicate()
@@ -228,12 +233,12 @@ class RemoteTarget(luigi.target.FileSystemTarget):
     The target is implemented using ssh commands streaming data over the network.
     """
 
-    def __init__(self, path, host, format=None, username=None, key_file=None):
+    def __init__(self, path, host, format=None, username=None, key_file=None, port=None):
         super(RemoteTarget, self).__init__(path)
         if format is None:
             format = luigi.format.get_default_format()
         self.format = format
-        self._fs = RemoteFileSystem(host, username, key_file)
+        self._fs = RemoteFileSystem(host, username, key_file, port)
 
     @property
     def fs(self):
