@@ -49,7 +49,7 @@ class MockODBCCursor(mock.Mock):
 class DummyODBCImporter(luigi.odbc.CopyToTable):
     date = luigi.DateParameter()
 
-    conn_str = "DSN=PSIMSServicedsn;UID=siamsquared@afyp6wnuvw;PWD=Asdf1234"
+    conn_str = "DSN=DummyServiceDSN;UID=dummy_user;PWD=dummy_password"
     host = 'dummy_host'
     database = 'dummy_database'
     user = 'dummy_user'
