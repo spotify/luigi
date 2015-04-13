@@ -39,9 +39,6 @@ class ODBCTarget(luigi.Target):
     """
     marker_table = luigi.configuration.get_config().get('odbc', 'marker-table', 'table_updates')
 
-    # Non specific database we use db timestamp
-    use_db_timestamps = True
-
     def __init__(self, conn_str, table, update_id):
         """
         Args:
@@ -64,22 +61,13 @@ class ODBCTarget(luigi.Target):
         self.create_marker_table()
 
         if connection is None:
-            # TODO: test this
             connection = self.connect(self.conn_str, autocommit=True)
-
-        if self.use_db_timestamps:
-            connection.cursor().execute(
-                """INSERT INTO {marker_table} (update_id, target_table)
-                   VALUES (%s, %s)
+        connection.cursor().execute(
+            """INSERT INTO {marker_table} (update_id, target_table, inserted)
+                     VALUES (?, ?, ?);
                 """.format(marker_table=self.marker_table),
-                (self.update_id, self.table))
-        else:
-            connection.cursor().execute(
-                """INSERT INTO {marker_table} (update_id, target_table, inserted)
-                         VALUES (%s, %s, %s);
-                    """.format(marker_table=self.marker_table),
-                (self.update_id, self.table,
-                 datetime.datetime.now()))
+            self.update_id, self.table,
+            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
         # make sure update is properly marked
         assert self.exists(connection)
@@ -87,17 +75,14 @@ class ODBCTarget(luigi.Target):
     def exists(self, connection=None):
         if connection is None:
             connection = self.connect()
-            connection.autocommit = True
         cursor = connection.cursor()
+        row = None
         try:
             cursor.execute("""SELECT 1 FROM {marker_table}
-                WHERE update_id = %s
-                LIMIT 1""".format(marker_table=self.marker_table),
-                           (self.update_id,)
-                           )
+                WHERE update_id = ?""".format(marker_table=self.marker_table), self.update_id)
             row = cursor.fetchone()
         except pyodbc.ProgrammingError:
-            raise
+            pass
         return row is not None
 
     def connect(self):
@@ -119,23 +104,17 @@ class ODBCTarget(luigi.Target):
             # Table already exits.
             pass
         else:
-            if self.use_db_timestamps:
-                sql = """ CREATE TABLE {marker_table} (
-                          update_id TEXT PRIMARY KEY,
-                          target_table TEXT,
-                          inserted TIMESTAMP DEFAULT NOW())
-                    """.format(marker_table=self.marker_table)
-            else:
-                sql = """ CREATE TABLE {marker_table} (
-                          update_id TEXT PRIMARY KEY,
-                          target_table TEXT,
-                          inserted TIMESTAMP);
-                      """.format(marker_table=self.marker_table)
+            # TEXT cannot be a primary key, use VARCHAR with length 2048 to hold long task name and params.
+            sql = """ CREATE TABLE {marker_table} (
+                      update_id VARCHAR(2048) PRIMARY KEY,
+                      target_table VARCHAR(128),
+                      inserted DATETIME);
+                  """.format(marker_table=self.marker_table)
             try:
                 cursor.execute(sql)
             except pyodbc.ProgrammingError:
                 # We cannot know the error code from ODBC implementation, just keep quiet if table already create.
-                pass
+                raise
         connection.close()
 
     def open(self, mode):
@@ -203,7 +182,23 @@ class CopyToTable(rdbms.CopyToTable):
             raise Exception(
                 'columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (
                     self.columns[0],))
-        cursor.copy_from(file, self.table, null='\N', sep=self.column_separator, columns=column_names)
+
+        sql = u"""
+            INSERT INTO {table}
+            ({fields})
+            VALUES
+            ({values})
+            """
+        # TODO improve insert performance
+        for line in file:
+            values = line.strip('\n').split('\t')
+            mask_value = ['?' for _ in values]
+            insert_sql = sql.format(table=self.table, fields=(u','.join(column_names)), values=(u','.join(mask_value)))
+            try:
+                cursor.execute(insert_sql, values)
+            except pyodbc.IntegrityError as err:
+                # Ignore duplicated row.
+                logging.warn(err)
 
     def run(self):
         """
@@ -250,6 +245,9 @@ class CopyToTable(rdbms.CopyToTable):
                     raise
             else:
                 break
+
+        if not self.output().exists():
+            self.output().create_marker_table()
 
         # mark as complete in same transaction
         self.output().touch(connection)
