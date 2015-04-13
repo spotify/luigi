@@ -136,11 +136,23 @@ class CopyToTable(rdbms.CopyToTable):
     def conn_str(self):
         return None
 
-    # Do not use below fields.
-    host = ''
-    database = ''
-    user = ''
-    password = ''
+    # pyodbc does not use fields `host`, `database`, `user`,
+    # `password` but use `conn_str` instead.
+    @property
+    def host(self):
+        return ''
+
+    @property
+    def database(self):
+        return ''
+
+    @property
+    def user(self):
+        return ''
+
+    @property
+    def password(self):
+        return ''
 
     def rows(self):
         """

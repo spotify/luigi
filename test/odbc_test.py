@@ -50,10 +50,6 @@ class DummyODBCImporter(luigi.odbc.CopyToTable):
     date = luigi.DateParameter()
 
     conn_str = "DSN=DummyServiceDSN;UID=dummy_user;PWD=dummy_password"
-    host = 'dummy_host'
-    database = 'dummy_database'
-    user = 'dummy_user'
-    password = 'dummy_password'
     table = 'dummy_table'
     columns = (
         ('some_text', 'text'),
