@@ -157,6 +157,12 @@ class CopyToTable(rdbms.CopyToTable):
     def conn_str(self):
         return None
 
+    # Do not use below fields.
+    host = ''
+    database = ''
+    user = ''
+    password = ''
+
     def rows(self):
         """
         Return/yield tuples or lists corresponding to each row to be inserted.
@@ -186,7 +192,7 @@ class CopyToTable(rdbms.CopyToTable):
 
         Normally you don't override this.
         """
-        return ODBCTarget(host=self.conn_str, table=self.table, update_id=self.update_id())
+        return ODBCTarget(conn_str=self.conn_str, table=self.table, update_id=self.update_id())
 
     def copy(self, cursor, file):
         if isinstance(self.columns[0], basestring):
