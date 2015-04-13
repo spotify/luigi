@@ -79,7 +79,7 @@ class ODBCTarget(luigi.Target):
         row = None
         try:
             cursor.execute("""SELECT 1 FROM {marker_table}
-                WHERE update_id = ?""".format(marker_table=self.marker_table), self.update_id)
+                WHERE update_id = ?""".format(marker_table=self.marker_table), [self.update_id])
             row = cursor.fetchone()
         except pyodbc.ProgrammingError:
             pass
