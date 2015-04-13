@@ -61,7 +61,7 @@ class ODBCTarget(luigi.Target):
         self.create_marker_table()
 
         if connection is None:
-            connection = self.connect(self.conn_str, autocommit=True)
+            connection = self.connect()
         connection.cursor().execute(
             """INSERT INTO {marker_table} (update_id, target_table, inserted)
                      VALUES (?, ?, ?);
@@ -104,9 +104,9 @@ class ODBCTarget(luigi.Target):
             # Table already exits.
             pass
         else:
-            # TEXT cannot be a primary key, use VARCHAR with length 2048 to hold long task name and params.
+            # TEXT cannot be a primary key, use VARCHAR with length 256 to hold long task name and params.
             sql = """ CREATE TABLE {marker_table} (
-                      update_id VARCHAR(2048) PRIMARY KEY,
+                      update_id VARCHAR(256) PRIMARY KEY,
                       target_table VARCHAR(128),
                       inserted DATETIME);
                   """.format(marker_table=self.marker_table)
@@ -174,8 +174,6 @@ class CopyToTable(rdbms.CopyToTable):
             return value.encode('utf8')
         else:
             return str(value)
-
-            # everything below will rarely have to be overridden
 
     def output(self):
         """

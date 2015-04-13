@@ -18,7 +18,7 @@ import unittest
 import mock
 
 import luigi
-import luigi.odbc
+import luigi.contrib.odbc
 from luigi.tools.range import RangeDaily
 
 
@@ -46,7 +46,7 @@ class MockODBCCursor(mock.Mock):
         return self.fetchone_result
 
 
-class DummyODBCImporter(luigi.odbc.CopyToTable):
+class DummyODBCImporter(luigi.contrib.odbc.CopyToTable):
     date = luigi.DateParameter()
 
     conn_str = "DSN=DummyServiceDSN;UID=dummy_user;PWD=dummy_password"
