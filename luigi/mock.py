@@ -99,9 +99,8 @@ class MockTarget(target.FileSystemTarget):
     def exists(self,):
         return self._fn in self.fs.get_all_data()
 
-    @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
-    def rename(self, path, fail_if_exists=False):
-        if fail_if_exists and path in self.fs.get_all_data():
+    def rename(self, path, raise_if_exists=False):
+        if raise_if_exists and path in self.fs.get_all_data():
             raise RuntimeError('Destination exists: %s' % path)
         contents = self.fs.get_all_data().pop(self._fn)
         self.fs.get_all_data()[path] = contents

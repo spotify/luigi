@@ -107,9 +107,8 @@ class LocalTarget(FileSystemTarget):
         else:
             raise Exception('mode must be r/w')
 
-    @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
-    def move(self, new_path, fail_if_exists=False):
-        if fail_if_exists and os.path.exists(new_path):
+    def move(self, new_path, raise_if_exists=False):
+        if raise_if_exists and os.path.exists(new_path):
             raise RuntimeError('Destination exists: %s' % new_path)
         d = os.path.dirname(new_path)
         if d and not os.path.exists(d):
@@ -122,9 +121,8 @@ class LocalTarget(FileSystemTarget):
     def remove(self):
         self.fs.remove(self.path)
 
-    @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
-    def copy(self, new_path, fail_if_exists=False):
-        if fail_if_exists and os.path.exists(new_path):
+    def copy(self, new_path, raise_if_exists=False):
+        if raise_if_exists and os.path.exists(new_path):
             raise RuntimeError('Destination exists: %s' % new_path)
         tmp = LocalTarget(new_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10), is_tmp=True)
         tmp.makedirs()

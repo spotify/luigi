@@ -903,8 +903,7 @@ class HdfsTarget(FileSystemTarget):
     def remove(self, skip_trash=False):
         remove(self.path, skip_trash=skip_trash)
 
-    @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
-    def rename(self, path, fail_if_exists=False):
+    def rename(self, path, raise_if_exists=False):
         """
         Rename does not change self.path, so be careful with assumptions.
 
@@ -912,18 +911,17 @@ class HdfsTarget(FileSystemTarget):
         """
         if isinstance(path, HdfsTarget):
             path = path.path
-        if fail_if_exists and exists(path):
+        if raise_if_exists and exists(path):
             raise RuntimeError('Destination exists: %s' % path)
         rename(self.path, path)
 
-    @luigi.util.deprecate_kwarg('fail_if_exists', 'raise_if_exists', False)
-    def move(self, path, fail_if_exists=False):
+    def move(self, path, raise_if_exists=False):
         """
         Move does not change self.path, so be careful with assumptions.
 
         Not recommendeed for directories. Use move_dir.  spotify/luigi#522
         """
-        self.rename(path, raise_if_exists=fail_if_exists)
+        self.rename(path, raise_if_exists=raise_if_exists)
 
     def move_dir(self, path):
         """
