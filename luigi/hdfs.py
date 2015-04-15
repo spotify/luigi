@@ -49,8 +49,7 @@ class hdfs(luigi.Config):
     snakebite_autoconfig = luigi.BoolParameter(default=False)
     namenode_host = luigi.Parameter(default=None)
     namenode_port = luigi.IntParameter(default=None)
-    client = luigi.Parameter(default=None)
-    use_snakebite = luigi.BoolParameter(default=False)
+    client = luigi.Parameter(default='hadoopcli')
     tmp_dir = luigi.Parameter(config_path=dict(section='core', name='hdfs-tmp-dir'), default=None)
 
 
@@ -630,7 +629,7 @@ def get_configured_hdfs_client(show_warnings=True):
         "snakebite_with_hadoopcli_fallback",
         "snakebite",
     ]
-    if six.PY3 and (custom in conf_usinf_snakebite or config.use_snakebite):
+    if six.PY3 and (custom in conf_usinf_snakebite):
         if show_warnings:
             warnings.warn(
                 "snakebite client not compatible with python3 at the moment"
@@ -638,16 +637,7 @@ def get_configured_hdfs_client(show_warnings=True):
                 stacklevel=2
             )
         return "hadoopcli"
-    if custom:
-        # Eventually this should be the only valid code path
-        return custom
-    if config.use_snakebite:
-        if show_warnings:
-            warnings.warn("Deprecated: Just specify 'client: snakebite' in config")
-        return "snakebite"
-    if show_warnings:
-        warnings.warn("Deprecated: Specify 'client: hadoopcli' in config")
-    return "hadoopcli"  # The old default when not specified
+    return custom
 
 
 def create_hadoopcli_client():
