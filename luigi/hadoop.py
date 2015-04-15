@@ -437,7 +437,9 @@ class HadoopJobRunner(JobRunner):
         libjars = [libjar for libjar in self.libjars]
 
         for libjar in self.libjars_in_hdfs:
-            subprocess.call(luigi.hdfs.load_hadoop_cmd() + ['fs', '-get', libjar, self.tmp_dir])
+            run_cmd = luigi.hdfs.load_hadoop_cmd() + ['fs', '-get', libjar, self.tmp_dir]
+            logger.debug(' '.join(run_cmd))
+            subprocess.call(run_cmd)
             libjars.append(os.path.join(self.tmp_dir, os.path.basename(libjar)))
 
         if libjars:
