@@ -282,9 +282,6 @@ snakebite_autoconfig
   If true, attempts to automatically detect the host and port of the
   namenode for snakebite queries. Defaults to false.
 
-use_snakebite
-  DEPRECATED - use client instead
-
 
 [hive]
 ------

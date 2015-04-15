@@ -41,8 +41,9 @@ class with_config(object):
       baz
     """
 
-    def __init__(self, config):
+    def __init__(self, config, replace_sections=False):
         self.config = config
+        self.replace_sections = replace_sections
 
     def __call__(self, fun):
         @functools.wraps(fun)
@@ -53,6 +54,9 @@ class with_config(object):
             conf = luigi.configuration.get_config()
             for (section, settings) in six.iteritems(self.config):
                 if not conf.has_section(section):
+                    conf.add_section(section)
+                elif self.replace_sections:
+                    conf.remove_section(section)
                     conf.add_section(section)
                 for (name, value) in six.iteritems(settings):
                     conf.set(section, name, value)
