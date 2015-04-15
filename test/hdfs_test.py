@@ -68,6 +68,10 @@ class ConfigurationTest(MiniClusterTestCase):
         self.assertTrue(target.move_dir('d/c'))
         self.assertEqual(2, len(list(client.listdir('d'))))
 
+    @helpers.with_config({"hdfs": {}}, replace_sections=True)
+    def test_when_not_specified(self):
+        self.assertEqual('hadoopcli', hdfs.get_configured_hdfs_client())
+
     @helpers.with_config({"hdfs": {"client": "hadoopcli"}})
     def test_hadoopcli(self):
         client = hdfs.get_autoconfig_client()
