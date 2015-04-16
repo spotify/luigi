@@ -163,6 +163,8 @@ class RemoteFileSystem(luigi.target.FileSystem):
             cmd.extend(["-i", self.remote_context.key_file])
         if self.remote_context.port:
             cmd.extend(["-P", self.remote_context.port])
+        if os.path.isdir(src):
+            cmd.extend(["-r"])
         cmd.extend([src, dest])
         p = subprocess.Popen(cmd)
         output, _ = p.communicate()
