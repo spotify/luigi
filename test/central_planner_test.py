@@ -668,6 +668,12 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(WORKER, 'F', deps=['A', 'B'])
         self.check_task_order('DCABEF')
 
+    def test_task_list_no_deps(self):
+        self.sch.add_task(WORKER, 'B', deps=('A',))
+        self.sch.add_task(WORKER, 'A')
+        task_list = self.sch.task_list('PENDING', '')
+        self.assertFalse('deps' in task_list['A'])
+
 
 if __name__ == '__main__':
     unittest.main()
