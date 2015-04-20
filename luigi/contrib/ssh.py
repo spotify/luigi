@@ -40,6 +40,7 @@ import contextlib
 import os
 import random
 import subprocess
+import posixpath
 
 import luigi
 import luigi.format
@@ -181,7 +182,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
     def put(self, local_path, path):
         # create parent folder if not exists
-        normpath = os.path.normpath(path)
+        normpath = posixpath.normpath(path)
         folder = os.path.dirname(normpath)
         if folder and not self.exists(folder):
             self.remote_context.check_output(['mkdir', '-p', folder])
