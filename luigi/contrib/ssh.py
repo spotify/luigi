@@ -48,12 +48,13 @@ import luigi.target
 
 class RemoteContext(object):
 
-    def __init__(self, host, username=None, key_file=None, connect_timeout=None, port=None):
+    def __init__(self, host, **kwargs):
         self.host = host
-        self.username = username
-        self.key_file = key_file
-        self.connect_timeout = connect_timeout
-        self.port = port
+        self.username = kwargs.get('username', None)
+        self.key_file = kwargs.get('key_file', None)
+        self.connect_timeout = kwargs.get('connect_timeout', None)
+        self.port = kwargs.get('port', None)
+        self.no_host_key_check = kwargs.get('no_host_key_check', False)
 
     def __repr__(self):
         return '%s(%r, %r, %r, %r, %r)' % (
@@ -81,6 +82,10 @@ class RemoteContext(object):
 
         if self.connect_timeout is not None:
             connection_cmd += ['-o', 'ConnectTimeout=%d' % self.connect_timeout]
+
+        if self.no_host_key_check:
+            connection_cmd += ['-o', 'UserKnownHostsFile=/dev/null',
+                               '-o', 'StrictHostKeyChecking=no']
 
         if self.key_file:
             connection_cmd.extend(["-i", self.key_file])
@@ -130,8 +135,8 @@ class RemoteContext(object):
 
 class RemoteFileSystem(luigi.target.FileSystem):
 
-    def __init__(self, host, username=None, key_file=None, port=None):
-        self.remote_context = RemoteContext(host, username, key_file, port)
+    def __init__(self, host, **kwargs):
+        self.remote_context = RemoteContext(host, **kwargs)
 
     def exists(self, path):
         """
@@ -159,6 +164,9 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
     def _scp(self, src, dest):
         cmd = ["scp", "-q", "-B", "-C", "-o", "ControlMaster=no"]
+        if self.remote_context.no_host_key_check:
+            cmd.extend(['-o', 'UserKnownHostsFile=/dev/null',
+                        '-o', 'StrictHostKeyChecking=no'])
         if self.remote_context.key_file:
             cmd.extend(["-i", self.remote_context.key_file])
         if self.remote_context.port:
@@ -235,12 +243,12 @@ class RemoteTarget(luigi.target.FileSystemTarget):
     The target is implemented using ssh commands streaming data over the network.
     """
 
-    def __init__(self, path, host, format=None, username=None, key_file=None, port=None):
+    def __init__(self, path, host, format=None, **kwargs):
         super(RemoteTarget, self).__init__(path)
         if format is None:
             format = luigi.format.get_default_format()
         self.format = format
-        self._fs = RemoteFileSystem(host, username, key_file, port)
+        self._fs = RemoteFileSystem(host, **kwargs)
 
     @property
     def fs(self):
