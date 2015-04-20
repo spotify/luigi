@@ -807,14 +807,19 @@ class CentralPlannerScheduler(Scheduler):
             self._recurse_deps(task_id, serialized)
         return serialized
 
-    def task_list(self, status, upstream_status, limit=True, **kwargs):
+    def task_list(self, status, upstream_status, limit=True, search=None, **kwargs):
         """
         Query for a subset of tasks by status.
         """
         self.prune()
         result = {}
         upstream_status_table = {}  # used to memoize upstream status
-        for task in self._state.get_active_tasks(status):
+        if search is None:
+            filter_func = lambda _: True
+        else:
+            terms = search.split()
+            filter_func = lambda t: all(term in t.id for term in terms)
+        for task in filter(filter_func, self._state.get_active_tasks(status)):
             if (task.status != PENDING or not upstream_status or
                     upstream_status == self._upstream_status(task.id, upstream_status_table)):
                 serialized = self._serialize_task(task.id, False)

@@ -597,6 +597,30 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(set('EFG'), set(sch.task_list('PENDING', '').keys()))
         self.assertEqual({'num_tasks': 4}, sch.task_list('DONE', ''))
 
+    def test_task_list_filter_by_search(self):
+        self.sch.add_task(WORKER, 'test_match_task')
+        self.sch.add_task(WORKER, 'test_filter_task')
+        matches = self.sch.task_list('PENDING', '', search='match')
+        self.assertEqual(['test_match_task'], list(matches.keys()))
+
+    def test_task_list_filter_by_multiple_search_terms(self):
+        self.sch.add_task(WORKER, 'abcd')
+        self.sch.add_task(WORKER, 'abd')
+        self.sch.add_task(WORKER, 'acd')
+        self.sch.add_task(WORKER, 'ad')
+        self.sch.add_task(WORKER, 'bc')
+        matches = self.sch.task_list('PENDING', '', search='b c')
+        self.assertEqual(set(['abcd', 'bc']), set(matches.keys()))
+
+    def test_search_results_beyond_limit(self):
+        sch = CentralPlannerScheduler(max_shown_tasks=3)
+        sch.add_task(WORKER, 'task_a')
+        sch.add_task(WORKER, 'task_b')
+        sch.add_task(WORKER, 'task_c')
+        sch.add_task(WORKER, 'task_d')
+        self.assertEqual({'num_tasks': 4}, sch.task_list('PENDING', '', search='a'))
+        self.assertEqual(['task_a'], list(sch.task_list('PENDING', '', search='_a').keys()))
+
     def test_priority_update_dependency_chain(self):
         self.sch.add_task(WORKER, 'A', priority=10, deps=['B'])
         self.sch.add_task(WORKER, 'B', priority=5, deps=['C'])
