@@ -2,6 +2,7 @@ function visualiserApp(luigi) {
     var templates = {};
     var invertDependencies = false;
     var typingTimer = 0;
+    var expandTasks = ['runningTasks'];
 
     function loadTemplates() {
         $("script[type='text/template']").each(function(i, element) {
@@ -207,13 +208,37 @@ function visualiserApp(luigi) {
             var length = tasks.length;
             var rendered = renderTasks(tasks);
         }
+        $(id).empty();
         $(id).append(rendered);
-        $(id).prev("h3").append(" (" + length + ")");
+        var header = $(id).prev("h3");
+        var countIndex = header.text().indexOf(" (");
+        if (countIndex != -1) {
+            header.text(header.text().slice(0, countIndex))
+        }
+        header.append(" (" + length + ")");
         bindTaskEvents(id, expand);
-        filterTasks();
+        filterTasks(false);
     }
 
-    function filterTasks() {
+    var lastSearchLoads = {};
+
+    function reloadTasksForFilter() {
+        $('.emptyTaskGroup').children('.taskList').each (function (i, task) {
+            var lastLoad = lastSearchLoads[task.id] || '';
+            var currentLoad = $('#filter-input').val();
+            var hasTooMany = $('#' + task.id + ' .tooManyTasks').length > 0;
+            if (hasTooMany || !currentLoad.startsWith(lastLoad)) {
+                loadTasks(task.id);
+                lastSearchLoads[task.id] = currentLoad;
+            }
+        });
+        updateCount();
+    }
+
+    function filterTasks(reload) {
+        if (reload === undefined || reload) {
+            reloadTasksForFilter();
+        }
         inputVal = $('#filter-input').val();
         if (inputVal) {
             arr = inputVal.split(" ");
@@ -237,8 +262,11 @@ function visualiserApp(luigi) {
     }
 
     function updateCount() {
-        taskGroups = $('#taskList .taskGroup:not(.emptyTaskGroup)');
+        taskGroups = $('#taskList .taskGroup');
         for (i=0; i<taskGroups.length; i++) {
+            if ($(taskGroups[i]).find('.tooManyTasks').length > 0) {
+                continue;
+            }
             groupCount = 0;
 
             // update each task family
@@ -256,6 +284,12 @@ function visualiserApp(luigi) {
         }
     }
 
+    function loadTasks(groupName) {
+        expand = $.inArray(groupName, expandTasks) != -1;
+        getFunc = "get" + groupName[0].toUpperCase() + groupName.slice(1, -1) + "List";
+        luigi[getFunc](function(tasks) { getTaskList("#" + groupName, tasks, expand); });
+    }
+
     $(document).ready(function() {
         loadTemplates();
 
@@ -270,33 +304,15 @@ function visualiserApp(luigi) {
             $("#workerList").append(renderWorkers(workers));
         });
 
-        luigi.getRunningTaskList(function(runningTasks) {
-            getTaskList("#runningTasks", runningTasks, true);
-        });
-
-        luigi.getFailedTaskList(function(failedTasks) {
-            getTaskList("#failedTasks", failedTasks);
-        });
-
-        luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
-            getTaskList("#upstreamFailedTasks", upstreamFailedTasks);
-        });
-
-        luigi.getDisabledTaskList(function(disabledTasks) {
-            getTaskList("#disabledTasks", disabledTasks);
-        });
-
-        luigi.getUpstreamDisabledTaskList(function(upstreamDisabledTasks) {
-            getTaskList("#upstreamDisabledTasks", upstreamDisabledTasks);
-        });
-
-        luigi.getPendingTaskList(function(pendingTasks) {
-            getTaskList("#pendingTasks", pendingTasks);
-        });
-
-        luigi.getDoneTaskList(function(doneTasks) {
-            getTaskList("#doneTasks", doneTasks);
-        });
+        [
+            "runningTasks",
+            "failedTasks",
+            "upstreamFailedTasks",
+            "disabledTasks",
+            "upstreamDisabledTasks",
+            "pendingTasks",
+            "doneTasks",
+        ].forEach(loadTasks);
 
         bindListEvents();
 
