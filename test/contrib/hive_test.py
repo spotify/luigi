@@ -106,6 +106,10 @@ class HiveCommandClientTest(unittest.TestCase):
         returned = self.client.table_exists("mytable")
         self.assertTrue(returned)
 
+        # Issue #896 test case insensitivity
+        returned = self.client.table_exists("MyTable")
+        self.assertTrue(returned)
+
         run_command.return_value = "day=2013-06-28/hour=3\n" \
                                    "day=2013-06-28/hour=4\n" \
                                    "day=2013-07-07/hour=2\n"
@@ -164,6 +168,10 @@ class HiveCommandClientTest(unittest.TestCase):
         run_command.return_value = "OK\n" \
                                    "mytable"
         returned = self.apacheclient.table_exists("mytable")
+        self.assertTrue(returned)
+
+        # Issue #896 test case insensitivity
+        returned = self.apacheclient.table_exists("MyTable")
         self.assertTrue(returned)
 
         run_command.return_value = "day=2013-06-28/hour=3\n" \

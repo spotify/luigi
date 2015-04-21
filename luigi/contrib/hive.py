@@ -138,7 +138,7 @@ class HiveCommandClient(HiveClient):
         if partition is None:
             stdout = run_hive_cmd('use {0}; show tables like "{1}";'.format(database, table))
 
-            return stdout and table in stdout
+            return stdout and table.lower() in stdout
         else:
             stdout = run_hive_cmd("""use %s; show partitions %s partition
                                 (%s)""" % (database, table, self.partition_spec(partition)))
