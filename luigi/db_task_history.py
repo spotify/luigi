@@ -198,7 +198,7 @@ class TaskEvent(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'))
     event_name = sqlalchemy.Column(sqlalchemy.String(20))
-    ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP, index=True)
+    ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP, index=True, nullable=False)
 
     def __repr__(self):
         return "TaskEvent(task_id=%s, event_name=%s, ts=%s" % (self.task_id, self.event_name, self.ts)
@@ -220,7 +220,7 @@ class TaskRecord(Base):
         cascade="all, delete-orphan")
     events = sqlalchemy.orm.relationship(
         'TaskEvent',
-        order_by=lambda: TaskEvent.ts.desc(),
+        order_by=(sqlalchemy.desc(TaskEvent.ts), sqlalchemy.desc(TaskEvent.id)),
         backref='task')
 
     def __repr__(self):
