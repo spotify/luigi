@@ -24,6 +24,8 @@ from __future__ import print_function
 import hashlib
 import os
 
+from luigi import six
+
 
 def getpcmd(pid):
     """
@@ -32,16 +34,23 @@ def getpcmd(pid):
     :param pid:
     """
     cmd = 'ps -p %s -o command=' % (pid,)
-    p = os.popen(cmd, 'r')
-    return p.readline().strip()
+    with os.popen(cmd, 'r') as p:
+        return p.readline().strip()
 
 
-def get_info(pid_dir):
+def get_info(pid_dir, my_pid=None):
     # Check the name and pid of this process
-    my_pid = os.getpid()
+    if my_pid is None:
+        my_pid = os.getpid()
+
     my_cmd = getpcmd(my_pid)
 
-    pid_file = os.path.join(pid_dir, hashlib.md5(my_cmd.encode('utf8')).hexdigest()) + '.pid'
+    if six.PY3:
+        cmd_hash = my_cmd.encode('utf8')
+    else:
+        cmd_hash = my_cmd
+
+    pid_file = os.path.join(pid_dir, hashlib.md5(cmd_hash).hexdigest()) + '.pid'
 
     return my_pid, my_cmd, pid_file
 

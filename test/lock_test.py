@@ -45,8 +45,15 @@ class LockTest(unittest.TestCase):
         self.pid, self.cmd, self.pid_file = luigi.lock.get_info(self.pid_dir)
 
     def tearDown(self):
-        os.remove(self.pid_file)
+        if os.path.exists(self.pid_file):
+            os.remove(self.pid_file)
         os.rmdir(self.pid_dir)
+
+    def test_get_info(self):
+        p = subprocess.Popen(["yes", "à我ф"], stdout=subprocess.PIPE)
+        pid, cmd, pid_file = luigi.lock.get_info(self.pid_dir, p.pid)
+        p.kill()
+        self.assertEqual(cmd, 'yes à我ф')
 
     def test_acquiring_free_lock(self):
         acquired = luigi.lock.acquire_for(self.pid_dir)
