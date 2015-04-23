@@ -82,3 +82,24 @@ class DbTaskHistoryTest(unittest.TestCase):
         self.history.task_scheduled(task.task_id)
         self.history.task_started(task.task_id, 'hostname')
         self.history.task_finished(task.task_id, successful=True)
+
+
+class MySQLDbTaskHistoryTest(unittest.TestCase):
+
+    @with_config(dict(task_history=dict(db_connection='mysql+mysqlconnector://travis@localhost/luigi_test')))
+    def setUp(self):
+        self.history = DbTaskHistory()
+
+    def test_subsecond_timestamp(self):
+        # Add 2 events in <1s
+        task = DummyTask()
+        self.run_task(task)
+
+        task_record = self.history.find_all_by_name('DummyTask').next()
+        print (task_record.events)
+        self.assertEqual(task_record.events[0].event_name, DONE)
+
+    def run_task(self, task):
+        self.history.task_scheduled(task.task_id)
+        self.history.task_started(task.task_id, 'hostname')
+        self.history.task_finished(task.task_id, successful=True)

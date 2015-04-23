@@ -4,6 +4,7 @@ jdk: oraclejdk7
 
 services:
   - elasticsearch
+  - mysql
 
 env:
   global:
@@ -36,6 +37,8 @@ before_script:
   - ssh-keygen -t rsa -N '' -C '' -f ~/.ssh/id_rsa
   - cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
   - ssh -o StrictHostKeyChecking=no localhost true
+
+  - mysql -e 'create database IF NOT EXISTS luigi_test;' -uroot
 
 script:
   - tox
