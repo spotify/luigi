@@ -96,7 +96,7 @@ class MySQLDbTaskHistoryTest(unittest.TestCase):
         self.run_task(task)
 
         task_record = self.history.find_all_by_name('DummyTask').next()
-        print task_record.events
+        print (task_record.events)
         self.assertEqual(task_record.events[0].event_name, DONE)
 
     def run_task(self, task):
