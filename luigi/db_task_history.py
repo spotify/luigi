@@ -49,6 +49,7 @@ import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
+from sqlalchemy.ext.compiler import compiles
 Base = sqlalchemy.ext.declarative.declarative_base()
 
 logger = logging.getLogger('luigi-interface')
@@ -175,6 +176,15 @@ class DbTaskHistory(task_history.TaskHistory):
         """
         with self._session(session) as session:
             return session.query(TaskRecord).get(id)
+
+
+@compiles(sqlalchemy.TIMESTAMP, 'mysql')
+def compile_TIMESTAMP(element, compiler, **kw):
+    """
+    Includes sub-second accuracy to MySQL TIMESTAMP type
+    """
+    return 'TIMESTAMP(6)'
+
 
 
 class TaskParameter(Base):
