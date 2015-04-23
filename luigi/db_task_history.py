@@ -185,6 +185,7 @@ def compile_TIMESTAMP(element, compiler, **kw):
     """
     return 'TIMESTAMP(6)'
 
+
 class TaskParameter(Base):
     """
     Table to track luigi.Parameter()s of a Task.
@@ -206,7 +207,7 @@ class TaskEvent(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'))
     event_name = sqlalchemy.Column(sqlalchemy.String(20))
-    ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP, index=True)
+    ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP, index=True, nullable=False)
 
     def __repr__(self):
         return "TaskEvent(task_id=%s, event_name=%s, ts=%s" % (self.task_id, self.event_name, self.ts)
