@@ -185,8 +185,6 @@ def compile_TIMESTAMP(element, compiler, **kw):
     """
     return 'TIMESTAMP(6)'
 
-
-
 class TaskParameter(Base):
     """
     Table to track luigi.Parameter()s of a Task.
