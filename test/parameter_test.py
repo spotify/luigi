@@ -638,6 +638,22 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
         self.assertEqual("p_default_2", A().p)
         self.assertEqual("boo_2", A(p="boo_2").p)
 
+    @with_config({"MyClass": {"p_wohoo": "p_default_3"}})
+    def testWithLongParameterName(self):
+        class MyClass(luigi.Task):
+            p_wohoo = luigi.Parameter(default="banana")
+
+        self.assertEqual("p_default_3", MyClass().p_wohoo)
+        self.assertEqual("boo_2", MyClass(p_wohoo="boo_2").p_wohoo)
+
+    @with_config({"RangeDaily": {"days_back": "123"}})
+    def testSettingOtherMember(self):
+        class A(luigi.Task):
+            pass
+
+        self.assertEqual(123, luigi.tools.range.RangeDaily(of=A).days_back)
+        self.assertEqual(70, luigi.tools.range.RangeDaily(of=A, days_back=70).days_back)
+
 
 class OverrideEnvStuff(unittest.TestCase):
 
