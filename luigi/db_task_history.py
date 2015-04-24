@@ -49,7 +49,6 @@ import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
-from sqlalchemy.ext.compiler import compiles
 Base = sqlalchemy.ext.declarative.declarative_base()
 
 logger = logging.getLogger('luigi-interface')
@@ -178,14 +177,6 @@ class DbTaskHistory(task_history.TaskHistory):
             return session.query(TaskRecord).get(id)
 
 
-@compiles(sqlalchemy.TIMESTAMP, 'mysql')
-def compile_TIMESTAMP(element, compiler, **kw):
-    """
-    Includes sub-second accuracy to MySQL TIMESTAMP type
-    """
-    return 'TIMESTAMP(6)'
-
-
 class TaskParameter(Base):
     """
     Table to track luigi.Parameter()s of a Task.
@@ -229,7 +220,7 @@ class TaskRecord(Base):
         cascade="all, delete-orphan")
     events = sqlalchemy.orm.relationship(
         'TaskEvent',
-        order_by=lambda: TaskEvent.ts.desc(),
+        order_by=(sqlalchemy.desc(TaskEvent.ts), sqlalchemy.desc(TaskEvent.id)),
         backref='task')
 
     def __repr__(self):
