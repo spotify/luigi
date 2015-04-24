@@ -86,7 +86,7 @@ class DbTaskHistoryTest(unittest.TestCase):
 
 class MySQLDbTaskHistoryTest(unittest.TestCase):
 
-    @with_config(dict(task_history=dict(db_connection='mysql+pymysql://travis@localhost/luigi_test')))
+    @with_config(dict(task_history=dict(db_connection='mysql+mysqlconnector://travis@localhost/luigi_test')))
     def setUp(self):
         self.history = DbTaskHistory()
 
