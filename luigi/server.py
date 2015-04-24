@@ -146,6 +146,7 @@ class SelectedRunHandler(BaseTaskHistoryHandler):
         self.render('history.html', name=name, statusResults=statusResults, taskResults=taskResults)
 
 
+#!FIXME: Will fail if sent a timestamp without sub-second precision, E.g. in MySQL
 def from_utc(utcTime, fmt="%Y-%m-%d %H:%M:%S.%f"):
     """convert UTC time string to time.struct_time: change datetime.datetime to time, return time.struct_time type"""
     time_struct = datetime.datetime.strptime(utcTime, fmt)

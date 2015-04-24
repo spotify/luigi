@@ -21,7 +21,7 @@ from luigi import six
 
 from helpers import with_config
 import luigi
-from luigi.db_task_history import DbTaskHistory
+from luigi.db_task_history import DbTaskHistory, Base
 from luigi.task_status import DONE, PENDING, RUNNING
 
 
@@ -98,6 +98,19 @@ class MySQLDbTaskHistoryTest(unittest.TestCase):
         task_record = self.history.find_all_by_name('DummyTask').next()
         print (task_record.events)
         self.assertEqual(task_record.events[0].event_name, DONE)
+
+    def test_utc_conversion(self):
+        from luigi.server import from_utc
+
+        task = DummyTask()
+        self.run_task(task)
+
+        task_record = self.history.find_all_by_name('DummyTask').next()
+        last_event = task_record.events[0]
+        try:
+            print (from_utc(str(last_event.ts)))
+        except ValueError:
+            self.fail("Failed to convert timestamp {} to UTC".format(last_event.ts))
 
     def run_task(self, task):
         self.history.task_scheduled(task.task_id)
