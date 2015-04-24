@@ -95,7 +95,7 @@ class MySQLDbTaskHistoryTest(unittest.TestCase):
         task = DummyTask()
         self.run_task(task)
 
-        task_record = self.history.find_all_by_name('DummyTask').next()
+        task_record = six.advance_iterator(self.history.find_all_by_name('DummyTask'))
         print (task_record.events)
         self.assertEqual(task_record.events[0].event_name, DONE)
 
@@ -105,7 +105,7 @@ class MySQLDbTaskHistoryTest(unittest.TestCase):
         task = DummyTask()
         self.run_task(task)
 
-        task_record = self.history.find_all_by_name('DummyTask').next()
+        task_record = six.advance_iterator(self.history.find_all_by_name('DummyTask'))
         last_event = task_record.events[0]
         try:
             print (from_utc(str(last_event.ts)))
