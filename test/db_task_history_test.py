@@ -21,7 +21,7 @@ from luigi import six
 
 from helpers import with_config
 import luigi
-from luigi.db_task_history import DbTaskHistory
+from luigi.db_task_history import DbTaskHistory, Base
 from luigi.task_status import DONE, PENDING, RUNNING
 
 
@@ -77,6 +77,40 @@ class DbTaskHistoryTest(unittest.TestCase):
             for param_name, param_value in six.iteritems(task.param_kwargs):
                 self.assertTrue(param_name in record.parameters)
                 self.assertEqual(str(param_value), record.parameters[param_name].value)
+
+    def run_task(self, task):
+        self.history.task_scheduled(task.task_id)
+        self.history.task_started(task.task_id, 'hostname')
+        self.history.task_finished(task.task_id, successful=True)
+
+
+class MySQLDbTaskHistoryTest(unittest.TestCase):
+
+    @with_config(dict(task_history=dict(db_connection='mysql+mysqlconnector://travis@localhost/luigi_test')))
+    def setUp(self):
+        self.history = DbTaskHistory()
+
+    def test_subsecond_timestamp(self):
+        # Add 2 events in <1s
+        task = DummyTask()
+        self.run_task(task)
+
+        task_record = six.advance_iterator(self.history.find_all_by_name('DummyTask'))
+        print (task_record.events)
+        self.assertEqual(task_record.events[0].event_name, DONE)
+
+    def test_utc_conversion(self):
+        from luigi.server import from_utc
+
+        task = DummyTask()
+        self.run_task(task)
+
+        task_record = six.advance_iterator(self.history.find_all_by_name('DummyTask'))
+        last_event = task_record.events[0]
+        try:
+            print (from_utc(str(last_event.ts)))
+        except ValueError:
+            self.fail("Failed to convert timestamp {} to UTC".format(last_event.ts))
 
     def run_task(self, task):
         self.history.task_scheduled(task.task_id)
