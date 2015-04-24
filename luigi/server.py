@@ -146,11 +146,23 @@ class SelectedRunHandler(BaseTaskHistoryHandler):
         self.render('history.html', name=name, statusResults=statusResults, taskResults=taskResults)
 
 
-def from_utc(utcTime, fmt="%Y-%m-%d %H:%M:%S.%f"):
+def from_utc(utcTime, fmt=None):
     """convert UTC time string to time.struct_time: change datetime.datetime to time, return time.struct_time type"""
-    time_struct = datetime.datetime.strptime(utcTime, fmt)
-    date = int(time.mktime(time_struct.timetuple()))
-    return date
+    if fmt is None:
+        try_formats = ["%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"]
+    else:
+        try_formats = [fmt]
+
+    for fmt in try_formats:
+        try:
+            time_struct = datetime.datetime.strptime(utcTime, fmt)
+        except ValueError:
+            pass
+        else:
+            date = int(time.mktime(time_struct.timetuple()))
+            return date
+    else:
+        raise ValueError("No UTC format matches {}".format(utcTime))
 
 
 class RecentRunHandler(BaseTaskHistoryHandler):
