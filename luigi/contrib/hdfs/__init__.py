@@ -181,6 +181,12 @@ class HdfsClient(FileSystem):
     def copy(self, path, destination):
         call_check(load_hadoop_cmd() + ['fs', '-cp', path, destination])
 
+    def append(self, local_path, destination):
+        """
+        Requires Hadoop >= 2.3.0
+        """
+        call_check(load_hadoop_cmd() + ['fs', '-appendToFile', local_path, destination])
+
     def put(self, local_path, destination):
         call_check(load_hadoop_cmd() + ['fs', '-put', local_path, destination])
 
@@ -628,13 +634,19 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         super(HdfsAtomicWritePipe, self).close()
         rename(self.tmppath, self.path)
 
+class HdfsAppendPipe(luigi.format.OutputPipeProcessWrapper):
+    def __init__(self, path):
+        self.path = path
+        parent_dir = os.path.dirname(self.path)
+        mkdir(parent_dir, parents=True, raise_if_exists=False)
+        super(HdfsAtomicWritePipe, self).__init__(load_hadoop_cmd() + ['fs', '-appendToFile', '-', self.path])
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
     """
     Writes a data<data_extension> file to a directory at <path>.
     """
 
-    def __init__(self, path, data_extension=""):
+    def __init__(self, path, data_extension="", append=False):
         self.path = path
         self.tmppath = tmppath(self.path)
         self.datapath = self.tmppath + ("/data%s" % data_extension)
@@ -705,6 +717,9 @@ class CompatibleHdfsFormat(luigi.format.Format):
 
     def pipe_writer(self, output):
         return self.writer(output)
+
+    def pipe_appender(self, output):
+        return HdfsAppendPipe(output)
 
     def pipe_reader(self, input):
         return self.reader(input)
@@ -794,11 +809,13 @@ class HdfsTarget(FileSystemTarget):
         return False
 
     def open(self, mode='r'):
-        if mode not in ('r', 'w'):
+        if mode not in ('r', 'w', 'a'):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
         if mode == 'r':
             return self.format.pipe_reader(self.path)
+        elif mode == 'a':
+            return self.format.pipe_appender(self.path)
         else:
             return self.format.pipe_writer(self.path)
 
