@@ -39,6 +39,7 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+import struct
 import subprocess
 import sys
 import tempfile
@@ -481,6 +482,7 @@ class HadoopJobRunner(JobRunner):
         if self.output_format:
             arglist += ['-outputformat', self.output_format]
         if self.input_format:
+            job._input_format = self.input_format
             arglist += ['-inputformat', self.input_format]
 
         for target in luigi.task.flatten(job.input_hadoop()):
@@ -883,13 +885,40 @@ class JobTask(BaseHadoopJobTask):
                 yield output
         self._flush_batch_incr_counter()
 
+    def _binseqfile_iter(self, stream):
+        """
+        Turn a typedbytes SequenceFile into (key, val) pairs.
+        """
+        while True:
+            keyheader = stream.read(4)
+            if not keyheader:
+                break
+            keylen = struct.unpack("!i", keyheader)[0]
+            key = stream.read(keylen)
+            tab = stream.read(1)
+            if tab != "\t":
+                raise IOError("Expected a %r separating key and value. Found %r instead." % 
+                    ("\t", tab))
+            valheader = stream.read(4)
+            if not valheader:
+                raise IOError("No value header found.")
+            vallen = struct.unpack("!i", valheader)[0]
+            val = stream.read(vallen)
+            eoln = stream.read(1)
+            if eoln != "\n":
+                raise IOError("Expected binary-tab-binary-eoln, we encountered %r-%r-%r-(%d bytes)-%r..." % (keyheader, key, tab, length, eoln))
+            yield key, val
+
     def run_mapper(self, stdin=sys.stdin, stdout=sys.stdout):
         """
         Run the mapper on the hadoop node.
         """
         self.init_hadoop()
         self.init_mapper()
-        outputs = self._map_input((line[:-1] for line in stdin))
+        if "SequenceFileAsBinaryInputFormat" in self._input_format:
+            outputs = self._map_input(self._binseqfile_iter(stdin))
+        else:
+            outputs = self._map_input((line[:-1] for line in stdin))
         if self.reducer == NotImplemented:
             self.writer(outputs, stdout)
         else:
