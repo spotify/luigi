@@ -32,7 +32,9 @@ from luigi.format import FileWrapper, get_default_format, MixedUnicodeBytes
 from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
 from luigi.target import AtomicLocalFileAppend
 
+
 class atomic_file(AtomicLocalFile):
+
     """Simple class that writes to a temp file and moves it on close()
     Also cleans up the temp file if close is not invoked
     """
@@ -45,6 +47,7 @@ class atomic_file(AtomicLocalFile):
 
 
 class LocalFileSystem(FileSystem):
+
     """
     Wrapper for access to file system operations.
 
