@@ -30,7 +30,7 @@ import warnings
 import luigi.util
 from luigi.format import FileWrapper, get_default_format, MixedUnicodeBytes
 from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
-
+from luigi.target import AtomicLocalFileAppend
 
 class atomic_file(AtomicLocalFile):
     """Simple class that writes to a temp file and moves it on close()
@@ -95,17 +95,19 @@ class LocalTarget(FileSystemTarget):
         if parentfolder and not os.path.exists(parentfolder):
             os.makedirs(parentfolder)
 
-    def open(self, mode='r'):
+    def open(self, mode='r', timeout=10):
         if mode == 'w':
             self.makedirs()
             return self.format.pipe_writer(atomic_file(self.path))
-
+        elif mode == 'a':
+            self.makedirs()
+            return self.format.pipe_writer(AtomicLocalFileAppend(self.path, timeout=timeout))
         elif mode == 'r':
             fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
             return self.format.pipe_reader(fileobj)
 
         else:
-            raise Exception('mode must be r/w')
+            raise Exception('mode must be r, w or a')
 
     def move(self, new_path, raise_if_exists=False):
         if raise_if_exists and os.path.exists(new_path):
