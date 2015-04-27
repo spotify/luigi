@@ -22,6 +22,5 @@ luigi.hdfs has moved to :py:mod:`luigi.contrib.hdfs`
 import warnings
 
 from luigi.contrib.hdfs import *
-
 warnings.warn("luigi.hdfs module has been moved to luigi.contrib.hdfs",
               DeprecationWarning)

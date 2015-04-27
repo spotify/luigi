@@ -27,12 +27,15 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
     local temporary file and then uploads it on completion
     """
 
-    def __init__(self, path):
+    def __init__(self, path, append=False):
         self.path = path
         self.tmppath = hdfs_config.tmppath(self.path)
         parent_dir = os.path.dirname(self.tmppath)
         mkdir(parent_dir, parents=True, raise_if_exists=False)
-        super(HdfsAtomicWritePipe, self).__init__(load_hadoop_cmd() + ['fs', '-put', '-', self.tmppath])
+        command = "-put"
+        if append:
+            command = "-appendToFile"
+        super(HdfsAtomicWritePipe, self).__init__(load_hadoop_cmd() + ['fs', command, '-', self.tmppath])
 
     def abort(self):
         logger.info("Aborting %s('%s'). Removing temporary file '%s'",
@@ -124,6 +127,9 @@ class CompatibleHdfsFormat(luigi.format.Format):
 
     def pipe_reader(self, input):
         return self.reader(input)
+
+    def pipe_appender(self, output):
+        return HdfsAtomicWritePipe(output, True)
 
     def hdfs_writer(self, output):
         return self.writer(output)

@@ -30,6 +30,10 @@ from luigi import six
 logger = logging.getLogger('luigi-interface')
 
 
+class FileLockException(Exception):
+    pass
+
+
 @six.add_metaclass(abc.ABCMeta)
 class Target(object):
     """
@@ -135,7 +139,9 @@ class FileSystem(object):
 
         *Note*: This method is optional, not all FileSystem subclasses implements it.
         """
-        raise NotImplementedError("isdir() not implemented on {0}".format(self.__class__.__name__))
+        raise NotImplementedError(
+            "isdir() not implemented on {0}".format(
+                self.__class__.__name__))
 
 
 class FileSystemTarget(Target):
