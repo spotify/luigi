@@ -22,7 +22,7 @@ import unittest
 import luigi
 import luigi.format
 import luigi.hadoop
-import luigi.hdfs
+import luigi.contrib.hdfs
 import luigi.mrrunner
 import luigi.notifications
 import minicluster
@@ -40,7 +40,7 @@ class OutputMixin(luigi.Task):
 
     def get_output(self, fn):
         if self.use_hdfs:
-            return luigi.hdfs.HdfsTarget('/tmp/' + fn, format=luigi.format.get_default_format() >> luigi.hdfs.PlainDir)
+            return luigi.contrib.hdfs.HdfsTarget('/tmp/' + fn, format=luigi.format.get_default_format() >> luigi.contrib.hdfs.PlainDir)
         else:
             return MockTarget(fn)
 

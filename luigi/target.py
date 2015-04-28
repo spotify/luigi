@@ -140,7 +140,7 @@ class FileSystem(object):
 
 class FileSystemTarget(Target):
     """
-    Base class for FileSystem Targets like :class:`~luigi.file.LocalTarget` and :class:`~luigi.hdfs.HdfsTarget`.
+    Base class for FileSystem Targets like :class:`~luigi.file.LocalTarget` and :class:`~luigi.contrib.hdfs.HdfsTarget`.
 
     A FileSystemTarget has an associated :py:class:`FileSystem` to which certain operations can be
     delegated. By default, :py:meth:`exists` and :py:meth:`remove` are delegated to the

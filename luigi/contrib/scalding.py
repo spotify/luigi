@@ -25,7 +25,7 @@ from luigi import six
 import luigi.configuration
 import luigi.contrib.hadoop
 import luigi.contrib.hadoop_jar
-import luigi.hdfs
+import luigi.contrib.hdfs
 from luigi import LocalTarget
 from luigi.task import flatten
 
@@ -198,7 +198,7 @@ class ScaldingJobRunner(luigi.contrib.hadoop.JobRunner):
         jars = [job_jar] + self.get_libjars() + job.extra_jars()
         scalding_core = self.get_scalding_core()
         libjars = ','.join(filter(None, jars))
-        arglist = luigi.hdfs.load_hadoop_cmd() + ['jar', scalding_core, '-libjars', libjars]
+        arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', scalding_core, '-libjars', libjars]
         arglist += ['-D%s' % c for c in job.jobconfs()]
 
         job_class = job.job_class() or self.get_job_class(job.source())

@@ -18,7 +18,7 @@
 from helpers import unittest
 import os
 import luigi
-import luigi.hdfs
+import luigi.contrib.hdfs
 from luigi import six
 from luigi.mock import MockTarget
 from helpers import with_config
@@ -93,7 +93,7 @@ class TestPySparkTask(PySparkTask):
 class HdfsJob(luigi.ExternalTask):
 
     def output(self):
-        return luigi.hdfs.HdfsTarget('test')
+        return luigi.contrib.hdfs.HdfsTarget('test')
 
 
 class TestSparkJob(SparkJob):
@@ -244,7 +244,7 @@ class SparkJobTest(unittest.TestCase):
 
     @with_config({'spark': {'hadoop-conf-dir': hcd, 'yarn-conf-dir': ycd, 'spark-jar': sj, 'spark-class': sc}})
     @patch('luigi.contrib.spark.subprocess.Popen')
-    @patch('luigi.hdfs.HdfsTarget')
+    @patch('luigi.contrib.hdfs.HdfsTarget')
     def test_run(self, target, proc):
         setup_run_process(proc)
         job = TestSparkJob()

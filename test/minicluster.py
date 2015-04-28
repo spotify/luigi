@@ -18,7 +18,8 @@
 import getpass
 import os
 
-from luigi import hadoop, hdfs
+import luigi.contrib.hadoop
+import luigi.contrib.hdfs
 from nose.plugins.attrib import attr
 
 import unittest
@@ -48,10 +49,11 @@ class MiniClusterTestCase(unittest.TestCase):
             cls.cluster.terminate()
 
     def setUp(self):
-        self.fs = hdfs.client
+        self.fs = luigi.contrib.hdfs.client
         cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "testconfig")
         hadoop_bin = os.path.join(os.environ['HADOOP_HOME'], 'bin/hadoop')
-        hdfs.load_hadoop_cmd = lambda: [hadoop_bin, '--config', cfg_path]
+        # TODO: Remove this hacky monkey patching (@tarrasch 29-Apr-2015)
+        luigi.contrib.hdfs.load_hadoop_cmd = lambda: [hadoop_bin, '--config', cfg_path]
 
     def tearDown(self):
         if self.fs.exists(self._test_dir()):
@@ -66,7 +68,7 @@ class MiniClusterTestCase(unittest.TestCase):
         return '%s/luigi_tmp_testfile%s' % (MiniClusterTestCase._test_dir(), suffix)
 
 
-class MiniClusterHadoopJobRunner(hadoop.HadoopJobRunner):
+class MiniClusterHadoopJobRunner(luigi.contrib.hadoop.HadoopJobRunner):
 
     ''' The default job runner just reads from config and sets stuff '''
 
