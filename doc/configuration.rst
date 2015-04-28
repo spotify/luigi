@@ -390,6 +390,15 @@ scalding-libjars
 
 Parameters controlling scheduler behavior
 
+disable-hard-timeout
+  Hard time limit after which tasks will be disabled by the server if
+  they fail again, in seconds. It will disable the task if it fails
+  **again** after this amount of time. E.g. if this was set to 600
+  (i.e. 10 minutes), and the task first failed at 10:00am, the task would
+  be disabled if it failed again any time after 10:10am. Note: This setting
+  does not consider the values of the `disable-num-failures` or
+  `disable-window-seconds` settings.
+
 disable-num-failures
   Number of times a task can fail within disable-window-seconds before
   the scheduler will automatically disable it. If not set, the scheduler
