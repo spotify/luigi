@@ -90,6 +90,7 @@ class MySQLDbTaskHistoryTest(unittest.TestCase):
     def setUp(self):
         self.history = DbTaskHistory()
 
+    @unittest.skip('Travis is failing, see #913')
     def test_subsecond_timestamp(self):
         # Add 2 events in <1s
         task = DummyTask()
@@ -99,6 +100,7 @@ class MySQLDbTaskHistoryTest(unittest.TestCase):
         print (task_record.events)
         self.assertEqual(task_record.events[0].event_name, DONE)
 
+    @unittest.skip('Travis is failing, see #913')
     def test_utc_conversion(self):
         from luigi.server import from_utc
 
