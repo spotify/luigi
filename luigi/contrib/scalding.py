@@ -108,7 +108,7 @@ class ScaldingJobRunner(luigi.hadoop.JobRunner):
                 p = os.path.join(lib_dir, j)
                 logger.debug('Found scalding-core: %s', p)
                 return p
-        raise luigi.hadoop.HadoopJobError('Coudl not find scalding-core.')
+        raise luigi.hadoop.HadoopJobError('Could not find scalding-core.')
 
     def get_provided_jars(self):
         return self._get_jars(self.provided_dir)
