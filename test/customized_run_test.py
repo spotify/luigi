@@ -20,7 +20,7 @@ import time
 from helpers import unittest
 
 import luigi
-import luigi.hadoop
+import luigi.contrib.hadoop
 import luigi.rpc
 import luigi.scheduler
 import luigi.worker

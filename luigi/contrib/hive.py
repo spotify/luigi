@@ -25,7 +25,7 @@ import tempfile
 from luigi import six
 
 import luigi
-import luigi.hadoop
+import luigi.contrib.hadoop
 from luigi.target import FileAlreadyExists, FileSystemTarget
 from luigi.task import flatten
 
@@ -254,7 +254,7 @@ def get_default_client():
 client = get_default_client()
 
 
-class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
+class HiveQueryTask(luigi.contrib.hadoop.BaseHadoopJobTask):
     """
     Task to run a hive query.
     """
@@ -311,7 +311,7 @@ class HiveQueryTask(luigi.hadoop.BaseHadoopJobTask):
         return HiveQueryRunner()
 
 
-class HiveQueryRunner(luigi.hadoop.JobRunner):
+class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
     """
     Runs a HiveQueryTask by shelling out to hive.
     """
@@ -355,7 +355,7 @@ class HiveQueryRunner(luigi.hadoop.JobRunner):
                     arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
 
             logger.info(arglist)
-            return luigi.hadoop.run_and_track_hadoop_job(arglist)
+            return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist)
 
 
 class HiveTableTarget(luigi.Target):

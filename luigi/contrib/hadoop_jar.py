@@ -22,7 +22,7 @@ import logging
 import os
 import random
 
-import luigi.hadoop
+import luigi.contrib.hadoop
 import luigi.hdfs
 
 logger = logging.getLogger('luigi-interface')
@@ -55,7 +55,7 @@ def fix_paths(job):
     return (tmp_files, args)
 
 
-class HadoopJarJobRunner(luigi.hadoop.JobRunner):
+class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
     """
     JobRunner for `hadoop jar` commands. Used to run a HadoopJarJobTask.
     """
@@ -82,13 +82,13 @@ class HadoopJarJobRunner(luigi.hadoop.JobRunner):
 
         arglist += job_args
 
-        luigi.hadoop.run_and_track_hadoop_job(arglist)
+        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist)
 
         for a, b in tmp_files:
             a.move(b)
 
 
-class HadoopJarJobTask(luigi.hadoop.BaseHadoopJobTask):
+class HadoopJarJobTask(luigi.contrib.hadoop.BaseHadoopJobTask):
     """
     A job task for `hadoop jar` commands that define a jar and (optional) main method.
     """

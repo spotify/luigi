@@ -16,9 +16,10 @@
 #
 
 """
-Run Hadoop Mapreduce jobs using Hadoop Streaming.
-To run a job, you need to subclass :py:class:`luigi.hadoop.JobTask` and implement a ``mapper`` and ``reducer`` methods.
-See :doc:`/example_top_artists` for an example of how to run a Hadoop job.
+Run Hadoop Mapreduce jobs using Hadoop Streaming. To run a job, you need
+to subclass :py:class:`luigi.contrib.hadoop.JobTask` and implement a
+``mapper`` and ``reducer`` methods. See :doc:`/example_top_artists` for
+an example of how to run a Hadoop job.
 """
 
 from __future__ import print_function
@@ -403,7 +404,7 @@ class HadoopJobRunner(JobRunner):
             warnings.warn("The core.tmp-dir configuration item is"
                           " deprecated, please use the TMPDIR"
                           " environment variable if you wish"
-                          " to control where luigi.hadoop may"
+                          " to control where luigi.contrib.hadoop may"
                           " create temporary files and directories.")
             self.tmp_dir = os.path.join(base_tmp_dir, 'hadoop_job_%016x' % random.getrandbits(64))
             os.makedirs(self.tmp_dir)

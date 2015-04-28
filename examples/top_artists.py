@@ -22,7 +22,7 @@ from heapq import nlargest
 from luigi import six
 
 import luigi
-import luigi.hadoop
+import luigi.contrib.hadoop
 import luigi.hdfs
 import luigi.postgres
 
@@ -136,9 +136,9 @@ class AggregateArtists(luigi.Task):
                 out_file.write('{}\t{}\n'.format(artist, count))
 
 
-class AggregateArtistsHadoop(luigi.hadoop.JobTask):
+class AggregateArtistsHadoop(luigi.contrib.hadoop.JobTask):
     """
-    This task runs a :py:class:`luigi.hadoop.JobTask` task
+    This task runs a :py:class:`luigi.contrib.hadoop.JobTask` task
     over each target data returned by :py:meth:`~/.StreamsHdfs.output` and
     writes the result into its :py:meth:`~.AggregateArtistsHadoop.output` target (a file in HDFS).
 
