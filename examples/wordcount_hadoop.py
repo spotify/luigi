@@ -16,7 +16,7 @@
 #
 
 import luigi
-import luigi.hadoop
+import luigi.contrib.hadoop
 import luigi.hdfs
 
 
@@ -46,7 +46,7 @@ class InputText(luigi.ExternalTask):
         return luigi.hdfs.HdfsTarget(self.date.strftime('/tmp/text/%Y-%m-%d.txt'))
 
 
-class WordCount(luigi.hadoop.JobTask):
+class WordCount(luigi.contrib.hadoop.JobTask):
     """
     This task runs a :py:class:`luigi.contrib.hadoop.JobTask`
     over the target data returned by :py:meth:`~/.InputText.output` and

@@ -55,7 +55,7 @@ class ScaldingTest(unittest.TestCase):
         shutil.rmtree(self.scalding_home)
 
     @mock.patch('subprocess.check_call')
-    @mock.patch('luigi.hadoop.run_and_track_hadoop_job')
+    @mock.patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
     def test_scalding(self, check_call, track_job):
         success = luigi.run(['MyScaldingTask', '--scala-source', self.scala_source, '--local-scheduler', '--no-lock'])
         self.assertTrue(success)

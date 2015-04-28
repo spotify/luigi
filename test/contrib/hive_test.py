@@ -295,7 +295,7 @@ class MyHiveTask(luigi.contrib.hive.HiveQueryTask):
 
 class TestHiveTask(unittest.TestCase):
 
-    @mock.patch('luigi.hadoop.run_and_track_hadoop_job')
+    @mock.patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
     def test_run(self, run_and_track_hadoop_job):
         success = luigi.run(['MyHiveTask', '--param', 'foo', '--local-scheduler', '--no-lock'])
         self.assertTrue(success)

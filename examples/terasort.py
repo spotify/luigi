@@ -19,7 +19,7 @@ import logging
 import os
 
 import luigi
-import luigi.hadoop_jar
+import luigi.contrib.hadoop_jar
 import luigi.hdfs
 
 logger = logging.getLogger('luigi-interface')
@@ -41,7 +41,7 @@ DEFAULT_TERASORT_IN = '/tmp/terasort-in'
 DEFAULT_TERASORT_OUT = '/tmp/terasort-out'
 
 
-class TeraGen(luigi.hadoop_jar.HadoopJarJobTask):
+class TeraGen(luigi.contrib.hadoop_jar.HadoopJarJobTask):
     """
     Runs TeraGen, by default with 1TB of data (10B records)
     """
@@ -72,7 +72,7 @@ class TeraGen(luigi.hadoop_jar.HadoopJarJobTask):
         return [self.records, self.output()]
 
 
-class TeraSort(luigi.hadoop_jar.HadoopJarJobTask):
+class TeraSort(luigi.contrib.hadoop_jar.HadoopJarJobTask):
     """
     Runs TeraGent, by default using
     """

@@ -23,8 +23,8 @@ import subprocess
 from luigi import six
 
 import luigi.configuration
-import luigi.hadoop
-import luigi.hadoop_jar
+import luigi.contrib.hadoop
+import luigi.contrib.hadoop_jar
 import luigi.hdfs
 from luigi import LocalTarget
 from luigi.task import flatten
@@ -59,7 +59,7 @@ Example configuration section in client.cfg::
 """
 
 
-class ScaldingJobRunner(luigi.hadoop.JobRunner):
+class ScaldingJobRunner(luigi.contrib.hadoop.JobRunner):
     """
     JobRunner for `pyscald` commands. Used to run a ScaldingJobTask.
     """
@@ -108,7 +108,7 @@ class ScaldingJobRunner(luigi.hadoop.JobRunner):
                 p = os.path.join(lib_dir, j)
                 logger.debug('Found scalding-core: %s', p)
                 return p
-        raise luigi.hadoop.HadoopJobError('Coudl not find scalding-core.')
+        raise luigi.contrib.hadoop.HadoopJobError('Could not find scalding-core.')
 
     def get_provided_jars(self):
         return self._get_jars(self.provided_dir)
@@ -145,7 +145,7 @@ class ScaldingJobRunner(luigi.hadoop.JobRunner):
             logger.debug('Found scalding job class: %s', job_class)
             return job_class
         else:
-            raise luigi.hadoop.HadoopJobError('Coudl not find scalding job class.')
+            raise luigi.contrib.hadoop.HadoopJobError('Coudl not find scalding job class.')
 
     def build_job_jar(self, job):
         job_jar = job.jar()
@@ -207,7 +207,7 @@ class ScaldingJobRunner(luigi.hadoop.JobRunner):
         # scalding does not parse argument with '=' properly
         arglist += ['--name', job.task_id.replace('=', ':')]
 
-        (tmp_files, job_args) = luigi.hadoop_jar.fix_paths(job)
+        (tmp_files, job_args) = luigi.contrib.hadoop_jar.fix_paths(job)
         arglist += job_args
 
         env = os.environ.copy()
@@ -216,13 +216,13 @@ class ScaldingJobRunner(luigi.hadoop.JobRunner):
         env['HADOOP_CLASSPATH'] = hadoop_cp
         logger.info("Submitting Hadoop job: HADOOP_CLASSPATH=%s %s",
                     hadoop_cp, ' '.join(arglist))
-        luigi.hadoop.run_and_track_hadoop_job(arglist, env=env)
+        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, env=env)
 
         for a, b in tmp_files:
             a.move(b)
 
 
-class ScaldingJobTask(luigi.hadoop.BaseHadoopJobTask):
+class ScaldingJobTask(luigi.contrib.hadoop.BaseHadoopJobTask):
     """
     A job task for Scalding that define a scala source and (optional) main method.
 
