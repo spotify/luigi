@@ -1,3 +1,6 @@
+.coverage.*
+doc/api/*.rst
+
 .nicesetup
 
 client.cfg
