@@ -471,7 +471,7 @@ class CentralPlannerScheduler(Scheduler):
         if task_history_impl:
             self._task_history = task_history_impl
         elif self._config.record_task_history:
-            import db_task_history  # Needs sqlalchemy, thus imported here
+            from luigi import db_task_history  # Needs sqlalchemy, thus imported here
             self._task_history = db_task_history.DbTaskHistory()
         else:
             self._task_history = history.NopHistory()
