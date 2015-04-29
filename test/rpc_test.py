@@ -45,6 +45,17 @@ class RPCTest(central_planner_test.CentralPlannerTest, ServerTestBase):
     def test_raw_ping_extended(self):
         self.sch._request('/api/ping', {'worker': 'xyz', 'foo': 'bar'})
 
+    # disable test that doesn't work with remote scheduler
+
+    def test_task_first_failure_time(self):
+        pass
+
+    def test_task_first_failure_time_remains_constant(self):
+        pass
+
+    def test_task_has_excessive_failures(self):
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()
