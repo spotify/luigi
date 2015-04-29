@@ -38,7 +38,8 @@ before_script:
   - cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
   - ssh -o StrictHostKeyChecking=no localhost true
 
-  - mysql -e 'create database IF NOT EXISTS luigi_test;' -uroot
+  # Create mysql database if possible but fail silently if not available.
+  - mysql -e 'create database IF NOT EXISTS luigi_test;' -uroot || true
 
 script:
   - tox
