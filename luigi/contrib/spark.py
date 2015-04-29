@@ -235,9 +235,7 @@ class SparkSubmitTask(luigi.Task):
                                 universal_newlines=True)
         try:
             with SparkRunContext(proc):
-                while proc.poll() is None:
-                    pass
-            logger.info(proc.communicate()[0])
+                proc.wait()
             tmp_stdout.seek(0)
             stdout = "".join(map(lambda s: s.decode('utf-8'), tmp_stdout.readlines()))
             logger.info("Spark job stdout:\n{0}".format(stdout))

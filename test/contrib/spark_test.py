@@ -193,7 +193,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
         def interrupt():
             raise KeyboardInterrupt()
 
-        proc.return_value.poll = interrupt
+        proc.return_value.wait = interrupt
         try:
             job = TestSparkSubmitTask()
             job.run()
