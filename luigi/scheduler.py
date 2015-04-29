@@ -91,7 +91,7 @@ class scheduler(Config):
     disable_failures = parameter.IntParameter(default=None,
                                               config_path=dict(section='scheduler', name='disable-num-failures'))
     disable_hard_timeout = parameter.IntParameter(default=None,
-                                              config_path=dict(section='scheduler', name='disable-hard-timeout'))
+                                                  config_path=dict(section='scheduler', name='disable-hard-timeout'))
     disable_persist = parameter.IntParameter(default=86400,
                                              config_path=dict(section='scheduler', name='disable-persist-seconds'))
     max_shown_tasks = parameter.IntParameter(default=100000)
@@ -201,7 +201,7 @@ class Task(object):
 
         excessive_failures = False
 
-        if (self.failures.first_failure_time != None and
+        if (self.failures.first_failure_time is not None and
                 self.disable_hard_timeout):
             if (time.time() >= self.failures.first_failure_time +
                     self.disable_hard_timeout):
