@@ -51,7 +51,7 @@ from luigi import six
 
 from luigi import configuration
 import luigi
-import luigi.hdfs
+import luigi.contrib.hdfs
 import luigi.s3
 from luigi import mrrunner
 
@@ -252,7 +252,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
         history_filename = configuration.get_config().get('core', 'history-filename', '')
         if history_filename and '-output' in arglist:
             output_dir = arglist[arglist.index('-output') + 1]
-            f = luigi.hdfs.HdfsTarget(os.path.join(output_dir, history_filename)).open('w')
+            f = luigi.contrib.hdfs.HdfsTarget(os.path.join(output_dir, history_filename)).open('w')
             f.write(json.dumps(history))
             f.close()
 
@@ -432,13 +432,13 @@ class HadoopJobRunner(JobRunner):
         else:
             output_hadoop = output_final
 
-        arglist = luigi.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
+        arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
 
         # 'libjars' is a generic option, so place it first
         libjars = [libjar for libjar in self.libjars]
 
         for libjar in self.libjars_in_hdfs:
-            run_cmd = luigi.hdfs.load_hadoop_cmd() + ['fs', '-get', libjar, self.tmp_dir]
+            run_cmd = luigi.contrib.hdfs.load_hadoop_cmd() + ['fs', '-get', libjar, self.tmp_dir]
             logger.debug(' '.join(run_cmd))
             subprocess.call(run_cmd)
             libjars.append(os.path.join(self.tmp_dir, os.path.basename(libjar)))
@@ -485,12 +485,12 @@ class HadoopJobRunner(JobRunner):
             arglist += ['-inputformat', self.input_format]
 
         for target in luigi.task.flatten(job.input_hadoop()):
-            if not isinstance(target, luigi.hdfs.HdfsTarget) \
+            if not isinstance(target, luigi.contrib.hdfs.HdfsTarget) \
                     and not isinstance(target, luigi.s3.S3Target):
                 raise TypeError('target must be an HdfsTarget or S3Target')
             arglist += ['-input', target.path]
 
-        if not isinstance(job.output(), luigi.hdfs.HdfsTarget) \
+        if not isinstance(job.output(), luigi.contrib.hdfs.HdfsTarget) \
                 and not isinstance(job.output(), luigi.s3.S3FlagTarget):
             raise TypeError('output must be an HdfsTarget or S3FlagTarget')
         arglist += ['-output', output_hadoop]
@@ -503,7 +503,7 @@ class HadoopJobRunner(JobRunner):
         run_and_track_hadoop_job(arglist)
 
         if self.end_job_with_atomic_move_dir:
-            luigi.hdfs.HdfsTarget(output_hadoop).move_dir(output_final)
+            luigi.contrib.hdfs.HdfsTarget(output_hadoop).move_dir(output_final)
         self.finish()
 
     def finish(self):
@@ -713,7 +713,7 @@ class JobTask(BaseHadoopJobTask):
         """
         outputs = luigi.task.flatten(self.output())
         for output in outputs:
-            if not isinstance(output, luigi.hdfs.HdfsTarget):
+            if not isinstance(output, luigi.contrib.hdfs.HdfsTarget):
                 warnings.warn("Job is using one or more non-HdfsTarget outputs" +
                               " so it will be run in local mode")
                 return LocalJobRunner()

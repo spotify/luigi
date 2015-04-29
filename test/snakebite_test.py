@@ -21,7 +21,7 @@ import posixpath
 import time
 import unittest
 
-import luigi.hdfs
+import luigi.contrib.hdfs
 import luigi.interface
 from luigi import six
 from nose.plugins.attrib import attr
@@ -29,7 +29,7 @@ from nose.plugins.attrib import attr
 if six.PY3:
     raise unittest.SkipTest("snakebite doesn't work on Python yet.")
 
-from luigi.hdfs import SnakebiteHdfsClient
+from luigi.contrib.hdfs import SnakebiteHdfsClient
 from minicluster import MiniClusterTestCase
 
 from snakebite.client import AutoConfigClient as SnakebiteAutoConfigClient

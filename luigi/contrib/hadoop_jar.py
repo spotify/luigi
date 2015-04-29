@@ -23,7 +23,7 @@ import os
 import random
 
 import luigi.contrib.hadoop
-import luigi.hdfs
+import luigi.contrib.hdfs
 
 logger = logging.getLogger('luigi-interface')
 
@@ -40,12 +40,12 @@ def fix_paths(job):
     tmp_files = []
     args = []
     for x in job.args():
-        if isinstance(x, luigi.hdfs.HdfsTarget):  # input/output
+        if isinstance(x, luigi.contrib.hdfs.HdfsTarget):  # input/output
             if x.exists() or not job.atomic_output():  # input
                 args.append(x.path)
             else:  # output
                 x_path_no_slash = x.path[:-1] if x.path[-1] == '/' else x.path
-                y = luigi.hdfs.HdfsTarget(x_path_no_slash + '-luigi-tmp-%09d' % random.randrange(0, 1e10))
+                y = luigi.contrib.hdfs.HdfsTarget(x_path_no_slash + '-luigi-tmp-%09d' % random.randrange(0, 1e10))
                 tmp_files.append((y, x_path_no_slash))
                 logger.info('Using temp path: %s for path %s', y.path, x.path)
                 args.append(y.path)
@@ -69,7 +69,7 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
         if not job.jar() or not os.path.exists(job.jar()):
             logger.error("Can't find jar: %s, full path %s", job.jar(), os.path.abspath(job.jar()))
             raise Exception("job jar does not exist")
-        arglist = luigi.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
+        arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
         if job.main():
             arglist.append(job.main())
 
