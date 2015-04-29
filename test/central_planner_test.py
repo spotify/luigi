@@ -42,7 +42,7 @@ class CentralPlannerTest(unittest.TestCase):
             'disable_persist': 10,
             'disable_window': 10,
             'disable_failures': 3,
-            'disable_hard_timeout': 60*60,
+            'disable_hard_timeout': 60 * 60,
         }
 
     def tearDown(self):
@@ -734,7 +734,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertFalse(test_task.has_excessive_failures())
 
         fake_failure_time = (test_task.failures.first_failure_time -
-                             2*60*60)
+                             2 * 60 * 60)
 
         test_task.failures.first_failure_time = fake_failure_time
         self.assertTrue(test_task.has_excessive_failures())
