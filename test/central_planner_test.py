@@ -709,8 +709,10 @@ class CentralPlannerTest(unittest.TestCase):
         test_task.add_failure()
         time_after_failure = time.time()
 
-        self.assertLess(time_before_failure, test_task.failures.first_failure_time)
-        self.assertGreater(time_after_failure, test_task.failures.first_failure_time)
+        self.assertLessEqual(time_before_failure,
+                             test_task.failures.first_failure_time)
+        self.assertGreaterEqual(time_after_failure,
+                                test_task.failures.first_failure_time)
 
     def test_task_first_failure_time_remains_constant(self):
         self.sch.add_task(WORKER, 'A')
