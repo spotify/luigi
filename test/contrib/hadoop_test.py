@@ -21,7 +21,7 @@ import unittest
 
 import luigi
 import luigi.format
-import luigi.hadoop
+import luigi.contrib.hadoop
 import luigi.contrib.hdfs
 import luigi.mrrunner
 import luigi.notifications
@@ -32,7 +32,7 @@ from nose.plugins.attrib import attr
 
 luigi.notifications.DEBUG = True
 
-luigi.hadoop.attach(minicluster)
+luigi.contrib.hadoop.attach(minicluster)
 
 
 class OutputMixin(luigi.Task):
@@ -45,13 +45,13 @@ class OutputMixin(luigi.Task):
             return MockTarget(fn)
 
 
-class HadoopJobTask(luigi.hadoop.JobTask, OutputMixin):
+class HadoopJobTask(luigi.contrib.hadoop.JobTask, OutputMixin):
 
     def job_runner(self):
         if self.use_hdfs:
             return minicluster.MiniClusterHadoopJobRunner()
         else:
-            return luigi.hadoop.LocalJobRunner()
+            return luigi.contrib.hadoop.LocalJobRunner()
 
 
 class Words(OutputMixin):
@@ -160,7 +160,7 @@ class FailingJob(HadoopJobTask):
         return self.get_output('failing')
 
 
-class MyStreamingJob(luigi.hadoop.JobTask):
+class MyStreamingJob(luigi.contrib.hadoop.JobTask):
     param = luigi.Parameter()
 
 
@@ -298,43 +298,43 @@ class CreatePackagesArchive(unittest.TestCase):
     @mock.patch('tarfile.open')
     def test_create_packages_archive_module(self, tar):
         module = __import__("module", None, None, 'dummy')
-        luigi.hadoop.create_packages_archive([module], '/dev/null')
+        luigi.contrib.hadoop.create_packages_archive([module], '/dev/null')
         self._assert_module(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package(self, tar):
         package = __import__("package", None, None, 'dummy')
-        luigi.hadoop.create_packages_archive([package], '/dev/null')
+        luigi.contrib.hadoop.create_packages_archive([package], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_submodule(self, tar):
         package_submodule = __import__("package.submodule", None, None, 'dummy')
-        luigi.hadoop.create_packages_archive([package_submodule], '/dev/null')
+        luigi.contrib.hadoop.create_packages_archive([package_submodule], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_submodule_with_absolute_import(self, tar):
         package_submodule_with_absolute_import = __import__("package.submodule_with_absolute_import", None, None, 'dummy')
-        luigi.hadoop.create_packages_archive([package_submodule_with_absolute_import], '/dev/null')
+        luigi.contrib.hadoop.create_packages_archive([package_submodule_with_absolute_import], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_submodule_without_imports(self, tar):
         package_submodule_without_imports = __import__("package.submodule_without_imports", None, None, 'dummy')
-        luigi.hadoop.create_packages_archive([package_submodule_without_imports], '/dev/null')
+        luigi.contrib.hadoop.create_packages_archive([package_submodule_without_imports], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_subpackage(self, tar):
         package_subpackage = __import__("package.subpackage", None, None, 'dummy')
-        luigi.hadoop.create_packages_archive([package_subpackage], '/dev/null')
+        luigi.contrib.hadoop.create_packages_archive([package_subpackage], '/dev/null')
         self._assert_package_subpackage(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_subpackage_submodule(self, tar):
         package_subpackage_submodule = __import__("package.subpackage.submodule", None, None, 'dummy')
-        luigi.hadoop.create_packages_archive([package_subpackage_submodule], '/dev/null')
+        luigi.contrib.hadoop.create_packages_archive([package_subpackage_submodule], '/dev/null')
         self._assert_package_subpackage(tar.return_value.add)
 
 
