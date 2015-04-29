@@ -64,6 +64,7 @@ setup(
     packages=[
         'luigi',
         'luigi.contrib',
+        'luigi.contrib.hdfs',
         'luigi.tools'
     ],
     package_data={
