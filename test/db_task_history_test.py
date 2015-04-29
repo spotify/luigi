@@ -88,7 +88,10 @@ class MySQLDbTaskHistoryTest(unittest.TestCase):
 
     @with_config(dict(task_history=dict(db_connection='mysql+mysqlconnector://travis@localhost/luigi_test')))
     def setUp(self):
-        self.history = DbTaskHistory()
+        try:
+            self.history = DbTaskHistory()
+        except Exception:
+            raise unittest.SkipTest('DBTaskHistory cannot be created: probably no MySQL available')
 
     def test_subsecond_timestamp(self):
         # Add 2 events in <1s
