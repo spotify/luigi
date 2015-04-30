@@ -22,16 +22,15 @@ You can configure what client by setting the "client" config under the "hdfs" se
 """
 
 import datetime
-import getpass
 import logging
 import os
 import random
 import re
 import subprocess
 try:
-    from urlparse import urlparse, urlsplit, urlunparse
+    from urlparse import urlsplit
 except ImportError:
-    from urllib.parse import urlparse, urlsplit, urlunparse
+    from urllib.parse import urlsplit
 import warnings
 
 from luigi import six
@@ -40,17 +39,11 @@ import luigi.contrib.target
 import luigi.format
 from luigi.target import FileAlreadyExists, FileSystem, FileSystemTarget
 
+from luigi.contrib.hdfs.config import load_hadoop_cmd
+from luigi.contrib.hdfs.config import tmppath
+from luigi.contrib.hdfs import config as hdfs_config
+
 logger = logging.getLogger('luigi-interface')
-
-
-class hdfs(luigi.Config):
-    client_version = luigi.IntParameter(default=None)
-    effective_user = luigi.Parameter(default=None)
-    snakebite_autoconfig = luigi.BoolParameter(default=False)
-    namenode_host = luigi.Parameter(default=None)
-    namenode_port = luigi.IntParameter(default=None)
-    client = luigi.Parameter(default='hadoopcli')
-    tmp_dir = luigi.Parameter(config_path=dict(section='core', name='hdfs-tmp-dir'), default=None)
 
 
 class HDFSCliError(Exception):
@@ -74,55 +67,6 @@ def call_check(command):
     if p.returncode != 0:
         raise HDFSCliError(command, p.returncode, stdout, stderr)
     return stdout
-
-
-def load_hadoop_cmd():
-    return luigi.configuration.get_config().get('hadoop', 'command', 'hadoop').split()
-
-
-def tmppath(path=None, include_unix_username=True):
-    """
-    @param path: target path for which it is needed to generate temporary location
-    @type path: str
-    @type include_unix_username: bool
-    @rtype: str
-
-    Note that include_unix_username might work on windows too.
-    """
-    addon = "luigitemp-%08d" % random.randrange(1e9)
-    temp_dir = '/tmp'  # default tmp dir if none is specified in config
-
-    # 1. Figure out to which temporary directory to place
-    configured_hdfs_tmp_dir = hdfs().tmp_dir
-    if configured_hdfs_tmp_dir is not None:
-        # config is superior
-        base_dir = configured_hdfs_tmp_dir
-    elif path is not None:
-        # need to copy correct schema and network location
-        parsed = urlparse(path)
-        base_dir = urlunparse((parsed.scheme, parsed.netloc, temp_dir, '', '', ''))
-    else:
-        # just system temporary directory
-        base_dir = temp_dir
-
-    # 2. Figure out what to place
-    if path is not None:
-        if path.startswith(temp_dir + '/'):
-            # Not 100%, but some protection from directories like /tmp/tmp/file
-            subdir = path[len(temp_dir):]
-        else:
-            # Protection from /tmp/hdfs:/dir/file
-            parsed = urlparse(path)
-            subdir = parsed.path
-        subdir = subdir.lstrip('/') + '-'
-    else:
-        # just return any random temporary location
-        subdir = ''
-
-    if include_unix_username:
-        subdir = os.path.join(getpass.getuser(), subdir)
-
-    return os.path.join(base_dir, subdir + addon)
 
 
 def list_path(path):
@@ -342,7 +286,7 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         If Luigi has forked, we have a different PID, and need to reconnect.
         """
-        config = hdfs()
+        config = hdfs_config.hdfs()
         if self.pid != os.getpid() or not self._bite:
             client_kwargs = dict(filter(
                 lambda k_v: k_v[1] is not None and k_v[1] != '', six.iteritems({
@@ -608,47 +552,12 @@ class HdfsClientApache1(HdfsClientCdh3):
             raise HDFSCliError(cmd, p.returncode, stdout, stderr)
 
 
-def get_configured_hadoop_version():
-    """
-    CDH4 (hadoop 2+) has a slightly different syntax for interacting with hdfs
-    via the command line.
-
-    The default version is CDH4, but one can override
-    this setting with "cdh3" or "apache1" in the hadoop section of the config
-    in order to use the old syntax.
-    """
-    return luigi.configuration.get_config().get("hadoop", "version", "cdh4").lower()
-
-
-def get_configured_hdfs_client(show_warnings=True):
-    """
-    This is a helper that fetches the configuration value for 'client' in
-    the [hdfs] section. It will return the client that retains backwards
-    compatibility when 'client' isn't configured.
-    """
-    config = hdfs()
-    custom = config.client
-    conf_usinf_snakebite = [
-        "snakebite_with_hadoopcli_fallback",
-        "snakebite",
-    ]
-    if six.PY3 and (custom in conf_usinf_snakebite):
-        if show_warnings:
-            warnings.warn(
-                "snakebite client not compatible with python3 at the moment"
-                "falling back on hadoopcli",
-                stacklevel=2
-            )
-        return "hadoopcli"
-    return custom
-
-
 def create_hadoopcli_client():
     """
     Given that we want one of the hadoop cli clients (unlike snakebite),
     this one will return the right one.
     """
-    version = get_configured_hadoop_version()
+    version = hdfs_config.get_configured_hadoop_version()
     if version == "cdh4":
         return HdfsClient()
     elif version == "cdh3":
@@ -664,7 +573,7 @@ def get_autoconfig_client(show_warnings=True):
     """
     Creates the client as specified in the `client.cfg` configuration.
     """
-    configured_client = get_configured_hdfs_client(show_warnings=show_warnings)
+    configured_client = hdfs_config.get_configured_hdfs_client(show_warnings=show_warnings)
     if configured_client == "snakebite":
         return SnakebiteHdfsClient()
     if configured_client == "snakebite_with_hadoopcli_fallback":
@@ -672,7 +581,7 @@ def get_autoconfig_client(show_warnings=True):
                                                      create_hadoopcli_client()])
     if configured_client == "hadoopcli":
         return create_hadoopcli_client()
-    raise Exception("Unknown hdfs client " + get_configured_hdfs_client())
+    raise Exception("Unknown hdfs client " + hdfs_config.get_configured_hdfs_client())
 
 # Suppress warnings so that importing luigi.contrib.hdfs doesn't show a deprecated warning.
 client = get_autoconfig_client(show_warnings=False)

@@ -70,7 +70,7 @@ class ConfigurationTest(MiniClusterTestCase):
 
     @helpers.with_config({"hdfs": {}}, replace_sections=True)
     def test_when_not_specified(self):
-        self.assertEqual('hadoopcli', hdfs.get_configured_hdfs_client())
+        self.assertEqual('hadoopcli', hdfs.config.get_configured_hdfs_client())
 
     @helpers.with_config({"hdfs": {"client": "hadoopcli"}})
     def test_hadoopcli(self):
@@ -731,14 +731,14 @@ class SnakebiteConfigTest(unittest.TestCase):
     @helpers.with_config({"hdfs": {"snakebite_autoconfig": "true"}})
     def testBoolOverride(self):
         # See #743
-        self.assertEqual(hdfs.hdfs().snakebite_autoconfig, True)
+        self.assertEqual(hdfs.config.hdfs().snakebite_autoconfig, True)
 
         class DummyTestTask(luigi.Task):
             pass
 
         luigi.run(['--local-scheduler', '--no-lock', 'DummyTestTask'])
 
-        self.assertEqual(hdfs.hdfs().snakebite_autoconfig, True)
+        self.assertEqual(hdfs.config.hdfs().snakebite_autoconfig, True)
 
 
 class _MiscOperationsMixin(object):
