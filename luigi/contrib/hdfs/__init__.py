@@ -879,7 +879,7 @@ class HdfsTarget(FileSystemTarget):
         return self._fs
 
     def glob_exists(self, expected_files):
-        ls = list(listdir(self.path))
+        ls = list(self.fs.listdir(self.path))
         if len(ls) == expected_files:
             return True
         return False
@@ -894,7 +894,7 @@ class HdfsTarget(FileSystemTarget):
             return self.format.pipe_writer(self.path)
 
     def remove(self, skip_trash=False):
-        remove(self.path, skip_trash=skip_trash)
+        self.fs.remove(self.path, skip_trash=skip_trash)
 
     def rename(self, path, raise_if_exists=False):
         """
@@ -904,9 +904,9 @@ class HdfsTarget(FileSystemTarget):
         """
         if isinstance(path, HdfsTarget):
             path = path.path
-        if raise_if_exists and exists(path):
+        if raise_if_exists and self.fs.exists(path):
             raise RuntimeError('Destination exists: %s' % path)
-        rename(self.path, path)
+        self.fs.rename(self.path, path)
 
     def move(self, path, raise_if_exists=False):
         """
@@ -944,7 +944,7 @@ class HdfsTarget(FileSystemTarget):
             length = len(parts)
             for part in xrange(length):
                 path = "/".join(parts[0:length - part]) + "/"
-                if exists(path):
+                if self.fs.exists(path):
                     # if the path exists and we can write there, great!
                     if self._is_writable(path):
                         return True
@@ -959,7 +959,7 @@ class HdfsTarget(FileSystemTarget):
         test_path = path + '.test_write_access-%09d' % random.randrange(1e10)
         try:
             self.fs.touchz(test_path)
-            remove(test_path, recursive=False)
+            self.fs.remove(test_path, recursive=False)
             return True
         except HDFSCliError:
             return False
