@@ -307,6 +307,9 @@ class HdfsClient(FileSystem):
             else:
                 yield file
 
+    def touchz(self, path):
+        call_check(load_hadoop_cmd() + ['fs', '-touchz', path])
+
 
 class SnakebiteHdfsClient(HdfsClient):
     """
@@ -931,6 +934,9 @@ class HdfsTarget(FileSystemTarget):
         return move_succeeded
 
     def is_writable(self):
+        """
+        Currently only works with hadoopcli
+        """
         if "/" in self.path:
             # example path: /log/ap/2013-01-17/00
             parts = self.path.split("/")
@@ -951,9 +957,9 @@ class HdfsTarget(FileSystemTarget):
 
     def _is_writable(self, path):
         test_path = path + '.test_write_access-%09d' % random.randrange(1e10)
-        return_value = subprocess.call(load_hadoop_cmd() + ['fs', '-touchz', test_path])
-        if return_value != 0:
-            return False
-        else:
+        try:
+            self.fs.touchz(test_path)
             remove(test_path, recursive=False)
             return True
+        except HDFSCliError:
+            return False

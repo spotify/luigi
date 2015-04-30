@@ -38,6 +38,7 @@ class CascadingClient(object):
                         'count', 'copy', 'get', 'put', 'mkdir', 'listdir',
                         'isdir',
                         'rename_dont_move',
+                        'touchz',
                         ]
 
     def __init__(self, clients, method_names=None):
