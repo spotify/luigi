@@ -122,6 +122,10 @@ column values separated by a tab. One can define `column_separator`
 option for the task if the values are say comma separated instead of
 tab separated.
 
+You can pass in database specific connection arguments by setting the connect_args
+dictionary.  The options will be passed directly to the DBAPI's connect method as
+keyword arguments.
+
 The other option to `sqla.CopyToTable` that can be of help with performance aspect is the
 `chunk_size`. The default is 5000. This is the number of rows that will be inserted in
 a transaction at a time. Depending on the size of the inserts, this value can be tuned
@@ -155,10 +159,11 @@ class SQLAlchemyTarget(luigi.Target):
     to create a task to write to the database.
     """
     marker_table = None
+    connect_args = {}
     _engine = None  # sqlalchemy engine
     _pid = None  # the pid of the sqlalchemy engine object
 
-    def __init__(self, connection_string, target_table, update_id, echo=False):
+    def __init__(self, connection_string, target_table, update_id, echo=False, connect_args=None):
         """
         Constructor for the SQLAlchemyTarget.
 
@@ -170,19 +175,23 @@ class SQLAlchemyTarget(luigi.Target):
         :type update_id: str
         :param echo: Flag to setup SQLAlchemy logging
         :type echo: bool
+        :param connect_args: A dictionary of connection arguments
+        :type connect_args: dict
         :return:
         """
         self.target_table = target_table
         self.update_id = update_id
         self.connection_string = connection_string
         self.echo = echo
+        self.connect_args = connect_args
         self.marker_table_bound = None
 
     @property
     def engine(self):
         pid = os.getpid()
         if (SQLAlchemyTarget._engine is None) or (SQLAlchemyTarget._pid != pid):
-            SQLAlchemyTarget._engine = sqlalchemy.create_engine(self.connection_string, echo=self.echo)
+            SQLAlchemyTarget._engine = sqlalchemy.create_engine(self.connection_string, connect_args=self.connect_args,
+                                                                echo=self.echo)
             SQLAlchemyTarget._pid = pid
         return SQLAlchemyTarget._engine
 
@@ -257,6 +266,7 @@ class CopyToTable(luigi.Task):
     _logger = logging.getLogger('luigi-interface')
 
     echo = False
+    connect_args = {}
 
     @abc.abstractmethod
     def connection_string(self):
@@ -330,6 +340,7 @@ class CopyToTable(luigi.Task):
             connection_string=self.connection_string,
             target_table=self.table,
             update_id=self.update_id(),
+            connect_args=self.connect_args,
             echo=self.echo)
 
     def rows(self):

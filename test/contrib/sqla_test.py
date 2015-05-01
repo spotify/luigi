@@ -42,6 +42,7 @@ TEMPDIR = tempfile.mkdtemp()
 SQLITEPATH = os.path.join(TEMPDIR, "sqlatest.db")
 CONNECTION_STRING = "sqlite:///%s" % SQLITEPATH
 TASK_LIST = ["item%d\tproperty%d\n" % (i, i) for i in range(10)]
+CONNECT_ARGS = {'timeout': 5.0}
 
 
 class BaseTask(luigi.Task):
@@ -62,6 +63,7 @@ class SQLATask(sqla.CopyToTable):
         (["property", sqlalchemy.String(64)], {})
     ]
     connection_string = CONNECTION_STRING
+    connect_args = CONNECT_ARGS
     table = "item_property"
     chunk_size = 1
 
@@ -82,7 +84,7 @@ class TestSQLA(unittest.TestCase):
     def setUp(self):
         if not os.path.exists(TEMPDIR):
             os.mkdir(TEMPDIR)
-        self.engine = sqlalchemy.create_engine(CONNECTION_STRING)
+        self.engine = sqlalchemy.create_engine(CONNECTION_STRING, connect_args=CONNECT_ARGS)
 
     def tearDown(self):
         self._clear_tables()
@@ -96,6 +98,7 @@ class TestSQLA(unittest.TestCase):
         """
         class TestSQLData(sqla.CopyToTable):
             connection_string = CONNECTION_STRING
+            connect_args = CONNECT_ARGS
             table = "test_table"
             columns = [
                 (["id", sqlalchemy.Integer], dict(primary_key=True)),
