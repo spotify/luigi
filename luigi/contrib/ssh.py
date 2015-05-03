@@ -167,7 +167,8 @@ class RemoteFileSystem(luigi.target.FileSystem):
         cmd = ["scp", "-q", "-B", "-C", "-o", "ControlMaster=no"]
         if self.remote_context.no_host_key_check:
             cmd.extend(['-o', 'UserKnownHostsFile=/dev/null',
-                        '-o', 'StrictHostKeyChecking=no'])
+                        '-o', 'StrictHostKeyChecking=no',
+                        '-o', 'ForwardAgent=yes'])
         if self.remote_context.key_file:
             cmd.extend(["-i", self.remote_context.key_file])
         if self.remote_context.port:
