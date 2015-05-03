@@ -56,6 +56,7 @@ class RemoteContext(object):
         self.connect_timeout = kwargs.get('connect_timeout', None)
         self.port = kwargs.get('port', None)
         self.no_host_key_check = kwargs.get('no_host_key_check', False)
+        self.sshpass = kwargs.get('sshpass', False)
 
     def __repr__(self):
         return '%s(%r, %r, %r, %r, %r)' % (
@@ -76,8 +77,11 @@ class RemoteContext(object):
     def _prepare_cmd(self, cmd):
         connection_cmd = ["ssh", self._host_ref(),
                           "-S", "none",  # disable ControlMaster since it causes all sorts of weird behaviour with subprocesses...
-                          "-o", "BatchMode=yes",  # no password prompts etc
                           ]
+        if self.sshpass:
+            connection_cmd = ["sshpass", "-e"] + connection_cmd
+        else:
+            connection_cmd += ["-o", "BatchMode=yes"]  # no password prompts etc
         if self.port:
             connection_cmd.extend(["-p", self.port])
 
@@ -164,7 +168,11 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.remote_context.check_output(cmd)
 
     def _scp(self, src, dest):
-        cmd = ["scp", "-q", "-B", "-C", "-o", "ControlMaster=no"]
+        cmd = ["scp", "-q", "-C", "-o", "ControlMaster=no"]
+        if self.remote_context.sshpass:
+            cmd = ["sshpass", "-e"] + cmd
+        else:
+            cmd.append("-B")
         if self.remote_context.no_host_key_check:
             cmd.extend(['-o', 'UserKnownHostsFile=/dev/null',
                         '-o', 'StrictHostKeyChecking=no',
