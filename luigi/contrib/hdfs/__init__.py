@@ -23,6 +23,15 @@ You can configure what client by setting the "client" config under the "hdfs" se
 
 # Here follows a series of deprecated imports that have been moved out there own files.
 
+# config.py
+from luigi.contrib.hdfs import config as hdfs_config
+hdfs = hdfs_config.hdfs
+load_hadoop_cmd = hdfs_config.load_hadoop_cmd
+get_configured_hadoop_version = hdfs_config.get_configured_hadoop_version
+get_configured_hdfs_client = hdfs_config.get_configured_hdfs_client
+tmppath = hdfs_config.tmppath
+
+
 # clients.py
 from luigi.contrib.hdfs import clients as hdfs_clients
 HDFSCliError = hdfs_clients.HDFSCliError
