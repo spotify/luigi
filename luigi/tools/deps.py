@@ -18,14 +18,14 @@
 # To do that you run:
 #      bin/deps.py --module daily_module Aggregate --daily-param1 xxx --upstream Daily
 #
-# This will output all the tasks on the dependency path b/w Daily and Aggregate. In
+# This will output all the tasks on the dependency path between Daily and Aggregate. In
 # effect, this is how you find all upstream tasks for Aggregate. Now you can delete its
 # output and run Aggregate again. Daily will eventually trigget Aggregate and all tasks on
 # the way.
 #
 # The same code here might be used as a CLI tool as well as a python module.
 # In python, invoke find_deps(task, upstream_name) to get a set of all task instances on the
-# paths b/w task T and upstream task S. You can then use the task instances to delete their output or
+# paths between task T and upstream task S. You can then use the task instances to delete their output or
 # perform other computation based on that.
 #
 # Example:
@@ -71,7 +71,7 @@ def find_deps(task, upstream_task_name):
     Finds all dependencies that start with the given task and have a path
     to upstream_task_name
 
-    Returns all deps on all paths b/w task and upstream
+    Returns all deps on all paths between task and upstream
     '''
     return set([t for t in dfs_paths(task, upstream_task_name)])
 
