@@ -49,14 +49,14 @@ def get_task_requires(task):
     return set(flatten(task.requires()))
 
 
-def dfs_paths(start_task, goal_task_name, path=None):
+def dfs_paths(start_task, goal_task_family, path=None):
     if path is None:
         path = [start_task]
-    if start_task.__class__.__name__ == goal_task_name or goal_task_name is None:
+    if start_task.task_family == goal_task_family or goal_task_family is None:
         for item in path:
             yield item
     for next in get_task_requires(start_task) - set(path):
-        for t in dfs_paths(next, goal_task_name, path + [next]):
+        for t in dfs_paths(next, goal_task_family, path + [next]):
             yield t
 
 
@@ -66,14 +66,14 @@ class UpstreamArg(luigi.Task):
     upstream = luigi.Parameter(is_global=True, default=None)
 
 
-def find_deps(task, upstream_task_name):
+def find_deps(task, upstream_task_family):
     '''
     Finds all dependencies that start with the given task and have a path
-    to upstream_task_name
+    to upstream_task_family
 
     Returns all deps on all paths between task and upstream
     '''
-    return set([t for t in dfs_paths(task, upstream_task_name)])
+    return set([t for t in dfs_paths(task, upstream_task_family)])
 
 
 def find_deps_cli():
@@ -84,8 +84,8 @@ def find_deps_cli():
     interface = luigi.interface.DynamicArgParseInterface()
     tasks = interface.parse()
     task, = tasks
-    upstream = UpstreamArg().upstream
-    return find_deps(task, upstream)
+    upstream_task_family = UpstreamArg().upstream
+    return find_deps(task, upstream_task_family)
 
 
 def main():
