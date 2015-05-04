@@ -19,6 +19,13 @@
 Provides access to HDFS using the :py:class:`HdfsTarget`, a subclass of :py:class:`~luigi.target.Target`.
 You can configure what client by setting the "client" config under the "hdfs" section in the configuration, or using the ``--hdfs-client`` command line option.
 "hadoopcli" is the slowest, but should work out of the box. "snakebite" is the fastest, but requires Snakebite to be installed.
+
+Currently (4th May) the :py:mod:`luigi.contrib.hdfs` module is under
+reorganization. We recommend importing the reexports from
+:py:mod:`luigi.contrib.hdfs` instead of the sub-modules, as we're not yet sure
+how the final structure of the sub-modules will be yet. Eventually this module
+will be empty and you'll have to import directly from the sub modules like
+:py:mod:`luigi.contrib.hdfs.config`.
 """
 
 # Here follows a series of deprecated imports that have been moved out there own files.
