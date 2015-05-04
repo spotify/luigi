@@ -33,7 +33,7 @@
 # PYTHONPATH=$PYTHONPATH:/path/to/your/luigi/tasks bin/deps.py \
 # --module my.tasks  MyDownstreamTask
 # --downstream_task_param1 123456
-# [--upstream MyUpstreamTask]
+# [--upstream-task-family MyUpstreamTask]
 #
 
 
@@ -43,6 +43,7 @@ from luigi.postgres import PostgresTarget
 from luigi.s3 import S3Target
 from luigi.target import FileSystemTarget
 from luigi.task import flatten
+from luigi import parameter
 
 
 def get_task_requires(task):
@@ -60,10 +61,11 @@ def dfs_paths(start_task, goal_task_family, path=None):
             yield t
 
 
-class UpstreamArg(luigi.Task):
-
-    'Used to provide the global parameter -- upstream'
-    upstream = luigi.Parameter(is_global=True, default=None)
+class upstream(luigi.task.Config):
+    '''
+    Used to provide the parameter upstream-task-family
+    '''
+    family = parameter.Parameter(default=None)
 
 
 def find_deps(task, upstream_task_family):
@@ -78,13 +80,12 @@ def find_deps(task, upstream_task_family):
 
 def find_deps_cli():
     '''
-    Finds all tasks on all paths from provided CLI task and down to the
-    task provided by --upstream
+    Finds all tasks on all paths from provided CLI task
     '''
     interface = luigi.interface.DynamicArgParseInterface()
     tasks = interface.parse()
     task, = tasks
-    upstream_task_family = UpstreamArg().upstream
+    upstream_task_family = upstream().family
     return find_deps(task, upstream_task_family)
 
 
