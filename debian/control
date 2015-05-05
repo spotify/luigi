@@ -3,8 +3,7 @@ Section: libs
 Priority: extra
 Maintainer: Elias Freider <freider@spotify.com>
 Build-Depends:	debhelper (>= 7),
-		python-all (>= 2.6.6-3~),
-		python-argparse,
+		python-all (>= 2.7),
 		python-pip,
 		python-psycopg2,
 		python-pyparsing,
@@ -25,7 +24,6 @@ Architecture: all
 Depends: ${shlibs:Depends},
 	 ${misc:Depends},
 	 ${python:Depends},
-	 python-argparse,
 	 python-pyparsing,
 	 python-sqlalchemy,
 	 python-mechanize
