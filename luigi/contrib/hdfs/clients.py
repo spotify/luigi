@@ -59,14 +59,6 @@ def call_check(command):
     return stdout
 
 
-def list_path(path):
-    if isinstance(path, list) or isinstance(path, tuple):
-        return path
-    if isinstance(path, str) or isinstance(path, unicode):
-        return [path, ]
-    return [str(path), ]
-
-
 class HdfsClient(FileSystem):
     """
     This client uses Apache 2.x syntax for file system commands, which also matched CDH4.
@@ -272,6 +264,14 @@ class SnakebiteHdfsClient(HdfsClient):
             logger.warning("Failed to load snakebite.client. Using HdfsClient.")
             return HdfsClient()
 
+    @staticmethod
+    def list_path(path):
+        if isinstance(path, list) or isinstance(path, tuple):
+            return path
+        if isinstance(path, str) or isinstance(path, unicode):
+            return [path, ]
+        return [str(path), ]
+
     def get_bite(self):
         """
         If Luigi has forked, we have a different PID, and need to reconnect.
@@ -325,7 +325,7 @@ class SnakebiteHdfsClient(HdfsClient):
             dir_path = '/'.join(parts[0:-1])
             if not self.exists(dir_path):
                 self.mkdir(dir_path, parents=True)
-        return list(self.get_bite().rename(list_path(path), dest))
+        return list(self.get_bite().rename(self.list_path(path), dest))
 
     def rename_dont_move(self, path, dest):
         """
@@ -357,7 +357,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :type skip_trash: boolean, default is False (use trash)
         :return: list of deleted items
         """
-        return list(self.get_bite().delete(list_path(path), recurse=recursive))
+        return list(self.get_bite().delete(self.list_path(path), recurse=recursive))
 
     def chmod(self, path, permissions, recursive=False):
         """
@@ -373,7 +373,7 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         if type(permissions) == str:
             permissions = int(permissions, 8)
-        return list(self.get_bite().chmod(list_path(path),
+        return list(self.get_bite().chmod(self.list_path(path),
                                           permissions, recursive))
 
     def chown(self, path, owner, group, recursive=False):
@@ -395,10 +395,10 @@ class SnakebiteHdfsClient(HdfsClient):
         bite = self.get_bite()
         if owner:
             if group:
-                return all(bite.chown(list_path(path), "%s:%s" % (owner, group),
+                return all(bite.chown(self.list_path(path), "%s:%s" % (owner, group),
                                       recurse=recursive))
-            return all(bite.chown(list_path(path), owner, recurse=recursive))
-        return list(bite.chgrp(list_path(path), group, recurse=recursive))
+            return all(bite.chown(self.list_path(path), owner, recurse=recursive))
+        return list(bite.chgrp(self.list_path(path), group, recurse=recursive))
 
     def count(self, path):
         """
@@ -409,7 +409,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :return: dictionary with content_size, dir_count and file_count keys
         """
         try:
-            res = self.get_bite().count(list_path(path)).next()
+            res = self.get_bite().count(self.list_path(path)).next()
             dir_count = res['directoryCount']
             file_count = res['fileCount']
             content_size = res['spaceConsumed']
@@ -427,7 +427,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :param local_destination: path on the system running Luigi
         :type local_destination: string
         """
-        return list(self.get_bite().copyToLocal(list_path(path),
+        return list(self.get_bite().copyToLocal(self.list_path(path),
                                                 local_destination))
 
     def mkdir(self, path, parents=True, mode=0o755, raise_if_exists=False):
@@ -444,7 +444,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :param mode: \*nix style owner/group/other permissions
         :type mode: octal, default 0755
         """
-        result = list(self.get_bite().mkdir(list_path(path),
+        result = list(self.get_bite().mkdir(self.list_path(path),
                                             create_parent=parents, mode=mode))
         if raise_if_exists and "ile exists" in result[0].get('error', ''):
             raise luigi.target.FileAlreadyExists("%s exists" % (path, ))
@@ -474,7 +474,7 @@ class SnakebiteHdfsClient(HdfsClient):
             true, a tuple starting with the path, and include_* items in order
         """
         bite = self.get_bite()
-        for entry in bite.ls(list_path(path), recurse=recursive):
+        for entry in bite.ls(self.list_path(path), recurse=recursive):
             if ignore_directories and entry['file_type'] == 'd':
                 continue
             if ignore_files and entry['file_type'] == 'f':
