@@ -23,7 +23,7 @@ Originally written by Alan Brenner <alan@magnetic.com> github.com/alanbbr
 
 
 from luigi.contrib.hdfs import config as hdfs_config
-from luigi.contrib.hdfs import clients as hdfs_clients
+from luigi.contrib.hdfs import error as hdfs_error
 from luigi.contrib.hdfs import hadoopcli_clients as hdfs_hadoopcli_clients
 from luigi import six
 import luigi.contrib.target
@@ -90,7 +90,7 @@ class SnakebiteHdfsClient(hdfs_hadoopcli_clients.HdfsClient):
         try:
             return self.get_bite().test(path, exists=True)
         except Exception as err:    # IGNORE:broad-except
-            raise hdfs_clients.HDFSCliError("snakebite.test", -1, str(err), repr(err))
+            raise hdfs_error.HDFSCliError("snakebite.test", -1, str(err), repr(err))
 
     def rename(self, path, dest):
         """

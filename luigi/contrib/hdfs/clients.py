@@ -30,21 +30,6 @@ import logging
 logger = logging.getLogger('luigi-interface')
 
 
-class HDFSCliError(Exception):
-
-    def __init__(self, command, returncode, stdout, stderr):
-        self.returncode = returncode
-        self.stdout = stdout
-        self.stderr = stderr
-        msg = ("Command %r failed [exit code %d]\n" +
-               "---stdout---\n" +
-               "%s\n" +
-               "---stderr---\n" +
-               "%s" +
-               "------------") % (command, returncode, stdout, stderr)
-        super(HDFSCliError, self).__init__(msg)
-
-
 def get_autoconfig_client(show_warnings=True):
     """
     Creates the client as specified in the `client.cfg` configuration.

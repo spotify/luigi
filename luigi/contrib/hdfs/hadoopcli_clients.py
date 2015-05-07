@@ -24,7 +24,7 @@ snakebite client.
 from luigi.target import FileAlreadyExists, FileSystem
 from luigi.contrib.hdfs.config import load_hadoop_cmd
 from luigi.contrib.hdfs import config as hdfs_config
-from luigi.contrib.hdfs import clients as hdfs_clients
+from luigi.contrib.hdfs import error as hdfs_error
 import logging
 import subprocess
 import datetime
@@ -64,7 +64,7 @@ class HdfsClient(FileSystem):
         p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, universal_newlines=True)
         stdout, stderr = p.communicate()
         if p.returncode != 0:
-            raise hdfs_clients.HDFSCliError(command, p.returncode, stdout, stderr)
+            raise hdfs_error.HDFSCliError(command, p.returncode, stdout, stderr)
         return stdout
 
     def exists(self, path):
@@ -84,7 +84,7 @@ class HdfsClient(FileSystem):
             for line in stderr.split('\n'):
                 if not_found_re.match(line):
                     return False
-            raise hdfs_clients.HDFSCliError(cmd, p.returncode, stdout, stderr)
+            raise hdfs_error.HDFSCliError(cmd, p.returncode, stdout, stderr)
 
     def rename(self, path, dest):
         parent_dir = os.path.dirname(dest)
@@ -185,7 +185,7 @@ class HdfsClient(FileSystem):
                    (['-p'] if parents else []) +
                    [path])
             self.call_check(cmd)
-        except hdfs_clients.HDFSCliError as ex:
+        except hdfs_error.HDFSCliError as ex:
             if "File exists" in ex.stderr:
                 if raise_if_exists:
                     raise FileAlreadyExists(ex.stderr)
@@ -249,7 +249,7 @@ class HdfsClientCdh3(HdfsClient):
         """
         try:
             self.call_check(load_hadoop_cmd() + ['fs', '-mkdir', path])
-        except hdfs_clients.HDFSCliError as ex:
+        except hdfs_error.HDFSCliError as ex:
             if "File exists" in ex.stderr:
                 raise FileAlreadyExists(ex.stderr)
             else:
@@ -285,4 +285,4 @@ class HdfsClientApache1(HdfsClientCdh3):
         elif p.returncode == 1:
             return False
         else:
-            raise hdfs_clients.HDFSCliError(cmd, p.returncode, stdout, stderr)
+            raise hdfs_error.HDFSCliError(cmd, p.returncode, stdout, stderr)

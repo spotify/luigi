@@ -39,9 +39,10 @@ tmppath = hdfs_config.tmppath
 
 # clients
 from luigi.contrib.hdfs import clients as hdfs_clients
+from luigi.contrib.hdfs import error as hdfs_error
 from luigi.contrib.hdfs import snakebite_client as hdfs_snakebite_client
 from luigi.contrib.hdfs import hadoopcli_clients as hdfs_hadoopcli_clients
-HDFSCliError = hdfs_clients.HDFSCliError
+HDFSCliError = hdfs_error.HDFSCliError
 call_check = hdfs_hadoopcli_clients.HdfsClient.call_check
 list_path = hdfs_snakebite_client.SnakebiteHdfsClient.list_path
 HdfsClient = hdfs_hadoopcli_clients.HdfsClient
