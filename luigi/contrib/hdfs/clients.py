@@ -51,28 +51,20 @@ class HDFSCliError(Exception):
         super(HDFSCliError, self).__init__(msg)
 
 
-def call_check(command):
-    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, universal_newlines=True)
-    stdout, stderr = p.communicate()
-    if p.returncode != 0:
-        raise HDFSCliError(command, p.returncode, stdout, stderr)
-    return stdout
-
-
-def list_path(path):
-    if isinstance(path, list) or isinstance(path, tuple):
-        return path
-    if isinstance(path, str) or isinstance(path, unicode):
-        return [path, ]
-    return [str(path), ]
-
-
 class HdfsClient(FileSystem):
     """
     This client uses Apache 2.x syntax for file system commands, which also matched CDH4.
     """
 
     recursive_listdir_cmd = ['-ls', '-R']
+
+    @staticmethod
+    def call_check(command):
+        p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, universal_newlines=True)
+        stdout, stderr = p.communicate()
+        if p.returncode != 0:
+            raise HDFSCliError(command, p.returncode, stdout, stderr)
+        return stdout
 
     def exists(self, path):
         """
@@ -101,7 +93,7 @@ class HdfsClient(FileSystem):
             path = [path]
         else:
             warnings.warn("Renaming multiple files at once is not atomic.")
-        call_check(load_hadoop_cmd() + ['fs', '-mv'] + path + [dest])
+        self.call_check(load_hadoop_cmd() + ['fs', '-mv'] + path + [dest])
 
     def rename_dont_move(self, path, dest):
         """
@@ -135,14 +127,14 @@ class HdfsClient(FileSystem):
             cmd = cmd + ['-skipTrash']
 
         cmd = cmd + [path]
-        call_check(cmd)
+        self.call_check(cmd)
 
     def chmod(self, path, permissions, recursive=False):
         if recursive:
             cmd = load_hadoop_cmd() + ['fs', '-chmod', '-R', permissions, path]
         else:
             cmd = load_hadoop_cmd() + ['fs', '-chmod', permissions, path]
-        call_check(cmd)
+        self.call_check(cmd)
 
     def chown(self, path, owner, group, recursive=False):
         if owner is None:
@@ -154,11 +146,11 @@ class HdfsClient(FileSystem):
             cmd = load_hadoop_cmd() + ['fs', '-chown', '-R', ownership, path]
         else:
             cmd = load_hadoop_cmd() + ['fs', '-chown', ownership, path]
-        call_check(cmd)
+        self.call_check(cmd)
 
     def count(self, path):
         cmd = load_hadoop_cmd() + ['fs', '-count', path]
-        stdout = call_check(cmd)
+        stdout = self.call_check(cmd)
         lines = stdout.split('\n')
         for line in stdout.split('\n'):
             if line.startswith("OpenJDK 64-Bit Server VM warning") or line.startswith("It's highly recommended") or not line:
@@ -169,20 +161,20 @@ class HdfsClient(FileSystem):
         return results
 
     def copy(self, path, destination):
-        call_check(load_hadoop_cmd() + ['fs', '-cp', path, destination])
+        self.call_check(load_hadoop_cmd() + ['fs', '-cp', path, destination])
 
     def put(self, local_path, destination):
-        call_check(load_hadoop_cmd() + ['fs', '-put', local_path, destination])
+        self.call_check(load_hadoop_cmd() + ['fs', '-put', local_path, destination])
 
     def get(self, path, local_destination):
-        call_check(load_hadoop_cmd() + ['fs', '-get', path, local_destination])
+        self.call_check(load_hadoop_cmd() + ['fs', '-get', path, local_destination])
 
     def getmerge(self, path, local_destination, new_line=False):
         if new_line:
             cmd = load_hadoop_cmd() + ['fs', '-getmerge', '-nl', path, local_destination]
         else:
             cmd = load_hadoop_cmd() + ['fs', '-getmerge', path, local_destination]
-        call_check(cmd)
+        self.call_check(cmd)
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
         if (parents and raise_if_exists):
@@ -191,7 +183,7 @@ class HdfsClient(FileSystem):
             cmd = (load_hadoop_cmd() + ['fs', '-mkdir'] +
                    (['-p'] if parents else []) +
                    [path])
-            call_check(cmd)
+            self.call_check(cmd)
         except HDFSCliError as ex:
             if "File exists" in ex.stderr:
                 if raise_if_exists:
@@ -208,7 +200,7 @@ class HdfsClient(FileSystem):
             cmd = load_hadoop_cmd() + ['fs'] + self.recursive_listdir_cmd + [path]
         else:
             cmd = load_hadoop_cmd() + ['fs', '-ls', path]
-        lines = call_check(cmd).split('\n')
+        lines = self.call_check(cmd).split('\n')
 
         for line in lines:
             if not line:
@@ -242,7 +234,7 @@ class HdfsClient(FileSystem):
                 yield file
 
     def touchz(self, path):
-        call_check(load_hadoop_cmd() + ['fs', '-touchz', path])
+        self.call_check(load_hadoop_cmd() + ['fs', '-touchz', path])
 
 
 class SnakebiteHdfsClient(HdfsClient):
@@ -271,6 +263,14 @@ class SnakebiteHdfsClient(HdfsClient):
         except ImportError:
             logger.warning("Failed to load snakebite.client. Using HdfsClient.")
             return HdfsClient()
+
+    @staticmethod
+    def list_path(path):
+        if isinstance(path, list) or isinstance(path, tuple):
+            return path
+        if isinstance(path, str) or isinstance(path, unicode):
+            return [path, ]
+        return [str(path), ]
 
     def get_bite(self):
         """
@@ -325,7 +325,7 @@ class SnakebiteHdfsClient(HdfsClient):
             dir_path = '/'.join(parts[0:-1])
             if not self.exists(dir_path):
                 self.mkdir(dir_path, parents=True)
-        return list(self.get_bite().rename(list_path(path), dest))
+        return list(self.get_bite().rename(self.list_path(path), dest))
 
     def rename_dont_move(self, path, dest):
         """
@@ -357,7 +357,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :type skip_trash: boolean, default is False (use trash)
         :return: list of deleted items
         """
-        return list(self.get_bite().delete(list_path(path), recurse=recursive))
+        return list(self.get_bite().delete(self.list_path(path), recurse=recursive))
 
     def chmod(self, path, permissions, recursive=False):
         """
@@ -373,7 +373,7 @@ class SnakebiteHdfsClient(HdfsClient):
         """
         if type(permissions) == str:
             permissions = int(permissions, 8)
-        return list(self.get_bite().chmod(list_path(path),
+        return list(self.get_bite().chmod(self.list_path(path),
                                           permissions, recursive))
 
     def chown(self, path, owner, group, recursive=False):
@@ -395,10 +395,10 @@ class SnakebiteHdfsClient(HdfsClient):
         bite = self.get_bite()
         if owner:
             if group:
-                return all(bite.chown(list_path(path), "%s:%s" % (owner, group),
+                return all(bite.chown(self.list_path(path), "%s:%s" % (owner, group),
                                       recurse=recursive))
-            return all(bite.chown(list_path(path), owner, recurse=recursive))
-        return list(bite.chgrp(list_path(path), group, recurse=recursive))
+            return all(bite.chown(self.list_path(path), owner, recurse=recursive))
+        return list(bite.chgrp(self.list_path(path), group, recurse=recursive))
 
     def count(self, path):
         """
@@ -409,7 +409,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :return: dictionary with content_size, dir_count and file_count keys
         """
         try:
-            res = self.get_bite().count(list_path(path)).next()
+            res = self.get_bite().count(self.list_path(path)).next()
             dir_count = res['directoryCount']
             file_count = res['fileCount']
             content_size = res['spaceConsumed']
@@ -427,7 +427,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :param local_destination: path on the system running Luigi
         :type local_destination: string
         """
-        return list(self.get_bite().copyToLocal(list_path(path),
+        return list(self.get_bite().copyToLocal(self.list_path(path),
                                                 local_destination))
 
     def mkdir(self, path, parents=True, mode=0o755, raise_if_exists=False):
@@ -444,7 +444,7 @@ class SnakebiteHdfsClient(HdfsClient):
         :param mode: \*nix style owner/group/other permissions
         :type mode: octal, default 0755
         """
-        result = list(self.get_bite().mkdir(list_path(path),
+        result = list(self.get_bite().mkdir(self.list_path(path),
                                             create_parent=parents, mode=mode))
         if raise_if_exists and "ile exists" in result[0].get('error', ''):
             raise luigi.target.FileAlreadyExists("%s exists" % (path, ))
@@ -474,7 +474,7 @@ class SnakebiteHdfsClient(HdfsClient):
             true, a tuple starting with the path, and include_* items in order
         """
         bite = self.get_bite()
-        for entry in bite.ls(list_path(path), recurse=recursive):
+        for entry in bite.ls(self.list_path(path), recurse=recursive):
             if ignore_directories and entry['file_type'] == 'd':
                 continue
             if ignore_files and entry['file_type'] == 'f':
@@ -502,7 +502,7 @@ class HdfsClientCdh3(HdfsClient):
         No -p switch, so this will fail creating ancestors.
         """
         try:
-            call_check(load_hadoop_cmd() + ['fs', '-mkdir', path])
+            self.call_check(load_hadoop_cmd() + ['fs', '-mkdir', path])
         except HDFSCliError as ex:
             if "File exists" in ex.stderr:
                 raise FileAlreadyExists(ex.stderr)
@@ -519,7 +519,7 @@ class HdfsClientCdh3(HdfsClient):
             cmd = cmd + ['-skipTrash']
 
         cmd = cmd + [path]
-        call_check(cmd)
+        self.call_check(cmd)
 
 
 class HdfsClientApache1(HdfsClientCdh3):

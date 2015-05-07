@@ -40,8 +40,8 @@ tmppath = hdfs_config.tmppath
 # clients.py
 from luigi.contrib.hdfs import clients as hdfs_clients
 HDFSCliError = hdfs_clients.HDFSCliError
-call_check = hdfs_clients.call_check
-list_path = hdfs_clients.list_path
+call_check = hdfs_clients.HdfsClient.call_check
+list_path = hdfs_clients.SnakebiteHdfsClient.list_path
 HdfsClient = hdfs_clients.HdfsClient
 SnakebiteHdfsClient = hdfs_clients.SnakebiteHdfsClient
 HdfsClientCdh3 = hdfs_clients.HdfsClientCdh3
