@@ -35,7 +35,9 @@ logger = logging.getLogger('luigi-interface')
 
 class SnakebiteHdfsClient(hdfs_clients.HdfsClient):
     """
-    This client uses Spotify's snakebite client whenever possible.
+    A hdfs client using snakebite. Since Snakebite has a python API, it'll be
+    about 100 times faster than the hadoop cli client, which does shell out to
+    a java program on each file system operation.
     """
 
     def __init__(self):
@@ -48,15 +50,6 @@ class SnakebiteHdfsClient(hdfs_clients.HdfsClient):
             raise RuntimeError("You must specify namenode_host and namenode_port "
                                "in the [hdfs] section of your luigi config in "
                                "order to use luigi's snakebite support", err)
-
-    def __new__(cls):
-        try:
-            from snakebite.client import Client
-            this = super(SnakebiteHdfsClient, cls).__new__(cls)
-            return this
-        except ImportError:
-            logger.warning("Failed to load snakebite.client. Using HdfsClient.")
-            return hdfs_clients.HdfsClient()
 
     @staticmethod
     def list_path(path):
