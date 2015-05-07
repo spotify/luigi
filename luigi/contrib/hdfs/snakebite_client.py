@@ -24,6 +24,7 @@ Originally written by Alan Brenner <alan@magnetic.com> github.com/alanbbr
 
 from luigi.contrib.hdfs import config as hdfs_config
 from luigi.contrib.hdfs import clients as hdfs_clients
+from luigi.contrib.hdfs import hadoopcli_clients as hdfs_hadoopcli_clients
 from luigi import six
 import luigi.contrib.target
 import logging
@@ -33,7 +34,7 @@ import os
 logger = logging.getLogger('luigi-interface')
 
 
-class SnakebiteHdfsClient(hdfs_clients.HdfsClient):
+class SnakebiteHdfsClient(hdfs_hadoopcli_clients.HdfsClient):
     """
     A hdfs client using snakebite. Since Snakebite has a python API, it'll be
     about 100 times faster than the hadoop cli client, which does shell out to
