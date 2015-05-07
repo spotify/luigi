@@ -13,11 +13,9 @@ env:
   matrix:
     - TOXENV=pep8
     - TOXENV=docs
-    - TOXENV=py26-nonhdfs
     - TOXENV=py27-nonhdfs
     - TOXENV=py33-nonhdfs
     - TOXENV=py34-nonhdfs
-    - TOXENV=py26-cdh
     - TOXENV=py27-cdh
     - TOXENV=py33-cdh
     - TOXENV=py34-cdh
