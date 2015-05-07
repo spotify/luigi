@@ -37,13 +37,14 @@ get_configured_hdfs_client = hdfs_config.get_configured_hdfs_client
 tmppath = hdfs_config.tmppath
 
 
-# clients.py
+# clients
 from luigi.contrib.hdfs import clients as hdfs_clients
+from luigi.contrib.hdfs import snakebite_client as hdfs_snakebite_client
 HDFSCliError = hdfs_clients.HDFSCliError
 call_check = hdfs_clients.HdfsClient.call_check
-list_path = hdfs_clients.SnakebiteHdfsClient.list_path
+list_path = hdfs_snakebite_client.SnakebiteHdfsClient.list_path
 HdfsClient = hdfs_clients.HdfsClient
-SnakebiteHdfsClient = hdfs_clients.SnakebiteHdfsClient
+SnakebiteHdfsClient = hdfs_snakebite_client.SnakebiteHdfsClient
 HdfsClientCdh3 = hdfs_clients.HdfsClientCdh3
 HdfsClientApache1 = hdfs_clients.HdfsClientApache1
 create_hadoopcli_client = hdfs_clients.create_hadoopcli_client
