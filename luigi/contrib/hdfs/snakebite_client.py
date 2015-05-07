@@ -42,14 +42,8 @@ class SnakebiteHdfsClient(hdfs_clients.HdfsClient):
 
     def __init__(self):
         super(SnakebiteHdfsClient, self).__init__()
-        try:
-            from snakebite.client import Client
-            self._bite = None
-            self.pid = -1
-        except Exception as err:    # IGNORE:broad-except
-            raise RuntimeError("You must specify namenode_host and namenode_port "
-                               "in the [hdfs] section of your luigi config in "
-                               "order to use luigi's snakebite support", err)
+        self._bite = None
+        self.pid = -1
 
     @staticmethod
     def list_path(path):
