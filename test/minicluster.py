@@ -52,15 +52,15 @@ class MiniClusterTestCase(unittest.TestCase):
         self.fs = luigi.contrib.hdfs.client
         cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "testconfig")
         hadoop_bin = os.path.join(os.environ['HADOOP_HOME'], 'bin/hadoop')
-        # TODO: Remove this hacky patching (@tarrasch 29-Apr-2015)
-        cmd = lambda: [hadoop_bin, '--config', cfg_path]
-        luigi.contrib.hdfs.load_hadoop_cmd = cmd
-        luigi.contrib.hdfs.clients.load_hadoop_cmd = cmd
-        luigi.contrib.hdfs.format.load_hadoop_cmd = cmd
+        cmd = "{0} --config {1}".format(hadoop_bin, cfg_path)
+        self.stashed_hdfs_client = luigi.configuration.get_config().get('hadoop', 'command', None)
+        luigi.configuration.get_config().set('hadoop', 'command', cmd)
 
     def tearDown(self):
         if self.fs.exists(self._test_dir()):
             self.fs.remove(self._test_dir(), skip_trash=True)
+        if self.stashed_hdfs_client:
+            luigi.configuration.get_config().set('hadoop', 'command', self.stashed_hdfs_client)
 
     @staticmethod
     def _test_dir():
