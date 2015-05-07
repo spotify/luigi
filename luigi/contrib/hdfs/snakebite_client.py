@@ -17,6 +17,8 @@
 
 """
 A luigi file system client that wraps around snakebite
+
+Originally written by Alan Brenner <alan@magnetic.com> github.com/alanbbr
 """
 
 
@@ -33,8 +35,6 @@ logger = logging.getLogger('luigi-interface')
 class SnakebiteHdfsClient(hdfs_clients.HdfsClient):
     """
     This client uses Spotify's snakebite client whenever possible.
-
-    @author: Alan Brenner <alan@magnetic.com> github.com/alanbbr
     """
 
     def __init__(self):
