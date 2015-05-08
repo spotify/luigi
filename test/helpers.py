@@ -16,6 +16,7 @@
 #
 
 import functools
+import itertools
 import sys
 
 from luigi import six
@@ -31,35 +32,88 @@ else:
 
 
 class with_config(object):
+    """
+    Decorator to override config settings for the length of a function.
 
-    """Decorator to override config settings for the length of a function. Example:
+    Usage:
 
-      >>> @with_config({'foo': {'bar': 'baz'}})
-      >>> def test():
-      >>>  print luigi.configuration.get_config.get("foo", "bar")
-      >>> test()
-      baz
+    .. code-block: python
+
+        >>> import luigi.configuration
+        >>> @with_config({'foo': {'bar': 'baz'}})
+        ... def my_test():
+        ...     print(luigi.configuration.get_config().get("foo", "bar"))
+        ...
+        >>> my_test()
+        baz
+        >>> @with_config({'hoo': {'bar': 'buz'}})
+        ... @with_config({'foo': {'bar': 'baz'}})
+        ... def my_test():
+        ...     print(luigi.configuration.get_config().get("foo", "bar"))
+        ...     print(luigi.configuration.get_config().get("hoo", "bar"))
+        ...
+        >>> my_test()
+        baz
+        buz
+        >>> @with_config({'foo': {'bar': 'buz'}})
+        ... @with_config({'foo': {'bar': 'baz'}})
+        ... def my_test():
+        ...     print(luigi.configuration.get_config().get("foo", "bar"))
+        ...
+        >>> my_test()
+        baz
+        >>> @with_config({'foo': {'bur': 'buz'}})
+        ... @with_config({'foo': {'bar': 'baz'}})
+        ... def my_test():
+        ...     print(luigi.configuration.get_config().get("foo", "bar"))
+        ...     print(luigi.configuration.get_config().get("foo", "bur"))
+        ...
+        >>> my_test()
+        baz
+        buz
+        >>> @with_config({'foo': {'bur': 'buz'}})
+        ... @with_config({'foo': {'bar': 'baz'}}, replace_sections=True)
+        ... def my_test():
+        ...     print(luigi.configuration.get_config().get("foo", "bar"))
+        ...     print(luigi.configuration.get_config().get("foo", "bur", "no_bur"))
+        ...
+        >>> my_test()
+        baz
+        no_bur
+
     """
 
     def __init__(self, config, replace_sections=False):
         self.config = config
         self.replace_sections = replace_sections
 
+    def _make_dict(self, old_dict):
+        if self.replace_sections:
+            old_dict.update(self.config)
+            return old_dict
+
+        def get_section(sec):
+            old_sec = old_dict.get(sec, {})
+            new_sec = self.config.get(sec, {})
+            old_sec.update(new_sec)
+            return old_sec
+
+        all_sections = itertools.chain(old_dict.keys(), self.config.keys())
+        return {sec: get_section(sec) for sec in all_sections}
+
     def __call__(self, fun):
         @functools.wraps(fun)
         def wrapper(*args, **kwargs):
             import luigi.configuration
-            orig_conf = luigi.configuration.get_config()
-            luigi.configuration.LuigiConfigParser._instance = None
-            conf = luigi.configuration.get_config()
-            for (section, settings) in six.iteritems(self.config):
-                if not conf.has_section(section):
-                    conf.add_section(section)
-                elif self.replace_sections:
-                    conf.remove_section(section)
-                    conf.add_section(section)
+            orig_conf = luigi.configuration.LuigiConfigParser.instance()
+            new_conf = luigi.configuration.LuigiConfigParser()
+            luigi.configuration.LuigiConfigParser._instance = new_conf
+            orig_dict = {k: dict(orig_conf.items(k)) for k in orig_conf.sections()}
+            new_dict = self._make_dict(orig_dict)
+            for (section, settings) in six.iteritems(new_dict):
+                new_conf.add_section(section)
                 for (name, value) in six.iteritems(settings):
-                    conf.set(section, name, value)
+                    new_conf.set(section, name, value)
             try:
                 return fun(*args, **kwargs)
             finally:
