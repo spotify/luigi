@@ -679,8 +679,12 @@ class BaseHadoopJobTask(luigi.Task):
             return super(BaseHadoopJobTask, self).on_failure(exception)
 
 DataInterchange = {
-    "python": {"serialize": str, "deserialize": eval},
-    "json": {"serialize": json.dumps, "deserialize": json.loads}
+    "python": {"serialize": str,
+               "internal_serialize": repr,
+               "deserialize": eval},
+    "json": {"serialize": json.dumps,
+             "internal_serialize": json.dumps,
+             "deserialize": json.loads}
 }
 
 
@@ -702,6 +706,10 @@ class JobTask(BaseHadoopJobTask):
     @cached_property
     def serialize(self):
         return DataInterchange[self.data_interchange_format]['serialize']
+
+    @cached_property
+    def internal_serialize(self):
+        return DataInterchange[self.data_interchange_format]['internal_serialize']
 
     @cached_property
     def deserialize(self):
@@ -754,7 +762,14 @@ class JobTask(BaseHadoopJobTask):
         """
         for output in outputs:
             try:
-                print("\t".join(map(self.serialize, flatten(output))), file=stdout)
+                output = flatten(output)
+                if self.data_interchange_format == "json":
+                    # Only dump one json string, and skip another one, maybe key or value.
+                    output = filter(lambda x: x, output)
+                else:
+                    # JSON is already serialized, so we put `self.serialize` in a else statement.
+                    output = map(self.serialize, output)
+                print("\t".join(output), file=stdout)
             except:
                 print(output, file=stderr)
                 raise
@@ -893,8 +908,8 @@ class JobTask(BaseHadoopJobTask):
         """
         Iterate over input, collect values with the same key, and call the reducer for each unique key.
         """
-        for key, values in groupby(inputs, key=lambda x: x[0]):
-            for output in reducer(key, (v[1] for v in values)):
+        for key, values in groupby(inputs, key=lambda x: self.internal_serialize(x[0])):
+            for output in reducer(self.deserialize(key), (v[1] for v in values)):
                 yield output
         if final != NotImplemented:
             for output in final():
@@ -941,4 +956,4 @@ class JobTask(BaseHadoopJobTask):
         Writer which outputs the python repr for each item.
         """
         for output in outputs:
-            print("\t".join(map(repr, output)), file=stdout)
+            print("\t".join(map(self.internal_serialize, output)), file=stdout)

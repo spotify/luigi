@@ -17,6 +17,7 @@
 
 import os
 import sys
+import json
 import unittest
 
 import luigi
@@ -147,6 +148,24 @@ class UnicodeJob(HadoopJobTask):
         return self.get_output('luigitest-4')
 
 
+class UseJsonAsDataInteterchangeFormatJob(HadoopJobTask):
+
+    data_interchange_format = "json"
+
+    def mapper(self, line):
+        yield "json", {"data type": "json"}
+
+    def reducer(self, _, vals):
+        yield "", json.dumps(list(vals)[0])
+
+    def requires(self):
+        """ Two lines from Word.task will cause two `mapper` call. """
+        return Words(self.use_hdfs)
+
+    def output(self):
+        return self.get_output('luigitest-5')
+
+
 class FailingJobException(Exception):
     pass
 
@@ -207,13 +226,17 @@ class CommonTests(object):
             c.append(line)
         # Make sure unicode('test') isnt grouped with str('test')
         # Since this is what happens when running on cluster
-        if sys.version_info.major == 3:
-            test_case.assertEqual(len(c), 2)
-            test_case.assertEqual(c[0], "test\t2\n")
-        # str and unicode can be equal in Python 2
-        if sys.version_info.major == 2:
-            test_case.assertEqual(len(c), 1)
-            test_case.assertEqual(c[0], "test\t4\n")
+        test_case.assertEqual(len(c), 2)
+        test_case.assertEqual(c[0], "test\t2\n")
+
+    @staticmethod
+    def test_use_json_as_data_interchange_format_job(test_case):
+        job = UseJsonAsDataInteterchangeFormatJob(use_hdfs=test_case.use_hdfs)
+        luigi.build([job], local_scheduler=True)
+        c = []
+        for line in job.output().open('r'):
+            c.append(line)
+        test_case.assertEqual(c, ['{"data type": "json"}\n'])
 
     @staticmethod
     def test_failing_job(test_case):
@@ -237,6 +260,9 @@ class MapreduceLocalTest(unittest.TestCase):
 
     def test_unicode_job(self):
         CommonTests.test_unicode_job(self)
+
+    def test_use_json_as_data_interchange_format_job(self):
+        CommonTests.test_use_json_as_data_interchange_format_job(self)
 
     def test_failing_job(self):
         CommonTests.test_failing_job(self)
