@@ -46,6 +46,7 @@ import tempfile
 import warnings
 from hashlib import md5
 from itertools import groupby
+from cached_property import cached_property
 
 from luigi import six
 
@@ -677,10 +678,18 @@ class BaseHadoopJobTask(luigi.Task):
         else:
             return super(BaseHadoopJobTask, self).on_failure(exception)
 
+DataInterchange = {
+    "python": {"serialize": str, "deserialize": eval},
+    "json": {"serialize": json.dumps, "deserialize": json.loads}
+}
+
 
 class JobTask(BaseHadoopJobTask):
     n_reduce_tasks = 25
     reducer = NotImplemented
+
+    # available formats are "python" and "json".
+    data_interchange_format = "python"
 
     def jobconfs(self):
         jcs = super(JobTask, self).jobconfs()
@@ -689,6 +698,14 @@ class JobTask(BaseHadoopJobTask):
         else:
             jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
         return jcs
+
+    @cached_property
+    def serialize(self):
+        return DataInterchange[self.data_interchange_format]['serialize']
+
+    @cached_property
+    def deserialize(self):
+        return DataInterchange[self.data_interchange_format]['deserialize']
 
     def init_mapper(self):
         pass
@@ -737,7 +754,7 @@ class JobTask(BaseHadoopJobTask):
         """
         for output in outputs:
             try:
-                print("\t".join(map(str, flatten(output))), file=stdout)
+                print("\t".join(map(self.serialize, flatten(output))), file=stdout)
             except:
                 print(output, file=stderr)
                 raise
@@ -876,8 +893,8 @@ class JobTask(BaseHadoopJobTask):
         """
         Iterate over input, collect values with the same key, and call the reducer for each unique key.
         """
-        for key, values in groupby(inputs, key=lambda x: repr(x[0])):
-            for output in reducer(eval(key), (v[1] for v in values)):
+        for key, values in groupby(inputs, key=lambda x: x[0]):
+            for output in reducer(key, (v[1] for v in values)):
                 yield output
         if final != NotImplemented:
             for output in final():
@@ -917,7 +934,7 @@ class JobTask(BaseHadoopJobTask):
         Yields a tuple of python objects.
         """
         for input_line in input_stream:
-            yield list(map(eval, input_line.split("\t")))
+            yield list(map(self.deserialize, input_line.split("\t")))
 
     def internal_writer(self, outputs, stdout):
         """

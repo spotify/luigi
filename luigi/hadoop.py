@@ -22,6 +22,5 @@ luigi.hadoop has moved to :py:mod:`luigi.contrib.hadoop`
 import warnings
 
 from luigi.contrib.hadoop import *
-
 warnings.warn("luigi.hadoop module has been moved to luigi.contrib.hadoop",
               DeprecationWarning)

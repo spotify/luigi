@@ -48,3 +48,4 @@ after_failure:
 branches:
   only:
     - master
+    - support_json_deserialization

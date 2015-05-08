@@ -207,9 +207,13 @@ class CommonTests(object):
             c.append(line)
         # Make sure unicode('test') isnt grouped with str('test')
         # Since this is what happens when running on cluster
-        test_case.assertEqual(len(c), 2)
-        test_case.assertEqual(c[0], "test\t2\n")
-        test_case.assertEqual(c[0], "test\t2\n")
+        if sys.version_info.major == 3:
+            test_case.assertEqual(len(c), 2)
+            test_case.assertEqual(c[0], "test\t2\n")
+        # str and unicode can be equal in Python 2
+        if sys.version_info.major == 2:
+            test_case.assertEqual(len(c), 1)
+            test_case.assertEqual(c[0], "test\t4\n")
 
     @staticmethod
     def test_failing_job(test_case):
