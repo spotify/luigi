@@ -18,14 +18,14 @@
 # To do that you run:
 #      bin/deps.py --module daily_module Aggregate --daily-param1 xxx --upstream Daily
 #
-# This will output all the tasks on the dependency path b/w Daily and Aggregate. In
+# This will output all the tasks on the dependency path between Daily and Aggregate. In
 # effect, this is how you find all upstream tasks for Aggregate. Now you can delete its
 # output and run Aggregate again. Daily will eventually trigget Aggregate and all tasks on
 # the way.
 #
 # The same code here might be used as a CLI tool as well as a python module.
 # In python, invoke find_deps(task, upstream_name) to get a set of all task instances on the
-# paths b/w task T and upstream task S. You can then use the task instances to delete their output or
+# paths between task T and upstream task S. You can then use the task instances to delete their output or
 # perform other computation based on that.
 #
 # Example:
@@ -33,7 +33,7 @@
 # PYTHONPATH=$PYTHONPATH:/path/to/your/luigi/tasks bin/deps.py \
 # --module my.tasks  MyDownstreamTask
 # --downstream_task_param1 123456
-# [--upstream MyUpstreamTask]
+# [--upstream-task-family MyUpstreamTask]
 #
 
 
@@ -43,49 +43,50 @@ from luigi.postgres import PostgresTarget
 from luigi.s3 import S3Target
 from luigi.target import FileSystemTarget
 from luigi.task import flatten
+from luigi import parameter
 
 
 def get_task_requires(task):
     return set(flatten(task.requires()))
 
 
-def dfs_paths(start_task, goal_task_name, path=None):
+def dfs_paths(start_task, goal_task_family, path=None):
     if path is None:
         path = [start_task]
-    if start_task.__class__.__name__ == goal_task_name or goal_task_name is None:
+    if start_task.task_family == goal_task_family or goal_task_family is None:
         for item in path:
             yield item
     for next in get_task_requires(start_task) - set(path):
-        for t in dfs_paths(next, goal_task_name, path + [next]):
+        for t in dfs_paths(next, goal_task_family, path + [next]):
             yield t
 
 
-class UpstreamArg(luigi.Task):
+class upstream(luigi.task.Config):
+    '''
+    Used to provide the parameter upstream-task-family
+    '''
+    family = parameter.Parameter(default=None)
 
-    'Used to provide the global parameter -- upstream'
-    upstream = luigi.Parameter(is_global=True, default=None)
 
-
-def find_deps(task, upstream_task_name):
+def find_deps(task, upstream_task_family):
     '''
     Finds all dependencies that start with the given task and have a path
-    to upstream_task_name
+    to upstream_task_family
 
-    Returns all deps on all paths b/w task and upstream
+    Returns all deps on all paths between task and upstream
     '''
-    return set([t for t in dfs_paths(task, upstream_task_name)])
+    return set([t for t in dfs_paths(task, upstream_task_family)])
 
 
 def find_deps_cli():
     '''
-    Finds all tasks on all paths from provided CLI task and down to the
-    task provided by --upstream
+    Finds all tasks on all paths from provided CLI task
     '''
     interface = luigi.interface.DynamicArgParseInterface()
     tasks = interface.parse()
     task, = tasks
-    upstream = UpstreamArg().upstream
-    return find_deps(task, upstream)
+    upstream_task_family = upstream().family
+    return find_deps(task, upstream_task_family)
 
 
 def main():
