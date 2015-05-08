@@ -28,7 +28,6 @@ import abc
 import binascii
 import datetime
 import glob
-import json
 import logging
 import os
 import pickle
@@ -58,6 +57,12 @@ from luigi import mrrunner
 
 if six.PY2:
     from itertools import imap as map
+
+try:
+    # See benchmark at https://gist.github.com/mvj3/02dca2bcc8b0ef1bbfb5
+    import ujson as json
+except:
+    import json
 
 logger = logging.getLogger('luigi-interface')
 
@@ -677,6 +682,7 @@ class BaseHadoopJobTask(luigi.Task):
       """.format(message=exception.message, stdout=exception.out, stderr=exception.err)
         else:
             return super(BaseHadoopJobTask, self).on_failure(exception)
+
 
 DataInterchange = {
     "python": {"serialize": str,
