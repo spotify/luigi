@@ -28,7 +28,6 @@ import abc
 import binascii
 import datetime
 import glob
-import json
 import logging
 import os
 import pickle
@@ -46,6 +45,7 @@ import tempfile
 import warnings
 from hashlib import md5
 from itertools import groupby
+from cached_property import cached_property
 
 from luigi import six
 
@@ -57,6 +57,12 @@ from luigi import mrrunner
 
 if six.PY2:
     from itertools import imap as map
+
+try:
+    # See benchmark at https://gist.github.com/mvj3/02dca2bcc8b0ef1bbfb5
+    import ujson as json
+except:
+    import json
 
 logger = logging.getLogger('luigi-interface')
 
@@ -678,9 +684,22 @@ class BaseHadoopJobTask(luigi.Task):
             return super(BaseHadoopJobTask, self).on_failure(exception)
 
 
+DataInterchange = {
+    "python": {"serialize": str,
+               "internal_serialize": repr,
+               "deserialize": eval},
+    "json": {"serialize": json.dumps,
+             "internal_serialize": json.dumps,
+             "deserialize": json.loads}
+}
+
+
 class JobTask(BaseHadoopJobTask):
     n_reduce_tasks = 25
     reducer = NotImplemented
+
+    # available formats are "python" and "json".
+    data_interchange_format = "python"
 
     def jobconfs(self):
         jcs = super(JobTask, self).jobconfs()
@@ -689,6 +708,18 @@ class JobTask(BaseHadoopJobTask):
         else:
             jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
         return jcs
+
+    @cached_property
+    def serialize(self):
+        return DataInterchange[self.data_interchange_format]['serialize']
+
+    @cached_property
+    def internal_serialize(self):
+        return DataInterchange[self.data_interchange_format]['internal_serialize']
+
+    @cached_property
+    def deserialize(self):
+        return DataInterchange[self.data_interchange_format]['deserialize']
 
     def init_mapper(self):
         pass
@@ -737,7 +768,14 @@ class JobTask(BaseHadoopJobTask):
         """
         for output in outputs:
             try:
-                print("\t".join(map(str, flatten(output))), file=stdout)
+                output = flatten(output)
+                if self.data_interchange_format == "json":
+                    # Only dump one json string, and skip another one, maybe key or value.
+                    output = filter(lambda x: x, output)
+                else:
+                    # JSON is already serialized, so we put `self.serialize` in a else statement.
+                    output = map(self.serialize, output)
+                print("\t".join(output), file=stdout)
             except:
                 print(output, file=stderr)
                 raise
@@ -876,8 +914,8 @@ class JobTask(BaseHadoopJobTask):
         """
         Iterate over input, collect values with the same key, and call the reducer for each unique key.
         """
-        for key, values in groupby(inputs, key=lambda x: repr(x[0])):
-            for output in reducer(eval(key), (v[1] for v in values)):
+        for key, values in groupby(inputs, key=lambda x: self.internal_serialize(x[0])):
+            for output in reducer(self.deserialize(key), (v[1] for v in values)):
                 yield output
         if final != NotImplemented:
             for output in final():
@@ -917,11 +955,11 @@ class JobTask(BaseHadoopJobTask):
         Yields a tuple of python objects.
         """
         for input_line in input_stream:
-            yield list(map(eval, input_line.split("\t")))
+            yield list(map(self.deserialize, input_line.split("\t")))
 
     def internal_writer(self, outputs, stdout):
         """
         Writer which outputs the python repr for each item.
         """
         for output in outputs:
-            print("\t".join(map(repr, output)), file=stdout)
+            print("\t".join(map(self.internal_serialize, output)), file=stdout)
