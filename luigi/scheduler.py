@@ -99,6 +99,8 @@ class scheduler(Config):
 
     record_task_history = parameter.BoolParameter(default=False)
 
+    visualization_graph = parameter.Parameter(default="svg", config_path=dict(section='scheduler', name='visualization-graph'))
+
 
 def fix_time(x):
     # Backwards compatibility for a fix in Dec 2014. Prior to the fix, pickled state might store datetime objects
