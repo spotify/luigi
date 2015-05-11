@@ -545,10 +545,10 @@ def flatten(struct):
 
     .. code-block:: python
 
-        >>> flatten({'a': 'foo', 'b': 'bar'})
-        ['foo', 'bar']
-        >>> flatten(['foo', ['bar', 'troll']])
-        ['foo', 'bar', 'troll']
+        >>> sorted(flatten({'a': 'foo', 'b': 'bar'}))
+        ['bar', 'foo']
+        >>> sorted(flatten(['foo', ['bar', 'troll']]))
+        ['bar', 'foo', 'troll']
         >>> flatten('foo')
         ['foo']
         >>> flatten(42)

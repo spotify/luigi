@@ -28,18 +28,20 @@ current_nodes = 0
 
 
 class Foo(luigi.Task):
+    task_namespace = 'examples'
 
     def run(self):
-        print "Running Foo"
+        print("Running Foo")
 
     def requires(self):
         global current_nodes
-        for i in xrange(30 / max_depth):
+        for i in range(30 / max_depth):
             current_nodes += 1
             yield Bar(i)
 
 
 class Bar(luigi.Task):
+    task_namespace = 'examples'
 
     num = luigi.IntParameter()
 
@@ -52,7 +54,7 @@ class Bar(luigi.Task):
 
         if max_total_nodes > current_nodes:
             valor = int(random.uniform(1, 30))
-            for i in xrange(valor / max_depth):
+            for i in range(valor / max_depth):
                 current_nodes += 1
                 yield Bar(current_nodes)
 
