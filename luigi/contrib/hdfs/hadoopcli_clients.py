@@ -90,7 +90,7 @@ class HdfsClient(FileSystem):
         parent_dir = os.path.dirname(dest)
         if parent_dir != '' and not self.exists(parent_dir):
             self.mkdir(parent_dir)
-        if type(path) not in (list, tuple):
+        if not isinstance(path, (list, tuple)):
             path = [path]
         else:
             warnings.warn("Renaming multiple files at once is not atomic.")
@@ -178,7 +178,7 @@ class HdfsClient(FileSystem):
         self.call_check(cmd)
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
-        if (parents and raise_if_exists):
+        if parents and raise_if_exists:
             raise NotImplementedError("HdfsClient.mkdir can't raise with -p")
         try:
             cmd = (load_hadoop_cmd() + ['fs', '-mkdir'] +
