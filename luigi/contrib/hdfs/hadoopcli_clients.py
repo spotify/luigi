@@ -93,7 +93,7 @@ class HdfsClient(FileSystem):
         if not isinstance(path, (list, tuple)):
             path = [path]
         else:
-            warnings.warn("Renaming multiple files at once is not atomic.")
+            warnings.warn("Renaming multiple files at once is not atomic.", stacklevel=2)
         self.call_check(load_hadoop_cmd() + ['fs', '-mv'] + path + [dest])
 
     def rename_dont_move(self, path, dest):
