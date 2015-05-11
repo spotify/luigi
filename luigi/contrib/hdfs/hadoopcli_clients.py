@@ -48,8 +48,8 @@ def create_hadoopcli_client():
     elif version == "apache1":
         return HdfsClientApache1()
     else:
-        raise Exception("Error: Unknown version specified in Hadoop version"
-                        "configuration parameter")
+        raise ValueError("Error: Unknown version specified in Hadoop version"
+                         "configuration parameter")
 
 
 class HdfsClient(FileSystem):
