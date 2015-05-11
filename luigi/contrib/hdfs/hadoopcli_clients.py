@@ -21,8 +21,9 @@ snakebite client.
 """
 
 
-from luigi.target import FileAlreadyExists, FileSystem
+from luigi.target import FileAlreadyExists
 from luigi.contrib.hdfs.config import load_hadoop_cmd
+from luigi.contrib.hdfs import abstract_client as hdfs_abstract_client
 from luigi.contrib.hdfs import config as hdfs_config
 from luigi.contrib.hdfs import error as hdfs_error
 import logging
@@ -52,7 +53,7 @@ def create_hadoopcli_client():
                          "configuration parameter")
 
 
-class HdfsClient(FileSystem):
+class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
     """
     This client uses Apache 2.x syntax for file system commands, which also matched CDH4.
     """
@@ -95,28 +96,6 @@ class HdfsClient(FileSystem):
         else:
             warnings.warn("Renaming multiple files at once is not atomic.", stacklevel=2)
         self.call_check(load_hadoop_cmd() + ['fs', '-mv'] + path + [dest])
-
-    def rename_dont_move(self, path, dest):
-        """
-        Override this method with an implementation that uses rename2,
-        which is a rename operation that never moves.
-
-        For instance, `rename2 a b` never moves `a` into `b` folder.
-
-        Currently, the hadoop cli does not support this operation.
-
-        We keep the interface simple by just aliasing this to
-        normal rename and let individual implementations redefine the method.
-
-        rename2 -
-        https://github.com/apache/hadoop/blob/ae91b13/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocol/ClientProtocol.java
-        (lines 483-523)
-        """
-        warnings.warn("Configured HDFS client doesn't support rename_dont_move, using normal mv operation instead.")
-        if self.exists(dest):
-            return False
-        self.rename(path, dest)
-        return True
 
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
