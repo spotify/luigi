@@ -360,16 +360,13 @@ function visualiserApp(luigi) {
                 if (task.inputQueue) {
                     for (var i =  0; i < task.inputQueue.length; i++) {
                         if (task.status === "DONE") {
-                                
                             var durationTime = getFinishTime(tasks, task.inputQueue);
-                                
                             g.setEdge(task.inputQueue[i], task.taskId, {
-                                label: durationTime[task.inputQueue[i]] + "/s",
+                                label: durationTime[task.inputQueue[i]] + " secs",
                                 width: 40
                             });
                         }else{
                             g.setEdge(task.inputQueue[i], task.taskId, {
-                                label: 0 + "/s",
                                 width: 40
                             });
                         }
