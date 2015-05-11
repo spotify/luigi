@@ -52,7 +52,7 @@ class MiniClusterTestCase(unittest.TestCase):
         self.fs = luigi.contrib.hdfs.client
         cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "testconfig")
         hadoop_bin = os.path.join(os.environ['HADOOP_HOME'], 'bin/hadoop')
-        cmd = "{0} --config {1}".format(hadoop_bin, cfg_path)
+        cmd = "{} --config {}".format(hadoop_bin, cfg_path)
         self.stashed_hdfs_client = luigi.configuration.get_config().get('hadoop', 'command', None)
         luigi.configuration.get_config().set('hadoop', 'command', cmd)
 
