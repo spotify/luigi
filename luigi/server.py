@@ -214,7 +214,11 @@ class StaticFileHandler(tornado.web.RequestHandler):
 class RootPathHandler(tornado.web.RequestHandler):
 
     def get(self):
-        self.redirect("/static/visualiser/index.html")
+        visualization_graph = configuration.get_config().get('core', 'visualization_graph', '')
+        if visualization_graph == "d3":
+            self.redirect("/static/visualiser/index.d3.html")
+        else:
+            self.redirect("/static/visualiser/index.html")
 
 
 def app(scheduler):
