@@ -343,7 +343,7 @@ function visualiserApp(luigi) {
                 var task = tasks[id];
                 var className = task.status;
                     
-                var html = "<div>";
+                var html = "<div onclick='window.location.href = \"" + "/static/visualiser/index.d3.html#" + task.taskId + "\"'>";
                 html += "<span class=status></span>";
                 html += "<span class=name>"+task.name+"</span>";
                 html += "<span class=queue><span class=counter>"+ task.status +"</span></span>";
