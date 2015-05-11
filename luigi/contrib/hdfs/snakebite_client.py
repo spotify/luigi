@@ -24,7 +24,7 @@ Originally written by Alan Brenner <alan@magnetic.com> github.com/alanbbr
 
 from luigi.contrib.hdfs import config as hdfs_config
 from luigi.contrib.hdfs import error as hdfs_error
-from luigi.contrib.hdfs import hadoopcli_clients as hdfs_hadoopcli_clients
+from luigi.contrib.hdfs import abstract_client as hdfs_abstract_client
 from luigi import six
 import luigi.contrib.target
 import logging
@@ -34,7 +34,7 @@ import os
 logger = logging.getLogger('luigi-interface')
 
 
-class SnakebiteHdfsClient(hdfs_hadoopcli_clients.HdfsClient):
+class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
     """
     A hdfs client using snakebite. Since Snakebite has a python API, it'll be
     about 100 times faster than the hadoop cli client, which does shell out to
@@ -200,6 +200,18 @@ class SnakebiteHdfsClient(hdfs_hadoopcli_clients.HdfsClient):
         return {'content_size': content_size, 'dir_count': dir_count,
                 'file_count': file_count}
 
+    def copy(self, path):
+        """
+        Raise a NotImplementedError exception.
+        """
+        return NotImplementedError("SnakebiteClient in luigi doesn't implement copy")
+
+    def put(self, local_path, destination):
+        """
+        Raise a NotImplementedError exception.
+        """
+        return NotImplementedError("Snakebite doesn't implement put")
+
     def get(self, path, local_destination):
         """
         Use snakebite.copyToLocal, if available.
@@ -272,3 +284,9 @@ class SnakebiteHdfsClient(hdfs_hadoopcli_clients.HdfsClient):
                 yield tuple(rval)
             else:
                 yield rval[0]
+
+    def touchz(self, path):
+        """
+        Raise a NotImplementedError exception.
+        """
+        return NotImplementedError("SnakebiteClient in luigi doesn't implement touchz")
