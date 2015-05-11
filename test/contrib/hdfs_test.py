@@ -697,7 +697,7 @@ class HdfsClientTest(MiniClusterTestCase):
         self.assertEqual(4, len(entries[5]), msg="%r" % entries)
         self.assertEqual(path + '/sub2/file4.dat', entries[5][0], msg="%r" % entries)
 
-    @mock.patch('luigi.contrib.hdfs.clients.HdfsClient.call_check')
+    @mock.patch('luigi.contrib.hdfs.hadoopcli_clients.HdfsClient.call_check')
     def test_cdh3_client(self, call_check):
         cdh3_client = luigi.contrib.hdfs.HdfsClientCdh3()
         cdh3_client.remove("/some/path/here")
