@@ -1,4 +1,5 @@
 {% include "header.html" %}
+<h2>Luigi Task History</h2>
 <table class="table table-striped table-bordered">
   <thead>
     <tr>
@@ -6,6 +7,7 @@
     <th>Host</th>
     <th>Last Action</th>
     <th>Status</th>
+    <th>Parameters</th>
   </tr>
   </thead>
   <tbody>
@@ -15,6 +17,9 @@
         <td>{{task.host}}</td>
         <td>{{task.events[0].ts}}</td>
         <td>{{task.events[0].event_name}}</td>
+		<td>{% for (k, param) in task.parameters.items() %}
+				<table class="table-condensed"><tr><td>{{k}}</td><td>{{param.value}}</td></tr></table>
+    		{% end %}</td>
       </tr>
     {% end %}
   </tbody>
