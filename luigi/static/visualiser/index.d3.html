@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Luigi Task Visualiser</title>
+        <script src="lib/jquery-1.10.0.min.js"></script>
+        <link href="lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        <link href="lib/jquery-ui/css/jquery-ui-1.10.3.custom.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="css/tipsy.css">
+        <script src="lib/bootstrap/js/bootstrap.min.js"></script>
+        <script src="http://d3js.org/d3.v3.js" charset="utf-8"></script>
+        <script src="js/dagre-d3.js"></script>
+        <script src="lib/mustache.js"></script>
+        <script src="js/luigi.d3.js"></script>
+        <script src="js/graph.js"></script>
+        <script src="js/visualiserApp.d3.js"></script>
+        <script src="js/tipsy.js"></script>
+        <script src="lib/jquery-ui/js/jquery-ui-1.10.3.custom.min.js"></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <style type="text/css">
+            .custom-header {
+                background-color:#eeeeee;
+                margin:0;
+                padding:10px;
+                border-radius: 6px;
+            }
+            body .modal {
+              width: 90%; /* desired relative width */
+              left: 100%; /* (100%-width)/2 */
+              margin: auto auto auto auto; /* place center */
+            }
+            body .modal.fade.in {
+              top: auto; /* fade in to correct spot */
+            }
+            /* This styles the title of the tooltip */
+            .tipsy .name {
+              font-size: 1.5em;
+              font-weight: bold;
+              margin: 0;
+            }
+        </style>
+
+        <style>
+        .nodeCircle {
+          stroke: #fff;
+          stroke-width: 1.5px;
+        }
+        text {
+            font-size:8pt;
+        }
+
+        .link {
+          stroke: #999;
+          stroke-opacity: .6;
+        }
+
+        svg {
+            border:1px solid #DDDDDD;
+            overflow:scroll;
+        }
+
+        .taskRow {
+          word-break:break-all;
+        }
+        </style>
+
+        <style>
+
+          
+          @-webkit-keyframes flash {
+            0%, 50%, 100% {
+              opacity: 1;
+            }
+
+            25%, 75% {
+              opacity: 0.2;
+            }
+          }
+
+          @keyframes flash {
+            0%, 50%, 100% {
+              opacity: 1;
+            }
+
+            25%, 75% {
+              opacity: 0.2;
+            }
+          }
+
+          .RUNNING {
+            -webkit-animation-duration: 5s;
+            animation-duration: 5s;
+            -webkit-animation-fill-mode: both;
+            animation-fill-mode: both;
+            -webkit-animation-iteration-count: 1;
+            animation-iteration-count: 1;
+          }
+
+          .live.map {
+            width: 100%;
+            height: 600px;
+            background: #333;
+          }
+
+          svg {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+          }
+
+          .live.map text {
+            font-weight: 300;
+            font-size: 14px;
+          }
+
+          .live.map .node rect {
+            stroke-width: 1.5px;
+            stroke: #bbb;
+            fill: #666;
+          }
+
+          .live.map .status {
+            height: 100%;
+            width: 15px;
+            display: block;
+            float: left;
+            border-top-left-radius: 5px;
+            border-bottom-left-radius: 5px;
+            margin-right: 4px;
+          }
+
+          .live.map .DONE .status {
+            background-color: #7f7;
+          }
+
+          .live.map .RUNNING .status {
+            background-color: #7f7;
+          }
+
+          .live.map .PENDING .status {
+            background-color: #FFFF46;
+          }
+
+          .live.map .ERROR .status {
+            background-color: #f77;
+          }          
+
+          .live.map .RUNNING .queue {
+            color: #f77;
+          }
+
+          .RUNNING {
+            -webkit-animation-name: flash;
+            animation-name: flash;
+          }
+
+          .live.map .consumers {
+            margin-right: 2px;
+          }
+
+          .live.map .consumers,
+          .live.map .name {
+            margin-top: 4px;
+          }
+
+          .live.map .consumers:after {
+            content: "x";
+          }
+
+          .live.map .queue {
+            display: block;
+            float: left;
+            width: 130px;
+            height: 20px;
+            font-size: 12px;
+            margin-top: 2px;
+          }
+
+          .live.map .node g div {
+            width: 200px;
+            height: 40px;
+            color: #fff;
+          }
+
+          .live.map .node g div span.consumers {
+            display: inline-block;
+            width: 20px;
+          }
+
+          .live.map .edgeLabel text {
+            width: 50px;
+            fill: #fff;
+          }
+
+          .live.map .edgePath path {
+            stroke: #999;
+            stroke-width: 1.5px;
+            fill: #999;
+          }
+        </style>
+        <script type="text/template" name="rowTemplate">
+            {{#tasks}}
+            <div class="taskFamily">
+                <h4>
+                    <button class="btn btn-mini btn-inverse" data-action="expandTaskRows">
+                        <span class="icon-plus icon-white"></span>
+                    </button>
+                    <span class="badge badge-important">
+                        {{value.length}}
+                    </span>
+                    {{key}}
+                </h4>
+                <div class="taskRows" style="display:none">
+                    {{#value}}
+                    <div class="taskRow row-fluid" data-task-id="{{taskId}}">
+                        <div class="span4"><strong>{{taskName}}</strong><em> ({{taskParams}})</em></div>
+                        <div class="span1">{{priority}}</div>
+                        <div class="span2">{{resources}}</div>
+                        <div class="span3">{{displayTime}}</div>
+                        <div class="span2">
+                            <a href="#{{taskId}}" class="btn btn-info btn-small" data-action="drawGraph">Dependency Graph</a>
+                            {{#error}}<a class="btn btn-primary btn-small error-trace-button" data-task-id="{{taskId}}">Show Error Trace</a>{{/error}}
+                            {{#re_enable}}<a class="btn btn-warning btn-small re-enable-button" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
+                        </div>
+                    </div>
+                    {{/value}}
+                </div>
+            </div>
+            {{/tasks}}
+        </script>
+        <script type="text/template" name="rowCountTemplate">
+            <h4>Too many tasks to display: {{num_tasks}}</h4>
+        </script>
+        <script type="text/template" name="errorTemplate">
+            <div class="modal-header">
+                <h3>Traceback for {{taskId}}</h3>
+            </div>
+            <div class="modal-body">
+                <pre class="pre-scrollable">{{error}}</pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+            </div>
+        </script>
+        <script type="text/template" name="workerTemplate">
+            {{#workers}}
+                <h3>{{name}}</h3>
+                <p><b>Started</b>: {{start_time}}</p>
+                <p><b>Last Checkin</b>: {{active}}</p>
+                <p><b>Root Task</b>: <a href="#{{{first_task}}}">{{first_task}}</a></p>
+                <p><b>Pending Tasks</b>: {{num_pending}}</p>
+                <p><b>Unique Pending Tasks</b>: {{num_uniques}}</p>
+                <p><b>Running Tasks</b>: {{num_running}}</p>
+                {{#tasks}}
+                <div class="taskRow row-fluid" data-task-id="{{taskId}}">
+                    <div class="span4"><strong>{{taskName}}</strong><em> ({{taskParams}})</em></div>
+                    <div class="span1">{{priority}}</div>
+                    <div class="span2">{{resources}}</div>
+                    <div class="span3">{{displayTime}}</div>
+                    <div class="span2">
+                        <a href="#{{taskId}}" class="btn btn-info btn-small" data-action="drawGraph">Dependency Graph</a>
+                        {{#error}}<a class="btn btn-primary btn-small error-trace-button" data-task-id="{{taskId}}">Show Error Trace</a>{{/error}}
+                        {{#re_enable}}<a class="btn btn-warning btn-small re-enable-button" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
+                    </div>
+                </div>
+                {{/tasks}}
+            {{/workers}}
+        </script>
+
+    </head>
+    <body>
+        <div class="page-header custom-header">
+            <h1>Luigi Task Status <small>Active tasks</small></h1>
+        </div>
+
+        <ul class="nav nav-tabs">
+            <li class="active"><a href="#" data-tab="taskList" class="tabButton">Task List</a></li>
+            <li><a href="#g" data-tab="dependencyGraph" class="tabButton">Dependency Graph</a></li>
+            <li><a href="#w" data-tab="workerList" class="tabButton">Workers</a></li>
+        </ul>
+        <div class="tab-content">
+            <section id="taskList" class="container-fluid tab-pane active">
+                <div id="searchBar" class="container-fluid">
+                  <input type="text" class="input-block-level search-query" id="filter-input" placeholder="Type here to filter by task id">
+                </div>
+                <div class="taskGroup">
+                    <h3>Upstream Failure</h3>
+                    <div id="upstreamFailedTasks" class="taskList"></div>
+                </div>
+                <div class="taskGroup">
+                    <h3>Failed Tasks</h3>
+                    <div id="failedTasks" class="taskList"></div>
+                </div>
+                <div class="taskGroup">
+                    <h3>Running Tasks</h3>
+                    <div id="runningTasks" class="taskList"></div>
+                </div>
+                <div class="taskGroup">
+                    <h3>Upstream Disabled</h3>
+                    <div id="upstreamDisabledTasks" class="taskList"></div>
+                </div>
+                <div class="taskGroup">
+                    <h3>Disabled Tasks</h3>
+                    <div id="disabledTasks" class="taskList"></div>
+                </div>
+                <div class="taskGroup">
+                    <h3>Pending Tasks</h3>
+                    <div id="pendingTasks" class="taskList"></div>
+                </div>
+                <div class="taskGroup">
+                    <h3>Done Tasks</h3>
+                    <div id="doneTasks" class="taskList"></div>
+                </div>
+            </section>
+            <section id="dependencyGraph" class="tab-pane">
+                <div class="navbar">
+                  <div class="navbar-inner">
+                    <form class="navbar-form pull-left" id="loadTaskForm">
+                      <input type="text" class="search-query" placeholder="TaskId(param1=val1,param2=val2)">
+                      <button type="submit" class="btn">Show task details</button>
+                    </form>
+                    <form class="navbar-form pull-left">
+                        <label for="invertCheckbox">Show Upstream Dependencies
+                        <input type="checkbox" class="checkbox" id="invertCheckbox"/>
+                        </label>
+                    </form>
+                  </div>
+                </div>
+                <div id="searchError">
+                </div>
+                <div id="graphContainer" class="container-fluid">
+                    <h4 id="dependencyTitle"></h4>
+                    <h5>Dependency Graph</h5>
+                    <div class="live map">
+                        <svg id="mysvg"><g/></svg>
+                    </div>
+
+                </div>
+            </section>
+            <section id="workerList" class="container-fluid tab-pane active">
+            </section>
+        </div>
+        <div id="errorModal" class="modal" style="display:none;">
+
+        </div>
+        <script>
+            visualiserApp(new LuigiAPI("../../api"));
+        </script>
+    </body>
+</html>

@@ -211,10 +211,16 @@ class StaticFileHandler(tornado.web.RequestHandler):
         self.write(data)
 
 
-class RootPathHandler(tornado.web.RequestHandler):
+class RootPathHandler(BaseTaskHistoryHandler):
 
     def get(self):
-        self.redirect("/static/visualiser/index.html")
+        visualization_graph = self._scheduler._config.visualization_graph
+        if visualization_graph == "d3":
+            self.redirect("/static/visualiser/index.d3.html")
+        elif visualization_graph == "svg":
+            self.redirect("/static/visualiser/index.html")
+        else:
+            self.redirect("/static/visualiser/index.html")
 
 
 def app(scheduler):
@@ -222,7 +228,7 @@ def app(scheduler):
     handlers = [
         (r'/api/(.*)', RPCHandler, {"scheduler": scheduler}),
         (r'/static/(.*)', StaticFileHandler),
-        (r'/', RootPathHandler),
+        (r'/', RootPathHandler, {'scheduler': scheduler}),
         (r'/tasklist', AllRunHandler, {'scheduler': scheduler}),
         (r'/tasklist/(.*?)', SelectedRunHandler, {'scheduler': scheduler}),
         (r'/history', RecentRunHandler, {'scheduler': scheduler}),
