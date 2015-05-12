@@ -214,7 +214,7 @@ class StaticFileHandler(tornado.web.RequestHandler):
 class RootPathHandler(BaseTaskHistoryHandler):
 
     def get(self):
-        visualization_graph =  self._scheduler._config.visualization_graph
+        visualization_graph = self._scheduler._config.visualization_graph
         if visualization_graph == "d3":
             self.redirect("/static/visualiser/index.d3.html")
         elif visualization_graph == "svg":
