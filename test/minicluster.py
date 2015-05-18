@@ -39,6 +39,7 @@ class MiniClusterTestCase(unittest.TestCase):
 
     @classmethod
     def setupClass(cls):
+        print(os.environ)
         if not cls.cluster:
             cls.cluster = MiniCluster(None, nnport=50030)
         cls.cluster.mkdir("/tmp")
