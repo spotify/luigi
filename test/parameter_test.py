@@ -474,6 +474,10 @@ class TestRemoveGlobalParameters(unittest.TestCase):
 
 class TestParamWithDefaultFromConfig(unittest.TestCase):
 
+    def run_and_check(self, args):
+        run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
+        return run_exit_status
+
     def testNoSection(self):
         self.assertRaises(ParameterException, lambda: luigi.Parameter(config_path=dict(section="foo", name="bar")).value)
 
@@ -653,6 +657,54 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
 
         self.assertEqual(123, luigi.tools.range.RangeDaily(of=A).days_back)
         self.assertEqual(70, luigi.tools.range.RangeDaily(of=A, days_back=70).days_back)
+
+    @with_config({"MyClass": {"p_not_global": "123"}})
+    def testCommandLineWithDefault(self):
+        """
+        Verify that we also read from the config when we build tasks from the
+        command line parsers.
+        """
+        class MyClass(luigi.Task):
+            p_not_global = luigi.Parameter(default='banana')
+
+            def complete(self):
+                import sys
+                luigi.configuration.get_config().write(sys.stdout)
+                if self.p_not_global != "123":
+                    raise ValueError("The parameter didn't get set!!")
+                return True
+
+            def run(self):
+                pass
+
+        self.assertTrue(self.run_and_check(['MyClass']))
+        self.assertFalse(self.run_and_check(['MyClass', '--p-not-global', '124']))
+        self.assertFalse(self.run_and_check(['MyClass', '--MyClass-p-not-global', '124']))
+
+    @with_config({"MyClass2": {"p_not_global_no_default": "123"}})
+    def testCommandLineNoDefault(self):
+        """
+        Verify that we also read from the config when we build tasks from the
+        command line parsers.
+        """
+        class MyClass2(luigi.Task):
+            """ TODO: Make luigi clean it's register for tests. Hate this 2 dance. """
+            p_not_global_no_default = luigi.Parameter()
+
+            def complete(self):
+                import sys
+                luigi.configuration.get_config().write(sys.stdout)
+                luigi.configuration.get_config().write(sys.stdout)
+                if self.p_not_global_no_default != "123":
+                    raise ValueError("The parameter didn't get set!!")
+                return True
+
+            def run(self):
+                pass
+
+        self.assertTrue(self.run_and_check(['MyClass2']))
+        self.assertFalse(self.run_and_check(['MyClass2', '--p-not-global-no-default', '124']))
+        self.assertFalse(self.run_and_check(['MyClass2', '--MyClass2-p-not-global-no-default', '124']))
 
 
 class OverrideEnvStuff(unittest.TestCase):

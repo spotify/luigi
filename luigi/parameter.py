@@ -279,7 +279,7 @@ class Parameter(object):
             return [str(v) for v in x]
         return str(x)
 
-    def parse_from_input(self, param_name, x):
+    def parse_from_input(self, param_name, x, task_name=None):
         """
         Parses the parameter value from input ``x``, handling defaults and is_list.
 
@@ -289,8 +289,8 @@ class Parameter(object):
         :raises MissingParameterException: if x is false-y and no default is specified.
         """
         if not x:
-            if self.has_value:
-                return self.value
+            if self.has_task_value(param_name=param_name, task_name=task_name):
+                return self.task_value(param_name=param_name, task_name=task_name)
             elif self.is_bool:
                 return False
             elif self.is_list:
@@ -333,8 +333,9 @@ class Parameter(object):
             description.append('for all instances of class %s' % task_name)
         elif self.description:
             description.append(self.description)
-        if self.has_value:
-            description.append(" [default: %s]" % (self.value,))
+        if self.has_task_value(param_name=param_name, task_name=task_name):
+            value = self.task_value(param_name=param_name, task_name=task_name)
+            description.append(" [default: %s]" % (value,))
 
         if self.is_list:
             action = "append"
@@ -356,7 +357,7 @@ class Parameter(object):
         dest = self.parser_dest(param_name, task_name, glob=False)
         if dest is not None:
             value = getattr(args, dest, None)
-            params[param_name] = self.parse_from_input(param_name, value)
+            params[param_name] = self.parse_from_input(param_name, value, task_name=task_name)
 
     def set_global_from_args(self, param_name, task_name, args, is_without_section=False):
         # Note: side effects
@@ -364,7 +365,7 @@ class Parameter(object):
         if dest is not None:
             value = getattr(args, dest, None)
             if value:
-                self.set_global(self.parse_from_input(param_name, value))
+                self.set_global(self.parse_from_input(param_name, value, task_name=task_name))
             else:  # either False (bools) or None (everything else)
                 self.reset_global()
 
