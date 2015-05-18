@@ -50,7 +50,7 @@ class TestSnakebiteClient(MiniClusterTestCase):
         """ We override setUp because we want to also use snakebite for
         creating the testing directory.  """
         self.testDir = "/tmp/luigi-test-{0}-{1}".format(
-            os.environ["USER"],
+            os.environ.get("USER", 'unknown'),
             time.mktime(datetime.datetime.now().timetuple())
         )
         self.snakebite = self.get_client()
