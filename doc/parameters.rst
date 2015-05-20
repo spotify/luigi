@@ -7,7 +7,7 @@ Luigi requires you to declare these parameters instantiating
 
 .. code:: python
 
-    class DailyReport(luigi.hadoop.JobTask):
+    class DailyReport(luigi.contrib.hadoop.JobTask):
         date = luigi.DateParameter(default=datetime.date.today())
         # ...
 

@@ -20,7 +20,7 @@ import os
 
 import luigi
 import luigi.contrib.hadoop_jar
-import luigi.hdfs
+import luigi.contrib.hdfs
 
 logger = logging.getLogger('luigi-interface')
 
@@ -59,7 +59,7 @@ class TeraGen(luigi.contrib.hadoop_jar.HadoopJarJobTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`~luigi.target.Target`)
         """
-        return luigi.hdfs.HdfsTarget(self.terasort_in)
+        return luigi.contrib.hdfs.HdfsTarget(self.terasort_in)
 
     def jar(self):
         return hadoop_examples_jar()
@@ -100,7 +100,7 @@ class TeraSort(luigi.contrib.hadoop_jar.HadoopJarJobTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`~luigi.target.Target`)
         """
-        return luigi.hdfs.HdfsTarget(self.terasort_out)
+        return luigi.contrib.hdfs.HdfsTarget(self.terasort_out)
 
     def jar(self):
         return hadoop_examples_jar()
