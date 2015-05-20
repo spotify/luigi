@@ -2,9 +2,6 @@
    :alt: Luigi Logo
    :align: center
 
-About Luigi
------------
-
 .. image:: https://img.shields.io/travis/spotify/luigi/master.svg?style=flat
     :target: https://travis-ci.org/spotify/luigi
  
@@ -23,10 +20,43 @@ About Luigi
 .. image:: https://pypip.in/py_versions/luigi/badge.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
-Luigi is a Python package that helps you build complex pipelines of
-batch jobs. It handles dependency resolution, workflow management,
-visualization, handling failures, command line integration, and much
-more.
+Luigi is a Python package that helps you build complex pipelines of batch
+jobs. It handles dependency resolution, workflow management, visualization,
+handling failures, command line integration, and much more.
+
+Getting Luigi
+-------------
+
+Run ``pip install luigi`` to install the latest stable version from
+`PyPI <pypi.python.org/pypi/luigi>`_.
+
+For bleeding edge code,
+``git clone https://github.com/spotify/luigi`` and
+``python setup.py install``.
+
+If you want to run the central scheduler (highly recommended), you
+need to install `Tornado <http://www.tornadoweb.org/>`_ which you can
+do from PyPI as well: ``pip install tornado``.
+
+Getting Started
+---------------
+
+Take a look at the `Example workflow
+<http://luigi.readthedocs.org/en/latest/example_top_artists.html>`_ and `Building workflows
+<http://luigi.readthedocs.org/en/latest/workflows.html>`_ which explains some of
+the most important concepts.
+
+Documentation
+-------------
+
+`Full documentation <http://luigi.readthedocs.org/>`_ is available at Read the Docs, including the
+`Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_.
+
+See `Configuration <http://luigi.readthedocs.org/en/latest/configuration.html>`_
+for how to configure Luigi.
+
+More background
+---------------
 
 The purpose of Luigi is to address all the plumbing typically associated
 with long-running batch processes. You want to chain many tasks,
@@ -105,27 +135,6 @@ references to other versions of the same task. However, the workflow can
 trigger things not in Python, such as running
 `Pig scripts <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.pig.html>`_
 or `scp'ing files <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.ssh.html>`_.
-
-Installing
-----------
-
-Downloading and running ``python setup.py install`` should be enough. Note
-that you probably want `Tornado <http://www.tornadoweb.org/>`_. See
-`Configuration <http://luigi.readthedocs.org/en/latest/configuration.html>`_ for how to configure Luigi.
-
-Getting Started
----------------
-
-Take a look at the `Example workflow
-<http://luigi.readthedocs.org/en/latest/example_top_artists.html>`_ and `Building workflows
-<http://luigi.readthedocs.org/en/latest/workflows.html>`_ which explains some of
-the most important concepts.
-
-Documentation
--------------
-
-`Full documentation <http://luigi.readthedocs.org/>`_ is available at Read the Docs, including the
-`Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_.
 
 Who uses Luigi?
 ---------------
