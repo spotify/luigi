@@ -23,7 +23,7 @@ from luigi import six
 
 import luigi
 import luigi.contrib.hadoop
-import luigi.hdfs
+import luigi.contrib.hdfs
 import luigi.postgres
 
 
@@ -44,7 +44,7 @@ class ExternalStreams(luigi.ExternalTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.hdfs.HdfsTarget(self.date.strftime('data/streams_%Y-%m-%d.tsv'))
+        return luigi.contrib.hdfs.HdfsTarget(self.date.strftime('data/streams_%Y-%m-%d.tsv'))
 
 
 class Streams(luigi.Task):
@@ -91,7 +91,7 @@ class StreamsHdfs(Streams):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.hdfs.HdfsTarget(self.date.strftime('data/streams_%Y_%m_%d_faked.tsv'))
+        return luigi.contrib.hdfs.HdfsTarget(self.date.strftime('data/streams_%Y_%m_%d_faked.tsv'))
 
 
 class AggregateArtists(luigi.Task):
@@ -155,9 +155,9 @@ class AggregateArtistsHadoop(luigi.contrib.hadoop.JobTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.hdfs.HdfsTarget(
+        return luigi.contrib.hdfs.HdfsTarget(
             "data/artist_streams_%s.tsv" % self.date_interval,
-            format=luigi.hdfs.PlainDir
+            format=luigi.contrib.hdfs.PlainDir
         )
 
     def requires(self):
