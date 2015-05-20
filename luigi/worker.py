@@ -233,6 +233,10 @@ class worker(Config):
                            config_path=dict(section='core', name='worker-timeout'))
     task_limit = IntParameter(default=None,
                               config_path=dict(section='core', name='worker-task-limit'))
+    retry_external_tasks = BoolParameter(default=False,
+                                         config_path=dict(section='core', name='retry-external-tasks'),
+                                         description='If true, incomplete external tasks will be '
+                                         'retested for completion while Luigi is running.')
 
 
 class KeepAliveThread(threading.Thread):
@@ -454,7 +458,7 @@ class Worker(object):
         elif task.run == NotImplemented:
             deps = None
             status = PENDING
-            runnable = configuration.get_config().getboolean('core', 'retry-external-tasks', False)
+            runnable = worker().retry_external_tasks
 
             task.trigger_event(Event.DEPENDENCY_MISSING, task)
             logger.warning('Task %s is not complete and run() is not implemented. Probably a missing external dependency.', task.task_id)
