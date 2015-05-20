@@ -22,6 +22,7 @@ See :doc:`/central_scheduler` for more info.
 
 import json
 import logging
+import socket
 import time
 
 from luigi.six.moves.urllib.parse import urlencode
@@ -77,7 +78,7 @@ class RemoteScheduler(Scheduler):
             try:
                 response = urlopen(full_url, body, self._connect_timeout)
                 break
-            except URLError as e:
+            except (URLError, socket.timeout) as e:
                 last_exception = e
                 if log_exceptions:
                     logger.exception("Failed connecting to remote scheduler %r", self._host)
