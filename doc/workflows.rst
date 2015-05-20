@@ -17,16 +17,16 @@ method which returns True if and only if the Target exists.
 
 In practice, implementing Target subclasses is rarely needed.
 Luigi comes a toolbox of several useful Targets.
-In particular, :class:`~luigi.file.LocalTarget` and :class:`~luigi.hdfs.HdfsTarget`,
-but there is also support for
-:class:`S3 luigi.s3.S3Target`,
-:class:`SSH luigi.contrib.ssh.RemoteTarget`,
-:class:`FTP luigi.ftp.RemoteTarget`,
-:class:`MySQL luigi.contrib.mysqldb.MySqlTarget`,
-:class:`Redshift luigi.redshift.RedshiftTarget`, and several more.
+In particular, :class:`~luigi.file.LocalTarget` and :class:`~luigi.contrib.hdfs.HdfsTarget`,
+but there is also support for other file systems: 
+:class:`luigi.s3.S3Target`,
+:class:`luigi.contrib.ssh.RemoteTarget`,
+:class:`luigi.ftp.RemoteTarget`,
+:class:`luigi.contrib.mysqldb.MySqlTarget`,
+:class:`luigi.redshift.RedshiftTarget`, and several more.
 
 Most of these targets, are file system-like.
-For instance, :class:`~luigi.file.LocalTarget` and :class:`~luigi.hdfs.HdfsTarget` map to a file on the local drive or a file in HDFS.
+For instance, :class:`~luigi.file.LocalTarget` and :class:`~luigi.contrib.hdfs.HdfsTarget` map to a file on the local drive or a file in HDFS.
 In addition these also wrap the underlying operations to make them atomic.
 They both implement the :func:`~luigi.file.LocalTarget.open` method which returns a stream object that
 could be read (``mode='r'``) from or written to (``mode='w'``).
@@ -88,4 +88,4 @@ For instance, some examples of the dependencies you might encounter:
     .. figure:: parameters_enum.png
        :alt: Dependencies with enums
 
-(These diagrams are from a `Luigi presentation in late 2014 at NYC Data Science meetup <www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`)
+(These diagrams are from a `Luigi presentation in late 2014 at NYC Data Science meetup <http://www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`_)

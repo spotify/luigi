@@ -38,7 +38,7 @@ you can wrap it in a Task class like this:
 
     class LogFiles(luigi.Task):
         def output(self):
-            return luigi.hdfs.HdfsTarget('/log')
+            return luigi.contrib.hdfs.HdfsTarget('/log')
 
 This also makes it easier to add parameters:
 
@@ -47,7 +47,7 @@ This also makes it easier to add parameters:
     class LogFiles(luigi.Task):
         date = luigi.DateParameter()
         def output(self):
-            return luigi.hdfs.HdfsTarget(self.date.strftime('/log/%Y-%m-%d'))
+            return luigi.contrib.hdfs.HdfsTarget(self.date.strftime('/log/%Y-%m-%d'))
 
 .. _Task.output:
 
@@ -66,7 +66,7 @@ atomicity will be lost unless the :class:`~luigi.task.Task` itself can ensure th
     class DailyReport(luigi.Task):
         date = luigi.DateParameter()
         def output(self):
-            return luigi.hdfs.HdfsTarget(self.date.strftime('/reports/%Y-%m-%d'))
+            return luigi.contrib.hdfs.HdfsTarget(self.date.strftime('/reports/%Y-%m-%d'))
         # ...
 
 .. _Task.run:
@@ -176,7 +176,7 @@ This allows you to effortlessly subscribe to events only from a specific class (
         """
         ...
 
-    @luigi.hadoop.JobTask.event_handler(luigi.Event.FAILURE)
+    @luigi.contrib.hadoop.JobTask.event_handler(luigi.Event.FAILURE)
     def mourn_failure(task, exception):
         """Will be called directly after a failed execution
            of `run` on any JobTask subclass
@@ -191,7 +191,7 @@ But I just want to run a Hadoop job?
 
 The Hadoop code is integrated in the rest of the Luigi code because
 we really believe almost all Hadoop jobs benefit from being part of some sort of workflow.
-However, in theory, nothing stops you from using the :class:`~luigi.hadoop.JobTask` class (and also :class:`~luigi.hdfs.HdfsTarget`)
+However, in theory, nothing stops you from using the :class:`~luigi.contrib.hadoop.JobTask` class (and also :class:`~luigi.contrib.hdfs.HdfsTarget`)
 without using the rest of Luigi.
 You can simply run it manually using
 
@@ -203,7 +203,7 @@ You can use the hdfs.HdfsTarget class anywhere by just instantiating it:
 
 .. code:: python
 
-    t = luigi.hdfs.HdfsTarget('/tmp/test.gz', format=format.Gzip)
+    t = luigi.contrib.hdfs.HdfsTarget('/tmp/test.gz', format=format.Gzip)
     f = t.open('w')
     # ...
     f.close() # needed

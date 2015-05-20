@@ -22,7 +22,7 @@ configuration file. For instance if you have a Task definition:
 
 .. code:: python
 
-    class DailyReport(luigi.hadoop.JobTask):
+    class DailyReport(luigi.contrib.hadoop.JobTask):
         date = luigi.DateParameter(default=datetime.date.today())
         # ...
 
