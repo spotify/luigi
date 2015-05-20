@@ -1,5 +1,5 @@
 import os
-import optparse
+import argparse
 import logging
 import sys
 
@@ -14,15 +14,15 @@ def luigi_run(argv=sys.argv[1:]):
 
 
 def luigid(argv=sys.argv[1:]):
-    parser = optparse.OptionParser()
-    parser.add_option(u'--background', help=u'Run in background mode', action='store_true')
-    parser.add_option(u'--pidfile', help=u'Write pidfile')
-    parser.add_option(u'--logdir', help=u'log directory')
-    parser.add_option(u'--state-path', help=u'Pickled state file')
-    parser.add_option(u'--address', help=u'Listening interface')
-    parser.add_option(u'--port', default=8082, help=u'Listening port')
+    parser = argparse.ArgumentParser(description=u'Central luigi server')
+    parser.add_argument(u'--background', help=u'Run in background mode', action='store_true')
+    parser.add_argument(u'--pidfile', help=u'Write pidfile')
+    parser.add_argument(u'--logdir', help=u'log directory')
+    parser.add_argument(u'--state-path', help=u'Pickled state file')
+    parser.add_argument(u'--address', help=u'Listening interface')
+    parser.add_argument(u'--port', default=8082, help=u'Listening port')
 
-    opts, args = parser.parse_args(argv)
+    opts = parser.parse_args(argv)
 
     if opts.state_path:
         config = luigi.configuration.get_config()
