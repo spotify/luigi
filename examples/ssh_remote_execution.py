@@ -15,6 +15,8 @@
 # limitations under the License.
 #
 
+from __future__ import print_function
+
 from collections import defaultdict
 
 from luigi import six
@@ -47,9 +49,9 @@ class CreateRemoteData(luigi.Task):
 
     def run(self):
         remote = RemoteContext(SSH_HOST)
-        print remote.check_output([
+        print(remote.check_output([
             "ps aux > {0}".format(self.output().path)
-        ])
+        ]))
 
 
 class ProcessRemoteData(luigi.Task):
@@ -84,7 +86,7 @@ class ProcessRemoteData(luigi.Task):
 
         with self.output().open('w') as outfile:
             for user, n_processes in toplist:
-                print >> outfile, n_processes, user
+                print(n_processes, user, file=outfile)
 
     def output(self):
         """

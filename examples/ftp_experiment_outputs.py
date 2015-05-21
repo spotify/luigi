@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+from __future__ import print_function
 import luigi
 from luigi.contrib.ftp import RemoteTarget
 
@@ -47,10 +48,10 @@ class ExperimentTask(luigi.ExternalTask):
         The execution of this task will write 4 lines of data on this task's target output.
         """
         with self.output().open('w') as outfile:
-            print >> outfile, "data 0 200 10 50 60"
-            print >> outfile, "data 1 190 9 52 60"
-            print >> outfile, "data 2 200 10 52 60"
-            print >> outfile, "data 3 195 1 52 60"
+            print("data 0 200 10 50 60", file=outfile)
+            print("data 1 190 9 52 60", file=outfile)
+            print("data 2 200 10 52 60", file=outfile)
+            print("data 3 195 1 52 60", file=outfile)
 
 
 class ProcessingTask(luigi.Task):
@@ -97,7 +98,7 @@ class ProcessingTask(luigi.Task):
 
         # save calculated values
         with self.output().open('w') as outfile:
-            print >> outfile, avg, sumval
+            print(avg, sumval, file=outfile)
 
 
 if __name__ == '__main__':
