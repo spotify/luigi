@@ -103,7 +103,7 @@ class Parameter(object):
 
     @deprecate_kwarg('is_boolean', 'is_bool', False)
     def __init__(self, default=_no_value, is_list=False, is_boolean=False, is_global=False, significant=True, description=None,
-                 config_path=None):
+                 config_path=None, positional=True):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -128,6 +128,10 @@ class Parameter(object):
                                  specifying a config file entry from which to read the
                                  default value for this parameter. DEPRECATED.
                                  Default: ``None``.
+        :param bool positional: If true, you can set the argument as a
+                                positional argument. Generally we recommend ``positional=False``
+                                as positional arguments become very tricky when
+                                you have inheritance and whatnot.
         """
         # The default default is no default
         self.__default = default
@@ -137,6 +141,7 @@ class Parameter(object):
         self.is_bool = is_boolean and not is_list  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         self.is_global = is_global  # It just means that the default value is exposed and you can override it
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
+        self.positional = positional
 
         if is_global:
             warnings.warn(

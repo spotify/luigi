@@ -306,6 +306,16 @@ class ParameterTest(unittest.TestCase):
         self.assertRaises(luigi.parameter.MissingParameterException,
                           lambda: MyTask())
 
+    def test_nonpositional_param(self):
+        """ Ensure we have the same behavior as in before a78338c  """
+        class MyTask(luigi.Task):
+            # This could typically be "--num-threads=True"
+            x = luigi.Parameter(significant=False, positional=False)
+
+        MyTask(x='arg')
+        self.assertRaises(luigi.parameter.UnknownParameterException,
+                          lambda: MyTask('arg'))
+
 
 class TestNewStyleGlobalParameters(unittest.TestCase):
 
