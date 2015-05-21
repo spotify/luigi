@@ -249,6 +249,10 @@ class CommonTests(object):
 class MapreduceLocalTest(unittest.TestCase):
     use_hdfs = False
 
+    def run_and_check(self, args):
+        run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
+        return run_exit_status
+
     def test_run(self):
         CommonTests.test_run(self)
 
@@ -270,6 +274,17 @@ class MapreduceLocalTest(unittest.TestCase):
     def test_instantiate_job(self):
         # See https://github.com/spotify/luigi/issues/738
         MyStreamingJob('param_value')
+
+    def test_cmd_line(self):
+        class DummyHadoopTask(luigi.contrib.hadoop.JobTask):
+            param = luigi.Parameter()
+
+            def run(self):
+                if 'mypool' not in ''.join(self.jobconfs()):
+                    raise ValueError("noooooo")
+
+        self.assertTrue(self.run_and_check(['DummyHadoopTask', '--param', 'myparam', '--pool', 'mypool']))
+        self.assertTrue(self.run_and_check(['DummyHadoopTask', '--param', 'myparam', '--hadoop-pool', 'mypool']))
 
     def setUp(self):
         MockTarget.fs.clear()

@@ -51,6 +51,7 @@ from luigi import six
 
 from luigi import configuration
 import luigi
+import luigi.task
 import luigi.contrib.hdfs
 import luigi.s3
 from luigi import mrrunner
@@ -67,6 +68,13 @@ except:
 logger = logging.getLogger('luigi-interface')
 
 _attached_packages = []
+
+
+class hadoop(luigi.task.Config):
+    pool = luigi.Parameter(default=None,
+                           description='Hadoop pool so use for Hadoop tasks. '
+                           'To specify pools per tasks, see '
+                           'BaseHadoopJobTask.pool')
 
 
 def attach(*packages):
@@ -601,7 +609,7 @@ class LocalJobRunner(JobRunner):
 
 
 class BaseHadoopJobTask(luigi.Task):
-    pool = luigi.Parameter(is_global=True, default=None, significant=False)
+    pool = luigi.Parameter(default=None, significant=False, positional=False)
     # This value can be set to change the default batching increment. Default is 1 for backwards compatibility.
     batch_counter_default = 1
 
@@ -614,6 +622,13 @@ class BaseHadoopJobTask(luigi.Task):
     _counter_dict = {}
     task_id = None
 
+    def _get_pool(self):
+        """ Protected method """
+        if self.pool:
+            return self.pool
+        if hadoop().pool:
+            return hadoop().pool
+
     @abc.abstractmethod
     def job_runner(self):
         pass
@@ -623,7 +638,7 @@ class BaseHadoopJobTask(luigi.Task):
         jcs.append('mapred.job.name="%s"' % self.task_id)
         if self.mr_priority != NotImplemented:
             jcs.append('mapred.job.priority=%s' % self.mr_priority())
-        pool = self.pool
+        pool = self._get_pool()
         if pool is not None:
             # Supporting two schedulers: fair (default) and capacity using the same option
             scheduler_type = configuration.get_config().get('hadoop', 'scheduler', 'fair')
