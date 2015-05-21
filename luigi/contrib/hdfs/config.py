@@ -41,11 +41,23 @@ class hdfs(luigi.Config):
     namenode_host = luigi.Parameter(default=None)
     namenode_port = luigi.IntParameter(default=None)
     client = luigi.Parameter(default='hadoopcli')
-    tmp_dir = luigi.Parameter(config_path=dict(section='core', name='hdfs-tmp-dir'), default=None)
+    tmp_dir = luigi.Parameter(default=None,
+                              config_path=dict(section='core', name='hdfs-tmp-dir'),
+                              )
+
+
+class hadoopcli(luigi.Config):
+    command = luigi.Parameter(default="hadoop",
+                              config_path=dict(section="hadoop", name="command"),
+                              description='The hadoop command, will run split() on it, '
+                              'so you can pass something like "hadoop --param"')
+    version = luigi.Parameter(default="cdh4",
+                              config_path=dict(section="hadoop", name="version"),
+                              description='Can also be cdh3 or apache1')
 
 
 def load_hadoop_cmd():
-    return luigi.configuration.get_config().get('hadoop', 'command', 'hadoop').split()
+    return hadoopcli().command.split()
 
 
 def get_configured_hadoop_version():
@@ -57,7 +69,7 @@ def get_configured_hadoop_version():
     this setting with "cdh3" or "apache1" in the hadoop section of the config
     in order to use the old syntax.
     """
-    return luigi.configuration.get_config().get("hadoop", "version", "cdh4").lower()
+    return hadoopcli().version.lower()
 
 
 def get_configured_hdfs_client(show_warnings=True):
