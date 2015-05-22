@@ -28,7 +28,7 @@ Getting Luigi
 -------------
 
 Run ``pip install luigi`` to install the latest stable version from
-`PyPI <pypi.python.org/pypi/luigi>`_.
+`PyPI <https://pypi.python.org/pypi/luigi>`_.
 
 For bleeding edge code,
 ``git clone https://github.com/spotify/luigi`` and
