@@ -61,7 +61,7 @@ if six.PY2:
 try:
     # See benchmark at https://gist.github.com/mvj3/02dca2bcc8b0ef1bbfb5
     import ujson as json
-except:
+except ImportError:
     import json
 
 logger = logging.getLogger('luigi-interface')
