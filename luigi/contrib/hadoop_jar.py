@@ -55,6 +55,10 @@ def fix_paths(job):
     return (tmp_files, args)
 
 
+class HadoopJarJobError(Exception):
+    pass
+
+
 class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
     """
     JobRunner for `hadoop jar` commands. Used to run a HadoopJarJobTask.
@@ -70,18 +74,18 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
             key_file = ssh_config.get("key_file", None)
             username = ssh_config.get("username", None)
             if not host or not key_file or not username or not job.jar():
-                raise Exception("missing some config for HadoopRemoteJarJobRunner")
+                raise HadoopJarJobError("missing some config for HadoopRemoteJarJobRunner")
             arglist = ['ssh', '-i', key_file,
                        '-o', 'BatchMode=yes']  # no password prompts etc
             if ssh_config.get("no_host_key_check", False):
                 arglist += ['-o', 'UserKnownHostsFile=/dev/null',
                             '-o', 'StrictHostKeyChecking=no']
-            arglist.append('%s@%s' % (username, host))
+            arglist.append('{}@{}'.format(username, host))
         else:
             arglist = []
             if not job.jar() or not os.path.exists(job.jar()):
                 logger.error("Can't find jar: %s, full path %s", job.jar(), os.path.abspath(job.jar()))
-                raise Exception("job jar does not exist")
+                raise HadoopJarJobError("job jar does not exist")
 
         # TODO(jcrobak): libjars, files, etc. Can refactor out of
         # hadoop.HadoopJobRunner
