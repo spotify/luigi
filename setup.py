@@ -49,6 +49,8 @@ install_requires = [
 if os.environ.get('READTHEDOCS', None) == 'True':
     install_requires.append('sqlalchemy')
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
+    install_requires.append('requests')
+    # So that we can build documentation for luigi.contrib.salesforce
 
 if sys.version_info[:2] < (2, 7):
     install_requires.extend(['argparse', 'ordereddict', 'importlib'])
