@@ -22,17 +22,17 @@ import luigi.interface
 
 
 class ExtraArgs(luigi.Task):
-    blah = luigi.Parameter(is_global=True, default=444)
+    blah = luigi.Parameter(default=444)
 
 
 class CmdlineTest(unittest.TestCase):
 
     def test_dynamic_loading(self):
         interface = luigi.interface.ArgParseInterface()
-        self.assertRaises(SystemExit, interface.parse, (['FooTask', '--blah', 'xyz', '--x', '123'],))  # should raise since it's not imported
+        self.assertRaises(SystemExit, interface.parse, (['FooTask', '--ExtraArgs-blah', 'xyz', '--x', '123'],))  # should raise since it's not imported
 
         interface = luigi.interface.DynamicArgParseInterface()
-        tasks = interface.parse(['--module', 'foo_module', 'FooTask', '--blah', 'xyz', '--x', '123'])
+        tasks = interface.parse(['--module', 'foo_module', 'FooTask', '--ExtraArgs-blah', 'xyz', '--x', '123'])
 
         self.assertEqual(ExtraArgs().blah, 'xyz')
 

@@ -375,7 +375,7 @@ class SparkJob(luigi.Task):
     spark_workers = None
     spark_master_memory = None
     spark_worker_memory = None
-    queue = luigi.Parameter(is_global=True, default=None, significant=False)
+    queue = luigi.Parameter(default=None, significant=False, positional=False)
     temp_hadoop_output_file = None
 
     def requires_local(self):
