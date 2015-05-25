@@ -68,12 +68,9 @@ class atomic_file_append(atomic_file):
             with open(self.tmp_path) as in_file:
                 with open(self.path, 'a') as out_file:
                     shutil.copyfileobj(in_file, out_file)
-        except Exception as exc:
+        finally:
             self.release()
             os.unlink(self.tmp_path)
-            raise exc
-        self.release()
-        os.unlink(self.tmp_path)
 
     def acquire(self):
         start_time = time.time()
@@ -161,7 +158,7 @@ class LocalTarget(FileSystemTarget):
             return self.format.pipe_reader(fileobj)
 
         else:
-            raise Exception('mode must be r, w or a')
+            raise ValueError('mode must be r, w or a')
 
     def move(self, new_path, raise_if_exists=False):
         if raise_if_exists and os.path.exists(new_path):

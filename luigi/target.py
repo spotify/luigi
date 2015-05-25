@@ -30,10 +30,6 @@ from luigi import six
 logger = logging.getLogger('luigi-interface')
 
 
-class FileLockException(Exception):
-    pass
-
-
 @six.add_metaclass(abc.ABCMeta)
 class Target(object):
     """
