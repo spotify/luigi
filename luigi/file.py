@@ -49,6 +49,7 @@ class atomic_file(AtomicLocalFile):
     def generate_tmp_path(self, path):
         return path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
 
+
 class atomic_file_append(atomic_file):
     """Use this to append to a temporary file and append to the final
     destination when it is closed.
@@ -96,8 +97,8 @@ class atomic_file_append(atomic_file):
             os.unlink(self.lockfile)
             self.is_locked = False
 
-class LocalFileSystem(FileSystem):
 
+class LocalFileSystem(FileSystem):
     """
     Wrapper for access to file system operations.
 
