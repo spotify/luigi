@@ -25,6 +25,9 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
 
     TODO: if this is buggy, change it so it first writes to a
     local temporary file and then uploads it on completion
+
+    If the append keyword arugment is set to True it will appendToFile instead
+    of put.
     """
 
     def __init__(self, path, append=False):

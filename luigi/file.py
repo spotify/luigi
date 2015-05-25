@@ -39,7 +39,6 @@ class FileLockException(Exception):
 
 
 class atomic_file(AtomicLocalFile):
-
     """Simple class that writes to a temp file and moves it on close()
     Also cleans up the temp file if close is not invoked
     """
@@ -51,6 +50,10 @@ class atomic_file(AtomicLocalFile):
         return path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
 
 class atomic_file_append(atomic_file):
+    """Use this to append to a temporary file and append to the final
+    destination when it is closed.
+    The destination file is locked to avoid concurrent writing to it.
+    """
     def __init__(self, path, timeout=20, delay=.05):
         self.timeout = timeout
         self.delay = delay
