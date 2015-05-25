@@ -23,7 +23,7 @@ import luigi
 import luigi.date_interval
 import luigi.interface
 import luigi.notifications
-from helpers import with_config
+from helpers import with_config, LuigiTestCase
 from luigi.mock import MockTarget, MockFileSystem
 from luigi.parameter import ParameterException
 from worker_test import email_patch
@@ -482,11 +482,7 @@ class TestRemoveGlobalParameters(unittest.TestCase):
         self.run_and_check(['PositionalParamsRequirer', '--non-positional-param', 'z'])
 
 
-class TestParamWithDefaultFromConfig(unittest.TestCase):
-
-    def run_and_check(self, args):
-        run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
-        return run_exit_status
+class TestParamWithDefaultFromConfig(LuigiTestCase):
 
     def testNoSection(self):
         self.assertRaises(ParameterException, lambda: luigi.Parameter(config_path=dict(section="foo", name="bar")).value)
@@ -687,9 +683,9 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
             def run(self):
                 pass
 
-        self.assertTrue(self.run_and_check(['MyClass']))
-        self.assertFalse(self.run_and_check(['MyClass', '--p-not-global', '124']))
-        self.assertFalse(self.run_and_check(['MyClass', '--MyClass-p-not-global', '124']))
+        self.assertTrue(self.run_locally(['MyClass']))
+        self.assertFalse(self.run_locally(['MyClass', '--p-not-global', '124']))
+        self.assertFalse(self.run_locally(['MyClass', '--MyClass-p-not-global', '124']))
 
     @with_config({"MyClass2": {"p_not_global_no_default": "123"}})
     def testCommandLineNoDefault(self):
@@ -712,9 +708,35 @@ class TestParamWithDefaultFromConfig(unittest.TestCase):
             def run(self):
                 pass
 
-        self.assertTrue(self.run_and_check(['MyClass2']))
-        self.assertFalse(self.run_and_check(['MyClass2', '--p-not-global-no-default', '124']))
-        self.assertFalse(self.run_and_check(['MyClass2', '--MyClass2-p-not-global-no-default', '124']))
+        self.assertTrue(self.run_locally(['MyClass2']))
+        self.assertFalse(self.run_locally(['MyClass2', '--p-not-global-no-default', '124']))
+        self.assertFalse(self.run_locally(['MyClass2', '--MyClass2-p-not-global-no-default', '124']))
+
+    @with_config({"mynamespace.A": {"p": "999"}})
+    def testWithNamespaceConfig(self):
+        class A(luigi.Task):
+            task_namespace = 'mynamespace'
+            p = luigi.IntParameter()
+
+        self.assertEqual(999, A().p)
+        self.assertEqual(777, A(p=777).p)
+
+    def testWithNamespaceCli(self):
+        class A(luigi.Task):
+            task_namespace = 'mynamespace'
+            p = luigi.IntParameter(default=100)
+            expected = luigi.IntParameter()
+
+            def complete(self):
+                if self.p != self.expected:
+                    raise ValueError
+                return True
+
+        self.assertTrue(self.run_locally_split('mynamespace.A --expected 100'))
+        # TODO(arash): Why is `--p 200` hanging with multiprocessing stuff?
+        # self.assertTrue(self.run_locally_split('mynamespace.A --p 200 --expected 200'))
+        self.assertTrue(self.run_locally_split('mynamespace.A --mynamespace.A-p 200 --expected 200'))
+        self.assertFalse(self.run_locally_split('mynamespace.A --A-p 200 --expected 200'))
 
 
 class OverrideEnvStuff(unittest.TestCase):

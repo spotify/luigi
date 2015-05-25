@@ -140,3 +140,8 @@ class LuigiTestCase(unittest.TestCase):
         line parsing and task from name intstantiation parts in particular. """
         run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
         return run_exit_status
+
+    def run_locally_split(self, space_seperated_args):
+        """ Helper for running tests testing more of the stack, the command
+        line parsing and task from name intstantiation parts in particular. """
+        return self.run_locally(space_seperated_args.split(' '))
