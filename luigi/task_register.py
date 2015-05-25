@@ -135,8 +135,6 @@ class Register(abc.ABCMeta):
         # We return this in a topologically sorted list of inheritance: this is useful in some cases (#822)
         reg = OrderedDict()
         for cls in cls._reg:
-            if cls.run == NotImplemented:
-                continue
             name = cls.task_family
 
             if name in reg and reg[name] != cls and \
