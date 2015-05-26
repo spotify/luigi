@@ -150,7 +150,7 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
         """
         Requires Hadoop >= 2.3.0
         """
-        call_check(load_hadoop_cmd() + ['fs', '-appendToFile', local_path, destination])
+        self.call_check(load_hadoop_cmd() + ['fs', '-appendToFile', local_path, destination])
 
     def get(self, path, local_destination):
         self.call_check(load_hadoop_cmd() + ['fs', '-get', path, local_destination])

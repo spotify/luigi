@@ -291,7 +291,7 @@ class HdfsTargetTests(MiniClusterTestCase, FileSystemTargetTestMixin):
         target = self.create_target()
         with target.open('a') as fobj:
             fobj.write(b'spam')
-        self.assertTrue(self.target.exists())
+        self.assertTrue(target.exists())
 
         with target.open('a') as fobj:
             fobj.write(b'ham')
