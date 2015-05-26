@@ -50,9 +50,6 @@ if os.environ.get('READTHEDOCS', None) == 'True':
     install_requires.append('sqlalchemy')
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
 
-if sys.version_info[:2] < (2, 7):
-    install_requires.extend(['argparse', 'ordereddict', 'importlib'])
-
 setup(
     name='luigi',
     version='1.2.2',
@@ -87,7 +84,6 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
