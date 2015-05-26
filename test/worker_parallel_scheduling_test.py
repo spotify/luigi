@@ -76,7 +76,7 @@ class ParallelSchedulingTest(unittest.TestCase):
         self.w = Worker(scheduler=self.sch, worker_id='x')
 
     def added_tasks(self, status):
-        return [args[1] for args, kw in self.sch.add_task.call_args_list if kw['status'] == status]
+        return [kw['task_id'] for args, kw in self.sch.add_task.call_args_list if kw['status'] == status]
 
     def test_multiprocess_scheduling_with_overlapping_dependencies(self):
         self.w.add(OverlappingSelfDependenciesTask(5, 2), True)

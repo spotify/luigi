@@ -480,7 +480,7 @@ class Worker(object):
             deps = [d.task_id for d in deps]
 
         self._scheduled_tasks[task.task_id] = task
-        self._scheduler.add_task(self._id, task.task_id, status=status,
+        self._scheduler.add_task(worker=self._id, task_id=task.task_id, status=status,
                                  deps=deps, runnable=runnable, priority=task.priority,
                                  resources=task.process_resources(),
                                  params=task.to_str_params(),
@@ -539,7 +539,7 @@ class Worker(object):
                 subject = 'Luigi: %s' % msg
                 error_message = notifications.wrap_traceback(ex)
                 notifications.send_error_email(subject, error_message)
-                self._scheduler.add_task(self._id, task_id, status=FAILED, runnable=False,
+                self._scheduler.add_task(worker=self._id, task_id=task_id, status=FAILED, runnable=False,
                                          assistant=self._assistant)
                 task_id = None
                 self.run_succeeded = False
@@ -612,8 +612,8 @@ class Worker(object):
                     self.add(t)
                 new_deps = [t.task_id for t in new_req]
 
-            self._scheduler.add_task(self._id,
-                                     task_id,
+            self._scheduler.add_task(worker=self._id,
+                                     task_id=task_id,
                                      status=status,
                                      expl=error_message,
                                      resources=task.process_resources(),
