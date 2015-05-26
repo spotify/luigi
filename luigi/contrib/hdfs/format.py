@@ -35,10 +35,10 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         self.tmppath = hdfs_config.tmppath(self.path)
         parent_dir = os.path.dirname(self.tmppath)
         mkdir(parent_dir, parents=True, raise_if_exists=False)
-        command = "-put"
-        if append:
-            command = "-appendToFile"
-        super(HdfsAtomicWritePipe, self).__init__(load_hadoop_cmd() + ['fs', command, '-', self.tmppath])
+        command = [
+            'fs', "-appendToFile" if append else "-put", '-', self.tmppath
+        ]
+        super(HdfsAtomicWritePipe, self).__init__(load_hadoop_cmd() + command)
 
     def abort(self):
         logger.info("Aborting %s('%s'). Removing temporary file '%s'",

@@ -34,7 +34,7 @@ from luigi.format import FileWrapper, get_default_format, MixedUnicodeBytes
 from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
 
 
-class FileLockException(Exception):
+class FileLockException(RuntimeError):
     pass
 
 
