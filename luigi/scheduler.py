@@ -691,7 +691,7 @@ class CentralPlannerScheduler(Scheduler):
         for task in tasks:
             upstream_status = self._upstream_status(task.id, upstream_table)
             in_workers = (assistant and task.workers) or worker in task.workers
-            if task.status == 'RUNNING' and in_workers:
+            if task.status == RUNNING and in_workers:
                 # Return a list of currently running tasks to the client,
                 # makes it easier to troubleshoot
                 other_worker = self._state.get_worker(task.worker_running)
