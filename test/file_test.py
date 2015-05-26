@@ -166,6 +166,27 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual(b'a\nb\nc\nd', b)
         self.assertEqual(b'a\r\nb\r\nc\r\nd', c)
 
+    def test_append_plaintext(self):
+        t = self.create_target()
+        p = t.open('a')
+        p.write("spam")
+        self.assertEqual(t.exists(), os.path.exists(self.path))
+        p.close()
+        self.assertEqual(t.exists(), os.path.exists(self.path))
+
+        f = t.open('r')
+        self.assertEqual("spam", f.read())
+        f.close()
+
+        # Append another piece of text
+        p = t.open('a')
+        p.write("ham")
+        p.close()
+
+        f = t.open('r')
+        self.assertEqual("spamham", f.read())
+        f.close()
+
 
 class LocalTargetCreateDirectoriesTest(LocalTargetTest):
     path = '/tmp/%s/xyz/test.txt' % random.randint(0, 999999999)
