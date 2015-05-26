@@ -82,13 +82,6 @@ class FailingTask(luigi.Task):
 
 
 class SchedulerVisualisationTest(unittest.TestCase):
-    # The following 2 are required to retain compatibility with python 2.6
-
-    def assertGreaterEqual(self, a, b):
-        self.assertTrue(a >= b)
-
-    def assertLessEqual(self, a, b):
-        self.assertTrue(a <= b)
 
     def setUp(self):
         self.scheduler = luigi.scheduler.CentralPlannerScheduler()
