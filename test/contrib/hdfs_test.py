@@ -296,7 +296,7 @@ class HdfsTargetTests(MiniClusterTestCase, FileSystemTargetTestMixin):
         with target.open('a') as fobj:
             fobj.write(b'ham')
 
-        with self.target.open('r') as fobj:
+        with target.open('r') as fobj:
             a = fobj.read()
         self.assertEqual(a, b'spamham')
 
@@ -504,7 +504,7 @@ class HdfsClientTest(MiniClusterTestCase):
         fobj.write("spam")
         fobj.close()
 
-        target_path = self._test_dir() + "/foo"
+        target_path = self._test_dir() + "/spammy_file"
         target = hdfs.HdfsTarget(target_path)
         if target.exists():
             target.remove(skip_trash=True)
