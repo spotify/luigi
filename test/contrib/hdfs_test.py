@@ -508,7 +508,6 @@ class HdfsClientTest(MiniClusterTestCase):
         target = hdfs.HdfsTarget(target_path)
         if target.exists():
             target.remove(skip_trash=True)
-        self.fs.mkdir(target.path)
 
         self.fs.append(local_target.path, target_path)
         self.fs.append(local_target.path, target_path)
