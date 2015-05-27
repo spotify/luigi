@@ -504,7 +504,7 @@ class HdfsClientTest(MiniClusterTestCase):
         fobj.write("spam")
         fobj.close()
 
-        target_path = self._test_dir()
+        target_path = self._test_dir() + "/foo"
         target = hdfs.HdfsTarget(target_path)
         if target.exists():
             target.remove(skip_trash=True)
