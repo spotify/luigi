@@ -32,7 +32,8 @@ Run ``pip install luigi`` to install the latest stable version from
 
 For bleeding edge code,
 ``git clone https://github.com/spotify/luigi`` and
-``python setup.py install``.
+``python setup.py install``. Bleeding edge documentation can be found
+`here <http://luigi.readthedocs.org/en/latest/>`_.
 
 If you want to run the central scheduler (highly recommended), you
 need to install `Tornado <http://www.tornadoweb.org/>`_ which you can
