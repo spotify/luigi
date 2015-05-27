@@ -1,19 +1,24 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+from helpers import unittest
 
 import luigi
-import unittest
+
 
 def create_class(cls_name):
     class NewTask(luigi.WrapperTask):
@@ -24,9 +29,11 @@ def create_class(cls_name):
     return NewTask
 
 
-my_new_task = luigi.expose(create_class('MyNewTask'))
+create_class('MyNewTask')
+
 
 class SetTaskNameTest(unittest.TestCase):
+
     ''' I accidentally introduced an issue in this commit:
     https://github.com/spotify/luigi/commit/6330e9d0332e6152996292a39c42f752b9288c96
 
@@ -34,7 +41,7 @@ class SetTaskNameTest(unittest.TestCase):
     to resolve the issue. '''
 
     def test_set_task_name(self):
-        luigi.run(['--local-scheduler', 'MyNewTask'])
+        luigi.run(['--local-scheduler', '--no-lock', 'MyNewTask'])
 
 
 if __name__ == '__main__':

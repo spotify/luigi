@@ -1,0 +1,116 @@
+<!--
+@Copyright 2015 Naver Corp.
+@Author Yeseul Park (yeseul.park@navercorp.com)
+-->
+
+<!-- Extend our site layout -->
+{% extends "layout.html" %}
+{% block content %}
+    <h1> {{name}} History </h1>
+	<br>
+	<div class="row">
+	<style>
+		#chart svg {
+			height: 800px;
+			width: 1200px;
+			margin-top: 80px;
+			font-family: Arial, sans-serif;
+			font-size: 9px;
+			overflow: scroll;
+		}
+		
+	</style>
+	<div id="chart">
+		<svg></svg>
+	</div>
+	{% if statusResults and taskResults %}
+	<!--h5> {{ statusResults }} and {{ taskResults }}</h5 -->
+	<script>
+		var status_results  =  unescape("{{ statusResults }}");
+		var status_results_str = String(status_results).replace(/&quot;/ig,'"');
+		var status_data = JSON.parse(status_results_str);
+		var running_data = status_data.RUNNING;
+		var done_data = status_data.DONE;
+		var failed_data = status_data.FAILED;
+		var task_results = unescape("{{ taskResults }}");
+		var task_results_str = String(task_results).replace(/&quot;/ig,'"');
+		var task_data = JSON.parse(task_results_str);
+		var dateSet = new Set();
+		for (var i = 0; i < running_data.length; i++) {
+			var id = running_data[i].id;
+			//millisecond converion of time for x-axis
+			running_data[i].x = running_data[i].x * 1000
+			dateSet.add(running_data[i].x);
+			for (var j = 0; j < task_data.length; j++) {
+				var latter_id = parseInt(id) + 1;
+				if (latter_id == task_data[j].id) {
+					//calculate time spent for running task with millisecond conversion of time for y-axis
+					running_data[i].y = task_data[j].timestamp * 1000 - running_data[i].x;
+					//get the next process after completing running status
+					running_data[i].next_process = task_data[j].status;
+				}
+			}
+		}
+		var refined_failed_data = {"key": "FAILED", "color": "#CC0000", "values":[]};
+		var refined_done_data = {"key": "DONE", "color": "#669900", "values":[]};
+		var dateSetL = new Array();
+		dateSet.forEach(function(d) {
+			dateSetL.push(d);
+		});
+		for (var i = 0; i < running_data.length; i++) {
+			//push each running data whose next process is "Failed" into refined_failed_data
+			if (running_data[i].next_process == "FAILED") {
+				to_be_failed_data = [running_data[i].x, running_data[i].y, running_data[i].id, running_data[i].task_id];
+				refined_failed_data["values"].push(to_be_failed_data);
+			} 
+			//push each running data whose next process is "Done" into refined_done_data
+			if (running_data[i].next_process == "DONE") {
+				to_be_done_data = [running_data[i].x, running_data[i].y, running_data[i].id, running_data[i].task_id];
+				refined_done_data["values"].push(to_be_done_data);
+			}
+		}
+		var merged_data = [];
+		if (refined_failed_data.values.length > 0 && refined_done_data.values.length > 0) merged_data = [refined_failed_data, refined_done_data];
+		else if (refined_failed_data.values.length > 0 && refined_done_data.values.length == 0) merged_data = [refined_failed_data];
+		else if (refined_failed_data.values.length == 0 && refined_done_data.values.length > 0) merged_data = [refined_done_data];
+		nv.addGraph(function() {
+			var	h = nv.utils.windowSize().height/2;
+			var chart = nv.models.multiBarChart()
+			.margin({top: 30, right: 100, bottom: 30, left: 100})
+			.x(function(d, i) { return i; })
+			.y(function(d) { if (d[1] > 0) return d[1]; })
+			.height(h);
+			
+			chart.xAxis
+			.axisLabel("Datetime")
+			.rotateLabels(-45)
+			.showMaxMin(false)
+			.ticks(refined_failed_data.values.length+refined_done_data.values.length)
+			.tickFormat(function(d, i) {
+					var dx = (merged_data[0].values[d] && merged_data[0].values[d][0]) || (merged_data[1].values[d] && merged_data[1].values[d][0]);
+					return d3.time.format('%x %X')(new Date(dx));
+			});
+			chart.yAxis
+			.axisLabel("Processing Time (H:M:S)")
+			.tickFormat(function(d) {
+				return d3.time.format('%X')(new Date(d - 32400000));
+			});
+			chart.tooltipContent(function(key, x, y, e, graph) {
+				tooltip_str = '<center><b>Result status: '+key+'</b></center>'+'<center>processing time: '+y+'</center><center> on '+x+'</center>';
+				return tooltip_str;
+			});
+	
+			d3.select('#chart svg')
+				.datum(merged_data)
+				.transition()
+				.duration(500)
+				.call(chart);
+
+			nv.utils.windowResize(chart.update);
+
+			return chart;
+		});
+	</script>
+	{% end %}
+</div>
+{% end %}

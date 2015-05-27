@@ -1,25 +1,29 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+import datetime
+import decimal
+from helpers import unittest
 
 import luigi
-from luigi.mock import MockFile
-import unittest
-import decimal
-import datetime
 import luigi.notifications
+from luigi.mock import MockTarget
+
 luigi.notifications.DEBUG = True
-File = MockFile
 
 
 class Report(luigi.Task):
@@ -33,7 +37,7 @@ class Report(luigi.Task):
         f.close()
 
     def output(self):
-        return File(self.date.strftime('/tmp/report-%Y-%m-%d'))
+        return MockTarget(self.date.strftime('/tmp/report-%Y-%m-%d'))
 
 
 class ReportReader(luigi.Task):
@@ -72,6 +76,7 @@ class CurrencyExchanger(luigi.Task):
 
 
 class InstanceWrapperTest(unittest.TestCase):
+
     ''' This test illustrates that tasks can have tasks as parameters
 
     This is a more complicated variant of factorial_test.py which is an example of
@@ -84,6 +89,7 @@ class InstanceWrapperTest(unittest.TestCase):
     pretty handy to be able to do that. I'm adding it as a unit test to make sure that
     new code doesn't break the expected behavior.
     '''
+
     def test(self):
         d = datetime.date(2012, 1, 1)
         r = ReportReader(d)

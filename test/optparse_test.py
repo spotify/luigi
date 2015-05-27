@@ -1,35 +1,39 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 import luigi
-from luigi.mock import MockFile
 from fib_test import FibTestBase
+from luigi.mock import MockTarget
 
 
 class OptParseTest(FibTestBase):
-    def test_cmdline_optparse(self):
-        luigi.run(['--local-scheduler', '--task', 'Fib', '--n', '100'], use_optparse=True)
 
-        self.assertEqual(MockFile._file_contents['/tmp/fib_10'], '55\n')
-        self.assertEqual(MockFile._file_contents['/tmp/fib_100'], '354224848179261915075\n')
+    def test_cmdline_optparse(self):
+        luigi.run(['--local-scheduler', '--no-lock', '--task', 'Fib', '--n', '100'], use_optparse=True)
+
+        self.assertEqual(MockTarget.fs.get_data('/tmp/fib_10'), b'55\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/fib_100'), b'354224848179261915075\n')
 
     def test_cmdline_optparse_existing(self):
         import optparse
         parser = optparse.OptionParser()
         parser.add_option('--blaha')
 
-        luigi.run(['--local-scheduler', '--task', 'Fib', '--n', '100'], use_optparse=True, existing_optparse=parser)
+        luigi.run(['--local-scheduler', '--no-lock', '--task', 'Fib', '--n', '100'], use_optparse=True, existing_optparse=parser)
 
-        self.assertEqual(MockFile._file_contents['/tmp/fib_10'], '55\n')
-        self.assertEqual(MockFile._file_contents['/tmp/fib_100'], '354224848179261915075\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/fib_10'), b'55\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/fib_100'), b'354224848179261915075\n')

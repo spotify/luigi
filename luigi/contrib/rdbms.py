@@ -1,22 +1,46 @@
-'''
+# -*- coding: utf-8 -*-
+#
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+"""
 A common module for posgres like databases, such as postgres or redshift
-'''
+"""
 
 import abc
 import logging
 
 import luigi
+import luigi.task
 
 logger = logging.getLogger('luigi-interface')
 
 
-class CopyToTable(luigi.Task):
+class CopyToTable(luigi.task.MixinNaiveBulkComplete, luigi.Task):
     """
-    An abstract task for inserting a data set into RDBMS
+    An abstract task for inserting a data set into RDBMS.
 
     Usage:
-    Subclass and override the required `host`, `database`, `user`,
-    `password`, `table` and `columns` attributes.
+
+        Subclass and override the following attributes:
+
+        * `host`,
+        * `database`,
+        * `user`,
+        * `password`,
+        * `table`
+        * `columns`
     """
 
     @abc.abstractproperty
@@ -51,9 +75,9 @@ class CopyToTable(luigi.Task):
 
     column_separator = "\t"  # how columns are separated in the file copied into postgres
 
-
     def create_table(self, connection):
-        """ Override to provide code for creating the target table.
+        """
+        Override to provide code for creating the target table.
 
         By default it will be created using types (optionally) specified in columns.
 
@@ -71,9 +95,10 @@ class CopyToTable(luigi.Task):
             query = "CREATE TABLE {table} ({coldefs})".format(table=self.table, coldefs=coldefs)
             connection.cursor().execute(query)
 
-
     def update_id(self):
-        """This update id will be a unique identifier for this insert on this table."""
+        """
+        This update id will be a unique identifier for this insert on this table.
+        """
         return self.task_id
 
     @abc.abstractmethod
@@ -81,9 +106,12 @@ class CopyToTable(luigi.Task):
         raise NotImplementedError("This method must be overridden")
 
     def init_copy(self, connection):
-        """ Override to perform custom queries.
+        """
+        Override to perform custom queries.
 
-            Any code here will be formed in the same transaction as the main copy, just prior to copying data. Example use cases include truncating the table or removing all data older than X in the database to keep a rolling window of data available in the table.
+        Any code here will be formed in the same transaction as the main copy, just prior to copying data.
+        Example use cases include truncating the table or removing all data older than X in the database
+        to keep a rolling window of data available in the table.
         """
 
         # TODO: remove this after sufficient time so most people using the

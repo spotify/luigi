@@ -136,6 +136,7 @@ class SqsWorkerHistory(SqsHistory, worker_history.WorkerHistory):
         elif event == Event.BROKEN_TASK:
             fields['exception'] = repr(args[1])
         else:
+            logger.info("Unhandled event: %s" % event)
             pass
 
         self._send_message(fields)

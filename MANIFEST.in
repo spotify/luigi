@@ -1,4 +1,3 @@
-include bin/luigid
 include README.rst
 include LICENSE
 include examples/*.py

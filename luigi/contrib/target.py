@@ -1,12 +1,34 @@
-import luigi.target
+# -*- coding: utf-8 -*-
+#
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import logging
-import types
+
+from luigi import six
+
+import luigi.target
+
 logger = logging.getLogger('luigi-interface')
 
-class CascadingClient():
+
+class CascadingClient(object):
     """
-    A FilesystemClient that will cascade failing function calls through a list
-    of clients. Which clients are used are specified at time of construction.
+    A FilesystemClient that will cascade failing function calls through a list of clients.
+
+    Which clients are used are specified at time of construction.
     """
 
     # This constant member is supposed to include all methods, feel free to add
@@ -14,14 +36,20 @@ class CascadingClient():
     # created, pass the kwarg to the constructor.
     ALL_METHOD_NAMES = ['exists', 'rename', 'remove', 'chmod', 'chown',
                         'count', 'copy', 'get', 'put', 'mkdir', 'listdir',
-                        'isdir']
+                        'getmerge',
+                        'isdir',
+                        'rename_dont_move',
+                        'touchz',
+                        ]
 
-    def __init__(self, clients, method_names=ALL_METHOD_NAMES):
+    def __init__(self, clients, method_names=None):
         self.clients = clients
+        if method_names is None:
+            method_names = self.ALL_METHOD_NAMES
 
         for method_name in method_names:
             new_method = self._make_method(method_name)
-            real_method = types.MethodType(new_method, self, type(self))
+            real_method = six.create_bound_method(new_method, self)
             setattr(self, method_name, real_method)
 
     @classmethod
@@ -39,12 +67,10 @@ class CascadingClient():
             except luigi.target.FileSystemException:
                 # For exceptions that are semantical, we must throw along
                 raise
-            except:
+            except BaseException:
                 is_last_iteration = (i + 1) >= len(self.clients)
                 if is_last_iteration:
                     raise
                 else:
-                    logger.exception(
-                        'The {0} failed to {1}, using fallback class {2}'
-                        .format(client.__class__.__name__, method_name,
-                                self.clients[i+1].__class__.__name__))
+                    logger.warning('The %s failed to %s, using fallback class %s',
+                                   client.__class__.__name__, method_name, self.clients[i + 1].__class__.__name__)

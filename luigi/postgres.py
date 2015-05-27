@@ -1,21 +1,30 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+"""
+Implements a sublass of :py:class:`~luigi.target.Target` that writes data to Postgres.
+Also provides a helper task to copy data into a Postgres table.
+"""
 
 import datetime
 import logging
-import tempfile
 import re
+import tempfile
+
+from luigi import six
 
 import luigi
 from luigi.contrib import rdbms
@@ -29,9 +38,10 @@ try:
 except ImportError:
     logger.warning("Loading postgres module without psycopg2 installed. Will crash at runtime if postgres functionality is used.")
 
+
 class MultiReplacer(object):
-    # TODO: move to misc/util module
-    """Object for one-pass replace of multiple words
+    """
+    Object for one-pass replace of multiple words
 
     Substituted parts will not be matched against other replace patterns, as opposed to when using multipass replace.
     The order of the items in the replace_pairs input will dictate replacement precedence.
@@ -40,17 +50,28 @@ class MultiReplacer(object):
     replace_pairs -- list of 2-tuples which hold strings to be replaced and replace string
 
     Usage:
-    >>> replace_pairs = [("a", "b"), ("b", "c")]
-    >>> MultiReplacer(replace_pairs)("abcd")
-    'bccd'
-    >>> replace_pairs = [("ab", "x"), ("a", "x")]
-    >>> MultiReplacer(replace_pairs)("ab")
-    'x'
-    >>> replace_pairs.reverse()
-    >>> MultiReplacer(replace_pairs)("ab")
-    'xb'
+
+    .. code-block:: python
+
+        >>> replace_pairs = [("a", "b"), ("b", "c")]
+        >>> MultiReplacer(replace_pairs)("abcd")
+        'bccd'
+        >>> replace_pairs = [("ab", "x"), ("a", "x")]
+        >>> MultiReplacer(replace_pairs)("ab")
+        'x'
+        >>> replace_pairs.reverse()
+        >>> MultiReplacer(replace_pairs)("ab")
+        'xb'
     """
+# TODO: move to misc/util module
+
     def __init__(self, replace_pairs):
+        """
+        Initializes a MultiReplacer instance.
+
+        :param replace_pairs: list of 2-tuples which hold strings to be replaced and replace string.
+        :type replace_pairs: tuple
+        """
         replace_list = list(replace_pairs)  # make a copy in case input is iterable
         self._replace_dict = dict(replace_list)
         pattern = '|'.join(re.escape(x) for x, y in replace_list)
@@ -78,9 +99,11 @@ default_escape = MultiReplacer([('\\', '\\\\'),
 
 
 class PostgresTarget(luigi.Target):
-    """Target for a resource in Postgres.
+    """
+    Target for a resource in Postgres.
 
-    This will rarely have to be directly instantiated by the user"""
+    This will rarely have to be directly instantiated by the user.
+    """
     marker_table = luigi.configuration.get_config().get('postgres', 'marker-table', 'table_updates')
 
     # Use DB side timestamps or client side timestamps in the marker_table
@@ -108,10 +131,12 @@ class PostgresTarget(luigi.Target):
         self.update_id = update_id
 
     def touch(self, connection=None):
-        """Mark this update as complete.
+        """
+        Mark this update as complete.
 
         Important: If the marker table doesn't exist, the connection transaction will be aborted
-        and the connection reset. Then the marker table will be created.
+        and the connection reset.
+        Then the marker table will be created.
         """
         self.create_marker_table()
 
@@ -125,14 +150,14 @@ class PostgresTarget(luigi.Target):
                 """INSERT INTO {marker_table} (update_id, target_table)
                    VALUES (%s, %s)
                 """.format(marker_table=self.marker_table),
-                    (self.update_id, self.table))
+                (self.update_id, self.table))
         else:
             connection.cursor().execute(
-                    """INSERT INTO {marker_table} (update_id, target_table, inserted)
+                """INSERT INTO {marker_table} (update_id, target_table, inserted)
                          VALUES (%s, %s, %s);
                     """.format(marker_table=self.marker_table),
-                            (self.update_id, self.table,
-                            datetime.datetime.now()))
+                (self.update_id, self.table,
+                 datetime.datetime.now()))
 
         # make sure update is properly marked
         assert self.exists(connection)
@@ -146,10 +171,10 @@ class PostgresTarget(luigi.Target):
             cursor.execute("""SELECT 1 FROM {marker_table}
                 WHERE update_id = %s
                 LIMIT 1""".format(marker_table=self.marker_table),
-                (self.update_id,)
-            )
+                           (self.update_id,)
+                           )
             row = cursor.fetchone()
-        except psycopg2.ProgrammingError, e:
+        except psycopg2.ProgrammingError as e:
             if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
                 row = None
             else:
@@ -157,7 +182,9 @@ class PostgresTarget(luigi.Target):
         return row is not None
 
     def connect(self):
-        "Get a psycopg2 connection object to the database where the table is"
+        """
+        Get a psycopg2 connection object to the database where the table is.
+        """
         connection = psycopg2.connect(
             host=self.host,
             port=self.port,
@@ -168,9 +195,11 @@ class PostgresTarget(luigi.Target):
         return connection
 
     def create_marker_table(self):
-        """Create marker table if it doesn't exist.
+        """
+        Create marker table if it doesn't exist.
 
-        Using a separate connection since the transaction might have to be reset"""
+        Using a separate connection since the transaction might have to be reset.
+        """
         connection = self.connect()
         connection.autocommit = True
         cursor = connection.cursor()
@@ -188,7 +217,7 @@ class PostgresTarget(luigi.Target):
                   """.format(marker_table=self.marker_table)
         try:
             cursor.execute(sql)
-        except psycopg2.ProgrammingError, e:
+        except psycopg2.ProgrammingError as e:
             if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
                 pass
             else:
@@ -209,32 +238,36 @@ class CopyToTable(rdbms.CopyToTable):
 
     To customize how to access data from an input task, override the `rows` method
     with a generator that yields each row as a tuple with fields ordered according to `columns`.
-
     """
 
     def rows(self):
-        """Return/yield tuples or lists corresponding to each row to be inserted """
+        """
+        Return/yield tuples or lists corresponding to each row to be inserted.
+        """
         with self.input().open('r') as fobj:
             for line in fobj:
                 yield line.strip('\n').split('\t')
 
     def map_column(self, value):
-        """Applied to each column of every row returned by `rows`
+        """
+        Applied to each column of every row returned by `rows`.
 
-        Default behaviour is to escape special characters and identify any self.null_values
+        Default behaviour is to escape special characters and identify any self.null_values.
         """
         if value in self.null_values:
-            return '\N'
+            return r'\N'
+        elif six.PY3:
+            return default_escape(str(value))
         elif isinstance(value, unicode):
             return default_escape(value).encode('utf8')
         else:
             return default_escape(str(value))
 
-
 # everything below will rarely have to be overridden
 
     def output(self):
-        """Returns a PostgresTarget representing the inserted dataset.
+        """
+        Returns a PostgresTarget representing the inserted dataset.
 
         Normally you don't override this.
         """
@@ -245,20 +278,20 @@ class CopyToTable(rdbms.CopyToTable):
             password=self.password,
             table=self.table,
             update_id=self.update_id()
-         )
-
+        )
 
     def copy(self, cursor, file):
-        if isinstance(self.columns[0], basestring):
+        if isinstance(self.columns[0], six.string_types):
             column_names = self.columns
         elif len(self.columns[0]) == 2:
-            column_names = zip(*self.columns)[0]
+            column_names = [c[0] for c in self.columns]
         else:
             raise Exception('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
-        cursor.copy_from(file, self.table, null='\N', sep=self.column_separator, columns=column_names)
+        cursor.copy_from(file, self.table, null=r'\N', sep=self.column_separator, columns=column_names)
 
     def run(self):
-        """Inserts data generated by rows() into target table.
+        """
+        Inserts data generated by rows() into target table.
 
         If the target table doesn't exist, self.create_table will be called to attempt to create the table.
 
@@ -278,7 +311,8 @@ class CopyToTable(rdbms.CopyToTable):
             if n % 100000 == 0:
                 logger.info("Wrote %d lines", n)
             rowstr = self.column_separator.join(self.map_column(val) for val in row)
-            tmp_file.write(rowstr + '\n')
+            rowstr += "\n"
+            tmp_file.write(rowstr.encode('utf-8'))
 
         logger.info("Done writing, importing at %s", datetime.datetime.now())
         tmp_file.seek(0)
@@ -286,12 +320,12 @@ class CopyToTable(rdbms.CopyToTable):
         # attempt to copy the data into postgres
         # if it fails because the target table doesn't exist
         # try to create it by running self.create_table
-        for attempt in xrange(2):
+        for attempt in range(2):
             try:
                 cursor = connection.cursor()
                 self.init_copy(connection)
                 self.copy(cursor, tmp_file)
-            except psycopg2.ProgrammingError, e:
+            except psycopg2.ProgrammingError as e:
                 if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
                     # if first attempt fails with "relation not found", try creating table
                     logger.info("Creating table %s", self.table)

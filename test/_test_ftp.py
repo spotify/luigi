@@ -1,23 +1,31 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-import os
-from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
-
+import datetime
 import ftplib
-import unittest
-from cStringIO import StringIO
+import os
+import time
+from helpers import unittest
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
+
+from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
 
 # dumb files
 FILE1 = """this is file1"""
@@ -28,7 +36,9 @@ HOST = "some_host"
 USER = "luigi"
 PWD = "some_password"
 
+
 class TestFTPFilesystem(unittest.TestCase):
+
     def setUp(self):
         """ Creates structure
 
@@ -81,6 +91,7 @@ class TestFTPFilesystem(unittest.TestCase):
 
 
 class TestFTPFilesystemUpload(unittest.TestCase):
+
     def test_single(self):
         """ Test upload file with creation of intermediate folders """
         ftp_path = "/test/nest/luigi-test"
@@ -110,6 +121,7 @@ class TestFTPFilesystemUpload(unittest.TestCase):
 
 
 class TestRemoteTarget(unittest.TestCase):
+
     def test_put(self):
         """ Test RemoteTarget put method with uploading to an FTP """
         local_filepath = "/tmp/luigi-remotetarget-write-test"
@@ -159,6 +171,15 @@ class TestRemoteTarget(unittest.TestCase):
 
         # file is successfuly created
         self.assertTrue(os.path.exists(local_filepath))
+
+        # test RemoteTarget with mtime
+        ts = datetime.datetime.now() - datetime.timedelta(minutes=2)
+        delayed_remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD, mtime=ts)
+        self.assertTrue(delayed_remotetarget.exists())
+
+        ts = datetime.datetime.now() + datetime.timedelta(minutes=2)
+        delayed_remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD, mtime=ts)
+        self.assertFalse(delayed_remotetarget.exists())
 
         # clean
         os.remove(local_filepath)

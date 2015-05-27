@@ -3,7 +3,8 @@ Graph = (function() {
         "FAILED":"#DD0000",
         "RUNNING":"#0044DD",
         "PENDING":"#EEBB00",
-        "DONE":"#00DD00"
+        "DONE":"#00DD00",
+        "DISABLED":"#808080"
     };
 
     /* Line height for items in task status legend */
@@ -24,6 +25,7 @@ Graph = (function() {
             trackingUrl: "#"+task.taskId,
             deps: deps,
             params: task.params,
+            priority: task.priority,
             depth: -1
         };
     }
@@ -125,7 +127,7 @@ Graph = (function() {
         };
     }
 
-    var graphWidth = 1110;
+    var graphWidth = window.innerWidth - 51;
 
     function DependencyGraph(containerElement) {
         this.svg = $(svgElement("svg")).appendTo($(containerElement));
@@ -189,6 +191,7 @@ Graph = (function() {
             $.each(node.params, function (param_name, param_value) {
                 titleText += param_name + "=" + param_value + '<br/>';
             });
+            titleText += "priority" + "=" + node.priority + '<br/>';
             g.attr("title", $.trim(titleText))
                 .tooltip();
         });
