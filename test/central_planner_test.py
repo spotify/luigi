@@ -741,6 +741,22 @@ class CentralPlannerTest(unittest.TestCase):
         test_task.failures.first_failure_time = fake_failure_time
         self.assertTrue(test_task.has_excessive_failures())
 
+    def test_quadratic_behavior(self):
+        """ Test that get_work is not taking linear amount of time.
+
+        This is of course impossible to test, however, doing reasonable
+        assumptions about hardware. This time should finish in a timely
+        manner.
+        """
+        # For 10000 it takes almost 1 second on my laptop.  Prior to these
+        # changes it was being slow already at NUM_TASKS=300
+        NUM_TASKS = 10000
+        for i in range(NUM_TASKS):
+            self.sch.add_task(worker=str(i), task_id=str(i), resources={})
+
+        for i in range(NUM_TASKS):
+            self.assertEqual(self.sch.get_work(worker=str(i))['task_id'], str(i))
+            self.sch.add_task(worker=str(i), task_id=str(i), status=DONE)
 
 if __name__ == '__main__':
     unittest.main()

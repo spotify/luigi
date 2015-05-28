@@ -229,6 +229,7 @@ class Worker(object):
         self.reference = None  # reference to the worker in the real world. (Currently a dict containing just the host)
         self.last_active = last_active  # seconds since epoch
         self.started = time.time()  # seconds since epoch
+        self.tasks = set()  # task objects
         self.info = {}
 
     def add_info(self, info):
@@ -243,6 +244,19 @@ class Worker(object):
         # Delete workers that haven't said anything for a while (probably killed)
         if self.last_active + config.worker_disconnect_delay < time.time():
             return True
+
+    def get_pending_tasks(self):
+        return six.moves.filter(lambda task: task.status in [PENDING, RUNNING],
+                                self.tasks)
+
+    def is_trivial_worker(self):
+        """
+        If it's not an assistant having only tasks that are without
+        requirements
+        """
+        if self.assistant:
+            return False
+        return all(not task.resources for task in self.get_pending_tasks())
 
     @property
     def assistant(self):
@@ -299,6 +313,14 @@ class SimpleTaskState(object):
             for k, v in six.iteritems(self._active_workers):
                 if isinstance(v, float):
                     self._active_workers[k] = Worker(worker_id=k, last_active=v)
+
+            if any(not hasattr(w, 'tasks') for k, w in six.iteritems(self._active_workers)):
+                # If you load from an old format where Workers don't contain tasks.
+                for k, worker in six.iteritems(self._active_workers):
+                    worker.tasks = set()
+                for task in six.itervalues(self._tasks):
+                    for worker_id in task.workers:
+                        self._active_workers[worker_id].tasks.add(task)
         else:
             logger.info("No prior state file exists at %s. Starting with clean slate", self._state_path)
 
@@ -597,6 +619,7 @@ class CentralPlannerScheduler(Scheduler):
 
         if runnable:
             task.workers.add(worker_id)
+            self._state.get_worker(worker_id).tasks.add(task)
 
         if expl is not None:
             task.expl = expl
@@ -628,7 +651,7 @@ class CentralPlannerScheduler(Scheduler):
                         used_resources[resource] += amount
         return used_resources
 
-    def _rank(self):
+    def _rank(self, among_tasks):
         """
         Return worker's rank function for task scheduling.
 
@@ -639,7 +662,7 @@ class CentralPlannerScheduler(Scheduler):
         def not_done(t):
             task = self._state.get_task(t, default=None)
             return task is None or task.status != DONE
-        for task in self._state.get_pending_tasks():
+        for task in among_tasks:
             if task.status != DONE:
                 deps = list(filter(not_done, task.deps))
                 inverse_num_deps = 1.0 / max(len(deps), 1)
@@ -681,14 +704,21 @@ class CentralPlannerScheduler(Scheduler):
         running_tasks = []
         upstream_table = {}
 
-        used_resources = self._used_resources()
         greedy_resources = collections.defaultdict(int)
         n_unique_pending = 0
-        greedy_workers = dict((worker.id, worker.info.get('workers', 1))
-                              for worker in self._state.get_active_workers())
 
-        tasks = list(self._state.get_pending_tasks())
-        tasks.sort(key=self._rank(), reverse=True)
+        worker = self._state.get_worker(worker_id)
+        if worker.is_trivial_worker():
+            relevant_tasks = worker.get_pending_tasks()
+            used_resources = collections.defaultdict(int)
+            greedy_workers = dict()  # If there's no resources, then they can grab any task
+        else:
+            relevant_tasks = self._state.get_pending_tasks()
+            used_resources = self._used_resources()
+            greedy_workers = dict((worker.id, worker.info.get('workers', 1))
+                                  for worker in self._state.get_active_workers())
+        tasks = list(relevant_tasks)
+        tasks.sort(key=self._rank(among_tasks=tasks), reverse=True)
 
         for task in tasks:
             upstream_status = self._upstream_status(task.id, upstream_table)
