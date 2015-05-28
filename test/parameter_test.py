@@ -76,35 +76,6 @@ class ForgotParamDep(luigi.Task):
         pass
 
 
-class HasGlobalParam(luigi.Task):
-    x = luigi.Parameter()
-    global_param = luigi.IntParameter(is_global=True, default=123)  # global parameters need default values
-    global_bool_param = luigi.BoolParameter(is_global=True, default=False)
-
-    def run(self):
-        self.complete = lambda: True
-
-    def complete(self):
-        return False
-
-
-class HasGlobalParamDep(luigi.Task):
-    x = luigi.Parameter()
-
-    def requires(self):
-        return HasGlobalParam(self.x)
-
-_shared_global_param = luigi.Parameter(is_global=True, default='123')
-
-
-class SharedGlobalParamA(luigi.Task):
-    shared_global_param = _shared_global_param
-
-
-class SharedGlobalParamB(luigi.Task):
-    shared_global_param = _shared_global_param
-
-
 class BananaDep(luigi.Task):
     x = luigi.Parameter()
     y = luigi.Parameter(default='def')
@@ -156,12 +127,6 @@ class NoopTask(luigi.Task):
 
 
 class ParameterTest(unittest.TestCase):
-
-    def setUp(self):
-        super(ParameterTest, self).setUp()
-        # Need to restore some defaults for the global params since they are overriden
-        HasGlobalParam.global_param.set_global(123)
-        HasGlobalParam.global_bool_param.set_global(False)
 
     def test_default_param(self):
         self.assertEqual(WithDefault().x, 'xyz')
@@ -225,52 +190,6 @@ class ParameterTest(unittest.TestCase):
     def test_default_param_cmdline(self):
         luigi.run(['--local-scheduler', '--no-lock', 'WithDefault'])
         self.assertEqual(WithDefault().x, 'xyz')
-
-    def test_global_param_defaults(self):
-        h = HasGlobalParam(x='xyz')
-        self.assertEqual(h.global_param, 123)
-        self.assertEqual(h.global_bool_param, False)
-
-    def test_global_param_cmdline(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'HasGlobalParam', '--x', 'xyz', '--global-param', '124'])
-        h = HasGlobalParam(x='xyz')
-        self.assertEqual(h.global_param, 124)
-        self.assertEqual(h.global_bool_param, False)
-
-    def test_global_param_cmdline_flipped(self):
-        luigi.run(['--local-scheduler', '--no-lock', '--global-param', '125', 'HasGlobalParam', '--x', 'xyz'])
-        h = HasGlobalParam(x='xyz')
-        self.assertEqual(h.global_param, 125)
-        self.assertEqual(h.global_bool_param, False)
-
-    def test_global_param_override(self):
-        h1 = HasGlobalParam(x='xyz', global_param=124)
-        h2 = HasGlobalParam(x='xyz')
-        self.assertEquals(h1.global_param, 124)
-        self.assertEquals(h2.global_param, 123)
-
-    def test_global_param_dep_cmdline(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'])
-        h = HasGlobalParam(x='xyz')
-        self.assertEqual(h.global_param, 124)
-        self.assertEqual(h.global_bool_param, False)
-
-    def test_global_param_dep_cmdline_optparse(self):
-        luigi.run(['--local-scheduler', '--no-lock', '--task', 'HasGlobalParamDep', '--x', 'xyz', '--global-param', '124'], use_optparse=True)
-        h = HasGlobalParam(x='xyz')
-        self.assertEqual(h.global_param, 124)
-        self.assertEqual(h.global_bool_param, False)
-
-    def test_global_param_dep_cmdline_bool(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'HasGlobalParamDep', '--x', 'xyz', '--global-bool-param'])
-        h = HasGlobalParam(x='xyz')
-        self.assertEqual(h.global_param, 123)
-        self.assertEqual(h.global_bool_param, True)
-
-    def test_global_param_shared(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'SharedGlobalParamA', '--shared-global-param', 'abc'])
-        b = SharedGlobalParamB()
-        self.assertEqual(b.shared_global_param, 'abc')
 
     def test_insignificant_parameter(self):
         class InsignificantParameterTask(luigi.Task):
@@ -449,38 +368,6 @@ class TestRemoveGlobalParameters(unittest.TestCase):
         self.assertRaises(luigi.parameter.UnknownParameterException,
                           lambda: MyTask('arg'))
 
-    def test_mixed_params(self):
-        """ Essentially for what broke in a78338c and was reported in #738 """
-        class MyTask(luigi.Task):
-            # This could typically be "--num-threads=True"
-            x_g3 = luigi.Parameter(default='y', is_global=True)
-            local_param = luigi.Parameter()
-
-        MyTask('setting_local_param')
-
-    def test_mixed_params_inheritence(self):
-        """ A slightly more real-world like test case """
-        class TaskWithOneGlobalParam(luigi.Task):
-            non_positional_param = luigi.Parameter(default='y', is_global=True)
-
-        class TaskWithOnePositionalParam(TaskWithOneGlobalParam):
-            """ Try to mess with positional parameters by subclassing """
-            only_positional_param = luigi.Parameter()
-
-            def complete(self):
-                return True
-
-        class PositionalParamsRequirer(luigi.Task):
-
-            def requires(self):
-                return TaskWithOnePositionalParam('only_positional_value')
-
-            def run(self):
-                pass
-
-        self.run_and_check(['PositionalParamsRequirer'])
-        self.run_and_check(['PositionalParamsRequirer', '--non-positional-param', 'z'])
-
 
 class TestParamWithDefaultFromConfig(LuigiTestCase):
 
@@ -602,19 +489,6 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
     def testWithDefaultAndMissing(self):
         p = luigi.Parameter(config_path=dict(section="foo", name="bar"), default='blah')
         self.assertEqual('blah', p.value)
-
-    @with_config({"foo": {"bar": "baz"}})
-    def testGlobal(self):
-        p = luigi.Parameter(config_path=dict(section="foo", name="bar"), is_global=True, default='blah')
-        self.assertEqual('baz', p.value)
-        p.set_global('meh')
-        self.assertEqual('meh', p.value)
-
-    def testGlobalAndMissing(self):
-        p = luigi.Parameter(config_path=dict(section="foo", name="bar"), is_global=True, default='blah')
-        self.assertEqual('blah', p.value)
-        p.set_global('meh')
-        self.assertEqual('meh', p.value)
 
     @with_config({"A": {"p": "p_default"}})
     def testDefaultFromTaskName(self):
