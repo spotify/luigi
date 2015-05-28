@@ -19,6 +19,8 @@
 :class:`LocalTarget` provides a concrete implementation of a :py:class:`~luigi.target.Target` class that uses files on the local file system
 """
 
+import errno
+import time
 import os
 import random
 import shutil
@@ -32,6 +34,10 @@ from luigi.format import FileWrapper, get_default_format, MixedUnicodeBytes
 from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
 
 
+class FileLockException(RuntimeError):
+    pass
+
+
 class atomic_file(AtomicLocalFile):
     """Simple class that writes to a temp file and moves it on close()
     Also cleans up the temp file if close is not invoked
@@ -42,6 +48,51 @@ class atomic_file(AtomicLocalFile):
 
     def generate_tmp_path(self, path):
         return path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+
+
+class atomic_file_append(atomic_file):
+    """Use this to append to a temporary file and append to the final
+    destination when it is closed.
+    The destination file is locked to avoid concurrent writing to it.
+    """
+    def __init__(self, path, timeout=20, delay=.05):
+        self.timeout = timeout
+        self.delay = delay
+        self.is_locked = False
+        self.lockfile = "%s.lock" % path
+        super(atomic_file_append, self).__init__(path)
+
+    def move_to_final_destination(self):
+        try:
+            self.acquire()
+            with open(self.tmp_path) as in_file:
+                with open(self.path, 'a') as out_file:
+                    shutil.copyfileobj(in_file, out_file)
+        finally:
+            self.release()
+            os.unlink(self.tmp_path)
+
+    def acquire(self):
+        start_time = time.time()
+        while True:
+            try:
+                self.fd = os.open(
+                    self.lockfile,
+                    os.O_CREAT | os.O_EXCL | os.O_RDWR)
+                break
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
+                if (time.time() - start_time) >= self.timeout:
+                    raise FileLockException("Timeout occured.")
+                time.sleep(self.delay)
+        self.is_locked = True
+
+    def release(self):
+        if self.is_locked:
+            os.close(self.fd)
+            os.unlink(self.lockfile)
+            self.is_locked = False
 
 
 class LocalFileSystem(FileSystem):
@@ -95,17 +146,19 @@ class LocalTarget(FileSystemTarget):
         if parentfolder and not os.path.exists(parentfolder):
             os.makedirs(parentfolder)
 
-    def open(self, mode='r'):
+    def open(self, mode='r', timeout=10):
         if mode == 'w':
             self.makedirs()
             return self.format.pipe_writer(atomic_file(self.path))
-
+        elif mode == 'a':
+            self.makedirs()
+            return self.format.pipe_writer(atomic_file_append(self.path, timeout=timeout))
         elif mode == 'r':
             fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
             return self.format.pipe_reader(fileobj)
 
         else:
-            raise Exception('mode must be r/w')
+            raise ValueError('mode must be r, w or a')
 
     def move(self, new_path, raise_if_exists=False):
         if raise_if_exists and os.path.exists(new_path):

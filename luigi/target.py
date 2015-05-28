@@ -135,7 +135,9 @@ class FileSystem(object):
 
         *Note*: This method is optional, not all FileSystem subclasses implements it.
         """
-        raise NotImplementedError("isdir() not implemented on {0}".format(self.__class__.__name__))
+        raise NotImplementedError(
+            "isdir() not implemented on {0}".format(
+                self.__class__.__name__))
 
 
 class FileSystemTarget(Target):

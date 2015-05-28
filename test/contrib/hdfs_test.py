@@ -18,7 +18,6 @@
 import functools
 import re
 from helpers import unittest
-from datetime import datetime
 import random
 
 import helpers
@@ -288,6 +287,19 @@ class HdfsTargetTests(MiniClusterTestCase, FileSystemTargetTestMixin):
             target.remove(skip_trash=True)
         return target
 
+    def test_append(self):
+        target = self.create_target()
+        with target.open('a') as fobj:
+            fobj.write(b'spam')
+        self.assertTrue(target.exists())
+
+        with target.open('a') as fobj:
+            fobj.write(b'ham')
+
+        with target.open('r') as fobj:
+            a = fobj.read()
+        self.assertEqual(a, b'spamham')
+
     def test_slow_exists(self):
         target = hdfs.HdfsTarget(self._test_file())
         try:
@@ -484,6 +496,25 @@ class HdfsClientTest(MiniClusterTestCase):
         target = self.put_file(local_target, local_filename, target_path)
         self.assertTrue(target.exists())
         local_target.remove()
+
+    def test_append(self):
+        local_path = "test/data/file1.dat"
+        local_target = luigi.LocalTarget(local_path)
+        fobj = local_target.open("w")
+        fobj.write("spam")
+        fobj.close()
+
+        target_path = self._test_dir() + "/spammy_file"
+        target = hdfs.HdfsTarget(target_path)
+        if target.exists():
+            target.remove(skip_trash=True)
+
+        self.fs.append(local_target.path, target_path)
+        self.fs.append(local_target.path, target_path)
+        self.assertTrue(target.exists())
+        # TODO probably we also want to make sure the data is actually in
+        # there, but I see this is also missing inside of the other unittests
+        # in here.
 
     def test_get(self):
         local_dir = "test/data"

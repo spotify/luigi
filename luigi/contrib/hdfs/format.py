@@ -25,24 +25,37 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
 
     TODO: if this is buggy, change it so it first writes to a
     local temporary file and then uploads it on completion
+
+    If the append keyword arugment is set to True it will appendToFile instead
+    of put.
     """
 
-    def __init__(self, path):
+    def __init__(self, path, append=False):
         self.path = path
         self.tmppath = hdfs_config.tmppath(self.path)
-        parent_dir = os.path.dirname(self.tmppath)
+        self.append = append
+        parent_dir = self.path if append else self.tmppath
+        parent_dir = os.path.dirname(parent_dir)
         mkdir(parent_dir, parents=True, raise_if_exists=False)
-        super(HdfsAtomicWritePipe, self).__init__(load_hadoop_cmd() + ['fs', '-put', '-', self.tmppath])
+        command = [
+            'fs',
+            "-appendToFile" if append else "-put", '-',
+            self.path if append else self.tmppath
+        ]
+        super(HdfsAtomicWritePipe, self).__init__(load_hadoop_cmd() + command)
 
     def abort(self):
-        logger.info("Aborting %s('%s'). Removing temporary file '%s'",
-                    self.__class__.__name__, self.path, self.tmppath)
+        logger.info("Aborting %s('%s').", self.__class__.__name__)
         super(HdfsAtomicWritePipe, self).abort()
-        remove(self.tmppath)
+        if not self.append:
+            logger.info("Removing temporary file '%s'",
+                        self.path, self.tmppath)
+            remove(self.tmppath)
 
     def close(self):
         super(HdfsAtomicWritePipe, self).close()
-        rename(self.tmppath, self.path)
+        if not self.append:
+            rename(self.tmppath, self.path)
 
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
@@ -124,6 +137,9 @@ class CompatibleHdfsFormat(luigi.format.Format):
 
     def pipe_reader(self, input):
         return self.reader(input)
+
+    def pipe_appender(self, output):
+        return HdfsAtomicWritePipe(path=output, append=True)
 
     def hdfs_writer(self, output):
         return self.writer(output)

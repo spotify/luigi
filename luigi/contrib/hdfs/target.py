@@ -110,11 +110,13 @@ class HdfsTarget(FileSystemTarget):
         return False
 
     def open(self, mode='r'):
-        if mode not in ('r', 'w'):
+        if mode not in ('r', 'w', 'a'):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
         if mode == 'r':
             return self.format.pipe_reader(self.path)
+        elif mode == 'a':
+            return self.format.pipe_appender(self.path)
         else:
             return self.format.pipe_writer(self.path)
 
