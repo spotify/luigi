@@ -373,6 +373,21 @@ class TestSQLA(unittest.TestCase):
         luigi.build([task2], local_scheduler=True, workers=self.NUM_WORKERS)
         self._check_entries(self.engine)
 
+    def test_multiple_engines(self):
+        """
+        Test case where different tasks require different SQL engines.
+        """
+        alt_db = "sqlite:///%s" % os.path.join(TEMPDIR, "sqlatest2.db")
+
+        class MultiEngineTask(SQLATask):
+            connection_string = alt_db
+
+        task0, task1, task2 = BaseTask(), SQLATask(), MultiEngineTask()
+        self.assertTrue(task1.output().engine != task2.output().engine)
+        luigi.build([task2, task1, task0], local_scheduler=True, workers=self.NUM_WORKERS)
+        self._check_entries(task1.output().engine)
+        self._check_entries(task2.output().engine)
+
 
 @attr('sqlalchemy')
 class TestSQLA2(TestSQLA):
