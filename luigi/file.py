@@ -27,9 +27,8 @@ import io
 import sys
 import warnings
 
-import luigi
+import luigi.Config
 import luigi.util
-import luigi.configuration
 from luigi.format import FileWrapper, get_default_format, MixedUnicodeBytes
 from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
 
