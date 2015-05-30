@@ -21,8 +21,11 @@ import gzip
 import os
 import random
 import shutil
+
 from helpers import unittest
 import mock
+
+import helpers
 
 import luigi.format
 from luigi import LocalTarget
@@ -51,6 +54,11 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
 
     def assertCleanUp(self, tmp_path=''):
         self.assertFalse(os.path.exists(tmp_path))
+
+    @helpers.with_config({"localfile": {"tmp_dir": "/tmp/bar"}})
+    def test_localfile(self):
+        t = LocalTarget()
+        self.assertTrue(t.path.startswith("/tmp/bar"))
 
     def test_exists(self):
         t = self.create_target()

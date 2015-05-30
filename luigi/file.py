@@ -27,10 +27,16 @@ import io
 import sys
 import warnings
 
+import luigi
 import luigi.util
 import luigi.configuration
 from luigi.format import FileWrapper, get_default_format, MixedUnicodeBytes
 from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
+
+
+class localfile(luigi.Config):
+    tmp_dir = luigi.Parameter(default=tempfile.gettempdir(),
+                              config_path=dict(section='core', name='local-tmp-dir'))
 
 
 class atomic_file(AtomicLocalFile):
@@ -75,9 +81,6 @@ class LocalTarget(FileSystemTarget):
         if format is None:
             format = get_default_format()
 
-        tmp_dir = luigi.configuration.get_config().get("core", "local-tmp-dir", None)
-        if not tmp_dir:
-            tmp_dir = tempfile.gettempdir()
         # Allow to write unicode in file for retrocompatibility
         if sys.version_info[:2] <= (2, 6):
             format = format >> MixedUnicodeBytes
@@ -85,7 +88,7 @@ class LocalTarget(FileSystemTarget):
         if not path:
             if not is_tmp:
                 raise Exception('path or is_tmp must be set')
-            path = os.path.join(tmp_dir, 'luigi-tmp-%09d' % random.randint(0, 999999999))
+            path = os.path.join(localfile().tmp_dir, 'luigi-tmp-%09d' % random.randint(0, 999999999))
         super(LocalTarget, self).__init__(path)
         self.format = format
         self.is_tmp = is_tmp
