@@ -15,16 +15,6 @@
 # limitations under the License.
 #
 
-"""
-Example configuration section in client.cfg::
-
-    [salesforce]
-    username: ${SF_USERNAME}
-    password: ${SF_PASSWORD}
-    security_token: ${SF_SECURITY_TOKEN}
-"""
-
-
 import requests
 import time
 try:
@@ -33,7 +23,7 @@ except ImportError:
     from urllib.parse import urlsplit
 import xml.etree.ElementTree as ET
 
-from luigi import configuration
+import luigi
 from luigi import BoolParameter, Parameter
 from luigi import target_factory
 from luigi import Task
@@ -44,14 +34,15 @@ import logging
 logger = logging.getLogger('luigi-interface')
 
 
+class SalesforceConfig(luigi.Config):
+    sf_username = luigi.Parameter(config_path=dict(section="salesforce", name="username"))
+    sf_password = luigi.Parameter(config_path=dict(section="salesforce", name="password"))
+    sf_security_token = luigi.Parameter(config_path=dict(section="salesforce", name="security_token"))
+
+
 class UploadToSalesforceTask(Task):
     """
-    This task will upload a file to Salesforce.  It requires the following fields
-    to be set in the [salesforce] section of the client.cfg file:
-
-    * username: The username of the SF user that will be doing the uploading.
-    * password: The password of the SF user that will be doing the uploading.
-    * security_token: The security_token of the SF user that will be doing the uploading.
+    This task will upload a file to Salesforce.
 
     The data will be uploaded as an upsert job in order to ensure idempotency.  A token
     file is written on job success to track whether the task has completed or not.
@@ -95,11 +86,11 @@ class UploadToSalesforceTask(Task):
         if self.sf_use_sandbox and not self.sf_sandbox_name:
             raise Exception("Parameter sf_sandbox_name must be provided when uploading to a Salesforce Sandbox")
 
-        sf_username = configuration.get_config().get('salesforce', 'username')
-        sf_password = configuration.get_config().get('salesforce', 'password')
-        sf_security_token = configuration.get_config().get('salesforce', 'security_token')
+        sfa = SalesforceAPI(SalesforceConfig().sf_username,
+                            SalesforceConfig().sf_password,
+                            SalesforceConfig().sf_security_token,
+                            self.sf_sandbox_name)
 
-        sfa = SalesforceAPI(sf_username, sf_password, sf_security_token, self.sf_sandbox_name)
         # Checks to make sure we have a valid target before creating the job in SF
         upload_target = target_factory.get_target(self.sf_upload_file_path)
 
