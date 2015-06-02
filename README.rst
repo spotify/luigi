@@ -32,7 +32,8 @@ Run ``pip install luigi`` to install the latest stable version from
 
 For bleeding edge code,
 ``git clone https://github.com/spotify/luigi`` and
-``python setup.py install``.
+``python setup.py install``. Bleeding edge documentation can be found
+`here <http://luigi.readthedocs.org/en/latest/>`_.
 
 If you want to run the central scheduler (highly recommended), you
 need to install `Tornado <http://www.tornadoweb.org/>`_ which you can
@@ -143,6 +144,7 @@ Several companies have written blog posts or presentation about Luigi:
 
 * `Spotify (NYC Data Science) <http://www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`_
 * `Foursquare <http://www.slideshare.net/OpenAnayticsMeetup/luigi-presentation-17-23199897>`_
+* `Mortar Data <http://help.mortardata.com/technologies/luigi>`_
 * `Stripe <http://www.slideshare.net/PyData/python-as-part-of-a-production-machine-learning-stack-by-michael-manapat-pydata-sv-2014>`_
 * `Asana <https://eng.asana.com/2014/11/stable-accessible-data-infrastructure-startup/>`_
 * `Buffer <https://overflow.bufferapp.com/2014/10/31/buffers-new-data-architecture/>`_
