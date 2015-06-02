@@ -39,6 +39,7 @@ class SimpleTaskHistory(luigi.task_history.TaskHistory):
     def task_started(self, task_id, worker_host, worker_id):
         self.actions.append(('started', task_id, worker_id))
 
+
 class TaskHistoryTest(unittest.TestCase):
 
     def setUp(self):
@@ -56,7 +57,7 @@ class TaskHistoryTest(unittest.TestCase):
         self.w.add(MyTask())
         self.w.run()
 
-        self.assertEquals([ (a[0],a[1]) for a in self.th.actions], [
+        self.assertEquals([(a[0], a[1]) for a in self.th.actions], [
             ('scheduled', 'MyTask()'),
             ('started', 'MyTask()'),
             ('finished', 'MyTask()')

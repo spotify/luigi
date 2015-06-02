@@ -210,14 +210,14 @@ class S3Client(FileSystem):
         # grab and validate the bucket
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
 
-        # calculate the number of parts (int division). 
+        # calculate the number of parts (int division).
         # use modulo to avoid float precision issues
         # for exactly-sized fits
         num_parts = \
             (source_size // part_size) \
             if source_size % part_size == 0 \
             else (source_size // part_size) + 1
-        
+
         mp = None
         try:
             mp = s3_bucket.initiate_multipart_upload(key)
@@ -227,9 +227,9 @@ class S3Client(FileSystem):
                 offset = part_size * i
                 bytes = min(part_size, source_size - offset)
                 with open(local_path, 'rb') as fp:
-                    part_num = i+1
-                    logger.info('Uploading part %s/%s to %s' % \
-                        (part_num, num_parts, destination_s3_path))
+                    part_num = i + 1
+                    logger.info('Uploading part %s/%s to %s' %
+                                (part_num, num_parts, destination_s3_path))
                     fp.seek(offset)
                     mp.upload_part_from_file(fp, part_num=part_num, size=bytes)
 

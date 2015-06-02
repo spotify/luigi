@@ -33,6 +33,7 @@ class ParamTask(luigi.Task):
     param1 = luigi.Parameter()
     param2 = luigi.IntParameter()
 
+
 class DbTaskHistoryTest(unittest.TestCase):
 
     @with_config(dict(task_history=dict(db_connection='sqlite:///:memory:')))

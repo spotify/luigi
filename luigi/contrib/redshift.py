@@ -217,7 +217,7 @@ class S3CopyToTable(rdbms.CopyToTable):
                 '{name} {type}'.format(name=name, type=type) for name, type in self.columns
             )
             query = "CREATE TABLE {table} ({coldefs}) {table_attributes}".format(
-                table=self.table, 
+                table=self.table,
                 coldefs=coldefs,
                 table_attributes=self.table_attributes())
             connection.cursor().execute(query)
@@ -350,6 +350,7 @@ class RedshiftManifestTask(S3PathTask):
         target.write(dump)
         target.close()
 
+
 class KillOpenRedshiftSessions(luigi.Task):
     """
     An abstract task for killing any open Redshift sessions
@@ -428,8 +429,8 @@ class KillOpenRedshiftSessions(luigi.Task):
                 # rebuild the connection. Need to pause for 30-60 seconds
                 # before Redshift will allow us back in.
                 connection.close()
-                logger.info("Pausing %s seconds for Redshift to reset connection" % \
-                    self.connection_reset_wait_seconds)
+                logger.info("Pausing %s seconds for Redshift to reset connection" %
+                            self.connection_reset_wait_seconds)
                 time.sleep(self.connection_reset_wait_seconds)
                 logger.info("Reconnecting to Redshift")
                 connection = self.output().connect()

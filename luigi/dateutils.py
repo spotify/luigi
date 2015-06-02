@@ -20,6 +20,7 @@ ZERO = timedelta(0)
 
 # A UTC tzinfo class.
 
+
 class UTC(tzinfo):
     """UTC"""
 
@@ -33,6 +34,7 @@ class UTC(tzinfo):
         return ZERO
 
 utc = UTC()
+
 
 def utcnow():
     return datetime.now(utc)

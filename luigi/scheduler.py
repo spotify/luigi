@@ -478,7 +478,7 @@ class CentralPlannerScheduler(Scheduler):
             from luigi import db_task_history  # Needs sqlalchemy, thus imported here
             self._task_history = db_task_history.DbTaskHistory()
         elif self._config.record_task_history_sqs:
-            import sqs_history # Needs boto, dateutil, thus imported here
+            import sqs_history  # Needs boto, dateutil, thus imported here
             self._task_history = sqs_history.SqsTaskHistory()
         else:
             self._task_history = history.NopHistory()

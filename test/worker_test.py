@@ -41,6 +41,7 @@ from luigi import six
 
 luigi.notifications.DEBUG = True
 
+
 class DummyTask(Task):
 
     def __init__(self, *args, **kwargs):
@@ -54,6 +55,7 @@ class DummyTask(Task):
         logging.debug("%s - setting has_run", self.task_id)
         self.has_run = True
 
+
 class DummyQueue():
     """
     Mock Queue for Testing.
@@ -63,6 +65,7 @@ class DummyQueue():
 
     def write(self, message):
         self.messages.append(message)
+
 
 class DynamicDummyTask(Task):
     p = luigi.Parameter()
@@ -125,7 +128,6 @@ class WorkerTest(unittest.TestCase):
         self.w = Worker(scheduler=self.sch, worker_id='X')
         self.w2 = Worker(scheduler=self.sch, worker_id='Y')
         self.time = time.time
-
 
     def tearDown(self):
         if time.time != self.time:
@@ -551,20 +553,21 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(a.has_run)
         w.stop()
 
+
 class WorkerTaskGlobalEventHandlerTests(unittest.TestCase):
 
-    @with_config(dict( worker_history=dict(record_worker_history_sqs='true',
-                                                   sqs_queue_name='name', 
-                                                   aws_access_key_id='key', 
-                                                   aws_secret_access_key='secret_key'),
-                               worker_metadata=dict(meta1='data1')))
+    @with_config(dict(worker_history=dict(record_worker_history_sqs='true',
+                                          sqs_queue_name='name',
+                                          aws_access_key_id='key',
+                                          aws_secret_access_key='secret_key'),
+                      worker_metadata=dict(meta1='data1')))
     def setUp(self):
         try:
             from luigi.sqs_history import SqsHistory, SqsTaskHistory, SqsWorkerHistory
         except ImportError as e:
             raise unittest.SkipTest('Could not test WorkerTaskGlobalEventHandlerTests: %s' % e)
 
-        #Replace _config method with one that uses our dummy queue.
+        # Replace _config method with one that uses our dummy queue.
         def fake_config(s, *args):
             s._queue = DummyQueue()
         SqsHistory._config = fake_config
@@ -574,7 +577,6 @@ class WorkerTaskGlobalEventHandlerTests(unittest.TestCase):
         self.w = Worker(scheduler=self.sch, worker_id='X')
         self.w2 = Worker(scheduler=self.sch, worker_id='Y')
         self.time = time.time
-
 
     def tearDown(self):
         if time.time != self.time:
@@ -634,19 +636,19 @@ class WorkerTaskGlobalEventHandlerTests(unittest.TestCase):
 
         self.assertEquals(4, len(event_messages))
 
-        #Check started events:
+        # Check started events:
         started_events = event_messages.get(Event.START)
         self.assertEquals(2, len(started_events))
         self.assertEquals('A(param_a=a)', started_events[0]['task']['id'])
         self.assertEquals('B()', started_events[1]['task']['id'])
 
-        #Check success events
+        # Check success events
         success_events = event_messages.get(Event.SUCCESS)
         self.assertEquals(2, len(success_events))
         self.assertEquals('A(param_a=a)', success_events[0]['task']['id'])
         self.assertEquals('B()', success_events[1]['task']['id'])
 
-        #Check processing time events
+        # Check processing time events
         processing_events = event_messages.get(Event.PROCESSING_TIME)
         self.assertEquals(2, len(processing_events))
         self.assertEquals('A(param_a=a)', processing_events[0]['task']['id'])
@@ -654,7 +656,7 @@ class WorkerTaskGlobalEventHandlerTests(unittest.TestCase):
         self.assertEquals('B()', processing_events[1]['task']['id'])
         self.assertTrue('processing_time' in processing_events[1])
 
-        #Check dependency event
+        # Check dependency event
         dependency_event = event_messages.get(Event.DEPENDENCY_DISCOVERED)
         self.assertEquals(1, len(dependency_event))
         self.assertEquals('B()', dependency_event[0]['task']['id'])
@@ -692,13 +694,13 @@ class WorkerTaskGlobalEventHandlerTests(unittest.TestCase):
 
         self.assertEquals(2, len(event_messages))
 
-        #Check dependency event
+        # Check dependency event
         dependency_event = event_messages.get(Event.DEPENDENCY_DISCOVERED)
         self.assertEquals(1, len(dependency_event))
         self.assertEquals('B()', dependency_event[0]['task']['id'])
         self.assertEquals('A()', dependency_event[0]['dependency_task']['id'])
 
-        #Check dependency missing event
+        # Check dependency missing event
         dependency_missing_event = event_messages.get(Event.DEPENDENCY_MISSING)
         self.assertEquals(1, len(dependency_missing_event))
         self.assertEquals('A()', dependency_missing_event[0]['task']['id'])
@@ -725,8 +727,8 @@ class WorkerTaskGlobalEventHandlerTests(unittest.TestCase):
         event_messages = self._parse_task_events(sent_messages)
 
         self.assertEquals(3, len(event_messages))
-        
-        #Check failure event
+
+        # Check failure event
         failure_event = event_messages.get(Event.FAILURE)
         self.assertEquals(1, len(failure_event))
         self.assertEquals('A()', failure_event[0]['task']['id'])
@@ -811,6 +813,7 @@ class WorkerTaskGlobalEventHandlerTests(unittest.TestCase):
         self.assertEquals(1, len(broken_event))
         self.assertEquals('B()', broken_event[0]['task']['id'])
         self.assertEquals("Exception('requires() must return Task objects',)", broken_event[0]['exception'])
+
 
 class DynamicDependenciesTest(unittest.TestCase):
     n_workers = 1

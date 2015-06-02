@@ -42,4 +42,3 @@ class NopWorkerHistory(WorkerHistory):
 
     def worker_task_event(self, worker_id, event, *args, **kwargs):
         pass
-

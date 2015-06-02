@@ -299,7 +299,7 @@ class Worker(object):
             worker_id = config.get('worker_metadata', 'worker_id', default_worker_id)
 
         if config.getboolean('worker_history', 'record_worker_history_sqs', False):
-            import sqs_history # Needs boto, thus imported here
+            import sqs_history  # Needs boto, thus imported here
             self._worker_history_impl = sqs_history.SqsWorkerHistory()
         else:
             self._worker_history_impl = NopWorkerHistory()
