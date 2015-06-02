@@ -29,7 +29,7 @@ from luigi import six
 
 from luigi import configuration
 from luigi.target import FileSystemTarget, AtomicLocalFile
-from luigi.format import get_default_format, MixedUnicodeBytes
+from luigi.format import get_default_format
 
 logger = logging.getLogger("luigi-interface")
 
@@ -49,10 +49,6 @@ class WebHdfsTarget(FileSystemTarget):
         self.fs = client or WebHdfsClient()
         if format is None:
             format = get_default_format()
-
-        # Allow to write unicode in file for retrocompatibility
-        if sys.version_info[:2] <= (2, 6):
-            format = format >> MixedUnicodeBytes
 
         self.format = format
 
