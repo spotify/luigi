@@ -77,10 +77,10 @@ class DbTaskHistoryTest(unittest.TestCase):
                 self.assertTrue(param_name in record.parameters)
                 self.assertEqual(str(param_value), record.parameters[param_name].value)
 
-    def run_task(self, task):
-        self.history.task_scheduled(task.task_id)
-        self.history.task_started(task.task_id, 'hostname')
-        self.history.task_finished(task.task_id, successful=True)
+    def run_task(self, task, worker_id):
+        self.history.task_scheduled(task.task_id, worker_id=worker_id)
+        self.history.task_started(task.task_id, 'hostname', worker_id=worker_id)
+        self.history.task_finished(task.task_id, successful=True, worker_id=worker_id)
 
 
 class MySQLDbTaskHistoryTest(unittest.TestCase):

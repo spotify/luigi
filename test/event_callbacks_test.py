@@ -124,7 +124,10 @@ class TestEventCallbacks(unittest.TestCase):
 
     def test_processing_time_handler_failure(self):
         t, result = self._run_processing_time_handler(True)
-        self.assertEqual(result, [])
+        self.assertEqual(len(result), 1)
+        task, time = result[0]
+        self.assertTrue(task is t)
+        self.assertEqual(time, 42.0)
 
 
 #        A

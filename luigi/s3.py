@@ -214,9 +214,9 @@ class S3Client(FileSystem):
         # use modulo to avoid float precision issues
         # for exactly-sized fits
         num_parts = \
-            (source_size / part_size) \
+            (source_size // part_size) \
             if source_size % part_size == 0 \
-            else (source_size / part_size) + 1
+            else (source_size // part_size) + 1
         
         mp = None
         try:
