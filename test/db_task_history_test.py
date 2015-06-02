@@ -96,7 +96,7 @@ class MySQLDbTaskHistoryTest(unittest.TestCase):
     def test_subsecond_timestamp(self):
         # Add 2 events in <1s
         task = DummyTask()
-        self.run_task(task)
+        self.run_task(task, "worker-id")
 
         task_record = six.advance_iterator(self.history.find_all_by_name('DummyTask'))
         print (task_record.events)
@@ -106,7 +106,7 @@ class MySQLDbTaskHistoryTest(unittest.TestCase):
         from luigi.server import from_utc
 
         task = DummyTask()
-        self.run_task(task)
+        self.run_task(task, "worker-id")
 
         task_record = six.advance_iterator(self.history.find_all_by_name('DummyTask'))
         last_event = task_record.events[0]
