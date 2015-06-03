@@ -83,7 +83,9 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
             arglist.append('{}@{}'.format(username, host))
         else:
             arglist = []
-            if not job.jar() or not os.path.exists(job.jar()):
+            if not job.jar():
+                raise HadoopJarJobError("Jar not defined")
+            if not os.path.exists(job.jar()):
                 logger.error("Can't find jar: %s, full path %s", job.jar(), os.path.abspath(job.jar()))
                 raise HadoopJarJobError("job jar does not exist")
 
