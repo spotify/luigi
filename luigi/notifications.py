@@ -73,6 +73,8 @@ def send_email_ses(config, sender, subject, message, recipients, image_png):
 
 
 def send_email(subject, message, sender, recipients, image_png=None):
+    config = configuration.get_config()
+
     subject = _prefix(subject)
     logger.debug("Emailing:\n"
                  "-------------\n"
@@ -84,7 +86,7 @@ def send_email(subject, message, sender, recipients, image_png=None):
                  "-------------", recipients, sender, subject, message)
     if not recipients or recipients == (None,):
         return
-    if sys.stdout.isatty() or DEBUG:
+    if (sys.stdout.isatty() or DEBUG) and (not config.getboolean('email', 'force-send', False)):
         logger.info("Not sending email when running from a tty or in debug mode")
         return
 
