@@ -3,23 +3,29 @@ Section: libs
 Priority: extra
 Maintainer: Elias Freider <freider@spotify.com>
 Build-Depends:	debhelper (>= 7),
-		python-all (>= 2.6.6-3~),
-		python-argparse,
+		python-all (>= 2.7),
 		python-pip,
+		python-psycopg2,
+		python-pyparsing,
 		python-simplejson,
 		python-tornado (>= 2.3),
 		python-mock,
+		python-daemon,
 		python-ordereddict,
-		openssh-client
+		openssh-client,
+		python-sqlalchemy,
+		python-unittest2,
+		snakebite
 Standards-Version: 3.7.3
-X-Python-Version: >= 2.6
+X-Python-Version: >= 2.7
 
 Package: luigi
 Architecture: all
 Depends: ${shlibs:Depends},
 	 ${misc:Depends},
 	 ${python:Depends},
-	 python-argparse,
+	 python-pyparsing,
+	 python-sqlalchemy,
 	 python-mechanize
 Description: Workflow mgmgt + task scheduling + dependency resolution
 
@@ -30,5 +36,7 @@ Depends:	${shlibs:Depends},
 		${python:Depends},
 		python-daemon,
 		python-pip,
+		python-pyparsing,
+		python-sqlalchemy,
 		python-tornado (>= 2.3)
 Description: Luigi central planner server

@@ -15,6 +15,11 @@
 import sys
 import os
 
+if os.environ.get('READTHEDOCS', None) == 'True':
+    # Run sphinx-apidoc automatically in readthedocs
+    # Taken from this: https://lists.torproject.org/pipermail/tor-commits/2012-September/046695.html
+    os.system('sphinx-apidoc -o api -T ../luigi --separate')
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -74,7 +79,7 @@ release = '1.0'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', 'README.rst']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -149,7 +154,7 @@ html_logo = 'luigi.png'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

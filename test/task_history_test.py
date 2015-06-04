@@ -1,22 +1,32 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-import luigi, luigi.scheduler, luigi.task_history, luigi.worker
-import unittest
+from helpers import unittest
+
+import luigi
+import luigi.scheduler
+import luigi.task_history
+import luigi.worker
+
 luigi.notifications.DEBUG = True
 
+
 class SimpleTaskHistory(luigi.task_history.TaskHistory):
+
     def __init__(self):
         self.actions = []
 
@@ -29,10 +39,12 @@ class SimpleTaskHistory(luigi.task_history.TaskHistory):
     def task_started(self, task_id, worker_host, worker_id):
         self.actions.append(('started', task_id, worker_id))
 
+
 class TaskHistoryTest(unittest.TestCase):
+
     def setUp(self):
         self.th = SimpleTaskHistory()
-        self.sch = luigi.scheduler.CentralPlannerScheduler(task_history=self.th)
+        self.sch = luigi.scheduler.CentralPlannerScheduler(task_history_impl=self.th)
         self.w = luigi.worker.Worker(scheduler=self.sch)
 
     def tearDown(self):
@@ -45,7 +57,7 @@ class TaskHistoryTest(unittest.TestCase):
         self.w.add(MyTask())
         self.w.run()
 
-        self.assertEquals([ (a[0],a[1]) for a in self.th.actions], [
+        self.assertEquals([(a[0], a[1]) for a in self.th.actions], [
             ('scheduled', 'MyTask()'),
             ('started', 'MyTask()'),
             ('finished', 'MyTask()')

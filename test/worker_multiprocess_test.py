@@ -1,23 +1,27 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-import luigi.worker
-from luigi.worker import Worker
-from luigi import Task, RemoteScheduler, Parameter
-import unittest
 import logging
+from helpers import unittest
+
 import luigi.notifications
+import luigi.worker
+from luigi import Parameter, RemoteScheduler, Task
+from luigi.worker import Worker
 from mock import Mock
 
 luigi.notifications.DEBUG = True
@@ -41,6 +45,7 @@ class DummyTask(Task):
 
 
 class MultiprocessWorkerTest(unittest.TestCase):
+
     def setUp(self):
         self.scheduler = RemoteScheduler()
         self.scheduler.add_worker = Mock()
@@ -50,11 +55,17 @@ class MultiprocessWorkerTest(unittest.TestCase):
     def tearDown(self):
         self.worker.stop()
 
+    def gw_res(self, pending, task_id):
+        return dict(n_pending_tasks=pending,
+                    task_id=task_id,
+                    running_tasks=0, n_unique_pending=0)
+
     def test_positive_path(self):
         a = DummyTask("a")
         b = DummyTask("b")
 
         class MultipleRequirementTask(DummyTask):
+
             def requires(self):
                 return [a, b]
 
@@ -62,13 +73,18 @@ class MultiprocessWorkerTest(unittest.TestCase):
 
         self.assertTrue(self.worker.add(c))
 
-        self.scheduler.get_work = Mock(side_effect=[(3, str(a)), (2, str(b)), (1, str(c)), (0, None), (0, None)])
+        self.scheduler.get_work = Mock(side_effect=[self.gw_res(3, str(a)),
+                                                    self.gw_res(2, str(b)),
+                                                    self.gw_res(1, str(c)),
+                                                    self.gw_res(0, None),
+                                                    self.gw_res(0, None)])
 
         self.assertTrue(self.worker.run())
         self.assertTrue(c.has_run)
 
     def test_path_with_task_failures(self):
         class FailingTask(DummyTask):
+
             def run(self):
                 raise Exception("I am failing")
 
@@ -76,6 +92,7 @@ class MultiprocessWorkerTest(unittest.TestCase):
         b = FailingTask("b")
 
         class MultipleRequirementTask(DummyTask):
+
             def requires(self):
                 return [a, b]
 
@@ -83,7 +100,11 @@ class MultiprocessWorkerTest(unittest.TestCase):
 
         self.assertTrue(self.worker.add(c))
 
-        self.scheduler.get_work = Mock(side_effect=[(3, str(a)), (2, str(b)), (1, str(c)), (0, None), (0, None)])
+        self.scheduler.get_work = Mock(side_effect=[self.gw_res(3, str(a)),
+                                                    self.gw_res(2, str(b)),
+                                                    self.gw_res(1, str(c)),
+                                                    self.gw_res(0, None),
+                                                    self.gw_res(0, None)])
 
         self.assertFalse(self.worker.run())
 

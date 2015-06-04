@@ -28,9 +28,10 @@ from boto.sqs.message import Message
 
 logger = logging.getLogger('luigi-interface')
 
+
 class SqsHistory(object):
-    """ A History class that sends messages to an SQS (http://aws.amazon.com/sqs/) 
-    queue using boto for events. 
+    """ A History class that sends messages to an SQS (http://aws.amazon.com/sqs/)
+    queue using boto for events.
     """
 
     def _send_message(self, fields):
@@ -46,15 +47,15 @@ class SqsHistory(object):
                            is_secure=True)
         self._queue = cx.get_queue(queue_name)
         if not self._queue:
-            raise Exception('Unable to load sqs queue %s with access_key_id %s in region %s' \
-               % (queue_name, aws_access_key_id, region))
+            raise Exception('Unable to load sqs queue %s with access_key_id %s in region %s' %
+                            (queue_name, aws_access_key_id, region))
 
 
 class SqsTaskHistory(SqsHistory, task_history.TaskHistory):
     def __init__(self):
         self.config = configuration.get_config()
         queue_name = self.config.get('task_history', 'sqs_queue_name')
-        aws_access_key_id  = self.config.get('task_history', 'aws_access_key_id')
+        aws_access_key_id = self.config.get('task_history', 'aws_access_key_id')
         aws_secret_access_key = self.config.get('task_history', 'aws_secret_access_key')
         region = self.config.get('task_history', 'region', None)
         self._config(queue_name, aws_access_key_id, aws_secret_access_key, region)
@@ -76,56 +77,47 @@ class SqsTaskHistory(SqsHistory, task_history.TaskHistory):
         return task_history.Task(task_id, status, host)
 
     def _send_task_message(self, task, worker_id):
-        fields = {
-                   'task': {
-                      'task_family': task.task_family,
-                      'params': task.parameters,
-                      'status': task.status,
-                      'host': task.host,
-                   },
+        fields = {'task': {'task_family': task.task_family,
+                           'params': task.parameters,
+                           'status': task.status,
+                           'host': task.host},
                   'timestamp': dateutils.utcnow().isoformat(),
                   'server_metadata': self.config.items('server_metadata'),
-                  'worker_id': worker_id
-                 }
+                  'worker_id': worker_id}
         self._send_message(fields)
 
 
 class SqsWorkerHistory(SqsHistory, worker_history.WorkerHistory):
     def __init__(self):
-      self.config = configuration.get_config()
-      queue_name = self.config.get('worker_history', 'sqs_queue_name')
-      aws_access_key_id  = self.config.get('worker_history', 'aws_access_key_id')
-      aws_secret_access_key = self.config.get('worker_history', 'aws_secret_access_key')
-      region = self.config.get('worker_history', 'region', None)
-      self._config(queue_name, aws_access_key_id, aws_secret_access_key, region)
+        self.config = configuration.get_config()
+        queue_name = self.config.get('worker_history', 'sqs_queue_name')
+        aws_access_key_id = self.config.get('worker_history', 'aws_access_key_id')
+        aws_secret_access_key = self.config.get('worker_history', 'aws_secret_access_key')
+        region = self.config.get('worker_history', 'region', None)
+        self._config(queue_name, aws_access_key_id, aws_secret_access_key, region)
 
     def worker_started(self, worker_id):
-        fields = {
-          'worker_status': STARTED,
-          'timestamp': dateutils.utcnow().isoformat(),
-          'worker_metadata': self.config.items('worker_metadata'),
-          'worker_id': worker_id
-        }
+        fields = \
+            {'worker_status': STARTED,
+             'timestamp': dateutils.utcnow().isoformat(),
+             'worker_metadata': self.config.items('worker_metadata'),
+             'worker_id': worker_id}
         self._send_message(fields)
 
     def worker_stopped(self, worker_id):
-        fields = {
-          'worker_status': STOPPED,
-          'timestamp': dateutils.utcnow().isoformat(),
-          'worker_metadata': self.config.items('worker_metadata'),
-          'worker_id': worker_id
-        }
+        fields = {'worker_status': STOPPED,
+                  'timestamp': dateutils.utcnow().isoformat(),
+                  'worker_metadata': self.config.items('worker_metadata'),
+                  'worker_id': worker_id}
         self._send_message(fields)
 
     def worker_task_event(self, worker_id, event, *args, **kwargs):
         task = args[0]
-        fields = {
-          'timestamp': dateutils.utcnow().isoformat(),
-          'worker_metadata': self.config.items('worker_metadata'),
-          'worker_id': worker_id,
-          'event': event,
-          'task': self._get_task_fields(task)
-        }
+        fields = {'timestamp': dateutils.utcnow().isoformat(),
+                  'worker_metadata': self.config.items('worker_metadata'),
+                  'worker_id': worker_id,
+                  'event': event,
+                  'task': self._get_task_fields(task)}
         # Handle events with extra data.
         if event == Event.DEPENDENCY_DISCOVERED:
             fields['dependency_task'] = self._get_task_fields(args[1])
@@ -136,12 +128,12 @@ class SqsWorkerHistory(SqsHistory, worker_history.WorkerHistory):
         elif event == Event.BROKEN_TASK:
             fields['exception'] = repr(args[1])
         else:
+            logger.info("Unhandled event: %s" % event)
             pass
 
         self._send_message(fields)
 
     def _get_task_fields(self, task):
-        return { 'id': task.task_id,
-                 'task_family': task.task_family,
-                 'params': task.to_str_params(),
-               }
+        return {'id': task.task_id,
+                'task_family': task.task_family,
+                'params': task.to_str_params()}

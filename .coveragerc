@@ -1,0 +1,17 @@
+[report]
+omit =
+    luigi/mrrunner.py
+    */python?.?/*
+    */site-packages/nose/*
+    *__init__*
+    *test/*
+    */luigi/six.py
+    */.tox/*
+    */setup.py
+    */bin/luigidc
+    */dummy_test_module/*
+    sitecustomize.py
+    hadoop_test.py
+    minicluster.py
+[run]
+parallel=True

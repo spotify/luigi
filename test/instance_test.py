@@ -1,25 +1,32 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+from helpers import unittest
 
 import luigi
+import luigi.worker
 import luigi.date_interval
-import unittest
 import luigi.notifications
+
 luigi.notifications.DEBUG = True
 
 
 class InstanceTest(unittest.TestCase):
+
     def test_simple(self):
         class DummyTask(luigi.Task):
             x = luigi.Parameter()
@@ -35,6 +42,7 @@ class InstanceTest(unittest.TestCase):
         test = self
 
         class A(luigi.Task):
+
             def __init__(self):
                 self.has_run = False
                 super(A, self).__init__()
@@ -79,6 +87,13 @@ class InstanceTest(unittest.TestCase):
 
         self.assertNotEqual(dummy_1, dummy_2)
         self.assertEqual(dummy_1, dummy_1b)
+
+    def test_unhashable_type(self):
+        # See #857
+        class DummyTask(luigi.Task):
+            x = luigi.Parameter()
+
+        dummy = DummyTask(x={})
 
 if __name__ == '__main__':
     unittest.main()

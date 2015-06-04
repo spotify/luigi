@@ -1,7 +1,40 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-import os
+"""
+luigi.configuration provides some convenience wrappers around Python's
+ConfigParser to get configuration options from config files.
+
+The default location for configuration files is client.cfg in the current
+working directory, then /etc/luigi/client.cfg.
+
+Configuration has largely been superseded by parameters since they can
+do essentially everything configuration can do, plus a tighter integration
+with the rest of Luigi.
+
+See :doc:`/configuration` for more info.
+"""
+
 import logging
-from ConfigParser import ConfigParser, NoOptionError, NoSectionError
+import os
+try:
+    from ConfigParser import ConfigParser, NoOptionError, NoSectionError
+except ImportError:
+    from configparser import ConfigParser, NoOptionError, NoSectionError
 
 
 class LuigiConfigParser(ConfigParser):
@@ -30,13 +63,16 @@ class LuigiConfigParser(ConfigParser):
     def reload(cls):
         return cls.instance().read(cls._config_paths)
 
-    def _get_with_default(self, method, section, option, default, expected_type=None):
-        """ Gets the value of the section/option using method. Returns default if value
-        is not found. Raises an exception if the default value is not None and doesn't match
-        the expected_type.
+    def _get_with_default(self, method, section, option, default, expected_type=None, **kwargs):
+        """
+        Gets the value of the section/option using method.
+
+        Returns default if value is not found.
+
+        Raises an exception if the default value is not None and doesn't match the expected_type.
         """
         try:
-            return method(self, section, option)
+            return method(self, section, option, **kwargs)
         except (NoOptionError, NoSectionError):
             if default is LuigiConfigParser.NO_DEFAULT:
                 raise
@@ -51,8 +87,8 @@ class LuigiConfigParser(ConfigParser):
         except NoSectionError:
             return []
 
-    def get(self, section, option, default=NO_DEFAULT):
-        return self._get_with_default(ConfigParser.get, section, option, default)
+    def get(self, section, option, default=NO_DEFAULT, **kwargs):
+        return self._get_with_default(ConfigParser.get, section, option, default, **kwargs)
 
     def getboolean(self, section, option, default=NO_DEFAULT):
         return self._get_with_default(ConfigParser.getboolean, section, option, default, bool)
@@ -63,12 +99,21 @@ class LuigiConfigParser(ConfigParser):
     def getfloat(self, section, option, default=NO_DEFAULT):
         return self._get_with_default(ConfigParser.getfloat, section, option, default, float)
 
-    def set(self, section, option, value):
+    def getintdict(self, section):
+        try:
+            return dict((key, int(value)) for key, value in self.items(section))
+        except NoSectionError:
+            return {}
+
+    def set(self, section, option, value=None):
         if not ConfigParser.has_section(self, section):
             ConfigParser.add_section(self, section)
 
         return ConfigParser.set(self, section, option, value)
 
+
 def get_config():
-    """ Convenience method (for backwards compatibility) for accessing config singleton """
+    """
+    Convenience method (for backwards compatibility) for accessing config singleton.
+    """
     return LuigiConfigParser.instance()

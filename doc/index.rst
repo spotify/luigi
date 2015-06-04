@@ -12,7 +12,9 @@ Table of Contents
    :maxdepth: 2
 
    example_top_artists.rst
-   api_overview.rst
+   workflows.rst
+   tasks.rst
+   parameters.rst
    command_line.rst
    programmatic_execution.rst
    central_scheduler.rst
@@ -20,7 +22,6 @@ Table of Contents
    luigi_patterns.rst
    configuration.rst
    more_info.rst
-   contributing.rst
 
 API Reference
 -------------
@@ -30,6 +31,7 @@ API Reference
 
    luigi
    luigi.contrib
+   luigi.tools
 
 
 Indices and tables
