@@ -532,8 +532,8 @@ class Worker(object):
         self._scheduler.add_worker(self._id, self._worker_info)
 
     def _log_remote_tasks(self, running_tasks, n_pending_tasks, n_unique_pending):
-        logger.info("Done")
-        logger.info("There are no more tasks to run at this time")
+        logger.debug("Done")
+        logger.debug("There are no more tasks to run at this time")
         if running_tasks:
             for r in running_tasks:
                 logger.debug('%s is currently run by worker %s', r['task_id'], r['worker'])
