@@ -32,7 +32,7 @@ def id_to_name_and_params(task_id):
         DeprecationWarning,
         stacklevel=2)
 
-    name_chars = pp.alphanums + '_'
+    name_chars = pp.alphanums + '_.'
     # modified version of pp.printables. Removed '[]', '()', ','
     value_chars = pp.alphanums + '\'!"#$%&*+-./:;<=>?@\\^_`{|}~'
     parameter = (
