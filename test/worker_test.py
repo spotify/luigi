@@ -1047,7 +1047,9 @@ class MultipleWorkersTest(unittest.TestCase):
 
         t0 = time.time()
         luigi.build([MyDynamicTask(i) for i in range(100)], workers=100, local_scheduler=True)
-        self.assertTrue(time.time() < t0 + 5.0)  # should ideally take exactly 0.1s, but definitely less than 10.0
+        duration = time.time() - t0
+        logging.info("Duration: %s" % duration)
+        self.assertTrue(duration < 10.0)  # should ideally take exactly 0.1s, but definitely less than 10.0
 
     def test_zero_workers(self):
         d = DummyTask()
