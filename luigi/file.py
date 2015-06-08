@@ -29,7 +29,7 @@ import warnings
 
 import luigi.util
 from luigi.format import FileWrapper, get_default_format, MixedUnicodeBytes
-from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
+from luigi.target import FileAlreadyExists, MissingParentDirectory, NotADirectory, FileSystem, FileSystemTarget, AtomicLocalFile
 
 
 class atomic_file(AtomicLocalFile):
@@ -55,10 +55,29 @@ class LocalFileSystem(FileSystem):
         return os.path.exists(path)
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
-        os.makedirs(path)
+        if self.exists(path):
+            if raise_if_exists:
+                raise FileAlreadyExists()
+            elif not self.isdir(path):
+                raise NotADirectory()
+            else:
+                return
+
+        if parents:
+            os.makedirs(path)
+        else:
+            if not os.path.exists(os.path.dirname(path)):
+                raise MissingParentDirectory()
+            os.mkdir(path)
 
     def isdir(self, path):
         return os.path.isdir(path)
+
+    def listdir(self, path):
+        for dir_, _, files in os.walk(path):
+            assert dir_.startswith(path)
+            for name in files:
+                yield os.path.join(dir_, name)
 
     def remove(self, path, recursive=True):
         if recursive and self.isdir(path):

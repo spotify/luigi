@@ -27,9 +27,10 @@ import subprocess
 from helpers import unittest
 import target_test
 
-from luigi.contrib.ssh import RemoteContext, RemoteTarget
+from luigi.contrib.ssh import RemoteContext, RemoteFileSystem, RemoteTarget
+from luigi.target import MissingParentDirectory, FileAlreadyExists
 
-working_ssh_host = 'localhost'
+working_ssh_host = os.environ.get('SSH_TEST_HOST', 'localhost')
 # set this to a working ssh host string (e.g. "localhost") to activate integration tests
 # The following tests require a working ssh server at `working_ssh_host`
 # the test runner can ssh into using password-less authentication
@@ -148,11 +149,47 @@ class TestRemoteTarget(unittest.TestCase):
         f.close()
         self.assertEqual(file_content, "hello")
 
+        self.assertTrue(self.target.fs.exists(self.filepath))
+        self.assertFalse(self.target.fs.isdir(self.filepath))
+
     def test_context_manager(self):
         with self.target.open('r') as f:
             file_content = f.read()
 
         self.assertEqual(file_content, "hello")
+
+
+class TestRemoteFilesystem(unittest.TestCase):
+    def setUp(self):
+        self.fs = RemoteFileSystem(working_ssh_host)
+        self.root = '/tmp/luigi-remote-test'
+        self.directory = self.root + '/dir'
+        self.filepath = self.directory + '/file'
+        self.target = RemoteTarget(
+            self.filepath,
+            working_ssh_host,
+        )
+
+        self.fs.remote_context.check_output(['rm', '-rf', self.root])
+        self.addCleanup(self.fs.remote_context.check_output, ['rm', '-rf', self.root])
+
+    def test_mkdir(self):
+        self.assertFalse(self.fs.isdir(self.directory))
+
+        self.assertRaises(MissingParentDirectory, self.fs.mkdir, self.directory, parents=False)
+        self.fs.mkdir(self.directory)
+        self.assertTrue(self.fs.isdir(self.directory))
+
+        # Shouldn't throw
+        self.fs.mkdir(self.directory)
+
+        self.assertRaises(FileAlreadyExists, self.fs.mkdir, self.directory, raise_if_exists=True)
+
+    def test_list(self):
+        with self.target.open('w'):
+            pass
+
+        self.assertEquals([self.target.path], list(self.fs.listdir(self.directory)))
 
 
 class TestRemoteTargetAtomicity(unittest.TestCase, target_test.FileSystemTargetTestMixin):
