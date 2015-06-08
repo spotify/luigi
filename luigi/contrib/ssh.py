@@ -57,6 +57,7 @@ class RemoteContext(object):
         self.port = kwargs.get('port', None)
         self.no_host_key_check = kwargs.get('no_host_key_check', False)
         self.sshpass = kwargs.get('sshpass', False)
+        self.tty = kwargs.get('tty', False)
 
     def __repr__(self):
         return '%s(%r, %r, %r, %r, %r)' % (
@@ -94,6 +95,9 @@ class RemoteContext(object):
 
         if self.key_file:
             connection_cmd.extend(["-i", self.key_file])
+
+        if self.tty:
+            connection_cmd.append('-t')
         return connection_cmd + cmd
 
     def Popen(self, cmd, **kwargs):
