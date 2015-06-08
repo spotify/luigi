@@ -36,7 +36,7 @@ from luigi import configuration
 logger = logging.getLogger("luigi-interface")
 
 
-DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.getfqdn()
+DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.gethostname()
 DEBUG = False
 
 
