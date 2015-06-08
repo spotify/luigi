@@ -141,6 +141,7 @@ Date: 01/02/2015
 
 
 import abc
+import collections
 import datetime
 import itertools
 import logging
@@ -160,8 +161,8 @@ class SQLAlchemyTarget(luigi.Target):
     """
     marker_table = None
     connect_args = {}
-    _engine = None  # sqlalchemy engine
-    _pid = None  # the pid of the sqlalchemy engine object
+    _engine_dict = {}  # dict of sqlalchemy engine instances
+    Connection = collections.namedtuple("Connection", "engine pid")
 
     def __init__(self, connection_string, target_table, update_id, echo=False, connect_args=None):
         """
@@ -188,12 +189,23 @@ class SQLAlchemyTarget(luigi.Target):
 
     @property
     def engine(self):
+        """
+        Return an engine instance, creating it if it doesn't exist.
+
+        Recreate the engine connection if it wasn't originally created
+        by the current process.
+        """
         pid = os.getpid()
-        if (SQLAlchemyTarget._engine is None) or (SQLAlchemyTarget._pid != pid):
-            SQLAlchemyTarget._engine = sqlalchemy.create_engine(self.connection_string, connect_args=self.connect_args,
-                                                                echo=self.echo)
-            SQLAlchemyTarget._pid = pid
-        return SQLAlchemyTarget._engine
+        conn = SQLAlchemyTarget._engine_dict.get(self.connection_string)
+        if not conn or conn.pid != pid:
+            # create and reset connection
+            engine = sqlalchemy.create_engine(
+                self.connection_string,
+                connect_args=self.connect_args,
+                echo=self.echo
+            )
+            SQLAlchemyTarget._engine_dict[self.connection_string] = self.Connection(engine, pid)
+        return SQLAlchemyTarget._engine_dict[self.connection_string].engine
 
     def touch(self):
         """
