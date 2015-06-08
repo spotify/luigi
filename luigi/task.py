@@ -68,9 +68,9 @@ class BulkCompleteNotImplementedError(NotImplementedError):
     """This is here to trick pylint.
 
     pylint thinks anything raising NotImplementedError needs to be implemented
-    in any subclass. bulk_complete does not. This tricks pylint into thinking
-    that the default implementation is a valid implementation and not an
-    abstract method."""
+    in any subclass. bulk_complete isn't like that. This tricks pylint into
+    thinking that the default implementation is a valid implementation and no
+    an abstract method."""
     pass
 
 

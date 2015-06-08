@@ -35,7 +35,7 @@ class CascadingClient(object):
     # methods here. If you want full control of which methods that should be
     # created, pass the kwarg to the constructor.
     ALL_METHOD_NAMES = ['exists', 'rename', 'remove', 'chmod', 'chown',
-                        'count', 'copy', 'get', 'put', 'mkdir', 'listdir',
+                        'count', 'copy', 'get', 'put', 'mkdir', 'list', 'listdir',
                         'getmerge',
                         'isdir',
                         'rename_dont_move',

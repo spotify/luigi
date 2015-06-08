@@ -40,9 +40,9 @@ from luigi import six
 from luigi.six.moves import range
 
 from luigi import configuration
-from luigi.format import FileWrapper, get_default_format, MixedUnicodeBytes
+from luigi.format import get_default_format, MixedUnicodeBytes
 from luigi.parameter import Parameter
-from luigi.target import FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile
+from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
 from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
@@ -108,7 +108,7 @@ class S3Client(FileSystem):
         if s3_key:
             return True
 
-        if self.is_dir(path):
+        if self.isdir(path):
             return True
 
         logger.debug('Path %s does not exist', path)
@@ -139,7 +139,7 @@ class S3Client(FileSystem):
             logger.debug('Deleting %s from bucket %s', key, bucket)
             return True
 
-        if self.is_dir(path) and not recursive:
+        if self.isdir(path) and not recursive:
             raise InvalidDeleteException(
                 'Path %s is a directory. Must use recursive delete' % path)
 
@@ -251,7 +251,7 @@ class S3Client(FileSystem):
 
         s3_bucket = self.s3.get_bucket(dst_bucket, validate=True)
 
-        if self.is_dir(source_path):
+        if self.isdir(source_path):
             src_prefix = self._add_path_delimiter(src_key)
             dst_prefix = self._add_path_delimiter(dst_key)
             for key in self.list(source_path):
@@ -268,7 +268,7 @@ class S3Client(FileSystem):
         self.copy(source_path, destination_path)
         self.remove(source_path)
 
-    def list(self, path):
+    def listdir(self, path):
         """
         Get an iterable with S3 folder contents.
         Iterable contains paths relative to queried path.
@@ -281,9 +281,14 @@ class S3Client(FileSystem):
         key_path = self._add_path_delimiter(key)
         key_path_len = len(key_path)
         for item in s3_bucket.list(prefix=key_path):
-            yield item.key[key_path_len:]
+            yield self._add_path_delimiter(path) + item.key[key_path_len:]
 
-    def is_dir(self, path):
+    def list(self, path):  # backwards compat
+        key_path_len = len(self._add_path_delimiter(path))
+        for item in self.listdir(path):
+            yield item[key_path_len:]
+
+    def isdir(self, path):
         """
         Is the parameter S3 path a directory?
         """
@@ -312,6 +317,22 @@ class S3Client(FileSystem):
             return True
 
         return False
+    is_dir = isdir  # compatibility with old version.
+
+    def mkdir(self, path, parents=True, raise_if_exists=False):
+        if raise_if_exists and self.isdir(path):
+            raise FileAlreadyExists()
+
+        _, key = self._path_to_bucket_and_key(path)
+        if self._is_root(key):
+            return  # isdir raises if the bucket doesn't exist; nothing to do here.
+
+        key = self._add_path_delimiter(key)
+
+        if not parents and not self.isdir(os.path.dirname(key)):
+            raise MissingParentDirectory()
+
+        return self.put_string("", self._add_path_delimiter(path))
 
     def _get_s3_config(self, key=None):
         try:

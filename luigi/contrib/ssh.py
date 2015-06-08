@@ -37,6 +37,7 @@ protocol or circumvent firewalls (as long as they are open for ssh traffic).
 """
 
 import contextlib
+import logging
 import os
 import random
 import subprocess
@@ -45,6 +46,9 @@ import posixpath
 import luigi
 import luigi.format
 import luigi.target
+
+
+logger = logging.getLogger('luigi-interface')
 
 
 class RemoteContext(object):
@@ -116,7 +120,7 @@ class RemoteContext(object):
         p = self.Popen(cmd, stdout=subprocess.PIPE)
         output, _ = p.communicate()
         if p.returncode != 0:
-            raise subprocess.CalledProcessError(p.returncode, cmd)
+            raise subprocess.CalledProcessError(p.returncode, cmd, output=output)
         return output
 
     @contextlib.contextmanager
@@ -160,6 +164,27 @@ class RemoteFileSystem(luigi.target.FileSystem):
                 raise
         return True
 
+    def listdir(self, path):
+        while path.endswith('/'):
+            path = path[:-1]
+
+        path = path or '.'
+        listing = self.remote_context.check_output(["find", path, "-type", "f"]).splitlines()
+        return [v.decode('utf-8') for v in listing]
+
+    def isdir(self, path):
+        """
+        Return `True` if directory at `path` exist, False otherwise.
+        """
+        try:
+            self.remote_context.check_output(["test", "-d", path])
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 1:
+                return False
+            else:
+                raise
+        return True
+
     def remove(self, path, recursive=True):
         """
         Remove file or directory at location `path`.
@@ -170,6 +195,27 @@ class RemoteFileSystem(luigi.target.FileSystem):
             cmd = ["rm", path]
 
         self.remote_context.check_output(cmd)
+
+    def mkdir(self, path, parents=True, raise_if_exists=False):
+        if self.exists(path):
+            if raise_if_exists:
+                raise luigi.target.FileAlreadyExists()
+            elif not self.isdir(path):
+                raise luigi.target.NotADirectory()
+            else:
+                return
+
+        if parents:
+            cmd = ['mkdir', '-p', path]
+        else:
+            cmd = ['mkdir', path, '2>&1']
+
+        try:
+            self.remote_context.check_output(cmd)
+        except subprocess.CalledProcessError as e:
+            if b'no such file' in e.output.lower():
+                raise luigi.target.MissingParentDirectory()
+            raise
 
     def _scp(self, src, dest):
         cmd = ["scp", "-q", "-C", "-o", "ControlMaster=no"]
@@ -191,7 +237,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         p = subprocess.Popen(cmd)
         output, _ = p.communicate()
         if p.returncode != 0:
-            raise subprocess.CalledProcessError(p.returncode, cmd)
+            raise subprocess.CalledProcessError(p.returncode, cmd, output=output)
 
     def put(self, local_path, path):
         # create parent folder if not exists
@@ -225,8 +271,8 @@ class AtomicRemoteFileWriter(luigi.format.OutputPipeProcessWrapper):
         # create parent folder if not exists
         normpath = os.path.normpath(self.path)
         folder = os.path.dirname(normpath)
-        if folder and not self.fs.exists(folder):
-            self.fs.remote_context.check_output(['mkdir', '-p', folder])
+        if folder:
+            self.fs.mkdir(folder)
 
         self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         super(AtomicRemoteFileWriter, self).__init__(
@@ -234,8 +280,13 @@ class AtomicRemoteFileWriter(luigi.format.OutputPipeProcessWrapper):
 
     def __del__(self):
         super(AtomicRemoteFileWriter, self).__del__()
-        if self.fs.exists(self.__tmp_path):
-            self.fs.remote_context.check_output(['rm', self.__tmp_path])
+
+        try:
+            if self.fs.exists(self.__tmp_path):
+                self.fs.remote_context.check_output(['rm', self.__tmp_path])
+        except Exception:
+            # Don't propagate the exception; bad things can happen.
+            logger.exception('Failed to delete in-flight file')
 
     def close(self):
         super(AtomicRemoteFileWriter, self).close()

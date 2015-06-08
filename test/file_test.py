@@ -27,6 +27,7 @@ import mock
 import luigi.format
 from luigi import LocalTarget
 from luigi.file import LocalFileSystem
+from luigi.target import FileAlreadyExists, MissingParentDirectory
 from target_test import FileSystemTargetTestMixin
 
 
@@ -200,7 +201,7 @@ class TmpFileTest(unittest.TestCase):
         self.assertFalse(os.path.exists(path))
 
 
-class TestFileSystem(unittest.TestCase):
+class FileSystemTest(unittest.TestCase):
     path = '/tmp/luigi-test-dir'
     fs = LocalFileSystem()
 
@@ -213,13 +214,26 @@ class TestFileSystem(unittest.TestCase):
 
     def test_mkdir(self):
         testpath = os.path.join(self.path, 'foo/bar')
+
+        self.assertRaises(MissingParentDirectory, self.fs.mkdir, testpath, parents=False)
+
         self.fs.mkdir(testpath)
         self.assertTrue(os.path.exists(testpath))
+        self.assertTrue(self.fs.isdir(testpath))
+
+        self.assertRaises(FileAlreadyExists, self.fs.mkdir, testpath, raise_if_exists=True)
 
     def test_exists(self):
         self.assertFalse(self.fs.exists(self.path))
         os.mkdir(self.path)
         self.assertTrue(self.fs.exists(self.path))
+        self.assertTrue(self.fs.isdir(self.path))
+
+    def test_listdir(self):
+        os.mkdir(self.path)
+        with open(self.path + '/file', 'w') as fp:
+            pass
+        self.assertTrue([self.path + '/file'], list(self.fs.listdir(self.path + '/')))
 
 
 class TestImportFile(unittest.TestCase):

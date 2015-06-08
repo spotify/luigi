@@ -71,6 +71,9 @@ class MockFileSystem(target.FileSystem):
         return [s for s in self.get_all_data().keys()
                 if s.startswith(path)]
 
+    def isdir(self, path):
+        return any(self.listdir(path))
+
     def mkdir(self, path, parents=True, raise_if_exists=False):
         """
         mkdir is a noop.
@@ -111,6 +114,7 @@ class MockTarget(target.FileSystemTarget):
 
     def open(self, mode):
         fn = self._fn
+        mock_target = self
 
         class Buffer(BytesIO):
             # Just to be able to do writing + reading from the same buffer
@@ -120,45 +124,45 @@ class MockTarget(target.FileSystemTarget):
             def set_wrapper(self, wrapper):
                 self.wrapper = wrapper
 
-            def write(self2, data):
+            def write(self, data):
                 if six.PY3:
                     stderrbytes = sys.stderr.buffer
                 else:
                     stderrbytes = sys.stderr
 
-                if self._mirror_on_stderr:
-                    if self2._write_line:
+                if mock_target._mirror_on_stderr:
+                    if self._write_line:
                         sys.stderr.write(fn + ": ")
                     stderrbytes.write(data)
                     if (data[-1]) == '\n':
-                        self2._write_line = True
+                        self._write_line = True
                     else:
-                        self2._write_line = False
-                super(Buffer, self2).write(data)
+                        self._write_line = False
+                super(Buffer, self).write(data)
 
-            def close(self2):
+            def close(self):
                 if mode == 'w':
                     try:
-                        self.wrapper.flush()
+                        mock_target.wrapper.flush()
                     except AttributeError:
                         pass
-                    self.fs.get_all_data()[fn] = self2.getvalue()
-                super(Buffer, self2).close()
+                    mock_target.fs.get_all_data()[fn] = self.getvalue()
+                super(Buffer, self).close()
 
             def __exit__(self, exc_type, exc_val, exc_tb):
                 if not exc_type:
                     self.close()
 
-            def __enter__(self2):
-                return self2
+            def __enter__(self):
+                return self
 
-            def readable(self2):
+            def readable(self):
                 return mode == 'r'
 
-            def writeable(self2):
+            def writeable(self):
                 return mode == 'w'
 
-            def seekable(self2):
+            def seekable(self):
                 return False
 
         if mode == 'w':
