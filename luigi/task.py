@@ -64,6 +64,16 @@ def id_to_name_and_params(task_id):
     return luigi.tools.parse_task.id_to_name_and_params(task_id)
 
 
+class BulkCompleteNotImplementedError(NotImplementedError):
+    """This is here to trick pylint.
+
+    pylint thinks anything raising NotImplementedError needs to be implemented
+    in any subclass. bulk_complete does not. This tricks pylint into thinking
+    that the default implementation is a valid implementation and not an
+    abstract method."""
+    pass
+
+
 @six.add_metaclass(Register)
 class Task(object):
     """
@@ -358,7 +368,7 @@ class Task(object):
         Override (with an efficient implementation) for efficient scheduling
         with range tools. Keep the logic consistent with that of complete().
         """
-        raise NotImplementedError
+        raise BulkCompleteNotImplementedError()
 
     def output(self):
         """
