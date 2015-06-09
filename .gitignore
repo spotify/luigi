@@ -1,5 +1,6 @@
 .coverage.*
 doc/api/*.rst
+test/gcloud-credentials.json
 
 .nicesetup
 
