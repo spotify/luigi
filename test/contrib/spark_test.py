@@ -149,7 +149,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
         self.assertEqual(proc.call_args[0][0],
                          ['ss-stub', '--master', 'yarn-client', '--deploy-mode', 'client', '--name', 'AppName',
                           '--class', 'org.test.MyClass', '--jars', 'jars/my.jar', '--py-files', 'file1.py,file2.py',
-                          '--files', 'file1,file2', '--archives', 'archive1,archive2', '--conf', '"Prop=Value"',
+                          '--files', 'file1,file2', '--archives', 'archive1,archive2', '--conf', 'Prop=Value',
                           '--properties-file', 'conf/spark-defaults.conf', '--driver-memory', '4G', '--driver-java-options', '-Xopt',
                           '--driver-library-path', 'library/path', '--driver-class-path', 'class/path', '--executor-memory', '8G',
                           '--driver-cores', '8', '--supervise', '--total-executor-cores', '150', '--executor-cores', '10',
@@ -165,7 +165,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
         self.assertEqual(proc.call_args[0][0],
                          ['ss-stub', '--master', 'spark://host:7077', '--jars', 'jar1.jar,jar2.jar',
                           '--py-files', 'file1.py,file2.py', '--files', 'file1,file2', '--archives', 'archive1',
-                          '--conf', '"prop1=val1"', 'test.py'])
+                          '--conf', 'prop1=val1', 'test.py'])
 
     @patch('luigi.contrib.spark.tempfile.TemporaryFile')
     @patch('luigi.contrib.spark.subprocess.Popen')
