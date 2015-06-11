@@ -373,7 +373,6 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     :return:
     """
     if "no_lock" not in env_params:
-        # TODO(erikbern): should we really override args here?
         env_params["no_lock"] = True
 
     Interface.run(tasks, worker_scheduler_factory, override_defaults=env_params)
