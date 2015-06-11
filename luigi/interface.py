@@ -376,4 +376,4 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
         # TODO(erikbern): should we really override args here?
         env_params["no_lock"] = True
 
-    Interface.run(tasks, worker_scheduler_factory, env_params)
+    Interface.run(tasks, worker_scheduler_factory, override_defaults=env_params)
