@@ -217,7 +217,7 @@ def check_complete(task, out_queue):
 class worker(Config):
 
     ping_interval = FloatParameter(default=1.0,
-                                   config_path=dict(section='core', name='retry-delay'))
+                                   config_path=dict(section='core', name='worker-ping-interval'))
     keep_alive = BoolParameter(default=False,
                                config_path=dict(section='core', name='worker-keep-alive'))
     count_uniques = BoolParameter(default=False,
