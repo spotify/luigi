@@ -86,9 +86,6 @@ class Parameter(object):
     There are subclasses of ``Parameter`` that define what type the parameter has. This is not
     enforced within Python, but are used for command line interaction.
 
-    The ``config_path`` argument lets you specify a place where the parameter is read from config
-    in case no value is provided.
-
     When a task is instantiated, it will first use any argument as the value of the parameter, eg.
     if you instantiate a = TaskA(x=44) then a.x == 44. If this does not exist, it will use the value
     of the Parameter object, which is defined on a class level. This will be resolved in this
