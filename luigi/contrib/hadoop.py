@@ -45,7 +45,7 @@ import tempfile
 import warnings
 from hashlib import md5
 from itertools import groupby
-from cached_property import cached_property
+import cached_property
 
 from luigi import six
 
@@ -67,7 +67,7 @@ except ImportError:
 
 logger = logging.getLogger('luigi-interface')
 
-_attached_packages = []
+_attached_packages = [cached_property]
 
 
 class hadoop(luigi.task.Config):
@@ -724,15 +724,15 @@ class JobTask(BaseHadoopJobTask):
             jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
         return jcs
 
-    @cached_property
+    @cached_property.cached_property
     def serialize(self):
         return DataInterchange[self.data_interchange_format]['serialize']
 
-    @cached_property
+    @cached_property.cached_property
     def internal_serialize(self):
         return DataInterchange[self.data_interchange_format]['internal_serialize']
 
-    @cached_property
+    @cached_property.cached_property
     def deserialize(self):
         return DataInterchange[self.data_interchange_format]['deserialize']
 
