@@ -21,7 +21,6 @@ This module contains the bindings for command line integration and dynamic loadi
 import argparse
 import logging
 import logging.config
-import optparse
 import os
 import sys
 import tempfile
@@ -206,9 +205,9 @@ def error_task_names(task_name, task_names):
     raise SystemExit(display_string)
 
 
-def add_task_parameters(parser, task_cls, optparse=False):
+def add_task_parameters(parser, task_cls):
     for param_name, param in task_cls.get_params():
-        param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, optparse=optparse, glob=False)
+        param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, glob=False)
 
 
 def get_global_parameters():
@@ -220,9 +219,9 @@ def get_global_parameters():
         yield task_name, is_without_section, param_name, param
 
 
-def add_global_parameters(parser, optparse=False):
+def add_global_parameters(parser):
     for task_name, is_without_section, param_name, param in get_global_parameters():
-        param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse, glob=True, is_without_section=is_without_section)
+        param.add_to_cmdline_parser(parser, param_name, task_name, glob=True, is_without_section=is_without_section)
 
 
 def get_task_parameters(task_cls, args):
@@ -331,90 +330,18 @@ class DynamicArgParseInterface(ArgParseInterface):
         return self.parse_task(cmdline_args, main_task_cls)
 
 
-class PassThroughOptionParser(optparse.OptionParser):
-    """
-    An unknown option pass-through implementation of OptionParser.
-
-    When unknown arguments are encountered, bundle with largs and try again, until rargs is depleted.
-
-    sys.exit(status) will still be called if a known argument is passed
-    incorrectly (e.g. missing arguments or bad argument types, etc.)
-    """
-
-    def _process_args(self, largs, rargs, values):
-        while rargs:
-            try:
-                optparse.OptionParser._process_args(self, largs, rargs, values)
-            except (optparse.BadOptionError, optparse.AmbiguousOptionError) as e:
-                largs.append(e.opt_str)
-
-
-class OptParseInterface(Interface):
-    """
-    Supported for legacy reasons where it's necessary to interact with an existing parser.
-
-    Takes the task using --task. All parameters to all possible tasks will be defined globally
-    in a big unordered soup.
-    """
-
-    def __init__(self, existing_optparse):
-        self.__existing_optparse = existing_optparse
-
-    def parse(self, cmdline_args=None, main_task_cls=None):
-        parser = PassThroughOptionParser()
-
-        def add_task_option(p):
-            if main_task_cls:
-                p.add_option('--task', help='Task to run (one of ' + Register.tasks_str() + ') [default: %default]', default=main_task_cls.task_family)
-            else:
-                p.add_option('--task', help='Task to run (one of %s)' % Register.tasks_str())
-
-        add_global_parameters(parser, optparse=True)
-
-        add_task_option(parser)
-        options, args = parser.parse_args(args=cmdline_args)
-
-        task_cls_name = options.task
-        if self.__existing_optparse:
-            parser = self.__existing_optparse
-        else:
-            parser = optparse.OptionParser()
-        add_task_option(parser)
-
-        task_cls = Register.get_task_cls(task_cls_name)
-
-        # Register all parameters as a big mess
-        add_global_parameters(parser, optparse=True)
-        add_task_parameters(parser, task_cls, optparse=True)
-
-        # Parse and run
-        options, args = parser.parse_args(args=cmdline_args)
-
-        set_global_parameters(options)
-        task_params = get_task_parameters(task_cls, options)
-
-        return [task_cls(**task_params)]
-
-
-def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None,
+def run(cmdline_args=None, main_task_cls=None,
         worker_scheduler_factory=None, use_dynamic_argparse=False, local_scheduler=False):
     """
-    Run from cmdline.
-
-    The default parser uses argparse however, for legacy reasons,
-    we support optparse that optionally allows for overriding an existing option parser with new args.
+    Run from cmdline using argparse.
 
     :param cmdline_args:
-    :param existing_optparse:
-    :param use_optparse:
     :param main_task_cls:
     :param worker_scheduler_factory:
     :param use_dynamic_argparse:
     :param local_scheduler:
     """
-    if use_optparse:
-        interface = OptParseInterface(existing_optparse)
-    elif use_dynamic_argparse:
+    if use_dynamic_argparse:
         interface = DynamicArgParseInterface()
     else:
         interface = ArgParseInterface()

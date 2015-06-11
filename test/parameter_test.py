@@ -633,7 +633,3 @@ class OverrideEnvStuff(unittest.TestCase):
     def testOverrideSchedulerPort3(self):
         env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6545)
-
-
-if __name__ == '__main__':
-    luigi.run(use_optparse=True)
