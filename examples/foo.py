@@ -64,4 +64,4 @@ if __name__ == "__main__":
     if os.path.exists('/tmp/bar'):
         shutil.rmtree('/tmp/bar')
 
-    luigi.run(['--task', 'examples.Foo', '--workers', '2', '--local-scheduler'], use_optparse=True)
+    luigi.run(['--task', 'examples.Foo', '--workers', '2', '--local-scheduler'])
