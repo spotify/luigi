@@ -71,17 +71,18 @@ class BigqueryTest(_gcs_test._GCSBaseTestCase):
         super(BigqueryTest, self).setUp()
         self.bq_client = bigquery.BigqueryClient(_gcs_test.CREDENTIALS)
 
-        self.table_id = self.id().split('.')[-1]
-        self.addCleanup(self.bq_client.delete_table, PROJECT_ID, DATASET_ID, self.table_id)
+        self.table = bigquery.BQTable(project_id=PROJECT_ID, dataset_id=DATASET_ID,
+                                      table_id=self.id().split('.')[-1])
+        self.addCleanup(self.bq_client.delete_table, self.table)
 
     def create_dataset(self, data=[]):
-        self.bq_client.delete_table(PROJECT_ID, DATASET_ID, self.table_id)
+        self.bq_client.delete_table(self.table)
 
         text = '\n'.join(map(json.dumps, data))
         gcs_file = _gcs_test.bucket_url(self.id())
         self.client.put_string(text, gcs_file)
 
-        task = TestLoadTask(source=gcs_file, table=self.table_id)
+        task = TestLoadTask(source=gcs_file, table=self.table.table_id)
         task._BIGQUERY_CLIENT = self.bq_client
 
         task.run()
@@ -93,25 +94,25 @@ class BigqueryTest(_gcs_test._GCSBaseTestCase):
         ])
 
         # Cram some stuff in here to make the tests run faster - loading data takes a while!
-        self.assertTrue(self.bq_client.exists(PROJECT_ID, DATASET_ID, self.table_id))
-        self.assertIn(DATASET_ID, list(self.bq_client.list_datasets(PROJECT_ID)))
-        self.assertIn(self.table_id, list(self.bq_client.list_tables(PROJECT_ID, DATASET_ID)))
+        self.assertTrue(self.bq_client.dataset_exists(self.table))
+        self.assertTrue(self.bq_client.table_exists(self.table))
+        self.assertIn(self.table.dataset_id,
+                      list(self.bq_client.list_datasets(self.table.project_id)))
+        self.assertIn(self.table.table_id,
+                      list(self.bq_client.list_tables(self.table.dataset)))
 
+        new_table = self.table._replace(table_id=self.table.table_id + '_copy')
         self.bq_client.copy(
-            source_project_id=PROJECT_ID,
-            dest_project_id=PROJECT_ID,
-            source_dataset_id=DATASET_ID,
-            dest_dataset_id=DATASET_ID,
-            source_table_id=self.table_id,
-            dest_table_id=self.table_id + '_copy',
+            source_table=self.table,
+            dest_table=new_table
         )
-        self.assertTrue(self.bq_client.exists(PROJECT_ID, DATASET_ID, self.table_id + '_copy'))
-        self.bq_client.delete_table(PROJECT_ID, DATASET_ID, self.table_id + '_copy')
-        self.assertFalse(self.bq_client.exists(PROJECT_ID, DATASET_ID, self.table_id + '_copy'))
+        self.assertTrue(self.bq_client.table_exists(new_table))
+        self.bq_client.delete_table(new_table)
+        self.assertFalse(self.bq_client.table_exists(new_table))
 
     def test_run_query(self):
-        task = TestRunQueryTask(table=self.table_id)
+        task = TestRunQueryTask(table=self.table.table_id)
         task._BIGQUERY_CLIENT = self.bq_client
         task.run()
 
-        self.assertTrue(self.bq_client.exists(PROJECT_ID, DATASET_ID, self.table_id))
+        self.assertTrue(self.bq_client.table_exists(self.table))

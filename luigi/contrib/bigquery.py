@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+import collections
 import logging
 import luigi.target
 import time
@@ -54,6 +55,15 @@ class SourceFormat(object):
     NEWLINE_DELIMITED_JSON = 'NEWLINE_DELIMITED_JSON'
 
 
+BQDataset = collections.namedtuple('BQDataset', 'project_id dataset_id')
+
+
+class BQTable(collections.namedtuple('BQTable', 'project_id dataset_id table_id')):
+    @property
+    def dataset(self):
+        return BQDataset(project_id=self.project_id, dataset_id=self.dataset_id)
+
+
 class BigqueryClient(object):
     """A client for Google BigQuery.
 
@@ -73,40 +83,55 @@ class BigqueryClient(object):
         else:
             self.client = discovery.build('bigquery', 'v2', credentials=oauth_credentials, http=http_)
 
-    def exists(self, project_id, dataset_id, table_id=None):
-        """Returns whether the given project/dataset/table exists.
+    def dataset_exists(self, dataset):
+        """Returns whether the given dataset exists.
 
-           ``table_id`` may be omitted if you want to check the existence of a dataset.
+           :param dataset:
+           :type dataset: BQDataset
         """
 
         try:
-            self.client.datasets().get(projectId=project_id, datasetId=dataset_id).execute()
+            self.client.datasets().get(projectId=dataset.project_id,
+                                       datasetId=dataset.dataset_id).execute()
         except http.HttpError as ex:
             if ex.resp.status == 404:
                 return False
             raise
 
-        if table_id is not None:
-            try:
-                self.client.tables().get(projectId=project_id, datasetId=dataset_id,
-                                         tableId=table_id).execute()
-            except http.HttpError as ex:
-                if ex.resp.status == 404:
-                    return False
-                raise
+        return True
+
+    def table_exists(self, table):
+        """Returns whether the given table exists.
+
+           :param table:
+           :type table: BQTable
+        """
+        if not self.dataset_exists(table.dataset):
+            return False
+
+        try:
+            self.client.tables().get(projectId=table.project_id,
+                                     datasetId=table.dataset_id,
+                                     tableId=table.table_id).execute()
+        except http.HttpError as ex:
+            if ex.resp.status == 404:
+                return False
+            raise
 
         return True
 
-    def make_dataset(self, project_id, dataset_id, raise_if_exists=False, body={}):
+    def make_dataset(self, dataset, raise_if_exists=False, body={}):
         """Creates a new dataset with the default permissions.
 
-           :param raise_if_exists whether to raise an exception if the dataset already exists.
-           :raises luigi.target.FileAlreadyExists
+           :param dataset:
+           :type dataset: BQDataset
+           :param raise_if_exists: whether to raise an exception if the dataset already exists.
+           :raises luigi.target.FileAlreadyExists: if raise_if_exists=True and the dataset exists
         """
 
         try:
-            self.client.datasets().insert(projectId=project_id, body=dict(
-                {'id': '{}:{}'.format(project_id, dataset_id)}, **body)).execute()
+            self.client.datasets().insert(projectId=dataset.project_id, body=dict(
+                {'id': '{}:{}'.format(dataset.project_id, dataset.dataset_id)}, **body)).execute()
         except http.HttpError as ex:
             if ex.resp.status == 409:
                 if raise_if_exists:
@@ -114,29 +139,41 @@ class BigqueryClient(object):
             else:
                 raise
 
-    def delete_dataset(self, project_id, dataset_id, delete_nonempty=True):
+    def delete_dataset(self, dataset, delete_nonempty=True):
         """Deletes a dataset (and optionally any tables in it), if it exists.
 
-           :param delete_nonempty if true, will delete any tables before deleting the dataset
+           :param dataset:
+           :type dataset: BQDataset
+           :param delete_nonempty: if true, will delete any tables before deleting the dataset
         """
 
-        if not self.exists(project_id, dataset_id):
+        if not self.dataset_exists(dataset):
             return
 
-        self.client.datasets().delete(projectId=project_id, datasetId=dataset_id,
+        self.client.datasets().delete(projectId=dataset.project_id,
+                                      datasetId=dataset.dataset_id,
                                       deleteContents=delete_nonempty).execute()
 
-    def delete_table(self, project_id, dataset_id, table_id):
-        """Deletes a table, if it exists."""
+    def delete_table(self, table):
+        """Deletes a table, if it exists.
 
-        if not self.exists(project_id, dataset_id, table_id):
+           :param table:
+           :type table: BQTable
+        """
+
+        if not self.table_exists(table):
             return
 
-        self.client.tables().delete(projectId=project_id, datasetId=dataset_id,
-                                    tableId=table_id).execute()
+        self.client.tables().delete(projectId=table.project_id,
+                                    datasetId=table.dataset_id,
+                                    tableId=table.table_id).execute()
 
     def list_datasets(self, project_id):
-        """Returns the list of datasets in a given project."""
+        """Returns the list of datasets in a given project.
+
+           :param project_id:
+           :type project_id: str
+        """
 
         request = self.client.datasets().list(projectId=project_id)
         response = request.execute()
@@ -151,10 +188,15 @@ class BigqueryClient(object):
 
             response = request.execute()
 
-    def list_tables(self, project_id, dataset_id):
-        """Returns the list of tables in a given dataset."""
+    def list_tables(self, dataset):
+        """Returns the list of tables in a given dataset.
 
-        request = self.client.tables().list(projectId=project_id, datasetId=dataset_id)
+           :param dataset:
+           :type dataset: BQDataset
+        """
+
+        request = self.client.tables().list(projectId=dataset.project_id,
+                                            datasetId=dataset.dataset_id)
         response = request.execute()
 
         while response is not None:
@@ -167,14 +209,18 @@ class BigqueryClient(object):
 
             response = request.execute()
 
-    def run_job(self, project_id, body, dataset_id=None):
+    def run_job(self, project_id, body, dataset=None):
         """Runs a bigquery "job". See the documentation for the format of body.
 
-           :note You probably don't need to use this directly.
+           .. note::
+               You probably don't need to use this directly. Use the tasks defined below.
+
+           :param dataset:
+           :type dataset: BQDataset
         """
 
-        if not self.exists(project_id, dataset_id):
-            self.make_dataset(project_id, dataset_id)
+        if dataset and not self.dataset_exists(dataset):
+            self.make_dataset(dataset)
 
         new_job = self.client.jobs().insert(projectId=project_id, body=body).execute()
         job_id = new_job['jobReference']['jobId']
@@ -190,32 +236,35 @@ class BigqueryClient(object):
             time.sleep(5.0)
 
     def copy(self,
-             source_project_id,
-             source_dataset_id,
-             source_table_id,
-             dest_project_id,
-             dest_dataset_id,
-             dest_table_id,
+             source_table,
+             dest_table,
              create_disposition=CreateDisposition.CREATE_IF_NEEDED,
              write_disposition=WriteDisposition.WRITE_TRUNCATE):
         """Copies (or appends) a table to another table.
 
-           :param create_disposition whether to create the table if needed
-           :param write_disposition whether to append/truncate/fail if the table exists"""
+            :param source_table:
+            :type source_table: BQTable
+            :param dest_table:
+            :type dest_table: BQTable
+            :param create_disposition: whether to create the table if needed
+            :type create_disposition: CreateDisposition
+            :param write_disposition: whether to append/truncate/fail if the table exists
+            :type write_disposition: WriteDisposition
+        """
 
         job = {
-            "projectId": dest_project_id,
+            "projectId": dest_table.project_id,
             "configuration": {
                 "copy": {
                     "sourceTable": {
-                        "projectId": source_project_id,
-                        "datasetId": source_dataset_id,
-                        "tableId": source_table_id,
+                        "projectId": source_table.project_id,
+                        "datasetId": source_table.dataset_id,
+                        "tableId": source_table.table_id,
                     },
                     "destinationTable": {
-                        "projectId": dest_project_id,
-                        "datasetId": dest_dataset_id,
-                        "tableId": dest_table_id,
+                        "projectId": dest_table.project_id,
+                        "datasetId": dest_table.dataset_id,
+                        "tableId": dest_table.table_id,
                     },
                     "createDisposition": create_disposition,
                     "writeDisposition": write_disposition,
@@ -223,21 +272,28 @@ class BigqueryClient(object):
             }
         }
 
-        self.run_job(dest_project_id, job, dataset_id=dest_dataset_id)
+        self.run_job(dest_table.project_id, job, dataset=dest_table.dataset)
 
 
 class BigqueryTarget(luigi.target.Target):
     def __init__(self, project_id, dataset_id, table_id, client=None):
-        self.project_id = project_id
-        self.dataset_id = dataset_id
-        self.table_id = table_id
+        self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id)
         self.client = client or BigqueryClient()
 
+    @classmethod
+    def from_bqtable(cls, table, client=None):
+        """A constructor that takes a :py:class:`BQTable`.
+
+           :param table:
+           :type table: BQTable
+        """
+        return cls(table.project_id, table.dataset_id, table.table_id, client=client)
+
     def exists(self):
-        return self.client.exists(self.project_id, self.dataset_id, self.table_id)
+        return self.client.table_exists(self.table)
 
     def __str__(self):
-        return 'bq://' + self.project_id + '/' + self.dataset_id + '/' + self.table_id
+        return str(self.table)
 
 
 class BigqueryLoadTask(luigi.Task):
@@ -245,14 +301,14 @@ class BigqueryLoadTask(luigi.Task):
 
     @property
     def source_format(self):
-        """The source format to use (see :py:class:SourceFormat)."""
+        """The source format to use (see :py:class:`SourceFormat`)."""
         return SourceFormat.NEWLINE_DELIMITED_JSON
 
     @property
     def write_disposition(self):
         """What to do if the table already exists. By default this will fail the job.
 
-           See :py:class:WriteDisposition"""
+           See :py:class:`WriteDisposition`"""
         return WriteDisposition.WRITE_EMPTY
 
     @property
@@ -281,13 +337,13 @@ class BigqueryLoadTask(luigi.Task):
         assert all(x.startswith('gs://') for x in source_uris)
 
         job = {
-            'projectId': output.project_id,
+            'projectId': output.table.project_id,
             'configuration': {
                 'load': {
                     'destinationTable': {
-                        'projectId': output.project_id,
-                        'datasetId': output.dataset_id,
-                        'tableId': output.table_id,
+                        'projectId': output.table.project_id,
+                        'datasetId': output.table.dataset_id,
+                        'tableId': output.table.table_id,
                     },
                     'sourceFormat': self.source_format,
                     'writeDisposition': self.write_disposition,
@@ -299,7 +355,7 @@ class BigqueryLoadTask(luigi.Task):
         if self.schema:
             job['configuration']['load']['schema'] = {'fields': self.schema}
 
-        bq_client.run_job(output.project_id, job, dataset_id=output.dataset_id)
+        bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
 
 
 class BigqueryRunQueryTask(luigi.Task):
@@ -308,12 +364,12 @@ class BigqueryRunQueryTask(luigi.Task):
     def write_disposition(self):
         """What to do if the table already exists. By default this will fail the job.
 
-           See :py:class:WriteDisposition"""
+           See :py:class:`WriteDisposition`"""
         return WriteDisposition.WRITE_TRUNCATE
 
     @property
     def create_disposition(self):
-        """Whether to create the table or not. See :py:class:CreateDisposition"""
+        """Whether to create the table or not. See :py:class:`CreateDisposition`"""
         return CreateDisposition.CREATE_IF_NEEDED
 
     @property
@@ -323,7 +379,7 @@ class BigqueryRunQueryTask(luigi.Task):
 
     @property
     def query_mode(self):
-        """The query mode. See :py:class:QueryMode."""
+        """The query mode. See :py:class:`QueryMode`."""
         return QueryMode.INTERACTIVE
 
     def run(self):
@@ -340,15 +396,15 @@ class BigqueryRunQueryTask(luigi.Task):
         logger.info('Query SQL: %s', query)
 
         job = {
-            'projectId': output.project_id,
+            'projectId': output.table.project_id,
             'configuration': {
                 'query': {
                     'query': query,
                     'priority': self.query_mode,
                     'destinationTable': {
-                        'projectId': output.project_id,
-                        'datasetId': output.dataset_id,
-                        'tableId': output.table_id,
+                        'projectId': output.table.project_id,
+                        'datasetId': output.table.dataset_id,
+                        'tableId': output.table.table_id,
                     },
                     'allowLargeResults': True,
                     'createDisposition': self.create_disposition,
@@ -357,4 +413,4 @@ class BigqueryRunQueryTask(luigi.Task):
             }
         }
 
-        bq_client.run_job(output.project_id, job, dataset_id=output.dataset_id)
+        bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
