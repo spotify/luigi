@@ -97,6 +97,11 @@ class CmdlineTest(unittest.TestCase):
         self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_100': b'done'})
 
     @mock.patch("logging.getLogger")
+    def test_cmdline_local_scheduler(self, logger):
+        luigi.run(['SomeTask', '--no-lock', '--n', '101'], local_scheduler=True)
+        self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_101': b'done'})
+
+    @mock.patch("logging.getLogger")
     def test_cmdline_other_task(self, logger):
         luigi.run(['--local-scheduler', '--no-lock', 'SomeTask', '--n', '1000'])
         self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_1000': b'done'})
