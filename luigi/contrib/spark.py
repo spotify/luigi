@@ -269,7 +269,7 @@ class SparkSubmitTask(luigi.Task):
         command = []
         if value and isinstance(value, dict):
             for prop, value in value.items():
-                command += [name, '"{0}={1}"'.format(prop, value)]
+                command += [name, '{0}={1}'.format(prop, value)]
         return command
 
     def _flag_arg(self, name, value):
