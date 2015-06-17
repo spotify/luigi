@@ -35,7 +35,7 @@ class DummyS3CopyToTable(luigi.contrib.redshift.S3CopyToTable):
     database = 'dummy_database'
     user = 'dummy_user'
     password = 'dummy_password'
-    table = 'dummy_table'
+    table = luigi.Parameter(default='dummy_table')
     columns = (
         ('some_text', 'text'),
         ('some_int', 'int'),
@@ -66,7 +66,7 @@ class TestS3CopyToTable(unittest.TestCase):
         # returned by S3CopyToTable.output(self).
         mock_redshift_target.assert_called_with(database=task.database,
                                                 host=task.host,
-                                                update_id='DummyS3CopyToTable()',
+                                                update_id='DummyS3CopyToTable(table=dummy_table)',
                                                 user=task.user,
                                                 table=task.table,
                                                 password=task.password)
@@ -82,5 +82,30 @@ class TestS3CopyToTable(unittest.TestCase):
                                                "from pg_table_def "
                                                "where tablename = %s limit 1",
                                                (task.table,))
+
+        return
+
+
+class TestS3CopyToSchemaTable(unittest.TestCase):
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_s3_copy_to_table(self, mock_redshift_target, mock_copy):
+        task = DummyS3CopyToTable(table='dummy_schema.dummy_table')
+        task.run()
+
+        # The mocked connection cursor passed to
+        # S3CopyToTable.copy(self, cursor, f).
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+
+        # Check the SQL query in `S3CopyToTable.does_table_exist`.
+        mock_cursor.execute.assert_called_with("select 1 as table_exists "
+                                               "from information_schema.tables "
+                                               "where table_schema = %s and "
+                                               "table_name = %s limit 1",
+                                               tuple(task.table.split('.')))
 
         return
