@@ -51,7 +51,7 @@ class _GCSBaseTestCase(unittest.TestCase):
         if not ATTEMPTED_BUCKET_CREATE:
             try:
                 self.client.client.buckets().insert(
-                    project=PROJECT_ID, body={'name': PROJECT_ID}).execute()
+                    project=PROJECT_ID, body={'name': BUCKET_NAME}).execute()
             except googleapiclient.errors.HttpError as ex:
                 if ex.resp.status != 409:  # bucket already exists
                     raise
