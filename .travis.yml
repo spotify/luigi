@@ -19,6 +19,7 @@ env:
     - TOXENV=py27-cdh
     - TOXENV=py33-cdh
     - TOXENV=py34-cdh
+    - TOXENV=pypy-scheduler
 
 sudo: false
 

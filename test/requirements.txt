@@ -2,7 +2,6 @@ mock
 moto
 HTTPretty>=0.8.8
 nose
-psycopg2
 unittest2
 boto
 sqlalchemy
