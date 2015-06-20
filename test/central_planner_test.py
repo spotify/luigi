@@ -19,6 +19,8 @@ import time
 import datetime
 from helpers import unittest
 
+from nose.plugins.attrib import attr
+
 import luigi.notifications
 from luigi.scheduler import DISABLED, DONE, FAILED, CentralPlannerScheduler
 
@@ -26,6 +28,7 @@ luigi.notifications.DEBUG = True
 WORKER = 'myworker'
 
 
+@attr('scheduler')
 class CentralPlannerTest(unittest.TestCase):
 
     def setUp(self):
