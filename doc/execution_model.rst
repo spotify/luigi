@@ -79,7 +79,7 @@ even across multiple machines, because
 the central scheduler will make sure at most one of each ``AggregationTask`` task is run simultaneously.
 Note that this might actually mean multiple tasks can be run because
 there are instances with different parameters, and
-this can gives you some form of parallelization
+this can give you some form of parallelization
 (eg. ``AggregationTask(2013-01-09)`` might run in parallel with ``AggregationTask(2013-01-08)``).
 
 Of course,
