@@ -81,7 +81,7 @@ class Parameter(object):
             foo = luigi.Parameter()
 
     This makes it possible to instantiate multiple tasks, eg ``MyTask(foo='bar')`` and
-    ``My(foo='baz')``. The task will then have the ``foo`` attribute set appropriately.
+    ``MyTask(foo='baz')``. The task will then have the ``foo`` attribute set appropriately.
 
     There are subclasses of ``Parameter`` that define what type the parameter has. This is not
     enforced within Python, but are used for command line interaction.
