@@ -109,7 +109,9 @@ class PostgresTarget(luigi.Target):
     # Use DB side timestamps or client side timestamps in the marker_table
     use_db_timestamps = True
 
-    def __init__(self, host, database, user, password, table, update_id):
+    def __init__(
+        self, host, database, user, password, table, update_id, port=None
+    ):
         """
         Args:
             host (str): Postgres server address. Possibly a host:port string.
@@ -117,13 +119,14 @@ class PostgresTarget(luigi.Target):
             user (str): Database user
             password (str): Password for specified user
             update_id (str): An identifier for this data set
+            port (int): Postgres server port.
 
         """
         if ':' in host:
             self.host, self.port = host.split(':')
         else:
             self.host = host
-            self.port = None
+            self.port = port
         self.database = database
         self.user = user
         self.password = password
