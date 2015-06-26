@@ -80,7 +80,8 @@ class WorkerExternalTaskTest(unittest.TestCase):
                                                  worker_disconnect_delay=3,
                                                  disable_persist=3,
                                                  disable_window=5,
-                                                 disable_failures=2)
+                                                 disable_failures=2,
+                                                 prune_on_get_work=True)
 
     def _assert_complete(self, tasks):
         for t in tasks:
@@ -126,15 +127,6 @@ class WorkerExternalTaskTest(unittest.TestCase):
         assert luigi.configuration.get_config().getboolean('core',
                                                            'retry-external-tasks',
                                                            False) is True
-
-        original_get_work = self.scheduler.get_work
-
-        def decorated_get_work(*args, **kwargs):
-            # need to call `prune()` to make the scheduler run the retry logic
-            self.scheduler.prune()
-            return original_get_work(*args, **kwargs)
-
-        self.scheduler.get_work = decorated_get_work
 
         tempdir = tempfile.mkdtemp(prefix='luigi-test-')
 

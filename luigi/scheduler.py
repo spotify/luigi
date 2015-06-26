@@ -101,6 +101,8 @@ class scheduler(Config):
 
     visualization_graph = parameter.Parameter(default="svg", config_path=dict(section='scheduler', name='visualization-graph'))
 
+    prune_on_get_work = parameter.BoolParameter(default=False)
+
 
 def fix_time(x):
     # Backwards compatibility for a fix in Dec 2014. Prior to the fix, pickled state might store datetime objects
@@ -227,7 +229,7 @@ class Worker(object):
     def __init__(self, worker_id, last_active=None):
         self.id = worker_id
         self.reference = None  # reference to the worker in the real world. (Currently a dict containing just the host)
-        self.last_active = last_active  # seconds since epoch
+        self.last_active = last_active or time.time()  # seconds since epoch
         self.started = time.time()  # seconds since epoch
         self.tasks = set()  # task objects
         self.info = {}
@@ -709,6 +711,9 @@ class CentralPlannerScheduler(Scheduler):
 
         # TODO: remove tasks that can't be done, figure out if the worker has absolutely
         # nothing it can wait for
+
+        if self._config.prune_on_get_work:
+            self.prune()
 
         worker_id = kwargs['worker']
         # Return remaining tasks that have no FAILED descendents
