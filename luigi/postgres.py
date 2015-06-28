@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 """
-Implements a sublass of :py:class:`~luigi.target.Target` that writes data to Postgres.
+Implements a subclass of :py:class:`~luigi.target.Target` that writes data to Postgres.
 Also provides a helper task to copy data into a Postgres table.
 """
 
