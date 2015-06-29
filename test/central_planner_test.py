@@ -761,5 +761,26 @@ class CentralPlannerTest(unittest.TestCase):
             self.assertEqual(self.sch.get_work(worker=str(i))['task_id'], str(i))
             self.sch.add_task(worker=str(i), task_id=str(i), status=DONE)
 
+    def test_get_work_speed(self):
+        """ Test that get_work is fast for few workers and many DONEs.
+
+        In #986, @daveFNbuck reported that he got a slowdown.
+        """
+        # This took almost 4 minutes without optimization.
+        # Now it takes 10 seconds on my machine.
+        NUM_PENDING = 1000
+        NUM_DONE = 200000
+        assert NUM_DONE >= NUM_PENDING
+        for i in range(NUM_PENDING):
+            self.sch.add_task(worker=WORKER, task_id=str(i), resources={})
+
+        for i in range(NUM_PENDING, NUM_DONE):
+            self.sch.add_task(worker=WORKER, task_id=str(i), status=DONE)
+
+        for i in range(NUM_PENDING):
+            res = int(self.sch.get_work(worker=WORKER)['task_id'])
+            self.assertTrue(0 <= res < NUM_PENDING)
+            self.sch.add_task(worker=WORKER, task_id=str(res), status=DONE)
+
 if __name__ == '__main__':
     unittest.main()
