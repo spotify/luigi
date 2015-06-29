@@ -60,5 +60,9 @@ class RPCTest(central_planner_test.CentralPlannerTest, ServerTestBase):
         """ This would be too slow to run through network """
         pass
 
+    def test_get_work_speed(self):
+        """ This would be too slow to run through network """
+        pass
+
 if __name__ == '__main__':
     unittest.main()
