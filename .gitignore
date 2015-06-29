@@ -5,6 +5,7 @@ test/gcloud-credentials.json
 .nicesetup
 
 client.cfg
+luigi.cfg
 
 hadoop_test.py
 minicluster.py

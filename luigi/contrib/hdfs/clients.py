@@ -32,7 +32,7 @@ logger = logging.getLogger('luigi-interface')
 
 def get_autoconfig_client(show_warnings=True):
     """
-    Creates the client as specified in the `client.cfg` configuration.
+    Creates the client as specified in the `luigi.cfg` configuration.
     """
     configured_client = hdfs_config.get_configured_hdfs_client(show_warnings=show_warnings)
     if configured_client == "snakebite":

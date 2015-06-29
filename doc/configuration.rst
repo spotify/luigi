@@ -4,7 +4,7 @@ Configuration
 All configuration can be done by adding a configuration files. They are looked for in:
 
  * ``/etc/luigi/client.cfg``
- * ``client.cfg`` in your current working directory
+ * ``luigi.cfg`` (or its legacy name ``client.cfg``) in your current working directory
  * ``LUIGI_CONFIG_PATH`` environment variable
 
 in increasing order of preference. The order only matters in case of key conflicts (see docs for ConfigParser_)

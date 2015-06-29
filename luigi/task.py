@@ -125,7 +125,7 @@ class Task(object):
 
     #: Number of seconds after which to time out the run function.
     #: No timeout if set to 0.
-    #: Defaults to 0 or value in client.cfg
+    #: Defaults to 0 or value in luigi.cfg
     worker_timeout = None
 
     @property
