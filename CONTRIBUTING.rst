@@ -16,4 +16,4 @@ Where ``pep8`` is the lint checking, ``py27`` is obviously Python 2.7. ``nonhdfs
 
 For `cdh` and `hdp`, tox will download the hadoop distribution for you. You however have to have Java installed and the `JAVA_HOME` environment variable set.
 
-For more details, check out the ``.travis.yml`` and ``tox.ini`` files.
+For more details, check out the ``.travis.yml`` and ``tox.ini`` files. 
