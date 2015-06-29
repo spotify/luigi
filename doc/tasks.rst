@@ -99,7 +99,7 @@ An example:
             f = self.input().open('r') # this will return a file stream that reads from "xyz"
             g = self.output().open('w')
             for line in f:
-                g.write('%s\n', ''.join(reversed(line.strip().split()))
+                g.write('%s\n', ''.join(reversed(line.strip().split())))
             g.close() # needed because files are atomic
 
 
