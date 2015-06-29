@@ -173,27 +173,39 @@ def send_email(subject, message, sender, recipients, image_png=None):
         send_email_smtp(config, sender, subject, message, recipients, image_png)
 
 
-def send_error_email(subject, message):
+def _email_recipients(additional_recipients=None):
+    config = configuration.get_config()
+    receiver = config.get('core', 'error-email', None)
+    recipients = [receiver] if receiver else []
+    if additional_recipients:
+        if isinstance(additional_recipients, str):
+            recipients.append(additional_recipients)
+        else:
+            recipients.extend(additional_recipients)
+    return recipients
+
+
+def send_error_email(subject, message, additional_recipients=None):
     """
     Sends an email to the configured error-email.
 
     If no error-email is configured, then a message is logged.
     """
     config = configuration.get_config()
-    receiver = config.get('core', 'error-email', None)
-    if receiver:
+    recipients = _email_recipients(additional_recipients)
+    if recipients:
         sender = config.get('core', 'email-sender', DEFAULT_CLIENT_EMAIL)
-        logger.info("Sending warning email to %r", receiver)
+        logger.info("Sending warning email to %r", recipients)
         send_email(
             subject=subject,
             message=message,
             sender=sender,
-            recipients=(receiver,)
+            recipients=recipients
         )
     else:
         logger.info("Skipping error email. Set `error-email` in the `core` "
-                    "section of the luigi config file to receive error "
-                    "emails.")
+                    "section of the luigi config file or override `owner_email`"
+                    "in the task to receive error emails.")
 
 
 def _prefix(subject):
