@@ -160,11 +160,10 @@ class SQLAlchemyTarget(luigi.Target):
     to create a task to write to the database.
     """
     marker_table = None
-    connect_args = {}
     _engine_dict = {}  # dict of sqlalchemy engine instances
     Connection = collections.namedtuple("Connection", "engine pid")
 
-    def __init__(self, connection_string, target_table, update_id, echo=False, connect_args=None):
+    def __init__(self, connection_string, target_table, update_id, echo=False, connect_args={}):
         """
         Constructor for the SQLAlchemyTarget.
 
