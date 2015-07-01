@@ -35,40 +35,19 @@ from nose.plugins.attrib import attr
 if six.PY3:
     unicode = str
 
-#################################
-# Globals part of the test case #
-#################################
-TEMPDIR = tempfile.mkdtemp()
-SQLITEPATH = os.path.join(TEMPDIR, "sqlatest.db")
-CONNECTION_STRING = "sqlite:///%s" % SQLITEPATH
-TASK_LIST = ["item%d\tproperty%d\n" % (i, i) for i in range(10)]
-CONNECT_ARGS = {'timeout': 5.0}
-
 
 class BaseTask(luigi.Task):
+
+    TASK_LIST = ["item%d\tproperty%d\n" % (i, i) for i in range(10)]
 
     def output(self):
         return MockFile("BaseTask", mirror_on_stderr=True)
 
     def run(self):
         out = self.output().open("w")
-        for task in TASK_LIST:
+        for task in self.TASK_LIST:
             out.write(task)
         out.close()
-
-
-class SQLATask(sqla.CopyToTable):
-    columns = [
-        (["item", sqlalchemy.String(64)], {}),
-        (["property", sqlalchemy.String(64)], {})
-    ]
-    connection_string = CONNECTION_STRING
-    connect_args = CONNECT_ARGS
-    table = "item_property"
-    chunk_size = 1
-
-    def requires(self):
-        return BaseTask()
 
 
 @attr('sqlalchemy')
@@ -82,14 +61,34 @@ class TestSQLA(unittest.TestCase):
             self.engine.execute(table.delete())
 
     def setUp(self):
-        if not os.path.exists(TEMPDIR):
-            os.mkdir(TEMPDIR)
-        self.engine = sqlalchemy.create_engine(CONNECTION_STRING, connect_args=CONNECT_ARGS)
+        self.tempdir = tempfile.mkdtemp()
+        self.connection_string = self.get_connection_string()
+        self.connect_args = {'timeout': 5.0}
+        self.engine = sqlalchemy.create_engine(self.connection_string, connect_args=self.connect_args)
+
+        # Create SQLATask and store in self
+        class SQLATask(sqla.CopyToTable):
+            columns = [
+                (["item", sqlalchemy.String(64)], {}),
+                (["property", sqlalchemy.String(64)], {})
+            ]
+            connection_string = self.connection_string
+            connect_args = self.connect_args
+            table = "item_property"
+            chunk_size = 1
+
+            def requires(self):
+                return BaseTask()
+
+        self.SQLATask = SQLATask
 
     def tearDown(self):
         self._clear_tables()
-        if os.path.exists(TEMPDIR):
-            shutil.rmtree(TEMPDIR)
+        if os.path.exists(self.tempdir):
+            shutil.rmtree(self.tempdir)
+
+    def get_connection_string(self, db='sqlatest.db'):
+        return "sqlite:///{path}".format(path=os.path.join(self.tempdir, db))
 
     def test_create_table(self):
         """
@@ -97,8 +96,8 @@ class TestSQLA(unittest.TestCase):
         :return:
         """
         class TestSQLData(sqla.CopyToTable):
-            connection_string = CONNECTION_STRING
-            connect_args = CONNECT_ARGS
+            connection_string = self.connection_string
+            connect_args = self.connect_args
             table = "test_table"
             columns = [
                 (["id", sqlalchemy.Integer], dict(primary_key=True)),
@@ -124,7 +123,7 @@ class TestSQLA(unittest.TestCase):
         :return:
         """
         class TestSQLData(sqla.CopyToTable):
-            connection_string = CONNECTION_STRING
+            connection_string = self.connection_string
             table = "test_table"
             columns = []
             chunk_size = 1
@@ -141,23 +140,23 @@ class TestSQLA(unittest.TestCase):
             meta = sqlalchemy.MetaData()
             meta.reflect(bind=engine)
             self.assertEqual(set([u'table_updates', u'item_property']), set(meta.tables.keys()))
-            table = meta.tables[SQLATask.table]
+            table = meta.tables[self.SQLATask.table]
             s = sqlalchemy.select([sqlalchemy.func.count(table.c.item)])
             result = conn.execute(s).fetchone()
-            self.assertEqual(len(TASK_LIST), result[0])
+            self.assertEqual(len(BaseTask.TASK_LIST), result[0])
             s = sqlalchemy.select([table]).order_by(table.c.item)
             result = conn.execute(s).fetchall()
-            for i in range(len(TASK_LIST)):
-                given = TASK_LIST[i].strip("\n").split("\t")
+            for i in range(len(BaseTask.TASK_LIST)):
+                given = BaseTask.TASK_LIST[i].strip("\n").split("\t")
                 given = (unicode(given[0]), unicode(given[1]))
                 self.assertEqual(given, tuple(result[i]))
 
     def test_rows(self):
-        task, task0 = SQLATask(), BaseTask()
+        task, task0 = self.SQLATask(), BaseTask()
         luigi.build([task, task0], local_scheduler=True, workers=self.NUM_WORKERS)
 
         for i, row in enumerate(task.rows()):
-            given = TASK_LIST[i].strip("\n").split("\t")
+            given = BaseTask.TASK_LIST[i].strip("\n").split("\t")
             self.assertEqual(row, given)
 
     def test_run(self):
@@ -166,7 +165,7 @@ class TestSQLA(unittest.TestCase):
         inserting more rows into the db.
         :return:
         """
-        task, task0 = SQLATask(), BaseTask()
+        task, task0 = self.SQLATask(), BaseTask()
         self.engine = sqlalchemy.create_engine(task.connection_string)
         luigi.build([task0, task], local_scheduler=True)
         self._check_entries(self.engine)
@@ -180,7 +179,7 @@ class TestSQLA(unittest.TestCase):
         The chunk_size can be specified in order to control the batch size for inserts.
         :return:
         """
-        task, task0 = SQLATask(), BaseTask()
+        task, task0 = self.SQLATask(), BaseTask()
         self.engine = sqlalchemy.create_engine(task.connection_string)
         task.chunk_size = 2  # change chunk size and check it runs ok
         luigi.build([task, task0], local_scheduler=True, workers=self.NUM_WORKERS)
@@ -192,8 +191,10 @@ class TestSQLA(unittest.TestCase):
         completely skip the columns part. It is not even required at that point.
         :return:
         """
+        SQLATask = self.SQLATask
+
         class AnotherSQLATask(sqla.CopyToTable):
-            connection_string = CONNECTION_STRING
+            connection_string = self.connection_string
             table = "item_property"
             reflect = True
             chunk_size = 1
@@ -208,10 +209,10 @@ class TestSQLA(unittest.TestCase):
                 conn.execute(ins, ins_rows)
 
             def rows(self):
-                for line in TASK_LIST:
+                for line in BaseTask.TASK_LIST:
                     yield line.strip("\n").split("\t")
 
-        task0, task1, task2 = AnotherSQLATask(), SQLATask(), BaseTask()
+        task0, task1, task2 = AnotherSQLATask(), self.SQLATask(), BaseTask()
         luigi.build([task0, task1, task2], local_scheduler=True, workers=self.NUM_WORKERS)
         self._check_entries(self.engine)
 
@@ -220,7 +221,7 @@ class TestSQLA(unittest.TestCase):
         Is the marker table created as expected for the SQLAlchemyTarget
         :return:
         """
-        target = sqla.SQLAlchemyTarget(CONNECTION_STRING, "test_table", "12312123")
+        target = sqla.SQLAlchemyTarget(self.connection_string, "test_table", "12312123")
         target.create_marker_table()
         self.assertTrue(target.engine.dialect.has_table(target.engine.connect(), target.marker_table))
 
@@ -229,7 +230,7 @@ class TestSQLA(unittest.TestCase):
         Touch takes care of creating a checkpoint for task completion
         :return:
         """
-        target = sqla.SQLAlchemyTarget(CONNECTION_STRING, "test_table", "12312123")
+        target = sqla.SQLAlchemyTarget(self.connection_string, "test_table", "12312123")
         target.create_marker_table()
         self.assertFalse(target.exists())
         target.touch()
@@ -243,7 +244,7 @@ class TestSQLA(unittest.TestCase):
                 (["item", sqlalchemy.String(64)], {}),
                 (["property", sqlalchemy.String(64)], {})
             ]
-            connection_string = CONNECTION_STRING
+            connection_string = self.connection_string
             table = "item_property"
             chunk_size = 1
 
@@ -280,7 +281,7 @@ class TestSQLA(unittest.TestCase):
                 (["item", sqlalchemy.String(64)], {}),
                 (["property", sqlalchemy.String(64)], {})
             ]
-            connection_string = CONNECTION_STRING
+            connection_string = self.connection_string
             table = "item_property"
             column_separator = ","
             chunk_size = 1
@@ -309,7 +310,7 @@ class TestSQLA(unittest.TestCase):
                 out.close()
 
         class ModSQLATask(sqla.CopyToTable):
-            connection_string = CONNECTION_STRING
+            connection_string = self.connection_string
             table = "item_property"
             columns = [
                 (["item", sqlalchemy.String(64)], {}),
@@ -321,7 +322,7 @@ class TestSQLA(unittest.TestCase):
                 return ModBaseTask()
 
         class UpdateSQLATask(sqla.CopyToTable):
-            connection_string = CONNECTION_STRING
+            connection_string = self.connection_string
             table = "item_property"
             reflect = True
             chunk_size = 1
@@ -356,7 +357,7 @@ class TestSQLA(unittest.TestCase):
                 (["item", sqlalchemy.String(64)], {}),
                 (["property", sqlalchemy.String(64)], {})
             ]
-            connection_string = CONNECTION_STRING
+            connection_string = self.connection_string
             table = "item_property"
             chunk_size = 1
 
@@ -365,7 +366,7 @@ class TestSQLA(unittest.TestCase):
 
         class ManyBaseTask(luigi.Task):
             def requires(self):
-                for t in TASK_LIST:
+                for t in BaseTask.TASK_LIST:
                     item, property = t.strip().split("\t")
                     yield SmallSQLATask(item=item, property=property)
 
@@ -377,12 +378,12 @@ class TestSQLA(unittest.TestCase):
         """
         Test case where different tasks require different SQL engines.
         """
-        alt_db = "sqlite:///%s" % os.path.join(TEMPDIR, "sqlatest2.db")
+        alt_db = self.get_connection_string("sqlatest2.db")
 
-        class MultiEngineTask(SQLATask):
+        class MultiEngineTask(self.SQLATask):
             connection_string = alt_db
 
-        task0, task1, task2 = BaseTask(), SQLATask(), MultiEngineTask()
+        task0, task1, task2 = BaseTask(), self.SQLATask(), MultiEngineTask()
         self.assertTrue(task1.output().engine != task2.output().engine)
         luigi.build([task2, task1, task0], local_scheduler=True, workers=self.NUM_WORKERS)
         self._check_entries(task1.output().engine)
