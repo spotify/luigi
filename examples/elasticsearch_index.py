@@ -112,4 +112,4 @@ class IndexDocuments(CopyToIndex):
         return FakeDocuments()
 
 if __name__ == "__main__":
-    luigi.run(['--task', 'IndexDocuments'], use_optparse=True)
+    luigi.run(['--task', 'IndexDocuments'])
