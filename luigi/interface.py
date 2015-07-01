@@ -109,7 +109,7 @@ class core(task.Config):
 class WorkerSchedulerFactory(object):
 
     def create_local_scheduler(self):
-        return scheduler.CentralPlannerScheduler()
+        return scheduler.CentralPlannerScheduler(prune_on_get_work=True)
 
     def create_remote_scheduler(self, host, port):
         return rpc.RemoteScheduler(host=host, port=port)
