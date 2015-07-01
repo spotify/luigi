@@ -23,7 +23,8 @@ except:
 def get_static_files(path):
     return [os.path.join(dirpath.replace("luigi/", ""), ext)
             for (dirpath, dirnames, filenames) in os.walk(path)
-            for ext in ["*.html", "*.js", "*.css", "*.png"]]
+            for ext in ["*.html", "*.js", "*.css", "*.png",
+                        "*.eot", "*.svg", "*.ttf", "*.woff", "*.woff2"]]
 
 
 luigi_package_data = sum(map(get_static_files, ["luigi/static", "luigi/templates"]), [])
