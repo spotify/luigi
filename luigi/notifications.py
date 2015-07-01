@@ -140,7 +140,7 @@ def send_email(subject, message, sender, recipients, image_png=None):
         return
 
     # Clean the recipients lists to allow multiple error-email addresses, comma
-    # separated in client.cfg
+    # separated in luigi.cfg
     recipients_tmp = []
     for r in recipients:
         recipients_tmp.extend(r.split(','))

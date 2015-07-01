@@ -69,7 +69,7 @@ This can be useful, if an index needs to recreated, even though
 the corresponding indexing task has been run sometime in the past - but
 a later indexing task might have altered the index in the meantime.
 
-There are a two luigi `client.cfg` configuration options:
+There are a two luigi `luigi.cfg` configuration options:
 
 .. code-block:: ini
 

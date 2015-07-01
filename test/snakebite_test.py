@@ -40,7 +40,7 @@ from snakebite.minicluster import MiniCluster
 class TestSnakebiteClient(MiniClusterTestCase):
 
     """This test requires a snakebite -- it finds it from your
-    client.cfg"""
+    luigi.cfg"""
     snakebite = None
 
     def get_client(self):

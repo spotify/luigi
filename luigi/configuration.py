@@ -19,7 +19,7 @@
 luigi.configuration provides some convenience wrappers around Python's
 ConfigParser to get configuration options from config files.
 
-The default location for configuration files is client.cfg in the current
+The default location for configuration files is luigi.cfg (or client.cfg) in the current
 working directory, then /etc/luigi/client.cfg.
 
 Configuration has largely been superseded by parameters since they can
@@ -40,7 +40,7 @@ except ImportError:
 class LuigiConfigParser(ConfigParser):
     NO_DEFAULT = object()
     _instance = None
-    _config_paths = ['/etc/luigi/client.cfg', 'client.cfg']
+    _config_paths = ['/etc/luigi/client.cfg', 'luigi.cfg', 'client.cfg']
     if 'LUIGI_CONFIG_PATH' in os.environ:
         _config_paths.append(os.environ['LUIGI_CONFIG_PATH'])
 

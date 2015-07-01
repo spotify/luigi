@@ -29,7 +29,7 @@ def hadoop_examples_jar():
     config = luigi.configuration.get_config()
     examples_jar = config.get('hadoop', 'examples-jar')
     if not examples_jar:
-        logger.error("You must specify hadoop:examples-jar in client.cfg")
+        logger.error("You must specify hadoop:examples-jar in luigi.cfg")
         raise
     if not os.path.exists(examples_jar):
         logger.error("Can't find example jar: " + examples_jar)

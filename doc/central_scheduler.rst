@@ -36,7 +36,7 @@ By default, the server starts on port ``8082``
 For a full list of configuration options and defaults,
 see the :ref:`scheduler configuration section <scheduler-config>`.
 Note that ``luigid`` uses the same configuration files as the luigi client
-(i.e. ``client.cfg`` or ``/etc/luigi/client.cfg`` by default).
+(i.e. ``luigi.cfg`` or ``/etc/luigi/client.cfg`` by default).
 
 .. _TaskHistory:
 
@@ -50,7 +50,7 @@ This information is exposed via the Central Scheduler at ``/history``.
 
 To enable the task history,
 specify ``record_task_history = True`` in the
-``[scheduler]`` section of ``client.cfg`` and
+``[scheduler]`` section of ``luigi.cfg`` and
 specify ``db_connection`` under ``[task_history]``.
 The ``db_connection`` string is to used to configure the `SQLAlchemy engine
 <http://docs.sqlalchemy.org/en/rel_0_9/core/engines.html>`_.
