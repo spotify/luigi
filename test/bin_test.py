@@ -23,14 +23,12 @@ from helpers import with_config
 
 class LuigidTest(server_test.ServerTestRun):
 
-    @with_config({'scheduler': {'state_path': '/tmp/luigi-test-server-state'}})
     def run_server(self):
         luigi.cmdline.luigid(['--port', str(self._api_port)])
 
 
 class LuigidDaemonTest(server_test.ServerTestRun):
 
-    @with_config({'scheduler': {'state_path': '/tmp/luigi-test-server-state'}})
     @mock.patch('daemon.DaemonContext')
     def run_server(self, daemon_context):
-        luigi.cmdline.luigid(['--port', str(self._api_port), '--background', '--logdir', '.', '--pidfile', 'test.pid'])
+        luigi.cmdline.luigid(['--port', str(self._api_port), '--background', '--logdir', '.', '--pidfile', self.id() + '.pid'])
