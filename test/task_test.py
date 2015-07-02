@@ -85,6 +85,7 @@ class TaskTest(unittest.TestCase):
         self.assertEquals(flatten('foo'), ['foo'])
         self.assertEquals(flatten(42), [42])
         self.assertEquals(flatten((len(i) for i in ["foo", "troll"])), [3, 5])
+        self.assertRaises(TypeError, flatten, (len(i) for i in ["foo", "troll", None]))
 
 
 if __name__ == '__main__':
