@@ -86,9 +86,6 @@ class Parameter(object):
     There are subclasses of ``Parameter`` that define what type the parameter has. This is not
     enforced within Python, but are used for command line interaction.
 
-    The ``config_path`` argument lets you specify a place where the parameter is read from config
-    in case no value is provided.
-
     When a task is instantiated, it will first use any argument as the value of the parameter, eg.
     if you instantiate a = TaskA(x=44) then a.x == 44. If this does not exist, it will use the value
     of the Parameter object, which is defined on a class level. This will be resolved in this
@@ -317,7 +314,7 @@ class Parameter(object):
             else:
                 return param_name
 
-    def add_to_cmdline_parser(self, parser, param_name, task_name, optparse=False, glob=False, is_without_section=False):
+    def add_to_cmdline_parser(self, parser, param_name, task_name, glob=False, is_without_section=False):
         dest = self.parser_dest(param_name, task_name, glob, is_without_section=is_without_section)
         if not dest:
             return
@@ -339,14 +336,11 @@ class Parameter(object):
             action = "store_true"
         else:
             action = "store"
-        if optparse:
-            f = parser.add_option
-        else:
-            f = parser.add_argument
-        f(flag,
-          help=' '.join(description),
-          action=action,
-          dest=dest)
+
+        parser.add_argument(flag,
+                            help=' '.join(description),
+                            action=action,
+                            dest=dest)
 
     def parse_from_args(self, param_name, task_name, args, params):
         # Note: modifies arguments

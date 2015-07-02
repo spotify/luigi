@@ -21,7 +21,6 @@ This module contains the bindings for command line integration and dynamic loadi
 import argparse
 import logging
 import logging.config
-import optparse
 import os
 import sys
 import tempfile
@@ -206,9 +205,9 @@ def error_task_names(task_name, task_names):
     raise SystemExit(display_string)
 
 
-def add_task_parameters(parser, task_cls, optparse=False):
+def add_task_parameters(parser, task_cls):
     for param_name, param in task_cls.get_params():
-        param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, optparse=optparse, glob=False)
+        param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, glob=False)
 
 
 def get_global_parameters():
@@ -220,9 +219,9 @@ def get_global_parameters():
         yield task_name, is_without_section, param_name, param
 
 
-def add_global_parameters(parser, optparse=False):
+def add_global_parameters(parser):
     for task_name, is_without_section, param_name, param in get_global_parameters():
-        param.add_to_cmdline_parser(parser, param_name, task_name, optparse=optparse, glob=True, is_without_section=is_without_section)
+        param.add_to_cmdline_parser(parser, param_name, task_name, glob=True, is_without_section=is_without_section)
 
 
 def get_task_parameters(task_cls, args):
@@ -244,7 +243,7 @@ class ArgParseInterface(Interface):
     Takes the task as the command, with parameters specific to it.
     """
 
-    def parse_task(self, cmdline_args=None, main_task_cls=None):
+    def parse_task(self, cmdline_args=None):
         if cmdline_args is None:
             cmdline_args = sys.argv[1:]
 
@@ -252,45 +251,39 @@ class ArgParseInterface(Interface):
 
         add_global_parameters(parser)
 
-        if main_task_cls:
-            add_task_parameters(parser, main_task_cls)
+        task_names = Register.task_names()
 
-            args = parser.parse_args(args=cmdline_args)
-            task_cls = main_task_cls
-        else:
-            task_names = Register.task_names()
+        # Parse global arguments and pull out the task name.
+        # We used to do this using subparsers+command, but some issues with
+        # argparse across different versions of Python (2.7.9) made it hard.
+        args, unknown = parser.parse_known_args(args=[a for a in cmdline_args if a != '--help'])
+        if len(unknown) == 0:
+            # In case it included a --help argument, run again
+            parser.parse_known_args(args=cmdline_args)
+            raise SystemExit('No task specified')
 
-            # Parse global arguments and pull out the task name.
-            # We used to do this using subparsers+command, but some issues with
-            # argparse across different versions of Python (2.7.9) made it hard.
-            args, unknown = parser.parse_known_args(args=[a for a in cmdline_args if a != '--help'])
-            if len(unknown) == 0:
-                # In case it included a --help argument, run again
-                parser.parse_known_args(args=cmdline_args)
-                raise SystemExit('No task specified')
+        task_name = unknown[0]
+        if task_name not in task_names:
+            error_task_names(task_name, task_names)
 
-            task_name = unknown[0]
-            if task_name not in task_names:
-                error_task_names(task_name, task_names)
+        task_cls = Register.get_task_cls(task_name)
 
-            task_cls = Register.get_task_cls(task_name)
+        # Add a subparser to parse task-specific arguments
+        subparsers = parser.add_subparsers(dest='command')
+        subparser = subparsers.add_parser(task_name)
 
-            # Add a subparser to parse task-specific arguments
-            subparsers = parser.add_subparsers(dest='command')
-            subparser = subparsers.add_parser(task_name)
+        # Add both task and global params here so that we can support both:
+        # test.py --global-param xyz Test --n 42
+        # test.py Test --n 42 --global-param xyz
+        add_global_parameters(subparser)
+        add_task_parameters(subparser, task_cls)
 
-            # Add both task and global params here so that we can support both:
-            # test.py --global-param xyz Test --n 42
-            # test.py Test --n 42 --global-param xyz
-            add_global_parameters(subparser)
-            add_task_parameters(subparser, task_cls)
-
-            # Workaround for bug in argparse for Python 2.7.9
-            # See https://mail.python.org/pipermail/python-dev/2015-January/137699.html
-            subargs = parser.parse_args(args=cmdline_args)
-            for key, value in vars(subargs).items():
-                if value:  # Either True (for boolean args) or non-None (everything else)
-                    setattr(args, key, value)
+        # Workaround for bug in argparse for Python 2.7.9
+        # See https://mail.python.org/pipermail/python-dev/2015-January/137699.html
+        subargs = parser.parse_args(args=cmdline_args)
+        for key, value in vars(subargs).items():
+            if value:  # Either True (for boolean args) or non-None (everything else)
+                setattr(args, key, value)
 
         # Notice that this is not side effect free because it might set global params
         set_global_parameters(args)
@@ -298,8 +291,8 @@ class ArgParseInterface(Interface):
 
         return [task_cls(**task_params)]
 
-    def parse(self, cmdline_args=None, main_task_cls=None):
-        return self.parse_task(cmdline_args, main_task_cls)
+    def parse(self, cmdline_args=None):
+        return self.parse_task(cmdline_args)
 
 
 class DynamicArgParseInterface(ArgParseInterface):
@@ -315,7 +308,7 @@ class DynamicArgParseInterface(ArgParseInterface):
     This will dynamically import foo_module and then try to create FooTask from this.
     """
 
-    def parse(self, cmdline_args=None, main_task_cls=None):
+    def parse(self, cmdline_args=None):
         if cmdline_args is None:
             cmdline_args = sys.argv[1:]
 
@@ -328,101 +321,32 @@ class DynamicArgParseInterface(ArgParseInterface):
 
         __import__(module)
 
-        return self.parse_task(cmdline_args, main_task_cls)
+        return self.parse_task(cmdline_args)
 
 
-class PassThroughOptionParser(optparse.OptionParser):
-    """
-    An unknown option pass-through implementation of OptionParser.
-
-    When unknown arguments are encountered, bundle with largs and try again, until rargs is depleted.
-
-    sys.exit(status) will still be called if a known argument is passed
-    incorrectly (e.g. missing arguments or bad argument types, etc.)
-    """
-
-    def _process_args(self, largs, rargs, values):
-        while rargs:
-            try:
-                optparse.OptionParser._process_args(self, largs, rargs, values)
-            except (optparse.BadOptionError, optparse.AmbiguousOptionError) as e:
-                largs.append(e.opt_str)
-
-
-class OptParseInterface(Interface):
-    """
-    Supported for legacy reasons where it's necessary to interact with an existing parser.
-
-    Takes the task using --task. All parameters to all possible tasks will be defined globally
-    in a big unordered soup.
-    """
-
-    def __init__(self, existing_optparse):
-        self.__existing_optparse = existing_optparse
-
-    def parse(self, cmdline_args=None, main_task_cls=None):
-        parser = PassThroughOptionParser()
-
-        def add_task_option(p):
-            if main_task_cls:
-                p.add_option('--task', help='Task to run (one of ' + Register.tasks_str() + ') [default: %default]', default=main_task_cls.task_family)
-            else:
-                p.add_option('--task', help='Task to run (one of %s)' % Register.tasks_str())
-
-        add_global_parameters(parser, optparse=True)
-
-        add_task_option(parser)
-        options, args = parser.parse_args(args=cmdline_args)
-
-        task_cls_name = options.task
-        if self.__existing_optparse:
-            parser = self.__existing_optparse
-        else:
-            parser = optparse.OptionParser()
-        add_task_option(parser)
-
-        task_cls = Register.get_task_cls(task_cls_name)
-
-        # Register all parameters as a big mess
-        add_global_parameters(parser, optparse=True)
-        add_task_parameters(parser, task_cls, optparse=True)
-
-        # Parse and run
-        options, args = parser.parse_args(args=cmdline_args)
-
-        set_global_parameters(options)
-        task_params = get_task_parameters(task_cls, options)
-
-        return [task_cls(**task_params)]
-
-
-def run(cmdline_args=None, existing_optparse=None, use_optparse=False, main_task_cls=None,
+def run(cmdline_args=None, main_task_cls=None,
         worker_scheduler_factory=None, use_dynamic_argparse=False, local_scheduler=False):
     """
-    Run from cmdline.
+    Please dont use. Instead use `luigi` binary.
 
-    The default parser uses argparse however, for legacy reasons,
-    we support optparse that optionally allows for overriding an existing option parser with new args.
+    Run from cmdline using argparse.
 
     :param cmdline_args:
-    :param existing_optparse:
-    :param use_optparse:
     :param main_task_cls:
     :param worker_scheduler_factory:
     :param use_dynamic_argparse:
     :param local_scheduler:
     """
-    if use_optparse:
-        interface = OptParseInterface(existing_optparse)
-    elif use_dynamic_argparse:
+    if use_dynamic_argparse:
         interface = DynamicArgParseInterface()
     else:
         interface = ArgParseInterface()
-    tasks = interface.parse(cmdline_args, main_task_cls=main_task_cls)
-    override_defaults = {}
+    if main_task_cls:
+        cmdline_args.insert(0, main_task_cls.task_family)
     if local_scheduler:
-        override_defaults['local_scheduler'] = True
-    return interface.run(tasks, worker_scheduler_factory, override_defaults=override_defaults)
+        cmdline_args.insert(0, '--local-scheduler')
+    tasks = interface.parse(cmdline_args)
+    return interface.run(tasks, worker_scheduler_factory)
 
 
 def build(tasks, worker_scheduler_factory=None, **env_params):
@@ -446,7 +370,6 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     :return:
     """
     if "no_lock" not in env_params:
-        # TODO(erikbern): should we really override args here?
         env_params["no_lock"] = True
 
-    Interface.run(tasks, worker_scheduler_factory, env_params)
+    Interface.run(tasks, worker_scheduler_factory, override_defaults=env_params)

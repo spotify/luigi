@@ -53,6 +53,8 @@ If it has, it will run the full dependency graph.
 
 .. code:: python
 
+    # my_tasks.py
+
     class DataDump(luigi.ExternalTask):
         date = luigi.DateParameter()
         def output(self): return luigi.contrib.hdfs.HdfsTarget(self.date.strftime('/var/log/dump/%Y-%m-%d.txt'))
@@ -70,9 +72,13 @@ If it has, it will run the full dependency graph.
             for window in [3, 7, 14]:
                 for d in xrange(10): # guarantee that aggregations were run for the past 10 days
                    yield AggregationTask(datetime.date.today() - datetime.timedelta(d), window)
-        
-    if __name__ == '__main__':
-        luigi.run(main_task_cls=RunAll)
+
+In your cronline you would then have something like
+
+.. code::
+
+    30 0 * * * my-user luigi RunAll --module my_tasks
+
 
 You can trigger this as much as you want from crontab, and
 even across multiple machines, because
