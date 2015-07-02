@@ -28,12 +28,14 @@ import luigi
 from luigi.contrib import bigquery
 from luigi.contrib import gcs
 
-from contrib import _gcs_test
+from contrib import gcs_test
+from nose.plugins.attrib import attr
 
-PROJECT_ID = _gcs_test.PROJECT_ID
+PROJECT_ID = gcs_test.PROJECT_ID
 DATASET_ID = os.environ.get('BQ_TEST_DATASET_ID', 'luigi_tests')
 
 
+@attr('gcloud')
 class TestLoadTask(bigquery.BigqueryLoadTask):
     _BIGQUERY_CLIENT = None
 
@@ -55,6 +57,7 @@ class TestLoadTask(bigquery.BigqueryLoadTask):
                                        client=self._BIGQUERY_CLIENT)
 
 
+@attr('gcloud')
 class TestRunQueryTask(bigquery.BigqueryRunQueryTask):
     _BIGQUERY_CLIENT = None
 
@@ -66,10 +69,11 @@ class TestRunQueryTask(bigquery.BigqueryRunQueryTask):
                                        client=self._BIGQUERY_CLIENT)
 
 
-class BigqueryTest(_gcs_test._GCSBaseTestCase):
+@attr('gcloud')
+class BigqueryTest(gcs_test._GCSBaseTestCase):
     def setUp(self):
         super(BigqueryTest, self).setUp()
-        self.bq_client = bigquery.BigqueryClient(_gcs_test.CREDENTIALS)
+        self.bq_client = bigquery.BigqueryClient(gcs_test.CREDENTIALS)
 
         self.table = bigquery.BQTable(project_id=PROJECT_ID, dataset_id=DATASET_ID,
                                       table_id=self.id().split('.')[-1])
@@ -79,7 +83,7 @@ class BigqueryTest(_gcs_test._GCSBaseTestCase):
         self.bq_client.delete_table(self.table)
 
         text = '\n'.join(map(json.dumps, data))
-        gcs_file = _gcs_test.bucket_url(self.id())
+        gcs_file = gcs_test.bucket_url(self.id())
         self.client.put_string(text, gcs_file)
 
         task = TestLoadTask(source=gcs_file, table=self.table.table_id)
