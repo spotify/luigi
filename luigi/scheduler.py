@@ -800,6 +800,8 @@ class CentralPlannerScheduler(Scheduler):
                 dep_id = task_stack.pop()
                 if self._state.has_task(dep_id):
                     dep = self._state.get_task(dep_id)
+                    if dep.status == DONE:
+                        continue
                     if dep_id not in upstream_status_table:
                         if dep.status == PENDING and dep.deps:
                             task_stack = task_stack + [dep_id] + list(dep.deps)
