@@ -669,25 +669,14 @@ class CentralPlannerScheduler(Scheduler):
                         used_resources[resource] += amount
         return used_resources
 
-    def _rank(self, among_tasks):
+    def _rank(self, task):
         """
         Return worker's rank function for task scheduling.
 
         :return:
         """
-        dependents = collections.defaultdict(int)
 
-        def not_done(t):
-            task = self._state.get_task(t, default=None)
-            return task is None or task.status != DONE
-        for task in among_tasks:
-            if task.status != DONE:
-                deps = list(filter(not_done, task.deps))
-                inverse_num_deps = 1.0 / max(len(deps), 1)
-                for dep in deps:
-                    dependents[dep] += inverse_num_deps
-
-        return lambda task: (task.priority, dependents[task.id], -task.time)
+        return task.priority, -task.time
 
     def _schedulable(self, task):
         if task.status != PENDING:
@@ -739,7 +728,7 @@ class CentralPlannerScheduler(Scheduler):
             greedy_workers = dict((worker.id, worker.info.get('workers', 1))
                                   for worker in self._state.get_active_workers())
         tasks = list(relevant_tasks)
-        tasks.sort(key=self._rank(among_tasks=tasks), reverse=True)
+        tasks.sort(key=self._rank, reverse=True)
 
         for task in tasks:
             upstream_status = self._upstream_status(task.id, upstream_table)

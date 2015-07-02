@@ -670,33 +670,6 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(2, response['n_pending_tasks'])
         self.assertEqual(2, response['n_unique_pending'])
 
-    def test_prefer_more_dependents(self):
-        self.sch.add_task(worker=WORKER, task_id='A')
-        self.sch.add_task(worker=WORKER, task_id='B')
-        self.sch.add_task(worker=WORKER, task_id='C', deps=['B'])
-        self.sch.add_task(worker=WORKER, task_id='D', deps=['B'])
-        self.sch.add_task(worker=WORKER, task_id='E', deps=['A'])
-        self.check_task_order('BACDE')
-
-    def test_prefer_readier_dependents(self):
-        self.sch.add_task(worker=WORKER, task_id='A')
-        self.sch.add_task(worker=WORKER, task_id='B')
-        self.sch.add_task(worker=WORKER, task_id='C')
-        self.sch.add_task(worker=WORKER, task_id='D')
-        self.sch.add_task(worker=WORKER, task_id='F', deps=['A', 'B', 'C'])
-        self.sch.add_task(worker=WORKER, task_id='G', deps=['A', 'B', 'C'])
-        self.sch.add_task(worker=WORKER, task_id='E', deps=['D'])
-        self.check_task_order('DABCFGE')
-
-    def test_ignore_done_dependents(self):
-        self.sch.add_task(worker=WORKER, task_id='A')
-        self.sch.add_task(worker=WORKER, task_id='B')
-        self.sch.add_task(worker=WORKER, task_id='C')
-        self.sch.add_task(worker=WORKER, task_id='D', priority=1)
-        self.sch.add_task(worker=WORKER, task_id='E', deps=['C', 'D'])
-        self.sch.add_task(worker=WORKER, task_id='F', deps=['A', 'B'])
-        self.check_task_order('DCABEF')
-
     def test_task_list_no_deps(self):
         self.sch.add_task(worker=WORKER, task_id='B', deps=('A',))
         self.sch.add_task(worker=WORKER, task_id='A')
