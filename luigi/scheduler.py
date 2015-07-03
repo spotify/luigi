@@ -747,12 +747,15 @@ class CentralPlannerScheduler(Scheduler):
                 if len(task.workers) == 1 and not assistant:
                     n_unique_pending += 1
 
+            if best_task:
+                continue
+
             if task.status == RUNNING and (task.worker_running in greedy_workers):
                 greedy_workers[task.worker_running] -= 1
                 for resource, amount in six.iteritems((task.resources or {})):
                     greedy_resources[resource] += amount
 
-            if not best_task and self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
+            if self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
                 if in_workers and self._has_resources(task.resources, used_resources):
                     best_task = task
                 else:
