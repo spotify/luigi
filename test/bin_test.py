@@ -15,24 +15,20 @@
 # limitations under the License.
 #
 
-import imp
 import mock
 import server_test
+import luigi.cmdline
 from helpers import with_config
 
 
 class LuigidTest(server_test.ServerTestRun):
 
-    @with_config({'scheduler': {'state_path': '/tmp/luigi-test-server-state'}})
     def run_server(self):
-        luigid = imp.load_source('luigid', 'bin/luigid')
-        luigid.main(['--port', str(self._api_port)])
+        luigi.cmdline.luigid(['--port', str(self._api_port)])
 
 
 class LuigidDaemonTest(server_test.ServerTestRun):
 
-    @with_config({'scheduler': {'state_path': '/tmp/luigi-test-server-state'}})
     @mock.patch('daemon.DaemonContext')
     def run_server(self, daemon_context):
-        luigid = imp.load_source('luigid', 'bin/luigid')
-        luigid.main(['--port', str(self._api_port), '--background', '--logdir', '.', '--pidfile', 'test.pid'])
+        luigi.cmdline.luigid(['--port', str(self._api_port), '--background', '--logdir', '.', '--pidfile', self.id() + '.pid'])

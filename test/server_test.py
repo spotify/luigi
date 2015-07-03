@@ -19,6 +19,7 @@ import multiprocessing
 import random
 import signal
 import time
+import tempfile
 
 from helpers import unittest, with_config
 import luigi.rpc
@@ -75,11 +76,6 @@ class ServerTestRun(unittest.TestCase):
     """Test to start and stop the server in a more "standard" way
     """
 
-    def remove_state(self):
-        if os.path.exists('/tmp/luigi-test-server-state'):
-            os.remove('/tmp/luigi-test-server-state')
-
-    @with_config({'scheduler': {'state_path': '/tmp/luigi-test-server-state'}})
     def run_server(self):
         luigi.server.run(api_port=self._api_port, address='127.0.0.1')
 
@@ -98,11 +94,11 @@ class ServerTestRun(unittest.TestCase):
             os.kill(self._process.pid, signal.SIGKILL)
 
     def setUp(self):
-        self.remove_state()
+        state_path = tempfile.mktemp(suffix=self.id())
+        luigi.configuration.get_config().set('scheduler', 'state_path', state_path)
         self.start_server()
 
     def tearDown(self):
-        self.remove_state()
         self.stop_server()
 
     def test_ping(self):
