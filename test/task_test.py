@@ -78,5 +78,15 @@ class TaskTest(unittest.TestCase):
         self.assertEquals(name, "InputText")
         self.assertEquals(params, dict(date="2014-12-29", foo=["bar", "baz-foo"]))
 
+    def test_flatten(self):
+        flatten = luigi.task.flatten
+        self.assertEquals(sorted(flatten({'a': 'foo', 'b': 'bar'})), ['bar', 'foo'])
+        self.assertEquals(sorted(flatten(['foo', ['bar', 'troll']])), ['bar', 'foo', 'troll'])
+        self.assertEquals(flatten('foo'), ['foo'])
+        self.assertEquals(flatten(42), [42])
+        self.assertEquals(flatten((len(i) for i in ["foo", "troll"])), [3, 5])
+        self.assertRaises(TypeError, flatten, (len(i) for i in ["foo", "troll", None]))
+
+
 if __name__ == '__main__':
     unittest.main()

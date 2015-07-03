@@ -576,13 +576,13 @@ def flatten(struct):
 
     try:
         # if iterable
-        for result in struct:
-            flat += flatten(result)
-        return flat
+        iterator = iter(struct)
     except TypeError:
-        pass
+        return [struct]
 
-    return [struct]
+    for result in iterator:
+        flat += flatten(result)
+    return flat
 
 
 def flatten_output(task):
