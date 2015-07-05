@@ -98,5 +98,14 @@ class SchedulerTest(unittest.TestCase):
             cps = reload_from_disk(cps=cps)  # This time without deleting
             self.assertEqual(cps.get_work(worker='D')['task_id'], '4')
 
+    def test_worker_prune_after_init(self):
+        worker = luigi.scheduler.Worker(123)
+
+        class TmpCfg:
+            def __init__(self):
+                self.worker_disconnect_delay = 10
+
+        worker.prune(TmpCfg())
+
 if __name__ == '__main__':
     unittest.main()
