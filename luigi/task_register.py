@@ -47,7 +47,7 @@ class Register(abc.ABCMeta):
     _default_namespace = None
     _reg = []
     AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
-    """If this value is returned by :py:meth:`__get_reg` then there is an
+    """If this value is returned by :py:meth:`_get_reg` then there is an
     ambiguous task name (two :py:class:`Task` have the same name). This denotes
     an error."""
 
@@ -126,7 +126,7 @@ class Register(abc.ABCMeta):
             return "%s.%s" % (cls.task_namespace, cls.__name__)
 
     @classmethod
-    def __get_reg(cls):
+    def _get_reg(cls):
         """Return all of the registered classes.
 
         :return:  an ``collections.OrderedDict`` of task_family -> class
@@ -135,8 +135,6 @@ class Register(abc.ABCMeta):
         # We return this in a topologically sorted list of inheritance: this is useful in some cases (#822)
         reg = OrderedDict()
         for cls in cls._reg:
-            if cls.run == NotImplemented:
-                continue
             name = cls.task_family
 
             if name in reg and reg[name] != cls and \
@@ -152,11 +150,17 @@ class Register(abc.ABCMeta):
         return reg
 
     @classmethod
+    def _set_reg(cls, reg):
+        """The writing complement of _get_reg
+        """
+        cls._reg = [task_cls for task_cls in reg.values() if task_cls is not cls.AMBIGUOUS_CLASS]
+
+    @classmethod
     def task_names(cls):
         """
         List of task names as strings
         """
-        return sorted(cls.__get_reg().keys())
+        return sorted(cls._get_reg().keys())
 
     @classmethod
     def tasks_str(cls):
@@ -170,7 +174,7 @@ class Register(abc.ABCMeta):
         """
         Returns an unambiguous class or raises an exception.
         """
-        task_cls = cls.__get_reg().get(name)
+        task_cls = cls._get_reg().get(name)
         if not task_cls:
             raise TaskClassException('Task %r not found. Candidates are: %s' % (name, cls.tasks_str()))
 
@@ -185,7 +189,7 @@ class Register(abc.ABCMeta):
 
         :return: a generator of tuples (TODO: we should make this more elegant)
         """
-        for task_name, task_cls in six.iteritems(cls.__get_reg()):
+        for task_name, task_cls in six.iteritems(cls._get_reg()):
             if task_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in task_cls.get_params():

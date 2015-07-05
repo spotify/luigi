@@ -23,7 +23,9 @@ from helpers import unittest
 
 import luigi.scheduler
 from helpers import with_config
+import logging
 
+logging.config.fileConfig('test/testconfig/logging.cfg', disable_existing_loggers=False)
 luigi.notifications.DEBUG = True
 
 
@@ -73,6 +75,37 @@ class SchedulerTest(unittest.TestCase):
         cps = luigi.scheduler.CentralPlannerScheduler()
         self.assertEqual({'a': 100, 'b': 200}, cps._resources)
 
+    def test_load_recovers_tasks_index(self):
+        cps = luigi.scheduler.CentralPlannerScheduler()
+        cps.add_task(worker='A', task_id='1')
+        cps.add_task(worker='B', task_id='2')
+        cps.add_task(worker='C', task_id='3')
+        cps.add_task(worker='D', task_id='4')
+        self.assertEqual(cps.get_work(worker='A')['task_id'], '1')
+
+        with tempfile.NamedTemporaryFile(delete=True) as fn:
+            def reload_from_disk(cps):
+                cps._state._state_path = fn.name
+                cps.dump()
+                cps = luigi.scheduler.CentralPlannerScheduler()
+                cps._state._state_path = fn.name
+                cps.load()
+                return cps
+            del cps._state.get_worker('B').tasks  # If you upgrade from old server
+            cps = reload_from_disk(cps=cps)  # tihii, cps == continuation passing style ;)
+            self.assertEqual(cps.get_work(worker='B')['task_id'], '2')
+            self.assertEqual(cps.get_work(worker='C')['task_id'], '3')
+            cps = reload_from_disk(cps=cps)  # This time without deleting
+            self.assertEqual(cps.get_work(worker='D')['task_id'], '4')
+
+    def test_worker_prune_after_init(self):
+        worker = luigi.scheduler.Worker(123)
+
+        class TmpCfg:
+            def __init__(self):
+                self.worker_disconnect_delay = 10
+
+        worker.prune(TmpCfg())
 
 if __name__ == '__main__':
     unittest.main()

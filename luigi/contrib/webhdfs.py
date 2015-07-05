@@ -137,7 +137,7 @@ class WebHdfsClient(object):
             return config.get('hdfs', key)
         except:
             raise RuntimeError("You must specify %s in the [hdfs] section of "
-                               "the luigi client.cfg file" % key)
+                               "the luigi.cfg file" % key)
 
     def walk(self, path, depth=1):
         return self.webhdfs.walk(path, depth=depth)

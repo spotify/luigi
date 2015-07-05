@@ -53,16 +53,18 @@ If it has, it will run the full dependency graph.
 
 .. code:: python
 
+    # my_tasks.py
+
     class DataDump(luigi.ExternalTask):
         date = luigi.DateParameter()
-        def output(self): return luigi.hdfs.HdfsTarget(self.date.strftime('/var/log/dump/%Y-%m-%d.txt'))
+        def output(self): return luigi.contrib.hdfs.HdfsTarget(self.date.strftime('/var/log/dump/%Y-%m-%d.txt'))
         
     class AggregationTask(luigi.Task):
         date = luigi.DateParameter()
         window = luigi.IntParameter()
         def requires(self): return [DataDump(self.date - datetime.timedelta(i)) for i in xrange(self.window)]
         def run(self): run_some_cool_stuff(self.input())
-        def output(self): return luigi.hdfs.HdfsTarget('/aggregated-%s-%d' % (self.date, self.window))
+        def output(self): return luigi.contrib.hdfs.HdfsTarget('/aggregated-%s-%d' % (self.date, self.window))
         
     class RunAll(luigi.Task):
         ''' Dummy task that triggers execution of a other tasks'''
@@ -70,16 +72,20 @@ If it has, it will run the full dependency graph.
             for window in [3, 7, 14]:
                 for d in xrange(10): # guarantee that aggregations were run for the past 10 days
                    yield AggregationTask(datetime.date.today() - datetime.timedelta(d), window)
-        
-    if __name__ == '__main__':
-        luigi.run(main_task_cls=RunAll)
+
+In your cronline you would then have something like
+
+.. code::
+
+    30 0 * * * my-user luigi RunAll --module my_tasks
+
 
 You can trigger this as much as you want from crontab, and
 even across multiple machines, because
 the central scheduler will make sure at most one of each ``AggregationTask`` task is run simultaneously.
 Note that this might actually mean multiple tasks can be run because
 there are instances with different parameters, and
-this can gives you some form of parallelization
+this can give you some form of parallelization
 (eg. ``AggregationTask(2013-01-09)`` might run in parallel with ``AggregationTask(2013-01-08)``).
 
 Of course,

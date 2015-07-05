@@ -163,7 +163,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         if not (self.table):
             raise Exception("table need to be specified")
 
-        path = self.s3_load_path()
+        path = self.s3_load_path
         connection = self.output().connect()
         if not self.does_table_exist(connection):
             # try creating table
@@ -216,12 +216,18 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         Determine whether the table already exists.
         """
-        query = ("select 1 as table_exists "
-                 "from pg_table_def "
-                 "where tablename = %s limit 1")
+
+        if '.' in self.table:
+            query = ("select 1 as table_exists "
+                     "from information_schema.tables "
+                     "where table_schema = %s and table_name = %s limit 1")
+        else:
+            query = ("select 1 as table_exists "
+                     "from pg_table_def "
+                     "where tablename = %s limit 1")
         cursor = connection.cursor()
         try:
-            cursor.execute(query, (self.table,))
+            cursor.execute(query, tuple(self.table.split('.')))
             result = cursor.fetchone()
             return bool(result)
         finally:

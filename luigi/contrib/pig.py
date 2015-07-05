@@ -16,7 +16,7 @@
 #
 """
 Apache Pig support.
-Example configuration section in client.cfg::
+Example configuration section in luigi.cfg::
 
     [pig]
     # pig home directory

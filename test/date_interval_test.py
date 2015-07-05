@@ -98,10 +98,6 @@ class DateIntervalTest(unittest.TestCase):
         class MyTaskNoDefault(luigi.Task):
             di = DI()
 
-        task = luigi.interface.OptParseInterface(None).parse(["--task", "MyTask"])[0]
-        self.assertEqual(task.di, month)
-        task = luigi.interface.OptParseInterface(None).parse(["--task", "MyTask", "--di", "2012-10"])[0]
-        self.assertEqual(task.di, other)
         task = luigi.interface.ArgParseInterface().parse(["MyTask"])[0]
         self.assertEqual(task.di, month)
         task = luigi.interface.ArgParseInterface().parse(["MyTask", "--di", "2012-10"])[0]

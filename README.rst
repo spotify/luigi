@@ -2,9 +2,6 @@
    :alt: Luigi Logo
    :align: center
 
-About Luigi
------------
-
 .. image:: https://img.shields.io/travis/spotify/luigi/master.svg?style=flat
     :target: https://travis-ci.org/spotify/luigi
  
@@ -23,10 +20,44 @@ About Luigi
 .. image:: https://pypip.in/py_versions/luigi/badge.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
-Luigi is a Python package that helps you build complex pipelines of
-batch jobs. It handles dependency resolution, workflow management,
-visualization, handling failures, command line integration, and much
-more.
+Luigi is a Python package that helps you build complex pipelines of batch
+jobs. It handles dependency resolution, workflow management, visualization,
+handling failures, command line integration, and much more.
+
+Getting Luigi
+-------------
+
+Run ``pip install luigi`` to install the latest stable version from
+`PyPI <https://pypi.python.org/pypi/luigi>`_.
+
+For bleeding edge code,
+``git clone https://github.com/spotify/luigi`` and
+``python setup.py install``. Bleeding edge documentation can be found
+`here <http://luigi.readthedocs.org/en/latest/>`_.
+
+If you want to run the central scheduler (highly recommended), you
+need to install `Tornado <http://www.tornadoweb.org/>`_ which you can
+do from PyPI as well: ``pip install tornado``.
+
+Getting Started
+---------------
+
+Take a look at the `Example workflow
+<http://luigi.readthedocs.org/en/latest/example_top_artists.html>`_ and `Building workflows
+<http://luigi.readthedocs.org/en/latest/workflows.html>`_ which explains some of
+the most important concepts.
+
+Documentation
+-------------
+
+`Full documentation <http://luigi.readthedocs.org/>`_ is available at Read the Docs, including the
+`Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_.
+
+See `Configuration <http://luigi.readthedocs.org/en/latest/configuration.html>`_
+for how to configure Luigi.
+
+More background
+---------------
 
 The purpose of Luigi is to address all the plumbing typically associated
 with long-running batch processes. You want to chain many tasks,
@@ -106,27 +137,6 @@ trigger things not in Python, such as running
 `Pig scripts <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.pig.html>`_
 or `scp'ing files <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.ssh.html>`_.
 
-Installing
-----------
-
-Downloading and running ``python setup.py install`` should be enough. Note
-that you probably want `Tornado <http://www.tornadoweb.org/>`_. See
-`Configuration <http://luigi.readthedocs.org/en/latest/configuration.html>`_ for how to configure Luigi.
-
-Getting Started
----------------
-
-Take a look at the `Example workflow
-<http://luigi.readthedocs.org/en/latest/example_top_artists.html>`_ and `Building workflows
-<http://luigi.readthedocs.org/en/latest/workflows.html>`_ which explains some of
-the most important concepts.
-
-Documentation
--------------
-
-`Full documentation <http://luigi.readthedocs.org/>`_ is available at Read the Docs, including the
-`Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_.
-
 Who uses Luigi?
 ---------------
 
@@ -134,12 +144,13 @@ Several companies have written blog posts or presentation about Luigi:
 
 * `Spotify (NYC Data Science) <http://www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`_
 * `Foursquare <http://www.slideshare.net/OpenAnayticsMeetup/luigi-presentation-17-23199897>`_
-* `Mortar Data <https://help.mortardata.com/technologies/luigi>`_
+* `Mortar Data <http://help.mortardata.com/technologies/luigi>`_
 * `Stripe <http://www.slideshare.net/PyData/python-as-part-of-a-production-machine-learning-stack-by-michael-manapat-pydata-sv-2014>`_
 * `Asana <https://eng.asana.com/2014/11/stable-accessible-data-infrastructure-startup/>`_
 * `Buffer <https://overflow.bufferapp.com/2014/10/31/buffers-new-data-architecture/>`_
 * `SeatGeek <http://chairnerd.seatgeek.com/building-out-the-seatgeek-data-pipeline/>`_
 * `Treasure Data <http://blog.treasuredata.com/blog/2015/02/25/managing-the-data-pipeline-with-git-luigi/>`_
+* `Growth Intelligence <http://www.slideshare.net/growthintel/a-beginners-guide-to-building-data-pipelines-with-luigi>`_
 
 Please let us know if your company wants to be featured on this list!
 
@@ -161,8 +172,9 @@ Authors
 -------
 
 Luigi was built at `Spotify <https://www.spotify.com/us/>`_, mainly by
-`Erik Bernhardsson <https://github.com/erikbern>`_ and `Elias
-Freider <https://github.com/freider>`_, but
-`many other people <https://github.com/spotify/luigi/graphs/contributors>`_
-have contributed.
-
+`Erik Bernhardsson <https://github.com/erikbern>`_ and
+`Elias Freider <https://github.com/freider>`_.
+`Many other people <https://github.com/spotify/luigi/graphs/contributors>`_
+have contributed since open sourcing in late 2012.
+`Arash Rouhani <https://github.com/tarrasch>`_ is currently the chief
+maintainer of Luigi.

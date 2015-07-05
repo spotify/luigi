@@ -19,16 +19,11 @@ import functools
 import itertools
 import sys
 
+import luigi
+import luigi.task_register
 from luigi import six
 
-# import unittest on python 2.6 for support of test skip
-if sys.version_info[:2] <= (2, 6):
-    try:
-        import unittest2 as unittest
-    except ImportError:
-        import unittest
-else:
-    import unittest
+import unittest
 
 
 class with_config(object):
@@ -119,3 +114,27 @@ class with_config(object):
             finally:
                 luigi.configuration.LuigiConfigParser._instance = orig_conf
         return wrapper
+
+
+class LuigiTestCase(unittest.TestCase):
+    """
+    Tasks registred within a test case will get unregistered in a finalizer
+    """
+    def setUp(self):
+        super(LuigiTestCase, self).setUp()
+        self._stashed_reg = luigi.task_register.Register._get_reg()
+
+    def tearDown(self):
+        luigi.task_register.Register._set_reg(self._stashed_reg)
+        super(LuigiTestCase, self).tearDown()
+
+    def run_locally(self, args):
+        """ Helper for running tests testing more of the stack, the command
+        line parsing and task from name intstantiation parts in particular. """
+        run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
+        return run_exit_status
+
+    def run_locally_split(self, space_seperated_args):
+        """ Helper for running tests testing more of the stack, the command
+        line parsing and task from name intstantiation parts in particular. """
+        return self.run_locally(space_seperated_args.split(' '))

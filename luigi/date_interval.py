@@ -264,7 +264,7 @@ class Custom(DateInterval):
 
     @classmethod
     def parse(cls, s):
-        if re.match('\d\d\d\d\-\d\d\-\d\d\-\d\d\d\d\-\d\d\-\d\d$', s):
+        if re.match(r'\d\d\d\d\-\d\d\-\d\d\-\d\d\d\d\-\d\d\-\d\d$', s):
             x = list(map(int, s.split('-')))
             date_a = datetime.date(*x[:3])
             date_b = datetime.date(*x[3:])

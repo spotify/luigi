@@ -34,7 +34,7 @@ logger = logging.getLogger('luigi-interface')
 """
 Scalding support for Luigi.
 
-Example configuration section in client.cfg::
+Example configuration section in luigi.cfg::
 
     [scalding]
     # scala home directory, which should include a lib subdir with scala jars.

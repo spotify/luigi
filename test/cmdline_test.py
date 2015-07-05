@@ -53,16 +53,6 @@ class AmbiguousClass(luigi.Task):
     pass
 
 
-class NonAmbiguousClass(luigi.ExternalTask):
-    pass
-
-
-class NonAmbiguousClass(luigi.Task):
-
-    def run(self):
-        NonAmbiguousClass.has_run = True
-
-
 class TaskWithSameName(luigi.Task):
 
     def run(self):
@@ -107,6 +97,11 @@ class CmdlineTest(unittest.TestCase):
         self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_100': b'done'})
 
     @mock.patch("logging.getLogger")
+    def test_cmdline_local_scheduler(self, logger):
+        luigi.run(['SomeTask', '--no-lock', '--n', '101'], local_scheduler=True)
+        self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_101': b'done'})
+
+    @mock.patch("logging.getLogger")
     def test_cmdline_other_task(self, logger):
         luigi.run(['--local-scheduler', '--no-lock', 'SomeTask', '--n', '1000'])
         self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_1000': b'done'})
@@ -114,12 +109,6 @@ class CmdlineTest(unittest.TestCase):
     @mock.patch("logging.getLogger")
     def test_cmdline_ambiguous_class(self, logger):
         self.assertRaises(Exception, luigi.run, ['--local-scheduler', '--no-lock', 'AmbiguousClass'])
-
-    @mock.patch("logging.getLogger")
-    @mock.patch("warnings.warn")
-    def test_cmdline_non_ambiguous_class(self, warn, logger):
-        luigi.run(['--local-scheduler', '--no-lock', 'NonAmbiguousClass'])
-        self.assertTrue(NonAmbiguousClass.has_run)
 
     @mock.patch("logging.getLogger")
     @mock.patch("logging.StreamHandler")

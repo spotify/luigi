@@ -81,13 +81,10 @@ class Parameter(object):
             foo = luigi.Parameter()
 
     This makes it possible to instantiate multiple tasks, eg ``MyTask(foo='bar')`` and
-    ``My(foo='baz')``. The task will then have the ``foo`` attribute set appropriately.
+    ``MyTask(foo='baz')``. The task will then have the ``foo`` attribute set appropriately.
 
     There are subclasses of ``Parameter`` that define what type the parameter has. This is not
     enforced within Python, but are used for command line interaction.
-
-    The ``config_path`` argument lets you specify a place where the parameter is read from config
-    in case no value is provided.
 
     When a task is instantiated, it will first use any argument as the value of the parameter, eg.
     if you instantiate a = TaskA(x=44) then a.x == 44. If this does not exist, it will use the value
@@ -103,7 +100,7 @@ class Parameter(object):
 
     @deprecate_kwarg('is_boolean', 'is_bool', False)
     def __init__(self, default=_no_value, is_list=False, is_boolean=False, is_global=False, significant=True, description=None,
-                 config_path=None):
+                 config_path=None, positional=True):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -114,8 +111,6 @@ class Parameter(object):
                              value of ``[]``.
         :param bool is_bool: specify ``True`` if the parameter is a bool value. Default:
                                 ``False``. Bool's have an implicit default value of ``False``.
-        :param bool is_global: specify ``True`` if the parameter is global (i.e. used by multiple
-                               Tasks). Default: ``False``. DEPRECATED.
         :param bool significant: specify ``False`` if the parameter should not be treated as part of
                                  the unique identifier for a Task. An insignificant Parameter might
                                  also be used to specify a password or other sensitive information
@@ -128,6 +123,10 @@ class Parameter(object):
                                  specifying a config file entry from which to read the
                                  default value for this parameter. DEPRECATED.
                                  Default: ``None``.
+        :param bool positional: If true, you can set the argument as a
+                                positional argument. Generally we recommend ``positional=False``
+                                as positional arguments become very tricky when
+                                you have inheritance and whatnot.
         """
         # The default default is no default
         self.__default = default
@@ -135,19 +134,13 @@ class Parameter(object):
 
         self.is_list = is_list
         self.is_bool = is_boolean and not is_list  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
-        self.is_global = is_global  # It just means that the default value is exposed and you can override it
-        self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
-
         if is_global:
-            warnings.warn(
-                'is_global is deprecated and will be removed. Please use either '
-                ' (a) class level config (eg. --MyTask-my-param 42)'
-                ' (b) a separate Config class with global settings on it',
-                DeprecationWarning,
-                stacklevel=2)
-
-        if is_global and default == _no_value and config_path is None:
-            raise ParameterException('Global parameters need default values')
+            warnings.warn("is_global support is removed. Assuming positional=False",
+                          DeprecationWarning,
+                          stacklevel=2)
+            positional = False
+        self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
+        self.positional = positional
 
         self.description = description
 
@@ -279,7 +272,7 @@ class Parameter(object):
             return [str(v) for v in x]
         return str(x)
 
-    def parse_from_input(self, param_name, x):
+    def parse_from_input(self, param_name, x, task_name=None):
         """
         Parses the parameter value from input ``x``, handling defaults and is_list.
 
@@ -289,8 +282,8 @@ class Parameter(object):
         :raises MissingParameterException: if x is false-y and no default is specified.
         """
         if not x:
-            if self.has_value:
-                return self.value
+            if self.has_task_value(param_name=param_name, task_name=task_name):
+                return self.task_value(param_name=param_name, task_name=task_name)
             elif self.is_bool:
                 return False
             elif self.is_list:
@@ -310,7 +303,7 @@ class Parameter(object):
             return self.serialize(x)
 
     def parser_dest(self, param_name, task_name, glob=False, is_without_section=False):
-        if self.is_global or is_without_section:
+        if is_without_section:
             if glob:
                 return param_name
             else:
@@ -321,7 +314,7 @@ class Parameter(object):
             else:
                 return param_name
 
-    def add_to_cmdline_parser(self, parser, param_name, task_name, optparse=False, glob=False, is_without_section=False):
+    def add_to_cmdline_parser(self, parser, param_name, task_name, glob=False, is_without_section=False):
         dest = self.parser_dest(param_name, task_name, glob, is_without_section=is_without_section)
         if not dest:
             return
@@ -333,8 +326,9 @@ class Parameter(object):
             description.append('for all instances of class %s' % task_name)
         elif self.description:
             description.append(self.description)
-        if self.has_value:
-            description.append(" [default: %s]" % (self.value,))
+        if self.has_task_value(param_name=param_name, task_name=task_name):
+            value = self.task_value(param_name=param_name, task_name=task_name)
+            description.append(" [default: %s]" % (value,))
 
         if self.is_list:
             action = "append"
@@ -342,21 +336,18 @@ class Parameter(object):
             action = "store_true"
         else:
             action = "store"
-        if optparse:
-            f = parser.add_option
-        else:
-            f = parser.add_argument
-        f(flag,
-          help=' '.join(description),
-          action=action,
-          dest=dest)
+
+        parser.add_argument(flag,
+                            help=' '.join(description),
+                            action=action,
+                            dest=dest)
 
     def parse_from_args(self, param_name, task_name, args, params):
         # Note: modifies arguments
         dest = self.parser_dest(param_name, task_name, glob=False)
         if dest is not None:
             value = getattr(args, dest, None)
-            params[param_name] = self.parse_from_input(param_name, value)
+            params[param_name] = self.parse_from_input(param_name, value, task_name=task_name)
 
     def set_global_from_args(self, param_name, task_name, args, is_without_section=False):
         # Note: side effects
@@ -364,7 +355,7 @@ class Parameter(object):
         if dest is not None:
             value = getattr(args, dest, None)
             if value:
-                self.set_global(self.parse_from_input(param_name, value))
+                self.set_global(self.parse_from_input(param_name, value, task_name=task_name))
             else:  # either False (bools) or None (everything else)
                 self.reset_global()
 

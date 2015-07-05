@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 
 import luigi
 import luigi.task
+from luigi.task_register import load_task
 
 
 class DummyTask(luigi.Task):
@@ -55,6 +56,10 @@ class TaskTest(unittest.TestCase):
         other = DummyTask.from_str_params(original.to_str_params())
         self.assertEqual(original, other)
 
+    def test_external_tasks_loadable(self):
+        task = load_task("luigi", "ExternalTask", {})
+        assert(isinstance(task, luigi.ExternalTask))
+
     def test_id_to_name_and_params(self):
         task_id = "InputText(date=2014-12-29)"
         (name, params) = luigi.task.id_to_name_and_params(task_id)
@@ -72,6 +77,16 @@ class TaskTest(unittest.TestCase):
         (name, params) = luigi.task.id_to_name_and_params(task_id)
         self.assertEquals(name, "InputText")
         self.assertEquals(params, dict(date="2014-12-29", foo=["bar", "baz-foo"]))
+
+    def test_flatten(self):
+        flatten = luigi.task.flatten
+        self.assertEquals(sorted(flatten({'a': 'foo', 'b': 'bar'})), ['bar', 'foo'])
+        self.assertEquals(sorted(flatten(['foo', ['bar', 'troll']])), ['bar', 'foo', 'troll'])
+        self.assertEquals(flatten('foo'), ['foo'])
+        self.assertEquals(flatten(42), [42])
+        self.assertEquals(flatten((len(i) for i in ["foo", "troll"])), [3, 5])
+        self.assertRaises(TypeError, flatten, (len(i) for i in ["foo", "troll", None]))
+
 
 if __name__ == '__main__':
     unittest.main()

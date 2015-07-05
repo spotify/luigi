@@ -217,7 +217,7 @@ def check_complete(task, out_queue):
 class worker(Config):
 
     ping_interval = FloatParameter(default=1.0,
-                                   config_path=dict(section='core', name='retry-delay'))
+                                   config_path=dict(section='core', name='worker-ping-interval'))
     keep_alive = BoolParameter(default=False,
                                config_path=dict(section='core', name='worker-keep-alive'))
     count_uniques = BoolParameter(default=False,
@@ -233,6 +233,10 @@ class worker(Config):
                            config_path=dict(section='core', name='worker-timeout'))
     task_limit = IntParameter(default=None,
                               config_path=dict(section='core', name='worker-task-limit'))
+    retry_external_tasks = BoolParameter(default=False,
+                                         config_path=dict(section='core', name='retry-external-tasks'),
+                                         description='If true, incomplete external tasks will be '
+                                         'retested for completion while Luigi is running.')
 
 
 class KeepAliveThread(threading.Thread):
@@ -454,7 +458,7 @@ class Worker(object):
         elif task.run == NotImplemented:
             deps = None
             status = PENDING
-            runnable = configuration.get_config().getboolean('core', 'retry-external-tasks', False)
+            runnable = worker().retry_external_tasks
 
             task.trigger_event(Event.DEPENDENCY_MISSING, task)
             logger.warning('Task %s is not complete and run() is not implemented. Probably a missing external dependency.', task.task_id)
@@ -476,7 +480,7 @@ class Worker(object):
             deps = [d.task_id for d in deps]
 
         self._scheduled_tasks[task.task_id] = task
-        self._scheduler.add_task(self._id, task.task_id, status=status,
+        self._scheduler.add_task(worker=self._id, task_id=task.task_id, status=status,
                                  deps=deps, runnable=runnable, priority=task.priority,
                                  resources=task.process_resources(),
                                  params=task.to_str_params(),
@@ -535,7 +539,7 @@ class Worker(object):
                 subject = 'Luigi: %s' % msg
                 error_message = notifications.wrap_traceback(ex)
                 notifications.send_error_email(subject, error_message)
-                self._scheduler.add_task(self._id, task_id, status=FAILED, runnable=False,
+                self._scheduler.add_task(worker=self._id, task_id=task_id, status=FAILED, runnable=False,
                                          assistant=self._assistant)
                 task_id = None
                 self.run_succeeded = False
@@ -608,8 +612,8 @@ class Worker(object):
                     self.add(t)
                 new_deps = [t.task_id for t in new_req]
 
-            self._scheduler.add_task(self._id,
-                                     task_id,
+            self._scheduler.add_task(worker=self._id,
+                                     task_id=task_id,
                                      status=status,
                                      expl=error_message,
                                      resources=task.process_resources(),

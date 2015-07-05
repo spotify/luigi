@@ -28,6 +28,7 @@ from boto.s3 import key
 from moto import mock_s3
 from luigi import configuration
 from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
+from luigi.target import MissingParentDirectory
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
     # spulec/moto#308
@@ -48,12 +49,11 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         self.tempFilePath = f.name
         f.write(self.tempFileContents)
         f.close()
+        self.addCleanup(os.remove, self.tempFilePath)
+
         self.mock_s3 = mock_s3()
         self.mock_s3.start()
-
-    def tearDown(self):
-        os.remove(self.tempFilePath)
-        self.mock_s3.stop()
+        self.addCleanup(self.mock_s3.stop)
 
     def create_target(self, format=None):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
@@ -108,12 +108,11 @@ class TestS3Client(unittest.TestCase):
         self.tempFilePath = f.name
         f.write(b"I'm a temporary file for testing\n")
         f.close()
+        self.addCleanup(os.remove, self.tempFilePath)
+
         self.mock_s3 = mock_s3()
         self.mock_s3.start()
-
-    def tearDown(self):
-        os.remove(self.tempFilePath)
-        self.mock_s3.stop()
+        self.addCleanup(self.mock_s3.stop)
 
     def test_init_with_environment_variables(self):
         os.environ['AWS_ACCESS_KEY_ID'] = 'foo'
@@ -212,19 +211,48 @@ class TestS3Client(unittest.TestCase):
         self.assertTrue(s3_client.get_key('s3://mybucket/key_to_find'))
         self.assertFalse(s3_client.get_key('s3://mybucket/does_not_exist'))
 
-    def test_is_dir(self):
+    def test_isdir(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
-        self.assertTrue(s3_client.is_dir('s3://mybucket'))
+        self.assertTrue(s3_client.isdir('s3://mybucket'))
 
         s3_client.put(self.tempFilePath, 's3://mybucket/tempdir0_$folder$')
-        self.assertTrue(s3_client.is_dir('s3://mybucket/tempdir0'))
+        self.assertTrue(s3_client.isdir('s3://mybucket/tempdir0'))
 
         s3_client.put(self.tempFilePath, 's3://mybucket/tempdir1/')
-        self.assertTrue(s3_client.is_dir('s3://mybucket/tempdir1'))
+        self.assertTrue(s3_client.isdir('s3://mybucket/tempdir1'))
 
         s3_client.put(self.tempFilePath, 's3://mybucket/key')
-        self.assertFalse(s3_client.is_dir('s3://mybucket/key'))
+        self.assertFalse(s3_client.isdir('s3://mybucket/key'))
+
+    def test_mkdir(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+        self.assertTrue(s3_client.isdir('s3://mybucket'))
+        s3_client.mkdir('s3://mybucket')
+
+        s3_client.mkdir('s3://mybucket/dir')
+        self.assertTrue(s3_client.isdir('s3://mybucket/dir'))
+
+        self.assertRaises(MissingParentDirectory,
+                          s3_client.mkdir, 's3://mybucket/dir/foo/bar', parents=False)
+        self.assertFalse(s3_client.isdir('s3://mybucket/dir/foo/bar'))
+
+    def test_listdir(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+
+        s3_client.put_string("", 's3://mybucket/hello/frank')
+        s3_client.put_string("", 's3://mybucket/hello/world')
+
+        self.assertEquals(['s3://mybucket/hello/frank', 's3://mybucket/hello/world'],
+                          list(s3_client.listdir('s3://mybucket/hello')))
+        self.assertEquals(['s3://mybucket/hello/frank', 's3://mybucket/hello/world'],
+                          list(s3_client.listdir('s3://mybucket/hello/')))
+        self.assertEquals(['frank', 'world'],
+                          list(s3_client.list('s3://mybucket/hello')))
+        self.assertEquals(['frank', 'world'],
+                          list(s3_client.list('s3://mybucket/hello/')))
 
     def test_remove(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)

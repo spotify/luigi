@@ -200,17 +200,17 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         return {'content_size': content_size, 'dir_count': dir_count,
                 'file_count': file_count}
 
-    def copy(self, path):
+    def copy(self, path, destination):
         """
         Raise a NotImplementedError exception.
         """
-        return NotImplementedError("SnakebiteClient in luigi doesn't implement copy")
+        raise NotImplementedError("SnakebiteClient in luigi doesn't implement copy")
 
     def put(self, local_path, destination):
         """
         Raise a NotImplementedError exception.
         """
-        return NotImplementedError("Snakebite doesn't implement put")
+        raise NotImplementedError("Snakebite doesn't implement put")
 
     def get(self, path, local_destination):
         """
@@ -289,4 +289,4 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         """
         Raise a NotImplementedError exception.
         """
-        return NotImplementedError("SnakebiteClient in luigi doesn't implement touchz")
+        raise NotImplementedError("SnakebiteClient in luigi doesn't implement touchz")

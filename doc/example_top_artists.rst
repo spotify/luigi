@@ -11,7 +11,8 @@ some other format.
 For the purpose of this exercise, we want to aggregate all streams,
 find the top 10 artists and then put the results into Postgres.
 
-This example is also available in ``examples/top_artists.py``
+This example is also available in
+`examples/top_artists.py <https://github.com/spotify/luigi/blob/master/examples/top_artists.py>`_.
 
 Step 1 - Aggregate Artist Streams
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -60,9 +61,9 @@ There are several pieces of this snippet that deserve more explanation.
    task. This could be anything, including calling subprocesses, performing
    long running number crunching, etc. For some subclasses of
    :class:`~luigi.task.Task` you don't have to implement the ``run``
-   method. For instance, for the :class:`~luigi.hadoop.JobTask`
+   method. For instance, for the :class:`~luigi.contrib.hadoop.JobTask`
    subclass you implement a *mapper* and *reducer* instead.
--  :class:`~luigi.hdfs.HdfsTarget` is a built in class that makes it
+-  :class:`~luigi.contrib.hdfs.HdfsTarget` is a built in class that makes it
    easy to read/write from/to HDFS. It also makes all file operations
    atomic, which is nice in case your script crashes for any reason.
 
@@ -75,7 +76,7 @@ Try running this using eg.
 
     $ python examples/top_artists.py AggregateArtists --local-scheduler --date-interval 2012-06
 
-You can also try to view the manual using --help which will give you an
+You can also try to view the manual using `--help` which will give you an
 overview of the options:
 
 ::
@@ -107,7 +108,7 @@ the input files is modified.
 You need to delete the output file
 manually.
 
-The *--local-scheduler* flag tells Luigi not to connect to a scheduler
+The `--local-scheduler` flag tells Luigi not to connect to a scheduler
 server. This is not recommended for other purpose than just testing
 things.
 
@@ -119,11 +120,11 @@ here is how this could look like, instead of the class above.
 
 .. code:: python
 
-    class AggregateArtistsHadoop(luigi.hadoop.JobTask):
+    class AggregateArtistsHadoop(luigi.contrib.hadoop.JobTask):
         date_interval = luigi.DateIntervalParameter()
 
         def output(self):
-            return luigi.hdfs.HdfsTarget("data/artist_streams_%s.tsv" % self.date_interval)
+            return luigi.contrib.hdfs.HdfsTarget("data/artist_streams_%s.tsv" % self.date_interval)
 
         def requires(self):
             return [StreamsHdfs(date) for date in self.date_interval]
@@ -135,9 +136,10 @@ here is how this could look like, instead of the class above.
         def reducer(self, key, values):
             yield key, sum(values)
 
-Note that ``luigi.hadoop.JobTask`` doesn't require you to implement a
-``run`` method. Instead, you typically implement a ``mapper`` and
-``reducer`` method.
+Note that :class:`luigi.contrib.hadoop.JobTask` doesn't require you to implement a
+:func:`~luigi.task.Task.run` method. Instead, you typically implement a
+:func:`~luigi.contrib.hadoop.JobTask.mapper` and
+:func:`~luigi.contrib.hadoop.JobTask.reducer` method.
 
 Step 2 – Find the Top Artists
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -223,7 +225,7 @@ building all its upstream dependencies.
 Using the Central Planner
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The *--local-scheduler* flag tells Luigi not to connect to a central scheduler.
+The `--local-scheduler` flag tells Luigi not to connect to a central scheduler.
 This is recommended in order to get started and or for development purposes.
 At the point where you start putting things in production
 we strongly recommend running the central scheduler server.
@@ -231,7 +233,7 @@ In addition to providing locking
 so that the same task is not run by multiple processes at the same time,
 this server also provides a pretty nice visualization of your current work flow.
 
-If you drop the *--local-scheduler* flag,
+If you drop the `--local-scheduler` flag,
 your script will try to connect to the central planner,
 by default at localhost port 8082.
 If you run
@@ -250,7 +252,7 @@ then in fact your script will now do the scheduling through a
 centralized server.
 You need `Tornado <http://www.tornadoweb.org/>`__ for this to work.
 
-Launching *http://localhost:8082* should show something like this:
+Launching `http://localhost:8082` should show something like this:
 
 .. figure:: web_server.png
    :alt: Web server screenshot

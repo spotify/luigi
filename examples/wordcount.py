@@ -78,6 +78,3 @@ class WordCount(luigi.Task):
         for word, count in six.iteritems(count):
             f.write("%s\t%d\n" % (word, count))
         f.close()  # WARNING: file system operations are atomic therefore if you don't close the file you lose all data
-
-if __name__ == '__main__':
-    luigi.run(main_task_cls=WordCount)

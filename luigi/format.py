@@ -72,7 +72,7 @@ class InputPipeProcessWrapper(object):
             try:
                 input_pipe.fileno()
             except AttributeError:
-                # subprocess require a fileno to work, if not reprsent we copy to disk first
+                # subprocess require a fileno to work, if not present we copy to disk first
                 self._original_input = False
                 f = tempfile.NamedTemporaryFile('wb', prefix='luigi-process_tmp', delete=False)
                 self._tmp_file = f.name

@@ -74,6 +74,14 @@ class MissingParentDirectory(FileSystemException):
     pass
 
 
+class NotADirectory(FileSystemException):
+    """
+    Raised when a file system operation can't be performed because
+    an expected directory is actually a file.
+    """
+    pass
+
+
 @six.add_metaclass(abc.ABCMeta)
 class FileSystem(object):
     """
@@ -136,6 +144,18 @@ class FileSystem(object):
         *Note*: This method is optional, not all FileSystem subclasses implements it.
         """
         raise NotImplementedError("isdir() not implemented on {0}".format(self.__class__.__name__))
+
+    def listdir(self, path):
+        """Return a list of files rooted in path.
+
+        This returns an iterable of the files rooted at ``path``. This is intended to be a
+        recursive listing.
+
+        :param str path: a path within the FileSystem to list.
+
+        *Note*: This method is optional, not all FileSystem subclasses implements it.
+        """
+        raise NotImplementedError("listdir() not implemented on {0}".format(self.__class__.__name__))
 
 
 class FileSystemTarget(Target):

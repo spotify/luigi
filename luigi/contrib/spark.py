@@ -122,6 +122,10 @@ class SparkSubmitTask(luigi.Task):
         return self._list_config(configuration.get_config().get("spark", "jars", None))
 
     @property
+    def packages(self):
+        return self._list_config(configuration.get_config().get("spark", "packages", None))
+
+    @property
     def py_files(self):
         return self._list_config(configuration.get_config().get("spark", "py-files", None))
 
@@ -203,6 +207,7 @@ class SparkSubmitTask(luigi.Task):
         command += self._text_arg('--name', self.name)
         command += self._text_arg('--class', self.entry_class)
         command += self._list_arg('--jars', self.jars)
+        command += self._list_arg('--packages', self.packages)
         command += self._list_arg('--py-files', self.py_files)
         command += self._list_arg('--files', self.files)
         command += self._list_arg('--archives', self.archives)
@@ -269,7 +274,7 @@ class SparkSubmitTask(luigi.Task):
         command = []
         if value and isinstance(value, dict):
             for prop, value in value.items():
-                command += [name, '"{0}={1}"'.format(prop, value)]
+                command += [name, '{0}={1}'.format(prop, value)]
         return command
 
     def _flag_arg(self, name, value):
@@ -375,7 +380,7 @@ class SparkJob(luigi.Task):
     spark_workers = None
     spark_master_memory = None
     spark_worker_memory = None
-    queue = luigi.Parameter(is_global=True, default=None, significant=False)
+    queue = luigi.Parameter(default=None, significant=False, positional=False)
     temp_hadoop_output_file = None
 
     def requires_local(self):

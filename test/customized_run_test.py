@@ -48,7 +48,7 @@ class CustomizedLocalScheduler(luigi.scheduler.CentralPlannerScheduler):
         self.has_run = False
 
     def get_work(self, worker, host=None, **kwargs):
-        r = super(CustomizedLocalScheduler, self).get_work(worker, host)
+        r = super(CustomizedLocalScheduler, self).get_work(worker=worker, host=host)
         self.has_run = True
         return r
 
@@ -63,7 +63,7 @@ class CustomizedRemoteScheduler(luigi.rpc.RemoteScheduler):
         self.has_run = False
 
     def get_work(self, worker, host=None):
-        r = super(CustomizedRemoteScheduler, self).get_work(worker, host)
+        r = super(CustomizedRemoteScheduler, self).get_work(worker=worker, host=host)
         self.has_run = True
         return r
 
