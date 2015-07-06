@@ -42,3 +42,27 @@ class ImportTest(unittest.TestCase):
             for f in files:
                 if f.endswith('.py') and not f.startswith('_'):
                     __import__(package + '.' + f[:-3])
+
+    def import_luigi_test(self):
+        """
+        Test that the top luigi package can be imported and contains the usual suspects.
+        """
+        import luigi
+
+        # These should exist (if not, this will cause AttributeErrors)
+        expected = [
+            luigi.Event,
+            luigi.Config,
+            luigi.Task, luigi.ExternalTask, luigi.WrapperTask,
+            luigi.Target, luigi.LocalTarget, luigi.File,
+            luigi.namespace,
+            luigi.RemoteScheduler,
+            luigi.RPCError,
+            luigi.run, luigi.build,
+            luigi.Parameter,
+            luigi.DateHourParameter, luigi.DateMinuteParameter, luigi.DateParameter,
+            luigi.DateIntervalParameter, luigi.TimeDeltaParameter,
+            luigi.IntParameter, luigi.FloatParameter,
+            luigi.BooleanParameter, luigi.BoolParameter,
+        ]
+        self.assertGreater(len(expected), 0)

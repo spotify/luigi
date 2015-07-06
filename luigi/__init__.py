@@ -19,42 +19,29 @@ Package containing core luigi functionality.
 """
 
 from luigi import task
-from luigi import file  # wtf @ naming
-from luigi import rpc
-from luigi import parameter
-from luigi import configuration
-from luigi import interface
+from luigi.task import Task, Config, ExternalTask, WrapperTask, namespace
+
 from luigi import target
+from luigi.target import Target
+
+from luigi import file  # wtf @ naming
+from luigi.file import File, LocalTarget
+
+from luigi import rpc
+from luigi.rpc import RemoteScheduler, RPCError
+
+from luigi import parameter
+from luigi.parameter import Parameter, \
+    DateParameter, DateHourParameter, DateMinuteParameter, \
+    DateIntervalParameter, TimeDeltaParameter, \
+    IntParameter, FloatParameter, BooleanParameter, BoolParameter
+
+from luigi import configuration
+
+from luigi import interface
+from luigi.interface import run, build
+
 from luigi import event
-
-Event = event.Event
-
-Task = task.Task
-Config = task.Config
-ExternalTask = task.ExternalTask
-WrapperTask = task.WrapperTask
-Target = target.Target
-
-File = file.File  # TODO: remove, should be LocalTarget
-LocalTarget = file.LocalTarget
-Parameter = parameter.Parameter
-RemoteScheduler = rpc.RemoteScheduler
-RPCError = rpc.RPCError
-
-run = interface.run
-build = interface.build
-
-# TODO: how can we get rid of these?
-DateHourParameter = parameter.DateHourParameter
-DateMinuteParameter = parameter.DateMinuteParameter
-DateParameter = parameter.DateParameter
-IntParameter = parameter.IntParameter
-FloatParameter = parameter.FloatParameter
-BooleanParameter = parameter.BooleanParameter  # backward compatibility
-BoolParameter = parameter.BoolParameter
-DateIntervalParameter = parameter.DateIntervalParameter
-TimeDeltaParameter = parameter.TimeDeltaParameter
-
-namespace = task.namespace
+from luigi.event import Event
 
 from .tools import range  # just makes the tool classes available from command line
