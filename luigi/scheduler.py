@@ -226,7 +226,7 @@ class Worker(object):
     Structure for tracking worker activity and keeping their references.
     """
 
-    def __init__(self, worker_id, last_active=time.time()):
+    def __init__(self, worker_id, last_active=None):
         self.id = worker_id
         self.reference = None  # reference to the worker in the real world. (Currently a dict containing just the host)
         self.last_active = last_active or time.time()  # seconds since epoch
