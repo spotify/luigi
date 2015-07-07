@@ -157,6 +157,15 @@ def send_email(subject, message, sender, recipients, image_png=None):
         send_email_smtp(config, sender, subject, message, recipients, image_png)
 
 
+def send_notification(subject, message, topic):
+    import boto.sns
+    config = configuration.get_config()
+    con = boto.sns.connect_to_region(config.get('sns', 'region', 'us-east-1'),
+                                     aws_access_key_id=config.get('sns', 'AWS_ACCESS_KEY', None),
+                                     aws_secret_access_key=config.get('sns', 'AWS_SECRET_KEY', None))
+    con.publish(topic, message, subject[:100])
+
+
 def send_error_email(subject, message):
     """
     Sends an email to the configured error-email.
@@ -165,6 +174,7 @@ def send_error_email(subject, message):
     """
     config = configuration.get_config()
     receiver = config.get('core', 'error-email', None)
+    sns_topic = config.get('core', 'error-sns-topic', None)
     if receiver:
         sender = config.get('core', 'email-sender', DEFAULT_CLIENT_EMAIL)
         logger.info("Sending warning email to %r", receiver)
@@ -173,6 +183,13 @@ def send_error_email(subject, message):
             message=message,
             sender=sender,
             recipients=(receiver,)
+        )
+    elif sns_topic:
+        logger.info("Sending warning via %r", sns_topic)
+        send_notification(
+            subject=subject,
+            message=message,
+            topic=sns_topic
         )
     else:
         logger.info("Skipping error email. Set `error-email` in the `core` "
