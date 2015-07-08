@@ -157,7 +157,7 @@ def send_email(subject, message, sender, recipients, image_png=None):
         send_email_smtp(config, sender, subject, message, recipients, image_png)
 
 
-def send_notification(subject, message, topic):
+def send_sns_notification(subject, message, topic):
     import boto.sns
     config = configuration.get_config()
     con = boto.sns.connect_to_region(config.get('sns', 'region', 'us-east-1'),
@@ -186,7 +186,7 @@ def send_error_email(subject, message):
         )
     elif sns_topic:
         logger.info("Sending warning via %r", sns_topic)
-        send_notification(
+        send_sns_notification(
             subject=subject,
             message=message,
             topic=sns_topic
