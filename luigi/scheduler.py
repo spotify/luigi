@@ -669,25 +669,14 @@ class CentralPlannerScheduler(Scheduler):
                         used_resources[resource] += amount
         return used_resources
 
-    def _rank(self, among_tasks):
+    def _rank(self, task):
         """
         Return worker's rank function for task scheduling.
 
         :return:
         """
-        dependents = collections.defaultdict(int)
 
-        def not_done(t):
-            task = self._state.get_task(t, default=None)
-            return task is None or task.status != DONE
-        for task in among_tasks:
-            if task.status != DONE:
-                deps = list(filter(not_done, task.deps))
-                inverse_num_deps = 1.0 / max(len(deps), 1)
-                for dep in deps:
-                    dependents[dep] += inverse_num_deps
-
-        return lambda task: (task.priority, dependents[task.id], -task.time)
+        return task.priority, -task.time
 
     def _schedulable(self, task):
         if task.status != PENDING:
@@ -739,7 +728,7 @@ class CentralPlannerScheduler(Scheduler):
             greedy_workers = dict((worker.id, worker.info.get('workers', 1))
                                   for worker in self._state.get_active_workers())
         tasks = list(relevant_tasks)
-        tasks.sort(key=self._rank(among_tasks=tasks), reverse=True)
+        tasks.sort(key=self._rank, reverse=True)
 
         for task in tasks:
             upstream_status = self._upstream_status(task.id, upstream_table)
@@ -758,12 +747,15 @@ class CentralPlannerScheduler(Scheduler):
                 if len(task.workers) == 1 and not assistant:
                     n_unique_pending += 1
 
+            if best_task:
+                continue
+
             if task.status == RUNNING and (task.worker_running in greedy_workers):
                 greedy_workers[task.worker_running] -= 1
                 for resource, amount in six.iteritems((task.resources or {})):
                     greedy_resources[resource] += amount
 
-            if not best_task and self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
+            if self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
                 if in_workers and self._has_resources(task.resources, used_resources):
                     best_task = task
                 else:
@@ -811,6 +803,8 @@ class CentralPlannerScheduler(Scheduler):
                 dep_id = task_stack.pop()
                 if self._state.has_task(dep_id):
                     dep = self._state.get_task(dep_id)
+                    if dep.status == DONE:
+                        continue
                     if dep_id not in upstream_status_table:
                         if dep.status == PENDING and dep.deps:
                             task_stack = task_stack + [dep_id] + list(dep.deps)
