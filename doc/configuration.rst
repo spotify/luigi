@@ -226,6 +226,10 @@ AWS_ACCESS_KEY
 AWS_SECRET_KEY
   Your AWS secret key
 
+force-send
+  If true, e-mails are sent in all run configurations (even if stdout is
+  connected to a tty device).  Defaults to False.
+  
 region
   Your AWS region. Defaults to us-east-1.
 
