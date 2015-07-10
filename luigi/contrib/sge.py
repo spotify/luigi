@@ -49,7 +49,7 @@ logger.propagate = 0
 
 POLL_TIME = 5  # decided to hard-code rather than configure here
 
-## Defaults for configuration parameters. Use StarCluster defaults. Number of CPUs is further configurable as task parameter
+# Defaults for configuration parameters. Use StarCluster defaults. Number of CPUs is further configurable as task parameter
 DEFAULT_HOME = configuration.get_config().get('sge', 'shared-tmp-dir', default=None) or '/home'
 DEFAULT_PE = configuration.get_config().get('sge', 'parallel-env', default=None) or 'orte'
 DEFAULT_NCPU = configuration.get_config().get('sge', 'n-cpu', default=None) or 2
@@ -57,12 +57,10 @@ DEFAULT_NCPU = configuration.get_config().get('sge', 'n-cpu', default=None) or 2
 
 def clean_task_id(task_id):
     '''Clean the task ID so qsub allows it as a "name" string. From the "name"
-    definition in sge_types(1):
+    definition in sge_types(1): The name may be any arbitrary alphanumeric ASCII
+    string, but may not contain "\n", "\t", "\r", "/", ":", "@", "\", "*", or "?".
 
-        The name may be any arbitrary alphanumeric ASCII string, but may not contain
-        "\n", "\t", "\r", "/", ":", "@", "\", "*", or "?".
-
-    Also remove some other punctuation and spaces just in case
+    Also remove some other punctuation and spaces just in case.
     '''
     for c in ['\n', '\t', '\r', '/', ':', '@', '\\', '*', '?', ',', '=', ' ', '(', ')']:
         task_id = task_id.replace(c, '-')
