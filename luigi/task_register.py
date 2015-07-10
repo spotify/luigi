@@ -33,6 +33,14 @@ class TaskClassException(Exception):
     pass
 
 
+class TaskClassNotFoundException(TaskClassException):
+    pass
+
+
+class TaskClassAmbigiousException(TaskClassException):
+    pass
+
+
 class Register(abc.ABCMeta):
     """
     The Metaclass of :py:class:`Task`.
@@ -176,10 +184,10 @@ class Register(abc.ABCMeta):
         """
         task_cls = cls._get_reg().get(name)
         if not task_cls:
-            raise TaskClassException('Task %r not found. Candidates are: %s' % (name, cls.tasks_str()))
+            raise TaskClassNotFoundException(cls._missing_task_msg(name))
 
         if task_cls == cls.AMBIGUOUS_CLASS:
-            raise TaskClassException('Task %r is ambiguous' % name)
+            raise TaskClassAmbigiousException('Task %r is ambiguous' % name)
         return task_cls
 
     @classmethod
@@ -194,6 +202,33 @@ class Register(abc.ABCMeta):
                 continue
             for param_name, param_obj in task_cls.get_params():
                 yield task_name, (not task_cls.use_cmdline_section), param_name, param_obj
+
+    @staticmethod
+    def _editdistance(a, b):
+        """ Simple unweighted Levenshtein distance """
+        r0 = range(0, len(b) + 1)
+        r1 = [0] * (len(b) + 1)
+
+        for i in range(0, len(a)):
+            r1[0] = i + 1
+
+            for j in range(0, len(b)):
+                c = 0 if a[i] is b[j] else 1
+                r1[j + 1] = min(r1[j] + 1, r0[j + 1] + 1, r0[j] + c)
+
+            r0 = r1[:]
+
+        return r1[len(b)]
+
+    @classmethod
+    def _missing_task_msg(cls, task_name):
+        weighted_tasks = [(Register._editdistance(task_name, task_name_2), task_name_2) for task_name_2 in cls.task_names()]
+        ordered_tasks = sorted(weighted_tasks, key=lambda pair: pair[0])
+        candidates = [task for (dist, task) in ordered_tasks if dist <= 5 and dist < len(task)]
+        if candidates:
+            return "No task %s. Did you mean:\n%s" % (task_name, '\n'.join(candidates))
+        else:
+            return "No task %s. Candidates are: %s" % (task_name, cls.tasks_str())
 
 
 def load_task(module, task_name, params_str):

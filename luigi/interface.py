@@ -175,36 +175,6 @@ class Interface(object):
         return success
 
 
-# Simple unweighted Levenshtein distance
-def _editdistance(a, b):
-    r0 = range(0, len(b) + 1)
-    r1 = [0] * (len(b) + 1)
-
-    for i in range(0, len(a)):
-        r1[0] = i + 1
-
-        for j in range(0, len(b)):
-            c = 0 if a[i] is b[j] else 1
-            r1[j + 1] = min(r1[j] + 1, r0[j + 1] + 1, r0[j] + c)
-
-        r0 = r1[:]
-
-    return r1[len(b)]
-
-
-def error_task_names(task_name, task_names):
-    weighted_tasks = [(_editdistance(task_name, task_name_2), task_name_2) for task_name_2 in task_names]
-    ordered_tasks = sorted(weighted_tasks, key=lambda pair: pair[0])
-    candidates = [task for (dist, task) in ordered_tasks if dist <= 5 and dist < len(task)]
-    display_string = ""
-    if candidates:
-        display_string = "No task %s. Did you mean:\n%s" % (task_name, '\n'.join(candidates))
-    else:
-        display_string = "No task %s." % task_name
-
-    raise SystemExit(display_string)
-
-
 def add_task_parameters(parser, task_cls):
     for param_name, param in task_cls.get_params():
         param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, glob=False)
@@ -263,9 +233,6 @@ class ArgParseInterface(Interface):
             raise SystemExit('No task specified')
 
         task_name = unknown[0]
-        if task_name not in task_names:
-            error_task_names(task_name, task_names)
-
         task_cls = Register.get_task_cls(task_name)
 
         # Add a subparser to parse task-specific arguments

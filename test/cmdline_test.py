@@ -143,7 +143,8 @@ class CmdlineTest(unittest.TestCase):
 
     @mock.patch('argparse.ArgumentParser.print_usage')
     def test_non_existent_class(self, print_usage):
-        self.assertRaises(SystemExit, luigi.run, ['--local-scheduler', '--no-lock', 'XYZ'])
+        self.assertRaises(luigi.task_register.TaskClassNotFoundException,
+                          luigi.run, ['--local-scheduler', '--no-lock', 'XYZ'])
 
     @mock.patch('argparse.ArgumentParser.print_usage')
     def test_no_task(self, print_usage):
