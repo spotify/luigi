@@ -56,11 +56,11 @@ DEFAULT_NCPU = configuration.get_config().get('sge', 'n-cpu', default=None) or 2
 
 
 def clean_task_id(task_id):
-    '''Clean the task ID so qsub allows it as a "name" string. From the "name"
-    definition in sge_types(1): The name may be any arbitrary alphanumeric ASCII
-    string, but may not contain "\n", "\t", "\r", "/", ":", "@", "\", "*", or "?".
+    '''Clean the task ID so qsub allows it as a "name" string.
 
-    Also remove some other punctuation and spaces just in case.
+    From the "name" definition in sge_types(1): "The name may be any arbitrary
+    alphanumeric ASCII string, but may not contain "\n", "\t", "\r", "/", ":",
+    "@", "\", "*", or "?"." Also removes some other punctuation and spaces just in case.
     '''
     for c in ['\n', '\t', '\r', '/', ':', '@', '\\', '*', '?', ',', '=', ' ', '(', ')']:
         task_id = task_id.replace(c, '-')
@@ -70,7 +70,7 @@ def clean_task_id(task_id):
 def parse_qstat_state(qstat_out, job_id):
     '''Parse "state" column from `qstat` output for given job_id
 
-    Returns state for the *first* job matching job_id. Returns 'u' if 
+    Returns state for the *first* job matching job_id. Returns 'u' if
     `qstat` output is empty or job_id is not found.
     '''
     if qstat_out.strip() == '':
