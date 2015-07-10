@@ -68,9 +68,10 @@ def clean_task_id(task_id):
 
 
 def parse_qstat_state(qstat_out, job_id):
-    '''Parse "state" column from qstat output for given job_name
+    '''Parse "state" column from `qstat` output for given job_id
 
-    Returns state for the *first* job matching job_name.
+    Returns state for the *first* job matching job_id. Returns 'u' if 
+    `qstat` output is empty or job_id is not found.
     '''
     if qstat_out.strip() == '':
         return 'u'
@@ -243,8 +244,7 @@ class SGEJobTask(luigi.Task):
             else:
                 logger.info('Job status is UNKNOWN!')
                 logger.info('Status is : %s' % sge_status)
-                break
-                raise Exception("job status isn't one of ['r', 'qw', 't']: %s" % sge_status)
+                raise Exception("job status isn't one of ['r', 'qw', 'E*', 't', 'u']: %s" % sge_status)
 
 
 class LocalSGEJobTask(SGEJobTask):
