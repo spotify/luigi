@@ -139,9 +139,9 @@ class GCSClient(luigi.target.FileSystem):
         while response is None:
             error = None
             try:
-                progress, response = request.next_chunk()
-                if progress:
-                    logger.debug('Upload progress: %.2f%%', 100 * progress.progress())
+                status, response = request.next_chunk()
+                if status:
+                    logger.debug('Upload progress: %.2f%%', 100 * status.progress())
             except errors.HttpError as err:
                 error = err
                 if err.resp.status < 500:
