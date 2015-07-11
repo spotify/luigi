@@ -337,6 +337,9 @@ def run(cmdline_args=None, main_task_cls=None,
     :param use_dynamic_argparse:
     :param local_scheduler:
     """
+    if cmdline_args is None:
+        cmdline_args = sys.argv[1:]
+
     if use_dynamic_argparse:
         interface = DynamicArgParseInterface()
     else:
