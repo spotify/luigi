@@ -259,12 +259,8 @@ class CopyToTable(rdbms.CopyToTable):
         """
         if value in self.null_values:
             return r'\N'
-        elif six.PY3:
-            return default_escape(str(value))
-        elif isinstance(value, unicode):
-            return default_escape(value).encode('utf8')
         else:
-            return default_escape(str(value))
+            return default_escape(six.text_type(value))
 
 # everything below will rarely have to be overridden
 

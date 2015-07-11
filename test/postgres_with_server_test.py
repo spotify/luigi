@@ -48,6 +48,8 @@ try:
         password=password,
     )
     conn.close()
+    psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
+    psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
 except Exception:
     raise unittest.SkipTest('Unable to connect to postgres')
 
@@ -76,6 +78,7 @@ class TestPostgresTask(CopyToTestDB):
         yield 'foo', 123, 123.45
         yield None, '-100', '5143.213'
         yield '\t\n\r\\N', 0, 0
+        yield u'éцү我', 0, 0
 
 
 class MetricBase(CopyToTestDB):
@@ -132,8 +135,9 @@ class TestPostgresImportTask(unittest.TestCase):
         self.assertEqual(rows, (
             ('foo', 123, 123.45),
             (None, -100, 5143.213),
-            ('\t\n\r\\N', 0.0, 0))
-        )
+            ('\t\n\r\\N', 0.0, 0),
+            (u'éцү我', 0, 0),
+        ))
 
     def test_multimetric(self):
         metrics = MetricBase()
