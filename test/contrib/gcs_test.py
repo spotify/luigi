@@ -144,12 +144,15 @@ class GCSClientTest(_GCSBaseTestCase):
 
     def test_put_file(self):
         with tempfile.NamedTemporaryFile() as fp:
-            fp.write(b'hi')
+            lorem = 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt\n'
+            # Larger file than chunk size, fails with incorrect progress set up
+            big = lorem * 41943
+            fp.write(big)
             fp.flush()
 
             self.client.put(fp.name, bucket_url('test_put_file'))
             self.assertTrue(self.client.exists(bucket_url('test_put_file')))
-            self.assertEquals(b'hi', self.client.download(bucket_url('test_put_file')).read())
+            self.assertEquals(big, self.client.download(bucket_url('test_put_file')).read())
 
 
 @attr('gcloud')
