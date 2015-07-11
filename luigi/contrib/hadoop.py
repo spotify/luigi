@@ -25,7 +25,6 @@ an example of how to run a Hadoop job.
 from __future__ import print_function
 
 import abc
-import binascii
 import datetime
 import glob
 import logging

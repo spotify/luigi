@@ -24,11 +24,9 @@ import random
 import shutil
 import tempfile
 import io
-import sys
 import warnings
 
-import luigi.util
-from luigi.format import FileWrapper, get_default_format, MixedUnicodeBytes
+from luigi.format import FileWrapper, get_default_format
 from luigi.target import FileAlreadyExists, MissingParentDirectory, NotADirectory, FileSystem, FileSystemTarget, AtomicLocalFile
 
 
@@ -92,10 +90,6 @@ class LocalTarget(FileSystemTarget):
     def __init__(self, path=None, format=None, is_tmp=False):
         if format is None:
             format = get_default_format()
-
-        # Allow to write unicode in file for retrocompatibility
-        if sys.version_info[:2] <= (2, 6):
-            format = format >> MixedUnicodeBytes
 
         if not path:
             if not is_tmp:

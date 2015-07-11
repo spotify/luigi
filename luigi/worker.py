@@ -24,7 +24,6 @@ When running in local mode, the worker talks directly to a :py:class:`~luigi.sch
 When you run a central server, the worker will talk to the scheduler using a :py:class:`~luigi.rpc.RemoteScheduler` instance.
 """
 
-import abc
 import collections
 import getpass
 import logging
@@ -43,7 +42,6 @@ import types
 
 from luigi import six
 
-from luigi import configuration
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task

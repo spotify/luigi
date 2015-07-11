@@ -27,7 +27,6 @@ import sys
 import warnings
 
 from luigi import six
-import luigi.util
 from luigi import target
 from luigi.format import get_default_format, MixedUnicodeBytes
 

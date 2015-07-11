@@ -25,7 +25,6 @@ import itertools
 import logging
 import os
 import os.path
-import sys
 try:
     from urlparse import urlsplit
 except ImportError:
@@ -40,7 +39,7 @@ from luigi import six
 from luigi.six.moves import range
 
 from luigi import configuration
-from luigi.format import get_default_format, MixedUnicodeBytes
+from luigi.format import get_default_format
 from luigi.parameter import Parameter
 from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
 from luigi.task import ExternalTask
@@ -466,10 +465,6 @@ class S3Target(FileSystemTarget):
         super(S3Target, self).__init__(path)
         if format is None:
             format = get_default_format()
-
-        # Allow to write unicode in file for retrocompatibility
-        if sys.version_info[:2] <= (2, 6):
-            format = format >> MixedUnicodeBytes
 
         self.format = format
         self.fs = client or S3Client()
