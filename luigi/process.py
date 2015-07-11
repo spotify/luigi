@@ -23,8 +23,6 @@ import datetime
 import logging
 import logging.handlers
 import os
-import random
-import signal
 
 rootlogger = logging.getLogger()
 server_logger = logging.getLogger("luigi.server")

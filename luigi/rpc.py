@@ -26,7 +26,7 @@ import socket
 import time
 
 from luigi.six.moves.urllib.parse import urlencode
-from luigi.six.moves.urllib.request import Request, urlopen
+from luigi.six.moves.urllib.request import urlopen
 from luigi.six.moves.urllib.error import URLError
 
 from luigi import configuration
