@@ -21,9 +21,10 @@ import gzip
 import os
 import random
 import shutil
-from helpers import unittest
+
 import mock
 
+from helpers import unittest
 import luigi.format
 from luigi import LocalTarget
 from luigi.file import LocalFileSystem
@@ -35,17 +36,20 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
     path = '/tmp/test.txt'
     copy = '/tmp/test.copy.txt'
 
-    def setUp(self):
+    def _cleanup_files(self):
         if os.path.exists(self.path):
-            os.remove(self.path)
+            if os.path.isdir(self.path):
+                shutil.rmtree(self.path)
+            else:
+                os.remove(self.path)
         if os.path.exists(self.copy):
             os.remove(self.copy)
 
+    def setUp(self):
+        self._cleanup_files()
+
     def tearDown(self):
-        if os.path.exists(self.path):
-            os.remove(self.path)
-        if os.path.exists(self.copy):
-            os.remove(self.copy)
+        self._cleanup_files()
 
     def create_target(self, format=None):
         return LocalTarget(self.path, format=format)
@@ -166,6 +170,29 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
 
         self.assertEqual(b'a\nb\nc\nd', b)
         self.assertEqual(b'a\r\nb\r\nc\r\nd', c)
+
+    def test_atomicity_dir_simple(self):
+        target = LocalTarget(self.path, is_dir=True)
+
+        with target.open("w") as f:
+            self.assertFalse(target.exists())
+            with open(os.path.join(f.tmp_path, "file_in_dir"), 'w') as fp:
+                fp.write("hello")
+        self.assertTrue(target.exists())
+        self.assertTrue(os.path.exists(os.path.join(target.path, "file_in_dir")))
+
+    def test_atomicity_dir_with_error(self):
+        target = LocalTarget(self.path, is_dir=True)
+
+        def raises_error():
+            with target.open("w") as f:
+                self.assertFalse(target.exists())
+                with open(os.path.join(f.tmp_path, "file_in_dir"), 'w') as fp:
+                    fp.write("hello")
+                raise Exception("My Error")
+
+        self.assertRaisesRegexp(Exception, "My Error", raises_error)
+        self.assertFalse(target.exists())
 
 
 class LocalTargetCreateDirectoriesTest(LocalTargetTest):

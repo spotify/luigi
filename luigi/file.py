@@ -87,7 +87,7 @@ class LocalFileSystem(FileSystem):
 class LocalTarget(FileSystemTarget):
     fs = LocalFileSystem()
 
-    def __init__(self, path=None, format=None, is_tmp=False):
+    def __init__(self, path=None, format=None, is_tmp=False, is_dir=False):
         if format is None:
             format = get_default_format()
 
@@ -98,6 +98,7 @@ class LocalTarget(FileSystemTarget):
         super(LocalTarget, self).__init__(path)
         self.format = format
         self.is_tmp = is_tmp
+        self.is_dir = is_dir
 
     def makedirs(self):
         """
@@ -111,7 +112,7 @@ class LocalTarget(FileSystemTarget):
     def open(self, mode='r'):
         if mode == 'w':
             self.makedirs()
-            return self.format.pipe_writer(atomic_file(self.path))
+            return self.format.pipe_writer(atomic_file(self.path, is_dir=self.is_dir))
 
         elif mode == 'r':
             fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
