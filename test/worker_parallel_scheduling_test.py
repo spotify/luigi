@@ -104,7 +104,7 @@ class ParallelSchedulingTest(unittest.TestCase):
     @mock.patch('luigi.notifications.send_error_email')
     def test_raise_exception_in_complete(self, send):
         self.w.add(ExceptionCompleteTask(), multiprocess=True)
-        send.assert_called_once()
+        send.check_called_once()
         self.assertEqual(0, self.sch.add_task.call_count)
         self.assertTrue('assert False' in send.call_args[0][1])
 
@@ -120,14 +120,14 @@ class ParallelSchedulingTest(unittest.TestCase):
 
         # verify this can run async
         self.w.add(UnpicklableExceptionTask(), multiprocess=True)
-        send.assert_called_once()
+        send.check_called_once()
         self.assertEqual(0, self.sch.add_task.call_count)
         self.assertTrue('raise UnpicklableException()' in send.call_args[0][1])
 
     @mock.patch('luigi.notifications.send_error_email')
     def test_raise_exception_in_requires(self, send):
         self.w.add(ExceptionRequiresTask(), multiprocess=True)
-        send.assert_called_once()
+        send.check_called_once()
         self.assertEqual(0, self.sch.add_task.call_count)
 
 
