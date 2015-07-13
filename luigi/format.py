@@ -169,13 +169,13 @@ class InputPipeProcessWrapper(object):
 class OutputPipeProcessWrapper(object):
     WRITES_BEFORE_FLUSH = 10000
 
-    def __init__(self, command, output_pipe=None):
+    def __init__(self, command, output_pipe=None, use_stdout_as_output=True):
         self.closed = False
         self._command = command
         self._output_pipe = output_pipe
         self._process = subprocess.Popen(command,
                                          stdin=subprocess.PIPE,
-                                         stdout=output_pipe,
+                                         stdout=output_pipe if use_stdout_as_output else None,
                                          close_fds=True)
         self._flushcount = 0
 
