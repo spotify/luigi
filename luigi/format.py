@@ -169,7 +169,7 @@ class InputPipeProcessWrapper(object):
 class OutputPipeProcessWrapper(object):
     WRITES_BEFORE_FLUSH = 10000
 
-    def __init__(self, command, output_pipe=None, use_stdout_as_output=True):
+    def __init__(self, command, output_pipe=None, use_stdout_as_output=True, writes_before_flash=None):
         self.closed = False
         self._command = command
         self._output_pipe = output_pipe
@@ -178,6 +178,8 @@ class OutputPipeProcessWrapper(object):
                                          stdout=output_pipe if use_stdout_as_output else None,
                                          close_fds=True)
         self._flushcount = 0
+        if writes_before_flash is not None:
+            self.WRITES_BEFORE_FLUSH = writes_before_flash
 
     def write(self, *args, **kwargs):
         self._process.stdin.write(*args, **kwargs)
