@@ -31,6 +31,8 @@ See :doc:`/configuration` for more info.
 
 import logging
 import os
+import warnings
+
 try:
     from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 except ImportError:
@@ -40,7 +42,12 @@ except ImportError:
 class LuigiConfigParser(ConfigParser):
     NO_DEFAULT = object()
     _instance = None
-    _config_paths = ['/etc/luigi/client.cfg', 'luigi.cfg', 'client.cfg']
+    _config_paths = [
+        '/etc/luigi/client.cfg',  # Deprecated old-style global luigi config
+        '/etc/luigi/luigi.cfg',
+        'client.cfg',  # Deprecated old-style local luigi config
+        'luigi.cfg',
+    ]
     if 'LUIGI_CONFIG_PATH' in os.environ:
         _config_paths.append(os.environ['LUIGI_CONFIG_PATH'])
 
@@ -61,6 +68,13 @@ class LuigiConfigParser(ConfigParser):
 
     @classmethod
     def reload(cls):
+        # Warn about deprecated old-style config paths.
+        deprecated_paths = [p for p in cls._config_paths if os.path.basename(p) == 'client.cfg' and os.path.exists(p)]
+        if deprecated_paths:
+            warnings.warn("Luigi configuration files named 'client.cfg' are deprecated if favor of 'luigi.cfg'. " +
+                          "Found: {paths!r}".format(paths=deprecated_paths),
+                          DeprecationWarning)
+
         return cls.instance().read(cls._config_paths)
 
     def _get_with_default(self, method, section, option, default, expected_type=None, **kwargs):
