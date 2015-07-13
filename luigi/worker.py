@@ -459,7 +459,7 @@ class Worker(object):
             runnable = worker().retry_external_tasks
 
             task.trigger_event(Event.DEPENDENCY_MISSING, task)
-            logger.warning('Task %s is not complete and run() is not implemented. Probably a missing external dependency.', task.task_id)
+            logger.warning('Data for %s does not exist (yet?). The task is an external data depedency, so it can not be run from this luigi process.', task.task_id)
 
         else:
             deps = task.deps()
