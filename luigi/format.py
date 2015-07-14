@@ -529,7 +529,7 @@ class DirectoryFormat(Format):
             return FileWrapper(io.BufferedReader(io.FileIO(input_pipe, 'r')))
 
         pattern = "%s*%s" % (self.prefix, self.suffix if self.suffix else "")
-        input_files = glob.glob(os.path.join(input_pipe, pattern))
+        input_files = sorted(glob.glob(os.path.join(input_pipe, pattern)))
         cmd = [self.gnu_cat] + input_files
         return InputPipeProcessWrapper(cmd, None)
 

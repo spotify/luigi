@@ -25,6 +25,7 @@ import shutil
 import mock
 
 
+
 # python 3 support
 try:
     from StringIO import StringIO
@@ -213,7 +214,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
 
         # Verifying our own directory reader
         f = LocalTarget(self.path, is_dir=True, format=directory_format).open('r')
-        self.assertTrue(test_data == f.read())
+        self.assertEqual(test_data, f.read())
         f.close()
 
         # Verifying using gzip
