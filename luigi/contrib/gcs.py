@@ -17,11 +17,12 @@
 
 """luigi bindings for Google Cloud Storage"""
 
-import logging
 import io
+import logging
 import mimetypes
 import os
 import tempfile
+import time
 try:
     from urlparse import urlsplit
 except ImportError:
@@ -29,6 +30,7 @@ except ImportError:
 
 import luigi.target
 from luigi import six
+from luigi.six.moves import xrange
 
 logger = logging.getLogger('luigi-interface')
 
@@ -54,6 +56,28 @@ CHUNKSIZE = 2 * 1024 * 1024
 
 # Mimetype to use if one can't be guessed from the file extension.
 DEFAULT_MIMETYPE = 'application/octet-stream'
+
+# Time to sleep while waiting for eventual consistency to finish.
+EVENTUAL_CONSISTENCY_SLEEP_INTERVAL = 0.1
+
+# Maximum number of sleeps for eventual consistency.
+EVENTUAL_CONSISTENCY_MAX_SLEEPS = 300
+
+
+def _wait_for_consistency(checker):
+    """Eventual consistency: wait until GCS reports something is true.
+
+    This is necessary for e.g. create/delete where the operation might return,
+    but won't be reflected for a bit.
+    """
+    for _ in xrange(EVENTUAL_CONSISTENCY_MAX_SLEEPS):
+        if checker():
+            return
+
+        time.sleep(EVENTUAL_CONSISTENCY_SLEEP_INTERVAL)
+
+    logger.warning('Exceeded wait for eventual GCS consistency - this may be a'
+                   'bug in the library or something is terribly wrong.')
 
 
 class InvalidDeleteException(luigi.target.FileSystemException):
@@ -158,6 +182,7 @@ class GCSClient(luigi.target.FileSystem):
             else:
                 attempts = 0
 
+        _wait_for_consistency(lambda: self._obj_exists(bucket, obj))
         return response
 
     def exists(self, path):
@@ -195,6 +220,7 @@ class GCSClient(luigi.target.FileSystem):
 
         if self._obj_exists(bucket, obj):
             self.client.objects().delete(bucket=bucket, object=obj).execute()
+            _wait_for_consistency(lambda: not self._obj_exists(bucket, obj))
             return True
 
         if self.isdir(path):
@@ -206,6 +232,8 @@ class GCSClient(luigi.target.FileSystem):
             for it in self._list_iter(bucket, self._add_path_delimiter(obj)):
                 req.add(self.client.objects().delete(bucket=bucket, object=it['name']))
             req.execute()
+
+            _wait_for_consistency(lambda: not self.isdir(path))
             return True
 
         return False
@@ -246,6 +274,7 @@ class GCSClient(luigi.target.FileSystem):
             dest_prefix = self._add_path_delimiter(dest_obj)
 
             source_path = self._add_path_delimiter(source_path)
+            copied_objs = []
             for obj in self.listdir(source_path):
                 suffix = obj[len(source_path):]
 
@@ -255,6 +284,11 @@ class GCSClient(luigi.target.FileSystem):
                     destinationBucket=dest_bucket,
                     destinationObject=dest_prefix + suffix,
                     body={}).execute()
+                copied_objs.append(dest_prefix + suffix)
+
+            _wait_for_consistency(
+                lambda: all(self._obj_exists(dest_bucket, obj)
+                            for obj in copied_objs))
         else:
             self.client.objects().copy(
                 sourceBucket=src_bucket,
@@ -262,6 +296,7 @@ class GCSClient(luigi.target.FileSystem):
                 destinationBucket=dest_bucket,
                 destinationObject=dest_obj,
                 body={}).execute()
+            _wait_for_consistency(lambda: self._obj_exists(dest_bucket, dest_obj))
 
     def rename(self, source_path, destination_path):
         """
