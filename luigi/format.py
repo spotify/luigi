@@ -540,7 +540,7 @@ class DirectoryFormat(Format):
             raise FileAlreadyExists(output_pipe)
 
         # the file does not exists and no write privileges are given
-        if not os.access(os.path.dirname(output_pipe), os.W_OK):
+        if not os.access(os.path.dirname(os.path.abspath(output_pipe)), os.W_OK):
             raise FileSystemException("Can not write into %s" % output_pipe)
 
         if not self.max_size:
