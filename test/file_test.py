@@ -24,6 +24,7 @@ import shutil
 
 import mock
 
+
 # python 3 support
 try:
     from StringIO import StringIO
@@ -189,7 +190,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertTrue(os.path.exists(self.path))
 
         # Validate split
-        self.assertEquals(os.listdir(self.path), ['part-00', 'part-01'])
+        self.assertEquals(sorted(os.listdir(self.path)), ['part-00', 'part-01'])
 
         # Verifying our own directory reader
         f = LocalTarget(self.path, is_dir=True, format=directory_format).open('r')
@@ -208,7 +209,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertTrue(os.path.exists(self.path))
 
         # Validate split
-        self.assertEquals(os.listdir(self.path), ['part-00.gz', 'part-01.gz', 'part-02.gz'])
+        self.assertEquals(sorted(os.listdir(self.path)), ['part-00.gz', 'part-01.gz', 'part-02.gz'])
 
         # Verifying our own directory reader
         f = LocalTarget(self.path, is_dir=True, format=directory_format).open('r')
