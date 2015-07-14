@@ -24,13 +24,7 @@ import shutil
 
 import mock
 
-
-
-# python 3 support
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import BytesIO
 
 from helpers import unittest
 import luigi.format
@@ -219,12 +213,12 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
 
         # Verifying using gzip
         with LocalTarget(self.path, is_dir=True, format=luigi.format.DirectoryFormat(suffix=".gz")).open('r') as fp:
-            v = StringIO(fp.read())
+            v = BytesIO(fp.read())
             with gzip.GzipFile(fileobj=v, mode='rb') as gp:
                 self.assertEqual(test_data, gp.read())
 
     def test_atomicity_dir_simple(self):
-        test_data = 'test'
+        test_data = b'test'
         target = LocalTarget(self.path, is_dir=True, format=luigi.format.DirectoryFormat(max_part_size=3))
         with target.open("w") as f:
             self.assertFalse(target.exists())
@@ -233,7 +227,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertTrue(target.open().read(), test_data)
 
     def test_atomicity_dir_with_error(self):
-        test_data = 'test'
+        test_data = b'test'
         target = LocalTarget(self.path, is_dir=True, format=luigi.format.DirectoryFormat(max_part_size=3))
 
         def raises_error():
