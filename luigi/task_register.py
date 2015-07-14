@@ -19,10 +19,7 @@ Define the centralized register of all :class:`~luigi.task.Task` classes.
 """
 
 import abc
-try:
-    from collections import OrderedDict
-except ImportError:
-    from ordereddict import OrderedDict
+from collections import OrderedDict
 
 from luigi import six
 import logging
