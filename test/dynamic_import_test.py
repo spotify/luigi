@@ -15,37 +15,41 @@
 # limitations under the License.
 #
 
-from helpers import unittest
+from helpers import unittest, LuigiTestCase
 
 import luigi
 import luigi.interface
+import tempfile
+import re
 
 
 class ExtraArgs(luigi.Task):
     blah = luigi.Parameter(default=444)
 
 
-class CmdlineTest(unittest.TestCase):
+class CmdlineTest(LuigiTestCase):
 
     def test_dynamic_loading(self):
-        interface = luigi.interface.ArgParseInterface()
-        self.assertRaises(SystemExit, interface.parse, (['FooTask', '--ExtraArgs-blah', 'xyz', '--x', '123'],))  # should raise since it's not imported
-
         interface = luigi.interface.DynamicArgParseInterface()
-        tasks = interface.parse(['--module', 'foo_module', 'FooTask', '--ExtraArgs-blah', 'xyz', '--x', '123'])
+        with tempfile.NamedTemporaryFile(dir='test/', prefix="_foo_module", suffix='.py') as temp_module_file:
+            temp_module_file.file.write(b'''
+import luigi
 
-        self.assertEqual(ExtraArgs().blah, 'xyz')
+class FooTask(luigi.Task):
+    x = luigi.IntParameter()
+''')
+            temp_module_file.file.flush()
+            temp_module_path = temp_module_file.name
+            temp_module_name = re.search(r'/(_foo_module.*).py', temp_module_path).group(1)
+            tasks = interface.parse(['--module', temp_module_name, 'FooTask', '--ExtraArgs-blah', 'xyz', '--x', '123'])
 
-        self.assertEqual(len(tasks), 1)
+            self.assertEqual(ExtraArgs().blah, 'xyz')
 
-        task, = tasks
-        self.assertEqual(task.x, 123)
+            self.assertEqual(len(tasks), 1)
 
-        import foo_module
-        self.assertEqual(task.__class__, foo_module.FooTask)
-        self.assertEqual(task, foo_module.FooTask(x=123))
+            task, = tasks
+            self.assertEqual(task.x, 123)
 
-    def test_run(self):
-        # TODO: this needs to run after the existing module, since by now foo_module is already imported
-
-        luigi.run(['--local-scheduler', '--no-lock', '--module', 'foo_module', 'FooTask', '--x', '100'], use_dynamic_argparse=True)
+            temp_module = __import__(temp_module_name)
+            self.assertEqual(task.__class__, temp_module.FooTask)
+            self.assertEqual(task, temp_module.FooTask(x=123))
