@@ -24,6 +24,12 @@ import shutil
 
 import mock
 
+#python 3 support
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 from helpers import unittest
 import luigi.format
 from luigi import LocalTarget
@@ -171,24 +177,67 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual(b'a\nb\nc\nd', b)
         self.assertEqual(b'a\r\nb\r\nc\r\nd', c)
 
-    def test_atomicity_dir_simple(self):
-        target = LocalTarget(self.path, is_dir=True)
+    def test_directory_with_split(self):
+        directory_format = luigi.format.DirectoryFormat(max_part_size=3)
+        t = LocalTarget(self.path, is_dir=True, format=directory_format)
+        p = t.open('w')
+        test_data = b'test'
+        p.write(test_data)
+        print(self.path)
+        self.assertFalse(os.path.exists(self.path))
+        p.close()
+        self.assertTrue(os.path.exists(self.path))
 
+        # Validate split
+        self.assertEquals(os.listdir(self.path), ['part-00', 'part-01'])
+
+        # Verifying our own directory reader
+        f = LocalTarget(self.path, is_dir=True, format=directory_format).open('r')
+        self.assertTrue(test_data == f.read())
+        f.close()
+
+    def test_directory_with_gzip_split(self):
+        directory_format = luigi.format.Gzip >> luigi.format.DirectoryFormat(max_part_size=10, suffix=".gz")
+        t = LocalTarget(self.path, is_dir=True, format=directory_format)
+        p = t.open('w')
+        test_data = b'test'
+        p.write(test_data)
+        print(self.path)
+        self.assertFalse(os.path.exists(self.path))
+        p.close()
+        self.assertTrue(os.path.exists(self.path))
+
+        # Validate split
+        self.assertEquals(os.listdir(self.path), ['part-00.gz', 'part-01.gz', 'part-02.gz'])
+
+        # Verifying our own directory reader
+        f = LocalTarget(self.path, is_dir=True, format=directory_format).open('r')
+        self.assertTrue(test_data == f.read())
+        f.close()
+
+        # Verifying using gzip
+        with LocalTarget(self.path, is_dir=True, format=luigi.format.DirectoryFormat(suffix=".gz")).open('r') as fp:
+            v = StringIO(fp.read())
+            with gzip.GzipFile(fileobj=v, mode='rb') as gp:
+                self.assertEqual(test_data, gp.read())
+
+    def test_atomicity_dir_simple(self):
+        test_data = 'test'
+        target = LocalTarget(self.path, is_dir=True, format=luigi.format.DirectoryFormat(max_part_size=3))
         with target.open("w") as f:
             self.assertFalse(target.exists())
-            with open(os.path.join(f.tmp_path, "file_in_dir"), 'w') as fp:
-                fp.write("hello")
+            f.write(test_data)
         self.assertTrue(target.exists())
-        self.assertTrue(os.path.exists(os.path.join(target.path, "file_in_dir")))
+        self.assertTrue(target.open().read(), test_data)
 
     def test_atomicity_dir_with_error(self):
-        target = LocalTarget(self.path, is_dir=True)
+        test_data = 'test'
+        target = LocalTarget(self.path, is_dir=True, format=luigi.format.DirectoryFormat(max_part_size=3))
 
         def raises_error():
             with target.open("w") as f:
                 self.assertFalse(target.exists())
-                with open(os.path.join(f.tmp_path, "file_in_dir"), 'w') as fp:
-                    fp.write("hello")
+                f.write(test_data)
                 raise Exception("My Error")
 
         self.assertRaisesRegexp(Exception, "My Error", raises_error)

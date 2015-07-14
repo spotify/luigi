@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import glob
 import signal
 import subprocess
 import io
@@ -25,6 +25,7 @@ import tempfile
 import warnings
 
 from luigi import six
+from luigi.target import FileAlreadyExists, FileSystemException
 
 
 class FileWrapper(object):
@@ -500,6 +501,64 @@ class Bzip2Format(Format):
 
     def pipe_writer(self, output_pipe):
         return OutputPipeProcessWrapper(['bzip2'], output_pipe)
+
+
+class DirectoryFormat(Format):
+    input = 'bytes'
+    output = 'dir'
+
+    # on osx/other env we have different tools, we need the way to overload
+    # should be moved into general configuration or ToolsConfig class.
+    gnu_split = 'split'  # gnu split required (gsplit on OSX)
+    gnu_cat = 'cat'
+
+    def __init__(self, prefix='part-',  max_part_size=None, suffix=None, writes_before_flash=None):
+        super(DirectoryFormat, self).__init__()
+        self.max_size = max_part_size
+        self.prefix = prefix
+        self.suffix = suffix
+        self.writes_before_flash = writes_before_flash
+
+    def pipe_reader(self, input_pipe):
+        if not os.path.exists(input_pipe):
+            from luigi.s3 import FileNotFoundException
+
+            raise FileNotFoundException(input_pipe)
+        if not os.path.isdir(input_pipe):
+            return FileWrapper(io.BufferedReader(io.FileIO(input_pipe, 'r')))
+
+        pattern = "%s*%s" % (self.prefix, self.suffix if self.suffix else "")
+        input_files = glob.glob(os.path.join(input_pipe, pattern))
+        cmd = [self.gnu_cat] + input_files
+        return InputPipeProcessWrapper(cmd, None)
+
+    def pipe_writer(self, output_pipe):
+        from luigi.file import atomic_file
+
+        # the file is there
+        if os.path.exists(output_pipe):
+            raise FileAlreadyExists(output_pipe)
+
+        # the file does not exists and no write privileges are given
+        if not os.access(os.path.dirname(output_pipe), os.W_OK):
+            raise FileSystemException("Can not write into %s" % output_pipe)
+
+        if not self.max_size:
+            return atomic_file(output_pipe)
+
+        output_pipe = atomic_file(output_pipe, is_dir=True)
+
+        cmd = [self.gnu_split,
+               '--bytes=%s' % self.max_size,  # limit by file size
+               '-d',  # use numbers for indexes
+               ]
+        if self.suffix:
+            cmd += ['--additional-suffix=%s' % self.suffix]
+        cmd += ['-', os.path.join(output_pipe.tmp_path, self.prefix)]
+        return OutputPipeProcessWrapper(cmd, output_pipe,
+                                        use_stdout_as_output=False,
+                                        writes_before_flash=self.writes_before_flash)
+
 
 Text = TextFormat()
 UTF8 = TextFormat(encoding='utf8')
