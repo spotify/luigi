@@ -26,7 +26,7 @@ import tempfile
 import io
 import warnings
 
-from luigi.format import FileWrapper, get_default_format
+from luigi.format import FileWrapper, get_default_format, Directory
 from luigi.target import FileAlreadyExists, MissingParentDirectory, NotADirectory, FileSystem, FileSystemTarget, AtomicLocalFile
 
 
@@ -90,7 +90,8 @@ class LocalTarget(FileSystemTarget):
     def __init__(self, path=None, format=None, is_tmp=False, is_dir=False):
         if format is None:
             format = get_default_format()
-
+            if is_dir:
+                format = format >> Directory
         if not path:
             if not is_tmp:
                 raise Exception('path or is_tmp must be set')

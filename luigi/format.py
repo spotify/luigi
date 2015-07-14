@@ -508,15 +508,28 @@ class DirectoryFormat(Format):
     input = 'bytes'
     output = 'dir'
 
-    # on osx/other env we have different tools, we need the way to overload
+    # on osx/other env we have different tools, we need the way to overload this
     # should be moved into general configuration or ToolsConfig class.
     gnu_split = 'split'  # gnu split required (gsplit on OSX)
     gnu_cat = 'cat'
     support_bsd_split = True
 
     def __init__(self, prefix='part-', max_part_size=None, suffix=None, writes_before_flash=None):
+        """
+        This Format wraps file/directory.
+        as input it reads multiple files from target dir  {PREFIX}*{POSTFIX}
+        as output it writes files with maximal size = max_part_size  with name = {PREFIX}{COUNTER}{POSTFIX}
+
+        in case input is file, just creates same stream as LocalTarget does
+        in case max_part_size==0 creates one file as output.
+        :param prefix: input files/output files prefix
+        :param max_part_size: output files maximum size
+        :param suffix: input/output files suffix  (example .gz)
+        :param writes_before_flash: number of bytes buffered by write before flushing to the split
+        :return:
+        """
         super(DirectoryFormat, self).__init__()
-        self.max_size = max_part_size
+        self.max_part_size = max_part_size
         self.prefix = prefix
         self.suffix = suffix
         self.writes_before_flash = writes_before_flash
@@ -535,7 +548,8 @@ class DirectoryFormat(Format):
         if not os.path.isdir(input_pipe):
             return FileWrapper(io.BufferedReader(io.FileIO(input_pipe, 'r')))
 
-        pattern = "%s*%s" % (self.prefix, self.suffix if self.suffix else "")
+        # build pattern from not none parts
+        pattern = "".join([str(p) for p in [self.prefix, "*", self.suffix] if p])
         input_files = sorted(glob.glob(os.path.join(input_pipe, pattern)))
         cmd = [self.gnu_cat] + input_files
         return InputPipeProcessWrapper(cmd, None)
@@ -551,13 +565,13 @@ class DirectoryFormat(Format):
         if not os.access(os.path.dirname(os.path.abspath(output_pipe)), os.W_OK):
             raise FileSystemException("Can not write into %s" % output_pipe)
 
-        if not self.max_size:
+        if not self.max_part_size:
             return atomic_file(output_pipe)
 
         output_pipe = atomic_file(output_pipe, is_dir=True)
 
         cmd = [self.gnu_split,
-               '-b', str(self.max_size),  # limit by file size
+               '-b', str(self.max_part_size),  # limit by file size
                ]
         if not self.support_bsd_split:
             if self.suffix:
@@ -568,7 +582,6 @@ class DirectoryFormat(Format):
                                         use_stdout_as_output=False,
                                         writes_before_flash=self.writes_before_flash)
 
-
 Text = TextFormat()
 UTF8 = TextFormat(encoding='utf8')
 Nop = NopFormat()
@@ -576,6 +589,7 @@ SysNewLine = NewlineFormat()
 Gzip = GzipFormat()
 Bzip2 = Bzip2Format()
 MixedUnicodeBytes = MixedUnicodeBytesFormat()
+Directory = DirectoryFormat()
 
 
 def get_default_format():
