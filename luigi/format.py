@@ -512,6 +512,7 @@ class DirectoryFormat(Format):
     # should be moved into general configuration or ToolsConfig class.
     gnu_split = 'split'  # gnu split required (gsplit on OSX)
     gnu_cat = 'cat'
+    support_bsd_split = True
 
     def __init__(self, prefix='part-', max_part_size=None, suffix=None, writes_before_flash=None):
         super(DirectoryFormat, self).__init__()
@@ -519,6 +520,12 @@ class DirectoryFormat(Format):
         self.prefix = prefix
         self.suffix = suffix
         self.writes_before_flash = writes_before_flash
+
+        if self.support_bsd_split and self.suffix:
+            warnings.warn(
+                'You could not use suffix while support_bsd_split is ON',
+                UserWarning, stacklevel=2
+            )
 
     def pipe_reader(self, input_pipe):
         if not os.path.exists(input_pipe):
@@ -550,11 +557,12 @@ class DirectoryFormat(Format):
         output_pipe = atomic_file(output_pipe, is_dir=True)
 
         cmd = [self.gnu_split,
-               '--bytes=%s' % self.max_size,  # limit by file size
-               '-d',  # use numbers for indexes
+               '-b', str(self.max_size),  # limit by file size
                ]
-        if self.suffix:
-            cmd += ['--additional-suffix=%s' % self.suffix]
+        if not self.support_bsd_split:
+            if self.suffix:
+                cmd += ['--additional-suffix=%s' % self.suffix]
+            cmd += ['-d']  # use numbers for indexes
         cmd += ['-', os.path.join(output_pipe.tmp_path, self.prefix)]
         return OutputPipeProcessWrapper(cmd, output_pipe,
                                         use_stdout_as_output=False,

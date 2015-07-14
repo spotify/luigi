@@ -185,7 +185,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertTrue(os.path.exists(self.path))
 
         # Validate split
-        self.assertEquals(sorted(os.listdir(self.path)), ['part-00', 'part-01'])
+        self.assertEquals(sorted(os.listdir(self.path)), ['part-aa', 'part-ab'])
 
         # Verifying our own directory reader
         f = LocalTarget(self.path, is_dir=True, format=directory_format).open('r')
@@ -193,7 +193,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         f.close()
 
     def test_directory_with_gzip_split(self):
-        directory_format = luigi.format.Gzip >> luigi.format.DirectoryFormat(max_part_size=10, suffix=".gz")
+        directory_format = luigi.format.Gzip >> luigi.format.DirectoryFormat(max_part_size=10)
         t = LocalTarget(self.path, is_dir=True, format=directory_format)
         p = t.open('w')
         test_data = b'test'
@@ -204,7 +204,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertTrue(os.path.exists(self.path))
 
         # Validate split
-        self.assertEquals(sorted(os.listdir(self.path)), ['part-00.gz', 'part-01.gz', 'part-02.gz'])
+        self.assertEquals(sorted(os.listdir(self.path)), ['part-aa', 'part-ab', 'part-ac'])
 
         # Verifying our own directory reader
         f = LocalTarget(self.path, is_dir=True, format=directory_format).open('r')
@@ -212,7 +212,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         f.close()
 
         # Verifying using gzip
-        with LocalTarget(self.path, is_dir=True, format=luigi.format.DirectoryFormat(suffix=".gz")).open('r') as fp:
+        with LocalTarget(self.path, is_dir=True, format=luigi.format.DirectoryFormat()).open('r') as fp:
             v = BytesIO(fp.read())
             with gzip.GzipFile(fileobj=v, mode='rb') as gp:
                 self.assertEqual(test_data, gp.read())
