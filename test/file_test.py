@@ -24,7 +24,7 @@ import shutil
 
 import mock
 
-#python 3 support
+# python 3 support
 try:
     from StringIO import StringIO
 except ImportError:

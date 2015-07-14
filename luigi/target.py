@@ -27,7 +27,7 @@ import shutil
 import tempfile
 import logging
 
-#support for python2.7/python3
+# support for python2.7/python3
 try:
     from StringIO import StringIO
 except ImportError:

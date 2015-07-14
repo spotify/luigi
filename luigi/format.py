@@ -512,7 +512,7 @@ class DirectoryFormat(Format):
     gnu_split = 'split'  # gnu split required (gsplit on OSX)
     gnu_cat = 'cat'
 
-    def __init__(self, prefix='part-',  max_part_size=None, suffix=None, writes_before_flash=None):
+    def __init__(self, prefix='part-', max_part_size=None, suffix=None, writes_before_flash=None):
         super(DirectoryFormat, self).__init__()
         self.max_size = max_part_size
         self.prefix = prefix
