@@ -23,6 +23,7 @@ import re
 import locale
 import tempfile
 import warnings
+from io import UnsupportedOperation
 
 from luigi import six
 from luigi.target import FileAlreadyExists, FileSystemException
@@ -72,7 +73,7 @@ class InputPipeProcessWrapper(object):
         if input_pipe is not None:
             try:
                 input_pipe.fileno()
-            except AttributeError:
+            except (AttributeError, UnsupportedOperation) as e:
                 # subprocess require a fileno to work, if not present we copy to disk first
                 self._original_input = False
                 f = tempfile.NamedTemporaryFile('wb', prefix='luigi-process_tmp', delete=False)
@@ -551,6 +552,8 @@ class DirectoryFormat(Format):
         # build pattern from not none parts
         pattern = "".join([str(p) for p in [self.prefix, "*", self.suffix] if p])
         input_files = sorted(glob.glob(os.path.join(input_pipe, pattern)))
+        if not input_files:
+            return FileWrapper(io.BufferedReader(io.BytesIO()))
         cmd = [self.gnu_cat] + input_files
         return InputPipeProcessWrapper(cmd, None)
 
