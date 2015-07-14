@@ -222,7 +222,8 @@ class OutputPipeProcessWrapper(object):
             if self._output_pipe is not None:
                 self._output_pipe.close()
         else:
-            raise RuntimeError('Error when executing command %s' % self._command)
+            raise RuntimeError('Error when executing command %s. Error code="%s"' % (self._command,
+                                                                                     self._process.returncode))
 
     def abort(self):
         self._finish()
