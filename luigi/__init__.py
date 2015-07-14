@@ -36,6 +36,7 @@ from luigi.parameter import (
     DateParameter, DateHourParameter, DateMinuteParameter,
     DateIntervalParameter, TimeDeltaParameter,
     IntParameter, FloatParameter, BooleanParameter, BoolParameter,
+    TaskParameter,
 )
 
 from luigi import configuration
