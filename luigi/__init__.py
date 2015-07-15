@@ -31,10 +31,12 @@ from luigi import rpc
 from luigi.rpc import RemoteScheduler, RPCError
 
 from luigi import parameter
-from luigi.parameter import Parameter, \
-    DateParameter, DateHourParameter, DateMinuteParameter, \
-    DateIntervalParameter, TimeDeltaParameter, \
-    IntParameter, FloatParameter, BooleanParameter, BoolParameter
+from luigi.parameter import (
+    Parameter,
+    DateParameter, DateHourParameter, DateMinuteParameter,
+    DateIntervalParameter, TimeDeltaParameter,
+    IntParameter, FloatParameter, BooleanParameter, BoolParameter,
+)
 
 from luigi import configuration
 
