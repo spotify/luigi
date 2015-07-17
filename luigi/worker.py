@@ -156,9 +156,10 @@ class TaskProcess(multiprocessing.Process):
             self.task.trigger_event(Event.FAILURE, self.task, ex)
             subject = "Luigi: %s FAILED" % self.task
 
-            error_message = notifications.format_task_error(subject, self.task,
-                                                            formatted_exception=traceback.format_exc())
-            notifications.send_error_email(subject, error_message)
+            error_message = notifications.wrap_traceback(self.task.on_failure(ex))
+            formatted_error_message = notifications.format_task_error(subject, self.task,
+                                                                      formatted_exception=error_message)
+            notifications.send_error_email(subject, formatted_error_message)
         finally:
             self.result_queue.put(
                 (self.task.task_id, status, error_message, missing, new_deps))

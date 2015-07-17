@@ -72,10 +72,24 @@ def generate_email(sender, subject, message, recipients, image_png):
 
 
 def wrap_traceback(traceback):
-    # TODO: Detect presence of Pygments and use if possible
     if email_type() == 'html':
-        return '<pre>%s</pre>' % traceback
-    return traceback
+        try:
+            from pygments import highlight
+            from pygments.lexers import PythonTracebackLexer
+            from pygments.formatters import HtmlFormatter
+            with_pygments = True
+        except ImportError:
+            with_pygments = False
+
+        if with_pygments:
+            formatter = HtmlFormatter(noclasses=True)
+            wrapped = highlight(traceback, PythonTracebackLexer(), formatter)
+        else:
+            wrapped = '<pre>%s</pre>' % traceback
+    else:
+        wrapped = traceback
+
+    return wrapped
 
 
 def send_email_smtp(config, sender, subject, message, recipients, image_png):
@@ -205,24 +219,55 @@ def format_task_error(headline, task, formatted_exception=None):
     :return: message body
 
     """
-    msg_template = textwrap.dedent('''\
-    {headline}
 
-    Task name: {name}
-
-    Task parameters:
-    {params}
-
-    {traceback}
-    ''')
-
+    typ = email_type()
     if formatted_exception:
         formatted_exception = wrap_traceback(formatted_exception)
     else:
         formatted_exception = ""
 
-    str_params = task.to_str_params()
-    max_width = max([0] + [len(x) for x in str_params.keys()])
-    params = '\n'.join('  {:{width}}: {}'.format(*items, width=max_width) for items in str_params.items())
+    if typ == 'html':
+        msg_template = textwrap.dedent('''
+        <html>
+        <body>
+        <h2>{headline}</h2>
 
-    return msg_template.format(headline=headline, name=task.task_family, params=params, traceback=formatted_exception)
+        <table style="border-top: 1px solid black; border-bottom: 1px solid black">
+        <thead>
+        <tr><th>name</th><td>{name}</td></tr>
+        </thead>
+        <tbody>
+        {param_rows}
+        </tbody>
+        </table>
+        </pre>
+
+        <h2>Traceback</h2>
+        {traceback}
+        </body>
+        </html>
+        ''')
+
+        str_params = task.to_str_params()
+        params = '\n'.join('<tr><th>{}</th><td>{}</td></tr>'.format(*items) for items in str_params.items())
+        body = msg_template.format(headline=headline, name=task.task_family, param_rows=params,
+                                   traceback=formatted_exception)
+    else:
+        msg_template = textwrap.dedent('''\
+        {headline}
+
+        Name: {name}
+
+        Parameters:
+        {params}
+
+        {traceback}
+        ''')
+
+        str_params = task.to_str_params()
+        max_width = max([0] + [len(x) for x in str_params.keys()])
+        params = '\n'.join('  {:{width}}: {}'.format(*items, width=max_width) for items in str_params.items())
+        body = msg_template.format(headline=headline, name=task.task_family, params=params,
+                                   traceback=formatted_exception)
+
+    return body

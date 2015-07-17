@@ -76,12 +76,20 @@ class ExceptionFormatTest(unittest.TestCase):
         task = FailRunTask(foo='foo', bar='bar')
         self._run_task(task)
 
+    def test_fail_run_html(self):
+        task = FailRunTask(foo='foo', bar='bar')
+        self._run_task_html(task)
+
     def test_fail_schedule(self):
         task = FailSchedulingTask(foo='foo', bar='bar')
         self._run_task(task)
 
+    def test_fail_schedule_html(self):
+        task = FailSchedulingTask(foo='foo', bar='bar')
+        self._run_task_html(task)
+
     @with_config({'core': {'error-email': 'nowhere@example.com',
-                           'error-prefix': '[TEST] '}})
+                           'email-prefix': '[TEST] '}})
     @mock.patch('luigi.notifications.send_error_email')
     def _run_task(self, task, mock_send):
         self.w.add(task)
@@ -92,14 +100,34 @@ class ExceptionFormatTest(unittest.TestCase):
         self._check_subject(args[0], task)
         self._check_body(args[1], task, html=False)
 
+    @with_config({'core': {'error-email': 'nowhere@axample.com',
+                           'email-prefix': '[TEST] ',
+                           'email-type': 'html'}})
+    @mock.patch('luigi.notifications.send_error_email')
+    def _run_task_html(self, task, mock_send):
+        self.w.add(task)
+        self.w.run()
+
+        self.assertEqual(mock_send.call_count, 1)
+        args, kwargs = mock_send.call_args
+        self._check_subject(args[0], task)
+        self._check_body(args[1], task, html=True)
+
     def _check_subject(self, subject, task):
         self.assertIn(task.task_id, subject)
 
     def _check_body(self, body, task, html=False):
-        self.assertIn('Task name: {}\n'.format(task.task_family), body)
-        self.assertIn('Task parameters:\n', body)
+        if html:
+            self.assertIn('<th>name</th><td>{}</td>'.format(task.task_family), body)
+            self.assertIn('<div class="highlight"', body)
+            self.assertIn('Oops!', body)
 
-        for param, value in task.param_kwargs.items():
-            self.assertIn('{}: {}\n'.format(param, value), body)
+            for param, value in task.param_kwargs.items():
+                self.assertIn('<th>{}</th><td>{}</td>'.format(param, value), body)
+        else:
+            self.assertIn('Name: {}\n'.format(task.task_family), body)
+            self.assertIn('Parameters:\n', body)
+            self.assertIn('TestException: Oops!', body)
 
-        self.assertIn('TestException: Oops!', body)
+            for param, value in task.param_kwargs.items():
+                self.assertIn('{}: {}\n'.format(param, value), body)
