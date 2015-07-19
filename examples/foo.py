@@ -23,20 +23,13 @@ import time
 import luigi
 
 
-class MyExternal(luigi.ExternalTask):
-
-    def complete(self):
-        return False
-
-
-class Foo(luigi.Task):
+class Foo(luigi.WrapperTask):
     task_namespace = 'examples'
 
     def run(self):
         print("Running Foo")
 
     def requires(self):
-        #        yield MyExternal()
         for i in range(10):
             yield Bar(i)
 

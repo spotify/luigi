@@ -705,7 +705,7 @@ class CentralPlannerScheduler(Scheduler):
             self.prune()
 
         worker_id = kwargs['worker']
-        # Return remaining tasks that have no FAILED descendents
+        # Return remaining tasks that have no FAILED descendants
         self.update(worker_id, {'host': host})
         if assistant:
             self.add_worker(worker_id, [('assistant', assistant)])
