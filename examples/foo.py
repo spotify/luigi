@@ -23,7 +23,7 @@ import time
 import luigi
 
 
-class Foo(luigi.Task):
+class Foo(luigi.WrapperTask):
     task_namespace = 'examples'
 
     def run(self):
