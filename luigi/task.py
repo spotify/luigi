@@ -300,7 +300,9 @@ class Task(object):
         return cls(**kwargs)
 
     def to_str_params(self):
-        ''' Convert all parameters to a str->str hash.'''
+        """
+        Convert all parameters to a str->str hash.
+        """
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
