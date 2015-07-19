@@ -271,7 +271,7 @@ class Task(object):
         task_id_parts = []
         param_objs = dict(params)
         for param_name, param_value in param_values:
-            if dict(params)[param_name].significant:
+            if param_objs[param_name].significant:
                 task_id_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
 
         self.task_id = '%s(%s)' % (self.task_family, ', '.join(task_id_parts))
