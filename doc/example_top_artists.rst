@@ -40,6 +40,9 @@ Step 1 - Aggregate Artist Streams
             with self.output().open('w') as out_file:
                 for artist, count in artist_count.iteritems():
                     print >> out_file, artist, count
+    
+    if __name__ == "__main__":
+        luigi.run()
 
 Note that this is just a portion of the file *examples/top\_artists.py*.
 In particular, ``Streams`` is defined as a :class:`~luigi.task.Task`,
