@@ -74,7 +74,8 @@ Try running this using eg.
 
 ::
 
-    $ python examples/top_artists.py AggregateArtists --local-scheduler --date-interval 2012-06
+    $ cd examples
+    $ luigi --module top_artists AggregateArtists --local-scheduler --date-interval 2012-06
 
 You can also try to view the manual using `--help` which will give you an
 overview of the options:
