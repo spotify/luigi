@@ -299,8 +299,18 @@
             </div>
         </script>
 
+        <script type="text/template" name="sidebarTemplate">
+            <ul class="sidebar-menu">
+                <li class="header">TASKS</li>
+                {{#tasks}}
+                <li data-task="{{name}}"><a href="#"><span class="badge">{{count}}</span> {{name}}</a>
+                </li>
+                {{/tasks}}
+            </ul>
+        </script>
+
     </head>
-    <body class="skin-green sidebar-collapse">
+    <body class="skin-green">
         <div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         </div>
 
@@ -328,10 +338,13 @@
                             </ul>
                         </div>
                     </div>
-
                 </nav>
             </div>
-        </div>
+            <div class="main-sidebar">
+                <div class="sidebar">
+                </div>
+            </div>
+
 
         <div class="content-wrapper">
           <div class="content">
@@ -457,6 +470,10 @@
         </div> <!-- /.tab-content -->
         </div> <!-- /.content -->
         </div> <!-- /.content-wrapper -->
+
+        </div> <!-- /.wrapper -->
+
+
         <script>
             visualiserApp(new LuigiAPI("../../api"));
         </script>
