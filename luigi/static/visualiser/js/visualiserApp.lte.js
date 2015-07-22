@@ -114,8 +114,7 @@ function visualiserApp(luigi) {
     /**
      * Filter table by all activated info boxes.
      */
-    function filterByCategory() {
-        var dt = $('#taskTable').DataTable();
+    function filterByCategory(dt) {
         var infoBoxes = $('.info-box');
 
         var activeBoxes = [];
@@ -126,6 +125,10 @@ function visualiserApp(luigi) {
         });
         var pattern = '(' + activeBoxes.join('|') + ')';
         dt.column(1).search(pattern, regex=true).draw();
+    }
+
+    function filterByTask(task, dt) {
+        dt.column(2).search(task).draw();
     }
 
     function toggleInfoBox(infoBox) {
@@ -143,6 +146,52 @@ function visualiserApp(luigi) {
             $(infoBox).removeClass(colorClass);
             infoBoxIcon.addClass(colorClass);
         }
+    }
+
+    function renderSidebar(tasks) {
+        console.log('render sidebar '+ tasks.length);
+        // tasks is a list of task names
+        var counts = {};
+        $.each(tasks, function(i) {
+            var name = tasks[i];
+            if (counts[name] === undefined) {
+                counts[name] = 0;
+            }
+            counts[name] += 1;
+        });
+        var taskList = [];
+        $.each(counts, function (name) {
+            taskList.push({name: name, count: counts[name]});
+        });
+        return renderTemplate("sidebarTemplate", {"tasks": taskList});
+    }
+
+    function selectSidebarItem(item) {
+        console.log('select sidebar '+item.dataset.task)
+        var sidebarItems = $('.sidebar').find('li');
+        sidebarItems.each(function (i) {
+            var item2 = sidebarItems[i];
+            if (item2.dataset.task === undefined) {
+                return;
+            }
+            if (item === item2) {
+                if ($(item2).hasClass('active')) {
+                    // item is active, deselect
+                    $(item2).removeClass('active');
+                    $(item2).find('.badge').removeClass('bg-green');
+                }
+                else {
+                    // select item
+                    $(item2).addClass('active');
+                    $(item2).find('.badge').addClass('bg-green');
+                }
+            }
+            else {
+                // clear any selection
+                $(item2).removeClass('active');
+                $(item2).find('.badge').removeClass('bg-green');
+            }
+        });
     }
 
     function processWorker(worker) {
@@ -402,6 +451,18 @@ function visualiserApp(luigi) {
         $('#'+category+'Info').find('.info-box-number').html(displayTasks.length);
         dt.draw();
 
+        $('.sidebar').html(renderSidebar(dt.column(2).data()));
+        $('.sidebar-menu').on('click', 'li', function () {
+            if (this.dataset.task) {
+                selectSidebarItem(this);
+                if ($(this).hasClass('active')) {
+                    filterByTask(this.dataset.task, dt);
+                }
+                else {
+                    filterByTask('', dt);
+                }
+            }
+        });
     }
     
     $(document).ready(function() {
@@ -508,8 +569,20 @@ function visualiserApp(luigi) {
 
         $('.info-box').on('click', function () {
             toggleInfoBox(this);
-            filterByCategory();
+            filterByCategory(dt);
         })
+
+        /*
+        dt.on('draw.dt', function () {
+            $('.sidebar').html(renderSidebar(dt.column(2).data()));
+            $('.sidebar-menu').on('click', 'li', function () {
+                if (this.dataset.task) {
+                    selectSidebarItem(this);
+                    filterByTask(this.dataset.task, dt);
+                }
+            })
+        });
+        */
 
         processHashChange(true);
     });
