@@ -286,7 +286,8 @@ class DynamicArgParseInterface(ArgParseInterface):
         args, unknown = parser.parse_known_args(args=[a for a in cmdline_args if a != '--help'])
         module = args.module
 
-        __import__(module)
+        if module:
+            __import__(module)
 
         return self.parse_task(cmdline_args)
 
