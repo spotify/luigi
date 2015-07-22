@@ -187,6 +187,14 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
         self.assertFalse(stdout.find(b'--x') != -1)
 
+    def test_bin_luigi_help_no_module(self):
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--help'])
+        self.assertTrue(stdout.find(b'usage:') != -1)
+
+    def test_bin_luigi_no_parameters(self):
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi'])
+        self.assertTrue(stderr.find(b'No task specified') != -1)
+
     def test_bin_luigi_help_class(self):
         returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'cmdline_test', 'FooBaseClass', '--help'])
         self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
