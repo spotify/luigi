@@ -111,6 +111,40 @@ function visualiserApp(luigi) {
     }
 
 
+    /**
+     * Filter table by all activated info boxes.
+     */
+    function filterByCategory() {
+        var dt = $('#taskTable').DataTable();
+        var infoBoxes = $('.info-box');
+
+        var activeBoxes = [];
+        infoBoxes.each(function (i) {
+            if (infoBoxes[i].dataset.on === 'yes') {
+                activeBoxes.push(infoBoxes[i].dataset.category);
+            }
+        });
+        var pattern = '(' + activeBoxes.join('|') + ')';
+        dt.column(1).search(pattern, regex=true).draw();
+    }
+
+    function toggleInfoBox(infoBox) {
+        var infoBoxColor = infoBox.dataset.color;
+        var infoBoxIcon = $(infoBox).find('.info-box-icon');
+        var colorClass = 'bg-' + infoBoxColor;
+
+        if ((infoBox.dataset.on === undefined) || (infoBox.dataset.on === 'no')) {
+            infoBox.dataset.on = 'yes';
+            infoBoxIcon.removeClass(colorClass);
+            $(infoBox).addClass(colorClass);
+        }
+        else {
+            infoBox.dataset.on = 'no';
+            $(infoBox).removeClass(colorClass);
+            infoBoxIcon.addClass(colorClass);
+        }
+    }
+
     function processWorker(worker) {
         worker.tasks = worker.running.map($.proxy(taskToDisplayTask, null, false));
         worker.start_time = new Date(worker.started * 1000).toLocaleString();
@@ -472,6 +506,10 @@ function visualiserApp(luigi) {
         } );
 
 
+        $('.info-box').on('click', function () {
+            toggleInfoBox(this);
+            filterByCategory();
+        })
 
         processHashChange(true);
     });
