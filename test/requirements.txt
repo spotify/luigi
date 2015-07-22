@@ -8,3 +8,4 @@ sqlalchemy
 elasticsearch
 snakebite>=2.5.2
 mysql-connector-python
+psutil
