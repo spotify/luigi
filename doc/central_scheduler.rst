@@ -3,7 +3,7 @@ Using the Central Scheduler
 
 While the ``--local-scheduler`` flag is useful for development purposes,
 it's not recommended for production usage.
-The centralized scheduler services two purposes:
+The centralized scheduler serves two purposes:
 
 -  Make sure two instances of the same task are not running simultaneously
 -  Provide visualization of everything that's going on.
