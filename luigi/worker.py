@@ -172,6 +172,12 @@ class SingleProcessPool(object):
     def apply_async(self, function, args):
         return function(*args)
 
+    def close(self):
+        pass
+
+    def join(self):
+        pass
+
 
 class DequeQueue(collections.deque):
     """
@@ -419,6 +425,9 @@ class Worker(object):
             self._log_unexpected_error(task)
             task.trigger_event(Event.BROKEN_TASK, task, ex)
             self._email_unexpected_error(task, formatted_traceback)
+        finally:
+            pool.close()
+            pool.join()
         return self.add_succeeded
 
     def _add(self, task, is_complete):

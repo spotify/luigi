@@ -15,13 +15,37 @@
 # limitations under the License.
 #
 
+import contextlib
+import gc
+import os
 import pickle
 import time
 from helpers import unittest
 
 import luigi
 import mock
+import psutil
 from luigi.worker import Worker
+
+
+def running_children():
+    children = set()
+    process = psutil.Process(os.getpid())
+    for child in process.children():
+        if child.is_running():
+            children.add(child.pid)
+    return children
+
+
+@contextlib.contextmanager
+def pause_gc():
+    if not gc.isenabled():
+        yield
+    try:
+        gc.disable()
+        yield
+    finally:
+        gc.enable()
 
 
 class SlowCompleteWrapper(luigi.WrapperTask):
@@ -77,6 +101,15 @@ class ParallelSchedulingTest(unittest.TestCase):
 
     def added_tasks(self, status):
         return [kw['task_id'] for args, kw in self.sch.add_task.call_args_list if kw['status'] == status]
+
+    def test_children_terminated(self):
+        before_children = running_children()
+        with pause_gc():
+            self.w.add(
+                OverlappingSelfDependenciesTask(5, 2),
+                multiprocess=True,
+            )
+            self.assertLessEqual(running_children(), before_children)
 
     def test_multiprocess_scheduling_with_overlapping_dependencies(self):
         self.w.add(OverlappingSelfDependenciesTask(5, 2), True)
