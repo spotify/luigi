@@ -381,7 +381,7 @@ class DateHourParameter(Parameter):
 
     def serialize(self, dt):
         """
-        Converts the datetime to a string usnig the format string ``%Y-%m-%dT%H``.
+        Converts the datetime to a string using the format string ``%Y-%m-%dT%H``.
         """
         if dt is None:
             return str(dt)
@@ -408,9 +408,44 @@ class DateParameter(Parameter):
     July 10, 2013.
     """
 
+    date_format = '%Y-%m-%d'
+
     def parse(self, s):
-        """Parses a date string formatted as ``YYYY-MM-DD``."""
-        return datetime.date(*map(int, s.split('-')))
+        """
+        Parses a date string formatted as ``YYYY-MM-DD``.
+        """
+        return datetime.datetime.strptime(s, self.date_format).date()
+
+    def serialize(self, dt):
+        """
+        Converts the date to a string (formatted ``YYYY-MM-DD``.
+        """
+        if dt is None:
+            return str(dt)
+        return dt.strftime(self.date_format)
+
+
+class MonthParameter(DateParameter):
+    """
+    Parameter whose value is a :py:class:`~datetime.date`, specified to the month
+    (day of :py:class:`~datetime.date` is "rounded" to first of the month).
+
+    A MonthParameter is a Date string formatted ``YYYY-MM``. For example, ``2013-07`` specifies
+    July of 2013.
+    """
+
+    date_format = '%Y-%m'
+
+
+class YearParameter(DateParameter):
+    """
+    Parameter whose value is a :py:class:`~datetime.date`, specified to the year
+    (day and month of :py:class:`~datetime.date` is "rounded" to first day of the year).
+
+    A YearParameter is a Date string formatted ``YYYY``.
+    """
+
+    date_format = '%Y'
 
 
 class IntParameter(Parameter):

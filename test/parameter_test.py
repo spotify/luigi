@@ -396,6 +396,16 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         p = luigi.DateParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(datetime.date(2001, 2, 3), p.value)
 
+    @with_config({"foo": {"bar": "2015-07"}})
+    def testMonthParameter(self):
+        p = luigi.MonthParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(datetime.date(2015, 7, 1), p.value)
+
+    @with_config({"foo": {"bar": "2015"}})
+    def testYearParameter(self):
+        p = luigi.YearParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(datetime.date(2015, 1, 1), p.value)
+
     @with_config({"foo": {"bar": "123"}})
     def testInt(self):
         p = luigi.IntParameter(config_path=dict(section="foo", name="bar"))

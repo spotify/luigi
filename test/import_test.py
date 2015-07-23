@@ -61,6 +61,7 @@ class ImportTest(unittest.TestCase):
             luigi.run, luigi.build,
             luigi.Parameter,
             luigi.DateHourParameter, luigi.DateMinuteParameter, luigi.DateParameter,
+            luigi.MonthParameter, luigi.YearParameter,
             luigi.DateIntervalParameter, luigi.TimeDeltaParameter,
             luigi.IntParameter, luigi.FloatParameter,
             luigi.BooleanParameter, luigi.BoolParameter,
