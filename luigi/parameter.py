@@ -568,7 +568,10 @@ class TaskParameter(Parameter):
 
             $ luigi --module my_tasks MyMetaTask --my_task_param my_namespace.MyTask
 
-    When instantiated, it'll always instantiate to a task class.
+    Where ``my_namespace.MyTask`` is defined in the ``my_tasks`` python module.
+
+    When the :py:class:`luigi.task.Task` class is instantiated to an object.
+    The value will always be a task class (and not a string).
     """
 
     def parse(self, input):
