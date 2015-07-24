@@ -49,31 +49,148 @@ function visualiserApp(luigi) {
         };
     }
 
-    function indexByProperty(tasks, fieldName) {
-        indexedTasks = {};
-        $.each(tasks, function(i, task) {
-            if (!indexedTasks.hasOwnProperty(task[fieldName])) {
-                indexedTasks[task[fieldName]] = [];
+    function taskToRowData(task) {
+        var taskIdParts = /([A-Za-z0-9_]*)\((.*)\)/.exec(task.taskId);
+        var taskName = taskIdParts[1];
+        var taskParams = taskIdParts[2];
+        var displayTime = new Date(Math.floor(task.start_time*1000)).toLocaleString();
+        //!TODO: time elapsed if running (see taskToDisplayTask)
+        return {
+            taskId: task.taskId,
+            taskName: taskName,
+            taskParams: taskParams,
+            priority: task.priority,
+            displayTime: displayTime,
+            displayTimestamp : task.start_time,
+            trackingUrl: task.trackingUrl,
+            status: task.status,
+            graph: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DONE"),
+            error: task.status == "FAILED",
+            re_enable: task.status == "DISABLED" && task.re_enable_able
+        };
+    }
+
+    function taskCategoryIcon(category) {
+        var iconClass;
+        var iconColor;
+        switch (category) {
+            case 'pending':
+                iconClass = 'fa-pause';
+                iconColor = 'yellow';
+                break;
+            case 'running':
+                iconClass = 'fa-play';
+                iconColor = 'aqua';
+                break;
+            case 'done':
+                iconClass = 'fa-check';
+                iconColor = 'green';
+                break;
+            case 'failed':
+                iconClass = 'fa-times';
+                iconColor = 'red';
+                break;
+            case 'disabled':
+                iconClass = 'fa-minus-circle';
+                iconColor = 'gray';
+                break;
+            case 'upstreamFailed':
+                iconClass = 'fa-warning';
+                iconColor = 'maroon';
+                break;
+            case 'upstreamDisabled':
+                iconClass = 'fa-warning';
+                iconColor = 'gray';
+                break;
+            default:
+                iconClass = 'fa-bug';
+                iconColor = 'orange';
+                break;
+        }
+        return '<span class="status-icon bg-' + iconColor + '"><i class="fa ' + iconClass + '"></i></span>';
+    }
+
+
+    /**
+     * Filter table by all activated info boxes.
+     */
+    function filterByCategory(dt) {
+        var infoBoxes = $('.info-box');
+
+        var activeBoxes = [];
+        infoBoxes.each(function (i) {
+            if (infoBoxes[i].dataset.on === 'yes') {
+                activeBoxes.push(infoBoxes[i].dataset.category);
             }
-            indexedTasks[task[fieldName]].push(task);
         });
-        return indexedTasks;
+        var pattern = '(' + activeBoxes.join('|') + ')';
+        dt.column(1).search(pattern, regex=true).draw();
     }
 
-    function entryList(object) {
-        var list = [];
-        $.each(object, function(key, value) {
-            list.push({key: key, value:value});
-        });
-        return list;
+    function filterByTask(task, dt) {
+        dt.column(2).search(task).draw();
     }
 
-    function renderTasks(tasks) {
-        var displayTasks = tasks.map($.proxy(taskToDisplayTask, null, true));
-        displayTasks.sort(function(a,b) { return b.displayTimestamp - a.displayTimestamp; });
-        var tasksByFamily = entryList(indexByProperty(displayTasks, "taskName"));
-        tasksByFamily.sort(function(a,b) { return a.key.localeCompare(b.key); });
-        return renderTemplate("rowTemplate", {tasks: tasksByFamily});
+    function toggleInfoBox(infoBox) {
+        var infoBoxColor = infoBox.dataset.color;
+        var infoBoxIcon = $(infoBox).find('.info-box-icon');
+        var colorClass = 'bg-' + infoBoxColor;
+
+        if ((infoBox.dataset.on === undefined) || (infoBox.dataset.on === 'no')) {
+            infoBox.dataset.on = 'yes';
+            infoBoxIcon.removeClass(colorClass);
+            $(infoBox).addClass(colorClass);
+        }
+        else {
+            infoBox.dataset.on = 'no';
+            $(infoBox).removeClass(colorClass);
+            infoBoxIcon.addClass(colorClass);
+        }
+    }
+
+    function renderSidebar(tasks) {
+        // tasks is a list of task names
+        var counts = {};
+        $.each(tasks, function(i) {
+            var name = tasks[i];
+            if (counts[name] === undefined) {
+                counts[name] = 0;
+            }
+            counts[name] += 1;
+        });
+        var taskList = [];
+        $.each(counts, function (name) {
+            taskList.push({name: name, count: counts[name]});
+        });
+        return renderTemplate("sidebarTemplate", {"tasks": taskList});
+    }
+
+    function selectSidebarItem(item) {
+        console.log('select sidebar '+item.dataset.task)
+        var sidebarItems = $('.sidebar').find('li');
+        sidebarItems.each(function (i) {
+            var item2 = sidebarItems[i];
+            if (item2.dataset.task === undefined) {
+                return;
+            }
+            if (item === item2) {
+                if ($(item2).hasClass('active')) {
+                    // item is active, deselect
+                    $(item2).removeClass('active');
+                    $(item2).find('.badge').removeClass('bg-green');
+                }
+                else {
+                    // select item
+                    $(item2).addClass('active');
+                    $(item2).find('.badge').addClass('bg-green');
+                }
+            }
+            else {
+                // clear any selection
+                $(item2).removeClass('active');
+                $(item2).find('.badge').removeClass('bg-green');
+            }
+        });
     }
 
     function processWorker(worker) {
@@ -183,99 +300,7 @@ function visualiserApp(luigi) {
         });
     }
 
-    function bindTaskEvents(id, expand) {
-        $(id + " [data-action=expandTaskRows]").click(function(event) {
-            event.preventDefault();
-            var icon = $(this).find("span");
-            if (icon.hasClass("icon-plus")) {
-                icon.removeClass("icon-plus");
-                icon.addClass("icon-minus");
-            } else {
-                icon.removeClass("icon-minus");
-                icon.addClass("icon-plus");
-            }
-            var taskRows = $(this).closest(".taskFamily").find(".taskRows").slideToggle("fast");
-        });
-        if (expand) {
-            $(id + " [data-action=expandTaskRows]").click();
-        }
-        $(id + " .error-trace-button").click(function() {
-            luigi.getErrorTrace($(this).attr("data-task-id"), function(error) {
-               showErrorTrace(error);
-            });
-        });
-        $(id + " .re-enable-button").click(function() {
-            var that = $(this);
-            $(this).attr('disabled', true);
-            luigi.reEnable($(this).attr("data-task-id"), function(data) {
-                if (data.name) {
-                  node = that.closest(".taskFamily").find(".badge-important");
-                  cnt = parseInt(node.text());
-                  cnt --;
-                  node.text(cnt);
-                  that.parent().parent().remove();
-                }
-            });
-        });
-    }
 
-    function getTaskList(id, tasks, expand) {
-        if (tasks.length == 1 && typeof(tasks[0]) === "number") {
-            var length = tasks[0];
-            var rendered = renderTemplate("rowCountTemplate", {'num_tasks': length});
-            $(id).parent().addClass('emptyTaskGroup');
-        } else {
-            var length = tasks.length;
-            var rendered = renderTasks(tasks);
-        }
-        $(id).append(rendered);
-        $(id).prev("h3").append(" (" + length + ")");
-        bindTaskEvents(id, expand);
-        filterTasks();
-    }
-
-    function filterTasks() {
-        inputVal = $('#filter-input').val();
-        if (inputVal) {
-            arr = inputVal.split(" ");
-            // hide all columns first
-            $('#taskList .taskRow').addClass('hidden');
-            $('#taskList .taskRow').parent().parent().addClass('hidden');
-
-            // unhide columns that matches filter
-            attrSelector = arr.map(function(a) {
-                return a ? '[data-task-id*=' + a + ']' : '';
-            }).join("");
-            selector = '.taskRow' + attrSelector;
-            $(selector).removeClass('hidden');
-            $(selector).parent().parent().removeClass('hidden');
-        } else {
-            $('#taskList .taskRow').removeClass('hidden');
-            $('#taskList .taskRow').parent().parent().removeClass('hidden');
-        }
-
-        updateCount();
-    }
-
-    function updateCount() {
-        taskGroups = $('#taskList .taskGroup:not(.emptyTaskGroup)');
-        for (i=0; i<taskGroups.length; i++) {
-            groupCount = 0;
-
-            // update each task family
-            taskFamilies = $(taskGroups[i]).find('.taskFamily');
-            for (j=0; j<taskFamilies.length; j++) {
-                cnt = $(taskFamilies[j]).find('.taskRow:not(.hidden)').length;
-                groupCount += cnt;
-                node = $(taskFamilies[j]).find(".badge-important");
-                node.text(cnt);
-            }
-
-            // update task group
-            newText = $(taskGroups[i]).find('h3').text().replace(/\d+/, groupCount);
-            $(taskGroups[i]).find('h3').text(newText);
-        }
-    }
 
     function asingInput(worker, id){
         if (worker[id].deps.length > 0) {
@@ -343,7 +368,7 @@ function visualiserApp(luigi) {
                 var task = tasks[id];
                 var className = task.status;
                     
-                var html = "<div onclick='window.location.href = \"" + "/static/visualiser/index.d3.html#" + task.taskId + "\"'>";
+                var html = "<div onclick='window.location.href = \"" + "index.html#" + task.taskId + "\"'>";
                 html += "<span class=status></span>";
                 html += "<span class=name>"+task.name+"</span>";
                 html += "<span class=queue><span class=counter>"+ task.status +"</span></span>";
@@ -394,66 +419,171 @@ function visualiserApp(luigi) {
             inner.selectAll("g.node")
                 .attr("title", function(v) { return styleTooltip(v, getParam(tasks, v)) })
                 .each(function(v) { $(this).tipsy({ gravity: "w", opacity: 1, html: true }); });
-            }
-            // Do some mock queue status updates
-            
-            if (getStatusTasks(tasks)) {
-                console.log("clearInterval");
-                clearInterval(interval);
-            };
-            draw();
+        }
+        // Do some mock queue status updates
+
+        if (getStatusTasks(tasks)) {
+            console.log("clearInterval");
+            clearInterval(interval);
+        };
+        draw();
     }
+
     var interval = setInterval(function() {
         processHashChange(false);
     }, 5000);
 
-    $(document).ready(function() {
-        loadTemplates();
+    /*
+       DataTables functions
+     */
+    // Remove tasks of a given category and add new ones.
+    function updateTaskCategory(dt, category, tasks) {
+        dt.rows(function (i, data) {
+            return data.category === category;
+        }).remove();
 
-        $('#filter-input').bind("keyup paste", function() {
-            clearTimeout(typingTimer);
-            if ($('#filter-input').val) {
-                typingTimer = setTimeout(filterTasks, 300);
+        var displayTasks = tasks.map(taskToRowData);
+        displayTasks.forEach(function (obj) {
+            obj.category = category;
+        });
+        dt.rows.add(displayTasks);
+
+        $('#'+category+'Info').find('.info-box-number').html(displayTasks.length);
+        dt.draw();
+
+        $('.sidebar').html(renderSidebar(dt.column(2).data()));
+        $('.sidebar-menu').on('click', 'li', function () {
+            if (this.dataset.task) {
+                selectSidebarItem(this);
+                if ($(this).hasClass('active')) {
+                    filterByTask(this.dataset.task, dt);
+                }
+                else {
+                    filterByTask('', dt);
+                }
             }
         });
+    }
+    
+    $(document).ready(function() {
+        loadTemplates();
 
         luigi.getWorkerList(function(workers) {
             $("#workerList").append(renderWorkers(workers));
         });
 
+        var dt = $('#taskTable').DataTable({
+            columns: [
+                {
+                    className:      'details-control',
+                    orderable:      false,
+                    data:           null,
+                    defaultContent: '<i class="fa fa-plus-square-o"></i>'
+                },
+                {
+                    data: 'category',
+                    render: function (data, type, row) {
+                        return taskCategoryIcon(data)+' '+row.status;
+                    }
+                },
+                {data: 'taskName'},
+                {data: 'taskParams'},
+                {data: 'displayTime'},
+                {
+                    data: null,
+                    render: function (data, type, row) {
+                        return Mustache.render(templates['actionsTemplate'], row);
+                    }
+                }
+            ]
+        });
+        
         luigi.getRunningTaskList(function(runningTasks) {
-            getTaskList("#runningTasks", runningTasks, true);
+            updateTaskCategory(dt, 'running', runningTasks);
         });
 
         luigi.getFailedTaskList(function(failedTasks) {
-            getTaskList("#failedTasks", failedTasks);
+            updateTaskCategory(dt, 'failed', failedTasks);
         });
 
         luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
-            getTaskList("#upstreamFailedTasks", upstreamFailedTasks);
+            updateTaskCategory(dt, 'upstreamFailed', upstreamFailedTasks);
         });
 
         luigi.getDisabledTaskList(function(disabledTasks) {
-            getTaskList("#disabledTasks", disabledTasks);
+            updateTaskCategory(dt, 'disabled', disabledTasks);
         });
 
         luigi.getUpstreamDisabledTaskList(function(upstreamDisabledTasks) {
-            getTaskList("#upstreamDisabledTasks", upstreamDisabledTasks);
+            updateTaskCategory(dt, 'upstreamDisabled', upstreamDisabledTasks);
         });
 
         luigi.getPendingTaskList(function(pendingTasks) {
-            getTaskList("#pendingTasks", pendingTasks);
+            updateTaskCategory(dt, 'pending', pendingTasks);
         });
 
         luigi.getDoneTaskList(function(doneTasks) {
-            getTaskList("#doneTasks", doneTasks);
+            updateTaskCategory(dt, 'done', doneTasks);
         });
 
         bindListEvents();
 
+        /* !TODO: Link errors
+               luigi.getErrorTrace($(this).attr("data-task-id"), function(error) {
+               showErrorTrace(error);
+            });
+         */
+
         //var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
         //$("#graphPlaceholder")[0].graph = graph;
-            
+        // Add event listener for opening and closing details
+
+        $('#taskTable tbody').on('click', 'td.details-control', function () {
+            var tr = $(this).closest('tr');
+            var row = dt.row( tr );
+            var data = row.data();
+
+            if ( row.child.isShown() ) {
+                // This row is already open - close it
+                row.child.hide();
+                $(this).html('<i class="fa fa-plus-square-o"></i>')
+            }
+            else {
+                // Open this row
+                row.child(Mustache.render(templates['rowDetailsTemplate'], data)).show();
+                $(this).html('<i class="fa fa-minus-square-o"></i>')
+
+                // If error state is present retrieve the error
+                if (data.error) {
+                    errorTrace = row.child().find('.error-trace');
+                    luigi.getErrorTrace(data.taskId, function(error) {
+                        errorTrace.html('<pre class="pre-scrollable">'+error.error+'</pre>');
+                    });
+                }
+
+
+            }
+
+        } );
+
+
+        $('.info-box').on('click', function () {
+            toggleInfoBox(this);
+            filterByCategory(dt);
+        })
+
+        /*
+        dt.on('draw.dt', function () {
+            $('.sidebar').html(renderSidebar(dt.column(2).data()));
+            $('.sidebar-menu').on('click', 'li', function () {
+                if (this.dataset.task) {
+                    selectSidebarItem(this);
+                    filterByTask(this.dataset.task, dt);
+                }
+            })
+        });
+        */
+
         processHashChange(true);
     });
 }

@@ -467,6 +467,11 @@ worker-disconnect-delay
   scheduler before removing it and marking all of its running tasks as
   failed. Defaults to 60.
 
+visualizer-theme
+  Selects the theme of the visualizer application.  The root URL
+  ``http://<host>:<port>/`` will redirect to the theme's URL according
+  to this option.  Possible values are ``default`` or ``retro``.
+
 
 [spark]
 -------

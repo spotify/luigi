@@ -99,7 +99,8 @@ class scheduler(Config):
 
     record_task_history = parameter.BoolParameter(default=False)
 
-    visualization_graph = parameter.Parameter(default="svg", config_path=dict(section='scheduler', name='visualization-graph'))
+    # visualizer_theme selects between default and retro themes
+    visualizer_theme = parameter.Parameter(default='default', config_path=dict(section='scheduler', name='visualizer-theme'))
 
     prune_on_get_work = parameter.BoolParameter(default=False)
 

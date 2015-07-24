@@ -2,19 +2,16 @@
 <html lang="en">
     <head>
         <title>Luigi Task Visualiser</title>
-        <script src="lib/jquery-1.10.0.min.js"></script>
-        <link href="lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-        <link href="lib/jquery-ui/css/jquery-ui-1.10.3.custom.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="css/tipsy.css">
-        <script src="lib/bootstrap/js/bootstrap.min.js"></script>
-        <script src="http://d3js.org/d3.v3.js" charset="utf-8"></script>
-        <script src="js/dagre-d3.js"></script>
-        <script src="lib/mustache.js"></script>
-        <script src="js/luigi.d3.js"></script>
-        <script src="js/graph.js"></script>
-        <script src="js/visualiserApp.d3.js"></script>
-        <script src="js/tipsy.js"></script>
-        <script src="lib/jquery-ui/js/jquery-ui-1.10.3.custom.min.js"></script>
+        <script src="../../lib/jquery-1.10.0.min.js"></script>
+        <link href="../../lib/bootstrap3/css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../lib/bootstrap3/css/bootstrap-theme.min.css" rel="stylesheet">
+        <script src="../../lib/bootstrap3/js/bootstrap.min.js"></script>
+        <link href="../../lib/jquery-ui/css/jquery-ui-1.10.3.custom.min.css" rel="stylesheet">
+        <script src="../../lib/mustache.js"></script>
+        <script src="../../js/luigi.js"></script>
+        <script src="../../js/graph.js"></script>
+        <script src="visualiserApp.js"></script>
+        <script src="../../lib/jquery-ui/js/jquery-ui-1.10.3.custom.min.js"></script>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
         <style type="text/css">
@@ -26,17 +23,11 @@
             }
             body .modal {
               width: 90%; /* desired relative width */
-              left: 100%; /* (100%-width)/2 */
+              left: 5%; /* (100%-width)/2 */
               margin: auto auto auto auto; /* place center */
             }
             body .modal.fade.in {
               top: auto; /* fade in to correct spot */
-            }
-            /* This styles the title of the tooltip */
-            .tipsy .name {
-              font-size: 1.5em;
-              font-weight: bold;
-              margin: 0;
             }
         </style>
 
@@ -62,141 +53,6 @@
         .taskRow {
           word-break:break-all;
         }
-        </style>
-
-        <style>
-
-          
-          @-webkit-keyframes flash {
-            0%, 50%, 100% {
-              opacity: 1;
-            }
-
-            25%, 75% {
-              opacity: 0.2;
-            }
-          }
-
-          @keyframes flash {
-            0%, 50%, 100% {
-              opacity: 1;
-            }
-
-            25%, 75% {
-              opacity: 0.2;
-            }
-          }
-
-          .RUNNING {
-            -webkit-animation-duration: 5s;
-            animation-duration: 5s;
-            -webkit-animation-fill-mode: both;
-            animation-fill-mode: both;
-            -webkit-animation-iteration-count: 1;
-            animation-iteration-count: 1;
-          }
-
-          .live.map {
-            width: 100%;
-            height: 600px;
-            background: #333;
-          }
-
-          svg {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-          }
-
-          .live.map text {
-            font-weight: 300;
-            font-size: 14px;
-          }
-
-          .live.map .node rect {
-            stroke-width: 1.5px;
-            stroke: #bbb;
-            fill: #666;
-          }
-
-          .live.map .status {
-            height: 100%;
-            width: 15px;
-            display: block;
-            float: left;
-            border-top-left-radius: 5px;
-            border-bottom-left-radius: 5px;
-            margin-right: 4px;
-          }
-
-          .live.map .DONE .status {
-            background-color: #7f7;
-          }
-
-          .live.map .RUNNING .status {
-            background-color: #7f7;
-          }
-
-          .live.map .PENDING .status {
-            background-color: #FFFF46;
-          }
-
-          .live.map .ERROR .status {
-            background-color: #f77;
-          }          
-
-          .live.map .RUNNING .queue {
-            color: #f77;
-          }
-
-          .RUNNING {
-            -webkit-animation-name: flash;
-            animation-name: flash;
-          }
-
-          .live.map .consumers {
-            margin-right: 2px;
-          }
-
-          .live.map .consumers,
-          .live.map .name {
-            margin-top: 4px;
-          }
-
-          .live.map .consumers:after {
-            content: "x";
-          }
-
-          .live.map .queue {
-            display: block;
-            float: left;
-            width: 130px;
-            height: 20px;
-            font-size: 12px;
-            margin-top: 2px;
-          }
-
-          .live.map .node g div {
-            width: 200px;
-            height: 40px;
-            color: #fff;
-          }
-
-          .live.map .node g div span.consumers {
-            display: inline-block;
-            width: 20px;
-          }
-
-          .live.map .edgeLabel text {
-            width: 50px;
-            fill: #fff;
-          }
-
-          .live.map .edgePath path {
-            stroke: #999;
-            stroke-width: 1.5px;
-            fill: #999;
-          }
         </style>
         <script type="text/template" name="rowTemplate">
             {{#tasks}}
@@ -229,7 +85,7 @@
             {{/tasks}}
         </script>
         <script type="text/template" name="rowCountTemplate">
-            <h4>Too many tasks to display: {{num_tasks}}</h4>
+            <h4 class="tooManyTasks">Too many tasks to display: {{num_tasks}}</h4>
         </script>
         <script type="text/template" name="errorTemplate">
             <div class="modal-header">
@@ -266,7 +122,6 @@
                 {{/tasks}}
             {{/workers}}
         </script>
-
     </head>
     <body>
         <div class="page-header custom-header">
@@ -331,10 +186,8 @@
                 <div id="graphContainer" class="container-fluid">
                     <h4 id="dependencyTitle"></h4>
                     <h5>Dependency Graph</h5>
-                    <div class="live map">
-                        <svg id="mysvg"><g/></svg>
+                    <div id="graphPlaceholder">
                     </div>
-
                 </div>
             </section>
             <section id="workerList" class="container-fluid tab-pane active">
@@ -344,7 +197,7 @@
 
         </div>
         <script>
-            visualiserApp(new LuigiAPI("../../api"));
+            visualiserApp(new LuigiAPI("../../../../api"));
         </script>
     </body>
 </html>
