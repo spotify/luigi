@@ -33,6 +33,7 @@ from luigi import rpc
 from luigi import scheduler
 from luigi import task
 from luigi import worker
+from luigi import execution_summary
 from luigi.task_register import Register
 
 
@@ -187,6 +188,7 @@ class Interface(object):
         if env_params.workers != 0:
             success &= w.run()
         w.stop()
+        logger.info(execution_summary.summary(w))
         return success
 
 

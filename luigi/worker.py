@@ -323,6 +323,21 @@ class Worker(object):
         self._task_result_queue = multiprocessing.Queue()
         self._running_tasks = {}
 
+        # Stuff for execution_summary
+        self._add_task_history = []
+        self._get_work_response_history = []
+
+    def _add_task(self, *args, **kwargs):
+        """
+        Call ``self._scheduler.add_task``, but store the values too so we can
+        implement :py:func:`luigi.execution_summary.summary`.
+        """
+        task = self._scheduled_tasks.get(kwargs['task_id'])
+        if task:
+            msg = (task, kwargs['status'], kwargs['runnable'])
+            self._add_task_history.append(msg)
+        self._scheduler.add_task(*args, **kwargs)
+
     def stop(self):
         """
         Stop the KeepAliveThread associated with this Worker.
@@ -497,12 +512,12 @@ class Worker(object):
             deps = [d.task_id for d in deps]
 
         self._scheduled_tasks[task.task_id] = task
-        self._scheduler.add_task(worker=self._id, task_id=task.task_id, status=status,
-                                 deps=deps, runnable=runnable, priority=task.priority,
-                                 resources=task.process_resources(),
-                                 params=task.to_str_params(),
-                                 family=task.task_family,
-                                 module=task.task_module)
+        self._add_task(worker=self._id, task_id=task.task_id, status=status,
+                       deps=deps, runnable=runnable, priority=task.priority,
+                       resources=task.process_resources(),
+                       params=task.to_str_params(),
+                       family=task.task_family,
+                       module=task.task_module)
 
         logger.info('Scheduled %s (%s)', task.task_id, status)
 
@@ -543,6 +558,11 @@ class Worker(object):
         running_tasks = r['running_tasks']
         n_unique_pending = r['n_unique_pending']
 
+        self._get_work_response_history.append(dict(
+            task_id=task_id,
+            running_tasks=running_tasks,
+        ))
+
         if task_id is not None and task_id not in self._scheduled_tasks:
             logger.info('Did not schedule %s, will load it dynamically', task_id)
 
@@ -558,8 +578,8 @@ class Worker(object):
                 subject = 'Luigi: %s' % msg
                 error_message = notifications.wrap_traceback(ex)
                 notifications.send_error_email(subject, error_message)
-                self._scheduler.add_task(worker=self._id, task_id=task_id, status=FAILED, runnable=False,
-                                         assistant=self._assistant)
+                self._add_task(worker=self._id, task_id=task_id, status=FAILED, runnable=False,
+                               assistant=self._assistant)
                 task_id = None
                 self.run_succeeded = False
 
@@ -631,17 +651,17 @@ class Worker(object):
                     self.add(t)
                 new_deps = [t.task_id for t in new_req]
 
-            self._scheduler.add_task(worker=self._id,
-                                     task_id=task_id,
-                                     status=status,
-                                     expl=error_message,
-                                     resources=task.process_resources(),
-                                     runnable=None,
-                                     params=task.to_str_params(),
-                                     family=task.task_family,
-                                     module=task.task_module,
-                                     new_deps=new_deps,
-                                     assistant=self._assistant)
+            self._add_task(worker=self._id,
+                           task_id=task_id,
+                           status=status,
+                           expl=error_message,
+                           resources=task.process_resources(),
+                           runnable=None,
+                           params=task.to_str_params(),
+                           family=task.task_family,
+                           module=task.task_module,
+                           new_deps=new_deps,
+                           assistant=self._assistant)
 
             if status == RUNNING:
                 continue
