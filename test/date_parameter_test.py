@@ -42,7 +42,7 @@ class YearTask(luigi.Task):
     year = luigi.YearParameter()
 
 
-class DateTest(unittest.TestCase):
+class DateParameterTest(unittest.TestCase):
     def test_parse(self):
         d = luigi.DateParameter().parse('2015-04-03')
         self.assertEqual(d, datetime.date(2015, 4, 3))
@@ -60,7 +60,7 @@ class DateTest(unittest.TestCase):
         self.assertEqual(str(t), 'DateTask(day=2015-04-03)')
 
 
-class DateHourTest(unittest.TestCase):
+class DateHourParameterTest(unittest.TestCase):
     def test_parse(self):
         dh = luigi.DateHourParameter().parse('2013-02-01T18')
         self.assertEqual(dh, datetime.datetime(2013, 2, 1, 18, 0, 0))
@@ -78,7 +78,7 @@ class DateHourTest(unittest.TestCase):
         self.assertEqual(str(t), 'DateHourTask(dh=2013-02-01T18)')
 
 
-class DateMinuteTest(unittest.TestCase):
+class DateMinuteParameterTest(unittest.TestCase):
     def test_parse(self):
         dm = luigi.DateMinuteParameter().parse('2013-02-01T18H42')
         self.assertEqual(dm, datetime.datetime(2013, 2, 1, 18, 42, 0))
@@ -104,7 +104,7 @@ class DateMinuteTest(unittest.TestCase):
         self.assertEqual(str(t), 'DateMinuteTask(dm=2013-02-01T18H42)')
 
 
-class MonthTest(unittest.TestCase):
+class MonthParameterTest(unittest.TestCase):
     def test_parse(self):
         m = luigi.MonthParameter().parse('2015-04')
         self.assertEqual(m, datetime.date(2015, 4, 1))
@@ -122,7 +122,7 @@ class MonthTest(unittest.TestCase):
         self.assertEqual(str(task), 'MonthTask(month=2015-04)')
 
 
-class YearTest(unittest.TestCase):
+class YearParameterTest(unittest.TestCase):
     def test_parse(self):
         year = luigi.YearParameter().parse('2015')
         self.assertEqual(year, datetime.date(2015, 1, 1))
