@@ -43,8 +43,10 @@ class DummyS3CopyToTable(luigi.contrib.redshift.S3CopyToTable):
 
     aws_access_key_id = AWS_ACCESS_KEY
     aws_secret_access_key = AWS_SECRET_KEY
-    s3_load_path = 's3://%s/%s' % (BUCKET, KEY)
     copy_options = ''
+
+    def s3_load_path(self):
+        return 's3://%s/%s' % (BUCKET, KEY)
 
 
 class TestS3CopyToTable(unittest.TestCase):
@@ -75,7 +77,7 @@ class TestS3CopyToTable(unittest.TestCase):
         # successfully referenced in the `S3CopyToTable.run` method, which is
         # in-turn passed to `S3CopyToTable.copy` and other functions in `run`
         # (see issue #995).
-        mock_copy.assert_called_with(mock_cursor, task.s3_load_path)
+        mock_copy.assert_called_with(mock_cursor, task.s3_load_path())
 
         # Check the SQL query in `S3CopyToTable.does_table_exist`.
         mock_cursor.execute.assert_called_with("select 1 as table_exists "
