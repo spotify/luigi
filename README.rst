@@ -157,6 +157,9 @@ Getting Help
 * Find us on `#luigi` on freenode.
 * Subscribe to the `luigi-user <http://groups.google.com/group/luigi-user/>`_
   group and ask a question.
+* If you're interested in professional services, click here:
+.. image:: https://s3-us-west-2.amazonaws.com/supportedsourceassets/buttons/supportandservices1.png
+    :target: http://supportedsource.org/consulting-services-and-support/Luigi
 
 External links
 --------------
