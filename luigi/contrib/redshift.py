@@ -163,7 +163,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         if not (self.table):
             raise Exception("table need to be specified")
 
-        path = self.s3_load_path
+        path = self.s3_load_path()
         connection = self.output().connect()
         if not self.does_table_exist(connection):
             # try creating table
