@@ -26,7 +26,7 @@ works.
 
 .. code:: python
 
-    class AllReports(luigi.Task):
+    class AllReports(luigi.WrapperTask):
         date = luigi.DateParameter(default=datetime.date.today())
         def requires(self):
             yield SomeReport(self.date)
@@ -38,6 +38,8 @@ works.
 This simple task will not do anything itself, but will invoke a bunch of
 other tasks. Per each invocation Luigi will perform as many of the pending
 jobs as possible (those which have all their dependencies present).
+
+You'll need to use :class:`~luigi.task.WrapperTask` for this instead of the usual Task class, because this job will not produce any output of its own, and as such needs a way to indicate when it's complete. This class is used for tasks that only wrap other tasks and that by definition are done if all their requirements exist.
 
 Triggering recurring tasks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
