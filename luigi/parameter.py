@@ -20,6 +20,7 @@ All Parameters sit on :class:`~luigi.task.Task` classes.
 See :ref:`Parameter` for more info on how to define parameters.
 '''
 
+import abc
 import datetime
 import warnings
 try:
@@ -361,47 +362,28 @@ class Parameter(object):
                 self.reset_global()
 
 
-class DateHourParameter(Parameter):
+class DateParameterBase(Parameter):
     """
-    Parameter whose value is a :py:class:`~datetime.datetime` specified to the hour.
-
-    A DateHourParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
-    date and time specified to the hour. For example, ``2013-07-10T19`` specifies July 10, 2013 at
-    19:00.
+    Base class Parameter for dates. Code reuse is made possible since all date
+    parameters are serialized in the same way.
     """
-
-    date_format = '%Y-%m-%dT%H'  # ISO 8601 is to use 'T'
-
-    def parse(self, s):
+    @abc.abstractproperty
+    def date_format(self):
         """
-        Parses a string to a :py:class:`~datetime.datetime` using the format string ``%Y-%m-%dT%H``.
+        Override me with a :py:meth:`~datetime.date.strftime` string.
         """
-        # TODO(erikbern): we should probably use an internal class for arbitary
-        # time intervals (similar to date_interval). Or what do you think?
-        return datetime.datetime.strptime(s, self.date_format)
+        pass
 
     def serialize(self, dt):
         """
-        Converts the datetime to a string using the format string ``%Y-%m-%dT%H``.
+        Converts the date to a string using the :py:attr:`~DateParameterBase.date_format`.
         """
         if dt is None:
             return str(dt)
         return dt.strftime(self.date_format)
 
 
-class DateMinuteParameter(DateHourParameter):
-    """
-    Parameter whose value is a :py:class:`~datetime.datetime` specified to the minute.
-
-    A DateMinuteParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
-    date and time specified to the minute. For example, ``2013-07-10T19H07`` specifies July 10, 2013 at
-    19:07.
-    """
-
-    date_format = '%Y-%m-%dT%HH%M'  # ISO 8601 is to use 'T' and 'H'
-
-
-class DateParameter(Parameter):
+class DateParameter(DateParameterBase):
     """
     Parameter whose value is a :py:class:`~datetime.date`.
 
@@ -416,14 +398,6 @@ class DateParameter(Parameter):
         Parses a date string formatted as ``YYYY-MM-DD``.
         """
         return datetime.datetime.strptime(s, self.date_format).date()
-
-    def serialize(self, dt):
-        """
-        Converts the date to a string (formatted ``YYYY-MM-DD``.
-        """
-        if dt is None:
-            return str(dt)
-        return dt.strftime(self.date_format)
 
 
 class MonthParameter(DateParameter):
@@ -447,6 +421,36 @@ class YearParameter(DateParameter):
     """
 
     date_format = '%Y'
+
+
+class DateHourParameter(DateParameterBase):
+    """
+    Parameter whose value is a :py:class:`~datetime.datetime` specified to the hour.
+
+    A DateHourParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
+    date and time specified to the hour. For example, ``2013-07-10T19`` specifies July 10, 2013 at
+    19:00.
+    """
+
+    date_format = '%Y-%m-%dT%H'  # ISO 8601 is to use 'T'
+
+    def parse(self, s):
+        """
+        Parses a string to a :py:class:`~datetime.datetime` using the format string ``%Y-%m-%dT%H``.
+        """
+        return datetime.datetime.strptime(s, self.date_format)
+
+
+class DateMinuteParameter(DateHourParameter):
+    """
+    Parameter whose value is a :py:class:`~datetime.datetime` specified to the minute.
+
+    A DateMinuteParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
+    date and time specified to the minute. For example, ``2013-07-10T19H07`` specifies July 10, 2013 at
+    19:07.
+    """
+
+    date_format = '%Y-%m-%dT%HH%M'  # ISO 8601 is to use 'T' and 'H'
 
 
 class IntParameter(Parameter):
