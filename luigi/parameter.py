@@ -27,6 +27,7 @@ try:
 except ImportError:
     from configparser import NoOptionError, NoSectionError
 
+from luigi import task_register
 from luigi import six
 
 from luigi import configuration
@@ -587,3 +588,29 @@ class TimeDeltaParameter(Parameter):
             return result
         else:
             raise ParameterException("Invalid time delta - could not parse %s" % input)
+
+
+class TaskParameter(Parameter):
+    """
+    A parameter that takes another luigi task class.
+
+    When used programatically, the parameter should be specified
+    directly with the :py:class:`luigi.task.Task` (sub) class. Like
+    ``MyMetaTask(my_task_param=my_tasks.MyTask)``. On the command line,
+    you specify the :py:attr:`luigi.task.Task.task_family`. Like
+
+    .. code:: console
+
+            $ luigi --module my_tasks MyMetaTask --my_task_param my_namespace.MyTask
+
+    Where ``my_namespace.MyTask`` is defined in the ``my_tasks`` python module.
+
+    When the :py:class:`luigi.task.Task` class is instantiated to an object.
+    The value will always be a task class (and not a string).
+    """
+
+    def parse(self, input):
+        """
+        Parse a task_famly using the :class:`~luigi.task_register.Register`
+        """
+        return task_register.Register.get_task_cls(input)

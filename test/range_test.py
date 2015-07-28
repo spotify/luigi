@@ -17,7 +17,7 @@
 
 import datetime
 import fnmatch
-from helpers import unittest
+from helpers import unittest, LuigiTestCase
 
 import luigi
 import mock
@@ -195,7 +195,7 @@ class RangeDailyBaseTest(unittest.TestCase):
         self.events = {}
 
     def test_consistent_formatting(self):
-        task = RangeDailyBase(of='CommonDateTask',
+        task = RangeDailyBase(of=CommonDateTask,
                               start=datetime.date(2016, 1, 1))
         self.assertEqual(task._format_range([datetime.datetime(2016, 1, 2, 13), datetime.datetime(2016, 2, 29, 23)]), '[2016-01-02, 2016-02-29]')
 
@@ -207,7 +207,7 @@ class RangeDailyBaseTest(unittest.TestCase):
                 calls.append(args)
                 return args[-1][:5]
 
-        task = RangeDailyDerived(of='CommonDateTask',
+        task = RangeDailyDerived(of=CommonDateTask,
                                  **kwargs)
         self.assertEqual(task.requires(), [])
         self.assertEqual(calls, [])
@@ -247,7 +247,7 @@ class RangeDailyBaseTest(unittest.TestCase):
                 calls.append(args)
                 return args[-1][:7]
 
-        task = RangeDailyDerived(of='CommonDateTask',
+        task = RangeDailyDerived(of=CommonDateTask,
                                  **kwargs)
         self.assertEqual(list(map(str, task.requires())), expected_requires)
         self.assertEqual(calls[0][1], CommonDateTask)
@@ -308,7 +308,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
         self.events = {}
 
     def test_consistent_formatting(self):
-        task = RangeHourlyBase(of='CommonDateHourTask',
+        task = RangeHourlyBase(of=CommonDateHourTask,
                                start=datetime.datetime(2016, 1, 1))
         self.assertEqual(task._format_range([datetime.datetime(2016, 1, 2, 13), datetime.datetime(2016, 2, 29, 23)]), '[2016-01-02T13, 2016-02-29T23]')
 
@@ -320,7 +320,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
                 calls.append(args)
                 return args[-1][:5]
 
-        task = RangeHourlyDerived(of='CommonDateHourTask',
+        task = RangeHourlyDerived(of=CommonDateHourTask,
                                   **kwargs)
         self.assertEqual(task.requires(), [])
         self.assertEqual(calls, [])
@@ -359,7 +359,7 @@ class RangeHourlyBaseTest(unittest.TestCase):
                 calls.append(args)
                 return args[-1][:7]
 
-        task = RangeHourlyDerived(of='CommonDateHourTask',
+        task = RangeHourlyDerived(of=CommonDateHourTask,
                                   **kwargs)
         self.assertEqual(list(map(str, task.requires())), expected_requires)
         self.assertEqual(calls[0][1], CommonDateHourTask)
@@ -546,7 +546,7 @@ class RangeDailyTest(unittest.TestCase):
                 raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
 
         task = RangeDaily(now=datetime_to_epoch(datetime.datetime(2015, 12, 1)),
-                          of='BulkCompleteDailyTask',
+                          of=BulkCompleteDailyTask,
                           start=datetime.date(2015, 11, 1),
                           stop=datetime.date(2015, 12, 1))
 
@@ -574,7 +574,7 @@ class RangeDailyTest(unittest.TestCase):
                 return MockTarget(self.d.strftime('/data/2014/p/v/z/%Y_/_%m-_-%doctor/20/ZOOO'))
 
         task = RangeDaily(now=datetime_to_epoch(datetime.datetime(2016, 4, 1)),
-                          of='SomeDailyTask',
+                          of=SomeDailyTask,
                           start=datetime.date(2014, 3, 20),
                           task_limit=3,
                           days_back=3 * 365)
@@ -596,7 +596,7 @@ class RangeHourlyTest(unittest.TestCase):
         for task_path in task_a_paths:
             MockTarget(task_path)
         task = RangeHourly(now=datetime_to_epoch(datetime.datetime(2016, 4, 1)),
-                           of='TaskA',
+                           of=TaskA,
                            start=datetime.datetime(2014, 3, 20, 17),
                            task_limit=3,
                            hours_back=3 * 365 * 24)  # this test takes a few seconds. Since stop is not defined, finite_datetimes constitute many years to consider
@@ -609,7 +609,7 @@ class RangeHourlyTest(unittest.TestCase):
     def test_missing_wrapper_tasks_correctly_required(self):
         task = RangeHourly(
             now=datetime_to_epoch(datetime.datetime(2040, 4, 1)),
-            of='CommonWrapperTask',
+            of=CommonWrapperTask,
             start=datetime.datetime(2014, 3, 20, 23),
             stop=datetime.datetime(2014, 3, 21, 6),
             hours_back=30 * 365 * 24)
@@ -628,7 +628,7 @@ class RangeHourlyTest(unittest.TestCase):
                 raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
 
         task = RangeHourly(now=datetime_to_epoch(datetime.datetime(2015, 12, 1)),
-                           of='BulkCompleteHourlyTask',
+                           of=BulkCompleteHourlyTask,
                            start=datetime.datetime(2015, 11, 1),
                            stop=datetime.datetime(2015, 12, 1))
 
@@ -645,7 +645,7 @@ class RangeHourlyTest(unittest.TestCase):
     def test_missing_directory(self):
         task = RangeHourly(now=datetime_to_epoch(
                            datetime.datetime(2014, 4, 1)),
-                           of='TaskC',
+                           of=TaskC,
                            start=datetime.datetime(2014, 3, 20, 23),
                            stop=datetime.datetime(2014, 3, 21, 1))
         self.assertFalse(task.complete())
@@ -653,3 +653,45 @@ class RangeHourlyTest(unittest.TestCase):
             'TaskC(dh=2014-03-20T23)',
             'TaskC(dh=2014-03-21T00)']
         self.assertEqual([t.task_id for t in task.requires()], expected)
+
+
+class RangeInstantiationTest(LuigiTestCase):
+
+    def test_old_instantiation(self):
+        """
+        Verify that you can still programatically set of param as string
+        """
+        class MyTask(luigi.Task):
+            date_param = luigi.DateParameter()
+
+            def complete(self):
+                return False
+
+        range_task = RangeDailyBase(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                    of=MyTask,
+                                    start=datetime.date(2015, 12, 1),
+                                    stop=datetime.date(2015, 12, 2))
+        expected_task = MyTask(date_param=datetime.date(2015, 12, 1))
+        self.assertEqual(expected_task, list(range_task._requires())[0])
+
+    def test_cli_instantiation(self):
+        """
+        Verify that you can still use Range through CLI
+        """
+
+        class MyTask(luigi.Task):
+            task_namespace = "wohoo"
+            date_param = luigi.DateParameter()
+            secret = 'some-value-to-sooth-python-linters'
+            comp = False
+
+            def complete(self):
+                return self.comp
+
+            def run(self):
+                self.comp = True
+                MyTask.secret = 'yay'
+
+        now = str(int(datetime_to_epoch(datetime.datetime(2015, 12, 2))))
+        self.run_locally_split('RangeDailyBase --of wohoo.MyTask --now {now} --start 2015-12-01 --stop 2015-12-02'.format(now=now))
+        self.assertEqual(MyTask(date_param=datetime.date(1934, 12, 1)).secret, 'yay')

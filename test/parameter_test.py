@@ -16,7 +16,7 @@
 #
 
 import datetime
-from helpers import unittest
+from helpers import unittest, LuigiTestCase
 from datetime import timedelta
 
 import luigi
@@ -643,3 +643,37 @@ class OverrideEnvStuff(unittest.TestCase):
     def testOverrideSchedulerPort3(self):
         env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6545)
+
+
+class TestTaskParameter(LuigiTestCase):
+
+    def testUsage(self):
+
+        class MetaTask(luigi.Task):
+            task_namespace = "mynamespace"
+            a = luigi.TaskParameter()
+
+            def run(self):
+                self.__class__.saved_value = self.a
+
+        class OtherTask(luigi.Task):
+            task_namespace = "other_namespace"
+
+        self.assertEqual(MetaTask(a=MetaTask).a, MetaTask)
+        self.assertEqual(MetaTask(a=OtherTask).a, OtherTask)
+
+        # So I first thought this "should" work, but actually it should not,
+        # because it should not need to parse values known at run-time
+        self.assertNotEqual(MetaTask(a="mynamespace.MetaTask").a, MetaTask)
+
+        # But is should be able to parse command line arguments
+        self.assertRaises(luigi.task_register.TaskClassNotFoundException,
+                          lambda: (luigi.run(['--local-scheduler', '--no-lock'] +
+                                   'mynamespace.MetaTask --a blah'.split())))
+        self.assertRaises(luigi.task_register.TaskClassNotFoundException,
+                          lambda: (luigi.run(['--local-scheduler', '--no-lock'] +
+                                   'mynamespace.MetaTask --a Taskk'.split())))
+        self.assertTrue(luigi.run(['--local-scheduler', '--no-lock'] + 'mynamespace.MetaTask --a mynamespace.MetaTask'.split()))
+        self.assertEqual(MetaTask.saved_value, MetaTask)
+        self.assertTrue(luigi.run(['--local-scheduler', '--no-lock'] + 'mynamespace.MetaTask --a other_namespace.OtherTask'.split()))
+        self.assertEqual(MetaTask.saved_value, OtherTask)
