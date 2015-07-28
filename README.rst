@@ -158,7 +158,8 @@ Getting Help
 * Subscribe to the `luigi-user <http://groups.google.com/group/luigi-user/>`_
   group and ask a question.
 * If you're interested in professional services, click here:
-[![Support and Consulting Services](https://s3-us-west-2.amazonaws.com/supportedsourceassets/buttons/supportandservices1.png)](http://supportedsource.org/consulting-services-and-support/Luigi)
+.. image:: https://s3-us-west-2.amazonaws.com/supportedsourceassets/buttons/supportandservices1.png
+    :target: http://supportedsource.org/consulting-services-and-support/Luigi
 
 External links
 --------------
