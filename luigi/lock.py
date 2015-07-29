@@ -55,7 +55,7 @@ def get_info(pid_dir, my_pid=None):
     return my_pid, my_cmd, pid_file
 
 
-def acquire_for(pid_dir, num_available=1):
+def acquire_for(pid_dir, num_available=1, kill_signal=None):
     """
     Makes sure the process is only run once at the same time with the same name.
 
@@ -80,7 +80,10 @@ def acquire_for(pid_dir, num_available=1):
         pid_cmds = dict((pid, getpcmd(pid)) for pid in pids)
         matching_pids = list(filter(lambda pid: pid_cmds[pid] == my_cmd, pids))
 
-        if len(matching_pids) >= num_available:
+        if kill_signal is not None:
+            for pid in map(int, matching_pids):
+                os.kill(pid, kill_signal)
+        elif len(matching_pids) >= num_available:
             # We are already running under a different pid
             print('Pid(s)', ', '.join(matching_pids), 'already running')
             return False
