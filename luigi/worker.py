@@ -29,6 +29,8 @@ import getpass
 import logging
 import multiprocessing  # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
 import os
+import signal
+
 try:
     import Queue
 except ImportError:
@@ -296,6 +298,7 @@ class Worker(object):
         self._id = worker_id
         self._scheduler = scheduler
         self._assistant = assistant
+        self._stop_requesting_work = False
 
         self.host = socket.gethostname()
         self._scheduled_tasks = {}
@@ -306,6 +309,8 @@ class Worker(object):
         self.add_succeeded = True
         self.run_succeeded = True
         self.unfulfilled_counts = collections.defaultdict(int)
+
+        signal.signal(signal.SIGUSR1, self.handle_interrupt)
 
         self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id, self._config.ping_interval)
         self._keep_alive_thread.daemon = True
@@ -524,6 +529,8 @@ class Worker(object):
                 logger.info("There are %i pending tasks unique to this worker", n_unique_pending)
 
     def _get_work(self):
+        if self._stop_requesting_work:
+            return None, 0, 0, 0
         logger.debug("Asking scheduler for work...")
         r = self._scheduler.get_work(worker=self._id, host=self.host, assistant=self._assistant)
         n_pending_tasks = r['n_pending_tasks']
@@ -677,6 +684,14 @@ class Worker(object):
         else:
             return n_pending_tasks and (n_unique_pending or not self._config.count_uniques)
 
+    def handle_interrupt(self, signum, _):
+        """
+        Stops the assistant from asking for more work on SIGUSR1
+        """
+        if signum == signal.SIGUSR1:
+            self._config.keep_alive = False
+            self._stop_requesting_work = True
+
     def run(self):
         """
         Returns True if all scheduled tasks were executed successfully.
@@ -696,7 +711,8 @@ class Worker(object):
             task_id, running_tasks, n_pending_tasks, n_unique_pending = self._get_work()
 
             if task_id is None:
-                self._log_remote_tasks(running_tasks, n_pending_tasks, n_unique_pending)
+                if not self._stop_requesting_work:
+                    self._log_remote_tasks(running_tasks, n_pending_tasks, n_unique_pending)
                 if len(self._running_tasks) == 0:
                     if self._keep_alive(n_pending_tasks, n_unique_pending):
                         six.next(sleeper)
