@@ -24,6 +24,7 @@ env:
     - TOXENV=py34-cdh
     - TOXENV=pypy-scheduler
     - TOXENV=py27-gcloud
+    - TOXENV=py27-postgres
 
 sudo: false
 
@@ -38,6 +39,7 @@ before_install:
     || export DIDNT_CREATE_GCP_CREDS=1
 
 before_script:
+  # TODO, only do this step for the postgres environment
   - psql -c 'create database spotify;' -U postgres
 
   # allow ssh loopback
