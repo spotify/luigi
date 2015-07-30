@@ -294,8 +294,9 @@ class Task(object):
             params_str = {}
         kwargs = {}
         for param_name, param in cls.get_params():
-            value = param.parse_from_input(param_name, params_str[param_name])
-            kwargs[param_name] = value
+            if param.significant or param_name in params_str:
+                value = param.parse_from_input(param_name, params_str[param_name])
+                kwargs[param_name] = value
 
         return cls(**kwargs)
 
