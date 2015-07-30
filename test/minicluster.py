@@ -24,7 +24,10 @@ from nose.plugins.attrib import attr
 
 import unittest
 
-from snakebite.minicluster import MiniCluster
+try:
+    from snakebite.minicluster import MiniCluster
+except ImportError:
+    raise unittest.SkipTest('Snakebite not installed')
 
 
 @attr('minicluster')
