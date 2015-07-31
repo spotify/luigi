@@ -645,6 +645,17 @@ class OverrideEnvStuff(unittest.TestCase):
         self.assertEqual(env_params.scheduler_port, 6545)
 
 
+class TestSerializeDateParameters(unittest.TestCase):
+
+    def testSerialize(self):
+        date = datetime.date(2013, 2, 3)
+        self.assertEquals(luigi.DateParameter().serialize(date), '2013-02-03')
+        self.assertEquals(luigi.YearParameter().serialize(date), '2013')
+        self.assertEquals(luigi.MonthParameter().serialize(date), '2013-02')
+        dt = datetime.datetime(2013, 2, 3, 4, 5)
+        self.assertEquals(luigi.DateHourParameter().serialize(dt), '2013-02-03T04')
+
+
 class TestTaskParameter(LuigiTestCase):
 
     def testUsage(self):
