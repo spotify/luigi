@@ -18,6 +18,7 @@ import luigi.postgres
 from luigi.tools.range import RangeDaily
 from helpers import unittest
 import mock
+from nose.plugins.attrib import attr
 
 
 def datetime_to_epoch(dt):
@@ -57,6 +58,7 @@ class DummyPostgresImporter(luigi.postgres.CopyToTable):
     )
 
 
+@attr('postgres')
 class DailyCopyToTableTest(unittest.TestCase):
     maxDiff = None
 

@@ -17,6 +17,7 @@
 import os
 
 from helpers import unittest
+from nose.plugins.attrib import attr
 
 import luigi
 import luigi.notifications
@@ -56,6 +57,7 @@ except Exception:
 
 # to avoid copying:
 
+@attr('postgres')
 class CopyToTestDB(postgres.CopyToTable):
     host = host
     database = database
