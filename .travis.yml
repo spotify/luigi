@@ -32,7 +32,7 @@ cache:
   - $HOME/.pip-cache
 
 install:
-  - pip install tox
+  - pip install 'tox<3.0'
 
 before_install:
   - openssl aes-256-cbc -K $encrypted_e05f6ccc270e_key -iv $encrypted_e05f6ccc270e_iv -in test/gcloud-credentials.json.enc -out test/gcloud-credentials.json -d
