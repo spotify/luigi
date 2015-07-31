@@ -306,8 +306,7 @@ class Task(object):
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
-            if params[param_name].significant:
-                params_str[param_name] = params[param_name].serialize(param_value)
+            params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
 
