@@ -40,10 +40,10 @@ with open('README.rst') as fobj:
     long_description = readme_note + fobj.read()
 
 install_requires = [
-    'cached_property',
-    'pyparsing',
-    'tornado',
-    'python-daemon',
+    'cached_property<2.0',
+    'pyparsing<3.0',
+    'tornado<5.0',
+    'python-daemon<3.0',
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
