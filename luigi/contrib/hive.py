@@ -158,7 +158,7 @@ class HiveCommandClient(HiveClient):
         """
         Turns a dict into the a Hive partition specification string.
         """
-        return ','.join(["{0}='{1}'".format(k, v) for (k, v) in
+        return ','.join(["`{0}`='{1}'".format(k, v) for (k, v) in
                          sorted(six.iteritems(partition), key=operator.itemgetter(0))])
 
 
