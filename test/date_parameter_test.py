@@ -80,28 +80,32 @@ class DateHourParameterTest(unittest.TestCase):
 
 class DateMinuteParameterTest(unittest.TestCase):
     def test_parse(self):
-        dm = luigi.DateMinuteParameter().parse('2013-02-01T18H42')
+        dm = luigi.DateMinuteParameter().parse('2013-02-01T1842')
         self.assertEqual(dm, datetime.datetime(2013, 2, 1, 18, 42, 0))
 
     def test_parse_padding_zero(self):
-        dm = luigi.DateMinuteParameter().parse('2013-02-01T18H07')
+        dm = luigi.DateMinuteParameter().parse('2013-02-01T1807')
         self.assertEqual(dm, datetime.datetime(2013, 2, 1, 18, 7, 0))
+
+    def test_parse_deprecated(self):
+        dm = luigi.DateMinuteParameter().parse('2013-02-01T18H42')
+        self.assertEqual(dm, datetime.datetime(2013, 2, 1, 18, 42, 0))
 
     def test_serialize(self):
         dm = luigi.DateMinuteParameter().serialize(datetime.datetime(2013, 2, 1, 18, 42, 0))
-        self.assertEqual(dm, '2013-02-01T18H42')
+        self.assertEqual(dm, '2013-02-01T1842')
 
     def test_serialize_padding_zero(self):
         dm = luigi.DateMinuteParameter().serialize(datetime.datetime(2013, 2, 1, 18, 7, 0))
-        self.assertEqual(dm, '2013-02-01T18H07')
+        self.assertEqual(dm, '2013-02-01T1807')
 
     def test_parse_interface(self):
-        task = luigi.interface.ArgParseInterface().parse(["DateMinuteTask", "--dm", "2013-02-01T18H42"])[0]
+        task = luigi.interface.ArgParseInterface().parse(["DateMinuteTask", "--dm", "2013-02-01T1842"])[0]
         self.assertEqual(task.dm, datetime.datetime(2013, 2, 1, 18, 42, 0))
 
     def test_serialize_task(self):
         t = DateMinuteTask(datetime.datetime(2013, 2, 1, 18, 42, 0))
-        self.assertEqual(str(t), 'DateMinuteTask(dm=2013-02-01T18H42)')
+        self.assertEqual(str(t), 'DateMinuteTask(dm=2013-02-01T1842)')
 
 
 class MonthParameterTest(unittest.TestCase):

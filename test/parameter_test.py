@@ -391,6 +391,16 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         p = luigi.DateHourParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(datetime.datetime(2001, 2, 3, 4, 0, 0), p.value)
 
+    @with_config({"foo": {"bar": "2001-02-03T0430"}})
+    def testDateMinute(self):
+        p = luigi.DateMinuteParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), p.value)
+
+    @with_config({"foo": {"bar": "2001-02-03T04H30"}})
+    def testDateMinuteDeprecated(self):
+        p = luigi.DateMinuteParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), p.value)
+
     @with_config({"foo": {"bar": "2001-02-03"}})
     def testDate(self):
         p = luigi.DateParameter(config_path=dict(section="foo", name="bar"))
