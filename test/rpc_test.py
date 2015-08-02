@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import unittest
+from helpers import unittest, skipOnTravis
 
 import luigi.rpc
 from luigi.scheduler import CentralPlannerScheduler
@@ -36,12 +36,15 @@ class RPCTest(central_planner_test.CentralPlannerTest, ServerTestBase):
         self.sch = luigi.rpc.RemoteScheduler(port=self.get_http_port())
         self.sch._wait = lambda: None
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72276513')
     def test_ping(self):
         self.sch.ping(worker='xyz')
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72276513')
     def test_raw_ping(self):
         self.sch._request('/api/ping', {'worker': 'xyz'})
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72276513')
     def test_raw_ping_extended(self):
         self.sch._request('/api/ping', {'worker': 'xyz', 'foo': 'bar'})
 

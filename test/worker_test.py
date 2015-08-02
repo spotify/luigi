@@ -29,7 +29,7 @@ from helpers import unittest
 import luigi.notifications
 import luigi.worker
 import mock
-from helpers import with_config
+from helpers import with_config, skipOnTravis
 from luigi import ExternalTask, RemoteScheduler, Task
 from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import CentralPlannerScheduler
@@ -809,6 +809,7 @@ class MultipleWorkersTest(unittest.TestCase):
     def test_time_out_hung_worker(self):
         luigi.build([HungWorker(0.1)], workers=2, local_scheduler=True)
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72953986')
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_default_timeout_time(self, mock_time):
         w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)

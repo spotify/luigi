@@ -21,7 +21,7 @@ import signal
 import time
 import tempfile
 
-from helpers import unittest, with_config
+from helpers import unittest, with_config, skipOnTravis
 import luigi.rpc
 import luigi.server
 from luigi.scheduler import CentralPlannerScheduler
@@ -114,6 +114,7 @@ class ServerTestRun(unittest.TestCase):
         with self.assertRaises(luigi.rpc.RPCError):
             self.sch._request('/api/fdsfds', {'dummy': 1})
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72953884')
     def test_save_state(self):
         self.sch.add_task('X', 'B', deps=('A',))
         self.sch.add_task('X', 'A')
