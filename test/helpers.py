@@ -22,8 +22,13 @@ import sys
 import luigi
 import luigi.task_register
 from luigi import six
+import os
 
 import unittest
+
+
+def skipOnTravis(reason):
+    return unittest.skipIf(os.getenv('TRAVIS') == 'true', reason)
 
 
 class with_config(object):

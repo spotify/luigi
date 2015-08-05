@@ -16,7 +16,7 @@
 #
 from __future__ import print_function
 
-from helpers import unittest
+from helpers import unittest, skipOnTravis
 
 import luigi.target
 import luigi.format
@@ -183,6 +183,7 @@ class FileSystemTargetTestMixin(object):
         with t.open("r") as f:
             self.assertEqual(f.foo, "custom read property")
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/73693470')
     def test_binary_write(self):
         t = self.create_target(luigi.format.Nop)
         with t.open('w') as f:
