@@ -7,5 +7,5 @@ if [[ $ENDENV == gcloud ]]
 then
   [[ $DIDNT_CREATE_GCP_CREDS = 1 ]] || tox
 else
-  tox
+  tox --hashseed 1
 fi
