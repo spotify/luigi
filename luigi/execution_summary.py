@@ -46,9 +46,18 @@ def _partition_tasks(worker):
     return set_tasks
 
 
-def _dfs(set_tasks, current_task, visited):
+def _populate_unknown_statuses(set_tasks):
     """
-    This dfs checks why tasks are still pending
+    Add the "upstream_*" and "unknown_reason" statuses my mutating set_tasks.
+    """
+    visited = set()
+    for task in set_tasks["still_pending_not_ext"]:
+        _depth_first_search(set_tasks, task, visited)
+
+
+def _depth_first_search(set_tasks, current_task, visited):
+    """
+    This dfs checks why tasks are still pending.
     """
     visited.add(current_task)
     if current_task in set_tasks["still_pending_not_ext"]:
@@ -57,7 +66,7 @@ def _dfs(set_tasks, current_task, visited):
         upstream_run_by_other_worker = False
         for task in current_task._requires():
             if task not in visited:
-                _dfs(set_tasks, task, visited)
+                _depth_first_search(set_tasks, task, visited)
             if task in set_tasks["failed"] or task in set_tasks["upstream_failure"]:
                 set_tasks["upstream_failure"].add(current_task)
                 upstream_failure = True
@@ -98,15 +107,16 @@ def _get_str(task_dict, extra_indent):
             attributes = sorted({getattr(task, tasks[0].get_params()[0][0]) for task in tasks})
             row += '- {0} {1}({2}='.format(len(tasks), task_family, tasks[0].get_params()[0][0])
             if _ranging_attributes(attributes, tasks[0].get_params()[0]) and len(attributes) > 3:
-                row += '{0}...{1}'.format(tasks[0].get_params()[0][1].serialize(attributes[0]), tasks[0].get_params()[0][1].serialize(attributes[len(attributes) - 1]))
+                row += '{0}...{1}'.format(tasks[0].get_params()[0][1].serialize(attributes[0]), tasks[0].get_params()[0][1].serialize(attributes[-1]))
             else:
                 row += '{0}'.format(_get_str_one_parameter(tasks))
             row += ")"
         else:
             ranging = False
             params = _get_set_of_params(tasks)
-            if _only_one_unique_param(params):
-                unique_param = _get_unique_param(params)
+            unique_param_keys = list(_get_unique_param_keys(params))
+            if len(unique_param_keys) == 1:
+                unique_param, = unique_param_keys
                 attributes = sorted(params[unique_param])
                 if _ranging_attributes(attributes, unique_param) and len(attributes) > 2:
                     ranging = True
@@ -123,22 +133,19 @@ def _get_str(task_dict, extra_indent):
 
 
 def _get_len_of_params(task):
-    _len_of_params = 0
-    for param in task.get_params():
-        _len_of_params += len(param[0])
-    return _len_of_params
+    return sum(len(param[0]) for param in task.get_params())
 
 
 def _get_str_ranging_multiple_parameters(attributes, tasks, unique_param):
     row = ''
-    str_unique_param = '{0}...{1}'.format(unique_param[1].serialize(attributes[0]), unique_param[1].serialize(attributes[len(attributes) - 1]))
+    str_unique_param = '{0}...{1}'.format(unique_param[1].serialize(attributes[0]), unique_param[1].serialize(attributes[-1]))
     for param in tasks[0].get_params():
         row += '{0}='.format(param[0])
         if param[0] == unique_param[0]:
             row += '{0}'.format(str_unique_param)
         else:
             row += '{0}'.format(param[1].serialize(getattr(tasks[0], param[0])))
-        if param != tasks[0].get_params()[len(tasks[0].get_params()) - 1]:
+        if param != tasks[0].get_params()[-1]:
             row += ", "
     row += ')'
     return row
@@ -151,37 +158,23 @@ def _get_set_of_params(tasks):
     return params
 
 
-def _only_one_unique_param(params):
-    len_params = len(params)
-    different = [1 for param in params if len(params[param]) == 1]
-    len_different = len(different)
-    if len_params - len_different == 1:
-        return True
-    else:
-        return False
-
-
-def _get_unique_param(params):
-    for param in params:
-        if len(params[param]) > 1:
-            return param
+def _get_unique_param_keys(params):
+    for param_key, param_values in params.items():
+        if len(param_values) > 1:
+            yield param_key
 
 
 def _ranging_attributes(attributes, unique_param):
     """
     Checks if there is a continuous range
     """
-    ranging = False
     if len(attributes) > 2:
-        ranging = True
         if unique_param[1].next_in_enumeration(attributes[0]) is None:
-            ranging = False
-        if ranging:
-            for i in range(1, len(attributes)):
-                if unique_param[1].next_in_enumeration(attributes[i - 1]) != attributes[i]:
-                    ranging = False
-                    break
-    return ranging
+            return False
+        for i in range(1, len(attributes)):
+            if unique_param[1].next_in_enumeration(attributes[i - 1]) != attributes[i]:
+                return False
+    return True
 
 
 def _get_str_one_parameter(tasks):
@@ -202,52 +195,59 @@ def _serialize_first_param(task):
     return task.get_params()[0][1].serialize(getattr(task, task.get_params()[0][0]))
 
 
+def _get_number_of_tasks_for(status, group_tasks):
+    if status == "still_pending":
+        return (_get_number_of_tasks(group_tasks["still_pending_ext"]) +
+                _get_number_of_tasks(group_tasks["still_pending_not_ext"]))
+    return _get_number_of_tasks(group_tasks[status])
+
+
 def _get_number_of_tasks(task_dict):
-    num = 0
-    for task_family, tasks in task_dict.items():
-        num += len(tasks)
-    return num
+    return sum(len(tasks) for tasks in task_dict.values())
 
 
 def _get_comments(group_tasks):
+    """
+    Get the human readable comments and quantities for the task types.
+    """
     comments = {}
-    for status, task_dict in group_tasks.items():
-        comments[status] = "* {0}".format(_get_number_of_tasks(task_dict))
-        if _get_number_of_tasks(task_dict) == 0:
-            comments.pop(status)
-    if "already_done" in comments:
-        comments["already_done"] += ' present dependencies were encountered:\n'
-    if "completed" in comments:
-        comments["completed"] += ' ran successfully:\n'
-    if "failed" in comments:
-        comments["failed"] += ' failed:\n'
-    still_pending = False
-    if "still_pending_ext" in comments:
-        comments["still_pending_ext"] = '    {0} were missing external dependencies:\n'.format(comments['still_pending_ext'])
-        still_pending = True
-    if "upstream_run_by_other_worker" in comments:
-        comments["upstream_run_by_other_worker"] = '    {0} had dependencies that were being run by other worker:\n'.format(comments['upstream_run_by_other_worker'])
-        still_pending = True
-    if "upstream_failure" in comments:
-        comments["upstream_failure"] = '    {0} had failed dependencies:\n'.format(comments['upstream_failure'])
-        still_pending = True
-    if "upstream_missing_dependency" in comments:
-        comments["upstream_missing_dependency"] = '    {0} had missing external dependencies:\n'.format(comments['upstream_missing_dependency'])
-        still_pending = True
-    if "run_by_other_worker" in comments:
-        comments["run_by_other_worker"] = '    {0} were being run by another worker:\n'.format(comments['run_by_other_worker'])
-        still_pending = True
-    if "unknown_reason" in comments:
-        comments["unknown_reason"] = '    {0} were left pending because of unknown reason:\n'.format(comments["unknown_reason"])
-        still_pending = True
-    if still_pending:
-        comments["still_pending"] = '* {0} were left pending, among these:\n'.format(_get_number_of_tasks(group_tasks["still_pending_ext"]) + _get_number_of_tasks(group_tasks["still_pending_not_ext"]))
+    for status, human in _COMMENTS:
+        num_tasks = _get_number_of_tasks_for(status, group_tasks)
+        if num_tasks:
+            space = "    " if status in _PENDING_SUB_STATUSES else ""
+            comments[status] = '{space}* {num_tasks} {human}:\n'.format(
+                space=space,
+                num_tasks=num_tasks,
+                human=human)
     return comments
 
 
-def _get_statuses():
-    statuses = ["already_done", "completed", "failed", "still_pending", "still_pending_ext", "run_by_other_worker", "upstream_failure", "upstream_missing_dependency", "upstream_run_by_other_worker", "unknown_reason"]
-    return statuses
+# Oredered in the sense that they'll be printed in this order
+_ORDERED_STATUSES = (
+    "already_done",
+    "completed",
+    "failed",
+    "still_pending",
+    "still_pending_ext",
+    "run_by_other_worker",
+    "upstream_failure",
+    "upstream_missing_dependency",
+    "upstream_run_by_other_worker",
+    "unknown_reason",
+)
+_PENDING_SUB_STATUSES = set(_ORDERED_STATUSES[_ORDERED_STATUSES.index("still_pending_ext"):])
+_COMMENTS = set((
+    ("already_done", 'present dependencies were encountered'),
+    ("completed", 'ran successfully'),
+    ("failed", 'failed'),
+    ("still_pending", 'were left pending, among these'),
+    ("still_pending_ext", 'were missing external dependencies'),
+    ("run_by_other_worker", 'were being run by another worker'),
+    ("upstream_failure", 'had failed dependencies'),
+    ("upstream_missing_dependency", 'had missing external dependencies'),
+    ("upstream_run_by_other_worker", 'had dependencies that were being run by other worker'),
+    ("unknown_reason", 'were left pending because of unknown reason'),
+))
 
 
 def _get_run_by_other_worker(worker):
@@ -301,9 +301,7 @@ def _group_tasks_by_name_and_status(task_dict):
 def _summary_dict(worker):
     set_tasks = _partition_tasks(worker)
     set_tasks["run_by_other_worker"] = _get_run_by_other_worker(worker)
-    visited = set()
-    for task in set_tasks["still_pending_not_ext"]:
-        _dfs(set_tasks, task, visited)
+    _populate_unknown_statuses(set_tasks)
     return set_tasks
 
 
@@ -313,16 +311,15 @@ def _summary_format(set_tasks, worker):
         group_tasks[status] = _group_tasks_by_name_and_status(task_dict)
     str_tasks = {}
     comments = _get_comments(group_tasks)
-    statuses = _get_statuses()
     num_all_tasks = len(set_tasks["already_done"]) + len(set_tasks["completed"]) + len(set_tasks["failed"]) + len(set_tasks["still_pending_ext"]) + len(set_tasks["still_pending_not_ext"])
     str_output = ''
     str_output += 'Scheduled {0} tasks of which:\n'.format(num_all_tasks)
-    for i in range(len(statuses)):
-        if statuses[i] not in comments:
+    for status in _ORDERED_STATUSES:
+        if status not in comments:
             continue
-        str_output += '{0}'.format(comments[statuses[i]])
-        if statuses[i] != 'still_pending':
-            str_output += '{0}\n'.format(_get_str(group_tasks[statuses[i]], i > 3))
+        str_output += '{0}'.format(comments[status])
+        if status != 'still_pending':
+            str_output += '{0}\n'.format(_get_str(group_tasks[status], status in _PENDING_SUB_STATUSES))
     ext_workers = _get_external_workers(worker)
     group_tasks_ext_workers = {}
     for ext_worker, task_dict in ext_workers.items():
