@@ -15,10 +15,10 @@
 # limitations under the License.
 #
 
-''' SGE batch system Tasks.
+""" SGE batch system Tasks.
 
 Adapted from LSF extension by Alex Wiltschko: https://github.com/dattalab/luigi/blob/lsf/luigi/lsf.py
-'''
+"""
 
 
 # This extension is modeled after the hadoop.py approach.
@@ -56,23 +56,25 @@ DEFAULT_NCPU = configuration.get_config().get('sge', 'n-cpu', default=None) or 2
 
 
 def clean_task_id(task_id):
-    '''Clean the task ID so qsub allows it as a "name" string.
+    """Clean the task ID so qsub allows it as a "name" string.
 
     From the "name" definition in sge_types(1): "The name may be any arbitrary
     alphanumeric ASCII string, but may not contain "\n", "\t", "\r", "/", ":",
     "@", "\", "*", or "?"." Also removes some other punctuation and spaces just in case.
-    '''
+    
+    """
     for c in ['\n', '\t', '\r', '/', ':', '@', '\\', '*', '?', ',', '=', ' ', '(', ')']:
         task_id = task_id.replace(c, '-')
     return task_id
 
 
 def parse_qstat_state(qstat_out, job_id):
-    '''Parse "state" column from `qstat` output for given job_id
+    """Parse "state" column from `qstat` output for given job_id
 
     Returns state for the *first* job matching job_id. Returns 'u' if
     `qstat` output is empty or job_id is not found.
-    '''
+    
+    """
     if qstat_out.strip() == '':
         return 'u'
     lines = qstat_out.split('\n')
@@ -88,16 +90,19 @@ def parse_qstat_state(qstat_out, job_id):
 
 
 def parse_qsub_job_id(qsub_out):
-    '''Parse job id from qsub output string. Assume format:
+    """Parse job id from qsub output string. 
+
+    Assume format:
 
         "Your job <job_id> ("<job_name>") has been submitted"
-        '''
+    
+    """
     return int(qsub_out.split()[2])
 
 
 def build_qsub_command(cmd, job_name, outfile, errfile, pe, n_cpu):
-    '''Submit shell command to SGE queue via `qsub`'''
-    qsub_template = '''echo {cmd} | qsub -o ":{outfile}" -e ":{errfile}" -V -r y -pe {pe} {n_cpu} -N {job_name}'''
+    """Submit shell command to SGE queue via `qsub`"""
+    qsub_template = """echo {cmd} | qsub -o ":{outfile}" -e ":{errfile}" -V -r y -pe {pe} {n_cpu} -N {job_name}"""
     return qsub_template.format(
         cmd=cmd, job_name=job_name, outfile=outfile, errfile=errfile,
         pe=pe, n_cpu=n_cpu)
@@ -154,10 +159,11 @@ class SGEJobTask(luigi.Task):
         self.init_local()
 
     def init_local(self):
-        ''' Implement any work to setup any internal datastructure etc here.
+        """Implement any work to setup any internal datastructure etc here.
+        
         You can add extra input using the requires_local/input_local methods.
         Anything you set on the object will be pickled and available on the compute nodes.
-        '''
+        """
         pass
 
     def run(self):
