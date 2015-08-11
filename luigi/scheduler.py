@@ -415,16 +415,7 @@ class SimpleTaskState(object):
         self._status_tasks[new_status][task.id] = task
         task.status = new_status
 
-    def prune(self, task, config, assistants):
-        remove = False
-
-        # Mark tasks with no remaining active stakeholders for deletion
-        if not task.stakeholders:
-            if task.remove is None:
-                logger.info("Task %r has stakeholders %r but none remain connected -> will remove "
-                            "task in %s seconds", task.id, task.stakeholders, config.remove_delay)
-                task.remove = time.time() + config.remove_delay
-
+    def fail_dead_worker_task(self, task, config, assistants):
         # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
         if task.status == RUNNING and task.worker_running and task.worker_running not in task.stakeholders | assistants:
             logger.info("Task %r is marked as running by disconnected worker %r -> marking as "
@@ -433,6 +424,16 @@ class SimpleTaskState(object):
             task.worker_running = None
             self.set_status(task, FAILED, config)
             task.retry = time.time() + config.retry_delay
+
+    def prune(self, task, config):
+        remove = False
+
+        # Mark tasks with no remaining active stakeholders for deletion
+        if not task.stakeholders:
+            if task.remove is None:
+                logger.info("Task %r has stakeholders %r but none remain connected -> will remove "
+                            "task in %s seconds", task.id, task.stakeholders, config.remove_delay)
+                task.remove = time.time() + config.remove_delay
 
         # Re-enable task after the disable time expires
         if task.status == DISABLED and task.scheduler_disable_time:
@@ -548,7 +549,8 @@ class CentralPlannerScheduler(Scheduler):
             necessary_tasks = ()
 
         for task in self._state.get_active_tasks():
-            if task.id not in necessary_tasks and self._state.prune(task, self._config, assistant_ids):
+            self._state.fail_dead_worker_task(task, self._config, assistant_ids)
+            if task.id not in necessary_tasks and self._state.prune(task, self._config):
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)

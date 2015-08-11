@@ -226,6 +226,18 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.prune()
         self.assertFalse(list(self.sch.task_list('', '')))
 
+    def test_fail_job_from_dead_worker_with_live_assistant(self):
+        self.setTime(0)
+        self.sch.add_task(worker='X', task_id='A')
+        self.assertEqual('A', self.sch.get_work(worker='X')['task_id'])
+        self.sch.add_worker('Y', [('assistant', True)])
+
+        self.setTime(600)
+        self.sch.ping(worker='Y')
+        self.sch.prune()
+
+        self.assertEqual(['A'], list(self.sch.task_list('FAILED', '').keys()))
+
     def test_prune_done_tasks(self, expected=None):
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A', status=DONE)
