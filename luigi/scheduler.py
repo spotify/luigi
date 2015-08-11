@@ -194,6 +194,7 @@ class Task(object):
         self.disable_hard_timeout = disable_hard_timeout
         self.failures = Failures(disable_window)
         self.scheduler_disable_time = None
+        self.runnable = False
 
     def __repr__(self):
         return "Task(%r)" % vars(self)
@@ -640,6 +641,7 @@ class CentralPlannerScheduler(Scheduler):
         if runnable:
             task.workers.add(worker_id)
             self._state.get_worker(worker_id).tasks.add(task)
+            task.runnable = runnable
 
         if expl is not None:
             task.expl = expl
@@ -734,7 +736,7 @@ class CentralPlannerScheduler(Scheduler):
 
         for task in tasks:
             upstream_status = self._upstream_status(task.id, upstream_table)
-            in_workers = (assistant and task.workers) or worker_id in task.workers
+            in_workers = (assistant and getattr(task, 'runnable', bool(task.workers))) or worker_id in task.workers
             if task.status == RUNNING and in_workers:
                 # Return a list of currently running tasks to the client,
                 # makes it easier to troubleshoot
