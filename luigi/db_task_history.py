@@ -65,13 +65,8 @@ class DbTaskHistory(task_history.TaskHistory):
             yield session
         else:
             session = self.session_factory()
-            try:
+            with session.transaction:
                 yield session
-            except:
-                session.rollback()
-                raise
-            else:
-                session.commit()
 
     def __init__(self):
         config = configuration.get_config()
