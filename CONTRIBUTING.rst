@@ -5,13 +5,17 @@ We are always happy to recieve Pull Requests. When you open a PR, it will
 automatically build on Travis. So you're not strictly required to test the
 patch locally before submitting it.
 
-Despite of this, it's good to test it locally first to speed up the iteration
-cycle. Here are four example commands:
+If you do want to run the tests locally you'll need to ``pip install tox`` and
+then run one of the tox commands below.
 
 .. code:: bash
 
+    # The first two are fast and will tell if you if you've broken
+    # something major:
     tox -e pep8
     tox -e py27-nonhdfs
+
+    # And some of the others involve downloading and running Hadoop:
     tox -e py33-cdh
     tox -e py34-hdp
 
