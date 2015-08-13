@@ -17,12 +17,13 @@
 """
 Light-weight remote execution library and utilities.
 
-There are some examples in the unittest, but
-I added another more luigi-specific in the examples directory (examples/ssh_remote_execution.py
+There are some examples in the unittest but I added another that is more
+luigi-specific in the examples directory (examples/ssh_remote_execution.py)
 
-:class:`RemoteContext` is meant to provide functionality similar to that of the standard library subprocess module,
-but where the commands executed are run on a remote machine instead,
-without the user having to think about prefixing everything with "ssh" and credentials etc.
+:class:`RemoteContext` is meant to provide functionality similar to that of the
+standard library subprocess module, but where the commands executed are run on
+a remote machine instead, without the user having to think about prefixing
+everything with "ssh" and credentials etc.
 
 Using this mini library (which is just a convenience wrapper for subprocess),
 :class:`RemoteTarget` is created to let you stream data from a remotely stored file using
