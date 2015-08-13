@@ -91,6 +91,11 @@ class BigqueryTest(gcs_test._GCSBaseTestCase):
 
         task.run()
 
+    def test_table_uri(self):
+        intended_uri = "bq://" + PROJECT_ID + "/" + \
+                       DATASET_ID + "/" + self.table.table_id
+        self.assertTrue(self.table.uri == intended_uri)
+
     def test_load_and_copy(self):
         self.create_dataset([
             {'field1': 'hi', 'field2': 1},
