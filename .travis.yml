@@ -19,6 +19,9 @@ env:
     - TOXENV=py27-nonhdfs
     - TOXENV=py33-nonhdfs
     - TOXENV=py34-nonhdfs
+    - TOXENV=py27-unixsockets
+    - TOXENV=py33-unixsockets
+    - TOXENV=py34-unixsockets
     - TOXENV=py27-cdh
     - TOXENV=py33-cdh
     - TOXENV=py34-cdh

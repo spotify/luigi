@@ -20,6 +20,7 @@ def luigid(argv=sys.argv[1:]):
     parser.add_argument(u'--logdir', help=u'log directory')
     parser.add_argument(u'--state-path', help=u'Pickled state file')
     parser.add_argument(u'--address', help=u'Listening interface')
+    parser.add_argument(u'--unix-socket', help=u'Unix socket path')
     parser.add_argument(u'--port', default=8082, help=u'Listening port')
 
     opts = parser.parse_args(argv)
@@ -33,7 +34,7 @@ def luigid(argv=sys.argv[1:]):
         logging.getLogger().setLevel(logging.INFO)
         luigi.process.daemonize(luigi.server.run, api_port=opts.port,
                                 address=opts.address, pidfile=opts.pidfile,
-                                logdir=opts.logdir)
+                                logdir=opts.logdir, unix_socket=opts.unix_socket)
     else:
         if opts.logdir:
             logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format(),

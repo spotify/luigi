@@ -649,7 +649,7 @@ class WorkerEmailTest(unittest.TestCase):
 
     @email_patch
     def test_connection_error(self, emails):
-        sch = RemoteScheduler(host="this_host_doesnt_exist", port=1337, connect_timeout=1)
+        sch = RemoteScheduler('http://tld.invalid:1337', connect_timeout=1)
         worker = Worker(scheduler=sch)
 
         self.waits = 0

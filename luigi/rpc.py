@@ -25,12 +25,27 @@ import logging
 import socket
 import time
 
-from luigi.six.moves.urllib.parse import urlencode
+from luigi.six.moves.urllib.parse import urlencode, ParseResult
 from luigi.six.moves.urllib.request import urlopen
 from luigi.six.moves.urllib.error import URLError
 
 from luigi import configuration
 from luigi.scheduler import PENDING, Scheduler
+
+
+HAS_UNIX_SOCKETS = True
+HAS_REQUESTS = True
+
+
+try:
+    import requests_unixsockets as requests
+except ImportError:
+    HAS_UNIX_SOCKETS = False
+    try:
+        import requests
+    except ImportError:
+        HAS_REQUESTS = False
+
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 
@@ -42,32 +57,62 @@ class RPCError(Exception):
         self.sub_exception = sub_exception
 
 
+class FetcherException(Exception):
+    def __init__(self, original_exc):
+        self.original_exc = original_exc
+
+
+class URLLibFetcher(object):
+    def fetch(self, full_url, body, timeout):
+        try:
+            body = urlencode(body).encode('utf-8')
+            return urlopen(full_url, body, timeout).read().decode('utf-8')
+        except (URLError, socket.timeout) as e:
+            raise FetcherException(e)
+
+
+class RequestsFetcher(object):
+    def __init__(self, session):
+        self.session = session
+
+    def fetch(self, full_url, body, timeout):
+        from requests import exceptions as requests_exceptions
+        try:
+            resp = self.session.get(full_url, data=body, timeout=timeout)
+            resp.raise_for_status()
+            return resp.text
+        except (requests_exceptions.RequestException) as e:
+            raise FetcherException(e)
+
+
 class RemoteScheduler(Scheduler):
     """
     Scheduler proxy object. Talks to a RemoteSchedulerResponder.
     """
 
-    def __init__(self, host='localhost', port=8082, connect_timeout=None, url_prefix=''):
-        self._host = host
-        self._port = port
-        self._url_prefix = url_prefix
+    def __init__(self, url='http://localhost:8082/', connect_timeout=None):
+        assert (
+            not (url.startswith('http+unix://') and not HAS_UNIX_SOCKETS),
+            'You need to install requests-unixsocket for Unix socket support.',
+        )
 
+        self._url = url
         config = configuration.get_config()
 
         if connect_timeout is None:
             connect_timeout = config.getfloat('core', 'rpc-connect-timeout', 10.0)
         self._connect_timeout = connect_timeout
 
+        if HAS_REQUESTS:
+            self._fetcher = RequestsFetcher(requests.Session())
+        else:
+            self._fetcher = URLLibFetcher()
+
     def _wait(self):
         time.sleep(30)
 
-    def _fetch(self, url, body, log_exceptions=True, attempts=3):
-
-        full_url = 'http://{host}:{port:d}{prefix}{url}'.format(
-            host=self._host,
-            port=self._port,
-            prefix=self._url_prefix,
-            url=url)
+    def _fetch(self, url_suffix, body, log_exceptions=True, attempts=3):
+        full_url = self._url + url_suffix
         last_exception = None
         attempt = 0
         while attempt < attempts:
@@ -76,24 +121,23 @@ class RemoteScheduler(Scheduler):
                 logger.info("Retrying...")
                 self._wait()  # wait for a bit and retry
             try:
-                response = urlopen(full_url, body, self._connect_timeout)
+                response = self._fetcher.fetch(full_url, body, self._connect_timeout)
                 break
-            except (URLError, socket.timeout) as e:
-                last_exception = e
+            except FetcherException as e:
+                last_exception = e.original_exc
                 if log_exceptions:
-                    logger.exception("Failed connecting to remote scheduler %r", self._host)
+                    logger.exception("Failed connecting to remote scheduler %r", self._url)
                 continue
         else:
             raise RPCError(
                 "Errors (%d attempts) when connecting to remote scheduler %r" %
-                (attempts, self._host),
+                (attempts, self._url),
                 last_exception
             )
-        return response.read().decode('utf-8')
+        return response
 
     def _request(self, url, data, log_exceptions=True, attempts=3):
-        data = {'data': json.dumps(data)}
-        body = urlencode(data).encode('utf-8')
+        body = {'data': json.dumps(data)}
 
         page = self._fetch(url, body, log_exceptions, attempts)
         result = json.loads(page)

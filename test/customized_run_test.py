@@ -94,8 +94,8 @@ class CustomizedWorkerSchedulerFactory(object):
     def create_local_scheduler(self):
         return self.scheduler
 
-    def create_remote_scheduler(self, host, port):
-        return CustomizedRemoteScheduler(host=host, port=port)
+    def create_remote_scheduler(self, url):
+        return CustomizedRemoteScheduler(url)
 
     def create_worker(self, scheduler, worker_processes=None, assistant=False):
         return self.worker
