@@ -52,6 +52,16 @@ import luigi.target
 logger = logging.getLogger('luigi-interface')
 
 
+class RemoteCalledProcessError(subprocess.CalledProcessError):
+    def __init__(self, returncode, command, host, output=None):
+        super(RemoteCalledProcessError, self).__init__(returncode, command, output)
+        self.host = host
+
+    def __str__(self):
+        return "Command '%s' on host %s returned non-zero exit status %d" % (
+            self.cmd, self.host, self.returncode)
+
+
 class RemoteContext(object):
 
     def __init__(self, host, **kwargs):
@@ -121,7 +131,7 @@ class RemoteContext(object):
         p = self.Popen(cmd, stdout=subprocess.PIPE)
         output, _ = p.communicate()
         if p.returncode != 0:
-            raise subprocess.CalledProcessError(p.returncode, cmd, output=output)
+            raise RemoteCalledProcessError(p.returncode, cmd, self.host, output=output)
         return output
 
     @contextlib.contextmanager
