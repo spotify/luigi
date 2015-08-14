@@ -33,7 +33,6 @@ class DummyTask(luigi.Task):
     date_param = luigi.DateParameter()
     datehour_param = luigi.DateHourParameter()
     timedelta_param = luigi.TimeDeltaParameter()
-    list_param = luigi.Parameter(is_list=True)
     insignificant_param = luigi.Parameter(significant=False)
 
 
@@ -51,7 +50,6 @@ class TaskTest(unittest.TestCase):
             date_param=datetime(2014, 9, 13).date(),
             datehour_param=datetime(2014, 9, 13, 9),
             timedelta_param=timedelta(44),  # doesn't support seconds
-            list_param=['in', 'flames'],
             insignificant_param='test')
 
         original = DummyTask(**params)
