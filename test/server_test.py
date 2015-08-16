@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import functools
 import os
 import multiprocessing
 import random
@@ -136,6 +137,7 @@ class ServerTestRun(unittest.TestCase):
     def setUp(self):
         self.server_client = self.server_client_class()
         state_path = tempfile.mktemp(suffix=self.id())
+        self.addCleanup(functools.partial(os.unlink, state_path))
         luigi.configuration.get_config().set('scheduler', 'state_path', state_path)
         self.start_server()
 
