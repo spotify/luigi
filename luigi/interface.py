@@ -79,6 +79,11 @@ class core(task.Config):
         default=8082,
         description='Port of remote scheduler api process',
         config_path=dict(section='core', name='default-scheduler-port'))
+    scheduler_url = parameter.Parameter(
+        default=None,
+        description='Full path to remote scheduler',
+        config_path=dict(section='core', name='default-scheduler-url'),
+    )
     lock_size = parameter.IntParameter(
         default=1,
         description="Maximum number of workers running the same command")
@@ -110,8 +115,8 @@ class WorkerSchedulerFactory(object):
     def create_local_scheduler(self):
         return scheduler.CentralPlannerScheduler(prune_on_get_work=True)
 
-    def create_remote_scheduler(self, host, port):
-        return rpc.RemoteScheduler(host=host, port=port)
+    def create_remote_scheduler(self, url):
+        return rpc.RemoteScheduler(url)
 
     def create_worker(self, scheduler, worker_processes, assistant=False):
         return worker.Worker(
@@ -157,9 +162,14 @@ class Interface(object):
         if env_params.local_scheduler:
             sch = worker_scheduler_factory.create_local_scheduler()
         else:
-            sch = worker_scheduler_factory.create_remote_scheduler(
-                host=env_params.scheduler_host,
-                port=env_params.scheduler_port)
+            if env_params.scheduler_url is not None:
+                url = env_params.scheduler_url
+            else:
+                url = 'http://{host}:{port:d}/'.format(
+                    host=env_params.scheduler_host,
+                    port=env_params.scheduler_port,
+                )
+            sch = worker_scheduler_factory.create_remote_scheduler(url=url)
 
         w = worker_scheduler_factory.create_worker(
             scheduler=sch, worker_processes=env_params.workers, assistant=env_params.assistant)

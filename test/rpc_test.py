@@ -33,7 +33,7 @@ class RPCTest(central_planner_test.CentralPlannerTest, ServerTestBase):
 
     def setUp(self):
         super(RPCTest, self).setUp()
-        self.sch = luigi.rpc.RemoteScheduler(port=self.get_http_port())
+        self.sch = luigi.rpc.RemoteScheduler(self.get_url(''))
         self.sch._wait = lambda: None
 
     @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72276513')

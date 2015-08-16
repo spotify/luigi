@@ -72,7 +72,7 @@ def _server_already_running(pidfile):
     return False
 
 
-def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None):
+def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None, unix_socket=None):
     import daemon
 
     logdir = logdir or "/var/log/luigi"
@@ -112,4 +112,4 @@ def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None):
                 return
             write_pid(pidfile)
 
-        cmd(api_port=api_port, address=address)
+        cmd(api_port=api_port, address=address, unix_socket=unix_socket)

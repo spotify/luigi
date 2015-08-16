@@ -63,6 +63,15 @@ default-scheduler-host
 default-scheduler-port
   Port of the remote scheduler api process. Defaults to 8082.
 
+default-scheduler-url
+  Full path to remote scheduler. Defaults to ``http://localhost:8082/``.
+  For TLS support use the URL scheme: ``https``,
+  example: ``https://luigi.example.com:443/``
+  (Note: you will have to terminate TLS using an HTTP proxy)
+  You can also use this to connect to a local Unix socket using the
+  non-standard URI scheme: ``http+unix``
+  example: ``http+unix://%2Fvar%2Frun%2Fluigid%2Fluigid.sock/``
+
 email-prefix
   Optional prefix to add to the subject line of all e-mails. For
   example, setting this to "[LUIGI]" would change the subject line of an

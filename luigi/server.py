@@ -240,11 +240,14 @@ def app(scheduler):
     return api_app
 
 
-def _init_api(scheduler, responder=None, api_port=None, address=None):
+def _init_api(scheduler, responder=None, api_port=None, address=None, unix_socket=None):
     if responder:
         raise Exception('The "responder" argument is no longer supported')
     api_app = app(scheduler)
-    api_sockets = tornado.netutil.bind_sockets(api_port, address=address)
+    if unix_socket is not None:
+        api_sockets = [tornado.netutil.bind_unix_socket(unix_socket)]
+    else:
+        api_sockets = tornado.netutil.bind_sockets(api_port, address=address)
     server = tornado.httpserver.HTTPServer(api_app)
     server.add_sockets(api_sockets)
 
@@ -252,7 +255,7 @@ def _init_api(scheduler, responder=None, api_port=None, address=None):
     return [s.getsockname() for s in api_sockets]
 
 
-def run(api_port=8082, address=None, scheduler=None, responder=None):
+def run(api_port=8082, address=None, unix_socket=None, scheduler=None, responder=None):
     """
     Runs one instance of the API server.
     """
@@ -262,7 +265,13 @@ def run(api_port=8082, address=None, scheduler=None, responder=None):
     # load scheduler state
     scheduler.load()
 
-    _init_api(scheduler, responder, api_port, address)
+    _init_api(
+        scheduler=scheduler,
+        responder=responder,
+        api_port=api_port,
+        address=address,
+        unix_socket=unix_socket,
+    )
 
     # prune work DAG every 60 seconds
     pruner = tornado.ioloop.PeriodicCallback(scheduler.prune, 60000)
