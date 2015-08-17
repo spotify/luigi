@@ -153,10 +153,13 @@ class TaskProcess(multiprocessing.Process):
         except BaseException as ex:
             status = FAILED
             logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
-            error_message = notifications.wrap_traceback(self.task.on_failure(ex))
             self.task.trigger_event(Event.FAILURE, self.task, ex)
             subject = "Luigi: %s FAILED" % self.task
-            notifications.send_error_email(subject, error_message)
+
+            error_message = notifications.wrap_traceback(self.task.on_failure(ex))
+            formatted_error_message = notifications.format_task_error(subject, self.task,
+                                                                      formatted_exception=error_message)
+            notifications.send_error_email(subject, formatted_error_message)
         finally:
             self.result_queue.put(
                 (self.task.task_id, status, error_message, missing, new_deps))
@@ -374,15 +377,17 @@ class Worker(object):
 
     def _email_complete_error(self, task, formatted_traceback):
         # like logger.exception but with WARNING level
-        formatted_traceback = notifications.wrap_traceback(formatted_traceback)
         subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
-        message = "Will not schedule {task} or any dependencies due to error in complete() method:\n{traceback}".format(task=task, traceback=formatted_traceback)
+        headline = "Will not schedule task or any dependencies due to error in complete() method"
+
+        message = notifications.format_task_error(headline, task, formatted_traceback)
         notifications.send_error_email(subject, message)
 
     def _email_unexpected_error(self, task, formatted_traceback):
-        formatted_traceback = notifications.wrap_traceback(formatted_traceback)
         subject = "Luigi: Framework error while scheduling {task}. Host: {host}".format(task=task, host=self.host)
-        message = "Luigi framework error:\n{traceback}".format(traceback=formatted_traceback)
+        headline = "Luigi framework error"
+
+        message = notifications.format_task_error(headline, task, formatted_traceback)
         notifications.send_error_email(subject, message)
 
     def add(self, task, multiprocess=False):
