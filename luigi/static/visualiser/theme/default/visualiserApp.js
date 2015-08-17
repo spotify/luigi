@@ -1,7 +1,10 @@
+var debugHook;
+
 function visualiserApp(luigi) {
     var templates = {};
     var invertDependencies = false;
     var typingTimer = 0;
+    var visType = 'd3';
 
     function loadTemplates() {
         $("script[type='text/template']").each(function(i, element) {
@@ -166,7 +169,6 @@ function visualiserApp(luigi) {
     }
 
     function selectSidebarItem(item) {
-        console.log('select sidebar '+item.dataset.task)
         var sidebarItems = $('.sidebar').find('li');
         sidebarItems.each(function (i) {
             var item2 = sidebarItems[i];
@@ -216,50 +218,73 @@ function visualiserApp(luigi) {
         $("#errorModal").modal({});
     }
 
+    function makeGraphCallback(visType, taskId, paint) {
+        function depGraphCallbackD3(dependencyGraph) {
+            $("#searchError").empty();
+            $("#searchError").removeClass();
+            if(dependencyGraph.length > 0) {
+                $("#dependencyTitle").text(taskId);
+                if(dependencyGraph != '{}'){
+                    for (var id in dependencyGraph) {
+                        if (dependencyGraph[id].deps.length > 0) {
+                            //console.log(asingInput(dependencyGraph, id));
+                            dependencyGraph[id]['inputQueue']=asingInput(dependencyGraph, id);
+                            dependencyGraph[id]['inputThroughput']=50;
+                            dependencyGraph[id]['count']=5;
+                            dependencyGraph[id]['consumers']=1;
+                        }else{
+                            dependencyGraph[id]['inputThroughput']=50;
+                            dependencyGraph[id]['count']=5;
+                            dependencyGraph[id]['consumers']=1;
+                        }
+                    }
+                }
+              bindGraphEvents();
+            } else {
+              $("#searchError").addClass("alert alert-error");
+              $("#searchError").append("Couldn't find task " + taskId);
+            }
+            drawGraphETL(dependencyGraph, paint);
+        }
+
+        function depGraphCallback (dependencyGraph) {
+            $("#graphPlaceholder svg").empty();
+            $("#searchError").empty();
+            $("#searchError").removeClass();
+            if(dependencyGraph.length > 0) {
+              $("#dependencyTitle").text(taskId);
+              $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
+              $("#graphContainer").show();
+              bindGraphEvents();
+            } else {
+              $("#searchError").addClass("alert alert-error");
+              $("#searchError").append("Couldn't find task " + taskId);
+            }
+        }
+
+
+        if (visType == 'd3') {
+            return depGraphCallbackD3;
+        }
+        else {
+            return depGraphCallback;
+        }
+
+    }
+
     function processHashChange(paint) {
         var hash = location.hash;
         if (hash == "#w") {
             switchTab("workerList");
         } else if (hash) {
             var taskId = hash.substr(1);
+            // TODO : Used in SVG visualiser.  Do we need it?
             //$("#graphContainer").hide();
-            //$(".live.map svg").empty();
             $("#searchError").empty();
             $("#searchError").removeClass();
             if (taskId != "g") {
-                depGraphCallback = function(dependencyGraph) {
-                    //$(".live.map svg").empty();
-                    $("#searchError").empty();
-                    $("#searchError").removeClass();
-                    if(dependencyGraph.length > 0) {
-                        $("#dependencyTitle").text(taskId);
-                        if(dependencyGraph != '{}'){
-                            //var json = JSON.parse(JSON.stringify(dependencyGraph));
-                            //workers = json.response
-                            
-                            for (var id in dependencyGraph) {
-                                if (dependencyGraph[id].deps.length > 0) {
-                                    //console.log(asingInput(dependencyGraph, id));
-                                    dependencyGraph[id]['inputQueue']=asingInput(dependencyGraph, id);
-                                    dependencyGraph[id]['inputThroughput']=50;
-                                    dependencyGraph[id]['count']=5;
-                                    dependencyGraph[id]['consumers']=1;
-                                }else{
-                                    dependencyGraph[id]['inputThroughput']=50;
-                                    dependencyGraph[id]['count']=5;
-                                    dependencyGraph[id]['consumers']=1;
-                                }
-                            }
-                        }
-                      //$("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
-                      //$("#graphContainer").show();
-                      bindGraphEvents();
-                    } else {
-                      $("#searchError").addClass("alert alert-error");
-                      $("#searchError").append("Couldn't find task " + taskId);
-                    }
-                    drawGraphETL(dependencyGraph, paint);
-                }
+                var depGraphCallback = makeGraphCallback(visType, taskId, paint);
+
                 if (invertDependencies) {
                     luigi.getInverseDependencyGraph(taskId, depGraphCallback);
                 } else {
@@ -297,6 +322,17 @@ function visualiserApp(luigi) {
             event.preventDefault();
             location.hash = $(this).find("input").val();
         });
+
+        $('.info-box').on('click', function () {
+            toggleInfoBox(this);
+            filterByCategory(dt);
+        });
+
+        $('#toggleVisButtons').on('click', 'label', function () {
+            var newVisType = $(this).find('input')[0].value;
+            initVisualisation(newVisType);
+        });
+
     }
 
 
@@ -313,8 +349,8 @@ function visualiserApp(luigi) {
         for (var i = 0; i < listId.length; i++) {
             for (var j = 0; j < tasks.length; j++) {
                 if (listId[i]===tasks[j].taskId) {
-                    var finishTime = new Date(tasks[i].time_running*1000);
-                    var startTime = new Date(tasks[i].start_time*1000);
+                    var finishTime = new Date(tasks[j].time_running*1000);
+                    var startTime = new Date(tasks[j].start_time*1000);
                     var durationTime = new Date((finishTime - startTime)*1000).getSeconds();
                     times[listId[i]] = durationTime;
                 };
@@ -350,6 +386,12 @@ function visualiserApp(luigi) {
             });
         svg.call(zoom);
 
+        // Create map of taskId to task
+        var taskIdMap = {};
+        $.each(tasks, function (i, task) {
+            taskIdMap[task.taskId] = task;
+        });
+
         var render = new dagreD3.render();
         // Left-to-right layout
         var g = new dagreD3.graphlib.Graph();
@@ -373,7 +415,6 @@ function visualiserApp(luigi) {
                 html += "<span class=name>"+task.name+"</span>";
                 html += "<span class=queue><span class=counter>"+ task.status +"</span></span>";
                 html += "</div>";
-                    
                 g.setNode(task.taskId, {
                     labelType: "html",
                     label: html,
@@ -384,18 +425,22 @@ function visualiserApp(luigi) {
                 });
                 if (task.inputQueue) {
                     for (var i =  0; i < task.inputQueue.length; i++) {
-                        if (task.status === "DONE") {
-                            var durationTime = getFinishTime(tasks, task.inputQueue);
-                            g.setEdge(task.inputQueue[i], task.taskId, {
-                                label: durationTime[task.inputQueue[i]] + " secs",
-                                width: 40
-                            });
-                        }else{
-                            g.setEdge(task.inputQueue[i], task.taskId, {
-                                width: 40
-                            });
+                        // Destination node may not be in tasks if this is an inverted graph
+                        if (taskIdMap[task.inputQueue[i]] !== undefined) {
+                            if (task.status === "DONE") {
+                                var durationTime = getFinishTime(tasks, task.inputQueue);
+                                g.setEdge(task.inputQueue[i], task.taskId, {
+                                    label: durationTime[task.inputQueue[i]] + " secs",
+                                    width: 40
+                                });
+                            } else {
+                                g.setEdge(task.inputQueue[i], task.taskId, {
+                                    width: 40
+                                });
+                            }
                         }
-                    };
+                    }
+
                 }
             }
             var styleTooltip = function(name, description) {
@@ -454,7 +499,25 @@ function visualiserApp(luigi) {
             }
         });
     }
-    
+
+    function initVisualisation(newVisType) {
+        visType = newVisType;
+
+        // Prepare graphPlaceholder for D3 code
+        if (visType == 'd3') {
+            $('#graphPlaceholder').empty();
+            $('#graphPlaceholder').html('<div class="live map"><svg width="100%" height="100%" id="mysvg"><g/></svg></div>');
+        }
+        else {
+            $('#graphPlaceholder').empty();
+            var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
+            $("#graphPlaceholder")[0].graph = graph;
+        }
+
+        processHashChange(true);
+
+    }
+
     $(document).ready(function() {
         loadTemplates();
 
@@ -556,24 +619,8 @@ function visualiserApp(luigi) {
 
         } );
 
+        initVisualisation(visType);
 
-        $('.info-box').on('click', function () {
-            toggleInfoBox(this);
-            filterByCategory(dt);
-        })
-
-        /*
-        dt.on('draw.dt', function () {
-            $('.sidebar').html(renderSidebar(dt.column(2).data()));
-            $('.sidebar-menu').on('click', 'li', function () {
-                if (this.dataset.task) {
-                    selectSidebarItem(this);
-                    filterByTask(this.dataset.task, dt);
-                }
-            })
-        });
-        */
-
-        processHashChange(true);
+        debugHook = initVisualisation;
     });
 }
