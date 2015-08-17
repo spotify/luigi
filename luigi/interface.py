@@ -24,6 +24,7 @@ import logging.config
 import os
 import sys
 import tempfile
+import signal
 
 from luigi import configuration
 from luigi import lock
@@ -93,6 +94,9 @@ class core(task.Config):
     lock_pid_dir = parameter.Parameter(
         default=os.path.join(tempfile.gettempdir(), 'luigi'),
         description='Directory to store the pid file')
+    take_lock = parameter.BoolParameter(
+        default=False,
+        description='Signal other processes to stop getting work if already running')
     workers = parameter.IntParameter(
         default=1,
         description='Maximum number of parallel tasks to run')
@@ -155,8 +159,9 @@ class Interface(object):
                 'core', 'no_configure_logging', False):
             setup_interface_logging(logging_conf)
 
+        kill_signal = signal.SIGUSR1 if env_params.take_lock else None
         if (not env_params.no_lock and
-                not(lock.acquire_for(env_params.lock_pid_dir, env_params.lock_size))):
+                not(lock.acquire_for(env_params.lock_pid_dir, env_params.lock_size, kill_signal))):
             sys.exit(1)
 
         if env_params.local_scheduler:

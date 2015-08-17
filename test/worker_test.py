@@ -154,6 +154,15 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(a.has_run)
         self.assertTrue(b.has_run)
 
+    def test_stop_getting_new_work(self):
+        d = DummyTask()
+        self.w.add(d)
+
+        self.assertFalse(d.complete())
+        self.w.handle_interrupt(signal.SIGUSR1, None)
+        self.w.run()
+        self.assertFalse(d.complete())
+
     def test_external_dep(self):
         class A(ExternalTask):
 

@@ -19,6 +19,7 @@ import hashlib
 import os
 import subprocess
 import tempfile
+import mock
 from helpers import unittest
 
 import luigi
@@ -86,3 +87,13 @@ class LockTest(unittest.TestCase):
 
         s = os.stat(self.pid_file)
         self.assertEqual(s.st_mode & 0o777, 0o777)
+
+    @mock.patch('os.kill')
+    def test_take_lock_with_kill(self, kill_fn):
+        with open(self.pid_file, 'w') as f:
+            f.write('%d\n' % (self.pid,))
+
+        kill_signal = 77777
+        acquired = luigi.lock.acquire_for(self.pid_dir, kill_signal=kill_signal)
+        self.assertTrue(acquired)
+        kill_fn.assert_called_once_with(self.pid, kill_signal)
