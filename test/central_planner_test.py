@@ -238,6 +238,18 @@ class CentralPlannerTest(unittest.TestCase):
 
         self.assertEqual(['A'], list(self.sch.task_list('FAILED', '').keys()))
 
+    def test_assistant_request_runnable_task(self):
+        self.setTime(0)
+        self.sch.add_task(worker='X', task_id='A', runnable=True)
+        self.setTime(600)
+        self.sch.prune()
+
+        self.assertEqual('A', self.sch.get_work(worker='Y', assistant=True)['task_id'])
+
+    def test_assistant_request_external_task(self):
+        self.sch.add_task(worker='X', task_id='A', runnable=False)
+        self.assertIsNone(self.sch.get_work(worker='Y', assistant=True)['task_id'])
+
     def test_prune_done_tasks(self, expected=None):
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A', status=DONE)
