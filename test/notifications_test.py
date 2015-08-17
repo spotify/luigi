@@ -18,8 +18,9 @@
 from helpers import unittest
 
 from helpers import with_config
+from mock import patch
 from luigi import notifications
-
+from boto.sns import SNSConnection
 
 class TestEmail(unittest.TestCase):
 
@@ -29,3 +30,19 @@ class TestEmail(unittest.TestCase):
     @with_config({"core": {"email-prefix": "[prefix]"}})
     def testEmailPrefix(self):
         self.assertEqual("[prefix] subject", notifications._prefix('subject'))
+
+class TestSNSNotifications(unittest.TestCase):
+
+    def testNotificationsNoSNS(self):
+        with patch.object(SNSConnection, 'publish') as mock_publish:
+            notifications.send_error_email("error", "something bad happened!")
+        
+        assert not mock_publish.called
+
+    @with_config({"core": {"error-sns-topic": "test-topic"}})
+    def testNotificationsSNS(self):
+        with patch.object(SNSConnection, 'publish') as mock_publish:
+            notifications.send_error_email("error", "something bad happened!")
+
+        mock_publish.assert_called_once_with("test-topic", "something bad happened!", "error")
+    
