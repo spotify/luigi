@@ -258,8 +258,7 @@ function visualiserApp(luigi) {
                       $("#searchError").addClass("alert alert-error");
                       $("#searchError").append("Couldn't find task " + taskId);
                     }
-                    //console.log(dependencyGraph);
-                    drawGraphETL(dependencyGraph, paint)
+                    drawGraphETL(dependencyGraph, paint);
                 }
                 if (invertDependencies) {
                     luigi.getInverseDependencyGraph(taskId, depGraphCallback);
@@ -360,7 +359,8 @@ function visualiserApp(luigi) {
             rankdir: "LR",
             marginx: 20,
             marginy: 20,
-            height: 400
+            height: 400,
+            ranker: "longest-path"
         });
 
         function draw(isUpdate) {
@@ -420,18 +420,8 @@ function visualiserApp(luigi) {
                 .attr("title", function(v) { return styleTooltip(v, getParam(tasks, v)) })
                 .each(function(v) { $(this).tipsy({ gravity: "w", opacity: 1, html: true }); });
         }
-        // Do some mock queue status updates
-
-        if (getStatusTasks(tasks)) {
-            console.log("clearInterval");
-            clearInterval(interval);
-        };
         draw();
     }
-
-    var interval = setInterval(function() {
-        processHashChange(false);
-    }, 5000);
 
     /*
        DataTables functions
