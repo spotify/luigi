@@ -101,16 +101,13 @@ class Parameter(object):
     """non-atomically increasing counter used for ordering parameters."""
 
     @deprecate_kwarg('is_boolean', 'is_bool', False)
-    def __init__(self, default=_no_value, is_list=False, is_boolean=False, is_global=False, significant=True, description=None,
+    def __init__(self, default=_no_value, is_boolean=False, is_global=False, significant=True, description=None,
                  config_path=None, positional=True):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
                         ``IntParameter``. By default, no default is stored and
                         the value must be specified at runtime.
-        :param bool is_list: specify ``True`` if the parameter should allow a list of values rather
-                             than a single value. Default: ``False``. A list has an implicit default
-                             value of ``[]``.
         :param bool is_bool: specify ``True`` if the parameter is a bool value. Default:
                                 ``False``. Bool's have an implicit default value of ``False``.
         :param bool significant: specify ``False`` if the parameter should not be treated as part of
@@ -134,8 +131,7 @@ class Parameter(object):
         self.__default = default
         self.__global = _no_value
 
-        self.is_list = is_list
-        self.is_bool = is_boolean and not is_list  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
+        self.is_bool = is_boolean  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
         if is_global:
             warnings.warn("is_global support is removed. Assuming positional=False",
                           DeprecationWarning,
@@ -163,10 +159,7 @@ class Parameter(object):
         except (NoSectionError, NoOptionError):
             return _no_value
 
-        if self.is_list:
-            return tuple(self.parse(p.strip()) for p in value.strip().split('\n'))
-        else:
-            return self.parse(value)
+        return self.parse(value)
 
     def _get_value(self, task_name=None, param_name=None):
         if self.__global != _no_value:
@@ -254,8 +247,7 @@ class Parameter(object):
 
         The default implementation is an identify (it returns ``x``), but subclasses should override
         this method for specialized parsing. This method is called by :py:meth:`parse_from_input`
-        if ``x`` exists. If this Parameter was specified with ``is_list=True``, then ``parse`` is
-        called once for each item in the list.
+        if ``x`` exists.
 
         :param str x: the value to parse.
         :return: the parsed value.
@@ -270,13 +262,11 @@ class Parameter(object):
 
         :param x: the value to serialize.
         """
-        if self.is_list:
-            return [str(v) for v in x]
         return str(x)
 
     def parse_from_input(self, param_name, x, task_name=None):
         """
-        Parses the parameter value from input ``x``, handling defaults and is_list.
+        Parses the parameter value from input ``x``, handling defaults.
 
         :param param_name: the name of the parameter. This is used for the message in
                            ``MissingParameterException``.
@@ -288,21 +278,14 @@ class Parameter(object):
                 return self.task_value(param_name=param_name, task_name=task_name)
             elif self.is_bool:
                 return False
-            elif self.is_list:
-                return []
             else:
                 raise MissingParameterException("No value for '%s' (%s) submitted and no default value has been assigned." %
                                                 (param_name, "--" + param_name.replace('_', '-')))
-        elif self.is_list:
-            return tuple(self.parse(p) for p in x)
         else:
             return self.parse(x)
 
     def serialize_to_input(self, x):
-        if self.is_list:
-            return tuple(self.serialize(p) for p in x)
-        else:
-            return self.serialize(x)
+        return self.serialize(x)
 
     def parser_dest(self, param_name, task_name, glob=False, is_without_section=False):
         if is_without_section:
@@ -332,9 +315,7 @@ class Parameter(object):
             value = self.task_value(param_name=param_name, task_name=task_name)
             description.append(" [default: %s]" % (value,))
 
-        if self.is_list:
-            action = "append"
-        elif self.is_bool:
+        if self.is_bool:
             action = "store_true"
         else:
             action = "store"

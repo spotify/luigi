@@ -42,15 +42,7 @@ class WithDefault(luigi.Task):
 class Foo(luigi.Task):
     bar = luigi.Parameter()
     p2 = luigi.IntParameter()
-    multi = luigi.Parameter(is_list=True)
     not_a_param = "lol"
-
-
-class Bar(luigi.Task):
-    multibool = luigi.BoolParameter(is_list=True)
-
-    def run(self):
-        Bar._val = self.multibool
 
 
 class Baz(luigi.Task):
@@ -152,23 +144,14 @@ class ParameterTest(unittest.TestCase):
         self.assertRaises(luigi.parameter.DuplicateParameterException, create_a)
 
     def test_parameter_registration(self):
-        self.assertEqual(len(Foo.get_params()), 3)
+        self.assertEqual(len(Foo.get_params()), 2)
 
     def test_task_creation(self):
-        f = Foo("barval", p2=5, multi=('m1', 'm2'))
-        self.assertEqual(len(f.get_params()), 3)
+        f = Foo("barval", p2=5)
+        self.assertEqual(len(f.get_params()), 2)
         self.assertEqual(f.bar, "barval")
         self.assertEqual(f.p2, 5)
-        self.assertEqual(f.multi, ('m1', 'm2'))
         self.assertEqual(f.not_a_param, "lol")
-
-    def test_multibool(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Bar', '--multibool', 'true', '--multibool', 'false'])
-        self.assertEqual(Bar._val, (True, False))
-
-    def test_multibool_empty(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Bar'])
-        self.assertEqual(Bar._val, tuple())
 
     def test_bool_false(self):
         luigi.run(['--local-scheduler', '--no-lock', 'Baz'])
@@ -490,16 +473,6 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
     @with_config({"foo": {"bar": "baz"}})
     def testHasDefaultWithBoth(self):
         self.assertTrue(luigi.Parameter(config_path=dict(section="foo", name="bar")).has_value)
-
-    @with_config({"foo": {"bar": "one\n\ttwo\n\tthree\n"}})
-    def testDefaultList(self):
-        p = luigi.Parameter(is_list=True, config_path=dict(section="foo", name="bar"))
-        self.assertEqual(('one', 'two', 'three'), p.value)
-
-    @with_config({"foo": {"bar": "1\n2\n3"}})
-    def testDefaultIntList(self):
-        p = luigi.IntParameter(is_list=True, config_path=dict(section="foo", name="bar"))
-        self.assertEqual((1, 2, 3), p.value)
 
     @with_config({"foo": {"bar": "baz"}})
     def testWithDefault(self):
