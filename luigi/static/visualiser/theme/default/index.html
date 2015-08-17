@@ -56,7 +56,11 @@
 
         svg {
             border:1px solid #DDDDDD;
-            overflow:scroll;
+            overflow: inherit;
+        }
+
+        #graphPlaceholder {
+            overflow: auto;
         }
 
         .taskRow {
@@ -100,12 +104,6 @@
             width: 100%;
             height: 600px;
             background: #333;
-          }
-
-          svg {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
           }
 
           .live.map text {
@@ -437,28 +435,39 @@
 
             </section>
             <section id="dependencyGraph" class="tab-pane">
-                <div class="navbar">
-                  <div class="navbar-inner">
-                    <form class="navbar-form pull-left" id="loadTaskForm">
-                      <input type="text" class="search-query" placeholder="TaskId(param1=val1,param2=val2)">
-                      <button type="submit" class="btn">Show task details</button>
+              <div class="container-fluid">
+                    <form class="form-inline" id="loadTaskForm">
+                      <div class="form-group col-md-6">
+                        <input type="text" class="search-query form-control" placeholder="TaskId(param1=val1,param2=val2)">
+                        <button type="submit" class="btn btn-default form-control">Show task details</button>
+                      </div>
                     </form>
-                    <form class="navbar-form pull-left">
-                        <label for="invertCheckbox">Show Upstream Dependencies
-                        <input type="checkbox" class="checkbox" id="invertCheckbox"/>
+                    <form class="form-inline" id="visForm">
+                      <div class="form-group col-md-3">
+                        <label class="btn btn-default" for="invertCheckbox">Show Upstream Dependencies
+                            <input type="checkbox" id="invertCheckbox"/>
                         </label>
+                      </div>
+                      <div class="form-group col-md-3">
+                        <label>Visualisation Type</label>
+                        <div class="btn-group" id="toggleVisButtons" data-toggle="buttons">
+                            <label class="btn btn-default active">
+                                <input type="radio" name="D3" value="d3"/> D3
+                            </label>
+                            <label class="btn btn-default">
+                                <input type="radio" name="SVG" value="svg"/> SVG
+                            </label>
+                        </div>
+                       </div>
                     </form>
-                  </div>
                 </div>
+
                 <div id="searchError">
                 </div>
                 <div id="graphContainer" class="container-fluid">
                     <h4 id="dependencyTitle"></h4>
                     <h5>Dependency Graph</h5>
-                    <div class="live map">
-                        <svg id="mysvg"><g/></svg>
-                    </div>
-
+                    <div id="graphPlaceholder"></div>
                 </div>
             </section>
             <section id="workerList" class="container-fluid tab-pane active">
