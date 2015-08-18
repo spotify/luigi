@@ -16,9 +16,9 @@
 #
 """
 This module provide the function :py:func:`summary` that is used for printing
-an execution summary at the end of luigi invocations.
-
-See `https://github.com/spotify/luigi/blob/master/examples/execution_summary_example.py` for an example.
+an `execution summary
+<https://github.com/spotify/luigi/blob/master/examples/execution_summary_example.py>`_
+at the end of luigi invocations.
 """
 
 import textwrap
@@ -367,8 +367,8 @@ def _summary_wrap(str_output):
 
 def summary(worker):
     """
-    Given a worker, return a human readable string describing roughly what the
-    workers have done.
+    Given a worker, return a human readable summary of what the worker have
+    done.
     """
     return _summary_wrap(_summary_format(_summary_dict(worker), worker))
 # 5
