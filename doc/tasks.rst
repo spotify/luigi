@@ -36,7 +36,7 @@ you can wrap it in a Task class like this:
 
 .. code:: python
 
-    class LogFiles(luigi.Task):
+    class LogFiles(luigi.ExternalTask):
         def output(self):
             return luigi.contrib.hdfs.HdfsTarget('/log')
 
@@ -44,7 +44,7 @@ This also makes it easier to add parameters:
 
 .. code:: python
 
-    class LogFiles(luigi.Task):
+    class LogFiles(luigi.ExternalTask):
         date = luigi.DateParameter()
         def output(self):
             return luigi.contrib.hdfs.HdfsTarget(self.date.strftime('/log/%Y-%m-%d'))
