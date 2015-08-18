@@ -20,6 +20,7 @@ Provides functionality to run a Hadoop job using a Jar
 
 import logging
 import os
+import pipes
 import random
 
 import luigi.contrib.hadoop
@@ -68,29 +69,11 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
         pass
 
     def run_job(self, job):
-        ssh_config = job.ssh()
-        if ssh_config:
-            host = ssh_config.get("host", None)
-            key_file = ssh_config.get("key_file", None)
-            username = ssh_config.get("username", None)
-            if not host or not key_file or not username or not job.jar():
-                raise HadoopJarJobError("missing some config for HadoopRemoteJarJobRunner")
-            arglist = ['ssh', '-i', key_file,
-                       '-o', 'BatchMode=yes']  # no password prompts etc
-            if ssh_config.get("no_host_key_check", False):
-                arglist += ['-o', 'UserKnownHostsFile=/dev/null',
-                            '-o', 'StrictHostKeyChecking=no']
-            arglist.append('{}@{}'.format(username, host))
-        else:
-            arglist = []
-            if not job.jar():
-                raise HadoopJarJobError("Jar not defined")
-            if not os.path.exists(job.jar()):
-                logger.error("Can't find jar: %s, full path %s", job.jar(), os.path.abspath(job.jar()))
-                raise HadoopJarJobError("job jar does not exist")
-
         # TODO(jcrobak): libjars, files, etc. Can refactor out of
         # hadoop.HadoopJobRunner
+        if not job.jar():
+            raise HadoopJarJobError("Jar not defined")
+
         hadoop_arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
         if job.main():
             hadoop_arglist.append(job.main())
@@ -103,7 +86,28 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
         (tmp_files, job_args) = fix_paths(job)
 
         hadoop_arglist += job_args
-        arglist.extend(hadoop_arglist)
+
+        ssh_config = job.ssh()
+        if ssh_config:
+            host = ssh_config.get("host", None)
+            key_file = ssh_config.get("key_file", None)
+            username = ssh_config.get("username", None)
+            if not host or not key_file or not username:
+                raise HadoopJarJobError("missing some config for HadoopRemoteJarJobRunner")
+            arglist = ['ssh', '-i', key_file,
+                       '-o', 'BatchMode=yes']  # no password prompts etc
+            if ssh_config.get("no_host_key_check", False):
+                arglist += ['-o', 'UserKnownHostsFile=/dev/null',
+                            '-o', 'StrictHostKeyChecking=no']
+            arglist.append('{}@{}'.format(username, host))
+            hadoop_arglist = [pipes.quote(arg) for arg in hadoop_arglist]
+            arglist.append(' '.join(hadoop_arglist))
+        else:
+            if not os.path.exists(job.jar()):
+                logger.error("Can't find jar: %s, full path %s", job.jar(),
+                             os.path.abspath(job.jar()))
+                raise HadoopJarJobError("job jar does not exist")
+            arglist = hadoop_arglist
 
         luigi.contrib.hadoop.run_and_track_hadoop_job(arglist)
 

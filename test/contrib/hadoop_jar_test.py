@@ -17,6 +17,7 @@
 
 import luigi
 import tempfile
+import shlex
 from helpers import unittest
 from luigi.contrib.hadoop_jar import HadoopJarJobError, HadoopJarJobTask
 from mock import patch, MagicMock
@@ -43,6 +44,10 @@ class TestRemoteMissingJarJob(TestHadoopJarJob):
         return {"host": "myhost", "key_file": "file"}
 
 
+class TestRemoteHadoopJarTwoParamJob(TestRemoteHadoopJarJob):
+    param2 = luigi.Parameter()
+
+
 class HadoopJarJobTaskTest(unittest.TestCase):
     @patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
     def test_good(self, mock_job):
@@ -62,6 +67,24 @@ class HadoopJarJobTaskTest(unittest.TestCase):
         mock_job.return_value = None
         with tempfile.NamedTemporaryFile() as temp_file:
             task = TestRemoteHadoopJarJob(temp_file.name)
+            task.run()
+
+    @patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
+    def test_remote_job_with_space_in_task_id(self, mock_job):
+        with tempfile.NamedTemporaryFile() as temp_file:
+
+            def check_space(arr, task_id):
+                for a in arr:
+                    if a.startswith('hadoop jar'):
+                        found = False
+                        for x in shlex.split(a):
+                            if task_id in x:
+                                found = True
+                        if not found:
+                            raise AssertionError
+
+            task = TestRemoteHadoopJarTwoParamJob(temp_file.name, 'test')
+            mock_job.side_effect = lambda x: check_space(x, task.task_id)
             task.run()
 
     @patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
