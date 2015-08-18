@@ -129,6 +129,15 @@ class Task(object):
     worker_timeout = None
 
     @property
+    def owner_email(self):
+        '''
+        Override this to send out additional error emails to task owner, in addition to the one
+        defined in `core`.`error-email`. This should return a string or a list of strings. e.g.
+        'test@exmaple.com' or ['test1@example.com', 'test2@example.com']
+        '''
+        return None
+
+    @property
     def use_cmdline_section(self):
         ''' Property used by core config such as `--workers` etc.
         These will be exposed without the class as prefix.'''

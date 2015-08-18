@@ -22,6 +22,7 @@ from helpers import with_config
 from luigi import notifications
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
+from luigi import six
 import luigi
 
 
@@ -131,3 +132,17 @@ class ExceptionFormatTest(unittest.TestCase):
 
             for param, value in task.param_kwargs.items():
                 self.assertIn('{}: {}\n'.format(param, value), body)
+
+    @with_config({"core": {"error-email": "a@a.a"}})
+    def testEmailRecipients(self):
+        six.assertCountEqual(self, notifications._email_recipients(), ["a@a.a"])
+        six.assertCountEqual(self, notifications._email_recipients("b@b.b"), ["a@a.a", "b@b.b"])
+        six.assertCountEqual(self, notifications._email_recipients(["b@b.b", "c@c.c"]),
+                             ["a@a.a", "b@b.b", "c@c.c"])
+
+    @with_config({"core": {}}, replace_sections=True)
+    def testEmailRecipientsNoConfig(self):
+        six.assertCountEqual(self, notifications._email_recipients(), [])
+        six.assertCountEqual(self, notifications._email_recipients("a@a.a"), ["a@a.a"])
+        six.assertCountEqual(self, notifications._email_recipients(["a@a.a", "b@b.b"]),
+                             ["a@a.a", "b@b.b"])
