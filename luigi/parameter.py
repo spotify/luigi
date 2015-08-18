@@ -33,6 +33,7 @@ from luigi import six
 
 from luigi import configuration
 from luigi.deprecate_kwarg import deprecate_kwarg
+from datetime import timedelta
 
 _no_value = object()
 
@@ -264,6 +265,20 @@ class Parameter(object):
         """
         return str(x)
 
+    @classmethod
+    def next_in_enumeration(_cls, _value):
+        """
+        If your Parameter type has an enumerable ordering of values. You can
+        choose to override this method. This method is used by the
+        :py:mod:`luigi.execution_summary` module for pretty printing
+        purposes. Enabling it to pretty print tasks like ``MyTask(num=1),
+        MyTask(num=2), MyTask(num=3)`` to ``MyTask(num=1..3)``.
+
+        :param value: The value
+        :return: The next value, like "value + 1". Or ``None`` if there's no enumerable ordering.
+        """
+        return None
+
     def parse_from_input(self, param_name, x, task_name=None):
         """
         Parses the parameter value from input ``x``, handling defaults.
@@ -355,6 +370,14 @@ class DateParameterBase(Parameter):
         """
         pass
 
+    @abc.abstractproperty
+    def _timedelta(self):
+        """
+        Either override me with a :py:class:`~datetime.timedelta` value or
+        implement :py:meth:`~Parameter.next_in_enumeration` to return ``None``.
+        """
+        pass
+
     def serialize(self, dt):
         """
         Converts the date to a string using the :py:attr:`~DateParameterBase.date_format`.
@@ -362,6 +385,10 @@ class DateParameterBase(Parameter):
         if dt is None:
             return str(dt)
         return dt.strftime(self.date_format)
+
+    @classmethod
+    def next_in_enumeration(cls, value):
+        return value + cls._timedelta
 
 
 class DateParameter(DateParameterBase):
@@ -373,6 +400,7 @@ class DateParameter(DateParameterBase):
     """
 
     date_format = '%Y-%m-%d'
+    _timedelta = timedelta(days=1)
 
     def parse(self, s):
         """
@@ -392,6 +420,10 @@ class MonthParameter(DateParameter):
 
     date_format = '%Y-%m'
 
+    @staticmethod
+    def next_in_enumeration(_value):
+        return None
+
 
 class YearParameter(DateParameter):
     """
@@ -402,6 +434,10 @@ class YearParameter(DateParameter):
     """
 
     date_format = '%Y'
+
+    @staticmethod
+    def next_in_enumeration(_value):
+        return None
 
 
 class DateHourParameter(DateParameterBase):
@@ -432,6 +468,7 @@ class DateMinuteParameter(DateHourParameter):
     """
 
     date_format = '%Y-%m-%dT%H%M'
+    _timedelta = timedelta(minutes=1)
     deprecated_date_format = '%Y-%m-%dT%HH%M'
 
     def parse(self, s):
@@ -457,6 +494,10 @@ class IntParameter(Parameter):
         Parses an ``int`` from the string using ``int()``.
         """
         return int(s)
+
+    @staticmethod
+    def next_in_enumeration(value):
+        return value + 1
 
 
 class FloatParameter(Parameter):
@@ -543,7 +584,6 @@ class TimeDeltaParameter(Parameter):
     """
 
     def _apply_regex(self, regex, input):
-        from datetime import timedelta
         import re
         re_match = re.match(regex, input)
         if re_match:
