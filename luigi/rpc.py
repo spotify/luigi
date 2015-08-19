@@ -96,7 +96,7 @@ class RemoteScheduler(Scheduler):
             'You need to install requests-unixsocket for Unix socket support.',
         )
 
-        self._url = url
+        self._url = url.rstrip('/')
         config = configuration.get_config()
 
         if connect_timeout is None:
