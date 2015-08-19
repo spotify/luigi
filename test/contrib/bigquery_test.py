@@ -58,6 +58,52 @@ class TestLoadTask(bigquery.BigqueryLoadTask):
 
 
 @attr('gcloud')
+class AtomicBigqueryTarget(bigquery.BigqueryTarget):
+
+    def close(self):
+        self.move_tmp_table()
+
+
+@attr('gcloud')
+class SimulatedAtomicLoad(TestLoadTask):
+
+    def run(self):
+        output = self.output()
+
+        bq_client = output.client
+
+        source_uris = self.source_uris()
+        assert all(x.startswith('gs://') for x in source_uris)
+
+        job = {
+            'projectId': output.table.project_id,
+            'configuration': {
+                'load': {
+                    'destinationTable': {
+                        'projectId': output.tmp_table.project_id,
+                        'datasetId': output.tmp_table.dataset_id,
+                        'tableId': output.tmp_table.table_id,
+                    },
+                    'sourceFormat': self.source_format,
+                    'writeDisposition': self.write_disposition,
+                    'sourceUris': source_uris,
+                    'maxBadRecords': self.max_bad_records,
+                }
+            }
+        }
+        if self.schema:
+            job['configuration']['load']['schema'] = {'fields': self.schema}
+
+        bq_client.run_job(output.tmp_table.project_id, job, dataset=output.tmp_table.dataset)
+        output.close()
+
+    def output(self):
+        return AtomicBigqueryTarget(PROJECT_ID, DATASET_ID, self.table,
+                                    client=self._BIGQUERY_CLIENT, tmp_dataset_id=DATASET_ID,
+                                    tmp_salt='_upload')
+
+
+@attr('gcloud')
 class TestRunQueryTask(bigquery.BigqueryRunQueryTask):
     _BIGQUERY_CLIENT = None
 
@@ -85,11 +131,7 @@ class BigqueryTest(gcs_test._GCSBaseTestCase):
         text = '\n'.join(map(json.dumps, data))
         gcs_file = gcs_test.bucket_url(self.id())
         self.client.put_string(text, gcs_file)
-
-        task = TestLoadTask(source=gcs_file, table=self.table.table_id)
-        task._BIGQUERY_CLIENT = self.bq_client
-
-        task.run()
+        return gcs_file
 
     def test_table_uri(self):
         intended_uri = "bq://" + PROJECT_ID + "/" + \
@@ -97,10 +139,15 @@ class BigqueryTest(gcs_test._GCSBaseTestCase):
         self.assertTrue(self.table.uri == intended_uri)
 
     def test_load_and_copy(self):
-        self.create_dataset([
+        gcs_file = self.create_dataset([
             {'field1': 'hi', 'field2': 1},
             {'field1': 'bye', 'field2': 2},
         ])
+
+        task = TestLoadTask(source=gcs_file, table=self.table.table_id)
+        task._BIGQUERY_CLIENT = self.bq_client
+
+        task.run()
 
         # Cram some stuff in here to make the tests run faster - loading data takes a while!
         self.assertTrue(self.bq_client.dataset_exists(self.table))
@@ -125,3 +172,16 @@ class BigqueryTest(gcs_test._GCSBaseTestCase):
         task.run()
 
         self.assertTrue(self.bq_client.table_exists(self.table))
+
+    def test_atomic_table_swap(self):
+        gcs_file = self.create_dataset([
+            {'field1': 'hi', 'field2': 1},
+            {'field1': 'bye', 'field2': 2},
+        ])
+        task = SimulatedAtomicLoad(source=gcs_file, table=self.table.table_id)
+        task._BIGQUERY_CLIENT = self.bq_client
+
+        task.run()
+        self.assertTrue(self.bq_client.table_exists(self.table))
+        tmp_table = bigquery.BQTable(project_id=PROJECT_ID, dataset_id=DATASET_ID, table_id='_' + self.table.table_id + '_upload')
+        self.assertFalse(self.bq_client.table_exists(tmp_table))

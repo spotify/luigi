@@ -282,9 +282,9 @@ class BigqueryClient(object):
 
 
 class BigqueryTarget(luigi.target.Target):
-    def __init__(self, project_id, dataset_id, table_id, client=None, tmp_dataset_id=None):
+    def __init__(self, project_id, dataset_id, table_id, client=None, tmp_dataset_id=None, tmp_salt=None):
         self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id)
-        tmp_table_id = "_" + table_id + "_%09d" % random.randrange(0, 1e10)
+        tmp_table_id = "_" + table_id + (tmp_salt or "_%09d" % random.randrange(0, 1e10))
         self.tmp_table = BQTable(project_id=project_id, dataset_id=tmp_dataset_id or "_incoming", table_id=tmp_table_id)
         self.client = client or BigqueryClient()
 
@@ -302,6 +302,16 @@ class BigqueryTarget(luigi.target.Target):
 
     def __str__(self):
         return str(self.table)
+
+    def move_tmp_table(self):
+        """For use with hadoop bigquery connector, allows inheriting targets
+        to implement swap into place"""
+        logger.info('Moving temporary table %s.%s to destination table %s.%s',
+                    self.tmp_table.dataset_id, self.tmp_table.table_id,
+                    self.table.dataset_id, self.table.table_id)
+        self.client.copy(self.tmp_table, self.table)
+        logger.info('Removing temporary table %s.%s', self.tmp_table.dataset_id, self.tmp_table.table_id)
+        self.client.delete_table(self.tmp_table)
 
 
 class BigqueryLoadTask(luigi.Task):
@@ -349,9 +359,9 @@ class BigqueryLoadTask(luigi.Task):
             'configuration': {
                 'load': {
                     'destinationTable': {
-                        'projectId': output.tmp_table.project_id,
-                        'datasetId': output.tmp_table.dataset_id,
-                        'tableId': output.tmp_table.table_id,
+                        'projectId': output.table.project_id,
+                        'datasetId': output.table.dataset_id,
+                        'tableId': output.table.table_id,
                     },
                     'sourceFormat': self.source_format,
                     'writeDisposition': self.write_disposition,
@@ -363,14 +373,7 @@ class BigqueryLoadTask(luigi.Task):
         if self.schema:
             job['configuration']['load']['schema'] = {'fields': self.schema}
 
-        logger.info('Loading data to temporary table %s.%s', output.tmp_table.dataset_id, output.tmp_table.table_id)
-        bq_client.run_job(output.tmp_table.project_id, job, dataset=output.tmp_table.dataset)
-        logger.info('Moving temporary table %s.%s to destination table %s.%s',
-                    output.tmp_table.dataset_id, output.tmp_table.table_id,
-                    output.table.dataset_id, output.table.table_id)
-        bq_client.copy(output.tmp_table, output.table)
-        logger.info('Removing temporary table %s.%s', output.tmp_table.dataset_id, output.tmp_table.table_id)
-        bq_client.delete_table(output.tmp_table)
+        bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
 
 
 class BigqueryRunQueryTask(luigi.Task):
