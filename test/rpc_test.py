@@ -16,12 +16,26 @@
 #
 
 from helpers import unittest, skipOnTravis
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 import luigi.rpc
 from luigi.scheduler import CentralPlannerScheduler
 import central_planner_test
 import luigi.server
 from server_test import ServerTestBase
+
+
+class RemoteSchedulerTest(unittest.TestCase):
+    def testUrlArgumentVariations(self):
+        for url in ['http://zorg.com', 'http://zorg.com/']:
+            for suffix in ['api/123', '/api/123']:
+                s = luigi.rpc.RemoteScheduler(url, 42)
+                with mock.patch.object(s, '_fetcher') as fetcher:
+                    s._fetch(suffix, '{}')
+                    fetcher.fetch.assert_called_once_with('http://zorg.com/api/123', '{}', 42)
 
 
 class RPCTest(central_planner_test.CentralPlannerTest, ServerTestBase):

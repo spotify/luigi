@@ -25,7 +25,7 @@ import logging
 import socket
 import time
 
-from luigi.six.moves.urllib.parse import urlencode, ParseResult
+from luigi.six.moves.urllib.parse import urljoin, urlencode, ParseResult
 from luigi.six.moves.urllib.request import urlopen
 from luigi.six.moves.urllib.error import URLError
 
@@ -112,7 +112,7 @@ class RemoteScheduler(Scheduler):
         time.sleep(30)
 
     def _fetch(self, url_suffix, body, log_exceptions=True, attempts=3):
-        full_url = self._url + url_suffix
+        full_url = urljoin(self._url, url_suffix)
         last_exception = None
         attempt = 0
         while attempt < attempts:
