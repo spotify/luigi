@@ -10,10 +10,13 @@ then run one of the tox commands below.
 
 .. code:: bash
 
-    # The first two are fast and will tell if you if you've broken
-    # something major:
+    # These commands are pretty fast and will tell if you if you've
+    # broken something major:
     tox -e pep8
     tox -e py27-nonhdfs
+    
+    # You can also test particular files for even faster iterations
+    tox -e py27-nonhdfs test/rpc_test.py
 
     # And some of the others involve downloading and running Hadoop:
     tox -e py33-cdh
