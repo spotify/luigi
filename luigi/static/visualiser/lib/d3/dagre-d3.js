@@ -3411,7 +3411,6 @@ module.exports = rank;
  *       fix them up later.
  */
 function rank(g) {
-  // ! DEBUG
   switch(g.graph().ranker) {
     case "network-simplex": networkSimplexRanker(g); break;
     case "tight-tree": tightTreeRanker(g); break;
