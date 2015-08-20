@@ -278,8 +278,6 @@ function visualiserApp(luigi) {
             switchTab("workerList");
         } else if (hash) {
             var taskId = hash.substr(1);
-            // TODO : Used in SVG visualiser.  Do we need it?
-            //$("#graphContainer").hide();
             $("#searchError").empty();
             $("#searchError").removeClass();
             if (taskId != "g") {

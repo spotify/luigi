@@ -213,14 +213,7 @@ class StaticFileHandler(tornado.web.RequestHandler):
 class RootPathHandler(BaseTaskHistoryHandler):
 
     def get(self):
-        visualizer_theme = self._scheduler._config.visualizer_theme
-
-        if visualizer_theme == "default":
-            self.redirect("/static/visualiser/theme/default/index.html")
-        elif visualizer_theme == "retro":
-            self.redirect(("/static/visualiser/theme/retro/index.html"))
-        else:
-            self.redirect("/static/visualiser/theme/default/index.html")
+        self.redirect("/static/visualiser/index.html")
 
 
 def app(scheduler):
