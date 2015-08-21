@@ -254,7 +254,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
     :param env:
     :return:
     """
-    logger.info('%s', ' '.join(arglist))
+    logger.info('%s', subprocess.list2cmdline(arglist))
 
     def write_luigi_history(arglist, history):
         """
@@ -452,7 +452,7 @@ class HadoopJobRunner(JobRunner):
 
         for libjar in self.libjars_in_hdfs:
             run_cmd = luigi.contrib.hdfs.load_hadoop_cmd() + ['fs', '-get', libjar, self.tmp_dir]
-            logger.debug(' '.join(run_cmd))
+            logger.debug(subprocess.list2cmdline(run_cmd))
             subprocess.call(run_cmd)
             libjars.append(os.path.join(self.tmp_dir, os.path.basename(libjar)))
 

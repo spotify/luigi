@@ -454,7 +454,7 @@ class SparkJob(luigi.Task):
         spark_class = configuration.get_config().get('spark', 'spark-class')
 
         temp_stderr = tempfile.TemporaryFile()
-        logger.info('Running: %s %s', spark_class, ' '.join(args))
+        logger.info('Running: %s %s', spark_class, subprocess.list2cmdline(args))
         proc = subprocess.Popen([spark_class] + args, stdout=subprocess.PIPE,
                                 stderr=temp_stderr, env=env, close_fds=True)
 
