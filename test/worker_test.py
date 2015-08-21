@@ -24,7 +24,7 @@ import signal
 import tempfile
 import threading
 import time
-from helpers import unittest
+from helpers import unittest, skipOnTravis
 
 import luigi.notifications
 import luigi.worker
@@ -834,6 +834,7 @@ class MultipleWorkersTest(unittest.TestCase):
         w._handle_next_task()
         self.assertEqual(0, len(w._running_tasks))
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/76645264')
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_override_timeout_time(self, mock_time):
         w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
