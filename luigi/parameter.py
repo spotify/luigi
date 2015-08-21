@@ -299,9 +299,6 @@ class Parameter(object):
         else:
             return self.parse(x)
 
-    def serialize_to_input(self, x):
-        return self.serialize(x)
-
     def parser_dest(self, param_name, task_name, glob=False, is_without_section=False):
         if is_without_section:
             if glob:
