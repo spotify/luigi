@@ -30,7 +30,7 @@ class ExtraArgs(luigi.Task):
 class CmdlineTest(LuigiTestCase):
 
     def test_dynamic_loading(self):
-        interface = luigi.interface.DynamicArgParseInterface()
+        interface = luigi.interface._DynamicArgParseInterface()
         with tempfile.NamedTemporaryFile(dir='test/', prefix="_foo_module", suffix='.py') as temp_module_file:
             temp_module_file.file.write(b'''
 import luigi

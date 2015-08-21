@@ -82,7 +82,7 @@ def find_deps_cli():
     '''
     Finds all tasks on all paths from provided CLI task
     '''
-    interface = luigi.interface.DynamicArgParseInterface()
+    interface = luigi.interface._DynamicArgParseInterface()
     tasks = interface.parse()
     task, = tasks
     upstream_task_family = upstream().family

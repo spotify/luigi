@@ -106,7 +106,7 @@ class core(task.Config):
         description='Configuration file for logging')
     module = parameter.Parameter(
         default=None,
-        description='Used for dynamic loading of modules')  # see DynamicArgParseInterface
+        description='Used for dynamic loading of modules')  # see _DynamicArgParseInterface
     parallel_scheduling = parameter.BoolParameter(
         default=False,
         description='Use multiprocessing to do scheduling in parallel.')
@@ -115,7 +115,7 @@ class core(task.Config):
         description='Run any task from the scheduler.')
 
 
-class WorkerSchedulerFactory(object):
+class _WorkerSchedulerFactory(object):
 
     def create_local_scheduler(self):
         return scheduler.CentralPlannerScheduler(prune_on_get_work=True)
@@ -128,7 +128,7 @@ class WorkerSchedulerFactory(object):
             scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
 
 
-class Interface(object):
+class _Interface(object):
 
     def parse(self):
         raise NotImplementedError
@@ -144,7 +144,7 @@ class Interface(object):
         """
 
         if worker_scheduler_factory is None:
-            worker_scheduler_factory = WorkerSchedulerFactory()
+            worker_scheduler_factory = _WorkerSchedulerFactory()
         if override_defaults is None:
             override_defaults = {}
         env_params = core(**override_defaults)
@@ -192,12 +192,12 @@ class Interface(object):
         return success
 
 
-def add_task_parameters(parser, task_cls):
+def _add_task_parameters(parser, task_cls):
     for param_name, param in task_cls.get_params():
         param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, glob=False)
 
 
-def get_global_parameters():
+def _get_global_parameters():
     seen_params = set()
     for task_name, is_without_section, param_name, param in Register.get_all_params():
         if param in seen_params:
@@ -206,12 +206,12 @@ def get_global_parameters():
         yield task_name, is_without_section, param_name, param
 
 
-def add_global_parameters(parser):
-    for task_name, is_without_section, param_name, param in get_global_parameters():
+def _add_global_parameters(parser):
+    for task_name, is_without_section, param_name, param in _get_global_parameters():
         param.add_to_cmdline_parser(parser, param_name, task_name, glob=True, is_without_section=is_without_section)
 
 
-def get_task_parameters(task_cls, args):
+def _get_task_parameters(task_cls, args):
     # Parse a str->str dict to the correct types
     params = {}
     for param_name, param in task_cls.get_params():
@@ -219,13 +219,13 @@ def get_task_parameters(task_cls, args):
     return params
 
 
-def set_global_parameters(args):
+def _set_global_parameters(args):
     # Note that this is not side effect free
-    for task_name, is_without_section, param_name, param in get_global_parameters():
+    for task_name, is_without_section, param_name, param in _get_global_parameters():
         param.set_global_from_args(param_name, task_name, args, is_without_section=is_without_section)
 
 
-class ArgParseInterface(Interface):
+class _ArgParseInterface(_Interface):
     """
     Takes the task as the command, with parameters specific to it.
     """
@@ -236,7 +236,7 @@ class ArgParseInterface(Interface):
 
         parser = argparse.ArgumentParser()
 
-        add_global_parameters(parser)
+        _add_global_parameters(parser)
 
         task_names = Register.task_names()
 
@@ -259,8 +259,8 @@ class ArgParseInterface(Interface):
         # Add both task and global params here so that we can support both:
         # test.py --global-param xyz Test --n 42
         # test.py Test --n 42 --global-param xyz
-        add_global_parameters(subparser)
-        add_task_parameters(subparser, task_cls)
+        _add_global_parameters(subparser)
+        _add_task_parameters(subparser, task_cls)
 
         # Workaround for bug in argparse for Python 2.7.9
         # See https://mail.python.org/pipermail/python-dev/2015-January/137699.html
@@ -270,8 +270,8 @@ class ArgParseInterface(Interface):
                 setattr(args, key, value)
 
         # Notice that this is not side effect free because it might set global params
-        set_global_parameters(args)
-        task_params = get_task_parameters(task_cls, args)
+        _set_global_parameters(args)
+        task_params = _get_task_parameters(task_cls, args)
 
         return [task_cls(**task_params)]
 
@@ -279,7 +279,7 @@ class ArgParseInterface(Interface):
         return self.parse_task(cmdline_args)
 
 
-class DynamicArgParseInterface(ArgParseInterface):
+class _DynamicArgParseInterface(_ArgParseInterface):
     """
     Uses --module as a way to load modules dynamically
 
@@ -298,7 +298,7 @@ class DynamicArgParseInterface(ArgParseInterface):
 
         parser = argparse.ArgumentParser()
 
-        add_global_parameters(parser)
+        _add_global_parameters(parser)
 
         args, unknown = parser.parse_known_args(args=[a for a in cmdline_args if a != '--help'])
         module = args.module
@@ -326,9 +326,9 @@ def run(cmdline_args=None, main_task_cls=None,
         cmdline_args = sys.argv[1:]
 
     if use_dynamic_argparse:
-        interface = DynamicArgParseInterface()
+        interface = _DynamicArgParseInterface()
     else:
-        interface = ArgParseInterface()
+        interface = _ArgParseInterface()
     if main_task_cls:
         cmdline_args.insert(0, main_task_cls.task_family)
     if local_scheduler:
@@ -355,9 +355,9 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     :param tasks:
     :param worker_scheduler_factory:
     :param env_params:
-    :return:
+    :return: True if there were no scheduling errors, even if tasks may fail.
     """
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
 
-    Interface.run(tasks, worker_scheduler_factory, override_defaults=env_params)
+    return _Interface.run(tasks, worker_scheduler_factory, override_defaults=env_params)
