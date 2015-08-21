@@ -5,6 +5,7 @@ function visualiserApp(luigi) {
     var invertDependencies = false;
     var typingTimer = 0;
     var visType = 'd3';
+    var dt; // DataTable instantiated in $(document).ready()
 
     function loadTemplates() {
         $("script[type='text/template']").each(function(i, element) {
@@ -523,7 +524,7 @@ function visualiserApp(luigi) {
             $("#workerList").append(renderWorkers(workers));
         });
 
-        var dt = $('#taskTable').DataTable({
+        dt = $('#taskTable').DataTable({
             columns: [
                 {
                     className:      'details-control',
