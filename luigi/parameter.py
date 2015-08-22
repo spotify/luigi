@@ -190,7 +190,7 @@ class Parameter(object):
         return _no_value
 
     @property
-    def has_value(self):
+    def _has_value(self):
         """
         ``True`` if a default was specified or if config_path references a valid entry in the conf.
 
@@ -205,7 +205,7 @@ class Parameter(object):
         return self._get_value() != _no_value
 
     @property
-    def value(self):
+    def _value(self):
         """
         The value for this Parameter.
 
@@ -231,7 +231,7 @@ class Parameter(object):
         else:
             return value
 
-    def set_global(self, value):
+    def _set_global(self, value):
         """
         Set the global value of this Parameter.
 
@@ -239,7 +239,7 @@ class Parameter(object):
         """
         self.__global = value
 
-    def reset_global(self):
+    def _reset_global(self):
         self.__global = _no_value
 
     def parse(self, x):
@@ -299,10 +299,7 @@ class Parameter(object):
         else:
             return self.parse(x)
 
-    def serialize_to_input(self, x):
-        return self.serialize(x)
-
-    def parser_dest(self, param_name, task_name, glob=False, is_without_section=False):
+    def _parser_dest(self, param_name, task_name, glob=False, is_without_section=False):
         if is_without_section:
             if glob:
                 return param_name
@@ -315,7 +312,10 @@ class Parameter(object):
                 return param_name
 
     def add_to_cmdline_parser(self, parser, param_name, task_name, glob=False, is_without_section=False):
-        dest = self.parser_dest(param_name, task_name, glob, is_without_section=is_without_section)
+        """
+        Internally used from interface.py, this method will probably be removed.
+        """
+        dest = self._parser_dest(param_name, task_name, glob, is_without_section=is_without_section)
         if not dest:
             return
         flag = '--' + dest.replace('_', '-')
@@ -341,21 +341,27 @@ class Parameter(object):
                             dest=dest)
 
     def parse_from_args(self, param_name, task_name, args, params):
+        """
+        Internally used from interface.py, this method will probably be removed.
+        """
         # Note: modifies arguments
-        dest = self.parser_dest(param_name, task_name, glob=False)
+        dest = self._parser_dest(param_name, task_name, glob=False)
         if dest is not None:
             value = getattr(args, dest, None)
             params[param_name] = self.parse_from_input(param_name, value, task_name=task_name)
 
     def set_global_from_args(self, param_name, task_name, args, is_without_section=False):
+        """
+        Internally used from interface.py, this method will probably be removed.
+        """
         # Note: side effects
-        dest = self.parser_dest(param_name, task_name, glob=True, is_without_section=is_without_section)
+        dest = self._parser_dest(param_name, task_name, glob=True, is_without_section=is_without_section)
         if dest is not None:
             value = getattr(args, dest, None)
             if value:
-                self.set_global(self.parse_from_input(param_name, value, task_name=task_name))
+                self._set_global(self.parse_from_input(param_name, value, task_name=task_name))
             else:  # either False (bools) or None (everything else)
-                self.reset_global()
+                self._reset_global()
 
 
 class DateParameterBase(Parameter):
