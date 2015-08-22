@@ -21,7 +21,7 @@ import luigi
 import luigi.date_interval
 import luigi.notifications
 import sys
-from luigi.interface import core, Interface, WorkerSchedulerFactory
+from luigi.interface import core, _WorkerSchedulerFactory
 from luigi.worker import Worker
 from mock import Mock, patch
 from helpers import LuigiTestCase
@@ -35,7 +35,7 @@ class InterfaceTest(LuigiTestCase):
         self.worker = Worker()
         self.worker.stop = Mock()
 
-        self.worker_scheduler_factory = WorkerSchedulerFactory()
+        self.worker_scheduler_factory = _WorkerSchedulerFactory()
         self.worker_scheduler_factory.create_worker = Mock(return_value=self.worker)
         self.worker_scheduler_factory.create_local_scheduler = Mock()
         super(InterfaceTest, self).setUp()
@@ -51,12 +51,6 @@ class InterfaceTest(LuigiTestCase):
         self.worker.run = Mock(return_value=True)
 
         self.assertTrue(self._run_interface())
-
-    def test_interface_default_override_defaults(self):
-        self.worker.add = Mock(side_effect=[True, True])
-        self.worker.run = Mock(return_value=True)
-
-        self.assertTrue(Interface.run([self.task_a, self.task_b], self.worker_scheduler_factory))
 
     def test_interface_run_with_add_failure(self):
         self.worker.add = Mock(side_effect=[True, False])
@@ -84,7 +78,7 @@ class InterfaceTest(LuigiTestCase):
             luigi.run(main_task_cls=MyOtherTestTask)
 
     def _run_interface(self):
-        return Interface.run([self.task_a, self.task_b], self.worker_scheduler_factory, {'no_lock': True})
+        return luigi.interface.build([self.task_a, self.task_b], worker_scheduler_factory=self.worker_scheduler_factory)
 
 
 if __name__ == '__main__':

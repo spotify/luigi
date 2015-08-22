@@ -22,7 +22,6 @@ from helpers import unittest
 
 import luigi
 import luigi.notifications
-from luigi.interface import ArgParseInterface
 from luigi.mock import MockTarget
 from luigi.parameter import MissingParameterException
 from luigi.util import common_params, copies, delegates, inherits, requires
