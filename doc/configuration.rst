@@ -7,7 +7,7 @@ All configuration can be done by adding a configuration files. They are looked f
  * ``luigi.cfg`` (or its legacy name ``client.cfg``) in your current working directory
  * ``LUIGI_CONFIG_PATH`` environment variable
 
-in increasing order of preference. The order only matters in case of key conflicts (see docs for ConfigParser_)
+in increasing order of preference. The order only matters in case of key conflicts (see docs for ConfigParser_). These configuration files are meant for the client, *not* ``luigid``.
 
 .. _ConfigParser: https://docs.python.org/2/library/configparser.html
 
