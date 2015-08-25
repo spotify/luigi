@@ -74,7 +74,7 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
         """
 
         cmd = load_hadoop_cmd() + ['fs', '-stat', path]
-        logger.debug('Running file existence check: %s', u' '.join(cmd))
+        logger.debug('Running file existence check: %s', subprocess.list2cmdline(cmd))
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, universal_newlines=True)
         stdout, stderr = p.communicate()
         if p.returncode == 0:

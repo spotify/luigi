@@ -110,7 +110,7 @@ class PigJobTask(luigi.Task):
 
         cmd = [self.pig_command_path()] + opts + ["-f", self.pig_script_path()]
 
-        logger.info(' '.join(cmd))
+        logger.info(subprocess.list2cmdline(cmd))
         return cmd
 
     def run(self):

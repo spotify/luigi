@@ -184,12 +184,12 @@ class ScaldingJobRunner(luigi.contrib.hadoop.JobRunner):
         arglist = ['java', '-cp', scala_cp, 'scala.tools.nsc.Main',
                    '-classpath', classpath,
                    '-d', build_dir, job_src]
-        logger.info('Compiling scala source: %s', ' '.join(arglist))
+        logger.info('Compiling scala source: %s', subprocess.list2cmdline(arglist))
         subprocess.check_call(arglist)
 
         # build job jar file
         arglist = ['jar', 'cf', job_jar, '-C', build_dir, '.']
-        logger.info('Building job jar: %s', ' '.join(arglist))
+        logger.info('Building job jar: %s', subprocess.list2cmdline(arglist))
         subprocess.check_call(arglist)
         return job_jar
 
@@ -215,7 +215,7 @@ class ScaldingJobRunner(luigi.contrib.hadoop.JobRunner):
         hadoop_cp = ':'.join(filter(None, jars))
         env['HADOOP_CLASSPATH'] = hadoop_cp
         logger.info("Submitting Hadoop job: HADOOP_CLASSPATH=%s %s",
-                    hadoop_cp, ' '.join(arglist))
+                    hadoop_cp, subprocess.list2cmdline(arglist))
         luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, env=env)
 
         for a, b in tmp_files:
