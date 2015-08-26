@@ -228,7 +228,7 @@ class Task(object):
             param_name, param_obj = positional_params[i]
             result[param_name] = arg
 
-        # Then the optional arguments
+        # Then the keyword arguments
         for param_name, arg in six.iteritems(kwargs):
             if param_name in result:
                 raise parameter.DuplicateParameterException('%s: parameter %s was already set as a positional parameter' % (exc_desc, param_name))
