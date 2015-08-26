@@ -203,19 +203,16 @@ class Task(object):
         self.failures.add_failure()
 
     def has_excessive_failures(self):
-
-        excessive_failures = False
-
         if (self.failures.first_failure_time is not None and
                 self.disable_hard_timeout):
             if (time.time() >= self.failures.first_failure_time +
                     self.disable_hard_timeout):
-                excessive_failures = True
+                return True
 
         if self.failures.num_failures() >= self.disable_failures:
-            excessive_failures = True
+            return True
 
-        return excessive_failures
+        return False
 
     def can_disable(self):
         return (self.disable_failures is not None or
