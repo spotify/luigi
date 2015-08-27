@@ -476,15 +476,17 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         self.assertRaises(luigi.parameter.ParameterException, f)  # ISO 8601 durations with months are not supported
 
     def testHasDefaultNoSection(self):
-        self.assertFalse(luigi.Parameter(config_path=dict(section="foo", name="bar"))._has_value)
+        self.assertRaises(luigi.parameter.MissingParameterException,
+                          lambda: _value(luigi.Parameter(config_path=dict(section="foo", name="bar"))))
 
     @with_config({"foo": {}})
     def testHasDefaultNoValue(self):
-        self.assertFalse(luigi.Parameter(config_path=dict(section="foo", name="bar"))._has_value)
+        self.assertRaises(luigi.parameter.MissingParameterException,
+                          lambda: _value(luigi.Parameter(config_path=dict(section="foo", name="bar"))))
 
     @with_config({"foo": {"bar": "baz"}})
     def testHasDefaultWithBoth(self):
-        self.assertTrue(luigi.Parameter(config_path=dict(section="foo", name="bar"))._has_value)
+        self.assertTrue(_value(luigi.Parameter(config_path=dict(section="foo", name="bar"))))
 
     @with_config({"foo": {"bar": "baz"}})
     def testWithDefault(self):
