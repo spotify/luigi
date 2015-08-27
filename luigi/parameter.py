@@ -163,31 +163,31 @@ class Parameter(object):
         return self.parse(value)
 
     def _get_value(self, task_name=None, param_name=None):
-        if self.__global != _no_value:
-            return self.__global
-        if task_name and param_name:
-            v = self._get_value_from_config(task_name, param_name)
-            if v != _no_value:
-                return v
-            v = self._get_value_from_config(task_name, param_name.replace('_', '-'))
-            if v != _no_value:
-                warnings.warn(
-                    'The use of the configuration [%s] %s (with dashes) should be avoided. Please use underscores.' %
-                    (task_name, param_name), DeprecationWarning, stacklevel=2)
-                return v
-        if self.__config:
-            v = self._get_value_from_config(self.__config['section'], self.__config['name'])
-            if v != _no_value and task_name and param_name:
-                warnings.warn(
-                    'The use of the configuration [%s] %s is deprecated. Please use [%s] %s' %
-                    (self.__config['section'], self.__config['name'], task_name, param_name),
-                    DeprecationWarning, stacklevel=2)
-            if v != _no_value:
-                return v
-        if self.__default != _no_value:
-            return self.__default
-
+        for value, warn in self._value_iterator(task_name, param_name):
+            if value != _no_value:
+                if warn:
+                    warnings.warn(warn, DeprecationWarning, stacklevel=2)
+                return value
         return _no_value
+
+    def _value_iterator(self, task_name, param_name):
+        """
+        Yield the parameter values, with optional deprecation warning as second tuple value.
+
+        The parameter value will be whatever non-_no_value that is yielded first.
+        """
+        yield (self.__global, None)
+        if task_name and param_name:
+            yield (self._get_value_from_config(task_name, param_name), None)
+            yield (self._get_value_from_config(task_name, param_name.replace('_', '-')),
+                   'Configuration [{}] {} (with dashes) should be avoided. Please use underscores.'.format(
+                   task_name, param_name))
+        if self.__config:
+            yield (self._get_value_from_config(self.__config['section'], self.__config['name']),
+                   (task_name and param_name and
+                    'The use of the configuration [{}] {} is deprecated. Please use [{}] {}'.format(
+                        self.__config['section'], self.__config['name'], task_name, param_name)))
+        yield (self.__default, None)
 
     @property
     def _has_value(self):
