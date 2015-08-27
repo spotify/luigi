@@ -189,38 +189,6 @@ class Parameter(object):
                         self.__config['section'], self.__config['name'], task_name, param_name)))
         yield (self.__default, None)
 
-    @property
-    def _has_value(self):
-        """
-        ``True`` if a default was specified or if config_path references a valid entry in the conf.
-
-        Note that "value" refers to the Parameter object itself - it can be either
-
-        1. The default value for this parameter
-        2. A value read from the config
-        3. A global value
-
-        Any Task instance can have its own value set that overrides this.
-        """
-        return self._get_value() != _no_value
-
-    @property
-    def _value(self):
-        """
-        The value for this Parameter.
-
-        This refers to any value defined by a default, a config option, or
-        a global value.
-
-        :raises MissingParameterException: if a value is not set.
-        :return: the parsed value.
-        """
-        value = self._get_value()
-        if value == _no_value:
-            raise MissingParameterException("No default specified")
-        else:
-            return value
-
     def has_task_value(self, task_name, param_name):
         return self._get_value(task_name, param_name) != _no_value
 
