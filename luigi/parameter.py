@@ -162,7 +162,7 @@ class Parameter(object):
 
         return self.parse(value)
 
-    def _get_value(self, task_name=None, param_name=None):
+    def _get_value(self, task_name, param_name):
         for value, warn in self._value_iterator(task_name, param_name):
             if value != _no_value:
                 if warn:
@@ -177,16 +177,14 @@ class Parameter(object):
         The parameter value will be whatever non-_no_value that is yielded first.
         """
         yield (self.__global, None)
-        if task_name and param_name:
-            yield (self._get_value_from_config(task_name, param_name), None)
-            yield (self._get_value_from_config(task_name, param_name.replace('_', '-')),
-                   'Configuration [{}] {} (with dashes) should be avoided. Please use underscores.'.format(
-                   task_name, param_name))
+        yield (self._get_value_from_config(task_name, param_name), None)
+        yield (self._get_value_from_config(task_name, param_name.replace('_', '-')),
+               'Configuration [{}] {} (with dashes) should be avoided. Please use underscores.'.format(
+               task_name, param_name))
         if self.__config:
             yield (self._get_value_from_config(self.__config['section'], self.__config['name']),
-                   (task_name and param_name and
-                    'The use of the configuration [{}] {} is deprecated. Please use [{}] {}'.format(
-                        self.__config['section'], self.__config['name'], task_name, param_name)))
+                   'The use of the configuration [{}] {} is deprecated. Please use [{}] {}'.format(
+                   self.__config['section'], self.__config['name'], task_name, param_name))
         yield (self.__default, None)
 
     def has_task_value(self, task_name, param_name):
