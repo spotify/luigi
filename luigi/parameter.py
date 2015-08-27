@@ -204,23 +204,6 @@ class Parameter(object):
         """
         return self._get_value() != _no_value
 
-    @property
-    def _value(self):
-        """
-        The value for this Parameter.
-
-        This refers to any value defined by a default, a config option, or
-        a global value.
-
-        :raises MissingParameterException: if a value is not set.
-        :return: the parsed value.
-        """
-        value = self._get_value()
-        if value == _no_value:
-            raise MissingParameterException("No default specified")
-        else:
-            return value
-
     def has_task_value(self, task_name, param_name):
         return self._get_value(task_name, param_name) != _no_value
 
