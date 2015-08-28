@@ -22,7 +22,7 @@ Example configuration section in luigi.cfg::
     # pig home directory
     home: /usr/share/pig
 """
-
+from contextlib import contextmanager
 import logging
 import os
 import select
@@ -95,27 +95,32 @@ class PigJobTask(luigi.Task):
         """
         raise NotImplementedError("subclass should define pig_script_path")
 
+    @contextmanager
     def _build_pig_cmd(self):
         opts = self.pig_options()
 
-        for k, v in six.iteritems(self.pig_parameters()):
-            opts.append("-p")
-            opts.append("%s=%s" % (k, v))
+        line = lambda k, v: ('%s=%s%s' % (k, v, os.linesep)).encode('utf-8')
+        with tempfile.NamedTemporaryFile() as param_file, tempfile.NamedTemporaryFile() as prop_file:
+            if self.pig_parameters():
+                items = six.iteritems(self.pig_parameters())
+                param_file.writelines(line(k, v) for (k, v) in items)
+                opts.append('-param_file')
+                opts.append(param_file.name)
 
-        if self.pig_properties():
-            with open('pig_property_file', 'w') as prop_file:
-                prop_file.writelines(["%s=%s%s" % (k, v, os.linesep) for (k, v) in six.iteritems(self.pig_properties())])
-            opts.append('-propertyFile')
-            opts.append('pig_property_file')
+            if self.pig_properties():
+                items = six.iteritems(self.pig_properties())
+                prop_file.writelines(line(k, v) for (k, v) in items)
+                opts.append('-propertyFile')
+                opts.append(prop_file.name)
 
-        cmd = [self.pig_command_path()] + opts + ["-f", self.pig_script_path()]
+            cmd = [self.pig_command_path()] + opts + ["-f", self.pig_script_path()]
 
-        logger.info(subprocess.list2cmdline(cmd))
-        return cmd
+            logger.info(subprocess.list2cmdline(cmd))
+            yield cmd
 
     def run(self):
-        cmd = self._build_pig_cmd()
-        self.track_and_progress(cmd)
+        with self._build_pig_cmd() as cmd:
+            self.track_and_progress(cmd)
 
     def track_and_progress(self, cmd):
         temp_stdout = tempfile.TemporaryFile()
