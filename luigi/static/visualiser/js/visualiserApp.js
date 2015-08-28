@@ -127,15 +127,15 @@ function visualiserApp(luigi) {
         });
         // Searched content will be <icon> <category>.
         var pattern = '\\b(' + activeBoxes.join('|') + ')\\b';
-        dt.column(1).search(pattern, regex=true).draw();
+        dt.column(0).search(pattern, regex=true).draw();
     }
 
     function filterByTask(task, dt) {
         if (task === null) {
-            dt.column(2).search('').draw();
+            dt.column(1).search('').draw();
         }
         else {
-            dt.column(2).search('^' + task + '$', regex = true).draw();
+            dt.column(1).search('^' + task + '$', regex = true).draw();
         }
     }
 
@@ -519,7 +519,7 @@ function visualiserApp(luigi) {
         $('#'+category+'_info').find('.info-box-number').html(displayTasks.length);
         dt.draw();
 
-        $('.sidebar').html(renderSidebar(dt.column(2).data()));
+        $('.sidebar').html(renderSidebar(dt.column(1).data()));
         $('.sidebar-menu').on('click', 'li', function () {
             if (this.dataset.task) {
                 selectSidebarItem(this);
@@ -561,12 +561,6 @@ function visualiserApp(luigi) {
         dt = $('#taskTable').DataTable({
             columns: [
                 {
-                    className:      'details-control',
-                    orderable:      false,
-                    data:           null,
-                    defaultContent: '<i class="fa fa-plus-square-o"></i>'
-                },
-                {
                     data: 'category',
                     render: function (data, type, row) {
                         return taskCategoryIcon(data)+' '+data;
@@ -576,6 +570,8 @@ function visualiserApp(luigi) {
                 {data: 'taskParams'},
                 {data: 'displayTime'},
                 {
+                    className: 'details-control',
+                    orderable: false,
                     data: null,
                     render: function (data, type, row) {
                         return Mustache.render(templates['actionsTemplate'], row);
@@ -624,7 +620,7 @@ function visualiserApp(luigi) {
         //$("#graphPlaceholder")[0].graph = graph;
         // Add event listener for opening and closing details
 
-        $('#taskTable tbody').on('click', 'td.details-control', function () {
+        $('#taskTable tbody').on('click', 'td.details-control .showError', function () {
             var tr = $(this).closest('tr');
             var row = dt.row( tr );
             var data = row.data();
@@ -632,12 +628,10 @@ function visualiserApp(luigi) {
             if ( row.child.isShown() ) {
                 // This row is already open - close it
                 row.child.hide();
-                $(this).html('<i class="fa fa-plus-square-o"></i>')
             }
             else {
                 // Open this row
                 row.child(Mustache.render(templates['rowDetailsTemplate'], data)).show();
-                $(this).html('<i class="fa fa-minus-square-o"></i>')
 
                 // If error state is present retrieve the error
                 if (data.error) {
