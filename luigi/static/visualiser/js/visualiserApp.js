@@ -131,7 +131,12 @@ function visualiserApp(luigi) {
     }
 
     function filterByTask(task, dt) {
-        dt.column(2).search(task).draw();
+        if (task === null) {
+            dt.column(2).search('').draw();
+        }
+        else {
+            dt.column(2).search('^' + task + '$', regex = true).draw();
+        }
     }
 
     function toggleInfoBox(infoBox) {
@@ -471,13 +476,43 @@ function visualiserApp(luigi) {
      */
     // Remove tasks of a given category and add new ones.
     function updateTaskCategory(dt, category, tasks) {
+        var taskMap = {};
+
+        var mostImportantCategory = function (cat1, cat2) {
+            var priorities = [
+                'RUNNING',
+                'DONE',
+                'PENDING',
+                'UPSTREAM_DISABLED',
+                'UPSTREAM_FAILED',
+                'DISABLED',
+                'FAILED'
+            ];
+            // NOTE : -1 indicates not in list
+            var i1 = priorities.indexOf(cat1);
+            var i2 = priorities.indexOf(cat2);
+            var ret;
+            if (i1 > i2) {
+                ret = cat1;
+            }
+            else {
+                ret = cat2;
+            }
+            return ret;
+        };
+
         dt.rows(function (i, data) {
+            taskMap[data.taskName] = data.category;
             return data.category === category;
         }).remove();
 
         var displayTasks = tasks.map(taskToRowData);
-        displayTasks.forEach(function (obj) {
-            obj.category = category;
+        displayTasks = displayTasks.filter(function (obj) {
+            if (category === mostImportantCategory(category, taskMap[obj.taskName])) {
+                obj.category = category;
+                return true;
+            }
+            return false;
         });
         dt.rows.add(displayTasks);
 
@@ -492,7 +527,7 @@ function visualiserApp(luigi) {
                     filterByTask(this.dataset.task, dt);
                 }
                 else {
-                    filterByTask('', dt);
+                    filterByTask(null, dt);
                 }
             }
         });
