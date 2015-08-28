@@ -284,16 +284,6 @@
             {{/workers}}
         </script>
 
-        <script type="text/template" name="checkboxesTemplate">
-            <div class="btn-group" data-toggle="buttons">
-                {{#categories}}
-                <label class="btn btn-default">
-                    <input type="checkbox" data-category="{{name}}" autocomplete="off"> {{{icon}}} {{label}}
-                </label>
-                {{/categories}}
-            </div>
-        </script>
-
         <script type="text/template" name="sidebarTemplate">
             <ul class="sidebar-menu">
                 <li class="header">TASKS</li>
@@ -345,7 +335,7 @@
           <div class="content">
                 <div class="row">
                   <div class="col-md-3 col-sm-6 col-xs-12">
-                    <div class="info-box" data-color='yellow' data-category='pending' id="pendingInfo">
+                    <div class="info-box" data-color='yellow' data-category='PENDING' id="PENDING_info">
                       <span class="info-box-icon bg-yellow"><i class="fa fa-pause"></i></span>
                       <div class="info-box-content">
                         <span class="info-box-text">Pending Tasks</span>
@@ -355,7 +345,7 @@
                   </div>
 
                   <div class="col-md-3 col-sm-6 col-xs-12">
-                    <div class="info-box" data-color='aqua' data-category='running' id="runningInfo">
+                    <div class="info-box" data-color='aqua' data-category='RUNNING' id="RUNNING_info">
                       <span class="info-box-icon bg-aqua"><i class="fa fa-play"></i></span>
                       <div class="info-box-content">
                         <span class="info-box-text">Running Tasks</span>
@@ -365,7 +355,7 @@
                   </div>
 
                   <div class="col-md-3 col-sm-6 col-xs-12">
-                    <div class="info-box" data-color='green' data-category='done' id="doneInfo">
+                    <div class="info-box" data-color='green' data-category='DONE' id="DONE_info">
                       <span class="info-box-icon bg-green"><i class="fa fa-check"></i></span>
                       <div class="info-box-content">
                         <span class="info-box-text">Done Tasks</span>
@@ -375,7 +365,7 @@
                   </div>
 
                   <div class="col-md-3 col-sm-6 col-xs-12">
-                    <div class="info-box" data-color='red' data-category='failed' id="failedInfo">
+                    <div class="info-box" data-color='red' data-category='FAILED' id="FAILED_info">
                       <span class="info-box-icon bg-red"><i class="fa fa-times"></i></span>
                       <div class="info-box-content">
                         <span class="info-box-text">Failed Tasks</span>
@@ -385,7 +375,7 @@
                   </div>
 
                   <div class="col-md-3 col-sm-6 col-xs-12">
-                    <div class="info-box" data-color='maroon' data-category='upstreamFailed' id="upstreamFailedInfo">
+                    <div class="info-box" data-color='maroon' data-category='UPSTREAM_FAILED' id="UPSTREAM_FAILED_info">
                       <span class="info-box-icon bg-maroon"><i class="fa fa-warning"></i></span>
                       <div class="info-box-content">
                         <span class="info-box-text">Upstream Failure</span>
@@ -395,7 +385,7 @@
                   </div>
 
                   <div class="col-md-3 col-sm-6 col-xs-12">
-                    <div class="info-box" data-color='gray' data-category='disabled' id="disabledInfo">
+                    <div class="info-box" data-color='gray' data-category='DISABLED' id="DISABLED_info">
                       <span class="info-box-icon bg-gray"><i class="fa fa-minus-circle"></i></span>
                       <div class="info-box-content">
                         <span class="info-box-text">Disabled Tasks</span>
@@ -405,7 +395,7 @@
                   </div>
 
                   <div class="col-md-3 col-sm-6 col-xs-12">
-                    <div class="info-box" data-color='gray' data-category='upstreamDisabled' id="upstreamDisabledInfo">
+                    <div class="info-box" data-color='gray' data-category='UPSTREAM_DISABLED' id="UPSTREAM_DISABLED_info">
                       <span class="info-box-icon bg-gray"><i class="fa fa-warning"></i></span>
                       <div class="info-box-content">
                         <span class="info-box-text">Upstream Disabled</span>

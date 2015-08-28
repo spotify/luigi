@@ -1,5 +1,3 @@
-var debugHook;
-
 function visualiserApp(luigi) {
     var templates = {};
     var invertDependencies = false;
@@ -78,31 +76,31 @@ function visualiserApp(luigi) {
         var iconClass;
         var iconColor;
         switch (category) {
-            case 'pending':
+            case 'PENDING':
                 iconClass = 'fa-pause';
                 iconColor = 'yellow';
                 break;
-            case 'running':
+            case 'RUNNING':
                 iconClass = 'fa-play';
                 iconColor = 'aqua';
                 break;
-            case 'done':
+            case 'DONE':
                 iconClass = 'fa-check';
                 iconColor = 'green';
                 break;
-            case 'failed':
+            case 'FAILED':
                 iconClass = 'fa-times';
                 iconColor = 'red';
                 break;
-            case 'disabled':
+            case 'DISABLED':
                 iconClass = 'fa-minus-circle';
                 iconColor = 'gray';
                 break;
-            case 'upstreamFailed':
+            case 'UPSTREAM_FAILED':
                 iconClass = 'fa-warning';
                 iconColor = 'maroon';
                 break;
-            case 'upstreamDisabled':
+            case 'UPSTREAM_DISABLED':
                 iconClass = 'fa-warning';
                 iconColor = 'gray';
                 break;
@@ -127,7 +125,8 @@ function visualiserApp(luigi) {
                 activeBoxes.push(infoBoxes[i].dataset.category);
             }
         });
-        var pattern = '(' + activeBoxes.join('|') + ')';
+        // Searched content will be <icon> <category>.
+        var pattern = '\\b(' + activeBoxes.join('|') + ')\\b';
         dt.column(1).search(pattern, regex=true).draw();
     }
 
@@ -482,7 +481,7 @@ function visualiserApp(luigi) {
         });
         dt.rows.add(displayTasks);
 
-        $('#'+category+'Info').find('.info-box-number').html(displayTasks.length);
+        $('#'+category+'_info').find('.info-box-number').html(displayTasks.length);
         dt.draw();
 
         $('.sidebar').html(renderSidebar(dt.column(2).data()));
@@ -535,7 +534,7 @@ function visualiserApp(luigi) {
                 {
                     data: 'category',
                     render: function (data, type, row) {
-                        return taskCategoryIcon(data)+' '+row.status;
+                        return taskCategoryIcon(data)+' '+data;
                     }
                 },
                 {data: 'taskName'},
@@ -551,31 +550,31 @@ function visualiserApp(luigi) {
         });
         
         luigi.getRunningTaskList(function(runningTasks) {
-            updateTaskCategory(dt, 'running', runningTasks);
+            updateTaskCategory(dt, 'RUNNING', runningTasks);
         });
 
         luigi.getFailedTaskList(function(failedTasks) {
-            updateTaskCategory(dt, 'failed', failedTasks);
+            updateTaskCategory(dt, 'FAILED', failedTasks);
         });
 
         luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
-            updateTaskCategory(dt, 'upstreamFailed', upstreamFailedTasks);
+            updateTaskCategory(dt, 'UPSTREAM_FAILED', upstreamFailedTasks);
         });
 
         luigi.getDisabledTaskList(function(disabledTasks) {
-            updateTaskCategory(dt, 'disabled', disabledTasks);
+            updateTaskCategory(dt, 'DISABLED', disabledTasks);
         });
 
         luigi.getUpstreamDisabledTaskList(function(upstreamDisabledTasks) {
-            updateTaskCategory(dt, 'upstreamDisabled', upstreamDisabledTasks);
+            updateTaskCategory(dt, 'UPSTREAM_DISABLED', upstreamDisabledTasks);
         });
 
         luigi.getPendingTaskList(function(pendingTasks) {
-            updateTaskCategory(dt, 'pending', pendingTasks);
+            updateTaskCategory(dt, 'PENDING', pendingTasks);
         });
 
         luigi.getDoneTaskList(function(doneTasks) {
-            updateTaskCategory(dt, 'done', doneTasks);
+            updateTaskCategory(dt, 'DONE', doneTasks);
         });
 
         bindListEvents();
