@@ -319,11 +319,15 @@ class SimpleTaskState(object):
 
             # Convert from old format
             # TODO: this is really ugly, we need something more future-proof
-            # Every time we add an attribute to the Worker class, this code needs to be updated
+            # Every time we add an attribute to the Worker or Task class, this
+            # code needs to be updated
+
+            # Compatibility since 2014-06-02
             for k, v in six.iteritems(self._active_workers):
                 if isinstance(v, float):
                     self._active_workers[k] = Worker(worker_id=k, last_active=v)
 
+            # Compatibility since 2015-05-28
             if any(not hasattr(w, 'tasks') for k, w in six.iteritems(self._active_workers)):
                 # If you load from an old format where Workers don't contain tasks.
                 for k, worker in six.iteritems(self._active_workers):
@@ -331,6 +335,11 @@ class SimpleTaskState(object):
                 for task in six.itervalues(self._tasks):
                     for worker_id in task.workers:
                         self._active_workers[worker_id].tasks.add(task)
+
+            # Compatibility since 2015-04-28
+            if any(not hasattr(t, 'disable_hard_timeout') for t in six.itervalues(self._tasks)):
+                for t in six.itervalues(self._tasks):
+                    t.disable_hard_timeout = None
         else:
             logger.info("No prior state file exists at %s. Starting with clean slate", self._state_path)
 
