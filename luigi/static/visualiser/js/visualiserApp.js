@@ -244,12 +244,12 @@ function visualiserApp(luigi) {
                         }
                     }
                 }
-              bindGraphEvents();
             } else {
               $("#searchError").addClass("alert alert-error");
               $("#searchError").append("Couldn't find task " + taskId);
             }
             drawGraphETL(dependencyGraph, paint);
+            bindGraphEvents();
         }
 
         function depGraphCallback (dependencyGraph) {
@@ -302,16 +302,34 @@ function visualiserApp(luigi) {
     }
 
     function bindGraphEvents() {
-        $(".graph-node-a").click(function(event) {
-            var taskId = $(this).attr("data-task-id");
-            var status = $(this).attr("data-task-status");
-            if (status=="FAILED") {
+        if (visType === 'd3') {
+            $('.node').click(function(event) {
+                var taskDiv = $(this).find('.taskNode');
+                var taskId = taskDiv.attr("data-task-id");
                 event.preventDefault();
-                luigi.getErrorTrace(taskId, function(error) {
-                   showErrorTrace(error);
-                });
-            }
-        });
+                // NOTE : hasClass() not reliable inside SVG
+                if ($(this).attr('class').match(/\bFAILED\b/)) {
+                    luigi.getErrorTrace(taskId, function (error) {
+                        showErrorTrace(error);
+                    });
+                }
+                else {
+                    window.location.href = 'index.html#' + taskId;
+                }
+            })
+        }
+        else {
+            $(".graph-node-a").click(function(event) {
+                var taskId = $(this).attr("data-task-id");
+                var status = $(this).attr("data-task-status");
+                if (status=="FAILED") {
+                    event.preventDefault();
+                    luigi.getErrorTrace(taskId, function(error) {
+                       showErrorTrace(error);
+                    });
+                }
+            });
+        }
     }
 
     function bindListEvents() {
@@ -413,7 +431,7 @@ function visualiserApp(luigi) {
                 var task = tasks[id];
                 var className = task.status;
                     
-                var html = "<div onclick='window.location.href = \"" + "index.html#" + task.taskId + "\"'>";
+                var html = "<div class='taskNode' data-task-id='" + task.taskId + "'>";
                 html += "<span class=status></span>";
                 html += "<span class=name>"+task.name+"</span>";
                 html += "<span class=queue><span class=counter>"+ task.status +"</span></span>";
@@ -609,12 +627,6 @@ function visualiserApp(luigi) {
         });
 
         bindListEvents();
-
-        /* !TODO: Link errors
-               luigi.getErrorTrace($(this).attr("data-task-id"), function(error) {
-               showErrorTrace(error);
-            });
-         */
 
         //var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
         //$("#graphPlaceholder")[0].graph = graph;
