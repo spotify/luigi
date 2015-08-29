@@ -20,6 +20,6 @@ luigi.scalding has moved to luigi.contrib.scalding
 
 import warnings
 
-from luigi.contrib.scalding import *
+from luigi.contrib.scalding import *  # NOQA
 
 warnings.warn("luigi.scalding has now moved to luigi.contrib.scalding", DeprecationWarning, stacklevel=3)

@@ -99,7 +99,7 @@ class UNIXServerClient(object):
         self.unix_socket = os.path.join(self.temp_dir, 'luigid.sock')
 
     def run_server(self):
-        luigi.server.run(unix_socket=unix_socket)
+        luigi.server.run(unix_socket=self.unix_socket)
 
     def scheduler(self):
         url = ParseResult(

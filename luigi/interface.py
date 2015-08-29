@@ -238,8 +238,6 @@ class _ArgParseInterface(_Interface):
 
         _add_global_parameters(parser)
 
-        task_names = Register.task_names()
-
         # Parse global arguments and pull out the task name.
         # We used to do this using subparsers+command, but some issues with
         # argparse across different versions of Python (2.7.9) made it hard.

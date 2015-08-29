@@ -220,7 +220,6 @@ class HiveThriftContext(object):
 
     def __enter__(self):
         try:
-            from thrift import Thrift
             from thrift.transport import TSocket
             from thrift.transport import TTransport
             from thrift.protocol import TBinaryProtocol

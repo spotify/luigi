@@ -305,7 +305,7 @@ class TestSQLA(unittest.TestCase):
 
             def run(self):
                 out = self.output().open("w")
-                for task in TASK_LIST:
+                for task in self.TASK_LIST:
                     out.write("dummy_" + task)
                 out.close()
 
@@ -337,7 +337,7 @@ class TestSQLA(unittest.TestCase):
                 conn.execute(ins, ins_rows)
 
             def rows(self):
-                for task in TASK_LIST:
+                for task in self.TASK_LIST:
                     yield task.strip("\n").split("\t")
 
         # Running only task1, and task2 should fail

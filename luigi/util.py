@@ -23,7 +23,7 @@ from luigi import six
 
 from luigi import task
 from luigi import parameter
-from luigi.deprecate_kwarg import deprecate_kwarg  # removing this breaks code
+from luigi.deprecate_kwarg import deprecate_kwarg  # NOQA: removing this breaks code
 
 if six.PY3:
     xrange = range

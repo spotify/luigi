@@ -825,7 +825,7 @@ class CentralPlannerScheduler(Scheduler):
                     elif upstream_status_table[dep_id] == '' and dep.deps:
                         # This is the postorder update step when we set the
                         # status based on the previously calculated child elements
-                        upstream_status = [upstream_status_table.get(task_id, '') for task_id in dep.deps]
+                        upstream_status = [upstream_status_table.get(a_task_id, '') for a_task_id in dep.deps]
                         upstream_status.append('')  # to handle empty list
                         status = max(upstream_status, key=UPSTREAM_SEVERITY_KEY)
                         upstream_status_table[dep_id] = status

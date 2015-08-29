@@ -24,12 +24,11 @@ import signal
 import tempfile
 import threading
 import time
-from helpers import unittest, skipOnTravis
+from helpers import unittest, with_config, skipOnTravis
 
 import luigi.notifications
 import luigi.worker
 import mock
-from helpers import with_config, skipOnTravis
 from luigi import ExternalTask, RemoteScheduler, Task
 from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import CentralPlannerScheduler

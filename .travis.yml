@@ -14,7 +14,7 @@ env:
     - GCS_TEST_BUCKET=luigi-travistestenvironment
     - GOOGLE_APPLICATION_CREDENTIALS=test/gcloud-credentials.json
   matrix:
-    - TOXENV=pep8
+    - TOXENV=flake8
     - TOXENV=docs
     - TOXENV=py27-nonhdfs
     - TOXENV=py33-nonhdfs

@@ -53,7 +53,6 @@ import tornado.ioloop
 import tornado.netutil
 import tornado.web
 
-from luigi import configuration
 from luigi.scheduler import CentralPlannerScheduler
 
 
