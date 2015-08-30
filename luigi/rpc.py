@@ -25,7 +25,7 @@ import logging
 import socket
 import time
 
-from luigi.six.moves.urllib.parse import urljoin, urlencode
+from luigi.six.moves.urllib.parse import urljoin, urlencode, urlparse
 from luigi.six.moves.urllib.request import urlopen
 from luigi.six.moves.urllib.error import URLError
 
@@ -33,14 +33,14 @@ from luigi import configuration
 from luigi.scheduler import PENDING, Scheduler
 
 
-HAS_UNIX_SOCKETS = True
+HAS_UNIX_SOCKET = True
 HAS_REQUESTS = True
 
 
 try:
-    import requests_unixsockets as requests
+    import requests_unixsocket as requests
 except ImportError:
-    HAS_UNIX_SOCKETS = False
+    HAS_UNIX_SOCKET = False
     try:
         import requests
     except ImportError:
@@ -50,6 +50,18 @@ except ImportError:
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 
 
+def _urljoin(base, url):
+    """
+    Join relative URLs to base URLs like urllib.parse.urljoin but support
+    arbitrary URIs (esp. 'http+unix://').
+    """
+    parsed = urlparse(base)
+    scheme = parsed.scheme
+    return urlparse(
+        urljoin(parsed._replace(scheme='http').geturl(), url)
+    )._replace(scheme=scheme).geturl()
+
+
 class RPCError(Exception):
 
     def __init__(self, message, sub_exception=None):
@@ -57,32 +69,24 @@ class RPCError(Exception):
         self.sub_exception = sub_exception
 
 
-class FetcherException(Exception):
-    def __init__(self, original_exc):
-        self.original_exc = original_exc
-
-
 class URLLibFetcher(object):
+    raises = (URLError, socket.timeout)
+
     def fetch(self, full_url, body, timeout):
-        try:
-            body = urlencode(body).encode('utf-8')
-            return urlopen(full_url, body, timeout).read().decode('utf-8')
-        except (URLError, socket.timeout) as e:
-            raise FetcherException(e)
+        body = urlencode(body).encode('utf-8')
+        return urlopen(full_url, body, timeout).read().decode('utf-8')
 
 
 class RequestsFetcher(object):
     def __init__(self, session):
+        from requests import exceptions as requests_exceptions
+        self.raises = requests_exceptions.RequestException
         self.session = session
 
     def fetch(self, full_url, body, timeout):
-        from requests import exceptions as requests_exceptions
-        try:
-            resp = self.session.get(full_url, data=body, timeout=timeout)
-            resp.raise_for_status()
-            return resp.text
-        except (requests_exceptions.RequestException) as e:
-            raise FetcherException(e)
+        resp = self.session.get(full_url, data=body, timeout=timeout)
+        resp.raise_for_status()
+        return resp.text
 
 
 class RemoteScheduler(Scheduler):
@@ -91,9 +95,8 @@ class RemoteScheduler(Scheduler):
     """
 
     def __init__(self, url='http://localhost:8082/', connect_timeout=None):
-        assert (
-            not (url.startswith('http+unix://') and not HAS_UNIX_SOCKETS),
-            'You need to install requests-unixsocket for Unix socket support.',
+        assert not url.startswith('http+unix://') or HAS_UNIX_SOCKET, (
+            'You need to install requests-unixsocket for Unix socket support.'
         )
 
         self._url = url.rstrip('/')
@@ -112,7 +115,7 @@ class RemoteScheduler(Scheduler):
         time.sleep(30)
 
     def _fetch(self, url_suffix, body, log_exceptions=True, attempts=3):
-        full_url = urljoin(self._url, url_suffix)
+        full_url = _urljoin(self._url, url_suffix)
         last_exception = None
         attempt = 0
         while attempt < attempts:
@@ -123,8 +126,8 @@ class RemoteScheduler(Scheduler):
             try:
                 response = self._fetcher.fetch(full_url, body, self._connect_timeout)
                 break
-            except FetcherException as e:
-                last_exception = e.original_exc
+            except self._fetcher.raises as e:
+                last_exception = e
                 if log_exceptions:
                     logger.exception("Failed connecting to remote scheduler %r", self._url)
                 continue
