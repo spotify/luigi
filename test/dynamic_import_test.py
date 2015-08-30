@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import unittest, LuigiTestCase
+from helpers import LuigiTestCase
 
 import luigi
 import luigi.interface

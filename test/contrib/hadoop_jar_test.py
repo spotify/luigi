@@ -20,7 +20,7 @@ import tempfile
 import shlex
 from helpers import unittest
 from luigi.contrib.hadoop_jar import HadoopJarJobError, HadoopJarJobTask
-from mock import patch, MagicMock
+from mock import patch
 
 
 class TestHadoopJarJob(HadoopJarJobTask):

@@ -231,7 +231,7 @@ class FileSystemTest(unittest.TestCase):
 
     def test_listdir(self):
         os.mkdir(self.path)
-        with open(self.path + '/file', 'w') as fp:
+        with open(self.path + '/file', 'w'):
             pass
         self.assertTrue([self.path + '/file'], list(self.fs.listdir(self.path + '/')))
 

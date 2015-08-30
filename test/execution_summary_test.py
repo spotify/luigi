@@ -14,10 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import mock
-from helpers import unittest, LuigiTestCase
 
-from luigi import six
+from helpers import LuigiTestCase
 
 import luigi
 import luigi.worker
@@ -76,7 +74,12 @@ class ExecutionSummaryTest(LuigiTestCase):
         s = self.summary()
         self.assertIn('\n* 3 ran successfully:\n    - 3 Bar(num=', s)
         self.assertIn('\n* 1 present dependencies were encountered:\n    - 1 Bar(num=1)\n', s)
-        self.assertIn('\n* 1 failed:\n    - 1 Bar(num=0)\n* 1 were left pending, among these:\n    * 1 had failed dependencies:\n        - 1 Foo()\n\nThis progress looks :( because there were failed tasks', s)
+        self.assertIn('\n* 1 failed:\n'
+                      '    - 1 Bar(num=0)\n'
+                      '* 1 were left pending, among these:\n'
+                      '    * 1 had failed dependencies:\n'
+                      '        - 1 Foo()\n\n'
+                      'This progress looks :( because there were failed tasks', s)
         self.assertNotIn('\n\n\n', s)
 
     def test_upstream_not_running(self):
@@ -118,7 +121,11 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertIn('\n* 4 ran successfully:\n    - 4 Bar(num=1...4)\n', s)
         self.assertIn('\n* 1 failed:\n    - 1 Bar(num=0)\n', s)
         self.assertIn('\n* 5 were left pending, among these:\n    * 4 were missing external dependencies:\n        - 4 ExternalBar(num=', s)
-        self.assertIn('\n    * 1 had failed dependencies:\n        - 1 Foo()\n    * 1 had missing external dependencies:\n        - 1 Foo()\n\nThis progress looks :( because there were failed tasks\n', s)
+        self.assertIn('\n    * 1 had failed dependencies:\n'
+                      '        - 1 Foo()\n'
+                      '    * 1 had missing external dependencies:\n'
+                      '        - 1 Foo()\n\n'
+                      'This progress looks :( because there were failed tasks\n', s)
         self.assertNotIn('\n\n\n', s)
 
     def test_already_running(self):
@@ -166,8 +173,17 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertEqual({LockTask()}, d['run_by_other_worker'])
         self.assertEqual({ParentTask()}, d['upstream_run_by_other_worker'])
         s = self.summary()
-        self.assertIn('\nScheduled 2 tasks of which:\n* 2 were left pending, among these:\n    * 1 were being run by another worker:\n        - 1 LockTask()\n    * 1 had dependencies that were being run by other worker:\n        - 1 ParentTask()\n', s)
-        self.assertIn('\n\nThe other workers were:\n    - other_worker ran 1 tasks\n\nDid not run any tasks\nThis progress looks :) because there were no failed tasks or missing external dependencies\n', s)
+        self.assertIn('\nScheduled 2 tasks of which:\n'
+                      '* 2 were left pending, among these:\n'
+                      '    * 1 were being run by another worker:\n'
+                      '        - 1 LockTask()\n'
+                      '    * 1 had dependencies that were being run by other worker:\n'
+                      '        - 1 ParentTask()\n', s)
+        self.assertIn('\n\nThe other workers were:\n'
+                      '    - other_worker ran 1 tasks\n\n'
+                      'Did not run any tasks\n'
+                      'This progress looks :) because there were no failed '
+                      'tasks or missing external dependencies\n', s)
         self.assertNotIn('\n\n\n', s)
 
     def test_larger_tree(self):

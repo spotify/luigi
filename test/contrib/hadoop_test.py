@@ -116,7 +116,7 @@ class WordFreqJob(HadoopJobTask):
         return [(fn, 'my_dir/my_file')]
 
     def init_remote(self):
-        f = open('my_dir/my_file')  # make sure it exists
+        open('my_dir/my_file')  # make sure it exists
 
 
 class MapOnlyJob(HadoopJobTask):

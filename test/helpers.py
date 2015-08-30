@@ -17,7 +17,6 @@
 
 import functools
 import itertools
-import sys
 
 import luigi
 import luigi.task_register

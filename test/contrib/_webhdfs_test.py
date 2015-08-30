@@ -15,10 +15,7 @@
 # limitations under the License.
 #
 
-import datetime
 import os
-import posixpath
-import time
 from helpers import unittest
 
 from luigi.contrib import webhdfs

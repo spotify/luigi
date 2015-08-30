@@ -23,7 +23,7 @@ import luigi
 import luigi.date_interval
 import luigi.interface
 import luigi.notifications
-from luigi.mock import MockTarget, MockFileSystem
+from luigi.mock import MockTarget
 from luigi.parameter import ParameterException
 from worker_test import email_patch
 
@@ -262,7 +262,9 @@ class TestNewStyleGlobalParameters(LuigiTestCase):
         self.expect_keys(['banana-foo-bar', 'banana-dep-foo-bar'])
 
     def test_x_arg_y_arg_override_all(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg-y-arg', '--BananaDep-y', 'xyz', '--BananaDep-x', 'blabla'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo',
+                   '--y', 'bar', '--style', 'x-arg-y-arg', '--BananaDep-y',
+                   'xyz', '--BananaDep-x', 'blabla'])
         self.expect_keys(['banana-foo-bar', 'banana-dep-foo-bar'])
 
     def test_y_arg_override(self):
@@ -270,7 +272,9 @@ class TestNewStyleGlobalParameters(LuigiTestCase):
         self.expect_keys(['banana-foo-bar', 'banana-dep-xyz-bar'])
 
     def test_y_arg_override_both(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz', '--BananaDep-y', 'blah'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo',
+                   '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz',
+                   '--BananaDep-y', 'blah'])
         self.expect_keys(['banana-foo-bar', 'banana-dep-xyz-bar'])
 
     def test_y_arg_override_banana(self):

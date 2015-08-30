@@ -17,7 +17,6 @@
 
 from collections import OrderedDict
 import os
-import sys
 import tempfile
 from helpers import unittest
 

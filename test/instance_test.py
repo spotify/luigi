@@ -93,7 +93,7 @@ class InstanceTest(unittest.TestCase):
         class DummyTask(luigi.Task):
             x = luigi.Parameter()
 
-        dummy = DummyTask(x={})
+        dummy = DummyTask(x={})  # NOQA
 
 if __name__ == '__main__':
     unittest.main()
