@@ -12,7 +12,7 @@ then run one of the tox commands below.
 
     # These commands are pretty fast and will tell if you if you've
     # broken something major:
-    tox -e pep8
+    tox -e flake8
     tox -e py27-nonhdfs
     
     # You can also test particular files for even faster iterations
@@ -22,7 +22,7 @@ then run one of the tox commands below.
     tox -e py33-cdh
     tox -e py34-hdp
 
-Where ``pep8`` is the lint checking, ``py27`` is obviously Python 2.7.
+Where ``flake8`` is the lint checking, ``py27`` is obviously Python 2.7.
 ``nonhdfs`` are tests not running on the Hadoop minicluster and ``cdh`` and
 ``hdp`` are two different hadoop distributions. For most local development it's
 usually enough to run the lint checking and a python version for ``nonhdfs``

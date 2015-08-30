@@ -49,7 +49,8 @@ from luigi.event import Event
 from luigi.task_register import load_task
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
 from luigi.target import Target
-from luigi.task import Task, flatten, getpaths, TaskClassException, Config
+from luigi.task import Task, flatten, getpaths, Config
+from luigi.task_register import TaskClassException
 from luigi.parameter import FloatParameter, IntParameter, BoolParameter
 
 try:

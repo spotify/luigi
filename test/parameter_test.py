@@ -16,14 +16,13 @@
 #
 
 import datetime
-from helpers import unittest, LuigiTestCase
+from helpers import unittest, with_config, LuigiTestCase
 from datetime import timedelta
 
 import luigi
 import luigi.date_interval
 import luigi.interface
 import luigi.notifications
-from helpers import with_config, LuigiTestCase
 from luigi.mock import MockTarget, MockFileSystem
 from luigi.parameter import ParameterException
 from worker_test import email_patch

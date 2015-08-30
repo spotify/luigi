@@ -20,7 +20,7 @@ luigi.webhdfs has moved to luigi.contrib.webhdfs
 
 import warnings
 
-from luigi.contrib.webhdfs import *
+from luigi.contrib.webhdfs import *  # NOQA
 
 warnings.warn("luigi.webhdfs module has been moved to luigi.contrib.webhdfs",
               DeprecationWarning)

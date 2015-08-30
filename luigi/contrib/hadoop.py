@@ -304,7 +304,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
                 hadoop_context.job_id = job_id
 
         # Read the rest + stdout
-        err = ''.join(err_lines + [err_line for err_line in proc.stderr])
+        err = ''.join(err_lines + [an_err_line for an_err_line in proc.stderr])
         temp_stdout.seek(0)
         out = ''.join(temp_stdout.readlines())
 

@@ -21,7 +21,7 @@ The hive module has been moved to ``luigi.contrib.hive``
 
 import warnings
 
-from luigi.contrib.hive import *
+from luigi.contrib.hive import *  # NOQA
 
 warnings.warn("luigi.hive module has been moved to luigi.contrib.hive",
               DeprecationWarning)

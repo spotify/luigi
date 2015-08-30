@@ -49,7 +49,7 @@ class AmbiguousClass(luigi.Task):
     pass
 
 
-class AmbiguousClass(luigi.Task):
+class AmbiguousClass(luigi.Task):  # NOQA
     pass
 
 
@@ -59,7 +59,7 @@ class TaskWithSameName(luigi.Task):
         self.x = 42
 
 
-class TaskWithSameName(luigi.Task):
+class TaskWithSameName(luigi.Task):  # NOQA
     # there should be no ambiguity
 
     def run(self):

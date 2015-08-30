@@ -31,7 +31,7 @@ import warnings
 from luigi import six
 
 from luigi import parameter
-from luigi.task_register import Register, TaskClassException
+from luigi.task_register import Register
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')

@@ -21,7 +21,7 @@ luigi.hadoop_jar has moved to :py:mod:`luigi.contrib.hadoop_jar`
 
 import warnings
 
-from luigi.contrib.hadoop_jar import *
+from luigi.contrib.hadoop_jar import *  # NOQA
 
 warnings.warn("luigi.hadoop_jar module has been moved to luigi.contrib.hadoop_jar",
               DeprecationWarning)

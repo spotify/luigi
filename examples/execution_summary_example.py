@@ -47,9 +47,6 @@ You can run this example like this:
 
 
 from __future__ import print_function
-import os
-import shutil
-import time
 import datetime
 
 import luigi

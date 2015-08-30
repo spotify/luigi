@@ -148,7 +148,7 @@ class PigJobTask(luigi.Task):
                         logger.info(t)
 
         # Read the rest + stdout
-        err = ''.join(err_lines + [err_line.decode('utf8') for err_line in proc.stderr])
+        err = ''.join(err_lines + [an_err_line.decode('utf8') for an_err_line in proc.stderr])
         if proc.returncode == 0:
             logger.info("Job completed successfully!")
         else:

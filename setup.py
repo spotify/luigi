@@ -13,7 +13,6 @@
 # the License.
 
 import os
-import sys
 
 try:
     from setuptools import setup
@@ -22,7 +21,7 @@ except:
 
 
 def get_static_files(path):
-    return [os.path.join(dirpath.replace("luigi/", ""), ext) 
+    return [os.path.join(dirpath.replace("luigi/", ""), ext)
             for (dirpath, dirnames, filenames) in os.walk(path)
             for ext in ["*.html", "*.js", "*.css", "*.png"]]
 

@@ -25,7 +25,7 @@ import logging
 import socket
 import time
 
-from luigi.six.moves.urllib.parse import urljoin, urlencode, ParseResult
+from luigi.six.moves.urllib.parse import urljoin, urlencode
 from luigi.six.moves.urllib.request import urlopen
 from luigi.six.moves.urllib.error import URLError
 

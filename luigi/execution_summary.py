@@ -22,7 +22,6 @@ at the end of luigi invocations.
 """
 
 import textwrap
-import datetime
 
 
 def _partition_tasks(worker):
@@ -309,7 +308,6 @@ def _summary_format(set_tasks, worker):
     group_tasks = {}
     for status, task_dict in set_tasks.items():
         group_tasks[status] = _group_tasks_by_name_and_status(task_dict)
-    str_tasks = {}
     comments = _get_comments(group_tasks)
     num_all_tasks = len(set_tasks["already_done"]) + len(set_tasks["completed"]) + len(set_tasks["failed"]) + len(set_tasks["still_pending_ext"]) + len(set_tasks["still_pending_not_ext"])
     str_output = ''

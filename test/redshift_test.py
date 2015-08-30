@@ -31,7 +31,7 @@ from luigi.s3 import S3Client
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
     # spulec/moto#308
-    mock_s3 = unittest.skip('moto mock doesn\'t work with python3.4')
+    mock_s3 = unittest.skip('moto mock doesn\'t work with python3.4')  # NOQA
 
 
 luigi.notifications.DEBUG = True
