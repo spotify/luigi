@@ -27,7 +27,9 @@ from helpers import unittest, with_config, skipOnTravis
 import luigi.rpc
 import luigi.server
 from luigi.scheduler import CentralPlannerScheduler
-from luigi.six.moves.urllib.parse import urlencode, ParseResult
+from luigi.six.moves.urllib.parse import (
+    urlencode, ParseResult, quote as urlquote
+)
 
 from tornado.testing import AsyncHTTPTestCase
 from nose.plugins.attrib import attr
@@ -96,7 +98,7 @@ class INETServerClient(object):
 class UNIXServerClient(object):
     def __init__(self):
         self.tempdir = tempfile.mkdtemp()
-        self.unix_socket = os.path.join(self.temp_dir, 'luigid.sock')
+        self.unix_socket = os.path.join(self.tempdir, 'luigid.sock')
 
     def run_server(self):
         luigi.server.run(unix_socket=self.unix_socket)
@@ -104,7 +106,7 @@ class UNIXServerClient(object):
     def scheduler(self):
         url = ParseResult(
             scheme='http+unix',
-            netloc=self.unix_socket,
+            netloc=urlquote(self.unix_socket, safe=''),
             path='',
             params='',
             query='',
@@ -175,12 +177,12 @@ class URLLibServerTestRun(ServerTestRun):
         super(URLLibServerTestRun, self).start_server(*args, **kwargs)
 
 
-@attr('unix')
-class UNIXServerTestRun(unittest.TestCase):
+@attr('unixsocket')
+class UNIXServerTestRun(ServerTestRun):
     server_client_class = UNIXServerClient
 
     def tearDown(self):
-        super(self, ServerTestRun).tearDown()
+        super(UNIXServerTestRun, self).tearDown()
         shutil.rmtree(self.server_client.tempdir)
 
 
