@@ -25,6 +25,7 @@ import os
 import sys
 import tempfile
 import signal
+import warnings
 
 from luigi import configuration
 from luigi import lock
@@ -308,7 +309,7 @@ class _DynamicArgParseInterface(_ArgParseInterface):
 
 
 def run(cmdline_args=None, main_task_cls=None,
-        worker_scheduler_factory=None, use_dynamic_argparse=False, local_scheduler=False):
+        worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
     """
     Please dont use. Instead use `luigi` binary.
 
@@ -317,16 +318,17 @@ def run(cmdline_args=None, main_task_cls=None,
     :param cmdline_args:
     :param main_task_cls:
     :param worker_scheduler_factory:
-    :param use_dynamic_argparse:
+    :param use_dynamic_argparse: Deprecated and ignored
     :param local_scheduler:
     """
+    if use_dynamic_argparse is not None:
+        warnings.warn("use_dynamic_argparse is deprecated, don't set it.",
+                      DeprecationWarning, stacklevel=2)
     if cmdline_args is None:
         cmdline_args = sys.argv[1:]
 
-    if use_dynamic_argparse:
-        interface = _DynamicArgParseInterface()
-    else:
-        interface = _ArgParseInterface()
+    interface = _DynamicArgParseInterface()
+
     if main_task_cls:
         cmdline_args.insert(0, main_task_cls.task_family)
     if local_scheduler:
