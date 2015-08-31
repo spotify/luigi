@@ -622,7 +622,7 @@ class CentralPlannerScheduler(Scheduler):
                 self._update_task_history(task_id, status)
             self._state.set_status(task, PENDING if status == SUSPENDED else status, self._config)
             if status == FAILED:
-                task.retry = time.time() + self._config.retry_delay
+                task.retry = self._retry_time(task, self._config)
 
         if deps is not None:
             task.deps = set(deps)
@@ -696,6 +696,9 @@ class CentralPlannerScheduler(Scheduler):
             if dep_task is None or dep_task.status != DONE:
                 return False
         return True
+
+    def _retry_time(self, task, config):
+        return time.time() + config.retry_delay
 
     def get_work(self, host=None, assistant=False, **kwargs):
         # TODO: remove any expired nodes
