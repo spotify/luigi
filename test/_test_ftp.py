@@ -18,7 +18,6 @@
 import datetime
 import ftplib
 import os
-import time
 from helpers import unittest
 try:
     from cStringIO import StringIO

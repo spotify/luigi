@@ -26,7 +26,6 @@ import os
 
 import luigi
 from luigi.contrib import bigquery
-from luigi.contrib import gcs
 
 from contrib import gcs_test
 from nose.plugins.attrib import attr

@@ -20,12 +20,10 @@ try:
     import ConfigParser
 except ImportError:
     import configparser as ConfigParser
-import logging
 import mock
 import os
 import subprocess
 from helpers import unittest
-import warnings
 
 from luigi import six
 

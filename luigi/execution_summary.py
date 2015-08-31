@@ -33,10 +33,13 @@ def _partition_tasks(worker):
     pending_tasks = {task for(task, status, ext) in task_history if status == 'PENDING'}
     set_tasks = {}
     set_tasks["completed"] = {task for (task, status, ext) in task_history if status == 'DONE' and task in pending_tasks}
-    set_tasks["already_done"] = {task for (task, status, ext) in task_history if status == 'DONE' and task not in pending_tasks and task not in set_tasks["completed"]}
+    set_tasks["already_done"] = {task for (task, status, ext) in task_history
+                                 if status == 'DONE' and task not in pending_tasks and task not in set_tasks["completed"]}
     set_tasks["failed"] = {task for (task, status, ext) in task_history if status == 'FAILED'}
-    set_tasks["still_pending_ext"] = {task for (task, status, ext) in task_history if status == 'PENDING' and task not in set_tasks["failed"] and task not in set_tasks["completed"] and not ext}
-    set_tasks["still_pending_not_ext"] = {task for (task, status, ext) in task_history if status == 'PENDING' and task not in set_tasks["failed"] and task not in set_tasks["completed"] and ext}
+    set_tasks["still_pending_ext"] = {task for (task, status, ext) in task_history
+                                      if status == 'PENDING' and task not in set_tasks["failed"] and task not in set_tasks["completed"] and not ext}
+    set_tasks["still_pending_not_ext"] = {task for (task, status, ext) in task_history
+                                          if status == 'PENDING' and task not in set_tasks["failed"] and task not in set_tasks["completed"] and ext}
     set_tasks["run_by_other_worker"] = set()
     set_tasks["upstream_failure"] = set()
     set_tasks["upstream_missing_dependency"] = set()
@@ -75,7 +78,8 @@ def _depth_first_search(set_tasks, current_task, visited):
             if task in set_tasks["run_by_other_worker"] or task in set_tasks["upstream_run_by_other_worker"]:
                 set_tasks["upstream_run_by_other_worker"].add(current_task)
                 upstream_run_by_other_worker = True
-        if not upstream_failure and not upstream_missing_dependency and not upstream_run_by_other_worker and current_task not in set_tasks["run_by_other_worker"]:
+        if not upstream_failure and not upstream_missing_dependency and \
+                not upstream_run_by_other_worker and current_task not in set_tasks["run_by_other_worker"]:
             set_tasks["unknown_reason"].add(current_task)
 
 
@@ -97,7 +101,8 @@ def _get_str(task_dict, extra_indent):
             break
         if len(tasks[0].get_params()) == 0:
             row += '- {0} {1}()'.format(len(tasks), str(task_family))
-        elif _get_len_of_params(tasks[0]) > 60 or (len(tasks) == 2 and len(tasks[0].get_params()) > 1 and (_get_len_of_params(tasks[0]) > 40 or len(str(tasks[0])) > 100)) or len(str(tasks[0])) > 200:
+        elif _get_len_of_params(tasks[0]) > 60 or len(str(tasks[0])) > 200 or \
+                (len(tasks) == 2 and len(tasks[0].get_params()) > 1 and (_get_len_of_params(tasks[0]) > 40 or len(str(tasks[0])) > 100)):
             """
             This is to make sure that there is no really long task in the output
             """
@@ -287,7 +292,9 @@ def _get_external_workers(worker):
 
 def _group_tasks_by_name_and_status(task_dict):
     """
-    Takes a dictionary with sets of tasks grouped by their status and returns a dictionary with dictionaries with an array of tasks grouped by their status and task name
+    Takes a dictionary with sets of tasks grouped by their status and
+    returns a dictionary with dictionaries with an array of tasks grouped by
+    their status and task name
     """
     group_status = {}
     for task in task_dict:
@@ -309,7 +316,10 @@ def _summary_format(set_tasks, worker):
     for status, task_dict in set_tasks.items():
         group_tasks[status] = _group_tasks_by_name_and_status(task_dict)
     comments = _get_comments(group_tasks)
-    num_all_tasks = len(set_tasks["already_done"]) + len(set_tasks["completed"]) + len(set_tasks["failed"]) + len(set_tasks["still_pending_ext"]) + len(set_tasks["still_pending_not_ext"])
+    num_all_tasks = sum([len(set_tasks["already_done"]),
+                         len(set_tasks["completed"]), len(set_tasks["failed"]),
+                         len(set_tasks["still_pending_ext"]),
+                         len(set_tasks["still_pending_not_ext"])])
     str_output = ''
     str_output += 'Scheduled {0} tasks of which:\n'.format(num_all_tasks)
     for status in _ORDERED_STATUSES:

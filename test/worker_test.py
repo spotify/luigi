@@ -98,8 +98,8 @@ class DynamicRequiresOtherModule(Task):
 
     def run(self):
         import other_module
-        other_target_foo = yield other_module.OtherModuleTask(os.path.join(self.p, 'foo'))
-        other_target_bar = yield other_module.OtherModuleTask(os.path.join(self.p, 'bar'))
+        other_target_foo = yield other_module.OtherModuleTask(os.path.join(self.p, 'foo'))  # NOQA
+        other_target_bar = yield other_module.OtherModuleTask(os.path.join(self.p, 'bar'))  # NOQA
 
         with self.output().open('w') as f:
             f.write('Done!')
@@ -937,7 +937,8 @@ class TaskLimitTest(unittest.TestCase):
         w.run()
         self.assertFalse(t.complete())
         leaf_tasks = [ForkBombTask(3, 2, branch) for branch in [(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1)]]
-        self.assertEquals(3, sum(t.complete() for t in leaf_tasks), "should have gracefully completed as much as possible even though the single last leaf didn't get scheduled")
+        self.assertEquals(3, sum(t.complete() for t in leaf_tasks),
+                          "should have gracefully completed as much as possible even though the single last leaf didn't get scheduled")
 
     @with_config({'core': {'worker-task-limit': '7'}})
     def test_task_limit_not_exceeded(self):

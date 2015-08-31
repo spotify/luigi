@@ -179,7 +179,9 @@ class RangeDailyBaseTest(unittest.TestCase):
     maxDiff = None
 
     def setUp(self):
-        # yucky to create separate callbacks; would be nicer if the callback received an instance of a subclass of Event, so one callback could accumulate all types
+        # yucky to create separate callbacks; would be nicer if the callback
+        # received an instance of a subclass of Event, so one callback could
+        # accumulate all types
         @RangeDailyBase.event_handler(RangeEvent.DELAY)
         def callback_delay(*args):
             self.events.setdefault(RangeEvent.DELAY, []).append(args)
@@ -292,7 +294,9 @@ class RangeHourlyBaseTest(unittest.TestCase):
     maxDiff = None
 
     def setUp(self):
-        # yucky to create separate callbacks; would be nicer if the callback received an instance of a subclass of Event, so one callback could accumulate all types
+        # yucky to create separate callbacks; would be nicer if the callback
+        # received an instance of a subclass of Event, so one callback could
+        # accumulate all types
         @RangeHourlyBase.event_handler(RangeEvent.DELAY)
         def callback_delay(*args):
             self.events.setdefault(RangeEvent.DELAY, []).append(args)
@@ -589,17 +593,20 @@ class RangeDailyTest(unittest.TestCase):
 
 class RangeHourlyTest(unittest.TestCase):
 
-    @mock.patch('luigi.mock.MockFileSystem.listdir', new=mock_listdir(mock_contents))  # fishy to mock the mock, but MockFileSystem doesn't support globs yet
+    # fishy to mock the mock, but MockFileSystem doesn't support globs yet
+    @mock.patch('luigi.mock.MockFileSystem.listdir', new=mock_listdir(mock_contents))
     @mock.patch('luigi.mock.MockFileSystem.exists',
                 new=mock_exists_always_true)
     def test_missing_tasks_correctly_required(self):
         for task_path in task_a_paths:
             MockTarget(task_path)
+        # this test takes a few seconds. Since stop is not defined,
+        # finite_datetimes constitute many years to consider
         task = RangeHourly(now=datetime_to_epoch(datetime.datetime(2016, 4, 1)),
                            of=TaskA,
                            start=datetime.datetime(2014, 3, 20, 17),
                            task_limit=3,
-                           hours_back=3 * 365 * 24)  # this test takes a few seconds. Since stop is not defined, finite_datetimes constitute many years to consider
+                           hours_back=3 * 365 * 24)
         actual = [t.task_id for t in task.requires()]
         self.assertEqual(actual, expected_a)
 

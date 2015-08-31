@@ -23,7 +23,7 @@ import signal
 import time
 import tempfile
 
-from helpers import unittest, with_config, skipOnTravis
+from helpers import unittest, skipOnTravis
 import luigi.rpc
 import luigi.server
 from luigi.scheduler import CentralPlannerScheduler

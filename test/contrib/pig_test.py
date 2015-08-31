@@ -19,7 +19,7 @@ import subprocess
 import tempfile
 
 import luigi
-from helpers import with_config, unittest
+from helpers import unittest
 from luigi.contrib.pig import PigJobError, PigJobTask
 from mock import patch
 
@@ -104,7 +104,10 @@ class ComplexPigTest(unittest.TestCase):
         try:
             job = ComplexTestJob()
             job.run()
-            self.assertEqual([['/usr/share/pig/bin/pig', '-x', 'local', '-p', 'YOUR_PARAM_NAME=Your param value', '-propertyFile', 'pig_property_file', '-f', 'my_complex_pig_script.pig']], arglist_result)
+            self.assertEqual([['/usr/share/pig/bin/pig', '-x', 'local', '-p',
+                               'YOUR_PARAM_NAME=Your param value',
+                               '-propertyFile', 'pig_property_file', '-f',
+                               'my_complex_pig_script.pig']], arglist_result)
 
             # Check property file
             with open('pig_property_file') as pprops_file:
@@ -125,7 +128,10 @@ class ComplexPigTest(unittest.TestCase):
         except PigJobError as e:
             p = e
             self.assertEqual('stderr', p.err)
-            self.assertEqual([['/usr/share/pig/bin/pig', '-x', 'local', '-p', 'YOUR_PARAM_NAME=Your param value', '-propertyFile', 'pig_property_file', '-f', 'my_complex_pig_script.pig']], arglist_result)
+            self.assertEqual([['/usr/share/pig/bin/pig', '-x', 'local', '-p',
+                               'YOUR_PARAM_NAME=Your param value',
+                               '-propertyFile', 'pig_property_file', '-f',
+                               'my_complex_pig_script.pig']], arglist_result)
 
             # Check property file
             with open('pig_property_file') as pprops_file:

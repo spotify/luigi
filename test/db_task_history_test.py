@@ -21,7 +21,7 @@ from luigi import six
 
 from helpers import with_config
 import luigi
-from luigi.db_task_history import DbTaskHistory, Base
+from luigi.db_task_history import DbTaskHistory
 from luigi.task_status import DONE, PENDING, RUNNING
 
 

@@ -16,9 +16,6 @@
 #
 
 import abc
-import os
-import random
-import tempfile
 from helpers import unittest
 
 import luigi

@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 
-import hashlib
 import os
 import subprocess
 import tempfile

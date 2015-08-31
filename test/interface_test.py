@@ -21,7 +21,7 @@ import luigi
 import luigi.date_interval
 import luigi.notifications
 import sys
-from luigi.interface import core, _WorkerSchedulerFactory
+from luigi.interface import _WorkerSchedulerFactory
 from luigi.worker import Worker
 from mock import Mock, patch
 from helpers import LuigiTestCase

@@ -16,7 +16,6 @@
 #
 
 import time
-import datetime
 from helpers import unittest
 
 from nose.plugins.attrib import attr

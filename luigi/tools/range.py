@@ -237,7 +237,13 @@ class RangeDailyBase(RangeBase):
         description="ending date, exclusive. Default: None - work forward forever")
     days_back = luigi.IntParameter(
         default=100,  # slightly more than three months
-        description="extent to which contiguousness is to be assured into past, in days from current time. Prevents infinite loop when start is none. If the dataset has limited retention (i.e. old outputs get removed), this should be set shorter to that, too, to prevent the oldest outputs flapping. Increase freely if you intend to process old dates - worker's memory is the limit")
+        description=("extent to which contiguousness is to be assured into "
+                     "past, in days from current time. Prevents infinite loop "
+                     "when start is none. If the dataset has limited retention"
+                     " (i.e. old outputs get removed), this should be set "
+                     "shorter to that, too, to prevent the oldest outputs "
+                     "flapping. Increase freely if you intend to process old "
+                     "dates - worker's memory is the limit"))
     days_forward = luigi.IntParameter(
         default=0,
         description="extent to which contiguousness is to be assured into future, in days from current time. Prevents infinite loop when stop is none")
@@ -280,7 +286,13 @@ class RangeHourlyBase(RangeBase):
         description="ending datehour, exclusive. Default: None - work forward forever")
     hours_back = luigi.IntParameter(
         default=100 * 24,  # slightly more than three months
-        description="extent to which contiguousness is to be assured into past, in hours from current time. Prevents infinite loop when start is none. If the dataset has limited retention (i.e. old outputs get removed), this should be set shorter to that, too, to prevent the oldest outputs flapping. Increase freely if you intend to process old dates - worker's memory is the limit")
+        description=("extent to which contiguousness is to be assured into "
+                     "past, in hours from current time. Prevents infinite "
+                     "loop when start is none. If the dataset has limited "
+                     "retention (i.e. old outputs get removed), this should "
+                     "be set shorter to that, too, to prevent the oldest "
+                     "outputs flapping. Increase freely if you intend to "
+                     "process old dates - worker's memory is the limit"))
     # TODO always entire interval for reprocessings (fixed start and stop)?
     hours_forward = luigi.IntParameter(
         default=0,
@@ -376,19 +388,25 @@ def _get_per_location_glob(tasks, outputs, regexes):
     don't even have to retrofit existing tasks anyhow.
     """
     paths = [o.path for o in outputs]
-    matches = [r.search(p) for r, p in zip(regexes, paths)]  # naive, because some matches could be confused by numbers earlier in path, e.g. /foo/fifa2000k/bar/2000-12-31/00
+    # naive, because some matches could be confused by numbers earlier
+    # in path, e.g. /foo/fifa2000k/bar/2000-12-31/00
+    matches = [r.search(p) for r, p in zip(regexes, paths)]
 
     for m, p, t in zip(matches, paths, tasks):
         if m is None:
             raise NotImplementedError("Couldn't deduce datehour representation in output path %r of task %s" % (p, t))
 
     n_groups = len(matches[0].groups())
-    positions = [most_common((m.start(i), m.end(i)) for m in matches)[0] for i in range(1, n_groups + 1)]  # the most common position of every group is likely to be conclusive hit or miss
+    # the most common position of every group is likely
+    # to be conclusive hit or miss
+    positions = [most_common((m.start(i), m.end(i)) for m in matches)[0] for i in range(1, n_groups + 1)]
 
     glob = list(paths[0])  # FIXME sanity check that it's the same for all paths
     for start, end in positions:
         glob = glob[:start] + ['[0-9]'] * (end - start) + glob[end:]
-    return ''.join(glob).rsplit('/', 1)[0]  # chop off the last path item (wouldn't need to if `hadoop fs -ls -d` equivalent were available)
+    # chop off the last path item
+    # (wouldn't need to if `hadoop fs -ls -d` equivalent were available)
+    return ''.join(glob).rsplit('/', 1)[0]
 
 
 def _get_filesystems_and_globs(datetime_to_task, datetime_to_re):
