@@ -10,7 +10,7 @@ import luigi.interface
 
 
 def luigi_run(argv=sys.argv[1:]):
-    luigi.interface.run(argv, use_dynamic_argparse=True)
+    luigi.interface.run(argv)
 
 
 def luigid(argv=sys.argv[1:]):
