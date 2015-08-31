@@ -101,47 +101,71 @@ class ComplexPigTest(unittest.TestCase):
         arglist_result = []
         p = subprocess.Popen
         subprocess.Popen = _get_fake_Popen(arglist_result, 0)
-        try:
-            job = ComplexTestJob()
-            job.run()
-            self.assertEqual([['/usr/share/pig/bin/pig', '-x', 'local', '-p',
-                               'YOUR_PARAM_NAME=Your param value',
-                               '-propertyFile', 'pig_property_file', '-f',
-                               'my_complex_pig_script.pig']], arglist_result)
 
-            # Check property file
-            with open('pig_property_file') as pprops_file:
-                pprops = pprops_file.readlines()
-                self.assertEqual(1, len(pprops))
-                self.assertEqual('pig.additional.jars=/path/to/your/jar\n', pprops[0])
-        finally:
-            subprocess.Popen = p
+        with tempfile.NamedTemporaryFile(delete=False) as param_file_mock, \
+                tempfile.NamedTemporaryFile(delete=False) as prop_file_mock, \
+                patch('luigi.contrib.pig.tempfile.NamedTemporaryFile',
+                      side_effect=[param_file_mock, prop_file_mock]):
+            try:
+                job = ComplexTestJob()
+                job.run()
+                self.assertEqual([['/usr/share/pig/bin/pig', '-x', 'local',
+                                   '-param_file', param_file_mock.name,
+                                   '-propertyFile', prop_file_mock.name,
+                                   '-f', 'my_complex_pig_script.pig']],
+                                 arglist_result)
+
+                # Check param file
+                with open(param_file_mock.name) as pparams_file:
+                    pparams = pparams_file.readlines()
+                    self.assertEqual(1, len(pparams))
+                    self.assertEqual('YOUR_PARAM_NAME=Your param value\n', pparams[0])
+
+                # Check property file
+                with open(prop_file_mock.name) as pprops_file:
+                    pprops = pprops_file.readlines()
+                    self.assertEqual(1, len(pprops))
+                    self.assertEqual('pig.additional.jars=/path/to/your/jar\n', pprops[0])
+            finally:
+                subprocess.Popen = p
 
     @patch('subprocess.Popen')
     def test_run__fail(self, mock):
         arglist_result = []
         p = subprocess.Popen
         subprocess.Popen = _get_fake_Popen(arglist_result, 1)
-        try:
-            job = ComplexTestJob()
-            job.run()
-        except PigJobError as e:
-            p = e
-            self.assertEqual('stderr', p.err)
-            self.assertEqual([['/usr/share/pig/bin/pig', '-x', 'local', '-p',
-                               'YOUR_PARAM_NAME=Your param value',
-                               '-propertyFile', 'pig_property_file', '-f',
-                               'my_complex_pig_script.pig']], arglist_result)
 
-            # Check property file
-            with open('pig_property_file') as pprops_file:
-                pprops = pprops_file.readlines()
-                self.assertEqual(1, len(pprops))
-                self.assertEqual('pig.additional.jars=/path/to/your/jar\n', pprops[0])
-        else:
-            self.fail("Should have thrown PigJobError")
-        finally:
-            subprocess.Popen = p
+        with tempfile.NamedTemporaryFile(delete=False) as param_file_mock, \
+                tempfile.NamedTemporaryFile(delete=False) as prop_file_mock, \
+                patch('luigi.contrib.pig.tempfile.NamedTemporaryFile',
+                      side_effect=[param_file_mock, prop_file_mock]):
+            try:
+                job = ComplexTestJob()
+                job.run()
+            except PigJobError as e:
+                p = e
+                self.assertEqual('stderr', p.err)
+                self.assertEqual([['/usr/share/pig/bin/pig', '-x', 'local',
+                                   '-param_file', param_file_mock.name,
+                                   '-propertyFile', prop_file_mock.name, '-f',
+                                   'my_complex_pig_script.pig']],
+                                 arglist_result)
+
+                # Check param file
+                with open(param_file_mock.name) as pparams_file:
+                    pparams = pparams_file.readlines()
+                    self.assertEqual(1, len(pparams))
+                    self.assertEqual('YOUR_PARAM_NAME=Your param value\n', pparams[0])
+
+                # Check property file
+                with open(prop_file_mock.name) as pprops_file:
+                    pprops = pprops_file.readlines()
+                    self.assertEqual(1, len(pprops))
+                    self.assertEqual('pig.additional.jars=/path/to/your/jar\n', pprops[0])
+            else:
+                self.fail("Should have thrown PigJobError")
+            finally:
+                subprocess.Popen = p
 
 
 def _get_fake_Popen(arglist_result, return_code, *args, **kwargs):
