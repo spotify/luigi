@@ -50,7 +50,9 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
     def list_path(path):
         if isinstance(path, list) or isinstance(path, tuple):
             return path
-        if isinstance(path, str) or isinstance(path, unicode):
+        # TODO: Should this be:
+        # isinstance(path, (six.text_type, six.binary_type))?
+        if isinstance(path, six.string_types):
             return [path, ]
         return [str(path), ]
 
