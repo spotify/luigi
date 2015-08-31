@@ -129,68 +129,62 @@ class _WorkerSchedulerFactory(object):
             scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
 
 
-class _Interface(object):
+def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=None):
+    """
+    :param tasks:
+    :param worker_scheduler_factory:
+    :param override_defaults:
+    :return: True if all tasks and their dependencies were successfully run (or already completed);
+             False if any error occurred.
+    """
 
-    def parse(self):
-        raise NotImplementedError
+    if worker_scheduler_factory is None:
+        worker_scheduler_factory = _WorkerSchedulerFactory()
+    if override_defaults is None:
+        override_defaults = {}
+    env_params = core(**override_defaults)
+    # search for logging configuration path first on the command line, then
+    # in the application config file
+    logging_conf = env_params.logging_conf_file
+    if logging_conf is not None and not os.path.exists(logging_conf):
+        raise Exception(
+            "Error: Unable to locate specified logging configuration file!"
+        )
 
-    @staticmethod
-    def run(tasks, worker_scheduler_factory=None, override_defaults=None):
-        """
-        :param tasks:
-        :param worker_scheduler_factory:
-        :param override_defaults:
-        :return: True if all tasks and their dependencies were successfully run (or already completed);
-                 False if any error occurred.
-        """
+    if not configuration.get_config().getboolean(
+            'core', 'no_configure_logging', False):
+        setup_interface_logging(logging_conf)
 
-        if worker_scheduler_factory is None:
-            worker_scheduler_factory = _WorkerSchedulerFactory()
-        if override_defaults is None:
-            override_defaults = {}
-        env_params = core(**override_defaults)
-        # search for logging configuration path first on the command line, then
-        # in the application config file
-        logging_conf = env_params.logging_conf_file
-        if logging_conf is not None and not os.path.exists(logging_conf):
-            raise Exception(
-                "Error: Unable to locate specified logging configuration file!"
-            )
+    kill_signal = signal.SIGUSR1 if env_params.take_lock else None
+    if (not env_params.no_lock and
+            not(lock.acquire_for(env_params.lock_pid_dir, env_params.lock_size, kill_signal))):
+        sys.exit(1)
 
-        if not configuration.get_config().getboolean(
-                'core', 'no_configure_logging', False):
-            setup_interface_logging(logging_conf)
-
-        kill_signal = signal.SIGUSR1 if env_params.take_lock else None
-        if (not env_params.no_lock and
-                not(lock.acquire_for(env_params.lock_pid_dir, env_params.lock_size, kill_signal))):
-            sys.exit(1)
-
-        if env_params.local_scheduler:
-            sch = worker_scheduler_factory.create_local_scheduler()
+    if env_params.local_scheduler:
+        sch = worker_scheduler_factory.create_local_scheduler()
+    else:
+        if env_params.scheduler_url is not None:
+            url = env_params.scheduler_url
         else:
-            if env_params.scheduler_url is not None:
-                url = env_params.scheduler_url
-            else:
-                url = 'http://{host}:{port:d}/'.format(
-                    host=env_params.scheduler_host,
-                    port=env_params.scheduler_port,
-                )
-            sch = worker_scheduler_factory.create_remote_scheduler(url=url)
+            url = 'http://{host}:{port:d}/'.format(
+                host=env_params.scheduler_host,
+                port=env_params.scheduler_port,
+            )
+        sch = worker_scheduler_factory.create_remote_scheduler(url=url)
 
-        w = worker_scheduler_factory.create_worker(
-            scheduler=sch, worker_processes=env_params.workers, assistant=env_params.assistant)
+    w = worker_scheduler_factory.create_worker(
+        scheduler=sch, worker_processes=env_params.workers, assistant=env_params.assistant)
 
-        success = True
-        for t in tasks:
-            success &= w.add(t, env_params.parallel_scheduling)
-        logger = logging.getLogger('luigi-interface')
-        logger.info('Done scheduling tasks')
-        if env_params.workers != 0:
-            success &= w.run()
-        w.stop()
-        logger.info(execution_summary.summary(w))
-        return success
+    success = True
+    for t in tasks:
+        success &= w.add(t, env_params.parallel_scheduling)
+    logger = logging.getLogger('luigi-interface')
+    logger.info('Done scheduling tasks')
+    if env_params.workers != 0:
+        success &= w.run()
+    w.stop()
+    logger.info(execution_summary.summary(w))
+    return success
 
 
 def _add_task_parameters(parser, task_cls):
@@ -226,7 +220,7 @@ def _set_global_parameters(args):
         param.set_global_from_args(param_name, task_name, args, is_without_section=is_without_section)
 
 
-class _ArgParseInterface(_Interface):
+class _ArgParseInterface(object):
     """
     Takes the task as the command, with parameters specific to it.
     """
@@ -334,7 +328,7 @@ def run(cmdline_args=None, main_task_cls=None,
     if local_scheduler:
         cmdline_args.insert(0, '--local-scheduler')
     tasks = interface.parse(cmdline_args)
-    return interface.run(tasks, worker_scheduler_factory)
+    return _schedule_and_run(tasks, worker_scheduler_factory)
 
 
 def build(tasks, worker_scheduler_factory=None, **env_params):
@@ -360,4 +354,4 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
 
-    return _Interface.run(tasks, worker_scheduler_factory, override_defaults=env_params)
+    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)
