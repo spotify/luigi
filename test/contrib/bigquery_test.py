@@ -58,13 +58,6 @@ class TestLoadTask(bigquery.BigqueryLoadTask):
 
 
 @attr('gcloud')
-class AtomicBigqueryTarget(bigquery.BigqueryTarget):
-
-    def close(self):
-        self.move_tmp_table()
-
-
-@attr('gcloud')
 class SimulatedAtomicLoad(TestLoadTask):
 
     def run(self):
@@ -75,14 +68,16 @@ class SimulatedAtomicLoad(TestLoadTask):
         source_uris = self.source_uris()
         assert all(x.startswith('gs://') for x in source_uris)
 
+        temp_table = output.temp_table(temp_dataset_id=DATASET_ID, salt="_upload")
+
         job = {
             'projectId': output.table.project_id,
             'configuration': {
                 'load': {
                     'destinationTable': {
-                        'projectId': output.tmp_table.project_id,
-                        'datasetId': output.tmp_table.dataset_id,
-                        'tableId': output.tmp_table.table_id,
+                        'projectId': temp_table.project_id,
+                        'datasetId': temp_table.dataset_id,
+                        'tableId': temp_table.table_id,
                     },
                     'sourceFormat': self.source_format,
                     'writeDisposition': self.write_disposition,
@@ -94,13 +89,14 @@ class SimulatedAtomicLoad(TestLoadTask):
         if self.schema:
             job['configuration']['load']['schema'] = {'fields': self.schema}
 
-        bq_client.run_job(output.tmp_table.project_id, job, dataset=output.tmp_table.dataset)
-        output.close()
+        bq_client.run_job(output.table.project_id, job, dataset=temp_table.dataset)
+        output.client.copy(temp_table, output.table)
+        output.client.delete_table(temp_table)
 
     def output(self):
-        return AtomicBigqueryTarget(PROJECT_ID, DATASET_ID, self.table,
-                                    client=self._BIGQUERY_CLIENT, tmp_dataset_id=DATASET_ID,
-                                    tmp_salt='_upload')
+        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table,
+                                       client=self._BIGQUERY_CLIENT
+                                       )
 
 
 @attr('gcloud')

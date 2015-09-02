@@ -33,6 +33,8 @@ except ImportError:
     logger.warning('Bigquery module imported, but google-api-python-client is '
                    'not installed. Any bigquery task will fail')
 
+IMPORT_TIME_SALT = random.randrange(0, 1e10)
+
 
 class CreateDisposition(object):
     CREATE_IF_NEEDED = 'CREATE_IF_NEEDED'
@@ -282,10 +284,8 @@ class BigqueryClient(object):
 
 
 class BigqueryTarget(luigi.target.Target):
-    def __init__(self, project_id, dataset_id, table_id, client=None, tmp_dataset_id=None, tmp_salt=None):
+    def __init__(self, project_id, dataset_id, table_id, client=None):
         self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id)
-        tmp_table_id = "_" + table_id + (tmp_salt or "_%09d" % random.randrange(0, 1e10))
-        self.tmp_table = BQTable(project_id=project_id, dataset_id=tmp_dataset_id or "_incoming", table_id=tmp_table_id)
         self.client = client or BigqueryClient()
 
     @classmethod
@@ -303,15 +303,9 @@ class BigqueryTarget(luigi.target.Target):
     def __str__(self):
         return str(self.table)
 
-    def move_tmp_table(self):
-        """For use with hadoop bigquery connector, allows inheriting targets
-        to implement swap into place"""
-        logger.info('Moving temporary table %s.%s to destination table %s.%s',
-                    self.tmp_table.dataset_id, self.tmp_table.table_id,
-                    self.table.dataset_id, self.table.table_id)
-        self.client.copy(self.tmp_table, self.table)
-        logger.info('Removing temporary table %s.%s', self.tmp_table.dataset_id, self.tmp_table.table_id)
-        self.client.delete_table(self.tmp_table)
+    def temp_table(self, temp_dataset_id=None, salt=None):
+        temp_table_id = "_" + self.table.table_id + (salt or "_%09d" % IMPORT_TIME_SALT)
+        return BQTable(project_id=self.table.project_id, dataset_id=temp_dataset_id or "_incoming", table_id=temp_table_id)
 
 
 class BigqueryLoadTask(luigi.Task):
