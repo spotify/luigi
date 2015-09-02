@@ -124,10 +124,10 @@ class TaskProcess(multiprocessing.Process):
             # Verify that all the tasks are fulfilled!
             missing_deps = [dep for dep in self.task.deps() if not dep.complete()]
             missing_targets = [tgt for tgt in flatten(dep.output()) for dep in missing_deps if not tgt.exists()]
-            for missing_target in missing_targets:
-                logger.warn('Missing Target: %s' % missing_target)
             missing_taskids = [dep.task_id for dep in missing_deps]
             if missing_taskids:
+                for missing_target in missing_targets:
+                    logger.warn('Missing Target: %s' % missing_target)
                 deps = 'dependency' if len(missing_taskids) == 1 else 'dependencies'
                 raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing_taskids)))
             self.task.trigger_event(Event.START, self.task)
