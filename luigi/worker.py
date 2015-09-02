@@ -127,7 +127,7 @@ class TaskProcess(multiprocessing.Process):
             missing_taskids = [dep.task_id for dep in missing_deps]
             if missing_taskids:
                 for missing_target in missing_targets:
-                    logger.warn('Missing Target: %s' % missing_target)
+                    logger.error('Missing Target: %s' % missing_target)
                 deps = 'dependency' if len(missing_taskids) == 1 else 'dependencies'
                 raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing_taskids)))
             self.task.trigger_event(Event.START, self.task)
