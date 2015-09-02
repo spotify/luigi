@@ -117,7 +117,7 @@ class TaskProcess(multiprocessing.Process):
 
         status = FAILED
         error_message = ''
-        missing_tasks = []
+        missing_taskids = []
         missing_targets = []
         new_deps = []
         try:
