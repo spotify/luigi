@@ -99,6 +99,12 @@ class LocalTarget(FileSystemTarget):
         self.format = format
         self.is_tmp = is_tmp
 
+    def __str__(self):
+        '''
+        Return a sensible string representation. Here the file system path is used
+        '''
+        return self.path
+
     def makedirs(self):
         """
         Create all parent folders if they do not exist.
