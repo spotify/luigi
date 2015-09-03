@@ -117,14 +117,19 @@ class TaskProcess(multiprocessing.Process):
 
         status = FAILED
         error_message = ''
-        missing = []
+        missing_taskids = []
+        missing_targets = []
         new_deps = []
         try:
             # Verify that all the tasks are fulfilled!
-            missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
-            if missing:
-                deps = 'dependency' if len(missing) == 1 else 'dependencies'
-                raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
+            missing_deps = [dep for dep in self.task.deps() if not dep.complete()]
+            missing_targets = [tgt for tgt in flatten(dep.output()) for dep in missing_deps if not tgt.exists()]
+            missing_taskids = [dep.task_id for dep in missing_deps]
+            if missing_taskids:
+                for missing_target in missing_targets:
+                    logger.error('Missing Target: %s' % missing_target)
+                deps = 'dependency' if len(missing_taskids) == 1 else 'dependencies'
+                raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing_taskids)))
             self.task.trigger_event(Event.START, self.task)
             t0 = time.time()
             status = None
@@ -165,7 +170,7 @@ class TaskProcess(multiprocessing.Process):
             notifications.send_error_email(subject, formatted_error_message, self.task.owner_email)
         finally:
             self.result_queue.put(
-                (self.task.task_id, status, error_message, missing, new_deps))
+                (self.task.task_id, status, error_message, missing_taskids, new_deps))
 
     def _recursive_terminate(self):
         import psutil
