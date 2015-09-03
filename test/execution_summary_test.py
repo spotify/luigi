@@ -736,3 +736,83 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertIn('\n        - 10 DateTask(date=1998-03-23...1998-04-01, num=5)\n', s)
         self.assertIn('\nThis progress looks :| because there were missing external dependencies\n\n', s)
         self.assertNotIn('\n\n\n', s)
+
+    def test_with_datehours(self):
+        """ Just test that it doesn't crash with datehour params """
+
+        start = datetime.datetime(1998, 3, 23, 5)
+
+        class Bar(luigi.Task):
+            datehour = luigi.DateHourParameter()
+
+            def __init__(self, *args, **kwargs):
+                super(Bar, self).__init__(*args, **kwargs)
+                self.comp = False
+
+            def run(self):
+                self.comp = True
+
+            def complete(self):
+                return self.comp
+
+        class Foo(luigi.Task):
+
+            def run(self):
+                pass
+
+            def requires(self):
+                for i in range(10):
+                    new_date = start + datetime.timedelta(hours=i)
+                    yield Bar(datehour=new_date)
+
+        self.run_task(Foo())
+        d = self.summary_dict()
+        exp_set = {Bar(start + datetime.timedelta(hours=i)) for i in range(10)}
+        exp_set.add(Foo())
+        self.assertEqual(exp_set, d['completed'])
+        s = self.summary()
+        self.assertIn('datehour=1998-03-23T0', s)
+        self.assertIn('Scheduled 11 tasks', s)
+        self.assertIn('Luigi Execution Summary', s)
+        self.assertNotIn('00:00:00', s)
+        self.assertNotIn('\n\n\n', s)
+
+    def test_with_months(self):
+        """ Just test that it doesn't crash with datehour params """
+
+        start = datetime.datetime(1998, 3, 23)
+
+        class Bar(luigi.Task):
+            month = luigi.MonthParameter()
+
+            def __init__(self, *args, **kwargs):
+                super(Bar, self).__init__(*args, **kwargs)
+                self.comp = False
+
+            def run(self):
+                self.comp = True
+
+            def complete(self):
+                return self.comp
+
+        class Foo(luigi.Task):
+
+            def run(self):
+                pass
+
+            def requires(self):
+                for i in range(3):
+                    new_date = start + datetime.timedelta(days=30*i)
+                    yield Bar(month=new_date)
+
+        self.run_task(Foo())
+        d = self.summary_dict()
+        exp_set = {Bar(start + datetime.timedelta(days=30*i)) for i in range(3)}
+        exp_set.add(Foo())
+        self.assertEqual(exp_set, d['completed'])
+        s = self.summary()
+        self.assertIn('month=1998-0', s)
+        self.assertIn('Scheduled 4 tasks', s)
+        self.assertIn('Luigi Execution Summary', s)
+        self.assertNotIn('00:00:00', s)
+        self.assertNotIn('\n\n\n', s)

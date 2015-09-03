@@ -422,6 +422,7 @@ class DateHourParameter(DateParameterBase):
     """
 
     date_format = '%Y-%m-%dT%H'  # ISO 8601 is to use 'T'
+    _timedelta = timedelta(hours=1)
 
     def parse(self, s):
         """
