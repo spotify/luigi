@@ -613,6 +613,9 @@ class CentralPlannerScheduler(Scheduler):
         if task.remove is not None:
             task.remove = None  # unmark task for removal so it isn't removed after being added
 
+        if expl is not None:
+            task.expl = expl
+
         if not (task.status == RUNNING and status == PENDING):
             # don't allow re-scheduling of task while it is running, it must either fail or succeed first
             if status == PENDING or status != task.status:
@@ -648,9 +651,6 @@ class CentralPlannerScheduler(Scheduler):
             task.workers.add(worker_id)
             self._state.get_worker(worker_id).tasks.add(task)
             task.runnable = runnable
-
-        if expl is not None:
-            task.expl = expl
 
     def add_worker(self, worker, info, **kwargs):
         self._state.get_worker(worker).add_info(info)
