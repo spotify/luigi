@@ -21,6 +21,7 @@ import os
 import luigi.contrib.hadoop
 import luigi.contrib.hdfs
 from nose.plugins.attrib import attr
+from helpers import LuigiTestCase
 
 import unittest
 
@@ -31,7 +32,7 @@ except ImportError:
 
 
 @attr('minicluster')
-class MiniClusterTestCase(unittest.TestCase):
+class MiniClusterTestCase(LuigiTestCase):
 
     """ Base class for test cases that rely on Hadoop's minicluster functionality. This
     in turn depends on Snakebite's minicluster setup:

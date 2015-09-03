@@ -18,7 +18,6 @@
 import os
 import sys
 import json
-import unittest
 
 import luigi
 import luigi.format
@@ -30,6 +29,7 @@ import minicluster
 import mock
 from luigi.mock import MockTarget
 from nose.plugins.attrib import attr
+from helpers import LuigiTestCase
 
 luigi.notifications.DEBUG = True
 
@@ -246,7 +246,7 @@ class CommonTests(object):
         test_case.assertFalse(success)
 
 
-class MapreduceLocalTest(unittest.TestCase):
+class MapreduceLocalTest(LuigiTestCase):
     use_hdfs = False
 
     def run_and_check(self, args):
@@ -312,7 +312,7 @@ class MapreduceIntegrationTest(minicluster.MiniClusterTestCase):
         CommonTests.test_failing_job(self)
 
 
-class CreatePackagesArchive(unittest.TestCase):
+class CreatePackagesArchive(LuigiTestCase):
 
     def setUp(self):
         sys.path.append(os.path.join('test', 'create_packages_archive_root'))

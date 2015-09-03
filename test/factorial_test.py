@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import unittest
+from helpers import LuigiTestCase
 
 import luigi
 
@@ -43,7 +43,7 @@ class Factorial(luigi.Task):
         return False
 
 
-class FactorialTest(unittest.TestCase):
+class FactorialTest(LuigiTestCase):
 
     def test_invoke(self):
         luigi.build([Factorial(100)], local_scheduler=True)
