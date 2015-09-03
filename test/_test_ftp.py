@@ -18,7 +18,7 @@
 import datetime
 import ftplib
 import os
-from helpers import unittest
+from helpers import unittest, LuigiTestCase
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -36,7 +36,7 @@ USER = "luigi"
 PWD = "some_password"
 
 
-class TestFTPFilesystem(unittest.TestCase):
+class TestFTPFilesystem(LuigiTestCase):
 
     def setUp(self):
         """ Creates structure
@@ -89,7 +89,7 @@ class TestFTPFilesystem(unittest.TestCase):
         self.assertFalse("test" in list_dir)
 
 
-class TestFTPFilesystemUpload(unittest.TestCase):
+class TestFTPFilesystemUpload(LuigiTestCase):
 
     def test_single(self):
         """ Test upload file with creation of intermediate folders """
@@ -119,7 +119,7 @@ class TestFTPFilesystemUpload(unittest.TestCase):
         ftp.close()
 
 
-class TestRemoteTarget(unittest.TestCase):
+class TestRemoteTarget(LuigiTestCase):
 
     def test_put(self):
         """ Test RemoteTarget put method with uploading to an FTP """

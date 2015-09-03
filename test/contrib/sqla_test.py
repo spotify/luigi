@@ -31,6 +31,7 @@ import sqlalchemy
 from luigi.contrib import sqla
 from luigi.mock import MockFile
 from nose.plugins.attrib import attr
+from helpers import LuigiTestCase
 
 if six.PY3:
     unicode = str
@@ -51,7 +52,7 @@ class BaseTask(luigi.Task):
 
 
 @attr('sqlalchemy')
-class TestSQLA(unittest.TestCase):
+class TestSQLA(LuigiTestCase):
     NUM_WORKERS = 1
 
     def _clear_tables(self):

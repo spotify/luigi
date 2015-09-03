@@ -16,13 +16,13 @@
 #
 
 import datetime
-from helpers import unittest
+from helpers import unittest, LuigiTestCase
 
 import luigi
 from luigi.parameter import DateIntervalParameter as DI
 
 
-class DateIntervalTest(unittest.TestCase):
+class DateIntervalTest(LuigiTestCase):
 
     def test_date(self):
         di = DI().parse('2012-01-01')

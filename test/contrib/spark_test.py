@@ -15,15 +15,15 @@
 # limitations under the License.
 #
 
-from helpers import unittest
 import os
 import luigi
 import luigi.contrib.hdfs
 from luigi import six
 from luigi.mock import MockTarget
-from helpers import with_config
+from helpers import with_config, LuigiTestCase
 from luigi.contrib.spark import SparkJobError, SparkSubmitTask, PySparkTask, PySpark1xJob, Spark1xJob, SparkJob
 from mock import patch, MagicMock
+
 
 BytesIO = six.BytesIO
 
@@ -136,7 +136,7 @@ class TestPySpark1xJob(PySpark1xJob):
         return luigi.LocalTarget('output')
 
 
-class SparkSubmitTaskTest(unittest.TestCase):
+class SparkSubmitTaskTest(LuigiTestCase):
     ss = 'ss-stub'
 
     @with_config({'spark': {'spark-submit': ss, 'master': "yarn-client", 'hadoop-conf-dir': 'path'}})
@@ -202,7 +202,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
         proc.return_value.kill.check_called()
 
 
-class PySparkTaskTest(unittest.TestCase):
+class PySparkTaskTest(LuigiTestCase):
     ss = 'ss-stub'
 
     @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077"}})
@@ -236,7 +236,7 @@ class PySparkTaskTest(unittest.TestCase):
         sc.textFile.return_value.saveAsTextFile.assert_called_with('output')
 
 
-class SparkJobTest(unittest.TestCase):
+class SparkJobTest(LuigiTestCase):
     hcd = 'hcd-stub'
     ycd = 'ycd-stub'
     sj = 'sj-stub'
@@ -268,7 +268,7 @@ class SparkJobTest(unittest.TestCase):
             self.fail("Should have thrown SparkJobError")
 
 
-class Spark1xTest(unittest.TestCase):
+class Spark1xTest(LuigiTestCase):
     ss = 'ss-stub'
 
     @with_config({'spark': {'spark-submit': ss}})
@@ -295,7 +295,7 @@ class Spark1xTest(unittest.TestCase):
             self.fail("Should have thrown SparkJobError")
 
 
-class PySpark1xTest(unittest.TestCase):
+class PySpark1xTest(LuigiTestCase):
     ss = 'ss-stub'
 
     @with_config({'spark': {'spark-submit': ss}})

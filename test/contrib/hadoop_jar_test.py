@@ -18,9 +18,9 @@
 import luigi
 import tempfile
 import shlex
-from helpers import unittest
 from luigi.contrib.hadoop_jar import HadoopJarJobError, HadoopJarJobTask
 from mock import patch
+from helpers import LuigiTestCase
 
 
 class TestHadoopJarJob(HadoopJarJobTask):
@@ -48,7 +48,7 @@ class TestRemoteHadoopJarTwoParamJob(TestRemoteHadoopJarJob):
     param2 = luigi.Parameter()
 
 
-class HadoopJarJobTaskTest(unittest.TestCase):
+class HadoopJarJobTaskTest(LuigiTestCase):
     @patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
     def test_good(self, mock_job):
         mock_job.return_value = None

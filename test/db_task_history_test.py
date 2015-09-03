@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import unittest
+from helpers import unittest, LuigiTestCase
 
 from luigi import six
 
@@ -34,7 +34,7 @@ class ParamTask(luigi.Task):
     param2 = luigi.IntParameter()
 
 
-class DbTaskHistoryTest(unittest.TestCase):
+class DbTaskHistoryTest(LuigiTestCase):
 
     @with_config(dict(task_history=dict(db_connection='sqlite:///:memory:')))
     def setUp(self):
@@ -84,7 +84,7 @@ class DbTaskHistoryTest(unittest.TestCase):
         self.history.task_finished(task.task_id, successful=True)
 
 
-class MySQLDbTaskHistoryTest(unittest.TestCase):
+class MySQLDbTaskHistoryTest(LuigiTestCase):
 
     @with_config(dict(task_history=dict(db_connection='mysql+mysqlconnector://travis@localhost/luigi_test')))
     def setUp(self):
