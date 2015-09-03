@@ -188,7 +188,8 @@ def _get_str_one_parameter(tasks):
         if (len(row) >= 30 and count > 2 and count != len(tasks) - 1) or len(row) > 200:
             row += '...'
             break
-        row += '{0}'.format(getattr(task, task.get_params()[0][0]))
+        param = task.get_params()[0]
+        row += '{0}'.format(param[1].serialize(getattr(task, param[0])))
         if count < len(tasks) - 1:
             row += ','
         count += 1
