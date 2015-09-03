@@ -170,6 +170,12 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         self._run_cmdline(args)
         self.assertTrue(t.exists())
 
+    def test_python_module(self):
+        t = luigi.LocalTarget(is_tmp=True)
+        args = ['python', '-m', 'luigi', '--module', 'cmdline_test', 'WriteToFile', '--filename', t.path, '--local-scheduler', '--no-lock']
+        self._run_cmdline(args)
+        self.assertTrue(t.exists())
+
     def test_direct_python_help(self):
         returncode, stdout, stderr = self._run_cmdline(['python', 'test/cmdline_test.py', '--help'])
         self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
@@ -185,6 +191,11 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
         self.assertFalse(stdout.find(b'--x') != -1)
 
+    def test_python_module_luigi_help(self):
+        returncode, stdout, stderr = self._run_cmdline(['python', '-m', 'luigi', '--module', 'cmdline_test', '--help'])
+        self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
+        self.assertFalse(stdout.find(b'--x') != -1)
+
     def test_bin_luigi_help_no_module(self):
         returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--help'])
         self.assertTrue(stdout.find(b'usage:') != -1)
@@ -193,8 +204,17 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         returncode, stdout, stderr = self._run_cmdline(['./bin/luigi'])
         self.assertTrue(stderr.find(b'No task specified') != -1)
 
+    def test_python_module_luigi_no_parameters(self):
+        returncode, stdout, stderr = self._run_cmdline(['python', '-m', 'luigi'])
+        self.assertTrue(stderr.find(b'No task specified') != -1)
+
     def test_bin_luigi_help_class(self):
         returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'cmdline_test', 'FooBaseClass', '--help'])
+        self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
+        self.assertTrue(stdout.find(b'--x') != -1)
+
+    def test_python_module_help_class(self):
+        returncode, stdout, stderr = self._run_cmdline(['python', '-m', 'luigi', '--module', 'cmdline_test', 'FooBaseClass', '--help'])
         self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
         self.assertTrue(stdout.find(b'--x') != -1)
 
