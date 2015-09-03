@@ -467,7 +467,7 @@ class Task(object):
         Override for custom error handling.
 
         This method gets called if an exception is raised in :py:meth:`run`.
-        Return value of this method is json encoded and sent to the scheduler
+        The returned value of this method is json encoded and sent to the scheduler
         as the `expl` argument. Its string representation will be used as the
         body of the error email sent out if any.
 
