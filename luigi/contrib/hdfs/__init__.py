@@ -51,7 +51,6 @@ HdfsClientCdh3 = hdfs_hadoopcli_clients.HdfsClientCdh3
 HdfsClientApache1 = hdfs_hadoopcli_clients.HdfsClientApache1
 create_hadoopcli_client = hdfs_hadoopcli_clients.create_hadoopcli_client
 get_autoconfig_client = hdfs_clients.get_autoconfig_client
-client = hdfs_clients.client
 exists = hdfs_clients.exists
 rename = hdfs_clients.rename
 remove = hdfs_clients.remove
