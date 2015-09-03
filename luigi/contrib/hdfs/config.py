@@ -72,7 +72,7 @@ def get_configured_hadoop_version():
     return hadoopcli().version.lower()
 
 
-def get_configured_hdfs_client(show_warnings=True):
+def get_configured_hdfs_client():
     """
     This is a helper that fetches the configuration value for 'client' in
     the [hdfs] section. It will return the client that retains backwards
@@ -85,12 +85,11 @@ def get_configured_hdfs_client(show_warnings=True):
         "snakebite",
     ]
     if six.PY3 and (custom in conf_usinf_snakebite):
-        if show_warnings:
-            warnings.warn(
-                "snakebite client not compatible with python3 at the moment"
-                "falling back on hadoopcli",
-                stacklevel=2
-            )
+        warnings.warn(
+            "snakebite client not compatible with python3 at the moment"
+            "falling back on hadoopcli",
+            stacklevel=2
+        )
         return "hadoopcli"
     return custom
 
