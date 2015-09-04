@@ -567,7 +567,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertNotIn('\n\n\n', s)
 
     def test_with_months(self):
-        """ Just test that it doesn't crash with datehour params """
+        """ Just test that it doesn't crash with month params """
 
         start = datetime.datetime(1998, 3, 23)
 
