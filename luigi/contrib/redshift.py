@@ -99,15 +99,18 @@ class S3CopyToTable(rdbms.CopyToTable):
         * IGNOREHEADER 1
         * TRUNCATECOLUMNS
         * IGNOREBLANKLINES
+        * DELIMITER '\t'
         """
         return ''
 
     def table_attributes(self):
-        '''Add extra table attributes, for example:
+        """
+        Add extra table attributes, for example:
+
         DISTSTYLE KEY
         DISTKEY (MY_FIELD)
         SORTKEY (MY_FIELD_2, MY_FIELD_3)
-        '''
+        """
         return ''
 
     def do_truncate_table(self):
@@ -188,15 +191,12 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         Defines copying from s3 into redshift.
         """
-
         cursor.execute("""
          COPY %s from '%s'
          CREDENTIALS 'aws_access_key_id=%s;aws_secret_access_key=%s'
-         delimiter '%s'
          %s
          ;""" % (self.table, f, self.aws_access_key_id,
-                 self.aws_secret_access_key, self.column_separator,
-                 self.copy_options))
+                 self.aws_secret_access_key, self.copy_options))
 
     def output(self):
         """
