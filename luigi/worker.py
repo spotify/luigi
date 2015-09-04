@@ -172,14 +172,25 @@ class TaskProcess(multiprocessing.Process):
     def _recursive_terminate(self):
         import psutil
 
-        parent = psutil.Process(self.pid)
-        for child in parent.children(recursive=True):
-            child.kill()
+        try:
+            parent = psutil.Process(self.pid)
+            children = parent.children(recursive=True)
 
-        parent.kill()
+            # terminate parent. Give it a chance to clean up
+            super(TaskProcess, self).terminate()
+            parent.wait()
+
+            # terminate children
+            for child in children:
+                try:
+                    child.terminate()
+                except psutil.NoSuchProcess:
+                    continue
+        except psutil.NoSuchProcess:
+            return
 
     def terminate(self):
-        """Terminate this process and it's subprocesses."""
+        """Terminate this process and its subprocesses."""
         # default terminate() doesn't cleanup child processes, it orphans them.
         try:
             return self._recursive_terminate()
