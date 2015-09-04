@@ -591,3 +591,20 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertIn('Luigi Execution Summary', s)
         self.assertNotIn('00:00:00', s)
         self.assertNotIn('\n\n\n', s)
+
+    def test_multiple_dash_dash_workers(self):
+        """
+        Don't print own worker with ``--workers 2`` setting.
+        """
+        self.worker = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=2)
+
+        class Foo(RunOnceTask):
+            pass
+
+        self.run_task(Foo())
+        d = self.summary_dict()
+        self.assertEqual(set(), d['run_by_other_worker'])
+        s = self.summary()
+        self.assertNotIn('The other workers were', s)
+        self.assertIn('This progress looks :) because there were no failed ', s)
+        self.assertNotIn('\n\n\n', s)
