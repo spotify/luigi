@@ -22,6 +22,8 @@ at the end of luigi invocations.
 """
 
 import textwrap
+import collections
+import functools
 
 
 def _partition_tasks(worker):
@@ -259,24 +261,15 @@ def _get_run_by_other_worker(worker):
     """
     This returns a set of the tasks that are being run by other worker
     """
-    worker_that_blocked_task = dict()
-    get_work_response_history = worker._get_work_response_history
-    for get_work_response in get_work_response_history:
-        if get_work_response['task_id'] is None:
-            for running_task in get_work_response['running_tasks']:
-                other_worker_id = running_task['worker']
-                other_task_id = running_task['task_id']
-                other_task = worker._scheduled_tasks.get(other_task_id)
-                if other_task:
-                    worker_that_blocked_task[other_task] = other_worker_id
-    return set(worker_that_blocked_task.keys())
+    task_sets = _get_external_workers(worker).values()
+    return functools.reduce(lambda a, b: a | b, task_sets, set())
 
 
 def _get_external_workers(worker):
     """
     This returns a dict with a set of tasks for all of the other workers
     """
-    worker_that_blocked_task = dict()
+    worker_that_blocked_task = collections.defaultdict(set)
     get_work_response_history = worker._get_work_response_history
     for get_work_response in get_work_response_history:
         if get_work_response['task_id'] is None:
@@ -284,10 +277,9 @@ def _get_external_workers(worker):
                 other_worker_id = running_task['worker']
                 other_task_id = running_task['task_id']
                 other_task = worker._scheduled_tasks.get(other_task_id)
-                if other_task:
-                    if other_worker_id not in worker_that_blocked_task.keys():
-                        worker_that_blocked_task[other_worker_id] = set()
-                    worker_that_blocked_task[other_worker_id].add(other_task)
+                if other_worker_id == worker._id or not other_task:
+                    continue
+                worker_that_blocked_task[other_worker_id].add(other_task)
     return worker_that_blocked_task
 
 

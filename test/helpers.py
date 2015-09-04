@@ -120,6 +120,19 @@ class with_config(object):
         return wrapper
 
 
+class RunOnceTask(luigi.Task):
+
+    def __init__(self, *args, **kwargs):
+        super(RunOnceTask, self).__init__(*args, **kwargs)
+        self.comp = False
+
+    def complete(self):
+        return self.comp
+
+    def run(self):
+        self.comp = True
+
+
 class LuigiTestCase(unittest.TestCase):
     """
     Tasks registred within a test case will get unregistered in a finalizer

@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase
+from helpers import LuigiTestCase, RunOnceTask
 
 import luigi
 import luigi.worker
@@ -55,9 +55,6 @@ class ExecutionSummaryTest(LuigiTestCase):
                 return False
 
         class Foo(luigi.Task):
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(5):
                     yield Bar(i)
@@ -99,9 +96,6 @@ class ExecutionSummaryTest(LuigiTestCase):
                     raise ValueError()
 
         class Foo(luigi.Task):
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(5):
                     yield ExternalBar(i)
@@ -132,28 +126,12 @@ class ExecutionSummaryTest(LuigiTestCase):
         lock1 = threading.Lock()
         lock2 = threading.Lock()
 
-        class ParentTask(luigi.Task):
-            def __init__(self, *args, **kwargs):
-                super(ParentTask, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def complete(self):
-                return self.comp
-
-            def run(self):
-                self.comp = True
+        class ParentTask(RunOnceTask):
 
             def requires(self):
                 yield LockTask()
 
-        class LockTask(luigi.Task):
-            def __init__(self, *args, **kwargs):
-                super(LockTask, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def complete(self):
-                return self.comp
-
+        class LockTask(RunOnceTask):
             def run(self):
                 lock2.release()
                 lock1.acquire()
@@ -188,17 +166,7 @@ class ExecutionSummaryTest(LuigiTestCase):
 
     def test_larger_tree(self):
 
-        class Dog(luigi.Task):
-            def __init__(self, *args, **kwargs):
-                super(Dog, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def complete(self):
-                return self.comp
-
-            def run(self):
-                self.comp = True
-
+        class Dog(RunOnceTask):
             def requires(self):
                 yield Cat(2)
 
@@ -220,18 +188,8 @@ class ExecutionSummaryTest(LuigiTestCase):
                 else:
                     return self.comp
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             num = luigi.IntParameter()
-
-            def __init__(self, *args, **kwargs):
-                super(Bar, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def complete(self):
-                return self.comp
-
-            def run(self):
-                self.comp = True
 
             def requires(self):
                 if self.num == 0:
@@ -244,9 +202,6 @@ class ExecutionSummaryTest(LuigiTestCase):
                     yield Dog()
 
         class Foo(luigi.Task):
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(3):
                     yield Bar(i)
@@ -274,24 +229,10 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         start = datetime.date(1998, 3, 23)
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             date = luigi.DateParameter()
 
-            def __init__(self, *args, **kwargs):
-                super(Bar, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def run(self):
-                self.comp = True
-
-            def complete(self):
-                return self.comp
-
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(10):
                     new_date = start + datetime.timedelta(days=i)
@@ -313,24 +254,10 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         start = datetime.datetime(1998, 3, 23, 1, 50)
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             time = luigi.DateMinuteParameter()
 
-            def __init__(self, *args, **kwargs):
-                super(Bar, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def run(self):
-                self.comp = True
-
-            def complete(self):
-                return self.comp
-
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(300):
                     new_time = start + datetime.timedelta(minutes=i)
@@ -347,24 +274,10 @@ class ExecutionSummaryTest(LuigiTestCase):
 
     def test_with_ranges_one_param(self):
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             num = luigi.IntParameter()
 
-            def __init__(self, *args, **kwargs):
-                super(Bar, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def run(self):
-                self.comp = True
-
-            def complete(self):
-                return self.comp
-
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(11):
                     yield Bar(i)
@@ -380,26 +293,12 @@ class ExecutionSummaryTest(LuigiTestCase):
 
     def test_with_ranges_multiple_params(self):
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             num1 = luigi.IntParameter()
             num2 = luigi.IntParameter()
             num3 = luigi.IntParameter()
 
-            def __init__(self, *args, **kwargs):
-                super(Bar, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def run(self):
-                self.comp = True
-
-            def complete(self):
-                return self.comp
-
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(5):
                     yield Bar(5, i, 25)
@@ -415,25 +314,11 @@ class ExecutionSummaryTest(LuigiTestCase):
 
     def test_with_two_tasks(self):
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             num = luigi.IntParameter()
             num2 = luigi.IntParameter()
 
-            def __init__(self, *args, **kwargs):
-                super(Bar, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def run(self):
-                self.comp = True
-
-            def complete(self):
-                return self.comp
-
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(2):
                     yield Bar(i, 2 * i)
@@ -449,24 +334,10 @@ class ExecutionSummaryTest(LuigiTestCase):
 
     def test_really_long_param_name(self):
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             This_is_a_really_long_parameter_that_we_should_not_print_out_because_people_will_get_annoyed = luigi.IntParameter()
 
-            def __init__(self, *args, **kwargs):
-                super(Bar, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def run(self):
-                self.comp = True
-
-            def complete(self):
-                return self.comp
-
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
-
             def requires(self):
                 yield Bar(0)
 
@@ -478,25 +349,11 @@ class ExecutionSummaryTest(LuigiTestCase):
 
     def test_multiple_params_multiple_same_task_family(self):
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             num = luigi.IntParameter()
             num2 = luigi.IntParameter()
 
-            def __init__(self, *args, **kwargs):
-                super(Bar, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def run(self):
-                self.comp = True
-
-            def complete(self):
-                return self.comp
-
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(4):
                     yield Bar(i, 2 * i)
@@ -510,25 +367,11 @@ class ExecutionSummaryTest(LuigiTestCase):
 
     def test_happy_smiley_face_normal(self):
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             num = luigi.IntParameter()
             num2 = luigi.IntParameter()
 
-            def __init__(self, *args, **kwargs):
-                super(Bar, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def run(self):
-                self.comp = True
-
-            def complete(self):
-                return self.comp
-
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(4):
                     yield Bar(i, 2 * i)
@@ -543,27 +386,12 @@ class ExecutionSummaryTest(LuigiTestCase):
         lock1 = threading.Lock()
         lock2 = threading.Lock()
 
-        class ParentTask(luigi.Task):
-            def __init__(self, *args, **kwargs):
-                super(ParentTask, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def complete(self):
-                return self.comp
-
-            def run(self):
-                self.comp = True
+        class ParentTask(RunOnceTask):
 
             def requires(self):
                 yield LockTask()
 
-        class LockTask(luigi.Task):
-            def __init__(self, *args, **kwargs):
-                super(LockTask, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def complete(self):
-                return self.comp
+        class LockTask(RunOnceTask):
 
             def run(self):
                 lock2.release()
@@ -599,9 +427,6 @@ class ExecutionSummaryTest(LuigiTestCase):
                     raise ValueError()
 
         class Foo(luigi.Task):
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(5):
                     yield Bar(i)
@@ -621,10 +446,6 @@ class ExecutionSummaryTest(LuigiTestCase):
                 return False
 
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
-
             def requires(self):
                 yield ExternalBar()
 
@@ -644,9 +465,6 @@ class ExecutionSummaryTest(LuigiTestCase):
                 return False
 
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
 
             def requires(self):
                 for i in range(10):
@@ -671,9 +489,6 @@ class ExecutionSummaryTest(LuigiTestCase):
         class Boom(luigi.Task):
             this_is_a_really_long_I_mean_way_too_long_and_annoying_parameter = luigi.IntParameter()
 
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(5, 200):
                     yield Bar(i)
@@ -681,9 +496,6 @@ class ExecutionSummaryTest(LuigiTestCase):
         class Foo(luigi.Task):
             num = luigi.IntParameter()
             num2 = luigi.IntParameter()
-
-            def run(self):
-                pass
 
             def requires(self):
                 yield MyExternal()
@@ -695,24 +507,15 @@ class ExecutionSummaryTest(LuigiTestCase):
             def complete(self):
                 return True
 
-            def run(self):
-                pass
-
         class DateTask(luigi.Task):
             date = luigi.DateParameter()
             num = luigi.IntParameter()
-
-            def run(self):
-                pass
 
             def requires(self):
                 yield MyExternal()
                 yield Boom(0)
 
         class EntryPoint(luigi.Task):
-
-            def run(self):
-                pass
 
             def requires(self):
                 for i in range(10):
@@ -742,24 +545,10 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         start = datetime.datetime(1998, 3, 23, 5)
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             datehour = luigi.DateHourParameter()
 
-            def __init__(self, *args, **kwargs):
-                super(Bar, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def run(self):
-                self.comp = True
-
-            def complete(self):
-                return self.comp
-
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(10):
                     new_date = start + datetime.timedelta(hours=i)
@@ -778,28 +567,14 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertNotIn('\n\n\n', s)
 
     def test_with_months(self):
-        """ Just test that it doesn't crash with datehour params """
+        """ Just test that it doesn't crash with month params """
 
         start = datetime.datetime(1998, 3, 23)
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             month = luigi.MonthParameter()
 
-            def __init__(self, *args, **kwargs):
-                super(Bar, self).__init__(*args, **kwargs)
-                self.comp = False
-
-            def run(self):
-                self.comp = True
-
-            def complete(self):
-                return self.comp
-
         class Foo(luigi.Task):
-
-            def run(self):
-                pass
-
             def requires(self):
                 for i in range(3):
                     new_date = start + datetime.timedelta(days=30*i)
@@ -815,4 +590,21 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertIn('Scheduled 4 tasks', s)
         self.assertIn('Luigi Execution Summary', s)
         self.assertNotIn('00:00:00', s)
+        self.assertNotIn('\n\n\n', s)
+
+    def test_multiple_dash_dash_workers(self):
+        """
+        Don't print own worker with ``--workers 2`` setting.
+        """
+        self.worker = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=2)
+
+        class Foo(RunOnceTask):
+            pass
+
+        self.run_task(Foo())
+        d = self.summary_dict()
+        self.assertEqual(set(), d['run_by_other_worker'])
+        s = self.summary()
+        self.assertNotIn('The other workers were', s)
+        self.assertIn('This progress looks :) because there were no failed ', s)
         self.assertNotIn('\n\n\n', s)
