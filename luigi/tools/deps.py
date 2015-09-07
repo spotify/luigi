@@ -16,7 +16,7 @@
 # You fixed the bug and now you want to rerun it, including all it's upstream deps.
 #
 # To do that you run:
-#      bin/deps.py --module daily_module Aggregate --daily-param1 xxx --upstream Daily
+#      bin/deps.py --module daily_module Aggregate --daily-param1 xxx --upstream-family Daily
 #
 # This will output all the tasks on the dependency path between Daily and Aggregate. In
 # effect, this is how you find all upstream tasks for Aggregate. Now you can delete its
@@ -33,7 +33,7 @@
 # PYTHONPATH=$PYTHONPATH:/path/to/your/luigi/tasks bin/deps.py \
 # --module my.tasks  MyDownstreamTask
 # --downstream_task_param1 123456
-# [--upstream-task-family MyUpstreamTask]
+# [--upstream-family MyUpstreamTask]
 #
 
 
@@ -44,6 +44,8 @@ from luigi.s3 import S3Target
 from luigi.target import FileSystemTarget
 from luigi.task import flatten
 from luigi import parameter
+import sys
+from luigi.cmdline_parser import CmdlineParser
 
 
 def get_task_requires(task):
@@ -63,7 +65,7 @@ def dfs_paths(start_task, goal_task_family, path=None):
 
 class upstream(luigi.task.Config):
     '''
-    Used to provide the parameter upstream-task-family
+    Used to provide the parameter upstream-family
     '''
     family = parameter.Parameter(default=None)
 
@@ -82,11 +84,12 @@ def find_deps_cli():
     '''
     Finds all tasks on all paths from provided CLI task
     '''
-    interface = luigi.interface._DynamicArgParseInterface()
-    tasks = interface.parse()
-    task, = tasks
-    upstream_task_family = upstream().family
-    return find_deps(task, upstream_task_family)
+    cmdline_args = sys.argv[1:]
+    with CmdlineParser.global_instance(cmdline_args) as cp:
+        task_cls = cp.get_task_cls()
+        task = task_cls()
+        upstream_task_family = upstream().family
+        return find_deps(task, upstream_task_family)
 
 
 def main():

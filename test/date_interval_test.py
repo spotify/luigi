@@ -16,7 +16,7 @@
 #
 
 import datetime
-from helpers import unittest
+from helpers import unittest, in_parse
 
 import luigi
 from luigi.parameter import DateIntervalParameter as DI
@@ -98,10 +98,9 @@ class DateIntervalTest(unittest.TestCase):
         class MyTaskNoDefault(luigi.Task):
             di = DI()
 
-        task = luigi.interface._ArgParseInterface().parse(["MyTask"])[0]
-        self.assertEqual(task.di, month)
-        task = luigi.interface._ArgParseInterface().parse(["MyTask", "--di", "2012-10"])[0]
-        self.assertEqual(task.di, other)
+        self.assertEqual(MyTask().di, month)
+        in_parse(["MyTask", "--di", "2012-10"],
+                 lambda: self.assertEqual(MyTask().di, other))
         task = MyTask(month)
         self.assertEqual(task.di, month)
         task = MyTask(di=month)
@@ -110,11 +109,11 @@ class DateIntervalTest(unittest.TestCase):
         self.assertNotEquals(task.di, month)
 
         def fail1():
-            luigi.interface._ArgParseInterface().parse(["MyTaskNoDefault"])[0]
+            return MyTaskNoDefault()
         self.assertRaises(luigi.parameter.MissingParameterException, fail1)
 
-        task = luigi.interface._ArgParseInterface().parse(["MyTaskNoDefault", "--di", "2012-10"])[0]
-        self.assertEqual(task.di, other)
+        in_parse(["MyTaskNoDefault", "--di", "2012-10"],
+                 lambda: self.assertEqual(MyTaskNoDefault().di, other))
 
     def test_hours(self):
         d = DI().parse('2015')

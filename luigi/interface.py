@@ -18,7 +18,6 @@
 This module contains the bindings for command line integration and dynamic loading of tasks
 """
 
-import argparse
 import logging
 import logging.config
 import os
@@ -35,7 +34,7 @@ from luigi import scheduler
 from luigi import task
 from luigi import worker
 from luigi import execution_summary
-from luigi.task_register import Register
+from luigi.cmdline_parser import CmdlineParser
 
 
 def setup_interface_logging(conf_file=None):
@@ -107,13 +106,16 @@ class core(task.Config):
         description='Configuration file for logging')
     module = parameter.Parameter(
         default=None,
-        description='Used for dynamic loading of modules')  # see _DynamicArgParseInterface
+        description='Used for dynamic loading of modules')
     parallel_scheduling = parameter.BoolParameter(
         default=False,
         description='Use multiprocessing to do scheduling in parallel.')
     assistant = parameter.BoolParameter(
         default=False,
         description='Run any task from the scheduler.')
+    help = parameter.BoolParameter(
+        default=False,
+        description='Help option flag, for --help')
 
 
 class _WorkerSchedulerFactory(object):
@@ -187,121 +189,6 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     return success
 
 
-def _add_task_parameters(parser, task_cls):
-    for param_name, param in task_cls.get_params():
-        param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, glob=False)
-
-
-def _get_global_parameters():
-    seen_params = set()
-    for task_name, is_without_section, param_name, param in Register.get_all_params():
-        if param in seen_params:
-            continue
-        seen_params.add(param)
-        yield task_name, is_without_section, param_name, param
-
-
-def _add_global_parameters(parser):
-    for task_name, is_without_section, param_name, param in _get_global_parameters():
-        param.add_to_cmdline_parser(parser, param_name, task_name, glob=True, is_without_section=is_without_section)
-
-
-def _get_task_parameters(task_cls, args):
-    # Parse a str->str dict to the correct types
-    params = {}
-    for param_name, param in task_cls.get_params():
-        param.parse_from_args(param_name, task_cls.task_family, args, params)
-    return params
-
-
-def _set_global_parameters(args):
-    # Note that this is not side effect free
-    for task_name, is_without_section, param_name, param in _get_global_parameters():
-        param.set_global_from_args(param_name, task_name, args, is_without_section=is_without_section)
-
-
-class _ArgParseInterface(object):
-    """
-    Takes the task as the command, with parameters specific to it.
-    """
-
-    def parse_task(self, cmdline_args=None):
-        if cmdline_args is None:
-            cmdline_args = sys.argv[1:]
-
-        parser = argparse.ArgumentParser()
-
-        _add_global_parameters(parser)
-
-        # Parse global arguments and pull out the task name.
-        # We used to do this using subparsers+command, but some issues with
-        # argparse across different versions of Python (2.7.9) made it hard.
-        args, unknown = parser.parse_known_args(args=[a for a in cmdline_args if a != '--help'])
-        if len(unknown) == 0:
-            # In case it included a --help argument, run again
-            parser.parse_known_args(args=cmdline_args)
-            raise SystemExit('No task specified')
-
-        task_name = unknown[0]
-        task_cls = Register.get_task_cls(task_name)
-
-        # Add a subparser to parse task-specific arguments
-        subparsers = parser.add_subparsers(dest='command')
-        subparser = subparsers.add_parser(task_name)
-
-        # Add both task and global params here so that we can support both:
-        # test.py --global-param xyz Test --n 42
-        # test.py Test --n 42 --global-param xyz
-        _add_global_parameters(subparser)
-        _add_task_parameters(subparser, task_cls)
-
-        # Workaround for bug in argparse for Python 2.7.9
-        # See https://mail.python.org/pipermail/python-dev/2015-January/137699.html
-        subargs = parser.parse_args(args=cmdline_args)
-        for key, value in vars(subargs).items():
-            if value:  # Either True (for boolean args) or non-None (everything else)
-                setattr(args, key, value)
-
-        # Notice that this is not side effect free because it might set global params
-        _set_global_parameters(args)
-        task_params = _get_task_parameters(task_cls, args)
-
-        return [task_cls(**task_params)]
-
-    def parse(self, cmdline_args=None):
-        return self.parse_task(cmdline_args)
-
-
-class _DynamicArgParseInterface(_ArgParseInterface):
-    """
-    Uses --module as a way to load modules dynamically
-
-    Usage:
-
-    .. code-block:: console
-
-        python whatever.py --module foo_module FooTask --blah xyz --x 123
-
-    This will dynamically import foo_module and then try to create FooTask from this.
-    """
-
-    def parse(self, cmdline_args=None):
-        if cmdline_args is None:
-            cmdline_args = sys.argv[1:]
-
-        parser = argparse.ArgumentParser()
-
-        _add_global_parameters(parser)
-
-        args, unknown = parser.parse_known_args(args=[a for a in cmdline_args if a != '--help'])
-        module = args.module
-
-        if module:
-            __import__(module)
-
-        return self.parse_task(cmdline_args)
-
-
 def run(cmdline_args=None, main_task_cls=None,
         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
     """
@@ -321,14 +208,15 @@ def run(cmdline_args=None, main_task_cls=None,
     if cmdline_args is None:
         cmdline_args = sys.argv[1:]
 
-    interface = _DynamicArgParseInterface()
-
     if main_task_cls:
         cmdline_args.insert(0, main_task_cls.task_family)
     if local_scheduler:
         cmdline_args.insert(0, '--local-scheduler')
-    tasks = interface.parse(cmdline_args)
-    return _schedule_and_run(tasks, worker_scheduler_factory)
+
+    with CmdlineParser.global_instance(cmdline_args) as cp:
+        task_cls = cp.get_task_cls()
+        task = task_cls()
+        return _schedule_and_run([task], worker_scheduler_factory)
 
 
 def build(tasks, worker_scheduler_factory=None, **env_params):
