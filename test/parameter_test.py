@@ -16,7 +16,7 @@
 #
 
 import datetime
-from helpers import unittest, with_config, LuigiTestCase
+from helpers import with_config, LuigiTestCase, parsing
 from datetime import timedelta
 
 import luigi
@@ -166,24 +166,26 @@ class ParameterTest(LuigiTestCase):
         self.assertEqual(f.not_a_param, "lol")
 
     def test_bool_false(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Baz'])
+        self.run_locally(['Baz'])
         self.assertEqual(Baz._val, False)
 
     def test_bool_true(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Baz', '--bool'])
+        self.run_locally(['Baz', '--bool'])
         self.assertEqual(Baz._val, True)
 
     def test_forgot_param(self):
-        self.assertRaises(luigi.parameter.MissingParameterException, luigi.run, ['--local-scheduler', '--no-lock', 'ForgotParam'],)
+        self.assertRaises(luigi.parameter.MissingParameterException, self.run_locally, ['ForgotParam'],)
 
     @email_patch
     def test_forgot_param_in_dep(self, emails):
         # A programmatic missing parameter will cause an error email to be sent
-        luigi.run(['--local-scheduler', '--no-lock', 'ForgotParamDep'])
+        self.run_locally(['ForgotParamDep'])
         self.assertNotEquals(emails, [])
 
     def test_default_param_cmdline(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'WithDefault'])
+        self.assertEqual(WithDefault().x, 'xyz')
+
+    def test_default_param_cmdline_2(self):
         self.assertEqual(WithDefault().x, 'xyz')
 
     def test_insignificant_parameter(self):
@@ -236,98 +238,90 @@ class TestNewStyleGlobalParameters(LuigiTestCase):
     def setUp(self):
         super(TestNewStyleGlobalParameters, self).setUp()
         MockTarget.fs.clear()
-        BananaDep.y._reset_global()
 
     def expect_keys(self, expected):
         self.assertEquals(set(MockTarget.fs.get_all_data().keys()), set(expected))
 
     def test_x_arg(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg'])
+        self.run_locally(['Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg'])
         self.expect_keys(['banana-foo-bar', 'banana-dep-foo-def'])
 
     def test_x_arg_override(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg', '--BananaDep-y', 'xyz'])
+        self.run_locally(['Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg', '--BananaDep-y', 'xyz'])
         self.expect_keys(['banana-foo-bar', 'banana-dep-foo-xyz'])
 
     def test_x_arg_override_stupid(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg', '--BananaDep-x', 'blabla'])
+        self.run_locally(['Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg', '--BananaDep-x', 'blabla'])
         self.expect_keys(['banana-foo-bar', 'banana-dep-foo-def'])
 
     def test_x_arg_y_arg(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg-y-arg'])
+        self.run_locally(['Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg-y-arg'])
         self.expect_keys(['banana-foo-bar', 'banana-dep-foo-bar'])
 
     def test_x_arg_y_arg_override(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg-y-arg', '--BananaDep-y', 'xyz'])
+        self.run_locally(['Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg-y-arg', '--BananaDep-y', 'xyz'])
         self.expect_keys(['banana-foo-bar', 'banana-dep-foo-bar'])
 
     def test_x_arg_y_arg_override_all(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo',
-                   '--y', 'bar', '--style', 'x-arg-y-arg', '--BananaDep-y',
-                   'xyz', '--BananaDep-x', 'blabla'])
+        self.run_locally(['Banana', '--x', 'foo',
+                          '--y', 'bar', '--style', 'x-arg-y-arg', '--BananaDep-y',
+                          'xyz', '--BananaDep-x', 'blabla'])
         self.expect_keys(['banana-foo-bar', 'banana-dep-foo-bar'])
 
     def test_y_arg_override(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz'])
+        self.run_locally(['Banana', '--x', 'foo', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz'])
         self.expect_keys(['banana-foo-bar', 'banana-dep-xyz-bar'])
 
     def test_y_arg_override_both(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--x', 'foo',
-                   '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz',
-                   '--BananaDep-y', 'blah'])
+        self.run_locally(['Banana', '--x', 'foo',
+                          '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz',
+                          '--BananaDep-y', 'blah'])
         self.expect_keys(['banana-foo-bar', 'banana-dep-xyz-bar'])
 
     def test_y_arg_override_banana(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Banana', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz', '--Banana-x', 'baz'])
+        self.run_locally(['Banana', '--y', 'bar', '--style', 'y-kwarg', '--BananaDep-x', 'xyz', '--Banana-x', 'baz'])
         self.expect_keys(['banana-baz-bar', 'banana-dep-xyz-bar'])
 
 
 class TestRemoveGlobalParameters(LuigiTestCase):
 
-    def setUp(self):
-        super(TestRemoveGlobalParameters, self).setUp()
-        MyConfig.mc_p._reset_global()
-        MyConfig.mc_q._reset_global()
-        MyConfigWithoutSection.mc_r._reset_global()
-        MyConfigWithoutSection.mc_s._reset_global()
-
     def run_and_check(self, args):
-        run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
+        run_exit_status = self.run_locally(args)
         self.assertTrue(run_exit_status)
         return run_exit_status
 
+    @parsing(['--MyConfig-mc-p', '99', '--mc-r', '55', 'NoopTask'])
     def test_use_config_class_1(self):
-        self.run_and_check(['--MyConfig-mc-p', '99', '--mc-r', '55', 'NoopTask'])
         self.assertEqual(MyConfig().mc_p, 99)
         self.assertEqual(MyConfig().mc_q, 73)
         self.assertEqual(MyConfigWithoutSection().mc_r, 55)
         self.assertEqual(MyConfigWithoutSection().mc_s, 99)
 
+    @parsing(['NoopTask', '--MyConfig-mc-p', '99', '--mc-r', '55'])
     def test_use_config_class_2(self):
-        self.run_and_check(['NoopTask', '--MyConfig-mc-p', '99', '--mc-r', '55'])
         self.assertEqual(MyConfig().mc_p, 99)
         self.assertEqual(MyConfig().mc_q, 73)
         self.assertEqual(MyConfigWithoutSection().mc_r, 55)
         self.assertEqual(MyConfigWithoutSection().mc_s, 99)
 
+    @parsing(['--MyConfig-mc-p', '99', '--mc-r', '55', 'NoopTask', '--mc-s', '123', '--MyConfig-mc-q', '42'])
     def test_use_config_class_more_args(self):
-        self.run_and_check(['--MyConfig-mc-p', '99', '--mc-r', '55', 'NoopTask', '--mc-s', '123', '--MyConfig-mc-q', '42'])
         self.assertEqual(MyConfig().mc_p, 99)
         self.assertEqual(MyConfig().mc_q, 42)
         self.assertEqual(MyConfigWithoutSection().mc_r, 55)
         self.assertEqual(MyConfigWithoutSection().mc_s, 123)
 
     @with_config({"MyConfig": {"mc_p": "666", "mc_q": "777"}})
+    @parsing(['--mc-r', '555', 'NoopTask'])
     def test_use_config_class_with_configuration(self):
-        self.run_and_check(['--mc-r', '555', 'NoopTask'])
         self.assertEqual(MyConfig().mc_p, 666)
         self.assertEqual(MyConfig().mc_q, 777)
         self.assertEqual(MyConfigWithoutSection().mc_r, 555)
         self.assertEqual(MyConfigWithoutSection().mc_s, 99)
 
     @with_config({"MyConfigWithoutSection": {"mc_r": "999", "mc_s": "888"}})
+    @parsing(['NoopTask', '--MyConfig-mc-p', '222', '--mc-r', '555'])
     def test_use_config_class_with_configuration_2(self):
-        self.run_and_check(['NoopTask', '--MyConfig-mc-p', '222', '--mc-r', '555'])
         self.assertEqual(MyConfig().mc_p, 222)
         self.assertEqual(MyConfig().mc_q, 73)
         self.assertEqual(MyConfigWithoutSection().mc_r, 555)
@@ -341,13 +335,13 @@ class TestRemoveGlobalParameters(LuigiTestCase):
             use_cmdline_section = False
             n_cats = luigi.IntParameter()
 
-        self.run_and_check(['--n-cats', '123', '--Dogs-n-dogs', '456', 'WithDefault'])
-        self.assertEqual(Dogs().n_dogs, 456)
-        self.assertEqual(CatsWithoutSection().n_cats, 123)
+        with luigi.cmdline_parser.CmdlineParser.global_instance(['--n-cats', '123', '--Dogs-n-dogs', '456', 'WithDefault'], allow_override=True):
+            self.assertEqual(Dogs().n_dogs, 456)
+            self.assertEqual(CatsWithoutSection().n_cats, 123)
 
-        self.run_and_check(['WithDefault', '--n-cats', '321', '--Dogs-n-dogs', '654'])
-        self.assertEqual(Dogs().n_dogs, 654)
-        self.assertEqual(CatsWithoutSection().n_cats, 321)
+        with luigi.cmdline_parser.CmdlineParser.global_instance(['WithDefault', '--n-cats', '321', '--Dogs-n-dogs', '654'], allow_override=True):
+            self.assertEqual(Dogs().n_dogs, 654)
+            self.assertEqual(CatsWithoutSection().n_cats, 321)
 
     def test_global_significant_param(self):
         """ We don't want any kind of global param to be positional """
@@ -379,11 +373,11 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
 
     @with_config({"foo": {"bar": "baz"}})
     def testDefault(self):
-        class A(luigi.Task):
+        class LocalA(luigi.Task):
             p = luigi.Parameter(config_path=dict(section="foo", name="bar"))
 
-        self.assertEqual("baz", A().p)
-        self.assertEqual("boo", A(p="boo").p)
+        self.assertEqual("baz", LocalA().p)
+        self.assertEqual("boo", LocalA(p="boo").p)
 
     @with_config({"foo": {"bar": "2001-02-03T04"}})
     def testDateHour(self):
@@ -500,37 +494,37 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         p = luigi.Parameter(config_path=dict(section="foo", name="bar"), default='blah')
         self.assertEqual('blah', _value(p))
 
-    @with_config({"A": {"p": "p_default"}})
+    @with_config({"LocalA": {"p": "p_default"}})
     def testDefaultFromTaskName(self):
-        class A(luigi.Task):
+        class LocalA(luigi.Task):
             p = luigi.Parameter()
 
-        self.assertEqual("p_default", A().p)
-        self.assertEqual("boo", A(p="boo").p)
+        self.assertEqual("p_default", LocalA().p)
+        self.assertEqual("boo", LocalA(p="boo").p)
 
-    @with_config({"A": {"p": "999"}})
+    @with_config({"LocalA": {"p": "999"}})
     def testDefaultFromTaskNameInt(self):
-        class A(luigi.Task):
+        class LocalA(luigi.Task):
             p = luigi.IntParameter()
 
-        self.assertEqual(999, A().p)
-        self.assertEqual(777, A(p=777).p)
+        self.assertEqual(999, LocalA().p)
+        self.assertEqual(777, LocalA(p=777).p)
 
-    @with_config({"A": {"p": "p_default"}, "foo": {"bar": "baz"}})
+    @with_config({"LocalA": {"p": "p_default"}, "foo": {"bar": "baz"}})
     def testDefaultFromConfigWithTaskNameToo(self):
-        class A(luigi.Task):
+        class LocalA(luigi.Task):
             p = luigi.Parameter(config_path=dict(section="foo", name="bar"))
 
-        self.assertEqual("p_default", A().p)
-        self.assertEqual("boo", A(p="boo").p)
+        self.assertEqual("p_default", LocalA().p)
+        self.assertEqual("boo", LocalA(p="boo").p)
 
-    @with_config({"A": {"p": "p_default_2"}})
+    @with_config({"LocalA": {"p": "p_default_2"}})
     def testDefaultFromTaskNameWithDefault(self):
-        class A(luigi.Task):
+        class LocalA(luigi.Task):
             p = luigi.Parameter(default="banana")
 
-        self.assertEqual("p_default_2", A().p)
-        self.assertEqual("boo_2", A(p="boo_2").p)
+        self.assertEqual("p_default_2", LocalA().p)
+        self.assertEqual("boo_2", LocalA(p="boo_2").p)
 
     @with_config({"MyClass": {"p_wohoo": "p_default_3"}})
     def testWithLongParameterName(self):
@@ -542,11 +536,11 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
 
     @with_config({"RangeDaily": {"days_back": "123"}})
     def testSettingOtherMember(self):
-        class A(luigi.Task):
+        class LocalA(luigi.Task):
             pass
 
-        self.assertEqual(123, luigi.tools.range.RangeDaily(of=A).days_back)
-        self.assertEqual(70, luigi.tools.range.RangeDaily(of=A, days_back=70).days_back)
+        self.assertEqual(123, luigi.tools.range.RangeDaily(of=LocalA).days_back)
+        self.assertEqual(70, luigi.tools.range.RangeDaily(of=LocalA, days_back=70).days_back)
 
     @with_config({"MyClass": {"p_not_global": "123"}})
     def testCommandLineWithDefault(self):
@@ -623,11 +617,7 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         self.assertFalse(self.run_locally_split('mynamespace.A --A-p 200 --expected 200'))
 
 
-class OverrideEnvStuff(unittest.TestCase):
-
-    def setUp(self):
-        env_params_cls = luigi.interface.core
-        env_params_cls.scheduler_port._reset_global()
+class OverrideEnvStuff(LuigiTestCase):
 
     @with_config({"core": {"default-scheduler-port": '6543'}})
     def testOverrideSchedulerPort(self):
@@ -679,12 +669,10 @@ class TestTaskParameter(LuigiTestCase):
 
         # But is should be able to parse command line arguments
         self.assertRaises(luigi.task_register.TaskClassNotFoundException,
-                          lambda: (luigi.run(['--local-scheduler', '--no-lock'] +
-                                   'mynamespace.MetaTask --a blah'.split())))
+                          lambda: (self.run_locally_split('mynamespace.MetaTask --a blah')))
         self.assertRaises(luigi.task_register.TaskClassNotFoundException,
-                          lambda: (luigi.run(['--local-scheduler', '--no-lock'] +
-                                   'mynamespace.MetaTask --a Taskk'.split())))
-        self.assertTrue(luigi.run(['--local-scheduler', '--no-lock'] + 'mynamespace.MetaTask --a mynamespace.MetaTask'.split()))
+                          lambda: (self.run_locally_split('mynamespace.MetaTask --a Taskk')))
+        self.assertTrue(self.run_locally_split('mynamespace.MetaTask --a mynamespace.MetaTask'))
         self.assertEqual(MetaTask.saved_value, MetaTask)
-        self.assertTrue(luigi.run(['--local-scheduler', '--no-lock'] + 'mynamespace.MetaTask --a other_namespace.OtherTask'.split()))
+        self.assertTrue(self.run_locally_split('mynamespace.MetaTask --a other_namespace.OtherTask'))
         self.assertEqual(MetaTask.saved_value, OtherTask)

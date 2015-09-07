@@ -87,16 +87,13 @@ class Task(object):
     * :py:meth:`requires` - the list of Tasks that this Task depends on.
     * :py:meth:`output` - the output :py:class:`Target` that this Task creates.
 
-    Parameters to the Task should be declared as members of the class, e.g.::
+    Each :py:class:`~luigi.Parameter` of the Task should be declared as members:
 
-    .. code-block:: python
+    .. code:: python
 
         class MyTask(luigi.Task):
             count = luigi.IntParameter()
-
-
-    Each Task exposes a constructor accepting all :py:class:`Parameter` (and
-    values) as kwargs. e.g. ``MyTask(count=10)`` would instantiate `MyTask`.
+            second_param = luigi.Parameter()
 
     In addition to any declared properties and methods, there are a few
     non-declared properties, which are created by the :py:class:`Register`
@@ -106,9 +103,6 @@ class Task(object):
       optional string which is prepended to the task name for the sake of
       scheduling. If it isn't overridden in a Task, whatever was last declared
       using `luigi.namespace` will be used.
-
-    ``Task._parameters``
-      list of ``(parameter_name, parameter)`` tuples for this task class
     """
 
     _event_callbacks = {}
@@ -197,7 +191,7 @@ class Task(object):
             params.append((param_name, param_obj))
 
         # The order the parameters are created matters. See Parameter class
-        params.sort(key=lambda t: t[1].counter)
+        params.sort(key=lambda t: t[1]._counter)
         return params
 
     @classmethod
@@ -253,18 +247,6 @@ class Task(object):
         return [(param_name, list_to_tuple(result[param_name])) for param_name, param_obj in params]
 
     def __init__(self, *args, **kwargs):
-        """
-        Constructor to resolve values for all Parameters.
-
-        For example, the Task:
-
-        .. code-block:: python
-
-            class MyTask(luigi.Task):
-                count = luigi.IntParameter()
-
-        can be instantiated as ``MyTask(count=10)``.
-        """
         params = self.get_params()
         param_values = self.get_param_values(params, args, kwargs)
 
@@ -293,19 +275,16 @@ class Task(object):
         return hasattr(self, 'task_id')
 
     @classmethod
-    def from_str_params(cls, params_str=None):
+    def from_str_params(cls, params_str):
         """
         Creates an instance from a str->str hash.
 
-        :param params_str: dict of param name -> value.
+        :param params_str: dict of param name -> value as string.
         """
-        if params_str is None:
-            params_str = {}
         kwargs = {}
         for param_name, param in cls.get_params():
-            if param.significant or param_name in params_str:
-                value = param.parse_from_input(param_name, params_str[param_name])
-                kwargs[param_name] = value
+            if param_name in params_str:
+                kwargs[param_name] = param.parse(params_str[param_name])
 
         return cls(**kwargs)
 
@@ -533,12 +512,11 @@ class WrapperTask(Task):
 
 
 class Config(Task):
-
-    """Used for configuration that's not specific to a certain task
-
-    TODO: let's refactor Task & Config so that it inherits from a common
-    ParamContainer base class
     """
+    Class for configuration. See :ref:`ConfigClasses`.
+    """
+    # TODO: let's refactor Task & Config so that it inherits from a common
+    # ParamContainer base class
     pass
 
 
