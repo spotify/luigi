@@ -520,7 +520,7 @@ function visualiserApp(luigi) {
         };
 
         dt.rows(function (i, data) {
-            taskMap[data.taskName] = data.category;
+            taskMap[data.taskId] = data.category;
             return data.category === category;
         }).remove();
 
@@ -569,6 +569,37 @@ function visualiserApp(luigi) {
 
     }
 
+    function updateTasks() {
+        luigi.getRunningTaskList(function(runningTasks) {
+            updateTaskCategory(dt, 'RUNNING', runningTasks);
+        });
+
+        luigi.getFailedTaskList(function(failedTasks) {
+            updateTaskCategory(dt, 'FAILED', failedTasks);
+        });
+
+        luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
+            updateTaskCategory(dt, 'UPSTREAM_FAILED', upstreamFailedTasks);
+        });
+
+        luigi.getDisabledTaskList(function(disabledTasks) {
+            updateTaskCategory(dt, 'DISABLED', disabledTasks);
+        });
+
+        luigi.getUpstreamDisabledTaskList(function(upstreamDisabledTasks) {
+            updateTaskCategory(dt, 'UPSTREAM_DISABLED', upstreamDisabledTasks);
+        });
+
+        luigi.getPendingTaskList(function(pendingTasks) {
+            updateTaskCategory(dt, 'PENDING', pendingTasks);
+        });
+
+        luigi.getDoneTaskList(function(doneTasks) {
+            updateTaskCategory(dt, 'DONE', doneTasks);
+        });
+
+    }
+
     $(document).ready(function() {
         loadTemplates();
 
@@ -598,34 +629,7 @@ function visualiserApp(luigi) {
             ]
         });
         
-        luigi.getRunningTaskList(function(runningTasks) {
-            updateTaskCategory(dt, 'RUNNING', runningTasks);
-        });
-
-        luigi.getFailedTaskList(function(failedTasks) {
-            updateTaskCategory(dt, 'FAILED', failedTasks);
-        });
-
-        luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
-            updateTaskCategory(dt, 'UPSTREAM_FAILED', upstreamFailedTasks);
-        });
-
-        luigi.getDisabledTaskList(function(disabledTasks) {
-            updateTaskCategory(dt, 'DISABLED', disabledTasks);
-        });
-
-        luigi.getUpstreamDisabledTaskList(function(upstreamDisabledTasks) {
-            updateTaskCategory(dt, 'UPSTREAM_DISABLED', upstreamDisabledTasks);
-        });
-
-        luigi.getPendingTaskList(function(pendingTasks) {
-            updateTaskCategory(dt, 'PENDING', pendingTasks);
-        });
-
-        luigi.getDoneTaskList(function(doneTasks) {
-            updateTaskCategory(dt, 'DONE', doneTasks);
-        });
-
+        updateTasks();
         bindListEvents();
 
         //var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
@@ -657,6 +661,14 @@ function visualiserApp(luigi) {
             }
 
         } );
+
+        $('#taskTable tbody').on('click', 'td.details-control .re-enable-button', function () {
+            var that = $(this);
+            luigi.reEnable($(this).attr("data-task-id"), function(data) {
+                updateTasks();
+            });
+        });
+
 
         initVisualisation(visType);
 
