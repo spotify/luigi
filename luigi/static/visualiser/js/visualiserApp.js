@@ -4,6 +4,7 @@ function visualiserApp(luigi) {
     var typingTimer = 0;
     var visType = 'd3';
     var dt; // DataTable instantiated in $(document).ready()
+    var missingCategories = {};
 
     function loadTemplates() {
         $("script[type='text/template']").each(function(i, element) {
@@ -52,6 +53,10 @@ function visualiserApp(luigi) {
     }
 
     function taskToRowData(task) {
+        /* NOTE : if max-shown-tasks is set `task` might be an integer indicating the number
+                  of tasks not returned from the API
+
+         */
         var taskIdParts = /([A-Za-z0-9_]*)\((.*)\)/.exec(task.taskId);
         var taskName = taskIdParts[1];
         var taskParams = taskIdParts[2];
@@ -198,6 +203,12 @@ function visualiserApp(luigi) {
                 $(item2).find('.badge').removeClass('bg-green');
             }
         });
+    }
+
+    function renderWarnings() {
+        return renderTemplate("warningsTemplate",
+            {missingCategories: $.map(missingCategories, function (v, k) {return v})}
+        );
     }
 
     function processWorker(worker) {
@@ -524,17 +535,31 @@ function visualiserApp(luigi) {
             return data.category === category;
         }).remove();
 
-        var displayTasks = tasks.map(taskToRowData);
-        displayTasks = displayTasks.filter(function (obj) {
-            if (category === mostImportantCategory(category, taskMap[obj.taskName])) {
-                obj.category = category;
-                return true;
-            }
-            return false;
-        });
-        dt.rows.add(displayTasks);
+        var taskCount;
+        /* Check for integers in tasks.  This indicates max-shown-tasks was exceeded */
+        if (tasks.length === 1 && typeof(tasks[0]) === 'number') {
+            taskCount = tasks[0];
+            missingCategories[category] = {name: category, count: taskCount};
+        }
+        else {
+            var displayTasks = tasks.map(taskToRowData);
+            displayTasks = displayTasks.filter(function (obj) {
+                if (obj === null) {
+                    return false;
+                }
+                if (category === mostImportantCategory(category, taskMap[obj.taskId])) {
+                    obj.category = category;
+                    return true;
+                }
+                return false;
+            });
+            dt.rows.add(displayTasks);
+            taskCount = displayTasks.length;
+            delete missingCategories[category];
+        }
 
-        $('#'+category+'_info').find('.info-box-number').html(displayTasks.length);
+
+        $('#'+category+'_info').find('.info-box-number').html(taskCount);
         dt.draw();
 
         $('.sidebar').html(renderSidebar(dt.column(1).data()));
@@ -549,6 +574,13 @@ function visualiserApp(luigi) {
                 }
             }
         });
+
+        if ($.isEmptyObject(missingCategories)) {
+            $('#warnings').html('');
+        }
+        else {
+            $('#warnings').html(renderWarnings());
+        }
     }
 
     function initVisualisation(newVisType) {
@@ -608,6 +640,9 @@ function visualiserApp(luigi) {
         });
 
         dt = $('#taskTable').DataTable({
+            language: {
+                search: 'Filter:'
+            },
             columns: [
                 {
                     data: 'category',
@@ -672,6 +707,5 @@ function visualiserApp(luigi) {
 
         initVisualisation(visType);
 
-        debugHook = initVisualisation;
     });
 }
