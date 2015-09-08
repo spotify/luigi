@@ -279,12 +279,28 @@
 
         <script type="text/template" name="sidebarTemplate">
             <ul class="sidebar-menu">
-                <li class="header">TASKS</li>
+                <li class="header">TASK FAMILIES</li>
                 {{#tasks}}
                 <li data-task="{{name}}"><a href="#"><span class="badge">{{count}}</span> {{name}}</a>
                 </li>
                 {{/tasks}}
             </ul>
+        </script>
+
+        <script type="text/template" name="warningsTemplate">
+          <div class="container">
+           <div class="callout callout-danger">
+            <h4>Warning</h4>
+            <ul>
+            {{#missingCategories}}
+            <li>Too many {{name}} tasks to display</li>
+            {{/missingCategories}}
+            </ul>
+            <p>
+              Task family counts only include displayed tasks.
+            </p>
+          </div>
+          </div>
         </script>
 
     </head>
@@ -398,6 +414,7 @@
                   </div>
 
                 </div>
+                <div class="row" id="warnings"></div>
 
         <div class="tab-content">
             <section id="taskList" class="container-fluid tab-pane active">
