@@ -206,6 +206,7 @@ function visualiserApp(luigi) {
         $(".tab-pane").removeClass("active");
         $("#"+tabId).addClass("active");
         $(".tabButton[data-tab="+tabId+"]").parent().addClass("active");
+        updateSidebar(tabId);
     }
 
     function showErrorTrace(error) {
@@ -620,6 +621,16 @@ function visualiserApp(luigi) {
 
     }
 
+    function updateSidebar(tabName) {
+        if (tabName === 'taskList') {
+            $('body').removeClass('sidebar-collapse');
+        }
+        else {
+            $('body').addClass('sidebar-collapse');
+        }
+
+    }
+
     $(document).ready(function() {
         loadTemplates();
 
@@ -703,6 +714,10 @@ function visualiserApp(luigi) {
             });
         });
 
+        $('.navbar-nav').on('click', 'a', function () {
+            var tabName = $(this).data('tab');
+            updateSidebar(tabName);
+        });
 
         initVisualisation(visType);
 
