@@ -216,14 +216,13 @@
 
         <script type="text/template" name="actionsTemplate">
             <div class="span2">
-                <a href="#{{taskId}}" class="btn btn-info btn-xs" data-action="drawGraph"><i class="fa fa-sitemap"></i></a>
-                {{#error}}<button class="btn btn-danger btn-xs showError"><i class="fa fa-bug"></i></button>{{/error}}
-                {{#re_enable}}<a class="btn btn-warning btn-xs re-enable-button" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
+                <a href="#{{taskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip"><i class="fa fa-sitemap"></i></a>
+                {{#error}}<button class="btn btn-danger btn-xs showError" title="Show error" data-toggle="tooltip"><i class="fa fa-bug"></i></button>{{/error}}
+                {{#re_enable}}<a class="btn btn-warning btn-xs re-enable-button" title="Re-enable" data-toggle="tooltip" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
             </div>
         </script>
         <script type="text/template" name="rowDetailsTemplate">
           <table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px;">
-            <!-- TODO: decide where to display Priority and Resources
             <tr>
               <td>Priority:</td>
               <td>{{ priority }}</td>
