@@ -23,7 +23,10 @@ function visualiserApp(luigi) {
         return dateObject.getHours() + ":" + dateObject.getMinutes() + ":" + dateObject.getSeconds();
     }
 
-    function taskToDisplayTask(showWorker, task) {
+    function taskToDisplayTask(task, showWorker) {
+        if (showWorker === undefined) {
+            showWorker = false;
+        }
         var taskIdParts = /([A-Za-z0-9_]*)\((.*)\)/.exec(task.taskId);
         var taskName = taskIdParts[1];
         var taskParams = taskIdParts[2];
@@ -52,30 +55,6 @@ function visualiserApp(luigi) {
         };
     }
 
-    function taskToRowData(task) {
-        /* NOTE : if max-shown-tasks is set `task` might be an integer indicating the number
-                  of tasks not returned from the API
-
-         */
-        var taskIdParts = /([A-Za-z0-9_]*)\((.*)\)/.exec(task.taskId);
-        var taskName = taskIdParts[1];
-        var taskParams = taskIdParts[2];
-        var displayTime = new Date(Math.floor(task.start_time*1000)).toLocaleString();
-        //!TODO: time elapsed if running (see taskToDisplayTask)
-        return {
-            taskId: task.taskId,
-            taskName: taskName,
-            taskParams: taskParams,
-            priority: task.priority,
-            displayTime: displayTime,
-            displayTimestamp : task.start_time,
-            trackingUrl: task.trackingUrl,
-            status: task.status,
-            graph: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DONE"),
-            error: task.status == "FAILED",
-            re_enable: task.status == "DISABLED" && task.re_enable_able
-        };
-    }
 
     function taskCategoryIcon(category) {
         var iconClass;
@@ -212,7 +191,7 @@ function visualiserApp(luigi) {
     }
 
     function processWorker(worker) {
-        worker.tasks = worker.running.map($.proxy(taskToDisplayTask, null, false));
+        worker.tasks = worker.running.map($.proxy(taskToDisplayTask, false, null));
         worker.start_time = new Date(worker.started * 1000).toLocaleString();
         worker.active = new Date(worker.last_active * 1000).toLocaleString();
         return worker;
@@ -551,7 +530,7 @@ function visualiserApp(luigi) {
             missingCategories[category] = {name: category, count: taskCount};
         }
         else {
-            var displayTasks = tasks.map(taskToRowData);
+            var displayTasks = tasks.map(taskToDisplayTask);
             displayTasks = displayTasks.filter(function (obj) {
                 if (obj === null) {
                     return false;
@@ -660,7 +639,18 @@ function visualiserApp(luigi) {
                     }
                 },
                 {data: 'taskName'},
-                {data: 'taskParams'},
+                {
+                    data: 'taskParams',
+                    render: function(data, type, row) {
+                        if (row.resources !== '') {
+                            return '<div>(' + data + ')</div><div>' + row.resources + '</div>';
+                        }
+                        else {
+                            return '<div>(' + data + ')</div>';
+                        }
+                    }
+                },
+                {data: 'priority', width: "2em"},
                 {data: 'displayTime'},
                 {
                     className: 'details-control',
