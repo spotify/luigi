@@ -365,6 +365,15 @@ function visualiserApp(luigi) {
             initVisualisation(newVisType);
         });
 
+        /*
+          Note: The #filter-input element is used by LuigiAPI to constrain requests to the server.
+          When the accompanying button is pressed we force a reload.
+         */
+        $('#taskFilter').on('click', 'button', function () {
+            console.log('ping');
+            updateTasks();
+        })
+
     }
 
 
@@ -641,7 +650,7 @@ function visualiserApp(luigi) {
 
         dt = $('#taskTable').DataTable({
             language: {
-                search: 'Filter:'
+                search: 'Filter table:'
             },
             columns: [
                 {
