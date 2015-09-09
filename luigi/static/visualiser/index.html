@@ -206,7 +206,12 @@
             line-height: 24px;
 
           }
-
+           /*
+          #taskFilter {
+            float: right;
+            margin: 4px;
+          }
+            */
         </style>
 
         <script type="text/template" name="actionsTemplate">
@@ -288,7 +293,6 @@
         </script>
 
         <script type="text/template" name="warningsTemplate">
-          <div class="container">
            <div class="callout callout-danger">
             <h4>Warning</h4>
             <ul>
@@ -297,9 +301,8 @@
             {{/missingCategories}}
             </ul>
             <p>
-              Task family counts only include displayed tasks.
+              Task family counts only include displayed tasks.  Use task filter to constrain search.
             </p>
-          </div>
           </div>
         </script>
 
@@ -414,7 +417,18 @@
                   </div>
 
                 </div>
-                <div class="row" id="warnings"></div>
+                <div class="box" id="taskFilter">
+                  <div class="box-body">
+                      <form class="form-inline col-md-4">
+                        <div class="form-group">
+                          <label>Filter by task:</label>
+                          <input type="text" class="form-control" id="filter-input" placeholder="TaskId(...)"/>
+                          <button class="btn  btn-primary"><i class="fa fa-refresh"></i></button>
+                        </div>
+                      </form>
+                      <div class="col-md-8" id="warnings"></div>
+                  </div>
+                </div>
 
         <div class="tab-content">
             <section id="taskList" class="container-fluid tab-pane active">
