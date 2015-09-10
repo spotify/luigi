@@ -111,6 +111,7 @@ class WorkerTest(unittest.TestCase):
         # InstanceCache.disable()
         self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         self.w = Worker(scheduler=self.sch, worker_id='X')
+        self.w_raise = Worker(scheduler=self.sch, worker_id='X_raise', raise_on_error=True)
         self.w2 = Worker(scheduler=self.sch, worker_id='Y')
         self.time = time.time
 
@@ -221,6 +222,41 @@ class WorkerTest(unittest.TestCase):
 
         self.assertTrue(self.w.add(b))
         self.assertFalse(self.w.run())
+
+        self.assertTrue(a.has_run)
+        self.assertFalse(b.has_run)
+
+    def test_fail_raised(self):
+        class A(Task):
+
+            def run(self):
+                self.has_run = True
+                raise BaseException()
+
+            def complete(self):
+                return self.has_run
+
+        a = A()
+
+        class B(Task):
+
+            def requires(self):
+                return a
+
+            def run(self):
+                self.has_run = True
+
+            def complete(self):
+                return self.has_run
+
+        b = B()
+
+        a.has_run = False
+        b.has_run = False
+
+        self.assertTrue(self.w_raise.add(b))
+        with self.assertRaises(BaseException):
+            self.w_raise.run()
 
         self.assertTrue(a.has_run)
         self.assertFalse(b.has_run)

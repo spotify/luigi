@@ -119,6 +119,8 @@ class TaskProcess(multiprocessing.Process):
         expl = ''
         missing = []
         new_deps = []
+        exception = None
+
         try:
             # Verify that all the tasks are fulfilled!
             missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
@@ -158,16 +160,19 @@ class TaskProcess(multiprocessing.Process):
             logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
             self.task.trigger_event(Event.FAILURE, self.task, ex)
             subject = "Luigi: %s FAILED" % self.task
+            exception = ex
 
             raw_error_message = self.task.on_failure(ex)
             notification_error_message = notifications.wrap_traceback(raw_error_message)
             expl = json.dumps(raw_error_message)
+
             formatted_error_message = notifications.format_task_error(subject, self.task,
                                                                       formatted_exception=notification_error_message)
             notifications.send_error_email(subject, formatted_error_message, self.task.owner_email)
         finally:
-            self.result_queue.put(
-                (self.task.task_id, status, expl, missing, new_deps))
+            # multiprocessing.Queue will pickle it
+            self.result_queue.put((
+                self.task.task_id, status, expl, missing, new_deps, exception))
 
     def _recursive_terminate(self):
         import psutil
@@ -317,7 +322,7 @@ class Worker(object):
     * asks for stuff to do (pulls it in a loop and runs it)
     """
 
-    def __init__(self, scheduler=None, worker_id=None, worker_processes=1, assistant=False, **kwargs):
+    def __init__(self, scheduler=None, worker_id=None, worker_processes=1, assistant=False, raise_on_error=False, **kwargs):
         if scheduler is None:
             scheduler = CentralPlannerScheduler()
 
@@ -357,6 +362,9 @@ class Worker(object):
         # Stuff for execution_summary
         self._add_task_history = []
         self._get_work_response_history = []
+
+        # whether to raise when a task throws an exception
+        self._raise_on_error = raise_on_error
 
     def _add_task(self, *args, **kwargs):
         """
@@ -650,7 +658,8 @@ class Worker(object):
                 continue
 
             logger.info(error_msg)
-            self._task_result_queue.put((task_id, FAILED, error_msg, [], []))
+            self._task_result_queue.put(
+                (task_id, FAILED, error_msg, [], [], None))
 
     def _handle_next_task(self):
         """
@@ -665,7 +674,7 @@ class Worker(object):
             self._purge_children()  # Deal with subprocess failures
 
             try:
-                task_id, status, expl, missing, new_requirements = (
+                task_id, status, expl, missing, new_requirements, exception = (
                     self._task_result_queue.get(
                         timeout=float(self._config.wait_interval)))
             except Queue.Empty:
@@ -699,6 +708,9 @@ class Worker(object):
             if status == RUNNING:
                 continue
             self._running_tasks.pop(task_id)
+
+            if status == FAILED and exception and self._raise_on_error:
+                raise exception
 
             # re-add task to reschedule missing dependencies
             if missing:

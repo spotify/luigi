@@ -48,9 +48,12 @@ class SuccessTask(luigi.Task):
 
 
 class FailTask(luigi.Task):
+    def __init__(self):
+        super(FailTask, self).__init__()
+        self.ex = BaseException("Uh oh.")
 
     def run(self):
-        raise BaseException("Uh oh.")
+        raise self.ex
 
     def on_failure(self, exception):
         return "test failure expl"
@@ -85,7 +88,7 @@ class TaskProcessTest(unittest.TestCase):
 
         with mock.patch.object(result_queue, 'put') as mock_put:
             task_process.run()
-            mock_put.assert_called_once_with((task.task_id, DONE, json.dumps("test success expl"), [], None))
+            mock_put.assert_called_once_with((task.task_id, DONE, json.dumps("test success expl"), [], None, None))
 
     def test_update_result_queue_on_failure(self):
         task = FailTask()
@@ -94,7 +97,7 @@ class TaskProcessTest(unittest.TestCase):
 
         with mock.patch.object(result_queue, 'put') as mock_put:
             task_process.run()
-            mock_put.assert_called_once_with((task.task_id, FAILED, json.dumps("test failure expl"), [], []))
+            mock_put.assert_called_once_with((task.task_id, FAILED, json.dumps("test failure expl"), [], [], task.ex))
 
     def test_cleanup_children_on_terminate(self):
         """
