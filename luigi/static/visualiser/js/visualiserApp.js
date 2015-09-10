@@ -5,6 +5,12 @@ function visualiserApp(luigi) {
     var visType = 'd3';
     var dt; // DataTable instantiated in $(document).ready()
     var missingCategories = {};
+    var currentFilter = {
+        taskFamily: null,
+        taskCategory: null,
+        taskFilter: null,
+        tableFilter: null
+    };
 
     function loadTemplates() {
         $("script[type='text/template']").each(function(i, element) {
@@ -111,15 +117,17 @@ function visualiserApp(luigi) {
         });
         // Searched content will be <icon> <category>.
         var pattern = '\\b(' + activeBoxes.join('|') + ')\\b';
+        currentFilter.taskCategory = activeBoxes;
         dt.column(0).search(pattern, regex=true).draw();
     }
 
-    function filterByTask(task, dt) {
-        if (task === null) {
+    function filterByTaskFamily(taskFamily, dt) {
+        currentFilter.taskFamily = taskFamily;
+        if (taskFamily === null) {
             dt.column(1).search('').draw();
         }
         else {
-            dt.column(1).search('^' + task + '$', regex = true).draw();
+            dt.column(1).search('^' + taskFamily + '$', regex = true).draw();
         }
     }
 
@@ -350,7 +358,6 @@ function visualiserApp(luigi) {
           When the accompanying button is pressed we force a reload.
          */
         $('#taskFilter').on('click', 'button', function () {
-            console.log('ping');
             updateTasks();
         })
 
@@ -556,10 +563,10 @@ function visualiserApp(luigi) {
             if (this.dataset.task) {
                 selectSidebarItem(this);
                 if ($(this).hasClass('active')) {
-                    filterByTask(this.dataset.task, dt);
+                    filterByTaskFamily(this.dataset.task, dt);
                 }
                 else {
-                    filterByTask(null, dt);
+                    filterByTaskFamily(null, dt);
                 }
             }
         });
@@ -570,6 +577,32 @@ function visualiserApp(luigi) {
         else {
             $('#warnings').html(renderWarnings());
         }
+    }
+
+    function updateCurrentFilter() {
+        var content;
+        currentFilter.taskFilter = $('#filter-input')[0].value;
+        currentFilter.tableFilter = dt.search();
+
+        if ((currentFilter.taskFilter === "") &&
+            (currentFilter.tableFilter === "") &&
+            (currentFilter.taskCategory === null) &&
+            (currentFilter.taskFamily === null)) {
+
+            content = '';
+        }
+        else {
+            if (currentFilter.taskCategory !== null) {
+                currentFilter.catNames = $.map(currentFilter.taskCategory, function (x) {
+                    return {name: x};
+                });
+            }
+
+            content = renderTemplate('currentFilterTemplate', currentFilter);
+        }
+
+        $('#currentFilter').html(content);
+        console.log(JSON.stringify(currentFilter));
     }
 
     function initVisualisation(newVisType) {
@@ -673,7 +706,9 @@ function visualiserApp(luigi) {
                 }
             ]
         });
-        
+
+        dt.on('draw', updateCurrentFilter);
+
         updateTasks();
         bindListEvents();
 
