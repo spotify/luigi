@@ -129,20 +129,20 @@ class WorkerExternalTaskTest(unittest.TestCase):
 
     @with_config({'worker': {'retry_external_tasks': 'true',
                              'keep_alive': 'true',
-                             'wait_interval': '0'},
+                             'wait_interval': '0.00001'},
                   'scheduler': {'retry_delay': '0.01'}})
     def test_external_dependency_worker_is_patient(self):
         """
         Test that worker doesn't "give up" with keep_alive option
 
-        Instead, it should sleep for random.randint() seconds, then ask
+        Instead, it should sleep for random.uniform() seconds, then ask
         scheduler for work.
         """
         assert luigi.worker.worker().retry_external_tasks is True
 
         tempdir = tempfile.mkdtemp(prefix='luigi-test-')
 
-        with patch('random.randint', return_value=0.001):
+        with patch('random.uniform', return_value=0.001):
             test_task = TestTask(tempdir=tempdir, complete_after=5)
             self._build([test_task])
 

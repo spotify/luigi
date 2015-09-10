@@ -992,5 +992,11 @@ class TaskLimitTest(unittest.TestCase):
         self.assertTrue(t.complete())
 
 
-if __name__ == '__main__':
-    luigi.run()
+class WorkerConfigurationTest(unittest.TestCase):
+
+    def test_asserts_for_worker(self):
+        """
+        Test that Worker() asserts that it's sanely configured
+        """
+        Worker(wait_interval=1)  # This shouldn't raise
+        self.assertRaises(AssertionError, Worker, wait_interval=0)

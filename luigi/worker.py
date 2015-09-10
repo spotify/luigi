@@ -270,8 +270,8 @@ class worker(Config):
                                   description='worker-count-uniques means that we will keep a '
                                   'worker alive only if it has a unique pending task, as '
                                   'well as having keep-alive true')
-    wait_interval = IntParameter(default=1,
-                                 config_path=dict(section='core', name='worker-wait-interval'))
+    wait_interval = FloatParameter(default=1.0,
+                                   config_path=dict(section='core', name='worker-wait-interval'))
     max_reschedules = IntParameter(default=1,
                                    config_path=dict(section='core', name='worker-max-reschedules'))
     timeout = IntParameter(default=0,
@@ -333,6 +333,9 @@ class Worker(object):
             worker_id = 'Worker(%s)' % ', '.join(['%s=%s' % (k, v) for k, v in self._worker_info])
 
         self._config = worker(**kwargs)
+
+        # multiprocessing.Queue.get() is undefined for timeout=0
+        assert self._config.wait_interval >= 0.00001, "[worker] wait_interval must be positive"
 
         self._id = worker_id
         self._scheduler = scheduler
@@ -676,7 +679,7 @@ class Worker(object):
             try:
                 task_id, status, expl, missing, new_requirements, exception = (
                     self._task_result_queue.get(
-                        timeout=float(self._config.wait_interval)))
+                        timeout=self._config.wait_interval))
             except Queue.Empty:
                 return
 
@@ -731,7 +734,7 @@ class Worker(object):
     def _sleeper(self):
         # TODO is exponential backoff necessary?
         while True:
-            wait_interval = self._config.wait_interval + random.randint(1, 5)
+            wait_interval = self._config.wait_interval + random.uniform(1, 5)
             logger.debug('Sleeping for %d seconds', wait_interval)
             time.sleep(wait_interval)
             yield
