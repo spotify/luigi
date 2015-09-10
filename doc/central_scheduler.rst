@@ -63,7 +63,7 @@ Example configuration::
 
     [scheduler]
     record_task_history = True
-    state-path = /usr/local/var/luigi-state.pickle
+    state_path = /usr/local/var/luigi-state.pickle
 
     [task_history]
     db_connection = sqlite:////usr/local/var/luigi-task-hist.db
