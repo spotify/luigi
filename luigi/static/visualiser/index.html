@@ -206,12 +206,24 @@
             line-height: 24px;
 
           }
-           /*
-          #taskFilter {
+
+          #serverSide {
             float: right;
             margin: 4px;
           }
-            */
+
+          .infoBar {
+            min-height: 80px;
+          }
+
+          #taskTable_filter {
+            margin-top: 9px;
+          }
+
+          #loadTaskForm input {
+            width: 20em;
+          }
+
         </style>
 
         <script type="text/template" name="actionsTemplate">
@@ -223,15 +235,6 @@
         </script>
         <script type="text/template" name="rowDetailsTemplate">
           <table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px;">
-            <tr>
-              <td>Priority:</td>
-              <td>{{ priority }}</td>
-            </tr>
-            <tr>
-              <td>Resources</td>
-              <td>{{ resources }}</td>
-            </tr>
-            -->
           {{#error}}
             <tr>
               <td>Exception:</td>
@@ -293,14 +296,11 @@
 
         <script type="text/template" name="warningsTemplate">
            <div class="callout callout-danger">
-            <h4>Warning</h4>
-            <ul>
-            {{#missingCategories}}
-            <li>Too many {{name}} tasks to display</li>
-            {{/missingCategories}}
-            </ul>
             <p>
-              Task family counts only include displayed tasks.  Use task filter to constrain search.
+              Too many {{#missingCategories}} <strong>{{name}}</strong>, {{/missingCategories}}  tasks to display.
+            </p>
+            <p>
+              Task family counts only include displayed tasks.  Use <strong>Filter on Server</strong> to constrain search.
             </p>
           </div>
         </script>
@@ -308,8 +308,7 @@
         <script type="text/template" name="currentFilterTemplate">
           <div class="callout callout-info">
             Displaying {{#catNames}}<strong>{{ name }}</strong>, {{/catNames}} tasks
-            {{#taskFamily}}of family <strong>{{taskFamily}}</strong>{{/taskFamily}} {{#taskFilter}}with prefix <strong>"{{taskFilter}}"</strong>{{/taskFilter}}.
-            {{#tableFilter}}Table filtered by <strong>"{{tableFilter}}"</strong>.{{/tableFilter}}
+            {{#taskFamily}}of family <strong>{{taskFamily}}</strong>{{/taskFamily}} {{#tableFilter}}filtered by <strong>"{{tableFilter}}"</strong>{{/tableFilter}}.
           </div>
         </script>
 
@@ -336,7 +335,7 @@
                         </div>
                         <div class="collapse navbar-collapse">
                             <ul class="nav navbar-nav">
-                                <li class="active"><a href="#" data-tab="taskList">Task List</a></li>
+                                <li><a href="#" data-tab="taskList">Task List</a></li>
                                 <li><a href="#g" data-tab="dependencyGraph">Dependency Graph</a></li>
                                 <li><a href="#w" data-tab="workerList">Workers</a></li>
                             </ul>
@@ -424,18 +423,9 @@
                   </div>
 
                 </div>
-                <div class="box" id="taskFilter">
-                  <div class="box-body">
-                      <div id="currentFilter" class="col-md-8 col-sm-4 col-xs-12"></div>
-                      <form class="form-inline col-md-4 col-sm-8 col-xs-12">
-                        <div class="form-group">
-                          <label>Filter by task:</label>
-                          <input type="text" class="form-control" id="filter-input" placeholder="TaskId(...)"/>
-                          <button class="btn  btn-primary"><i class="fa fa-refresh"></i></button>
-                        </div>
-                      </form>
-                      <div class="col-md-12" id="warnings"></div>
-                  </div>
+                <div class="container-fluid infoBar">
+                  <div id="currentFilter" class="col-md-6 col-sm-12 col-xs-12"></div>
+                  <div id="warnings" class="col-md-6 col-sm-12 col-xs-12"></div>
                 </div>
 
         <div class="tab-content">
@@ -459,12 +449,12 @@
             </section>
             <section id="dependencyGraph" class="tab-pane">
               <div class="container-fluid">
-                    <form class="form-inline" id="loadTaskForm">
-                      <div class="form-group col-md-6">
+                    <div class="form-group col-md-6 col-sm-4">
+                      <form class="form-inline" id="loadTaskForm">
                         <input type="text" class="search-query form-control" placeholder="TaskId(param1=val1,param2=val2)">
                         <button type="submit" class="btn btn-default form-control">Show task details</button>
-                      </div>
-                    </form>
+                      </form>
+                    </div>
                     <form class="form-inline" id="visForm">
                       <div class="form-group col-md-3">
                         <label class="btn btn-default" for="invertCheckbox">Show Upstream Dependencies

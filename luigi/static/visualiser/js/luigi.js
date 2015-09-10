@@ -36,7 +36,13 @@ var LuigiAPI = (function() {
     }
 
     function searchTerm() {
-        return $('#filter-input').val();
+        // FIXME : leaky API.  This shouldn't rely on the DOM.
+        if ($('#serverSideCheckbox')[0].checked) {
+            return $('#taskTable_filter').find('input').val();
+        }
+        else {
+            return '';
+        }
     }
 
     LuigiAPI.prototype.getDependencyGraph = function (taskId, callback) {
