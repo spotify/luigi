@@ -305,6 +305,14 @@
           </div>
         </script>
 
+        <script type="text/template" name="currentFilterTemplate">
+          <div class="callout callout-info">
+            Displaying {{#catNames}}<strong>{{ name }}</strong>, {{/catNames}} tasks
+            {{#taskFamily}}of family <strong>{{taskFamily}}</strong>{{/taskFamily}} {{#taskFilter}}with prefix <strong>"{{taskFilter}}"</strong>{{/taskFilter}}.
+            {{#tableFilter}}Table filtered by <strong>"{{tableFilter}}"</strong>.{{/tableFilter}}
+          </div>
+        </script>
+
     </head>
     <body class="skin-green-light fixed">
         <div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
@@ -418,14 +426,15 @@
                 </div>
                 <div class="box" id="taskFilter">
                   <div class="box-body">
-                      <form class="form-inline col-md-4">
+                      <div id="currentFilter" class="col-md-8 col-sm-4 col-xs-12"></div>
+                      <form class="form-inline col-md-4 col-sm-8 col-xs-12">
                         <div class="form-group">
                           <label>Filter by task:</label>
                           <input type="text" class="form-control" id="filter-input" placeholder="TaskId(...)"/>
                           <button class="btn  btn-primary"><i class="fa fa-refresh"></i></button>
                         </div>
                       </form>
-                      <div class="col-md-8" id="warnings"></div>
+                      <div class="col-md-12" id="warnings"></div>
                   </div>
                 </div>
 
