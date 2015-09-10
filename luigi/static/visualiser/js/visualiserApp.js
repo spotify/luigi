@@ -2,15 +2,37 @@ function visualiserApp(luigi) {
     var templates = {};
     var invertDependencies = false;
     var typingTimer = 0;
-    var visType = 'd3';
+    var visType;
     var dt; // DataTable instantiated in $(document).ready()
     var missingCategories = {};
     var currentFilter = {
-        taskFamily: null,
-        taskCategory: null,
-        taskFilter: null,
-        tableFilter: null
+        taskFamily: "",
+        taskCategory: [],
+        tableFilter: ""
     };
+
+    function getVisType() {
+        if (document.cookie === "") {
+            // TODO : detect default vis type
+            return 'd3';
+        }
+        else {
+            var cookieObj = JSON.parse(document.cookie);
+            return cookieObj.visType;
+        }
+    }
+    function setVisType (newVisType) {
+        visType = newVisType;
+        var cookieObj = JSON.parse(document.cookie);
+        cookieObj.visType = newVisType;
+        document.cookie = JSON.stringify(cookieObj);
+
+        $('#toggleVisButtons').find('label').removeClass('active');
+        $('#toggleVisButtons').find('input[value="' + visType + '"]').parent().addClass('active');
+
+        return visType;
+    }
+
 
     function loadTemplates() {
         $("script[type='text/template']").each(function(i, element) {
@@ -123,7 +145,7 @@ function visualiserApp(luigi) {
 
     function filterByTaskFamily(taskFamily, dt) {
         currentFilter.taskFamily = taskFamily;
-        if (taskFamily === null) {
+        if (taskFamily === "") {
             dt.column(1).search('').draw();
         }
         else {
@@ -349,15 +371,15 @@ function visualiserApp(luigi) {
         });
 
         $('#toggleVisButtons').on('click', 'label', function () {
-            var newVisType = $(this).find('input')[0].value;
-            initVisualisation(newVisType);
+            setVisType($(this).find('input')[0].value);
+            initVisualisation(visType);
         });
 
         /*
           Note: The #filter-input element is used by LuigiAPI to constrain requests to the server.
           When the accompanying button is pressed we force a reload.
          */
-        $('#taskFilter').on('click', 'button', function () {
+        $('#serverSide').on('change', 'label', function () {
             updateTasks();
         })
 
@@ -566,7 +588,7 @@ function visualiserApp(luigi) {
                     filterByTaskFamily(this.dataset.task, dt);
                 }
                 else {
-                    filterByTaskFamily(null, dt);
+                    filterByTaskFamily("", dt);
                 }
             }
         });
@@ -581,18 +603,16 @@ function visualiserApp(luigi) {
 
     function updateCurrentFilter() {
         var content;
-        currentFilter.taskFilter = $('#filter-input')[0].value;
         currentFilter.tableFilter = dt.search();
 
-        if ((currentFilter.taskFilter === "") &&
-            (currentFilter.tableFilter === "") &&
-            (currentFilter.taskCategory === null) &&
-            (currentFilter.taskFamily === null)) {
+        if ((currentFilter.tableFilter === "") &&
+            ($.isEmptyObject(currentFilter.taskCategory)) &&
+            (currentFilter.taskFamily === "")) {
 
             content = '';
         }
         else {
-            if (currentFilter.taskCategory !== null) {
+            if (currentFilter.taskCategory !== "") {
                 currentFilter.catNames = $.map(currentFilter.taskCategory, function (x) {
                     return {name: x};
                 });
@@ -602,7 +622,6 @@ function visualiserApp(luigi) {
         }
 
         $('#currentFilter').html(content);
-        console.log(JSON.stringify(currentFilter));
     }
 
     function initVisualisation(newVisType) {
@@ -672,6 +691,7 @@ function visualiserApp(luigi) {
         });
 
         dt = $('#taskTable').DataTable({
+            dom: 'l<"#serverSide">frtip',
             language: {
                 search: 'Filter table:'
             },
@@ -686,7 +706,7 @@ function visualiserApp(luigi) {
                 {
                     data: 'taskParams',
                     render: function(data, type, row) {
-                        if (row.resources !== '') {
+                        if (row.resources !== '{}') {
                             return '<div>(' + data + ')</div><div>' + row.resources + '</div>';
                         }
                         else {
@@ -709,12 +729,12 @@ function visualiserApp(luigi) {
 
         dt.on('draw', updateCurrentFilter);
 
+        $('#serverSide').html('<form class="form-inline"><label class="btn btn-default" for="serverSideCheckbox">' +
+                      'Filter on Server <input type="checkbox" id="serverSideCheckbox"/>' +
+                      '</label></form>');
+
         updateTasks();
         bindListEvents();
-
-        //var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
-        //$("#graphPlaceholder")[0].graph = graph;
-        // Add event listener for opening and closing details
 
         $('#taskTable tbody').on('click', 'td.details-control .showError', function () {
             var tr = $(this).closest('tr');
@@ -754,6 +774,8 @@ function visualiserApp(luigi) {
             updateSidebar(tabName);
         });
 
+        visType = getVisType();
+        setVisType(visType);
         initVisualisation(visType);
 
     });
