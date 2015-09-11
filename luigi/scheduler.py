@@ -291,11 +291,16 @@ class SimpleTaskState(object):
         self._status_tasks = collections.defaultdict(dict)
         self._active_workers = {}  # map from id to a Worker object
 
+    def get_state(self):
+        return self._tasks, self._active_workers
+
+    def set_state(self, state):
+        self._tasks, self._active_workers = state
+
     def dump(self):
-        state = (self._tasks, self._active_workers)
         try:
             with open(self._state_path, 'wb') as fobj:
-                pickle.dump(state, fobj)
+                pickle.dump(self.get_state(), fobj)
         except IOError:
             logger.warning("Failed saving scheduler state", exc_info=1)
         else:
@@ -312,7 +317,7 @@ class SimpleTaskState(object):
                 logger.exception("Error when loading state. Starting from clean slate.")
                 return
 
-            self._tasks, self._active_workers = state
+            self.set_state(state)
             self._status_tasks = collections.defaultdict(dict)
             for task in six.itervalues(self._tasks):
                 self._status_tasks[task.status][task.id] = task
