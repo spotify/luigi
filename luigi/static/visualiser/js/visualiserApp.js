@@ -352,6 +352,7 @@ function visualiserApp(luigi) {
 
     function bindListEvents() {
         $(window).on('hashchange', processHashChange);
+        invertDependencies = $('#invertCheckbox')[0].checked;
         $("#invertCheckbox").click(function() {
             invertDependencies = this.checked;
             processHashChange(true);
