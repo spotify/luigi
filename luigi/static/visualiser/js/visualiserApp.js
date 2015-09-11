@@ -21,8 +21,14 @@ function visualiserApp(luigi) {
         }
     }
     function setVisType (newVisType) {
+        var cookieObj;
         visType = newVisType;
-        var cookieObj = JSON.parse(document.cookie);
+        if (document.cookie === "") {
+            cookieObj = {};
+        }
+        else {
+            var cookieObj = JSON.parse(document.cookie);
+        }
         cookieObj.visType = newVisType;
         document.cookie = JSON.stringify(cookieObj);
 
@@ -577,27 +583,7 @@ function visualiserApp(luigi) {
 
 
         $('#'+category+'_info').find('.info-box-number').html(taskCount);
-        dt.draw();
 
-        $('.sidebar').html(renderSidebar(dt.column(1).data()));
-        $('.sidebar-menu').on('click', 'li', function () {
-            if (this.dataset.task) {
-                selectSidebarItem(this);
-                if ($(this).hasClass('active')) {
-                    filterByTaskFamily(this.dataset.task, dt);
-                }
-                else {
-                    filterByTaskFamily("", dt);
-                }
-            }
-        });
-
-        if ($.isEmptyObject(missingCategories)) {
-            $('#warnings').html('');
-        }
-        else {
-            $('#warnings').html(renderWarnings());
-        }
     }
 
     function updateCurrentFilter() {
@@ -642,32 +628,58 @@ function visualiserApp(luigi) {
     }
 
     function updateTasks() {
-        luigi.getRunningTaskList(function(runningTasks) {
+        var ajax1 = luigi.getRunningTaskList(function(runningTasks) {
             updateTaskCategory(dt, 'RUNNING', runningTasks);
         });
 
-        luigi.getFailedTaskList(function(failedTasks) {
+        var ajax2 = luigi.getFailedTaskList(function(failedTasks) {
             updateTaskCategory(dt, 'FAILED', failedTasks);
         });
 
-        luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
+        var ajax3 = luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
             updateTaskCategory(dt, 'UPSTREAM_FAILED', upstreamFailedTasks);
         });
 
-        luigi.getDisabledTaskList(function(disabledTasks) {
+        var ajax4 = luigi.getDisabledTaskList(function(disabledTasks) {
             updateTaskCategory(dt, 'DISABLED', disabledTasks);
         });
 
-        luigi.getUpstreamDisabledTaskList(function(upstreamDisabledTasks) {
+        var ajax5 = luigi.getUpstreamDisabledTaskList(function(upstreamDisabledTasks) {
             updateTaskCategory(dt, 'UPSTREAM_DISABLED', upstreamDisabledTasks);
         });
 
-        luigi.getPendingTaskList(function(pendingTasks) {
+        var ajax6 = luigi.getPendingTaskList(function(pendingTasks) {
             updateTaskCategory(dt, 'PENDING', pendingTasks);
         });
 
-        luigi.getDoneTaskList(function(doneTasks) {
+        var ajax7 = luigi.getDoneTaskList(function(doneTasks) {
             updateTaskCategory(dt, 'DONE', doneTasks);
+        });
+
+        $.when(ajax1, ajax2, ajax3, ajax4, ajax5, ajax6, ajax7).done(function () {
+            dt.draw();
+
+            $('.sidebar').html(renderSidebar(dt.column(1).data()));
+            var selectedFamily = $('.sidebar-menu').find('li[data-task="' + currentFilter.taskFamily + '"]')[0];
+            selectSidebarItem(selectedFamily);
+            $('.sidebar-menu').on('click', 'li', function () {
+                if (this.dataset.task) {
+                    selectSidebarItem(this);
+                    if ($(this).hasClass('active')) {
+                        filterByTaskFamily(this.dataset.task, dt);
+                    }
+                    else {
+                        filterByTaskFamily("", dt);
+                    }
+                }
+            });
+
+            if ($.isEmptyObject(missingCategories)) {
+                $('#warnings').html('');
+            }
+            else {
+                $('#warnings').html(renderWarnings());
+            }
         });
 
     }
@@ -731,6 +743,18 @@ function visualiserApp(luigi) {
         $('#serverSide').html('<form class="form-inline"><label class="btn btn-default" for="serverSideCheckbox">' +
                       'Filter on Server <input type="checkbox" id="serverSideCheckbox"/>' +
                       '</label></form>');
+
+        // If using server-side filter we need to updateTasks every time the filter changes
+
+        $('#taskTable_filter').on('keyup paste', 'input', function () {
+            if ($('#serverSideCheckbox')[0].checked) {
+                clearTimeout(typingTimer);
+                if ($(this).val) {
+                    typingTimer = setTimeout(updateTasks, 400);
+                }
+            }
+        });
+
 
         updateTasks();
         bindListEvents();
