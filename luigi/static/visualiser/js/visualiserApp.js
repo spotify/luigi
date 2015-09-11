@@ -13,8 +13,7 @@ function visualiserApp(luigi) {
 
     function getVisType() {
         if (document.cookie === "") {
-            // TODO : detect default vis type
-            return 'd3';
+            return 'svg';
         }
         else {
             var cookieObj = JSON.parse(document.cookie);
