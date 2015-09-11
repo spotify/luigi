@@ -12,25 +12,17 @@ function visualiserApp(luigi) {
     };
 
     function getVisType() {
-        if (document.cookie === "") {
+        var cookieParts = document.cookie.match(/visType=(.*)/);
+        if (cookieParts === null) {
             return 'svg';
         }
         else {
-            var cookieObj = JSON.parse(document.cookie);
-            return cookieObj.visType;
+            return cookieParts[1];
         }
     }
     function setVisType (newVisType) {
-        var cookieObj;
         visType = newVisType;
-        if (document.cookie === "") {
-            cookieObj = {};
-        }
-        else {
-            var cookieObj = JSON.parse(document.cookie);
-        }
-        cookieObj.visType = newVisType;
-        document.cookie = JSON.stringify(cookieObj);
+        document.cookie = 'visType=' + visType;
 
         $('#toggleVisButtons').find('label').removeClass('active');
         $('#toggleVisButtons').find('input[value="' + visType + '"]').parent().addClass('active');
