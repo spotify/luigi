@@ -74,20 +74,12 @@ class TestTask(luigi.Task):
 
 class WorkerExternalTaskTest(unittest.TestCase):
 
-    def setUp(self):
-        self.scheduler = CentralPlannerScheduler(retry_delay=0.01,
-                                                 remove_delay=3,
-                                                 worker_disconnect_delay=3,
-                                                 disable_persist=3,
-                                                 disable_window=5,
-                                                 disable_failures=2,
-                                                 prune_on_get_work=True)
-
     def _assert_complete(self, tasks):
         for t in tasks:
             self.assert_(t.complete())
 
     def _build(self, tasks):
+        self.scheduler = CentralPlannerScheduler(prune_on_get_work=True)
         w = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1)
         for t in tasks:
             w.add(t)
@@ -113,25 +105,45 @@ class WorkerExternalTaskTest(unittest.TestCase):
         # complete() is called once per failure, twice per success
         assert test_task.dependency.times_called == 2
 
-    @with_config({'core': {'retry-external-tasks': 'true',
-                           'disable-num-failures': '4',
-                           'max-reschedules': '4',
-                           'worker-keep-alive': 'true',
-                           'retry-delay': '0.01'}})
-    def test_external_dependency_completes_later(self):
+    @with_config({'worker': {'retry_external_tasks': 'true'},
+                  'scheduler': {'retry_delay': '0.0'}})
+    def test_external_dependency_gets_rechecked(self):
         """
-        Test that an external dependency that is not `complete` when luigi is invoked, but \
-        becomes `complete` while the workflow is executing is re-evaluated and
-        allows dependencies to run.
+        Test that retry_external_tasks re-checks external tasks
         """
-        assert luigi.configuration.get_config().getboolean('core',
-                                                           'retry-external-tasks',
-                                                           False) is True
+        assert luigi.worker.worker().retry_external_tasks is True
 
         tempdir = tempfile.mkdtemp(prefix='luigi-test-')
 
-        with patch('random.randint', return_value=0.1):
-            test_task = TestTask(tempdir=tempdir, complete_after=3)
+        test_task = TestTask(tempdir=tempdir, complete_after=10)
+        self._build([test_task])
+
+        assert os.path.exists(test_task.dep_path)
+        assert os.path.exists(test_task.output_path)
+
+        os.unlink(test_task.dep_path)
+        os.unlink(test_task.output_path)
+        os.rmdir(tempdir)
+
+        self.assertGreaterEqual(test_task.dependency.times_called, 10)
+
+    @with_config({'worker': {'retry_external_tasks': 'true',
+                             'keep_alive': 'true',
+                             'wait_interval': '0.00001'},
+                  'scheduler': {'retry_delay': '0.01'}})
+    def test_external_dependency_worker_is_patient(self):
+        """
+        Test that worker doesn't "give up" with keep_alive option
+
+        Instead, it should sleep for random.uniform() seconds, then ask
+        scheduler for work.
+        """
+        assert luigi.worker.worker().retry_external_tasks is True
+
+        tempdir = tempfile.mkdtemp(prefix='luigi-test-')
+
+        with patch('random.uniform', return_value=0.001):
+            test_task = TestTask(tempdir=tempdir, complete_after=5)
             self._build([test_task])
 
         assert os.path.exists(test_task.dep_path)
@@ -141,9 +153,4 @@ class WorkerExternalTaskTest(unittest.TestCase):
         os.unlink(test_task.output_path)
         os.rmdir(tempdir)
 
-        # complete() is called once per failure, twice per success
-        assert test_task.dependency.times_called == 4
-
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertGreaterEqual(test_task.dependency.times_called, 5)
