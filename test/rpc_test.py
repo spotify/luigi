@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import unittest, skipOnTravis
+from helpers import unittest
 try:
     from unittest import mock
 except ImportError:
@@ -50,18 +50,6 @@ class RPCTest(central_planner_test.CentralPlannerTest, ServerTestBase):
         self.sch = luigi.rpc.RemoteScheduler(self.get_url(''))
         self.sch._wait = lambda: None
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72276513')
-    def test_ping(self):
-        self.sch.ping(worker='xyz')
-
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72276513')
-    def test_raw_ping(self):
-        self.sch._request('/api/ping', {'worker': 'xyz'})
-
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72276513')
-    def test_raw_ping_extended(self):
-        self.sch._request('/api/ping', {'worker': 'xyz', 'foo': 'bar'})
-
     # disable test that doesn't work with remote scheduler
 
     def test_task_first_failure_time(self):
@@ -80,6 +68,3 @@ class RPCTest(central_planner_test.CentralPlannerTest, ServerTestBase):
     def test_get_work_speed(self):
         """ This would be too slow to run through network """
         pass
-
-if __name__ == '__main__':
-    unittest.main()

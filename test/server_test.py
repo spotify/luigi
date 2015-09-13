@@ -17,7 +17,6 @@
 import functools
 import os
 import multiprocessing
-import random
 import shutil
 import signal
 import time
@@ -26,6 +25,7 @@ import tempfile
 from helpers import unittest, skipOnTravis
 import luigi.rpc
 import luigi.server
+import luigi.cmdline
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.six.moves.urllib.parse import (
     urlencode, ParseResult, quote as urlquote
@@ -74,7 +74,6 @@ class ServerTest(ServerTestBase):
 
     def _test_404(self, path):
         response = self.fetch(path)
-
         self.assertEqual(response.code, 404)
 
     def test_404(self):
@@ -84,42 +83,11 @@ class ServerTest(ServerTestBase):
         self._test_404('/api/foo')
 
 
-class INETServerClient(object):
-    def __init__(self):
-        self.port = random.randint(1024, 9999)
-
-    def run_server(self):
-        luigi.server.run(api_port=self.port, address='127.0.0.1')
-
-    def scheduler(self):
-        return luigi.rpc.RemoteScheduler('http://localhost:' + str(self.port))
-
-
-class UNIXServerClient(object):
-    def __init__(self):
-        self.tempdir = tempfile.mkdtemp()
-        self.unix_socket = os.path.join(self.tempdir, 'luigid.sock')
-
-    def run_server(self):
-        luigi.server.run(unix_socket=self.unix_socket)
-
-    def scheduler(self):
-        url = ParseResult(
-            scheme='http+unix',
-            netloc=urlquote(self.unix_socket, safe=''),
-            path='',
-            params='',
-            query='',
-            fragment='',
-        ).geturl()
-        return luigi.rpc.RemoteScheduler(url)
-
-
-class ServerTestRun(unittest.TestCase):
-    """Test to start and stop the server in a more "standard" way
+class _ServerTest(unittest.TestCase):
     """
-
-    server_client_class = INETServerClient
+    Test to start and stop the server in a more "standard" way
+    """
+    server_client_class = "To be defined by subclasses"
 
     def start_server(self):
         self._process = multiprocessing.Process(
@@ -132,7 +100,7 @@ class ServerTestRun(unittest.TestCase):
 
     def stop_server(self):
         self._process.terminate()
-        self._process.join(1)
+        self._process.join(timeout=1)
         if self._process.is_alive():
             os.kill(self._process.pid, signal.SIGKILL)
 
@@ -173,21 +141,106 @@ class ServerTestRun(unittest.TestCase):
         self.assertEqual(work['task_id'], 'A')
 
 
-class URLLibServerTestRun(ServerTestRun):
-
-    @mock.patch.object(luigi.rpc, 'HAS_REQUESTS', False)
-    def start_server(self, *args, **kwargs):
-        super(URLLibServerTestRun, self).start_server(*args, **kwargs)
-
-
 @attr('unixsocket')
-class UNIXServerTestRun(ServerTestRun):
-    server_client_class = UNIXServerClient
+class UNIXServerTest(_ServerTest):
+    class ServerClient(object):
+        def __init__(self):
+            self.tempdir = tempfile.mkdtemp()
+            self.unix_socket = os.path.join(self.tempdir, 'luigid.sock')
+
+        def run_server(self):
+            luigi.server.run(unix_socket=self.unix_socket)
+
+        def scheduler(self):
+            url = ParseResult(
+                scheme='http+unix',
+                netloc=urlquote(self.unix_socket, safe=''),
+                path='',
+                params='',
+                query='',
+                fragment='',
+            ).geturl()
+            return luigi.rpc.RemoteScheduler(url)
+
+    server_client_class = ServerClient
 
     def tearDown(self):
-        super(UNIXServerTestRun, self).tearDown()
+        super(UNIXServerTest, self).tearDown()
         shutil.rmtree(self.server_client.tempdir)
 
 
-if __name__ == '__main__':
-    unittest.main()
+class INETServerClient(object):
+    def __init__(self):
+        # Just some port
+        self.port = 8083
+
+    def scheduler(self):
+        return luigi.rpc.RemoteScheduler('http://localhost:' + str(self.port))
+
+
+class _INETServerTest(_ServerTest):
+
+    def test_with_cmdline(self):
+        """
+        Test to run against the server as a normal luigi invocation does
+        """
+        luigi.cmdline.luigi_run(['Task', '--scheduler-port', str(self.server_client.port), '--no-lock'])
+
+
+class INETProcessServerTest(_INETServerTest):
+    class ServerClient(INETServerClient):
+        def run_server(self):
+            luigi.server.run(api_port=self.port, address='127.0.0.1')
+
+    server_client_class = ServerClient
+
+
+class INETURLLibServerTest(INETProcessServerTest):
+
+    @mock.patch.object(luigi.rpc, 'HAS_REQUESTS', False)
+    def start_server(self, *args, **kwargs):
+        super(INETURLLibServerTest, self).start_server(*args, **kwargs)
+
+    def patching_test(self):
+        """
+        Check that HAS_REQUESTS patching is meaningful
+        """
+        fetcher1 = luigi.rpc.RemoteScheduler()._fetcher
+        with mock.patch.object(luigi.rpc, 'HAS_REQUESTS', False):
+            fetcher2 = luigi.rpc.RemoteScheduler()._fetcher
+
+        self.assertNotEqual(fetcher1.__class__, fetcher2.__class__)
+
+
+class INETLuigidServerTest(_INETServerTest):
+    class ServerClient(INETServerClient):
+        def run_server(self):
+            # I first tried to things like "subprocess.call(['luigid', ...]),
+            # But it ended up to be a total mess getting the cleanup to work
+            # unfortunately.
+            luigi.cmdline.luigid(['--port', str(self.port)])
+
+    server_client_class = ServerClient
+
+
+class INETLuigidDaemonServerTest(_INETServerTest):
+
+    class ServerClient(INETServerClient):
+        def __init__(self):
+            super(INETLuigidDaemonServerTest.ServerClient, self).__init__()
+            self.tempdir = tempfile.mkdtemp()
+
+        @mock.patch('daemon.DaemonContext')
+        def run_server(self, daemon_context):
+            luigi.cmdline.luigid([
+                '--port', str(self.port),
+                '--background',  # This makes it a daemon
+                '--logdir', self.tempdir,
+                '--pidfile', os.path.join(self.tempdir, 'luigid.pid')
+            ])
+
+    def tearDown(self):
+        super(INETLuigidDaemonServerTest, self).tearDown()
+        shutil.rmtree(self.server_client.tempdir)
+
+    server_client_class = ServerClient

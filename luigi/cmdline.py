@@ -27,7 +27,7 @@ def luigid(argv=sys.argv[1:]):
 
     if opts.state_path:
         config = luigi.configuration.get_config()
-        config.set('scheduler', 'state-path', opts.state_path)
+        config.set('scheduler', 'state_path', opts.state_path)
 
     if opts.background:
         # daemonize sets up logging to spooled log files
