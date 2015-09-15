@@ -258,7 +258,7 @@ class CopyToTable(rdbms.CopyToTable):
         Default behaviour is to escape special characters and identify any self.null_values.
         """
         if value in self.null_values:
-            return r'\N'
+            return r'\\N'
         else:
             return default_escape(six.text_type(value))
 
@@ -286,7 +286,7 @@ class CopyToTable(rdbms.CopyToTable):
             column_names = [c[0] for c in self.columns]
         else:
             raise Exception('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
-        cursor.copy_from(file, self.table, null=r'\N', sep=self.column_separator, columns=column_names)
+        cursor.copy_from(file, self.table, null=r'\\N', sep=self.column_separator, columns=column_names)
 
     def run(self):
         """
