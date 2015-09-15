@@ -218,7 +218,7 @@ function visualiserApp(luigi) {
     }
 
     function processWorker(worker) {
-        worker.tasks = worker.running.map($.proxy(taskToDisplayTask, false, null));
+        worker.tasks = worker.running.map(taskToDisplayTask);
         worker.start_time = new Date(worker.started * 1000).toLocaleString();
         worker.active = new Date(worker.last_active * 1000).toLocaleString();
         return worker;
@@ -237,7 +237,7 @@ function visualiserApp(luigi) {
     }
 
     function showErrorTrace(error) {
-        $("#errorModal").empty().append(renderTemplate("errorTemplate", error));
+        $("#errorModal").empty().append(renderTemplate("errorTemplate", decodeError(error)));
         $("#errorModal").modal({});
     }
 
@@ -687,6 +687,19 @@ function visualiserApp(luigi) {
 
     }
 
+    // Error strings may or may not be JSON encoded, depending on client version
+    // Decoding an unencoded string may raise an exception.
+    function decodeError(error) {
+        var decoded;
+        try {
+            decoded = JSON.parse(error);
+        }
+        catch (e) {
+            decoded = error;
+        }
+        return decoded;
+    }
+
     $(document).ready(function() {
         loadTemplates();
 
@@ -769,7 +782,7 @@ function visualiserApp(luigi) {
                 if (data.error) {
                     errorTrace = row.child().find('.error-trace');
                     luigi.getErrorTrace(data.taskId, function(error) {
-                        errorTrace.html('<pre class="pre-scrollable">'+error.error+'</pre>');
+                        errorTrace.html('<pre class="pre-scrollable">'+decodeError(error.error)+'</pre>');
                     });
                 }
 
