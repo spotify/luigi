@@ -64,6 +64,15 @@ logger = logging.getLogger('luigi-interface')
 # that may not be unlocked in child process, resulting in the process being locked indefinitely.
 fork_lock = threading.Lock()
 
+# Why we assert on _WAIT_INTERVAL_EPS:
+# multiprocessing.Queue.get() is undefined for timeout=0 it seems:
+# https://docs.python.org/3.4/library/multiprocessing.html#multiprocessing.Queue.get.
+# I also tried with really low epsilon, but then ran into the same issue where
+# the test case "test_external_dependency_worker_is_patient" got stuck. So I
+# unscientifically just set the final value to a floating point number that
+# "worked for me".
+_WAIT_INTERVAL_EPS = 0.00001
+
 
 class TaskException(Exception):
     pass
@@ -334,8 +343,7 @@ class Worker(object):
 
         self._config = worker(**kwargs)
 
-        # multiprocessing.Queue.get() is undefined for timeout=0
-        assert self._config.wait_interval >= 0.00001, "[worker] wait_interval must be positive"
+        assert self._config.wait_interval >= _WAIT_INTERVAL_EPS, "[worker] wait_interval must be positive"
 
         self._id = worker_id
         self._scheduler = scheduler
