@@ -370,7 +370,12 @@ class GCSClient(luigi.target.FileSystem):
 class _DeleteOnCloseFile(io.FileIO):
     def close(self):
         super(_DeleteOnCloseFile, self).close()
-        os.remove(self.name)
+        try:
+            os.remove(self.name)
+        except OSError:
+            # Catch a potential threading race condition and also allow this
+            # method to be called multiple times.
+            pass
 
     def readable(self):
         return True
