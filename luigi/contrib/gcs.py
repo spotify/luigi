@@ -52,7 +52,7 @@ else:
 NUM_RETRIES = 5
 
 # Number of bytes to send/receive in each request.
-CHUNKSIZE = 2 * 1024 * 1024
+CHUNKSIZE = 10 * 1024 * 1024
 
 # Mimetype to use if one can't be guessed from the file extension.
 DEFAULT_MIMETYPE = 'application/octet-stream'
@@ -108,7 +108,7 @@ class GCSClient(luigi.target.FileSystem):
       as the ``descriptor`` argument.
     """
     def __init__(self, oauth_credentials=None, descriptor='', http_=None,
-                 chunksize=10 * 1024 * 1024):
+                 chunksize=CHUNKSIZE):
         self.chunksize = chunksize
         http_ = http_ or httplib2.Http()
 
