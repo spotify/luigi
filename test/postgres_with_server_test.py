@@ -81,6 +81,7 @@ class TestPostgresTask(CopyToTestDB):
         yield None, '-100', '5143.213'
         yield '\t\n\r\\N', 0, 0
         yield u'éцү我', 0, 0
+        yield '', 0, r'\N'  # Test working default null charcter
 
 
 class MetricBase(CopyToTestDB):
@@ -139,6 +140,7 @@ class TestPostgresImportTask(unittest.TestCase):
             (None, -100, 5143.213),
             ('\t\n\r\\N', 0.0, 0),
             (u'éцү我', 0, 0),
+            (u'', 0, None),  # Test working default null charcter
         ))
 
     def test_multimetric(self):
