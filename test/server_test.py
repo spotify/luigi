@@ -21,7 +21,6 @@ import shutil
 import signal
 import time
 import tempfile
-
 from helpers import unittest, skipOnTravis
 import luigi.rpc
 import luigi.server
@@ -31,6 +30,7 @@ from luigi.six.moves.urllib.parse import (
     urlencode, ParseResult, quote as urlquote
 )
 
+import tornado.ioloop
 from tornado.testing import AsyncHTTPTestCase
 from nose.plugins.attrib import attr
 
@@ -38,6 +38,21 @@ try:
     from unittest import mock
 except ImportError:
     import mock
+
+
+def _is_running_from_main_thread():
+    """
+    Return true if we're the same thread as the one that created the Tornado
+    IOLoop. In practice, the problem is that we get annoying intermittent
+    failures because sometimes the KeepAliveThread jumps in and "disturbs" the
+    intended flow of the test case. Worse, it fails in the terrible way that
+    the KeepAliveThread is kept alive, bugging the execution of subsequent test
+    casses.
+
+    Oh, I so wish Tornado would explicitly say that you're acessing it from
+    different threads and things will just not work.
+    """
+    return tornado.ioloop.IOLoop.current(instance=False)
 
 
 class ServerTestBase(AsyncHTTPTestCase):
@@ -51,13 +66,14 @@ class ServerTestBase(AsyncHTTPTestCase):
         self._old_fetch = luigi.rpc.RemoteScheduler._fetch
 
         def _fetch(obj, url, body, *args, **kwargs):
-            body = urlencode(body).encode('utf-8')
-            response = self.fetch(url, body=body, method='POST')
-            if response.code >= 400:
-                raise luigi.rpc.RPCError(
-                    'Errror when connecting to remote scheduler'
-                )
-            return response.body.decode('utf-8')
+            if _is_running_from_main_thread():
+                body = urlencode(body).encode('utf-8')
+                response = self.fetch(url, body=body, method='POST')
+                if response.code >= 400:
+                    raise luigi.rpc.RPCError(
+                        'Errror when connecting to remote scheduler'
+                    )
+                return response.body.decode('utf-8')
 
         luigi.rpc.RemoteScheduler._fetch = _fetch
 
