@@ -52,7 +52,7 @@ else:
 NUM_RETRIES = 5
 
 # Number of bytes to send/receive in each request.
-CHUNKSIZE = 2 * 1024 * 1024
+CHUNKSIZE = 10 * 1024 * 1024
 
 # Mimetype to use if one can't be guessed from the file extension.
 DEFAULT_MIMETYPE = 'application/octet-stream'
@@ -97,6 +97,9 @@ class GCSClient(luigi.target.FileSystem):
              scope='https://www.googleapis.com/auth/devstorage.read_write')
          client = GCSClient(oauth_credentials=credentails)
 
+        The chunksize parameter specifies how much data to transfer when downloading
+        or uploading files.
+
     .. warning::
       By default this class will use "automated service discovery" which will require
       a connection to the web. The google api client downloads a JSON file to "create" the
@@ -104,7 +107,9 @@ class GCSClient(luigi.target.FileSystem):
       contents of this file (currently found at https://www.googleapis.com/discovery/v1/apis/storage/v1/rest )
       as the ``descriptor`` argument.
     """
-    def __init__(self, oauth_credentials=None, descriptor='', http_=None):
+    def __init__(self, oauth_credentials=None, descriptor='', http_=None,
+                 chunksize=CHUNKSIZE):
+        self.chunksize = chunksize
         http_ = http_ or httplib2.Http()
 
         if not oauth_credentials:
@@ -238,11 +243,12 @@ class GCSClient(luigi.target.FileSystem):
 
         return False
 
-    def put(self, filename, dest_path, mimetype=None):
+    def put(self, filename, dest_path, mimetype=None, chunksize=None):
+        chunksize = chunksize or self.chunksize
         resumable = os.path.getsize(filename) > 0
 
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE
-        media = http.MediaFileUpload(filename, mimetype, chunksize=CHUNKSIZE, resumable=resumable)
+        media = http.MediaFileUpload(filename, mimetype, chunksize=chunksize, resumable=resumable)
 
         self._do_put(media, dest_path)
 
@@ -320,7 +326,8 @@ class GCSClient(luigi.target.FileSystem):
         for it in self._list_iter(bucket, obj_prefix):
             yield self._add_path_delimiter(path) + it['name'][obj_prefix_len:]
 
-    def download(self, path):
+    def download(self, path, chunksize=None):
+        chunksize = chunksize or self.chunksize
         bucket, obj = self._path_to_bucket_and_key(path)
 
         with tempfile.NamedTemporaryFile(delete=False) as fp:
@@ -333,7 +340,7 @@ class GCSClient(luigi.target.FileSystem):
                 return return_fp
 
             request = self.client.objects().get_media(bucket=bucket, object=obj)
-            downloader = http.MediaIoBaseDownload(fp, request, chunksize=1024 * 1024)
+            downloader = http.MediaIoBaseDownload(fp, request, chunksize=chunksize)
 
             attempts = 0
             done = False
