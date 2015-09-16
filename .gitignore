@@ -41,7 +41,8 @@ develop-eggs/
 dist/
 downloads/
 eggs/
-lib/
+# NOTE : lib/ prevents inclusion of static/visualiser/lib
+#lib/
 lib64/
 parts/
 sdist/
