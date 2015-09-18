@@ -180,14 +180,15 @@ Graph = (function() {
                 .attr("data-task-id", node.taskId)
                 .appendTo(g);
 
-            var titleText = node.taskId;
+            var titleText = node.name;
+            var content = $.map(node.params, function (value, name) { return name + ": " + value; }).join("<br>");
             g.attr("title", titleText)
-                .tooltip({
+                .popover({
+                    trigger: 'hover',
                     container: 'body',
                     html: true,
-                    title: function() {
-                        return $(this).prop('title');
-                    }
+                    placement: 'top',
+                    content: content
                 });
         });
 
