@@ -19,6 +19,7 @@ import functools
 import re
 from helpers import unittest
 import random
+import pickle
 
 import helpers
 import luigi
@@ -449,6 +450,10 @@ class HdfsTargetTests(MiniClusterTestCase, FileSystemTargetTestMixin):
     def test_tmppath_username(self):
         self.assertRegexpMatches(hdfs.tmppath('/path/to/stuff', include_unix_username=True),
                                  "^/tmp/[a-z0-9_]+/path/to/stuff-luigitemp-\d+")
+
+    def test_pickle(self):
+        t = hdfs.HdfsTarget("/tmp/dir")
+        pickle.dumps(t)
 
 
 @attr('minicluster')

@@ -130,3 +130,28 @@ class CompatibleHdfsFormat(luigi.format.Format):
 
     def hdfs_reader(self, input):
         return self.reader(input)
+
+    # __getstate__/__setstate__ needed for pickling, because self.reader and
+    # self.writer may be unpickleable instance methods of another format class.
+    # This was mainly to support pickling of standard HdfsTarget instances.
+
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        for attr in ('reader', 'writer'):
+            method = getattr(self, attr)
+            try:
+                # if instance method, pickle instance and method name
+                d[attr] = method.__self__, method.__func__.__name__
+            except AttributeError:
+                pass  # not an instance method
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__ = d
+        for attr in ('reader', 'writer'):
+            try:
+                method_self, method_name = d[attr]
+            except ValueError:
+                continue
+            method = getattr(method_self, method_name)
+            setattr(self, attr, method)
