@@ -20,6 +20,6 @@ from helpers import unittest
 import luigi
 
 
-class UnicodeParameterTest (unittest.TestCase):
-    def test_serialize (self):
+class UnicodeParameterTest(unittest.TestCase):
+    def test_serialize(self):
         self.assertEqual(luigi.Parameter().serialize(u"é"), u"é")
