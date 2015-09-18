@@ -192,11 +192,15 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(b.has_run)
 
     def test_fail(self):
+        class CustomException(BaseException):
+            def __init__(self, msg):
+                self.msg = msg
+
         class A(Task):
 
             def run(self):
                 self.has_run = True
-                raise Exception()
+                raise CustomException('bad things')
 
             def complete(self):
                 return self.has_run
