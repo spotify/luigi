@@ -119,12 +119,12 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return False
 
-	def copy_to_temp(self):
-		"""
-		Return True if data should copy to temp table.
-		"""
-		return False
-    
+    def copy_to_temp(self):
+        """
+        Return True if data should copy to temp table.
+        """
+        return False
+
     def queries(self):
         """
         Override to return a list of queries to be executed in order.
@@ -208,14 +208,14 @@ class S3CopyToTable(rdbms.CopyToTable):
 
         logger.info('Executing queries')
         self.execute_queries(cursor, connection)
-        #won't register marker_table changes (because only one redshift target can be specified)
+        # won't register marker_table changes (because only one redshift target can be specified)
 
         # commit and clean up
         connection.close()
 
     def execute_queries(self, cursor, connection):
         """
-        Defines query execution 
+        Defines query execution
         """
         for query in self.queries():
             cursor.execute(query)
