@@ -163,13 +163,6 @@ Graph = (function() {
             var g = $(svgElement("g"))
                 .addClass("node")
                 .attr("transform", "translate(" + node.x + "," + node.y +")")
-                .attr("title", "translate(" + node.x + "," + node.y +")")
-                .tooltip(
-                    {
-                        content: function() {
-                            return $(this).attr('title');
-                        }
-                    })
                 .appendTo(self.svg);
 
             $(svgElement("circle"))
@@ -187,13 +180,15 @@ Graph = (function() {
                 .attr("data-task-id", node.taskId)
                 .appendTo(g);
 
-            var titleText = node.name + '<br/>';
-            $.each(node.params, function (param_name, param_value) {
-                titleText += param_name + "=" + param_value + '<br/>';
-            });
-            titleText += "priority" + "=" + node.priority + '<br/>';
-            g.attr("title", $.trim(titleText))
-                .tooltip();
+            var titleText = node.taskId;
+            g.attr("title", titleText)
+                .tooltip({
+                    container: 'body',
+                    html: true,
+                    title: function() {
+                        return $(this).prop('title');
+                    }
+                });
         });
 
         // Legend for Task status
