@@ -229,7 +229,7 @@ class Parameter(object):
 
         :param x: the value to serialize.
         """
-        return str(x)
+        return unicode(x)
 
     @classmethod
     def next_in_enumeration(_cls, _value):
