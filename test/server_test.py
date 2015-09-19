@@ -217,6 +217,7 @@ class INETURLLibServerTest(INETProcessServerTest):
     def start_server(self, *args, **kwargs):
         super(INETURLLibServerTest, self).start_server(*args, **kwargs)
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/81022689')
     def patching_test(self):
         """
         Check that HAS_REQUESTS patching is meaningful
