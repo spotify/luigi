@@ -159,3 +159,19 @@ class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
 
     def create_target(self, format=None):
         return gcs.GCSTarget(bucket_url(self.id()), format=format, client=self.client)
+
+    def test_close_twice(self):
+        # Ensure gcs._DeleteOnCloseFile().close() can be called multiple times
+        tgt = self.create_target()
+
+        with tgt.open('w') as dst:
+            dst.write('data')
+        assert dst.closed
+        dst.close()
+        assert dst.closed
+
+        with tgt.open() as src:
+            assert src.read().strip() == 'data'
+        assert src.closed
+        src.close()
+        assert src.closed
