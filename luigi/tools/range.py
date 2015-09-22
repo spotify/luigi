@@ -101,6 +101,10 @@ class RangeBase(luigi.WrapperTask):
     now = luigi.IntParameter(
         default=None,
         description="set to override current time. In seconds since epoch")
+    param_name = luigi.Parameter(
+        default=None,
+        description="parameter name used to pass in parameterized value. Defaults to None, meaning use first positional parameter",
+        positional=False)
 
     @property
     def of_cls(self):
@@ -164,6 +168,13 @@ class RangeBase(luigi.WrapperTask):
         param_last = self._format_datetime(datetimes[-1])
         return '[%s, %s]' % (param_first, param_last)
 
+    def _instantiate_task_cls(self, task_cls, param):
+        if self.param_name is None:
+            return task_cls(param)
+        else:
+            kwargs = {self.param_name: param}
+            return task_cls(**kwargs)
+
     def requires(self):
         # cache because we anticipate a fair amount of computation
         if hasattr(self, '_cached_requires'):
@@ -209,7 +220,7 @@ class RangeBase(luigi.WrapperTask):
         if self.reverse:
             required_datetimes.reverse()  # TODO priorities, so that within the batch tasks are ordered too
 
-        self._cached_requires = [task_cls(self.datetime_to_parameter(d)) for d in required_datetimes]
+        self._cached_requires = [self._instantiate_task_cls(task_cls, self.datetime_to_parameter(d)) for d in required_datetimes]
         return self._cached_requires
 
     def missing_datetimes(self, task_cls, finite_datetimes):
@@ -222,7 +233,7 @@ class RangeBase(luigi.WrapperTask):
 
         Inadvisable as it may be slow.
         """
-        return [d for d in finite_datetimes if not task_cls(self.datetime_to_parameter(d)).complete()]
+        return [d for d in finite_datetimes if not self._instantiate_task_cls(task_cls, self.datetime_to_parameter(d)).complete()]
 
 
 class RangeDailyBase(RangeBase):
