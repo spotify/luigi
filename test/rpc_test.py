@@ -26,6 +26,8 @@ from luigi.scheduler import CentralPlannerScheduler
 import central_planner_test
 import luigi.server
 from server_test import ServerTestBase
+import time
+import socket
 
 
 class RemoteSchedulerTest(unittest.TestCase):
@@ -36,6 +38,26 @@ class RemoteSchedulerTest(unittest.TestCase):
                 with mock.patch.object(s, '_fetcher') as fetcher:
                     s._fetch(suffix, '{}')
                     fetcher.fetch.assert_called_once_with('http://zorg.com/api/123', '{}', 42)
+
+    def test_retry_rpc_method(self):
+        """
+        Tests that a call to a RPC method is re-tried 3 times.
+        """
+
+        class ShorterWaitRemoteScheduler(luigi.rpc.RemoteScheduler):
+            """
+            A RemoteScheduler which waits shorter than usual before retrying (to speed up tests).
+            """
+
+            def _wait(self):
+                time.sleep(1)
+
+        scheduler = ShorterWaitRemoteScheduler('http://zorg.com', 42)
+
+        with mock.patch.object(scheduler, '_fetcher') as fetcher:
+            fetcher.raises = socket.timeout
+            fetcher.fetch.side_effect = [socket.timeout, socket.timeout, '{"response":{}}']
+            self.assertEquals(scheduler.get_work("fake_worker"), {})
 
 
 class RPCTest(central_planner_test.CentralPlannerTest, ServerTestBase):
