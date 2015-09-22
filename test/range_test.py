@@ -702,3 +702,19 @@ class RangeInstantiationTest(LuigiTestCase):
         now = str(int(datetime_to_epoch(datetime.datetime(2015, 12, 2))))
         self.run_locally_split('RangeDailyBase --of wohoo.MyTask --now {now} --start 2015-12-01 --stop 2015-12-02'.format(now=now))
         self.assertEqual(MyTask(date_param=datetime.date(1934, 12, 1)).secret, 'yay')
+
+    def test_param_name(self):
+        class MyTask(luigi.Task):
+            some_non_range_param = luigi.Parameter(default='woo')
+            date_param = luigi.DateParameter()
+
+            def complete(self):
+                return False
+
+        range_task = RangeDailyBase(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                    of=MyTask,
+                                    start=datetime.date(2015, 12, 1),
+                                    stop=datetime.date(2015, 12, 2),
+                                    param_name='date_param')
+        expected_task = MyTask('woo', datetime.date(2015, 12, 1))
+        self.assertEqual(expected_task, list(range_task._requires())[0])
