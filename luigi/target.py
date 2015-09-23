@@ -23,8 +23,16 @@ import abc
 import io
 import os
 import random
+import shutil
 import tempfile
 import logging
+
+# support for python2.7/python3
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 from luigi import six
 
 logger = logging.getLogger('luigi-interface')
@@ -220,6 +228,14 @@ class FileSystemTarget(Target):
         self.fs.remove(self.path)
 
 
+class _NonWritableStream(StringIO):
+    def write(self, b):
+        raise NotImplementedError("You can not write to this stream.")
+
+    def writable(self):
+        return not self.closed
+
+
 class AtomicLocalFile(io.BufferedWriter):
     """Abstract class to create Target that create
     a tempoprary file in the local filesystem before
@@ -229,10 +245,20 @@ class AtomicLocalFile(io.BufferedWriter):
     :class:`luigi.file.LocalTarget` for example
     """
 
-    def __init__(self, path):
+    def __init__(self, path, is_dir=False):
         self.__tmp_path = self.generate_tmp_path(path)
         self.path = path
-        super(AtomicLocalFile, self).__init__(io.FileIO(self.__tmp_path, 'w'))
+        self.is_dir = is_dir
+
+        if not self.is_dir:
+            file_io = io.FileIO(self.__tmp_path, 'w')
+        else:
+            file_io = _NonWritableStream()
+            if os.path.exists(self.__tmp_path):
+                raise FileAlreadyExists(self.__tmp_path)
+            os.makedirs(self.__tmp_path)
+
+        super(AtomicLocalFile, self).__init__(file_io)
 
     def close(self):
         super(AtomicLocalFile, self).close()
@@ -246,7 +272,10 @@ class AtomicLocalFile(io.BufferedWriter):
 
     def __del__(self):
         if os.path.exists(self.tmp_path):
-            os.remove(self.tmp_path)
+            if self.is_dir:
+                shutil.rmtree(self.tmp_path)
+            else:
+                os.remove(self.tmp_path)
 
     @property
     def tmp_path(self):

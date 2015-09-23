@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+import glob
 import signal
 import subprocess
 import io
@@ -23,8 +23,10 @@ import re
 import locale
 import tempfile
 import warnings
+from io import UnsupportedOperation
 
 from luigi import six
+from luigi.target import FileAlreadyExists, FileSystemException
 
 
 class FileWrapper(object):
@@ -71,7 +73,7 @@ class InputPipeProcessWrapper(object):
         if input_pipe is not None:
             try:
                 input_pipe.fileno()
-            except AttributeError:
+            except (AttributeError, UnsupportedOperation) as e:
                 # subprocess require a fileno to work, if not present we copy to disk first
                 self._original_input = False
                 f = tempfile.NamedTemporaryFile('wb', prefix='luigi-process_tmp', delete=False)
@@ -169,15 +171,17 @@ class InputPipeProcessWrapper(object):
 class OutputPipeProcessWrapper(object):
     WRITES_BEFORE_FLUSH = 10000
 
-    def __init__(self, command, output_pipe=None):
+    def __init__(self, command, output_pipe=None, use_stdout_as_output=True, writes_before_flash=None):
         self.closed = False
         self._command = command
         self._output_pipe = output_pipe
         self._process = subprocess.Popen(command,
                                          stdin=subprocess.PIPE,
-                                         stdout=output_pipe,
+                                         stdout=output_pipe if use_stdout_as_output else None,
                                          close_fds=True)
         self._flushcount = 0
+        if writes_before_flash is not None:
+            self.WRITES_BEFORE_FLUSH = writes_before_flash
 
     def write(self, *args, **kwargs):
         self._process.stdin.write(*args, **kwargs)
@@ -219,7 +223,8 @@ class OutputPipeProcessWrapper(object):
             if self._output_pipe is not None:
                 self._output_pipe.close()
         else:
-            raise RuntimeError('Error when executing command %s' % self._command)
+            raise RuntimeError('Error when executing command %s. Error code="%s"' % (self._command,
+                                                                                     self._process.returncode))
 
     def abort(self):
         self._finish()
@@ -499,6 +504,87 @@ class Bzip2Format(Format):
     def pipe_writer(self, output_pipe):
         return OutputPipeProcessWrapper(['bzip2'], output_pipe)
 
+
+class DirectoryFormat(Format):
+    input = 'bytes'
+    output = 'dir'
+
+    # on osx/other env we have different tools, we need the way to overload this
+    # should be moved into general configuration or ToolsConfig class.
+    gnu_split = 'split'  # gnu split required (gsplit on OSX)
+    gnu_cat = 'cat'
+    support_bsd_split = True
+
+    def __init__(self, prefix='part-', max_part_size=None, suffix=None, writes_before_flash=None):
+        """
+        This Format wraps file/directory.
+        as input it reads multiple files from target dir  {PREFIX}*{POSTFIX}
+        as output it writes files with maximal size = max_part_size  with name = {PREFIX}{COUNTER}{POSTFIX}
+
+        in case input is file, just creates same stream as LocalTarget does
+        in case max_part_size==0 creates one file as output.
+        :param prefix: input files/output files prefix
+        :param max_part_size: output files maximum size
+        :param suffix: input/output files suffix  (example .gz)
+        :param writes_before_flash: number of bytes buffered by write before flushing to the split
+        :return:
+        """
+        super(DirectoryFormat, self).__init__()
+        self.max_part_size = max_part_size
+        self.prefix = prefix
+        self.suffix = suffix
+        self.writes_before_flash = writes_before_flash
+
+        if self.support_bsd_split and self.suffix:
+            warnings.warn(
+                'You could not use suffix while support_bsd_split is ON',
+                UserWarning, stacklevel=2
+            )
+
+    def pipe_reader(self, input_pipe):
+        if not os.path.exists(input_pipe):
+            from luigi.s3 import FileNotFoundException
+
+            raise FileNotFoundException(input_pipe)
+        if not os.path.isdir(input_pipe):
+            return FileWrapper(io.BufferedReader(io.FileIO(input_pipe, 'r')))
+
+        # build pattern from not none parts
+        pattern = "".join([str(p) for p in [self.prefix, "*", self.suffix] if p])
+        input_files = sorted(glob.glob(os.path.join(input_pipe, pattern)))
+        if not input_files:
+            return FileWrapper(io.BufferedReader(io.BytesIO()))
+        cmd = [self.gnu_cat] + input_files
+        return InputPipeProcessWrapper(cmd, None)
+
+    def pipe_writer(self, output_pipe):
+        from luigi.file import atomic_file
+
+        # the file is there
+        if os.path.exists(output_pipe):
+            raise FileAlreadyExists(output_pipe)
+
+        # the file does not exists and no write privileges are given
+        if not os.access(os.path.dirname(os.path.abspath(output_pipe)), os.W_OK):
+            raise FileSystemException("Can not write into %s" % output_pipe)
+
+        if not self.max_part_size:
+            return atomic_file(output_pipe)
+
+        output_pipe = atomic_file(output_pipe, is_dir=True)
+
+        cmd = [self.gnu_split,
+               '-b', str(self.max_part_size),  # limit by file size
+               ]
+        if not self.support_bsd_split:
+            if self.suffix:
+                cmd += ['--additional-suffix=%s' % self.suffix]
+            cmd += ['-d']  # use numbers for indexes
+        cmd += ['-', os.path.join(output_pipe.tmp_path, self.prefix)]
+        return OutputPipeProcessWrapper(cmd, output_pipe,
+                                        use_stdout_as_output=False,
+                                        writes_before_flash=self.writes_before_flash)
+
 Text = TextFormat()
 UTF8 = TextFormat(encoding='utf8')
 Nop = NopFormat()
@@ -506,6 +592,7 @@ SysNewLine = NewlineFormat()
 Gzip = GzipFormat()
 Bzip2 = Bzip2Format()
 MixedUnicodeBytes = MixedUnicodeBytesFormat()
+Directory = DirectoryFormat()
 
 
 def get_default_format():

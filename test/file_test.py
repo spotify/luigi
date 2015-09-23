@@ -21,9 +21,12 @@ import gzip
 import os
 import random
 import shutil
-from helpers import unittest
+
 import mock
 
+from io import BytesIO
+
+from helpers import unittest
 import luigi.format
 from luigi import LocalTarget
 from luigi.file import LocalFileSystem
@@ -35,17 +38,20 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
     path = '/tmp/test.txt'
     copy = '/tmp/test.copy.txt'
 
-    def setUp(self):
+    def _cleanup_files(self):
         if os.path.exists(self.path):
-            os.remove(self.path)
+            if os.path.isdir(self.path):
+                shutil.rmtree(self.path)
+            else:
+                os.remove(self.path)
         if os.path.exists(self.copy):
             os.remove(self.copy)
 
+    def setUp(self):
+        self._cleanup_files()
+
     def tearDown(self):
-        if os.path.exists(self.path):
-            os.remove(self.path)
-        if os.path.exists(self.copy):
-            os.remove(self.copy)
+        self._cleanup_files()
 
     def create_target(self, format=None):
         return LocalTarget(self.path, format=format)
@@ -166,6 +172,72 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
 
         self.assertEqual(b'a\nb\nc\nd', b)
         self.assertEqual(b'a\r\nb\r\nc\r\nd', c)
+
+    def test_directory_with_split(self):
+        directory_format = luigi.format.DirectoryFormat(max_part_size=3)
+        t = LocalTarget(self.path, is_dir=True, format=directory_format)
+        p = t.open('w')
+        test_data = b'test'
+        p.write(test_data)
+        print(self.path)
+        self.assertFalse(os.path.exists(self.path))
+        p.close()
+        self.assertTrue(os.path.exists(self.path))
+
+        # Validate split
+        self.assertEquals(sorted(os.listdir(self.path)), ['part-aa', 'part-ab'])
+
+        # Verifying our own directory reader
+        f = LocalTarget(self.path, is_dir=True, format=directory_format).open('r')
+        self.assertTrue(test_data == f.read())
+        f.close()
+
+    def test_directory_with_gzip_split(self):
+        directory_format = luigi.format.Gzip >> luigi.format.DirectoryFormat(max_part_size=10)
+        t = LocalTarget(self.path, is_dir=True, format=directory_format)
+        p = t.open('w')
+        test_data = b'test'
+        p.write(test_data)
+        print(self.path)
+        self.assertFalse(os.path.exists(self.path))
+        p.close()
+        self.assertTrue(os.path.exists(self.path))
+
+        # Validate split
+        self.assertEquals(sorted(os.listdir(self.path)), ['part-aa', 'part-ab', 'part-ac'])
+
+        # Verifying our own directory reader
+        f = LocalTarget(self.path, is_dir=True, format=directory_format).open('r')
+        self.assertEqual(test_data, f.read())
+        f.close()
+
+        # Verifying using gzip
+        with LocalTarget(self.path, is_dir=True, format=luigi.format.DirectoryFormat()).open('r') as fp:
+            v = BytesIO(fp.read())
+            with gzip.GzipFile(fileobj=v, mode='rb') as gp:
+                self.assertEqual(test_data, gp.read())
+
+    def test_atomicity_dir_simple(self):
+        test_data = b'test'
+        target = LocalTarget(self.path, is_dir=True, format=luigi.format.DirectoryFormat(max_part_size=3))
+        with target.open("w") as f:
+            self.assertFalse(target.exists())
+            f.write(test_data)
+        self.assertTrue(target.exists())
+        self.assertTrue(target.open().read(), test_data)
+
+    def test_atomicity_dir_with_error(self):
+        test_data = b'test'
+        target = LocalTarget(self.path, is_dir=True, format=luigi.format.DirectoryFormat(max_part_size=3))
+
+        def raises_error():
+            with target.open("w") as f:
+                self.assertFalse(target.exists())
+                f.write(test_data)
+                raise Exception("My Error")
+
+        self.assertRaisesRegexp(Exception, "My Error", raises_error)
+        self.assertFalse(target.exists())
 
 
 class LocalTargetCreateDirectoriesTest(LocalTargetTest):
