@@ -176,6 +176,8 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
 
     w = worker_scheduler_factory.create_worker(
         scheduler=sch, worker_processes=env_params.workers, assistant=env_params.assistant)
+    import luigi
+    luigi.w = w  # Arash is naugthy
 
     success = True
     for t in tasks:

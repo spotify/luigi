@@ -3,14 +3,49 @@ import argparse
 import logging
 import sys
 
+import luigi.interface
 import luigi.server
 import luigi.process
 import luigi.configuration
 import luigi.interface
 
 
+class cmdline(luigi.Config):
+    use_cmdline_section = False
+    retcode_internal_failure = luigi.IntParameter(default=1)
+    retcode_missing_data = luigi.IntParameter(default=0)
+    retcode_task_failed = luigi.IntParameter(default=0)
+    retcode_already_running = luigi.IntParameter(default=0, description='For both local --lock and luigid "lock"')
+
+
 def luigi_run(argv=sys.argv[1:]):
-    luigi.interface.run(argv)
+    """
+    Return
+    """
+    logger = logging.getLogger('luigi-interface')
+    with luigi.cmdline_parser.CmdlineParser.global_instance(argv):
+        cmdl = cmdline()
+
+    try:
+        luigi.interface.run(argv)
+    except Exception:
+        logger.exception("Unknown uncaught exception in luigi")
+        sys.exit(cmdl.retcode_internal_failure)
+
+    worker = luigi.w  # lulz
+    task_sets = luigi.execution_summary._summary_dict(worker)
+    non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
+
+    def has(status):
+        assert status in luigi.execution_summary._ORDERED_STATUSES
+        return status in non_empty_categories
+
+    codes_and_conds = (
+        (cmdl.retcode_missing_data, has('still_pending_ext')),
+        (cmdl.retcode_task_failed, has('failed')),
+        (cmdl.retcode_already_running, has('run_by_other_worker')),  # TODO: lockfile logic
+    )
+    sys.exit(max(code * (1 if cond else 0) for code, cond in codes_and_conds))
 
 
 def luigid(argv=sys.argv[1:]):
