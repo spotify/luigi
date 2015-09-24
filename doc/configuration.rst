@@ -411,6 +411,47 @@ hive resources and 1 mysql resource:
 Note that it was not necessary to specify the 1 for mysql here, but it
 is good practice to do so when you have a fixed set of resources.
 
+.. _retcode-config:
+
+[retcode]
+----------
+
+Configure return codes for the luigi binary. In the case of multiple return
+codes that could apply, for example a failing task and missing data, the
+*numerically greatest* return code is returned.
+
+We recommend that you copy this set of exit codes to your ``luigi.cfg`` file:
+
+::
+
+  [retcode]
+  # The following return codes are the recommended exit codes for luigi
+  # They are in increasing level of severity (for most applications)
+  already_running: 10
+  missing_data: 20
+  task_failed: 30
+  unhandled_exception: 40
+
+unhandled_exception
+  For exceptions during scheduling (if you raise from the ``complete()`` or
+  ``requires()`` methods for instance) or for internal luigi errors.  Defaults
+  to 4, since this type of error probably will not recover over time.
+missing_data
+  For when an :py:class:`~luigi.task.ExternalTask` is not complete, and this
+  caused the worker to give up.  As an alternative to fiddling with this, see
+  the [worker] keep_alive option.
+task_failed
+  For signaling that there were last known to have failed. Typically because
+  some exception have been raised.
+already_running
+  This can happen in two different cases. Either the local lock file was taken
+  at the time the invocation starts up. Or, the central scheduler have reported
+  that some tasks could not have been run, because other workers are already
+  running the tasks.
+
+If you customize return codes, prefer to set them in range 128 to 255 to avoid
+conflicts. Return codes in range 0 to 127 are reserved for possible future use
+by Luigi contributors.
 
 [scalding]
 ----------
