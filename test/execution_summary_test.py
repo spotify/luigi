@@ -22,6 +22,7 @@ import luigi.worker
 import luigi.execution_summary
 import threading
 import datetime
+import mock
 
 
 class ExecutionSummaryTest(LuigiTestCase):
@@ -163,6 +164,30 @@ class ExecutionSummaryTest(LuigiTestCase):
                       'This progress looks :) because there were no failed '
                       'tasks or missing external dependencies\n', s)
         self.assertNotIn('\n\n\n', s)
+
+    def test_already_running_2(self):
+        class AlreadyRunningTask(luigi.Task):
+            def run(self):
+                pass
+
+        other_worker = luigi.worker.Worker(scheduler=self.scheduler, worker_id="other_worker")
+        other_worker.add(AlreadyRunningTask())  # This also registers this worker
+        old_func = luigi.scheduler.CentralPlannerScheduler.get_work
+
+        def new_func(*args, **kwargs):
+            new_kwargs = kwargs.copy()
+            new_kwargs['worker'] = 'other_worker'
+            old_func(*args, **new_kwargs)
+            return old_func(*args, **kwargs)
+
+        with mock.patch('luigi.scheduler.CentralPlannerScheduler.get_work', new_func):
+            self.run_task(AlreadyRunningTask())
+
+        d = self.summary_dict()
+        self.assertFalse(d['already_done'])
+        self.assertFalse(d['completed'])
+        self.assertFalse(d['unknown_reason'])
+        self.assertEqual({AlreadyRunningTask()}, d['run_by_other_worker'])
 
     def test_larger_tree(self):
 
