@@ -119,11 +119,11 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return False
 
-    def copy_to_temp(self):
+    def table_type(self):
         """
-        Return True if data should copy to temp table.
+        Return table type (i.e. 'temp').
         """
-        return False
+        return ''
 
     def queries(self):
         """
@@ -163,20 +163,13 @@ class S3CopyToTable(rdbms.CopyToTable):
                     type=type) for name, type in self.columns
             )
 
-            if self.copy_to_temp():
-                query = ("CREATE TEMP TABLE "
-                         "{table} ({coldefs}) "
-                         "{table_attributes}").format(
-                    table=self.table,
-                    coldefs=coldefs,
-                    table_attributes=self.table_attributes())
-            else:
-                query = ("CREATE TABLE "
-                         "{table} ({coldefs}) "
-                         "{table_attributes}").format(
-                    table=self.table,
-                    coldefs=coldefs,
-                    table_attributes=self.table_attributes())
+            query = ("CREATE {type} TABLE "
+                     "{table} ({coldefs}) "
+                     "{table_attributes}").format(
+                type=self.type_type(),
+                table=self.table,
+                coldefs=coldefs,
+                table_attributes=self.table_attributes())
 
             connection.cursor().execute(query)
 
