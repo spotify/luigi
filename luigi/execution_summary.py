@@ -341,10 +341,10 @@ def _summary_format(set_tasks, worker):
         str_output += 'Did not run any tasks'
     smiley = ""
     reason = ""
-    if len(set_tasks["failed"]):
+    if set_tasks["failed"]:
         smiley = ":("
         reason = "there were failed tasks"
-    elif len(set_tasks["still_pending_ext"]):
+    elif set_tasks["still_pending_ext"]:
         smiley = ":|"
         reason = "there were missing external dependencies"
     else:
