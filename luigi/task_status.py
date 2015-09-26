@@ -22,6 +22,6 @@ PENDING = 'PENDING'
 FAILED = 'FAILED'
 DONE = 'DONE'
 RUNNING = 'RUNNING'
-SUSPENDED = 'SUSPENDED'
+SUSPENDED = 'SUSPENDED'  # Only kept for backward compatibility with old clients
 UNKNOWN = 'UNKNOWN'
 DISABLED = 'DISABLED'

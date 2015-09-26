@@ -389,10 +389,6 @@ class SimpleTaskState(object):
         if new_status == FAILED:
             assert config is not None
 
-        # not sure why we have SUSPENDED, as it can never be set
-        if new_status == SUSPENDED:
-            new_status = PENDING
-
         if new_status == DISABLED and task.status == RUNNING:
             return
 
@@ -619,7 +615,7 @@ class CentralPlannerScheduler(Scheduler):
         if expl is not None:
             task.expl = expl
 
-        if not (task.status == RUNNING and status == PENDING):
+        if not (task.status == RUNNING and status == PENDING) or new_deps:
             # don't allow re-scheduling of task while it is running, it must either fail or succeed first
             if status == PENDING or status != task.status:
                 # Update the DB only if there was a acctual change, to prevent noise.

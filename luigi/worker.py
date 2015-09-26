@@ -47,7 +47,7 @@ from luigi import six
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, SUSPENDED, CentralPlannerScheduler
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, CentralPlannerScheduler
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
@@ -145,13 +145,12 @@ class TaskProcess(multiprocessing.Process):
                 status = DONE if self.task.complete() else FAILED
             else:
                 new_deps = self._run_get_new_deps()
-                status = DONE if not new_deps else SUSPENDED
+                status = DONE if not new_deps else PENDING
 
-            if status == SUSPENDED:
+            if new_deps:
                 logger.info(
                     '[pid %s] Worker %s new requirements      %s',
                     os.getpid(), self.worker_id, self.task.task_id)
-
             elif status == DONE:
                 self.task.trigger_event(
                     Event.PROCESSING_TIME, self.task, time.time() - t0)
@@ -727,7 +726,7 @@ class Worker(object):
                 if reschedule:
                     self.add(task)
 
-            self.run_succeeded &= status in (DONE, SUSPENDED)
+            self.run_succeeded &= (status == DONE) or (len(new_deps) > 0)
             return
 
     def _sleeper(self):
