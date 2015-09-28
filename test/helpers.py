@@ -20,6 +20,8 @@ import itertools
 
 import luigi
 import luigi.task_register
+import luigi.cmdline_parser
+from luigi.cmdline_parser import CmdlineParser
 from luigi import six
 import os
 
@@ -148,10 +150,37 @@ class LuigiTestCase(unittest.TestCase):
     def run_locally(self, args):
         """ Helper for running tests testing more of the stack, the command
         line parsing and task from name intstantiation parts in particular. """
-        run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
+        temp = CmdlineParser._instance
+        try:
+            CmdlineParser._instance = None
+            run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
+        finally:
+            CmdlineParser._instance = temp
         return run_exit_status
 
     def run_locally_split(self, space_seperated_args):
         """ Helper for running tests testing more of the stack, the command
         line parsing and task from name intstantiation parts in particular. """
         return self.run_locally(space_seperated_args.split(' '))
+
+
+class parsing(object):
+    """
+    Convenient decorator for test cases to set the parsing environment.
+    """
+
+    def __init__(self, cmds):
+        self.cmds = cmds
+
+    def __call__(self, fun):
+        @functools.wraps(fun)
+        def wrapper(*args, **kwargs):
+            with CmdlineParser.global_instance(self.cmds, allow_override=True):
+                return fun(*args, **kwargs)
+
+        return wrapper
+
+
+def in_parse(cmds, deferred_computation):
+    with CmdlineParser.global_instance(cmds):
+        deferred_computation()
