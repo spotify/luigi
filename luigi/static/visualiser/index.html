@@ -51,7 +51,7 @@
 
         <style>
 
-          
+
           @-webkit-keyframes flash {
             0%, 50%, 100% {
               opacity: 1;
@@ -122,7 +122,7 @@
 
           .live.map .ERROR .status {
             background-color: #f77;
-          }          
+          }
 
           .live.map .FAILED .status {
             background-color: #dd4b39;
@@ -257,26 +257,43 @@
         </script>
         <script type="text/template" name="workerTemplate">
             {{#workers}}
-                <h3>{{name}}</h3>
-                <p><b>Started</b>: {{start_time}}</p>
-                <p><b>Last Checkin</b>: {{active}}</p>
-                <p><b>Root Task</b>: <a href="#{{{first_task}}}">{{first_task}}</a></p>
-                <p><b>Pending Tasks</b>: {{num_pending}}</p>
-                <p><b>Unique Pending Tasks</b>: {{num_uniques}}</p>
-                <p><b>Running Tasks</b>: {{num_running}}</p>
-                {{#tasks}}
-                <div class="taskRow row-fluid" data-task-id="{{taskId}}">
-                    <div class="span4"><strong>{{taskName}}</strong><em> ({{taskParams}})</em></div>
-                    <div class="span1">{{priority}}</div>
-                    <div class="span2">{{resources}}</div>
-                    <div class="span3">{{displayTime}}</div>
-                    <div class="span2">
-                        <a href="#{{taskId}}" class="btn btn-info btn-small" data-action="drawGraph">Dependency Graph</a>
-                        {{#error}}<a class="btn btn-primary btn-small error-trace-button" data-task-id="{{taskId}}">Show Error Trace</a>{{/error}}
-                        {{#re_enable}}<a class="btn btn-warning btn-small re-enable-button" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
-                    </div>
+            <div class="box">
+                <div class="box-header with-border">
+                    <h3 class="box-title">{{name}}</h3>
                 </div>
-                {{/tasks}}
+                <div class="box-body">
+                    Started: {{start_time}}<br>
+                    Last Checkin: {{active}}<br>
+                    Root Task: <a href="#{{{first_task}}}">{{first_task}}</a><br>
+                    Running: {{num_running}}<br>
+                    Pending: {{num_pending}}<br>
+                    Unique Pending: {{num_uniques}}<br>
+
+                    {{#num_running}}
+                    <hr>
+                    <table class="table table-striped worker-table">
+                      <thead>
+                        <th>Name</th>
+                        <th>Priority</th>
+                        <th>Resources</th>
+                        <th>Time</th>
+                        <th>Actions</th>
+                      </thead>
+                      <tbody>
+                      {{#tasks}}
+                      <tr>
+                        <td>{{taskName}}({{taskParams}})</td>
+                        <td>{{priority}}</td>
+                        <td>{{resources}}</td>
+                        <td>{{displayTime}}</td>
+                        <td><a href="#{{taskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a></td>
+                      </tr>
+                      {{/tasks}}
+                      {{/num_running}}
+                      </tbody>
+                    </table>
+                </div>
+            </div>
             {{/workers}}
         </script>
 
