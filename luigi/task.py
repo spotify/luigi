@@ -27,6 +27,7 @@ except ImportError:
 import logging
 import traceback
 import warnings
+from collections import OrderedDict
 
 from luigi import six
 
@@ -227,12 +228,19 @@ class Task(object):
                 raise parameter.UnknownParameterException('%s: unknown parameter %s' % (exc_desc, param_name))
             result[param_name] = arg
 
-        # Then use the defaults for anything not filled in
+        # Then use the defaults for anything not filled in, but don't throw any exceptions yet
         for param_name, param_obj in params:
             if param_name not in result:
-                if not param_obj.has_task_value(task_name, param_name):
-                    raise parameter.MissingParameterException("%s: requires the '%s' parameter to be set" % (exc_desc, param_name))
-                result[param_name] = param_obj.task_value(task_name, param_name)
+                if param_obj.has_task_value(task_name, param_name):
+                    result[param_name] = param_obj.task_value(task_name, param_name)
+
+        # Invoke the parameter hook that might fill up parameters that have no default
+        cls.param_hook(result, args, kwargs)
+
+        # Traverse through parameters again and raise when any is still missing
+        for param_name, param_obj in params:
+            if param_name not in result:
+                raise parameter.MissingParameterException("%s: requires the '%s' parameter to be set" % (exc_desc, param_name))
 
         def list_to_tuple(x):
             """ Make tuples out of lists and sets to allow hashing """
@@ -242,6 +250,17 @@ class Task(object):
                 return x
         # Sort it by the correct order and make a list
         return [(param_name, list_to_tuple(result[param_name])) for param_name, param_obj in params]
+
+    @classmethod
+    def param_hook(cls, result, args, kwargs):
+        """
+        Hook to update the resulting parameter values in-place.
+
+        :param result: current dict of param name -> value.
+        :param args: positional arguments
+        :param kwargs: keyword arguments.
+        """
+        pass
 
     def __init__(self, *args, **kwargs):
         """
