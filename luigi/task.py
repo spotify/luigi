@@ -27,7 +27,6 @@ except ImportError:
 import logging
 import traceback
 import warnings
-from collections import OrderedDict
 
 from luigi import six
 
