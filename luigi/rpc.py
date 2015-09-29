@@ -205,6 +205,9 @@ class RemoteScheduler(Scheduler):
     def worker_list(self):
         return self._request('/api/worker_list', {})
 
+    def resource_list(self):
+        return self._request('/api/resource_list', {})
+
     def task_search(self, task_str):
         return self._request('/api/task_search', {'task_str': task_str})
 

@@ -300,6 +300,51 @@
             {{/workers}}
         </script>
 
+        <script type="text/template" name="resourceTemplate">
+        {{#resources}}
+        <div class="box">
+            <div class="box-header with-border">
+                <h3 class="box-title">{{name}}</h3>
+                {{#num_consumer}}
+                <div class="box-tools pull-right">
+                    <i class="fa fa-navicon" data-toggle="collapse" data-target="#collapse-{{name}}" aria-expanded="false" aria-controls="collapse-{{name}}"></i>
+                </div><!-- /.box-tools -->
+                {{/num_consumer}}
+            </div><!-- /.box-header -->
+            <div class="box-body">
+                <div class="progress">
+                    <div class="progress-bar progress-bar-{{bar_type}}" style="width: {{percent_used}}%">
+                        <b>{{num_used}}/{{num_total}}</b>
+                    </div>
+                </div>
+
+                {{#num_consumer}}
+                <div class="collapse" id="collapse-{{name}}">
+                    <table class="table table-striped worker-table">
+                        <thead>
+                            <th>Name</th>
+                            <th>Priority</th>
+                            <th>Time</th>
+                            <th>Actions</th>
+                        </thead>
+                        <tbody>
+                            {{#tasks}}
+                            <tr>
+                                <td>{{displayName}}</td>
+                                <td>{{priority}}</td>
+                                <td>{{displayTime}}</td>
+                                <td><a href="#{{taskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a></td>
+                            </tr>
+                            {{/tasks}}
+                        </tbody>
+                    </table>
+                </div>
+                {{/num_consumer}}
+            </div><!-- /.box-body -->
+        </div><!-- /.box -->
+        {{/resources}}
+        </script>
+
         <script type="text/template" name="sidebarTemplate">
             <ul class="sidebar-menu">
                 <li class="header">TASK FAMILIES</li>
@@ -354,6 +399,7 @@
                                 <li><a href="#" data-tab="taskList">Task List</a></li>
                                 <li><a href="#g" data-tab="dependencyGraph">Dependency Graph</a></li>
                                 <li><a href="#w" data-tab="workerList">Workers</a></li>
+                                <li><a href="#r" data-tab="resourceList">Resources</a></li>
                             </ul>
                         </div>
                     </div>
@@ -500,6 +546,8 @@
                 </div>
             </section>
             <section id="workerList" class="container-fluid tab-pane active">
+            </section>
+            <section id="resourceList" class="tab-pane">
             </section>
         </div> <!-- /.tab-content -->
         </div> <!-- /.content -->
