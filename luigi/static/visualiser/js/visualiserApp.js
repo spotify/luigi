@@ -48,10 +48,7 @@ function visualiserApp(luigi) {
         return dateObject.getHours() + ":" + dateObject.getMinutes() + ":" + dateObject.getSeconds();
     }
 
-    function taskToDisplayTask(task, showWorker) {
-        if (showWorker === undefined) {
-            showWorker = false;
-        }
+    function taskToDisplayTask(task) {
         var taskIdParts = /([A-Za-z0-9_]*)\((.*)\)/.exec(task.taskId);
         var taskName = taskIdParts[1];
         var taskParams = taskIdParts[2];
@@ -60,9 +57,6 @@ function visualiserApp(luigi) {
             var current_time = new Date().getTime();
             var minutes_running = Math.round((current_time - task.time_running * 1000) / 1000 / 60);
             displayTime += " | " + minutes_running + " minutes";
-            if (showWorker && "worker_running" in task) {
-              displayTime += " (" + task.worker_running + ")";
-            }
         }
         return {
             taskId: task.taskId,
