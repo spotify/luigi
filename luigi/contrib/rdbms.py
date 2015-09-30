@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 """
-A common module for posgres like databases, such as postgres or redshift
+A common module for postgres like databases, such as postgres or redshift
 """
 
 import abc
