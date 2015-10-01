@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase, RunOnceTask
+from helpers import LuigiTestCase, RunOnceTask, with_config
 
 import luigi
 import luigi.worker
@@ -69,16 +69,90 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertFalse(d['upstream_missing_dependency'])
         self.assertFalse(d['run_by_other_worker'])
         self.assertFalse(d['still_pending_ext'])
-        s = self.summary()
-        self.assertIn('\n* 3 ran successfully:\n    - 3 Bar(num=', s)
-        self.assertIn('\n* 1 present dependencies were encountered:\n    - 1 Bar(num=1)\n', s)
-        self.assertIn('\n* 1 failed:\n'
-                      '    - 1 Bar(num=0)\n'
-                      '* 1 were left pending, among these:\n'
-                      '    * 1 had failed dependencies:\n'
-                      '        - 1 Foo()\n\n'
-                      'This progress looks :( because there were failed tasks', s)
-        self.assertNotIn('\n\n\n', s)
+        summary = self.summary()
+
+        expected = ['',
+                    '===== Luigi Execution Summary =====',
+                    '',
+                    'Scheduled 6 tasks of which:',
+                    '* 1 present dependencies were encountered:',
+                    '    - 1 Bar(num=1)',
+                    '* 3 ran successfully:',
+                    '    - 3 Bar(num=2,3,4)',
+                    '* 1 failed:',
+                    '    - 1 Bar(num=0)',
+                    '* 1 were left pending, among these:',
+                    '    * 1 had failed dependencies:',
+                    '        - 1 Foo()',
+                    '',
+                    'This progress looks :( because there were failed tasks',
+                    '',
+                    '===== Luigi Execution Summary =====',
+                    '']
+        result = summary.split('\n')
+        self.assertEqual(len(result), len(expected))
+        for i, line in enumerate(result):
+            self.assertEqual(line, expected[i])
+
+    @with_config({'execution_summary': {'summary-length': '1'}})
+    def test_config_summary_limit(self):
+        class Bar(luigi.Task):
+            num = luigi.IntParameter()
+
+            def run(self):
+                pass
+
+            def complete(self):
+                return True
+
+        class Biz(Bar):
+            pass
+
+        class Bat(Bar):
+            pass
+
+        class Wut(Bar):
+            pass
+
+        class Foo(luigi.Task):
+            def requires(self):
+                yield Bat(1)
+                yield Wut(1)
+                yield Biz(1)
+                for i in range(4):
+                    yield Bar(i)
+
+            def complete(self):
+                return False
+
+        self.run_task(Foo())
+        d = self.summary_dict()
+        self.assertEqual({Bat(1), Wut(1), Biz(1), Bar(0), Bar(1), Bar(2), Bar(3)}, d['already_done'])
+        self.assertEqual({Foo()}, d['completed'])
+        self.assertFalse(d['failed'])
+        self.assertFalse(d['upstream_failure'])
+        self.assertFalse(d['upstream_missing_dependency'])
+        self.assertFalse(d['run_by_other_worker'])
+        self.assertFalse(d['still_pending_ext'])
+        summary = self.summary()
+        expected = ['',
+                    '===== Luigi Execution Summary =====',
+                    '',
+                    'Scheduled 8 tasks of which:',
+                    '* 7 present dependencies were encountered:',
+                    '    - 4 Bar(num=0...3)',
+                    '    ...',
+                    '* 1 ran successfully:',
+                    '    - 1 Foo()',
+                    '',
+                    'This progress looks :) because there were no failed tasks or missing external dependencies',
+                    '',
+                    '===== Luigi Execution Summary =====',
+                    '']
+        result = summary.split('\n')
+        self.assertEqual(len(result), len(expected))
+        for i, line in enumerate(result):
+            self.assertEqual(line, expected[i])
 
     def test_upstream_not_running(self):
         class ExternalBar(luigi.ExternalTask):
@@ -418,11 +492,25 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.run_task(Foo())
         d = self.summary_dict()
         self.assertEqual({Foo(), Bar(num=0, num2=0), Bar(num=1, num2=2)}, d['completed'])
-        s = self.summary()
-        self.assertIn(') and Bar(num=', s)
-        self.assertIn('- Bar(num=', s)
-        self.assertNotIn("Did not run any tasks", s)
-        self.assertNotIn('\n\n\n', s)
+
+        summary = self.summary()
+        result = summary.split('\n')
+        expected = ['',
+                    '===== Luigi Execution Summary =====',
+                    '',
+                    'Scheduled 3 tasks of which:',
+                    '* 3 ran successfully:',
+                    '    - 2 Bar(num=0, num2=0) and Bar(num=1, num2=2)',
+                    '    - 1 Foo()',
+                    '',
+                    'This progress looks :) because there were no failed tasks or missing external dependencies',
+                    '',
+                    '===== Luigi Execution Summary =====',
+                    '']
+
+        self.assertEqual(len(result), len(expected))
+        for i, line in enumerate(result):
+            self.assertEqual(line, expected[i])
 
     def test_really_long_param_name(self):
 
@@ -451,11 +539,25 @@ class ExecutionSummaryTest(LuigiTestCase):
                     yield Bar(i, 2 * i)
 
         self.run_task(Foo())
-        s = self.summary()
-        self.assertIn('- Bar(', s)
-        self .assertIn(' and 3 other Bar', s)
-        self.assertNotIn("Did not run any tasks", s)
-        self.assertNotIn('\n\n\n', s)
+        summary = self.summary()
+
+        result = summary.split('\n')
+        expected = ['',
+                    '===== Luigi Execution Summary =====',
+                    '',
+                    'Scheduled 5 tasks of which:',
+                    '* 5 ran successfully:',
+                    '    - 4 Bar(num=0, num2=0) ...',
+                    '    - 1 Foo()',
+                    '',
+                    'This progress looks :) because there were no failed tasks or missing external dependencies',
+                    '',
+                    '===== Luigi Execution Summary =====',
+                    '']
+
+        self.assertEqual(len(result), len(expected))
+        for i, line in enumerate(result):
+            self.assertEqual(line, expected[i])
 
     def test_happy_smiley_face_normal(self):
 
@@ -616,21 +718,33 @@ class ExecutionSummaryTest(LuigiTestCase):
                     yield DateTask(datetime.date(1998, 3, 23) + datetime.timedelta(days=i), 5)
 
         self.run_task(EntryPoint())
-        s = self.summary()
-        self.assertIn('\n\nScheduled 218 tasks of which:\n', s)
-        self.assertIn('\n* 195 present dependencies were encountered:\n', s)
-        self.assertIn('\n* 1 ran successfully:\n', s)
-        self.assertIn('\n    - 1 Boom(...)\n', s)
-        self.assertIn('\n* 22 were left pending, among these:\n', s)
-        self.assertIn('\n    * 1 were missing external dependencies:\n', s)
-        self.assertIn('\n        - 1 MyExternal()\n', s)
-        self.assertIn('\n    * 21 had missing external dependencies:\n', s)
-        self.assertIn('\n        - 1 EntryPoint()\n', s)
-        self.assertIn('\n        - Foo(num=', s)
-        self.assertIn(') and 9 other Foo\n', s)
-        self.assertIn('\n        - 10 DateTask(date=1998-03-23...1998-04-01, num=5)\n', s)
-        self.assertIn('\nThis progress looks :| because there were missing external dependencies\n\n', s)
-        self.assertNotIn('\n\n\n', s)
+        summary = self.summary()
+
+        expected = ['',
+                    '===== Luigi Execution Summary =====',
+                    '',
+                    'Scheduled 218 tasks of which:',
+                    '* 195 present dependencies were encountered:',
+                    '    - 195 Bar(num=5...199)',
+                    '* 1 ran successfully:',
+                    '    - 1 Boom(...)',
+                    '* 22 were left pending, among these:',
+                    '    * 1 were missing external dependencies:',
+                    '        - 1 MyExternal()',
+                    '    * 21 had missing external dependencies:',
+                    '        - 10 DateTask(date=1998-03-23...1998-04-01, num=5)',
+                    '        - 1 EntryPoint()',
+                    '        - 10 Foo(num=100, num2=0) ...',
+                    '',
+                    'This progress looks :| because there were missing external dependencies',
+                    '',
+                    '===== Luigi Execution Summary =====',
+                    '']
+        result = summary.split('\n')
+
+        self.assertEqual(len(result), len(expected))
+        for i, line in enumerate(result):
+            self.assertEqual(line, expected[i])
 
     def test_with_datehours(self):
         """ Just test that it doesn't crash with datehour params """
