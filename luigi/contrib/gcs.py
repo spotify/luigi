@@ -306,14 +306,14 @@ class GCSClient(luigi.target.FileSystem):
 
     def rename(self, source_path, destination_path):
         """
-        Rename/move an object from one S3 location to another.
+        Rename/move an object from one GCS location to another.
         """
         self.copy(source_path, destination_path)
         self.remove(source_path)
 
     def listdir(self, path):
         """
-        Get an iterable with S3 folder contents.
+        Get an iterable with GCS folder contents.
         Iterable contains paths relative to queried path.
         """
         bucket, obj = self._path_to_bucket_and_key(path)
@@ -444,7 +444,7 @@ class GCSFlagTarget(GCSTarget):
 
     def __init__(self, path, format=None, client=None, flag='_SUCCESS'):
         """
-        Initializes a S3FlagTarget.
+        Initializes a GCSFlagTarget.
 
         :param path: the directory where the files are stored.
         :type path: str
@@ -457,7 +457,7 @@ class GCSFlagTarget(GCSTarget):
             format = luigi.format.get_default_format()
 
         if path[-1] != "/":
-            raise ValueError("S3FlagTarget requires the path to be to a "
+            raise ValueError("GCSFlagTarget requires the path to be to a "
                              "directory.  It must end with a slash ( / ).")
         super(GCSFlagTarget, self).__init__(path)
         self.format = format
