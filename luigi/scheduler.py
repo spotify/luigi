@@ -226,6 +226,7 @@ class Worker(object):
         self.id = worker_id
         self.reference = None  # reference to the worker in the real world. (Currently a dict containing just the host)
         self.last_active = last_active or time.time()  # seconds since epoch
+        self.last_get_work = None
         self.started = time.time()  # seconds since epoch
         self.tasks = set()  # task objects
         self.info = {}
@@ -233,10 +234,12 @@ class Worker(object):
     def add_info(self, info):
         self.info.update(info)
 
-    def update(self, worker_reference):
+    def update(self, worker_reference, get_work=False):
         if worker_reference:
             self.reference = worker_reference
         self.last_active = time.time()
+        if get_work:
+            self.last_get_work = time.time()
 
     def prune(self, config):
         # Delete workers that haven't said anything for a while (probably killed)
@@ -469,9 +472,13 @@ class SimpleTaskState(object):
             task_obj = self._tasks.pop(task)
             self._status_tasks[task_obj.status].pop(task)
 
-    def get_active_workers(self, last_active_lt=None):
+    def get_active_workers(self, last_active_lt=None, last_get_work_gt=None):
         for worker in six.itervalues(self._active_workers):
             if last_active_lt is not None and worker.last_active >= last_active_lt:
+                continue
+            last_get_work = getattr(worker, 'last_get_work', None)
+            if last_get_work_gt is not None and (
+                    last_get_work is None or last_get_work <= last_get_work_gt):
                 continue
             yield worker
 
@@ -533,6 +540,7 @@ class CentralPlannerScheduler(Scheduler):
             Task, disable_failures=self._config.disable_failures,
             disable_hard_timeout=self._config.disable_hard_timeout,
             disable_window=self._config.disable_window)
+        self._worker_requests = {}
 
     def load(self):
         self._state.load()
@@ -567,12 +575,12 @@ class CentralPlannerScheduler(Scheduler):
 
         logger.info("Done pruning task graph")
 
-    def update(self, worker_id, worker_reference=None):
+    def update(self, worker_id, worker_reference=None, get_work=False):
         """
         Keep track of whenever the worker was last active.
         """
         worker = self._state.get_worker(worker_id)
-        worker.update(worker_reference)
+        worker.update(worker_reference, get_work=get_work)
 
     def _update_priority(self, task, prio, worker):
         """
@@ -722,7 +730,7 @@ class CentralPlannerScheduler(Scheduler):
 
         worker_id = kwargs['worker']
         # Return remaining tasks that have no FAILED descendants
-        self.update(worker_id, {'host': host})
+        self.update(worker_id, {'host': host}, get_work=True)
         if assistant:
             self.add_worker(worker_id, [('assistant', assistant)])
         best_task = None
@@ -741,8 +749,10 @@ class CentralPlannerScheduler(Scheduler):
         else:
             relevant_tasks = self._state.get_pending_tasks()
             used_resources = self._used_resources()
+            activity_limit = time.time() - self._config.worker_disconnect_delay
+            active_workers = self._state.get_active_workers(last_get_work_gt=activity_limit)
             greedy_workers = dict((worker.id, worker.info.get('workers', 1))
-                                  for worker in self._state.get_active_workers())
+                                  for worker in active_workers)
         tasks = list(relevant_tasks)
         tasks.sort(key=self._rank, reverse=True)
 
