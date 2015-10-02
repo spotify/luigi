@@ -224,12 +224,12 @@ class NewStyleParameters822Test(unittest.TestCase):
 
     @parsing(['FooSubClass', '--x', 'xyz', '--FooBaseClass-x', 'xyz'])
     def test_subclasses(self):
-        self.assertEquals(FooSubClass().x, 'xyz')
+        self.assertEqual(FooSubClass().x, 'xyz')
 
     @parsing(['FooBaseClass', '--FooBaseClass-x', 'xyz'])
     def test_subclasses_2(self):
         # https://github.com/spotify/luigi/issues/822#issuecomment-77782714
-        self.assertEquals(FooBaseClass().x, 'xyz')
+        self.assertEqual(FooBaseClass().x, 'xyz')
 
 
 if __name__ == '__main__':

@@ -189,7 +189,7 @@ class TestRemoteFilesystem(unittest.TestCase):
         with self.target.open('w'):
             pass
 
-        self.assertEquals([self.target.path], list(self.fs.listdir(self.directory)))
+        self.assertEqual([self.target.path], list(self.fs.listdir(self.directory)))
 
 
 class TestGetAttrRecursion(unittest.TestCase):

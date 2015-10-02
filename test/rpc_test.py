@@ -57,7 +57,7 @@ class RemoteSchedulerTest(unittest.TestCase):
         with mock.patch.object(scheduler, '_fetcher') as fetcher:
             fetcher.raises = socket.timeout
             fetcher.fetch.side_effect = [socket.timeout, socket.timeout, '{"response":{}}']
-            self.assertEquals(scheduler.get_work("fake_worker"), {})
+            self.assertEqual(scheduler.get_work("fake_worker"), {})
 
 
 class RPCTest(central_planner_test.CentralPlannerTest, ServerTestBase):

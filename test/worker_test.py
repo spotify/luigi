@@ -678,7 +678,7 @@ class WorkerEmailTest(unittest.TestCase):
         self.assertEqual(emails, [])
         worker.add(a)
         self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
-        self.assertNotEquals(emails, [])
+        self.assertNotEqual(emails, [])
         self.assertTrue(emails[0].find("Luigi: Framework error while scheduling %s" % (a,)) != -1)
         worker.stop()
 
@@ -941,8 +941,8 @@ class TaskLimitTest(unittest.TestCase):
         w.run()
         self.assertFalse(t.complete())
         leaf_tasks = [ForkBombTask(3, 2, branch) for branch in [(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1)]]
-        self.assertEquals(3, sum(t.complete() for t in leaf_tasks),
-                          "should have gracefully completed as much as possible even though the single last leaf didn't get scheduled")
+        self.assertEqual(3, sum(t.complete() for t in leaf_tasks),
+                         "should have gracefully completed as much as possible even though the single last leaf didn't get scheduled")
 
     @with_config({'core': {'worker-task-limit': '7'}})
     def test_task_limit_not_exceeded(self):
