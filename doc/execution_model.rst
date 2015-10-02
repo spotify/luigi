@@ -58,14 +58,14 @@ If it has, it will run the full dependency graph.
     class DataDump(luigi.ExternalTask):
         date = luigi.DateParameter()
         def output(self): return luigi.contrib.hdfs.HdfsTarget(self.date.strftime('/var/log/dump/%Y-%m-%d.txt'))
-        
+
     class AggregationTask(luigi.Task):
         date = luigi.DateParameter()
         window = luigi.IntParameter()
         def requires(self): return [DataDump(self.date - datetime.timedelta(i)) for i in xrange(self.window)]
         def run(self): run_some_cool_stuff(self.input())
         def output(self): return luigi.contrib.hdfs.HdfsTarget('/aggregated-%s-%d' % (self.date, self.window))
-        
+
     class RunAll(luigi.Task):
         ''' Dummy task that triggers execution of a other tasks'''
         def requires(self):

@@ -18,7 +18,7 @@ method which returns True if and only if the Target exists.
 In practice, implementing Target subclasses is rarely needed.
 Luigi comes with a toolbox of several useful Targets.
 In particular, :class:`~luigi.file.LocalTarget` and :class:`~luigi.contrib.hdfs.HdfsTarget`,
-but there is also support for other file systems: 
+but there is also support for other file systems:
 :class:`luigi.s3.S3Target`,
 :class:`luigi.contrib.ssh.RemoteTarget`,
 :class:`luigi.ftp.RemoteTarget`,
