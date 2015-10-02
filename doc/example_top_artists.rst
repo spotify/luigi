@@ -113,7 +113,7 @@ here is how this could look like, instead of the class above.
         def mapper(self, line):
             timestamp, artist, track = line.strip().split()
             yield artist, 1
-            
+
         def reducer(self, key, values):
             yield key, sum(values)
 

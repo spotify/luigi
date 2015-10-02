@@ -46,7 +46,7 @@ parameters of the same values are not just equal, but the same instance:
     >>> import datetime
     >>> class DateTask(luigi.Task):
     ...   date = luigi.DateParameter()
-    ... 
+    ...
     >>> a = datetime.date(2014, 1, 21)
     >>> b = datetime.date(2014, 1, 21)
     >>> a is b
@@ -72,7 +72,7 @@ are not the same instance:
 
     >>> class DateTask2(DateTask):
     ...   other = luigi.Parameter(significant=False)
-    ... 
+    ...
     >>> c = DateTask2(date=a, other="foo")
     >>> d = DateTask2(date=b, other="bar")
     >>> c
@@ -102,7 +102,7 @@ Python is not a strongly typed language and you don't have to specify the types
 of any of your parameters.
 You can simply use the base class :class:`~luigi.parameter.Parameter` if you don't care.
 
-The reason you would use a subclass like :class:`~luigi.parameter.DateParameter` 
+The reason you would use a subclass like :class:`~luigi.parameter.DateParameter`
 is that Luigi needs to know its type for the command line interaction.
 That's how it knows how to convert a string provided on the command line to
 the corresponding type (i.e. datetime.date instead of a string).
