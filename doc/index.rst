@@ -16,7 +16,6 @@ Table of Contents
    tasks.rst
    parameters.rst
    command_line.rst
-   programmatic_execution.rst
    central_scheduler.rst
    execution_model.rst
    luigi_patterns.rst

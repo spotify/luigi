@@ -122,9 +122,9 @@ For instance, say you have classes TaskA and TaskB:
         y = luigi.Parameter()
 
 
-You can run ``TaskB`` on the command line: ``python script.py TaskB --y 42``.
+You can run ``TaskB`` on the command line: ``luigi TaskB --y 42``.
 But you can also set the class value of ``TaskA`` by running
-``python script.py TaskB --y 42 --TaskA-x 43``.
+``luigi TaskB --y 42 --TaskA-x 43``.
 This sets the value of ``TaskA.x`` to 43 on a *class* level.
 It is still possible to override it inside Python if you instantiate ``TaskA(x=44)``.
 
