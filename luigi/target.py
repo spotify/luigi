@@ -228,6 +228,7 @@ class AtomicLocalFile(io.BufferedWriter):
     This class is just for the writing part of the Target. See
     :class:`luigi.file.LocalTarget` for example
     """
+    tmp_path_prefix = 'luigi-tmp'
 
     def __init__(self, path):
         self.__tmp_path = self.generate_tmp_path(path)
@@ -239,7 +240,7 @@ class AtomicLocalFile(io.BufferedWriter):
         self.move_to_final_destination()
 
     def generate_tmp_path(self, path):
-        return os.path.join(tempfile.gettempdir(), 'luigi-s3-tmp-%09d' % random.randrange(0, 1e10))
+        return os.path.join(tempfile.gettempdir(), self.tmp_path_prefix + '-%09d' % random.randrange(0, 1e10))
 
     def move_to_final_destination(self):
         raise NotImplementedError()

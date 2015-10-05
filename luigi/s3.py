@@ -364,6 +364,7 @@ class AtomicS3File(AtomicLocalFile):
     """
     An S3 file that writes to a temp file and put to S3 on close.
     """
+    tmp_path_prefix = 'luigi-s3-tmp'
 
     def __init__(self, path, s3_client):
         self.s3_client = s3_client
@@ -462,11 +463,7 @@ class S3Target(FileSystemTarget):
     fs = None
 
     def __init__(self, path, format=None, client=None):
-        super(S3Target, self).__init__(path)
-        if format is None:
-            format = get_default_format()
-
-        self.format = format
+        super(S3Target, self).__init__(path, format=format)
         self.fs = client or S3Client()
 
     def open(self, mode='r'):
@@ -525,9 +522,7 @@ class S3FlagTarget(S3Target):
         if path[-1] != "/":
             raise ValueError("S3FlagTarget requires the path to be to a "
                              "directory.  It must end with a slash ( / ).")
-        super(S3FlagTarget, self).__init__(path)
-        self.format = format
-        self.fs = client or S3Client()
+        super(S3FlagTarget, self).__init__(path, format=format, client=client)
         self.flag = flag
 
     def exists(self):
