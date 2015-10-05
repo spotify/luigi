@@ -138,8 +138,7 @@ class Parameter(object):
                                 you have inheritance and whatnot.
         """
         if is_boolean:
-            self.__default = False
-            assert default is not True
+            self.__default = False if default == _no_value else default
         else:
             self.__default = default
 

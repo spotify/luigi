@@ -38,6 +38,10 @@ class WithDefault(luigi.Task):
     x = luigi.Parameter(default='xyz')
 
 
+class WithDefaultTrue(luigi.Task):
+    x = luigi.BoolParameter(default=True)
+
+
 class Foo(luigi.Task):
     bar = luigi.Parameter()
     p2 = luigi.IntParameter()
@@ -172,6 +176,9 @@ class ParameterTest(LuigiTestCase):
     def test_bool_true(self):
         self.run_locally(['Baz', '--bool'])
         self.assertEqual(Baz._val, True)
+
+    def test_bool_default_true(self):
+        self.assertTrue(WithDefaultTrue().x)
 
     def test_forgot_param(self):
         self.assertRaises(luigi.parameter.MissingParameterException, self.run_locally, ['ForgotParam'],)
@@ -418,6 +425,11 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
     def testBool(self):
         p = luigi.BoolParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(True, _value(p))
+
+    @with_config({"foo": {"bar": "false"}})
+    def testBoolConfigOutranksDefault(self):
+        p = luigi.BoolParameter(default=True, config_path=dict(section="foo", name="bar"))
+        self.assertEqual(False, _value(p))
 
     @with_config({"foo": {"bar": "2001-02-03-2001-02-28"}})
     def testDateInterval(self):
