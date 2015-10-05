@@ -364,6 +364,7 @@ class AtomicS3File(AtomicLocalFile):
     """
     An S3 file that writes to a temp file and put to S3 on close.
     """
+    tmp_path_prefix = 'luigi-s3-tmp'
 
     def __init__(self, path, s3_client):
         self.s3_client = s3_client

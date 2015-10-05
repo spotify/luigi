@@ -249,7 +249,8 @@ class GCSClient(luigi.target.FileSystem):
 
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE
         media = http.MediaFileUpload(filename, mimetype, chunksize=chunksize, resumable=resumable)
-
+        import pdb
+        pdb.set_trace()
         self._do_put(media, dest_path)
 
     def put_string(self, contents, dest_path, mimetype=None):
@@ -391,6 +392,7 @@ class AtomicGCSFile(luigi.target.AtomicLocalFile):
     """
     A GCS file that writes to a temp file and put to GCS on close.
     """
+    tmp_path_prefix = 'luigi-gcs-tmp'
 
     def __init__(self, path, gcs_client):
         self.gcs_client = gcs_client
@@ -462,6 +464,12 @@ class GCSFlagTarget(GCSTarget):
         super(GCSFlagTarget, self).__init__(path, format=format, client=client)
         self.flag = flag
 
+    @property
+    def flag_path(self):
+        return self.path + self.flag
+
     def exists(self):
-        flag_target = self.path + self.flag
-        return self.fs.exists(flag_target)
+        return self.fs.exists(self.flag_path)
+
+    def move_to_final_destination(self):
+        self.gcs_client.put(self.tmp_path, self.flag_path)
