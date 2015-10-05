@@ -463,11 +463,7 @@ class S3Target(FileSystemTarget):
     fs = None
 
     def __init__(self, path, format=None, client=None):
-        super(S3Target, self).__init__(path)
-        if format is None:
-            format = get_default_format()
-
-        self.format = format
+        super(S3Target, self).__init__(path, format=format)
         self.fs = client or S3Client()
 
     def open(self, mode='r'):
