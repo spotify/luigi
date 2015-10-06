@@ -189,13 +189,9 @@ class Parameter(object):
         """
         cp_parser = CmdlineParser.get_instance()
         if cp_parser:
-            is_without_section = not task_register.Register.get_task_cls(task_name).use_cmdline_section
-            globs = [True] + ([False] if cp_parser.is_local_task(task_name) else [])
-            for glob in globs:
-                dest = self._parser_dest(param_name, task_name, glob=glob, is_without_section=is_without_section)
-                if dest:
-                    found = getattr(cp_parser.known_args, dest, None)
-                    yield (self._parse_or_no_value(found), None)
+            dest = self._parser_dest(param_name, task_name)
+            found = getattr(cp_parser.known_args, dest, None)
+            yield (self._parse_or_no_value(found), None)
         yield (self._get_value_from_config(task_name, param_name), None)
         yield (self._get_value_from_config(task_name, param_name.replace('_', '-')),
                'Configuration [{}] {} (with dashes) should be avoided. Please use underscores.'.format(
@@ -258,23 +254,23 @@ class Parameter(object):
         else:
             return self.parse(x)
 
-    def _parser_dest(self, param_name, task_name, glob=False, is_without_section=False):
-        if is_without_section:
-            if glob:
-                return param_name
-            else:
-                return None
-        else:
-            if glob:
-                return task_name + '_' + param_name
-            else:
-                return param_name
+    @staticmethod
+    def _parser_dest(param_name, task_name):
+        return task_name + '_' + param_name
 
-    def _add_to_cmdline_parser(self, parser, param_name, task_name, glob=False, is_without_section=False):
-        dest = self._parser_dest(param_name, task_name, glob, is_without_section=is_without_section)
-        if not dest:
-            return
-        flag = '--' + dest.replace('_', '-')
+    @staticmethod
+    def _parser_flag_names(param_name, task_name, is_without_section, as_active):
+        if is_without_section:
+            yield param_name
+        else:
+            if as_active:
+                yield param_name
+            yield task_name + '_' + param_name
+
+    def _add_to_cmdline_parser(self, parser, param_name, task_name, is_without_section, as_active):
+        dest = self._parser_dest(param_name, task_name)
+        flag_names = self._parser_flag_names(param_name, task_name, is_without_section, as_active)
+        flags = ['--' + flag_name.replace('_', '-') for flag_name in flag_names]
 
         description = []
         description.append('%s.%s' % (task_name, param_name))
@@ -286,7 +282,7 @@ class Parameter(object):
         else:
             action = "store"
 
-        parser.add_argument(flag,
+        parser.add_argument(*flags,
                             help=' '.join(description),
                             action=action,
                             dest=dest)

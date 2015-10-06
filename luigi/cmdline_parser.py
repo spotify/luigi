@@ -20,7 +20,6 @@ be considered internal to luigi.
 """
 
 import argparse
-import functools
 from contextlib import contextmanager
 from luigi.task_register import Register
 import cached_property
@@ -78,11 +77,10 @@ class CmdlineParser(object):
         parser = argparse.ArgumentParser(add_help=False)
 
         for task_name, is_without_section, param_name, param_obj in Register.get_all_params():
-            add = functools.partial(param_obj._add_to_cmdline_parser, parser,
-                                    param_name, task_name, is_without_section=is_without_section)
-            add(glob=True)
-            if task_name in active_tasks:
-                add(glob=False)
+            as_active = task_name in active_tasks
+            param_obj._add_to_cmdline_parser(parser, param_name, task_name,
+                                             is_without_section=is_without_section,
+                                             as_active=as_active)
 
         return parser
 
@@ -123,7 +121,7 @@ class CmdlineParser(object):
         """
         Load the --module parameter
         """
-        module = known_args.module
+        module = known_args.core_module
         if module:
             __import__(module)
 
@@ -132,6 +130,6 @@ class CmdlineParser(object):
         """
         Check if the user passed --help, if so, print a message and exit.
         """
-        if known_args.help:
+        if known_args.core_help:
             parser.print_help()
             raise SystemExit('Exiting due to --help was passed')
