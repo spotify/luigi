@@ -21,6 +21,7 @@ See :ref:`Parameter` for more info on how to define parameters.
 '''
 
 import abc
+import argparse
 import datetime
 import warnings
 try:
@@ -112,7 +113,7 @@ class Parameter(object):
 
     @deprecate_kwarg('is_boolean', 'is_bool', False)
     def __init__(self, default=_no_value, is_boolean=False, is_global=False, significant=True, description=None,
-                 config_path=None, positional=True):
+                 config_path=None, positional=True, always_in_help=False):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -136,6 +137,8 @@ class Parameter(object):
                                 positional argument. Generally we recommend ``positional=False``
                                 as positional arguments become very tricky when
                                 you have inheritance and whatnot.
+        :param bool always_in_help: For the --help option in the command line
+                                    parsing. Set true to always show in --help.
         """
         if is_boolean:
             self.__default = False
@@ -153,6 +156,7 @@ class Parameter(object):
         self.positional = positional
 
         self.description = description
+        self.always_in_help = always_in_help
 
         if config_path is not None and ('section' not in config_path or 'name' not in config_path):
             raise ParameterException('config_path must be a hash containing entries for section and name')
@@ -267,25 +271,22 @@ class Parameter(object):
                 yield param_name
             yield task_name + '_' + param_name
 
-    def _add_to_cmdline_parser(self, parser, param_name, task_name, is_without_section, as_active):
+    def _add_to_cmdline_parser(self, parser, param_name, task_name, is_without_section, as_active, help_all):
         dest = self._parser_dest(param_name, task_name)
         flag_names = self._parser_flag_names(param_name, task_name, is_without_section, as_active)
         flags = ['--' + flag_name.replace('_', '-') for flag_name in flag_names]
-
-        description = []
-        description.append('%s.%s' % (task_name, param_name))
-        if self.description:
-            description.append(self.description)
 
         if self.is_bool:
             action = "store_true"
         else:
             action = "store"
 
+        help = self.description if as_active or help_all or self.always_in_help else argparse.SUPPRESS
         parser.add_argument(*flags,
-                            help=' '.join(description),
+                            help=help,
                             action=action,
-                            dest=dest)
+                            dest=dest
+                            )
 
 
 class DateParameterBase(Parameter):

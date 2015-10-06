@@ -72,7 +72,8 @@ class core(task.Config):
 
     local_scheduler = parameter.BoolParameter(
         default=False,
-        description='Use local scheduling')
+        description='Use an in-memory central scheduler. Useful for testing.',
+        always_in_help=True)
     scheduler_host = parameter.Parameter(
         default='localhost',
         description='Hostname of machine running remote scheduler',
@@ -106,7 +107,8 @@ class core(task.Config):
         description='Configuration file for logging')
     module = parameter.Parameter(
         default=None,
-        description='Used for dynamic loading of modules')
+        description='Used for dynamic loading of modules',
+        always_in_help=True)
     parallel_scheduling = parameter.BoolParameter(
         default=False,
         description='Use multiprocessing to do scheduling in parallel.')
@@ -115,7 +117,12 @@ class core(task.Config):
         description='Run any task from the scheduler.')
     help = parameter.BoolParameter(
         default=False,
-        description='Help option flag, for --help')
+        description='Show most common flags and all task-specific flags',
+        always_in_help=True)
+    help_all = parameter.BoolParameter(
+        default=False,
+        description='Show all command line flags',
+        always_in_help=True)
 
 
 class _WorkerSchedulerFactory(object):

@@ -23,6 +23,7 @@ import argparse
 from contextlib import contextmanager
 from luigi.task_register import Register
 import cached_property
+import sys
 
 
 class CmdlineParser(object):
@@ -63,24 +64,26 @@ class CmdlineParser(object):
         self.cmdline_args = cmdline_args
         known_args, _ = self._build_parser().parse_known_args(args=cmdline_args)
         self._attempt_load_module(known_args)
-        parser = self._build_parser(active_tasks=self._active_tasks())
+        parser = self._build_parser(active_tasks=self._active_tasks(),
+                                    help_all=known_args.core_help_all)
         # TODO: Use parse_args instead of parse_known_args, but can't be
         # done just yet.  Once `--task` is forced, it should be possible
-        known_args, _ = parser.parse_known_args(args=cmdline_args)
         self._possibly_exit_with_help(parser, known_args)
+        known_args, _ = parser.parse_known_args(args=cmdline_args)
         if not self._active_tasks():
             raise SystemExit('No task specified')
         self.known_args = known_args  # Also publically expose parsed arguments
 
     @staticmethod
-    def _build_parser(active_tasks=set()):
+    def _build_parser(active_tasks=set(), help_all=False):
         parser = argparse.ArgumentParser(add_help=False)
 
         for task_name, is_without_section, param_name, param_obj in Register.get_all_params():
             as_active = task_name in active_tasks
             param_obj._add_to_cmdline_parser(parser, param_name, task_name,
                                              is_without_section=is_without_section,
-                                             as_active=as_active)
+                                             as_active=as_active,
+                                             help_all=help_all)
 
         return parser
 
@@ -130,6 +133,6 @@ class CmdlineParser(object):
         """
         Check if the user passed --help, if so, print a message and exit.
         """
-        if known_args.core_help:
+        if known_args.core_help or known_args.core_help_all:
             parser.print_help()
-            raise SystemExit('Exiting due to --help was passed')
+            sys.exit()
