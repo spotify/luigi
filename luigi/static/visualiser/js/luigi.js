@@ -123,5 +123,9 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.disableWorker = function(workerId) {
+        jsonRPC(this.urlRoot + "/disable_worker", {'worker': workerId});
+    }
+
     return LuigiAPI;
 })();

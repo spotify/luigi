@@ -794,6 +794,79 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='A')
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
 
+    def test_disable_worker(self):
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.disable_worker(worker=WORKER)
+        work = self.sch.get_work(worker=WORKER)
+        self.assertEqual(0, work['n_unique_pending'])
+        self.assertEqual(0, work['n_pending_tasks'])
+        self.assertIsNone(work['task_id'])
+
+    def test_disable_worker_leaves_jobs_running(self):
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.get_work(worker=WORKER)
+
+        self.sch.disable_worker(worker=WORKER)
+        self.assertEqual(['A'], list(self.sch.task_list('RUNNING', '').keys()))
+        self.assertEqual(['A'], list(self.sch.worker_list()[0]['running'].keys()))
+
+    def test_disable_worker_cannot_pick_up_failed_jobs(self):
+        self.setTime(0)
+
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.get_work(worker=WORKER)
+        self.sch.disable_worker(worker=WORKER)
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+
+        # increase time and prune to make the job pending again
+        self.setTime(1000)
+        self.sch.ping(worker=WORKER)
+        self.sch.prune()
+
+        # we won't try the job again
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
+
+        # not even if other stuff is pending, changing the pending tasks code path
+        self.sch.add_task(worker='other_worker', task_id='B')
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
+
+    def test_disable_worker_cannot_continue_scheduling(self):
+        self.sch.disable_worker(worker=WORKER)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
+
+    def test_disable_worker_can_finish_task(self, new_status=DONE, new_deps=[]):
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
+
+        self.sch.disable_worker(worker=WORKER)
+        self.assertEqual(['A'], list(self.sch.task_list('RUNNING', '').keys()))
+
+        for dep in new_deps:
+            self.sch.add_task(worker=WORKER, task_id=dep, status='PENDING')
+        self.sch.add_task(worker=WORKER, task_id='A', status=new_status, new_deps=new_deps)
+        self.assertFalse(self.sch.task_list('RUNNING', '').keys())
+        self.assertEqual(['A'], list(self.sch.task_list(new_status, '').keys()))
+
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
+        for task in self.sch.task_list('', '').values():
+            self.assertFalse(task['workers'])
+
+    def test_disable_worker_can_fail_task(self):
+        self.test_disable_worker_can_finish_task(new_status=FAILED)
+
+    def test_disable_worker_stays_disabled_on_new_deps(self):
+        self.test_disable_worker_can_finish_task(new_status='PENDING', new_deps=['B', 'C'])
+
+    def test_prune_worker(self):
+        self.setTime(1)
+        self.sch.add_worker(worker=WORKER, info={})
+        self.setTime(10000)
+        self.sch.prune()
+        self.setTime(20000)
+        self.sch.prune()
+        self.assertFalse(self.sch.worker_list())
+
     def test_task_list_beyond_limit(self):
         sch = CentralPlannerScheduler(max_shown_tasks=3)
         for c in 'ABCD':

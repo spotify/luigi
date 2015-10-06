@@ -544,7 +544,7 @@ function visualiserApp(luigi) {
             for (var id in tasks) {
                 var task = tasks[id];
                 var className = task.status;
-                    
+
                 var html = "<div class='taskNode' data-task-id='" + task.taskId + "'>";
                 html += "<span class=status></span>";
                 html += "<span class=name>"+task.name+"</span>";
@@ -910,6 +910,22 @@ function visualiserApp(luigi) {
         $('.navbar-nav').on('click', 'a', function () {
             var tabName = $(this).data('tab');
             updateSidebar(tabName);
+        });
+
+        $('#workerList').on('show.bs.modal', '#disableWorkerModal', function (event) {
+            var triggerButton = $(event.relatedTarget);
+            $('#disableWorkerButton').data('trigger', triggerButton);
+        });
+
+        $('#workerList').on('click', '#disableWorkerButton', function() {
+            var triggerButton = $(this).data('trigger');
+            var worker = triggerButton.data('worker');
+
+            luigi.disableWorker(worker);
+
+            // show the worker as disabled in the visualiser
+            triggerButton.parents('.box').addClass('box-solid box-default');
+            triggerButton.remove();
         });
 
         visType = getVisType();
