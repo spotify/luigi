@@ -58,21 +58,35 @@ Graph = (function() {
     /* Compute the maximum depth of each node for layout purposes, returns the number
        of nodes at each depth level (for layout purposes) */
     function computeDepth(nodes, nodeIndex) {
-        var rowSizes = [];
         function descend(n, depth) {
-            n.depth = depth;
+            if (n.depth === undefined || depth > n.depth) {
+                n.depth = depth;
+                $.each(n.deps, function(i, dep) {
+                    if (nodeIndex[dep]) {
+                        descend(nodes[nodeIndex[dep]], depth + 1);
+                    }
+                });
+            }
+        }
+        descend(nodes[0], 0);
+
+        var rowSizes = [];
+        function placeNodes(n, depth) {
             if (rowSizes[depth] === undefined) {
                 rowSizes[depth] = 0;
             }
-            n.xOrder = rowSizes[depth];
-            rowSizes[depth]++;
-            $.each(n.deps, function(i, dep) {
-                if (nodeIndex[dep]) {
-                    descend(nodes[nodeIndex[dep]], depth + 1);
-                }
-            });
+            if (n.xOrder === undefined && depth === n.depth) {
+                n.xOrder = rowSizes[depth];
+                rowSizes[depth]++;
+                $.each(n.deps, function(i, dep) {
+                    if (nodeIndex[dep]) {
+                        placeNodes(nodes[nodeIndex[dep]], depth + 1);
+                    }
+                });
+            }
         }
-        descend(nodes[0], 0);
+        placeNodes(nodes[0], 0);
+
         return rowSizes;
     }
 
