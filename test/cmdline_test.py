@@ -23,7 +23,7 @@ except ImportError:
 import mock
 import os
 import subprocess
-from helpers import unittest
+from helpers import unittest, parsing
 
 from luigi import six
 
@@ -222,21 +222,14 @@ class InvokeOverCmdlineTest(unittest.TestCase):
 class NewStyleParameters822Test(unittest.TestCase):
     # See https://github.com/spotify/luigi/issues/822
 
+    @parsing(['FooSubClass', '--x', 'xyz', '--FooBaseClass-x', 'xyz'])
     def test_subclasses(self):
-        ap = luigi.interface._ArgParseInterface()
+        self.assertEquals(FooSubClass().x, 'xyz')
 
-        task, = ap.parse(['--local-scheduler', '--no-lock', 'FooSubClass', '--x', 'xyz', '--FooBaseClass-x', 'xyz'])
-        self.assertEquals(task.x, 'xyz')
-
-        # This won't work because --FooSubClass-x doesn't exist
-        self.assertRaises(BaseException, ap.parse, (['--local-scheduler', '--no-lock', 'FooBaseClass', '--x', 'xyz', '--FooSubClass-x', 'xyz']))
-
+    @parsing(['FooBaseClass', '--FooBaseClass-x', 'xyz'])
     def test_subclasses_2(self):
-        ap = luigi.interface._ArgParseInterface()
-
         # https://github.com/spotify/luigi/issues/822#issuecomment-77782714
-        task, = ap.parse(['--local-scheduler', '--no-lock', 'FooBaseClass', '--FooBaseClass-x', 'xyz'])
-        self.assertEquals(task.x, 'xyz')
+        self.assertEquals(FooBaseClass().x, 'xyz')
 
 
 if __name__ == '__main__':

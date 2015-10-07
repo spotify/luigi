@@ -1,7 +1,7 @@
 Configuration
 =============
 
-All configuration can be done by adding a configuration files. They are looked for in:
+All configuration can be done by adding configuration files. They are looked for in:
 
  * ``/etc/luigi/client.cfg``
  * ``luigi.cfg`` (or its legacy name ``client.cfg``) in your current working directory
@@ -23,8 +23,14 @@ The config file is broken into sections, each controlling a different part of th
     default-scheduler-host: luigi-host.mycompany.foo
     error-email: foo@bar.baz
 
-By default, all parameters will be overridden by matching values in the
-configuration file. For instance if you have a Task definition:
+
+.. _ParamConfigIngestion:
+
+Parameters from config Ingestion
+--------------------------------
+
+All parameters can be overridden from configuration files. For instance if you
+have a Task definition:
 
 .. code:: python
 
@@ -32,16 +38,42 @@ configuration file. For instance if you have a Task definition:
         date = luigi.DateParameter(default=datetime.date.today())
         # ...
 
-Then you can override the default value for date by providing it in the
-configuration:
+Then you can override the default value for ``DailyReport().date`` by providing
+it in the configuration:
 
 ::
 
     [DailyReport]
     date: 2012-01-01
 
-You can also use ``config_path`` as an argument to the ``Parameter`` if
-you want to use a specific section in the config.
+.. _ConfigClasses:
+
+Configuration classes
+*********************
+
+Using the :ref:`ParamConfigIngestion` method. We derive the
+conventional way to do global configuration. Imagine this configuration.
+
+::
+
+    [mysection]
+    option: hello
+    intoption: 123
+
+
+We can create a :py:class:`~luigi.Config` class:
+
+.. code:: python
+
+    import luigi
+
+    # Config classes should be camel cased
+    class mysection(luigi.Config):
+        option = luigi.Parameter(default='world')
+        intoption = luigi.IntParameter(default=555)
+
+    mysection().option
+    mysection().intoption
 
 
 Configurable options
@@ -238,7 +270,7 @@ AWS_SECRET_KEY
 force-send
   If true, e-mails are sent in all run configurations (even if stdout is
   connected to a tty device).  Defaults to False.
-  
+
 region
   Your AWS region. Defaults to us-east-1.
 

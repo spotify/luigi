@@ -41,7 +41,7 @@ Step 1 - Aggregate Artist Streams
                 for artist, count in artist_count.iteritems():
                     print >> out_file, artist, count
 
-Note that this is just a portion of the file *examples/top\_artists.py*.
+Note that this is just a portion of the file ``examples/top_artists.py``.
 In particular, ``Streams`` is defined as a :class:`~luigi.task.Task`,
 acting as a dependency for ``AggregateArtists``.
 In addition, ``luigi.run()`` is called if the script is executed directly,
@@ -78,27 +78,7 @@ Try running this using eg.
     $ luigi --module top_artists AggregateArtists --local-scheduler --date-interval 2012-06
 
 You can also try to view the manual using `--help` which will give you an
-overview of the options:
-
-::
-
-    usage: wordcount.py [-h] [--local-scheduler] [--scheduler-host SCHEDULER_HOST]
-                        [--lock] [--lock-pid-dir LOCK_PID_DIR] [--workers WORKERS]
-                        [--date-interval DATE_INTERVAL]
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      --local-scheduler     Use local scheduling
-      --scheduler-host SCHEDULER_HOST
-                            Hostname of machine running remote scheduler [default:
-                            localhost]
-      --lock                Do not run if the task is already running
-      --lock-pid-dir LOCK_PID_DIR
-                            Directory to store the pid file [default:
-                            /var/tmp/luigi]
-      --workers WORKERS     Maximum number of parallel tasks to run [default: 1]
-      --date-interval DATE_INTERVAL
-                            AggregateArtists.date_interval
+overview of the options.
 
 Running the command again will do nothing because the output file is
 already created.
@@ -133,7 +113,7 @@ here is how this could look like, instead of the class above.
         def mapper(self, line):
             timestamp, artist, track = line.strip().split()
             yield artist, 1
-            
+
         def reducer(self, key, values):
             yield key, sum(values)
 
@@ -187,7 +167,7 @@ the task will run before *Top10Artists*.
 
 ::
 
-    $ python examples/top_artists.py Top10Artists --local-scheduler --date-interval 2012-07
+    $ luigi --module examples.top_artists Top10Artists --local-scheduler --date-interval 2012-07
 
 This will run both tasks.
 
@@ -243,14 +223,8 @@ If you run
 
     luigid
 
-in the background and then run
-
-::
-
-    $ python wordcount.py --date 2012-W03
-
-then in fact your script will now do the scheduling through a
-centralized server.
+in the background and then run your task without the ``--local-scheduler`` flag,
+then your script will now schedule through a centralized server.
 You need `Tornado <http://www.tornadoweb.org/>`__ for this to work.
 
 Launching `http://localhost:8082` should show something like this:

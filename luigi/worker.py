@@ -47,7 +47,7 @@ from luigi import six
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, CentralPlannerScheduler
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, SUSPENDED, CentralPlannerScheduler
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
@@ -166,17 +166,19 @@ class TaskProcess(multiprocessing.Process):
             status = FAILED
             logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
             self.task.trigger_event(Event.FAILURE, self.task, ex)
-            subject = "Luigi: %s FAILED" % self.task
-
             raw_error_message = self.task.on_failure(ex)
-            notification_error_message = notifications.wrap_traceback(raw_error_message)
             expl = json.dumps(raw_error_message)
-            formatted_error_message = notifications.format_task_error(subject, self.task,
-                                                                      formatted_exception=notification_error_message)
-            notifications.send_error_email(subject, formatted_error_message, self.task.owner_email)
+            self._send_error_notification(raw_error_message)
         finally:
             self.result_queue.put(
                 (self.task.task_id, status, expl, missing, new_deps))
+
+    def _send_error_notification(self, raw_error_message):
+        subject = "Luigi: %s FAILED" % self.task
+        notification_error_message = notifications.wrap_traceback(raw_error_message)
+        formatted_error_message = notifications.format_task_error(subject, self.task,
+                                                                  formatted_exception=notification_error_message)
+        notifications.send_error_email(subject, formatted_error_message, self.task.owner_email)
 
     def _recursive_terminate(self):
         import psutil
@@ -632,9 +634,7 @@ class Worker(object):
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
 
-        p = TaskProcess(task, self._id, self._task_result_queue,
-                        random_seed=bool(self.worker_processes > 1),
-                        worker_timeout=self._config.timeout)
+        p = self._create_task_process(task)
 
         self._running_tasks[task_id] = p
 
@@ -644,6 +644,11 @@ class Worker(object):
         else:
             # Run in the same process
             p.run()
+
+    def _create_task_process(self, task):
+        return TaskProcess(task, self._id, self._task_result_queue,
+                           random_seed=bool(self.worker_processes > 1),
+                           worker_timeout=self._config.timeout)
 
     def _purge_children(self):
         """
@@ -707,8 +712,6 @@ class Worker(object):
                            new_deps=new_deps,
                            assistant=self._assistant)
 
-            if status == RUNNING:
-                continue
             self._running_tasks.pop(task_id)
 
             # re-add task to reschedule missing dependencies
