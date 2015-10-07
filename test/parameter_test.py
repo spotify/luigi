@@ -180,7 +180,7 @@ class ParameterTest(LuigiTestCase):
     def test_forgot_param_in_dep(self, emails):
         # A programmatic missing parameter will cause an error email to be sent
         self.run_locally(['ForgotParamDep'])
-        self.assertNotEquals(emails, [])
+        self.assertNotEqual(emails, [])
 
     def test_default_param_cmdline(self):
         self.assertEqual(WithDefault().x, 'xyz')
@@ -240,7 +240,7 @@ class TestNewStyleGlobalParameters(LuigiTestCase):
         MockTarget.fs.clear()
 
     def expect_keys(self, expected):
-        self.assertEquals(set(MockTarget.fs.get_all_data().keys()), set(expected))
+        self.assertEqual(set(MockTarget.fs.get_all_data().keys()), set(expected))
 
     def test_x_arg(self):
         self.run_locally(['Banana', '--x', 'foo', '--y', 'bar', '--style', 'x-arg'])
@@ -639,11 +639,11 @@ class TestSerializeDateParameters(LuigiTestCase):
 
     def testSerialize(self):
         date = datetime.date(2013, 2, 3)
-        self.assertEquals(luigi.DateParameter().serialize(date), '2013-02-03')
-        self.assertEquals(luigi.YearParameter().serialize(date), '2013')
-        self.assertEquals(luigi.MonthParameter().serialize(date), '2013-02')
+        self.assertEqual(luigi.DateParameter().serialize(date), '2013-02-03')
+        self.assertEqual(luigi.YearParameter().serialize(date), '2013')
+        self.assertEqual(luigi.MonthParameter().serialize(date), '2013-02')
         dt = datetime.datetime(2013, 2, 3, 4, 5)
-        self.assertEquals(luigi.DateHourParameter().serialize(dt), '2013-02-03T04')
+        self.assertEqual(luigi.DateHourParameter().serialize(dt), '2013-02-03T04')
 
 
 class TestTaskParameter(LuigiTestCase):

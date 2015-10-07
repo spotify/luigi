@@ -78,28 +78,28 @@ class TaskTest(unittest.TestCase):
     def test_id_to_name_and_params(self):
         task_id = "InputText(date=2014-12-29)"
         (name, params) = luigi.task.id_to_name_and_params(task_id)
-        self.assertEquals(name, "InputText")
-        self.assertEquals(params, dict(date="2014-12-29"))
+        self.assertEqual(name, "InputText")
+        self.assertEqual(params, dict(date="2014-12-29"))
 
     def test_id_to_name_and_params_multiple_args(self):
         task_id = "InputText(date=2014-12-29,foo=bar)"
         (name, params) = luigi.task.id_to_name_and_params(task_id)
-        self.assertEquals(name, "InputText")
-        self.assertEquals(params, dict(date="2014-12-29", foo="bar"))
+        self.assertEqual(name, "InputText")
+        self.assertEqual(params, dict(date="2014-12-29", foo="bar"))
 
     def test_id_to_name_and_params_list_args(self):
         task_id = "InputText(date=2014-12-29,foo=[bar,baz-foo])"
         (name, params) = luigi.task.id_to_name_and_params(task_id)
-        self.assertEquals(name, "InputText")
-        self.assertEquals(params, dict(date="2014-12-29", foo=["bar", "baz-foo"]))
+        self.assertEqual(name, "InputText")
+        self.assertEqual(params, dict(date="2014-12-29", foo=["bar", "baz-foo"]))
 
     def test_flatten(self):
         flatten = luigi.task.flatten
-        self.assertEquals(sorted(flatten({'a': 'foo', 'b': 'bar'})), ['bar', 'foo'])
-        self.assertEquals(sorted(flatten(['foo', ['bar', 'troll']])), ['bar', 'foo', 'troll'])
-        self.assertEquals(flatten('foo'), ['foo'])
-        self.assertEquals(flatten(42), [42])
-        self.assertEquals(flatten((len(i) for i in ["foo", "troll"])), [3, 5])
+        self.assertEqual(sorted(flatten({'a': 'foo', 'b': 'bar'})), ['bar', 'foo'])
+        self.assertEqual(sorted(flatten(['foo', ['bar', 'troll']])), ['bar', 'foo', 'troll'])
+        self.assertEqual(flatten('foo'), ['foo'])
+        self.assertEqual(flatten(42), [42])
+        self.assertEqual(flatten((len(i) for i in ["foo", "troll"])), [3, 5])
         self.assertRaises(TypeError, flatten, (len(i) for i in ["foo", "troll", None]))
 
 

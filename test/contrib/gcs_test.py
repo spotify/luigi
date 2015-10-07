@@ -99,7 +99,7 @@ class GCSClientTest(_GCSBaseTestCase):
     def test_download(self):
         self.client.put_string('hello', bucket_url('test_download'))
         fp = self.client.download(bucket_url('test_download'))
-        self.assertEquals(b'hello', fp.read())
+        self.assertEqual(b'hello', fp.read())
 
     def test_rename(self):
         self.client.put_string('hello', bucket_url('test_rename_1'))
@@ -151,7 +151,7 @@ class GCSClientTest(_GCSBaseTestCase):
 
             self.client.put(fp.name, bucket_url('test_put_file'))
             self.assertTrue(self.client.exists(bucket_url('test_put_file')))
-            self.assertEquals(big, self.client.download(bucket_url('test_put_file')).read())
+            self.assertEqual(big, self.client.download(bucket_url('test_put_file')).read())
 
 
 @attr('gcloud')

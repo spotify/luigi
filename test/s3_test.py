@@ -245,14 +245,14 @@ class TestS3Client(unittest.TestCase):
         s3_client.put_string("", 's3://mybucket/hello/frank')
         s3_client.put_string("", 's3://mybucket/hello/world')
 
-        self.assertEquals(['s3://mybucket/hello/frank', 's3://mybucket/hello/world'],
-                          list(s3_client.listdir('s3://mybucket/hello')))
-        self.assertEquals(['s3://mybucket/hello/frank', 's3://mybucket/hello/world'],
-                          list(s3_client.listdir('s3://mybucket/hello/')))
-        self.assertEquals(['frank', 'world'],
-                          list(s3_client.list('s3://mybucket/hello')))
-        self.assertEquals(['frank', 'world'],
-                          list(s3_client.list('s3://mybucket/hello/')))
+        self.assertEqual(['s3://mybucket/hello/frank', 's3://mybucket/hello/world'],
+                         list(s3_client.listdir('s3://mybucket/hello')))
+        self.assertEqual(['s3://mybucket/hello/frank', 's3://mybucket/hello/world'],
+                         list(s3_client.listdir('s3://mybucket/hello/')))
+        self.assertEqual(['frank', 'world'],
+                         list(s3_client.list('s3://mybucket/hello')))
+        self.assertEqual(['frank', 'world'],
+                         list(s3_client.list('s3://mybucket/hello/')))
 
     def test_remove(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
