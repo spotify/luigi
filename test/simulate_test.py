@@ -25,8 +25,6 @@ import tempfile
 
 
 def temp_dir():
-    if os.getenv('TRAVIS') == 'true':
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), 'simulate-tmp'))
     return os.path.join(tempfile.gettempdir(), 'luigi-simulate')
 
 
@@ -44,15 +42,11 @@ def is_writable():
     return unittest.skipIf(not exists, 'Can\'t write to temporary directory')
 
 
-class PathRunAnywayTarget(RunAnywayTarget):
-    temp_dir = temp_dir()
-
-
 class TaskA(luigi.Task):
     i = luigi.IntParameter(default=0)
 
     def output(self):
-        return PathRunAnywayTarget(self)
+        return RunAnywayTarget(self)
 
     def run(self):
         fn = os.path.join(temp_dir(), 'luigi-simulate-test.tmp')
