@@ -119,6 +119,18 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return False
 
+    def table_type(self):
+        """
+        Return table type (i.e. 'temp').
+        """
+        return ''
+
+    def queries(self):
+        """
+        Override to return a list of queries to be executed in order.
+        """
+        return []
+
     def truncate_table(self, connection):
         query = "truncate %s" % self.table
         cursor = connection.cursor()
@@ -150,12 +162,15 @@ class S3CopyToTable(rdbms.CopyToTable):
                     name=name,
                     type=type) for name, type in self.columns
             )
-            query = ("CREATE TABLE "
+
+            query = ("CREATE {type} TABLE "
                      "{table} ({coldefs}) "
                      "{table_attributes}").format(
+                type=self.type_type(),
                 table=self.table,
                 coldefs=coldefs,
                 table_attributes=self.table_attributes())
+
             connection.cursor().execute(query)
 
     def run(self):
@@ -184,8 +199,20 @@ class S3CopyToTable(rdbms.CopyToTable):
         self.output().touch(connection)
         connection.commit()
 
+        logger.info('Executing queries')
+        self.execute_queries(cursor, connection)
+        # won't register marker_table changes (because only one redshift target can be specified)
+
         # commit and clean up
         connection.close()
+
+    def execute_queries(self, cursor, connection):
+        """
+        Defines query execution
+        """
+        for query in self.queries():
+            cursor.execute(query)
+            connection.commit()
 
     def copy(self, cursor, f):
         """

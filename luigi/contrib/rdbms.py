@@ -119,6 +119,15 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         if hasattr(self, "clear_table"):
             raise Exception("The clear_table attribute has been removed. Override init_copy instead!")
 
+    def post_copy(self, connection):
+        """
+        Override to perform custom queries.
+
+        Any code here will be formed in the same transaction as the main copy, just after copying data.
+        Example use cases include cleansing data in temp table prior to insertion into real table.
+        """
+        pass
+
     @abc.abstractmethod
     def copy(self, cursor, file):
         raise NotImplementedError("This method must be overridden")
