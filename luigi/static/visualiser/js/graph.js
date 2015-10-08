@@ -10,6 +10,12 @@ Graph = (function() {
     /* Line height for items in task status legend */
     var legendLineHeight = 20;
 
+    /* Height of vertical space between nodes */
+    var nodeHeight = 10;
+
+    /* Amount of horizontal space given for each node */
+    var nodeWidth = 200;
+
     /* Calculate minimum SVG height required for legend */
     var legendMaxY = (function () {
         return Object.keys(statusColors).length * legendLineHeight + ( legendLineHeight / 2 )
@@ -92,16 +98,25 @@ Graph = (function() {
 
     /* Format nodes according to their depth and horizontal sort order.
        Algorithm: evenly distribute nodes along each depth level, offsetting each
-       by the text line height to prevent overlapping text. The height of each
-       depth level is therefore determined by the number of nodes at that depth. */
+       by the text line height to prevent overlapping text. This is done within
+       multiple columns to keep the levels from being too tall. The column width
+       is at least nodeWidth to ensure readability. The height of each level is
+       determined by number of nodes divided by number of columns, rounded up. */
     function layoutNodes(nodes, rowSizes) {
+        var numCols = Math.max(2, Math.floor(graphWidth / nodeWidth))
         function rowStartPosition(depth) {
             if (depth === 0) return 20;
-            return rowStartPosition(depth-1)+Math.max(rowSizes[depth-1]*10+10,100);
+            var rowHeight = Math.ceil(rowSizes[depth-1] / numCols);
+            console.log("depth: " + depth + "\nrowHeight: " + rowHeight + "\n\n");
+            return rowStartPosition(depth-1)+Math.max(rowHeight * nodeHeight + 100);
         }
         $.each(nodes, function(i, node) {
-            node.x = ((node.xOrder+1)/(rowSizes[node.depth]+1))*(graphWidth-200)+100;
-            node.y = rowStartPosition(node.depth) + (node.xOrder*10);
+            var levelCols = Math.min(rowSizes[node.depth], numCols)
+            var numRows = Math.ceil(rowSizes[node.depth] / levelCols);
+            var row = node.xOrder % numRows;
+            var col = node.xOrder / numRows;
+            node.x = ((col + 1) / (levelCols + 1)) * (graphWidth - 200);
+            node.y = rowStartPosition(node.depth) + row * nodeHeight;
         });
     }
 
