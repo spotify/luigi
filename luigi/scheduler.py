@@ -168,7 +168,8 @@ def _get_default(x, default):
 class Task(object):
 
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
-                 params=None, disable_failures=None, disable_window=None, disable_hard_timeout=None):
+                 params=None, disable_failures=None, disable_window=None, disable_hard_timeout=None,
+                 tracking_url=None):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -191,6 +192,7 @@ class Task(object):
         self.disable_failures = disable_failures
         self.disable_hard_timeout = disable_hard_timeout
         self.failures = Failures(disable_window)
+        self.tracking_url = tracking_url
         self.scheduler_disable_time = None
         self.runnable = False
 
@@ -594,7 +596,7 @@ class CentralPlannerScheduler(Scheduler):
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
-                 assistant=False, **kwargs):
+                 assistant=False, tracking_url=None, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -616,6 +618,9 @@ class CentralPlannerScheduler(Scheduler):
             task.module = module
         if not task.params:
             task.params = _get_default(params, {})
+
+        if tracking_url is not None or task.status != RUNNING:
+            task.tracking_url = tracking_url
 
         if task.remove is not None:
             task.remove = None  # unmark task for removal so it isn't removed after being added
@@ -855,6 +860,7 @@ class CentralPlannerScheduler(Scheduler):
             'name': task.family,
             'priority': task.priority,
             'resources': task.resources,
+            'tracking_url': getattr(task, "tracking_url", None),
         }
         if task.status == DISABLED:
             ret['re_enable_able'] = task.scheduler_disable_time is not None

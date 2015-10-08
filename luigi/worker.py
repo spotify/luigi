@@ -51,6 +51,7 @@ from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, CentralPlannerSched
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
+from luigi.task_status import RUNNING
 from luigi.parameter import FloatParameter, IntParameter, BoolParameter
 
 try:
@@ -84,18 +85,25 @@ class TaskProcess(multiprocessing.Process):
 
     Mainly for convenience since this is run in a separate process. """
 
-    def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0):
+    def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0,
+                 tracking_url_callback=None):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
         self.result_queue = result_queue
         self.random_seed = random_seed
+        self.tracking_url_callback = tracking_url_callback
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
 
     def _run_get_new_deps(self):
-        task_gen = self.task.run()
+        try:
+            task_gen = self.task.run(tracking_url_callback=self.tracking_url_callback)
+        except TypeError as ex:
+            if 'unexpected keyword argument' not in getattr(ex, 'message', ex.args[0]):
+                raise
+            task_gen = self.task.run()
         if not isinstance(task_gen, types.GeneratorType):
             return None
 
@@ -651,9 +659,20 @@ class Worker(object):
             p.run()
 
     def _create_task_process(self, task):
-        return TaskProcess(task, self._id, self._task_result_queue,
-                           random_seed=bool(self.worker_processes > 1),
-                           worker_timeout=self._config.timeout)
+        def update_tracking_url(tracking_url):
+            self._scheduler.add_task(
+                task_id=task.task_id,
+                worker=self._id,
+                status=RUNNING,
+                tracking_url=tracking_url,
+            )
+
+        return TaskProcess(
+            task, self._id, self._task_result_queue,
+            random_seed=bool(self.worker_processes > 1),
+            worker_timeout=self._config.timeout,
+            tracking_url_callback=update_tracking_url,
+        )
 
     def _purge_children(self):
         """

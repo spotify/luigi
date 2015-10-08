@@ -191,6 +191,45 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(a.has_run)
         self.assertFalse(b.has_run)
 
+    def test_tracking_url(self):
+        tracking_url = 'http://test_url.com/'
+
+        class A(Task):
+            has_run = False
+
+            def complete(self):
+                return self.has_run
+
+            def run(self, tracking_url_callback=None):
+                if tracking_url_callback is not None:
+                    tracking_url_callback(tracking_url)
+                self.has_run = True
+
+        a = A()
+        self.assertTrue(self.w.add(a))
+        self.assertTrue(self.w.run())
+        tasks = self.sch.task_list('DONE', '')
+        self.assertEqual(1, len(tasks))
+        self.assertEqual(tracking_url, tasks['A()']['tracking_url'])
+
+    def test_type_error_in_tracking_run(self):
+        class A(Task):
+            num_runs = 0
+
+            def complete(self):
+                return False
+
+            def run(self, tracking_url_callback=None):
+                self.num_runs += 1
+                raise TypeError('bad type')
+
+        a = A()
+        self.assertTrue(self.w.add(a))
+        self.assertFalse(self.w.run())
+
+        # Should only run and fail once, not retry because of the type error
+        self.assertEqual(1, a.num_runs)
+
     def test_fail(self):
         class CustomException(BaseException):
             def __init__(self, msg):
