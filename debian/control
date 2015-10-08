@@ -4,7 +4,6 @@ Priority: extra
 Maintainer: Elias Freider <freider@spotify.com>
 Build-Depends:	debhelper (>= 7),
 		python-all (>= 2.7),
-		python-pip,
 		python-psycopg2,
 		python-pyparsing,
 		python-setuptools,
@@ -35,7 +34,6 @@ Depends:	${shlibs:Depends},
 		${misc:Depends},
 		${python:Depends},
 		python-daemon,
-		python-pip,
 		python-pyparsing,
 		python-sqlalchemy,
 		python-tornado (>= 2.3)
