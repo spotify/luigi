@@ -107,7 +107,6 @@ Graph = (function() {
         function rowStartPosition(depth) {
             if (depth === 0) return 20;
             var rowHeight = Math.ceil(rowSizes[depth-1] / numCols);
-            console.log("depth: " + depth + "\nrowHeight: " + rowHeight + "\n\n");
             return rowStartPosition(depth-1)+Math.max(rowHeight * nodeHeight + 100);
         }
         $.each(nodes, function(i, node) {
