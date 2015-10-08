@@ -33,3 +33,17 @@ however have to have Java installed and the `JAVA_HOME` environment variable
 set.
 
 For more details, check out the ``.travis.yml`` and ``tox.ini`` files.
+
+Writing documentation
+=====================
+
+All documentation for luigi is written in `reStructuredText/Sphinx markup
+<http://sphinx-doc.org/domains.html#the-python-domain>`_ and are both in the
+code as docstrings and in `.rst`. Pull requests should come with documentation
+when appropriate.
+
+You can check the syntax for your documentation by running
+
+.. code:: bash
+
+    tox -e docs
