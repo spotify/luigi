@@ -256,6 +256,7 @@ Graph = (function() {
     };
 
     DependencyGraph.prototype.updateData = function(taskList) {
+        $('.popover').popover('destroy');
         this.graph = createGraph(taskList);
         bounds = findBounds(this.graph.nodes);
         this.renderGraph();
