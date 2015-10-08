@@ -137,7 +137,10 @@ or `scp'ing files <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.ssh.
 Who uses Luigi?
 ---------------
 
-Several companies have written blog posts or presentation about Luigi:
+Since luigi is open source and without any registration walls, the exact number
+of luigi users is unknown. But based on the number of unique contributors, we
+expect hundreads of enterprises to use it. Some users have written blog posts
+or held presentations about Luigi:
 
 * `Spotify (NYC Data Science) <http://www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`_
 * `Foursquare <http://www.slideshare.net/OpenAnayticsMeetup/luigi-presentation-17-23199897>`_
@@ -150,7 +153,7 @@ Several companies have written blog posts or presentation about Luigi:
 * `Growth Intelligence <http://www.slideshare.net/growthintel/a-beginners-guide-to-building-data-pipelines-with-luigi>`_
 * `AdRoll <http://tech.adroll.com/blog/data/2015/09/22/data-pipelines-docker.html>`_
 
-Please let us know if your company wants to be featured on this list!
+We're more than happy to have your company added here. Just send a PR on GitHub.
 
 Getting Help
 ------------
