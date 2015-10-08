@@ -166,7 +166,7 @@ class S3CopyToTable(rdbms.CopyToTable):
             query = ("CREATE {type} TABLE "
                      "{table} ({coldefs}) "
                      "{table_attributes}").format(
-                type=self.type_type(),
+                type=self.table_type(),
                 table=self.table,
                 coldefs=coldefs,
                 table_attributes=self.table_attributes())
@@ -188,20 +188,25 @@ class S3CopyToTable(rdbms.CopyToTable):
             logger.info("Creating table %s", self.table)
             connection.reset()
             self.create_table(connection)
+
+        # Update this to utilize rdbms.init_copy as it states it is intended for truncating tables and other pre-copy functionality
         elif self.do_truncate_table():
             logger.info("Truncating table %s", self.table)
             self.truncate_table(connection)
 
+        self.init_copy(connection)
+
         logger.info("Inserting file: %s", path)
         cursor = connection.cursor()
-        self.init_copy(connection)
         self.copy(cursor, path)
-        self.output().touch(connection)
-        connection.commit()
 
         logger.info('Executing queries')
         self.execute_queries(cursor, connection)
         # won't register marker_table changes (because only one redshift target can be specified)
+
+        # update marker table
+        self.output().touch(connection)
+        connection.commit()
 
         # commit and clean up
         connection.close()
