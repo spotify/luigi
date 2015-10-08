@@ -278,6 +278,8 @@ class worker(Config):
                                   'well as having keep-alive true')
     wait_interval = FloatParameter(default=1.0,
                                    config_path=dict(section='core', name='worker-wait-interval'))
+    wait_jitter = FloatParameter(default=5.0)
+
     max_reschedules = IntParameter(default=1,
                                    config_path=dict(section='core', name='worker-max-reschedules'))
     timeout = IntParameter(default=0,
@@ -341,6 +343,7 @@ class Worker(object):
         self._config = worker(**kwargs)
 
         assert self._config.wait_interval >= _WAIT_INTERVAL_EPS, "[worker] wait_interval must be positive"
+        assert self._config.wait_jitter >= 0.0, "[worker] wait_jitter must be equal or greater than zero"
 
         self._id = worker_id
         self._scheduler = scheduler
@@ -733,8 +736,9 @@ class Worker(object):
     def _sleeper(self):
         # TODO is exponential backoff necessary?
         while True:
-            wait_interval = self._config.wait_interval + random.uniform(1, 5)
-            logger.debug('Sleeping for %d seconds', wait_interval)
+            jitter = self._config.wait_jitter
+            wait_interval = self._config.wait_interval + random.uniform(0, jitter)
+            logger.debug('Sleeping for %f seconds', wait_interval)
             time.sleep(wait_interval)
             yield
 

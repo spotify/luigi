@@ -968,3 +968,39 @@ class WorkerConfigurationTest(unittest.TestCase):
         """
         Worker(wait_interval=1)  # This shouldn't raise
         self.assertRaises(AssertionError, Worker, wait_interval=0)
+
+
+class WorkerWaitJitterTest(unittest.TestCase):
+    @with_config({'worker': {'wait_jitter': '10.0'}})
+    @mock.patch("random.uniform")
+    @mock.patch("time.sleep")
+    def test_wait_jitter(self, mock_sleep, mock_random):
+        """ verify configured jitter amount """
+        mock_random.return_value = 1.0
+
+        w = Worker()
+        x = w._sleeper()
+        six.next(x)
+        mock_random.assert_called_with(0, 10.0)
+        mock_sleep.assert_called_with(2.0)
+
+        mock_random.return_value = 2.0
+        six.next(x)
+        mock_random.assert_called_with(0, 10.0)
+        mock_sleep.assert_called_with(3.0)
+
+    @mock.patch("random.uniform")
+    @mock.patch("time.sleep")
+    def test_wait_jitter_default(self, mock_sleep, mock_random):
+        """ verify default jitter is as expected """
+        mock_random.return_value = 1.0
+        w = Worker()
+        x = w._sleeper()
+        six.next(x)
+        mock_random.assert_called_with(0, 5.0)
+        mock_sleep.assert_called_with(2.0)
+
+        mock_random.return_value = 3.3
+        six.next(x)
+        mock_random.assert_called_with(0, 5.0)
+        mock_sleep.assert_called_with(4.3)
