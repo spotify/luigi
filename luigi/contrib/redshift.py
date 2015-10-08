@@ -103,13 +103,14 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
-    @abc.abstractproperty
-    def prune_column(self):
-        return ''
+    def prune_table(self):
+        return None
 
-    @abc.abstractproperty
+    def prune_column(self):
+        return None
+
     def prune_date(self):
-        return ''
+        return None
 
     def table_attributes(self):
         """
@@ -129,9 +130,13 @@ class S3CopyToTable(rdbms.CopyToTable):
 
     def do_prune(self):
         """
-        Return True if table should be pruned (data older than x deleted) before copying new data in.
+        Return True if prune_column and prune_date are implemented 
+        prune (data older than x deleted) before copying new data in.
         """
-        return False
+        if prune_table and prune_column and prune_date:
+            return True
+        else:
+            return False
 
     def table_type(self):
         """
@@ -154,7 +159,7 @@ class S3CopyToTable(rdbms.CopyToTable):
             cursor.close()
 
     def prune_table(self, connection):
-        query = "delete from %s where %s is >= %s" % self.table, self.column, self.date
+        query = "delete from %s where %s >= %s" % (self.prune_table, self.prune_column, self.prune_date)
         cursor = connection.cursor()
         try:
             cursor.execute(query)
@@ -290,7 +295,7 @@ class S3CopyToTable(rdbms.CopyToTable):
             logger.info("Truncating table %s", self.table)
             self.truncate_table(connection)
         elif self.do_prune():
-            logger.info("Removing %s older than %s from %s", self.column, self.date, self.table)
+            logger.info("Removing %s older than %s from %s", self.prune_column, self.prune_date, self.prune_table)
             self.prune_table(connection)
 
 
