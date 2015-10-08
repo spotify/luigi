@@ -21,32 +21,19 @@ Luigi is a Python (2.7, 3.3, 3.4) package that helps you build complex pipelines
 jobs. It handles dependency resolution, workflow management, visualization,
 handling failures, command line integration, and much more.
 
-Getting Luigi
--------------
-
-Run ``pip install luigi`` to install the latest stable version from
-`PyPI <https://pypi.python.org/pypi/luigi>`_.
-
-For the bleeding edge code, ``pip install
-git+https://github.com/spotify/luigi.git``. Bleeding edge documentation can be
-found `here <http://luigi.readthedocs.org/en/latest/>`_.
-
 Getting Started
 ---------------
 
-Take a look at the `Example workflow
-<http://luigi.readthedocs.org/en/latest/example_top_artists.html>`_ and `Building workflows
-<http://luigi.readthedocs.org/en/latest/workflows.html>`_ which explains some of
-the most important concepts.
+Run ``pip install luigi`` to install the latest stable version from `PyPI
+<https://pypi.python.org/pypi/luigi>`_. Documentation for the latest release is
+hosted `here <http://luigi.readthedocs.org/en/stable/>`__.
 
-Documentation
--------------
+For the bleeding edge code, ``pip install
+git+https://github.com/spotify/luigi.git``. Bleeding edge documentation can be
+found `here <http://luigi.readthedocs.org/en/latest/>`__.
 
-`Full documentation <http://luigi.readthedocs.org/>`_ is available at Read the Docs, including the
-`Luigi package documentation <http://luigi.readthedocs.org/en/latest/api/luigi.html>`_.
-
-More background
----------------
+Background
+----------
 
 The purpose of Luigi is to address all the plumbing typically associated
 with long-running batch processes. You want to chain many tasks,
@@ -97,17 +84,8 @@ build up data files.
 .. figure:: https://raw.githubusercontent.com/spotify/luigi/master/doc/user_recs.png
    :alt: Dependency graph
 
-Background
+Philosophy
 ----------
-
-We use Luigi internally at `Spotify <https://www.spotify.com/us/>`_ to run
-thousands of tasks every day, organized in complex dependency graphs.
-Most of these tasks are Hadoop jobs. Luigi provides an infrastructure
-that powers all kinds of stuff including recommendations, toplists, A/B
-test analysis, external reports, internal dashboards, etc. Luigi grew
-out of the realization that powerful abstractions for batch processing
-can help programmers focus on the most important bits and leave the rest
-(the boilerplate) to the framework.
 
 Conceptually, Luigi is similar to `GNU
 Make <http://www.gnu.org/software/make/>`_ where you have certain tasks
@@ -128,6 +106,12 @@ or `scp'ing files <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.ssh.
 
 Who uses Luigi?
 ---------------
+
+We use Luigi internally at `Spotify <https://www.spotify.com/us/>`_ to run
+thousands of tasks every day, organized in complex dependency graphs.
+Most of these tasks are Hadoop jobs. Luigi provides an infrastructure
+that powers all kinds of stuff including recommendations, toplists, A/B
+test analysis, external reports, internal dashboards, etc.
 
 Since luigi is open source and without any registration walls, the exact number
 of luigi users is unknown. But based on the number of unique contributors, we
