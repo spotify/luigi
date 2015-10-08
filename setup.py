@@ -14,10 +14,7 @@
 
 import os
 
-try:
-    from setuptools import setup
-except:
-    from distutils.core import setup
+from setuptools import setup
 
 
 def get_static_files(path):
