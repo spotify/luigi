@@ -154,7 +154,7 @@ class S3CopyToTable(rdbms.CopyToTable):
             cursor.close()
 
     def prune_table(self, connection):
-        query = "delete from %s where %s is > %s" % self.table, self.column, self.date
+        query = "delete from %s where %s is >= %s" % self.table, self.column, self.date
         cursor = connection.cursor()
         try:
             cursor.execute(query)
