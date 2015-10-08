@@ -14,6 +14,22 @@
 
 import sys
 import os
+import sphinx.environment
+from docutils.utils import get_source_line
+
+
+def _warn_node(self, msg, node):
+    """
+    Mute warnings that are like ``WARNING: nonlocal image URI found: https://img. ...``
+
+    Solution was found by googling, copied it from SO:
+
+    http://stackoverflow.com/questions/12772927/specifying-an-online-image-in-sphinx-restructuredtext-format
+    """
+    if not msg.startswith('nonlocal image URI found:'):
+        self._warnfunc(msg, '%s:%s' % get_source_line(node))
+
+sphinx.environment.BuildEnvironment.warn_node = _warn_node
 
 if os.environ.get('READTHEDOCS', None) == 'True':
     # Run sphinx-apidoc automatically in readthedocs
