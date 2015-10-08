@@ -27,14 +27,9 @@ Getting Luigi
 Run ``pip install luigi`` to install the latest stable version from
 `PyPI <https://pypi.python.org/pypi/luigi>`_.
 
-For bleeding edge code,
-``git clone https://github.com/spotify/luigi`` and
-``python setup.py install``. Bleeding edge documentation can be found
-`here <http://luigi.readthedocs.org/en/latest/>`_.
-
-If you want to run the central scheduler (highly recommended), you
-need to install `Tornado <http://www.tornadoweb.org/>`_ which you can
-do from PyPI as well: ``pip install tornado``.
+For the bleeding edge code, ``pip install
+git+https://github.com/spotify/luigi.git``. Bleeding edge documentation can be
+found `here <http://luigi.readthedocs.org/en/latest/>`_.
 
 Getting Started
 ---------------
