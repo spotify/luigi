@@ -513,3 +513,31 @@ class KillOpenRedshiftSessions(luigi.Task):
             connection.close()
 
         logger.info('Done killing all open Redshift sessions for database: %s', self.database)
+
+class RedshiftQuery(postgres.PostgresQuery):
+    """
+    Template task for querying an Amazon Redshift database
+
+    Usage:
+    Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes.
+
+    Override the `run` method if your use case requires some action with the query result.
+
+    Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
+
+    To customize the query signature as recorded in the database marker table, override the `update_id` method.
+    """
+
+    def output(self):
+        """
+        Returns a RedshiftTarget representing the executed query.
+
+        Normally you don't override this.
+        """
+        return RedshiftTarget(
+            host=self.host,
+            database=self.database,
+            user=self.user,
+            password=self.password,
+            table=self.table,
+            update_id=self.update_id())
