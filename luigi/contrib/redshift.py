@@ -127,7 +127,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return False
 
-    def do_copy_over(self):
+    def do_prune(self):
         """
         Return True if table should be pruned (data older than x deleted) before copying new data in.
         """
@@ -289,7 +289,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         elif self.do_truncate_table():
             logger.info("Truncating table %s", self.table)
             self.truncate_table(connection)
-        elif self.do_copy_over():
+        elif self.do_prune():
             logger.info("Removing %s older than %s from %s", self.column, self.date, self.table)
             self.prune_table(connection)
 
