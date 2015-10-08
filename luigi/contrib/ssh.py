@@ -265,8 +265,11 @@ class RemoteFileSystem(luigi.target.FileSystem):
         # Create folder if it does not exist
         normpath = os.path.normpath(local_path)
         folder = os.path.dirname(normpath)
-        if folder and not os.path.exists(folder):
-            os.makedirs(folder)
+        if folder:
+            try:
+                os.makedirs(folder)
+            except OSError:
+                pass
 
         tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
         self._scp("%s:%s" % (self.remote_context._host_ref(), path), tmp_local_path)

@@ -879,8 +879,11 @@ class JobTask(BaseHadoopJobTask):
             missing = []
             for src, dst in self._links:
                 d = os.path.dirname(dst)
-                if d and not os.path.exists(d):
-                    os.makedirs(d)
+                if d:
+                    try:
+                        os.makedirs(d)
+                    except OSError:
+                        pass
                 if not os.path.exists(src):
                     missing.append(src)
                     continue

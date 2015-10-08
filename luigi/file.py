@@ -105,8 +105,11 @@ class LocalTarget(FileSystemTarget):
         """
         normpath = os.path.normpath(self.path)
         parentfolder = os.path.dirname(normpath)
-        if parentfolder and not os.path.exists(parentfolder):
-            os.makedirs(parentfolder)
+        if parentfolder:
+            try:
+                os.makedirs(parentfolder)
+            except OSError:
+                pass
 
     def open(self, mode='r'):
         if mode == 'w':
