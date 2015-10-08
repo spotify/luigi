@@ -103,6 +103,14 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
+    @abc.abstractproperty
+    def prune_column(self):
+        return ''
+
+    @abc.abstractproperty
+    def prune_date(self):
+        return ''
+
     def table_attributes(self):
         """
         Add extra table attributes, for example:
@@ -116,6 +124,12 @@ class S3CopyToTable(rdbms.CopyToTable):
     def do_truncate_table(self):
         """
         Return True if table should be truncated before copying new data in.
+        """
+        return False
+
+    def do_copy_over(self):
+        """
+        Return True if table should be pruned (data older than x deleted) before copying new data in.
         """
         return False
 
@@ -133,6 +147,14 @@ class S3CopyToTable(rdbms.CopyToTable):
 
     def truncate_table(self, connection):
         query = "truncate %s" % self.table
+        cursor = connection.cursor()
+        try:
+            cursor.execute(query)
+        finally:
+            cursor.close()
+
+    def prune_table(self, connection):
+        query = "delete from %s where %s is > %s" % self.table, self.column, self.date
         cursor = connection.cursor()
         try:
             cursor.execute(query)
@@ -183,25 +205,21 @@ class S3CopyToTable(rdbms.CopyToTable):
 
         path = self.s3_load_path()
         connection = self.output().connect()
-        if not self.does_table_exist(connection):
-            # try creating table
-            logger.info("Creating table %s", self.table)
-            connection.reset()
-            self.create_table(connection)
-        elif self.do_truncate_table():
-            logger.info("Truncating table %s", self.table)
-            self.truncate_table(connection)
+
+        # perform creationg, truncation, or prunation (pruning)
+        self.init_copy(connection)
 
         logger.info("Inserting file: %s", path)
         cursor = connection.cursor()
-        self.init_copy(connection)
         self.copy(cursor, path)
-        self.output().touch(connection)
-        connection.commit()
 
         logger.info('Executing queries')
-        self.execute_queries(cursor, connection)
         # won't register marker_table changes (because only one redshift target can be specified)
+        self.execute_queries(cursor, connection)
+
+        # update marker table
+        self.output().touch(connection)
+        connection.commit()
 
         # commit and clean up
         connection.close()
@@ -259,6 +277,21 @@ class S3CopyToTable(rdbms.CopyToTable):
             return bool(result)
         finally:
             cursor.close()
+
+    def init_copy(self, connection):
+        """
+        Perform pre-copy sql - such as creating table, truncating, or removing data older than x.
+        """
+        if not self.does_table_exist(connection):
+            logger.info("Creating table %s", self.table)
+            connection.reset()
+            self.create_table(connection)
+        elif self.do_truncate_table():
+            logger.info("Truncating table %s", self.table)
+            self.truncate_table(connection)
+        elif self.do_copy_over():
+            logger.info("Removing %s older than %s from %s", self.column, self.date, self.table)
+            self.prune_table(connection)
 
 
 class S3CopyJSONToTable(S3CopyToTable):
