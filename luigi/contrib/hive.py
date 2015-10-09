@@ -334,7 +334,7 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                     except FileAlreadyExists:
                         pass
 
-    def run_job(self, job):
+    def run_job(self, job, tracking_url_callback=None):
         self.prepare_outputs(job)
         with tempfile.NamedTemporaryFile() as f:
             query = job.query()
@@ -354,7 +354,7 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                     arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
 
             logger.info(arglist)
-            return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist)
+            return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback)
 
 
 class HiveTableTarget(luigi.Target):

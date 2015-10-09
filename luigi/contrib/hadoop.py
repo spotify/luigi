@@ -402,7 +402,7 @@ class HadoopJobRunner(JobRunner):
         self.end_job_with_atomic_move_dir = end_job_with_atomic_move_dir
         self.tmp_dir = False
 
-    def run_job(self, job):
+    def run_job(self, job, tracking_url_callback=None):
         packages = [luigi] + self.modules + job.extra_modules() + list(_attached_packages)
 
         # find the module containing the job
@@ -515,7 +515,7 @@ class HadoopJobRunner(JobRunner):
 
         job.dump(self.tmp_dir)
 
-        run_and_track_hadoop_job(arglist)
+        run_and_track_hadoop_job(arglist, tracking_url_callback=tracking_url_callback)
 
         if self.end_job_with_atomic_move_dir:
             luigi.contrib.hdfs.HdfsTarget(output_hadoop).move_dir(output_final)
@@ -665,7 +665,7 @@ class BaseHadoopJobTask(luigi.Task):
     # available formats are "python" and "json".
     data_interchange_format = "python"
 
-    def run(self):
+    def run(self, tracking_url_callback=None):
         # The best solution is to store them as lazy `cached_property`, but it
         # has extraneous dependency. And `property` is slow (need to be
         # calculated every time when called), so we save them as attributes
@@ -675,7 +675,12 @@ class BaseHadoopJobTask(luigi.Task):
         self.deserialize = DataInterchange[self.data_interchange_format]['deserialize']
 
         self.init_local()
-        self.job_runner().run_job(self)
+        try:
+            self.job_runner().run_job(self, tracking_url_callback=tracking_url_callback)
+        except TypeError as ex:
+            if 'unexpected keyword argument' not in ex.message:
+                raise
+            self.job_runner().run_job(self)
 
     def requires_local(self):
         """
