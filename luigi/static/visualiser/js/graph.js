@@ -64,27 +64,18 @@ Graph = (function() {
     /* Compute the maximum depth of each node for layout purposes, returns the number
        of nodes at each depth level (for layout purposes) */
     function computeDepth(nodes, nodeIndex) {
-
-        // memoized to take linear time in number of nodes and edges
-        function height(taskId) {
-            var node = nodes[nodeIndex[taskId]];
-
-            // storing height in depth here to save space
-            if (node.depth === undefined || node.depth === -1) {
-                node.depth = Math.max(0, Math.max.apply(null, node.deps.map(height)) + 1);
+        function descend(n, depth) {
+            if (n.depth === undefined || depth > n.depth) {
+                n.depth = depth;
+                $.each(n.deps, function(i, dep) {
+                    if (nodeIndex[dep]) {
+                        descend(nodes[nodeIndex[dep]], depth + 1);
+                    }
+                });
             }
-            return node.depth;
         }
-        var max_height = height(nodes[0].taskId);
+        descend(nodes[0], 0);
 
-        // convert height to depth
-        $.each(nodes, function(i, node) {
-            if (node.depth !== undefined && node.depth !== -1) {
-                node.depth = max_height - node.depth;
-            }
-        })
-
-        // linear graph traversal, visiting each node once
         var rowSizes = [];
         function placeNodes(n, depth) {
             if (rowSizes[depth] === undefined) {
