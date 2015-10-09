@@ -68,6 +68,10 @@ class DummyS3CopyToTempTable(luigi.contrib.redshift.S3CopyToTable):
     aws_access_key_id = AWS_ACCESS_KEY
     aws_secret_access_key = AWS_SECRET_KEY
     copy_options = ''
+    sql = ["insert into dummy_table select * from stage_dummy_table;"]
+    prune_date = 'current_date - 30'
+    prune_column = 'dumb_date'
+    prune_table = 'stage_dummy_table'
 
     def s3_load_path(self):
         return 's3://%s/%s' % (BUCKET, KEY)
@@ -76,7 +80,7 @@ class DummyS3CopyToTempTable(luigi.contrib.redshift.S3CopyToTable):
         return 'TEMP'
 
     def queries(self):
-        return ["insert into dummy_table select * from "+table+";"]
+        return sql
 
 class TestS3CopyToTable(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
@@ -132,22 +136,23 @@ class TestS3CopyToTable(unittest.TestCase):
 
         # `mock_redshift_target` is the mocked `RedshiftTarget` object
         # returned by S3CopyToTable.output(self).
-        mock_redshift_target.assert_called_with(database=task.database,
+        mock_redshift_target.assert_called_once_with(database=task.database,
                                                 host=task.host,
                                                 update_id='DummyS3CopyToTable(table=stage_dummy_table)',
                                                 user=task.user,
                                                 table=task.table,
                                                 password=task.password,
-                                                table_type='TEMP')
+                                                table_type='TEMP',
+                                                sql=task.sql)
 
         # Check if the `S3CopyToTable.s3_load_path` class attribute was
         # successfully referenced in the `S3CopyToTable.run` method, which is
         # in-turn passed to `S3CopyToTable.copy` and other functions in `run`
         # (see issue #995).
-        mock_copy.assert_called_with(mock_cursor, task.s3_load_path())
+        mock_copy.assert_called_once_with(mock_cursor, task.s3_load_path())
 
-        # Check the SQL query in `S3CopyToTable.does_table_exist`.
-        mock_cursor.execute.assert_called_with("select 1 as table_exists "
+        # Check the SQL query in `S3CopyToTable.does_table_exist`. # temp table
+        mock_cursor.execute.assert_called_once_with("select 1 as table_exists "
                                                "from pg_table_def "
                                                "where tablename = %s limit 1",
                                                (task.table,))
