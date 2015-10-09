@@ -243,6 +243,11 @@ worker-wait-interval
   for another job after the scheduler has said that it does not have any
   available jobs.
 
+worker-wait-jitter
+  Size of jitter to add to the worker wait interval such that the multiple
+  workers do not ask the scheduler for another job at the same time.
+  Default: 5.0
+
 
 [elasticsearch]
 ---------------
