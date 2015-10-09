@@ -167,7 +167,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     kill_signal = signal.SIGUSR1 if env_params.take_lock else None
     if (not env_params.no_lock and
             not(lock.acquire_for(env_params.lock_pid_dir, env_params.lock_size, kill_signal))):
-        sys.exit(1)
+        raise PidLockAlreadyTakenExit()
 
     if env_params.local_scheduler:
         sch = worker_scheduler_factory.create_local_scheduler()
@@ -193,11 +193,22 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
         success &= w.run()
     w.stop()
     logger.info(execution_summary.summary(w))
-    return success
+    return dict(success=success, worker=w)
 
 
-def run(cmdline_args=None, main_task_cls=None,
-        worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
+class PidLockAlreadyTakenExit(SystemExit):
+    """
+    The exception thrown by :py:func:`luigi.run`, when the lock file is inaccessible
+    """
+    pass
+
+
+def run(*args, **kwargs):
+    return _run(*args, **kwargs)['success']
+
+
+def _run(cmdline_args=None, main_task_cls=None,
+         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
     """
     Please dont use. Instead use `luigi` binary.
 
@@ -249,4 +260,4 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
 
-    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)
+    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)['success']

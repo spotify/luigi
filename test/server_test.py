@@ -200,7 +200,8 @@ class _INETServerTest(_ServerTest):
         """
         Test to run against the server as a normal luigi invocation does
         """
-        luigi.cmdline.luigi_run(['Task', '--scheduler-port', str(self.server_client.port), '--no-lock'])
+        params = ['Task', '--scheduler-port', str(self.server_client.port), '--no-lock']
+        self.assertTrue(luigi.interface.run(params))
 
 
 class INETProcessServerTest(_INETServerTest):

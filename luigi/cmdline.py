@@ -3,14 +3,15 @@ import argparse
 import logging
 import sys
 
+import luigi.interface
 import luigi.server
 import luigi.process
 import luigi.configuration
-import luigi.interface
+from luigi.retcodes import run_with_retcodes
 
 
 def luigi_run(argv=sys.argv[1:]):
-    luigi.interface.run(argv)
+    run_with_retcodes(argv)
 
 
 def luigid(argv=sys.argv[1:]):
