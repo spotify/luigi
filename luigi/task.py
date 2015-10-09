@@ -119,7 +119,8 @@ class Task(object):
 
     #: Number of seconds after which to time out the run function.
     #: No timeout if set to 0.
-    #: Defaults to 0 or value in luigi.cfg
+    #: Defaults to 0 or worker-timeout value in config file
+    #: Only works when using multiple workers.
     worker_timeout = None
 
     @property
