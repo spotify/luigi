@@ -603,3 +603,13 @@ Parameters controlling storage of task history in a database
 db_connection
   Connection string for connecting to the task history db using
   sqlalchemy.
+
+
+[execution_summary]
+-------------------
+
+Parameters controlling execution summary of a worker
+
+summary-length
+  Maximum number of tasks to show in an execution summary.  If the value is 0,
+  then all tasks will be displayed.  Default value is 5.

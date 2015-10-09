@@ -25,6 +25,12 @@ import textwrap
 import collections
 import functools
 
+import luigi
+
+
+class execution_summary(luigi.Config):
+    summary_length = luigi.IntParameter(default=5)
+
 
 def _partition_tasks(worker):
     """
@@ -89,34 +95,38 @@ def _get_str(task_dict, extra_indent):
     """
     This returns a string for each status
     """
+    summary_length = execution_summary().summary_length
+
     lines = []
-    for task_family, tasks in task_dict.items():
-        row = '    '
-        if extra_indent:
-            row += '    '
-        if len(lines) >= 5:
-            """
-            This is how many rows will be printed for each status. If you want fewer rows you can lower the limit.
-            """
-            row += '...'
-            lines.append(row)
+    task_names = sorted(task_dict.keys())
+    for task_family in task_names:
+        tasks = task_dict[task_family]
+        tasks = sorted(tasks, key=lambda x: str(x))
+        prefix_size = 8 if extra_indent else 4
+        prefix = ' ' * prefix_size
+
+        line = None
+
+        if summary_length > 0 and len(lines) >= summary_length:
+            line = prefix + "..."
+            lines.append(line)
             break
         if len(tasks[0].get_params()) == 0:
-            row += '- {0} {1}()'.format(len(tasks), str(task_family))
+            line = prefix + '- {0} {1}()'.format(len(tasks), str(task_family))
         elif _get_len_of_params(tasks[0]) > 60 or len(str(tasks[0])) > 200 or \
                 (len(tasks) == 2 and len(tasks[0].get_params()) > 1 and (_get_len_of_params(tasks[0]) > 40 or len(str(tasks[0])) > 100)):
             """
             This is to make sure that there is no really long task in the output
             """
-            row += '- {0} {1}(...)'.format(len(tasks), task_family)
+            line = prefix + '- {0} {1}(...)'.format(len(tasks), task_family)
         elif len((tasks[0].get_params())) == 1:
             attributes = sorted({getattr(task, tasks[0].get_params()[0][0]) for task in tasks})
-            row += '- {0} {1}({2}='.format(len(tasks), task_family, tasks[0].get_params()[0][0])
+
             if _ranging_attributes(attributes, tasks[0].get_params()[0]) and len(attributes) > 3:
-                row += '{0}...{1}'.format(tasks[0].get_params()[0][1].serialize(attributes[0]), tasks[0].get_params()[0][1].serialize(attributes[-1]))
+                param_str = '{0}...{1}'.format(tasks[0].get_params()[0][1].serialize(attributes[0]), tasks[0].get_params()[0][1].serialize(attributes[-1]))
             else:
-                row += '{0}'.format(_get_str_one_parameter(tasks))
-            row += ")"
+                param_str = '{0}'.format(_get_str_one_parameter(tasks))
+            line = prefix + '- {0} {1}({2}={3})'.format(len(tasks), task_family, tasks[0].get_params()[0][0], param_str)
         else:
             ranging = False
             params = _get_set_of_params(tasks)
@@ -126,15 +136,15 @@ def _get_str(task_dict, extra_indent):
                 attributes = sorted(params[unique_param])
                 if _ranging_attributes(attributes, unique_param) and len(attributes) > 2:
                     ranging = True
-                    row += '- {0} {1}({2}'.format(len(tasks), task_family, _get_str_ranging_multiple_parameters(attributes, tasks, unique_param))
+                    line = prefix + '- {0} {1}({2}'.format(len(tasks), task_family, _get_str_ranging_multiple_parameters(attributes, tasks, unique_param))
             if not ranging:
                 if len(tasks) == 1:
-                    row += '- {0} {1}'.format(len(tasks), tasks[0])
+                    line = prefix + '- {0} {1}'.format(len(tasks), tasks[0])
                 if len(tasks) == 2:
-                    row += '- {0} and {1}'.format(tasks[0], tasks[1])
+                    line = prefix + '- {0} {1} and {2}'.format(len(tasks), tasks[0], tasks[1])
                 if len(tasks) > 2:
-                    row += '- {0} and {1} other {2}'.format(tasks[0], len(tasks) - 1, task_family)
-        lines.append(row)
+                    line = prefix + '- {0} {1} ...'.format(len(tasks), tasks[0])
+        lines.append(line)
     return '\n'.join(lines)
 
 
