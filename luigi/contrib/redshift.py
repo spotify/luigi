@@ -220,7 +220,7 @@ class S3CopyToTable(rdbms.CopyToTable):
 
         logger.info('Executing queries')
         # won't register marker_table changes (because only one redshift target can be specified)
-        self.execute_queries(cursor, connection)
+        self.execute_queries(cursor)
 
         # update marker table
         self.output().touch(connection)
@@ -229,13 +229,12 @@ class S3CopyToTable(rdbms.CopyToTable):
         # commit and clean up
         connection.close()
 
-    def execute_queries(self, cursor, connection):
+    def execute_queries(self, cursor):
         """
         Defines query execution
         """
         for query in self.queries():
             cursor.execute(query)
-            connection.commit()
 
     def copy(self, cursor, f):
         """
