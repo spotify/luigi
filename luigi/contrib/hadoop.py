@@ -69,6 +69,9 @@ logger = logging.getLogger('luigi-interface')
 _attached_packages = [cached_property]
 
 
+TRACKING_RE = re.compile(r'(tracking url|the url to track the job):\s+(?P<url>.+)$')
+
+
 class hadoop(luigi.task.Config):
     pool = luigi.Parameter(default=None,
                            description='Hadoop pool so use for Hadoop tasks. '
@@ -288,8 +291,9 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
                 if err_line:
                     logger.info('%s', err_line)
                 err_line = err_line.lower()
-                if err_line.find('tracking url') != -1:
-                    tracking_url = err_line.split('tracking url: ')[-1]
+                tracking_url_match = TRACKING_RE.search(err_line)
+                if tracking_url_match:
+                    tracking_url = tracking_url_match.group('url')
                     try:
                         tracking_url_callback(tracking_url)
                     except Exception as e:
