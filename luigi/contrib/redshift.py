@@ -428,6 +428,7 @@ class KillOpenRedshiftSessions(luigi.Task):
 
         logger.info('Done killing all open Redshift sessions for database: %s', self.database)
 
+
 class RedshiftQuery(postgres.PostgresQuery):
     """
     Template task for querying an Amazon Redshift database
