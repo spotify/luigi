@@ -134,7 +134,7 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         raise NotImplementedError("This method must be overridden")
 
 
-class Query(luigi.Task):
+class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
     """
     An abstract task for executing an RDBMS query.
 

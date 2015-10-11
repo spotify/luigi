@@ -81,3 +81,46 @@ class DailyCopyToTableTest(unittest.TestCase):
             DummyPostgresImporter(date=datetime.datetime(2015, 1, 6)).task_id,
         ]))
         self.assertFalse(task.complete())
+
+
+class DummyPostgresQuery(luigi.postgres.PostgresQuery):
+    date = luigi.DateParameter()
+
+    host = 'dummy_host'
+    database = 'dummy_database'
+    user = 'dummy_user'
+    password = 'dummy_password'
+    table = 'dummy_table'
+    columns = (
+        ('some_text', 'text'),
+        ('some_int', 'int'),
+    )
+
+    def query(self):
+        sql = 'SELECT * FROM foo'
+        return sql
+
+
+@attr('postgres')
+class PostgresQueryTest(unittest.TestCase):
+    maxDiff = None
+
+    @mock.patch('psycopg2.connect')
+    def test_bulk_complete(self, mock_connect):
+        mock_cursor = MockPostgresCursor([
+            'DummyPostgresQuery(date=2015-01-03)'
+        ])
+        mock_connect.return_value.cursor.return_value = mock_cursor
+
+        task = RangeDaily(of=DummyPostgresQuery,
+                          start=datetime.date(2015, 1, 2),
+                          now=datetime_to_epoch(datetime.datetime(2015, 1, 7)))
+        actual = [t.task_id for t in task.requires()]
+
+        self.assertEqual(actual, [
+            'DummyPostgresQuery(date=2015-01-02)',
+            'DummyPostgresQuery(date=2015-01-04)',
+            'DummyPostgresQuery(date=2015-01-05)',
+            'DummyPostgresQuery(date=2015-01-06)',
+        ])
+        self.assertFalse(task.complete())
