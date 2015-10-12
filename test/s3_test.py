@@ -106,7 +106,8 @@ class TestS3Client(unittest.TestCase):
     def setUp(self):
         f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
         self.tempFilePath = f.name
-        f.write(b"I'm a temporary file for testing\n")
+        self.tempFileContents = b"I'm a temporary file for testing\n"
+        f.write(self.tempFileContents)
         f.close()
         self.addCleanup(os.remove, self.tempFilePath)
 
@@ -203,6 +204,30 @@ class TestS3Client(unittest.TestCase):
         s3_client.put(self.tempFilePath, 's3://mybucket/tempdir2/subdir')
         self.assertTrue(s3_client.exists('s3://mybucket/tempdir2'))
         self.assertFalse(s3_client.exists('s3://mybucket/tempdir'))
+
+    def test_get(self):
+        # put a file on s3 first
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+        s3_client.put(self.tempFilePath, 's3://mybucket/putMe')
+
+        tmp_file = tempfile.NamedTemporaryFile(delete=True)
+        tmp_file_path = tmp_file.name
+
+        s3_client.get('s3://mybucket/putMe', tmp_file_path)
+        self.assertEquals(tmp_file.read(), self.tempFileContents)
+
+        tmp_file.close()
+
+    def test_get_as_string(self):
+        # put a file on s3 first
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+        s3_client.put(self.tempFilePath, 's3://mybucket/putMe')
+
+        contents = s3_client.get_as_string('s3://mybucket/putMe')
+
+        self.assertEquals(contents, self.tempFileContents)
 
     def test_get_key(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
