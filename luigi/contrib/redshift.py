@@ -133,7 +133,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         Return True if prune_column and prune_date are implemented 
         prune (data older than x deleted) before copying new data in.
         """
-        if prune_table and prune_column and prune_date:
+        if self.prune_table and self.prune_column and self.prune_date:
             return True
         else:
             return False

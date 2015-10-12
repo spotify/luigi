@@ -28,7 +28,6 @@ KEY = 'key'
 
 
 class DummyS3CopyToTable(luigi.contrib.redshift.S3CopyToTable):
-
     # Class attributes taken from `DummyPostgresImporter` in
     # `../postgres_test.py`.
     host = 'dummy_host'
@@ -52,7 +51,6 @@ class DummyS3CopyToTable(luigi.contrib.redshift.S3CopyToTable):
         return 's3://%s/%s' % (BUCKET, KEY)
 
 class DummyS3CopyToTempTable(luigi.contrib.redshift.S3CopyToTable):
-
     # Class attributes taken from `DummyPostgresImporter` in
     # `../postgres_test.py`.
     host = 'dummy_host'
@@ -80,7 +78,7 @@ class DummyS3CopyToTempTable(luigi.contrib.redshift.S3CopyToTable):
         return 'TEMP'
 
     def queries(self):
-        return sql
+        return self.sql
 
 class TestS3CopyToTable(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
