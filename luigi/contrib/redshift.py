@@ -158,7 +158,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         finally:
             cursor.close()
 
-    def prune_table(self, connection):
+    def prune(self, connection):
         query = "delete from %s where %s >= %s" % (self.prune_table, self.prune_column, self.prune_date)
         cursor = connection.cursor()
         try:
@@ -295,7 +295,7 @@ class S3CopyToTable(rdbms.CopyToTable):
             self.truncate_table(connection)
         elif self.do_prune():
             logger.info("Removing %s older than %s from %s", self.prune_column, self.prune_date, self.prune_table)
-            self.prune_table(connection)
+            self.prune(connection)
 
 
 class S3CopyJSONToTable(S3CopyToTable):
