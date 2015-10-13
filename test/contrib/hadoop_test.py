@@ -496,3 +496,23 @@ class JobRunnerTest(unittest.TestCase):
         ]
         subprocess = self._run_and_track_with_interrupt(err_lines)
         subprocess.call.assert_called_once_with(['mapred', 'job', '-kill', job_id])
+
+    def test_kill_application_on_interrupt(self):
+        application_id = 'application_1234_5678'
+        err_lines = [
+            'YarnClientImpl: Submitted application %s\n' % application_id,
+            'FlowStep: [SomeJob()] submitted hadoop job: job_1234_5678\n',
+        ]
+        subprocess = self._run_and_track_with_interrupt(err_lines)
+        subprocess.call.assert_called_once_with(['yarn', 'application', '-kill', application_id])
+
+    def test_kill_last_application_on_interrupt(self):
+        application_id = 'application_1234_5678'
+        err_lines = [
+            'YarnClientImpl: Submitted application application_0000_0000\n',
+            'FlowStep: [SomeJob()] submitted hadoop job: job_0000_0000\n',
+            'YarnClientImpl: Submitted application %s\n' % application_id,
+            'FlowStep: [SomeJob()] submitted hadoop job: job_1234_5678\n',
+        ]
+        subprocess = self._run_and_track_with_interrupt(err_lines)
+        subprocess.call.assert_called_once_with(['yarn', 'application', '-kill', application_id])

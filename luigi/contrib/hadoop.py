@@ -213,6 +213,7 @@ class HadoopRunContext(object):
 
     def __init__(self):
         self.job_id = None
+        self.application_id = None
 
     def __enter__(self):
         self.__old_signal = signal.getsignal(signal.SIGTERM)
@@ -220,7 +221,10 @@ class HadoopRunContext(object):
         return self
 
     def kill_job(self, captured_signal=None, stack_frame=None):
-        if self.job_id:
+        if self.application_id:
+            logger.info('Job interrupted, killing application %s' % self.application_id)
+            subprocess.call(['yarn', 'application', '-kill', self.application_id])
+        elif self.job_id:
             logger.info('Job interrupted, killing job %s', self.job_id)
             subprocess.call(['mapred', 'job', '-kill', self.job_id])
         if captured_signal is not None:
@@ -279,6 +283,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
         # This URL is useful for fetching the logs of the job.
         tracking_url = None
         job_id = None
+        application_id = None
         err_lines = []
 
         with HadoopRunContext() as hadoop_context:
@@ -303,7 +308,10 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
                 if err_line.find('submitted hadoop job:') != -1:
                     # scalding output
                     job_id = err_line.split('submitted hadoop job: ')[-1]
+                if err_line.find('submitted application ') != -1:
+                    application_id = err_line.split('submitted application ')[-1]
                 hadoop_context.job_id = job_id
+                hadoop_context.application_id = application_id
 
         # Read the rest + stdout
         err = ''.join(err_lines + [an_err_line for an_err_line in proc.stderr])
