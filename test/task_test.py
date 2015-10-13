@@ -75,24 +75,6 @@ class TaskTest(unittest.TestCase):
         task = load_task("luigi", "ExternalTask", {})
         assert(isinstance(task, luigi.ExternalTask))
 
-    def test_id_to_name_and_params(self):
-        task_id = "InputText(date=2014-12-29)"
-        (name, params) = luigi.task.id_to_name_and_params(task_id)
-        self.assertEqual(name, "InputText")
-        self.assertEqual(params, dict(date="2014-12-29"))
-
-    def test_id_to_name_and_params_multiple_args(self):
-        task_id = "InputText(date=2014-12-29,foo=bar)"
-        (name, params) = luigi.task.id_to_name_and_params(task_id)
-        self.assertEqual(name, "InputText")
-        self.assertEqual(params, dict(date="2014-12-29", foo="bar"))
-
-    def test_id_to_name_and_params_list_args(self):
-        task_id = "InputText(date=2014-12-29,foo=[bar,baz-foo])"
-        (name, params) = luigi.task.id_to_name_and_params(task_id)
-        self.assertEqual(name, "InputText")
-        self.assertEqual(params, dict(date="2014-12-29", foo=["bar", "baz-foo"]))
-
     def test_flatten(self):
         flatten = luigi.task.flatten
         self.assertEqual(sorted(flatten({'a': 'foo', 'b': 'bar'})), ['bar', 'foo'])
