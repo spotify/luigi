@@ -44,8 +44,6 @@ import tempfile
 import warnings
 from hashlib import md5
 from itertools import groupby
-import cached_property
-
 from luigi import six
 
 from luigi import configuration
@@ -66,7 +64,7 @@ except ImportError:
 
 logger = logging.getLogger('luigi-interface')
 
-_attached_packages = [cached_property]
+_attached_packages = []
 
 
 TRACKING_RE = re.compile(r'(tracking url|the url to track the job):\s+(?P<url>.+)$')
@@ -664,7 +662,18 @@ class BaseHadoopJobTask(luigi.Task):
     def init_hadoop(self):
         pass
 
+    # available formats are "python" and "json".
+    data_interchange_format = "python"
+
     def run(self):
+        # The best solution is to store them as lazy `cached_property`, but it
+        # has extraneous dependency. And `property` is slow (need to be
+        # calculated every time when called), so we save them as attributes
+        # directly.
+        self.serialize = DataInterchange[self.data_interchange_format]['serialize']
+        self.internal_serialize = DataInterchange[self.data_interchange_format]['internal_serialize']
+        self.deserialize = DataInterchange[self.data_interchange_format]['deserialize']
+
         self.init_local()
         self.job_runner().run_job(self)
 
@@ -716,9 +725,6 @@ class JobTask(BaseHadoopJobTask):
     n_reduce_tasks = 25
     reducer = NotImplemented
 
-    # available formats are "python" and "json".
-    data_interchange_format = "python"
-
     def jobconfs(self):
         jcs = super(JobTask, self).jobconfs()
         if self.reducer == NotImplemented:
@@ -726,18 +732,6 @@ class JobTask(BaseHadoopJobTask):
         else:
             jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
         return jcs
-
-    @cached_property.cached_property
-    def serialize(self):
-        return DataInterchange[self.data_interchange_format]['serialize']
-
-    @cached_property.cached_property
-    def internal_serialize(self):
-        return DataInterchange[self.data_interchange_format]['internal_serialize']
-
-    @cached_property.cached_property
-    def deserialize(self):
-        return DataInterchange[self.data_interchange_format]['deserialize']
 
     def init_mapper(self):
         pass
