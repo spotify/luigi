@@ -22,7 +22,6 @@ be considered internal to luigi.
 import argparse
 from contextlib import contextmanager
 from luigi.task_register import Register
-import cached_property
 import sys
 
 
@@ -61,15 +60,16 @@ class CmdlineParser(object):
         """
         Initialize cmd line args
         """
-        self.cmdline_args = cmdline_args
         known_args, _ = self._build_parser().parse_known_args(args=cmdline_args)
         self._attempt_load_module(known_args)
+        # We have to parse again now. As the positionally first unrecognized
+        # argument (the task) could be different.
+        known_args, _ = self._build_parser().parse_known_args(args=cmdline_args)
+        self._task_name = known_args.task
         parser = self._build_parser(active_tasks=self._active_tasks(),
                                     help_all=known_args.core_help_all)
-        # TODO: Use parse_args instead of parse_known_args, but can't be
-        # done just yet.  Once `--task` is forced, it should be possible
         self._possibly_exit_with_help(parser, known_args)
-        known_args, _ = parser.parse_known_args(args=cmdline_args)
+        known_args = parser.parse_args(args=cmdline_args)
         if not self._active_tasks():
             raise SystemExit('No task specified')
         self.known_args = known_args  # Also publically expose parsed arguments
@@ -77,6 +77,10 @@ class CmdlineParser(object):
     @staticmethod
     def _build_parser(active_tasks=set(), help_all=False):
         parser = argparse.ArgumentParser(add_help=False)
+
+        # Unfortunately, we have to set it as optional to argparse, so we can
+        # parse out stuff like `--module` before we call for `--help`.
+        parser.add_argument('task', nargs='?', help='Task family to run. Is not optional.')
 
         for task_name, is_without_section, param_name, param_obj in Register.get_all_params():
             as_active = task_name in active_tasks
@@ -86,19 +90,6 @@ class CmdlineParser(object):
                                              help_all=help_all)
 
         return parser
-
-    @cached_property.cached_property
-    def _task_name(self):
-        """
-        Get the task name
-
-        If the task does not exist, raise SystemExit
-        """
-        parser = self._build_parser()
-        _, unknown = parser.parse_known_args(args=self.cmdline_args)
-        if len(unknown) > 0:
-            task_name = unknown[0]
-            return task_name
 
     def get_task_cls(self):
         """

@@ -154,6 +154,7 @@ class InvokeOverCmdlineTest(unittest.TestCase):
     def _run_cmdline(self, args):
         env = os.environ.copy()
         env['PYTHONPATH'] = env.get('PYTHONPATH', '') + ':.:test'
+        print('Running: ' + ' '.join(args))  # To simplify rerunning failing tests
         p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         stdout, stderr = p.communicate()  # Unfortunately subprocess.check_output is 2.7+
         return p.returncode, stdout, stderr
@@ -234,6 +235,15 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         returncode, stdout, stderr = self._run_cmdline(['python', '-m', 'luigi', '--module', 'cmdline_test', 'FooBaseClass', '--help'])
         self.assertTrue(stdout.find(b'--FooBaseClass-x') != -1)
         self.assertTrue(stdout.find(b'--x') != -1)
+
+    def test_bin_luigi_options_before_task(self):
+        args = ['./bin/luigi', '--module', 'cmdline_test', '--no-lock', '--local-scheduler', '--FooBaseClass-x', 'hello', 'FooBaseClass']
+        returncode, stdout, stderr = self._run_cmdline(args)
+        self.assertEqual(0, returncode)
+
+    def test_bin_fail_on_unrecognized_args(self):
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--no-lock', '--local-scheduler', 'Task', '--unknown-param', 'hiiii'])
+        self.assertNotEqual(0, returncode)
 
 
 class NewStyleParameters822Test(unittest.TestCase):
