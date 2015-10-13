@@ -131,11 +131,17 @@ class DbTaskHistory(task_history.TaskHistory):
         Find tasks with the given task_name and the same parameters as the kwargs.
         """
         with self._session(session) as session:
-            # TODO : Make efficient in task_params
-            tasks = session.query(TaskRecord).join(TaskEvent).filter(TaskRecord.name == task_name).order_by(TaskEvent.ts).all()
+            query = session.query(TaskRecord).join(TaskEvent).filter(TaskRecord.name == task_name)
+            for (k, v) in six.iteritems(task_params):
+                alias = sqlalchemy.orm.aliased(TaskParameter)
+                query = query.join(alias).filter(alias.name == k, alias.value == v)
+
+            tasks = query.order_by(TaskEvent.ts)
             for task in tasks:
-                if all(k in task.parameters and v == str(task.parameters[k].value) for (k, v) in six.iteritems(task_params)):
-                    yield task
+                # Sanity check
+                assert all(k in task.parameters and v == str(task.parameters[k].value) for (k, v) in six.iteritems(task_params))
+
+                yield task
 
     def find_all_by_name(self, task_name, session=None):
         """
