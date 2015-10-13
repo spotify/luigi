@@ -241,6 +241,36 @@ class S3Client(FileSystem):
                 mp.cancel_upload()
             raise
 
+    def get(self, s3_path, destination_local_path):
+        """
+        Get an object stored in S3 and write it to a local path.
+        """
+        (bucket, key) = self._path_to_bucket_and_key(s3_path)
+
+        # grab and validate the bucket
+        s3_bucket = self.s3.get_bucket(bucket, validate=True)
+
+        # download the file
+        s3_key = Key(s3_bucket)
+        s3_key.key = key
+        s3_key.get_contents_to_filename(destination_local_path)
+
+    def get_as_string(self, s3_path):
+        """
+        Get the contents of an object stored in S3 as a string.
+        """
+        (bucket, key) = self._path_to_bucket_and_key(s3_path)
+
+        # grab and validate the bucket
+        s3_bucket = self.s3.get_bucket(bucket, validate=True)
+
+        # get the content
+        s3_key = Key(s3_bucket)
+        s3_key.key = key
+        contents = s3_key.get_contents_as_string()
+
+        return contents
+
     def copy(self, source_path, destination_path):
         """
         Copy an object from one S3 location to another.
