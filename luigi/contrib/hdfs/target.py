@@ -155,6 +155,12 @@ class HdfsTarget(FileSystemTarget):
             self.path = path
         return move_succeeded
 
+    def copy(self, dst_dir):
+        """
+        Copy to destination directory.
+        """
+        self.fs.copy(self.path, dst_dir)
+
     def is_writable(self):
         """
         Currently only works with hadoopcli
