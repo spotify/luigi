@@ -29,6 +29,7 @@ import luigi.notifications
 import minicluster
 import mock
 from luigi.mock import MockTarget
+from luigi.six import StringIO
 from nose.plugins.attrib import attr
 
 luigi.notifications.DEBUG = True
@@ -381,3 +382,117 @@ class CreatePackagesArchive(unittest.TestCase):
         package_subpackage_submodule = __import__("package.subpackage.submodule", None, None, 'dummy')
         luigi.contrib.hadoop.create_packages_archive([package_subpackage_submodule], '/dev/null')
         self._assert_package_subpackage(tar.return_value.add)
+
+
+class MockProcess(object):
+    def __init__(self, err_lines, returncode):
+        err = ''.join(err_lines)
+        self.__err_len = len(err)
+        self.stderr = StringIO(err)
+        self.__rc = returncode
+        self.returncode = None
+
+    def poll(self):
+        if self.stderr.tell() == self.__err_len:
+            self.returncode = self.__rc
+        return self.returncode
+
+
+class KeyboardInterruptedMockProcess(MockProcess):
+    def __init__(self, err_lines):
+        super(KeyboardInterruptedMockProcess, self).__init__(err_lines, 0)
+
+    def poll(self):
+        if super(KeyboardInterruptedMockProcess, self).poll() is not None:
+            raise KeyboardInterrupt
+
+
+class JobRunnerTest(unittest.TestCase):
+    def setUp(self):
+        self.tracking_urls = []
+
+    def track(self, url):
+        self.tracking_urls.append(url)
+
+    def _run_and_track(self, err_lines, returncode):
+        with mock.patch('luigi.contrib.hadoop.subprocess') as subprocess:
+            subprocess.Popen.return_value = MockProcess(err_lines, returncode)
+            _, err = luigi.contrib.hadoop.run_and_track_hadoop_job([], self.track)
+            self.assertEqual(err, ''.join(err_lines))
+
+    def test_tracking_url_yarn(self):
+        url = 'http://example.jobtracker.com:8080/proxy/application_1234_5678/'
+        yarn_lines = [
+            "INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1234_5678\n",
+            "INFO impl.YarnClientImpl: Submitted application application_1234_5678\n",
+            "INFO mapreduce.Job: The url to track the job: %s\n" % url,
+            "INFO mapreduce.Job: Running job: job_1234_5678\n",
+            "INFO mapreduce.Job: Job job_1234_5678 running in uber mode : false\n",
+            "INFO mapreduce.Job: Job job_1234_5678 completed successfully\n",
+        ]
+        self._run_and_track(yarn_lines, 0)
+        self.assertEqual([url], self.tracking_urls)
+
+    def test_tracking_url_old_version(self):
+        url = 'http://tracker.com/1234_5678'
+        err_lines = [
+            'INFO tracking url: %s\n' % url,
+        ]
+        self._run_and_track(err_lines, 0)
+        self.assertEqual([url], self.tracking_urls)
+
+    def test_multiple_tracking_urls(self):
+        urls = [
+            'http://tracking/1',
+            'http://tracking/2',
+            'http://tracking/3',
+        ]
+        err_lines = [
+            'running...\n',
+            'The url to track the job: %s\n' % urls[0],
+            'done\n',
+            'running another stage...\n',
+            'The url to track the job: %s\n' % urls[1],
+            'done\n',
+            'running another stage...\n',
+            'The url to track the job: %s\n' % urls[2],
+            'done\n',
+        ]
+        self._run_and_track(err_lines, 0)
+        self.assertEqual(urls, self.tracking_urls)
+
+    def test_tracking_url_captured_on_fail(self):
+        url = 'http://tracking/'
+        err_lines = [
+            'The url to track the job: %s\n' % url,
+        ]
+        with self.assertRaises(luigi.contrib.hadoop.HadoopJobError):
+            self._run_and_track(err_lines, 1)
+        self.assertEqual([url], self.tracking_urls)
+
+    def _run_and_track_with_interrupt(self, err_lines):
+        proc = KeyboardInterruptedMockProcess(err_lines)
+        with mock.patch('luigi.contrib.hadoop.subprocess') as subprocess:
+            subprocess.Popen.return_value = proc
+            with self.assertRaises(KeyboardInterrupt):
+                luigi.contrib.hadoop.run_and_track_hadoop_job([], proc)
+        return subprocess
+
+    def test_kill_job_on_interrupt(self):
+        job_id = 'job_1234_5678'
+        err_lines = [
+            'FlowStep: [SomeJob()] submitted hadoop job: %s\n' % job_id,
+            'some other line\n',
+        ]
+        subprocess = self._run_and_track_with_interrupt(err_lines)
+        subprocess.call.assert_called_once_with(['mapred', 'job', '-kill', job_id])
+
+    def test_kill_last_mapreduce_on_interrupt(self):
+        job_id = 'job_1234_5678'
+        err_lines = [
+            'FlowStep: [SomeJob()] submitted hadoop job: job_0000_0000\n',
+            'FlowStep: [SomeJob()] submitted hadoop job: %s\n' % job_id,
+            'some other line\n',
+        ]
+        subprocess = self._run_and_track_with_interrupt(err_lines)
+        subprocess.call.assert_called_once_with(['mapred', 'job', '-kill', job_id])
