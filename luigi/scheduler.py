@@ -95,6 +95,7 @@ class scheduler(Config):
     disable_persist = parameter.IntParameter(default=86400,
                                              config_path=dict(section='scheduler', name='disable-persist-seconds'))
     max_shown_tasks = parameter.IntParameter(default=100000)
+    max_graph_nodes = parameter.IntParameter(default=100000)
     prune_done_tasks = parameter.BoolParameter(default=False)
 
     record_task_history = parameter.BoolParameter(default=False)
@@ -855,7 +856,7 @@ class CentralPlannerScheduler(Scheduler):
                         upstream_status_table[dep_id] = status
             return upstream_status_table[dep_id]
 
-    def _serialize_task(self, task_id, include_deps=True):
+    def _serialize_task(self, task_id, include_deps=True, deps=None):
         task = self._state.get_task(task_id)
         ret = {
             'status': task.status,
@@ -872,18 +873,41 @@ class CentralPlannerScheduler(Scheduler):
         if task.status == DISABLED:
             ret['re_enable_able'] = task.scheduler_disable_time is not None
         if include_deps:
-            ret['deps'] = list(task.deps)
+            ret['deps'] = list(task.deps if deps is None else deps)
         return ret
 
     def graph(self, **kwargs):
         self.prune()
         serialized = {}
+        seen = set()
         for task in self._state.get_active_tasks():
-            serialized[task.id] = self._serialize_task(task.id)
+            serialized.update(self._traverse_graph(task.id, seen))
         return serialized
 
-    def _recurse_deps(self, task_id, serialized):
-        if task_id not in serialized:
+    def _traverse_graph(self, root_task_id, seen=None, dep_func=None):
+        """ Returns the dependency graph rooted at task_id
+
+        This does a breadth-first traversal to find the nodes closest to the
+        root before hitting the scheduler.max_graph_nodes limit.
+
+        :param root_task_id: the id of the graph's root
+        :return: A map of task id to serialized node
+        """
+
+        if seen is None:
+            seen = set()
+        elif root_task_id in seen:
+            return {}
+
+        if dep_func is None:
+            dep_func = lambda t: t.deps
+
+        seen.add(root_task_id)
+        serialized = {}
+        queue = collections.deque([root_task_id])
+        while queue:
+            task_id = queue.popleft()
+
             task = self._state.get_task(task_id)
             if task is None or not task.family:
                 logger.warn('Missing task for id [%s]', task_id)
@@ -904,16 +928,32 @@ class CentralPlannerScheduler(Scheduler):
                     'priority': 0,
                 }
             else:
-                serialized[task_id] = self._serialize_task(task_id)
-                for dep in task.deps:
-                    self._recurse_deps(dep, serialized)
+                deps = dep_func(task)
+                serialized[task_id] = self._serialize_task(task_id, deps=deps)
+                for dep in sorted(deps):
+                    if dep not in seen:
+                        seen.add(dep)
+                        queue.append(dep)
+            if len(serialized) >= self._config.max_graph_nodes:
+                break
+
+        return serialized
 
     def dep_graph(self, task_id, **kwargs):
         self.prune()
-        serialized = {}
-        if self._state.has_task(task_id):
-            self._recurse_deps(task_id, serialized)
-        return serialized
+        if not self._state.has_task(task_id):
+            return {}
+        return self._traverse_graph(task_id)
+
+    def inverse_dep_graph(self, task_id, **kwargs):
+        self.prune()
+        if not self._state.has_task(task_id):
+            return {}
+        inverse_graph = collections.defaultdict(set)
+        for task in self._state.get_active_tasks():
+            for dep in task.deps:
+                inverse_graph[dep].add(task.id)
+        return self._traverse_graph(task_id, dep_func=lambda t: inverse_graph[t.id])
 
     def task_list(self, status, upstream_status, limit=True, search=None, **kwargs):
         """
@@ -965,26 +1005,6 @@ class CentralPlannerScheduler(Scheduler):
                 worker['num_uniques'] = num_uniques[worker['name']]
                 worker['running'] = tasks
         return workers
-
-    def inverse_dep_graph(self, task_id, **kwargs):
-        self.prune()
-        serialized = {}
-        if self._state.has_task(task_id):
-            self._traverse_inverse_deps(task_id, serialized)
-        return serialized
-
-    def _traverse_inverse_deps(self, task_id, serialized):
-        stack = [task_id]
-        serialized[task_id] = self._serialize_task(task_id)
-        while len(stack) > 0:
-            curr_id = stack.pop()
-            for task in self._state.get_active_tasks():
-                if curr_id in task.deps:
-                    serialized[curr_id]["deps"].append(task.id)
-                    if task.id not in serialized:
-                        serialized[task.id] = self._serialize_task(task.id)
-                        serialized[task.id]["deps"] = []
-                        stack.append(task.id)
 
     def task_search(self, task_str, **kwargs):
         """
