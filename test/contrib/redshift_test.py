@@ -16,7 +16,7 @@ import luigi
 import luigi.contrib.redshift
 import mock
 
-from helpers import unittest
+import unittest
 
 
 # Fake AWS and S3 credentials taken from `../redshift_test.py`.
@@ -28,7 +28,6 @@ KEY = 'key'
 
 
 class DummyS3CopyToTable(luigi.contrib.redshift.S3CopyToTable):
-
     # Class attributes taken from `DummyPostgresImporter` in
     # `../postgres_test.py`.
     host = 'dummy_host'
@@ -44,10 +43,42 @@ class DummyS3CopyToTable(luigi.contrib.redshift.S3CopyToTable):
     aws_access_key_id = AWS_ACCESS_KEY
     aws_secret_access_key = AWS_SECRET_KEY
     copy_options = ''
+    prune_table = ''
+    prune_column = ''
+    prune_date = ''
 
     def s3_load_path(self):
         return 's3://%s/%s' % (BUCKET, KEY)
 
+class DummyS3CopyToTempTable(luigi.contrib.redshift.S3CopyToTable):
+    # Class attributes taken from `DummyPostgresImporter` in
+    # `../postgres_test.py`.
+    host = 'dummy_host'
+    database = 'dummy_database'
+    user = 'dummy_user'
+    password = 'dummy_password'
+    table = luigi.Parameter(default='stage_dummy_table')
+    columns = (
+        ('some_text', 'text'),
+        ('some_int', 'int'),
+    )
+
+    aws_access_key_id = AWS_ACCESS_KEY
+    aws_secret_access_key = AWS_SECRET_KEY
+    copy_options = ''
+    sql = ["insert into dummy_table select * from stage_dummy_table;"]
+    prune_date = 'current_date - 30'
+    prune_column = 'dumb_date'
+    prune_table = 'stage_dummy_table'
+
+    def s3_load_path(self):
+        return 's3://%s/%s' % (BUCKET, KEY)
+
+    def table_type(self):
+        return 'TEMP'
+
+    def queries(self):
+        return self.sql
 
 class TestS3CopyToTable(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
@@ -81,6 +112,45 @@ class TestS3CopyToTable(unittest.TestCase):
 
         # Check the SQL query in `S3CopyToTable.does_table_exist`.
         mock_cursor.execute.assert_called_with("select 1 as table_exists "
+                                               "from pg_table_def "
+                                               "where tablename = %s limit 1",
+                                               (task.table,))
+
+        return
+
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_s3_copy_to_temp_table(self, mock_redshift_target, mock_copy):
+        task = DummyS3CopyToTempTable()
+        task.run()
+
+        # The mocked connection cursor passed to
+        # S3CopyToTable.copy(self, cursor, f).
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+
+        # `mock_redshift_target` is the mocked `RedshiftTarget` object
+        # returned by S3CopyToTable.output(self).
+        mock_redshift_target.assert_called_once_with(database=task.database,
+                                                host=task.host,
+                                                update_id='DummyS3CopyToTable(table=stage_dummy_table)',
+                                                user=task.user,
+                                                table=task.table,
+                                                password=task.password,
+                                                table_type='TEMP',
+                                                sql=task.sql)
+
+        # Check if the `S3CopyToTable.s3_load_path` class attribute was
+        # successfully referenced in the `S3CopyToTable.run` method, which is
+        # in-turn passed to `S3CopyToTable.copy` and other functions in `run`
+        # (see issue #995).
+        mock_copy.assert_called_once_with(mock_cursor, task.s3_load_path())
+
+        # Check the SQL query in `S3CopyToTable.does_table_exist`. # temp table
+        mock_cursor.execute.assert_called_once_with("select 1 as table_exists "
                                                "from pg_table_def "
                                                "where tablename = %s limit 1",
                                                (task.table,))
