@@ -248,6 +248,38 @@ function visualiserApp(luigi) {
         $("#errorModal").modal({});
     }
 
+    function preProcessGraph(dependencyGraph) {
+        var extraNodes = [];
+        var seen = {};
+        $.each(dependencyGraph, function(i, node) {
+            seen[node.taskId] = true;
+        });
+        $.each(dependencyGraph, function(i, node) {
+            $.each(node.deps, function(j, dep) {
+                if (!seen[dep]) {
+                    seen[dep] = true;
+                    var paramsStrs = (/\((.*)\)/.exec(dep) || ['', ''])[1].split(', ');
+                    var params = {};
+                    $.each(paramsStrs, function(i, param) {
+                        if (param !== "") {
+                            var kv = param.split('=');
+                            params[kv[0]] = kv[1];
+                        }
+                    });
+
+                    extraNodes.push({
+                        name: (/(\w+)\(/.exec(dep) || [])[1],
+                        taskId: dep,
+                        deps: [],
+                        params: params,
+                        status: "TRUNCATED"
+                    });
+                }
+            });
+        });
+        return dependencyGraph.concat(extraNodes);
+    }
+
     function makeGraphCallback(visType, taskId, paint) {
         function depGraphCallbackD3(dependencyGraph) {
             $("#searchError").empty();
@@ -292,12 +324,19 @@ function visualiserApp(luigi) {
             }
         }
 
+        function processedCallback(callback) {
+            function processed(dependencyGraph) {
+                return callback(preProcessGraph(dependencyGraph));
+            }
+            return processed;
+        }
+
 
         if (visType == 'd3') {
-            return depGraphCallbackD3;
+            return processedCallback(depGraphCallbackD3);
         }
         else {
-            return depGraphCallback;
+            return processedCallback(depGraphCallback);
         }
 
     }
