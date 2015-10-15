@@ -103,6 +103,34 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
+    @property    
+    def prune_table(self):
+        """
+        Override to set equal to the name of the table which is to be pruned.
+        Intended to be used in conjunction with prune_column and prune_date
+        i.e. copy to temp table, prune production table to prune_column with a date greater than prune_date, then insert into production table from temp table
+        """
+        return None
+
+    @property
+    def prune_column(self):
+        """
+        Override to set equal to the column of the prune_table which is to be compared
+        Intended to be used in conjunction with prune_table and prune_date
+        i.e. copy to temp table, prune production table to prune_column with a date greater than prune_date, then insert into production table from temp table
+        """
+        return None
+
+    @property
+    def prune_date(self):
+        """
+        Override to set equal to the date by which prune_column is to be compared
+        Intended to be used in conjunction with prune_table and prune_column
+        i.e. copy to temp table, prune production table to prune_column with a date greater than prune_date, then insert into production table from temp table
+        """
+        return None
+
+    @property
     def table_attributes(self):
         """
         Add extra table attributes, for example:
@@ -119,8 +147,42 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return False
 
+    def do_prune(self):
+        """
+        Return True if prune_table, prune_column, and prune_date are implemented.
+        If only a subset of prune variables are override, an exception is raised to remind the user to implement all or none.
+        Prune (data newer than prune_date deleted) before copying new data in.
+        """
+        if self.prune_table and self.prune_column and self.prune_date:
+            return True
+        elif self.prune_table or self.prune_column or self.prune_date:
+            raise Exception('override zero or all prune variables')
+        else:
+            return False
+
+    @property
+    def table_type(self):
+        """
+        Return table type (i.e. 'temp').
+        """
+        return ''
+
+    def queries(self):
+        """
+        Override to return a list of queries to be executed in order.
+        """
+        return []
+
     def truncate_table(self, connection):
         query = "truncate %s" % self.table
+        cursor = connection.cursor()
+        try:
+            cursor.execute(query)
+        finally:
+            cursor.close()
+
+    def prune(self, connection):
+        query = "delete from %s where %s >= %s" % (self.prune_table, self.prune_column, self.prune_date)
         cursor = connection.cursor()
         try:
             cursor.execute(query)
@@ -150,12 +212,15 @@ class S3CopyToTable(rdbms.CopyToTable):
                     name=name,
                     type=type) for name, type in self.columns
             )
-            query = ("CREATE TABLE "
+
+            query = ("CREATE {type} TABLE "
                      "{table} ({coldefs}) "
                      "{table_attributes}").format(
+                type=self.table_type(),
                 table=self.table,
                 coldefs=coldefs,
                 table_attributes=self.table_attributes())
+
             connection.cursor().execute(query)
 
     def run(self):
@@ -168,19 +233,13 @@ class S3CopyToTable(rdbms.CopyToTable):
 
         path = self.s3_load_path()
         connection = self.output().connect()
-        if not self.does_table_exist(connection):
-            # try creating table
-            logger.info("Creating table %s", self.table)
-            connection.reset()
-            self.create_table(connection)
-        elif self.do_truncate_table():
-            logger.info("Truncating table %s", self.table)
-            self.truncate_table(connection)
-
-        logger.info("Inserting file: %s", path)
         cursor = connection.cursor()
+
         self.init_copy(connection)
         self.copy(cursor, path)
+        self.post_copy(cursor)
+
+        # update marker table
         self.output().touch(connection)
         connection.commit()
 
@@ -191,6 +250,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         Defines copying from s3 into redshift.
         """
+        logger.info("Inserting file: %s", f)
         cursor.execute("""
          COPY %s from '%s'
          CREDENTIALS 'aws_access_key_id=%s;aws_secret_access_key=%s'
@@ -232,6 +292,29 @@ class S3CopyToTable(rdbms.CopyToTable):
             return bool(result)
         finally:
             cursor.close()
+
+    def init_copy(self, connection):
+        """
+        Perform pre-copy sql - such as creating table, truncating, or removing data older than x.
+        """
+        if not self.does_table_exist(connection):
+            logger.info("Creating table %s", self.table)
+            connection.reset()
+            self.create_table(connection)
+        elif self.do_truncate_table():
+            logger.info("Truncating table %s", self.table)
+            self.truncate_table(connection)
+        elif self.do_prune():
+            logger.info("Removing %s older than %s from %s", self.prune_column, self.prune_date, self.prune_table)
+            self.prune(connection)
+
+    def post_copy(self, cursor):
+        """
+        Performs post-copy sql - such as cleansing data, inserting into production table (if copied to temp table), etc.
+        """
+        logger.info('Executing post copy queries')
+        for query in self.queries():
+            cursor.execute(query)
 
 
 class S3CopyJSONToTable(S3CopyToTable):
