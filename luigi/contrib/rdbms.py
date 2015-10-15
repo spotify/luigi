@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 """
-A common module for postgres like databases, such as postgres or redshift
+A common module for posgres like databases, such as postgres or redshift
 """
 
 import abc
@@ -118,6 +118,15 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         # clear_table attribtue will have noticed it doesn't work anymore
         if hasattr(self, "clear_table"):
             raise Exception("The clear_table attribute has been removed. Override init_copy instead!")
+
+    def post_copy(self, connection):
+        """
+        Override to perform custom queries.
+
+        Any code here will be formed in the same transaction as the main copy, just after copying data.
+        Example use cases include cleansing data in temp table prior to insertion into real table.
+        """
+        pass
 
     @abc.abstractmethod
     def copy(self, cursor, file):
