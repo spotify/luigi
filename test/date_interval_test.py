@@ -100,7 +100,7 @@ class DateIntervalTest(LuigiTestCase):
 
         self.assertEqual(MyTask().di, month)
         in_parse(["MyTask", "--di", "2012-10"],
-                 lambda: self.assertEqual(MyTask().di, other))
+                 lambda task: self.assertEqual(task.di, other))
         task = MyTask(month)
         self.assertEqual(task.di, month)
         task = MyTask(di=month)
@@ -113,7 +113,7 @@ class DateIntervalTest(LuigiTestCase):
         self.assertRaises(luigi.parameter.MissingParameterException, fail1)
 
         in_parse(["MyTaskNoDefault", "--di", "2012-10"],
-                 lambda: self.assertEqual(MyTaskNoDefault().di, other))
+                 lambda task: self.assertEqual(task.di, other))
 
     def test_hours(self):
         d = DI().parse('2015')

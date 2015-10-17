@@ -86,10 +86,7 @@ def find_deps_cli():
     '''
     cmdline_args = sys.argv[1:]
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        task_cls = cp.get_task_cls()
-        task = task_cls()
-        upstream_task_family = upstream().family
-        return find_deps(task, upstream_task_family)
+        return find_deps(cp.get_task_obj(), upstream().family)
 
 
 def main():

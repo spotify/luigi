@@ -65,17 +65,17 @@ class CmdlineParser(object):
         # We have to parse again now. As the positionally first unrecognized
         # argument (the task) could be different.
         known_args, _ = self._build_parser().parse_known_args(args=cmdline_args)
-        self._task_name = known_args.task
-        parser = self._build_parser(active_tasks=self._active_tasks(),
+        root_task = known_args.task
+        parser = self._build_parser(root_task=root_task,
                                     help_all=known_args.core_help_all)
         self._possibly_exit_with_help(parser, known_args)
-        known_args = parser.parse_args(args=cmdline_args)
-        if not self._active_tasks():
+        if not root_task:
             raise SystemExit('No task specified')
+        known_args = parser.parse_args(args=cmdline_args)
         self.known_args = known_args  # Also publically expose parsed arguments
 
     @staticmethod
-    def _build_parser(active_tasks=set(), help_all=False):
+    def _build_parser(root_task=None, help_all=False):
         parser = argparse.ArgumentParser(add_help=False)
 
         # Unfortunately, we have to set it as optional to argparse, so we can
@@ -83,32 +83,49 @@ class CmdlineParser(object):
         parser.add_argument('task', nargs='?', help='Task family to run. Is not optional.')
 
         for task_name, is_without_section, param_name, param_obj in Register.get_all_params():
-            as_active = task_name in active_tasks
-            param_obj._add_to_cmdline_parser(parser, param_name, task_name,
-                                             is_without_section=is_without_section,
-                                             as_active=as_active,
-                                             help_all=help_all)
+            is_the_root_task = task_name == root_task
+            help = param_obj.description if any((is_the_root_task, help_all, param_obj.always_in_help)) else argparse.SUPPRESS
+            flag_name_underscores = param_name if is_without_section else task_name + '_' + param_name
+            global_flag_name = '--' + flag_name_underscores.replace('_', '-')
+            parser.add_argument(global_flag_name,
+                                help=help,
+                                action=param_obj._parser_action(),
+                                dest=param_obj._parser_global_dest(param_name, task_name)
+                                )
+            if is_the_root_task:
+                local_flag_name = '--' + param_name.replace('_', '-')
+                parser.add_argument(local_flag_name,
+                                    help=help,
+                                    action=param_obj._parser_action(),
+                                    dest=param_name
+                                    )
 
         return parser
 
-    def get_task_cls(self):
+    def get_task_obj(self):
+        """
+        Get the task object
+        """
+        return self._get_task_cls()(**self._get_task_kwargs())
+
+    def _get_task_cls(self):
         """
         Get the task class
         """
-        return Register.get_task_cls(self._task_name)
+        return Register.get_task_cls(self.known_args.task)
 
-    def is_local_task(self, task_name):
+    def _get_task_kwargs(self):
         """
-        Used to see if unqualified command line parameters should be added too.
+        Get the local task arguments as a dictionary. The return value is in
+        the form ``dict(my_param='my_value', ...)``
         """
-        return task_name in self._active_tasks()
+        res = {}
+        for (param_name, param_obj) in self._get_task_cls().get_params():
+            attr = getattr(self.known_args, param_name)
+            if attr:
+                res.update(((param_name, param_obj.parse(attr)),))
 
-    def _active_tasks(self):
-        """
-        Set of task families that should expose their parameters unqualified.
-        """
-        root_task = self._task_name
-        return set([root_task] if root_task else [])
+        return res
 
     @staticmethod
     def _attempt_load_module(known_args):
@@ -122,7 +139,7 @@ class CmdlineParser(object):
     @staticmethod
     def _possibly_exit_with_help(parser, known_args):
         """
-        Check if the user passed --help, if so, print a message and exit.
+        Check if the user passed --help[-all], if so, print a message and exit.
         """
         if known_args.core_help or known_args.core_help_all:
             parser.print_help()

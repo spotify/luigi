@@ -53,7 +53,7 @@ class DateParameterTest(unittest.TestCase):
 
     def test_parse_interface(self):
         in_parse(["DateTask", "--day", "2015-04-03"],
-                 lambda: self.assertEqual(DateTask().day, datetime.date(2015, 4, 3)))
+                 lambda task: self.assertEqual(task.day, datetime.date(2015, 4, 3)))
 
     def test_serialize_task(self):
         t = DateTask(datetime.date(2015, 4, 3))
@@ -71,7 +71,7 @@ class DateHourParameterTest(unittest.TestCase):
 
     def test_parse_interface(self):
         in_parse(["DateHourTask", "--dh", "2013-02-01T18"],
-                 lambda: self.assertEqual(DateHourTask().dh, datetime.datetime(2013, 2, 1, 18, 0, 0)))
+                 lambda task: self.assertEqual(task.dh, datetime.datetime(2013, 2, 1, 18, 0, 0)))
 
     def test_serialize_task(self):
         t = DateHourTask(datetime.datetime(2013, 2, 1, 18, 0, 0))
@@ -101,7 +101,7 @@ class DateMinuteParameterTest(unittest.TestCase):
 
     def test_parse_interface(self):
         in_parse(["DateMinuteTask", "--dm", "2013-02-01T1842"],
-                 lambda: self.assertEqual(DateMinuteTask().dm, datetime.datetime(2013, 2, 1, 18, 42, 0)))
+                 lambda task: self.assertEqual(task.dm, datetime.datetime(2013, 2, 1, 18, 42, 0)))
 
     def test_serialize_task(self):
         t = DateMinuteTask(datetime.datetime(2013, 2, 1, 18, 42, 0))
@@ -119,7 +119,7 @@ class MonthParameterTest(unittest.TestCase):
 
     def test_parse_interface(self):
         in_parse(["MonthTask", "--month", "2015-04"],
-                 lambda: self.assertEqual(MonthTask().month, datetime.date(2015, 4, 1)))
+                 lambda task: self.assertEqual(task.month, datetime.date(2015, 4, 1)))
 
     def test_serialize_task(self):
         task = MonthTask(datetime.date(2015, 4, 3))
@@ -137,7 +137,7 @@ class YearParameterTest(unittest.TestCase):
 
     def test_parse_interface(self):
         in_parse(["YearTask", "--year", "2015"],
-                 lambda: self.assertEqual(YearTask().year, datetime.date(2015, 1, 1)))
+                 lambda task: self.assertEqual(task.year, datetime.date(2015, 1, 1)))
 
     def test_serialize_task(self):
         task = YearTask(datetime.date(2015, 4, 3))

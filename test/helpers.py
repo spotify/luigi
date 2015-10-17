@@ -182,5 +182,5 @@ class parsing(object):
 
 
 def in_parse(cmds, deferred_computation):
-    with CmdlineParser.global_instance(cmds):
-        deferred_computation()
+    with CmdlineParser.global_instance(cmds) as cp:
+        deferred_computation(cp.get_task_obj())

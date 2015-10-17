@@ -21,7 +21,6 @@ See :ref:`Parameter` for more info on how to define parameters.
 '''
 
 import abc
-import argparse
 import datetime
 import warnings
 try:
@@ -33,7 +32,6 @@ from luigi import task_register
 from luigi import six
 
 from luigi import configuration
-from luigi.deprecate_kwarg import deprecate_kwarg
 from datetime import timedelta
 from luigi.cmdline_parser import CmdlineParser
 
@@ -111,16 +109,13 @@ class Parameter(object):
     """
     _counter = 0  # non-atomically increasing counter used for ordering parameters.
 
-    @deprecate_kwarg('is_boolean', 'is_bool', False)
-    def __init__(self, default=_no_value, is_boolean=False, is_global=False, significant=True, description=None,
+    def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
                  config_path=None, positional=True, always_in_help=False):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
                         ``IntParameter``. By default, no default is stored and
                         the value must be specified at runtime.
-        :param bool is_bool: specify ``True`` if the parameter is a bool value. Default:
-                                ``False``. Bool's have an implicit default value of ``False``.
         :param bool significant: specify ``False`` if the parameter should not be treated as part of
                                  the unique identifier for a Task. An insignificant Parameter might
                                  also be used to specify a password or other sensitive information
@@ -140,12 +135,7 @@ class Parameter(object):
         :param bool always_in_help: For the --help option in the command line
                                     parsing. Set true to always show in --help.
         """
-        if is_boolean:
-            self.__default = False if default == _no_value else default
-        else:
-            self.__default = default
-
-        self.is_bool = is_boolean  # Only BoolParameter should ever use this. TODO(erikbern): should we raise some kind of exception?
+        self._default = default
         if is_global:
             warnings.warn("is_global support is removed. Assuming positional=False",
                           DeprecationWarning,
@@ -192,7 +182,7 @@ class Parameter(object):
         """
         cp_parser = CmdlineParser.get_instance()
         if cp_parser:
-            dest = self._parser_dest(param_name, task_name)
+            dest = self._parser_global_dest(param_name, task_name)
             found = getattr(cp_parser.known_args, dest, None)
             yield (self._parse_or_no_value(found), None)
         yield (self._get_value_from_config(task_name, param_name), None)
@@ -203,7 +193,7 @@ class Parameter(object):
             yield (self._get_value_from_config(self.__config['section'], self.__config['name']),
                    'The use of the configuration [{}] {} is deprecated. Please use [{}] {}'.format(
                    self.__config['section'], self.__config['name'], task_name, param_name))
-        yield (self.__default, None)
+        yield (self._default, None)
 
     def has_task_value(self, task_name, param_name):
         return self._get_value(task_name, param_name) != _no_value
@@ -258,34 +248,12 @@ class Parameter(object):
             return self.parse(x)
 
     @staticmethod
-    def _parser_dest(param_name, task_name):
+    def _parser_global_dest(param_name, task_name):
         return task_name + '_' + param_name
 
     @staticmethod
-    def _parser_flag_names(param_name, task_name, is_without_section, as_active):
-        if is_without_section:
-            yield param_name
-        else:
-            if as_active:
-                yield param_name
-            yield task_name + '_' + param_name
-
-    def _add_to_cmdline_parser(self, parser, param_name, task_name, is_without_section, as_active, help_all):
-        dest = self._parser_dest(param_name, task_name)
-        flag_names = self._parser_flag_names(param_name, task_name, is_without_section, as_active)
-        flags = ['--' + flag_name.replace('_', '-') for flag_name in flag_names]
-
-        if self.is_bool:
-            action = "store_true"
-        else:
-            action = "store"
-
-        help = self.description if as_active or help_all or self.always_in_help else argparse.SUPPRESS
-        parser.add_argument(*flags,
-                            help=help,
-                            action=action,
-                            dest=dest
-                            )
+    def _parser_action():
+        return "store"
 
 
 class DateParameterBase(Parameter):
@@ -445,7 +413,8 @@ class FloatParameter(Parameter):
 
 class BoolParameter(Parameter):
     """
-    A Parameter whose value is a ``bool``.
+    A Parameter whose value is a ``bool``. This parameter have an implicit
+    default value of ``False``.
     """
 
     def __init__(self, *args, **kwargs):
@@ -453,13 +422,19 @@ class BoolParameter(Parameter):
         This constructor passes along args and kwargs to ctor for :py:class:`Parameter` but
         specifies ``is_bool=True``.
         """
-        super(BoolParameter, self).__init__(*args, is_bool=True, **kwargs)
+        super(BoolParameter, self).__init__(*args, **kwargs)
+        if self._default == _no_value:
+            self._default = False
 
     def parse(self, s):
         """
         Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case.
         """
         return {'true': True, 'false': False}[str(s).lower()]
+
+    @staticmethod
+    def _parser_action():
+        return 'store_true'
 
 
 class BooleanParameter(BoolParameter):

@@ -16,7 +16,7 @@
 #
 
 import datetime
-from helpers import with_config, LuigiTestCase, parsing
+from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
 
 import luigi
@@ -688,3 +688,96 @@ class TestTaskParameter(LuigiTestCase):
         self.assertEqual(MetaTask.saved_value, MetaTask)
         self.assertTrue(self.run_locally_split('mynamespace.MetaTask --a other_namespace.OtherTask'))
         self.assertEqual(MetaTask.saved_value, OtherTask)
+
+
+class NewStyleParameters822Test(LuigiTestCase):
+    """
+    I bet these tests created at 2015-03-08 are reduntant by now (Oct 2015).
+    But maintaining them anyway, just in case I have overlooked something.
+    """
+    # See https://github.com/spotify/luigi/issues/822
+
+    def test_subclasses(self):
+        class BarBaseClass(luigi.Task):
+            x = luigi.Parameter(default='bar_base_default')
+
+        class BarSubClass(BarBaseClass):
+            pass
+
+        in_parse(['BarSubClass', '--x', 'xyz', '--BarBaseClass-x', 'xyz'],
+                 lambda task: self.assertEqual(task.x, 'xyz'))
+
+        # https://github.com/spotify/luigi/issues/822#issuecomment-77782714
+        in_parse(['BarBaseClass', '--BarBaseClass-x', 'xyz'],
+                 lambda task: self.assertEqual(task.x, 'xyz'))
+
+
+class LocalParameters1304Test(LuigiTestCase):
+    """
+    It was discussed and decided that local parameters (--x) should be
+    semantically different from global parameters (--MyTask-x).
+
+    The former sets only the parsed root task, and the later sets the parameter
+    for all the tasks.
+
+    https://github.com/spotify/luigi/issues/1304#issuecomment-148402284
+    """
+    def test_local_params(self):
+
+        class MyTask(RunOnceTask):
+            param1 = luigi.IntParameter()
+            param2 = luigi.BoolParameter(default=False)
+
+            def requires(self):
+                if self.param1 > 0:
+                    yield MyTask(param1=(self.param1 - 1))
+
+            def run(self):
+                assert self.param1 == 1 or not self.param2
+                self.comp = True
+
+        self.assertTrue(self.run_locally_split('MyTask --param1 1 --param2'))
+
+    def test_local_takes_precedence(self):
+
+        class MyTask(luigi.Task):
+            param = luigi.IntParameter()
+
+            def complete(self):
+                return False
+
+            def run(self):
+                assert self.param == 5
+
+        self.assertTrue(self.run_locally_split('MyTask --param 5 --MyTask-param 6'))
+
+    def test_local_only_affects_root(self):
+
+        class MyTask(RunOnceTask):
+            param = luigi.IntParameter(default=3)
+
+            def requires(self):
+                assert self.param != 3
+                if self.param == 5:
+                    yield MyTask()
+
+        # It would be a cyclic dependency if local took precedence
+        self.assertTrue(self.run_locally_split('MyTask --param 5 --MyTask-param 6'))
+
+    def test_range_doesnt_propagate_args(self):
+        """
+        Ensure that ``--task Range --of Blah --blah-arg 123`` doesn't work.
+
+        This will of course not work unless support is explicitly added for it.
+        But being a bit paranoid here and adding this test case so that if
+        somebody decides to add it in the future, they'll be redircted to the
+        dicussion in #1304
+        """
+
+        class Blah(RunOnceTask):
+            date = luigi.DateParameter()
+            blah_arg = luigi.IntParameter()
+
+        # The SystemExit is assumed to be thrown by argparse
+        self.assertRaises(SystemExit, self.run_locally_split, 'RangeDailyBase --of Blah --start 2015-01-01 --task-limit 1 --blah-arg 123')
+        self.assertTrue(self.run_locally_split('RangeDailyBase --of Blah --start 2015-01-01 --task-limit 1 --Blah-blah-arg 123'))
