@@ -1,5 +1,4 @@
 language: python
-python: 3.4
 
 jdk: oraclejdk7
 
