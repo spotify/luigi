@@ -95,12 +95,13 @@ from luigi import six
 logger = logging.getLogger('luigi-interface')
 
 try:
-    from elasticsearch.helpers import bulk_index
-    from elasticsearch.connection import Urllib3HttpConnection
     import elasticsearch
     if elasticsearch.__version__ < (1, 0, 0):
         logger.warning("This module works with elasticsearch 1.0.0 "
                        "or newer only.")
+    from elasticsearch.helpers import bulk_index
+    from elasticsearch.connection import Urllib3HttpConnection
+
 except ImportError:
     logger.warning("Loading esindex module without elasticsearch installed. "
                    "Will crash at runtime if esindex functionality is used.")
