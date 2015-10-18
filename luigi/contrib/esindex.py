@@ -95,12 +95,13 @@ from luigi import six
 logger = logging.getLogger('luigi-interface')
 
 try:
-    from elasticsearch.helpers import bulk_index
-    from elasticsearch.connection import Urllib3HttpConnection
     import elasticsearch
     if elasticsearch.__version__ < (1, 0, 0):
         logger.warning("This module works with elasticsearch 1.0.0 "
                        "or newer only.")
+    from elasticsearch.helpers import bulk
+    from elasticsearch.connection import Urllib3HttpConnection
+
 except ImportError:
     logger.warning("Loading esindex module without elasticsearch installed. "
                    "Will crash at runtime if esindex functionality is used.")
@@ -452,8 +453,8 @@ class CopyToIndex(luigi.Task):
         es.indices.put_settings({"index": {"refresh_interval": "-1"}},
                                 index=self.index)
 
-        bulk_index(es, self._docs(), chunk_size=self.chunk_size,
-                   raise_on_error=self.raise_on_error)
+        bulk(es, self._docs(), chunk_size=self.chunk_size,
+             raise_on_error=self.raise_on_error)
 
         es.indices.put_settings({"index": {"refresh_interval": "1s"}},
                                 index=self.index)

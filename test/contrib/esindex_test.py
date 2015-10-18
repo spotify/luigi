@@ -61,10 +61,6 @@ try:
 except Exception:
     raise unittest.SkipTest('Unable to connect to ElasticSearch')
 
-target = ElasticsearchTarget(HOST, PORT, INDEX, DOC_TYPE, 'update_id', http_auth=HTTP_AUTH)
-target.marker_index = MARKER_INDEX
-target.marker_doc_type = MARKER_DOC_TYPE
-
 
 class ElasticsearchTargetTest(unittest.TestCase):
 
@@ -72,6 +68,10 @@ class ElasticsearchTargetTest(unittest.TestCase):
 
     def test_touch_and_exists(self):
         """ Basic test. """
+        target = ElasticsearchTarget(HOST, PORT, INDEX, DOC_TYPE, 'update_id', http_auth=HTTP_AUTH)
+        target.marker_index = MARKER_INDEX
+        target.marker_doc_type = MARKER_DOC_TYPE
+
         delete()
         self.assertFalse(target.exists(),
                          'Target should not exist before touching it')
