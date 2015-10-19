@@ -378,11 +378,16 @@ class Worker(object):
         Call ``self._scheduler.add_task``, but store the values too so we can
         implement :py:func:`luigi.execution_summary.summary`.
         """
-        task = self._scheduled_tasks.get(kwargs['task_id'])
+        task_id = kwargs['task_id']
+        status = kwargs['status']
+        runnable = kwargs['runnable']
+        task = self._scheduled_tasks.get(task_id)
         if task:
-            msg = (task, kwargs['status'], kwargs['runnable'])
+            msg = (task, status, runnable)
             self._add_task_history.append(msg)
         self._scheduler.add_task(*args, **kwargs)
+
+        logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
 
     def stop(self):
         """
@@ -566,8 +571,6 @@ class Worker(object):
                        params=task.to_str_params(),
                        family=task.task_family,
                        module=task.task_module)
-
-        logger.info('Scheduled %s (%s)', task.task_id, status)
 
     def _validate_dependency(self, dependency):
         if isinstance(dependency, Target):
