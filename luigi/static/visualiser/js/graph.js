@@ -110,8 +110,8 @@ Graph = (function() {
             return rowStartPosition(depth-1)+Math.max(rowHeight * nodeHeight + 100);
         }
         $.each(nodes, function(i, node) {
-            var levelCols = Math.min(rowSizes[node.depth], numCols)
-            var numRows = Math.ceil(rowSizes[node.depth] / levelCols);
+            var numRows = Math.ceil(rowSizes[node.depth] / numCols);
+            var levelCols = Math.ceil(rowSizes[node.depth] / numRows);
             var row = node.xOrder % numRows;
             var col = node.xOrder / numRows;
             node.x = ((col + 1) / (levelCols + 1)) * (graphWidth - 200);
