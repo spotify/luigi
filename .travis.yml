@@ -61,3 +61,5 @@ script:
 branches:
   only:
     - master
+    # TODO : Remove before PR
+    - trask_id_hashing
