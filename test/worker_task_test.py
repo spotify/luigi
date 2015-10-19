@@ -18,7 +18,7 @@ import multiprocessing
 from subprocess import check_call
 import sys
 
-from helpers import unittest
+from helpers import LuigiTestCase
 import json
 import mock
 from psutil import Process
@@ -33,39 +33,16 @@ from luigi.scheduler import DONE, FAILED
 luigi.notifications.DEBUG = True
 
 
-class MyTask(luigi.Task):
-    # Test overriding the constructor without calling the superconstructor
-    # This is a simple mistake but caused an error that was very hard to understand
-
-    def __init__(self):
-        pass
-
-
-class SuccessTask(luigi.Task):
-
-    def on_success(self):
-        return "test success expl"
-
-
-class FailTask(luigi.Task):
-
-    def run(self):
-        raise BaseException("Uh oh.")
-
-    def on_failure(self, exception):
-        return "test failure expl"
-
-
-class HangingSubprocessTask(luigi.Task):
-
-    def run(self):
-        python = sys.executable
-        check_call([python, '-c', 'while True: pass'])
-
-
-class WorkerTaskTest(unittest.TestCase):
+class WorkerTaskTest(LuigiTestCase):
 
     def test_constructor(self):
+        class MyTask(luigi.Task):
+            # Test overriding the constructor without calling the superconstructor
+            # This is a simple mistake but caused an error that was very hard to understand
+
+            def __init__(self):
+                pass
+
         def f():
             luigi.build([MyTask()], local_scheduler=True)
         self.assertRaises(TaskException, f)
@@ -76,9 +53,13 @@ class WorkerTaskTest(unittest.TestCase):
         self.assertRaises(TaskException, f)
 
 
-class TaskProcessTest(unittest.TestCase):
+class TaskProcessTest(LuigiTestCase):
 
     def test_update_result_queue_on_success(self):
+        class SuccessTask(luigi.Task):
+            def on_success(self):
+                return "test success expl"
+
         task = SuccessTask()
         result_queue = multiprocessing.Queue()
         task_process = TaskProcess(task, 1, result_queue)
@@ -88,6 +69,13 @@ class TaskProcessTest(unittest.TestCase):
             mock_put.assert_called_once_with((task.task_id, DONE, json.dumps("test success expl"), [], None))
 
     def test_update_result_queue_on_failure(self):
+        class FailTask(luigi.Task):
+            def run(self):
+                raise BaseException("Uh oh.")
+
+            def on_failure(self, exception):
+                return "test failure expl"
+
         task = FailTask()
         result_queue = multiprocessing.Queue()
         task_process = TaskProcess(task, 1, result_queue)
@@ -100,6 +88,11 @@ class TaskProcessTest(unittest.TestCase):
         """
         Subprocesses spawned by tasks should be terminated on terminate
         """
+        class HangingSubprocessTask(luigi.Task):
+            def run(self):
+                python = sys.executable
+                check_call([python, '-c', 'while True: pass'])
+
         task = HangingSubprocessTask()
         queue = mock.Mock()
         worker_id = 1
@@ -118,7 +111,3 @@ class TaskProcessTest(unittest.TestCase):
 
         self.assertFalse(parent.is_running())
         self.assertFalse(child.is_running())
-
-
-if __name__ == '__main__':
-    unittest.main()
