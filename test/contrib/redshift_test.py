@@ -101,7 +101,7 @@ class TestS3CopyToTable(unittest.TestCase):
         # returned by S3CopyToTable.output(self).
         mock_redshift_target.assert_called_with(database=task.database,
                                                 host=task.host,
-                                                update_id='DummyS3CopyToTable(table=dummy_table)',
+                                                update_id=task.task_id,
                                                 user=task.user,
                                                 table=task.table,
                                                 password=task.password)
@@ -139,7 +139,7 @@ class TestS3CopyToTable(unittest.TestCase):
         mock_redshift_target.assert_called_once_with(
             database=task.database,
             host=task.host,
-            update_id='DummyS3CopyToTempTable(table=stage_dummy_table)',
+            update_id=task.task_id,
             user=task.user,
             table=task.table,
             password=task.password,

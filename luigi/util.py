@@ -236,7 +236,7 @@ def get_previous_completed(task, max_steps=10):
     prev = task
     for _ in xrange(max_steps):
         prev = previous(prev)
-        logger.debug("Checking if %s is complete", prev.task_id)
+        logger.debug("Checking if %s is complete", prev)
         if prev.complete():
             return prev
     return None

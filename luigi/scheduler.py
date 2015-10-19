@@ -914,8 +914,11 @@ class CentralPlannerScheduler(Scheduler):
 
                 # try to infer family and params from task_id
                 try:
-                    family, _, param_str = task_id.rstrip(')').partition('(')
-                    params = dict(param.split('=') for param in param_str.split(', '))
+                    family = task_id.split('#')[0]
+                    params = {}
+                    # FIXME : This won't work with hashed task_ids
+                    # family, _, param_str = task_id.rstrip(')').partition('(')
+                    # params = dict(param.split('=') for param in param_str.split(', '))
                 except BaseException:
                     family, params = '', {}
                 serialized[task_id] = {

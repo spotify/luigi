@@ -65,19 +65,19 @@ class DailyCopyToTableTest(unittest.TestCase):
     @mock.patch('psycopg2.connect')
     def test_bulk_complete(self, mock_connect):
         mock_cursor = MockPostgresCursor([
-            'DummyPostgresImporter(date=2015-01-03)'
+            DummyPostgresImporter(date=datetime.datetime(2015, 1, 3)).task_id
         ])
         mock_connect.return_value.cursor.return_value = mock_cursor
 
         task = RangeDaily(of=DummyPostgresImporter,
                           start=datetime.date(2015, 1, 2),
                           now=datetime_to_epoch(datetime.datetime(2015, 1, 7)))
-        actual = [t.task_id for t in task.requires()]
+        actual = sorted([t.task_id for t in task.requires()])
 
-        self.assertEqual(actual, [
-            'DummyPostgresImporter(date=2015-01-02)',
-            'DummyPostgresImporter(date=2015-01-04)',
-            'DummyPostgresImporter(date=2015-01-05)',
-            'DummyPostgresImporter(date=2015-01-06)',
-        ])
+        self.assertEqual(actual, sorted([
+            DummyPostgresImporter(date=datetime.datetime(2015, 1, 2)).task_id,
+            DummyPostgresImporter(date=datetime.datetime(2015, 1, 4)).task_id,
+            DummyPostgresImporter(date=datetime.datetime(2015, 1, 5)).task_id,
+            DummyPostgresImporter(date=datetime.datetime(2015, 1, 6)).task_id,
+        ]))
         self.assertFalse(task.complete())

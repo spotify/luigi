@@ -20,6 +20,7 @@ from hypothesis.extra.datetime import datetimes as hyp_datetimes
 
 _no_value = luigi.parameter._no_value
 
+
 def _mk_param_strategy(param_cls, param_value_strat, with_default=None):
     if with_default is None:
         default = hyp.strategies.one_of(hyp.strategies.just(_no_value), param_value_strat)
@@ -29,8 +30,9 @@ def _mk_param_strategy(param_cls, param_value_strat, with_default=None):
         default = hyp.strategies.just(_no_value)
 
     return hyp.strategies.builds(param_cls,
-                               description=hyp.strategies.text(alphabet=string.printable),
-                               default=default)
+                                 description=hyp.strategies.text(alphabet=string.printable),
+                                 default=default)
+
 
 def _mk_task(name, params):
     return type(name, (luigi.Task, ), params)
@@ -98,3 +100,6 @@ def test_json_serializable(task_cls):
     task2 = _task_from_dict(task_cls, param_dict)
 
     assert task.task_id == task2.task_id
+
+
+# TODO : significant an non-significant parameters

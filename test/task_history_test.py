@@ -49,11 +49,12 @@ class TaskHistoryTest(LuigiTestCase):
             class MyTask(luigi.Task):
                 pass
 
-            w.add(MyTask())
+            task = MyTask()
+            w.add(task)
             w.run()
 
             self.assertEqual(th.actions, [
-                ('scheduled', 'MyTask()'),
-                ('started', 'MyTask()'),
-                ('finished', 'MyTask()')
+                ('scheduled', task.task_id),
+                ('started', task.task_id),
+                ('finished', task.task_id)
             ])

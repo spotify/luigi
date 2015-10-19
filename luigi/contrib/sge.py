@@ -112,9 +112,7 @@ POLL_TIME = 5  # decided to hard-code rather than configure here
 
 def _clean_task_id(task_id):
     """Clean the task ID so qsub allows it as a "name" string."""
-    for c in ['\n', '\t', '\r', '/', ':', '@', '\\', '*', '?', ',', '=', ' ', '(', ')']:
-        task_id = task_id.replace(c, '-')
-    return task_id
+    return task_id.replace('#', '-')
 
 
 def _parse_qstat_state(qstat_out, job_id):
