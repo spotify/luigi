@@ -81,28 +81,28 @@ class DbTaskHistory(task_history.TaskHistory):
         Base.metadata.create_all(self.engine)
         self.tasks = {}  # task_id -> TaskRecord
 
-    def task_scheduled(self, task_id):
-        task = self._get_task(task_id, status=PENDING)
-        self._add_task_event(task, TaskEvent(event_name=PENDING, ts=datetime.datetime.now()))
+    def task_scheduled(self, task):
+        htask = self._get_task(task, status=PENDING)
+        self._add_task_event(htask, TaskEvent(event_name=PENDING, ts=datetime.datetime.now()))
 
-    def task_finished(self, task_id, successful):
+    def task_finished(self, task, successful):
         event_name = DONE if successful else FAILED
-        task = self._get_task(task_id, status=event_name)
-        self._add_task_event(task, TaskEvent(event_name=event_name, ts=datetime.datetime.now()))
+        htask = self._get_task(task, status=event_name)
+        self._add_task_event(htask, TaskEvent(event_name=event_name, ts=datetime.datetime.now()))
 
-    def task_started(self, task_id, worker_host):
-        task = self._get_task(task_id, status=RUNNING, host=worker_host)
-        self._add_task_event(task, TaskEvent(event_name=RUNNING, ts=datetime.datetime.now()))
+    def task_started(self, task, worker_host):
+        htask = self._get_task(task, status=RUNNING, host=worker_host)
+        self._add_task_event(htask, TaskEvent(event_name=RUNNING, ts=datetime.datetime.now()))
 
-    def _get_task(self, task_id, status, host=None):
-        if task_id in self.tasks:
-            task = self.tasks[task_id]
-            task.status = status
+    def _get_task(self, task, status, host=None):
+        if task.id in self.tasks:
+            htask = self.tasks[task.id]
+            htask.status = status
             if host:
-                task.host = host
+                htask.host = host
         else:
-            task = self.tasks[task_id] = task_history.Task(task_id, status, host)
-        return task
+            htask = self.tasks[task.id] = task_history.StoredTask(task, status, host)
+        return htask
 
     def _add_task_event(self, task, event):
         for (task_record, session) in self._find_or_create_task(task):
@@ -131,10 +131,17 @@ class DbTaskHistory(task_history.TaskHistory):
         Find tasks with the given task_name and the same parameters as the kwargs.
         """
         with self._session(session) as session:
-            tasks = session.query(TaskRecord).join(TaskEvent).filter(TaskRecord.name == task_name).order_by(TaskEvent.ts).all()
+            query = session.query(TaskRecord).join(TaskEvent).filter(TaskRecord.name == task_name)
+            for (k, v) in six.iteritems(task_params):
+                alias = sqlalchemy.orm.aliased(TaskParameter)
+                query = query.join(alias).filter(alias.name == k, alias.value == v)
+
+            tasks = query.order_by(TaskEvent.ts)
             for task in tasks:
-                if all(k in task.parameters and v == str(task.parameters[k].value) for (k, v) in six.iteritems(task_params)):
-                    yield task
+                # Sanity check
+                assert all(k in task.parameters and v == str(task.parameters[k].value) for (k, v) in six.iteritems(task_params))
+
+                yield task
 
     def find_all_by_name(self, task_name, session=None):
         """

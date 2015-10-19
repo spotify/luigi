@@ -30,14 +30,14 @@ class SimpleTaskHistory(luigi.task_history.TaskHistory):
     def __init__(self):
         self.actions = []
 
-    def task_scheduled(self, task_id):
-        self.actions.append(('scheduled', task_id))
+    def task_scheduled(self, task):
+        self.actions.append(('scheduled', task.id))
 
-    def task_finished(self, task_id, successful):
-        self.actions.append(('finished', task_id))
+    def task_finished(self, task, successful):
+        self.actions.append(('finished', task.id))
 
-    def task_started(self, task_id, worker_host):
-        self.actions.append(('started', task_id))
+    def task_started(self, task, worker_host):
+        self.actions.append(('started', task.id))
 
 
 class TaskHistoryTest(unittest.TestCase):

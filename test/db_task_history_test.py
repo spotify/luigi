@@ -23,6 +23,7 @@ from helpers import with_config
 import luigi
 from luigi.db_task_history import DbTaskHistory
 from luigi.task_status import DONE, PENDING, RUNNING
+import luigi.scheduler
 
 
 class DummyTask(luigi.Task):
@@ -78,10 +79,25 @@ class DbTaskHistoryTest(unittest.TestCase):
                 self.assertTrue(param_name in record.parameters)
                 self.assertEqual(str(param_value), record.parameters[param_name].value)
 
+    def test_task_blank_param(self):
+        self.run_task(DummyTask(foo=""))
+
+        tasks = list(self.history.find_all_by_name('DummyTask'))
+
+        self.assertEqual(len(tasks), 1)
+        task_record = tasks[0]
+        self.assertEqual(task_record.name, 'DummyTask')
+        self.assertEqual(task_record.host, 'hostname')
+        self.assertIn('foo', task_record.parameters)
+        self.assertEqual(task_record.parameters['foo'].value, '')
+
     def run_task(self, task):
-        self.history.task_scheduled(task.task_id)
-        self.history.task_started(task.task_id, 'hostname')
-        self.history.task_finished(task.task_id, successful=True)
+        task2 = luigi.scheduler.Task(task.task_id, PENDING, [], family=task.task_family,
+                                     params=task.param_kwargs)
+
+        self.history.task_scheduled(task2)
+        self.history.task_started(task2, 'hostname')
+        self.history.task_finished(task2, successful=True)
 
 
 class MySQLDbTaskHistoryTest(unittest.TestCase):
@@ -116,6 +132,9 @@ class MySQLDbTaskHistoryTest(unittest.TestCase):
             self.fail("Failed to convert timestamp {} to UTC".format(last_event.ts))
 
     def run_task(self, task):
-        self.history.task_scheduled(task.task_id)
-        self.history.task_started(task.task_id, 'hostname')
-        self.history.task_finished(task.task_id, successful=True)
+        task2 = luigi.scheduler.Task(task.task_id, PENDING, [],
+                                     family=task.task_family, params=task.param_kwargs)
+
+        self.history.task_scheduled(task2)
+        self.history.task_started(task2, 'hostname')
+        self.history.task_finished(task2, successful=True)

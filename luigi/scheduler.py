@@ -629,7 +629,7 @@ class CentralPlannerScheduler(Scheduler):
                 # Update the DB only if there was a acctual change, to prevent noise.
                 # We also check for status == PENDING b/c that's the default value
                 # (so checking for status != task.status woule lie)
-                self._update_task_history(task_id, status)
+                self._update_task_history(task, status)
             self._state.set_status(task, PENDING if status == SUSPENDED else status, self._config)
             if status == FAILED:
                 task.retry = self._retry_time(task, self._config)
@@ -802,7 +802,7 @@ class CentralPlannerScheduler(Scheduler):
             self._state.set_status(best_task, RUNNING, self._config)
             best_task.worker_running = worker_id
             best_task.time_running = time.time()
-            self._update_task_history(best_task.id, RUNNING, host=host)
+            self._update_task_history(best_task, RUNNING, host=host)
 
             reply['task_id'] = best_task.id
             reply['task_family'] = best_task.family
@@ -1002,15 +1002,15 @@ class CentralPlannerScheduler(Scheduler):
         else:
             return {"taskId": task_id, "error": ""}
 
-    def _update_task_history(self, task_id, status, host=None):
+    def _update_task_history(self, task, status, host=None):
         try:
             if status == DONE or status == FAILED:
                 successful = (status == DONE)
-                self._task_history.task_finished(task_id, successful)
+                self._task_history.task_finished(task, successful)
             elif status == PENDING:
-                self._task_history.task_scheduled(task_id)
+                self._task_history.task_scheduled(task)
             elif status == RUNNING:
-                self._task_history.task_started(task_id, host)
+                self._task_history.task_started(task, host)
         except BaseException:
             logger.warning("Error saving Task history", exc_info=True)
 

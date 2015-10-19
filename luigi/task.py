@@ -58,12 +58,6 @@ def namespace(namespace=None):
     Register._default_namespace = namespace
 
 
-def id_to_name_and_params(task_id):
-    # DEPRECATED
-    import luigi.tools.parse_task
-    return luigi.tools.parse_task.id_to_name_and_params(task_id)
-
-
 class BulkCompleteNotImplementedError(NotImplementedError):
     """This is here to trick pylint.
 
