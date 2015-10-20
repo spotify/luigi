@@ -62,6 +62,8 @@ def run_with_retcodes(argv):
     except luigi.interface.PidLockAlreadyTakenExit:
         sys.exit(retcodes.already_running)
     except Exception:
+        # Some errors occur before logging is set up, we set it up now
+        luigi.interface.setup_interface_logging()
         logger.exception("Uncaught exception in luigi")
         sys.exit(retcodes.unhandled_exception)
 
