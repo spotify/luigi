@@ -199,7 +199,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
             job.run()
         except KeyboardInterrupt:
             pass
-        proc.return_value.kill.assert_called()
+        proc.return_value.kill.check_called()
 
 
 class PySparkTaskTest(unittest.TestCase):
