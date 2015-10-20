@@ -218,6 +218,10 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--help-all'])
         self.assertGreater(len(stdout.splitlines()), 15)
 
+    def test_error_mesage_on_misspelled_task(self):
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', 'RangeDaili'])
+        self.assertTrue(stderr.find(b'RangeDaily') != -1)
+
     def test_bin_luigi_no_parameters(self):
         returncode, stdout, stderr = self._run_cmdline(['./bin/luigi'])
         self.assertTrue(stderr.find(b'No task specified') != -1)
