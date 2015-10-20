@@ -99,6 +99,18 @@ and stop (exclusive) parameters specified:
 
 	luigi --module all_reports RangeDaily --of AllReportsV2 --start 2014-10-31 --stop 2014-12-25
 
+Propagating parameters with Range
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When your recurring task has a parameter, you'll at first notice that the Range
+tasks do not recognize or propagate parameters passed to them. The easiest
+solution is to set the parameter at the task family level as described
+:ref:`here <Parameter-class-level-parameters>`.
+
+.. code:: console
+
+	luigi RangeDaily --of MyTask --start 2014-10-31 --MyTask-my-param 123
+
 Monitoring task pipelines
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

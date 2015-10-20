@@ -107,6 +107,8 @@ is that Luigi needs to know its type for the command line interaction.
 That's how it knows how to convert a string provided on the command line to
 the corresponding type (i.e. datetime.date instead of a string).
 
+.. _Parameter-class-level-parameters:
+
 Setting parameter value for other classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
