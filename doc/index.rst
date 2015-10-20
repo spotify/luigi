@@ -20,7 +20,7 @@ Table of Contents
    execution_model.rst
    luigi_patterns.rst
    configuration.rst
-   more_info.rst
+   design_and_limitations.rst
 
 API Reference
 -------------
