@@ -310,6 +310,12 @@ class TestS3Client(unittest.TestCase):
             lambda: s3_client.remove('s3://mybucket/removemedir', recursive=False)
         )
 
+        # test that the marker file created by Hadoop S3 Native FileSystem is removed
+        s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/file')
+        s3_client.put_string("", 's3://mybucket/removemedir_$folder$')
+        self.assertTrue(s3_client.remove('s3://mybucket/removemedir'))
+        self.assertFalse(s3_client.exists('s3://mybucket/removemedir_$folder$'))
+
     def _run_multipart_test(self, part_size, file_size):
         file_contents = b"a" * file_size
 
