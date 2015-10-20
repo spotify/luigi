@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import unittest
+from helpers import LuigiTestCase
 
 import luigi
 import luigi.scheduler
@@ -40,7 +40,7 @@ class SimpleTaskHistory(luigi.task_history.TaskHistory):
         self.actions.append(('started', task.id))
 
 
-class TaskHistoryTest(unittest.TestCase):
+class TaskHistoryTest(LuigiTestCase):
 
     def setUp(self):
         self.th = SimpleTaskHistory()
@@ -62,7 +62,3 @@ class TaskHistoryTest(unittest.TestCase):
             ('started', 'MyTask()'),
             ('finished', 'MyTask()')
         ])
-
-
-if __name__ == '__main__':
-    unittest.main()

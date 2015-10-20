@@ -232,9 +232,7 @@ def _run(cmdline_args=None, main_task_cls=None,
         cmdline_args.insert(0, '--local-scheduler')
 
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        task_cls = cp.get_task_cls()
-        task = task_cls()
-        return _schedule_and_run([task], worker_scheduler_factory)
+        return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory)
 
 
 def build(tasks, worker_scheduler_factory=None, **env_params):
