@@ -30,6 +30,7 @@ import logging
 import multiprocessing  # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
 import os
 import signal
+import itertools
 
 try:
     import Queue
@@ -90,6 +91,7 @@ class TaskProcess(multiprocessing.Process):
         self.worker_id = worker_id
         self.result_queue = result_queue
         self.random_seed = random_seed
+        self._running_locally = False
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
@@ -116,6 +118,16 @@ class TaskProcess(multiprocessing.Process):
                 next_send = getpaths(requires)
             else:
                 return new_deps
+
+    def is_alive(self):
+        return self._running_locally or super(TaskProcess, self).is_alive()
+
+    def run_single_threaded(self):
+        self._running_locally = True
+        try:
+            self.run()
+        finally:
+            self._running_locally = False
 
     def run(self):
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task.task_id)
@@ -268,6 +280,10 @@ class worker(Config):
 
     ping_interval = FloatParameter(default=1.0,
                                    config_path=dict(section='core', name='worker-ping-interval'))
+    task_ping_ratio = IntParameter(default=60,
+                                   description='Pings will include the running tasks once in this '
+                                               'many pings. Defaults to 60 for once a minute with '
+                                               'ping_interval of 1 hz')
     keep_alive = BoolParameter(default=False,
                                config_path=dict(section='core', name='worker-keep-alive'))
     count_uniques = BoolParameter(default=False,
@@ -296,25 +312,36 @@ class KeepAliveThread(threading.Thread):
     Periodically tell the scheduler that the worker still lives.
     """
 
-    def __init__(self, scheduler, worker_id, ping_interval):
+    def __init__(self, scheduler, worker_id, ping_interval, task_ping_ratio, running_tasks):
         super(KeepAliveThread, self).__init__()
         self._should_stop = threading.Event()
         self._scheduler = scheduler
         self._worker_id = worker_id
         self._ping_interval = ping_interval
+        self._task_ping_ratio = task_ping_ratio
+        self._running_tasks_dict = running_tasks
 
     def stop(self):
         self._should_stop.set()
 
+    def _running_tasks(self):
+        return [task_id for task_id, p in six.iteritems(self._running_tasks_dict) if p.is_alive()]
+
     def run(self):
-        while True:
+        for normal_ping in itertools.cycle(range(self._task_ping_ratio)):
             self._should_stop.wait(self._ping_interval)
             if self._should_stop.is_set():
                 logger.info("Worker %s was stopped. Shutting down Keep-Alive thread" % self._worker_id)
                 break
             with fork_lock:
                 try:
-                    self._scheduler.ping(worker=self._worker_id)
+                    if normal_ping:
+                        self._scheduler.ping(worker=self._worker_id)
+                    else:
+                        self._scheduler.ping(
+                            worker=self._worker_id,
+                            running_tasks=self._running_tasks(),
+                        )
                 except:  # httplib.BadStatusLine:
                     logger.warning('Failed pinging scheduler')
 
@@ -361,13 +388,19 @@ class Worker(object):
 
         signal.signal(signal.SIGUSR1, self.handle_interrupt)
 
-        self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id, self._config.ping_interval)
-        self._keep_alive_thread.daemon = True
-        self._keep_alive_thread.start()
-
         # Keep info about what tasks are running (could be in other processes)
         self._task_result_queue = multiprocessing.Queue()
         self._running_tasks = {}
+
+        self._keep_alive_thread = KeepAliveThread(
+            self._scheduler,
+            self._id,
+            self._config.ping_interval,
+            self._config.task_ping_ratio,
+            running_tasks=self._running_tasks,
+        )
+        self._keep_alive_thread.daemon = True
+        self._keep_alive_thread.start()
 
         # Stuff for execution_summary
         self._add_task_history = []
@@ -641,14 +674,15 @@ class Worker(object):
 
         p = self._create_task_process(task)
 
-        self._running_tasks[task_id] = p
+        with fork_lock:
+            self._running_tasks[task_id] = p
 
         if self.worker_processes > 1:
             with fork_lock:
                 p.start()
         else:
             # Run in the same process
-            p.run()
+            p.run_single_threaded()
 
     def _create_task_process(self, task):
         return TaskProcess(task, self._id, self._task_result_queue,
@@ -717,7 +751,8 @@ class Worker(object):
                            new_deps=new_deps,
                            assistant=self._assistant)
 
-            self._running_tasks.pop(task_id)
+            with fork_lock:
+                self._running_tasks.pop(task_id)
 
             # re-add task to reschedule missing dependencies
             if missing:

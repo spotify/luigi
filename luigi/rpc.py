@@ -146,9 +146,9 @@ class RemoteScheduler(Scheduler):
         result = json.loads(page)
         return result["response"]
 
-    def ping(self, worker):
+    def ping(self, worker, running_tasks=None):
         # just one attempt, keep-alive thread will keep trying anyway
-        self._request('/api/ping', {'worker': worker}, attempts=1)
+        self._request('/api/ping', {'worker': worker, 'running_tasks': running_tasks}, attempts=1)
 
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None, priority=0,

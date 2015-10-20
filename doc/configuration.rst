@@ -249,6 +249,20 @@ worker-wait-jitter
   Default: 5.0
 
 
+[worker]
+--------
+
+These parameters control the main worker thread and its interactions with
+the scheduler.
+
+task-ping-ratio
+  .. versionadded:: 2.0.0
+
+  Ratio of number of pings that do not contain task information to
+  number that do. Keeping this high means that most pings will be
+  light-weight. Defaults to 60.
+
+
 [elasticsearch]
 ---------------
 

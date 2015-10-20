@@ -604,7 +604,7 @@ class WorkerPingThreadTests(unittest.TestCase):
 
         self._total_pings = 0  # class var so it can be accessed from fail_ping
 
-        def fail_ping(worker):
+        def fail_ping(*args, **kwargs):
             # this will be called from within keep-alive thread...
             self._total_pings += 1
             raise Exception("Some random exception")
@@ -630,6 +630,91 @@ class WorkerPingThreadTests(unittest.TestCase):
         self.assertTrue(w._keep_alive_thread.is_alive())
         w.stop()  # should stop within 0.01 s
         self.assertFalse(w._keep_alive_thread.is_alive())
+
+    def _ping_running_tasks(self, num_workers):
+        sch = CentralPlannerScheduler()
+        pings = []
+
+        def ping(running_tasks=None, **kwargs):
+            pings.append(running_tasks)
+        sch.ping = ping
+        w = Worker(
+            ping_interval=0.01,
+            task_ping_ratio=1,
+            scheduler=sch,
+            worker_id='X',
+            worker_processes=num_workers,
+        )
+
+        time.sleep(0.1)
+        self.assertTrue(pings)
+        self.assertEqual([], pings[-1])
+
+        class SleepTask(luigi.Task):
+            def complete(self):
+                return False
+
+            def run(self):
+                time.sleep(0.1)
+
+        w.add(SleepTask())
+        w.run()
+        w.stop()
+        self.assertIn(['SleepTask()'], pings)
+
+    def test_ping_running_tasks_single_process(self):
+        self._ping_running_tasks(1)
+
+    def test_ping_running_tasks_multiprocess(self):
+        self._ping_running_tasks(2)
+
+    @mock.patch.object(luigi.worker.TaskProcess, 'is_alive')
+    def test_ping_remove_dead_pids(self, is_alive):
+        is_alive.return_value = False
+
+        sch = CentralPlannerScheduler()
+        w = Worker(ping_interval=0.01, task_ping_ratio=1, scheduler=sch, worker_id='X')
+        pings = []
+
+        def ping(running_tasks=None, **kwargs):
+            pings.append(running_tasks)
+        sch.ping = ping
+
+        class SleepTask(luigi.Task):
+            def complete(self):
+                return False
+
+            def run(self):
+                time.sleep(0.1)
+
+        w.add(SleepTask())
+        w.run()
+        w.stop()
+        self.assertTrue(pings)
+        self.assertTrue(all(ping == [] for ping in pings))
+
+    def test_ping_ratio(self):
+        sch = CentralPlannerScheduler()
+        w = Worker(ping_interval=0.01, task_ping_ratio=2, scheduler=sch, worker_id='X')
+        pings = []
+
+        def ping(running_tasks=None, **kwargs):
+            pings.append(running_tasks)
+        sch.ping = ping
+
+        class SleepTask(luigi.Task):
+            def complete(self):
+                return False
+
+            def run(self):
+                time.sleep(0.1)
+
+        w.add(SleepTask())
+        w.run()
+        w.stop()
+        self.assertIn(['SleepTask()'], pings)
+        first_ping = pings.index(['SleepTask()'])
+        self.assertEqual([['SleepTask()'], None] * 3, pings[first_ping:first_ping + 6])
 
 
 def email_patch(test_func):

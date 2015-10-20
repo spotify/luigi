@@ -21,6 +21,7 @@ from helpers import unittest
 from nose.plugins.attrib import attr
 
 import luigi.notifications
+import luigi.six as six
 from luigi.scheduler import DISABLED, DONE, FAILED, CentralPlannerScheduler
 
 luigi.notifications.DEBUG = True
@@ -159,6 +160,51 @@ class CentralPlannerTest(unittest.TestCase):
             self.setTime(10000 + i)
             self.sch.ping(worker='Y')
         self.sch.add_task(task_id='A', status=DONE, worker='Y')  # This used to raise an exception since A was removed
+
+    def test_ping_to_remove_non_running_tasks(self):
+        self.setTime(0)
+        self.sch.add_task(task_id='A', worker='X')
+        self.assertEqual('A', self.sch.get_work(worker='X')['task_id'])
+        six.assertCountEqual(self, ['A'], self.sch.task_list('RUNNING', '').keys())
+
+        # ping that A is not running
+        self.sch.ping(worker='X', running_tasks=[])
+        self.sch.ping(worker='X', running_tasks=[])
+        self.assertFalse(self.sch.task_list('RUNNING', ''))
+        six.assertCountEqual(self, ['A'], self.sch.task_list('FAILED', '').keys())
+
+    def test_old_ping_with_running_tasks(self):
+        self.sch.add_task(task_id='A', worker='X')
+        self.assertEqual('A', self.sch.get_work(worker='X')['task_id'])
+        six.assertCountEqual(self, ['A'], self.sch.task_list('RUNNING', '').keys())
+
+        # ping without indicating what is running
+        self.sch.ping(worker='X')
+        self.sch.ping(worker='X')
+        six.assertCountEqual(self, ['A'], self.sch.task_list('RUNNING', '').keys())
+
+    def test_ping_to_remove_some_running_tasks(self):
+        self.sch.add_task(task_id='A', worker='X')
+        self.sch.add_task(task_id='B', worker='X')
+        self.assertEqual('A', self.sch.get_work(worker='X')['task_id'])
+        self.assertEqual('B', self.sch.get_work(worker='X')['task_id'])
+        six.assertCountEqual(self, ['A', 'B'], self.sch.task_list('RUNNING', '').keys())
+
+        # ping that only B is running
+        self.sch.ping(worker='X', running_tasks=['B'])
+        self.sch.ping(worker='X', running_tasks=['B'])
+        six.assertCountEqual(self, ['B'], (self.sch.task_list('RUNNING', '').keys()))
+        six.assertCountEqual(self, ['A'], self.sch.task_list('FAILED', '').keys())
+
+    def test_require_two_pings_to_remove_non_running_task(self):
+        self.sch.add_task(task_id='A', worker='X')
+        self.assertEqual('A', self.sch.get_work(worker='X')['task_id'])
+
+        six.assertCountEqual(self, ['A'], self.sch.task_list('RUNNING', '').keys())
+        self.sch.ping(worker='X', running_tasks=[])
+        six.assertCountEqual(self, ['A'], self.sch.task_list('RUNNING', '').keys())
+        self.sch.ping(worker='X', running_tasks=[])
+        six.assertCountEqual(self, [], self.sch.task_list('RUNNING', '').keys())
 
     def test_disallowed_state_changes(self):
         # Test that we can not schedule an already running task

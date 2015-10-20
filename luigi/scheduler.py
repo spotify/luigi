@@ -182,6 +182,7 @@ class Task(object):
         self.remove = None
         self.worker_running = None  # the worker id that is currently running the task or None
         self.time_running = None  # Timestamp when picked up by worker
+        self.not_running_cnt = 0
         self.expl = None
         self.priority = priority
         self.resources = _get_default(resources, {})
@@ -229,6 +230,7 @@ class Worker(object):
         self.last_get_work = None
         self.started = time.time()  # seconds since epoch
         self.tasks = set()  # task objects
+        self.running_tasks = set()
         self.info = {}
 
     def add_info(self, info):
@@ -811,9 +813,30 @@ class CentralPlannerScheduler(Scheduler):
 
         return reply
 
-    def ping(self, **kwargs):
+    def ping(self, running_tasks=None, **kwargs):
         worker_id = kwargs['worker']
         self.update(worker_id)
+        if running_tasks is not None:
+            self._update_running(worker_id, set(running_tasks))
+
+    def _update_running(self, worker_id, running_tasks):
+        failed_tasks = set()
+        for task in self._state.get_running_tasks():
+            if task.worker_running == worker_id:
+                if task.id in running_tasks:
+                    running_tasks.remove(task.id)
+                    task.not_running_cnt = 0
+                else:
+                    task.not_running_cnt = getattr(task, 'not_running_cnt', 0) + 1
+
+                    # mark for removal so we don't modify during iteration
+                    if task.not_running_cnt > 1:
+                        failed_tasks.add(task)
+
+        for task in failed_tasks:
+            self.add_task(task_id=task.id, status=FAILED, worker=worker_id)
+
+        # TODO: we should have logic to handle running_tasks that aren't being run by that worker
 
     def _upstream_status(self, task_id, upstream_status_table):
         if task_id in upstream_status_table:
