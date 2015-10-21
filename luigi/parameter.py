@@ -418,10 +418,6 @@ class BoolParameter(Parameter):
     """
 
     def __init__(self, *args, **kwargs):
-        """
-        This constructor passes along args and kwargs to ctor for :py:class:`Parameter` but
-        specifies ``is_bool=True``.
-        """
         super(BoolParameter, self).__init__(*args, **kwargs)
         if self._default == _no_value:
             self._default = False
@@ -438,6 +434,9 @@ class BoolParameter(Parameter):
 
 
 class BooleanParameter(BoolParameter):
+    """
+    DEPRECATED. Use :py:class:`~BoolParameter`
+    """
 
     def __init__(self, *args, **kwargs):
         warnings.warn(
