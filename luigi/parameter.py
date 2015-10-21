@@ -256,7 +256,7 @@ class Parameter(object):
         return "store"
 
 
-class DateParameterBase(Parameter):
+class _DateParameterBase(Parameter):
     """
     Base class Parameter for dates. Code reuse is made possible since all date
     parameters are serialized in the same way.
@@ -278,7 +278,7 @@ class DateParameterBase(Parameter):
 
     def serialize(self, dt):
         """
-        Converts the date to a string using the :py:attr:`~DateParameterBase.date_format`.
+        Converts the date to a string using the :py:attr:`~_DateParameterBase.date_format`.
         """
         if dt is None:
             return str(dt)
@@ -289,7 +289,7 @@ class DateParameterBase(Parameter):
         return value + cls._timedelta
 
 
-class DateParameter(DateParameterBase):
+class DateParameter(_DateParameterBase):
     """
     Parameter whose value is a :py:class:`~datetime.date`.
 
@@ -338,7 +338,7 @@ class YearParameter(DateParameter):
         return None
 
 
-class DateHourParameter(DateParameterBase):
+class DateHourParameter(_DateParameterBase):
     """
     Parameter whose value is a :py:class:`~datetime.datetime` specified to the hour.
 
