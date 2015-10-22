@@ -299,6 +299,25 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(a.complete())
         self.assertTrue(b.complete())
 
+    def test_gets_missed_work(self):
+        class A(Task):
+            done = False
+
+            def complete(self):
+                return self.done
+
+            def run(self):
+                self.done = True
+
+        a = A()
+        self.assertTrue(self.w.add(a))
+
+        # simulate a missed get_work response
+        self.assertEqual('A()', self.sch.get_work(worker='X')['task_id'])
+
+        self.assertTrue(self.w.run())
+        self.assertTrue(a.complete())
+
     def test_avoid_infinite_reschedule(self):
         class A(Task):
 

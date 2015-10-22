@@ -603,7 +603,12 @@ class Worker(object):
         if self._stop_requesting_work:
             return None, 0, 0, 0
         logger.debug("Asking scheduler for work...")
-        r = self._scheduler.get_work(worker=self._id, host=self.host, assistant=self._assistant)
+        r = self._scheduler.get_work(
+            worker=self._id,
+            host=self.host,
+            assistant=self._assistant,
+            current_tasks=list(self._running_tasks.keys()),
+        )
         n_pending_tasks = r['n_pending_tasks']
         task_id = r['task_id']
         running_tasks = r['running_tasks']
