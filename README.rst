@@ -70,6 +70,15 @@ and local files that ensures all file system operations are atomic. This
 is important because it means your data pipeline will not crash in a
 state containing partial data.
 
+Visualiser page
+---------------
+
+The luigi server comes with a web interface too, so you can search and filter
+among all your tasks.
+
+.. figure:: https://raw.githubusercontent.com/spotify/luigi/master/doc/visualiser_front_page.png
+   :alt: Visualiser page
+
 Dependency graph example
 ------------------------
 
