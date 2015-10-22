@@ -91,9 +91,7 @@ class RemoteContext(object):
             return self.host
 
     def _prepare_cmd(self, cmd):
-        connection_cmd = ["ssh", self._host_ref(),
-                          "-S", "none",  # disable ControlMaster since it causes all sorts of weird behaviour with subprocesses...
-                          ]
+        connection_cmd = ["ssh", self._host_ref(), "-o", "ControlMaster=no"]
         if self.sshpass:
             connection_cmd = ["sshpass", "-e"] + connection_cmd
         else:
