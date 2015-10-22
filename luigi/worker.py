@@ -405,6 +405,9 @@ class Worker(object):
         """
         self._keep_alive_thread.stop()
         self._keep_alive_thread.join()
+        for task in self._running_tasks.values():
+            if task.is_alive():
+                task.terminate()
 
     def _generate_worker_info(self):
         # Generate as much info as possible about the worker
