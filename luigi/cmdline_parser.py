@@ -65,7 +65,7 @@ class CmdlineParser(object):
         # We have to parse again now. As the positionally first unrecognized
         # argument (the task) could be different.
         known_args, _ = self._build_parser().parse_known_args(args=cmdline_args)
-        root_task = known_args.task
+        root_task = known_args.root_task
         parser = self._build_parser(root_task=root_task,
                                     help_all=known_args.core_help_all)
         self._possibly_exit_with_help(parser, known_args)
@@ -80,7 +80,11 @@ class CmdlineParser(object):
 
         # Unfortunately, we have to set it as optional to argparse, so we can
         # parse out stuff like `--module` before we call for `--help`.
-        parser.add_argument('task', nargs='?', help='Task family to run. Is not optional.')
+        parser.add_argument('root_task',
+                            nargs='?',
+                            help='Task family to run. Is not optional.',
+                            metavar='Required root task',
+                            )
 
         for task_name, is_without_section, param_name, param_obj in Register.get_all_params():
             is_the_root_task = task_name == root_task
@@ -112,7 +116,7 @@ class CmdlineParser(object):
         """
         Get the task class
         """
-        return Register.get_task_cls(self.known_args.task)
+        return Register.get_task_cls(self.known_args.root_task)
 
     def _get_task_kwargs(self):
         """

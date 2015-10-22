@@ -781,3 +781,13 @@ class LocalParameters1304Test(LuigiTestCase):
         # The SystemExit is assumed to be thrown by argparse
         self.assertRaises(SystemExit, self.run_locally_split, 'RangeDailyBase --of Blah --start 2015-01-01 --task-limit 1 --blah-arg 123')
         self.assertTrue(self.run_locally_split('RangeDailyBase --of Blah --start 2015-01-01 --task-limit 1 --Blah-blah-arg 123'))
+
+
+class TaskAsParameterName1335Test(LuigiTestCase):
+    def test_parameter_can_be_named_task(self):
+
+        class MyTask(luigi.Task):
+            # Indeed, this is not the most realistic example, but still ...
+            task = luigi.IntParameter()
+
+        self.assertTrue(self.run_locally_split('MyTask --task 5'))
