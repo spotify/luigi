@@ -16,36 +16,39 @@ import sys
 import os
 import sphinx.environment
 from docutils.utils import get_source_line
-import luigi
-import luigi.parameter
 
 
-def parameter_repr(self):
-    """
-    When building documentation, we want Parameter objects to show their
-    description in a nice way
-    """
-    significance = 'Insignificant ' if not self.significant else ''
-    class_name = self.__class__.__name__
-    has_default = self._default != luigi.parameter._no_value
-    default = ' (defaults to {})'.format(self._default) if has_default else ''
-    description = (': ' + self.description if self.description else '')
-    return significance + class_name + default + description
+try:
+    import luigi
+    import luigi.parameter
 
-luigi.parameter.Parameter.__repr__ = parameter_repr
+    def parameter_repr(self):
+        """
+        When building documentation, we want Parameter objects to show their
+        description in a nice way
+        """
+        significance = 'Insignificant ' if not self.significant else ''
+        class_name = self.__class__.__name__
+        has_default = self._default != luigi.parameter._no_value
+        default = ' (defaults to {})'.format(self._default) if has_default else ''
+        description = (': ' + self.description if self.description else '')
+        return significance + class_name + default + description
 
+    luigi.parameter.Parameter.__repr__ = parameter_repr
 
-def assertIn(needle, haystack):
-    """
-    We test repr of Parameter objects, since it'll be used for readthedocs
-    """
-    assert needle in haystack
+    def assertIn(needle, haystack):
+        """
+        We test repr of Parameter objects, since it'll be used for readthedocs
+        """
+        assert needle in haystack
 
-# TODO: find a better place to put this!
-assertIn('IntParameter', repr(luigi.IntParameter()))
-assertIn('defaults to 37', repr(luigi.IntParameter(default=37)))
-assertIn('hi mom', repr(luigi.IntParameter(description='hi mom')))
-assertIn('Insignificant BoolParameter', repr(luigi.BoolParameter(significant=False)))
+    # TODO: find a better place to put this!
+    assertIn('IntParameter', repr(luigi.IntParameter()))
+    assertIn('defaults to 37', repr(luigi.IntParameter(default=37)))
+    assertIn('hi mom', repr(luigi.IntParameter(description='hi mom')))
+    assertIn('Insignificant BoolParameter', repr(luigi.BoolParameter(significant=False)))
+except ImportError:
+    pass
 
 
 def _warn_node(self, msg, node):
