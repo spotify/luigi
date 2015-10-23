@@ -37,14 +37,15 @@ with open('README.rst') as fobj:
     long_description = readme_note + fobj.read()
 
 install_requires = [
-    'pyparsing<3.0',
     'tornado<5.0',
     'python-daemon<3.0',
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
-    install_requires.append('sqlalchemy')
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
+    install_requires.append('sqlalchemy')
+    # readthedocs don't like python-daemon, see #1342
+    install_requires.remove('python-daemon<3.0')
 
 setup(
     name='luigi',
