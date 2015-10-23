@@ -139,12 +139,15 @@ class RemoteScheduler(Scheduler):
             )
         return response
 
-    def _request(self, url, data, log_exceptions=True, attempts=3):
+    def _request(self, url, data, log_exceptions=True, attempts=3, allow_null=True):
         body = {'data': json.dumps(data)}
 
-        page = self._fetch(url, body, log_exceptions, attempts)
-        result = json.loads(page)
-        return result["response"]
+        for _ in range(attempts):
+            page = self._fetch(url, body, log_exceptions, attempts)
+            response = json.loads(page)["response"]
+            if allow_null or response is not None:
+                return response
+        raise RPCError("Received null response from remote scheduler %r" % self._url)
 
     def ping(self, worker):
         # just one attempt, keep-alive thread will keep trying anyway
@@ -179,7 +182,9 @@ class RemoteScheduler(Scheduler):
                 'host': host,
                 'assistant': assistant,
                 'current_tasks': current_tasks,
-            })
+            },
+            allow_null=False,
+        )
 
     def graph(self):
         return self._request('/api/graph', {})
