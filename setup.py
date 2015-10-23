@@ -42,8 +42,10 @@ install_requires = [
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
-    install_requires.append('sqlalchemy')
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
+    install_requires.append('sqlalchemy')
+    # readthedocs don't like python-daemon, see #1342
+    install_requires.remove('python-daemon<3.0')
 
 setup(
     name='luigi',
