@@ -303,7 +303,7 @@ function visualiserApp(luigi) {
     }
 
     function processHashChange(paint) {
-        var hash = location.hash;
+        var hash = decodeURIComponent(location.hash);
         if (hash == "#w") {
             switchTab("workerList");
         } else if (hash) {
@@ -317,7 +317,6 @@ function visualiserApp(luigi) {
                     luigi.getInverseDependencyGraph(taskId, depGraphCallback);
                 } else {
                     luigi.getDependencyGraph(taskId, depGraphCallback);
-                    
                 }
             }
             switchTab("dependencyGraph");
