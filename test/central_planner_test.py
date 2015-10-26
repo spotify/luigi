@@ -675,6 +675,35 @@ class CentralPlannerTest(unittest.TestCase):
         self.setTime(101)
         self.assertEqual(FAILED, self.sch.task_list('', '')['A']['status'])
 
+    def test_no_automatic_re_enable_after_manual_disable(self):
+        self.sch = CentralPlannerScheduler(disable_persist=100)
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A', status=DISABLED)
+
+        # should be disabled now
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
+
+        # should not re-enable after 100 seconds
+        self.setTime(101)
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
+
+    def test_no_automatic_re_enable_after_auto_then_manual_disable(self):
+        self.sch = CentralPlannerScheduler(disable_failures=2, disable_persist=100)
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+
+        # should be disabled now
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
+
+        # should remain disabled once set
+        self.sch.add_task(worker=WORKER, task_id='A', status=DISABLED)
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
+
+        # should not re-enable after 100 seconds
+        self.setTime(101)
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
+
     def test_disable_by_worker(self):
         self.sch.add_task(worker=WORKER, task_id='A', status=DISABLED)
         self.assertEqual(len(self.sch.task_list('DISABLED', '')), 1)
