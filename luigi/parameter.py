@@ -94,9 +94,9 @@ class Parameter(object):
 
         * Any value provided on the command line:
 
-          - With qualified task name (eg. ``--TaskA-param xyz``)
+          - To the root task (eg. ``--param xyz``)
 
-          - Without (eg. ``--param xyz``)
+          - Then to the class, using the qualified task name syntax (eg. ``--TaskA-param xyz``).
 
         * With ``[TASK_NAME]>PARAM_NAME: <serialized value>`` syntax. See :ref:`ParamConfigIngestion`
 
