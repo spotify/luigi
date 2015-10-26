@@ -78,7 +78,7 @@ function visualiserApp(luigi) {
             displayTime: displayTime,
             displayTimestamp: task.start_time,
             timeRunning: time_running,
-            trackingUrl: task.trackingUrl,
+            trackingUrl: task.tracking_url,
             status: task.status,
             graph: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DONE"),
             error: task.status == "FAILED",

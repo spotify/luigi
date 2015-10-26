@@ -84,7 +84,7 @@ class HadoopJarJobTaskTest(unittest.TestCase):
                             raise AssertionError
 
             task = TestRemoteHadoopJarTwoParamJob(temp_file.name, 'test')
-            mock_job.side_effect = lambda x: check_space(x, task.task_id)
+            mock_job.side_effect = lambda x, _: check_space(x, task.task_id)
             task.run()
 
     @patch('luigi.contrib.hadoop.run_and_track_hadoop_job')

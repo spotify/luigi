@@ -68,7 +68,7 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
     def __init__(self):
         pass
 
-    def run_job(self, job):
+    def run_job(self, job, tracking_url_callback=None):
         # TODO(jcrobak): libjars, files, etc. Can refactor out of
         # hadoop.HadoopJobRunner
         if not job.jar():
@@ -109,7 +109,7 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
                 raise HadoopJarJobError("job jar does not exist")
             arglist = hadoop_arglist
 
-        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist)
+        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback)
 
         for a, b in tmp_files:
             a.move(b)

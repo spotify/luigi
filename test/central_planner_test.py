@@ -134,6 +134,44 @@ class CentralPlannerTest(unittest.TestCase):
 
         self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'A')
 
+    def test_do_not_overwrite_tracking_url_while_running(self):
+        self.sch.add_task(task_id='A', worker='X', status='RUNNING', tracking_url='trackme')
+        self.assertEqual('trackme', self.sch.task_list('RUNNING', '')['A']['tracking_url'])
+
+        # not wiped out by another working scheduling as pending
+        self.sch.add_task(task_id='A', worker='Y', status='PENDING')
+        self.assertEqual('trackme', self.sch.task_list('RUNNING', '')['A']['tracking_url'])
+
+    def test_do_update_tracking_url_while_running(self):
+        self.sch.add_task(task_id='A', worker='X', status='RUNNING', tracking_url='trackme')
+        self.assertEqual('trackme', self.sch.task_list('RUNNING', '')['A']['tracking_url'])
+
+        self.sch.add_task(task_id='A', worker='X', status='RUNNING', tracking_url='stage_2')
+        self.assertEqual('stage_2', self.sch.task_list('RUNNING', '')['A']['tracking_url'])
+
+    def test_keep_tracking_url_on_done_and_fail(self):
+        for status in ('DONE', 'FAILED'):
+            self.sch.add_task(task_id='A', worker='X', status='RUNNING', tracking_url='trackme')
+            self.assertEqual('trackme', self.sch.task_list('RUNNING', '')['A']['tracking_url'])
+
+            self.sch.add_task(task_id='A', worker='X', status=status)
+            self.assertEqual('trackme', self.sch.task_list(status, '')['A']['tracking_url'])
+
+    def test_drop_tracking_url_when_rescheduled_while_not_running(self):
+        for status in ('DONE', 'FAILED', 'PENDING'):
+            self.sch.add_task(task_id='A', worker='X', status=status, tracking_url='trackme')
+            self.assertEqual('trackme', self.sch.task_list(status, '')['A']['tracking_url'])
+
+            self.sch.add_task(task_id='A', worker='Y', status='PENDING')
+            self.assertIsNone(self.sch.task_list('PENDING', '')['A']['tracking_url'])
+
+    def test_reset_tracking_url_on_new_run(self):
+        self.sch.add_task(task_id='A', worker='X', status='PENDING', tracking_url='trackme')
+        self.assertEqual('trackme', self.sch.task_list('PENDING', '')['A']['tracking_url'])
+
+        self.sch.add_task(task_id='A', worker='Y', status='RUNNING')
+        self.assertIsNone(self.sch.task_list('RUNNING', '')['A']['tracking_url'])
+
     def test_remove_dep(self):
         # X schedules A -> B, A is broken
         # Y schedules C -> B: this should remove A as a dep of B

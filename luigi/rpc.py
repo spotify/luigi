@@ -152,7 +152,8 @@ class RemoteScheduler(Scheduler):
 
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None, priority=0,
-                 family='', module=None, params=None, assistant=False):
+                 family='', module=None, params=None, assistant=False,
+                 tracking_url=None):
         self._request('/api/add_task', {
             'task_id': task_id,
             'worker': worker,
@@ -167,6 +168,7 @@ class RemoteScheduler(Scheduler):
             'module': module,
             'params': params,
             'assistant': assistant,
+            'tracking_url': tracking_url,
         })
 
     def get_work(self, worker, host=None, assistant=False):
