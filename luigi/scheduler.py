@@ -447,7 +447,7 @@ class SimpleTaskState(object):
                 task.remove = time.time() + config.remove_delay
 
         # Re-enable task after the disable time expires
-        if task.status == DISABLED and task.scheduler_disable_time:
+        if task.status == DISABLED and task.scheduler_disable_time is not None:
             if time.time() - fix_time(task.scheduler_disable_time) > config.disable_persist:
                 self.re_enable(task, config)
 
