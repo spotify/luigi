@@ -162,7 +162,7 @@ class TaskProcess(multiprocessing.Process):
             elif status == DONE:
                 self.task.trigger_event(
                     Event.PROCESSING_TIME, self.task, time.time() - t0)
-                expl = json.dumps(self.task.on_success())
+                expl = json.dumps(unicode(self.task.on_success(), errors='replace'))
                 logger.info('[pid %s] Worker %s done      %s', os.getpid(),
                             self.worker_id, self.task.task_id)
                 self.task.trigger_event(Event.SUCCESS, self.task)
@@ -174,7 +174,7 @@ class TaskProcess(multiprocessing.Process):
             logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
             self.task.trigger_event(Event.FAILURE, self.task, ex)
             raw_error_message = self.task.on_failure(ex)
-            expl = json.dumps(raw_error_message)
+            expl = json.dumps(unicode(raw_error_message, errors='replace'))
             self._send_error_notification(raw_error_message)
         finally:
             self.result_queue.put(
