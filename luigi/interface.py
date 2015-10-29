@@ -164,7 +164,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
             'core', 'no_configure_logging', False):
         setup_interface_logging(logging_conf)
 
-    kill_signal = signal.SIGUSR1 if env_params.take_lock else None
+    kill_signal = signal.SIGTERM if env_params.take_lock else None
     if (not env_params.no_lock and
             not(lock.acquire_for(env_params.lock_pid_dir, env_params.lock_size, kill_signal))):
         raise PidLockAlreadyTakenExit()
