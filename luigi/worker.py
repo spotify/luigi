@@ -367,7 +367,7 @@ class Worker(object):
         self.run_succeeded = True
         self.unfulfilled_counts = collections.defaultdict(int)
 
-        signal.signal(signal.SIGUSR1, self.handle_interrupt)
+        signal.signal(signal.SIGTERM, self.handle_interrupt)
 
         self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id, self._config.ping_interval)
         self._keep_alive_thread.daemon = True
@@ -783,9 +783,9 @@ class Worker(object):
 
     def handle_interrupt(self, signum, _):
         """
-        Stops the assistant from asking for more work on SIGUSR1
+        Stops the assistant from asking for more work on SIGTERM
         """
-        if signum == signal.SIGUSR1:
+        if signum == signal.SIGTERM:
             self._config.keep_alive = False
             self._stop_requesting_work = True
 

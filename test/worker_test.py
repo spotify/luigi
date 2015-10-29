@@ -158,7 +158,7 @@ class WorkerTest(unittest.TestCase):
         self.w.add(d)
 
         self.assertFalse(d.complete())
-        self.w.handle_interrupt(signal.SIGUSR1, None)
+        self.w.handle_interrupt(signal.SIGTERM, None)
         self.w.run()
         self.assertFalse(d.complete())
 
