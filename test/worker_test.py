@@ -158,7 +158,10 @@ class WorkerTest(unittest.TestCase):
         self.w.add(d)
 
         self.assertFalse(d.complete())
-        self.w.handle_interrupt(signal.SIGUSR1, None)
+        try:
+            self.w.handle_interrupt(signal.SIGUSR1, None)
+        except AttributeError:
+            raise unittest.SkipTest('signal.SIGUSR1 not found on this system')
         self.w.run()
         self.assertFalse(d.complete())
 
@@ -354,6 +357,11 @@ class WorkerTest(unittest.TestCase):
 
         self.assertTrue(self.w.add(B()))
         self.assertFalse(self.w.run())
+
+    def test_fails_registering_signal(self):
+        with mock.patch('luigi.worker.signal', spec=['signal']):
+            # mock will raise an attribute error getting signal.SIGUSR1
+            Worker()
 
     def test_allow_reschedule_with_many_missing_deps(self):
         class A(Task):

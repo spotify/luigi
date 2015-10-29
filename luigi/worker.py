@@ -367,7 +367,10 @@ class Worker(object):
         self.run_succeeded = True
         self.unfulfilled_counts = collections.defaultdict(int)
 
-        signal.signal(signal.SIGUSR1, self.handle_interrupt)
+        try:
+            signal.signal(signal.SIGUSR1, self.handle_interrupt)
+        except AttributeError:
+            pass
 
         self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id, self._config.ping_interval)
         self._keep_alive_thread.daemon = True
