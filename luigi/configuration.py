@@ -49,7 +49,11 @@ class LuigiConfigParser(ConfigParser):
         'luigi.cfg',
     ]
     if 'LUIGI_CONFIG_PATH' in os.environ:
-        _config_paths.append(os.environ['LUIGI_CONFIG_PATH'])
+        config_file = os.environ['LUIGI_CONFIG_PATH']
+        if not os.path.isfile(config_file):
+            warnings.warn("LUIGI_CONFIG_PATH points to a file which does not exist. Invalid file: {path}".format(path=config_file))
+        else:
+            _config_paths.append(config_file)
 
     @classmethod
     def add_config_path(cls, path):
