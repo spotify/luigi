@@ -104,12 +104,14 @@ class PigJobTask(luigi.Task):
             if self.pig_parameters():
                 items = six.iteritems(self.pig_parameters())
                 param_file.writelines(line(k, v) for (k, v) in items)
+                param_file.flush()
                 opts.append('-param_file')
                 opts.append(param_file.name)
 
             if self.pig_properties():
                 items = six.iteritems(self.pig_properties())
                 prop_file.writelines(line(k, v) for (k, v) in items)
+                prop_file.flush()
                 opts.append('-propertyFile')
                 opts.append(prop_file.name)
 
