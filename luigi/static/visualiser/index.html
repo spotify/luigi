@@ -224,7 +224,7 @@
 
         <script type="text/template" name="actionsTemplate">
             <div class="span2">
-                <a href="#{{taskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip"><i class="fa fa-sitemap"></i></a>
+                <a href="#{{encodedTaskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip"><i class="fa fa-sitemap"></i></a>
                 {{#error}}<button class="btn btn-danger btn-xs showError" title="Show error" data-toggle="tooltip"><i class="fa fa-bug"></i></button>{{/error}}
                 {{#re_enable}}<a class="btn btn-warning btn-xs re-enable-button" title="Re-enable" data-toggle="tooltip" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
                 {{#trackingUrl}}<a target="_blank" href="{{trackingUrl}}" class="btn btn-primary btn-xs" title="Track Progress" data-toggle="tooltip"><i class="fa fa-eye"></i></a>{{/trackingUrl}}
@@ -265,7 +265,7 @@
                 <div class="box-body">
                     Started: {{start_time}}<br>
                     Last Checkin: {{active}}<br>
-                    Root Task: <a href="#{{{first_task}}}">{{first_task}}</a><br>
+                    Root Task: <a href="#{{{encoded_first_task}}}">{{first_task}}</a><br>
                     Running: {{num_running}}<br>
                     Pending: {{num_pending}}<br>
                     Unique Pending: {{num_uniques}}<br>
@@ -287,7 +287,7 @@
                         <td>{{priority}}</td>
                         <td>{{resources}}</td>
                         <td>{{displayTime}}</td>
-                        <td><a href="#{{taskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a>
+                        <td><a href="#{{encodedTaskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a>
                             {{#trackingUrl}}<a target="_blank" href="{{trackingUrl}}" class="btn btn-primary btn-xs" title="Track Progress" data-toggle="tooltip"><i class="fa fa-eye"></i></a>{{/trackingUrl}}
                         </td>
                       </tr>

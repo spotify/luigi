@@ -71,6 +71,7 @@ function visualiserApp(luigi) {
         }
         return {
             taskId: task.taskId,
+            encodedTaskId: encodeURIComponent(task.taskId),
             taskName: taskName,
             taskParams: taskParams,
             priority: task.priority,
@@ -224,6 +225,7 @@ function visualiserApp(luigi) {
     }
 
     function processWorker(worker) {
+        worker.encoded_first_task = encodeURIComponent(worker.first_task);
         worker.tasks = worker.running.map(taskToDisplayTask);
         worker.tasks.sort(function(task1, task2) { return task1.timeRunning - task2.timeRunning; });
         worker.start_time = new Date(worker.started * 1000).toLocaleString();
@@ -307,7 +309,7 @@ function visualiserApp(luigi) {
         if (hash == "#w") {
             switchTab("workerList");
         } else if (hash) {
-            var taskId = hash.substr(1);
+            var taskId = decodeURIComponent(hash.substr(1));
             $("#searchError").empty();
             $("#searchError").removeClass();
             if (taskId != "g") {
