@@ -2,7 +2,7 @@ Parameters
 ----------
 
 Parameters is the Luigi equivalent of creating a constructor for each Task.
-Luigi requires you to declare these parameters instantiating
+Luigi requires you to declare these parameters by instantiating
 :class:`~luigi.parameter.Parameter` objects on the class scope:
 
 .. code:: python
@@ -11,7 +11,7 @@ Luigi requires you to declare these parameters instantiating
         date = luigi.DateParameter(default=datetime.date.today())
         # ...
 
-By doing this, Luigi can do take care of all the boilerplate code that
+By doing this, Luigi can take care of all the boilerplate code that
 would normally be needed in the constructor.
 Internally, the DailyReport object can now be constructed by running
 ``DailyReport(datetime.date(2012, 5, 10))`` or just ``DailyReport()``.
