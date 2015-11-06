@@ -501,6 +501,7 @@ class S3Target(FileSystemTarget):
         if format is None:
             format = get_default_format()
 
+        self.path = path
         self.format = format
         self.fs = client or S3Client()
 

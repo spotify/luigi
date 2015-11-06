@@ -100,6 +100,11 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual("line two" + os.linesep, lines[1])
         self.assertEqual("line three", lines[2])
 
+    def test_get_path(self):
+        t = self.create_target()
+        path = t.path
+        self.assertEqual('s3://mybucket/test_file', path)
+
 
 class TestS3Client(unittest.TestCase):
 
