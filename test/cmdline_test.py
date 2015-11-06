@@ -84,6 +84,17 @@ class FooSubClass(FooBaseClass):
     pass
 
 
+class LoggingTask(luigi.Task):
+
+    def complete(self):
+        return False
+
+    def run(self):
+        import logging
+        logging.getLogger().addHandler(logging.StreamHandler())
+        logging.info('set up a root logger')
+
+
 class CmdlineTest(unittest.TestCase):
 
     def setUp(self):
@@ -248,6 +259,12 @@ class InvokeOverCmdlineTest(unittest.TestCase):
     def test_bin_fail_on_unrecognized_args(self):
         returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--no-lock', '--local-scheduler', 'Task', '--unknown-param', 'hiiii'])
         self.assertNotEqual(0, returncode)
+
+    def test_not_propagating_logs(self):
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'cmdline_test', 'LoggingTask', '--local-scheduler'])
+        lines = stderr.splitlines()
+        count = len(list(filter(lambda x: x.find(b'DONE') != -1, lines)))
+        self.assertEqual(1, count)
 
     def test_deps_py_script(self):
         """

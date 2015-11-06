@@ -45,6 +45,7 @@ def setup_interface_logging(conf_file=None):
     if conf_file is None:
         logger = logging.getLogger('luigi-interface')
         logger.setLevel(logging.DEBUG)
+        logger.propagate = False
 
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(logging.DEBUG)
