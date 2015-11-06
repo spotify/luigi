@@ -24,6 +24,7 @@ import signal
 import tempfile
 import threading
 import time
+import psutil
 from helpers import unittest, with_config, skipOnTravis
 
 import luigi.notifications
@@ -885,6 +886,23 @@ class MultipleWorkersTest(unittest.TestCase):
         w._handle_next_task()
         w._handle_next_task()
         w._handle_next_task()
+
+    def test_stop_worker_kills_subprocesses(self):
+        w = Worker(worker_processes=2)
+        hung_task = HungWorker()
+        w.add(hung_task)
+
+        w._run_task(hung_task.task_id)
+        pids = [p.pid for p in w._running_tasks.values()]
+        self.assertEqual(1, len(pids))
+        pid = pids[0]
+
+        def is_running():
+            return pid in {p.pid for p in psutil.Process().children()}
+
+        self.assertTrue(is_running())
+        w.stop()
+        self.assertFalse(is_running())
 
     def test_time_out_hung_worker(self):
         luigi.build([HungWorker(0.1)], workers=2, local_scheduler=True)
