@@ -454,6 +454,10 @@ class Worker(object):
         log_msg = "Will not schedule {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task, tb=tb)
         logger.warning(log_msg)
 
+    def _log_dependency_error(self, task, tb):
+        log_msg = "Will not schedule {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task, tb=tb)
+        logger.warning(log_msg)
+
     def _log_unexpected_error(self, task):
         logger.exception("Luigi unexpected framework error while scheduling %s", task)  # needs to be called from within except clause
 
@@ -461,6 +465,13 @@ class Worker(object):
         # like logger.exception but with WARNING level
         subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
         headline = "Will not schedule task or any dependencies due to error in complete() method"
+
+        message = notifications.format_task_error(headline, task, formatted_traceback)
+        notifications.send_error_email(subject, message, task.owner_email)
+
+    def _email_dependency_error(self, task, formatted_traceback):
+        subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
+        headline = "Will not schedule task or any dependencies due to error in deps() method"
 
         message = notifications.format_task_error(headline, task, formatted_traceback)
         notifications.send_error_email(subject, message, task.owner_email)
@@ -560,7 +571,14 @@ class Worker(object):
                            ' this luigi process.', task.task_id)
 
         else:
-            deps = task.deps()
+            try:
+                deps = task.deps()
+            except Exception:
+                formatted_traceback = traceback.format_exc()
+                self.add_succeeded = False
+                self._log_dependency_error(task, formatted_traceback)
+                self._email_dependency_error(task, formatted_traceback)
+                return
             status = PENDING
             runnable = True
 

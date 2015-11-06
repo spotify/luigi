@@ -578,15 +578,21 @@ class WorkerTest(unittest.TestCase):
 
         a = A()
 
-        class C(DummyTask):
+        class D(DummyTask):
             pass
+
+        d = D()
+
+        class C(DummyTask):
+            def requires(self):
+                return d
 
         c = C()
 
         class B(DummyTask):
 
             def requires(self):
-                return a, c
+                return c, a
 
         b = B()
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
@@ -595,6 +601,7 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(w.run())
         self.assertFalse(b.has_run)
         self.assertTrue(c.has_run)
+        self.assertTrue(d.has_run)
         self.assertFalse(a.has_run)
         w.stop()
 
@@ -742,6 +749,20 @@ class WorkerEmailTest(unittest.TestCase):
         self.assertTrue(emails[0].find("Luigi: %s failed scheduling" % (a,)) != -1)
         self.worker.run()
         self.assertTrue(emails[0].find("Luigi: %s failed scheduling" % (a,)) != -1)
+        self.assertFalse(a.has_run)
+
+    @email_patch
+    def test_requires_error(self, emails):
+        class A(DummyTask):
+
+            def requires(self):
+                raise Exception("b0rk")
+
+        a = A()
+        self.assertEqual(emails, [])
+        self.worker.add(a)
+        self.assertTrue(emails[0].find("Luigi: %s failed scheduling" % (a,)) != -1)
+        self.worker.run()
         self.assertFalse(a.has_run)
 
     @email_patch
