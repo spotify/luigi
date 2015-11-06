@@ -712,7 +712,7 @@ class CentralPlannerScheduler(Scheduler):
     def _retry_time(self, task, config):
         return time.time() + config.retry_delay
 
-    def get_work(self, host=None, assistant=False, **kwargs):
+    def get_work(self, host=None, assistant=False, current_tasks=None, **kwargs):
         # TODO: remove any expired nodes
 
         # Algo: iterate over all nodes, find the highest priority node no dependencies and available
@@ -734,7 +734,14 @@ class CentralPlannerScheduler(Scheduler):
         self.update(worker_id, {'host': host}, get_work=True)
         if assistant:
             self.add_worker(worker_id, [('assistant', assistant)])
+
         best_task = None
+        if current_tasks is not None:
+            ct_set = set(current_tasks)
+            for task in sorted(self._state.get_running_tasks(), key=self._rank):
+                if task.worker_running == worker_id and task.id not in ct_set:
+                    best_task = task
+
         locally_pending_tasks = 0
         running_tasks = []
         upstream_table = {}

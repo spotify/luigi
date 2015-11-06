@@ -273,6 +273,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         old_func = luigi.scheduler.CentralPlannerScheduler.get_work
 
         def new_func(*args, **kwargs):
+            kwargs['current_tasks'] = None
             old_func(*args, **kwargs)
             return old_func(*args, **kwargs)
 

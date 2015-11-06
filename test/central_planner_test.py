@@ -118,6 +118,28 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.prune()
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
 
+    def test_resend_task(self):
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.add_task(worker=WORKER, task_id='B')
+        for _ in range(10):
+            self.assertEqual('A', self.sch.get_work(worker=WORKER, current_tasks=[])['task_id'])
+        self.assertEqual('B', self.sch.get_work(worker=WORKER, current_tasks=['A'])['task_id'])
+
+    def test_resend_multiple_tasks(self):
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.add_task(worker=WORKER, task_id='B')
+        self.sch.add_task(worker=WORKER, task_id='C')
+
+        # get A and B running
+        self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
+        self.assertEqual('B', self.sch.get_work(worker=WORKER)['task_id'])
+
+        for _ in range(10):
+            self.assertEqual('A', self.sch.get_work(worker=WORKER, current_tasks=[])['task_id'])
+            self.assertEqual('A', self.sch.get_work(worker=WORKER, current_tasks=['B'])['task_id'])
+            self.assertEqual('B', self.sch.get_work(worker=WORKER, current_tasks=['A'])['task_id'])
+            self.assertEqual('C', self.sch.get_work(worker=WORKER, current_tasks=['A', 'B'])['task_id'])
+
     def test_disconnect_running(self):
         # X and Y wants to run A.
         # X starts but does not report back. Y does.

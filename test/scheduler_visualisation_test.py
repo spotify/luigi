@@ -412,15 +412,15 @@ class SchedulerVisualisationTest(unittest.TestCase):
         class X(luigi.Task):
             n = luigi.IntParameter()
 
-        w = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=3)
+        w = luigi.worker.Worker(worker_id='w', scheduler=self.scheduler, worker_processes=3)
         w.add(X(0))
         w.add(X(1))
         w.add(X(2))
         w.add(X(3))
 
-        w._get_work()
-        w._get_work()
-        w._get_work()
+        self.scheduler.get_work(worker='w')
+        self.scheduler.get_work(worker='w')
+        self.scheduler.get_work(worker='w')
 
         workers = self._remote().worker_list()
         self.assertEqual(1, len(workers))

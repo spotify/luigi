@@ -57,6 +57,7 @@ class RetcodesTest(LuigiTestCase):
         old_func = luigi.scheduler.CentralPlannerScheduler.get_work
 
         def new_func(*args, **kwargs):
+            kwargs['current_tasks'] = None
             old_func(*args, **kwargs)
             res = old_func(*args, **kwargs)
             res['running_tasks'][0]['worker'] = "not me :)"  # Otherwise it will be filtered
