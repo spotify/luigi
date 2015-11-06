@@ -402,10 +402,10 @@ class SimpleTaskState(object):
                 self.re_enable(task)
 
             # don't allow workers to override a scheduler disable
-            elif task.scheduler_disable_time is not None:
+            elif task.scheduler_disable_time is not None and new_status != DISABLED:
                 return
 
-        if new_status == FAILED and task.can_disable():
+        if new_status == FAILED and task.can_disable() and task.status != DISABLED:
             task.add_failure()
             if task.has_excessive_failures():
                 task.scheduler_disable_time = time.time()
@@ -447,7 +447,7 @@ class SimpleTaskState(object):
                 task.remove = time.time() + config.remove_delay
 
         # Re-enable task after the disable time expires
-        if task.status == DISABLED and task.scheduler_disable_time:
+        if task.status == DISABLED and task.scheduler_disable_time is not None:
             if time.time() - fix_time(task.scheduler_disable_time) > config.disable_persist:
                 self.re_enable(task, config)
 
