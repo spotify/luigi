@@ -114,6 +114,8 @@ class TaskProcess(multiprocessing.Process):
                     requires = six.next(task_gen)
                 else:
                     requires = task_gen.send(next_send)
+                if requires == None:
+                    return None
             except StopIteration:
                 return None
 
