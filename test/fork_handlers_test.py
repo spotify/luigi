@@ -1,19 +1,16 @@
 from helpers import unittest
 
 import luigi
-from luigi.mock import MockTarget, MockFileSystem
 from multiprocessing import Queue
 from luigi.worker import Worker
 from luigi.worker import ForkHandlerType
 from luigi.scheduler import CentralPlannerScheduler
 import time
 
+
 class ForkHandlerTest(unittest.TestCase):
     def setUp(self):
-        self.worker_queue = Queue()
-        self.child_queue = Queue()
 
-    def test_worker_executes_fork_handler(self):
         @Worker.fork_handler()
         def both():
             '''
@@ -32,9 +29,32 @@ class ForkHandlerTest(unittest.TestCase):
         def child():
             self.child_queue.put("child")
 
+        self.worker_queue = Queue()
+        self.child_queue = Queue()
+
+    def test_single_threaded_worker_doesnot_execute_fork_handler(self):
         class Stub(luigi.Task):
             def complete(self):
                 return False
+
+            def run(self):
+                pass
+
+        s = CentralPlannerScheduler()
+        w = Worker(scheduler=s, worker_processes=1)
+        w.add(Stub())
+        w.run()
+
+        time.sleep(0.1)
+
+        self.assertTrue(self.worker_queue.empty())
+        self.assertTrue(self.child_queue.empty())
+
+    def test_worker_executes_fork_handler(self):
+        class Stub(luigi.Task):
+            def complete(self):
+                return False
+
             def run(self):
                 pass
 

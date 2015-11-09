@@ -131,8 +131,8 @@ class TaskProcess(multiprocessing.Process):
 
         if self.fork_handlers:
             logger.info('Calling child process fork handlers')
-        for fork_handler in self.fork_handlers:
-            fork_handler()
+            for fork_handler in self.fork_handlers:
+                fork_handler()
 
         status = FAILED
         expl = ''
@@ -679,8 +679,8 @@ class Worker(object):
                 p.start()
                 if self._fork_handlers:
                     logger.info("Calling master process fork handlers")
-                for fork_handler in self._fork_handlers:
-                    fork_handler()
+                    for fork_handler in self._fork_handlers:
+                        fork_handler()
         else:
             # Run in the same process
             p.run()
@@ -701,7 +701,7 @@ class Worker(object):
             fork_handlers = self._child_fork_handlers + [lambda: random.seed(
                 (os.getpid(), time.time()))]
         else:
-            fork_handlers=None
+            fork_handlers = None
 
         return TaskProcess(
             task, self._id, self._task_result_queue,
