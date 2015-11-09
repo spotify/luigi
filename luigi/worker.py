@@ -85,17 +85,18 @@ class TaskProcess(multiprocessing.Process):
 
     Mainly for convenience since this is run in a separate process. """
 
-    def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0,
-                 tracking_url_callback=None):
+    def __init__(self, task, worker_id, result_queue, worker_timeout=0,
+                 tracking_url_callback=None, fork_handlers=None):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
         self.result_queue = result_queue
-        self.random_seed = random_seed
         self.tracking_url_callback = tracking_url_callback
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
+
+        self.fork_handlers = fork_handlers
 
     def _run_get_new_deps(self):
         try:
@@ -128,9 +129,10 @@ class TaskProcess(multiprocessing.Process):
     def run(self):
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task.task_id)
 
-        if self.random_seed:
-            # Need to have different random seeds if running in separate processes
-            random.seed((os.getpid(), time.time()))
+        if self.fork_handlers:
+            logger.info('Calling child process fork handlers')
+            for fork_handler in self.fork_handlers:
+                fork_handler()
 
         status = FAILED
         expl = ''
@@ -327,6 +329,19 @@ class KeepAliveThread(threading.Thread):
                     logger.warning('Failed pinging scheduler')
 
 
+class ForkHandlerType(object):
+    """
+    Where to call this fork hendler
+
+    * in a child process (Child)
+    * in a master process (Master)
+    * or in both processes (Both)
+    """
+    Child = 1
+    Master = 2
+    Both = 3
+
+
 class Worker(object):
     """
     Worker object communicates with a scheduler.
@@ -336,6 +351,11 @@ class Worker(object):
     * tells the scheduler what it has to do + its dependencies
     * asks for stuff to do (pulls it in a loop and runs it)
     """
+    # Fork handler to be called after fork
+    # in master process
+    _fork_handlers = []
+    # and in child processes
+    _child_fork_handlers = []
 
     def __init__(self, scheduler=None, worker_id=None, worker_processes=1, assistant=False, **kwargs):
         if scheduler is None:
@@ -657,6 +677,10 @@ class Worker(object):
         if self.worker_processes > 1:
             with fork_lock:
                 p.start()
+                if self._fork_handlers:
+                    logger.info("Calling master process fork handlers")
+                    for fork_handler in self._fork_handlers:
+                        fork_handler()
         else:
             # Run in the same process
             p.run()
@@ -670,11 +694,20 @@ class Worker(object):
                 tracking_url=tracking_url,
             )
 
+        if self.worker_processes > 1:
+            # need to call handlers after fork in child process
+            # append default one to update random seed in
+            # child process
+            fork_handlers = self._child_fork_handlers + [lambda: random.seed(
+                (os.getpid(), time.time()))]
+        else:
+            fork_handlers = None
+
         return TaskProcess(
             task, self._id, self._task_result_queue,
-            random_seed=bool(self.worker_processes > 1),
             worker_timeout=self._config.timeout,
             tracking_url_callback=update_tracking_url,
+            fork_handlers=fork_handlers
         )
 
     def _purge_children(self):
@@ -832,3 +865,17 @@ class Worker(object):
             self._handle_next_task()
 
         return self.run_succeeded
+
+    @classmethod
+    def fork_handler(cls, handler_type=ForkHandlerType.Both):
+        """
+        Decorator for adding fork handlers.
+        """
+        def wrapped(callback):
+            if handler_type & ForkHandlerType.Child:
+                cls._child_fork_handlers.append(callback)
+            if handler_type & ForkHandlerType.Master:
+                cls._fork_handlers.append(callback)
+
+            return callback
+        return wrapped
