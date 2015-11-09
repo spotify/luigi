@@ -147,14 +147,28 @@ def send_email_sendgrid(config, sender, subject, message, recipients, image_png)
     client.send(to_send)
 
 
+def _email_disabled():
+    if email_type() == 'none':
+        logger.info("Not sending email when email-type is none")
+        return True
+    elif configuration.get_config().getboolean('email', 'force-send', False):
+        return False
+    elif sys.stdout.isatty():
+        logger.info("Not sending email when running from a tty")
+        return True
+    elif DEBUG:
+        logger.info("Not sending email when running in debug mode")
+    else:
+        return False
+
+
 def send_email(subject, message, sender, recipients, image_png=None):
     config = configuration.get_config()
 
     subject = _prefix(subject)
     if not recipients or recipients == (None,):
         return
-    if (sys.stdout.isatty() or DEBUG) and (not config.getboolean('email', 'force-send', False)):
-        logger.info("Not sending email when running from a tty or in debug mode")
+    if _email_disabled():
         return
 
     # Clean the recipients lists to allow multiple error-email addresses, comma

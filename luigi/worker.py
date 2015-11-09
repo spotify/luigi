@@ -416,6 +416,9 @@ class Worker(object):
         """
         self._keep_alive_thread.stop()
         self._keep_alive_thread.join()
+        for task in self._running_tasks.values():
+            if task.is_alive():
+                task.terminate()
 
     def _generate_worker_info(self):
         # Generate as much info as possible about the worker
@@ -454,6 +457,10 @@ class Worker(object):
         log_msg = "Will not schedule {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task, tb=tb)
         logger.warning(log_msg)
 
+    def _log_dependency_error(self, task, tb):
+        log_msg = "Will not schedule {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task, tb=tb)
+        logger.warning(log_msg)
+
     def _log_unexpected_error(self, task):
         logger.exception("Luigi unexpected framework error while scheduling %s", task)  # needs to be called from within except clause
 
@@ -461,6 +468,13 @@ class Worker(object):
         # like logger.exception but with WARNING level
         subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
         headline = "Will not schedule task or any dependencies due to error in complete() method"
+
+        message = notifications.format_task_error(headline, task, formatted_traceback)
+        notifications.send_error_email(subject, message, task.owner_email)
+
+    def _email_dependency_error(self, task, formatted_traceback):
+        subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
+        headline = "Will not schedule task or any dependencies due to error in deps() method"
 
         message = notifications.format_task_error(headline, task, formatted_traceback)
         notifications.send_error_email(subject, message, task.owner_email)
@@ -560,7 +574,14 @@ class Worker(object):
                            ' this luigi process.', task.task_id)
 
         else:
-            deps = task.deps()
+            try:
+                deps = task.deps()
+            except Exception:
+                formatted_traceback = traceback.format_exc()
+                self.add_succeeded = False
+                self._log_dependency_error(task, formatted_traceback)
+                self._email_dependency_error(task, formatted_traceback)
+                return
             status = PENDING
             runnable = True
 
@@ -614,7 +635,12 @@ class Worker(object):
         if self._stop_requesting_work:
             return None, 0, 0, 0
         logger.debug("Asking scheduler for work...")
-        r = self._scheduler.get_work(worker=self._id, host=self.host, assistant=self._assistant)
+        r = self._scheduler.get_work(
+            worker=self._id,
+            host=self.host,
+            assistant=self._assistant,
+            current_tasks=list(self._running_tasks.keys()),
+        )
         n_pending_tasks = r['n_pending_tasks']
         task_id = r['task_id']
         running_tasks = r['running_tasks']

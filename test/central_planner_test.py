@@ -118,6 +118,28 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.prune()
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
 
+    def test_resend_task(self):
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.add_task(worker=WORKER, task_id='B')
+        for _ in range(10):
+            self.assertEqual('A', self.sch.get_work(worker=WORKER, current_tasks=[])['task_id'])
+        self.assertEqual('B', self.sch.get_work(worker=WORKER, current_tasks=['A'])['task_id'])
+
+    def test_resend_multiple_tasks(self):
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.add_task(worker=WORKER, task_id='B')
+        self.sch.add_task(worker=WORKER, task_id='C')
+
+        # get A and B running
+        self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
+        self.assertEqual('B', self.sch.get_work(worker=WORKER)['task_id'])
+
+        for _ in range(10):
+            self.assertEqual('A', self.sch.get_work(worker=WORKER, current_tasks=[])['task_id'])
+            self.assertEqual('A', self.sch.get_work(worker=WORKER, current_tasks=['B'])['task_id'])
+            self.assertEqual('B', self.sch.get_work(worker=WORKER, current_tasks=['A'])['task_id'])
+            self.assertEqual('C', self.sch.get_work(worker=WORKER, current_tasks=['A', 'B'])['task_id'])
+
     def test_disconnect_running(self):
         # X and Y wants to run A.
         # X starts but does not report back. Y does.
@@ -649,6 +671,60 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(len(self.sch.task_list('DONE', '')), 1)
         self.sch.add_task(worker=WORKER, task_id='A')
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+
+    def test_automatic_re_enable(self):
+        self.sch = CentralPlannerScheduler(disable_failures=2, disable_persist=100)
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+
+        # should be disabled now
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
+
+        # re-enables after 100 seconds
+        self.setTime(101)
+        self.assertEqual(FAILED, self.sch.task_list('', '')['A']['status'])
+
+    def test_automatic_re_enable_with_one_failure_allowed(self):
+        self.sch = CentralPlannerScheduler(disable_failures=1, disable_persist=100)
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+
+        # should be disabled now
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
+
+        # re-enables after 100 seconds
+        self.setTime(101)
+        self.assertEqual(FAILED, self.sch.task_list('', '')['A']['status'])
+
+    def test_no_automatic_re_enable_after_manual_disable(self):
+        self.sch = CentralPlannerScheduler(disable_persist=100)
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A', status=DISABLED)
+
+        # should be disabled now
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
+
+        # should not re-enable after 100 seconds
+        self.setTime(101)
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
+
+    def test_no_automatic_re_enable_after_auto_then_manual_disable(self):
+        self.sch = CentralPlannerScheduler(disable_failures=2, disable_persist=100)
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+
+        # should be disabled now
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
+
+        # should remain disabled once set
+        self.sch.add_task(worker=WORKER, task_id='A', status=DISABLED)
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
+
+        # should not re-enable after 100 seconds
+        self.setTime(101)
+        self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
 
     def test_disable_by_worker(self):
         self.sch.add_task(worker=WORKER, task_id='A', status=DISABLED)

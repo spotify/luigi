@@ -103,7 +103,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
-    @property    
+    @property
     def prune_table(self):
         """
         Override to set equal to the name of the table which is to be pruned.
@@ -141,6 +141,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
+    @property
     def do_truncate_table(self):
         """
         Return True if table should be truncated before copying new data in.
@@ -167,6 +168,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
+    @property
     def queries(self):
         """
         Override to return a list of queries to be executed in order.
@@ -232,7 +234,8 @@ class S3CopyToTable(rdbms.CopyToTable):
             raise Exception("table need to be specified")
 
         path = self.s3_load_path()
-        connection = self.output().connect()
+        output = self.output()
+        connection = output.connect()
         cursor = connection.cursor()
 
         self.init_copy(connection)
@@ -240,7 +243,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         self.post_copy(cursor)
 
         # update marker table
-        self.output().touch(connection)
+        output.touch(connection)
         connection.commit()
 
         # commit and clean up
@@ -270,7 +273,7 @@ class S3CopyToTable(rdbms.CopyToTable):
             user=self.user,
             password=self.password,
             table=self.table,
-            update_id=self.update_id())
+            update_id=self.update_id)
 
     def does_table_exist(self, connection):
         """
@@ -301,7 +304,7 @@ class S3CopyToTable(rdbms.CopyToTable):
             logger.info("Creating table %s", self.table)
             connection.reset()
             self.create_table(connection)
-        elif self.do_truncate_table():
+        elif self.do_truncate_table:
             logger.info("Truncating table %s", self.table)
             self.truncate_table(connection)
         elif self.do_prune():
@@ -313,7 +316,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         Performs post-copy sql - such as cleansing data, inserting into production table (if copied to temp table), etc.
         """
         logger.info('Executing post copy queries')
-        for query in self.queries():
+        for query in self.queries:
             cursor.execute(query)
 
 

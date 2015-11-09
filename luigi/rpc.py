@@ -171,10 +171,15 @@ class RemoteScheduler(Scheduler):
             'tracking_url': tracking_url,
         })
 
-    def get_work(self, worker, host=None, assistant=False):
+    def get_work(self, worker, host=None, assistant=False, current_tasks=None):
         return self._request(
             '/api/get_work',
-            {'worker': worker, 'host': host, 'assistant': assistant})
+            {
+                'worker': worker,
+                'host': host,
+                'assistant': assistant,
+                'current_tasks': current_tasks,
+            })
 
     def graph(self):
         return self._request('/api/graph', {})

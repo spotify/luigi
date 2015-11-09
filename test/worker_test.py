@@ -24,6 +24,7 @@ import signal
 import tempfile
 import threading
 import time
+import psutil
 from helpers import unittest, with_config, skipOnTravis
 
 import luigi.notifications
@@ -341,6 +342,25 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(a.complete())
         self.assertTrue(b.complete())
 
+    def test_gets_missed_work(self):
+        class A(Task):
+            done = False
+
+            def complete(self):
+                return self.done
+
+            def run(self):
+                self.done = True
+
+        a = A()
+        self.assertTrue(self.w.add(a))
+
+        # simulate a missed get_work response
+        self.assertEqual('A()', self.sch.get_work(worker='X')['task_id'])
+
+        self.assertTrue(self.w.run())
+        self.assertTrue(a.complete())
+
     def test_avoid_infinite_reschedule(self):
         class A(Task):
 
@@ -578,15 +598,21 @@ class WorkerTest(unittest.TestCase):
 
         a = A()
 
-        class C(DummyTask):
+        class D(DummyTask):
             pass
+
+        d = D()
+
+        class C(DummyTask):
+            def requires(self):
+                return d
 
         c = C()
 
         class B(DummyTask):
 
             def requires(self):
-                return a, c
+                return c, a
 
         b = B()
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
@@ -595,6 +621,7 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(w.run())
         self.assertFalse(b.has_run)
         self.assertTrue(c.has_run)
+        self.assertTrue(d.has_run)
         self.assertFalse(a.has_run)
         w.stop()
 
@@ -679,8 +706,10 @@ class WorkerPingThreadTests(unittest.TestCase):
         self.assertFalse(w._keep_alive_thread.is_alive())
 
 
-def email_patch(test_func):
+def email_patch(test_func, email_config=None):
     EMAIL_CONFIG = {"core": {"error-email": "not-a-real-email-address-for-test-only"}, "email": {"force-send": "true"}}
+    if email_config is not None:
+        EMAIL_CONFIG.update(email_config)
     emails = []
 
     def mock_send_email(sender, recipients, msg):
@@ -694,6 +723,10 @@ def email_patch(test_func):
         test_func(self, emails)
 
     return run_test
+
+
+def custom_email_patch(config):
+    return functools.partial(email_patch, email_config=config)
 
 
 class WorkerEmailTest(unittest.TestCase):
@@ -745,6 +778,20 @@ class WorkerEmailTest(unittest.TestCase):
         self.assertFalse(a.has_run)
 
     @email_patch
+    def test_requires_error(self, emails):
+        class A(DummyTask):
+
+            def requires(self):
+                raise Exception("b0rk")
+
+        a = A()
+        self.assertEqual(emails, [])
+        self.worker.add(a)
+        self.assertTrue(emails[0].find("Luigi: %s failed scheduling" % (a,)) != -1)
+        self.worker.run()
+        self.assertFalse(a.has_run)
+
+    @email_patch
     def test_complete_return_value(self, emails):
         class A(DummyTask):
 
@@ -786,6 +833,16 @@ class WorkerEmailTest(unittest.TestCase):
         self.worker.run()
         self.assertEqual(emails, [])
         self.assertTrue(a.complete())
+
+    @custom_email_patch({"core": {"error-email": "not-a-real-email-address-for-test-only", 'email-type': 'none'}})
+    def test_disable_emails(self, emails):
+        class A(luigi.Task):
+
+            def complete(self):
+                raise Exception("b0rk")
+
+        self.worker.add(A())
+        self.assertEqual(emails, [])
 
 
 class RaiseSystemExit(luigi.Task):
@@ -864,6 +921,23 @@ class MultipleWorkersTest(unittest.TestCase):
         w._handle_next_task()
         w._handle_next_task()
         w._handle_next_task()
+
+    def test_stop_worker_kills_subprocesses(self):
+        w = Worker(worker_processes=2)
+        hung_task = HungWorker()
+        w.add(hung_task)
+
+        w._run_task(hung_task.task_id)
+        pids = [p.pid for p in w._running_tasks.values()]
+        self.assertEqual(1, len(pids))
+        pid = pids[0]
+
+        def is_running():
+            return pid in {p.pid for p in psutil.Process().children()}
+
+        self.assertTrue(is_running())
+        w.stop()
+        self.assertFalse(is_running())
 
     def test_time_out_hung_worker(self):
         luigi.build([HungWorker(0.1)], workers=2, local_scheduler=True)

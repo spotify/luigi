@@ -64,6 +64,16 @@ class InterfaceTest(LuigiTestCase):
 
         self.assertFalse(self._run_interface())
 
+    def test_interface_stops_worker_on_exception(self):
+        self.worker = Worker()
+        self.worker_scheduler_factory.create_worker = Mock(return_value=self.worker)
+        self.worker.add = Mock(side_effect=[True, True])
+        self.worker.run = Mock(side_effect=AttributeError)
+        self.worker.stop = Mock()
+
+        self.assertRaises(AttributeError, self._run_interface)
+        self.worker.stop.assert_called_once_with()
+
     def test_just_run_main_task_cls(self):
         class MyTestTask(luigi.Task):
             pass

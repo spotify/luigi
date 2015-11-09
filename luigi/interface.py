@@ -190,8 +190,10 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     logger = logging.getLogger('luigi-interface')
     logger.info('Done scheduling tasks')
     if env_params.workers != 0:
-        success &= w.run()
-    w.stop()
+        try:
+            success &= w.run()
+        finally:
+            w.stop()
     logger.info(execution_summary.summary(w))
     return dict(success=success, worker=w)
 

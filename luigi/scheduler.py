@@ -402,10 +402,10 @@ class SimpleTaskState(object):
                 self.re_enable(task)
 
             # don't allow workers to override a scheduler disable
-            elif task.scheduler_disable_time is not None:
+            elif task.scheduler_disable_time is not None and new_status != DISABLED:
                 return
 
-        if new_status == FAILED and task.can_disable():
+        if new_status == FAILED and task.can_disable() and task.status != DISABLED:
             task.add_failure()
             if task.has_excessive_failures():
                 task.scheduler_disable_time = time.time()
@@ -447,7 +447,7 @@ class SimpleTaskState(object):
                 task.remove = time.time() + config.remove_delay
 
         # Re-enable task after the disable time expires
-        if task.status == DISABLED and task.scheduler_disable_time:
+        if task.status == DISABLED and task.scheduler_disable_time is not None:
             if time.time() - fix_time(task.scheduler_disable_time) > config.disable_persist:
                 self.re_enable(task, config)
 
@@ -712,7 +712,7 @@ class CentralPlannerScheduler(Scheduler):
     def _retry_time(self, task, config):
         return time.time() + config.retry_delay
 
-    def get_work(self, host=None, assistant=False, **kwargs):
+    def get_work(self, host=None, assistant=False, current_tasks=None, **kwargs):
         # TODO: remove any expired nodes
 
         # Algo: iterate over all nodes, find the highest priority node no dependencies and available
@@ -734,7 +734,14 @@ class CentralPlannerScheduler(Scheduler):
         self.update(worker_id, {'host': host}, get_work=True)
         if assistant:
             self.add_worker(worker_id, [('assistant', assistant)])
+
         best_task = None
+        if current_tasks is not None:
+            ct_set = set(current_tasks)
+            for task in sorted(self._state.get_running_tasks(), key=self._rank):
+                if task.worker_running == worker_id and task.id not in ct_set:
+                    best_task = task
+
         locally_pending_tasks = 0
         running_tasks = []
         upstream_table = {}

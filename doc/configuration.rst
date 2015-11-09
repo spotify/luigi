@@ -115,14 +115,19 @@ email-sender
   Default value: luigi-client@<server_name>
 
 email-type
-  Type of e-mail to send. Valid values are "plain" and "html". When set
-  to html, tracebacks are wrapped in <pre> tags to get fixed-width font.
+  Type of e-mail to send. Valid values are "plain", "html" and "none".
+  When set to html, tracebacks are wrapped in <pre> tags to get fixed-
+  width font.
+
+  New in version 2.1.0: When set to none, no e-mails will be sent.
+
   Default value is plain.
 
 error-email
   Recipient of all error e-mails. If this is not set, no error e-mails
-  are sent when luigi crashes. If luigi is run from the command line, no
-  e-mails will be sent unless output is redirected to a file.
+  are sent when luigi crashes unless the crashed job has owners set. If
+  luigi is run from the command line, no e-mails will be sent unless
+  output is redirected to a file.
 
 hdfs-tmp-dir
   Base directory in which to store temporary files on hdfs. Defaults to

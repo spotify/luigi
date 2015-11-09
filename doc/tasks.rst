@@ -55,7 +55,7 @@ Task.output
 ~~~~~~~~~~~
 
 The :func:`~luigi.task.Task.output` method returns one or more :class:`~luigi.target.Target` objects.
-Similarly to requires, can return wrap them up in any way that's convenient for you.
+Similarly to requires, you can return them wrapped up in any way that's convenient for you.
 However we recommend that any :class:`~luigi.task.Task` only return one single :class:`~luigi.target.Target` in output.
 If multiple outputs are returned,
 atomicity will be lost unless the :class:`~luigi.task.Task` itself can ensure that each :class:`~luigi.target.Target` is atomically created.
@@ -108,7 +108,7 @@ An example:
 Task.input
 ~~~~~~~~~~
 
-As seen in the example above, :class:`~luigi.task.Task` is a wrapper around Task.requires_ that
+As seen in the example above, :func:`~luigi.task.Task.input` is a wrapper around Task.requires_ that
 returns the corresponding Target objects instead of Task objects.
 Anything returned by Task.requires_ will be transformed, including lists,
 nested dicts, etc.
@@ -191,7 +191,7 @@ But I just want to run a Hadoop job?
 
 The Hadoop code is integrated in the rest of the Luigi code because
 we really believe almost all Hadoop jobs benefit from being part of some sort of workflow.
-However, in theory, nothing stops you from using the :class:`~luigi.contrib.hadoop.JobTask` class (and also :class:`~luigi.contrib.hdfs.HdfsTarget`)
+However, in theory, nothing stops you from using the :class:`~luigi.contrib.hadoop.JobTask` class (and also :class:`~luigi.contrib.hdfs.target.HdfsTarget`)
 without using the rest of Luigi.
 You can simply run it manually using
 
@@ -199,11 +199,11 @@ You can simply run it manually using
 
     MyJobTask('abc', 123).run()
 
-You can use the hdfs.HdfsTarget class anywhere by just instantiating it:
+You can use the hdfs.target.HdfsTarget class anywhere by just instantiating it:
 
 .. code:: python
 
-    t = luigi.contrib.hdfs.HdfsTarget('/tmp/test.gz', format=format.Gzip)
+    t = luigi.contrib.hdfs.target.HdfsTarget('/tmp/test.gz', format=format.Gzip)
     f = t.open('w')
     # ...
     f.close() # needed
@@ -214,7 +214,7 @@ Task priority
 ~~~~~~~~~~~~~
 
 The scheduler decides which task to run next from
-the set of all task that have all their dependencies met.
+the set of all tasks that have all their dependencies met.
 By default, this choice is pretty arbitrary,
 which is fine for most workflows and situations.
 
