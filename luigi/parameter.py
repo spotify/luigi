@@ -451,12 +451,11 @@ class DateIntervalParameter(Parameter):
     """
     A Parameter whose value is a :py:class:`~luigi.date_interval.DateInterval`.
 
-    Date Intervals are specified using the ISO 8601 `Time Interval
-    <http://en.wikipedia.org/wiki/ISO_8601#Time_intervals>`_ notation.
+    Date Intervals are specified using the ISO 8601 date notation for dates
+    (eg. "2015-11-04"), months (eg. "2015-05"), years (eg. "2015"), or weeks
+    (eg. "2015-W35"). In addition, it also supports arbitrary date intervals
+    provided as two dates separated with a dash (eg. "2015-11-04-2015-12-04").
     """
-    # Class that maps to/from dates using ISO 8601 standard
-    # Also gives some helpful interval algebra
-
     def parse(self, s):
         """
         Parses a :py:class:`~luigi.date_interval.DateInterval` from the input.
