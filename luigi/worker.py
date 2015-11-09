@@ -129,7 +129,7 @@ class TaskProcess(multiprocessing.Process):
     def run(self):
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task.task_id)
 
-        if self.fork_handler:
+        if self.fork_handlers:
             logger.info('Calling child process fork handlers')
         for fork_handler in self.fork_handlers:
             fork_handler()
@@ -867,7 +867,7 @@ class Worker(object):
         return self.run_succeeded
 
     @classmethod
-    def fork_handler(cls, handler_type):
+    def fork_handler(cls, handler_type=ForkHandlerType.Both):
         """
         Decorator for adding fork handlers.
         """
