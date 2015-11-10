@@ -239,11 +239,9 @@ class DequeQueue(collections.deque):
     """
 
     def put(self, obj, block=None, timeout=None):
-        del block, timeout
         return self.append(obj)
 
     def get(self, block=None, timeout=None):
-        del block, timeout
         return self.pop()
 
 
