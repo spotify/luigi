@@ -238,10 +238,12 @@ class DequeQueue(collections.deque):
     deque wrapper implementing the Queue interface.
     """
 
-    def put(self, *args, **kwargs):
-        return self.append(*args)
+    def put(self, obj, block=None, timeout=None):
+        del block, timeout
+        return self.append(obj)
 
-    def get(self, **kwargs):
+    def get(self, block=None, timeout=None):
+        del block, timeout
         return self.pop()
 
 
