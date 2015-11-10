@@ -63,8 +63,8 @@ There are several pieces of this snippet that deserve more explanation.
    :class:`~luigi.task.Task` you don't have to implement the ``run``
    method. For instance, for the :class:`~luigi.contrib.hadoop.JobTask`
    subclass you implement a *mapper* and *reducer* instead.
--  :class:`~luigi.contrib.hdfs.HdfsTarget` is a built in class that makes it
-   easy to read/write from/to HDFS. It also makes all file operations
+-  :class:`~luigi.LocalTarget` is a built in class that makes it
+   easy to read/write from/to the local filesystem. It also makes all file operations
    atomic, which is nice in case your script crashes for any reason.
 
 Running this Locally

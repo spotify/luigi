@@ -13,7 +13,7 @@ help you with job parallelization.
 For running tasks periodically,
 the easiest thing to do is to trigger a Python script from cron or
 from a continuously running process.
-There is no central process that automatically triggers job.
+There is no central process that automatically triggers jobs.
 This model may seem limited, but
 we believe that it makes things far more intuitive and easy to understand.
 
@@ -53,7 +53,7 @@ To enable the task history,
 specify ``record_task_history = True`` in the
 ``[scheduler]`` section of ``luigi.cfg`` and
 specify ``db_connection`` under ``[task_history]``.
-The ``db_connection`` string is to used to configure the `SQLAlchemy engine
+The ``db_connection`` string is used to configure the `SQLAlchemy engine
 <http://docs.sqlalchemy.org/en/rel_0_9/core/engines.html>`_.
 When starting up,
 ``luigid`` will create all the necessary tables using `create_all
