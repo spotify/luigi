@@ -59,9 +59,8 @@ def generate_email(sender, subject, message, recipients, image_png):
     msg_root.attach(msg_text)
 
     if image_png:
-        fp = open(image_png, 'rb')
-        msg_image = email.mime.image.MIMEImage(fp.read(), 'png')
-        fp.close()
+        with open(image_png, 'rb') as fp:
+            msg_image = email.mime.image.MIMEImage(fp.read(), 'png')
         msg_root.attach(msg_image)
 
     msg_root['Subject'] = subject
@@ -163,7 +162,16 @@ def _email_disabled():
 
 
 def send_email(subject, message, sender, recipients, image_png=None):
+    """
+    Decides whether to send notification. Notification is cancelled if there are
+    no recipients or if stdout is onto tty or if in debug mode.
+
+    Dispatches on config value email.type.  Default is 'smtp'.
+    """
     config = configuration.get_config()
+    notifiers = {'ses': send_email_ses,
+                 'sendgrid': send_email_sendgrid,
+                 'smtp': send_email_smtp}
 
     subject = _prefix(subject)
     if not recipients or recipients == (None,):
@@ -180,13 +188,10 @@ def send_email(subject, message, sender, recipients, image_png=None):
     # Replace original recipients with the clean list
     recipients = recipients_tmp
 
+    # Get appropriate sender and call it to send the notification
     email_sender_type = config.get('email', 'type', None)
-    if email_sender_type == "ses":
-        send_email_ses(config, sender, subject, message, recipients, image_png)
-    elif email_sender_type == "sendgrid":
-        send_email_sendgrid(config, sender, subject, message, recipients, image_png)
-    else:
-        send_email_smtp(config, sender, subject, message, recipients, image_png)
+    email_sender = notifiers.get(email_sender_type, send_email_smtp)
+    email_sender(config, sender, subject, message, recipients, image_png)
 
 
 def _email_recipients(additional_recipients=None):
