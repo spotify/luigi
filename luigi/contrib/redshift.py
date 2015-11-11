@@ -103,7 +103,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
-    @property    
+    @property
     def prune_table(self):
         """
         Override to set equal to the name of the table which is to be pruned.
