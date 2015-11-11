@@ -706,8 +706,10 @@ class WorkerPingThreadTests(unittest.TestCase):
         self.assertFalse(w._keep_alive_thread.is_alive())
 
 
-def email_patch(test_func):
+def email_patch(test_func, email_config=None):
     EMAIL_CONFIG = {"core": {"error-email": "not-a-real-email-address-for-test-only"}, "email": {"force-send": "true"}}
+    if email_config is not None:
+        EMAIL_CONFIG.update(email_config)
     emails = []
 
     def mock_send_email(sender, recipients, msg):
@@ -721,6 +723,10 @@ def email_patch(test_func):
         test_func(self, emails)
 
     return run_test
+
+
+def custom_email_patch(config):
+    return functools.partial(email_patch, email_config=config)
 
 
 class WorkerEmailTest(unittest.TestCase):
@@ -827,6 +833,16 @@ class WorkerEmailTest(unittest.TestCase):
         self.worker.run()
         self.assertEqual(emails, [])
         self.assertTrue(a.complete())
+
+    @custom_email_patch({"core": {"error-email": "not-a-real-email-address-for-test-only", 'email-type': 'none'}})
+    def test_disable_emails(self, emails):
+        class A(luigi.Task):
+
+            def complete(self):
+                raise Exception("b0rk")
+
+        self.worker.add(A())
+        self.assertEqual(emails, [])
 
 
 class RaiseSystemExit(luigi.Task):
