@@ -292,6 +292,56 @@ class TestSESEmail(unittest.TestCase, NotificationFixture):
                                .send_raw_email.called)
 
 
+class TestSNSNotification(unittest.TestCase, NotificationFixture):
+    """
+    Tests sending email through AWS SNS.
+    """
+
+    def setUp(self):
+        sys.modules['boto3'] = mock.MagicMock()
+        import boto3  # NOQA  silent flake8
+
+    def tearDown(self):
+        del sys.modules['boto3']
+
+    @with_config({})
+    def test_sends_sns_email(self):
+        """
+        Call notificaions.send_email_sns with fixture parameters
+        and check that boto3 is properly called.
+        """
+
+        with mock.patch('boto3.resource') as res:
+            notifications.send_email_sns(configuration.get_config(),
+                                         *self.notification_args)
+
+            SNS = res.return_value
+            SNS.Topic.assert_called_once_with(self.recipients[0])
+            SNS.Topic.return_value.publish.assert_called_once_with(
+                Subject=self.subject, Message=self.message)
+
+    @with_config({})
+    def test_sns_subject_is_shortened(self):
+        """
+        Call notificaions.send_email_sns with too long Subject (more than 100 chars)
+        and check that it is cut to lenght of 100 chars.
+        """
+
+        long_subject = 'Luigi: SanityCheck(regexPattern=aligned-source\\|data-not-older\\|source-chunks-compl,'\
+                       'mailFailure=False, mongodb=mongodb://localhost/stats) FAILED'
+
+        with mock.patch('boto3.resource') as res:
+            notifications.send_email_sns(configuration.get_config(),
+                                         self.sender, long_subject, self.message,
+                                         self.recipients, self.image_png)
+
+            SNS = res.return_value
+            SNS.Topic.assert_called_once_with(self.recipients[0])
+            called_subj = SNS.Topic.return_value.publish.call_args[1]['Subject']
+            self.assertTrue(len(called_subj) <= 100,
+                            "Subject can be max 100 chars long! Found {}.".format(len(called_subj)))
+
+
 class Test_Notification_Dispatcher(unittest.TestCase, NotificationFixture):
     """
     Test dispatching of notifications on configuration values.
@@ -329,3 +379,8 @@ class Test_Notification_Dispatcher(unittest.TestCase, NotificationFixture):
                             'type': 'sendgrid'}})
     def test_sendgrid(self):
         return self.check_dispatcher('send_email_sendgrid')
+
+    @with_config({'email': {'force-send': 'True',
+                            'type': 'sns'}})
+    def test_sns(self):
+        return self.check_dispatcher('send_email_sns')

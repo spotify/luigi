@@ -161,6 +161,33 @@ def _email_disabled():
         return False
 
 
+def send_email_sns(config, sender, subject, message, topic_ARN, image_png):
+    """
+    Sends notification through AWS SNS. Takes Topic ARN from recipients.
+
+    Does not handle access keys.  Use either
+      1/ configuration file
+      2/ EC2 instance profile
+
+    See also http://boto3.readthedocs.org/en/latest/guide/configuration.html.
+    """
+    from boto3 import resource as boto3_resource
+
+    sns = boto3_resource('sns')
+    topic = sns.Topic(topic_ARN[0])
+
+    # Subject is max 100 chars
+    if len(subject) > 100:
+        subject = subject[0:48] + '...' + subject[-49:]
+
+    response = topic.publish(Subject=subject, Message=message)
+
+    logger.debug(("Message sent to SNS.\nMessageId: {},\nRequestId: {},\n"
+                 "HTTPSStatusCode: {}").format(response['MessageId'],
+                                               response['ResponseMetadata']['RequestId'],
+                                               response['ResponseMetadata']['HTTPStatusCode']))
+
+
 def send_email(subject, message, sender, recipients, image_png=None):
     """
     Decides whether to send notification. Notification is cancelled if there are
@@ -171,7 +198,8 @@ def send_email(subject, message, sender, recipients, image_png=None):
     config = configuration.get_config()
     notifiers = {'ses': send_email_ses,
                  'sendgrid': send_email_sendgrid,
-                 'smtp': send_email_smtp}
+                 'smtp': send_email_smtp,
+                 'sns': send_email_sns}
 
     subject = _prefix(subject)
     if not recipients or recipients == (None,):
