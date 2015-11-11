@@ -139,12 +139,10 @@ class TestS3CopyToTable(unittest.TestCase):
         mock_redshift_target.assert_called_once_with(
             database=task.database,
             host=task.host,
-            update_id='DummyS3CopyToTable(table=stage_dummy_table)',
+            update_id='DummyS3CopyToTempTable(table=stage_dummy_table)',
             user=task.user,
             table=task.table,
             password=task.password,
-            table_type='TEMP',
-            sql=task.sql,
         )
 
         # Check if the `S3CopyToTable.s3_load_path` class attribute was
@@ -154,7 +152,7 @@ class TestS3CopyToTable(unittest.TestCase):
         mock_copy.assert_called_once_with(mock_cursor, task.s3_load_path())
 
         # Check the SQL query in `S3CopyToTable.does_table_exist`. # temp table
-        mock_cursor.execute.assert_called_once_with(
+        mock_cursor.execute.assert_any_call(
             "select 1 as table_exists "
             "from pg_table_def "
             "where tablename = %s limit 1",

@@ -232,7 +232,8 @@ class S3CopyToTable(rdbms.CopyToTable):
             raise Exception("table need to be specified")
 
         path = self.s3_load_path()
-        connection = self.output().connect()
+        output = self.output()
+        connection = output.connect()
         cursor = connection.cursor()
 
         self.init_copy(connection)
@@ -240,7 +241,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         self.post_copy(cursor)
 
         # update marker table
-        self.output().touch(connection)
+        output.touch(connection)
         connection.commit()
 
         # commit and clean up
