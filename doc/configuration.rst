@@ -283,19 +283,8 @@ type
   services of Amazon web services. SendGrid is an email delivery service.
   The default value is "smtp".
 
-In order to send messages through Amazon SNS set up your AWS config files or
-run luigi on an EC2 instance with proper instance profile.
-
-These parameters control sending error e-mails through Amazon SES.
-
-AWS_ACCESS_KEY
-  Your AWS access key
-
-AWS_SECRET_KEY
-  Your AWS secret key
-
-region
-  Your AWS region. Defaults to us-east-1.
+In order to send messages through Amazon SNS or SES set up your AWS config
+files or run luigi on an EC2 instance with proper instance profile.
 
 These parameters control sending error e-mails through SendGrid.
 

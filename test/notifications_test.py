@@ -259,37 +259,32 @@ class TestSESEmail(unittest.TestCase, NotificationFixture):
     """
 
     def setUp(self):
-        sys.modules['boto'] = mock.MagicMock()
-        import boto      # NOQA  silent flake8
-
-        sys.modules['boto.ses'] = boto.ses = mock.MagicMock()
-        import boto.ses  # NOQA  silent flake8
+        sys.modules['boto3'] = mock.MagicMock()
+        import boto3  # NOQA  silent flake8
 
     def tearDown(self):
-        del sys.modules['boto.ses']
-        del sys.modules['boto']
+        del sys.modules['boto3']
 
-
-    @with_config({"email": {"region": "us-east-1",
-                            "AWS_ACCESS_KEY": "access",
-                            "AWS_SECRET_KEY": "secret"}})
+    @with_config({})
     def test_sends_ses_email(self):
         """
         Call notificaions.send_email_ses with fixture parameters
         and check that boto is properly called.
         """
 
-        with mock.patch('boto.ses') as SES:
-            notifications.send_email_ses(configuration.get_config(),
-                                         *self.notification_args)
+        with mock.patch('boto3.client') as boto_client:
+            with mock.patch('luigi.notifications.generate_email') as generate_email:
+                generate_email.return_value\
+                    .as_string.return_value = self.mocked_email_msg
 
-            SES.connect_to_region.assert_called_once_with(
-                "us-east-1",
-                aws_access_key_id="access",
-                aws_secret_access_key="secret")
+                notifications.send_email_ses(configuration.get_config(),
+                                             *self.notification_args)
 
-            self.assertTrue(SES.connect_to_region.return_value
-                               .send_raw_email.called)
+                SES = boto_client.return_value
+                SES.send_raw_email.assert_called_once_with(
+                    Source=self.sender,
+                    Destinations=self.recipients,
+                    RawMessage={'Data': self.mocked_email_msg})
 
 
 class TestSNSNotification(unittest.TestCase, NotificationFixture):
