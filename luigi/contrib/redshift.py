@@ -141,6 +141,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
+    @property
     def do_truncate_table(self):
         """
         Return True if table should be truncated before copying new data in.
@@ -167,6 +168,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
+    @property
     def queries(self):
         """
         Override to return a list of queries to be executed in order.
@@ -271,7 +273,7 @@ class S3CopyToTable(rdbms.CopyToTable):
             user=self.user,
             password=self.password,
             table=self.table,
-            update_id=self.update_id())
+            update_id=self.update_id)
 
     def does_table_exist(self, connection):
         """
@@ -302,7 +304,7 @@ class S3CopyToTable(rdbms.CopyToTable):
             logger.info("Creating table %s", self.table)
             connection.reset()
             self.create_table(connection)
-        elif self.do_truncate_table():
+        elif self.do_truncate_table:
             logger.info("Truncating table %s", self.table)
             self.truncate_table(connection)
         elif self.do_prune():
@@ -314,7 +316,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         Performs post-copy sql - such as cleansing data, inserting into production table (if copied to temp table), etc.
         """
         logger.info('Executing post copy queries')
-        for query in self.queries():
+        for query in self.queries:
             cursor.execute(query)
 
 
@@ -471,7 +473,7 @@ class KillOpenRedshiftSessions(luigi.Task):
             user=self.user,
             password=self.password,
             table=self.__class__.__name__,
-            update_id=self.update_id())
+            update_id=self.update_id)
 
     def run(self):
         """
