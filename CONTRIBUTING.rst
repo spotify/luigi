@@ -18,6 +18,9 @@ then run one of the tox commands below.
     # You can also test particular files for even faster iterations
     tox -e py27-nonhdfs test/rpc_test.py
 
+    # The visualiser tests require phantomjs to be installed on your path
+    tox -e visualiser
+
     # And some of the others involve downloading and running Hadoop:
     tox -e py33-cdh
     tox -e py34-hdp

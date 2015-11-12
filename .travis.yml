@@ -28,6 +28,7 @@ env:
     - TOXENV=pypy-scheduler
     - TOXENV=py27-gcloud
     - TOXENV=py27-postgres
+    - TOXENV=visualiser
 
 sudo: false
 
