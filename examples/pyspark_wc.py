@@ -73,7 +73,7 @@ class PySparkWordCount(SparkSubmitTask):
     """
     driver_memory = '2g'
     executor_memory = '3g'
-    total_executor_cores = luigi.IntParameter(default=100)
+    total_executor_cores = luigi.IntParameter(default=100, significant=False)
 
     name = "PySpark Word Count"
     app = 'wordcount.py'
