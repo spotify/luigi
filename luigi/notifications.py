@@ -135,7 +135,7 @@ def send_email_ses(config, sender, subject, message, recipients, image_png):
                                      Destinations=recipients,
                                      RawMessage={'Data': msg_root.as_string()})
 
-    logger.debug(("Message sent to SNS.\nMessageId: {},\nRequestId: {},\n"
+    logger.debug(("Message sent to SES.\nMessageId: {},\nRequestId: {},\n"
                  "HTTPSStatusCode: {}").format(response['MessageId'],
                                                response['ResponseMetadata']['RequestId'],
                                                response['ResponseMetadata']['HTTPStatusCode']))
