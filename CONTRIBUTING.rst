@@ -10,11 +10,11 @@ then run one of the tox commands below.
 
 .. code:: bash
 
-    # These commands are pretty fast and will tell if you if you've
+    # These commands are pretty fast and will tell if you've
     # broken something major:
     tox -e flake8
     tox -e py27-nonhdfs
-    
+
     # You can also test particular files for even faster iterations
     tox -e py27-nonhdfs test/rpc_test.py
 
