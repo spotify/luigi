@@ -557,3 +557,9 @@ class TaskParameter(Parameter):
         Parse a task_famly using the :class:`~luigi.task_register.Register`
         """
         return task_register.Register.get_task_cls(input)
+
+    def serialize(self, cls):
+        """
+        Converts the :py:class:`luigi.task.Task` (sub) class to its family name.
+        """
+        return cls.task_family

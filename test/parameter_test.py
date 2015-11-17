@@ -677,7 +677,8 @@ class TestTaskParameter(LuigiTestCase):
 
         # So I first thought this "should" work, but actually it should not,
         # because it should not need to parse values known at run-time
-        self.assertNotEqual(MetaTask(a="mynamespace.MetaTask").a, MetaTask)
+        self.assertRaises(AttributeError,
+                          lambda: MetaTask(a="mynamespace.MetaTask"))
 
         # But is should be able to parse command line arguments
         self.assertRaises(luigi.task_register.TaskClassNotFoundException,
@@ -688,6 +689,35 @@ class TestTaskParameter(LuigiTestCase):
         self.assertEqual(MetaTask.saved_value, MetaTask)
         self.assertTrue(self.run_locally_split('mynamespace.MetaTask --a other_namespace.OtherTask'))
         self.assertEqual(MetaTask.saved_value, OtherTask)
+
+    def testSerialize(self):
+
+        class OtherTask(luigi.Task):
+
+            def complete(self):
+                return True
+
+        class DepTask(luigi.Task):
+
+            dep = luigi.TaskParameter()
+            ran = False
+
+            def complete(self):
+                return self.__class__.ran
+
+            def requires(self):
+                return self.dep()
+
+            def run(self):
+                self.__class__.ran = True
+
+        class MainTask(luigi.Task):
+
+            def run(self):
+                yield DepTask(dep=OtherTask)
+
+        # OtherTask is serialized because it is used as an argument for DepTask.
+        self.assertTrue(self.run_locally(['MainTask']))
 
 
 class NewStyleParameters822Test(LuigiTestCase):
