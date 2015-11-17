@@ -572,6 +572,9 @@ deploy-mode
 jars
     Comma-separated list of local jars to include on the driver and executor classpaths. Default: Spark default
 
+packages
+    Comma-separated list of packages to link to on the driver and executors
+
 py-files
     Comma-separated list of .zip, .egg, or .py files to place on the PYTHONPATH for Python apps. Default: Spark default
 
