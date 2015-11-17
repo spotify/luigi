@@ -27,8 +27,10 @@ import os
 import luigi
 from luigi.contrib import bigquery
 
+from helpers import unittest
 from contrib import gcs_test
 from nose.plugins.attrib import attr
+from mock import MagicMock
 
 PROJECT_ID = gcs_test.PROJECT_ID
 DATASET_ID = os.environ.get('BQ_TEST_DATASET_ID', 'luigi_tests')
@@ -36,7 +38,7 @@ DATASET_ID = os.environ.get('BQ_TEST_DATASET_ID', 'luigi_tests')
 
 @attr('gcloud')
 class TestLoadTask(bigquery.BigqueryLoadTask):
-    _BIGQUERY_CLIENT = None
+    client = None
 
     source = luigi.Parameter()
     table = luigi.Parameter()
@@ -53,19 +55,18 @@ class TestLoadTask(bigquery.BigqueryLoadTask):
 
     def output(self):
         return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table,
-                                       client=self._BIGQUERY_CLIENT)
+                                       client=self.client)
 
 
 @attr('gcloud')
 class TestRunQueryTask(bigquery.BigqueryRunQueryTask):
-    _BIGQUERY_CLIENT = None
-
+    client = None
     query = ''' SELECT 'hello' as field1, 2 as field2 '''
     table = luigi.Parameter()
 
     def output(self):
         return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table,
-                                       client=self._BIGQUERY_CLIENT)
+                                       client=self.client)
 
 
 @attr('gcloud')
@@ -124,3 +125,16 @@ class BigqueryTest(gcs_test._GCSBaseTestCase):
         task.run()
 
         self.assertTrue(self.bq_client.table_exists(self.table))
+
+
+class BulkCompleteTest(unittest.TestCase):
+
+    def test_bulk_complete(self):
+        parameters = ['table1', 'table2']
+
+        client = MagicMock()
+        client.list_tables.return_value = ['table2', 'table3']
+        TestRunQueryTask.client = client
+
+        complete = list(TestRunQueryTask.bulk_complete(parameters))
+        self.assertEquals(complete, ['table2'])
