@@ -181,7 +181,8 @@ class BigqueryClient(object):
            :type project_id: str
         """
 
-        request = self.client.datasets().list(projectId=project_id)
+        request = self.client.datasets().list(projectId=project_id,
+                                              maxResults=1000)
         response = request.execute()
 
         while response is not None:
@@ -202,7 +203,8 @@ class BigqueryClient(object):
         """
 
         request = self.client.tables().list(projectId=dataset.project_id,
-                                            datasetId=dataset.dataset_id)
+                                            datasetId=dataset.dataset_id,
+                                            maxResults=1000)
         response = request.execute()
 
         while response is not None:
