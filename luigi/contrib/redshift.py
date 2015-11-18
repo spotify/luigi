@@ -69,7 +69,7 @@ class S3CopyToTable(rdbms.CopyToTable):
       * `s3_load_path`.
     """
 
-    @abc.abstractproperty
+    @abc.abstractmethod
     def s3_load_path(self):
         """
         Override to return the load path.
