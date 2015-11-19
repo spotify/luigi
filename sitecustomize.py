@@ -31,10 +31,10 @@ def patch_process_for_coverage():
                     cov.stop()
                     cov.save()
 
-    if sys.version_info >= (3, 4):
-        klass._bootstrap = ProcessWithCoverage._bootstrap
-    else:
-        multiprocessing.Process = ProcessWithCoverage
+        if sys.version_info >= (3, 4):
+            klass._bootstrap = ProcessWithCoverage._bootstrap
+        else:
+            multiprocessing.Process = ProcessWithCoverage
 
 
 if os.getenv('FULL_COVERAGE', 'false') == 'true':
