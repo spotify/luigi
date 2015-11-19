@@ -39,11 +39,7 @@ class RemoteSchedulerTest(unittest.TestCase):
                     s._fetch(suffix, '{}')
                     fetcher.fetch.assert_called_once_with('http://zorg.com/api/123', '{}', 42)
 
-    def test_retry_rpc_method(self):
-        """
-        Tests that a call to a RPC method is re-tried 3 times.
-        """
-
+    def get_work(self, fetcher_side_effect):
         class ShorterWaitRemoteScheduler(luigi.rpc.RemoteScheduler):
             """
             A RemoteScheduler which waits shorter than usual before retrying (to speed up tests).
@@ -56,8 +52,40 @@ class RemoteSchedulerTest(unittest.TestCase):
 
         with mock.patch.object(scheduler, '_fetcher') as fetcher:
             fetcher.raises = socket.timeout
-            fetcher.fetch.side_effect = [socket.timeout, socket.timeout, '{"response":{}}']
-            self.assertEqual(scheduler.get_work("fake_worker"), {})
+            fetcher.fetch.side_effect = fetcher_side_effect
+            return scheduler.get_work("fake_worker")
+
+    def test_retry_rpc_method(self):
+        """
+        Tests that a call to a RPC method is re-tried 3 times.
+        """
+
+        fetch_results = [socket.timeout, socket.timeout, '{"response":{}}']
+        self.assertEqual({}, self.get_work(fetch_results))
+
+    def test_retry_rpc_limited(self):
+        """
+        Tests that a call to an RPC method fails after the third attempt
+        """
+
+        fetch_results = [socket.timeout, socket.timeout, socket.timeout]
+        self.assertRaises(luigi.rpc.RPCError, self.get_work, fetch_results)
+
+    def test_get_work_retries_on_null(self):
+        """
+        Tests that get_work will retry if the response is null
+        """
+
+        fetch_results = ['{"response": null}', '{"response": {"pass": true}}']
+        self.assertEqual({'pass': True}, self.get_work(fetch_results))
+
+    def test_get_work_retries_on_null_limited(self):
+        """
+        Tests that get_work will give up after the third null response
+        """
+
+        fetch_results = ['{"response": null}'] * 3 + ['{"response": {}}']
+        self.assertRaises(luigi.rpc.RPCError, self.get_work, fetch_results)
 
 
 class RPCTest(central_planner_test.CentralPlannerTest, ServerTestBase):
