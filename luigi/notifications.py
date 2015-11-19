@@ -59,9 +59,8 @@ def generate_email(sender, subject, message, recipients, image_png):
     msg_root.attach(msg_text)
 
     if image_png:
-        fp = open(image_png, 'rb')
-        msg_image = email.mime.image.MIMEImage(fp.read(), 'png')
-        fp.close()
+        with open(image_png, 'rb') as fp:
+            msg_image = email.mime.image.MIMEImage(fp.read(), 'png')
         msg_root.attach(msg_image)
 
     msg_root['Subject'] = subject
@@ -118,14 +117,28 @@ def send_email_smtp(config, sender, subject, message, recipients, image_png):
 
 
 def send_email_ses(config, sender, subject, message, recipients, image_png):
-    import boto.ses
-    con = boto.ses.connect_to_region(config.get('email', 'region', 'us-east-1'),
-                                     aws_access_key_id=config.get('email', 'AWS_ACCESS_KEY', None),
-                                     aws_secret_access_key=config.get('email', 'AWS_SECRET_KEY', None))
+    """
+    Sends notification through AWS SES.
+
+    Does not handle access keys.  Use either
+      1/ configuration file
+      2/ EC2 instance profile
+
+    See also http://boto3.readthedocs.org/en/latest/guide/configuration.html.
+    """
+    from boto3 import client as boto3_client
+
+    client = boto3_client('ses')
+
     msg_root = generate_email(sender, subject, message, recipients, image_png)
-    con.send_raw_email(msg_root.as_string(),
-                       source=msg_root['From'],
-                       destinations=msg_root['To'])
+    response = client.send_raw_email(Source=sender,
+                                     Destinations=recipients,
+                                     RawMessage={'Data': msg_root.as_string()})
+
+    logger.debug(("Message sent to SES.\nMessageId: {},\nRequestId: {},\n"
+                 "HTTPSStatusCode: {}").format(response['MessageId'],
+                                               response['ResponseMetadata']['RequestId'],
+                                               response['ResponseMetadata']['HTTPStatusCode']))
 
 
 def send_email_sendgrid(config, sender, subject, message, recipients, image_png):
@@ -162,8 +175,45 @@ def _email_disabled():
         return False
 
 
+def send_email_sns(config, sender, subject, message, topic_ARN, image_png):
+    """
+    Sends notification through AWS SNS. Takes Topic ARN from recipients.
+
+    Does not handle access keys.  Use either
+      1/ configuration file
+      2/ EC2 instance profile
+
+    See also http://boto3.readthedocs.org/en/latest/guide/configuration.html.
+    """
+    from boto3 import resource as boto3_resource
+
+    sns = boto3_resource('sns')
+    topic = sns.Topic(topic_ARN[0])
+
+    # Subject is max 100 chars
+    if len(subject) > 100:
+        subject = subject[0:48] + '...' + subject[-49:]
+
+    response = topic.publish(Subject=subject, Message=message)
+
+    logger.debug(("Message sent to SNS.\nMessageId: {},\nRequestId: {},\n"
+                 "HTTPSStatusCode: {}").format(response['MessageId'],
+                                               response['ResponseMetadata']['RequestId'],
+                                               response['ResponseMetadata']['HTTPStatusCode']))
+
+
 def send_email(subject, message, sender, recipients, image_png=None):
+    """
+    Decides whether to send notification. Notification is cancelled if there are
+    no recipients or if stdout is onto tty or if in debug mode.
+
+    Dispatches on config value email.type.  Default is 'smtp'.
+    """
     config = configuration.get_config()
+    notifiers = {'ses': send_email_ses,
+                 'sendgrid': send_email_sendgrid,
+                 'smtp': send_email_smtp,
+                 'sns': send_email_sns}
 
     subject = _prefix(subject)
     if not recipients or recipients == (None,):
@@ -180,13 +230,10 @@ def send_email(subject, message, sender, recipients, image_png=None):
     # Replace original recipients with the clean list
     recipients = recipients_tmp
 
+    # Get appropriate sender and call it to send the notification
     email_sender_type = config.get('email', 'type', None)
-    if email_sender_type == "ses":
-        send_email_ses(config, sender, subject, message, recipients, image_png)
-    elif email_sender_type == "sendgrid":
-        send_email_sendgrid(config, sender, subject, message, recipients, image_png)
-    else:
-        send_email_smtp(config, sender, subject, message, recipients, image_png)
+    email_sender = notifiers.get(email_sender_type, send_email_smtp)
+    email_sender(config, sender, subject, message, recipients, image_png)
 
 
 def _email_recipients(additional_recipients=None):

@@ -129,6 +129,9 @@ error-email
   luigi is run from the command line, no e-mails will be sent unless
   output is redirected to a file.
 
+  Set it to SNS Topic ARN if you want to receive notifications through
+  Amazon SNS. See also section `[email]`_.
+
 hdfs-tmp-dir
   Base directory in which to store temporary files on hdfs. Defaults to
   tempfile.gettempdir()
@@ -269,24 +272,25 @@ marker-doc-type
 [email]
 -------
 
-These parameters control sending error e-mails through Amazon SES.
-
-AWS_ACCESS_KEY
-  Your AWS access key
-
-AWS_SECRET_KEY
-  Your AWS secret key
+General parameters
 
 force-send
   If true, e-mails are sent in all run configurations (even if stdout is
   connected to a tty device).  Defaults to False.
 
-region
-  Your AWS region. Defaults to us-east-1.
-
 type
-  If set to "ses", error e-mails will be send through Amazon SES.
-  Otherwise, e-mails are sent via smtp.
+  Valid values are "smtp", "sendgrid", "ses" and "sns". SES and SNS are
+  services of Amazon web services. SendGrid is an email delivery service.
+  The default value is "smtp".
+
+In order to send messages through Amazon SNS or SES set up your AWS config
+files or run luigi on an EC2 instance with proper instance profile.
+
+These parameters control sending error e-mails through SendGrid.
+
+SENDGRID_USERNAME
+
+SENDGRID_PASSWORD
 
 
 [hadoop]
