@@ -4,8 +4,10 @@ Graph = (function() {
         "RUNNING":"#0044DD",
         "PENDING":"#EEBB00",
         "DONE":"#00DD00",
-        "DISABLED":"#808080"
-    };
+        "DISABLED":"#808080",
+        "UNKNOWN":"#000000",
+        "TRUNCATED":"#FF00FF"
+    }
 
     /* Line height for items in task status legend */
     var legendLineHeight = 20;

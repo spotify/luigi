@@ -155,9 +155,19 @@ max-shown-tasks
   .. versionadded:: 1.0.20
 
   The maximum number of tasks returned in a task_list api call. This
-  will restrict the number of tasks shown in any section in the
+  will restrict the number of tasks shown in task lists in the
   visualiser. Small values can alleviate frozen browsers when there are
   too many done tasks. This defaults to 100000 (one hundred thousand).
+
+max-graph-nodes
+  .. versionadded:: 2.0.0
+
+  The maximum number of nodes returned by a dep_graph or
+  inverse_dep_graph api call. Small values can greatly speed up graph
+  display in the visualiser by limiting the number of nodes shown. Some
+  of the nodes that are not sent to the visualiser will still show up as
+  dependencies of nodes that were sent. These nodes are given TRUNCATED
+  status.
 
 no_configure_logging
   If true, logging is not configured. Defaults to false.
