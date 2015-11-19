@@ -181,7 +181,8 @@ class BigqueryClient(object):
            :type project_id: str
         """
 
-        request = self.client.datasets().list(projectId=project_id)
+        request = self.client.datasets().list(projectId=project_id,
+                                              maxResults=1000)
         response = request.execute()
 
         while response is not None:
@@ -202,7 +203,8 @@ class BigqueryClient(object):
         """
 
         request = self.client.tables().list(projectId=dataset.project_id,
-                                            datasetId=dataset.dataset_id)
+                                            datasetId=dataset.dataset_id,
+                                            maxResults=1000)
         response = request.execute()
 
         while response is not None:
@@ -304,7 +306,40 @@ class BigqueryTarget(luigi.target.Target):
         return str(self.table)
 
 
-class BigqueryLoadTask(luigi.Task):
+class MixinBigqueryBulkComplete(object):
+    """
+    Allows to efficiently check if a range of BigqueryTargets are complete.
+    This enables scheduling tasks with luigi range tools.
+
+    If you implement a custom Luigi task with a BigqueryTarget output, make sure to also inherit
+    from this mixin to enable range support.
+    """
+
+    @classmethod
+    def bulk_complete(cls, parameter_tuples):
+        if len(parameter_tuples) < 1:
+            return
+
+        # Instantiate the tasks to inspect them
+        tasks_with_params = [(cls(p), p) for p in parameter_tuples]
+
+        # Grab the set of BigQuery datasets we are interested in
+        datasets = set([t.output().table.dataset for t, p in tasks_with_params])
+        logger.info('Checking datasets %s for available tables', datasets)
+
+        # Query the available tables for all datasets
+        client = tasks_with_params[0][0].output().client
+
+        available = {dataset: set(client.list_tables(dataset)) for dataset in datasets}
+
+        # Return parameter_tuples belonging to available tables
+        for t, p in tasks_with_params:
+            table = t.output().table
+            if table.table_id in available.get(table.dataset, []):
+                yield p
+
+
+class BigqueryLoadTask(MixinBigqueryBulkComplete, luigi.Task):
     """Load data into bigquery from GCS."""
 
     @property
@@ -373,7 +408,7 @@ class BigqueryLoadTask(luigi.Task):
         bq_client.delete_table(output.tmp_table)
 
 
-class BigqueryRunQueryTask(luigi.Task):
+class BigqueryRunQueryTask(MixinBigqueryBulkComplete, luigi.Task):
 
     @property
     def write_disposition(self):
