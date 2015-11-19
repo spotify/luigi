@@ -219,9 +219,6 @@ smtp_timeout
   Optionally sets the number of seconds after which smtp attempts should
   time out.
 
-tmp-dir
-  DEPRECATED - use hdfs-tmp-dir instead
-
 worker-count-uniques
   If true, workers will only count unique pending jobs when deciding
   whether to stay alive. So if a worker can't get a job to run and other
@@ -356,6 +353,9 @@ namenode_port
 snakebite_autoconfig
   If true, attempts to automatically detect the host and port of the
   namenode for snakebite queries. Defaults to false.
+  
+tmp_dir
+  Path to where luigi will put temporary files on hdfs
 
 
 [hive]
