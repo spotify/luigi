@@ -275,9 +275,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(suc[u'deps'], [BadReqTask(succeed=False).task_id])
 
         fail = dep_graph[BadReqTask(succeed=False).task_id]
-        self.assertEqual(fail[u'name'], 'BadReqTask')
-        # FIXME : Not possible with hashed task_id.  See scheduler.py _recurse_deps()
-        # self.assertEqual(fail[u'params'], {'succeed': 'False'})
+        self.assertEqual(fail[u'name'], 'UNKNOWN')
         self.assertEqual(fail[u'status'], 'UNKNOWN')
 
     def test_dep_graph_diamond(self):

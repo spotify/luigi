@@ -912,15 +912,10 @@ class CentralPlannerScheduler(Scheduler):
             if task is None or not task.family:
                 logger.warn('Missing task for id [%s]', task_id)
 
-                # try to infer family and params from task_id
-                try:
-                    family = task_id.split('#')[0]
-                    params = {}
-                    # FIXME : This won't work with hashed task_ids
-                    # family, _, param_str = task_id.rstrip(')').partition('(')
-                    # params = dict(param.split('=') for param in param_str.split(', '))
-                except BaseException:
-                    family, params = '', {}
+                # NOTE : If a dependency is missing from self._state there is no way to deduce the
+                #        task family and parameters.
+
+                family, params = UNKNOWN, {}
                 serialized[task_id] = {
                     'deps': [],
                     'status': UNKNOWN,
