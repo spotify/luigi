@@ -212,7 +212,7 @@ class S3Client(FileSystem):
 
         if source_size <= part_size:
             # fallback to standard, non-multipart strategy
-            return self.put(local_path, destination_s3_path)
+            return self.put(local_path, destination_s3_path, **kwargs)
 
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
