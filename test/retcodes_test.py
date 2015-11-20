@@ -78,8 +78,12 @@ class RetcodesTest(LuigiTestCase):
             self.run_with_config(dict(already_running='3'), 'Task', 3, extra_args=['--local-scheduler'])
 
     def test_unhandled_exception(self):
-        self.run_and_expect('UnknownTask', 4)
-        self.run_and_expect('UnknownTask --retcode-unhandled-exception 2', 2)
+        def new_func(*args, **kwargs):
+            raise Exception()
+
+        with mock.patch('luigi.worker.Worker.add', new_func):
+            self.run_and_expect('Task', 4)
+            self.run_and_expect('Task --retcode-unhandled-exception 2', 2)
 
         class TaskWithRequiredParam(luigi.Task):
             param = luigi.Parameter()

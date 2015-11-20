@@ -71,6 +71,9 @@ class CmdlineParser(object):
         self._possibly_exit_with_help(parser, known_args)
         if not root_task:
             raise SystemExit('No task specified')
+        else:
+            # Check that what we believe to be the task is correctly spelled
+            Register.get_task_cls(root_task)
         known_args = parser.parse_args(args=cmdline_args)
         self.known_args = known_args  # Also publically expose parsed arguments
 
