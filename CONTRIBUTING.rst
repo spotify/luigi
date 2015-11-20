@@ -8,6 +8,8 @@ patch locally before submitting it.
 If you do want to run the tests locally you'll need to ``pip install tox`` and
 then run one of the tox commands below.
 
+You will need a ``tox --version`` of at least 2.0.
+
 .. code:: bash
 
     # These commands are pretty fast and will tell if you've
