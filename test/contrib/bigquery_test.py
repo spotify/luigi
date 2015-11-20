@@ -38,8 +38,7 @@ DATASET_ID = os.environ.get('BQ_TEST_DATASET_ID', 'luigi_tests')
 
 @attr('gcloud')
 class TestLoadTask(bigquery.BigqueryLoadTask):
-    client = None
-
+    client = MagicMock()
     source = luigi.Parameter()
     table = luigi.Parameter()
 
@@ -60,13 +59,30 @@ class TestLoadTask(bigquery.BigqueryLoadTask):
 
 @attr('gcloud')
 class TestRunQueryTask(bigquery.BigqueryRunQueryTask):
-    client = None
+    client = MagicMock()
     query = ''' SELECT 'hello' as field1, 2 as field2 '''
     table = luigi.Parameter()
 
     def output(self):
-        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table,
-                                       client=self.client)
+        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
+
+
+class TestRunQueryTaskWithRequires(bigquery.BigqueryRunQueryTask):
+    client = MagicMock()
+    table = luigi.Parameter()
+
+    def requires(self):
+        return TestRunQueryTask(table='table1')
+
+    @property
+    def query(self):
+        requires = self.requires().output().table
+        dataset = requires.dataset_id
+        table = requires.table_id
+        return 'SELECT * FROM [{dataset}.{table}]'.format(dataset=dataset, table=table)
+
+    def output(self):
+        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
 
 
 @attr('gcloud')
@@ -138,3 +154,27 @@ class BulkCompleteTest(unittest.TestCase):
 
         complete = list(TestRunQueryTask.bulk_complete(parameters))
         self.assertEquals(complete, ['table2'])
+
+
+class RunQueryTest(unittest.TestCase):
+
+    def test_query_property(self):
+        task = TestRunQueryTask(table='table2')
+        task.client = MagicMock()
+        task.run()
+
+        (_, job), _ = task.client.run_job.call_args
+        query = job['configuration']['query']['query']
+        self.assertEqual(query, TestRunQueryTask.query)
+
+    def test_override_query_property(self):
+        task = TestRunQueryTaskWithRequires(table='table2')
+        task.client = MagicMock()
+        task.run()
+
+        (_, job), _ = task.client.run_job.call_args
+        query = job['configuration']['query']['query']
+
+        expected_table = '[' + DATASET_ID + '.' + task.requires().output().table.table_id + ']'
+        self.assertIn(expected_table, query)
+        self.assertEqual(query, task.query)
