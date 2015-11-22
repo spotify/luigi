@@ -329,13 +329,13 @@ class MixinBigqueryBulkComplete(object):
 
         # Query the available tables for all datasets
         client = tasks_with_params[0][0].output().client
-
-        available = {dataset: set(client.list_tables(dataset)) for dataset in datasets}
+        available_datasets = filter(client.dataset_exists, datasets)
+        available_tables = {d: set(client.list_tables(d)) for d in available_datasets}
 
         # Return parameter_tuples belonging to available tables
         for t, p in tasks_with_params:
             table = t.output().table
-            if table.table_id in available.get(table.dataset, []):
+            if table.table_id in available_tables.get(table.dataset, []):
                 yield p
 
 
