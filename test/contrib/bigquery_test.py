@@ -149,11 +149,20 @@ class BulkCompleteTest(unittest.TestCase):
         parameters = ['table1', 'table2']
 
         client = MagicMock()
+        client.dataset_exists.return_value = True
         client.list_tables.return_value = ['table2', 'table3']
         TestRunQueryTask.client = client
 
         complete = list(TestRunQueryTask.bulk_complete(parameters))
         self.assertEquals(complete, ['table2'])
+
+    def test_dataset_doesnt_exist(self):
+        client = MagicMock()
+        client.dataset_exists.return_value = False
+        TestRunQueryTask.client = client
+
+        complete = list(TestRunQueryTask.bulk_complete(['table1']))
+        self.assertEquals(complete, [])
 
 
 class RunQueryTest(unittest.TestCase):
