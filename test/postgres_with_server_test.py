@@ -57,7 +57,6 @@ except Exception:
 
 # to avoid copying:
 
-@attr('postgres')
 class CopyToTestDB(postgres.CopyToTable):
     host = host
     database = database
@@ -109,6 +108,7 @@ class Metric2(MetricBase):
         yield 'metric2', 3
 
 
+@attr('postgres')
 class TestPostgresImportTask(unittest.TestCase):
 
     def test_default_escape(self):
