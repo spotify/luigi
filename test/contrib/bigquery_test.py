@@ -38,7 +38,6 @@ DATASET_ID = os.environ.get('BQ_TEST_DATASET_ID', 'luigi_tests')
 
 @attr('gcloud')
 class TestLoadTask(bigquery.BigqueryLoadTask):
-    client = MagicMock()
     source = luigi.Parameter()
     table = luigi.Parameter()
 
@@ -53,22 +52,19 @@ class TestLoadTask(bigquery.BigqueryLoadTask):
         return [self.source]
 
     def output(self):
-        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table,
-                                       client=self.client)
+        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table)
 
 
 @attr('gcloud')
 class TestRunQueryTask(bigquery.BigqueryRunQueryTask):
-    client = MagicMock()
     query = ''' SELECT 'hello' as field1, 2 as field2 '''
     table = luigi.Parameter()
 
     def output(self):
-        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
+        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table)
 
 
 class TestRunQueryTaskWithRequires(bigquery.BigqueryRunQueryTask):
-    client = MagicMock()
     table = luigi.Parameter()
 
     def requires(self):
@@ -82,7 +78,7 @@ class TestRunQueryTaskWithRequires(bigquery.BigqueryRunQueryTask):
         return 'SELECT * FROM [{dataset}.{table}]'.format(dataset=dataset, table=table)
 
     def output(self):
-        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
+        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table)
 
 
 @attr('gcloud')
@@ -103,7 +99,6 @@ class BigqueryTest(gcs_test._GCSBaseTestCase):
         self.client.put_string(text, gcs_file)
 
         task = TestLoadTask(source=gcs_file, table=self.table.table_id)
-        task._BIGQUERY_CLIENT = self.bq_client
 
         task.run()
 
