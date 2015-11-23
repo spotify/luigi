@@ -61,5 +61,3 @@ script:
 branches:
   only:
     - master
-    # TODO : Remove before PR
-    - task_id_hashing

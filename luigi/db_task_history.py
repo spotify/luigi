@@ -117,7 +117,7 @@ class DbTaskHistory(task_history.TaskHistory):
                     raise Exception("Task with record_id, but no matching Task record!")
                 yield (task_record, session)
             else:
-                task_record = TaskRecord(name=task.task_family, host=task.host)
+                task_record = TaskRecord(task_id=task._task.id, name=task.task_family, host=task.host)
                 for (k, v) in six.iteritems(task.parameters):
                     task_record.parameters[k] = TaskParameter(name=k, value=v)
                 session.add(task_record)
@@ -219,6 +219,7 @@ class TaskRecord(Base):
     """
     __tablename__ = 'tasks'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
+    task_id = sqlalchemy.Column(sqlalchemy.String(200), index=True)
     name = sqlalchemy.Column(sqlalchemy.String(128), index=True)
     host = sqlalchemy.Column(sqlalchemy.String(128))
     parameters = sqlalchemy.orm.relationship(
@@ -232,3 +233,8 @@ class TaskRecord(Base):
 
     def __repr__(self):
         return "TaskRecord(name=%s, host=%s)" % (self.name, self.host)
+
+
+version_table = sqlalchemy.Table('version', Base.metadata,
+                                 sqlalchemy.Column('version', sqlalchemy.Integer)
+                                 )
