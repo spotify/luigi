@@ -36,6 +36,15 @@ class EmptyTask(Task):
             raise DummyException()
 
 
+class TaskWithBrokenDependency(Task):
+
+    def requires(self):
+        raise DummyException()
+
+    def run(self):
+        pass
+
+
 class TaskWithCallback(Task):
 
     def run(self):
@@ -84,6 +93,22 @@ class TestEventCallbacks(unittest.TestCase):
     def test_failure(self):
         t, successes, failures, exceptions = self._run_empty_task(True)
         self.assertEqual(successes, [])
+        self.assertEqual(failures, [t])
+        self.assertEqual(len(exceptions), 1)
+        self.assertTrue(isinstance(exceptions[0], DummyException))
+
+    def test_broken_dependency(self):
+        failures = []
+        exceptions = []
+
+        @TaskWithBrokenDependency.event_handler(Event.BROKEN_TASK)
+        def failure(task, exception):
+            failures.append(task)
+            exceptions.append(exception)
+
+        t = TaskWithBrokenDependency()
+        build([t], local_scheduler=True)
+
         self.assertEqual(failures, [t])
         self.assertEqual(len(exceptions), 1)
         self.assertTrue(isinstance(exceptions[0], DummyException))

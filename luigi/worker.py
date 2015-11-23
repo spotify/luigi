@@ -583,10 +583,11 @@ class Worker(object):
         else:
             try:
                 deps = task.deps()
-            except Exception:
+            except Exception as ex:
                 formatted_traceback = traceback.format_exc()
                 self.add_succeeded = False
                 self._log_dependency_error(task, formatted_traceback)
+                task.trigger_event(Event.BROKEN_TASK, task, ex)
                 self._email_dependency_error(task, formatted_traceback)
                 return
             status = PENDING
