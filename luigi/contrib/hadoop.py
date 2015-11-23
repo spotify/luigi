@@ -396,7 +396,7 @@ class HadoopJobRunner(JobRunner):
     def __init__(self, streaming_jar, modules=None, streaming_args=None,
                  libjars=None, libjars_in_hdfs=None, jobconfs=None,
                  input_format=None, output_format=None,
-                 end_job_with_atomic_move_dir=True):
+                 end_job_with_atomic_move_dir=True, username=None):
         def get(x, default):
             return x is not None and x or default
         self.streaming_jar = streaming_jar
@@ -409,6 +409,7 @@ class HadoopJobRunner(JobRunner):
         self.output_format = output_format
         self.end_job_with_atomic_move_dir = end_job_with_atomic_move_dir
         self.tmp_dir = False
+        self.username = username;
 
     def run_job(self, job, tracking_url_callback=None):
         packages = [luigi] + self.modules + job.extra_modules() + list(_attached_packages)
@@ -455,7 +456,12 @@ class HadoopJobRunner(JobRunner):
         else:
             output_hadoop = output_final
 
-        arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
+        username_command = ""
+
+        if self.username:
+            username_command = "HADOOP_USER_NAME=" + self.username + " "
+
+        arglist = username_command + " " + luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
 
         # 'libjars' is a generic option, so place it first
         libjars = [libjar for libjar in self.libjars]
@@ -618,7 +624,8 @@ class LocalJobRunner(JobRunner):
 
 
 class BaseHadoopJobTask(luigi.Task):
-    pool = luigi.Parameter(default=None, significant=False, positional=False)
+    pool     = luigi.Parameter(default=None, significant=False, positional=False)
+    username = luigi.Parameter(default=None, significant=False, positional=False)
     # This value can be set to change the default batching increment. Default is 1 for backwards compatibility.
     batch_counter_default = 1
 

@@ -65,8 +65,8 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
     JobRunner for `hadoop jar` commands. Used to run a HadoopJarJobTask.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, username=None):
+        self.username = username
 
     def run_job(self, job, tracking_url_callback=None):
         # TODO(jcrobak): libjars, files, etc. Can refactor out of
@@ -74,7 +74,12 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
         if not job.jar():
             raise HadoopJarJobError("Jar not defined")
 
-        hadoop_arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
+        username_command = ""
+
+        if self.username:
+            username_command = "HADOOP_USER_NAME=" + self.username + " "
+
+        hadoop_arglist = username_command + luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
         if job.main():
             hadoop_arglist.append(job.main())
 
@@ -134,7 +139,7 @@ class HadoopJarJobTask(luigi.contrib.hadoop.BaseHadoopJobTask):
 
     def job_runner(self):
         # We recommend that you define a subclass, override this method and set up your own config
-        return HadoopJarJobRunner()
+        return HadoopJarJobRunner(username=self.username)
 
     def atomic_output(self):
         """
