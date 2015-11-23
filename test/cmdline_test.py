@@ -259,6 +259,17 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         self.assertTrue(stdout.find(b'[FileSystem] data/streams_2015_03_04_faked.tsv') != -1)
         self.assertTrue(stdout.find(b'[DB] localhost') != -1)
 
+    def test_bin_mentions_misspelled_task(self):
+        """
+        Test that the error message is informative when a task is misspelled.
+
+        In particular it should say that the task is misspelled and not that
+        the local parameters do not exist.
+        """
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'cmdline_test', 'HooBaseClass', '--x 5'])
+        self.assertTrue(stderr.find(b'FooBaseClass') != -1)
+        self.assertTrue(stderr.find(b'--x') != 0)
+
 
 if __name__ == '__main__':
     # Needed for one of the tests
