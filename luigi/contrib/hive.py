@@ -352,7 +352,7 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
             username_cmd = ""
             if self.username:
                 username_cmd = "HADOOP_USER_NAME=" + self.username
-            arglist = username_cmd + " " + [load_hive_cmd(), '-f', f.name]
+            arglist = [username_cmd] + [load_hive_cmd(), '-f', f.name]
             hiverc = job.hiverc()
             if hiverc:
                 if isinstance(hiverc, str):
