@@ -303,8 +303,6 @@ class HiveQueryTask(luigi.contrib.hadoop.BaseHadoopJobTask):
                 jcs['mapred.fairscheduler.pool'] = self.pool
             elif scheduler_type == 'capacity':
                 jcs['mapred.job.queue.name'] = self.pool
-        if self.user_name is not None:
-            jcs['mapreduce.job.user.name'] = self.user_name
         if self.bytes_per_reducer is not None:
             jcs['hive.exec.reducers.bytes.per.reducer'] = self.bytes_per_reducer
         if self.reducers_max is not None:
