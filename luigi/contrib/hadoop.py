@@ -456,12 +456,12 @@ class HadoopJobRunner(JobRunner):
         else:
             output_hadoop = output_final
 
-        username_command = ""
+        username_cmd = ""
 
         if self.username:
-            username_command = "HADOOP_USER_NAME=" + self.username + " "
+            username_cmd = "HADOOP_USER_NAME=" + self.username + " "
 
-        arglist = username_command + " " + luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
+        arglist = [username_cmd] + luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
 
         # 'libjars' is a generic option, so place it first
         libjars = [libjar for libjar in self.libjars]
