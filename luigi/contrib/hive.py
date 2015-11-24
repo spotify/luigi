@@ -64,7 +64,7 @@ def run_hive(args, check_return_code=True, username=None):
     username_cmd = ""
     if username:
         username_cmd = "HADOOP_USER_NAME=" + username
-    cmd = username_cmd + " " + [load_hive_cmd()] + args
+    cmd = [username_cmd] + [load_hive_cmd()] + args
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if check_return_code and p.returncode != 0:

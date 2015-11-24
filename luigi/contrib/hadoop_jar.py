@@ -79,7 +79,7 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
         if self.username:
             username_command = "HADOOP_USER_NAME=" + self.username + " "
 
-        hadoop_arglist = username_command + luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
+        hadoop_arglist = [username_command] + luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
         if job.main():
             hadoop_arglist.append(job.main())
 
