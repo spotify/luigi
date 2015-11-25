@@ -74,12 +74,7 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
         if not job.jar():
             raise HadoopJarJobError("Jar not defined")
 
-        username_command = ""
-
-        if self.username:
-            username_command = "HADOOP_USER_NAME=" + self.username + " "
-
-        hadoop_arglist = [username_command] + luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
+        hadoop_arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', job.jar()]
         if job.main():
             hadoop_arglist.append(job.main())
 
@@ -114,7 +109,11 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
                 raise HadoopJarJobError("job jar does not exist")
             arglist = hadoop_arglist
 
-        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback)
+        job_env = os.environ.copy()
+
+        if self.username:
+            job_env["HADOOP_USER_NAME"] = self.username
+        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback, env=job_env)
 
         for a, b in tmp_files:
             a.move(b)
