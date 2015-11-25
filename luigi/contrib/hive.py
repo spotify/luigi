@@ -61,11 +61,11 @@ def run_hive(args, check_return_code=True, username=None):
     (which are done using DESCRIBE do not exit with a return code of 0
     so we need an option to ignore the return code and just return stdout for parsing
     """
-    username_cmd = ""
+    cmd = [load_hive_cmd()] + args
+    cmd_env = os.environ.copy()
     if username:
-        username_cmd = "HADOOP_USER_NAME=" + username
-    cmd = [username_cmd] + [load_hive_cmd()] + args
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cmd_env["HADOOP_USER_NAME"] = username
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=cmd_env)
     stdout, stderr = p.communicate()
     if check_return_code and p.returncode != 0:
         raise HiveCommandError("Hive command: {0} failed with error code: {1}".format(" ".join(cmd), p.returncode),
@@ -347,10 +347,7 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                 query = query.encode('utf8')
             f.write(query)
             f.flush()
-            username_cmd = ""
-            if self.username:
-                username_cmd = "HADOOP_USER_NAME=" + self.username
-            arglist = [username_cmd] + [load_hive_cmd(), '-f', f.name]
+            arglist = [load_hive_cmd(), '-f', f.name]
             hiverc = job.hiverc()
             if hiverc:
                 if isinstance(hiverc, str):
@@ -359,11 +356,16 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                 for rcfile in hiverc:
                     arglist += ['-i', rcfile]
             if job.hiveconfs():
-                for k, v in six. iteritems(job.hiveconfs()):
+                for k, v in six.iteritems(job.hiveconfs()):
                     arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
 
+            job_env = os.environ.copy()
+
+            if self.username:
+                job_env["HADOOP_USER_NAME"] = self.username
+
             logger.info(arglist)
-            return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback)
+            return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback, env=job_env)
 
 
 class HiveTableTarget(luigi.Target):
