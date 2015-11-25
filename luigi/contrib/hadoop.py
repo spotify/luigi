@@ -456,12 +456,7 @@ class HadoopJobRunner(JobRunner):
         else:
             output_hadoop = output_final
 
-        username_cmd = ""
-
-        if self.username:
-            username_cmd = "HADOOP_USER_NAME=" + self.username + " "
-
-        arglist = [username_cmd] + luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
+        arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
 
         # 'libjars' is a generic option, so place it first
         libjars = [libjar for libjar in self.libjars]
@@ -529,7 +524,10 @@ class HadoopJobRunner(JobRunner):
 
         job.dump(self.tmp_dir)
 
-        run_and_track_hadoop_job(arglist, tracking_url_callback=tracking_url_callback)
+        job_env = os.environ.copy()
+        if self.username:
+            job_env["HADOOP_USER_NAME"] = self.username
+        run_and_track_hadoop_job(arglist, tracking_url_callback=tracking_url_callback, env=job_env)
 
         if self.end_job_with_atomic_move_dir:
             luigi.contrib.hdfs.HdfsTarget(output_hadoop).move_dir(output_final)
