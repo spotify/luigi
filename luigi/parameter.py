@@ -129,9 +129,8 @@ class Parameter(object):
                                  default value for this parameter. DEPRECATED.
                                  Default: ``None``.
         :param bool positional: If true, you can set the argument as a
-                                positional argument. Generally we recommend ``positional=False``
-                                as positional arguments become very tricky when
-                                you have inheritance and whatnot.
+                                positional argument. It's true by default but we recommend
+                                ``positional=False`` for abstract base classes and similar cases.
         :param bool always_in_help: For the --help option in the command line
                                     parsing. Set true to always show in --help.
         """
