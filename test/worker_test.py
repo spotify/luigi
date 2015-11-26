@@ -1143,3 +1143,20 @@ class KeyboardInterruptBehaviorTest(LuigiTestCase):
 
         cmd = 'KeyboardInterruptTask --local-scheduler --no-lock'.split(' ')
         self.assertRaises(KeyboardInterrupt, luigi_run, cmd)
+
+    def test_propagation_when_scheduling(self):
+        """
+        Test that KeyboardInterrupt causes luigi to quit while scheduling.
+        """
+        class KeyboardInterruptTask(luigi.Task):
+            def complete(self):
+                raise KeyboardInterrupt()
+
+        class ExternalKeyboardInterruptTask(luigi.ExternalTask):
+            def complete(self):
+                raise KeyboardInterrupt()
+
+        self.assertRaises(KeyboardInterrupt, luigi_run,
+                          ['KeyboardInterruptTask', '--local-scheduler', '--no-lock'])
+        self.assertRaises(KeyboardInterrupt, luigi_run,
+                          ['ExternalKeyboardInterruptTask', '--local-scheduler', '--no-lock'])
