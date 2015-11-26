@@ -1186,3 +1186,17 @@ class KeyboardInterruptBehaviorTest(LuigiTestCase):
         p.start()
         p.join()
         self.assertEqual(0, p.exitcode)  # Validating the isolated assertRaises
+
+    def test_propagation_when_executing(self):
+        """
+        Ensure that keyboard interrupts causes luigi to quit when you are
+        executing tasks.
+
+        TODO: Add a test that tests the multiprocessing (--worker >1) case
+        """
+        class KeyboardInterruptTask(luigi.Task):
+            def run(self):
+                raise KeyboardInterrupt()
+
+        cmd = 'KeyboardInterruptTask --local-scheduler --no-lock'.split(' ')
+        self.assertRaises(KeyboardInterrupt, luigi_run, cmd)
