@@ -25,7 +25,8 @@ import tempfile
 import threading
 import time
 import psutil
-from helpers import unittest, with_config, skipOnTravis
+import multiprocessing
+from helpers import unittest, with_config, skipOnTravis, LuigiTestCase
 
 import luigi.notifications
 import luigi.worker
@@ -35,6 +36,7 @@ from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
 from luigi import six
+from luigi.cmdline import luigi_run
 
 luigi.notifications.DEBUG = True
 
@@ -1125,3 +1127,62 @@ class WorkerWaitJitterTest(unittest.TestCase):
         six.next(x)
         mock_random.assert_called_with(0, 5.0)
         mock_sleep.assert_called_with(4.3)
+
+
+class CtrlCWrapperTask(luigi.Task):
+    """
+    Kind of similar to the foo.py example
+    """
+    def requires(self):
+        for i in range(10):
+            yield CtrlCTask(num=i)
+
+
+class CtrlCTask(luigi.Task):
+    """
+    It's tempting to put this task inside the test, but I saw problems with the
+    task being pickled in the parallel scheduling case.
+    """
+    num = luigi.IntParameter(default=10)
+
+    def complete(self):
+        if self.num == 3:
+            # Somewhere in the middle
+            pgid = os.getpgid(0)
+            # Ctrl+C corresponds to os.killpg, not os.kill
+            os.killpg(pgid, signal.SIGINT)
+        else:
+            return True  # Doesn't matter what we return
+
+
+class KeyboardInterruptBehaviorTest(LuigiTestCase):
+
+    @unittest.skipIf(six.PY2, 'This test hangs intermittently on python 2.7')
+    def test_propagation_when_par_scheduling(self):
+        """
+        Test that KeyboardInterrupts work during the parallel scheduling phase.
+
+        In particular it should not keep the KeepAliveThread alive!!
+        Previously, this test would get stuck, worse, the KeepAliveThread never
+        dies.  The reason is that the main thread deadlocked waiting for the
+        complete()-checking processes. And the complete() checking processes
+        waited for the mainthread to read from the result queue.
+
+        Also. by KeyboardInterrupt I mean Ctrl+C equivalent. Which doesn't
+        correspond to raising a KeyboardInterrupt to any single process. Ctrl+C
+        is equivalent to sending SIGINT to the the whole process *group*.
+
+        Relevant internet wisdom: http://unix.stackexchange.com/a/149756/61085
+        """
+        def isolating_luigi_run():
+            os.setsid()  # So we don't kill parents like tox/nose/python
+            # Exceptions from pool.terminate() were not correctly wrapped in
+            # python 2.7, so we can't be as strict in our testing then.
+            exception_class = KeyboardInterrupt if six.PY3 else BaseException
+            self.assertRaises(exception_class, luigi_run,
+                              ['CtrlCWrapperTask', '--local-scheduler',
+                                  '--no-lock', '--parallel-scheduling'])
+        p = multiprocessing.Process(target=isolating_luigi_run)
+        p.start()
+        p.join()
+        self.assertEqual(0, p.exitcode)  # Validating the isolated assertRaises

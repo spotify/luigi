@@ -226,10 +226,7 @@ class SingleProcessPool(object):
     def apply_async(self, function, args):
         return function(*args)
 
-    def close(self):
-        pass
-
-    def join(self):
+    def terminate(self):
         pass
 
 
@@ -534,8 +531,22 @@ class Worker(object):
             task.trigger_event(Event.BROKEN_TASK, task, ex)
             self._email_unexpected_error(task, formatted_traceback)
         finally:
-            pool.close()
-            pool.join()
+            # We must not "pool.join()" here, as the pool proccesses may have
+            # deadlocked (since this main tread is not .get()-ing from the
+            # queue anymore).
+            # http://stackoverflow.com/a/27492515/621449
+            try:
+                # However, as some users have disabled garbage collection (see
+                # spotify/luigi#1089), we want to explicitly try to kill off
+                # any remaining processes right away.
+                pool.terminate()
+            except (OSError, EOFError):
+                # If this fails however, we still want to propagate the outer
+                # exception and not re raise!
+                #
+                # The enumerated exception classes in the "except" clause is
+                # the union of exceptions when I ran this 100 times.
+                pass
         return self.add_succeeded
 
     def _add(self, task, is_complete):
