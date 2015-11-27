@@ -22,6 +22,10 @@ The worker communicates with the scheduler and does two things:
 
 When running in local mode, the worker talks directly to a :py:class:`~luigi.scheduler.CentralPlannerScheduler` instance.
 When you run a central server, the worker will talk to the scheduler using a :py:class:`~luigi.rpc.RemoteScheduler` instance.
+
+Everything in this module is private to luigi and may change in incompatible
+ways between versions. The exception is the exception types and the
+:py:class:`worker` config class.
 """
 
 import collections
