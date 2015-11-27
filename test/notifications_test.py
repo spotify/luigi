@@ -70,10 +70,6 @@ class ExceptionFormatTest(unittest.TestCase):
 
     def setUp(self):
         self.sch = CentralPlannerScheduler()
-        self.w = Worker(scheduler=self.sch)
-
-    def tear_down(self):
-        self.w.stop()
 
     def test_fail_run(self):
         task = FailRunTask(foo='foo', bar='bar')
@@ -95,8 +91,9 @@ class ExceptionFormatTest(unittest.TestCase):
                            'email-prefix': '[TEST] '}})
     @mock.patch('luigi.notifications.send_error_email')
     def _run_task(self, task, mock_send):
-        self.w.add(task)
-        self.w.run()
+        with Worker(scheduler=self.sch) as w:
+            w.add(task)
+            w.run()
 
         self.assertEqual(mock_send.call_count, 1)
         args, kwargs = mock_send.call_args
@@ -108,8 +105,9 @@ class ExceptionFormatTest(unittest.TestCase):
                            'email-type': 'html'}})
     @mock.patch('luigi.notifications.send_error_email')
     def _run_task_html(self, task, mock_send):
-        self.w.add(task)
-        self.w.run()
+        with Worker(scheduler=self.sch) as w:
+            w.add(task)
+            w.run()
 
         self.assertEqual(mock_send.call_count, 1)
         args, kwargs = mock_send.call_args

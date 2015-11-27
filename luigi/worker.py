@@ -375,10 +375,6 @@ class Worker(object):
         except AttributeError:
             pass
 
-        self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id, self._config.ping_interval)
-        self._keep_alive_thread.daemon = True
-        self._keep_alive_thread.start()
-
         # Keep info about what tasks are running (could be in other processes)
         if worker_processes == 1:
             self._task_result_queue = DequeQueue()
@@ -407,25 +403,25 @@ class Worker(object):
 
         logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
 
-    def stop(self):
+    def __enter__(self):
         """
-        Stop the KeepAliveThread associated with this Worker.
+        Start the KeepAliveThread.
+        """
+        self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id, self._config.ping_interval)
+        self._keep_alive_thread.daemon = True
+        self._keep_alive_thread.start()
+        return self
 
-        This should be called whenever you are done with a worker instance to clean up.
-
-        Warning: this should _only_ be performed if you are sure this worker
-        is not performing any work or will perform any work after this has been called
-
-        TODO: also kill all currently running tasks
-
-        TODO (maybe): Worker should be/have a context manager to enforce calling this
-            whenever you stop using a Worker instance
+    def __exit__(self, type, value, traceback):
+        """
+        Stop the KeepAliveThread and kill still running tasks.
         """
         self._keep_alive_thread.stop()
         self._keep_alive_thread.join()
         for task in self._running_tasks.values():
             if task.is_alive():
                 task.terminate()
+        return False  # Don't suppress exception
 
     def _generate_worker_info(self):
         # Generate as much info as possible about the worker

@@ -181,21 +181,19 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
             )
         sch = worker_scheduler_factory.create_remote_scheduler(url=url)
 
-    w = worker_scheduler_factory.create_worker(
+    worker = worker_scheduler_factory.create_worker(
         scheduler=sch, worker_processes=env_params.workers, assistant=env_params.assistant)
 
     success = True
-    for t in tasks:
-        success &= w.add(t, env_params.parallel_scheduling)
     logger = logging.getLogger('luigi-interface')
-    logger.info('Done scheduling tasks')
-    if env_params.workers != 0:
-        try:
-            success &= w.run()
-        finally:
-            w.stop()
-    logger.info(execution_summary.summary(w))
-    return dict(success=success, worker=w)
+    with worker:
+        for t in tasks:
+            success &= worker.add(t, env_params.parallel_scheduling)
+        logger.info('Done scheduling tasks')
+        if env_params.workers != 0:
+            success &= worker.run()
+    logger.info(execution_summary.summary(worker))
+    return dict(success=success, worker=worker)
 
 
 class PidLockAlreadyTakenExit(SystemExit):

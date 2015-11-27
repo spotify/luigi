@@ -59,11 +59,7 @@ class InstanceTest(unittest.TestCase):
             def run(self):
                 test.assertTrue(self.requires().has_run)
 
-        w = luigi.worker.Worker()
-        w.add(B(1))
-        w.add(B(2))
-        w.run()
-        w.stop()
+        luigi.build([B(1), B(2)], local_scheduler=True)
 
     def test_external_instance_cache(self):
         class A(luigi.Task):

@@ -50,10 +50,10 @@ class MultiprocessWorkerTest(unittest.TestCase):
         self.scheduler = RemoteScheduler()
         self.scheduler.add_worker = Mock()
         self.scheduler.add_task = Mock()
-        self.worker = Worker(scheduler=self.scheduler, worker_id='X', worker_processes=2)
+        self.worker = Worker(scheduler=self.scheduler, worker_id='X', worker_processes=2).__enter__()
 
     def tearDown(self):
-        self.worker.stop()
+        self.worker.__exit__(None, None, None)
 
     def gw_res(self, pending, task_id):
         return dict(n_pending_tasks=pending,

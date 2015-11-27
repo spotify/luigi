@@ -80,11 +80,10 @@ class WorkerExternalTaskTest(unittest.TestCase):
 
     def _build(self, tasks):
         self.scheduler = CentralPlannerScheduler(prune_on_get_work=True)
-        w = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1)
-        for t in tasks:
-            w.add(t)
-        w.run()
-        w.stop()
+        with luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1) as w:
+            for t in tasks:
+                w.add(t)
+            w.run()
 
     def test_external_dependency_already_complete(self):
         """

@@ -95,11 +95,10 @@ class SchedulerVisualisationTest(unittest.TestCase):
             self.assert_(t.complete())
 
     def _build(self, tasks):
-        w = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1)
-        for t in tasks:
-            w.add(t)
-        w.run()
-        w.stop()
+        with luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1) as w:
+            for t in tasks:
+                w.add(t)
+            w.run()
 
     def _remote(self):
         return self.scheduler

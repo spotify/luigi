@@ -111,15 +111,15 @@ class WorkerTest(unittest.TestCase):
     def setUp(self):
         # InstanceCache.disable()
         self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        self.w = Worker(scheduler=self.sch, worker_id='X')
-        self.w2 = Worker(scheduler=self.sch, worker_id='Y')
+        self.w = Worker(scheduler=self.sch, worker_id='X').__enter__()
+        self.w2 = Worker(scheduler=self.sch, worker_id='Y').__enter__()
         self.time = time.time
 
     def tearDown(self):
         if time.time != self.time:
             time.time = self.time
-        self.w.stop()
-        self.w2.stop()
+        self.w.__exit__(None, None, None)
+        self.w2.__exit__(None, None, None)
 
     def setTime(self, t):
         time.time = lambda: t
@@ -440,21 +440,17 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(eb.task_id, "B()")
 
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        w = Worker(scheduler=sch, worker_id='X')
-        w2 = Worker(scheduler=sch, worker_id='Y')
-
-        self.assertTrue(w.add(b))
-        self.assertTrue(w2.add(eb))
-        logging.debug("RUNNING BROKEN WORKER")
-        self.assertTrue(w2.run())
-        self.assertFalse(a.complete())
-        self.assertFalse(b.complete())
-        logging.debug("RUNNING FUNCTIONAL WORKER")
-        self.assertTrue(w.run())
-        self.assertTrue(a.complete())
-        self.assertTrue(b.complete())
-        w.stop()
-        w2.stop()
+        with Worker(scheduler=sch, worker_id='X') as w, Worker(scheduler=sch, worker_id='Y') as w2:
+            self.assertTrue(w.add(b))
+            self.assertTrue(w2.add(eb))
+            logging.debug("RUNNING BROKEN WORKER")
+            self.assertTrue(w2.run())
+            self.assertFalse(a.complete())
+            self.assertFalse(b.complete())
+            logging.debug("RUNNING FUNCTIONAL WORKER")
+            self.assertTrue(w.run())
+            self.assertTrue(a.complete())
+            self.assertTrue(b.complete())
 
     def test_interleaved_workers2(self):
         # two tasks without dependencies, one external, one not
@@ -473,18 +469,14 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(eb.task_id, "B()")
 
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        w = Worker(scheduler=sch, worker_id='X')
-        w2 = Worker(scheduler=sch, worker_id='Y')
+        with Worker(scheduler=sch, worker_id='X') as w, Worker(scheduler=sch, worker_id='Y') as w2:
+            self.assertTrue(w2.add(eb))
+            self.assertTrue(w.add(b))
 
-        self.assertTrue(w2.add(eb))
-        self.assertTrue(w.add(b))
-
-        self.assertTrue(w2.run())
-        self.assertFalse(b.complete())
-        self.assertTrue(w.run())
-        self.assertTrue(b.complete())
-        w.stop()
-        w2.stop()
+            self.assertTrue(w2.run())
+            self.assertFalse(b.complete())
+            self.assertTrue(w.run())
+            self.assertTrue(b.complete())
 
     def test_interleaved_workers3(self):
         class A(DummyTask):
@@ -509,20 +501,16 @@ class WorkerTest(unittest.TestCase):
 
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
 
-        w = Worker(scheduler=sch, worker_id='X', keep_alive=True, count_uniques=True)
-        w2 = Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1)
+        with Worker(scheduler=sch, worker_id='X', keep_alive=True, count_uniques=True) as w:
+            with Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1) as w2:
+                self.assertTrue(w.add(a))
+                self.assertTrue(w2.add(b))
 
-        self.assertTrue(w.add(a))
-        self.assertTrue(w2.add(b))
+                threading.Thread(target=w.run).start()
+                self.assertTrue(w2.run())
 
-        threading.Thread(target=w.run).start()
-        self.assertTrue(w2.run())
-
-        self.assertTrue(a.complete())
-        self.assertTrue(b.complete())
-
-        w.stop()
-        w2.stop()
+                self.assertTrue(a.complete())
+                self.assertTrue(b.complete())
 
     def test_die_for_non_unique_pending(self):
         class A(DummyTask):
@@ -547,19 +535,16 @@ class WorkerTest(unittest.TestCase):
 
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
 
-        w = Worker(scheduler=sch, worker_id='X', keep_alive=True, count_uniques=True)
-        w2 = Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1)
+        with Worker(scheduler=sch, worker_id='X', keep_alive=True, count_uniques=True) as w:
+            with Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1) as w2:
+                self.assertTrue(w.add(b))
+                self.assertTrue(w2.add(b))
 
-        self.assertTrue(w.add(b))
-        self.assertTrue(w2.add(b))
+                self.assertEqual(w._get_work()[0], 'A()')
+                self.assertTrue(w2.run())
 
-        self.assertEqual(w._get_work()[0], 'A()')
-        self.assertTrue(w2.run())
-
-        self.assertFalse(a.complete())
-        self.assertFalse(b.complete())
-
-        w2.stop()
+                self.assertFalse(a.complete())
+                self.assertFalse(b.complete())
 
     def test_complete_exception(self):
         "Tests that a task is still scheduled if its sister task crashes in the complete() method"
@@ -582,13 +567,12 @@ class WorkerTest(unittest.TestCase):
 
         b = B()
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        w = Worker(scheduler=sch, worker_id="foo")
-        self.assertFalse(w.add(b))
-        self.assertTrue(w.run())
-        self.assertFalse(b.has_run)
-        self.assertTrue(c.has_run)
-        self.assertFalse(a.has_run)
-        w.stop()
+        with Worker(scheduler=sch, worker_id="foo") as w:
+            self.assertFalse(w.add(b))
+            self.assertTrue(w.run())
+            self.assertFalse(b.has_run)
+            self.assertTrue(c.has_run)
+            self.assertFalse(a.has_run)
 
     def test_requires_exception(self):
         class A(DummyTask):
@@ -616,14 +600,13 @@ class WorkerTest(unittest.TestCase):
 
         b = B()
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        w = Worker(scheduler=sch, worker_id="foo")
-        self.assertFalse(w.add(b))
-        self.assertTrue(w.run())
-        self.assertFalse(b.has_run)
-        self.assertTrue(c.has_run)
-        self.assertTrue(d.has_run)
-        self.assertFalse(a.has_run)
-        w.stop()
+        with Worker(scheduler=sch, worker_id="foo") as w:
+            self.assertFalse(w.add(b))
+            self.assertTrue(w.run())
+            self.assertFalse(b.has_run)
+            self.assertTrue(c.has_run)
+            self.assertTrue(d.has_run)
+            self.assertFalse(a.has_run)
 
 
 class DynamicDependenciesTest(unittest.TestCase):
@@ -685,24 +668,21 @@ class WorkerPingThreadTests(unittest.TestCase):
 
         sch.ping = fail_ping
 
-        w = Worker(
-            scheduler=sch,
-            worker_id="foo",
-            ping_interval=0.01  # very short between pings to make test fast
-        )
-
-        # let the keep-alive thread run for a bit...
-        time.sleep(0.1)  # yes, this is ugly but it's exactly what we need to test
-        w.stop()
+        with Worker(
+                scheduler=sch,
+                worker_id="foo",
+                ping_interval=0.01  # very short between pings to make test fast
+                ):
+            # let the keep-alive thread run for a bit...
+            time.sleep(0.1)  # yes, this is ugly but it's exactly what we need to test
         self.assertTrue(
             self._total_pings > 1,
             msg="Didn't retry pings (%d pings performed)" % (self._total_pings,)
         )
 
     def test_ping_thread_shutdown(self):
-        w = Worker(ping_interval=0.01)
-        self.assertTrue(w._keep_alive_thread.is_alive())
-        w.stop()  # should stop within 0.01 s
+        with Worker(ping_interval=0.01) as w:
+            self.assertTrue(w._keep_alive_thread.is_alive())
         self.assertFalse(w._keep_alive_thread.is_alive())
 
 
@@ -734,15 +714,14 @@ class WorkerEmailTest(unittest.TestCase):
     def setUp(self):
         super(WorkerEmailTest, self).setUp()
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        self.worker = Worker(scheduler=sch, worker_id="foo")
+        self.worker = Worker(scheduler=sch, worker_id="foo").__enter__()
 
     def tearDown(self):
-        self.worker.stop()
+        self.worker.__exit__(None, None, None)
 
     @email_patch
     def test_connection_error(self, emails):
         sch = RemoteScheduler('http://tld.invalid:1337', connect_timeout=1)
-        worker = Worker(scheduler=sch)
 
         self.waits = 0
 
@@ -756,11 +735,11 @@ class WorkerEmailTest(unittest.TestCase):
 
         a = A()
         self.assertEqual(emails, [])
-        worker.add(a)
-        self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
-        self.assertNotEqual(emails, [])
-        self.assertTrue(emails[0].find("Luigi: Framework error while scheduling %s" % (a,)) != -1)
-        worker.stop()
+        with Worker(scheduler=sch) as worker:
+            worker.add(a)
+            self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
+            self.assertNotEqual(emails, [])
+            self.assertTrue(emails[0].find("Luigi: Framework error while scheduling %s" % (a,)) != -1)
 
     @email_patch
     def test_complete_error(self, emails):
@@ -923,20 +902,19 @@ class MultipleWorkersTest(unittest.TestCase):
         w._handle_next_task()
 
     def test_stop_worker_kills_subprocesses(self):
-        w = Worker(worker_processes=2)
-        hung_task = HungWorker()
-        w.add(hung_task)
+        with Worker(worker_processes=2) as w:
+            hung_task = HungWorker()
+            w.add(hung_task)
 
-        w._run_task(hung_task.task_id)
-        pids = [p.pid for p in w._running_tasks.values()]
-        self.assertEqual(1, len(pids))
-        pid = pids[0]
+            w._run_task(hung_task.task_id)
+            pids = [p.pid for p in w._running_tasks.values()]
+            self.assertEqual(1, len(pids))
+            pid = pids[0]
 
-        def is_running():
-            return pid in {p.pid for p in psutil.Process().children()}
+            def is_running():
+                return pid in {p.pid for p in psutil.Process().children()}
 
-        self.assertTrue(is_running())
-        w.stop()
+            self.assertTrue(is_running())
         self.assertFalse(is_running())
 
     def test_time_out_hung_worker(self):
@@ -990,8 +968,11 @@ class Dummy2Task(Task):
 class AssistantTest(unittest.TestCase):
     def setUp(self):
         self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        self.w = Worker(scheduler=self.sch, worker_id='X')
+        self.w = Worker(scheduler=self.sch, worker_id='X').__enter__()
         self.assistant = Worker(scheduler=self.sch, worker_id='Y', assistant=True)
+
+    def tearDown(self):
+        self.w.__exit__(None, None, None)
 
     def test_get_work(self):
         d = Dummy2Task('123')
