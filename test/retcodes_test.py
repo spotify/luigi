@@ -108,11 +108,3 @@ class RetcodesTest(LuigiTestCase):
 
         self.run_and_expect('RequiringTask --retcode-task-failed 4 --retcode-missing-data 5', 5)
         self.run_and_expect('RequiringTask --retcode-task-failed 7 --retcode-missing-data 6', 7)
-
-    def test_keyboard_interrupts(self):
-
-        class KeyboardInterruptTask(luigi.Task):
-            def run(self):
-                raise KeyboardInterrupt()
-
-        self.assertRaises(KeyboardInterrupt, luigi_run, ['KeyboardInterruptTask', '--local-scheduler', '--no-lock'])

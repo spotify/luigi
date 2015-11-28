@@ -25,7 +25,7 @@ import tempfile
 import threading
 import time
 import psutil
-from helpers import unittest, with_config, skipOnTravis
+from helpers import unittest, with_config, skipOnTravis, LuigiTestCase
 
 import luigi.notifications
 import luigi.worker
@@ -35,6 +35,7 @@ from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
 from luigi import six
+from luigi.cmdline import luigi_run
 
 luigi.notifications.DEBUG = True
 
@@ -1125,3 +1126,37 @@ class WorkerWaitJitterTest(unittest.TestCase):
         six.next(x)
         mock_random.assert_called_with(0, 5.0)
         mock_sleep.assert_called_with(4.3)
+
+
+class KeyboardInterruptBehaviorTest(LuigiTestCase):
+
+    def test_propagation_when_executing(self):
+        """
+        Ensure that keyboard interrupts causes luigi to quit when you are
+        executing tasks.
+
+        TODO: Add a test that tests the multiprocessing (--worker >1) case
+        """
+        class KeyboardInterruptTask(luigi.Task):
+            def run(self):
+                raise KeyboardInterrupt()
+
+        cmd = 'KeyboardInterruptTask --local-scheduler --no-lock'.split(' ')
+        self.assertRaises(KeyboardInterrupt, luigi_run, cmd)
+
+    def test_propagation_when_scheduling(self):
+        """
+        Test that KeyboardInterrupt causes luigi to quit while scheduling.
+        """
+        class KeyboardInterruptTask(luigi.Task):
+            def complete(self):
+                raise KeyboardInterrupt()
+
+        class ExternalKeyboardInterruptTask(luigi.ExternalTask):
+            def complete(self):
+                raise KeyboardInterrupt()
+
+        self.assertRaises(KeyboardInterrupt, luigi_run,
+                          ['KeyboardInterruptTask', '--local-scheduler', '--no-lock'])
+        self.assertRaises(KeyboardInterrupt, luigi_run,
+                          ['ExternalKeyboardInterruptTask', '--local-scheduler', '--no-lock'])
