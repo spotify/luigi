@@ -244,8 +244,11 @@ class HiveThriftContext(object):
 
 
 def get_default_client():
-    if get_hive_syntax() == "apache":
+    syntax = get_hive_syntax()
+    if syntax == "apache":
         return ApacheHiveCommandClient()
+    elif syntax == "metastore":
+        return MetastoreClient()
     else:
         return HiveCommandClient()
 
