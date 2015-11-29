@@ -47,9 +47,6 @@ class RecursionTest(unittest.TestCase):
         MockTarget.fs.get_all_data()['/tmp/popularity/2009-01-01.txt'] = b'0\n'
 
     def test_invoke(self):
-        w = luigi.worker.Worker()
-        w.add(Popularity(datetime.date(2010, 1, 1)))
-        w.run()
-        w.stop()
+        luigi.build([Popularity(datetime.date(2009, 1, 5))], local_scheduler=True)
 
-        self.assertEqual(MockTarget.fs.get_data('/tmp/popularity/2010-01-01.txt'), b'365\n')
+        self.assertEqual(MockTarget.fs.get_data('/tmp/popularity/2009-01-05.txt'), b'4\n')
