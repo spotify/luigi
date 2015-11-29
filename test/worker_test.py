@@ -109,18 +109,16 @@ class DynamicRequiresOtherModule(Task):
 
 class WorkerTest(unittest.TestCase):
 
-    def setUp(self):
-        # InstanceCache.disable()
+    def run(self, result=None):
         self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        self.w = Worker(scheduler=self.sch, worker_id='X').__enter__()
-        self.w2 = Worker(scheduler=self.sch, worker_id='Y').__enter__()
         self.time = time.time
+        with Worker(scheduler=self.sch, worker_id='X') as w, Worker(scheduler=self.sch, worker_id='Y') as w2:
+            self.w = w
+            self.w2 = w2
+            super(WorkerTest, self).run(result)
 
-    def tearDown(self):
         if time.time != self.time:
             time.time = self.time
-        self.w.__exit__(None, None, None)
-        self.w2.__exit__(None, None, None)
 
     def setTime(self, t):
         time.time = lambda: t
@@ -712,13 +710,12 @@ def custom_email_patch(config):
 
 class WorkerEmailTest(unittest.TestCase):
 
-    def setUp(self):
+    def run(self, result=None):
         super(WorkerEmailTest, self).setUp()
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        self.worker = Worker(scheduler=sch, worker_id="foo").__enter__()
-
-    def tearDown(self):
-        self.worker.__exit__(None, None, None)
+        with Worker(scheduler=sch, worker_id="foo") as worker:
+            self.worker = worker
+            super(WorkerEmailTest, self).run(result)
 
     @email_patch
     def test_connection_error(self, emails):
@@ -967,13 +964,12 @@ class Dummy2Task(Task):
 
 
 class AssistantTest(unittest.TestCase):
-    def setUp(self):
+    def run(self, result=None):
         self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        self.w = Worker(scheduler=self.sch, worker_id='X').__enter__()
         self.assistant = Worker(scheduler=self.sch, worker_id='Y', assistant=True)
-
-    def tearDown(self):
-        self.w.__exit__(None, None, None)
+        with Worker(scheduler=self.sch, worker_id='X') as w:
+            self.w = w
+            super(AssistantTest, self).run(result)
 
     def test_get_work(self):
         d = Dummy2Task('123')
