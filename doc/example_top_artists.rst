@@ -120,7 +120,8 @@ here is how this could look like, instead of the class above.
 Note that :class:`luigi.contrib.hadoop.JobTask` doesn't require you to implement a
 :func:`~luigi.task.Task.run` method. Instead, you typically implement a
 :func:`~luigi.contrib.hadoop.JobTask.mapper` and
-:func:`~luigi.contrib.hadoop.JobTask.reducer` method.
+:func:`~luigi.contrib.hadoop.JobTask.reducer` method. *mapper* and *combiner* require
+yielding tuple of only two elements: key and value. Both key and value also may be a tuple.
 
 Step 2 – Find the Top Artists
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
