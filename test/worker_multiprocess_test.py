@@ -46,14 +46,13 @@ class DummyTask(Task):
 
 class MultiprocessWorkerTest(unittest.TestCase):
 
-    def setUp(self):
+    def run(self, result=None):
         self.scheduler = RemoteScheduler()
         self.scheduler.add_worker = Mock()
         self.scheduler.add_task = Mock()
-        self.worker = Worker(scheduler=self.scheduler, worker_id='X', worker_processes=2).__enter__()
-
-    def tearDown(self):
-        self.worker.__exit__(None, None, None)
+        with Worker(scheduler=self.scheduler, worker_id='X', worker_processes=2) as worker:
+            self.worker = worker
+            super(MultiprocessWorkerTest, self).run(result)
 
     def gw_res(self, pending, task_id):
         return dict(n_pending_tasks=pending,
