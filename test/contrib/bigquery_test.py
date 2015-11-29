@@ -19,17 +19,15 @@
 These are the unit tests for the Bigquery-luigi binding.
 """
 
-import os
 
 import luigi
 from luigi.contrib import bigquery
 
 from helpers import unittest
-from contrib import gcs_test
 from mock import MagicMock
 
-PROJECT_ID = gcs_test.PROJECT_ID
-DATASET_ID = os.environ.get('BQ_TEST_DATASET_ID', 'luigi_tests')
+PROJECT_ID = 'projectid'
+DATASET_ID = 'dataset'
 
 
 class TestRunQueryTask(bigquery.BigqueryRunQueryTask):
