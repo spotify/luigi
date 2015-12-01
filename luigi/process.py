@@ -100,7 +100,8 @@ def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None, unix_
     ctx = daemon.DaemonContext(
         stdout=stdout_proxy,
         stderr=stderr_proxy,
-        working_directory='.'
+        working_directory='.',
+        initgroups=False,
     )
 
     with ctx:
