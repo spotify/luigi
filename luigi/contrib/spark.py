@@ -233,7 +233,7 @@ class SparkSubmitTask(luigi.Task):
 
     def run(self):
         args = list(map(str, self.spark_command() + self.app_command()))
-        logger.info('Running: %s', repr(args))
+        logger.info('Running: {}'.format(subprocess.list2cmdline(args)))
         tmp_stdout, tmp_stderr = tempfile.TemporaryFile(), tempfile.TemporaryFile()
         proc = subprocess.Popen(args, stdout=tmp_stdout, stderr=tmp_stderr,
                                 env=self.get_environment(), close_fds=True,
