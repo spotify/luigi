@@ -94,7 +94,7 @@ class HdfsTarget(FileSystemTarget):
     def __del__(self):
         # TODO: not sure is_tmp belongs in Targets construction arguments
         if self.is_tmp and self.exists():
-            self.remove()
+            self.remove(skip_trash=True)
 
     @property
     def fs(self):

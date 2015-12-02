@@ -23,6 +23,7 @@ snakebite client.
 
 from luigi.contrib.hdfs import config as hdfs_config
 from luigi.contrib.hdfs import snakebite_client as hdfs_snakebite_client
+from luigi.contrib.hdfs import webhdfs_client as hdfs_webhdfs_client
 from luigi.contrib.hdfs import hadoopcli_clients as hdfs_hadoopcli_clients
 import luigi.contrib.target
 import logging
@@ -35,6 +36,8 @@ def get_autoconfig_client():
     Creates the client as specified in the `luigi.cfg` configuration.
     """
     configured_client = hdfs_config.get_configured_hdfs_client()
+    if configured_client == "webhdfs":
+        return hdfs_webhdfs_client.WebHdfsClient()
     if configured_client == "snakebite":
         return hdfs_snakebite_client.SnakebiteHdfsClient()
     if configured_client == "snakebite_with_hadoopcli_fallback":
@@ -42,7 +45,7 @@ def get_autoconfig_client():
                                                      hdfs_hadoopcli_clients.create_hadoopcli_client()])
     if configured_client == "hadoopcli":
         return hdfs_hadoopcli_clients.create_hadoopcli_client()
-    raise Exception("Unknown hdfs client " + hdfs_config.get_configured_hdfs_client())
+    raise Exception("Unknown hdfs client " + configured_client)
 
 
 def _with_ac(method_name):

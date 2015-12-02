@@ -15,28 +15,25 @@
 # limitations under the License.
 #
 """
-Provides a :class:`WebHdfsTarget` and :class:`WebHdfsClient` using the
-`Python hdfs <https://pypi.python.org/pypi/hdfs/>`_
+Provides a :class:`WebHdfsTarget` using the `Python hdfs
+<https://pypi.python.org/pypi/hdfs/>`_
+
+This module is DEPRECATED and does not play well with rest of luigi's hdfs
+contrib module. You can consider migrating to
+:class:`luigi.contrib.hdfs.webhdfs_client.WebHdfsClient`
 """
 
 from __future__ import absolute_import
 
 import logging
-import os
 
 from luigi import six
 
-from luigi import configuration
 from luigi.target import FileSystemTarget, AtomicLocalFile
 from luigi.format import get_default_format
+import luigi.contrib.hdfs
 
 logger = logging.getLogger("luigi-interface")
-
-try:
-    import hdfs as webhdfs
-except ImportError:
-    logger.warning("Loading webhdfs module without `hdfs` package installed. "
-                   "Will crash at runtime if webhdfs functionality is used.")
 
 
 class WebHdfsTarget(FileSystemTarget):
@@ -116,52 +113,4 @@ class AtomicWebHdfsFile(AtomicLocalFile):
             self.client.upload(self.path, self.tmp_path)
 
 
-class WebHdfsClient(object):
-
-    def __init__(self, host=None, port=None, user=None):
-        host = self.get_config('namenode_host') if host is None else host
-        port = self.get_config('namenode_port') if port is None else port
-        user = self.get_config('user') if user is None else os.environ['USER']
-
-        url = 'http://' + host + ':' + port
-        self.webhdfs = webhdfs.InsecureClient(url=url, user=user)
-
-    def get_config(self, key):
-        config = configuration.get_config()
-        try:
-            return config.get('hdfs', key)
-        except:
-            raise RuntimeError("You must specify %s in the [hdfs] section of "
-                               "the luigi.cfg file" % key)
-
-    def walk(self, path, depth=1):
-        return self.webhdfs.walk(path, depth=depth)
-
-    def exists(self, path):
-        """
-        Returns true if the path exists and false otherwise.
-        """
-        try:
-            self.webhdfs.status(path)
-            return True
-        except webhdfs.util.HdfsError as e:
-            if str(e).startswith('File does not exist: '):
-                return False
-            else:
-                raise e
-
-    def upload(self, hdfs_path, local_path, overwrite=False):
-        return self.webhdfs.upload(hdfs_path, local_path, overwrite=overwrite)
-
-    def download(self, hdfs_path, local_path, overwrite=False, n_threads=-1):
-        return self.webhdfs.download(hdfs_path, local_path, overwrite=overwrite,
-                                     n_threads=n_threads)
-
-    def remove(self, hdfs_path, recursive=False):
-        return self.webhdfs.delete(hdfs_path, recursive=recursive)
-
-    def read(self, hdfs_path, offset=0, length=None, buffer_size=None,
-             chunk_size=1024, buffer_char=None):
-        return self.webhdfs.read(hdfs_path, offset=offset, length=length,
-                                 buffer_size=buffer_size, chunk_size=chunk_size,
-                                 buffer_char=buffer_char)
+WebHdfsClient = luigi.contrib.hdfs.WebHdfsClient
