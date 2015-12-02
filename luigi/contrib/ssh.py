@@ -178,7 +178,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
             path = path[:-1]
 
         path = path or '.'
-        listing = self.remote_context.check_output(["find", path, "-type", "f"]).splitlines()
+        listing = self.remote_context.check_output(["find", "-L", path, "-type", "f"]).splitlines()
         return [v.decode('utf-8') for v in listing]
 
     def isdir(self, path):
