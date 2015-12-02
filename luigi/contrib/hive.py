@@ -183,7 +183,7 @@ class MetastoreClient(HiveClient):
                 try:
                     partition_str = self.partition_spec(partition)
                     thrift_table = client.get_partition_by_name(database, table, partition_str)
-                except NoSuchObjectException as e:
+                except hive_metastore.ttypes.NoSuchObjectException as e:
                     return ''
             else:
                 thrift_table = client.get_table(database, table)
