@@ -26,6 +26,7 @@ from luigi import six
 
 import luigi
 import luigi.contrib.hadoop
+import hive_metastore
 from luigi.target import FileAlreadyExists, FileSystemTarget
 from luigi.task import flatten
 
