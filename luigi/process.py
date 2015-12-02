@@ -77,6 +77,8 @@ def _server_already_running(pidfile):
 
 def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None, unix_socket=None):
     import daemon
+    from daemon._metadata import get_distribution_version_info as gdvi
+    from distutils.version import StrictVersion
 
     logdir = logdir or "/var/log/luigi"
     if not os.path.exists(logdir):
@@ -97,11 +99,16 @@ def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None, unix_
     stdout_proxy = open(stdout_path, 'a+')
     stderr_proxy = open(stderr_path, 'a+')
 
-    ctx = daemon.DaemonContext(
-        stdout=stdout_proxy,
-        stderr=stderr_proxy,
-        working_directory='.'
-    )
+    daemon_kwargs = {
+        "stdout": stdout_proxy,
+        "stderr": stderr_proxy,
+        "working_directory": '.',
+    }
+
+    if (StrictVersion(gdvi().get("version") or "0.0.0") >= StrictVersion("2.1.0")):
+        daemon_kwargs["initgroups"] = False
+
+    ctx = daemon.DaemonContext(**daemon_kwargs)
 
     with ctx:
         loghandler = get_spool_handler(log_path)
