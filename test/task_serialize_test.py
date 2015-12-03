@@ -1,5 +1,21 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """
-We want to test that task_id is consistent when generated form:
+We want to test that task_id is consistent when generated from:
 
  1. A real task instance
  2. The task_family and a dictionary of parameter values (as strings)
@@ -101,5 +117,13 @@ def test_json_serializable(task_cls):
 
     assert task.task_id == task2.task_id
 
+
+@hyp.given(tasks_with_defaults)
+def test_task_id_alphanumeric(task_cls):
+    task = task_cls()
+    task_id = task.task_id
+    valid = string.ascii_letters + string.digits + '_'
+
+    assert [x for x in task_id if x not in valid] == []
 
 # TODO : significant an non-significant parameters

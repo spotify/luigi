@@ -29,6 +29,7 @@ import traceback
 import warnings
 import json
 import hashlib
+import re
 
 from luigi import six
 
@@ -260,6 +261,7 @@ class Task(object):
         TASK_ID_INCLUDE_PARAMS = 3
         TASK_ID_TRUNCATE_PARAMS = 16
         TASK_ID_TRUNCATE_HASH = 10
+        TASK_ID_INVALID_CHAR_REGEX = r'[^A-Za-z0-9_]'
 
         params = self.to_str_params(only_significant=True)
         param_str = json.dumps(params, separators=(',', ':'), sort_keys=True)
@@ -267,6 +269,8 @@ class Task(object):
 
         param_summary = '_'.join(p[:TASK_ID_TRUNCATE_PARAMS]
                                  for p in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))
+        param_summary = re.sub(TASK_ID_INVALID_CHAR_REGEX, '_', param_summary)
+
         self.task_id = '{}_{}_{}'.format(self.task_family, param_summary, param_hash[:TASK_ID_TRUNCATE_HASH])
 
         self.__hash = hash(self.task_id)
@@ -333,17 +337,20 @@ class Task(object):
         return self.__hash
 
     def __repr__(self):
+        """
+        Build a task representation like `MyTask(param1=1.5, param2='5')`
+        """
         params = self.get_params()
         param_values = self.get_param_values(params, [], self.param_kwargs)
 
         # Build up task id
-        task_id_parts = []
+        repr_parts = []
         param_objs = dict(params)
         for param_name, param_value in param_values:
             if param_objs[param_name].significant:
-                task_id_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
+                repr_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
 
-        task_str = '{}({})'.format(self.task_family, ', '.join(task_id_parts))
+        task_str = '{}({})'.format(self.task_family, ', '.join(repr_parts))
 
         return task_str
 
