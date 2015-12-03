@@ -97,11 +97,20 @@ def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None, unix_
     stdout_proxy = open(stdout_path, 'a+')
     stderr_proxy = open(stderr_path, 'a+')
 
-    ctx = daemon.DaemonContext(
-        stdout=stdout_proxy,
-        stderr=stderr_proxy,
-        working_directory='.'
-    )
+    try:
+        ctx = daemon.DaemonContext(
+            stdout=stdout_proxy,
+            stderr=stderr_proxy,
+            working_directory='.',
+            initgroups=False,
+        )
+    except TypeError:
+        # Older versions of python-daemon cannot deal with initgroups arg.
+        ctx = daemon.DaemonContext(
+            stdout=stdout_proxy,
+            stderr=stderr_proxy,
+            working_directory='.',
+        )
 
     with ctx:
         loghandler = get_spool_handler(log_path)
