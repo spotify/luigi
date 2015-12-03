@@ -41,4 +41,4 @@ def luigid(argv=sys.argv[1:]):
                                 filename=os.path.join(opts.logdir, "luigi-server.log"))
         else:
             logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format())
-        luigi.server.run(api_port=opts.port, address=opts.address)
+        luigi.server.run(api_port=opts.port, address=opts.address, unix_socket=opts.unix_socket)
