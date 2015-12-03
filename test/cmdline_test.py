@@ -84,6 +84,11 @@ class FooSubClass(FooBaseClass):
     pass
 
 
+class ATaskThatFails(luigi.Task):
+    def run(self):
+        raise ValueError()
+
+
 class CmdlineTest(unittest.TestCase):
 
     def setUp(self):
@@ -269,6 +274,20 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'cmdline_test', 'HooBaseClass', '--x 5'])
         self.assertTrue(stderr.find(b'FooBaseClass') != -1)
         self.assertTrue(stderr.find(b'--x') != 0)
+
+    def test_stack_trace_has_no_inner(self):
+        """
+        Test that the stack trace for failing tasks are short
+
+        The stack trace shouldn't contain unreasonably much implementation
+        details of luigi In particular it should say that the task is
+        misspelled and not that the local parameters do not exist.
+        """
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'cmdline_test', 'ATaskThatFails', '--local-scheduler', '--no-lock'])
+        print(stdout)
+
+        self.assertFalse(stdout.find(b"run() got an unexpected keyword argument 'tracking_url_callback'") != -1)
+        self.assertFalse(stdout.find(b'During handling of the above exception, another exception occurred') != -1)
 
 
 if __name__ == '__main__':

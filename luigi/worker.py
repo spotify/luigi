@@ -102,11 +102,14 @@ class TaskProcess(multiprocessing.Process):
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
 
     def _run_get_new_deps(self):
+        run_again = False
         try:
             task_gen = self.task.run(tracking_url_callback=self.tracking_url_callback)
         except TypeError as ex:
             if 'unexpected keyword argument' not in getattr(ex, 'message', ex.args[0]):
                 raise
+            run_again = True
+        if run_again:
             task_gen = self.task.run()
         if not isinstance(task_gen, types.GeneratorType):
             return None
