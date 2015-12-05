@@ -22,7 +22,7 @@ import luigi.contrib.hdfs
 from luigi import six
 from luigi.mock import MockTarget
 from helpers import with_config
-from luigi.contrib.spark import SparkJobError, SparkSubmitTask, PySparkTask, PySpark1xJob, Spark1xJob, SparkJob
+from luigi.contrib.spark import SparkJobError, SparkSubmitTask, PySparkTask
 from mock import patch, MagicMock
 
 BytesIO = six.BytesIO
@@ -94,46 +94,6 @@ class HdfsJob(luigi.ExternalTask):
 
     def output(self):
         return luigi.contrib.hdfs.HdfsTarget('test')
-
-
-class TestSparkJob(SparkJob):
-
-    spark_workers = '2'
-    spark_master_memory = '1g'
-    spark_worker_memory = '1g'
-
-    def requires_hadoop(self):
-        return HdfsJob()
-
-    def jar(self):
-        return 'jar'
-
-    def job_class(self):
-        return 'job_class'
-
-    def output(self):
-        return luigi.LocalTarget('output')
-
-
-class TestSpark1xJob(Spark1xJob):
-
-    def jar(self):
-        return 'jar'
-
-    def job_class(self):
-        return 'job_class'
-
-    def output(self):
-        return luigi.LocalTarget('output')
-
-
-class TestPySpark1xJob(PySpark1xJob):
-
-    def program(self):
-        return 'python_file'
-
-    def output(self):
-        return luigi.LocalTarget('output')
 
 
 class SparkSubmitTaskTest(unittest.TestCase):
@@ -234,89 +194,3 @@ class PySparkTaskTest(unittest.TestCase):
 
         sc.textFile.assert_called_with('input')
         sc.textFile.return_value.saveAsTextFile.assert_called_with('output')
-
-
-class SparkJobTest(unittest.TestCase):
-    hcd = 'hcd-stub'
-    ycd = 'ycd-stub'
-    sj = 'sj-stub'
-    sc = 'sc-sub'
-
-    @with_config({'spark': {'hadoop-conf-dir': hcd, 'yarn-conf-dir': ycd, 'spark-jar': sj, 'spark-class': sc}})
-    @patch('luigi.contrib.spark.subprocess.Popen')
-    @patch('luigi.contrib.hdfs.HdfsTarget')
-    def test_run(self, target, proc):
-        setup_run_process(proc)
-        job = TestSparkJob()
-        job.run()
-        self.assertEqual(proc.call_args[0][0], [self.sc, 'org.apache.spark.deploy.yarn.Client', '--jar', job.jar(), '--class', job.job_class(),
-                                                '--num-workers', '2', '--master-memory', '1g', '--worker-memory', '1g'])
-
-    @with_config({'spark': {'hadoop-conf-dir': hcd, 'yarn-conf-dir': ycd, 'spark-jar': sj, 'spark-class': sc}})
-    @patch('luigi.contrib.spark.tempfile.TemporaryFile')
-    @patch('luigi.contrib.spark.subprocess.Popen')
-    def test_handle_failed_job(self, proc, file):
-        proc.return_value.returncode = 1
-        file.return_value = BytesIO(b'stderr')
-        try:
-            job = TestSparkJob()
-            job.run()
-        except SparkJobError as e:
-            self.assertEqual(e.err, 'stderr')
-            self.assertTrue('STDERR: stderr' in six.text_type(e))
-        else:
-            self.fail("Should have thrown SparkJobError")
-
-
-class Spark1xTest(unittest.TestCase):
-    ss = 'ss-stub'
-
-    @with_config({'spark': {'spark-submit': ss}})
-    @patch('luigi.contrib.spark.subprocess.Popen')
-    def test_run(self, proc):
-        setup_run_process(proc)
-        job = TestSpark1xJob()
-        job.run()
-        self.assertEqual(proc.call_args[0][0], [self.ss, '--master', 'yarn-client', '--class', job.job_class(), job.jar()])
-
-    @with_config({'spark': {'spark-submit': ss}})
-    @patch('luigi.contrib.spark.tempfile.TemporaryFile')
-    @patch('luigi.contrib.spark.subprocess.Popen')
-    def test_handle_failed_job(self, proc, file):
-        proc.return_value.returncode = 1
-        file.return_value = BytesIO(b'stderr')
-        try:
-            job = TestSpark1xJob()
-            job.run()
-        except SparkJobError as e:
-            self.assertEqual(e.err, 'stderr')
-            self.assertTrue('STDERR: stderr' in six.text_type(e))
-        else:
-            self.fail("Should have thrown SparkJobError")
-
-
-class PySpark1xTest(unittest.TestCase):
-    ss = 'ss-stub'
-
-    @with_config({'spark': {'spark-submit': ss}})
-    @patch('luigi.contrib.spark.subprocess.Popen')
-    def test_run(self, proc):
-        setup_run_process(proc)
-        job = TestPySpark1xJob()
-        job.run()
-        self.assertEqual(proc.call_args[0][0], [self.ss, '--master', 'yarn-client', job.program()])
-
-    @with_config({'spark': {'spark-submit': ss}})
-    @patch('luigi.contrib.spark.tempfile.TemporaryFile')
-    @patch('luigi.contrib.spark.subprocess.Popen')
-    def test_handle_failed_job(self, proc, file):
-        proc.return_value.returncode = 1
-        file.return_value = BytesIO(b'stderr')
-        try:
-            job = TestPySpark1xJob()
-            job.run()
-        except SparkJobError as e:
-            self.assertEqual(e.err, 'stderr')
-            self.assertTrue('STDERR: stderr' in six.text_type(e))
-        else:
-            self.fail("Should have thrown SparkJobError")
