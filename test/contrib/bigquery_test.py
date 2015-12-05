@@ -57,7 +57,14 @@ class TestRunQueryTaskWithRequires(bigquery.BigqueryRunQueryTask):
         return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
 
 
-class BulkCompleteTest(unittest.TestCase):
+class TestExternalBigqueryTask(bigquery.ExternalBigqueryTask):
+    client = MagicMock()
+
+    def output(self):
+        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, 'table1', client=self.client)
+
+
+class BigqueryTest(unittest.TestCase):
 
     def test_bulk_complete(self):
         parameters = ['table1', 'table2']
@@ -77,9 +84,6 @@ class BulkCompleteTest(unittest.TestCase):
 
         complete = list(TestRunQueryTask.bulk_complete(['table1']))
         self.assertEquals(complete, [])
-
-
-class RunQueryTest(unittest.TestCase):
 
     def test_query_property(self):
         task = TestRunQueryTask(table='table2')
@@ -101,3 +105,8 @@ class RunQueryTest(unittest.TestCase):
         expected_table = '[' + DATASET_ID + '.' + task.requires().output().table.table_id + ']'
         self.assertIn(expected_table, query)
         self.assertEqual(query, task.query)
+
+    def test_external_task(self):
+        task = TestExternalBigqueryTask()
+        self.assertIsInstance(task, luigi.ExternalTask)
+        self.assertIsInstance(task, bigquery.MixinBigqueryBulkComplete)

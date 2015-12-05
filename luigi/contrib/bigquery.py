@@ -454,3 +454,10 @@ class BigqueryRunQueryTask(MixinBigqueryBulkComplete, luigi.Task):
         }
 
         bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
+
+
+class ExternalBigqueryTask(MixinBigqueryBulkComplete, luigi.ExternalTask):
+    """
+    An external task for a BigQuery target.
+    """
+    pass
