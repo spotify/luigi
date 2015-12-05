@@ -49,11 +49,10 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 
 setup(
     name='luigi',
-    version='2.0.0',
+    version='2.0.1',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='Erik Bernhardsson',
-    author_email='erikbern@spotify.com',
     url='https://github.com/spotify/luigi',
     license='Apache License 2.0',
     packages=[
