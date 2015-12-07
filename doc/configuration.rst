@@ -332,9 +332,11 @@ Parameters controlling the use of snakebite to speed up hdfs queries.
 
 client
   Client to use for most hadoop commands. Options are "snakebite",
-  "snakebite_with_hadoopcli_fallback", and "hadoopcli". Snakebite is
-  much faster, so use of it is encouraged. Using snakebite requires it
-  to be installed separately on the machine. Defaults to "hadoopcli".
+  "snakebite_with_hadoopcli_fallback", "webhdfs" and "hadoopcli". Snakebite is
+  much faster, so use of it is encouraged. webhdfs is fast and works with
+  Python 3 as well, but has not been used that much in the wild.
+  Both snakebite and webhdfs requires you to install it separately on
+  the machine. Defaults to "hadoopcli".
 
 client_version
   Optionally specifies hadoop client version for snakebite.
@@ -681,3 +683,15 @@ Parameters controlling execution summary of a worker
 summary-length
   Maximum number of tasks to show in an execution summary.  If the value is 0,
   then all tasks will be displayed.  Default value is 5.
+
+
+[webhdfs]
+---------
+
+port
+  The port to use for webhdfs. The normal namenode port is probably on a
+  different port from this one.
+user
+  Perform file system operations as the specified user instead of $USER.  Since
+  this parameter is not honored by any of the other hdfs clients, you should
+  think twice before setting this parameter.

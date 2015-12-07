@@ -279,8 +279,7 @@ class ComplexOldFormatTest(MiniClusterTestCase):
         self.assertEqual(a, b'foo')
 
 
-@attr('minicluster')
-class HdfsTargetTests(MiniClusterTestCase, FileSystemTargetTestMixin):
+class HdfsTargetTestMixin(FileSystemTargetTestMixin):
 
     def create_target(self, format=None):
         target = hdfs.HdfsTarget(self._test_file(), format=format)
@@ -454,6 +453,11 @@ class HdfsTargetTests(MiniClusterTestCase, FileSystemTargetTestMixin):
     def test_pickle(self):
         t = hdfs.HdfsTarget("/tmp/dir")
         pickle.dumps(t)
+
+
+@attr('minicluster')
+class HdfsTargetTest(MiniClusterTestCase, HdfsTargetTestMixin):
+    pass
 
 
 @attr('minicluster')
