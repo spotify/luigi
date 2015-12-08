@@ -144,11 +144,15 @@ class TaskProcess(multiprocessing.Process):
         missing = []
         new_deps = []
         try:
-            # Verify that all the tasks are fulfilled!
-            missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
-            if missing:
-                deps = 'dependency' if len(missing) == 1 else 'dependencies'
-                raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
+            # Verify that all the tasks are fulfilled! For external tasks we
+            # don't care about unfulfilled dependencies, because we are just
+            # checking completeness of self.task so outputs of dependencies are
+            # irrelevant.
+            if self.task.run != NotImplemented:
+                missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
+                if missing:
+                    deps = 'dependency' if len(missing) == 1 else 'dependencies'
+                    raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
             self.task.trigger_event(Event.START, self.task)
             t0 = time.time()
             status = None
