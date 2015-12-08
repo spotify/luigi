@@ -161,7 +161,12 @@ class TaskProcess(multiprocessing.Process):
                 # External task
                 # TODO(erikbern): We should check for task completeness after non-external tasks too!
                 # This will resolve #814 and make things a lot more consistent
-                status = DONE if self.task.complete() else FAILED
+                if self.task.complete():
+                    status = DONE
+                else:
+                    status = FAILED
+                    expl = 'Task is an external data dependency ' \
+                        'and data does not exist (yet?).'
             else:
                 new_deps = self._run_get_new_deps()
                 status = DONE if not new_deps else PENDING
