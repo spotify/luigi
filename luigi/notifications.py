@@ -108,7 +108,7 @@ def send_email_smtp(config, sender, subject, message, recipients, image_png):
     smtp = smtplib.SMTP(**kwargs) if not smtp_ssl else smtplib.SMTP_SSL(**kwargs)
     smtp.ehlo_or_helo_if_needed()
 	if smtp.has_extn('starttls'):
-		smtp.starttls()
+        smtp.starttls()
     if smtp_login and smtp_password:
         smtp.login(smtp_login, smtp_password)
 
