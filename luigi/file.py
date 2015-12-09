@@ -112,12 +112,12 @@ class LocalTarget(FileSystemTarget):
                 pass
 
     def open(self, mode='r'):
-        if mode == 'w':
+        if mode[:1] == 'w':
             self.makedirs()
             return self.format.pipe_writer(atomic_file(self.path))
 
-        elif mode == 'r':
-            fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
+        elif mode[:1] == 'r':
+            fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, mode)))
             return self.format.pipe_reader(fileobj)
 
         else:
