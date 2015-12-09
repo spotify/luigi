@@ -112,16 +112,17 @@ class LocalTarget(FileSystemTarget):
                 pass
 
     def open(self, mode='r'):
-        if mode == 'w':
+        rwmode = mode.replace('b','').replace('t','')
+        if rwmode == 'w':
             self.makedirs()
             return self.format.pipe_writer(atomic_file(self.path))
 
-        elif mode == 'r':
-            fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, 'r')))
+        elif rwmode == 'r':
+            fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, mode)))
             return self.format.pipe_reader(fileobj)
 
         else:
-            raise Exception('mode must be r/w')
+            raise Exception('mode must be r/w (got:%s)' % mode)
 
     def move(self, new_path, raise_if_exists=False):
         if raise_if_exists and os.path.exists(new_path):
