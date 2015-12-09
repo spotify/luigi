@@ -129,19 +129,19 @@ class TestS3CopyToTable(unittest.TestCase):
         """
         Test missing table creation
         """
+        # Ensure `S3CopyToTable.create_table` does not throw an error.
         task = DummyS3CopyToTable()
         task.run()
 
-        # The mocked connection cursor passed to
-        # S3CopyToTable.copy(self, cursor, f).
+        # Make sure the cursor was successfully used to create the table in
+        # `create_table` as expected.
         mock_cursor = (mock_redshift_target.return_value
                                            .connect
                                            .return_value
                                            .cursor
                                            .return_value)
-
-        # Ensure `S3CopyToTable.create_table` does not throw an error.
-        assert mock_cursor.execute.called
+        assert mock_cursor.execute.call_args_list[0][0][0].startswith(
+            "CREATE  TABLE %s" % task.table)
 
         return
 
