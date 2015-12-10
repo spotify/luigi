@@ -112,7 +112,7 @@ class LocalTarget(FileSystemTarget):
                 pass
 
     def open(self, mode='r'):
-        if mode[:1] == 'w':
+        if mode[:1] == 'w' and '+' not in mode:
             self.makedirs()
             return self.format.pipe_writer(atomic_file(self.path))
 
