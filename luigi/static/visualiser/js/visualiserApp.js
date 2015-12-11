@@ -245,8 +245,9 @@ function visualiserApp(luigi) {
         updateSidebar(tabId);
     }
 
-    function showErrorTrace(error) {
-        $("#errorModal").empty().append(renderTemplate("errorTemplate", decodeError(error)));
+    function showErrorTrace(data) {
+        data.error = decodeError(data.error)
+        $("#errorModal").empty().append(renderTemplate("errorTemplate", data));
         $("#errorModal").modal({});
     }
 
