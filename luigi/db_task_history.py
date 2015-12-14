@@ -49,6 +49,7 @@ import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
+from sqlalchemy.engine import reflection
 Base = sqlalchemy.ext.declarative.declarative_base()
 
 logger = logging.getLogger('luigi-interface')
@@ -59,6 +60,8 @@ class DbTaskHistory(task_history.TaskHistory):
     Task History that writes to a database using sqlalchemy.
     Also has methods for useful db queries.
     """
+    CURRENT_SOURCE_VERSION = 1
+
     @contextmanager
     def _session(self, session=None):
         if session:
@@ -80,6 +83,8 @@ class DbTaskHistory(task_history.TaskHistory):
         self.session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
         self.tasks = {}  # task_id -> TaskRecord
+
+        _upgrade_schema(self.engine)
 
     def task_scheduled(self, task):
         htask = self._get_task(task, status=PENDING)
@@ -235,6 +240,17 @@ class TaskRecord(Base):
         return "TaskRecord(name=%s, host=%s)" % (self.name, self.host)
 
 
-version_table = sqlalchemy.Table('version', Base.metadata,
-                                 sqlalchemy.Column('version', sqlalchemy.Integer)
-                                 )
+def _upgrade_schema(engine):
+    """
+    Ensure the database schema is up to date with the codebase.
+
+    :param engine: SQLAlchemy engine of the underlying database.
+    """
+    inspector = reflection.Inspector.from_engine(engine)
+    conn = engine.connect()
+
+    # Upgrade 1.  Add task_id column and index to tasks
+    if 'task_id' not in [x['name'] for x in inspector.get_columns('tasks')]:
+        logger.warn('Upgrading DbTaskHistory schema: Adding tasks.task_id')
+        conn.execute('ALTER TABLE tasks ADD COLUMN task_id VARCHAR(200)')
+        conn.execute('CREATE INDEX ix_task_id ON tasks (task_id)')
