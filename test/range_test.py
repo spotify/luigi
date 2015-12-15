@@ -205,7 +205,8 @@ class RangeDailyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeDailyDerived(RangeDailyBase):
-            def missing_datetimes(*args):
+            def missing_datetimes(self, task_cls, finite_datetimes):
+                args = [self, task_cls, finite_datetimes]
                 calls.append(args)
                 return args[-1][:5]
 
@@ -245,15 +246,16 @@ class RangeDailyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeDailyDerived(RangeDailyBase):
-            def missing_datetimes(*args):
-                calls.append(args)
-                return args[-1][:7]
+            def missing_datetimes(self, finite_datetimes):
+                # I only changed tests for number of arguments at this one
+                # place to test both old and new behavior
+                calls.append((self, finite_datetimes))
+                return finite_datetimes[:7]
 
         task = RangeDailyDerived(of=CommonDateTask,
                                  **kwargs)
         self.assertEqual(list(map(str, task.requires())), expected_requires)
-        self.assertEqual(calls[0][1], CommonDateTask)
-        self.assertEqual((min(calls[0][2]), max(calls[0][2])), expected_finite_datetimes_range)
+        self.assertEqual((min(calls[0][1]), max(calls[0][1])), expected_finite_datetimes_range)
         self.assertEqual(list(map(str, task.requires())), expected_requires)
         self.assertEqual(len(calls), 1)  # subsequent requires() should return the cached result, not call missing_datetimes again
         self.assertEqual(self.events, expected_events)
@@ -320,7 +322,8 @@ class RangeHourlyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeHourlyDerived(RangeHourlyBase):
-            def missing_datetimes(*args):
+            def missing_datetimes(a, b, c):
+                args = [a, b, c]
                 calls.append(args)
                 return args[-1][:5]
 
@@ -359,7 +362,8 @@ class RangeHourlyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeHourlyDerived(RangeHourlyBase):
-            def missing_datetimes(*args):
+            def missing_datetimes(a, b, c):
+                args = [a, b, c]
                 calls.append(args)
                 return args[-1][:7]
 
@@ -716,5 +720,21 @@ class RangeInstantiationTest(LuigiTestCase):
                                     start=datetime.date(2015, 12, 1),
                                     stop=datetime.date(2015, 12, 2),
                                     param_name='date_param')
+        expected_task = MyTask('woo', datetime.date(2015, 12, 1))
+        self.assertEqual(expected_task, list(range_task._requires())[0])
+
+    def test_param_name_with_inferred_fs(self):
+        class MyTask(luigi.Task):
+            some_non_range_param = luigi.Parameter(default='woo')
+            date_param = luigi.DateParameter()
+
+            def output(self):
+                return MockTarget(self.date_param.strftime('/n2000y01a05n/%Y_%m-_-%daww/21mm%Hdara21/ooo'))
+
+        range_task = RangeDaily(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                of=MyTask,
+                                start=datetime.date(2015, 12, 1),
+                                stop=datetime.date(2015, 12, 2),
+                                param_name='date_param')
         expected_task = MyTask('woo', datetime.date(2015, 12, 1))
         self.assertEqual(expected_task, list(range_task._requires())[0])
