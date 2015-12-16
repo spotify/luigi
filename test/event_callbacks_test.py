@@ -242,21 +242,21 @@ class TestDependencyEvents(unittest.TestCase):
             D(param).produce_output()
         self._run_test(A(), {
             'event.core.dependency.discovered': set([
-                ('A(param=1)', 'B(param=1)'),
-                ('A(param=1)', 'B(param=2)'),
-                ('B(param=1)', 'C(param=1)'),
-                ('B(param=2)', 'C(param=2)'),
-                ('C(param=1)', 'D(param=1)'),
-                ('C(param=1)', 'D(param=2)'),
-                ('C(param=2)', 'D(param=2)'),
-                ('C(param=2)', 'D(param=3)'),
+                (A(param=1).task_id, B(param=1).task_id),
+                (A(param=1).task_id, B(param=2).task_id),
+                (B(param=1).task_id, C(param=1).task_id),
+                (B(param=2).task_id, C(param=2).task_id),
+                (C(param=1).task_id, D(param=1).task_id),
+                (C(param=1).task_id, D(param=2).task_id),
+                (C(param=2).task_id, D(param=2).task_id),
+                (C(param=2).task_id, D(param=3).task_id),
             ]),
             'event.core.dependency.missing': set([
-                ('D(param=3)',),
+                (D(param=3).task_id,),
             ]),
             'event.core.dependency.present': set([
-                ('D(param=1)',),
-                ('D(param=2)',),
+                (D(param=1).task_id,),
+                (D(param=2).task_id,),
             ]),
         })
         self.assertFalse(A().output().exists())
@@ -266,28 +266,28 @@ class TestDependencyEvents(unittest.TestCase):
             D(param).produce_output()
         self._run_test(A(), {
             'event.core.dependency.discovered': set([
-                ('A(param=1)', 'B(param=1)'),
-                ('A(param=1)', 'B(param=2)'),
-                ('B(param=1)', 'C(param=1)'),
-                ('B(param=2)', 'C(param=2)'),
-                ('C(param=1)', 'D(param=1)'),
-                ('C(param=1)', 'D(param=2)'),
-                ('C(param=2)', 'D(param=2)'),
-                ('C(param=2)', 'D(param=3)'),
+                (A(param=1).task_id, B(param=1).task_id),
+                (A(param=1).task_id, B(param=2).task_id),
+                (B(param=1).task_id, C(param=1).task_id),
+                (B(param=2).task_id, C(param=2).task_id),
+                (C(param=1).task_id, D(param=1).task_id),
+                (C(param=1).task_id, D(param=2).task_id),
+                (C(param=2).task_id, D(param=2).task_id),
+                (C(param=2).task_id, D(param=3).task_id),
             ]),
             'event.core.dependency.present': set([
-                ('D(param=1)',),
-                ('D(param=2)',),
-                ('D(param=3)',),
+                (D(param=1).task_id,),
+                (D(param=2).task_id,),
+                (D(param=3).task_id,),
             ]),
         })
         self.assertEqual(eval_contents(A().output()),
-                         ['A(param=1)',
-                             ['B(param=1)',
-                                 ['C(param=1)',
-                                     ['D(param=1)'],
-                                     ['D(param=2)']]],
-                             ['B(param=2)',
-                                 ['C(param=2)',
-                                     ['D(param=2)'],
-                                     ['D(param=3)']]]])
+                         [A(param=1).task_id,
+                             [B(param=1).task_id,
+                                 [C(param=1).task_id,
+                                     [D(param=1).task_id],
+                                     [D(param=2).task_id]]],
+                             [B(param=2).task_id,
+                                 [C(param=2).task_id,
+                                     [D(param=2).task_id],
+                                     [D(param=3).task_id]]]])

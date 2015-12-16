@@ -133,7 +133,7 @@ class TaskProcess(multiprocessing.Process):
                 return new_deps
 
     def run(self):
-        logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task.task_id)
+        logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task)
 
         if self.random_seed:
             # Need to have different random seeds if running in separate processes
@@ -165,13 +165,13 @@ class TaskProcess(multiprocessing.Process):
             if new_deps:
                 logger.info(
                     '[pid %s] Worker %s new requirements      %s',
-                    os.getpid(), self.worker_id, self.task.task_id)
+                    os.getpid(), self.worker_id, self.task)
             elif status == DONE:
                 self.task.trigger_event(
                     Event.PROCESSING_TIME, self.task, time.time() - t0)
                 expl = json.dumps(self.task.on_success())
                 logger.info('[pid %s] Worker %s done      %s', os.getpid(),
-                            self.worker_id, self.task.task_id)
+                            self.worker_id, self.task)
                 self.task.trigger_event(Event.SUCCESS, self.task)
 
         except KeyboardInterrupt:
@@ -581,7 +581,7 @@ class Worker(object):
             task.trigger_event(Event.DEPENDENCY_MISSING, task)
             logger.warning('Data for %s does not exist (yet?). The task is an '
                            'external data depedency, so it can not be run from'
-                           ' this luigi process.', task.task_id)
+                           ' this luigi process.', task)
 
         else:
             try:

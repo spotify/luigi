@@ -201,12 +201,12 @@ class ParameterTest(LuigiTestCase):
             bar = luigi.Parameter()
 
         t1 = InsignificantParameterTask(foo='x', bar='y')
-        self.assertEqual(t1.task_id, 'InsignificantParameterTask(bar=y)')
+        self.assertEqual(str(t1), 'InsignificantParameterTask(bar=y)')
 
         t2 = InsignificantParameterTask('u', 'z')
         self.assertEqual(t2.foo, 'u')
         self.assertEqual(t2.bar, 'z')
-        self.assertEqual(t2.task_id, 'InsignificantParameterTask(bar=z)')
+        self.assertEqual(str(t2), 'InsignificantParameterTask(bar=z)')
 
     def test_local_significant_param(self):
         """ Obviously, if anything should be positional, so should local

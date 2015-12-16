@@ -563,7 +563,7 @@ class RangeDailyTest(unittest.TestCase):
             'BulkCompleteDailyTask(d=2015-11-30)',
         ]
 
-        actual = [t.task_id for t in task.requires()]
+        actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected)
 
     @mock.patch('luigi.mock.MockFileSystem.listdir',
@@ -591,7 +591,7 @@ class RangeDailyTest(unittest.TestCase):
             'SomeDailyTask(d=2014-03-22)',
             'SomeDailyTask(d=2014-03-25)',
         ]
-        actual = [t.task_id for t in task.requires()]
+        actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected)
 
 
@@ -611,7 +611,7 @@ class RangeHourlyTest(unittest.TestCase):
                            start=datetime.datetime(2014, 3, 20, 17),
                            task_limit=3,
                            hours_back=3 * 365 * 24)
-        actual = [t.task_id for t in task.requires()]
+        actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected_a)
 
     @mock.patch('luigi.mock.MockFileSystem.listdir', new=mock_listdir(mock_contents))
@@ -624,7 +624,7 @@ class RangeHourlyTest(unittest.TestCase):
             start=datetime.datetime(2014, 3, 20, 23),
             stop=datetime.datetime(2014, 3, 21, 6),
             hours_back=30 * 365 * 24)
-        actual = [t.task_id for t in task.requires()]
+        actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected_wrapper)
 
     def test_bulk_complete_correctly_interfaced(self):
@@ -648,7 +648,7 @@ class RangeHourlyTest(unittest.TestCase):
             'BulkCompleteHourlyTask(dh=2015-11-30T23)',
         ]
 
-        actual = [t.task_id for t in task.requires()]
+        actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected)
 
     @mock.patch('luigi.mock.MockFileSystem.exists',
@@ -663,7 +663,7 @@ class RangeHourlyTest(unittest.TestCase):
         expected = [
             'TaskC(dh=2014-03-20T23)',
             'TaskC(dh=2014-03-21T00)']
-        self.assertEqual([t.task_id for t in task.requires()], expected)
+        self.assertEqual([str(t) for t in task.requires()], expected)
 
 
 class RangeInstantiationTest(LuigiTestCase):

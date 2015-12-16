@@ -50,7 +50,7 @@ class DummyTask(Task):
         return self.has_run
 
     def run(self):
-        logging.debug("%s - setting has_run", self.task_id)
+        logging.debug("%s - setting has_run", self)
         self.has_run = True
 
 
@@ -213,7 +213,7 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(self.w.run())
         tasks = self.sch.task_list('DONE', '')
         self.assertEqual(1, len(tasks))
-        self.assertEqual(tracking_url, tasks['A()']['tracking_url'])
+        self.assertEqual(tracking_url, tasks[a.task_id]['tracking_url'])
 
     def test_type_error_in_tracking_run(self):
         class A(Task):
@@ -355,7 +355,7 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(self.w.add(a))
 
         # simulate a missed get_work response
-        self.assertEqual('A()', self.sch.get_work(worker='X')['task_id'])
+        self.assertEqual(a.task_id, self.sch.get_work(worker='X')['task_id'])
 
         self.assertTrue(self.w.run())
         self.assertTrue(a.complete())
@@ -436,7 +436,7 @@ class WorkerTest(unittest.TestCase):
 
         b = B()
         eb = ExternalB()
-        self.assertEqual(eb.task_id, "B()")
+        self.assertEqual(str(eb), "B()")
 
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         with Worker(scheduler=sch, worker_id='X') as w, Worker(scheduler=sch, worker_id='Y') as w2:
@@ -465,7 +465,7 @@ class WorkerTest(unittest.TestCase):
         b = B()
         eb = ExternalB()
 
-        self.assertEqual(eb.task_id, "B()")
+        self.assertEqual(str(eb), "B()")
 
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         with Worker(scheduler=sch, worker_id='X') as w, Worker(scheduler=sch, worker_id='Y') as w2:
@@ -539,7 +539,7 @@ class WorkerTest(unittest.TestCase):
                 self.assertTrue(w.add(b))
                 self.assertTrue(w2.add(b))
 
-                self.assertEqual(w._get_work()[0], 'A()')
+                self.assertEqual(w._get_work()[0], a.task_id)
                 self.assertTrue(w2.run())
 
                 self.assertFalse(a.complete())
@@ -923,8 +923,9 @@ class MultipleWorkersTest(unittest.TestCase):
     def test_purge_hung_worker_default_timeout_time(self, mock_time):
         w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
         mock_time.time.return_value = 0
-        w.add(HungWorker())
-        w._run_task('HungWorker(worker_timeout=None)')
+        task = HungWorker()
+        w.add(task)
+        w._run_task(task.task_id)
 
         mock_time.time.return_value = 5
         w._handle_next_task()
@@ -939,8 +940,9 @@ class MultipleWorkersTest(unittest.TestCase):
     def test_purge_hung_worker_override_timeout_time(self, mock_time):
         w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
         mock_time.time.return_value = 0
-        w.add(HungWorker(10))
-        w._run_task('HungWorker(worker_timeout=10)')
+        task = HungWorker(worker_timeout=10)
+        w.add(task)
+        w._run_task(task.task_id)
 
         mock_time.time.return_value = 10
         w._handle_next_task()
@@ -989,7 +991,7 @@ class AssistantTest(unittest.TestCase):
         self.assertFalse(d.complete())
         self.assertFalse(self.assistant.run())
         self.assertFalse(d.complete())
-        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), [str(d)])
+        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), [d.task_id])
 
     def test_unimported_job_type(self):
         class NotImportedTask(luigi.Task):
@@ -1001,13 +1003,13 @@ class AssistantTest(unittest.TestCase):
         # verify that it can't run the task without the module info necessary to import it
         self.w.add(task)
         self.assertFalse(self.assistant.run())
-        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), ['UnimportedTask()'])
+        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), [task.task_id])
 
         # check that it can import with the right module
         task.task_module = 'dummy_test_module.not_imported'
         self.w.add(task)
         self.assertTrue(self.assistant.run())
-        self.assertEqual(list(self.sch.task_list('DONE', '').keys()), ['UnimportedTask()'])
+        self.assertEqual(list(self.sch.task_list('DONE', '').keys()), [task.task_id])
 
 
 class ForkBombTask(luigi.Task):

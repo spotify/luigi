@@ -58,9 +58,8 @@ function visualiserApp(luigi) {
     }
 
     function taskToDisplayTask(task) {
-        var taskIdParts = /([A-Za-z0-9_]*)\(([\s\S]*)\)/.exec(task.taskId);
-        var taskName = taskIdParts[1];
-        var taskParams = taskIdParts[2];
+        var taskName = task.name;
+        var taskParams = JSON.stringify(task.params);
         var displayTime = new Date(Math.floor(task.start_time*1000)).toLocaleString();
         var time_running = -1;
         if (task.status == "RUNNING" && "time_running" in task) {
