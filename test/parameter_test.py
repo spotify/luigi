@@ -180,6 +180,12 @@ class ParameterTest(LuigiTestCase):
     def test_bool_default_true(self):
         self.assertTrue(WithDefaultTrue().x)
 
+    def test_bool_coerce(self):
+        self.assertEquals(True, WithDefaultTrue(x='yes').x)
+
+    def test_bool_no_coerce_none(self):
+        self.assertIsNone(WithDefaultTrue(x=None).x)
+
     def test_forgot_param(self):
         self.assertRaises(luigi.parameter.MissingParameterException, self.run_locally, ['ForgotParam'],)
 
@@ -232,7 +238,7 @@ class ParameterTest(LuigiTestCase):
     def test_nonpositional_param(self):
         """ Ensure we have the same behavior as in before a78338c  """
         class MyTask(luigi.Task):
-            # This could typically be "--num-threads=True"
+            # This could typically be "--num-threads=10"
             x = luigi.Parameter(significant=False, positional=False)
 
         MyTask(x='arg')

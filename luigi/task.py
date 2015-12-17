@@ -218,7 +218,7 @@ class Task(object):
             if i >= len(positional_params):
                 raise parameter.UnknownParameterException('%s: takes at most %d parameters (%d given)' % (exc_desc, len(positional_params), len(args)))
             param_name, param_obj = positional_params[i]
-            result[param_name] = arg
+            result[param_name] = param_obj.normalize(arg)
 
         # Then the keyword arguments
         for param_name, arg in six.iteritems(kwargs):
@@ -226,7 +226,7 @@ class Task(object):
                 raise parameter.DuplicateParameterException('%s: parameter %s was already set as a positional parameter' % (exc_desc, param_name))
             if param_name not in params_dict:
                 raise parameter.UnknownParameterException('%s: unknown parameter %s' % (exc_desc, param_name))
-            result[param_name] = arg
+            result[param_name] = params_dict[param_name].normalize(arg)
 
         # Then use the defaults for anything not filled in
         for param_name, param_obj in params:
