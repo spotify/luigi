@@ -95,6 +95,7 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, luigi.Task):
             query = "CREATE TABLE {table} ({coldefs})".format(table=self.table, coldefs=coldefs)
             connection.cursor().execute(query)
 
+    @property
     def update_id(self):
         """
         This update id will be a unique identifier for this insert on this table.
