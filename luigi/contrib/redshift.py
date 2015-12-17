@@ -216,10 +216,10 @@ class S3CopyToTable(rdbms.CopyToTable):
             query = ("CREATE {type} TABLE "
                      "{table} ({coldefs}) "
                      "{table_attributes}").format(
-                type=self.table_type(),
+                type=self.table_type,
                 table=self.table,
                 coldefs=coldefs,
-                table_attributes=self.table_attributes())
+                table_attributes=self.table_attributes)
 
             connection.cursor().execute(query)
 

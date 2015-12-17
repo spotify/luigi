@@ -120,6 +120,31 @@ class TestS3CopyToTable(unittest.TestCase):
 
         return
 
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.does_table_exist",
+                return_value=False)
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_s3_copy_to_missing_table(self,
+                                      mock_redshift_target,
+                                      mock_does_exist):
+        """
+        Test missing table creation
+        """
+        # Ensure `S3CopyToTable.create_table` does not throw an error.
+        task = DummyS3CopyToTable()
+        task.run()
+
+        # Make sure the cursor was successfully used to create the table in
+        # `create_table` as expected.
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+        assert mock_cursor.execute.call_args_list[0][0][0].startswith(
+            "CREATE  TABLE %s" % task.table)
+
+        return
+
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
     def test_s3_copy_to_temp_table(self, mock_redshift_target, mock_copy):
