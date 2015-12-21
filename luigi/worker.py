@@ -475,26 +475,27 @@ class Worker(object):
         logger.exception("Luigi unexpected framework error while scheduling %s", task)  # needs to be called from within except clause
 
     def _email_complete_error(self, task, formatted_traceback):
-        # like logger.exception but with WARNING level
-        subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
-        headline = "Will not schedule task or any dependencies due to error in complete() method"
-
-        message = notifications.format_task_error(headline, task, formatted_traceback)
-        notifications.send_error_email(subject, message, task.owner_email)
+        self._email_error(task, formatted_traceback,
+                          subject="Luigi: {task} failed scheduling. Host: {host}",
+                          headline="Will not schedule task or any dependencies due to error in complete() method",
+                          )
 
     def _email_dependency_error(self, task, formatted_traceback):
-        subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
-        headline = "Will not schedule task or any dependencies due to error in deps() method"
-
-        message = notifications.format_task_error(headline, task, formatted_traceback)
-        notifications.send_error_email(subject, message, task.owner_email)
+        self._email_error(task, formatted_traceback,
+                          subject="Luigi: {task} failed scheduling. Host: {host}",
+                          headline="Will not schedule task or any dependencies due to error in deps() method",
+                          )
 
     def _email_unexpected_error(self, task, formatted_traceback):
-        subject = "Luigi: Framework error while scheduling {task}. Host: {host}".format(task=task, host=self.host)
-        headline = "Luigi framework error"
+        self._email_error(task, formatted_traceback,
+                          subject="Luigi: Framework error while scheduling {task}. Host: {host}",
+                          headline="Luigi framework error",
+                          )
 
+    def _email_error(self, task, formatted_traceback, subject, headline):
+        formatted_subject = subject.format(task=task, host=self.host)
         message = notifications.format_task_error(headline, task, formatted_traceback)
-        notifications.send_error_email(subject, message, task.owner_email)
+        notifications.send_error_email(formatted_subject, message, task.owner_email)
 
     def add(self, task, multiprocess=False):
         """
