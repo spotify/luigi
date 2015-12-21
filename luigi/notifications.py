@@ -33,12 +33,37 @@ import sys
 import textwrap
 
 from luigi import configuration
+import luigi.task
+import luigi.parameter
 
 logger = logging.getLogger("luigi-interface")
 
 
 DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.gethostname()
 DEBUG = False
+
+
+class TestNotificationsTask(luigi.task.Task):
+    """
+    You may invoke this task to quickly check if you correctly have setup your
+    notifications Configuration.  You can run:
+
+    .. code:: console
+
+            $ luigi TestNotifications --local-scheduler
+
+    And then check your email inbox to see if you got an error email or any
+    other kind of notifications that you expected.
+    """
+    raise_in_complete = luigi.parameter.BoolParameter(description='If true, fail in complete() instead of run()')
+
+    def run(self):
+        raise ValueError('Testing notifications triggering')
+
+    def complete(self):
+        if self.raise_in_complete:
+            raise ValueError('Testing notifications triggering')
+        return False
 
 
 def email_type():
