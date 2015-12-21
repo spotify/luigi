@@ -25,6 +25,8 @@ In particular using the config `error-email` should set up Luigi so that it will
 
     [core]
     error-email: foo@bar.baz
+
+TODO: Eventually, all email configuration should move into the [email] section.
 '''
 
 import logging
@@ -96,6 +98,9 @@ def generate_email(sender, subject, message, recipients, image_png):
 
 
 def wrap_traceback(traceback):
+    """
+    For internal use only (until further notice)
+    """
     if email_type() == 'html':
         try:
             from pygments import highlight
@@ -317,7 +322,6 @@ def format_task_error(headline, task, formatted_exception=None):
     :param formatted_exception: optional string showing traceback
 
     :return: message body
-
     """
 
     typ = email_type()
