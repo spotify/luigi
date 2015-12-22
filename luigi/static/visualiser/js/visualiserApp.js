@@ -751,6 +751,19 @@ function visualiserApp(luigi) {
         return decoded;
     }
 
+    /**
+     * Return HTML of a task parameter dictionary
+     * @param params: task parameter dictionary
+     */
+    function renderParams(params) {
+        var htmls = [];
+        for (var key in params) {
+            htmls.push('<span class="param-name">' + key +
+                '</span>=<span class="param-value">' + params[key] + '</span>');
+        }
+        return htmls.join(', ');
+    }
+
     $(document).ready(function() {
         loadTemplates();
 
@@ -774,11 +787,12 @@ function visualiserApp(luigi) {
                 {
                     data: 'taskParams',
                     render: function(data, type, row) {
+                        var params = JSON.parse(data);
                         if (row.resources !== '{}') {
-                            return '<div>(' + data + ')</div><div>' + row.resources + '</div>';
+                            return '<div>' + renderParams(params) + '</div><div>' + row.resources + '</div>';
                         }
                         else {
-                            return '<div>(' + data + ')</div>';
+                            return '<div>' + renderParams(params) + '</div>';
                         }
                     }
                 },
