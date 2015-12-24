@@ -281,7 +281,7 @@ class S3Client(FileSystem):
 
         return contents
 
-    def copy(self, source_path, destination_path, **kwargs):
+    def copy(self, source_path, destination_path, part_size=67108864, **kwargs):
         """
         Copy an object from one S3 location to another.
 
@@ -291,16 +291,70 @@ class S3Client(FileSystem):
         (dst_bucket, dst_key) = self._path_to_bucket_and_key(destination_path)
 
         s3_bucket = self.s3.get_bucket(dst_bucket, validate=True)
+        source_bucket = self.s3.get_bucket(src_bucket, validate=True)
 
         if self.isdir(source_path):
             src_prefix = self._add_path_delimiter(src_key)
             dst_prefix = self._add_path_delimiter(dst_key)
             for key in self.list(source_path):
-                s3_bucket.copy_key(dst_prefix + key,
-                                   src_bucket,
-                                   src_prefix + key, **kwargs)
-        else:
+                if source_bucket.lookup(key).size <= part_size:
+                    s3_bucket.copy_key(dst_prefix + key,
+                                       src_bucket,
+                                       src_prefix + key, **kwargs)
+                else:
+                    self.copy_multipart(dst_prefix + key,
+                                        src_bucket,
+                                        src_prefix + key, **kwargs)
+
+        elif source_bucket.lookup(src_key).size <= part_size: 
             s3_bucket.copy_key(dst_key, src_bucket, src_key, **kwargs)
+        else:
+            self.copy_multipart(source_path, destination_path, **kwargs)
+
+    def copy_multipart(self, source_path, destination_path, part_size=67108864, **kwargs):
+        """
+        Copy a single S3 object to another S3 object using S3 multi-part copy (for files > 5GB).
+
+        :param source_path: URL for S3 Source
+        :param destination_path: URL for target S3 location
+        :param part_size: Part size in bytes. Default: 67108864 (64MB), must be >= 5MB and <= 5 GB.
+        :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
+        """
+        (src_bucket, src_key) = self._path_to_bucket_and_key(source_path)
+        (dst_bucket, dst_key) = self._path_to_bucket_and_key(destination_path)
+
+        dest_bucket = self.s3.get_bucket(dst_bucket, validate=True)
+        source_bucket = self.s3.get_bucket(src_bucket, validate=True)
+
+        source_size = source_bucket.lookup(src_key).size
+
+        num_parts = \
+            (source_size // part_size) \
+            if source_size % part_size == 0 \
+            else (source_size // part_size) + 1
+
+        mp = None
+        try:
+            mp = dest_bucket.initiate_multipart_upload(dst_key, **kwargs)
+            cur_pos = 0
+            for i in range(num_parts):
+                # copy a part at a time to S3
+                part_start = cur_pos
+                cur_pos += part_size
+                part_end = min(cur_pos - 1, source_size - 1)
+                part_num = i + 1
+
+                mp.copy_part_from_key(src_bucket, src_key, part_num, part_start, part_end)
+                logger.info('Copying part %s/%s to %s', part_num, num_parts, destination_path)
+            # finish the copy, making the file available in S3
+            mp.complete_upload()
+        except BaseException:
+            if mp:
+                logger.info('Canceling multipart s3 copy for %s to %s', source_path, destination_path)
+                # cancel the copy so we don't get charged for
+                # storage consumed by copied parts
+                mp.cancel_upload()
+            raise
 
     def rename(self, source_path, destination_path, **kwargs):
         """
