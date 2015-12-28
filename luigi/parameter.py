@@ -202,7 +202,7 @@ class Parameter(object):
         if value == _no_value:
             raise MissingParameterException("No default specified")
         else:
-            return value
+            return self.normalize(value)
 
     def parse(self, x):
         """
@@ -225,6 +225,20 @@ class Parameter(object):
         :param x: the value to serialize.
         """
         return str(x)
+
+    def normalize(self, x):
+        """
+        Given a parsed parameter value, normalizes it.
+
+        The value can either be the result of parse(), the default value or
+        arguments passed into the task's constructor by instantiation.
+
+        This is very implementation defined, but can be used to validate/clamp
+        valid values. For example, if you wanted to only accept even integers,
+        and "correct" odd values to the nearest integer, you can implement
+        normalize as ``x // 2 * 2``.
+        """
+        return x  # default impl
 
     @classmethod
     def next_in_enumeration(_cls, _value):
@@ -426,6 +440,10 @@ class BoolParameter(Parameter):
         Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case.
         """
         return {'true': True, 'false': False}[str(s).lower()]
+
+    def normalize(self, value):
+        # coerce anything truthy to True
+        return bool(value) if value is not None else None
 
     @staticmethod
     def _parser_action():
