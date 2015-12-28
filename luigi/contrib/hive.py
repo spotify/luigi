@@ -52,7 +52,7 @@ def get_hive_syntax():
     return luigi.configuration.get_config().get('hive', 'release', 'cdh4')
 
 
-def run_hive(args, check_return_code=True):
+def run_hive(args, check_return_code=True, username=None):
     """
     Runs the `hive` from the command line, passing in the given args, and
     returning stdout.
@@ -62,7 +62,10 @@ def run_hive(args, check_return_code=True):
     so we need an option to ignore the return code and just return stdout for parsing
     """
     cmd = [load_hive_cmd()] + args
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    cmd_env = os.environ.copy()
+    if username:
+        cmd_env["HADOOP_USER_NAME"] = username
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=cmd_env)
     stdout, stderr = p.communicate()
     if check_return_code and p.returncode != 0:
         raise HiveCommandError("Hive command: {0} failed with error code: {1}".format(" ".join(cmd), p.returncode),
@@ -70,27 +73,27 @@ def run_hive(args, check_return_code=True):
     return stdout
 
 
-def run_hive_cmd(hivecmd, check_return_code=True):
+def run_hive_cmd(hivecmd, check_return_code=True, username=None):
     """
     Runs the given hive query and returns stdout.
     """
-    return run_hive(['-e', hivecmd], check_return_code)
+    return run_hive(['-e', hivecmd], check_return_code, username)
 
 
-def run_hive_script(script):
+def run_hive_script(script, username=None):
     """
     Runs the contents of the given script in hive and returns stdout.
     """
     if not os.path.isfile(script):
         raise RuntimeError("Hive script: {0} does not exist.".format(script))
-    return run_hive(['-f', script])
+    return run_hive(['-f', script], username)
 
 
 @six.add_metaclass(abc.ABCMeta)
 class HiveClient(object):  # interface
 
     @abc.abstractmethod
-    def table_location(self, table, database='default', partition=None):
+    def table_location(self, table, database='default', partition=None, username=None):
         """
         Returns location of db.table (or db.table.partition). partition is a dict of partition key to
         value.
@@ -98,14 +101,14 @@ class HiveClient(object):  # interface
         pass
 
     @abc.abstractmethod
-    def table_schema(self, table, database='default'):
+    def table_schema(self, table, database='default', username=None):
         """
         Returns list of [(name, type)] for each column in database.table.
         """
         pass
 
     @abc.abstractmethod
-    def table_exists(self, table, database='default', partition=None):
+    def table_exists(self, table, database='default', partition=None, username=None):
         """
         Returns true if db.table (or db.table.partition) exists. partition is a dict of partition key to
         value.
@@ -123,33 +126,33 @@ class HiveCommandClient(HiveClient):
     Uses `hive` invocations to find information.
     """
 
-    def table_location(self, table, database='default', partition=None):
+    def table_location(self, table, database='default', partition=None, username=None):
         cmd = "use {0}; describe formatted {1}".format(database, table)
         if partition is not None:
             cmd += " PARTITION ({0})".format(self.partition_spec(partition))
 
-        stdout = run_hive_cmd(cmd)
+        stdout = run_hive_cmd(cmd, username)
 
         for line in stdout.split("\n"):
             if "Location:" in line:
                 return line.split("\t")[1]
 
-    def table_exists(self, table, database='default', partition=None):
+    def table_exists(self, table, database='default', partition=None, username=None):
         if partition is None:
-            stdout = run_hive_cmd('use {0}; show tables like "{1}";'.format(database, table))
+            stdout = run_hive_cmd('use {0}; show tables like "{1}";'.format(database, table), username)
 
             return stdout and table.lower() in stdout
         else:
             stdout = run_hive_cmd("""use %s; show partitions %s partition
-                                (%s)""" % (database, table, self.partition_spec(partition)))
+                                (%s)""" % (database, table, self.partition_spec(partition)), username)
 
             if stdout:
                 return True
             else:
                 return False
 
-    def table_schema(self, table, database='default'):
-        describe = run_hive_cmd("use {0}; describe {1}".format(database, table))
+    def table_schema(self, table, database='default', username=None):
+        describe = run_hive_cmd("use {0}; describe {1}".format(database, table), username)
         if not describe or "does not exist" in describe:
             return None
         return [tuple([x.strip() for x in line.strip().split("\t")]) for line in describe.strip().split("\n")]
@@ -168,8 +171,8 @@ class ApacheHiveCommandClient(HiveCommandClient):
     the hive command so that we can just parse the output.
     """
 
-    def table_schema(self, table, database='default'):
-        describe = run_hive_cmd("use {0}; describe {1}".format(database, table), False)
+    def table_schema(self, table, database='default', username=None):
+        describe = run_hive_cmd("use {0}; describe {1}".format(database, table), False, username)
         if not describe or "Table not found" in describe:
             return None
         return [tuple([x.strip() for x in line.strip().split("\t")]) for line in describe.strip().split("\n")]
@@ -177,7 +180,7 @@ class ApacheHiveCommandClient(HiveCommandClient):
 
 class MetastoreClient(HiveClient):
 
-    def table_location(self, table, database='default', partition=None):
+    def table_location(self, table, database='default', partition=None, username=None):
         with HiveThriftContext() as client:
             if partition is not None:
                 partition_str = self.partition_spec(partition)
@@ -314,6 +317,8 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
     """
     Runs a HiveQueryTask by shelling out to hive.
     """
+    def __init__(self, username=None):
+        self.username = username
 
     def prepare_outputs(self, job):
         """
@@ -347,14 +352,20 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
             if hiverc:
                 if isinstance(hiverc, str):
                     hiverc = [hiverc]
+
                 for rcfile in hiverc:
                     arglist += ['-i', rcfile]
             if job.hiveconfs():
                 for k, v in six.iteritems(job.hiveconfs()):
                     arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
 
+            job_env = os.environ.copy()
+
+            if self.username:
+                job_env["HADOOP_USER_NAME"] = self.username
+
             logger.info(arglist)
-            return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback)
+            return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback, env=job_env)
 
 
 class HiveTableTarget(luigi.Target):

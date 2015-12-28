@@ -28,7 +28,7 @@ from luigi import LocalTarget
 class HiveTest(unittest.TestCase):
     count = 0
 
-    def mock_hive_cmd(self, args, check_return=True):
+    def mock_hive_cmd(self, args, check_return=True, username=None):
         self.last_hive_cmd = args
         self.count += 1
         return "statement{0}".format(self.count)

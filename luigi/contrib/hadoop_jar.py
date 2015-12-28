@@ -65,8 +65,8 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
     JobRunner for `hadoop jar` commands. Used to run a HadoopJarJobTask.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, username=None):
+        self.username = username
 
     def run_job(self, job, tracking_url_callback=None):
         # TODO(jcrobak): libjars, files, etc. Can refactor out of
@@ -109,7 +109,11 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
                 raise HadoopJarJobError("job jar does not exist")
             arglist = hadoop_arglist
 
-        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback)
+        job_env = os.environ.copy()
+
+        if self.username:
+            job_env["HADOOP_USER_NAME"] = self.username
+        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback, env=job_env)
 
         for a, b in tmp_files:
             a.move(b)
@@ -134,7 +138,7 @@ class HadoopJarJobTask(luigi.contrib.hadoop.BaseHadoopJobTask):
 
     def job_runner(self):
         # We recommend that you define a subclass, override this method and set up your own config
-        return HadoopJarJobRunner()
+        return HadoopJarJobRunner(username=self.username)
 
     def atomic_output(self):
         """
