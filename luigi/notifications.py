@@ -25,6 +25,8 @@ In particular using the config `error-email` should set up Luigi so that it will
 
     [core]
     error-email: foo@bar.baz
+
+TODO: Eventually, all email configuration should move into the [email] section.
 '''
 
 import logging
@@ -33,12 +35,37 @@ import sys
 import textwrap
 
 from luigi import configuration
+import luigi.task
+import luigi.parameter
 
 logger = logging.getLogger("luigi-interface")
 
 
 DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.gethostname()
 DEBUG = False
+
+
+class TestNotificationsTask(luigi.task.Task):
+    """
+    You may invoke this task to quickly check if you correctly have setup your
+    notifications Configuration.  You can run:
+
+    .. code:: console
+
+            $ luigi TestNotifications --local-scheduler
+
+    And then check your email inbox to see if you got an error email or any
+    other kind of notifications that you expected.
+    """
+    raise_in_complete = luigi.parameter.BoolParameter(description='If true, fail in complete() instead of run()')
+
+    def run(self):
+        raise ValueError('Testing notifications triggering')
+
+    def complete(self):
+        if self.raise_in_complete:
+            raise ValueError('Testing notifications triggering')
+        return False
 
 
 def email_type():
@@ -71,6 +98,9 @@ def generate_email(sender, subject, message, recipients, image_png):
 
 
 def wrap_traceback(traceback):
+    """
+    For internal use only (until further notice)
+    """
     if email_type() == 'html':
         try:
             from pygments import highlight
@@ -107,7 +137,8 @@ def send_email_smtp(config, sender, subject, message, recipients, image_png):
     smtp_password = config.get('core', 'smtp_password', None)
     smtp = smtplib.SMTP(**kwargs) if not smtp_ssl else smtplib.SMTP_SSL(**kwargs)
     smtp.ehlo_or_helo_if_needed()
-    smtp.starttls()
+    if smtp.has_extn('starttls'):
+        smtp.starttls()
     if smtp_login and smtp_password:
         smtp.login(smtp_login, smtp_password)
 
@@ -292,7 +323,6 @@ def format_task_error(headline, task, formatted_exception=None):
     :param formatted_exception: optional string showing traceback
 
     :return: message body
-
     """
 
     typ = email_type()
