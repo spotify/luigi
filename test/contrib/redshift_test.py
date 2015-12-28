@@ -36,12 +36,12 @@ class DummyS3CopyToTable(luigi.contrib.redshift.S3CopyToTable):
     password = 'dummy_password'
     table = luigi.Parameter(default='dummy_table')
     columns = (
-        ('some_text', 'text'),
+        ('some_text', 'varchar(255)'),
         ('some_int', 'int'),
     )
 
-    aws_access_key_id = AWS_ACCESS_KEY
-    aws_secret_access_key = AWS_SECRET_KEY
+    aws_access_key_id = 'AWS_ACCESS_KEY'
+    aws_secret_access_key = 'AWS_SECRET_KEY'
     copy_options = ''
     prune_table = ''
     prune_column = ''
@@ -51,35 +51,17 @@ class DummyS3CopyToTable(luigi.contrib.redshift.S3CopyToTable):
         return 's3://%s/%s' % (BUCKET, KEY)
 
 
-class DummyS3CopyToTempTable(luigi.contrib.redshift.S3CopyToTable):
-    # Class attributes taken from `DummyPostgresImporter` in
-    # `../postgres_test.py`.
-    host = 'dummy_host'
-    database = 'dummy_database'
-    user = 'dummy_user'
-    password = 'dummy_password'
+class DummyS3CopyToTempTable(DummyS3CopyToTable):
+    # Extend/alter DummyS3CopyToTable for temp table copying
     table = luigi.Parameter(default='stage_dummy_table')
-    columns = (
-        ('some_text', 'text'),
-        ('some_int', 'int'),
-    )
 
-    aws_access_key_id = AWS_ACCESS_KEY
-    aws_secret_access_key = AWS_SECRET_KEY
-    copy_options = ''
-    sql = ["insert into dummy_table select * from stage_dummy_table;"]
+    table_type = 'TEMP'
+
     prune_date = 'current_date - 30'
     prune_column = 'dumb_date'
     prune_table = 'stage_dummy_table'
 
-    def s3_load_path(self):
-        return 's3://%s/%s' % (BUCKET, KEY)
-
-    def table_type(self):
-        return 'TEMP'
-
-    def queries(self):
-        return self.sql
+    queries = ["insert into dummy_table select * from stage_dummy_table;"]
 
 
 class TestS3CopyToTable(unittest.TestCase):
