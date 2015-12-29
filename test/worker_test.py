@@ -708,13 +708,12 @@ def custom_email_patch(config):
     return functools.partial(email_patch, email_config=config)
 
 
-class WorkerEmailTest(unittest.TestCase):
+class WorkerEmailTest(LuigiTestCase):
 
     def run(self, result=None):
         super(WorkerEmailTest, self).setUp()
         sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
-        with Worker(scheduler=sch, worker_id="foo") as worker:
-            self.worker = worker
+        with Worker(scheduler=sch, worker_id="foo") as self.worker:
             super(WorkerEmailTest, self).run(result)
 
     @email_patch
@@ -786,10 +785,6 @@ class WorkerEmailTest(unittest.TestCase):
     @email_patch
     def test_run_error(self, emails):
         class A(luigi.Task):
-
-            def complete(self):
-                return False
-
             def run(self):
                 raise Exception("b0rk")
 
@@ -798,6 +793,39 @@ class WorkerEmailTest(unittest.TestCase):
         self.assertEqual(emails, [])
         self.worker.run()
         self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
+
+    @email_patch
+    def test_task_process_dies(self, emails):
+        a = SuicidalWorker(signal.SIGKILL)
+        luigi.build([a], workers=2, local_scheduler=True)
+        self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
+        self.assertTrue(emails[0].find("died unexpectedly with exit code -9") != -1)
+
+    @email_patch
+    def test_task_times_out(self, emails):
+        class A(luigi.Task):
+            worker_timeout = 0.00001
+
+            def run(self):
+                time.sleep(5)
+
+        a = A()
+        luigi.build([a], workers=2, local_scheduler=True)
+        self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
+        self.assertTrue(emails[0].find("timed out and was terminated.") != -1)
+
+    @with_config(dict(worker=dict(retry_external_tasks='true')))
+    @email_patch
+    def test_external_task_retries(self, emails):
+        """
+        Test that we do not send error emails on the failures of external tasks
+        """
+        class A(luigi.ExternalTask):
+            pass
+
+        a = A()
+        luigi.build([a], workers=2, local_scheduler=True)
+        self.assertEqual(emails, [])
 
     @email_patch
     def test_no_error(self, emails):
