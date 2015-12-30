@@ -596,7 +596,6 @@ class LocalJobRunner(JobRunner):
             map_output.close()
             return
 
-        job.init_mapper()
         # run job now...
         map_output = StringIO()
         job.run_mapper(map_input, map_output)
@@ -611,7 +610,6 @@ class LocalJobRunner(JobRunner):
             combine_output.seek(0)
             reduce_input = self.group(combine_output)
 
-        job.init_reducer()
         reduce_output = job.output().open('w')
         job.run_reducer(reduce_input, reduce_output)
         reduce_output.close()
