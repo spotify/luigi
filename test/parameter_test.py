@@ -18,6 +18,7 @@
 import datetime
 from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
+import enum
 
 import luigi
 import luigi.date_interval
@@ -119,6 +120,10 @@ class MyConfigWithoutSection(luigi.Config):
 
 class NoopTask(luigi.Task):
     pass
+
+
+class MyEnum(enum.Enum):
+    A = 1
 
 
 def _value(parameter):
@@ -244,6 +249,17 @@ class ParameterTest(LuigiTestCase):
         MyTask(x='arg')
         self.assertRaises(luigi.parameter.UnknownParameterException,
                           lambda: MyTask('arg'))
+
+    def test_enum_param_valid(self):
+        p = luigi.parameter.EnumParameter(enum=MyEnum)
+        self.assertEqual(MyEnum.A, p.parse('A'))
+
+    def test_enum_param_invalid(self):
+        p = luigi.parameter.EnumParameter(enum=MyEnum)
+        self.assertRaises(ValueError, lambda: p.parse('B'))
+
+    def test_enum_param_missing(self):
+        self.assertRaises(ParameterException, lambda: luigi.parameter.EnumParameter())
 
 
 class TestNewStyleGlobalParameters(LuigiTestCase):
