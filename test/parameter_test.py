@@ -397,9 +397,19 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         p = luigi.DateHourParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(datetime.datetime(2001, 2, 3, 4, 0, 0), _value(p))
 
+    @with_config({"foo": {"bar": "2001-02-03T05"}})
+    def testDateHourWithInterval(self):
+        p = luigi.DateHourParameter(config_path=dict(section="foo", name="bar"), interval=2)
+        self.assertEqual(datetime.datetime(2001, 2, 3, 4, 0, 0), _value(p))
+
     @with_config({"foo": {"bar": "2001-02-03T0430"}})
     def testDateMinute(self):
         p = luigi.DateMinuteParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), _value(p))
+
+    @with_config({"foo": {"bar": "2001-02-03T0431"}})
+    def testDateWithMinuteInterval(self):
+        p = luigi.DateMinuteParameter(config_path=dict(section="foo", name="bar"), interval=2)
         self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), _value(p))
 
     @with_config({"foo": {"bar": "2001-02-03T04H30"}})
@@ -412,15 +422,33 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         p = luigi.DateParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(datetime.date(2001, 2, 3), _value(p))
 
+    @with_config({"foo": {"bar": "2001-02-03"}})
+    def testDateWithInterval(self):
+        p = luigi.DateParameter(config_path=dict(section="foo", name="bar"),
+                                interval=3, start=datetime.date(2001, 2, 1))
+        self.assertEqual(datetime.date(2001, 2, 1), _value(p))
+
     @with_config({"foo": {"bar": "2015-07"}})
     def testMonthParameter(self):
         p = luigi.MonthParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(datetime.date(2015, 7, 1), _value(p))
 
+    @with_config({"foo": {"bar": "2015-07"}})
+    def testMonthWithIntervalParameter(self):
+        p = luigi.MonthParameter(config_path=dict(section="foo", name="bar"),
+                                 interval=13, start=datetime.date(2014, 1, 1))
+        self.assertEqual(datetime.date(2015, 2, 1), _value(p))
+
     @with_config({"foo": {"bar": "2015"}})
     def testYearParameter(self):
         p = luigi.YearParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(datetime.date(2015, 1, 1), _value(p))
+
+    @with_config({"foo": {"bar": "2015"}})
+    def testYearWithIntervalParameter(self):
+        p = luigi.YearParameter(config_path=dict(section="foo", name="bar"),
+                                start=datetime.date(2011, 1, 1), interval=5)
+        self.assertEqual(datetime.date(2011, 1, 1), _value(p))
 
     @with_config({"foo": {"bar": "123"}})
     def testInt(self):
