@@ -845,6 +845,7 @@ class JobTask(BaseHadoopJobTask):
                 continue
             args = list(key) + [count]
             self._incr_counter(*args)
+            self._counter_dict[key] = 0
 
     def _incr_counter(self, *args):
         """
