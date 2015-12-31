@@ -84,24 +84,48 @@ An example:
 
 .. code:: python
 
-    class TaskA(luigi.Task):
-        def output(self):
-            return luigi.LocalTarget('xyz')
-
-    class FlipLinesBackwards(luigi.Task):
-        def requires(self):
-            return TaskA()
+    class GenerateWords(luigi.Task):
 
         def output(self):
-            return luigi.LocalTarget('abc')
+            return luigi.LocalTarget('words.txt')
 
         def run(self):
-            f = self.input().open('r') # this will return a file stream that reads from "xyz"
-            g = self.output().open('w')
-            for line in f:
-                g.write('%s\n', ''.join(reversed(line.strip().split())))
-            g.close() # needed because files are atomic
 
+            # write a dummy list of words to output file
+            words = [
+                    'apple',
+                    'banana',
+                    'grapefruit'
+                    ]
+
+            with self.output().open('w') as f:
+                for word in words:
+                    f.write('{word}\n'.format(word=word))
+
+
+    class CountLetters(luigi.Task):
+
+        def requires(self):
+            return GenerateWords()
+
+        def output(self):
+            return luigi.LocalTarget('letter_counts.txt')
+
+        def run(self):
+
+            # read in file as list
+            with self.input().open('r') as infile:
+                words = infile.read().splitlines()
+
+            # write each word to output file with its corresponding letter count
+            with self.output().open('w') as outfile:
+                for word in words:
+                    outfile.write(
+                            '{word} | {letter_count}\n'.format(
+                                word=word,
+                                letter_count=len(word)
+                                )
+                            )
 
 .. _Task.input:
 
