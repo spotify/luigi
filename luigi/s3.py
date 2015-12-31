@@ -297,7 +297,7 @@ class S3Client(FileSystem):
             src_prefix = self._add_path_delimiter(src_key)
             dst_prefix = self._add_path_delimiter(dst_key)
             for key in self.list(source_path):
-                if source_bucket.lookup(key).size <= multipart_size:
+                if source_bucket.lookup(src_prefix + key).size <= multipart_size:
                     s3_bucket.copy_key(dst_prefix + key,
                                        src_bucket,
                                        src_prefix + key, **kwargs)
