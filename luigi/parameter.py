@@ -667,9 +667,22 @@ class EnumParameter(Parameter):
     """
     A parameter whose value is an :class:`~enum.Enum`.
 
-    .. code:: python
+    In the task definition, use
 
-        my_param = EnumParameter(enum=MyEnum)
+    .. code-block:: python
+
+        class Models(enum.IntEnum):
+          Honda = 1
+
+        class MyTask(luigi.Task):
+          my_param = luigi.EnumParameter(enum=Models)
+
+    At the command line, use,
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --my-param Honda
+
     """
 
     def __init__(self, *args, **kwargs):
