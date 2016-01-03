@@ -661,3 +661,41 @@ class TaskParameter(Parameter):
         Converts the :py:class:`luigi.task.Task` (sub) class to its family name.
         """
         return cls.task_family
+
+
+class EnumParameter(Parameter):
+    """
+    A parameter whose value is an :class:`~enum.Enum`.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class Models(enum.IntEnum):
+          Honda = 1
+
+        class MyTask(luigi.Task):
+          my_param = luigi.EnumParameter(enum=Models)
+
+    At the command line, use,
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --my-param Honda
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        if 'enum' not in kwargs:
+            raise ParameterException('An enum class must be specified.')
+        self._enum = kwargs.pop('enum')
+        super(EnumParameter, self).__init__(*args, **kwargs)
+
+    def parse(self, s):
+        try:
+            return self._enum[s]
+        except KeyError:
+            raise ValueError('Invalid enum value - could not be parsed')
+
+    def serialize(self, e):
+        return e.name
