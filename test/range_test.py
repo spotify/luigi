@@ -205,7 +205,8 @@ class RangeDailyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeDailyDerived(RangeDailyBase):
-            def missing_datetimes(*args):
+            def missing_datetimes(self, task_cls, finite_datetimes):
+                args = [self, task_cls, finite_datetimes]
                 calls.append(args)
                 return args[-1][:5]
 
@@ -245,15 +246,16 @@ class RangeDailyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeDailyDerived(RangeDailyBase):
-            def missing_datetimes(*args):
-                calls.append(args)
-                return args[-1][:7]
+            def missing_datetimes(self, finite_datetimes):
+                # I only changed tests for number of arguments at this one
+                # place to test both old and new behavior
+                calls.append((self, finite_datetimes))
+                return finite_datetimes[:7]
 
         task = RangeDailyDerived(of=CommonDateTask,
                                  **kwargs)
         self.assertEqual(list(map(str, task.requires())), expected_requires)
-        self.assertEqual(calls[0][1], CommonDateTask)
-        self.assertEqual((min(calls[0][2]), max(calls[0][2])), expected_finite_datetimes_range)
+        self.assertEqual((min(calls[0][1]), max(calls[0][1])), expected_finite_datetimes_range)
         self.assertEqual(list(map(str, task.requires())), expected_requires)
         self.assertEqual(len(calls), 1)  # subsequent requires() should return the cached result, not call missing_datetimes again
         self.assertEqual(self.events, expected_events)
@@ -320,7 +322,8 @@ class RangeHourlyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeHourlyDerived(RangeHourlyBase):
-            def missing_datetimes(*args):
+            def missing_datetimes(a, b, c):
+                args = [a, b, c]
                 calls.append(args)
                 return args[-1][:5]
 
@@ -359,7 +362,8 @@ class RangeHourlyBaseTest(unittest.TestCase):
         calls = []
 
         class RangeHourlyDerived(RangeHourlyBase):
-            def missing_datetimes(*args):
+            def missing_datetimes(a, b, c):
+                args = [a, b, c]
                 calls.append(args)
                 return args[-1][:7]
 
@@ -559,7 +563,7 @@ class RangeDailyTest(unittest.TestCase):
             'BulkCompleteDailyTask(d=2015-11-30)',
         ]
 
-        actual = [t.task_id for t in task.requires()]
+        actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected)
 
     @mock.patch('luigi.mock.MockFileSystem.listdir',
@@ -587,7 +591,7 @@ class RangeDailyTest(unittest.TestCase):
             'SomeDailyTask(d=2014-03-22)',
             'SomeDailyTask(d=2014-03-25)',
         ]
-        actual = [t.task_id for t in task.requires()]
+        actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected)
 
 
@@ -607,7 +611,7 @@ class RangeHourlyTest(unittest.TestCase):
                            start=datetime.datetime(2014, 3, 20, 17),
                            task_limit=3,
                            hours_back=3 * 365 * 24)
-        actual = [t.task_id for t in task.requires()]
+        actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected_a)
 
     @mock.patch('luigi.mock.MockFileSystem.listdir', new=mock_listdir(mock_contents))
@@ -620,7 +624,7 @@ class RangeHourlyTest(unittest.TestCase):
             start=datetime.datetime(2014, 3, 20, 23),
             stop=datetime.datetime(2014, 3, 21, 6),
             hours_back=30 * 365 * 24)
-        actual = [t.task_id for t in task.requires()]
+        actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected_wrapper)
 
     def test_bulk_complete_correctly_interfaced(self):
@@ -644,7 +648,7 @@ class RangeHourlyTest(unittest.TestCase):
             'BulkCompleteHourlyTask(dh=2015-11-30T23)',
         ]
 
-        actual = [t.task_id for t in task.requires()]
+        actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected)
 
     @mock.patch('luigi.mock.MockFileSystem.exists',
@@ -659,7 +663,7 @@ class RangeHourlyTest(unittest.TestCase):
         expected = [
             'TaskC(dh=2014-03-20T23)',
             'TaskC(dh=2014-03-21T00)']
-        self.assertEqual([t.task_id for t in task.requires()], expected)
+        self.assertEqual([str(t) for t in task.requires()], expected)
 
 
 class RangeInstantiationTest(LuigiTestCase):
@@ -716,5 +720,21 @@ class RangeInstantiationTest(LuigiTestCase):
                                     start=datetime.date(2015, 12, 1),
                                     stop=datetime.date(2015, 12, 2),
                                     param_name='date_param')
+        expected_task = MyTask('woo', datetime.date(2015, 12, 1))
+        self.assertEqual(expected_task, list(range_task._requires())[0])
+
+    def test_param_name_with_inferred_fs(self):
+        class MyTask(luigi.Task):
+            some_non_range_param = luigi.Parameter(default='woo')
+            date_param = luigi.DateParameter()
+
+            def output(self):
+                return MockTarget(self.date_param.strftime('/n2000y01a05n/%Y_%m-_-%daww/21mm%Hdara21/ooo'))
+
+        range_task = RangeDaily(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                of=MyTask,
+                                start=datetime.date(2015, 12, 1),
+                                stop=datetime.date(2015, 12, 2),
+                                param_name='date_param')
         expected_task = MyTask('woo', datetime.date(2015, 12, 1))
         self.assertEqual(expected_task, list(range_task._requires())[0])

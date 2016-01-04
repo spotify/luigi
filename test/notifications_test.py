@@ -115,7 +115,7 @@ class ExceptionFormatTest(unittest.TestCase):
         self._check_body(args[1], task, html=True)
 
     def _check_subject(self, subject, task):
-        self.assertIn(task.task_id, subject)
+        self.assertIn(str(task), subject)
 
     def _check_body(self, body, task, html=False):
         if html:

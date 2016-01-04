@@ -115,23 +115,23 @@ class ParallelSchedulingTest(unittest.TestCase):
         self.w.add(OverlappingSelfDependenciesTask(5, 2), True)
         self.assertEqual(15, self.sch.add_task.call_count)
         self.assertEqual(set((
-            'OverlappingSelfDependenciesTask(n=1, k=1)',
-            'OverlappingSelfDependenciesTask(n=2, k=1)',
-            'OverlappingSelfDependenciesTask(n=2, k=2)',
-            'OverlappingSelfDependenciesTask(n=3, k=1)',
-            'OverlappingSelfDependenciesTask(n=3, k=2)',
-            'OverlappingSelfDependenciesTask(n=4, k=1)',
-            'OverlappingSelfDependenciesTask(n=4, k=2)',
-            'OverlappingSelfDependenciesTask(n=5, k=2)',
+            OverlappingSelfDependenciesTask(n=1, k=1).task_id,
+            OverlappingSelfDependenciesTask(n=2, k=1).task_id,
+            OverlappingSelfDependenciesTask(n=2, k=2).task_id,
+            OverlappingSelfDependenciesTask(n=3, k=1).task_id,
+            OverlappingSelfDependenciesTask(n=3, k=2).task_id,
+            OverlappingSelfDependenciesTask(n=4, k=1).task_id,
+            OverlappingSelfDependenciesTask(n=4, k=2).task_id,
+            OverlappingSelfDependenciesTask(n=5, k=2).task_id,
         )), set(self.added_tasks('PENDING')))
         self.assertEqual(set((
-            'OverlappingSelfDependenciesTask(n=0, k=0)',
-            'OverlappingSelfDependenciesTask(n=0, k=1)',
-            'OverlappingSelfDependenciesTask(n=1, k=0)',
-            'OverlappingSelfDependenciesTask(n=1, k=2)',
-            'OverlappingSelfDependenciesTask(n=2, k=0)',
-            'OverlappingSelfDependenciesTask(n=3, k=0)',
-            'OverlappingSelfDependenciesTask(n=4, k=0)',
+            OverlappingSelfDependenciesTask(n=0, k=0).task_id,
+            OverlappingSelfDependenciesTask(n=0, k=1).task_id,
+            OverlappingSelfDependenciesTask(n=1, k=0).task_id,
+            OverlappingSelfDependenciesTask(n=1, k=2).task_id,
+            OverlappingSelfDependenciesTask(n=2, k=0).task_id,
+            OverlappingSelfDependenciesTask(n=3, k=0).task_id,
+            OverlappingSelfDependenciesTask(n=4, k=0).task_id,
         )), set(self.added_tasks('DONE')))
 
     @mock.patch('luigi.notifications.send_error_email')

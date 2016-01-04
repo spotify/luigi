@@ -76,7 +76,11 @@ class InputPipeProcessWrapper(object):
                 self._original_input = False
                 f = tempfile.NamedTemporaryFile('wb', prefix='luigi-process_tmp', delete=False)
                 self._tmp_file = f.name
-                f.write(input_pipe.read())
+                while True:
+                    chunk = input_pipe.read(io.DEFAULT_BUFFER_SIZE)
+                    if not chunk:
+                        break
+                    f.write(chunk)
                 input_pipe.close()
                 f.close()
                 self._input_pipe = FileWrapper(io.BufferedReader(io.FileIO(self._tmp_file, 'r')))

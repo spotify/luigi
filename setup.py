@@ -70,6 +70,7 @@ setup(
             'luigid = luigi.cmdline:luigid',
             'luigi-grep = luigi.tools.luigi_grep:main',
             'luigi-deps = luigi.tools.deps:main',
+            'luigi-migrate = luigi.tools.migrate:main'
         ]
     },
     install_requires=install_requires,

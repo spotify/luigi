@@ -259,7 +259,7 @@ class MarkerIndexTest(unittest.TestCase):
         result = self.es.search(index=MARKER_INDEX, doc_type=MARKER_DOC_TYPE,
                                 body={'query': {'match_all': {}}})
         marker_doc = result.get('hits').get('hits')[0].get('_source')
-        self.assertEqual('IndexingTask1()', marker_doc.get('update_id'))
+        self.assertEqual(task1.task_id, marker_doc.get('update_id'))
         self.assertEqual(INDEX, marker_doc.get('target_index'))
         self.assertEqual(DOC_TYPE, marker_doc.get('target_doc_type'))
         self.assertTrue('date' in marker_doc)
@@ -286,8 +286,8 @@ class MarkerIndexTest(unittest.TestCase):
         first = next(it)
         second = next(it)
         self.assertTrue(first.date < second.date)
-        self.assertEqual(first.update_id, 'IndexingTask1()')
-        self.assertEqual(second.update_id, 'IndexingTask2()')
+        self.assertEqual(first.update_id, task1.task_id)
+        self.assertEqual(second.update_id, task2.task_id)
 
 
 class IndexingTask4(CopyToTestIndex):
@@ -333,5 +333,5 @@ class IndexHistSizeTest(unittest.TestCase):
         marker_index_document_id = task4_3.output().marker_index_document_id()
         result = self.es.get(id=marker_index_document_id, index=MARKER_INDEX,
                              doc_type=MARKER_DOC_TYPE)
-        self.assertEqual('IndexingTask4(date=2002-01-01)',
+        self.assertEqual(task4_3.task_id,
                          result.get('_source').get('update_id'))

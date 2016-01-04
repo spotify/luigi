@@ -110,13 +110,6 @@ logger.propagate = 0
 POLL_TIME = 5  # decided to hard-code rather than configure here
 
 
-def _clean_task_id(task_id):
-    """Clean the task ID so qsub allows it as a "name" string."""
-    for c in ['\n', '\t', '\r', '/', ':', '@', '\\', '*', '?', ',', '=', ' ', '(', ')']:
-        task_id = task_id.replace(c, '-')
-    return task_id
-
-
 def _parse_qstat_state(qstat_out, job_id):
     """Parse "state" column from `qstat` output for given job_id
 
@@ -200,7 +193,7 @@ class SGEJobTask(luigi.Task):
         # Set up temp folder in shared directory (trim to max filename length)
         base_tmp_dir = self.shared_tmp_dir
         random_id = '%016x' % random.getrandbits(64)
-        folder_name = _clean_task_id(self.task_id) + '-' + random_id
+        folder_name = self.task_id + '-' + random_id
         self.tmp_dir = os.path.join(base_tmp_dir, folder_name)
         max_filename_length = os.fstatvfs(0).f_namemax
         self.tmp_dir = self.tmp_dir[:max_filename_length]

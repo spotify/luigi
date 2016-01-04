@@ -64,6 +64,14 @@ class TestExternalBigqueryTask(bigquery.ExternalBigqueryTask):
         return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, 'table1', client=self.client)
 
 
+class TestCreateViewTask(bigquery.BigqueryCreateViewTask):
+    client = MagicMock()
+    view = '''SELECT * FROM table LIMIT 10'''
+
+    def output(self):
+        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, 'view1', client=self.client)
+
+
 class BigqueryTest(unittest.TestCase):
 
     def test_bulk_complete(self):
@@ -110,3 +118,31 @@ class BigqueryTest(unittest.TestCase):
         task = TestExternalBigqueryTask()
         self.assertIsInstance(task, luigi.ExternalTask)
         self.assertIsInstance(task, bigquery.MixinBigqueryBulkComplete)
+
+    def test_create_view(self):
+        task = TestCreateViewTask()
+
+        task.client.get_view.return_value = None
+        self.assertFalse(task.complete())
+
+        task.run()
+        (table, view), _ = task.client.update_view.call_args
+        self.assertEqual(task.output().table, table)
+        self.assertEqual(task.view, view)
+
+    def test_update_view(self):
+        task = TestCreateViewTask()
+
+        task.client.get_view.return_value = 'some other query'
+        self.assertFalse(task.complete())
+
+        task.run()
+        (table, view), _ = task.client.update_view.call_args
+        self.assertEqual(task.output().table, table)
+        self.assertEqual(task.view, view)
+
+    def test_view_completed(self):
+        task = TestCreateViewTask()
+
+        task.client.get_view.return_value = task.view
+        self.assertTrue(task.complete())

@@ -133,7 +133,7 @@ class TaskProcess(multiprocessing.Process):
                 return new_deps
 
     def run(self):
-        logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task.task_id)
+        logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task)
 
         if self.random_seed:
             # Need to have different random seeds if running in separate processes
@@ -165,13 +165,13 @@ class TaskProcess(multiprocessing.Process):
             if new_deps:
                 logger.info(
                     '[pid %s] Worker %s new requirements      %s',
-                    os.getpid(), self.worker_id, self.task.task_id)
+                    os.getpid(), self.worker_id, self.task)
             elif status == DONE:
                 self.task.trigger_event(
                     Event.PROCESSING_TIME, self.task, time.time() - t0)
                 expl = json.dumps(self.task.on_success())
                 logger.info('[pid %s] Worker %s done      %s', os.getpid(),
-                            self.worker_id, self.task.task_id)
+                            self.worker_id, self.task)
                 self.task.trigger_event(Event.SUCCESS, self.task)
 
         except KeyboardInterrupt:
@@ -475,26 +475,27 @@ class Worker(object):
         logger.exception("Luigi unexpected framework error while scheduling %s", task)  # needs to be called from within except clause
 
     def _email_complete_error(self, task, formatted_traceback):
-        # like logger.exception but with WARNING level
-        subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
-        headline = "Will not schedule task or any dependencies due to error in complete() method"
-
-        message = notifications.format_task_error(headline, task, formatted_traceback)
-        notifications.send_error_email(subject, message, task.owner_email)
+        self._email_error(task, formatted_traceback,
+                          subject="Luigi: {task} failed scheduling. Host: {host}",
+                          headline="Will not schedule task or any dependencies due to error in complete() method",
+                          )
 
     def _email_dependency_error(self, task, formatted_traceback):
-        subject = "Luigi: {task} failed scheduling. Host: {host}".format(task=task, host=self.host)
-        headline = "Will not schedule task or any dependencies due to error in deps() method"
-
-        message = notifications.format_task_error(headline, task, formatted_traceback)
-        notifications.send_error_email(subject, message, task.owner_email)
+        self._email_error(task, formatted_traceback,
+                          subject="Luigi: {task} failed scheduling. Host: {host}",
+                          headline="Will not schedule task or any dependencies due to error in deps() method",
+                          )
 
     def _email_unexpected_error(self, task, formatted_traceback):
-        subject = "Luigi: Framework error while scheduling {task}. Host: {host}".format(task=task, host=self.host)
-        headline = "Luigi framework error"
+        self._email_error(task, formatted_traceback,
+                          subject="Luigi: Framework error while scheduling {task}. Host: {host}",
+                          headline="Luigi framework error",
+                          )
 
+    def _email_error(self, task, formatted_traceback, subject, headline):
+        formatted_subject = subject.format(task=task, host=self.host)
         message = notifications.format_task_error(headline, task, formatted_traceback)
-        notifications.send_error_email(subject, message, task.owner_email)
+        notifications.send_error_email(formatted_subject, message, task.owner_email)
 
     def add(self, task, multiprocess=False):
         """
@@ -581,7 +582,7 @@ class Worker(object):
             task.trigger_event(Event.DEPENDENCY_MISSING, task)
             logger.warning('Data for %s does not exist (yet?). The task is an '
                            'external data depedency, so it can not be run from'
-                           ' this luigi process.', task.task_id)
+                           ' this luigi process.', task)
 
         else:
             try:
@@ -632,15 +633,15 @@ class Worker(object):
         self._scheduler.add_worker(self._id, self._worker_info)
 
     def _log_remote_tasks(self, running_tasks, n_pending_tasks, n_unique_pending):
-        logger.info("Done")
-        logger.info("There are no more tasks to run at this time")
+        logger.debug("Done")
+        logger.debug("There are no more tasks to run at this time")
         if running_tasks:
             for r in running_tasks:
-                logger.info('%s is currently run by worker %s', r['task_id'], r['worker'])
+                logger.debug('%s is currently run by worker %s', r['task_id'], r['worker'])
         elif n_pending_tasks:
-            logger.info("There are %s pending tasks possibly being run by other workers", n_pending_tasks)
+            logger.debug("There are %s pending tasks possibly being run by other workers", n_pending_tasks)
             if n_unique_pending:
-                logger.info("There are %i pending tasks unique to this worker", n_unique_pending)
+                logger.debug("There are %i pending tasks unique to this worker", n_unique_pending)
 
     def _get_work(self):
         if self._stop_requesting_work:
