@@ -64,9 +64,9 @@ class ConfigurationTest(MiniClusterTestCase):
         client.mkdir('d/b')
         self.assertEqual(2, len(list(client.listdir('d'))))
         target = hdfs.HdfsTarget('d/a', fs=client)
-        self.assertFalse(target.move_dir('d/b'))
+        self.assertRaises(luigi.target.FileSystemException, lambda: target.move_dir('d/b'))
         self.assertEqual(2, len(list(client.listdir('d'))))
-        self.assertTrue(target.move_dir('d/c'))
+        target.move_dir('d/c')
         self.assertEqual(2, len(list(client.listdir('d'))))
 
     @helpers.with_config({"hdfs": {}}, replace_sections=True)

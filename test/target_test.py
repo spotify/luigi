@@ -244,3 +244,25 @@ class FileSystemTargetTestMixin(object):
             result = f.read()
 
         self.assertEqual(test_data, result)
+
+    def test_move_on_fs(self):
+        # We're cheating and retrieving the fs from target.
+        # TODO: maybe move to "filesystem_test.py" or something
+        t = self.create_target()
+        t._touchz()
+        fs = t.fs
+        self.assertTrue(t.exists())
+        fs.move(t.path, t.path+"-yay")
+        self.assertFalse(t.exists())
+
+    def test_rename_dont_move_on_fs(self):
+        # We're cheating and retrieving the fs from target.
+        # TODO: maybe move to "filesystem_test.py" or something
+        t = self.create_target()
+        t._touchz()
+        fs = t.fs
+        self.assertTrue(t.exists())
+        fs.rename_dont_move(t.path, t.path+"-yay")
+        self.assertFalse(t.exists())
+        self.assertRaises(luigi.target.FileAlreadyExists,
+                          lambda: fs.rename_dont_move(t.path, t.path+"-yay"))

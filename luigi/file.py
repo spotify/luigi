@@ -83,6 +83,14 @@ class LocalFileSystem(FileSystem):
         else:
             os.remove(path)
 
+    def move(self, old_path, new_path, raise_if_exists=False):
+        if raise_if_exists and os.path.exists(new_path):
+            raise RuntimeError('Destination exists: %s' % new_path)
+        d = os.path.dirname(new_path)
+        if d and not os.path.exists(d):
+            self.fs.mkdir(d)
+        os.rename(old_path, new_path)
+
 
 class LocalTarget(FileSystemTarget):
     fs = LocalFileSystem()
@@ -124,12 +132,7 @@ class LocalTarget(FileSystemTarget):
             raise Exception('mode must be r/w')
 
     def move(self, new_path, raise_if_exists=False):
-        if raise_if_exists and os.path.exists(new_path):
-            raise RuntimeError('Destination exists: %s' % new_path)
-        d = os.path.dirname(new_path)
-        if d and not os.path.exists(d):
-            self.fs.mkdir(d)
-        os.rename(self.path, new_path)
+        self.fs.move(self.path, new_path, raise_if_exists=raise_if_exists)
 
     def move_dir(self, new_path):
         self.move(new_path)

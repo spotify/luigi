@@ -247,6 +247,9 @@ class TestRemoteTargetAtomicity(unittest.TestCase, target_test.FileSystemTargetT
         file_content = f.read()
         self.assertEqual(file_content, 'hello')
 
+    test_move_on_fs = None  # ssh don't have move (yet?)
+    test_rename_dont_move_on_fs = None  # ssh don't have move (yet?)
+
 
 class TestRemoteTargetCreateDirectories(TestRemoteTargetAtomicity):
     path = '/tmp/%s/xyz/luigi_remote_atomic_test.txt' % random.randint(0, 999999999)

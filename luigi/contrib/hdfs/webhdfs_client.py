@@ -105,7 +105,7 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
                                 buffer_size=buffer_size, chunk_size=chunk_size,
                                 buffer_char=buffer_char)
 
-    def rename(self, path, dest):
+    def move(self, path, dest):
         parts = dest.rstrip('/').split('/')
         if len(parts) > 1:
             dir_path = '/'.join(parts[0:-1])

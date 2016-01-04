@@ -38,7 +38,7 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         logger.info("Aborting %s('%s'). Removing temporary file '%s'",
                     self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWritePipe, self).abort()
-        remove(self.tmppath)
+        remove(self.tmppath, skip_trash=True)
 
     def close(self):
         super(HdfsAtomicWritePipe, self).close()
@@ -60,7 +60,7 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
         logger.info("Aborting %s('%s'). Removing temporary dir '%s'",
                     self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWriteDirPipe, self).abort()
-        remove(self.tmppath)
+        remove(self.tmppath, skip_trash=True)
 
     def close(self):
         super(HdfsAtomicWriteDirPipe, self).close()

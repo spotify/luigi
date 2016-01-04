@@ -302,7 +302,13 @@ class S3Client(FileSystem):
         else:
             s3_bucket.copy_key(dst_key, src_bucket, src_key, **kwargs)
 
-    def rename(self, source_path, destination_path, **kwargs):
+    def rename(self, *args, **kwargs):
+        """
+        Alias for ``move()``
+        """
+        self.move(*args, **kwargs)
+
+    def move(self, source_path, destination_path, **kwargs):
         """
         Rename/move an object from one S3 location to another.
 
