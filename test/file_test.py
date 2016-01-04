@@ -34,6 +34,7 @@ import itertools
 import io
 from errno import EEXIST
 
+
 class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
     path = '/tmp/test.txt'
     copy = '/tmp/test.copy.txt'
@@ -170,19 +171,16 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual(b'a\nb\nc\nd', b)
         self.assertEqual(b'a\r\nb\r\nc\r\nd', c)
 
-
     def theoretical_io_modes(
             self,
             rwax='rwax',
-            bt=['','b','t'],
+            bt=['', 'b', 't'],
             plus=['', '+']):
         p = itertools.product(rwax, plus, bt)
-        return set(
-                [''.join(c) for c in 
-                    list(itertools.chain.from_iterable(
-                        [itertools.permutations(m) for m in 
-                            p]))])
-        
+        return set( [''.join(c) for c in
+            list(itertools.chain.from_iterable(
+                [itertools.permutations(m) for m in p]))])
+
     def valid_io_modes(self, *a, **kw):
         modes = set()
         t = LocalTarget(is_tmp=True)
@@ -190,7 +188,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         for mode in self.theoretical_io_modes(*a, **kw):
             try:
                 io.FileIO(t.path, mode).close()
-            except ValueError: 
+            except ValueError:
                 pass
             except IOError as err:
                 if err.errno == EEXIST:
@@ -209,7 +207,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
 
     def invalid_io_modes_for_luigi(self):
         return self.valid_io_modes().difference(
-                self.valid_write_io_modes_for_luigi(), 
+                self.valid_write_io_modes_for_luigi(),
                 self.valid_read_io_modes_for_luigi())
 
     def test_open_modes(self):
