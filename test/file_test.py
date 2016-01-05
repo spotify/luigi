@@ -177,8 +177,8 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
             bt=['', 'b', 't'],
             plus=['', '+']):
         p = itertools.product(rwax, plus, bt)
-        return set( [''.join(c) for c in
-            list(itertools.chain.from_iterable(
+        return set([''.join(c) for c in
+                list(itertools.chain.from_iterable(
                 [itertools.permutations(m) for m in p]))])
 
     def valid_io_modes(self, *a, **kw):
@@ -207,7 +207,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
 
     def invalid_io_modes_for_luigi(self):
         return self.valid_io_modes().difference(
-                self.valid_write_io_modes_for_luigi(),
+            self.valid_write_io_modes_for_luigi(),
                 self.valid_read_io_modes_for_luigi())
 
     def test_open_modes(self):
