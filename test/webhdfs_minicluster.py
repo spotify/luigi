@@ -59,15 +59,17 @@ class WebHdfsMiniCluster(MiniCluster):
                                      stderr=subprocess.PIPE, universal_newlines=True)
 
     def _get_namenode_port(self):
+        just_seen_webhdfs = False
         while self.hdfs.poll() is None:
             rlist, wlist, xlist = select.select([self.hdfs.stderr, self.hdfs.stdout], [], [])
             for f in rlist:
                 line = f.readline()
-                print(line,)
-                # luigi webhdfs version (different regex)
-                m = re.match(".*namenode.NameNode: Web-server up at: localhost:(\d+).*", line)
-                if m:
+                print(line.rstrip())
+
+                m = re.match(".*Jetty bound to port (\d+).*", line)
+                if just_seen_webhdfs and m:
                     return int(m.group(1))
+                just_seen_webhdfs = re.match(".*namenode.*webhdfs.*", line)
 
 
 class WebHdfsMiniClusterTestCase(MiniClusterTestCase):

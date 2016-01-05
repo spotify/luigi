@@ -52,7 +52,9 @@ mkdir -p $HADOOP_HOME
 if [ $HADOOP_DISTRO = "cdh" ]; then
     URL="http://archive.cloudera.com/cdh5/cdh/5/hadoop-latest.tar.gz"
 elif [ $HADOOP_DISTRO = "hdp" ]; then
-    URL="http://public-repo-1.hortonworks.com/HDP/centos6/2.x/updates/2.0.6.0/tars/hadoop-2.2.0.2.0.6.0-76.tar.gz"
+    # This site provides good URLs:
+    # https://github.com/saltstack-formulas/hadoop-formula/blob/5034a2204da691eceb9c2d8cd8260f11d5cc06f3/hadoop/settings.sls
+    URL="http://public-repo-1.hortonworks.com/HDP/centos6/2.x/updates/2.2.6.0/tars/hadoop-2.6.0.2.2.6.0-2800.tar.gz"
 else
     echo "No/bad HADOOP_DISTRO='${HADOOP_DISTRO}' specified" >&2
     exit 1
