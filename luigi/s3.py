@@ -22,11 +22,16 @@ system operations. The `boto` library is required to use S3 targets.
 
 from __future__ import division
 
+import datetime
 import itertools
 import logging
 import os
 import os.path
+import sys
+import threading
+import time
 from multiprocessing.pool import ThreadPool
+from threading import Thread, BoundedSemaphore
 
 try:
     from urlparse import urlsplit
@@ -279,16 +284,51 @@ class S3Client(FileSystem):
 
         return contents
 
-    def copy(self, source_path, destination_path, **kwargs):
+    def copy(self, source_path, destination_path, threads=3, start_time=None, end_time=None, **kwargs):
         """
         Copy an object from one S3 location to another.
+
+        :param threads: Optional argument to define the number of threads to use when copying (min: 3 threads)
+        :param start_time: Optional argument to copy files with modified dates after start_time
+        :param end_time: Optional argument to copy files with modified dates before end_time
         :param kwargs: Keyword arguments are passed to the boto function `copy_key`
         """
+        start = datetime.datetime.now()
+
         (src_bucket, src_key) = self._path_to_bucket_and_key(source_path)
         (dst_bucket, dst_key) = self._path_to_bucket_and_key(destination_path)
+        src_prefix = self._add_path_delimiter(src_key)
+        dst_prefix = self._add_path_delimiter(dst_key)
 
         s3_bucket = self.s3.get_bucket(dst_bucket, validate=True)
         source_bucket = self.s3.get_bucket(src_bucket, validate=True)
+
+        key_copy_thread_list = []
+        threads = 3 if threads < 3 else threads  # don't allow threads to be less than 3
+        pool_semaphore = BoundedSemaphore(value=threads)
+        total_keys = 0
+
+        class CopyKey(Thread):
+            def __init__(self, s3, key):
+                Thread.__init__(self)
+                self.s3 = s3
+                self.key = key
+                self.status = None
+
+            def run(self):
+                thread_dst_bucket = self.s3.get_bucket(dst_bucket, validate=True)
+
+                pool_semaphore.acquire()
+                self.status = '%s : Semaphore Acquired, Copy Next' % datetime.datetime.now()
+                try:
+                    thread_dst_bucket.copy_key(dst_prefix + self.key,
+                                       src_bucket,
+                                       src_prefix + self.key, **kwargs)
+                    self.status = '%s : Copy Success : %s' % (datetime.datetime.now(), self.key)
+                except:
+                    self.status = '%s : Copy Error : %s' % (datetime.datetime.now(), sys.exc_info())
+                finally:
+                    pool_semaphore.release()
 
         # If the file is larger than 64MB, then use multipart copy to perform the
         # copy faster. This constant was chosen in the the original put_multipart
@@ -296,17 +336,41 @@ class S3Client(FileSystem):
         multipart_threshold = 67108864
 
         if self.isdir(source_path):
-            src_prefix = self._add_path_delimiter(src_key)
-            dst_prefix = self._add_path_delimiter(dst_key)
-            for key in self.list(source_path):
+            max_thread_count = 0
+            for key in self.list(source_path, start_time=start_time, end_time=end_time):
                 if source_bucket.lookup(src_prefix + key).size <= multipart_threshold:
-                    s3_bucket.copy_key(dst_prefix + key,
-                                       src_bucket,
-                                       src_prefix + key, **kwargs)
+                    if key != '' and key != '/':  # prevents copy attempt of empty key in folder
+                        total_keys += 1
+
+                    current = CopyKey(self.s3, key)
+                    key_copy_thread_list.append(current)
+                    current.start()  # start new thread
+
+                    if len(threading.enumerate()) > max_thread_count:
+                        max_thread_count = len(threading.enumerate())
+
+                    # Pause if max threads reached-note that enumerate returns all threads, including this parent thread
+                    if len(threading.enumerate()) >= threads:
+                        while True:
+                            if len(threading.enumerate()) < threads:
+                                break  # continues to create threads
+                            time.sleep(1)
                 else:
                     self.copy_multipart(dst_prefix + key,
                                         src_bucket,
                                         src_prefix + key, **kwargs)
+
+            for key_copy_thread in key_copy_thread_list:
+                # Bring this thread to current "parent" thread, blocks parent until joined or 30s timeout
+                key_copy_thread.join(30)
+                if key_copy_thread.isAlive():
+                    logger.debug('%s : TIMEOUT on key %s' % (datetime.datetime.now(), key_copy_thread.key_name))
+                    continue
+
+            end = datetime.datetime.now()
+            duration = end - start
+            logger.info('%s : Complete : %s Total Keys Requested in %s' % (datetime.datetime.now(), total_keys, duration))
+            logger.debug('Max Num Active Threads: %d' % max_thread_count)
 
         elif source_bucket.lookup(src_key).size <= multipart_threshold:
             s3_bucket.copy_key(dst_key, src_bucket, src_key, **kwargs)
@@ -390,10 +454,13 @@ class S3Client(FileSystem):
         self.copy(source_path, destination_path)
         self.remove(source_path)
 
-    def listdir(self, path):
+    def listdir(self, path, start_time=None, end_time=None):
         """
         Get an iterable with S3 folder contents.
         Iterable contains paths relative to queried path.
+
+        :param start_time: Optional argument to copy files with modified dates after start_time
+        :param end_time: Optional argument to copy files with modified dates before end_time
         """
         (bucket, key) = self._path_to_bucket_and_key(path)
 
@@ -403,7 +470,14 @@ class S3Client(FileSystem):
         key_path = self._add_path_delimiter(key)
         key_path_len = len(key_path)
         for item in s3_bucket.list(prefix=key_path):
-            yield self._add_path_delimiter(path) + item.key[key_path_len:]
+            last_modified_date = time.strptime(item.last_modified, "%Y-%m-%dT%H:%M:%S.%fZ")
+            if (
+                    (not start_time and not end_time) or  # neither are defined, list all
+                    (start_time and not end_time and start_time < last_modified_date) or  # start defined, after start
+                    (not start_time and end_time and last_modified_date < end_time) or  # end defined, prior to end
+                    (start_time and end_time and start_time < last_modified_date < end_time)  # both defined, between
+               ):
+                yield self._add_path_delimiter(path) + item.key[key_path_len:]
 
     def list(self, path):  # backwards compat
         key_path_len = len(self._add_path_delimiter(path))
@@ -480,7 +554,7 @@ class S3Client(FileSystem):
         return (len(key) == 0) or (key == '/')
 
     def _add_path_delimiter(self, key):
-        return key if key[-1:] == '/' else key + '/'
+        return key if key[-1:] == '/' or key == '' else key + '/'
 
 
 class AtomicS3File(AtomicLocalFile):
