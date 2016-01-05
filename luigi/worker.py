@@ -169,7 +169,7 @@ class TaskProcess(multiprocessing.Process):
             elif status == DONE:
                 self.task.trigger_event(
                     Event.PROCESSING_TIME, self.task, time.time() - t0)
-                expl = json.dumps(self.task.on_success())
+                expl = self.task.on_success()
                 logger.info('[pid %s] Worker %s done      %s', os.getpid(),
                             self.worker_id, self.task)
                 self.task.trigger_event(Event.SUCCESS, self.task)
@@ -181,18 +181,11 @@ class TaskProcess(multiprocessing.Process):
             logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
             self.task.trigger_event(Event.FAILURE, self.task, ex)
             raw_error_message = self.task.on_failure(ex)
-            expl = json.dumps(raw_error_message)
-            self._send_error_notification(raw_error_message)
+            expl = raw_error_message
+
         finally:
             self.result_queue.put(
                 (self.task.task_id, status, expl, missing, new_deps))
-
-    def _send_error_notification(self, raw_error_message):
-        subject = "Luigi: %s FAILED" % self.task
-        notification_error_message = notifications.wrap_traceback(raw_error_message)
-        formatted_error_message = notifications.format_task_error(subject, self.task,
-                                                                  formatted_exception=notification_error_message)
-        notifications.send_error_email(subject, formatted_error_message, self.task.owner_email)
 
     def _recursive_terminate(self):
         import psutil
@@ -492,6 +485,12 @@ class Worker(object):
                           headline="Luigi framework error",
                           )
 
+    def _email_task_failure(self, task, formatted_traceback):
+        self._email_error(task, formatted_traceback,
+                          subject="Luigi: {task} FAILED. Host: {host}",
+                          headline="A task failed when running. Most likely run() raised an exception.",
+                          )
+
     def _email_error(self, task, formatted_traceback, subject, headline):
         formatted_subject = subject.format(task=task, host=self.host)
         message = notifications.format_task_error(headline, task, formatted_traceback)
@@ -723,10 +722,10 @@ class Worker(object):
         """
         for task_id, p in six.iteritems(self._running_tasks):
             if not p.is_alive() and p.exitcode:
-                error_msg = 'Worker task %s died unexpectedly with exit code %s' % (task_id, p.exitcode)
+                error_msg = 'Task %s died unexpectedly with exit code %s' % (task_id, p.exitcode)
             elif p.timeout_time is not None and time.time() > float(p.timeout_time) and p.is_alive():
                 p.terminate()
-                error_msg = 'Worker task %s timed out and was terminated.' % task_id
+                error_msg = 'Task %s timed out and was terminated.' % task_id
             else:
                 continue
 
@@ -757,6 +756,11 @@ class Worker(object):
                 continue
                 # Not a running task. Probably already removed.
                 # Maybe it yielded something?
+
+            if status == FAILED and expl:
+                # If no expl, it is because of a retry-external-task failure.
+                self._email_task_failure(task, expl)
+
             new_deps = []
             if new_requirements:
                 new_req = [load_task(module, name, params)
@@ -768,7 +772,7 @@ class Worker(object):
             self._add_task(worker=self._id,
                            task_id=task_id,
                            status=status,
-                           expl=expl,
+                           expl=json.dumps(expl),
                            resources=task.process_resources(),
                            runnable=None,
                            params=task.to_str_params(),
