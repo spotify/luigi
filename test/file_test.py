@@ -115,7 +115,7 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         t.copy(self.copy)
         self.assertTrue(os.path.exists(self.path))
         self.assertTrue(os.path.exists(self.copy))
-        self.assertEqual(t.open('r').read(),LocalTarget(self.copy).open('r').read())
+        self.assertEqual(t.open('r').read(), LocalTarget(self.copy).open('r').read())
 
     def test_move(self):
         t = LocalTarget(self.path)
