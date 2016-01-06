@@ -16,7 +16,8 @@
 #
 """
 Implementation of Simple Storage Service support.
-:py:class:`S3Target` is a subclass of the Target class to support S3 file system operations
+:py:class:`S3Target` is a subclass of the Target class to support S3 file
+system operations. The `boto` library is required to use S3 targets.
 """
 
 from __future__ import division
@@ -46,13 +47,6 @@ from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
 
-try:
-    import boto
-    from boto.s3.key import Key
-except ImportError:
-    logger.warning("Loading s3 module without boto installed. Will crash at "
-                   "runtime if s3 functionality is used.")
-
 
 # two different ways of marking a directory
 # with a suffix in S3
@@ -75,6 +69,10 @@ class S3Client(FileSystem):
 
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
                  **kwargs):
+        # only import boto when needed to allow top-lvl s3 module import
+        import boto
+        from boto.s3.key import Key
+
         options = self._get_s3_config()
         options.update(kwargs)
         # Removing key args would break backwards compability
@@ -88,6 +86,7 @@ class S3Client(FileSystem):
         self.s3 = boto.connect_s3(aws_access_key_id,
                                   aws_secret_access_key,
                                   **options)
+        self.Key = Key
 
     def exists(self, path):
         """
@@ -177,7 +176,7 @@ class S3Client(FileSystem):
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
 
         # put the file
-        s3_key = Key(s3_bucket)
+        s3_key = self.Key(s3_bucket)
         s3_key.key = key
         s3_key.set_contents_from_filename(local_path, **kwargs)
 
@@ -192,7 +191,7 @@ class S3Client(FileSystem):
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
 
         # put the content
-        s3_key = Key(s3_bucket)
+        s3_key = self.Key(s3_bucket)
         s3_key.key = key
         s3_key.set_contents_from_string(content, **kwargs)
 
@@ -261,7 +260,7 @@ class S3Client(FileSystem):
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
 
         # download the file
-        s3_key = Key(s3_bucket)
+        s3_key = self.Key(s3_bucket)
         s3_key.key = key
         s3_key.get_contents_to_filename(destination_local_path)
 
@@ -275,7 +274,7 @@ class S3Client(FileSystem):
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
 
         # get the content
-        s3_key = Key(s3_bucket)
+        s3_key = self.Key(s3_bucket)
         s3_key.key = key
         contents = s3_key.get_contents_as_string()
 
