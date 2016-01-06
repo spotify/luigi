@@ -27,6 +27,7 @@ import itertools
 import logging
 import os
 import os.path
+
 import sys
 import threading
 import time
@@ -38,6 +39,7 @@ try:
 except ImportError:
     from urllib.parse import urlsplit
 import warnings
+
 try:
     from ConfigParser import NoSectionError
 except ImportError:
@@ -49,7 +51,8 @@ from luigi.six.moves import range
 from luigi import configuration
 from luigi.format import get_default_format
 from luigi.parameter import Parameter
-from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
+from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, \
+    MissingParentDirectory
 from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
@@ -131,8 +134,7 @@ class S3Client(FileSystem):
 
         # root
         if self._is_root(key):
-            raise InvalidDeleteException(
-                'Cannot delete root of bucket at path %s' % path)
+            raise InvalidDeleteException('Cannot delete root of bucket at path %s' % path)
 
         # grab and validate the bucket
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
@@ -145,8 +147,7 @@ class S3Client(FileSystem):
             return True
 
         if self.isdir(path) and not recursive:
-            raise InvalidDeleteException(
-                'Path %s is a directory. Must use recursive delete' % path)
+            raise InvalidDeleteException('Path %s is a directory. Must use recursive delete' % path)
 
         delete_key_list = [
             k for k in s3_bucket.list(self._add_path_delimiter(key))]
@@ -342,19 +343,20 @@ class S3Client(FileSystem):
                     if key != '' and key != '/':  # prevents copy attempt of empty key in folder
                         total_keys += 1
 
-                    current = CopyKey(self.s3, key)
-                    key_copy_thread_list.append(current)
-                    current.start()  # start new thread
+                        current = CopyKey(self.s3, key)
+                        key_copy_thread_list.append(current)
+                        current.start()  # start new thread
 
-                    if len(threading.enumerate()) > max_thread_count:
-                        max_thread_count = len(threading.enumerate())
+                        if len(threading.enumerate()) > max_thread_count:
+                            max_thread_count = len(threading.enumerate())
 
-                    # Pause if max threads reached-note that enumerate returns all threads, including this parent thread
-                    if len(threading.enumerate()) >= threads:
-                        while True:
-                            if len(threading.enumerate()) < threads:
-                                break  # continues to create threads
-                            time.sleep(1)
+                        # Pause if max threads reached
+                        # note that enumerate returns all threads, including this parent thread
+                        if len(threading.enumerate()) >= threads:
+                            while True:
+                                if len(threading.enumerate()) < threads:
+                                    break  # continues to create threads
+                                time.sleep(1)
                 else:
                     self.copy_multipart(dst_prefix + key,
                                         src_bucket,
@@ -369,7 +371,8 @@ class S3Client(FileSystem):
 
             end = datetime.datetime.now()
             duration = end - start
-            logger.info('%s : Complete : %s Total Keys Requested in %s' % (datetime.datetime.now(), total_keys, duration))
+            logger.info('%s : Complete : %s Total Keys Requested in %s' %
+                        (datetime.datetime.now(), total_keys, duration))
             logger.debug('Max Num Active Threads: %d' % max_thread_count)
 
         elif source_bucket.lookup(src_key).size <= multipart_threshold:
@@ -479,9 +482,9 @@ class S3Client(FileSystem):
                ):
                 yield self._add_path_delimiter(path) + item.key[key_path_len:]
 
-    def list(self, path):  # backwards compat
+    def list(self, path, start_time=None, end_time=None):  # backwards compat
         key_path_len = len(self._add_path_delimiter(path))
-        for item in self.listdir(path):
+        for item in self.listdir(path, start_time=start_time, end_time=end_time):
             yield item[key_path_len:]
 
     def isdir(self, path):
@@ -505,14 +508,12 @@ class S3Client(FileSystem):
 
         # files with this prefix
         key_path = self._add_path_delimiter(key)
-        s3_bucket_list_result = \
-            list(itertools.islice(
-                 s3_bucket.list(prefix=key_path),
-                 1))
+        s3_bucket_list_result = list(itertools.islice(s3_bucket.list(prefix=key_path), 1))
         if s3_bucket_list_result:
             return True
 
         return False
+
     is_dir = isdir  # compatibility with old version.
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
@@ -574,7 +575,6 @@ class AtomicS3File(AtomicLocalFile):
 
 
 class ReadableS3File(object):
-
     def __init__(self, s3_key):
         self.s3_key = s3_key
         self.buffer = []
