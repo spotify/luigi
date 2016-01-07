@@ -466,6 +466,12 @@ class BigqueryRunQueryTask(MixinBigqueryBulkComplete, luigi.Task):
         return CreateDisposition.CREATE_IF_NEEDED
 
     @property
+    def flatten_results(self):
+        """Flattens all nested and repeated fields in the query results.
+        allowLargeResults must be true if this is set to False."""
+        return True
+
+    @property
     def query(self):
         """The query, in text form."""
         raise NotImplementedError()
@@ -502,6 +508,7 @@ class BigqueryRunQueryTask(MixinBigqueryBulkComplete, luigi.Task):
                     'allowLargeResults': True,
                     'createDisposition': self.create_disposition,
                     'writeDisposition': self.write_disposition,
+                    'flattenResults': self.flatten_results
                 }
             }
         }
