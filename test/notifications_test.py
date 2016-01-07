@@ -196,7 +196,8 @@ class TestSMTPEmail(unittest.TestCase, NotificationFixture):
                            "smtp_local_hostname": "ptms",
                            "smtp_timeout": "1200",
                            "smtp_login": "Robin",
-                           "smtp_password": "dooH"}})
+                           "smtp_password": "dooH",
+                           "smtp_tls": "True"}})
     def test_sends_smtp_email(self):
         """
         Call notificaions.send_email_smtp with fixture parameters
