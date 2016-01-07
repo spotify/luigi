@@ -120,10 +120,11 @@ def _get_str(task_dict, extra_indent):
             """
             line = prefix + '- {0} {1}(...)'.format(len(tasks), task_family)
         elif len((tasks[0].get_params())) == 1:
-            attributes = sorted({getattr(task, tasks[0].get_params()[0][0]) for task in tasks})
-
-            if _ranging_attributes(attributes, tasks[0].get_params()[0]) and len(attributes) > 3:
-                param_str = '{0}...{1}'.format(tasks[0].get_params()[0][1].serialize(attributes[0]), tasks[0].get_params()[0][1].serialize(attributes[-1]))
+            attributes = {getattr(task, tasks[0].get_params()[0][0]) for task in tasks}
+            param_class = tasks[0].get_params()[0][1]
+            first, last = _ranging_attributes(attributes, param_class)
+            if first is not None and last is not None and len(attributes) > 3:
+                param_str = '{0}...{1}'.format(param_class.serialize(first), param_class.serialize(last))
             else:
                 param_str = '{0}'.format(_get_str_one_parameter(tasks))
             line = prefix + '- {0} {1}({2}={3})'.format(len(tasks), task_family, tasks[0].get_params()[0][0], param_str)
@@ -133,10 +134,12 @@ def _get_str(task_dict, extra_indent):
             unique_param_keys = list(_get_unique_param_keys(params))
             if len(unique_param_keys) == 1:
                 unique_param, = unique_param_keys
-                attributes = sorted(params[unique_param])
-                if _ranging_attributes(attributes, unique_param) and len(attributes) > 2:
+                attributes = params[unique_param]
+                param_class = unique_param[1]
+                first, last = _ranging_attributes(attributes, param_class)
+                if first is not None and last is not None and len(attributes) > 2:
                     ranging = True
-                    line = prefix + '- {0} {1}({2}'.format(len(tasks), task_family, _get_str_ranging_multiple_parameters(attributes, tasks, unique_param))
+                    line = prefix + '- {0} {1}({2}'.format(len(tasks), task_family, _get_str_ranging_multiple_parameters(first, last, tasks, unique_param))
             if not ranging:
                 if len(tasks) == 1:
                     line = prefix + '- {0} {1}'.format(len(tasks), tasks[0])
@@ -152,9 +155,9 @@ def _get_len_of_params(task):
     return sum(len(param[0]) for param in task.get_params())
 
 
-def _get_str_ranging_multiple_parameters(attributes, tasks, unique_param):
+def _get_str_ranging_multiple_parameters(first, last, tasks, unique_param):
     row = ''
-    str_unique_param = '{0}...{1}'.format(unique_param[1].serialize(attributes[0]), unique_param[1].serialize(attributes[-1]))
+    str_unique_param = '{0}...{1}'.format(unique_param[1].serialize(first), unique_param[1].serialize(last))
     for param in tasks[0].get_params():
         row += '{0}='.format(param[0])
         if param[0] == unique_param[0]:
@@ -180,17 +183,18 @@ def _get_unique_param_keys(params):
             yield param_key
 
 
-def _ranging_attributes(attributes, unique_param):
+def _ranging_attributes(attributes, param_class):
     """
     Checks if there is a continuous range
     """
-    if len(attributes) > 2:
-        if unique_param[1].next_in_enumeration(attributes[0]) is None:
-            return False
-        for i in range(1, len(attributes)):
-            if unique_param[1].next_in_enumeration(attributes[i - 1]) != attributes[i]:
-                return False
-    return True
+    next_attributes = {param_class.next_in_enumeration(attribute) for attribute in attributes}
+    in_first = attributes.difference(next_attributes)
+    in_second = next_attributes.difference(attributes)
+    if len(in_first) == 1 and len(in_second) == 1:
+        for x in attributes:
+            if {param_class.next_in_enumeration(x)} == in_second:
+                return next(iter(in_first)), x
+    return None, None
 
 
 def _get_str_one_parameter(tasks):
