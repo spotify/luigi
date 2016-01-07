@@ -23,6 +23,7 @@ import luigi.execution_summary
 import threading
 import datetime
 import mock
+from enum import Enum
 
 
 class ExecutionSummaryTest(LuigiTestCase):
@@ -815,3 +816,29 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertNotIn('The other workers were', s)
         self.assertIn('This progress looks :) because there were no failed ', s)
         self.assertNotIn('\n\n\n', s)
+
+    def test_with_uncomparable_parameters(self):
+        """
+        Don't rely on parameters being sortable
+        """
+        class Color(Enum):
+            red = 1
+            yellow = 2
+
+        class Bar(RunOnceTask):
+            eparam = luigi.EnumParameter(enum=Color)
+
+        class Baz(RunOnceTask):
+            eparam = luigi.EnumParameter(enum=Color)
+            another_param = luigi.IntParameter()
+
+        class Foo(luigi.Task):
+            def requires(self):
+                yield Bar(Color.red)
+                yield Bar(Color.yellow)
+                yield Baz(Color.red, 5)
+                yield Baz(Color.yellow, 5)
+
+        self.run_task(Foo())
+        s = self.summary()
+        self.assertIn('yellow', s)
