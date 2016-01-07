@@ -39,6 +39,13 @@ class TestRunQueryTask(bigquery.BigqueryRunQueryTask):
         return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
 
 
+class TestRunQueryTaskDontFlattenResults(TestRunQueryTask):
+
+    @property
+    def flatten_results(self):
+        return False
+
+
 class TestRunQueryTaskWithRequires(bigquery.BigqueryRunQueryTask):
     client = MagicMock()
     table = luigi.Parameter()
@@ -146,3 +153,11 @@ class BigqueryTest(unittest.TestCase):
 
         task.client.get_view.return_value = task.view
         self.assertTrue(task.complete())
+
+    def test_flatten_results(self):
+        task = TestRunQueryTask(table='table3')
+        self.assertTrue(task.flatten_results)
+
+    def test_dont_flatten_results(self):
+        task = TestRunQueryTaskDontFlattenResults(table='table3')
+        self.assertFalse(task.flatten_results)
