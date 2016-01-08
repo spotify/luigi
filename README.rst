@@ -17,7 +17,7 @@
 .. image:: https://img.shields.io/pypi/l/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
-Luigi is a Python (2.7, 3.3, 3.4) package that helps you build complex pipelines of batch
+Luigi is a Python (2.7, 3.3, 3.4, 3.5) package that helps you build complex pipelines of batch
 jobs. It handles dependency resolution, workflow management, visualization,
 handling failures, command line integration, and much more.
 
