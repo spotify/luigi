@@ -108,7 +108,7 @@ class PostgresQueryTest(unittest.TestCase):
     @mock.patch('psycopg2.connect')
     def test_bulk_complete(self, mock_connect):
         mock_cursor = MockPostgresCursor([
-            'DummyPostgresQuery(date=2015-01-03)'
+            'DummyPostgresQuery_2015_01_03_838e32a989'
         ])
         mock_connect.return_value.cursor.return_value = mock_cursor
 
@@ -118,9 +118,9 @@ class PostgresQueryTest(unittest.TestCase):
         actual = [t.task_id for t in task.requires()]
 
         self.assertEqual(actual, [
-            'DummyPostgresQuery(date=2015-01-02)',
-            'DummyPostgresQuery(date=2015-01-04)',
-            'DummyPostgresQuery(date=2015-01-05)',
-            'DummyPostgresQuery(date=2015-01-06)',
+            'DummyPostgresQuery_2015_01_02_3a0ec498ed',
+            'DummyPostgresQuery_2015_01_04_9c1d42ff62',
+            'DummyPostgresQuery_2015_01_05_0f90e52357',
+            'DummyPostgresQuery_2015_01_06_f91a47ec40',
         ])
         self.assertFalse(task.complete())
