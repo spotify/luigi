@@ -215,8 +215,8 @@ smtp_port
 smtp_ssl
   If true, connects to smtp through SSL. Defaults to false.
 
-smtp_tls
-  If true, connects to smtp through TLS. Defaults to true.
+smtp_without_tls
+  If true, connects to smtp without TLS. Defaults to false.
 
 smtp_timeout
   Optionally sets the number of seconds after which smtp attempts should
