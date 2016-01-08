@@ -30,6 +30,10 @@ from luigi.file import LocalFileSystem
 from luigi.target import FileAlreadyExists, MissingParentDirectory
 from target_test import FileSystemTargetTestMixin
 
+import itertools
+import io
+from errno import EEXIST
+
 
 class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
     path = '/tmp/test.txt'
@@ -166,6 +170,65 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
 
         self.assertEqual(b'a\nb\nc\nd', b)
         self.assertEqual(b'a\r\nb\r\nc\r\nd', c)
+
+    def theoretical_io_modes(
+            self,
+            rwax='rwax',
+            bt=['', 'b', 't'],
+            plus=['', '+']):
+        p = itertools.product(rwax, plus, bt)
+        return set([''.join(c) for c in list(
+            itertools.chain.from_iterable(
+                [itertools.permutations(m) for m in p]))])
+
+    def valid_io_modes(self, *a, **kw):
+        modes = set()
+        t = LocalTarget(is_tmp=True)
+        t.open('w').close()
+        for mode in self.theoretical_io_modes(*a, **kw):
+            try:
+                io.FileIO(t.path, mode).close()
+            except ValueError:
+                pass
+            except IOError as err:
+                if err.errno == EEXIST:
+                    modes.add(mode)
+                else:
+                    raise
+            else:
+                modes.add(mode)
+        return modes
+
+    def valid_write_io_modes_for_luigi(self):
+        return self.valid_io_modes('w', plus=[''])
+
+    def valid_read_io_modes_for_luigi(self):
+        return self.valid_io_modes('r', plus=[''])
+
+    def invalid_io_modes_for_luigi(self):
+        return self.valid_io_modes().difference(
+            self.valid_write_io_modes_for_luigi(),
+            self.valid_read_io_modes_for_luigi())
+
+    def test_open_modes(self):
+        t = LocalTarget(is_tmp=True)
+        print('Valid write mode:', end=' ')
+        for mode in self.valid_write_io_modes_for_luigi():
+            print(mode, end=' ')
+            p = t.open(mode)
+            p.close()
+        print()
+        print('Valid read mode:', end=' ')
+        for mode in self.valid_read_io_modes_for_luigi():
+            print(mode, end=' ')
+            p = t.open(mode)
+            p.close()
+        print()
+        print('Invalid mode:', end=' ')
+        for mode in self.invalid_io_modes_for_luigi():
+            print(mode, end=' ')
+            self.assertRaises(Exception, t.open, mode)
+        print()
 
 
 class LocalTargetCreateDirectoriesTest(LocalTargetTest):
