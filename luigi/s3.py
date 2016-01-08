@@ -51,8 +51,7 @@ from luigi.six.moves import range
 from luigi import configuration
 from luigi.format import get_default_format
 from luigi.parameter import Parameter
-from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, \
-    MissingParentDirectory
+from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
 from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
@@ -93,6 +92,7 @@ class S3Client(FileSystem):
         for key in ['aws_access_key_id', 'aws_secret_access_key']:
             if key in options:
                 options.pop(key)
+
         self.s3 = boto.connect_s3(aws_access_key_id,
                                   aws_secret_access_key,
                                   **options)
@@ -304,6 +304,11 @@ class S3Client(FileSystem):
         s3_bucket = self.s3.get_bucket(dst_bucket, validate=True)
         source_bucket = self.s3.get_bucket(src_bucket, validate=True)
 
+        # If the file is larger than 64MB, then use multipart copy to perform the
+        # copy faster. This constant was chosen in the the original put_multipart
+        # implementation, and I've just used it here.
+        multipart_threshold = 67108864
+
         key_copy_thread_list = []
         threads = 3 if threads < 3 else threads  # don't allow threads to be less than 3
         pool_semaphore = BoundedSemaphore(value=threads)
@@ -323,18 +328,13 @@ class S3Client(FileSystem):
                 self.status = '%s : Semaphore Acquired, Copy Next' % datetime.datetime.now()
                 try:
                     thread_dst_bucket.copy_key(dst_prefix + self.key,
-                                       src_bucket,
-                                       src_prefix + self.key, **kwargs)
+                                               src_bucket,
+                                               src_prefix + self.key, **kwargs)
                     self.status = '%s : Copy Success : %s' % (datetime.datetime.now(), self.key)
                 except:
                     self.status = '%s : Copy Error : %s' % (datetime.datetime.now(), sys.exc_info())
                 finally:
                     pool_semaphore.release()
-
-        # If the file is larger than 64MB, then use multipart copy to perform the
-        # copy faster. This constant was chosen in the the original put_multipart
-        # implementation, and I've just used it here.
-        multipart_threshold = 67108864
 
         if self.isdir(source_path):
             max_thread_count = 0
