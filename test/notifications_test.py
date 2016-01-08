@@ -196,10 +196,11 @@ class TestSMTPEmail(unittest.TestCase, NotificationFixture):
                            "smtp_local_hostname": "ptms",
                            "smtp_timeout": "1200",
                            "smtp_login": "Robin",
-                           "smtp_password": "dooH"}})
+                           "smtp_password": "dooH",
+                           "smtp_without_tls": "False"}})
     def test_sends_smtp_email(self):
         """
-        Call notificaions.send_email_smtp with fixture parameters
+        Call notificaions.send_email_smtp with fixture parameters with smtp_without_tls  set to False
         and check that sendmail is properly called.
         """
 
@@ -218,7 +219,42 @@ class TestSMTPEmail(unittest.TestCase, NotificationFixture):
 
                 SMTP.assert_called_once_with(**smtp_kws)
                 SMTP.return_value.login.assert_called_once_with("Robin", "dooH")
+                SMTP.return_value.starttls.assert_called_once_with()
                 SMTP.return_value.sendmail\
+                    .assert_called_once_with(self.sender, self.recipients,
+                                             self.mocked_email_msg)
+
+    @with_config({"core": {"smtp_ssl": "False",
+                           "smtp_host": "my.smtp.local",
+                           "smtp_port": "999",
+                           "smtp_local_hostname": "ptms",
+                           "smtp_timeout": "1200",
+                           "smtp_login": "Robin",
+                           "smtp_password": "dooH",
+                           "smtp_without_tls": "True"}})
+    def test_sends_smtp_email_without_tls(self):
+        """
+        Call notificaions.send_email_smtp with fixture parameters with smtp_without_tls  set to True
+        and check that sendmail is properly called without also calling
+        starttls.
+        """
+        smtp_kws = {"host": "my.smtp.local",
+                    "port": 999,
+                    "local_hostname": "ptms",
+                    "timeout": 1200}
+
+        with mock.patch('smtplib.SMTP') as SMTP:
+            with mock.patch('luigi.notifications.generate_email') as generate_email:
+                generate_email.return_value \
+                    .as_string.return_value = self.mocked_email_msg
+
+                notifications.send_email_smtp(configuration.get_config(),
+                                              *self.notification_args)
+
+                SMTP.assert_called_once_with(**smtp_kws)
+                self.assertEqual(SMTP.return_value.starttls.called, False)
+                SMTP.return_value.login.assert_called_once_with("Robin", "dooH")
+                SMTP.return_value.sendmail \
                     .assert_called_once_with(self.sender, self.recipients,
                                              self.mocked_email_msg)
 
