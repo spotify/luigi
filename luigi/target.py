@@ -25,6 +25,7 @@ import os
 import random
 import tempfile
 import logging
+import warnings
 from luigi import six
 
 logger = logging.getLogger('luigi-interface')
@@ -157,6 +158,32 @@ class FileSystem(object):
         """
         raise NotImplementedError("listdir() not implemented on {0}".format(self.__class__.__name__))
 
+    def move(self, path, dest):
+        """
+        Move a file, as one would expect.
+        """
+        raise NotImplementedError("move() not implemented on {0}".format(self.__class__.__name__))
+
+    def rename_dont_move(self, path, dest):
+        """
+        Potentially rename ``path`` to ``dest``, but don't move it into the
+        ``dest`` folder (if it is a folder).  This kind of operation is useful
+        when you don't want your output path to ever contain partial or
+        errinously nested data.
+
+        See `this github issue <https://github.com/spotify/luigi/pull/557>`__ and
+        `the thanksgiving bug <http://tarrasch.github.io/luigi-budapest-bi-oct-2015/#/21>`__
+        where the problem is described.
+
+        This method has a reasonable but not bullet proof default
+        implementation.  It will just do ``move()`` if the file doesn't
+        ``exists()`` already.
+        """
+        warnings.warn("File system {} client doesn't support atomic mv.".format(self.__class__.__name__))
+        if self.exists(dest):
+            raise FileAlreadyExists()
+        self.move(path, dest)
+
 
 class FileSystemTarget(Target):
     """
@@ -218,6 +245,10 @@ class FileSystemTarget(Target):
         This method is implemented by using :py:meth:`fs`.
         """
         self.fs.remove(self.path)
+
+    def _touchz(self):
+        with self.open('w'):
+            pass
 
 
 class AtomicLocalFile(io.BufferedWriter):

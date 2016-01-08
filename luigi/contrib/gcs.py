@@ -304,7 +304,13 @@ class GCSClient(luigi.target.FileSystem):
                 body={}).execute()
             _wait_for_consistency(lambda: self._obj_exists(dest_bucket, dest_obj))
 
-    def rename(self, source_path, destination_path):
+    def rename(self, *args, **kwargs):
+        """
+        Alias for ``move()``
+        """
+        self.move(*args, **kwargs)
+
+    def move(self, source_path, destination_path):
         """
         Rename/move an object from one GCS location to another.
         """

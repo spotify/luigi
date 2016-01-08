@@ -21,6 +21,7 @@ import posixpath
 import time
 import unittest
 
+import luigi.target
 from luigi import six
 from nose.plugins.attrib import attr
 
@@ -94,10 +95,11 @@ class TestSnakebiteClient(MiniClusterTestCase):
         self.assertTrue(self.snakebite.exists(foo))  # For sanity
         self.assertTrue(self.snakebite.exists(bar))  # For sanity
 
-        self.assertFalse(self.snakebite.rename_dont_move(foo, bar))
+        self.assertRaises(luigi.target.FileAlreadyExists,
+                          lambda: self.snakebite.rename_dont_move(foo, bar))
         self.assertTrue(self.snakebite.exists(foo))
         self.assertTrue(self.snakebite.exists(bar))
 
-        self.assertTrue(self.snakebite.rename_dont_move(foo, foo + '2'))
+        self.snakebite.rename_dont_move(foo, foo + '2')
         self.assertFalse(self.snakebite.exists(foo))
         self.assertTrue(self.snakebite.exists(foo + '2'))

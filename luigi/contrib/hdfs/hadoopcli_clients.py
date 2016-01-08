@@ -87,7 +87,7 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
                     return False
             raise hdfs_error.HDFSCliError(cmd, p.returncode, stdout, stderr)
 
-    def rename(self, path, dest):
+    def move(self, path, dest):
         parent_dir = os.path.dirname(dest)
         if parent_dir != '' and not self.exists(parent_dir):
             self.mkdir(parent_dir)

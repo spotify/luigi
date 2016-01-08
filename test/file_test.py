@@ -36,10 +36,11 @@ from errno import EEXIST
 
 
 class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
-    path = '/tmp/test.txt'
-    copy = '/tmp/test.copy.txt'
+    PATH_PREFIX = '/tmp/test.txt'
 
     def setUp(self):
+        self.path = self.PATH_PREFIX + '-' + str(self.id())
+        self.copy = self.PATH_PREFIX + '-copy-' + str(self.id())
         if os.path.exists(self.path):
             os.remove(self.path)
         if os.path.exists(self.copy):
