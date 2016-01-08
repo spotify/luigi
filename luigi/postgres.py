@@ -355,7 +355,7 @@ class PostgresQuery(rdbms.Query):
 
     Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
 
-    To customize the query signature as recorded in the database marker table, override the `update_id` method.
+    To customize the query signature as recorded in the database marker table, override the `update_id` property.
     """
 
     def run(self):
@@ -385,5 +385,5 @@ class PostgresQuery(rdbms.Query):
             user=self.user,
             password=self.password,
             table=self.table,
-            update_id=self.update_id()
+            update_id=self.update_id
         )

@@ -453,6 +453,7 @@ class KillOpenRedshiftSessions(luigi.Task):
     def password(self):
         return None
 
+    @property
     def update_id(self):
         """
         This update id will be a unique identifier
@@ -526,7 +527,7 @@ class RedshiftQuery(postgres.PostgresQuery):
 
     Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
 
-    To customize the query signature as recorded in the database marker table, override the `update_id` method.
+    To customize the query signature as recorded in the database marker table, override the `update_id` property.
     """
 
     def output(self):
@@ -541,4 +542,5 @@ class RedshiftQuery(postgres.PostgresQuery):
             user=self.user,
             password=self.password,
             table=self.table,
-            update_id=self.update_id())
+            update_id=self.update_id
+        )

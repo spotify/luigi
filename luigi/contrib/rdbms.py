@@ -189,6 +189,7 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         """
         raise NotImplementedError("This method must be overridden")
 
+    @property
     def update_id(self):
         """
         Override to create a custom marker table 'update_id' signature for Query subclass task instances
