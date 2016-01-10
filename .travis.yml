@@ -30,6 +30,17 @@ env:
     - TOXENV=py27-postgres
     - TOXENV=visualiser
 
+# Python 3.5 has to go here until Travis adds it to the default build images.
+# https://github.com/travis-ci/travis-ci/issues/4794#issuecomment-143758799
+matrix:
+  include:
+    - python: 3.5
+      env: TOXENV=py35-nonhdfs
+    - python: 3.5
+      env: TOXENV=py35-unixsocket
+    - python: 3.5
+      env: TOXENV=py35-cdh
+
 sudo: false
 
 cache:
