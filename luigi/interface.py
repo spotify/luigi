@@ -131,7 +131,7 @@ class core(task.Config):
 class _WorkerSchedulerFactory(object):
 
     def create_local_scheduler(self):
-        return scheduler.CentralPlannerScheduler(prune_on_get_work=True)
+        return scheduler.CentralPlannerScheduler(prune_on_get_work=True, record_task_history=False)
 
     def create_remote_scheduler(self, url):
         return rpc.RemoteScheduler(url)

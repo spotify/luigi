@@ -75,6 +75,12 @@ class SchedulerTest(unittest.TestCase):
         cps = luigi.scheduler.CentralPlannerScheduler()
         self.assertEqual({'a': 100, 'b': 200}, cps._resources)
 
+    @with_config({'scheduler': {'record_task_history': 'True'},
+                  'task_history': {'db_connection': 'sqlite:////none/existing/path/hist.db'}})
+    def test_local_scheduler_task_history_status(self):
+        ls = luigi.interface._WorkerSchedulerFactory().create_local_scheduler()
+        self.assertEqual(False, ls._config.record_task_history)
+
     def test_load_recovers_tasks_index(self):
         cps = luigi.scheduler.CentralPlannerScheduler()
         cps.add_task(worker='A', task_id='1')
