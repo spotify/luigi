@@ -1039,6 +1039,17 @@ class AssistantTest(unittest.TestCase):
         self.assertTrue(self.assistant.run())
         self.assertEqual(list(self.sch.task_list('DONE', '').keys()), [task.task_id])
 
+    @mock.patch('luigi.worker.KeepAliveThread')
+    def test_dead_assistant(self, keep_alive_fn):
+        self.assistant = Worker(scheduler=self.sch, worker_id='Y', assistant=True, keep_alive=True)
+        task = Dummy2Task('A')
+        keep_alive_thread = keep_alive_fn.return_value
+        keep_alive_thread.is_alive.side_effect = lambda: not task.complete()
+        with self.assistant:
+            self.assistant.add(task)
+            self.assistant.run()
+        self.assertEqual(list(self.sch.task_list('DONE', '').keys()), [task.task_id])
+
 
 class ForkBombTask(luigi.Task):
     depth = luigi.IntParameter()
