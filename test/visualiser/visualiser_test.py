@@ -15,11 +15,11 @@ import threading
 
 here = os.path.dirname(__file__)
 
-# Patch-up path so that we can import from the directory above this one.
+# Patch-up path so that we can import from the directory above this one.r
 # This seems to be necessary because the `test` directory has no __init__.py but
 # adding one makes other tests fail.
 sys.path.append(os.path.join(here, '..'))
-from server_test import ServerTestBase
+from server_test import ServerTestBase  # noqa
 
 TEST_TIMEOUT = 40
 

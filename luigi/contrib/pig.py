@@ -99,7 +99,9 @@ class PigJobTask(luigi.Task):
     def _build_pig_cmd(self):
         opts = self.pig_options()
 
-        line = lambda k, v: ('%s=%s%s' % (k, v, os.linesep)).encode('utf-8')
+        def line(k, v):
+            return ('%s=%s%s' % (k, v, os.linesep)).encode('utf-8')
+
         with tempfile.NamedTemporaryFile() as param_file, tempfile.NamedTemporaryFile() as prop_file:
             if self.pig_parameters():
                 items = six.iteritems(self.pig_parameters())

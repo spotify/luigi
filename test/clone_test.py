@@ -38,7 +38,8 @@ class LinearSum(luigi.Task):
             self.s = 0
         self.complete = lambda: True  # workaround since we don't write any output
 
-    complete = lambda self: False
+    def complete(self):
+        return False
 
     def f(self, x):
         return x
