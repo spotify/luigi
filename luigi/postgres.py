@@ -324,6 +324,7 @@ class CopyToTable(rdbms.CopyToTable):
                 cursor = connection.cursor()
                 self.init_copy(connection)
                 self.copy(cursor, tmp_file)
+                self.post_copy(connection)
             except psycopg2.ProgrammingError as e:
                 if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
                     # if first attempt fails with "relation not found", try creating table
