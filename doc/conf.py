@@ -17,6 +17,7 @@ import os
 import datetime
 import sphinx.environment
 from docutils.utils import get_source_line
+from pkg_resources import get_distribution
 
 
 try:
@@ -112,7 +113,6 @@ copyright = u"2011-{}, Erik Bernhardsson and Elias Freider".format(datetime.date
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from pkg_resources import get_distribution
 __version__ = get_distribution('luigi').version  # assume luigi is already installed
 # The short X.Y version.
 version = ".".join(__version__.split(".")[0:2])

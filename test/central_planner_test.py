@@ -285,6 +285,19 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.prune()
         self.assertFalse(list(self.sch.task_list('', '')))
 
+    def test_re_enable_failed_task_assistant(self):
+        self.setTime(0)
+        self.sch.add_worker('X', [('assistant', True)])
+        self.sch.add_task(worker='X', task_id='A', status=FAILED, assistant=True)
+
+        # should be failed now
+        self.assertEqual(FAILED, self.sch.task_list('', '')['A']['status'])
+
+        # resets to PENDING after 100 seconds
+        self.setTime(101)
+        self.sch.ping(worker='X')  # worker still alive
+        self.assertEqual('PENDING', self.sch.task_list('', '')['A']['status'])
+
     def test_fail_job_from_dead_worker_with_live_assistant(self):
         self.setTime(0)
         self.sch.add_task(worker='X', task_id='A')

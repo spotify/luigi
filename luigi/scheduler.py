@@ -567,7 +567,8 @@ class CentralPlannerScheduler(Scheduler):
 
         for task in self._state.get_active_tasks():
             self._state.fail_dead_worker_task(task, self._config, assistant_ids)
-            if task.id not in necessary_tasks and self._state.prune(task, self._config):
+            removed = self._state.prune(task, self._config)
+            if removed and task.id not in necessary_tasks:
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)
@@ -900,7 +901,8 @@ class CentralPlannerScheduler(Scheduler):
             return {}
 
         if dep_func is None:
-            dep_func = lambda t: t.deps
+            def dep_func(t):
+                return t.deps
 
         seen.add(root_task_id)
         serialized = {}
@@ -961,10 +963,13 @@ class CentralPlannerScheduler(Scheduler):
         result = {}
         upstream_status_table = {}  # used to memoize upstream status
         if search is None:
-            filter_func = lambda _: True
+            def filter_func(_):
+                return True
         else:
             terms = search.split()
-            filter_func = lambda t: all(term in t.id for term in terms)
+
+            def filter_func(t):
+                return all(term in t.id for term in terms)
         for task in filter(filter_func, self._state.get_active_tasks(status)):
             if (task.status != PENDING or not upstream_status or
                     upstream_status == self._upstream_status(task.id, upstream_status_table)):
