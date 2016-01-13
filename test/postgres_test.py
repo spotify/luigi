@@ -18,6 +18,7 @@ import luigi.postgres
 from luigi.tools.range import RangeDaily
 from helpers import unittest
 import mock
+import re
 from nose.plugins.attrib import attr
 
 
@@ -34,17 +35,34 @@ class MockPostgresCursor(mock.Mock):
         super(MockPostgresCursor, self).__init__()
         self.existing = existing_update_ids
 
-    def execute(self, query, params):
+    def execute(self, query, params=""):
+        query = re.sub(r"[\t \n]+", " ", query).strip()
         if query.startswith('SELECT 1 FROM table_updates'):
             self.fetchone_result = (1, ) if params[0] in self.existing else None
+        elif query.startswith(
+            "SELECT update_id FROM table_updates WHERE target_table = 'dummy_table'"
+        ):
+            self.fetchall_result = [
+                ("DummyPostgresImporter(date=2015-01-01)", ),
+                ("Non_Requested_UpdateId", )
+            ]
         else:
             self.fetchone_result = None
 
     def fetchone(self):
         return self.fetchone_result
 
+    def fetchall(self):
+        return self.fetchall_result
 
-class DummyPostgresImporter(luigi.postgres.CopyToTable):
+    def close(self):
+        pass
+
+
+class DummyPostgresImporter(
+        luigi.postgres.MixinPostgresBulkComplete,
+        luigi.postgres.CopyToTable
+    ):
     date = luigi.DateParameter()
 
     host = 'dummy_host'
@@ -81,3 +99,20 @@ class DailyCopyToTableTest(unittest.TestCase):
             DummyPostgresImporter(date=datetime.datetime(2015, 1, 6)).task_id,
         ]))
         self.assertFalse(task.complete())
+
+
+@attr('postgres')
+class BulkCompleteTest(unittest.TestCase):
+
+    @mock.patch('psycopg2.connect')
+    def test_bulk_complete(self, mock_connect):
+        task = DummyPostgresImporter(date=datetime.date(2015, 1, 1))
+        mock_cursor = MockPostgresCursor([task.task_id])
+        mock_connect.return_value.cursor.return_value = mock_cursor
+        c = DummyPostgresImporter.bulk_complete(
+            (
+                (datetime.date(2015, 1, 1,), ),
+                (datetime.date(2015, 1, 2,), )
+            )
+        )
+        self.assertIn(task.update_id(), c)
