@@ -567,7 +567,8 @@ class CentralPlannerScheduler(Scheduler):
 
         for task in self._state.get_active_tasks():
             self._state.fail_dead_worker_task(task, self._config, assistant_ids)
-            if task.id not in necessary_tasks and self._state.prune(task, self._config):
+            removed = self._state.prune(task, self._config)
+            if removed and task.id not in necessary_tasks:
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)
