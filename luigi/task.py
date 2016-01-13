@@ -501,7 +501,18 @@ class MixinNaiveBulkComplete(object):
     """
     @classmethod
     def bulk_complete(cls, parameter_tuples):
-        return [t for t in parameter_tuples if cls(t).complete()]
+        generated_tuples = []
+        for parameter_tuple in parameter_tuples:
+            if isinstance(parameter_tuple, (list, tuple)):
+                if cls(*parameter_tuple).complete():
+                    generated_tuples.append(parameter_tuple)
+            elif isinstance(parameter_tuple, dict):
+                if cls(**parameter_tuple).complete():
+                    generated_tuples.append(parameter_tuple)
+            else:
+                if cls(parameter_tuple).complete():
+                    generated_tuples.append(parameter_tuple)
+        return generated_tuples
 
 
 def externalize(task):
