@@ -267,6 +267,19 @@ worker-wait-jitter
   Default: 5.0
 
 
+[worker]
+
+no_install_shutdown_handler
+  By default, workers will stop requesting new work and finish running
+  pending tasks after receiving a `SIGUSR1` signal. This provides a hook
+  for gracefully shutting down workers that are in the process of running
+  (potentially expensive) tasks. If set to true, Luigi will NOT install
+  this shutdown hook on workers. Note this hook does not work on Windows
+  operating systems, or when jobs are launched outside the main execution
+  thread.
+  Defaults to false.
+
+
 [elasticsearch]
 ---------------
 
