@@ -450,9 +450,11 @@ class HadoopJobRunner(JobRunner):
         # build arguments
         config = configuration.get_config()
         python_executable = config.get('hadoop', 'python-executable', 'python')
-        map_cmd = '{0} mrrunner.py map'.format(python_executable)
-        cmb_cmd = '{0} mrrunner.py combiner'.format(python_executable)
-        red_cmd = '{0} mrrunner.py reduce'.format(python_executable)
+        runner_arg = 'mrrunner.pex' if job.package_binary is not None else 'mrrunner.py'
+        command = '{0} {1} {{step}}'.format(python_executable, runner_arg)
+        map_cmd = command.format(step='map')
+        cmb_cmd = command.format(step='combiner')
+        red_cmd = command.format(step='reduce')
 
         output_final = job.output().path
         # atomic output: replace output with a temporary work directory
@@ -514,9 +516,14 @@ class HadoopJobRunner(JobRunner):
             arglist += ['-combiner', cmb_cmd]
         if job.reducer != NotImplemented:
             arglist += ['-reducer', red_cmd]
-        files = [runner_path, self.tmp_dir + '/packages.tar', self.tmp_dir + '/job-instance.pickle']
+        packages_fn = 'mrrunner.pex' if job.package_binary is not None else 'packages.tar'
+        files = [
+            runner_path if job.package_binary is None else None,
+            os.path.join(self.tmp_dir, packages_fn),
+            os.path.join(self.tmp_dir, 'job-instance.pickle'),
+        ]
 
-        for f in files:
+        for f in filter(None, files):
             arglist += ['-file', f]
 
         if self.output_format:
@@ -544,7 +551,10 @@ class HadoopJobRunner(JobRunner):
         arglist += ['-output', output_hadoop]
 
         # submit job
-        create_packages_archive(packages, self.tmp_dir + '/packages.tar')
+        if job.package_binary is not None:
+            shutil.copy(job.package_binary, os.path.join(self.tmp_dir, 'mrrunner.pex'))
+        else:
+            create_packages_archive(packages, os.path.join(self.tmp_dir, 'packages.tar'))
 
         job.dump(self.tmp_dir)
 
@@ -650,6 +660,7 @@ class BaseHadoopJobTask(luigi.Task):
     final_reducer = NotImplemented
 
     mr_priority = NotImplemented
+    package_binary = None
 
     _counter_dict = {}
     task_id = None
