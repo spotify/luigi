@@ -187,6 +187,9 @@ function visualiserApp(luigi) {
         $.each(counts, function (name) {
             taskList.push({name: name, count: counts[name]});
         });
+        taskList.sort(function(a,b){
+          return a.name.localeCompare(b.name);
+        });
         return renderTemplate("sidebarTemplate", {"tasks": taskList});
     }
 
