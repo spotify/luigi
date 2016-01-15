@@ -37,6 +37,7 @@
 #
 
 
+from __future__ import print_function
 import luigi.interface
 from luigi.contrib.ssh import RemoteTarget
 from luigi.postgres import PostgresTarget
@@ -46,6 +47,7 @@ from luigi.task import flatten
 from luigi import parameter
 import sys
 from luigi.cmdline_parser import CmdlineParser
+import collections
 
 
 def get_task_requires(task):
@@ -89,23 +91,41 @@ def find_deps_cli():
         return find_deps(cp.get_task_obj(), upstream().family)
 
 
+def get_task_output_description(task_output):
+    '''
+    Returns a task's output as a string
+    '''
+    output_description = "n/a"
+
+    if isinstance(task_output, RemoteTarget):
+        output_description = "[SSH] {0}:{1}".format(task_output._fs.remote_context.host, task_output.path)
+    elif isinstance(task_output, S3Target):
+        output_description = "[S3] {0}".format(task_output.path)
+    elif isinstance(task_output, FileSystemTarget):
+        output_description = "[FileSystem] {0}".format(task_output.path)
+    elif isinstance(task_output, PostgresTarget):
+        output_description = "[DB] {0}:{1}".format(task_output.host, task_output.table)
+    else:
+        output_description = "to be determined"
+
+    return output_description
+
+
 def main():
     deps = find_deps_cli()
-    for d in deps:
-        task_name = d
-        task_output = u"n/a"
-        if isinstance(d.output(), RemoteTarget):
-            task_output = u"[SSH] {0}:{1}".format(d.output()._fs.remote_context.host, d.output().path)
-        elif isinstance(d.output(), S3Target):
-            task_output = u"[S3] {0}".format(d.output().path)
-        elif isinstance(d.output(), FileSystemTarget):
-            task_output = u"[FileSystem] {0}".format(d.output().path)
-        elif isinstance(d.output(), PostgresTarget):
-            task_output = u"[DB] {0}:{1}".format(d.output().host, d.output().table)
+    for task in deps:
+        task_output = task.output()
+
+        if isinstance(task_output, dict):
+            output_descriptions = [get_task_output_description(output) for label, output in task_output.iteritems()]
+        elif isinstance(task_output, collections.Iterable):
+            output_descriptions = [get_task_output_description(output) for output in task_output]
         else:
-            task_output = "to be determined"
-        print(u"""   TASK: {0}
-                       : {1}""".format(task_name, task_output))
+            output_descriptions = [get_task_output_description(task_output)]
+
+        print("   TASK: {0}".format(task))
+        for desc in output_descriptions:
+            print("                       : {0}".format(desc))
 
 
 if __name__ == '__main__':
