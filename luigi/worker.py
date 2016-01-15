@@ -144,11 +144,15 @@ class TaskProcess(multiprocessing.Process):
         missing = []
         new_deps = []
         try:
-            # Verify that all the tasks are fulfilled!
-            missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
-            if missing:
-                deps = 'dependency' if len(missing) == 1 else 'dependencies'
-                raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
+            # Verify that all the tasks are fulfilled! For external tasks we
+            # don't care about unfulfilled dependencies, because we are just
+            # checking completeness of self.task so outputs of dependencies are
+            # irrelevant.
+            if self.task.run != NotImplemented:
+                missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
+                if missing:
+                    deps = 'dependency' if len(missing) == 1 else 'dependencies'
+                    raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
             self.task.trigger_event(Event.START, self.task)
             t0 = time.time()
             status = None
@@ -157,7 +161,12 @@ class TaskProcess(multiprocessing.Process):
                 # External task
                 # TODO(erikbern): We should check for task completeness after non-external tasks too!
                 # This will resolve #814 and make things a lot more consistent
-                status = DONE if self.task.complete() else FAILED
+                if self.task.complete():
+                    status = DONE
+                else:
+                    status = FAILED
+                    expl = 'Task is an external data dependency ' \
+                        'and data does not exist (yet?).'
             else:
                 new_deps = self._run_get_new_deps()
                 status = DONE if not new_deps else PENDING
