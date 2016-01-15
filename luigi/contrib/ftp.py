@@ -29,6 +29,7 @@ import datetime
 import ftplib
 import os
 import random
+import tempfile
 import io
 
 import luigi
@@ -258,7 +259,8 @@ class RemoteTarget(luigi.target.FileSystemTarget):
             return self.format.pipe_writer(AtomicFtpFile(self._fs, self.path))
 
         elif mode == 'r':
-            self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+            temp_dir = os.path.join(tempfile.gettempdir(), 'luigi-contrib-ftp')
+            self.__tmp_path = temp_dir + '/' + self.path.lstrip('/') + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
             # download file to local
             self._fs.get(self.path, self.__tmp_path)
 
