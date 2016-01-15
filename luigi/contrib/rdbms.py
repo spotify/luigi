@@ -132,3 +132,66 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, luigi.Task):
     @abc.abstractmethod
     def copy(self, cursor, file):
         raise NotImplementedError("This method must be overridden")
+
+
+class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
+    """
+    An abstract task for executing an RDBMS query.
+
+    Usage:
+
+        Subclass and override the following attributes:
+
+        * `host`,
+        * `database`,
+        * `user`,
+        * `password`,
+        * `table`,
+        * `query`
+
+        Subclass and override the following methods:
+
+        * `output`
+    """
+
+    @abc.abstractproperty
+    def host(self):
+        return None
+
+    @abc.abstractproperty
+    def database(self):
+        return None
+
+    @abc.abstractproperty
+    def user(self):
+        return None
+
+    @abc.abstractproperty
+    def password(self):
+        return None
+
+    @abc.abstractproperty
+    def table(self):
+        return None
+
+    @abc.abstractproperty
+    def query(self):
+        return None
+
+    @abc.abstractmethod
+    def run(self):
+        raise NotImplementedError("This method must be overridden")
+
+    @abc.abstractmethod
+    def output(self):
+        """
+        Override with an RDBMS Target (e.g. PostgresTarget or RedshiftTarget) to record execution in a marker table
+        """
+        raise NotImplementedError("This method must be overridden")
+
+    @property
+    def update_id(self):
+        """
+        Override to create a custom marker table 'update_id' signature for Query subclass task instances
+        """
+        return self.task_id
