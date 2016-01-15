@@ -37,6 +37,7 @@
 #
 
 
+from __future__ import print_function
 import luigi.interface
 from luigi.contrib.ssh import RemoteTarget
 from luigi.postgres import PostgresTarget
@@ -94,18 +95,18 @@ def get_task_output_description(task_output):
     '''
     Returns a task's output as a string
     '''
-    output_description = u"n/a"
+    output_description = "n/a"
 
     if isinstance(task_output, RemoteTarget):
-        output_description = u"[SSH] {0}:{1}".format(task_output._fs.remote_context.host, task_output.path)
+        output_description = "[SSH] {0}:{1}".format(task_output._fs.remote_context.host, task_output.path)
     elif isinstance(task_output, S3Target):
-        output_description = u"[S3] {0}".format(task_output.path)
+        output_description = "[S3] {0}".format(task_output.path)
     elif isinstance(task_output, FileSystemTarget):
-        output_description = u"[FileSystem] {0}".format(task_output.path)
+        output_description = "[FileSystem] {0}".format(task_output.path)
     elif isinstance(task_output, PostgresTarget):
-        output_description = u"[DB] {0}:{1}".format(task_output.host, task_output.table)
+        output_description = "[DB] {0}:{1}".format(task_output.host, task_output.table)
     else:
-        output_description = u"to be determined"
+        output_description = "to be determined"
 
     return output_description
 
@@ -122,9 +123,9 @@ def main():
         else:
             output_descriptions = [get_task_output_description(task_output)]
 
-        print u"   TASK: {0}".format(task)
+        print("   TASK: {0}".format(task))
         for desc in output_descriptions:
-            print u"                       : {0}".format(desc)
+            print("                       : {0}".format(desc))
 
 
 if __name__ == '__main__':
