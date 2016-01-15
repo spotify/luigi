@@ -1,7 +1,5 @@
 language: python
 
-jdk: oraclejdk7
-
 services:
   - elasticsearch
   - mysql
@@ -45,7 +43,8 @@ matrix:
 sudo: false
 
 cache:
-  - $HOME/.pip-cache
+  directories:
+    - $HOME/.pip-cache
 
 install:
   - pip install 'tox<3.0'
