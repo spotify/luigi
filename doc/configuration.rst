@@ -177,20 +177,6 @@ parallel-scheduling
   parallel using multiprocessing. This can significantly speed up
   scheduling, but requires that all tasks can be pickled.
 
-retry-external-tasks
-  If true, incomplete external tasks (i.e. tasks where the `run()` method is
-  NotImplemented) will be retested for completion while Luigi is running.
-  This means that if external dependencies are satisfied after a workflow has
-  started, any tasks dependent on that resource will be eligible for running.
-  Note: Every time the task remains incomplete, it will count as FAILED, so
-  normal retry logic applies (see: `disable-num-failures` and `retry-delay`).
-  This setting works best with `worker-keep-alive: true`.
-  If false, external tasks will only be evaluated when Luigi is first invoked.
-  In this case, Luigi will not check whether external dependencies are
-  satisfied  while a workflow is in progress, so dependent tasks will remain
-  PENDING until the workflow is reinvoked.
-  Defaults to false for backwards compatibility.
-
 rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0
@@ -222,23 +208,28 @@ smtp_timeout
   Optionally sets the number of seconds after which smtp attempts should
   time out.
 
-worker-count-uniques
+
+[worker]
+
+These parameters control Luigi worker behavior.
+
+count_uniques
   If true, workers will only count unique pending jobs when deciding
   whether to stay alive. So if a worker can't get a job to run and other
   workers are waiting on all of its pending jobs, the worker will die.
   worker-keep-alive must be true for this to have any effect. Defaults
   to false.
 
-worker-keep-alive
+keep_alive
   If true, workers will stay alive when they run out of jobs to run, as
   long as they have some pending job waiting to be run. Defaults to
   false.
 
-worker-ping-interval
+ping_interval
   Number of seconds to wait between pinging scheduler to let it know
   that the worker is still alive. Defaults to 1.0.
 
-worker-task-limit
+task_limit
   .. versionadded:: 1.0.25
 
   Maximum number of tasks to schedule per invocation. Upon exceeding it,
@@ -246,7 +237,7 @@ worker-task-limit
   thus far. Prevents incidents due to spamming of the scheduler, usually
   accidental. Default: no limit.
 
-worker-timeout
+timeout
   .. versionadded:: 1.0.20
 
   Number of seconds after which to kill a task which has been running
@@ -256,15 +247,33 @@ worker-timeout
   by killing worker subprocesses. Default value is 0, meaning no
   timeout.
 
-worker-wait-interval
+wait_interval
   Number of seconds for the worker to wait before asking the scheduler
   for another job after the scheduler has said that it does not have any
   available jobs.
 
-worker-wait-jitter
+wait_jitter
   Size of jitter to add to the worker wait interval such that the multiple
   workers do not ask the scheduler for another job at the same time.
   Default: 5.0
+
+max_reschedules
+  Maximum number of times to reschedule a failed task.
+  Default: 1
+
+retry_external_tasks
+  If true, incomplete external tasks (i.e. tasks where the `run()` method is
+  NotImplemented) will be retested for completion while Luigi is running.
+  This means that if external dependencies are satisfied after a workflow has
+  started, any tasks dependent on that resource will be eligible for running.
+  Note: Every time the task remains incomplete, it will count as FAILED, so
+  normal retry logic applies (see: `disable-num-failures` and `retry-delay`).
+  This setting works best with `worker-keep-alive: true`.
+  If false, external tasks will only be evaluated when Luigi is first invoked.
+  In this case, Luigi will not check whether external dependencies are
+  satisfied  while a workflow is in progress, so dependent tasks will remain
+  PENDING until the workflow is reinvoked.
+  Defaults to false for backwards compatibility.
 
 
 [elasticsearch]
