@@ -176,6 +176,10 @@ class TestRemoteTarget(unittest.TestCase):
         remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD)
         remotetarget.get(local_filepath)
 
+        # make sure that it can open file
+        with remotetarget.open('r') as fin:
+            self.assertEqual(fin.read(), "something to fill")
+
         # file is successfuly created
         self.assertTrue(os.path.exists(local_filepath))
 
