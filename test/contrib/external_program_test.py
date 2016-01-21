@@ -1,3 +1,7 @@
+import os
+import shutil
+import tempfile
+
 from helpers import unittest
 import luigi
 import luigi.contrib.hdfs
@@ -28,6 +32,16 @@ class TestExternalProgramTask(ExternalProgramTask):
 
     def output(self):
         return luigi.LocalTarget('output')
+
+
+class TestTouchTask(ExternalProgramTask):
+    file_path = luigi.Parameter()
+
+    def program_args(self):
+        return ['touch', self.output().path]
+
+    def output(self):
+        return luigi.LocalTarget(self.file_path)
 
 
 class ExternalProgramTaskTest(unittest.TestCase):
@@ -73,6 +87,21 @@ class ExternalProgramTaskTest(unittest.TestCase):
         except KeyboardInterrupt:
             pass
         proc.return_value.kill.check_called()
+
+    def test_non_mocked_task_run(self):
+        # create a tempdir first, to ensure an empty playground for
+        # TestTouchTask to create its file in
+        tempdir = tempfile.mkdtemp()
+        tempfile_path = os.path.join(tempdir, 'testfile')
+
+        try:
+            job = TestTouchTask(file_path=tempfile_path)
+            job.run()
+
+            self.assertTrue(luigi.LocalTarget(tempfile_path).exists())
+        finally:
+            # clean up temp files even if assertion fails
+            shutil.rmtree(tempdir)
 
 
 class TestExternalPythonProgramTask(ExternalPythonProgramTask):
