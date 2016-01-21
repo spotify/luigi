@@ -41,9 +41,9 @@ class ExternalProgramTask(luigi.Task):
         env = os.environ.copy()
         return env
 
-    def _clean_output_file(self, file):
-        file.seek(0)
-        return ''.join(map(lambda s: s.decode('utf-8'), file.readlines()))
+    def _clean_output_file(self, file_object):
+        file_object.seek(0)
+        return ''.join(map(lambda s: s.decode('utf-8'), file_object.readlines()))
 
     def run(self):
         args = list(map(str, self.program_args()))
@@ -131,11 +131,13 @@ class ExternalPythonProgramTask(ExternalProgramTask):
     """
     virtualenv = luigi.Parameter(
         default=None,
+        positional=False,
         description='path to the virtualenv directory to use. It should point to '
                     'the directory containing the ``bin/activate`` file used for '
                     'enabling the virtualenv.')
     extra_pythonpath = luigi.Parameter(
         default=None,
+        positional=False,
         description='extend the search path for modules by prepending this '
                     'value to the ``PYTHONPATH`` environment variable.')
 
