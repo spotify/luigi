@@ -766,8 +766,9 @@ class Worker(object):
                 # Not a running task. Probably already removed.
                 # Maybe it yielded something?
 
-            if status == FAILED and expl:
-                # If no expl, it is because of a retry-external-task failure.
+            # external task if run not implemented, retry-able if config option is enabled.
+            external_task_retryable = task.run == NotImplemented and self._config.retry_external_tasks
+            if status == FAILED and not external_task_retryable:
                 self._email_task_failure(task, expl)
 
             new_deps = []
