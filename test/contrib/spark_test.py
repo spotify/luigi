@@ -90,12 +90,6 @@ class TestPySparkTask(PySparkTask):
         sc.textFile(self.input().path).saveAsTextFile(self.output().path)
 
 
-class HdfsJob(luigi.ExternalTask):
-
-    def output(self):
-        return luigi.contrib.hdfs.HdfsTarget('test')
-
-
 class SparkSubmitTaskTest(unittest.TestCase):
     ss = 'ss-stub'
 
