@@ -109,6 +109,16 @@ class SparkSubmitTaskTest(unittest.TestCase):
                           '--driver-cores', '8', '--supervise', '--total-executor-cores', '150', '--executor-cores', '10',
                           '--queue', 'queue', '--num-executors', '2', 'file', 'arg1', 'arg2'])
 
+    @with_config({'spark': {'hadoop-conf-dir': 'path'}})
+    @patch('luigi.contrib.spark.subprocess.Popen')
+    def test_environment_is_set_correctly(self, proc):
+        setup_run_process(proc)
+        job = TestSparkSubmitTask()
+        job.run()
+
+        self.assertIn('HADOOP_CONF_DIR', proc.call_args[1]['env'])
+        self.assertEqual(proc.call_args[1]['env']['HADOOP_CONF_DIR'], 'path')
+
     @with_config({'spark': {'spark-submit': ss, 'master': 'spark://host:7077', 'conf': 'prop1=val1', 'jars': 'jar1.jar,jar2.jar',
                             'files': 'file1,file2', 'py-files': 'file1.py,file2.py', 'archives': 'archive1'}})
     @patch('luigi.contrib.spark.subprocess.Popen')
