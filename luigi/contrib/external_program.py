@@ -1,3 +1,18 @@
+"""
+Template tasks for running external programs as luigi tasks.
+
+This module is primarily intended for when you need to call a single external
+program, and it's enough to specify program arguments and environment
+variables.
+
+If you need to run multiple commands, chain them together or pipe output
+from one command to the next, you're probably better off using something like
+`plumbum`_, and wrapping plumbum commands in normal luigi
+:py:class:`~luigi.task.Task` s.
+
+.. _plumbum: https://plumbum.readthedocs.org/
+"""
+
 import logging
 import os
 import signal
