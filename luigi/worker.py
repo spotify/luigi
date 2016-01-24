@@ -310,6 +310,9 @@ class worker(Config):
                                          config_path=dict(section='core', name='retry-external-tasks'),
                                          description='If true, incomplete external tasks will be '
                                          'retested for completion while Luigi is running.')
+    no_install_shutdown_handler = BoolParameter(default=False,
+                                                description='If true, the SIGUSR1 shutdown handler will'
+                                                'NOT be install on the worker')
 
 
 class KeepAliveThread(threading.Thread):
@@ -380,10 +383,13 @@ class Worker(object):
         self.run_succeeded = True
         self.unfulfilled_counts = collections.defaultdict(int)
 
-        try:
-            signal.signal(signal.SIGUSR1, self.handle_interrupt)
-        except AttributeError:
-            pass
+        # note that ``signal.signal(signal.SIGUSR1, fn)`` only works inside the main execution thread, which is why we
+        # provide the ability to conditionally install the hook.
+        if not self._config.no_install_shutdown_handler:
+            try:
+                signal.signal(signal.SIGUSR1, self.handle_interrupt)
+            except AttributeError:
+                pass
 
         # Keep info about what tasks are running (could be in other processes)
         if worker_processes == 1:

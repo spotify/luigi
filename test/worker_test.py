@@ -165,6 +165,33 @@ class WorkerTest(unittest.TestCase):
         self.w.run()
         self.assertFalse(d.complete())
 
+    def test_disabled_shutdown_hook(self):
+        w = Worker(scheduler=self.sch, keep_alive=True, no_install_shutdown_handler=True)
+        with w:
+            try:
+                # try to kill the worker!
+                os.kill(os.getpid(), signal.SIGUSR1)
+            except AttributeError:
+                raise unittest.SkipTest('signal.SIGUSR1 not found on this system')
+            # try to kill the worker... AGAIN!
+            t = SuicidalWorker(signal.SIGUSR1)
+            w.add(t)
+            w.run()
+            # task should have stepped away from the ledge, and completed successfully despite all the SIGUSR1 signals
+            self.assertEqual(list(self.sch.task_list('DONE', '').keys()), [t.task_id])
+
+    @with_config({"worker": {"no_install_shutdown_handler": "True"}})
+    def test_can_run_luigi_in_thread(self):
+        class A(DummyTask):
+            pass
+        task = A()
+        # Note that ``signal.signal(signal.SIGUSR1, fn)`` can only be called in the main thread.
+        # So if we do not disable the shutdown handler, this would fail.
+        t = threading.Thread(target=lambda: luigi.build([task], local_scheduler=True))
+        t.start()
+        t.join()
+        self.assertTrue(task.complete())
+
     def test_external_dep(self):
         class A(ExternalTask):
 
