@@ -18,8 +18,8 @@
 Template tasks for running external programs as luigi tasks.
 
 This module is primarily intended for when you need to call a single external
-program, and it's enough to specify program arguments and environment
-variables.
+program or shell script, and it's enough to specify program arguments and
+environment variables.
 
 If you need to run multiple commands, chain them together or pipe output
 from one command to the next, you're probably better off using something like
@@ -57,7 +57,7 @@ class ExternalProgramTask(luigi.Task):
 
     def program_args(self):
         """
-        Subclass this method to map your task parameters to the program arguments
+        Override this method to map your task parameters to the program arguments
 
         :return: list to pass as ``args`` to :py:class:`subprocess.Popen`
         """
@@ -65,12 +65,21 @@ class ExternalProgramTask(luigi.Task):
 
     def program_environment(self):
         """
-        Subclass this method to control environment variables for the program
+        Override this method to control environment variables for the program
 
         :return: dict mapping environment variable names to values
         """
         env = os.environ.copy()
         return env
+
+    @property
+    def always_log_stderr(self):
+        """
+        When True, stderr will be logged even if program execution succeeded
+
+        Override to False to log stderr only when program execution fails.
+        """
+        return True
 
     def _clean_output_file(self, file_object):
         file_object.seek(0)
@@ -92,6 +101,7 @@ class ExternalProgramTask(luigi.Task):
         try:
             with ExternalProgramRunContext(proc):
                 proc.wait()
+            success = proc.returncode == 0
 
             stdout = self._clean_output_file(tmp_stdout)
             stderr = self._clean_output_file(tmp_stderr)
@@ -99,9 +109,10 @@ class ExternalProgramTask(luigi.Task):
             if stdout:
                 logger.info('Program stdout:\n{}'.format(stdout))
             if stderr:
-                logger.info('Program stderr:\n{}'.format(stderr))
+                if self.always_log_stderr or not success:
+                    logger.info('Program stderr:\n{}'.format(stderr))
 
-            if proc.returncode != 0:
+            if not success:
                 raise ExternalProgramRunError(
                     'Program failed with return code={}:'.format(proc.returncode),
                     args, env=env, stdout=stdout, stderr=stderr)
