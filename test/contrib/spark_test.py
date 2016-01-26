@@ -22,8 +22,9 @@ import luigi.contrib.hdfs
 from luigi import six
 from luigi.mock import MockTarget
 from helpers import with_config
-from luigi.contrib.spark import SparkJobError, SparkSubmitTask, PySparkTask
-from mock import patch, MagicMock
+from luigi.contrib.external_program import ExternalProgramRunError
+from luigi.contrib.spark import SparkSubmitTask, PySparkTask
+from mock import patch, call, MagicMock
 
 BytesIO = six.BytesIO
 
@@ -94,7 +95,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
     ss = 'ss-stub'
 
     @with_config({'spark': {'spark-submit': ss, 'master': "yarn-client", 'hadoop-conf-dir': 'path'}})
-    @patch('luigi.contrib.spark.subprocess.Popen')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_run(self, proc):
         setup_run_process(proc)
         job = TestSparkSubmitTask()
@@ -110,7 +111,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
                           '--queue', 'queue', '--num-executors', '2', 'file', 'arg1', 'arg2'])
 
     @with_config({'spark': {'hadoop-conf-dir': 'path'}})
-    @patch('luigi.contrib.spark.subprocess.Popen')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_environment_is_set_correctly(self, proc):
         setup_run_process(proc)
         job = TestSparkSubmitTask()
@@ -121,7 +122,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
 
     @with_config({'spark': {'spark-submit': ss, 'master': 'spark://host:7077', 'conf': 'prop1=val1', 'jars': 'jar1.jar,jar2.jar',
                             'files': 'file1,file2', 'py-files': 'file1.py,file2.py', 'archives': 'archive1'}})
-    @patch('luigi.contrib.spark.subprocess.Popen')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_defaults(self, proc):
         proc.return_value.returncode = 0
         job = TestDefaultSparkSubmitTask()
@@ -131,27 +132,43 @@ class SparkSubmitTaskTest(unittest.TestCase):
                           '--py-files', 'file1.py,file2.py', '--files', 'file1,file2', '--archives', 'archive1',
                           '--conf', 'prop1=val1', 'test.py'])
 
-    @patch('luigi.contrib.spark.tempfile.TemporaryFile')
-    @patch('luigi.contrib.spark.subprocess.Popen')
-    def test_handle_failed_job(self, proc, file):
+    @patch('luigi.contrib.external_program.logger')
+    @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_handle_failed_job(self, proc, file, logger):
         proc.return_value.returncode = 1
-        file.return_value = BytesIO(b'stderr')
+        file.return_value = BytesIO(b'spark test error')
         try:
             job = TestSparkSubmitTask()
             job.run()
-        except SparkJobError as e:
-            self.assertEqual(e.err, 'stderr')
-            self.assertTrue('STDERR: stderr' in six.text_type(e))
+        except ExternalProgramRunError as e:
+            self.assertEqual(e.err, 'spark test error')
+            self.assertIn('spark test error', six.text_type(e))
+            self.assertIn(call.info('Program stderr:\nspark test error'),
+                          logger.mock_calls)
         else:
-            self.fail("Should have thrown SparkJobError")
+            self.fail("Should have thrown ExternalProgramRunError")
 
-    @patch('luigi.contrib.spark.subprocess.Popen')
+    @patch('luigi.contrib.external_program.logger')
+    @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_dont_log_stderr_on_success(self, proc, file, logger):
+        proc.return_value.returncode = 0
+        file.return_value = BytesIO(b'spark normal error output')
+        job = TestSparkSubmitTask()
+        job.run()
+
+        self.assertNotIn(call.info(
+            'Program stderr:\nspark normal error output'),
+            logger.mock_calls)
+
+    @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_app_must_be_set(self, proc):
         with self.assertRaises(NotImplementedError):
             job = SparkSubmitTask()
             job.run()
 
-    @patch('luigi.contrib.spark.subprocess.Popen')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_app_interruption(self, proc):
 
         def interrupt():
@@ -170,7 +187,7 @@ class PySparkTaskTest(unittest.TestCase):
     ss = 'ss-stub'
 
     @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077"}})
-    @patch('luigi.contrib.spark.subprocess.Popen')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_run(self, proc):
         setup_run_process(proc)
         job = TestPySparkTask()
