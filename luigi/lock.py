@@ -33,9 +33,14 @@ def getpcmd(pid):
 
     :param pid:
     """
-    cmd = 'ps -p %s -o command=' % (pid,)
+    cmd = 'ps -o pid,args'
     with os.popen(cmd, 'r') as p:
-        return p.readline().strip()
+        # Skip the column titles
+        p.readline()
+        for line in p:
+            spid, scmd = line.strip().split(' ', 1)
+            if int(spid) == int(pid):
+                return scmd
 
 
 def get_info(pid_dir, my_pid=None):
