@@ -556,17 +556,33 @@ class RedshiftUnloadTask(postgres.PostgresQuery):
     Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
     To customize the query signature as recorded in the database marker table, override the `update_id` property.
     """
-    s3_path = luigi.Parameter()
-    query = luigi.Parameter()
-    unload_options = luigi.Parameter(default = "DELIMITER '|' ADDQUOTES GZIP ALLOWOVERWRITE PARALLEL ON")
+
+    @property
+    def s3_unload_path(self):
+        """
+        Override to return the load path.
+        """
+        return ''
+
+    @property
+    def unload_options(self):
+        """
+        Add extra or override default unload options:
+        """
+        return "DELIMITER '|' ADDQUOTES GZIP ALLOWOVERWRITE PARALLEL ON"
+
+    @property
+    def unload_query(self):
+        """
+        Default UNLOAD command
+        """
+        return ("UNLOAD ( '{query}' ) TO '{s3_unload_path}' "
+            "credentials 'aws_access_key_id={s3_access_key};aws_secret_access_key={s3_security_key}' "
+            "{unload_options};")
 
     def run(self):
         connection = self.output().connect()
         cursor = connection.cursor()
-        unload_query = (
-            "UNLOAD ( '{query}' ) TO '{s3_key}' "
-            "credentials 'aws_access_key_id={s3_access_key};aws_secret_access_key={s3_security_key}' "
-            "{unload_options};")
 
         # Retrieve AWS s3 credentials
         config = luigi.configuration.get_config()
@@ -578,17 +594,17 @@ class RedshiftUnloadTask(postgres.PostgresQuery):
             aws_access_key_id = os.environ['AWS_ACCESS_KEY_ID']
             aws_secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY']
 
-        unload_query = unload_query.format(
+        _unload_query = self.unload_query().format(
             query = self.query().replace("'", "\'"),
-            s3_key = self.s3_path,
-            unload_options = self.unload_options,
+            s3_unload_path = self.s3_unload_path(),
+            unload_options = self.unload_options(),
             s3_access_key = aws_access_key_id,
             s3_security_key = aws_secret_access_key)
 
         logger.info('Executing unload query from task: {name}'.format(name=self.__class__))
         try:
             cursor = connection.cursor()
-            cursor.execute(unload_query)
+            cursor.execute(_unload_query)
             rowcount = cursor.rowcount
             logging.info(cursor.statusmessage)
         except:
@@ -600,7 +616,6 @@ class RedshiftUnloadTask(postgres.PostgresQuery):
         # commit and close connection
         connection.commit()
         connection.close()
-
 
     def output(self):
         """
