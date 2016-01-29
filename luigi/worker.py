@@ -106,7 +106,7 @@ class TaskProcess(multiprocessing.Process):
         try:
             task_gen = self.task.run(tracking_url_callback=self.tracking_url_callback)
         except TypeError as ex:
-            if 'unexpected keyword argument' not in getattr(ex, 'message', ex.args[0]):
+            if 'unexpected keyword argument' not in str(ex):
                 raise
             run_again = True
         if run_again:
