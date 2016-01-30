@@ -557,6 +557,20 @@ class RedshiftUnloadTask(postgres.PostgresQuery):
     To customize the query signature as recorded in the database marker table, override the `update_id` property.
     """
 
+    @abc.abstractproperty
+    def aws_access_key_id(self):
+        """
+        Override to return the key id.
+        """
+        return None
+
+    @abc.abstractproperty
+    def aws_secret_access_key(self):
+        """
+        Override to return the secret access key.
+        """
+        return None
+
     @property
     def s3_unload_path(self):
         """
@@ -586,28 +600,29 @@ class RedshiftUnloadTask(postgres.PostgresQuery):
 
         # Retrieve AWS s3 credentials
         config = luigi.configuration.get_config()
-        aws_access_key_id = config.get('s3','aws_access_key_id')
-        aws_secret_access_key = config.get('s3','aws_secret_access_key')
+        if self.aws_access_key_id is None or self.aws_secret_access_key is None:
+            self.aws_access_key_id = config.get('s3','aws_access_key_id')
+            self.aws_secret_access_key = config.get('s3','aws_secret_access_key')
         # Optionally we can access env variables to get the keys
-        if aws_access_key_id is None or aws_access_key_id.strip() == '' \
-            or aws_secret_access_key is None or aws_secret_access_key.strip() == '':
-            aws_access_key_id = os.environ['AWS_ACCESS_KEY_ID']
-            aws_secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY']
+        if self.aws_access_key_id is None or self.aws_access_key_id.strip() == '' \
+            or self.aws_secret_access_key is None or self.aws_secret_access_key.strip() == '':
+            self.aws_access_key_id = os.environ['AWS_ACCESS_KEY_ID']
+            self.aws_secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY']
 
-        _unload_query = self.unload_query().format(
+        unload_query = self.unload_query.format(
             query = self.query().replace("'", "\'"),
-            s3_unload_path = self.s3_unload_path(),
-            unload_options = self.unload_options(),
-            s3_access_key = aws_access_key_id,
-            s3_security_key = aws_secret_access_key)
+            s3_unload_path = self.s3_unload_path,
+            unload_options = self.unload_options,
+            s3_access_key = self.aws_access_key_id,
+            s3_security_key = self.aws_secret_access_key)
 
         logger.info('Executing unload query from task: {name}'.format(name=self.__class__))
         try:
             cursor = connection.cursor()
-            cursor.execute(_unload_query)
+            cursor.execute(unload_query)
             rowcount = cursor.rowcount
             logging.info(cursor.statusmessage)
-        except:
+        except Exception, error:
             logging.error("Error running unload on Redshift: {error}.".format(error=str(error)))
             raise
 

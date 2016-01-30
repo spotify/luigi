@@ -190,3 +190,49 @@ class TestS3CopyToSchemaTable(unittest.TestCase):
             "table_name = %s limit 1",
             tuple(task.table.split('.')),
         )
+
+
+class DummyRedshiftUnloadTask(luigi.contrib.redshift.RedshiftUnloadTask):
+    # Class attributes taken from `DummyPostgresImporter` in
+    # `../postgres_test.py`.
+    host = 'dummy_host'
+    database = 'dummy_database'
+    user = 'dummy_user'
+    password = 'dummy_password'
+    table = luigi.Parameter(default='dummy_table')
+    columns = (
+        ('some_text', 'varchar(255)'),
+        ('some_int', 'int'),
+    )
+
+    aws_access_key_id = 'AWS_ACCESS_KEY'
+    aws_secret_access_key = 'AWS_SECRET_KEY'
+
+    s3_unload_path = 's3://%s/%s' % (BUCKET, KEY)
+    unload_options = "DELIMITER ',' ADDQUOTES GZIP ALLOWOVERWRITE PARALLEL OFF"
+
+    def query(self):
+        return "SELECT 'a' as col_a, current_date as col_b"
+
+
+class TestRedshiftUnloadTask(unittest.TestCase):
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_redshift_unload_command(self, mock_redshift_target):
+
+        task = DummyRedshiftUnloadTask()
+        task.run()
+
+        # The mocked connection cursor passed to
+        # RedshiftUnloadTask.
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+
+        # Check the Unload query.
+        mock_cursor.execute.assert_called_with(
+            "UNLOAD ( 'SELECT \'a\' as col_a, current_date as col_b' ) TO 's3://bucket/key' "
+            "credentials 'aws_access_key_id=AWS_ACCESS_KEY;aws_secret_access_key=AWS_SECRET_KEY' "
+            "DELIMITER ',' ADDQUOTES GZIP ALLOWOVERWRITE PARALLEL OFF;"
+        )
