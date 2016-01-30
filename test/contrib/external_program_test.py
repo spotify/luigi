@@ -24,7 +24,7 @@ import luigi.contrib.hdfs
 from luigi import six
 from luigi.contrib.external_program import ExternalProgramTask, ExternalPythonProgramTask
 from luigi.contrib.external_program import ExternalProgramRunError
-from mock import patch
+from mock import patch, call
 
 BytesIO = six.BytesIO
 
@@ -50,6 +50,10 @@ class TestExternalProgramTask(ExternalProgramTask):
         return luigi.LocalTarget('output')
 
 
+class TestLogStderrOnFailureOnlyTask(TestExternalProgramTask):
+    always_log_stderr = False
+
+
 class TestTouchTask(ExternalProgramTask):
     file_path = luigi.Parameter()
 
@@ -70,9 +74,10 @@ class ExternalProgramTaskTest(unittest.TestCase):
         self.assertEqual(proc.call_args[0][0],
                          ['app_path', 'arg1', 'arg2'])
 
+    @patch('luigi.contrib.external_program.logger')
     @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
     @patch('luigi.contrib.external_program.subprocess.Popen')
-    def test_handle_failed_job(self, proc, file):
+    def test_handle_failed_job(self, proc, file, logger):
         proc.return_value.returncode = 1
         file.return_value = BytesIO(b'stderr')
         try:
@@ -81,8 +86,43 @@ class ExternalProgramTaskTest(unittest.TestCase):
         except ExternalProgramRunError as e:
             self.assertEqual(e.err, 'stderr')
             self.assertIn('STDERR: stderr', six.text_type(e))
+            self.assertIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
         else:
-            self.fail('Should have thrown SubprocessRunError')
+            self.fail('Should have thrown ExternalProgramRunError')
+
+    @patch('luigi.contrib.external_program.logger')
+    @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_always_log_stderr_on_failure(self, proc, file, logger):
+        proc.return_value.returncode = 1
+        file.return_value = BytesIO(b'stderr')
+        with self.assertRaises(ExternalProgramRunError):
+            job = TestLogStderrOnFailureOnlyTask()
+            job.run()
+
+        self.assertIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
+
+    @patch('luigi.contrib.external_program.logger')
+    @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_log_stderr_on_success_by_default(self, proc, file, logger):
+        proc.return_value.returncode = 0
+        file.return_value = BytesIO(b'stderr')
+        job = TestExternalProgramTask()
+        job.run()
+
+        self.assertIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
+
+    @patch('luigi.contrib.external_program.logger')
+    @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_dont_log_stderr_on_success_if_disabled(self, proc, file, logger):
+        proc.return_value.returncode = 0
+        file.return_value = BytesIO(b'stderr')
+        job = TestLogStderrOnFailureOnlyTask()
+        job.run()
+
+        self.assertNotIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
 
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_program_args_must_be_implemented(self, proc):
