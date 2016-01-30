@@ -245,6 +245,9 @@ class HadoopJobError(RuntimeError):
         self.out = out
         self.err = err
 
+    def __str__(self):
+        return self.message
+
 
 def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
     """
