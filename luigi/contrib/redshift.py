@@ -19,6 +19,7 @@ import abc
 import json
 import logging
 import time
+import os
 
 import luigi
 from luigi import postgres
@@ -591,8 +592,8 @@ class RedshiftUnloadTask(postgres.PostgresQuery):
         Default UNLOAD command
         """
         return ("UNLOAD ( '{query}' ) TO '{s3_unload_path}' "
-            "credentials 'aws_access_key_id={s3_access_key};aws_secret_access_key={s3_security_key}' "
-            "{unload_options};")
+                "credentials 'aws_access_key_id={s3_access_key};aws_secret_access_key={s3_security_key}' "
+                "{unload_options};")
 
     def run(self):
         connection = self.output().connect()
@@ -601,29 +602,27 @@ class RedshiftUnloadTask(postgres.PostgresQuery):
         # Retrieve AWS s3 credentials
         config = luigi.configuration.get_config()
         if self.aws_access_key_id is None or self.aws_secret_access_key is None:
-            self.aws_access_key_id = config.get('s3','aws_access_key_id')
-            self.aws_secret_access_key = config.get('s3','aws_secret_access_key')
+            self.aws_access_key_id = config.get('s3', 'aws_access_key_id')
+            self.aws_secret_access_key = config.get('s3', 'aws_secret_access_key')
         # Optionally we can access env variables to get the keys
         if self.aws_access_key_id is None or self.aws_access_key_id.strip() == '' \
-            or self.aws_secret_access_key is None or self.aws_secret_access_key.strip() == '':
+                or self.aws_secret_access_key is None or self.aws_secret_access_key.strip() == '':
             self.aws_access_key_id = os.environ['AWS_ACCESS_KEY_ID']
             self.aws_secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY']
 
         unload_query = self.unload_query.format(
-            query = self.query().replace("'", "\'"),
-            s3_unload_path = self.s3_unload_path,
-            unload_options = self.unload_options,
-            s3_access_key = self.aws_access_key_id,
-            s3_security_key = self.aws_secret_access_key)
+            query=self.query().replace("'", "\'"),
+            s3_unload_path=self.s3_unload_path,
+            unload_options=self.unload_options,
+            s3_access_key=self.aws_access_key_id,
+            s3_security_key=self.aws_secret_access_key)
 
         logger.info('Executing unload query from task: {name}'.format(name=self.__class__))
         try:
             cursor = connection.cursor()
             cursor.execute(unload_query)
-            rowcount = cursor.rowcount
-            logging.info(cursor.statusmessage)
-        except Exception, error:
-            logging.error("Error running unload on Redshift: {error}.".format(error=str(error)))
+            logger.info(cursor.statusmessage)
+        except:
             raise
 
         # Update marker table
