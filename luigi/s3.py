@@ -581,9 +581,7 @@ class S3FlagTarget(S3Target):
         if path[-1] != "/":
             raise ValueError("S3FlagTarget requires the path to be to a "
                              "directory.  It must end with a slash ( / ).")
-        super(S3FlagTarget, self).__init__(path)
-        self.format = format
-        self.fs = client or S3Client()
+        super(S3FlagTarget, self).__init__(path, format, client)
         self.flag = flag
 
     def exists(self):
