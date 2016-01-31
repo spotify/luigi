@@ -338,8 +338,8 @@ class S3Client(FileSystem):
         # As the S3 copy command is completely server side, there is no issue with issuing a single
         # API call per part, however, this may in theory cause issues on systems with low ulimits for
         # number of threads when copying really large files, e.g. with a ~100GB file this will open ~1500
-        # threads.
-        pool = ThreadPool(processes=num_parts)
+        # threads. We take the max of this and 1 as if we're copying an empty file we will have  `num_part == 0`
+        pool = ThreadPool(processes=max(1, num_parts))
 
         mp = None
         try:
