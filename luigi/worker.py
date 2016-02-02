@@ -399,6 +399,7 @@ class Worker(object):
         self.host = socket.gethostname()
         self._scheduled_tasks = {}
         self._suspended_tasks = {}
+        self._scheduled_batches = set()
 
         self._first_task = None
 
@@ -649,13 +650,24 @@ class Worker(object):
 
             deps = [d.task_id for d in deps]
 
+        if task.task_family not in self._scheduled_batches:
+            self._scheduler.add_task_batcher(
+                worker=self._id,
+                family=task.task_family,
+                batcher_aggregate_args=task.get_batched_params(),
+                max_batch_size=task.batch_size,
+            )
+            self._scheduled_batches.add(task.task_family)
+
         self._scheduled_tasks[task.task_id] = task
         self._add_task(worker=self._id, task_id=task.task_id, status=status,
                        deps=deps, runnable=runnable, priority=task.priority,
                        resources=task.process_resources(),
                        params=task.to_str_params(),
                        family=task.task_family,
-                       module=task.task_module)
+                       module=task.task_module,
+                       batchable=task.is_batchable,
+                       )
 
     def _validate_dependency(self, dependency):
         if isinstance(dependency, Target):

@@ -156,7 +156,7 @@ class RemoteScheduler(Scheduler):
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None, priority=0,
                  family='', module=None, params=None, assistant=False,
-                 tracking_url=None):
+                 tracking_url=None, batchable=None):
         self._request('/api/add_task', {
             'task_id': task_id,
             'worker': worker,
@@ -172,6 +172,15 @@ class RemoteScheduler(Scheduler):
             'params': params,
             'assistant': assistant,
             'tracking_url': tracking_url,
+            'batchable': batchable,
+        })
+
+    def add_task_batcher(self, worker, family, batcher_aggregate_args, max_batch_size=None):
+        self._request('/api/add_task_batcher', {
+            'worker': worker,
+            'family': family,
+            'batcher_aggregate_args': batcher_aggregate_args,
+            'max_batch_size': max_batch_size,
         })
 
     def get_work(self, worker, host=None, assistant=False, current_tasks=None):

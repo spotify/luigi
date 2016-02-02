@@ -70,6 +70,7 @@ class RPCHandler(tornado.web.RequestHandler):
     def get(self, method):
         if method not in [
             'add_task',
+            'add_task_batcher',
             'add_worker',
             'dep_graph',
             'disable_worker',

@@ -700,6 +700,83 @@ class WorkerTest(unittest.TestCase):
             self.assertTrue(d.has_run)
             self.assertFalse(a.has_run)
 
+    def test_run_jobs_in_batch(self):
+        complete_jobs = set()
+
+        class BatchRunnableJob(DummyTask):
+            val = luigi.Parameter(batch_method='csv')
+
+            def run(self):
+                running = self.val.split(',')
+                assert len(running) == 5 and not complete_jobs
+                complete_jobs.update(running)
+
+            def complete(self):
+                return self.val in complete_jobs
+
+        jobs = [BatchRunnableJob(str(i)) for i in range(5)]
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        with Worker(scheduler=sch, worker_id="foo") as worker:
+            self.assertFalse(any(job.complete() for job in jobs))
+            for job in jobs:
+                self.assertTrue(worker.add(job))
+            self.assertTrue(worker.run())
+            self.assertTrue(all(job.complete() for job in jobs))
+            self.assertEqual({job.task_id for job in jobs}, set(sch.task_list('DONE', '').keys()))
+
+    def test_run_jobs_in_small_batches(self):
+        complete_jobs = set()
+
+        class SmallBatchRunnableJob(DummyTask):
+            val = luigi.Parameter(batch_method='csv')
+            batch_size = 10
+
+            def run(self):
+                running = self.val.split(',')
+                assert len(running) == 10 or (len(complete_jobs) == 30 and len(running) == 7)
+                complete_jobs.update(running)
+
+            def complete(self):
+                return self.val in complete_jobs
+
+        jobs = [SmallBatchRunnableJob(str(i)) for i in range(37)]
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        with Worker(scheduler=sch, worker_id="foo") as worker:
+            self.assertFalse(any(job.complete() for job in jobs))
+            for job in jobs:
+                self.assertTrue(worker.add(job))
+            self.assertTrue(worker.run())
+            self.assertTrue(all(job.complete() for job in jobs))
+            self.assertEqual({job.task_id for job in jobs}, set(sch.task_list('DONE', '').keys()))
+
+    def test_run_overwrite_job_as_max_batch(self):
+        complete_jobs = set()
+
+        class OverwriteWrapper(luigi.WrapperTask):
+            def requires(self):
+                return map(OverwriteJob, range(5))
+
+        class OverwriteJob(DummyTask):
+            val = luigi.IntParameter(batch_method='max')
+
+            def run(self):
+                assert self.val == 4
+                complete_jobs.add(self.val)
+
+            def complete(self):
+                return bool(complete_jobs) and self.val <= max(complete_jobs)
+
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        with Worker(scheduler=sch, worker_id="foo") as worker:
+            job = OverwriteWrapper()
+            worker.add(job)
+            self.assertTrue(worker.run())
+            self.assertEqual({4}, complete_jobs)
+            complete = {job.task_id}
+            complete.update(subtask.task_id for subtask in job.requires())
+            self.assertEqual(complete, set(sch.task_list('DONE', '').keys()))
+            self.assertTrue(job.complete())
+
 
 class DynamicDependenciesTest(unittest.TestCase):
     n_workers = 1

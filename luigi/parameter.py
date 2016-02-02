@@ -116,7 +116,7 @@ class Parameter(object):
     _counter = 0  # non-atomically increasing counter used for ordering parameters.
 
     def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
-                 config_path=None, positional=True, always_in_help=False):
+                 config_path=None, positional=True, always_in_help=False, batch_method=None):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -139,6 +139,7 @@ class Parameter(object):
                                 ``positional=False`` for abstract base classes and similar cases.
         :param bool always_in_help: For the --help option in the command line
                                     parsing. Set true to always show in --help.
+        :param str batch_method: How multiple
         """
         self._default = default
         if is_global:
@@ -151,6 +152,7 @@ class Parameter(object):
 
         self.description = description
         self.always_in_help = always_in_help
+        self.batch_method = batch_method
 
         if config_path is not None and ('section' not in config_path or 'name' not in config_path):
             raise ParameterException('config_path must be a hash containing entries for section and name')

@@ -50,6 +50,7 @@ class MultiprocessWorkerTest(unittest.TestCase):
         self.scheduler = RemoteScheduler()
         self.scheduler.add_worker = Mock()
         self.scheduler.add_task = Mock()
+        self.scheduler.add_task_batcher = Mock()
         with Worker(scheduler=self.scheduler, worker_id='X', worker_processes=2) as worker:
             self.worker = worker
             super(MultiprocessWorkerTest, self).run(result)

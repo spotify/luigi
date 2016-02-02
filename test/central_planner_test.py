@@ -21,8 +21,9 @@ from helpers import unittest
 from nose.plugins.attrib import attr
 
 import luigi.notifications
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, \
+from luigi.scheduler import BATCH_RUNNING, DISABLED, DONE, FAILED, PENDING, \
     UNKNOWN, CentralPlannerScheduler
+from luigi.task import task_id_str
 
 luigi.notifications.DEBUG = True
 WORKER = 'myworker'
@@ -971,6 +972,262 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='C', priority=5, deps=['A'])
         self.sch.add_task(worker=WORKER, task_id='D', priority=6)
         self.check_task_order(['A', 'B', 'D', 'C'])
+
+    def task_id_str(self, family, args):
+        return task_id_str(family, args)
+
+    def test_aggregation(self, aggregate_type='csv', expected_args='1,3'):
+        self.sch.add_task(worker=WORKER, task_id='A(a=1)', family='A', params={'a': '1'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': aggregate_type})
+        self.check_task_order([self.task_id_str('A', {'a': expected_args})])
+
+    def test_aggregation_min(self):
+        self.test_aggregation('min', '1')
+
+    def test_aggregation_max(self):
+        self.test_aggregation('max', '3')
+
+    def test_aggregation_range(self):
+        self.test_aggregation('range', '1-3')
+
+    def test_aggregation_ignores_jobs_with_pending_deps(self):
+        self.sch.add_task(worker=WORKER, task_id='A(a=1)', family='A', params={'a': '1'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=2)', family='A', params={'a': '2'}, deps=['B'], batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='B')
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.check_task_order([
+            self.task_id_str('A', {'a': '1,3'}),
+            'B',
+            'A(a=2)',
+        ])
+
+    def test_aggregation_ignores_non_pending_jobs(self):
+        for status in [FAILED, DONE, DISABLED]:
+            self.sch.add_task(worker=WORKER, task_id='A(a=1)', family='A', params={'a': '1'}, status=PENDING, batchable=True)
+            self.sch.add_task(worker=WORKER, task_id='A(a=2)', family='A', params={'a': '2'}, status=status, batchable=True)
+            self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, status=PENDING, batchable=True)
+            self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+            self.check_task_order([self.task_id_str('A', {'a': '1,3'})])
+
+    def test_aggregation_ignores_running_jobs(self):
+        self.sch.add_task(worker=WORKER, task_id='A(a=1)', family='A', params={'a': '1'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=2)', family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+
+        self.sch.add_task(worker='worker2', task_id='A(a=2)', family='A', params={'a': '2'}, batchable=True)
+        self.assertEqual('A(a=2)', self.sch.get_work(worker='worker2')['task_id'])
+        self.check_task_order([self.task_id_str('A', {'a': '1,3'})])
+
+    def test_aggregation_ignores_batch_running_jobs(self):
+        self.sch.add_task(worker=WORKER, task_id='A(a=1)', family='A', params={'a': '1'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=2)', family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=4)', family='A', params={'a': '4'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+
+        self.sch.add_task(worker='worker2', task_id='A(a=2)', family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(worker='worker2', task_id='A(a=4)', family='A', params={'a': '4'}, batchable=True)
+        self.sch.add_task_batcher(worker='worker2', family='A', batcher_aggregate_args={'a': 'csv'})
+
+        worker2_task = self.task_id_str('A', {'a': '2,4'})
+        self.assertEqual(worker2_task, self.sch.get_work(worker='worker2')['task_id'])
+        self.check_task_order([self.task_id_str('A', {'a': '1,3'})])
+
+    def test_aggregate_jobs_batch_running(self):
+        self.sch.add_task(worker=WORKER, task_id='A(a=1)', family='A', params={'a': '1'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.get_work(worker=WORKER)
+        self.assertEqual({'A(a=1)', 'A(a=3)'}, set(self.sch.task_list(BATCH_RUNNING, '').keys()))
+
+    def test_multiple_groups_same_family(self):
+        self.sch.add_task(worker=WORKER, task_id='A(a=1,b=1)', family='A', params={'a': '1', 'b': '1'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=1,b=2)', family='A', params={'a': '1', 'b': '2'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=2,b=1)', family='A', params={'a': '2', 'b': '1'}, batchable=True, priority=1)
+        self.sch.add_task(worker=WORKER, task_id='A(a=2,b=2)', family='A', params={'a': '2', 'b': '2'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'b': 'csv'})
+        self.check_task_order([
+            self.task_id_str('A', {'a': '2', 'b': '1,2'}),
+            self.task_id_str('A', {'a': '1', 'b': '1,2'}),
+        ])
+
+    def test_multiple_args_aggregate_args(self):
+        self.sch.add_task(worker=WORKER, task_id='A(a=1,b=1)', family='A', params={'a': '1', 'b': '1'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=1,b=2)', family='A', params={'a': '1', 'b': '2'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=2,b=1)', family='A', params={'a': '2', 'b': '1'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A(a=2,b=2)', family='A', params={'a': '2', 'b': '2'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'min', 'b': 'max'})
+        self.check_task_order([self.task_id_str('A', {'a': '1', 'b': '2'})])
+
+    def test_batch_tasks_result_in_complete_tasks(self):
+        self.test_multiple_args_aggregate_args()
+        self.assertTrue(all(task['status'] == DONE for task in self.sch.task_list('', '').values()))
+
+    def test_daily_overwrite_task(self):
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        self.check_task_order([self.task_id_str('DOW', {'d': '2016-02-01'})])
+        done_tasks = {'DOW(d=2016-01-31)', 'DOW(d=2016-02-01)'}
+        self.assertEqual(done_tasks, set(self.sch.task_list(DONE, '').keys()))
+
+    def test_daily_overwrite_task_failure(self):
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        expected_id = self.task_id_str('DOW', {'d': '2016-02-01'})
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], expected_id)
+        self.sch.add_task(worker=WORKER, task_id=expected_id, status=FAILED)
+        failed_tasks = {'DOW(d=2016-01-31)', 'DOW(d=2016-02-01)'}
+        self.assertEqual(failed_tasks, set(self.sch.task_list(FAILED, '').keys()))
+
+    def test_daily_overwrite_task_auto_disable(self):
+        sch = CentralPlannerScheduler(disable_failures=2, disable_persist=10**8, disable_window=10**8)
+        sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'i': 'max'})
+        all_tasks = [self.task_id_str('A', {'i': str(i)}) for i in range(5)]
+        batch_running = set(all_tasks[:-1])
+
+        for _ in range(2):
+            for i, task_id in enumerate(all_tasks):
+                sch.add_task(worker=WORKER, task_id=task_id, family='A', params={'i': str(i)}, batchable=True, status=PENDING)
+            running_task = self.task_id_str('A', {'i': '4'})
+            self.assertEqual(running_task, sch.get_work(worker=WORKER)['task_id'])
+            self.assertEqual(batch_running, set(sch.task_list(BATCH_RUNNING, '')))
+            sch.add_task(worker=WORKER, task_id=running_task, status=FAILED)
+            self.assertEqual(set(), set(sch.task_list(BATCH_RUNNING, '')))
+
+        self.assertEqual(set(all_tasks), set(sch.task_list(DISABLED, '')))
+        self.assertTrue(all(task['re_enable_able'] for task in sch.task_list(DISABLED, '').values()))
+
+    def test_batch_task_does_not_batch_jobs_from_other_workers(self):
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True, resources={'a': 1})
+        self.sch.add_task(worker='OTHER_WORKER', task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True, resources={'a': 1})
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        done_tasks = {'DOW(d=2016-01-31)'}
+        self.check_task_order(done_tasks)
+        self.assertEqual(done_tasks, set(self.sch.task_list(DONE, '')))
+
+    def test_done_batch_tasks_fall_out_of_scheduler(self):
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        self.check_task_order([self.task_id_str('DOW', {'d': '2016-02-01'})])
+        done_tasks = {'DOW(d=2016-01-31)', 'DOW(d=2016-02-01)'}
+        self.assertEqual(done_tasks, set(self.sch.task_list(DONE, '').keys()))
+
+    def test_failed_batch_tasks_fall_out_of_scheduler(self):
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        expected_id = self.task_id_str('DOW', {'d': '2016-02-01'})
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], expected_id)
+        self.sch.add_task(worker=WORKER, task_id=expected_id, status=FAILED)
+        failed_tasks = {'DOW(d=2016-01-31)', 'DOW(d=2016-02-01)'}
+        self.assertEqual(failed_tasks, set(self.sch.task_list(FAILED, '').keys()))
+
+    def test_batch_task_failure_message(self):
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        expected_id = self.task_id_str('DOW', {'d': '2016-02-01'})
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], expected_id)
+
+        task_ids = ['DOW(d=2016-01-31)', 'DOW(d=2016-02-01)']
+        for task_id in task_ids:
+            self.assertIsNone(self.sch.fetch_error(task_id)['error'])
+
+        error_msg = 'dummy error msg'
+        self.sch.add_task(worker=WORKER, task_id=expected_id, status=FAILED, expl=error_msg)
+
+        for task_id in task_ids:
+            self.assertEqual(error_msg, self.sch.fetch_error(task_id)['error'])
+
+    def test_batch_task_update_tracking_url(self):
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        expected_id = self.task_id_str('DOW', {'d': '2016-02-01'})
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], expected_id)
+        tracking_url = 'http://sample.url/'
+        self.sch.add_task(worker=WORKER, task_id=expected_id, status='RUNNING', tracking_url=tracking_url)
+
+        expected_batch = {'DOW(d=2016-01-31)', 'DOW(d=2016-02-01)'}
+        batch_tasks = self.sch.task_list(BATCH_RUNNING, '')
+        self.assertEqual(expected_batch, set(batch_tasks.keys()))
+        self.assertTrue(all(task['tracking_url'] == tracking_url for task in batch_tasks.values()))
+
+        running_tasks = self.sch.task_list('RUNNING', '')
+        self.assertEqual({expected_id}, set(running_tasks.keys()))
+        self.assertTrue(all(task['tracking_url'] == tracking_url for task in running_tasks.values()))
+
+    def test_batch_tasks_pruned_from_dead_worker(self):
+        self.setTime(1)
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'range'})
+        expected_id = self.task_id_str('DOW', {'d': '2016-01-31-2016-02-01'})
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], expected_id)
+        self.setTime(1000)
+        self.sch.prune()
+        failed_tasks = {'DOW(d=2016-01-31)', 'DOW(d=2016-02-01)'}
+        self.assertEqual(failed_tasks, set(self.sch.task_list(FAILED, '').keys()))
+
+    def test_batch_task_combines_resources(self):
+        self.sch.add_task(worker=WORKER, task_id='A', family='A', params={'a': '1'}, resources={'a': 1}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='B', family='A', params={'a': '2'}, resources={'b': 1}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.assertEqual(self.task_id_str('A', {'a': '1,2'}), self.sch.get_work(worker=WORKER)['task_id'])
+
+        # add tasks using a and b to make sure they can't schedule
+        self.sch.add_task(worker=WORKER, task_id='C', resources={'a': 1}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='D', resources={'b': 1}, batchable=True)
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
+
+    def test_batch_task_takes_max_resource_values(self):
+        self.sch.add_task(worker=WORKER, task_id='A', family='A', params={'a': '1'}, resources={'a': 1}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='B', family='A', params={'a': '2'}, resources={'a': 2}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.update_resources(a=2)
+        self.assertEqual(self.task_id_str('A', {'a': '1,2'}), self.sch.get_work(worker=WORKER)['task_id'])
+
+        self.sch.add_task(worker=WORKER, task_id='C', resources={'a': 1})
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
+        self.sch.update_resources(a=3)
+        self.assertEqual('C', self.sch.get_work(worker=WORKER)['task_id'])
+
+    def test_batch_task_excludes_items_with_too_many_resources(self):
+        self.sch.add_task(worker=WORKER, task_id='A', family='A', params={'a': '1'}, resources={'a': 1}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='B', family='A', params={'a': '2'}, resources={'a': 2}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='C', family='A', params={'a': '3'}, resources={'a': 1}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.update_resources(a=1)
+        self.assertEqual(self.task_id_str('A', {'a': '1,3'}), self.sch.get_work(worker=WORKER)['task_id'])
+
+    def test_batch_task_not_used_for_single_task(self):
+        self.sch.add_task(worker=WORKER, task_id='A', family='A', params={'a': '1'}, resources={'a': 1}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
+
+    def test_batch_task_not_all_batchable(self):
+        self.sch.add_task(worker=WORKER, task_id='A', family='A', params={'a': '1'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='B', family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='C', family='A', params={'a': '3'}, batchable=False)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.check_task_order([self.task_id_str('A', {'a': '1,2'}), 'C'])
+
+    def test_batch_task_with_max_batch_size(self):
+        for i in range(10):
+            self.sch.add_task(worker=WORKER, task_id='A(a={})'.format(i), family='A', params={'a': str(i)}, batchable=True)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'}, max_batch_size=3)
+        self.check_task_order([
+            self.task_id_str('A', {'a': '0,1,2'}),
+            self.task_id_str('A', {'a': '3,4,5'}),
+            self.task_id_str('A', {'a': '6,7,8'}),
+            'A(a=9)',
+        ])
 
     def test_unique_tasks(self):
         self.sch.add_task(worker=WORKER, task_id='A')
