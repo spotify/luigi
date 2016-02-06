@@ -95,6 +95,29 @@ class ExecutionSummaryTest(LuigiTestCase):
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
 
+    @with_config({'worker': {'save_summary_data': 'False'}})
+    def test_config_no_summary_data(self):
+        class Foo(luigi.Task):
+            num = luigi.IntParameter()
+
+            def run(self):
+                pass
+
+            def complete(self):
+                return True
+
+        self.run_task(Foo(num=1))
+        summary = self.summary()
+        expected = ['',
+                    '===== Luigi Execution Summary =====',
+                    '',
+                    'Did not schedule any tasks',
+                    ''
+                    '===== Luigi Execution Summary ====='
+                    '']
+        result = summary.split('\n')
+        self.assertEqual(result, expected)
+
     @with_config({'execution_summary': {'summary-length': '1'}})
     def test_config_summary_limit(self):
         class Bar(luigi.Task):

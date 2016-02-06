@@ -275,6 +275,10 @@ retry_external_tasks
   PENDING until the workflow is reinvoked.
   Defaults to false for backwards compatibility.
 
+save_summary_data
+  If true, save task metadata for all tasks executed by the worker for use
+  in the execution summary.
+  Default: True
 
 [worker]
 

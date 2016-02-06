@@ -313,6 +313,8 @@ class worker(Config):
     no_install_shutdown_handler = BoolParameter(default=False,
                                                 description='If true, the SIGUSR1 shutdown handler will'
                                                 'NOT be install on the worker')
+    save_summary_data = BoolParameter(default=True, description='If true, save data required for '
+                                      'execution summary')
 
 
 class KeepAliveThread(threading.Thread):
@@ -414,7 +416,8 @@ class Worker(object):
         task = self._scheduled_tasks.get(task_id)
         if task:
             msg = (task, status, runnable)
-            self._add_task_history.append(msg)
+            if self._config.save_summary_data:
+                self._add_task_history.append(msg)
         self._scheduler.add_task(*args, **kwargs)
 
         logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
@@ -673,10 +676,11 @@ class Worker(object):
         running_tasks = r['running_tasks']
         n_unique_pending = r['n_unique_pending']
 
-        self._get_work_response_history.append(dict(
-            task_id=task_id,
-            running_tasks=running_tasks,
-        ))
+        if self._config.save_summary_data:
+            self._get_work_response_history.append(dict(
+                task_id=task_id,
+                running_tasks=running_tasks,
+            ))
 
         if task_id is not None and task_id not in self._scheduled_tasks:
             logger.info('Did not schedule %s, will load it dynamically', task_id)
