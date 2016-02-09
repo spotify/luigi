@@ -865,6 +865,7 @@ class CentralPlannerScheduler(Scheduler):
     def _serialize_task(self, task_id, include_deps=True, deps=None):
         task = self._state.get_task(task_id)
         ret = {
+            'display_name': task.pretty_id,
             'status': task.status,
             'workers': list(task.workers),
             'worker_running': task.worker_running,
