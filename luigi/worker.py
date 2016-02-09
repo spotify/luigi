@@ -672,6 +672,7 @@ class Worker(object):
         task_id = r['task_id']
         running_tasks = r['running_tasks']
         n_unique_pending = r['n_unique_pending']
+        n_failed_tasks = r['n_failed_tasks']
 
         self._get_work_response_history.append(dict(
             task_id=task_id,
@@ -698,7 +699,7 @@ class Worker(object):
                 task_id = None
                 self.run_succeeded = False
 
-        return task_id, running_tasks, n_pending_tasks, n_unique_pending
+        return task_id, running_tasks, n_pending_tasks, n_unique_pending, n_failed_tasks
 
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
@@ -825,7 +826,7 @@ class Worker(object):
             time.sleep(wait_interval)
             yield
 
-    def _keep_alive(self, n_pending_tasks, n_unique_pending):
+    def _keep_alive(self, n_pending_tasks, n_unique_pending, n_failed_tasks):
         """
         Returns true if a worker should stay alive given.
 
@@ -867,13 +868,13 @@ class Worker(object):
                 logger.debug('%d running tasks, waiting for next task to finish', len(self._running_tasks))
                 self._handle_next_task()
 
-            task_id, running_tasks, n_pending_tasks, n_unique_pending = self._get_work()
+            task_id, running_tasks, n_pending_tasks, n_unique_pending, n_failed_tasks = self._get_work()
 
             if task_id is None:
                 if not self._stop_requesting_work:
                     self._log_remote_tasks(running_tasks, n_pending_tasks, n_unique_pending)
                 if len(self._running_tasks) == 0:
-                    if self._keep_alive(n_pending_tasks, n_unique_pending):
+                    if self._keep_alive(n_pending_tasks, n_unique_pending, n_failed_tasks):
                         six.next(sleeper)
                         continue
                     else:

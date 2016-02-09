@@ -373,6 +373,12 @@ class SimpleTaskState(object):
         """
         return len(self._status_tasks[PENDING]) + len(self._status_tasks[RUNNING])
 
+    def num_failed_tasks(self):
+        """
+        Return how many tasks are marked as FAILED. O(1).
+        """
+        return len(self._status_tasks[FAILED])
+
     def get_task(self, task_id, default=None, setdefault=None):
         if setdefault:
             task = self._tasks.setdefault(task_id, setdefault)
@@ -763,6 +769,7 @@ class CentralPlannerScheduler(Scheduler):
             active_workers = self._state.get_active_workers(last_get_work_gt=activity_limit)
             greedy_workers = dict((worker.id, worker.info.get('workers', 1))
                                   for worker in active_workers)
+        n_failed_tasks = self._state.num_failed_tasks()
         tasks = list(relevant_tasks)
         tasks.sort(key=self._rank, reverse=True)
 
@@ -810,7 +817,8 @@ class CentralPlannerScheduler(Scheduler):
         reply = {'n_pending_tasks': locally_pending_tasks,
                  'running_tasks': running_tasks,
                  'task_id': None,
-                 'n_unique_pending': n_unique_pending}
+                 'n_unique_pending': n_unique_pending,
+                 'n_failed_tasks': n_failed_tasks}
 
         if best_task:
             self._state.set_status(best_task, RUNNING, self._config)
