@@ -23,8 +23,9 @@ import tempfile
 from target_test import FileSystemTargetTestMixin
 from helpers import with_config, unittest
 
-from boto.exception import S3ResponseError
+from boto.exception import S3ResponseError, S3CopyError
 from boto.s3 import key
+from mock import Mock, DEFAULT
 from moto import mock_s3
 from luigi import configuration
 from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
@@ -256,6 +257,77 @@ class TestS3Client(unittest.TestCase):
             InvalidDeleteException,
             lambda: s3_client.remove('s3://mybucket/removemedir', recursive=False)
         )
+
+    def test_copy(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+
+        s3_client.put(self.tempFilePath, 's3://mybucket/foo/f1')
+        s3_client.put(self.tempFilePath, 's3://mybucket/foo/f2')
+
+        self.assertFalse(s3_client.exists('s3://mybucket/bar/f1'))
+        self.assertFalse(s3_client.exists('s3://mybucket/bar/f2'))
+
+        s3_client.copy('s3://mybucket/foo', 's3://mybucket/bar')
+
+        self.assertTrue(s3_client.exists('s3://mybucket/bar/f1'))
+        self.assertTrue(s3_client.exists('s3://mybucket/bar/f2'))
+
+    def test_failed_copy_key(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+
+        s3_client.put(self.tempFilePath, 's3://mybucket/foo/f1')
+        s3_client.put(self.tempFilePath, 's3://mybucket/foo/f2')
+        s3_client.put(self.tempFilePath, 's3://mybucket/lotsoffailures/f1')
+        s3_client.put(self.tempFilePath, 's3://mybucket/lotsoffailures/f2')
+        self.assertFalse(s3_client.exists('s3://mybucket/bar/f1'))
+        self.assertFalse(s3_client.exists('s3://mybucket/bar/f2'))
+        self.assertFalse(s3_client.exists('s3://mybucket/greenerpastures/f1'))
+        self.assertFalse(s3_client.exists('s3://mybucket/greenerpastures/f2'))
+
+        class ThrowAFewExceptions(object):
+            def __init__(self, num_exceptions):
+                self.num_exceptions = num_exceptions
+                self.calls = 0
+
+            def do(self, *args):
+                self.calls += 1
+                if self.calls <= self.num_exceptions:
+                    raise S3CopyError(500, "Failed!")
+                else:
+                    return DEFAULT
+
+        mock_s3_bucket = Mock(wraps=s3_client.s3.get_bucket('mybucket'))
+        mock_s3_bucket.copy_key.side_effect = ThrowAFewExceptions(1).do
+
+        mock_s3 = Mock(wraps=s3_client.s3)
+        s3_client.s3 = mock_s3
+        mock_s3.get_bucket.return_value = mock_s3_bucket
+
+        self.assertRaises(S3CopyError, s3_client.copy, 's3://mybucket/foo', 's3://mybucket/bar', num_retries=0, sleep_increment_sec=0.1)
+
+        self.assertFalse(s3_client.exists('s3://mybucket/bar/f1'))
+        self.assertFalse(s3_client.exists('s3://mybucket/bar/f2'))
+
+        # Reset exception
+        mock_s3_bucket.copy_key.side_effect = ThrowAFewExceptions(1).do
+        s3_client.copy('s3://mybucket/foo', 's3://mybucket/bar', num_retries=1, sleep_increment_sec=0.1)
+
+        self.assertTrue(s3_client.exists('s3://mybucket/bar/f1'))
+        self.assertTrue(s3_client.exists('s3://mybucket/bar/f2'))
+
+        # Try with lots of failures 
+
+        # Reset exception
+        last_side_effect_class = ThrowAFewExceptions(5)
+        mock_s3_bucket.copy_key.side_effect = last_side_effect_class.do
+        self.assertRaises(S3CopyError, s3_client.copy, 's3://mybucket/lotsoffailures', 's3://mybucket/greenerpastures', sleep_increment_sec=0.1)
+
+        self.assertFalse(s3_client.exists('s3://mybucket/greenerpastures/f1'))
+        self.assertFalse(s3_client.exists('s3://mybucket/greenerpastures/f2'))
+        self.assertEquals(4, last_side_effect_class.calls)
+
 
     def _run_multipart_test(self, part_size, file_size):
         file_contents = b"a" * file_size
