@@ -57,7 +57,9 @@ class MultiprocessWorkerTest(unittest.TestCase):
     def gw_res(self, pending, task_id):
         return dict(n_pending_tasks=pending,
                     task_id=task_id,
-                    running_tasks=0, n_unique_pending=0)
+                    running_tasks=0,
+                    n_unique_pending=0,
+                    n_failed_tasks=0)
 
     def test_positive_path(self):
         a = DummyTask("a")
