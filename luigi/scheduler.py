@@ -219,6 +219,11 @@ class Task(object):
         return (self.disable_failures is not None or
                 self.disable_hard_timeout is not None)
 
+    @property
+    def pretty_id(self):
+        param_str = ', '.join('{}={}'.format(key, value) for key, value in self.params.items())
+        return '{}({})'.format(self.family, param_str)
+
 
 class Worker(object):
     """
@@ -969,7 +974,7 @@ class CentralPlannerScheduler(Scheduler):
             terms = search.split()
 
             def filter_func(t):
-                return all(term in t.id for term in terms)
+                return all(term in t.pretty_id for term in terms)
         for task in filter(filter_func, self._state.get_active_tasks(status)):
             if (task.status != PENDING or not upstream_status or
                     upstream_status == self._upstream_status(task.id, upstream_status_table)):
