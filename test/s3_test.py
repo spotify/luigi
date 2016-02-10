@@ -318,8 +318,6 @@ class TestS3Client(unittest.TestCase):
         self.assertTrue(s3_client.exists('s3://mybucket/bar/f2'))
 
         # Try with lots of failures 
-
-        # Reset exception
         last_side_effect_class = ThrowAFewExceptions(5)
         mock_s3_bucket.copy_key.side_effect = last_side_effect_class.do
         self.assertRaises(S3CopyError, s3_client.copy, 's3://mybucket/lotsoffailures', 's3://mybucket/greenerpastures', sleep_increment_sec=0.1)
@@ -327,7 +325,6 @@ class TestS3Client(unittest.TestCase):
         self.assertFalse(s3_client.exists('s3://mybucket/greenerpastures/f1'))
         self.assertFalse(s3_client.exists('s3://mybucket/greenerpastures/f2'))
         self.assertEquals(4, last_side_effect_class.calls)
-
 
     def _run_multipart_test(self, part_size, file_size):
         file_contents = b"a" * file_size

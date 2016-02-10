@@ -259,7 +259,7 @@ class S3Client(FileSystem):
 
         s3_bucket = self.s3.get_bucket(dst_bucket, validate=True)
 
-        @retry(stop_max_attempt_number=num_retries+1, wait_exponential_multiplier=sleep_increment_sec*1000)
+        @retry(stop_max_attempt_number=num_retries + 1, wait_exponential_multiplier=sleep_increment_sec * 1000)
         def _copy_key(d_key, s_key):
             s3_bucket.copy_key(d_key, src_bucket, s_key)
 
@@ -270,7 +270,6 @@ class S3Client(FileSystem):
                 _copy_key(dst_prefix + key, src_prefix + key)
         else:
             _copy_key(dst_key, src_key)
-
 
     def rename(self, source_path, destination_path):
         """
