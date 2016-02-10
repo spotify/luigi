@@ -41,7 +41,7 @@ with open('README.rst') as fobj:
 
 install_requires = [
     'cached_property',
-    'pyparsing',
+    'pyparsing==2.0.7',
     'tornado',
     'python-daemon',
     'retrying'
