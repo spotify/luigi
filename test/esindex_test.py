@@ -36,10 +36,14 @@ import datetime
 import os
 from helpers import unittest
 
-import elasticsearch
+try:
+    from luigi.contrib import esindex
+    from elasticsearch.connection import Urllib3HttpConnection
+    from luigi.contrib.esindex import CopyToIndex, ElasticsearchTarget
+except ImportError:
+    raise unittest.SkipTest('Unable to import esindex')
+
 import luigi
-from elasticsearch.connection import Urllib3HttpConnection
-from luigi.contrib.esindex import CopyToIndex, ElasticsearchTarget
 
 HOST = os.getenv('ESINDEX_TEST_HOST', 'localhost')
 PORT = os.getenv('ESINDEX_TEST_PORT', 9200)
