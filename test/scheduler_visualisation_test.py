@@ -311,6 +311,22 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(remote.task_list('FAILED', ''), {})
         self.assertEqual(remote.task_list('PENDING', ''), {})
 
+    def test_dep_graph_root_has_display_name(self):
+        root_task = FactorTask(12)
+        self._build([root_task])
+
+        dep_graph = self._remote().dep_graph(root_task.task_id)
+        self.assertEqual('FactorTask(product=12)', dep_graph[root_task.task_id]['display_name'])
+
+    def test_dep_graph_non_root_nodes_lack_display_name(self):
+        root_task = FactorTask(12)
+        self._build([root_task])
+
+        dep_graph = self._remote().dep_graph(root_task.task_id)
+        for task_id, node in dep_graph.items():
+            if task_id != root_task.task_id:
+                self.assertNotIn('display_name', node)
+
     def test_task_list_failed(self):
         self._build([FailingTask(8)])
         remote = self._remote()
