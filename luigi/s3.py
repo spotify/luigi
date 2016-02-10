@@ -26,6 +26,8 @@ import logging
 import os
 import os.path
 import sys
+from retrying import retry
+from time import sleep
 try:
     from urlparse import urlsplit
 except ImportError:
@@ -248,7 +250,7 @@ class S3Client(FileSystem):
                 mp.cancel_upload()
             raise
 
-    def copy(self, source_path, destination_path):
+    def copy(self, source_path, destination_path, num_retries=3, sleep_increment_sec=5):
         """
         Copy an object from one S3 location to another.
         """
@@ -257,15 +259,17 @@ class S3Client(FileSystem):
 
         s3_bucket = self.s3.get_bucket(dst_bucket, validate=True)
 
+        @retry(stop_max_attempt_number=num_retries + 1, wait_exponential_multiplier=sleep_increment_sec * 1000)
+        def _copy_key(d_key, s_key):
+            s3_bucket.copy_key(d_key, src_bucket, s_key)
+
         if self.is_dir(source_path):
             src_prefix = self._add_path_delimiter(src_key)
             dst_prefix = self._add_path_delimiter(dst_key)
             for key in self.list(source_path):
-                s3_bucket.copy_key(dst_prefix + key,
-                                   src_bucket,
-                                   src_prefix + key)
+                _copy_key(dst_prefix + key, src_prefix + key)
         else:
-            s3_bucket.copy_key(dst_key, src_bucket, src_key)
+            _copy_key(dst_key, src_key)
 
     def rename(self, source_path, destination_path):
         """

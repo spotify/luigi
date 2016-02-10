@@ -22,7 +22,7 @@ except:
 
 
 def get_static_files(path):
-    return [os.path.join(dirpath.replace("luigi/", ""), ext) 
+    return [os.path.join(dirpath.replace("luigi/", ""), ext)
             for (dirpath, dirnames, filenames) in os.walk(path)
             for ext in ["*.html", "*.js", "*.css", "*.png"]]
 
@@ -41,9 +41,10 @@ with open('README.rst') as fobj:
 
 install_requires = [
     'cached_property',
-    'pyparsing',
+    'pyparsing==2.0.7',
     'tornado',
     'python-daemon',
+    'retrying'
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
