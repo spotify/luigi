@@ -8,5 +8,5 @@ boto
 sqlalchemy
 elasticsearch
 snakebite>=2.5.2
-mysql-connector-python
+mysql-connector-repackaged
 cached_property
