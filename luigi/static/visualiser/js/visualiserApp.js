@@ -73,6 +73,7 @@ function visualiserApp(luigi) {
             encodedTaskId: encodeURIComponent(task.taskId),
             taskName: taskName,
             taskParams: taskParams,
+            displayName: task.display_name,
             priority: task.priority,
             resources: JSON.stringify(task.resources),
             displayTime: displayTime,
@@ -290,7 +291,7 @@ function visualiserApp(luigi) {
             $("#searchError").empty();
             $("#searchError").removeClass();
             if(dependencyGraph.length > 0) {
-                $("#dependencyTitle").text(taskId);
+                $("#dependencyTitle").text(dependencyGraph[0].display_name);
                 if(dependencyGraph != '{}'){
                     for (var id in dependencyGraph) {
                         if (dependencyGraph[id].deps.length > 0) {
@@ -319,7 +320,7 @@ function visualiserApp(luigi) {
             $("#searchError").empty();
             $("#searchError").removeClass();
             if(dependencyGraph.length > 0) {
-              $("#dependencyTitle").text(taskId);
+              $("#dependencyTitle").text(dependencyGraph[0].display_name);
               $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
               $("#graphContainer").show();
               bindGraphEvents();

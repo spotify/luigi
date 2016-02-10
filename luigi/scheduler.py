@@ -931,6 +931,7 @@ class CentralPlannerScheduler(Scheduler):
                     'start_time': UNKNOWN,
                     'params': params,
                     'name': family,
+                    'display_name': task_id,
                     'priority': 0,
                 }
             else:
@@ -940,6 +941,9 @@ class CentralPlannerScheduler(Scheduler):
                     if dep not in seen:
                         seen.add(dep)
                         queue.append(dep)
+
+            if task_id != root_task_id:
+                del serialized[task_id]['display_name']
             if len(serialized) >= self._config.max_graph_nodes:
                 break
 
