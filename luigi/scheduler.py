@@ -1048,7 +1048,8 @@ class CentralPlannerScheduler(Scheduler):
 
     def fetch_error(self, task_id, **kwargs):
         if self._state.has_task(task_id):
-            return {"taskId": task_id, "error": self._state.get_task(task_id).expl}
+            task = self._state.get_task(task_id)
+            return {"taskId": task_id, "error": task.expl, 'displayName': task.pretty_id}
         else:
             return {"taskId": task_id, "error": ""}
 
