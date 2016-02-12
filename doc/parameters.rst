@@ -98,7 +98,7 @@ subclasses of :class:`~luigi.parameter.Parameter`. There are a few of them, like
 :class:`~luigi.parameter.IntParameter`,
 :class:`~luigi.parameter.FloatParameter`, etc.
 
-Python is not a strongly typed language and you don't have to specify the types
+Python is not a statically typed language and you don't have to specify the types
 of any of your parameters.
 You can simply use the base class :class:`~luigi.parameter.Parameter` if you don't care.
 
