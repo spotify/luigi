@@ -137,6 +137,7 @@ or held presentations about Luigi:
 * `Treasure Data <http://blog.treasuredata.com/blog/2015/02/25/managing-the-data-pipeline-with-git-luigi/>`_
 * `Growth Intelligence <http://www.slideshare.net/growthintel/a-beginners-guide-to-building-data-pipelines-with-luigi>`_
 * `AdRoll <http://tech.adroll.com/blog/data/2015/09/22/data-pipelines-docker.html>`_
+* `Schibsted <http://www.schibsted.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
