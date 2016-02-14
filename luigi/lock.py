@@ -34,7 +34,7 @@ def getpcmd(pid):
     :param pid:
     """
     import sys
-    if sys.platform =="win32":
+    if sys.platform == "win32":
         # Windows doesn't have ps command
         cmd = 'wmic path win32_process where ProcessID=%s get Commandline' % (pid, )
         with os.popen(cmd, 'r') as p:
