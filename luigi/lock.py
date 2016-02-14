@@ -34,7 +34,11 @@ def getpcmd(pid):
     :param pid:
     """
     import sys
+<<<<<<< HEAD
     if sys.platform == "win32":
+=======
+    if sys.platform =="win32":
+>>>>>>> e58dc75... fixed lock.py
         # Windows doesn't have ps command
         cmd = 'wmic path win32_process where ProcessID=%s get Commandline' % (pid, )
         with os.popen(cmd, 'r') as p:
@@ -43,6 +47,7 @@ def getpcmd(pid):
                 _, val = lines
                 return val
     else:
+<<<<<<< HEAD
         cmd = 'ps -o pid,args'
         with os.popen(cmd, 'r') as p:
             # Skip the column titles
@@ -51,6 +56,11 @@ def getpcmd(pid):
                 spid, scmd = line.strip().split(' ', 1)
                 if int(spid) == int(pid):
                     return scmd
+=======
+        cmd = 'ps -p %s -o command=' % (pid,)
+        with os.popen(cmd, 'r') as p:
+            return p.readline().strip()
+>>>>>>> e58dc75... fixed lock.py
 
 
 def get_info(pid_dir, my_pid=None):
