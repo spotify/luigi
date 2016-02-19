@@ -387,7 +387,7 @@ class S3Client(FileSystem):
 
         :param kwargs: Keyword arguments are passed to the boto function `copy_key`
         """
-        self.copy(source_path, destination_path)
+        self.copy(source_path, destination_path, **kwargs)
         self.remove(source_path)
 
     def listdir(self, path):
