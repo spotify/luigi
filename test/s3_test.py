@@ -378,6 +378,98 @@ class TestS3Client(unittest.TestCase):
         self.assertTrue(s3_client.remove('s3://mybucket/removemedir'))
         self.assertFalse(s3_client.exists('s3://mybucket/removemedir_$folder$'))
 
+    def test_copy_multiple_parts_non_exact_fit(self):
+        """
+        Test a multipart put with two parts, where the parts are not exactly the split size.
+        """
+        # First, put a file into S3
+        self._run_copy_test(self.test_put_multipart_multiple_parts_non_exact_fit)
+
+    def test_copy_multiple_parts_exact_fit(self):
+        """
+        Test a copy multiple parts, where the parts are exactly the split size.
+        """
+        self._run_copy_test(self.test_put_multipart_multiple_parts_exact_fit)
+
+    def test_copy_less_than_split_size(self):
+        """
+        Test a copy with a file smaller than split size; should revert to regular put.
+        """
+        self._run_copy_test(self.test_put_multipart_less_than_split_size)
+
+    def test_copy_empty_file(self):
+        """
+        Test a copy with an empty file.
+        """
+        self._run_copy_test(self.test_put_multipart_empty_file)
+
+    @unittest.skip("bug in moto 0.4.21 causing failure: https://github.com/spulec/moto/issues/526")
+    def test_copy_multipart_multiple_parts_non_exact_fit(self):
+        """
+        Test a multipart copy with two parts, where the parts are not exactly the split size.
+        """
+        # First, put a file into S3
+        self._run_multipart_copy_test(self.test_put_multipart_multiple_parts_non_exact_fit)
+
+    @unittest.skip("bug in moto 0.4.21 causing failure: https://github.com/spulec/moto/issues/526")
+    def test_copy_multipart_multiple_parts_exact_fit(self):
+        """
+        Test a multipart copy with multiple parts, where the parts are exactly the split size.
+        """
+        self._run_multipart_copy_test(self.test_put_multipart_multiple_parts_exact_fit)
+
+    def test_copy_multipart_less_than_split_size(self):
+        """
+        Test a multipart copy with a file smaller than split size; should revert to regular put.
+        """
+        self._run_multipart_copy_test(self.test_put_multipart_less_than_split_size)
+
+    def test_copy_multipart_empty_file(self):
+        """
+        Test a multipart copy with an empty file.
+        """
+        self._run_multipart_copy_test(self.test_put_multipart_empty_file)
+
+    def _run_multipart_copy_test(self, put_method):
+        # Run the method to put the file into s3 into the first place
+        put_method()
+
+        # As all the multipart put methods use `self._run_multipart_test`
+        # we can just use this key
+        original = 's3://mybucket/putMe'
+        copy = 's3://mybucket/putMe_copy'
+
+        # 5MB is minimum part size, use it here so we don't have to generate huge files to test
+        # the multipart upload in moto
+        part_size = (1024 ** 2) * 5
+
+        # Copy the file from old location to new
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.copy_multipart(original, copy, part_size=part_size)
+
+        # We can't use etags to compare between multipart and normal keys,
+        # so we fall back to using the size instead
+        original_size = s3_client.get_key(original).size
+        copy_size = s3_client.get_key(copy).size
+        self.assertEqual(original_size, copy_size)
+
+    def _run_copy_test(self, put_method):
+        # Run the method to put the file into s3 into the first place
+        put_method()
+
+        # As all the multipart put methods use `self._run_multipart_test`
+        # we can just use this key
+        original = 's3://mybucket/putMe'
+        copy = 's3://mybucket/putMe_copy'
+
+        # Copy the file from old location to new
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.copy(original, copy)
+
+        original_md5 = s3_client.get_key(original).etag
+        copy_md5 = s3_client.get_key(copy).etag
+        self.assertEqual(original_md5, copy_md5)
+
     def _run_multipart_test(self, part_size, file_size, **kwargs):
         file_contents = b"a" * file_size
 
@@ -391,11 +483,9 @@ class TestS3Client(unittest.TestCase):
         s3_client.s3.create_bucket('mybucket')
         s3_client.put_multipart(tmp_file_path, s3_path, part_size=part_size, **kwargs)
         self.assertTrue(s3_client.exists(s3_path))
-        # b/c of https://github.com/spulec/moto/issues/131 have to
-        # get contents to check size
-        key_contents = s3_client.get_key(s3_path).get_contents_as_string()
-        self.assertEqual(len(file_contents), len(key_contents))
-
+        file_size = os.path.getsize(tmp_file.name)
+        key_size = s3_client.get_key(s3_path).size
+        self.assertEqual(file_size, key_size)
         tmp_file.close()
 
 if __name__ == '__main__':

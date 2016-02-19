@@ -26,6 +26,8 @@ import itertools
 import logging
 import os
 import os.path
+from multiprocessing.pool import ThreadPool
+
 try:
     from urlparse import urlsplit
 except ImportError:
@@ -221,10 +223,7 @@ class S3Client(FileSystem):
         # calculate the number of parts (int division).
         # use modulo to avoid float precision issues
         # for exactly-sized fits
-        num_parts = \
-            (source_size // part_size) \
-            if source_size % part_size == 0 \
-            else (source_size // part_size) + 1
+        num_parts = (source_size + part_size - 1) // part_size
 
         mp = None
         try:
@@ -283,23 +282,98 @@ class S3Client(FileSystem):
     def copy(self, source_path, destination_path, **kwargs):
         """
         Copy an object from one S3 location to another.
-
         :param kwargs: Keyword arguments are passed to the boto function `copy_key`
         """
         (src_bucket, src_key) = self._path_to_bucket_and_key(source_path)
         (dst_bucket, dst_key) = self._path_to_bucket_and_key(destination_path)
 
         s3_bucket = self.s3.get_bucket(dst_bucket, validate=True)
+        source_bucket = self.s3.get_bucket(src_bucket, validate=True)
+
+        # If the file is larger than 64MB, then use multipart copy to perform the
+        # copy faster. This constant was chosen in the the original put_multipart
+        # implementation, and I've just used it here.
+        multipart_threshold = 67108864
 
         if self.isdir(source_path):
             src_prefix = self._add_path_delimiter(src_key)
             dst_prefix = self._add_path_delimiter(dst_key)
             for key in self.list(source_path):
-                s3_bucket.copy_key(dst_prefix + key,
-                                   src_bucket,
-                                   src_prefix + key, **kwargs)
-        else:
+                if source_bucket.lookup(src_prefix + key).size <= multipart_threshold:
+                    s3_bucket.copy_key(dst_prefix + key,
+                                       src_bucket,
+                                       src_prefix + key, **kwargs)
+                else:
+                    self.copy_multipart(dst_prefix + key,
+                                        src_bucket,
+                                        src_prefix + key, **kwargs)
+
+        elif source_bucket.lookup(src_key).size <= multipart_threshold:
             s3_bucket.copy_key(dst_key, src_bucket, src_key, **kwargs)
+        else:
+            self.copy_multipart(source_path, destination_path, **kwargs)
+
+    def copy_multipart(self, source_path, destination_path, part_size=67108864, **kwargs):
+        """
+        Copy a single S3 object to another S3 object using S3 multi-part copy (for files > 5GB).
+        It will use a single thread per request so that all parts are requested to be moved simultaneously
+        for maximum speed.
+
+        :param source_path: URL for S3 Source
+        :param destination_path: URL for target S3 location
+        :param part_size: Part size in bytes. Default: 67108864 (64MB), must be >= 5MB and <= 5 GB.
+        :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
+        """
+        (src_bucket, src_key) = self._path_to_bucket_and_key(source_path)
+        (dst_bucket, dst_key) = self._path_to_bucket_and_key(destination_path)
+
+        dest_bucket = self.s3.get_bucket(dst_bucket, validate=True)
+        source_bucket = self.s3.get_bucket(src_bucket, validate=True)
+
+        source_size = source_bucket.lookup(src_key).size
+
+        num_parts = (source_size + part_size - 1) // part_size
+
+        # As the S3 copy command is completely server side, there is no issue with issuing a single
+        # API call per part, however, this may in theory cause issues on systems with low ulimits for
+        # number of threads when copying really large files, e.g. with a ~100GB file this will open ~1500
+        # threads. We take the max of this and 1 as if we're copying an empty file we will have  `num_part == 0`
+        pool = ThreadPool(processes=max(1, num_parts))
+
+        mp = None
+        try:
+            mp = dest_bucket.initiate_multipart_upload(dst_key, **kwargs)
+            cur_pos = 0
+
+            # Store the results from the apply_async in a list so we can check for failures
+            results = []
+
+            for i in range(num_parts):
+                # Issue an S3 copy request, one part at a time, from one S3 object to another
+                part_start = cur_pos
+                cur_pos += part_size
+                part_end = min(cur_pos - 1, source_size - 1)
+                part_num = i + 1
+                results.append(pool.apply_async(mp.copy_part_from_key, args=(src_bucket, src_key, part_num, part_start, part_end)))
+                logger.info('Requesting copy of %s/%s to %s', part_num, num_parts, destination_path)
+
+            logger.info('Waiting for multipart copy of %s to finish', destination_path)
+            pool.close()
+            pool.join()
+
+            # This will raise any exceptions in any of the copy threads
+            for result in results:
+                result.get()
+
+            # finish the copy, making the file available in S3
+            mp.complete_upload()
+        except BaseException:
+            if mp:
+                logger.info('Canceling multipart s3 copy for %s to %s', source_path, destination_path)
+                # cancel the copy so we don't get charged for
+                # storage consumed by copied parts
+                mp.cancel_upload()
+            raise
 
     def rename(self, *args, **kwargs):
         """
