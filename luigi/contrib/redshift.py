@@ -305,10 +305,12 @@ class S3CopyToTable(rdbms.CopyToTable):
             logger.info("Creating table %s", self.table)
             connection.reset()
             self.create_table(connection)
-        elif self.do_truncate_table:
+
+        if self.do_truncate_table:
             logger.info("Truncating table %s", self.table)
             self.truncate_table(connection)
-        elif self.do_prune():
+
+        if self.do_prune():
             logger.info("Removing %s older than %s from %s", self.prune_column, self.prune_date, self.prune_table)
             self.prune(connection)
 
