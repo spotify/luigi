@@ -113,15 +113,15 @@ class RemoteFileSystem(luigi.target.FileSystem):
                 continue
 
             try:
-                ftp.cwd(name)  # if we can cwd to it, it's a folder
-                ftp.cwd(wd)  # don't try a nuke a folder we're in
-                ftp.cwd(path) # then go back to where we were
+                ftp.cwd(name)   # if we can cwd to it, it's a folder
+                ftp.cwd(wd)   # don't try a nuke a folder we're in
+                ftp.cwd(path)  # then go back to where we were
                 self._rm_recursive(ftp, name)
             except ftplib.all_errors as e:
                 ftp.delete(name)
 
         try:
-            ftp.cwd(wd) # do not delete the folder that we are in
+            ftp.cwd(wd)  # do not delete the folder that we are in
             ftp.rmd(path)
         except ftplib.all_errors as e:
             print('_rm_recursive: Could not remove {0}: {1}'.format(path, e))

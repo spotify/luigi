@@ -188,7 +188,7 @@ class TestRemoteTarget(unittest.TestCase):
         delayed_remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD, mtime=ts)
         self.assertTrue(delayed_remotetarget.exists())
 
-        ts = datetime.datetime.now() + datetime.timedelta(days=2) # who know what timezone it is in
+        ts = datetime.datetime.now() + datetime.timedelta(days=2)  # who knows what timezone it is in
         delayed_remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD, mtime=ts)
         self.assertFalse(delayed_remotetarget.exists())
 
