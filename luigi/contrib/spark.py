@@ -198,7 +198,7 @@ class SparkSubmitTask(ExternalProgramTask):
 
     def _dict_config(self, config):
         if config and isinstance(config, six.string_types):
-            return dict(map(lambda i: i.split('='), config.split('|')))
+            return dict(map(lambda i: i.split('=', 1), config.split('|')))
 
     def _text_arg(self, name, value):
         if value:
