@@ -35,7 +35,8 @@ def getpcmd(pid):
     """
     import sys
     if sys.platform == "win32":
-        # Windows doesn't have ps command
+        # The behavior of Windows's ps is different from linux's.
+        # Use wmic instead.
         cmd = 'wmic path win32_process where ProcessID=%s get Commandline' % (pid, )
         with os.popen(cmd, 'r') as p:
             lines = [line for line in p.readlines() if line.strip("\r\n ") != ""]
