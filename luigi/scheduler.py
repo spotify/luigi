@@ -219,6 +219,11 @@ class Task(object):
         return (self.disable_failures is not None or
                 self.disable_hard_timeout is not None)
 
+    @property
+    def pretty_id(self):
+        param_str = ', '.join('{}={}'.format(key, value) for key, value in self.params.items())
+        return '{}({})'.format(self.family, param_str)
+
 
 class Worker(object):
     """
@@ -860,6 +865,7 @@ class CentralPlannerScheduler(Scheduler):
     def _serialize_task(self, task_id, include_deps=True, deps=None):
         task = self._state.get_task(task_id)
         ret = {
+            'display_name': task.pretty_id,
             'status': task.status,
             'workers': list(task.workers),
             'worker_running': task.worker_running,
@@ -925,6 +931,7 @@ class CentralPlannerScheduler(Scheduler):
                     'start_time': UNKNOWN,
                     'params': params,
                     'name': family,
+                    'display_name': task_id,
                     'priority': 0,
                 }
             else:
@@ -934,6 +941,9 @@ class CentralPlannerScheduler(Scheduler):
                     if dep not in seen:
                         seen.add(dep)
                         queue.append(dep)
+
+            if task_id != root_task_id:
+                del serialized[task_id]['display_name']
             if len(serialized) >= self._config.max_graph_nodes:
                 break
 
@@ -969,7 +979,7 @@ class CentralPlannerScheduler(Scheduler):
             terms = search.split()
 
             def filter_func(t):
-                return all(term in t.id for term in terms)
+                return all(term in t.pretty_id for term in terms)
         for task in filter(filter_func, self._state.get_active_tasks(status)):
             if (task.status != PENDING or not upstream_status or
                     upstream_status == self._upstream_status(task.id, upstream_status_table)):
@@ -979,6 +989,13 @@ class CentralPlannerScheduler(Scheduler):
             return {'num_tasks': len(result)}
         return result
 
+    def _first_task_display_name(self, worker):
+        task_id = worker.info.get('first_task', '')
+        if self._state.has_task(task_id):
+            return self._state.get_task(task_id).pretty_id
+        else:
+            return task_id
+
     def worker_list(self, include_running=True, **kwargs):
         self.prune()
         workers = [
@@ -986,6 +1003,7 @@ class CentralPlannerScheduler(Scheduler):
                 name=worker.id,
                 last_active=worker.last_active,
                 started=getattr(worker, 'started', None),
+                first_task_display_name=self._first_task_display_name(worker),
                 **worker.info
             ) for worker in self._state.get_active_workers()]
         workers.sort(key=lambda worker: worker['started'], reverse=True)
@@ -1034,7 +1052,8 @@ class CentralPlannerScheduler(Scheduler):
 
     def fetch_error(self, task_id, **kwargs):
         if self._state.has_task(task_id):
-            return {"taskId": task_id, "error": self._state.get_task(task_id).expl}
+            task = self._state.get_task(task_id)
+            return {"taskId": task_id, "error": task.expl, 'displayName': task.pretty_id}
         else:
             return {"taskId": task_id, "error": ""}
 

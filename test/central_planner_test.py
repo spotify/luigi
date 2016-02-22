@@ -772,29 +772,73 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(set('EFG'), set(sch.task_list('PENDING', '').keys()))
         self.assertEqual({'num_tasks': 4}, sch.task_list('DONE', ''))
 
-    def test_task_list_filter_by_search(self):
-        self.sch.add_task(worker=WORKER, task_id='test_match_task')
-        self.sch.add_task(worker=WORKER, task_id='test_filter_task')
-        matches = self.sch.task_list('PENDING', '', search='match')
-        self.assertEqual(['test_match_task'], list(matches.keys()))
+    def add_task(self, family, **params):
+        task_id = str(hash((family, str(params))))  # use an unhelpful task id
+        self.sch.add_task(worker=WORKER, family=family, params=params, task_id=task_id)
+        return task_id
+
+    def search_pending(self, term, expected_keys):
+        actual_keys = set(self.sch.task_list('PENDING', '', search=term).keys())
+        self.assertEqual(expected_keys, actual_keys)
+
+    def test_task_list_filter_by_search_family_name(self):
+        task1 = self.add_task('MySpecialTask')
+        task2 = self.add_task('OtherSpecialTask')
+
+        self.search_pending('Special', {task1, task2})
+        self.search_pending('Task', {task1, task2})
+        self.search_pending('My', {task1})
+        self.search_pending('Other', {task2})
+
+    def test_task_list_filter_by_search_long_family_name(self):
+        task = self.add_task('TaskClassWithAVeryLongNameAndDistinctEndingUUDDLRLRAB')
+        self.search_pending('UUDDLRLRAB', {task})
+
+    def test_task_list_filter_by_param_name(self):
+        task1 = self.add_task('ClassA', day='2016-02-01')
+        task2 = self.add_task('ClassB', hour='2016-02-01T12')
+
+        self.search_pending('day', {task1})
+        self.search_pending('hour', {task2})
+
+    def test_task_list_filter_by_long_param_name(self):
+        task = self.add_task('ClassA', a_very_long_param_name_ending_with_uuddlrlrab='2016-02-01')
+
+        self.search_pending('uuddlrlrab', {task})
+
+    def test_task_list_filter_by_param_value(self):
+        task1 = self.add_task('ClassA', day='2016-02-01')
+        task2 = self.add_task('ClassB', hour='2016-02-01T12')
+
+        self.search_pending('2016-02-01', {task1, task2})
+        self.search_pending('T12', {task2})
+
+    def test_task_list_filter_by_long_param_value(self):
+        task = self.add_task('ClassA', param='a_very_long_param_value_ending_with_uuddlrlrab')
+        self.search_pending('uuddlrlrab', {task})
+
+    def test_task_list_filter_by_param_name_value_pair(self):
+        task = self.add_task('ClassA', param='value')
+        self.search_pending('param=value', {task})
+
+    def test_task_list_does_not_filter_by_task_id(self):
+        task = self.add_task('Class')
+        self.search_pending(task, set())
 
     def test_task_list_filter_by_multiple_search_terms(self):
-        self.sch.add_task(worker=WORKER, task_id='abcd')
-        self.sch.add_task(worker=WORKER, task_id='abd')
-        self.sch.add_task(worker=WORKER, task_id='acd')
-        self.sch.add_task(worker=WORKER, task_id='ad')
-        self.sch.add_task(worker=WORKER, task_id='bc')
-        matches = self.sch.task_list('PENDING', '', search='b c')
-        self.assertEqual(set(['abcd', 'bc']), set(matches.keys()))
+        expected = self.add_task('ClassA', day='2016-02-01', num='5')
+        self.add_task('ClassA', day='2016-03-01', num='5')
+        self.add_task('ClassB', day='2016-02-01', num='5')
+        self.add_task('ClassA', day='2016-02-01', val='5')
+
+        self.search_pending('ClassA 2016-02-01 num', {expected})
 
     def test_search_results_beyond_limit(self):
         sch = CentralPlannerScheduler(max_shown_tasks=3)
-        sch.add_task(worker=WORKER, task_id='task_a')
-        sch.add_task(worker=WORKER, task_id='task_b')
-        sch.add_task(worker=WORKER, task_id='task_c')
-        sch.add_task(worker=WORKER, task_id='task_d')
-        self.assertEqual({'num_tasks': 4}, sch.task_list('PENDING', '', search='a'))
-        self.assertEqual(['task_a'], list(sch.task_list('PENDING', '', search='_a').keys()))
+        for i in range(4):
+            sch.add_task(worker=WORKER, family='Test', params={'p': str(i)}, task_id='Test_%i' % i)
+        self.assertEqual({'num_tasks': 4}, sch.task_list('PENDING', '', search='Test'))
+        self.assertEqual(['Test_0'], list(sch.task_list('PENDING', '', search='0').keys()))
 
     def test_priority_update_dependency_chain(self):
         self.sch.add_task(worker=WORKER, task_id='A', priority=10, deps=['B'])
