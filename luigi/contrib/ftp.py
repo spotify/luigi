@@ -29,6 +29,7 @@ import datetime
 import ftplib
 import os
 import random
+import tempfile
 import io
 
 import luigi
@@ -112,13 +113,15 @@ class RemoteFileSystem(luigi.target.FileSystem):
                 continue
 
             try:
-                ftp.cwd(name)  # if we can cwd to it, it's a folder
-                ftp.cwd(wd)  # don't try a nuke a folder we're in
+                ftp.cwd(name)   # if we can cwd to it, it's a folder
+                ftp.cwd(wd)   # don't try a nuke a folder we're in
+                ftp.cwd(path)  # then go back to where we were
                 self._rm_recursive(ftp, name)
-            except ftplib.all_errors:
+            except ftplib.all_errors as e:
                 ftp.delete(name)
 
         try:
+            ftp.cwd(wd)  # do not delete the folder that we are in
             ftp.rmd(path)
         except ftplib.all_errors as e:
             print('_rm_recursive: Could not remove {0}: {1}'.format(path, e))
@@ -258,7 +261,8 @@ class RemoteTarget(luigi.target.FileSystemTarget):
             return self.format.pipe_writer(AtomicFtpFile(self._fs, self.path))
 
         elif mode == 'r':
-            self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+            temp_dir = os.path.join(tempfile.gettempdir(), 'luigi-contrib-ftp')
+            self.__tmp_path = temp_dir + '/' + self.path.lstrip('/') + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
             # download file to local
             self._fs.get(self.path, self.__tmp_path)
 
