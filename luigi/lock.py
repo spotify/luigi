@@ -33,14 +33,23 @@ def getpcmd(pid):
 
     :param pid:
     """
-    cmd = 'ps -o pid,args'
-    with os.popen(cmd, 'r') as p:
-        # Skip the column titles
-        p.readline()
-        for line in p:
-            spid, scmd = line.strip().split(' ', 1)
-            if int(spid) == int(pid):
-                return scmd
+    if os.name == "nt":
+        # Use wmic command instead of ps on Windows.
+        cmd = 'wmic path win32_process where ProcessID=%s get Commandline' % (pid, )
+        with os.popen(cmd, 'r') as p:
+            lines = [line for line in p.readlines() if line.strip("\r\n ") != ""]
+            if lines:
+                _, val = lines
+                return val
+    else:
+        cmd = 'ps -o pid,args'
+        with os.popen(cmd, 'r') as p:
+            # Skip the column titles
+            p.readline()
+            for line in p:
+                spid, scmd = line.strip().split(' ', 1)
+                if int(spid) == int(pid):
+                    return scmd
 
 
 def get_info(pid_dir, my_pid=None):
