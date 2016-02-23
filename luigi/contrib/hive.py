@@ -180,8 +180,12 @@ class MetastoreClient(HiveClient):
     def table_location(self, table, database='default', partition=None):
         with HiveThriftContext() as client:
             if partition is not None:
-                partition_str = self.partition_spec(partition)
-                thrift_table = client.get_partition_by_name(database, table, partition_str)
+                try:
+                    import hive_metastore.ttypes
+                    partition_str = self.partition_spec(partition)
+                    thrift_table = client.get_partition_by_name(database, table, partition_str)
+                except hive_metastore.ttypes.NoSuchObjectException:
+                    return ''
             else:
                 thrift_table = client.get_table(database, table)
             return thrift_table.sd.location
@@ -244,8 +248,11 @@ class HiveThriftContext(object):
 
 
 def get_default_client():
-    if get_hive_syntax() == "apache":
+    syntax = get_hive_syntax()
+    if syntax == "apache":
         return ApacheHiveCommandClient()
+    elif syntax == "metastore":
+        return MetastoreClient()
     else:
         return HiveCommandClient()
 

@@ -252,6 +252,10 @@ class HiveCommandClientTest(unittest.TestCase):
         client = luigi.contrib.hive.get_default_client()
         self.assertEqual(luigi.contrib.hive.ApacheHiveCommandClient, type(client))
 
+        hive_syntax.get_config.return_value.get.return_value = "metastore"
+        client = luigi.contrib.hive.get_default_client()
+        self.assertEqual(luigi.contrib.hive.MetastoreClient, type(client))
+
     @mock.patch('subprocess.Popen')
     def test_run_hive_command(self, popen):
         # I'm testing this again to check the return codes
