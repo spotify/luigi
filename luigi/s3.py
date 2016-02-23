@@ -85,9 +85,14 @@ class S3Client(FileSystem):
         for key in ['aws_access_key_id', 'aws_secret_access_key']:
             if key in options:
                 options.pop(key)
-        self.s3 = boto.connect_s3(aws_access_key_id,
-                                  aws_secret_access_key,
-                                  **options)
+        # If using IAM roles, boto > 2.5.1 will find the credentials in the instance metadata
+        if options.get('use_iam_role'):
+            options.pop('use_iam_role')
+            self.s3 = boto.connect_s3(**options)
+        else:
+            self.s3 = boto.connect_s3(aws_access_key_id,
+                                      aws_secret_access_key,
+                                      **options)
         self.Key = Key
 
     def exists(self, path):
