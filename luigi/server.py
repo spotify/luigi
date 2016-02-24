@@ -64,10 +64,19 @@ class RPCHandler(tornado.web.RequestHandler):
     Handle remote scheduling calls using rpc.RemoteSchedulerResponder.
     """
 
-    def initialize(self, scheduler):
+    def initialize(self, scheduler, api_keys):
         self._scheduler = scheduler
+        self._authenticated = True
+        if api_keys is not None:
+            key = self.request.headers.get('LAUTH', None)
+            if key is None or key not in api_keys:
+                self._authenticated = False
 
     def get(self, method):
+        if not self._authenticated:
+            self.send_error(403)
+            return
+
         payload = self.get_argument('data', default="{}")
         arguments = json.loads(payload)
 
@@ -216,10 +225,10 @@ class RootPathHandler(BaseTaskHistoryHandler):
         self.redirect("/static/visualiser/index.html")
 
 
-def app(scheduler):
+def app(scheduler, api_keys):
     settings = {"static_path": os.path.join(os.path.dirname(__file__), "static"), "unescape": tornado.escape.xhtml_unescape}
     handlers = [
-        (r'/api/(.*)', RPCHandler, {"scheduler": scheduler}),
+        (r'/api/(.*)', RPCHandler, {"scheduler": scheduler, "api_keys": api_keys}),
         (r'/static/(.*)', StaticFileHandler),
         (r'/', RootPathHandler, {'scheduler': scheduler}),
         (r'/tasklist', AllRunHandler, {'scheduler': scheduler}),
@@ -233,10 +242,25 @@ def app(scheduler):
     return api_app
 
 
-def _init_api(scheduler, responder=None, api_port=None, address=None, unix_socket=None):
+def _init_api(scheduler, responder=None, api_port=None, address=None, unix_socket=None, api_key_file=None):
     if responder:
         raise Exception('The "responder" argument is no longer supported')
-    api_app = app(scheduler)
+
+    api_keys = None
+    if api_key_file is not None:
+        api_keys = set()
+        try:
+            with open(api_key_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if len(line) == 0:
+                        continue
+                    api_keys.add(line)
+        except IOError:
+            logger.error("Failed to read API key file, disabling authentication")
+            api_keys = None
+
+    api_app = app(scheduler, api_keys)
     if unix_socket is not None:
         api_sockets = [tornado.netutil.bind_unix_socket(unix_socket)]
     else:
@@ -248,7 +272,7 @@ def _init_api(scheduler, responder=None, api_port=None, address=None, unix_socke
     return [s.getsockname() for s in api_sockets]
 
 
-def run(api_port=8082, address=None, unix_socket=None, scheduler=None, responder=None):
+def run(api_port=8082, address=None, unix_socket=None, scheduler=None, responder=None, api_key_file=None):
     """
     Runs one instance of the API server.
     """
@@ -264,6 +288,7 @@ def run(api_port=8082, address=None, unix_socket=None, scheduler=None, responder
         api_port=api_port,
         address=address,
         unix_socket=unix_socket,
+        api_key_file=api_key_file,
     )
 
     # prune work DAG every 60 seconds

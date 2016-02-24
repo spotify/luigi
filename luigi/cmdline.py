@@ -22,6 +22,7 @@ def luigid(argv=sys.argv[1:]):
     parser.add_argument(u'--address', help=u'Listening interface')
     parser.add_argument(u'--unix-socket', help=u'Unix socket path')
     parser.add_argument(u'--port', default=8082, help=u'Listening port')
+    parser.add_argument(u'--keys', default=None, help=u'Path of the file storing API keys')
 
     opts = parser.parse_args(argv)
 

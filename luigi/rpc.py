@@ -26,7 +26,7 @@ import socket
 import time
 
 from luigi.six.moves.urllib.parse import urljoin, urlencode, urlparse
-from luigi.six.moves.urllib.request import urlopen
+from luigi.six.moves.urllib.request import urlopen, Request
 from luigi.six.moves.urllib.error import URLError
 
 from luigi import configuration
@@ -72,15 +72,21 @@ class RPCError(Exception):
 class URLLibFetcher(object):
     raises = (URLError, socket.timeout)
 
+    def __init__(self, api_key):
+        self._api_key = api_key
+
     def fetch(self, full_url, body, timeout):
         body = urlencode(body).encode('utf-8')
-        return urlopen(full_url, body, timeout).read().decode('utf-8')
+        request = Request(full_url, headers={"LAUTH": self._api_key})
+        return urlopen(request, body, timeout).read().decode('utf-8')
 
 
 class RequestsFetcher(object):
-    def __init__(self, session):
+    def __init__(self, session, api_key):
+        self._api_key = api_key
         from requests import exceptions as requests_exceptions
         self.raises = requests_exceptions.RequestException
+        session.headers.update({"LAUTH": self._api_key})
         self.session = session
 
     def fetch(self, full_url, body, timeout):
@@ -94,7 +100,7 @@ class RemoteScheduler(Scheduler):
     Scheduler proxy object. Talks to a RemoteSchedulerResponder.
     """
 
-    def __init__(self, url='http://localhost:8082/', connect_timeout=None):
+    def __init__(self, url='http://localhost:8082/', connect_timeout=None, api_key=None):
         assert not url.startswith('http+unix://') or HAS_UNIX_SOCKET, (
             'You need to install requests-unixsocket for Unix socket support.'
         )
@@ -106,10 +112,14 @@ class RemoteScheduler(Scheduler):
             connect_timeout = config.getfloat('core', 'rpc-connect-timeout', 10.0)
         self._connect_timeout = connect_timeout
 
+        if api_key is None:
+            api_key = config.getstring('core', 'rpc-api-key', "00000000000000000000000000000000")
+        self._api_key = api_key
+
         if HAS_REQUESTS:
-            self._fetcher = RequestsFetcher(requests.Session())
+            self._fetcher = RequestsFetcher(requests.Session(), self._api_key)
         else:
-            self._fetcher = URLLibFetcher()
+            self._fetcher = URLLibFetcher(self._api_key)
 
     def _wait(self):
         time.sleep(30)
