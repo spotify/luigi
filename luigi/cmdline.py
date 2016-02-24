@@ -35,11 +35,12 @@ def luigid(argv=sys.argv[1:]):
         logging.getLogger().setLevel(logging.INFO)
         luigi.process.daemonize(luigi.server.run, api_port=opts.port,
                                 address=opts.address, pidfile=opts.pidfile,
-                                logdir=opts.logdir, unix_socket=opts.unix_socket)
+                                logdir=opts.logdir, unix_socket=opts.unix_socket,
+                                api_key_file=opts.keys)
     else:
         if opts.logdir:
             logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format(),
                                 filename=os.path.join(opts.logdir, "luigi-server.log"))
         else:
             logging.basicConfig(level=logging.INFO, format=luigi.process.get_log_format())
-        luigi.server.run(api_port=opts.port, address=opts.address, unix_socket=opts.unix_socket)
+        luigi.server.run(api_port=opts.port, address=opts.address, unix_socket=opts.unix_socket, api_key_file=opts.keys)
