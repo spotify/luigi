@@ -181,9 +181,6 @@ rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0
 
-rpc-api-key
-  API key to authenticate with central scheduler
-
 smtp_host
   Hostname for sending mail throug smtp. Defaults to localhost.
 
@@ -215,6 +212,9 @@ smtp_timeout
 [worker]
 
 These parameters control Luigi worker behavior.
+
+rpc-api-key
+  API key for worker to authenticate with central scheduler API
 
 count_uniques
   If true, workers will only count unique pending jobs when deciding
