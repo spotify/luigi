@@ -181,6 +181,9 @@ rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0
 
+rpc-api-key
+  API key to authenticate with central scheduler
+
 smtp_host
   Hostname for sending mail throug smtp. Defaults to localhost.
 
@@ -532,6 +535,11 @@ scalding-libjars
 -----------
 
 Parameters controlling scheduler behavior
+
+api-key-path
+  File path to the API keys which will be accepted by the scheduler.
+  If this value is undefined, and the default api-key-path `/etc/luigi/api_keys.lst`
+  is unavailable or empty, API authentication will be disabled.
 
 disable-hard-timeout
   Hard time limit after which tasks will be disabled by the server if

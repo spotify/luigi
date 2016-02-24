@@ -94,6 +94,8 @@ class scheduler(Config):
                                                   config_path=dict(section='scheduler', name='disable-hard-timeout'))
     disable_persist = parameter.IntParameter(default=86400,
                                              config_path=dict(section='scheduler', name='disable-persist-seconds'))
+    api_key_file = parameter.Parameter(default='/etc/luigi/api_keys.lst',
+                                       config_path=dict(section='scheduler', name='api-key-path'))
     max_shown_tasks = parameter.IntParameter(default=100000)
     max_graph_nodes = parameter.IntParameter(default=100000)
     prune_done_tasks = parameter.BoolParameter(default=False)
@@ -532,6 +534,21 @@ class CentralPlannerScheduler(Scheduler):
         self._config = config or scheduler(**kwargs)
         self._state = SimpleTaskState(self._config.state_path)
 
+        self._api_keys = None
+        try:
+            with open(self._config.api_key_file, "r") as f:
+                self._api_keys = set()
+                for line in f:
+                    line = line.strip()
+                    if len(line) == 0:
+                        continue
+                    self._api_keys.add(line)
+            if len(self._api_keys) == 0:
+                self._api_keys = None
+        except IOError:
+            logger.error("Failed to open API key file, proceeding without authentication")
+            self._api_keys = None
+
         if task_history_impl:
             self._task_history = task_history_impl
         elif self._config.record_task_history:
@@ -545,6 +562,9 @@ class CentralPlannerScheduler(Scheduler):
             disable_hard_timeout=self._config.disable_hard_timeout,
             disable_window=self._config.disable_window)
         self._worker_requests = {}
+
+    def _check_authentication(self, key):
+        return self._api_keys is None or key in self._api_keys
 
     def load(self):
         self._state.load()
