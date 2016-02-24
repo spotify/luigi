@@ -21,7 +21,7 @@ from helpers import unittest
 from nose.plugins.attrib import attr
 
 import luigi.notifications
-from luigi.scheduler import DISABLED, DONE, FAILED, CentralPlannerScheduler
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, CentralPlannerScheduler
 
 luigi.notifications.DEBUG = True
 WORKER = 'myworker'
@@ -207,6 +207,50 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(task_id='C', worker='Y', status=DONE)
 
         self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'B')
+
+    def test_start_time(self):
+        self.setTime(100)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.setTime(200)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.add_task(worker=WORKER, task_id='A', status=DONE)
+        self.assertEqual(100, self.sch.task_list(DONE, '')['A']['start_time'])
+
+    def test_last_updated_does_not_change_with_same_status_update(self):
+        for t, status in ((100, PENDING), (300, DONE), (500, DISABLED)):
+            self.setTime(t)
+            self.sch.add_task(worker=WORKER, task_id='A', status=status)
+            self.assertEqual(t, self.sch.task_list(status, '')['A']['last_updated'])
+
+            self.setTime(t + 100)
+            self.sch.add_task(worker=WORKER, task_id='A', status=status)
+            self.assertEqual(t, self.sch.task_list(status, '')['A']['last_updated'])
+
+    def test_last_updated_shows_running_start(self):
+        self.setTime(100)
+        self.sch.add_task(worker=WORKER, task_id='A', status=PENDING)
+        self.assertEqual(100, self.sch.task_list(PENDING, '')['A']['last_updated'])
+
+        self.setTime(200)
+        self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
+        self.assertEqual(200, self.sch.task_list('RUNNING', '')['A']['last_updated'])
+
+        self.setTime(300)
+        self.sch.add_task(worker=WORKER, task_id='A', status=PENDING)
+        self.assertEqual(200, self.sch.task_list('RUNNING', '')['A']['last_updated'])
+
+    def test_last_updated_with_failure_and_recovery(self):
+        self.setTime(100)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
+
+        self.setTime(200)
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+        self.assertEqual(200, self.sch.task_list(FAILED, '')['A']['last_updated'])
+
+        self.setTime(1000)
+        self.sch.prune()
+        self.assertEqual(1000, self.sch.task_list(PENDING, '')['A']['last_updated'])
 
     def test_timeout(self):
         # A bug that was earlier present when restarting the same flow
