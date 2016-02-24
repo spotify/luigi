@@ -257,7 +257,7 @@ def send_email(subject, message, sender, recipients, image_png=None):
     # separated in luigi.cfg
     recipients_tmp = []
     for r in recipients:
-        recipients_tmp.extend(r.split(','))
+        recipients_tmp.extend([a.strip() for a in r.split(',') if a.strip()])
 
     # Replace original recipients with the clean list
     recipients = recipients_tmp
