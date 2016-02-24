@@ -60,7 +60,7 @@ function visualiserApp(luigi) {
     function taskToDisplayTask(task) {
         var taskName = task.name;
         var taskParams = JSON.stringify(task.params);
-        var displayTime = new Date(Math.floor(task.start_time*1000)).toLocaleString();
+        var displayTime = new Date(Math.floor(task.last_updated*1000)).toLocaleString();
         var time_running = -1;
         if (task.status == "RUNNING" && "time_running" in task) {
             var current_time = new Date().getTime();
@@ -77,7 +77,7 @@ function visualiserApp(luigi) {
             priority: task.priority,
             resources: JSON.stringify(task.resources),
             displayTime: displayTime,
-            displayTimestamp: task.start_time,
+            displayTimestamp: task.last_updated,
             timeRunning: time_running,
             trackingUrl: task.tracking_url,
             status: task.status,
