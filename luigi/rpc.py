@@ -113,7 +113,7 @@ class RemoteScheduler(Scheduler):
         self._connect_timeout = connect_timeout
 
         if api_key is None:
-            api_key = config.getstring('core', 'rpc-api-key', "00000000000000000000000000000000")
+            api_key = config.get('core', 'rpc-api-key', "00000000000000000000000000000000")
         self._api_key = api_key
 
         if HAS_REQUESTS:
