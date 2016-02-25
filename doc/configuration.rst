@@ -213,6 +213,9 @@ smtp_timeout
 
 These parameters control Luigi worker behavior.
 
+rpc-api-key
+  API key for worker to authenticate with central scheduler API
+
 count_uniques
   If true, workers will only count unique pending jobs when deciding
   whether to stay alive. So if a worker can't get a job to run and other
@@ -532,6 +535,11 @@ scalding-libjars
 -----------
 
 Parameters controlling scheduler behavior
+
+api-key-path
+  File path to the API keys which will be accepted by the scheduler.
+  If this value is undefined, and the default api-key-path `/etc/luigi/api_keys.lst`
+  is unavailable or empty, API authentication will be disabled.
 
 disable-hard-timeout
   Hard time limit after which tasks will be disabled by the server if

@@ -66,8 +66,13 @@ class RPCHandler(tornado.web.RequestHandler):
 
     def initialize(self, scheduler):
         self._scheduler = scheduler
+        self._authenticated = scheduler._check_authentication(self.request.headers.get('LAUTH', None))
 
     def get(self, method):
+        if not self._authenticated:
+            self.send_error(403)
+            return
+
         payload = self.get_argument('data', default="{}")
         arguments = json.loads(payload)
 
@@ -236,6 +241,7 @@ def app(scheduler):
 def _init_api(scheduler, responder=None, api_port=None, address=None, unix_socket=None):
     if responder:
         raise Exception('The "responder" argument is no longer supported')
+
     api_app = app(scheduler)
     if unix_socket is not None:
         api_sockets = [tornado.netutil.bind_unix_socket(unix_socket)]
@@ -263,7 +269,7 @@ def run(api_port=8082, address=None, unix_socket=None, scheduler=None, responder
         responder=responder,
         api_port=api_port,
         address=address,
-        unix_socket=unix_socket,
+        unix_socket=unix_socket
     )
 
     # prune work DAG every 60 seconds
