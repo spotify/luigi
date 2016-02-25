@@ -50,6 +50,8 @@ def getpcmd(pid):
                 spid, scmd = line.strip().split(' ', 1)
                 if int(spid) == int(pid):
                     return scmd
+    # Fallback instead of None, for e.g. Cygwin where -o is an "unknown option" for the ps command:
+    return '[PROCESS_WITH_PID={}]'.format(pid)
 
 
 def get_info(pid_dir, my_pid=None):
