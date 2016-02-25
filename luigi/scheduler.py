@@ -1031,6 +1031,41 @@ class CentralPlannerScheduler(Scheduler):
                 worker['running'] = tasks
         return workers
 
+    def resource_list(self):
+        """
+        Resources usage info and their consumers (tasks).
+        """
+        self.prune()
+        resources = [
+            dict(
+                name=resource,
+                num_total=r_dict['total'],
+                num_used=r_dict['used']
+            ) for resource, r_dict in six.iteritems(self.resources())]
+        if self._resources is not None:
+            consumers = collections.defaultdict(dict)
+            for task in self._state.get_running_tasks():
+                if task.status == RUNNING and task.resources:
+                    for resource, amount in six.iteritems(task.resources):
+                        consumers[resource][task.id] = self._serialize_task(task.id, False)
+            for resource in resources:
+                tasks = consumers[resource['name']]
+                resource['num_consumer'] = len(tasks)
+                resource['running'] = tasks
+        return resources
+
+    def resources(self):
+        ''' get total resources and available ones '''
+        used_resources = self._used_resources()
+        ret = collections.defaultdict(dict)
+        for resource, total in self._resources.iteritems():
+            ret[resource]['total'] = total
+            if resource in used_resources:
+                ret[resource]['used'] = used_resources[resource]
+            else:
+                ret[resource]['used'] = 0
+        return ret
+
     def task_search(self, task_str, **kwargs):
         """
         Query for a subset of tasks by task_id.
