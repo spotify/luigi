@@ -45,14 +45,14 @@ var LuigiAPI = (function() {
         }
     }
 
-    LuigiAPI.prototype.getDependencyGraph = function (taskId, callback) {
-        return jsonRPC(this.urlRoot + "/dep_graph", {task_id: taskId}, function(response) {
+    LuigiAPI.prototype.getDependencyGraph = function (taskId, callback, include_done) {
+        return jsonRPC(this.urlRoot + "/dep_graph", {task_id: taskId, include_done: include_done}, function(response) {
             callback(flatten(response.response, taskId));
         });
     };
 
-    LuigiAPI.prototype.getInverseDependencyGraph = function (taskId, callback) {
-        return jsonRPC(this.urlRoot + "/inverse_dep_graph", {task_id: taskId}, function(response) {
+    LuigiAPI.prototype.getInverseDependencyGraph = function (taskId, callback, include_done) {
+        return jsonRPC(this.urlRoot + "/inverse_dep_graph", {task_id: taskId, include_done: include_done}, function(response) {
             callback(flatten(response.response, taskId));
         });
     }

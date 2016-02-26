@@ -1,6 +1,7 @@
 function visualiserApp(luigi) {
     var templates = {};
     var invertDependencies = false;
+    var hideDone = false;
     var typingTimer = 0;
     var visType;
     var dt; // DataTable instantiated in $(document).ready()
@@ -395,9 +396,9 @@ function visualiserApp(luigi) {
                 var depGraphCallback = makeGraphCallback(visType, taskId, paint);
 
                 if (invertDependencies) {
-                    luigi.getInverseDependencyGraph(taskId, depGraphCallback);
+                    luigi.getInverseDependencyGraph(taskId, depGraphCallback, !hideDone);
                 } else {
-                    luigi.getDependencyGraph(taskId, depGraphCallback);
+                    luigi.getDependencyGraph(taskId, depGraphCallback, !hideDone);
                 }
             }
             switchTab("dependencyGraph");
@@ -442,6 +443,11 @@ function visualiserApp(luigi) {
         invertDependencies = $('#invertCheckbox')[0].checked;
         $("#invertCheckbox").click(function() {
             invertDependencies = this.checked;
+            processHashChange(true);
+        });
+        hideDone = $('#hideDoneCheckbox')[0].checked;
+        $('#hideDoneCheckbox').click(function() {
+            hideDone = this.checked;
             processHashChange(true);
         });
         $("a[href=#list]").click(function() { location.hash=""; });
