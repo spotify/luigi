@@ -275,7 +275,8 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(suc[u'deps'], [BadReqTask(succeed=False).task_id])
 
         fail = dep_graph[BadReqTask(succeed=False).task_id]
-        self.assertEqual(fail[u'name'], 'UNKNOWN')
+        self.assertEqual(fail[u'name'], 'BadReqTask')
+        self.assertEqual(fail[u'params'], {'task_id': BadReqTask(succeed=False).task_id})
         self.assertEqual(fail[u'status'], 'UNKNOWN')
 
     def test_dep_graph_diamond(self):
