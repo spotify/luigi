@@ -134,7 +134,7 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
         lines = stdout.split('\n')
         for line in stdout.split('\n'):
             if line.startswith("OpenJDK 64-Bit Server VM warning") or line.startswith("It's highly recommended") or \
-	        line.endswith('using builtin-java classes where applicable') or not line:
+                    line.endswith('using builtin-java classes where applicable') or not line:
                 lines.pop(lines.index(line))  # ignoring native libraries warnings
             else:
                 (dir_count, file_count, content_size, ppath) = stdout.split()
@@ -187,7 +187,7 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
             if not line:
                 continue
             elif line.startswith('OpenJDK 64-Bit Server VM warning') or line.startswith('It\'s highly recommended') or \
-                line.startswith('Found') or line.endswith('using builtin-java classes where applicable'):
+                    line.startswith('Found') or line.endswith('using builtin-java classes where applicable'):
                 continue  # "hadoop fs -ls" outputs "Found %d items" as its first line and ignoring native libraries warnings
             elif ignore_directories and line[0] == 'd':
                 continue
