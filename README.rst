@@ -138,6 +138,7 @@ or held presentations about Luigi:
 * `Growth Intelligence <http://www.slideshare.net/growthintel/a-beginners-guide-to-building-data-pipelines-with-luigi>`_
 * `AdRoll <http://tech.adroll.com/blog/data/2015/09/22/data-pipelines-docker.html>`_
 * `Schibsted <http://www.schibsted.com/>`_
+* `17zuoye <https://speakerdeck.com/mvj3/luiti-an-offline-task-management-framework>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
