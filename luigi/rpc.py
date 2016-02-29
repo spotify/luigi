@@ -217,6 +217,9 @@ class RemoteScheduler(Scheduler):
     def add_worker(self, worker, info):
         return self._request('/api/add_worker', {'worker': worker, 'info': info})
 
+    def disable_worker(self, worker):
+        return self._request('/api/disable_worker', {'worker': worker})
+
     def update_resources(self, **resources):
         return self._request('/api/update_resources', resources)
 
