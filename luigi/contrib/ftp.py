@@ -41,12 +41,13 @@ from luigi.format import FileWrapper
 
 class RemoteFileSystem(luigi.target.FileSystem):
 
-    def __init__(self, host, username=None, password=None, port=21, tls=False):
+    def __init__(self, host, username=None, password=None, port=21, tls=False, timeout=60):
         self.host = host
         self.username = username
         self.password = password
         self.port = port
         self.tls = tls
+        self.timeout = timeout
 
     def _connect(self):
         """
@@ -56,7 +57,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
             self.ftpcon = ftplib.FTP_TLS()
         else:
             self.ftpcon = ftplib.FTP()
-        self.ftpcon.connect(self.host, self.port)
+        self.ftpcon.connect(self.host, self.port, timeout=self.timeout)
         self.ftpcon.login(self.username, self.password)
         if self.tls:
             self.ftpcon.prot_p()
@@ -230,7 +231,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
 
     def __init__(
         self, path, host, format=None, username=None,
-        password=None, port=21, mtime=None, tls=False
+        password=None, port=21, mtime=None, tls=False, timeout=60
     ):
         if format is None:
             format = luigi.format.get_default_format()
@@ -239,7 +240,8 @@ class RemoteTarget(luigi.target.FileSystemTarget):
         self.mtime = mtime
         self.format = format
         self.tls = tls
-        self._fs = RemoteFileSystem(host, username, password, port, tls)
+        self.timeout = timeout
+        self._fs = RemoteFileSystem(host, username, password, port, tls, timeout)
 
     @property
     def fs(self):
