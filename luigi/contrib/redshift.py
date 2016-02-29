@@ -241,11 +241,17 @@ class S3CopyToTable(rdbms.CopyToTable):
         Determine whether the table already exists.
         """
         query = ("select 1 as table_exists "
-                 "from pg_table_def "
-                 "where tablename = %s limit 1")
+                 "from information_schema.tables "
+                 "where table_name = %s and table_schema = %s limit 1")
         cursor = connection.cursor()
+
+        if self.table.find(".") != -1:
+            (schema, table) = self.table.split('.', 1)
+        else:
+            (schema, table) = ('public', self.table)
+
         try:
-            cursor.execute(query, (self.table,))
+            cursor.execute(query, (table, schema,))
             result = cursor.fetchone()
             return bool(result)
         finally:
