@@ -23,6 +23,8 @@ See :ref:`Parameter` for more info on how to define parameters.
 import abc
 import datetime
 import warnings
+import json
+
 try:
     from ConfigParser import NoOptionError, NoSectionError
 except ImportError:
@@ -30,9 +32,10 @@ except ImportError:
 
 from luigi import task_register
 from luigi import six
-
+from frozendict import frozendict
 from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
+
 
 _no_value = object()
 
@@ -699,3 +702,18 @@ class EnumParameter(Parameter):
 
     def serialize(self, e):
         return e.name
+
+
+class DictParameter(Parameter):
+    """
+    Parameter whose value is a ``dict``.
+    """
+
+    def parse(self, s):
+        """
+        Parses a ``dict`` from a JSON string using standard JSON library.
+        """
+        mutable_dict = json.loads(s)
+        immutable_dict = frozendict(mutable_dict)
+        frozendict.__repr__ = mutable_dict.__repr__
+        return immutable_dict
