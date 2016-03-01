@@ -82,6 +82,22 @@ class FailingTask(luigi.Task):
         raise Exception("Error Message")
 
 
+class OddFibTask(luigi.Task):
+    n = luigi.IntParameter()
+    done = luigi.BoolParameter(default=True, significant=False)
+
+    def requires(self):
+        if self.n > 1:
+            yield OddFibTask(self.n - 1, self.done)
+            yield OddFibTask(self.n - 2, self.done)
+
+    def complete(self):
+        return self.n % 2 == 0 and self.done
+
+    def run(self):
+        assert False
+
+
 class SchedulerVisualisationTest(unittest.TestCase):
 
     def setUp(self):
@@ -297,6 +313,34 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         d2 = dep_graph[FactorTask(product=2).task_id]
         self.assertEqual(sorted(d2[u'deps']), [])
+
+    def test_dep_graph_skip_done(self):
+        task = OddFibTask(9)
+        self._build([task])
+        remote = self._remote()
+
+        task_id = task.task_id
+        self.assertEqual(9, len(remote.dep_graph(task_id, include_done=True)))
+
+        skip_done_graph = remote.dep_graph(task_id, include_done=False)
+        self.assertEqual(5, len(skip_done_graph))
+        for task in skip_done_graph.values():
+            self.assertNotEqual('DONE', task['status'])
+            self.assertLess(len(task['deps']), 2)
+
+    def test_inverse_dep_graph_skip_done(self):
+        self._build([OddFibTask(9, done=False)])
+        self._build([OddFibTask(9, done=True)])
+        remote = self._remote()
+
+        task_id = OddFibTask(1).task_id
+        self.assertEqual(9, len(remote.inverse_dep_graph(task_id, include_done=True)))
+
+        skip_done_graph = remote.inverse_dep_graph(task_id, include_done=False)
+        self.assertEqual(5, len(skip_done_graph))
+        for task in skip_done_graph.values():
+            self.assertNotEqual('DONE', task['status'])
+            self.assertLess(len(task['deps']), 2)
 
     def test_task_list_single(self):
         self._build([FactorTask(7)])

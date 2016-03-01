@@ -919,7 +919,13 @@ class CentralPlannerScheduler(Scheduler):
             serialized.update(self._traverse_graph(task.id, seen))
         return serialized
 
-    def _traverse_graph(self, root_task_id, seen=None, dep_func=None):
+    def _filter_done(self, task_ids):
+        for task_id in task_ids:
+            task = self._state.get_task(task_id)
+            if task is None or task.status != DONE:
+                yield task_id
+
+    def _traverse_graph(self, root_task_id, seen=None, dep_func=None, include_done=True):
         """ Returns the dependency graph rooted at task_id
 
         This does a breadth-first traversal to find the nodes closest to the
@@ -965,6 +971,8 @@ class CentralPlannerScheduler(Scheduler):
                 }
             else:
                 deps = dep_func(task)
+                if not include_done:
+                    deps = list(self._filter_done(deps))
                 serialized[task_id] = self._serialize_task(task_id, deps=deps)
                 for dep in sorted(deps):
                     if dep not in seen:
@@ -978,13 +986,13 @@ class CentralPlannerScheduler(Scheduler):
 
         return serialized
 
-    def dep_graph(self, task_id, **kwargs):
+    def dep_graph(self, task_id, include_done=True, **kwargs):
         self.prune()
         if not self._state.has_task(task_id):
             return {}
-        return self._traverse_graph(task_id)
+        return self._traverse_graph(task_id, include_done=include_done)
 
-    def inverse_dep_graph(self, task_id, **kwargs):
+    def inverse_dep_graph(self, task_id, include_done=True, **kwargs):
         self.prune()
         if not self._state.has_task(task_id):
             return {}
@@ -992,7 +1000,8 @@ class CentralPlannerScheduler(Scheduler):
         for task in self._state.get_active_tasks():
             for dep in task.deps:
                 inverse_graph[dep].add(task.id)
-        return self._traverse_graph(task_id, dep_func=lambda t: inverse_graph[t.id])
+        return self._traverse_graph(
+            task_id, dep_func=lambda t: inverse_graph[t.id], include_done=include_done)
 
     def task_list(self, status, upstream_status, limit=True, search=None, **kwargs):
         """
