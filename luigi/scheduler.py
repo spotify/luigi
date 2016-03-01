@@ -31,6 +31,7 @@ import functools
 import itertools
 import logging
 import os
+import re
 import time
 
 from luigi import six
@@ -74,6 +75,8 @@ STATUS_TO_UPSTREAM_MAP = {
     PENDING: UPSTREAM_MISSING_INPUT,
     DISABLED: UPSTREAM_DISABLED,
 }
+
+TASK_FAMILY_RE = re.compile(r'([^(_]+)[(_]')
 
 
 class scheduler(Config):
@@ -947,8 +950,9 @@ class CentralPlannerScheduler(Scheduler):
 
                 # NOTE : If a dependency is missing from self._state there is no way to deduce the
                 #        task family and parameters.
-
-                family, params = UNKNOWN, {}
+                family_match = TASK_FAMILY_RE.match(task_id)
+                family = family_match.group(1) if family_match else UNKNOWN
+                params = {'task_id': task_id}
                 serialized[task_id] = {
                     'deps': [],
                     'status': UNKNOWN,
