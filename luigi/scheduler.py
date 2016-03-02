@@ -719,8 +719,8 @@ class CentralPlannerScheduler(Scheduler):
     def _used_resources(self):
         used_resources = collections.defaultdict(int)
         if self._resources is not None:
-            for task in self._state.get_active_tasks():
-                if task.status == RUNNING and task.resources:
+            for task in self._state.get_active_tasks(status=RUNNING):
+                if task.resources:
                     for resource, amount in six.iteritems(task.resources):
                         used_resources[resource] += amount
         return used_resources
@@ -799,7 +799,6 @@ class CentralPlannerScheduler(Scheduler):
         tasks.sort(key=self._rank, reverse=True)
 
         for task in tasks:
-            upstream_status = self._upstream_status(task.id, upstream_table)
             in_workers = (assistant and getattr(task, 'runnable', bool(task.workers))) or worker_id in task.workers
             if task.status == RUNNING and in_workers:
                 # Return a list of currently running tasks to the client,
@@ -810,10 +809,12 @@ class CentralPlannerScheduler(Scheduler):
                     more_info.update(other_worker.info)
                     running_tasks.append(more_info)
 
-            if task.status == PENDING and in_workers and upstream_status != UPSTREAM_DISABLED:
-                locally_pending_tasks += 1
-                if len(task.workers) == 1 and not assistant:
-                    n_unique_pending += 1
+            if task.status == PENDING and in_workers:
+                upstream_status = self._upstream_status(task.id, upstream_table)
+                if upstream_status != UPSTREAM_DISABLED:
+                    locally_pending_tasks += 1
+                    if len(task.workers) == 1 and not assistant:
+                        n_unique_pending += 1
 
             if best_task:
                 continue
@@ -869,13 +870,13 @@ class CentralPlannerScheduler(Scheduler):
 
             while task_stack:
                 dep_id = task_stack.pop()
-                if self._state.has_task(dep_id):
-                    dep = self._state.get_task(dep_id)
+                dep = self._state.get_task(dep_id)
+                if dep:
                     if dep.status == DONE:
                         continue
                     if dep_id not in upstream_status_table:
                         if dep.status == PENDING and dep.deps:
-                            task_stack = task_stack + [dep_id] + list(dep.deps)
+                            task_stack += [dep_id] + list(dep.deps)
                             upstream_status_table[dep_id] = ''  # will be updated postorder
                         else:
                             dep_status = STATUS_TO_UPSTREAM_MAP.get(dep.status, '')
@@ -883,9 +884,9 @@ class CentralPlannerScheduler(Scheduler):
                     elif upstream_status_table[dep_id] == '' and dep.deps:
                         # This is the postorder update step when we set the
                         # status based on the previously calculated child elements
-                        upstream_status = [upstream_status_table.get(a_task_id, '') for a_task_id in dep.deps]
-                        upstream_status.append('')  # to handle empty list
-                        status = max(upstream_status, key=UPSTREAM_SEVERITY_KEY)
+                        status = max((upstream_status_table.get(a_task_id, '')
+                                      for a_task_id in dep.deps),
+                                     key=UPSTREAM_SEVERITY_KEY)
                         upstream_status_table[dep_id] = status
             return upstream_status_table[dep_id]
 
