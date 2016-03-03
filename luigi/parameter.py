@@ -24,6 +24,11 @@ import abc
 import datetime
 import warnings
 import json
+from json import JSONEncoder
+from collections import OrderedDict
+import collections
+import operator
+import functools
 
 try:
     from ConfigParser import NoOptionError, NoSectionError
@@ -32,7 +37,6 @@ except ImportError:
 
 from luigi import task_register
 from luigi import six
-from frozendict import frozendict
 from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
 
@@ -704,16 +708,85 @@ class EnumParameter(Parameter):
         return e.name
 
 
+class FrozenOrderedDict(collections.Mapping):
+    """
+    It is an immutable wrapper around ordered dictionaries that implements the complete :py:class:`collections.Mapping`
+    interface. It can be used as a drop-in replacement for dictionaries where immutability and ordering are desired.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.__dict = OrderedDict(*args, **kwargs)
+        self.__hash = None
+
+    def __getitem__(self, key):
+        return self.__dict[key]
+
+    def __iter__(self):
+        return iter(self.__dict)
+
+    def __len__(self):
+        return len(self.__dict)
+
+    def __repr__(self):
+        return '<FrozenOrderedDict %s>' % repr(self.__dict)
+
+    def __hash__(self):
+        if self.__hash is None:
+            hashes = map(hash, self.items())
+            self.__hash = functools.reduce(operator.xor, hashes, 0)
+
+        return self.__hash
+
+    def get_wrapped(self):
+        return self.__dict
+
+
 class DictParameter(Parameter):
     """
     Parameter whose value is a ``dict``.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+          dict_param = luigi.DictParameter()
+
+            def run(self):
+                value = self.dict_param[key]
+
+    At the command line, use,
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --dict-param <JSON string>
+
+    It can be used to define dynamic parameters, when you do not know the exact list of your parameters (e.g. list of
+    tags, that are dynamically constructed outside Luigi), or you have a complex parameter containing logically related
+    values (like a database connection config).
     """
+
+    class DictParamEncoder(JSONEncoder):
+        """
+        JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~FrozenOrderedDict` JSON serializable.
+        """
+        def default(self, obj):
+            if isinstance(obj, FrozenOrderedDict):
+                return obj.get_wrapped()
+            return json.JSONEncoder.default(self, obj)
 
     def parse(self, s):
         """
-        Parses a ``dict`` from a JSON string using standard JSON library.
+        Parses an immutable and ordered ``dict`` from a JSON string using standard JSON library.
+
+        We need to use an immutable dictionary, to create a hashable parameter and also preserve the internal structure
+        of parsing. The traversal order of standard ``dict`` is undefined, which can result various string
+        representations of this parameter, and therefore a different task id for the task containing this parameter.
+        This is because task id contains the hash of parameters' JSON representation.
+
+        :param s: String to be parse
         """
-        mutable_dict = json.loads(s)
-        immutable_dict = frozendict(mutable_dict)
-        frozendict.__repr__ = mutable_dict.__repr__
-        return immutable_dict
+        return json.loads(s, object_pairs_hook=FrozenOrderedDict)
+
+    def serialize(self, x):
+        return json.dumps(x, cls=DictParameter.DictParamEncoder)
