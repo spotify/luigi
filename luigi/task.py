@@ -40,6 +40,12 @@ Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
 
 
+TASK_ID_INCLUDE_PARAMS = 3
+TASK_ID_TRUNCATE_PARAMS = 16
+TASK_ID_TRUNCATE_HASH = 10
+TASK_ID_INVALID_CHAR_REGEX = re.compile(r'[^A-Za-z0-9_]')
+
+
 def namespace(namespace=None):
     """
     Call to set namespace of tasks declared after the call.
@@ -59,6 +65,26 @@ def namespace(namespace=None):
             task_namespace = 'namespace2'
     """
     Register._default_namespace = namespace
+
+
+def task_id_str(task_family, params):
+    """
+    Returns a canonical string used to identify a particular task
+
+    :param task_family: The task family (class name) of the task
+    :param params: a dict mapping parameter names to their serialized values
+    :return: A unique, shortened identifier corresponding to the family and params
+    """
+    # task_id is a concatenation of task family, the first values of the first 3 parameters
+    # sorted by parameter name and a md5hash of the family/parameters as a cananocalised json.
+    param_str = json.dumps(params, separators=(',', ':'), sort_keys=True)
+    param_hash = hashlib.md5(param_str.encode('utf-8')).hexdigest()
+
+    param_summary = '_'.join(p[:TASK_ID_TRUNCATE_PARAMS]
+                             for p in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))
+    param_summary = TASK_ID_INVALID_CHAR_REGEX.sub('_', param_summary)
+
+    return '{}_{}_{}'.format(task_family, param_summary, param_hash[:TASK_ID_TRUNCATE_HASH])
 
 
 class BulkCompleteNotImplementedError(NotImplementedError):
@@ -193,6 +219,10 @@ class Task(object):
         return params
 
     @classmethod
+    def get_param_names(cls, include_significant=False):
+        return [name for name, p in cls.get_params() if include_significant or p.significant]
+
+    @classmethod
     def get_param_values(cls, params, args, kwargs):
         """
         Get the values of the parameters from the args and kwargs.
@@ -256,23 +286,7 @@ class Task(object):
         self.param_args = tuple(value for key, value in param_values)
         self.param_kwargs = dict(param_values)
 
-        # task_id is a concatenation of task family, the first values of the first 3 parameters
-        # sorted by parameter name and a md5hash of the family/parameters as a cananocalised json.
-        TASK_ID_INCLUDE_PARAMS = 3
-        TASK_ID_TRUNCATE_PARAMS = 16
-        TASK_ID_TRUNCATE_HASH = 10
-        TASK_ID_INVALID_CHAR_REGEX = r'[^A-Za-z0-9_]'
-
-        params = self.to_str_params(only_significant=True)
-        param_str = json.dumps(params, separators=(',', ':'), sort_keys=True)
-        param_hash = hashlib.md5(param_str.encode('utf-8')).hexdigest()
-
-        param_summary = '_'.join(p[:TASK_ID_TRUNCATE_PARAMS]
-                                 for p in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))
-        param_summary = re.sub(TASK_ID_INVALID_CHAR_REGEX, '_', param_summary)
-
-        self.task_id = '{}_{}_{}'.format(self.task_family, param_summary, param_hash[:TASK_ID_TRUNCATE_HASH])
-
+        self.task_id = task_id_str(self.task_family, self.to_str_params(only_significant=True))
         self.__hash = hash(self.task_id)
 
     def initialized(self):
