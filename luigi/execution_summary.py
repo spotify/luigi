@@ -187,7 +187,11 @@ def _ranging_attributes(attributes, param_class):
     """
     Checks if there is a continuous range
     """
-    next_attributes = {param_class.next_in_enumeration(attribute) for attribute in attributes}
+    try:
+        next_attributes = {param_class.next_in_enumeration(attribute) for attribute in attributes}
+    except TypeError:
+        # Assume some value such as None was encountered that doesn't have an obvious ordering.
+        return None, None
     in_first = attributes.difference(next_attributes)
     in_second = next_attributes.difference(attributes)
     if len(in_first) == 1 and len(in_second) == 1:
