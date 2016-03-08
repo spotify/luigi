@@ -38,29 +38,66 @@ import luigi.format
 import luigi.target
 from luigi.format import FileWrapper
 
+import logging
+
+logger = logging.getLogger('luigi-interface')
+
 
 class RemoteFileSystem(luigi.target.FileSystem):
 
-    def __init__(self, host, username=None, password=None, port=21, tls=False, timeout=60):
+    def __init__(self, host, username=None, password=None, port=21, tls=False, timeout=60, sftp=False):
         self.host = host
         self.username = username
         self.password = password
         self.port = port
         self.tls = tls
         self.timeout = timeout
+        self.sftp = sftp
+
+        if self.sftp:
+            self.port = 22
 
     def _connect(self):
         """
         Log in to ftp.
         """
-        if self.tls:
-            self.ftpcon = ftplib.FTP_TLS()
+        if self.sftp:
+            self._sftp_connect()
         else:
-            self.ftpcon = ftplib.FTP()
-        self.ftpcon.connect(self.host, self.port, timeout=self.timeout)
-        self.ftpcon.login(self.username, self.password)
+            self._ftp_connect()
+
+    def _sftp_connect(self):
+        try:
+            import pysftp
+        except ImportError:
+            logger.warning('Please install pysftp to use SFTP.')
+
+        self.conn = pysftp.Connection(self.host, username=self.username, password=self.password, port=self.port)
+
+    def _ftp_connect(self):
         if self.tls:
-            self.ftpcon.prot_p()
+            self.conn = ftplib.FTP_TLS()
+        else:
+            self.conn = ftplib.FTP()
+        self.conn.connect(self.host, self.port, timeout=self.timeout)
+        self.conn.login(self.username, self.password)
+        if self.tls:
+            self.conn.prot_p()
+
+    def _close(self):
+        """
+        Close ftp connection.
+        """
+        if self.sftp:
+            self._sftp_close()
+        else:
+            self._ftp_close()
+
+    def _sftp_close(self):
+        self.conn.close()
+
+    def _ftp_close(self):
+        self.conn.quit()
 
     def exists(self, path, mtime=None):
         """
@@ -71,20 +108,82 @@ class RemoteFileSystem(luigi.target.FileSystem):
         Return False if the file's modified time is older mtime.
         """
         self._connect()
-        files = self.ftpcon.nlst(path)
 
-        result = False
+        if self.sftp:
+            exists = self._sftp_exists(path, mtime)
+        else:
+            exists = self._ftp_exists(path, mtime)
+
+        self._close()
+
+        return exists
+
+    def _sftp_exists(self, path, mtime):
+        exists = False
+        if mtime:
+            exists = self.conn.stat(path).st_mtime > mtime
+        elif self.conn.exists(path):
+            exists = True
+        return exists
+
+    def _ftp_exists(self, path, mtime):
+        files = self.conn.nlst(path)
+
+        exists = False
         if files:
             if mtime:
-                mdtm = self.ftpcon.sendcmd('MDTM ' + path)
+                mdtm = self.conn.sendcmd('MDTM ' + path)
                 modified = datetime.datetime.strptime(mdtm[4:], "%Y%m%d%H%M%S")
-                result = modified > mtime
+                exists = modified > mtime
             else:
-                result = True
+                exists = True
+        return exists
 
-        self.ftpcon.quit()
+    def remove(self, path, recursive=True):
+        """
+        Remove file or directory at location ``path``.
 
-        return result
+        :param path: a path within the FileSystem to remove.
+        :type path: str
+        :param recursive: if the path is a directory, recursively remove the directory and
+                          all of its descendants. Defaults to ``True``.
+        :type recursive: bool
+        """
+        self._connect()
+
+        if self.sftp:
+            self._sftp_remove(path, recursive)
+        else:
+            self._ftp_remove(path, recursive)
+
+        self._close()
+
+    def _sftp_remove(self, path, recursive):
+        if self.conn.isfile(path):
+            self.conn.unlink(path)
+        else:
+            if not recursive:
+                raise RuntimeError("Path is not a regular file, and recursive option is not set")
+            directories = []
+            # walk the tree, and execute call backs when files,
+            # directories and unknown types are encountered
+            # files must be removed first.  then directories can be removed
+            # after the files are gone.
+            self.conn.walktree(path, self.conn.unlink, directories.append, self.conn.unlink)
+            for directory in reversed(directories):
+                self.conn.rmdir(directory)
+            self.conn.rmdir(path)
+
+    def _ftp_remove(self, path, recursive):
+        if recursive:
+            self._rm_recursive(self.conn, path)
+        else:
+            try:
+                # try delete file
+                self.conn.delete(path)
+            except ftplib.all_errors:
+                # it is a folder, delete it
+                self.conn.rmd(path)
 
     def _rm_recursive(self, ftp, path):
         """
@@ -127,46 +226,47 @@ class RemoteFileSystem(luigi.target.FileSystem):
         except ftplib.all_errors as e:
             print('_rm_recursive: Could not remove {0}: {1}'.format(path, e))
 
-    def remove(self, path, recursive=True):
-        """
-        Remove file or directory at location ``path``.
-
-        :param path: a path within the FileSystem to remove.
-        :type path: str
-        :param recursive: if the path is a directory, recursively remove the directory and
-                          all of its descendants. Defaults to ``True``.
-        :type recursive: bool
-        """
-        self._connect()
-
-        if recursive:
-            self._rm_recursive(self.ftpcon, path)
-        else:
-            try:
-                # try delete file
-                self.ftpcon.delete(path)
-            except ftplib.all_errors:
-                # it is a folder, delete it
-                self.ftpcon.rmd(path)
-
-        self.ftpcon.quit()
-
     def put(self, local_path, path, atomic=True):
-        # create parent folder if not exists
+        """
+        Put file from local filesystem to (s)FTP.
+        """
         self._connect()
 
+        if self.sftp:
+            self._sftp_put(local_path, path, atomic)
+        else:
+            self._ftp_put(local_path, path, atomic)
+
+        self._close()
+
+    def _sftp_put(self, local_path, path, atomic):
+        normpath = os.path.normpath(path)
+        directory = os.path.dirname(normpath)
+        self.conn.makedirs(directory)
+
+        if atomic:
+            tmp_path = os.path.join(directory, 'luigi-tmp-{:09d}'.format(random.randrange(0, 1e10)))
+        else:
+            tmp_path = normpath
+
+        self.conn.put(local_path, tmp_path)
+
+        if atomic:
+            self.conn.rename(tmp_path, normpath)
+
+    def _ftp_put(self, local_path, path, atomic):
         normpath = os.path.normpath(path)
         folder = os.path.dirname(normpath)
 
         # create paths if do not exists
         for subfolder in folder.split(os.sep):
-            if subfolder and subfolder not in self.ftpcon.nlst():
-                self.ftpcon.mkd(subfolder)
+            if subfolder and subfolder not in self.conn.nlst():
+                self.conn.mkd(subfolder)
 
-            self.ftpcon.cwd(subfolder)
+            self.conn.cwd(subfolder)
 
         # go back to ftp root folder
-        self.ftpcon.cwd("/")
+        self.conn.cwd("/")
 
         # random file name
         if atomic:
@@ -174,27 +274,39 @@ class RemoteFileSystem(luigi.target.FileSystem):
         else:
             tmp_path = normpath
 
-        self.ftpcon.storbinary('STOR %s' % tmp_path, open(local_path, 'rb'))
+        self.conn.storbinary('STOR %s' % tmp_path, open(local_path, 'rb'))
 
         if atomic:
-            self.ftpcon.rename(tmp_path, normpath)
-
-        self.ftpcon.quit()
+            self.conn.rename(tmp_path, normpath)
 
     def get(self, path, local_path):
-        # Create folder if it does not exist
+        """
+        Download file from (s)FTP to local filesystem.
+        """
         normpath = os.path.normpath(local_path)
         folder = os.path.dirname(normpath)
         if folder and not os.path.exists(folder):
             os.makedirs(folder)
 
         tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+
         # download file
         self._connect()
-        self.ftpcon.retrbinary('RETR %s' % path, open(tmp_local_path, 'wb').write)
-        self.ftpcon.quit()
+
+        if self.sftp:
+            self._sftp_get(path, tmp_local_path)
+        else:
+            self._ftp_get(path, tmp_local_path)
+
+        self._close()
 
         os.rename(tmp_local_path, local_path)
+
+    def _sftp_get(self, path, tmp_local_path):
+        self.conn.get(path, tmp_local_path)
+
+    def _ftp_get(self, path, tmp_local_path):
+        self.conn.retrbinary('RETR %s' % path, open(tmp_local_path, 'wb').write)
 
 
 class AtomicFtpFile(luigi.target.AtomicLocalFile):
@@ -231,7 +343,8 @@ class RemoteTarget(luigi.target.FileSystemTarget):
 
     def __init__(
         self, path, host, format=None, username=None,
-        password=None, port=21, mtime=None, tls=False, timeout=60
+        password=None, port=21, mtime=None, tls=False,
+        timeout=60, sftp=False
     ):
         if format is None:
             format = luigi.format.get_default_format()
@@ -241,7 +354,8 @@ class RemoteTarget(luigi.target.FileSystemTarget):
         self.format = format
         self.tls = tls
         self.timeout = timeout
-        self._fs = RemoteFileSystem(host, username, password, port, tls, timeout)
+        self.sftp = sftp
+        self._fs = RemoteFileSystem(host, username, password, port, tls, timeout, sftp)
 
     @property
     def fs(self):
