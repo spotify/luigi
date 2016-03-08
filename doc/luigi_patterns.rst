@@ -58,7 +58,7 @@ jobs would catch up nicely after fixing intermittent problems.
 Luigi actually comes with a reusable tool for achieving this, called
 :class:`~luigi.tools.range.RangeDailyBase` (resp. :class:`~luigi.tools.range.RangeHourlyBase`). Simply putting
 
-.. code:: console
+.. code-block:: console
 
 	luigi --module all_reports RangeDailyBase --of AllReports --start 2015-01-01
 
@@ -77,7 +77,7 @@ hundreds of task classes scheduled concurrently with contiguousness
 requirements spanning years (which would incur redundant completeness
 checks and scheduler overload using the naive looping approach.) Usage:
 
-.. code:: console
+.. code-block:: console
 
 	luigi --module all_reports RangeDaily --of AllReports --start 2015-01-01
 
@@ -95,7 +95,7 @@ of dates for that or another reason. Most conveniently it is achieved
 with the above described range tools, just with both start (inclusive)
 and stop (exclusive) parameters specified:
 
-.. code:: console
+.. code-block:: console
 
 	luigi --module all_reports RangeDaily --of AllReportsV2 --start 2014-10-31 --stop 2014-12-25
 
@@ -107,7 +107,7 @@ tasks do not recognize or propagate parameters passed to them. The easiest
 solution is to set the parameter at the task family level as described
 :ref:`here <Parameter-class-level-parameters>`.
 
-.. code:: console
+.. code-block:: console
 
 	luigi RangeDaily --of MyTask --start 2014-10-31 --MyTask-my-param 123
 
@@ -123,4 +123,3 @@ reliable scheduling for you, but also emit events which you can use to
 set up delay monitoring. That way you can implement alerts for when
 jobs are stuck for prolonged periods lacking input data or otherwise
 requiring attention.
-

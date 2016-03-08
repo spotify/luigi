@@ -21,10 +21,10 @@ This needs some more documentation.
 See :doc:`/configuration` for configuration options.
 In particular using the config `error-email` should set up Luigi so that it will send emails when tasks fail.
 
-::
+.. code-block:: ini
 
     [core]
-    error-email: foo@bar.baz
+    error-email=foo@bar.baz
 
 TODO: Eventually, all email configuration should move into the [email] section.
 '''
@@ -50,7 +50,7 @@ class TestNotificationsTask(luigi.task.Task):
     You may invoke this task to quickly check if you correctly have setup your
     notifications Configuration.  You can run:
 
-    .. code:: console
+    .. code-block:: console
 
             $ luigi TestNotifications --local-scheduler
 

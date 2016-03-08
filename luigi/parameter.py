@@ -640,7 +640,7 @@ class TaskParameter(Parameter):
     ``MyMetaTask(my_task_param=my_tasks.MyTask)``. On the command line,
     you specify the :py:attr:`luigi.task.Task.task_family`. Like
 
-    .. code:: console
+    .. code-block:: console
 
             $ luigi --module my_tasks MyMetaTask --my_task_param my_namespace.MyTask
 
