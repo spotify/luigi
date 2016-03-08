@@ -90,7 +90,7 @@ If it has, it will run the full dependency graph.
 
 In your cronline you would then have something like
 
-.. code::
+.. code:: console
 
     30 0 * * * my-user luigi RunAll --module my_tasks
 

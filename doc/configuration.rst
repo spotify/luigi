@@ -13,15 +13,16 @@ in increasing order of preference. The order only matters in case of key conflic
 
 The config file is broken into sections, each controlling a different part of the config. Example configuration file:
 
-::
+
+.. code:: ini
 
     [hadoop]
-    version: cdh4
-    streaming-jar: /usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
+    version=cdh4
+    streaming-jar=/usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
 
     [core]
-    default-scheduler-host: luigi-host.mycompany.foo
-    error-email: foo@bar.baz
+    default-scheduler-host=luigi-host.mycompany.foo
+    error-email=foo@bar.baz
 
 
 .. _ParamConfigIngestion:
@@ -41,10 +42,10 @@ have a Task definition:
 Then you can override the default value for ``DailyReport().date`` by providing
 it in the configuration:
 
-::
+.. code:: ini
 
     [DailyReport]
-    date: 2012-01-01
+    date=2012-01-01
 
 .. _ConfigClasses:
 
@@ -54,11 +55,11 @@ Configuration classes
 Using the :ref:`ParamConfigIngestion` method. We derive the
 conventional way to do global configuration. Imagine this configuration.
 
-::
+.. code:: ini
 
     [mysection]
-    option: hello
-    intoption: 123
+    option=hello
+    intoption=123
 
 
 We can create a :py:class:`~luigi.Config` class:
@@ -380,7 +381,7 @@ namenode_port
 snakebite_autoconfig
   If true, attempts to automatically detect the host and port of the
   namenode for snakebite queries. Defaults to false.
-  
+
 tmp_dir
   Path to where luigi will put temporary files on hdfs
 
@@ -453,11 +454,11 @@ exceeding the counts in this section. Unspecified resources are assumed
 to have limit 1. Example resources section for a configuration with 2
 hive resources and 1 mysql resource:
 
-::
+.. code:: ini
 
   [resources]
-  hive: 2
-  mysql: 1
+  hive=2
+  mysql=1
 
 Note that it was not necessary to specify the 1 for mysql here, but it
 is good practice to do so when you have a fixed set of resources.
@@ -473,15 +474,15 @@ codes that could apply, for example a failing task and missing data, the
 
 We recommend that you copy this set of exit codes to your ``luigi.cfg`` file:
 
-::
+.. code:: ini
 
   [retcode]
   # The following return codes are the recommended exit codes for luigi
   # They are in increasing level of severity (for most applications)
-  already_running: 10
-  missing_data: 20
-  task_failed: 30
-  unhandled_exception: 40
+  already_running=10
+  missing_data=20
+  task_failed=30
+  unhandled_exception=40
 
 unhandled_exception
   For exceptions during scheduling (if you raise from the ``complete()`` or

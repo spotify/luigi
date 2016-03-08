@@ -20,12 +20,12 @@ that will be installed with the pip package.
 
 Should be run like this
 
-.. code:: console
+.. code-block:: console
 
-        luigi --module my_module MyTask --x 123 --y 456 --local-scheduler
+        $ luigi --module my_module MyTask --x 123 --y 456 --local-scheduler
 
 Or alternatively like this:
 
-.. code:: console
+.. code-block:: console
 
-        python -m luigi --module my_module MyTask --x 100 --local-scheduler
+        $ python -m luigi --module my_module MyTask --x 100 --local-scheduler
