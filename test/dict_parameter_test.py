@@ -39,6 +39,12 @@ class DictParameterTest(unittest.TestCase):
         d = luigi.DictParameter().serialize(DictParameterTest._dict)
         self.assertEqual(d, '{"username": "me", "password": "secret"}')
 
+    def test_parse_and_serialize(self):
+        inputs = ['{"username": "me", "password": "secret"}', '{"password": "secret", "username": "me"}']
+        for json_input in inputs:
+            _dict = luigi.DictParameter().parse(json_input)
+            self.assertEqual(json_input, luigi.DictParameter().serialize(_dict))
+
     def test_parse_interface(self):
         in_parse(["DictParameterTask", "--param", '{"username": "me", "password": "secret"}'],
                  lambda task: self.assertEqual(task.param, DictParameterTest._dict))
