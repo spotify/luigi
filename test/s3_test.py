@@ -445,7 +445,7 @@ class TestS3Client(unittest.TestCase):
 
         # Copy the file from old location to new
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        s3_client.copy_multipart(original, copy, part_size=part_size)
+        s3_client.copy(original, copy, part_size=part_size, threads=4)
 
         # We can't use etags to compare between multipart and normal keys,
         # so we fall back to using the size instead
@@ -464,11 +464,13 @@ class TestS3Client(unittest.TestCase):
 
         # Copy the file from old location to new
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        s3_client.copy(original, copy)
+        s3_client.copy(original, copy, threads=4)
 
-        original_md5 = s3_client.get_key(original).etag
-        copy_md5 = s3_client.get_key(copy).etag
-        self.assertEqual(original_md5, copy_md5)
+        # We can't use etags to compare between multipart and normal keys,
+        # so we fall back to using the file size
+        original_size = s3_client.get_key(original).size
+        copy_size = s3_client.get_key(copy).size
+        self.assertEqual(original_size, copy_size)
 
     def _run_multipart_test(self, part_size, file_size, **kwargs):
         file_contents = b"a" * file_size
