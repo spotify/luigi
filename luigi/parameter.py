@@ -750,16 +750,24 @@ class DictParameter(Parameter):
     .. code-block:: python
 
         class MyTask(luigi.Task):
-          dict_param = luigi.DictParameter()
+          tags = luigi.DictParameter()
 
             def run(self):
-                value = self.dict_param[key]
+                logging.info("Find server with role: %s", self.tags['role'])
+                server = aws.ec2.find_my_resource(self.tags)
 
-    At the command line, use,
+
+    At the command line, use
 
     .. code-block:: console
 
-        $ luigi --module my_tasks MyTask --dict-param <JSON string>
+        $ luigi --module my_tasks MyTask --tags <JSON string>
+
+    Simple example with two tags:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --tags '{"role": "web", "env": "staging"}'
 
     It can be used to define dynamic parameters, when you do not know the exact list of your parameters (e.g. list of
     tags, that are dynamically constructed outside Luigi), or you have a complex parameter containing logically related
