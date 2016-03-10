@@ -25,8 +25,7 @@ import datetime
 import warnings
 import json
 from json import JSONEncoder
-from collections import OrderedDict
-import collections
+from collections import OrderedDict, Mapping
 import operator
 import functools
 
@@ -708,7 +707,7 @@ class EnumParameter(Parameter):
         return e.name
 
 
-class FrozenOrderedDict(collections.Mapping):
+class FrozenOrderedDict(Mapping):
     """
     It is an immutable wrapper around ordered dictionaries that implements the complete :py:class:`collections.Mapping`
     interface. It can be used as a drop-in replacement for dictionaries where immutability and ordering are desired.
