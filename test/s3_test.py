@@ -430,6 +430,41 @@ class TestS3Client(unittest.TestCase):
         """
         self._run_multipart_copy_test(self.test_put_multipart_empty_file)
 
+    def test_copy_dir(self):
+        """
+        Test copying 20 files from one folder to another
+        """
+
+        n = 20
+        copy_part_size = (1024 ** 2) * 5
+
+        # Note we can't test the multipart copy due to moto issue #526
+        # so here I have to keep the file size smaller than the copy_part_size
+        file_size = 5000
+
+        s3_dir = 's3://mybucket/copydir/'
+        file_contents = b"a" * file_size
+        tmp_file = tempfile.NamedTemporaryFile(mode='wb', delete=True)
+        tmp_file_path = tmp_file.name
+        tmp_file.write(file_contents)
+        tmp_file.flush()
+
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+
+        for i in range(n):
+            file_path = s3_dir + str(i)
+            s3_client.put_multipart(tmp_file_path, file_path)
+            self.assertTrue(s3_client.exists(file_path))
+
+        s3_dest = 's3://mybucket/copydir_new/'
+        s3_client.copy(s3_dir, s3_dest, threads=10, part_size=copy_part_size)
+
+        for i in range(n):
+            original_size = s3_client.get_key(s3_dir + str(i)).size
+            copy_size = s3_client.get_key(s3_dest + str(i)).size
+            self.assertEqual(original_size, copy_size)
+
     def _run_multipart_copy_test(self, put_method):
         # Run the method to put the file into s3 into the first place
         put_method()
