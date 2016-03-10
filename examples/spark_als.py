@@ -40,9 +40,9 @@ class UserItemMatrix(luigi.Task):
         * `rating`: the day when the data was created.
 
         """
-        w = open(self.output(), 'w')
+        w = self.output().open('w')
         for user in range(self.data_size):
-            track = int(random * self.data_size)
+            track = int(random.random() * self.data_size)
             w.write('%d\%d\%f' % (user, track, 1.0))
         w.close()
 
@@ -104,7 +104,7 @@ class SparkALS(SparkSubmitTask):
         :rtype: object (:py:class:`~luigi.target.Target`)
         """
         # The corresponding Spark job outputs as GZip format.
-        return luigi.contrib.hdfs.HdfsTarget('%s/als-output/*' % self.item_type, format=luigi.format.Gzip)
+        return luigi.contrib.hdfs.HdfsTarget('als-output/', format=luigi.format.Gzip)
 
 
 '''
