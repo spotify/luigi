@@ -40,7 +40,7 @@ class UserItemMatrix(luigi.Task):
         * `rating`: the day when the data was created.
 
         """
-        w = open(self.output(), 'w')
+        w = self.output().open('w')
         for user in range(self.data_size):
             track = int(random * self.data_size)
             w.write('%d\%d\%f' % (user, track, 1.0))
