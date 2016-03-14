@@ -26,7 +26,6 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-import datetime
 import functools
 import itertools
 import logging
@@ -106,15 +105,6 @@ class scheduler(Config):
     prune_on_get_work = parameter.BoolParameter(default=False)
 
 
-def fix_time(x):
-    # Backwards compatibility for a fix in Dec 2014. Prior to the fix, pickled state might store datetime objects
-    # Let's remove this function soon
-    if isinstance(x, datetime.datetime):
-        return time.mktime(x.timetuple())
-    else:
-        return x
-
-
 class Failures(object):
     """
     This class tracks the number of failures in a given time window.
@@ -150,7 +140,7 @@ class Failures(object):
         """
         min_time = time.time() - self.window
 
-        while self.failures and fix_time(self.failures[0]) < min_time:
+        while self.failures and self.failures[0] < min_time:
             self.failures.popleft()
 
         return len(self.failures)
@@ -335,30 +325,6 @@ class SimpleTaskState(object):
             self._status_tasks = collections.defaultdict(dict)
             for task in six.itervalues(self._tasks):
                 self._status_tasks[task.status][task.id] = task
-
-            # Convert from old format
-            # TODO: this is really ugly, we need something more future-proof
-            # Every time we add an attribute to the Worker or Task class, this
-            # code needs to be updated
-
-            # Compatibility since 2014-06-02
-            for k, v in six.iteritems(self._active_workers):
-                if isinstance(v, float):
-                    self._active_workers[k] = Worker(worker_id=k, last_active=v)
-
-            # Compatibility since 2015-05-28
-            if any(not hasattr(w, 'tasks') for k, w in six.iteritems(self._active_workers)):
-                # If you load from an old format where Workers don't contain tasks.
-                for k, worker in six.iteritems(self._active_workers):
-                    worker.tasks = set()
-                for task in six.itervalues(self._tasks):
-                    for worker_id in task.workers:
-                        self._active_workers[worker_id].tasks.add(task)
-
-            # Compatibility since 2015-04-28
-            if any(not hasattr(t, 'disable_hard_timeout') for t in six.itervalues(self._tasks)):
-                for t in six.itervalues(self._tasks):
-                    t.disable_hard_timeout = None
         else:
             logger.info("No prior state file exists at %s. Starting with clean slate", self._state_path)
 
@@ -461,7 +427,7 @@ class SimpleTaskState(object):
 
         # Re-enable task after the disable time expires
         if task.status == DISABLED and task.scheduler_disable_time is not None:
-            if time.time() - fix_time(task.scheduler_disable_time) > config.disable_persist:
+            if time.time() - task.scheduler_disable_time > config.disable_persist:
                 self.re_enable(task, config)
 
         # Remove tasks that have no stakeholders
