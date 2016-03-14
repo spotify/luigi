@@ -1093,7 +1093,7 @@ class CentralPlannerScheduler(Scheduler):
         ''' get total resources and available ones '''
         used_resources = self._used_resources()
         ret = collections.defaultdict(dict)
-        for resource, total in self._resources.iteritems():
+        for resource, total in six.iteritems(self._resources):
             ret[resource]['total'] = total
             if resource in used_resources:
                 ret[resource]['used'] = used_resources[resource]
