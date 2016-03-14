@@ -79,8 +79,8 @@ TASK_FAMILY_RE = re.compile(r'([^(_]+)[(_]')
 
 
 class scheduler(Config):
-    # TODO(erikbern): the config_path is needed for backwards compatilibity. We should drop the compatibility
-    # at some point (in particular this would force users to replace all dashes with underscores in the config)
+    # TODO(erikbern): the config_path is needed for backwards compatilibity. We
+    # should drop the compatibility at some point
     retry_delay = parameter.FloatParameter(default=900.0)
     remove_delay = parameter.FloatParameter(default=600.0)
     worker_disconnect_delay = parameter.FloatParameter(default=60.0)
