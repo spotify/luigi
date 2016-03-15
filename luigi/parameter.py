@@ -272,6 +272,15 @@ class Parameter(object):
     def _parser_action():
         return "store"
 
+    def _parser_add_arguments(self, parser, flag_name, dest, help):
+        """
+        Updates the given parser with an argument to set this Parameter.        
+        """
+        parser.add_argument(flag_name,
+                            dest=dest,
+                            action=self._parser_action(),
+                            help=help)
+
 
 _UNIX_EPOCH = datetime.datetime.utcfromtimestamp(0)
 
