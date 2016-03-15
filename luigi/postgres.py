@@ -362,7 +362,7 @@ class PostgresQuery(rdbms.Query):
     def run(self):
         connection = self.output().connect()
         cursor = connection.cursor()
-        sql = self.query()
+        sql = self.query
 
         logger.info('Executing query from task: {name}'.format(name=self.__class__))
         cursor.execute(sql)

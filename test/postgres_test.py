@@ -95,10 +95,7 @@ class DummyPostgresQuery(luigi.postgres.PostgresQuery):
         ('some_text', 'text'),
         ('some_int', 'int'),
     )
-
-    def query(self):
-        sql = 'SELECT * FROM foo'
-        return sql
+    query = 'SELECT * FROM foo'
 
 
 @attr('postgres')
