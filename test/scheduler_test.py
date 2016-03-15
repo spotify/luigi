@@ -97,11 +97,10 @@ class SchedulerTest(unittest.TestCase):
                 cps._state._state_path = fn.name
                 cps.load()
                 return cps
-            del cps._state.get_worker('B').tasks  # If you upgrade from old server
-            cps = reload_from_disk(cps=cps)  # tihii, cps == continuation passing style ;)
+            cps = reload_from_disk(cps=cps)
             self.assertEqual(cps.get_work(worker='B')['task_id'], '2')
             self.assertEqual(cps.get_work(worker='C')['task_id'], '3')
-            cps = reload_from_disk(cps=cps)  # This time without deleting
+            cps = reload_from_disk(cps=cps)
             self.assertEqual(cps.get_work(worker='D')['task_id'], '4')
 
     def test_worker_prune_after_init(self):
