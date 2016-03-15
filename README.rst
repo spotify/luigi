@@ -140,6 +140,7 @@ or held presentations about Luigi:
 * `Schibsted <http://www.schibsted.com/>`_
 * `17zuoye <https://speakerdeck.com/mvj3/luiti-an-offline-task-management-framework>`_
 * `enbrite.ly <http://enbrite.ly/>`_
+* `Dow Jones / The Wall Street Journal <http://wsj.com>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
