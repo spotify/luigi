@@ -188,7 +188,7 @@ class Parameter(object):
         if cp_parser:
             dest = self._parser_global_dest(param_name, task_name)
             found = getattr(cp_parser.known_args, dest, None)
-            yield (self._parse_or_no_value(found), None)
+            yield (self.parse(found) if found is not None else _no_value, None)
         yield (self._get_value_from_config(task_name, param_name), None)
         yield (self._get_value_from_config(task_name, param_name.replace('_', '-')),
                'Configuration [{}] {} (with dashes) should be avoided. Please use underscores.'.format(
@@ -258,27 +258,17 @@ class Parameter(object):
         """
         return None
 
-    def _parse_or_no_value(self, x):
-        if not x:
-            return _no_value
-        else:
-            return self.parse(x)
-
     @staticmethod
     def _parser_global_dest(param_name, task_name):
         return task_name + '_' + param_name
 
-    @staticmethod
-    def _parser_action():
-        return "store"
-
     def _parser_add_arguments(self, parser, flag_name, dest, help):
         """
-        Updates the given parser with an argument to set this Parameter.        
+        Updates the given parser with an argument to set this Parameter.
         """
-        parser.add_argument(flag_name,
+        parser.add_argument('--{}'.format(flag_name),
                             dest=dest,
-                            action=self._parser_action(),
+                            action='store',
                             help=help)
 
 
@@ -525,10 +515,14 @@ class BoolParameter(Parameter):
     """
     A Parameter whose value is a ``bool``. This parameter have an implicit
     default value of ``False``.
+
+    :param bool omit_inverted_argument: specify ``True`` if the parameter should not have
+                                        the inverted argument --no-NAME created. Default: ``False``.
     """
 
-    def __init__(self, *args, **kwargs):
-        super(BoolParameter, self).__init__(*args, **kwargs)
+    def __init__(self, omit_inverted_argument=False, **kwargs):
+        super(BoolParameter, self).__init__(**kwargs)
+        self._omit_inverted_argument = omit_inverted_argument
         if self._default == _no_value:
             self._default = False
 
@@ -542,9 +536,18 @@ class BoolParameter(Parameter):
         # coerce anything truthy to True
         return bool(value) if value is not None else None
 
-    @staticmethod
-    def _parser_action():
-        return 'store_true'
+    def _parser_add_arguments(self, parser, flag_name, dest, help):
+        parser.add_argument('--{}'.format(flag_name),
+                            dest=dest,
+                            action='store_true',
+                            default=None,
+                            help=help)
+        if not self._omit_inverted_argument:
+            parser.add_argument('--no-{}'.format(flag_name),
+                                dest=dest,
+                                action='store_false',
+                                default=None,
+                                help=help)
 
 
 class BooleanParameter(BoolParameter):

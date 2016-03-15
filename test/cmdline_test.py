@@ -32,10 +32,10 @@ from luigi.mock import MockTarget
 
 
 class SomeTask(luigi.Task):
-    n = luigi.IntParameter()
+    z = luigi.IntParameter()
 
     def output(self):
-        return MockTarget('/tmp/test_%d' % self.n)
+        return MockTarget('/tmp/test_%d' % self.z)
 
     def run(self):
         f = self.output().open('w')
@@ -96,17 +96,17 @@ class CmdlineTest(unittest.TestCase):
 
     @mock.patch("logging.getLogger")
     def test_cmdline_main_task_cls(self, logger):
-        luigi.run(['--local-scheduler', '--no-lock', '--n', '100'], main_task_cls=SomeTask)
+        luigi.run(['--local-scheduler', '--no-lock', '--z', '100'], main_task_cls=SomeTask)
         self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_100': b'done'})
 
     @mock.patch("logging.getLogger")
     def test_cmdline_local_scheduler(self, logger):
-        luigi.run(['SomeTask', '--no-lock', '--n', '101'], local_scheduler=True)
+        luigi.run(['SomeTask', '--no-lock', '--z', '101'], local_scheduler=True)
         self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_101': b'done'})
 
     @mock.patch("logging.getLogger")
     def test_cmdline_other_task(self, logger):
-        luigi.run(['--local-scheduler', '--no-lock', 'SomeTask', '--n', '1000'])
+        luigi.run(['--local-scheduler', '--no-lock', 'SomeTask', '--z', '1000'])
         self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_1000': b'done'})
 
     @mock.patch("logging.getLogger")
@@ -133,7 +133,7 @@ class CmdlineTest(unittest.TestCase):
     def test_cmdline_logger(self, setup_mock, warn):
         with mock.patch("luigi.interface.core") as env_params:
             env_params.return_value.logging_conf_file = None
-            luigi.run(['SomeTask', '--n', '7', '--local-scheduler', '--no-lock'])
+            luigi.run(['SomeTask', '--z', '7', '--local-scheduler', '--no-lock'])
             self.assertEqual([mock.call(None)], setup_mock.call_args_list)
 
         with mock.patch("luigi.configuration.get_config") as getconf:
@@ -141,7 +141,7 @@ class CmdlineTest(unittest.TestCase):
             getconf.return_value.getint.return_value = 0
 
             luigi.interface.setup_interface_logging.call_args_list = []
-            luigi.run(['SomeTask', '--n', '42', '--local-scheduler', '--no-lock'])
+            luigi.run(['SomeTask', '--z', '42', '--local-scheduler', '--no-lock'])
             self.assertEqual([], setup_mock.call_args_list)
 
     @mock.patch('argparse.ArgumentParser.print_usage')

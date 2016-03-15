@@ -871,3 +871,28 @@ class TaskAsParameterName1335Test(LuigiTestCase):
             task = luigi.IntParameter()
 
         self.assertTrue(self.run_locally_split('MyTask --task 5'))
+
+
+class BoolParameterTest(LuigiTestCase):
+    def test_inverted_bool_parameter_argument(self):
+        """
+        Ensure that BoolParameter's value can be set to both True and False via option.
+        """
+
+        class MyTask(luigi.Task):
+            b1 = luigi.BoolParameter()
+            b2 = luigi.BoolParameter(default=True)
+            b3 = luigi.BoolParameter(default=False)
+
+            def complete(self):
+                return False
+
+            def run(self):
+                assert self.b1
+                assert not self.b2
+                assert self.b3
+
+        # Test that local and global parameters take effect as expcected. They must be
+        # tested separately because different code paths are involved.
+        self.assertTrue(self.run_locally_split('MyTask --b1 --no-b2 --b3'))
+        self.assertTrue(self.run_locally_split('MyTask --MyTask-b1 --no-MyTask-b2 --MyTask-b3'))

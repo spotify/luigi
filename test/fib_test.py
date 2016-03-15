@@ -25,21 +25,21 @@ from luigi.mock import MockTarget
 
 
 class Fib(luigi.Task):
-    n = luigi.IntParameter(default=100)
+    N = luigi.IntParameter(default=100)
 
     def requires(self):
-        if self.n >= 2:
-            return [Fib(self.n - 1), Fib(self.n - 2)]
+        if self.N >= 2:
+            return [Fib(self.N - 1), Fib(self.N - 2)]
         else:
             return []
 
     def output(self):
-        return MockTarget('/tmp/fib_%d' % self.n)
+        return MockTarget('/tmp/fib_%d' % self.N)
 
     def run(self):
-        if self.n == 0:
+        if self.N == 0:
             s = 0
-        elif self.n == 1:
+        elif self.N == 1:
             s = 1
         else:
             s = 0
@@ -66,7 +66,7 @@ class FibTest(FibTestBase):
         self.assertEqual(MockTarget.fs.get_data('/tmp/fib_100'), b'354224848179261915075\n')
 
     def test_cmdline(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'Fib', '--n', '100'])
+        luigi.run(['--local-scheduler', '--no-lock', 'Fib', '--N', '100'])
 
         self.assertEqual(MockTarget.fs.get_data('/tmp/fib_10'), b'55\n')
         self.assertEqual(MockTarget.fs.get_data('/tmp/fib_100'), b'354224848179261915075\n')

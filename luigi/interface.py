@@ -95,7 +95,8 @@ class core(task.Config):
         description="Maximum number of workers running the same command")
     no_lock = parameter.BoolParameter(
         default=False,
-        description='Ignore if similar process is already running')
+        description='Ignore if similar process is already running',
+        omit_inverted_argument=True)
     lock_pid_dir = parameter.Parameter(
         default=os.path.join(tempfile.gettempdir(), 'luigi'),
         description='Directory to store the pid file')
@@ -121,11 +122,13 @@ class core(task.Config):
     help = parameter.BoolParameter(
         default=False,
         description='Show most common flags and all task-specific flags',
-        always_in_help=True)
+        always_in_help=True,
+        omit_inverted_argument=True)
     help_all = parameter.BoolParameter(
         default=False,
         description='Show all command line flags',
-        always_in_help=True)
+        always_in_help=True,
+        omit_inverted_argument=True)
 
 
 class _WorkerSchedulerFactory(object):
