@@ -64,7 +64,7 @@ def parse_results(fields, data):
     for record in data['records']:  # for each 'record' in response
         row = [None] * len(fields)  # create null list the length of number of columns
         for obj, value in record.iteritems():  # for each obj in record
-            if isinstance(value, basestring):  # if query base object has desired fields
+            if not isinstance(value, (dict, list, tuple)):  # if not data structure
                 if obj in fields:
                     row[fields.index(obj)] = ensure_utf(value)
 
@@ -258,7 +258,7 @@ class SalesforceAPI(object):
         if response.status_code != requests.codes.ok:
             raise Exception(response.content)
 
-        return response.json(object_pairs_hook=OrderedDict)
+        return response.json()
 
     def query_more(self, next_records_identifier, identifier_is_url=False, **kwargs):
         """
@@ -286,7 +286,7 @@ class SalesforceAPI(object):
 
         response.raise_for_status()
 
-        return response.json(object_pairs_hook=OrderedDict)
+        return response.json()
 
     def query_all(self, query, **kwargs):
         """
