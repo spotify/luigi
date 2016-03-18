@@ -127,10 +127,14 @@ class RemoteFileSystem(luigi.target.FileSystem):
         return exists
 
     def _ftp_exists(self, path, mtime):
+        path_parts = path.split('/')
+        path = '/'.join(path_parts[:-1])
+        fn = path_parts[-1]
+
         files = self.conn.nlst(path)
 
         exists = False
-        if files:
+        if fn in files:
             if mtime:
                 mdtm = self.conn.sendcmd('MDTM ' + path)
                 modified = datetime.datetime.strptime(mdtm[4:], "%Y%m%d%H%M%S")
