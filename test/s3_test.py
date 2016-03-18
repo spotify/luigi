@@ -26,6 +26,8 @@ from helpers import with_config, unittest
 from boto.exception import S3ResponseError
 from boto.s3 import key
 from moto import mock_s3
+from moto import mock_sts
+
 from luigi import configuration
 from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
 from luigi.target import MissingParentDirectory
@@ -127,7 +129,10 @@ class TestS3Client(unittest.TestCase):
 
         self.mock_s3 = mock_s3()
         self.mock_s3.start()
+        self.mock_sts = mock_sts()
+        self.mock_sts.start()
         self.addCleanup(self.mock_s3.stop)
+        self.addCleanup(self.mock_sts.stop)
 
     def test_init_with_environment_variables(self):
         os.environ['AWS_ACCESS_KEY_ID'] = 'foo'
@@ -147,6 +152,12 @@ class TestS3Client(unittest.TestCase):
         s3_client = S3Client()
         self.assertEqual(s3_client.s3.access_key, 'foo')
         self.assertEqual(s3_client.s3.secret_key, 'bar')
+
+    @with_config({'s3': {'aws_role_arn': 'role', 'aws_role_session_name': 'name'}})
+    def test_init_with_config_and_roles(self):
+        s3_client = S3Client()
+        self.assertEqual(s3_client.s3.access_key, 'AKIAIOSFODNN7EXAMPLE')
+        self.assertEqual(s3_client.s3.secret_key, 'aJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY')
 
     def test_put(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
