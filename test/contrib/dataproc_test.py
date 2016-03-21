@@ -38,22 +38,6 @@ class _DataprocBaseTestCase(unittest.TestCase):
         pass
 
 
-class MySparkDataprocTask(dataproc.DataprocTask):
-    def run(self):
-        self.submit_spark_job(main_class="my.MainClass",
-                              jars=["one.jar", "two.jar"],
-                              job_args=["foo", "bar"])
-        self.wait_for_job()
-
-
-class MyPysparkDataprocTask(dataproc.DataprocTask):
-    def run(self):
-        self.submit_pyspark_job(job_file="main_job.py",
-                                extra_files=["extra1.py", "extra2.py"],
-                                job_args=["foo", "bar"])
-        self.wait_for_job()
-
-
 @attr('gcloud')
 class DataprocTaskTest(_DataprocBaseTestCase):
 
@@ -75,35 +59,59 @@ class DataprocTaskTest(_DataprocBaseTestCase):
         self.assertTrue(success)
         self.assertLess(time.time() - job_start, 3)
 
-    def test_3_submit_spark_job(self):
-        # The job itself will fail because the python files don't exist
+    def test_3_submit_minimal_job(self):
+        # The job itself will fail because the job files don't exist
         # We don't care, because then we would be testing spark
         # We care the job was submitted correctly, so that's what we test
 
         luigi.run(['--local-scheduler',
                    '--no-lock',
-                   'MySparkDataprocTask',
+                   'DataprocSparkTask',
                    '--gcloud-project-id=' + PROJECT_ID,
-                   '--dataproc-cluster-name=' + CLUSTER_NAME])
+                   '--dataproc-cluster-name=' + CLUSTER_NAME,
+                   '--main-class=my.MinimalMainClass'])
 
         response = dataproc.get_dataproc_client().projects().regions().jobs() \
             .list(projectId=PROJECT_ID, region=REGION, clusterName=CLUSTER_NAME).execute()
-        lastJob = response['jobs'][0]
+        lastJob = response['jobs'][0]['sparkJob']
 
-        self.assertEquals(lastJob['sparkJob']['mainClass'], "my.MainClass")
-        self.assertEquals(lastJob['sparkJob']['jarFileUris'], ["one.jar", "two.jar"])
-        self.assertEquals(lastJob['sparkJob']['args'], ["foo", "bar"])
+        self.assertEquals(lastJob['mainClass'], "my.MinimalMainClass")
 
-    def test_4_submit_pyspark_job(self):
-        # The job itself will fail because the python files don't exist
+    def test_4_submit_spark_job(self):
+        # The job itself will fail because the job files don't exist
+        # We don't care, because then we would be testing spark
+        # We care the job was submitted correctly, so that's what we test
+
+        luigi.run(['--local-scheduler',
+                   '--no-lock',
+                   'DataprocSparkTask',
+                   '--gcloud-project-id=' + PROJECT_ID,
+                   '--dataproc-cluster-name=' + CLUSTER_NAME,
+                   '--main-class=my.MainClass',
+                   '--jars=one.jar,two.jar',
+                   '--job-args=foo,bar'])
+
+        response = dataproc.get_dataproc_client().projects().regions().jobs() \
+            .list(projectId=PROJECT_ID, region=REGION, clusterName=CLUSTER_NAME).execute()
+        lastJob = response['jobs'][0]['sparkJob']
+
+        self.assertEquals(lastJob['mainClass'], "my.MainClass")
+        self.assertEquals(lastJob['jarFileUris'], ["one.jar", "two.jar"])
+        self.assertEquals(lastJob['args'], ["foo", "bar"])
+
+    def test_5_submit_pyspark_job(self):
+        # The job itself will fail because the job files don't exist
         # We don't care, because then we would be testing pyspark
         # We care the job was submitted correctly, so that's what we test
 
         luigi.run(['--local-scheduler',
                    '--no-lock',
-                   'MyPysparkDataprocTask',
+                   'DataprocPysparkTask',
                    '--gcloud-project-id=' + PROJECT_ID,
-                   '--dataproc-cluster-name=' + CLUSTER_NAME])
+                   '--dataproc-cluster-name=' + CLUSTER_NAME,
+                   '--job-file=main_job.py',
+                   '--extra-files=extra1.py,extra2.py',
+                   '--job-args=foo,bar'])
 
         response = dataproc.get_dataproc_client().projects().regions().jobs()\
             .list(projectId=PROJECT_ID, region=REGION, clusterName=CLUSTER_NAME).execute()
@@ -113,7 +121,7 @@ class DataprocTaskTest(_DataprocBaseTestCase):
         self.assertEquals(lastJob['pythonFileUris'], ["extra1.py", "extra2.py"])
         self.assertEquals(lastJob['args'], ["foo", "bar"])
 
-    def test_5_delete_cluster(self):
+    def test_6_delete_cluster(self):
         success = luigi.run(['--local-scheduler',
                              '--no-lock',
                              'DeleteDataprocClusterTask',
@@ -121,7 +129,7 @@ class DataprocTaskTest(_DataprocBaseTestCase):
                              '--dataproc-cluster-name=' + CLUSTER_NAME])
         self.assertTrue(success)
 
-    def test_6_delete_cluster_should_return_immediately_if_no_cluster(self):
+    def test_7_delete_cluster_should_return_immediately_if_no_cluster(self):
         job_start = time.time()
         success = luigi.run(['--local-scheduler',
                              '--no-lock',

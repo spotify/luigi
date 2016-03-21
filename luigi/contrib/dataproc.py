@@ -32,15 +32,18 @@ def set_dataproc_client(client):
 
 
 class _DataprocBaseTask(luigi.Task):
-    gcloud_project_id = luigi.Parameter(significant=False)
-    dataproc_cluster_name = luigi.Parameter(significant=False)
-    dataproc_region = luigi.Parameter(default="global", significant=False)
+    gcloud_project_id = luigi.Parameter(significant=False, positional=False)
+    dataproc_cluster_name = luigi.Parameter(significant=False, positional=False)
+    dataproc_region = luigi.Parameter(default="global", significant=False, positional=False)
 
     dataproc_client = get_dataproc_client()
 
 
-class DataprocTask(_DataprocBaseTask):
-    """ Base task for running jobs in Dataproc """
+class DataprocBaseTask(_DataprocBaseTask):
+    """
+    Base task for running jobs in Dataproc. It is recommended to use one of the tasks specific to your job type.
+    Extend this class if you need fine grained control over what kind of job gets submitted to your Dataproc cluster.
+    """
 
     _job = None
     _job_name = None
@@ -97,6 +100,36 @@ class DataprocTask(_DataprocBaseTask):
             if status == 'ERROR':
                 raise Exception(job_result['status']['details'])
             time.sleep(5)
+
+
+class DataprocSparkTask(DataprocBaseTask):
+    """
+    Runs a spark jobs on your Dataproc cluster
+    """
+    main_class = luigi.Parameter()
+    jars = luigi.Parameter(default="")
+    job_args = luigi.Parameter(default="")
+
+    def run(self):
+        self.submit_spark_job(main_class=self.main_class,
+                              jars=self.jars.split(",") if self.jars else [],
+                              job_args=self.job_args.split(",") if self.job_args else [])
+        self.wait_for_job()
+
+
+class DataprocPysparkTask(DataprocBaseTask):
+    """
+    Runs a pyspark jobs on your Dataproc cluster
+    """
+    job_file = luigi.Parameter()
+    extra_files = luigi.Parameter(default="")
+    job_args = luigi.Parameter(default="")
+
+    def run(self):
+        self.submit_pyspark_job(job_file="main_job.py",
+                                extra_files=self.extra_files.split(",") if self.extra_files else [],
+                                job_args=self.job_args.split(",") if self.job_args else [])
+        self.wait_for_job()
 
 
 class CreateDataprocClusterTask(_DataprocBaseTask):
@@ -179,7 +212,13 @@ class CreateDataprocClusterTask(_DataprocBaseTask):
 
 
 class DeleteDataprocClusterTask(_DataprocBaseTask):
-    """ Task for deleting a Dataproc cluster. """
+    """
+    Task for deleting a Dataproc cluster.
+    One of the uses for this class is to extend it and have it require a Dataproc task that does a calculation and have
+    that task extend the cluster creation task. This allows you to create chains where you create a cluster,
+    run your job and remove the cluster right away.
+    (Store your input and output files in gs://... instead of hdfs://... if you do this).
+    """
 
     def _get_cluster_status(self):
         try:
