@@ -534,6 +534,11 @@ class CentralPlannerScheduler(Scheduler):
 
     def prune(self):
         logger.info("Starting pruning of task graph")
+        self._prune_workers()
+        self._prune_tasks()
+        logger.info("Done pruning task graph")
+
+    def _prune_workers(self):
         remove_workers = []
         for worker in self._state.get_active_workers():
             if worker.prune(self._config):
@@ -542,6 +547,7 @@ class CentralPlannerScheduler(Scheduler):
 
         self._state.inactivate_workers(remove_workers)
 
+    def _prune_tasks(self):
         assistant_ids = set(w.id for w in self._state.get_assistants())
         remove_tasks = []
 
@@ -557,8 +563,6 @@ class CentralPlannerScheduler(Scheduler):
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)
-
-        logger.info("Done pruning task graph")
 
     def update(self, worker_id, worker_reference=None, get_work=False):
         """
