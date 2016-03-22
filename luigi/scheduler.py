@@ -482,8 +482,8 @@ class SimpleTaskState(object):
     def get_necessary_tasks(self):
         necessary_tasks = set()
         for task in self.get_active_tasks():
-            if task.status not in (DONE, DISABLED) or \
-                    getattr(task, 'scheduler_disable_time', None) is not None:
+            if task.status not in (DONE, DISABLED, UNKNOWN) or \
+                    task.scheduler_disable_time is not None:
                 necessary_tasks.update(task.deps)
                 necessary_tasks.add(task.id)
         return necessary_tasks
