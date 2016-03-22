@@ -8,6 +8,7 @@ env:
   global:
     - PIP_DOWNLOAD_CACHE=$HOME/.pip-cache
     - POSTGRES_USER=postgres
+    - DATAPROC_TEST_PROJECT_ID=luigi-travistestenvironment
     - GCS_TEST_PROJECT_ID=luigi-travistestenvironment
     - GCS_TEST_BUCKET=luigi-travistestenvironment
     - GOOGLE_APPLICATION_CREDENTIALS=test/gcloud-credentials.json
