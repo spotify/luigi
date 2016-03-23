@@ -415,13 +415,11 @@ class SimpleTaskState(object):
             self.set_status(task, FAILED, config)
             task.retry = time.time() + config.retry_delay
 
-    def prune(self, task, config):
-        remove = False
-
+    def update_status(self, task, config):
         # Mark tasks with no remaining active stakeholders for deletion
         if not task.stakeholders:
             if task.remove is None:
-                logger.info("Task %r has stakeholders %r but none remain connected -> will remove "
+                logger.info("Task %r has stakeholders %r but none remain connected -> might remove "
                             "task in %s seconds", task.id, task.stakeholders, config.remove_delay)
                 task.remove = time.time() + config.remove_delay
 
@@ -430,16 +428,12 @@ class SimpleTaskState(object):
             if time.time() - task.scheduler_disable_time > config.disable_persist:
                 self.re_enable(task, config)
 
-        # Remove tasks that have no stakeholders
-        if task.remove and time.time() > task.remove:
-            logger.info("Removing task %r (no connected stakeholders)", task.id)
-            remove = True
-
         # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
         if task.status == FAILED and config.retry_delay >= 0 and task.retry < time.time():
             self.set_status(task, PENDING, config)
 
-        return remove
+    def may_prune(self, task):
+        return task.remove and time.time() > task.remove
 
     def inactivate_tasks(self, delete_tasks):
         # The terminology is a bit confusing: we used to "delete" tasks when they became inactive,
@@ -488,8 +482,8 @@ class SimpleTaskState(object):
     def get_necessary_tasks(self):
         necessary_tasks = set()
         for task in self.get_active_tasks():
-            if task.status not in (DONE, DISABLED) or \
-                    getattr(task, 'scheduler_disable_time', None) is not None:
+            if task.status not in (DONE, DISABLED, UNKNOWN) or \
+                    task.scheduler_disable_time is not None:
                 necessary_tasks.update(task.deps)
                 necessary_tasks.add(task.id)
         return necessary_tasks
@@ -534,6 +528,11 @@ class CentralPlannerScheduler(Scheduler):
 
     def prune(self):
         logger.info("Starting pruning of task graph")
+        self._prune_workers()
+        self._prune_tasks()
+        logger.info("Done pruning task graph")
+
+    def _prune_workers(self):
         remove_workers = []
         for worker in self._state.get_active_workers():
             if worker.prune(self._config):
@@ -542,6 +541,7 @@ class CentralPlannerScheduler(Scheduler):
 
         self._state.inactivate_workers(remove_workers)
 
+    def _prune_tasks(self):
         assistant_ids = set(w.id for w in self._state.get_assistants())
         remove_tasks = []
 
@@ -552,13 +552,12 @@ class CentralPlannerScheduler(Scheduler):
 
         for task in self._state.get_active_tasks():
             self._state.fail_dead_worker_task(task, self._config, assistant_ids)
-            removed = self._state.prune(task, self._config)
-            if removed and task.id not in necessary_tasks:
+            self._state.update_status(task, self._config)
+            if self._state.may_prune(task) and task.id not in necessary_tasks:
+                logger.info("Removing task %r", task.id)
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)
-
-        logger.info("Done pruning task graph")
 
     def update(self, worker_id, worker_reference=None, get_work=False):
         """
