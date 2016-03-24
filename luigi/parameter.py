@@ -677,11 +677,12 @@ class EnumParameter(Parameter):
 
     .. code-block:: python
 
-        class Models(enum.IntEnum):
+        class Model(enum.IntEnum):
           Honda = 1
+          Volvo = 2
 
         class MyTask(luigi.Task):
-          my_param = luigi.EnumParameter(enum=Models)
+          my_param = luigi.EnumParameter(enum=Model)
 
     At the command line, use,
 
