@@ -42,6 +42,9 @@ class retcode(luigi.Config):
     already_running = IntParameter(default=0,
                                    description='For both local --lock and luigid "lock"',
                                    )
+    complete_failed = IntParameter(default=0,
+                                   description='''For when a task's complete() check fails'''
+                                   )
 
 
 def run_with_retcodes(argv):
@@ -78,5 +81,6 @@ def run_with_retcodes(argv):
         (retcodes.missing_data, has('still_pending_ext')),
         (retcodes.task_failed, has('failed')),
         (retcodes.already_running, has('run_by_other_worker')),
+        (retcodes.complete_failed, has('unknown_completeness')),
     )
     sys.exit(max(code * (1 if cond else 0) for code, cond in codes_and_conds))
