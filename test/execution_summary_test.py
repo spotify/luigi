@@ -95,6 +95,53 @@ class ExecutionSummaryTest(LuigiTestCase):
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
 
+    def test_check_complete_error(self):
+        class Bar(luigi.Task):
+            def run(self):
+                pass
+
+            def complete(self):
+                raise Exception
+                return True
+
+        class Foo(luigi.Task):
+            def requires(self):
+                yield Bar()
+
+        self.run_task(Foo())
+        d = self.summary_dict()
+        self.assertEqual({Foo()}, d['still_pending_not_ext'])
+        self.assertEqual({Foo()}, d['upstream_unverifiable_dependency'])
+        self.assertEqual({Bar()}, d['unknown_completeness'])
+        self.assertFalse(d['unknown_reason'])
+        self.assertFalse(d['already_done'])
+        self.assertFalse(d['completed'])
+        self.assertFalse(d['failed'])
+        self.assertFalse(d['upstream_failure'])
+        self.assertFalse(d['upstream_missing_dependency'])
+        self.assertFalse(d['run_by_other_worker'])
+        self.assertFalse(d['still_pending_ext'])
+        summary = self.summary()
+        expected = ['',
+                    '===== Luigi Execution Summary =====',
+                    '',
+                    'Scheduled 2 tasks of which:',
+                    '* 1 complete() check failed:',
+                    '    - 1 Bar()',
+                    '* 1 were left pending, among these:',
+                    "    * 1 had dependencies whose complete() check failed:",
+                    '        - 1 Foo()',
+                    '',
+                    'Did not run any tasks',
+                    'This progress looks :( because there were unverifiable dependencies',
+                    '',
+                    '===== Luigi Execution Summary =====',
+                    '']
+        result = summary.split('\n')
+        self.assertEqual(len(result), len(expected))
+        for i, line in enumerate(result):
+            self.assertEqual(line, expected[i])
+
     @with_config({'execution_summary': {'summary-length': '1'}})
     def test_config_summary_limit(self):
         class Bar(luigi.Task):

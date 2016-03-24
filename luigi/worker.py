@@ -51,7 +51,7 @@ from luigi import six
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, CentralPlannerScheduler
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, CentralPlannerScheduler
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
@@ -577,13 +577,11 @@ class Worker(object):
             self._log_complete_error(task, formatted_traceback)
             task.trigger_event(Event.DEPENDENCY_MISSING, task)
             self._email_complete_error(task, formatted_traceback)
-            # abort, i.e. don't schedule any subtasks of a task with
-            # failing complete()-method since we don't know if the task
-            # is complete and subtasks might not be desirable to run if
-            # they have already ran before
-            return
+            deps = None
+            status = UNKNOWN
+            runnable = False
 
-        if is_complete:
+        elif is_complete:
             deps = None
             status = DONE
             runnable = False

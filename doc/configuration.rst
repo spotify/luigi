@@ -481,6 +481,7 @@ We recommend that you copy this set of exit codes to your ``luigi.cfg`` file:
   # They are in increasing level of severity (for most applications)
   already_running=10
   missing_data=20
+  complete_failed=20
   task_failed=30
   unhandled_exception=40
 
@@ -492,6 +493,9 @@ missing_data
   For when an :py:class:`~luigi.task.ExternalTask` is not complete, and this
   caused the worker to give up.  As an alternative to fiddling with this, see
   the [worker] keep_alive option.
+complete_failed
+  For signaling that the verification of the completeness of a dependency
+  failed. Typically because some exception have been raised.
 task_failed
   For signaling that there were last known to have failed. Typically because
   some exception have been raised.
