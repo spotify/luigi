@@ -677,7 +677,7 @@ class EnumParameter(Parameter):
 
     .. code-block:: python
 
-        class Model(enum.IntEnum):
+        class Model(enum.Enum):
           Honda = 1
           Volvo = 2
 
