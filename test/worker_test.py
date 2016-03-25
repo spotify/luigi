@@ -221,6 +221,51 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(a.has_run)
         self.assertFalse(b.has_run)
 
+    def test_externalized_dep(self):
+        class A(Task):
+            has_run = False
+
+            def run(self):
+                self.has_run = True
+
+            def complete(self):
+                return self.has_run
+        a = A()
+
+        class B(A):
+            def requires(self):
+                return luigi.task.externalize(a)
+        b = B()
+
+        self.assertTrue(self.w.add(b))
+        self.assertTrue(self.w.run())
+
+        self.assertFalse(a.has_run)
+        self.assertFalse(b.has_run)
+
+    def test_legacy_externalized_dep(self):
+        class A(Task):
+            has_run = False
+
+            def run(self):
+                self.has_run = True
+
+            def complete(self):
+                return self.has_run
+        a = A()
+        a.run = NotImplemented
+
+        class B(A):
+            def requires(self):
+                return a
+        b = B()
+
+        self.assertTrue(self.w.add(b))
+        self.assertTrue(self.w.run())
+
+        self.assertFalse(a.has_run)
+        self.assertFalse(b.has_run)
+
     def test_tracking_url(self):
         tracking_url = 'http://test_url.com/'
 

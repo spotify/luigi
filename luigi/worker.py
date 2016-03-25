@@ -79,6 +79,10 @@ fork_lock = threading.Lock()
 _WAIT_INTERVAL_EPS = 0.00001
 
 
+def _is_external(task):
+    return task.run is None or task.run == NotImplemented
+
+
 class TaskException(Exception):
     pass
 
@@ -148,7 +152,7 @@ class TaskProcess(multiprocessing.Process):
             # don't care about unfulfilled dependencies, because we are just
             # checking completeness of self.task so outputs of dependencies are
             # irrelevant.
-            if self.task.run != NotImplemented:
+            if not _is_external(self.task):
                 missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
                 if missing:
                     deps = 'dependency' if len(missing) == 1 else 'dependencies'
@@ -157,7 +161,7 @@ class TaskProcess(multiprocessing.Process):
             t0 = time.time()
             status = None
 
-            if self.task.run == NotImplemented:
+            if _is_external(self.task):
                 # External task
                 # TODO(erikbern): We should check for task completeness after non-external tasks too!
                 # This will resolve #814 and make things a lot more consistent
@@ -589,7 +593,7 @@ class Worker(object):
             runnable = False
 
             task.trigger_event(Event.DEPENDENCY_PRESENT, task)
-        elif task.run == NotImplemented:
+        elif _is_external(task):
             deps = None
             status = PENDING
             runnable = worker().retry_external_tasks
@@ -774,7 +778,7 @@ class Worker(object):
                 # Maybe it yielded something?
 
             # external task if run not implemented, retry-able if config option is enabled.
-            external_task_retryable = task.run == NotImplemented and self._config.retry_external_tasks
+            external_task_retryable = _is_external(task) and self._config.retry_external_tasks
             if status == FAILED and not external_task_retryable:
                 self._email_task_failure(task, expl)
 
