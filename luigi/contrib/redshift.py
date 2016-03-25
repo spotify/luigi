@@ -190,14 +190,14 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         Defines copying from s3 into redshift.
         """
-        columns = ', '.join(map(lambda (name, type): name, self.columns))
+        columns = [name for (name, type) in self.columns if name.strip() != 'PRIMARY KEY']
 
         cursor.execute("""
          COPY %s (%s) from '%s'
          CREDENTIALS 'aws_access_key_id=%s;aws_secret_access_key=%s'
          delimiter '%s'
          %s
-         ;""" % (self.table, columns, f, self.aws_access_key_id,
+         ;""" % (self.table, ', '.join(columns), f, self.aws_access_key_id,
                  self.aws_secret_access_key, self.column_separator,
                  self.copy_options))
 
