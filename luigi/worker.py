@@ -552,6 +552,7 @@ class Worker(object):
             self._log_unexpected_error(task)
             task.trigger_event(Event.BROKEN_TASK, task, ex)
             self._email_unexpected_error(task, formatted_traceback)
+            raise
         finally:
             pool.close()
             pool.join()
