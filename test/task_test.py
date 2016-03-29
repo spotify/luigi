@@ -16,6 +16,8 @@
 #
 
 import doctest
+import pickle
+
 from helpers import unittest
 from datetime import datetime, timedelta
 
@@ -83,6 +85,11 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(flatten(42), [42])
         self.assertEqual(flatten((len(i) for i in ["foo", "troll"])), [3, 5])
         self.assertRaises(TypeError, flatten, (len(i) for i in ["foo", "troll", None]))
+
+    def test_externalized_task_picklable(self):
+        task = luigi.task.externalize(luigi.Task())
+        pickled_task = pickle.dumps(task)
+        self.assertEqual(task, pickle.loads(pickled_task))
 
 
 if __name__ == '__main__':

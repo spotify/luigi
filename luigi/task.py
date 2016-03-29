@@ -535,7 +535,7 @@ def externalize(task):
 
     See :py:class:`ExternalTask`.
     """
-    task.run = NotImplemented
+    task.run = None
     return task
 
 
@@ -547,7 +547,7 @@ class ExternalTask(Task):
     the framework that this Task's :py:meth:`output` is generated outside of
     Luigi.
     """
-    run = NotImplemented
+    run = None
 
 
 class WrapperTask(Task):
