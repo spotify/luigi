@@ -112,7 +112,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         d = self.summary_dict()
         self.assertEqual({Foo()}, d['still_pending_not_ext'])
         self.assertEqual({Foo()}, d['upstream_unverifiable_dependency'])
-        self.assertEqual({Bar()}, d['unknown_completeness'])
+        self.assertEqual({Bar()}, d['unknown'])
         self.assertFalse(d['unknown_reason'])
         self.assertFalse(d['already_done'])
         self.assertFalse(d['completed'])
@@ -126,14 +126,57 @@ class ExecutionSummaryTest(LuigiTestCase):
                     '===== Luigi Execution Summary =====',
                     '',
                     'Scheduled 2 tasks of which:',
-                    '* 1 complete() check failed:',
+                    '* 1 failed running complete() or requires():',
                     '    - 1 Bar()',
                     '* 1 were left pending, among these:',
-                    "    * 1 had dependencies whose complete() check failed:",
+                    "    * 1 had dependencies whose complete() or requires() failed:",
                     '        - 1 Foo()',
                     '',
                     'Did not run any tasks',
-                    'This progress looks :( because there were unverifiable dependencies',
+                    'This progress looks :( because there were tasks whose complete() or requires() failed',
+                    '',
+                    '===== Luigi Execution Summary =====',
+                    '']
+        result = summary.split('\n')
+        self.assertEqual(len(result), len(expected))
+        for i, line in enumerate(result):
+            self.assertEqual(line, expected[i])
+
+    def test_deps_error(self):
+        class Bar(luigi.Task):
+            def run(self):
+                pass
+
+            def complete(self):
+                return True
+
+        class Foo(luigi.Task):
+            def requires(self):
+                raise Exception
+                yield Bar()
+
+        self.run_task(Foo())
+        d = self.summary_dict()
+        self.assertEqual({Foo()}, d['unknown'])
+        self.assertFalse(d['upstream_unverifiable_dependency'])
+        self.assertFalse(d['unknown_reason'])
+        self.assertFalse(d['already_done'])
+        self.assertFalse(d['completed'])
+        self.assertFalse(d['failed'])
+        self.assertFalse(d['upstream_failure'])
+        self.assertFalse(d['upstream_missing_dependency'])
+        self.assertFalse(d['run_by_other_worker'])
+        self.assertFalse(d['still_pending_ext'])
+        summary = self.summary()
+        expected = ['',
+                    '===== Luigi Execution Summary =====',
+                    '',
+                    'Scheduled 1 tasks of which:',
+                    '* 1 failed running complete() or requires():',
+                    '    - 1 Foo()',
+                    '',
+                    'Did not run any tasks',
+                    'This progress looks :( because there were tasks whose complete() or requires() failed',
                     '',
                     '===== Luigi Execution Summary =====',
                     '']

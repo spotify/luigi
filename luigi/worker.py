@@ -473,11 +473,11 @@ class Worker(object):
             raise TaskException('Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__)
 
     def _log_complete_error(self, task, tb):
-        log_msg = "Will not schedule {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task, tb=tb)
+        log_msg = "Will not run {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task, tb=tb)
         logger.warning(log_msg)
 
     def _log_dependency_error(self, task, tb):
-        log_msg = "Will not schedule {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task, tb=tb)
+        log_msg = "Will not run {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task, tb=tb)
         logger.warning(log_msg)
 
     def _log_unexpected_error(self, task):
@@ -606,9 +606,12 @@ class Worker(object):
                 self._log_dependency_error(task, formatted_traceback)
                 task.trigger_event(Event.BROKEN_TASK, task, ex)
                 self._email_dependency_error(task, formatted_traceback)
-                return
-            status = PENDING
-            runnable = True
+                deps = None
+                status = UNKNOWN
+                runnable = False
+            else:
+                status = PENDING
+                runnable = True
 
         if task.disabled:
             status = DISABLED
