@@ -548,7 +548,7 @@ class CentralPlannerTest(unittest.TestCase):
         # now we have enough resources
         self.check_task_order(['B', 'A'])
 
-    def test_hendle_multiple_resources(self):
+    def test_handle_multiple_resources(self):
         self.sch.add_task(worker=WORKER, task_id='A', resources={'r1': 1, 'r2': 1})
         self.sch.add_task(worker=WORKER, task_id='B', resources={'r1': 1, 'r2': 1})
         self.sch.add_task(worker=WORKER, task_id='C', resources={'r1': 1})
