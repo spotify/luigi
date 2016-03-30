@@ -77,6 +77,50 @@ class RetcodesTest(LuigiTestCase):
             self.run_and_expect('Task --retcode-already-running 5', 5, extra_args=['--local-scheduler'])
             self.run_with_config(dict(already_running='3'), 'Task', 3, extra_args=['--local-scheduler'])
 
+    def test_failure_in_complete(self):
+        class FailingComplete(luigi.Task):
+            def complete(self):
+                raise Exception
+
+        class RequiringTask(luigi.Task):
+            def requires(self):
+                yield FailingComplete()
+
+        self.run_and_expect('RequiringTask', 4)
+
+    def test_failure_in_requires(self):
+        class FailingRequires(luigi.Task):
+            def requires(self):
+                raise Exception
+
+        self.run_and_expect('FailingRequires', 4)
+
+    def test_validate_dependency_error(self):
+        # requires() from RequiringTask expects a Task object
+        class DependencyTask(object):
+            pass
+
+        class RequiringTask(luigi.Task):
+            def requires(self):
+                yield DependencyTask()
+
+        self.run_and_expect('RequiringTask', 4)
+
+    def test_task_limit(self):
+        class TaskB(luigi.Task):
+            def complete(self):
+                return False
+
+        class TaskA(luigi.Task):
+            def requires(sefl):
+                yield TaskB()
+
+        class TaskLimitTest(luigi.Task):
+            def requires(self):
+                yield TaskA()
+
+        self.run_and_expect('TaskLimitTest --worker-task-limit 1', 4)
+
     def test_unhandled_exception(self):
         def new_func(*args, **kwargs):
             raise Exception()
