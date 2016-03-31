@@ -702,6 +702,34 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         self.assertTrue(self.run_locally_split('mynamespace.A --mynamespace.A-p 200 --expected 200'))
         self.assertFalse(self.run_locally_split('mynamespace.A --A-p 200 --expected 200'))
 
+    def testListWithNamespaceCli(self):
+        class A(luigi.Task):
+            task_namespace = 'mynamespace'
+            l = luigi.ListParameter(default=[1, 2, 3])
+            expected = luigi.ListParameter()
+
+            def complete(self):
+                if self.l != self.expected:
+                    raise ValueError
+                return True
+
+        self.assertTrue(self.run_locally_split('mynamespace.A --expected [1,2,3]'))
+        self.assertTrue(self.run_locally_split('mynamespace.A --mynamespace.A-l [1,2,3] --expected [1,2,3]'))
+
+    def testTupleWithNamespaceCli(self):
+        class A(luigi.Task):
+            task_namespace = 'mynamespace'
+            t = luigi.TupleParameter(default=((1, 2), (3, 4)))
+            expected = luigi.TupleParameter()
+
+            def complete(self):
+                if self.t != self.expected:
+                    raise ValueError
+                return True
+
+        self.assertTrue(self.run_locally_split('mynamespace.A --expected ((1,2),(3,4))'))
+        self.assertTrue(self.run_locally_split('mynamespace.A --mynamespace.A-t ((1,2),(3,4)) --expected ((1,2),(3,4))'))
+
     @with_config({"foo": {"bar": "[1,2,3]"}})
     def testListConfig(self):
         self.assertTrue(_value(luigi.ListParameter(config_path=dict(section="foo", name="bar"))))
