@@ -887,8 +887,20 @@ class TupleParameter(Parameter):
         :param str x: the value to parse.
         :return: the parsed value.
         """
+        # Since the result of json.dumps(tuple) differs from a tuple string, we must handle either case.
+        # A tuple string may come from a config file or from cli execution.
+
+        # t = ((1, 2), (3, 4))
+        # t_str = '((1,2),(3,4))'
+        # t_json_str = json.dumps(t)
+        # t_json_str == '[[1, 2], [3, 4]]'
+        # json.loads(t_json_str) == t
+        # json.loads(t_str) == ValueError: No JSON object could be decoded
+
+        # Therefore, if json.loads(x) returns a ValueError, try ast.literal_eval(x).
+        # ast.literal_eval(t_str) == t
         try:
-            return tuple(tuple(x) for x in json.loads(x))
+            return tuple(tuple(x) for x in json.loads(x))  # loop required to parse tuple of tuples
         except ValueError:
             return literal_eval(x)  # if this causes an error, let that error be raised.
 
