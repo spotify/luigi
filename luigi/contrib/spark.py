@@ -161,8 +161,20 @@ class SparkSubmitTask(ExternalProgramTask):
     def program_args(self):
         return self.spark_command() + self.app_command()
 
+    def extra_spark_submit_args(self):
+        """
+        Override this function to specify extra spark-submit command line arguments.
+        Any arguments that are not supported by luigi.contrib.spark
+
+        (i.e. spark.mesos.executor.docker.image)
+        Returns: list of strings
+
+        """
+        return []
+
     def spark_command(self):
         command = [self.spark_submit]
+        command += self.extra_spark_submit_args()
         command += self._text_arg('--master', self.master)
         command += self._text_arg('--deploy-mode', self.deploy_mode)
         command += self._text_arg('--name', self.name)
