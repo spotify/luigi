@@ -289,7 +289,7 @@ class Task(object):
         self.task_id = task_id_str(self.task_family, self.to_str_params(only_significant=True))
         self.__hash = hash(self.task_id)
 
-        self._status_message = None
+        self.status_message = None
         self._status_message_callback = None
 
     def initialized(self):
@@ -507,14 +507,9 @@ class Task(object):
         Default behavior is to send an None value"""
         pass
 
-    @property
-    def status_message(self):
-        return self._status_message
-
-    @status_message.setter
-    def status_message(self, message):
-        if message != self._status_message:
-            self._status_message = message
+    def set_status_message(self, message):
+        if message != self.status_message:
+            self.status_message = message
             if hasattr(self._status_message_callback, "__call__"):
                 self._status_message_callback(message)
 
