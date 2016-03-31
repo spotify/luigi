@@ -508,6 +508,11 @@ class Task(object):
         pass
 
     def set_status_message(self, message):
+        """
+        Sets the status message of the task to message. If the value actually changed w.r.t the
+        current value, the _status_message_callback is invoked which propagates the change down to
+        the scheduler.
+        """
         if message != self.status_message:
             self.status_message = message
             if hasattr(self._status_message_callback, "__call__"):
