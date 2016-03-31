@@ -66,7 +66,8 @@ class FieldDelimiter(object):
 
     https://cloud.google.com/bigquery/docs/reference/v2/jobs#configuration.load
     """
-    COMMA = ',' # Default
+
+    COMMA = ','  # Default
     TAB = "\t"
     PIPE = "|"
 
@@ -77,6 +78,7 @@ class Encoding(object):
 
     BigQuery decodes the data after the raw, binary data has been split using the values of the quote and fieldDelimiter properties.
     """
+
     UTF_8 = 'UTF-8'
     ISO_8859_1 = 'ISO-8859-1'
 
@@ -489,7 +491,6 @@ class BigqueryLoadTask(MixinBigqueryBulkComplete, luigi.Task):
 
         CSV: Trailing columns JSON: Named values that don't match any column names"""
         return False
-
 
     @property
     def allow_quoted_new_lines(self):
