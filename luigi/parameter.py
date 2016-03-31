@@ -230,6 +230,8 @@ class Parameter(object):
 
         :param x: the value to serialize.
         """
+        if not isinstance(x, six.string_types) and self.__class__ == Parameter:
+            warnings.warn("Parameter {0} is not of type string.".format(str(x)))
         return str(x)
 
     def normalize(self, x):
