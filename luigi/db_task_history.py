@@ -208,7 +208,7 @@ class TaskEvent(Base):
     """
     __tablename__ = 'task_events'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
-    task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'))
+    task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'), index=True)
     event_name = sqlalchemy.Column(sqlalchemy.String(20))
     ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP, index=True, nullable=False)
 
