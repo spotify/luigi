@@ -485,7 +485,9 @@ class BigqueryLoadTask(MixinBigqueryBulkComplete, luigi.Task):
 
         and if there are too many bad records, an invalid error is returned in the job result. The default value is false.
 
-        The sourceFormat property determines what BigQuery treats as an extra value: CSV: Trailing columns JSON: Named values that don't match any column names"""
+        The sourceFormat property determines what BigQuery treats as an extra value:
+
+        CSV: Trailing columns JSON: Named values that don't match any column names"""
         return False
 
 
@@ -521,7 +523,7 @@ class BigqueryLoadTask(MixinBigqueryBulkComplete, luigi.Task):
                 }
             }
         }
-        
+
         if self.source_format == SourceFormat.CSV:
             job['configuration']['load']['fieldDelimiter'] = self.field_delimter
             job['configuration']['load']['skipLeadingRows'] = self.skip_leading_rows
