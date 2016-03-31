@@ -229,3 +229,12 @@ class RemoteScheduler(Scheduler):
 
     def re_enable_task(self, task_id):
         return self._request('/api/re_enable_task', {'task_id': task_id})
+
+    def set_task_status_message(self, task_id, status_message):
+        self._request('/api/set_task_status_message', {
+            'task_id': task_id,
+            'status_message': status_message
+        })
+
+    def get_task_status_message(self, task_id):
+        return self._request('/api/get_task_status_message', {'task_id': task_id})
