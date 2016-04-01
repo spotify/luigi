@@ -84,7 +84,8 @@ function visualiserApp(luigi) {
             status: task.status,
             graph: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DONE"),
             error: task.status == "FAILED",
-            re_enable: task.status == "DISABLED" && task.re_enable_able
+            re_enable: task.status == "DISABLED" && task.re_enable_able,
+            statusMessage: task.status_message
         };
     }
 
@@ -287,6 +288,16 @@ function visualiserApp(luigi) {
         data.error = decodeError(data.error)
         $("#errorModal").empty().append(renderTemplate("errorTemplate", data));
         $("#errorModal").modal({});
+    }
+
+    function showStatusMessage(data) {
+        $("#statusMessageModal").empty().append(renderTemplate("statusMessageTemplate", data));
+        $("#statusMessageModal .refresh").on('click', function() {
+            luigi.getTaskStatusMessage(data.taskId, function(data) {
+                $("#statusMessageModal pre").html(data.statusMessage);
+            });
+        }).trigger('click');
+        $("#statusMessageModal").modal({});
     }
 
     function preProcessGraph(dependencyGraph) {
@@ -815,6 +826,11 @@ function visualiserApp(luigi) {
 
         luigi.getWorkerList(function(workers) {
             $("#workerList").append(renderWorkers(workers));
+
+            $('.worker-table tbody').on('click', 'td .statusMessage', function() {
+                var data = $(this).data();
+                showStatusMessage(data);
+            });
         });
 
         luigi.getResourceList(function(resources) {
@@ -911,6 +927,11 @@ function visualiserApp(luigi) {
             luigi.reEnable($(this).attr("data-task-id"), function(data) {
                 updateTasks();
             });
+        });
+
+        $('#taskTable tbody').on('click', 'td.details-control .statusMessage', function () {
+            var data = $(this).data();
+            showStatusMessage(data);
         });
 
         $('.navbar-nav').on('click', 'a', function () {
