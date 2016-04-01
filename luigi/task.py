@@ -510,6 +510,8 @@ class Task(object):
         """
         Sets the status message of the task to message, i.e., invokes _status_message_callback if it
         is a callable. This propagates the message down to the scheduler.
+
+        See :ref:`Task.set_status_message`
         """
         if hasattr(self._status_message_callback, "__call__"):
             self._status_message_callback(message)
