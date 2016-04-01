@@ -289,6 +289,9 @@ class Task(object):
         self.task_id = task_id_str(self.task_family, self.to_str_params(only_significant=True))
         self.__hash = hash(self.task_id)
 
+        self.status_message = None
+        self._status_message_callback = None
+
     def initialized(self):
         """
         Returns ``True`` if the Task is initialized and ``False`` otherwise.
@@ -503,6 +506,17 @@ class Task(object):
 
         Default behavior is to send an None value"""
         pass
+
+    def set_status_message(self, message):
+        """
+        Sets the status message of the task to message. If the value actually changed w.r.t the
+        current value, the _status_message_callback is invoked which propagates the change down to
+        the scheduler.
+        """
+        if message != self.status_message:
+            self.status_message = message
+            if hasattr(self._status_message_callback, "__call__"):
+                self._status_message_callback(message)
 
 
 class MixinNaiveBulkComplete(object):

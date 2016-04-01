@@ -94,13 +94,14 @@ class TaskProcess(multiprocessing.Process):
     Mainly for convenience since this is run in a separate process. """
 
     def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0,
-                 tracking_url_callback=None):
+                 tracking_url_callback=None, status_message_callback=None):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
         self.result_queue = result_queue
         self.random_seed = random_seed
         self.tracking_url_callback = tracking_url_callback
+        self.task._status_message_callback = status_message_callback
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
@@ -727,11 +728,15 @@ class Worker(object):
                 tracking_url=tracking_url,
             )
 
+        def update_status_message(message):
+            self._scheduler.set_task_status_message(task.task_id, message)
+
         return TaskProcess(
             task, self._id, self._task_result_queue,
             random_seed=bool(self.worker_processes > 1),
             worker_timeout=self._config.timeout,
             tracking_url_callback=update_tracking_url,
+            status_message_callback=update_status_message
         )
 
     def _purge_children(self):
