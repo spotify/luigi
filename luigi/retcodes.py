@@ -43,8 +43,8 @@ class retcode(luigi.Config):
                                    description='For both local --lock and luigid "lock"',
                                    )
     scheduling_error = IntParameter(default=4,
-                                   description='''For when a task's complete() or requires() fails.'''
-                                   )
+                                    description='''For when a task's complete() or requires() fails.'''
+                                    )
 
 
 def run_with_retcodes(argv):

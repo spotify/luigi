@@ -26,6 +26,7 @@ import luigi
 import mock
 import psutil
 from luigi.worker import Worker
+from luigi.task_status import UNKNOWN
 
 
 def running_children():
@@ -138,7 +139,8 @@ class ParallelSchedulingTest(unittest.TestCase):
     def test_raise_exception_in_complete(self, send):
         self.w.add(ExceptionCompleteTask(), multiprocess=True)
         send.check_called_once()
-        self.assertEqual(0, self.sch.add_task.call_count)
+        self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]['status'])
+        self.assertFalse(self.sch.add_task.call_args[1]['runnable'])
         self.assertTrue('assert False' in send.call_args[0][1])
 
     @mock.patch('luigi.notifications.send_error_email')
@@ -154,14 +156,16 @@ class ParallelSchedulingTest(unittest.TestCase):
         # verify this can run async
         self.w.add(UnpicklableExceptionTask(), multiprocess=True)
         send.check_called_once()
-        self.assertEqual(0, self.sch.add_task.call_count)
+        self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]['status'])
+        self.assertFalse(self.sch.add_task.call_args[1]['runnable'])
         self.assertTrue('raise UnpicklableException()' in send.call_args[0][1])
 
     @mock.patch('luigi.notifications.send_error_email')
     def test_raise_exception_in_requires(self, send):
         self.w.add(ExceptionRequiresTask(), multiprocess=True)
         send.check_called_once()
-        self.assertEqual(0, self.sch.add_task.call_count)
+        self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]['status'])
+        self.assertFalse(self.sch.add_task.call_args[1]['runnable'])
 
 
 if __name__ == '__main__':
