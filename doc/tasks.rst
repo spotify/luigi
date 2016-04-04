@@ -149,25 +149,6 @@ This can be useful if you have many dependencies:
             g = [y.open('r') for y in self.input()['b']]
 
 
-.. _Task.set_status_message:
-
-Task.set_status_message
-~~~~~~~~~~~~~~~~~~~~~~~
-
-For long-running tasks it is convenient to see status messages not only on the command line or in
-your logs but also in the GUI of the central scheduler. For this purpose you can use
-:func:`~luigi.task.Task.set_status_message`:
-
-.. code:: python
-
-    class MyTask(luigi.Task):
-        def run(self):
-            for i in range(100):
-                # do some hard work here
-                if i % 10 == 0:
-                    self.set_status_message("Progress: %d / 100" % i)
-
-
 Dynamic dependencies
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -196,6 +177,24 @@ In other words, you should make sure your Task.run_ method is idempotent.
 
 For an example of a workflow using dynamic dependencies, see
 `examples/dynamic_requirements.py <https://github.com/spotify/luigi/blob/master/examples/dynamic_requirements.py>`_.
+
+
+Task Status messages
+~~~~~~~~~~~~~~~~~~~~
+
+For long-running tasks it is convenient to see status messages not only on the command line or in
+your logs but also in the GUI of the central scheduler. For this purpose you can use the
+``status_message_callback`` which is passed opportunistically to Task.run_:
+
+.. code:: python
+
+    class MyTask(luigi.Task):
+        def run(self, status_message_callback):
+            for i in range(100):
+                # do some hard work here
+                if i % 10 == 0:
+                    status_message_callback("Progress: %d / 100" % i)
+
 
 .. _Events:
 
