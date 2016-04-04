@@ -45,7 +45,7 @@ class HiveCommandError(RuntimeError):
 
 
 def load_hive_cmd():
-    return luigi.configuration.get_config().get('hive', 'command', 'hive')
+    return luigi.configuration.get_config().get('hive', 'command', 'hive').split(' ')
 
 
 def get_hive_syntax():
@@ -61,7 +61,7 @@ def run_hive(args, check_return_code=True):
     (which are done using DESCRIBE do not exit with a return code of 0
     so we need an option to ignore the return code and just return stdout for parsing
     """
-    cmd = [load_hive_cmd()] + args
+    cmd = load_hive_cmd() + args
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if check_return_code and p.returncode != 0:
@@ -297,7 +297,7 @@ class HiveQueryTask(luigi.contrib.hadoop.BaseHadoopJobTask):
         * hive.exec.reducers.max (reducers_max)
         """
         jcs = {}
-        jcs['mapred.job.name'] = self.task_id
+        jcs['mapred.job.name'] = "'" + self.task_id + "'"
         if self.n_reduce_tasks is not None:
             jcs['mapred.reduce.tasks'] = self.n_reduce_tasks
         if self.pool is not None:
@@ -349,7 +349,7 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                 query = query.encode('utf8')
             f.write(query)
             f.flush()
-            arglist = [load_hive_cmd(), '-f', f.name]
+            arglist = load_hive_cmd() + ['-f', f.name]
             hiverc = job.hiverc()
             if hiverc:
                 if isinstance(hiverc, str):
