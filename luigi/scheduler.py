@@ -318,7 +318,7 @@ class SimpleTaskState(object):
                 with open(self._state_path, 'rb') as fobj:
                     state = pickle.load(fobj)
             except BaseException:
-                logger.exception("Error when loading state. Starting from clean slate.")
+                logger.exception("Error when loading state. Starting from empty state.")
                 return
 
             self.set_state(state)
@@ -326,7 +326,7 @@ class SimpleTaskState(object):
             for task in six.itervalues(self._tasks):
                 self._status_tasks[task.status][task.id] = task
         else:
-            logger.info("No prior state file exists at %s. Starting with clean slate", self._state_path)
+            logger.info("No prior state file exists at %s. Starting with empty state", self._state_path)
 
     def get_active_tasks(self, status=None):
         if status:
