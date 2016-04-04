@@ -45,6 +45,7 @@ import threading
 import time
 import traceback
 import types
+import inspect
 
 from luigi import six
 
@@ -94,28 +95,29 @@ class TaskProcess(multiprocessing.Process):
     Mainly for convenience since this is run in a separate process. """
 
     def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0,
-                 tracking_url_callback=None, status_message_callback=None):
+                 run_callbacks=None):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
         self.result_queue = result_queue
         self.random_seed = random_seed
-        self.tracking_url_callback = tracking_url_callback
-        self.task._status_message_callback = status_message_callback
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
 
+        if run_callbacks is None:
+            run_callbacks = {}
+        self.run_callbacks = run_callbacks
+
     def _run_get_new_deps(self):
-        run_again = False
-        try:
-            task_gen = self.task.run(tracking_url_callback=self.tracking_url_callback)
-        except TypeError as ex:
-            if 'unexpected keyword argument' not in str(ex):
-                raise
-            run_again = True
-        if run_again:
-            task_gen = self.task.run()
+        run_spec = inspect.getargspec(self.task.run)
+        if run_spec.keywords:
+            run_kwargs = self.run_callbacks.copy()
+        else:
+            run_kwargs = {key: cb for key, cb in self.run_callbacks.items() if key in run_spec.args}
+
+        task_gen = self.task.run(**run_kwargs)
+
         if not isinstance(task_gen, types.GeneratorType):
             return None
 
@@ -731,12 +733,16 @@ class Worker(object):
         def update_status_message(message):
             self._scheduler.set_task_status_message(task.task_id, message)
 
+        run_callbacks = {
+            "tracking_url_callback": update_tracking_url,
+            "status_message_callback": update_status_message
+        }
+
         return TaskProcess(
             task, self._id, self._task_result_queue,
             random_seed=bool(self.worker_processes > 1),
             worker_timeout=self._config.timeout,
-            tracking_url_callback=update_tracking_url,
-            status_message_callback=update_status_message
+            run_callbacks=run_callbacks
         )
 
     def _purge_children(self):
