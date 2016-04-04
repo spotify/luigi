@@ -55,6 +55,34 @@ class SourceFormat(object):
     NEWLINE_DELIMITED_JSON = 'NEWLINE_DELIMITED_JSON'
 
 
+class FieldDelimiter(object):
+    """
+    The separator for fields in a CSV file. The separator can be any ISO-8859-1 single-byte character.
+    To use a character in the range 128-255, you must encode the character as UTF8.
+    BigQuery converts the string to ISO-8859-1 encoding, and then uses the
+    first byte of the encoded string to split the data in its raw, binary state.
+    BigQuery also supports the escape sequence "\t" to specify a tab separator.
+    The default value is a comma (',').
+
+    https://cloud.google.com/bigquery/docs/reference/v2/jobs#configuration.load
+    """
+
+    COMMA = ','  # Default
+    TAB = "\t"
+    PIPE = "|"
+
+
+class Encoding(object):
+    """
+    [Optional] The character encoding of the data. The supported values are UTF-8 or ISO-8859-1. The default value is UTF-8.
+
+    BigQuery decodes the data after the raw, binary data has been split using the values of the quote and fieldDelimiter properties.
+    """
+
+    UTF_8 = 'UTF-8'
+    ISO_8859_1 = 'ISO-8859-1'
+
+
 BQDataset = collections.namedtuple('BQDataset', 'project_id dataset_id')
 
 
@@ -398,6 +426,11 @@ class BigqueryLoadTask(MixinBigqueryBulkComplete, luigi.Task):
         return SourceFormat.NEWLINE_DELIMITED_JSON
 
     @property
+    def encoding(self):
+        """The encoding of the data that is going to be loaded (see :py:class:`Encoding`)."""
+        return Encoding.UTF_8
+
+    @property
     def write_disposition(self):
         """What to do if the table already exists. By default this will fail the job.
 
@@ -413,12 +446,56 @@ class BigqueryLoadTask(MixinBigqueryBulkComplete, luigi.Task):
 
     @property
     def max_bad_records(self):
+        """ The maximum number of bad records that BigQuery can ignore when reading data.
+
+        If the number of bad records exceeds this value, an invalid error is returned in the job result."""
         return 0
 
     @property
+    def field_delimter(self):
+        """The separator for fields in a CSV file. The separator can be any ISO-8859-1 single-byte character."""
+        return FieldDelimiter.COMMA
+
+    @property
     def source_uris(self):
-        """Source data which should be in GCS."""
+        """The fully-qualified URIs that point to your data in Google Cloud Storage.
+
+        Each URI can contain one '*' wildcard character and it must come after the 'bucket' name."""
         return [x.path for x in luigi.task.flatten(self.input())]
+
+    @property
+    def skip_leading_rows(self):
+        """The number of rows at the top of a CSV file that BigQuery will skip when loading the data.
+
+        The default value is 0. This property is useful if you have header rows in the file that should be skipped."""
+        return 0
+
+    @property
+    def allow_jagged_rows(self):
+        """Accept rows that are missing trailing optional columns. The missing values are treated as nulls.
+
+        If false, records with missing trailing columns are treated as bad records, and if there are too many bad records,
+
+        an invalid error is returned in the job result. The default value is false. Only applicable to CSV, ignored for other formats."""
+        return False
+
+    @property
+    def ignore_unknown_values(self):
+        """Indicates if BigQuery should allow extra values that are not represented in the table schema.
+
+        If true, the extra values are ignored. If false, records with extra columns are treated as bad records,
+
+        and if there are too many bad records, an invalid error is returned in the job result. The default value is false.
+
+        The sourceFormat property determines what BigQuery treats as an extra value:
+
+        CSV: Trailing columns JSON: Named values that don't match any column names"""
+        return False
+
+    @property
+    def allow_quoted_new_lines(self):
+        """	Indicates if BigQuery should allow quoted data sections that contain newline characters in a CSV file. The default value is false."""
+        return False
 
     def run(self):
         output = self.output()
@@ -438,13 +515,22 @@ class BigqueryLoadTask(MixinBigqueryBulkComplete, luigi.Task):
                         'datasetId': output.table.dataset_id,
                         'tableId': output.table.table_id,
                     },
+                    'encoding': self.encoding,
                     'sourceFormat': self.source_format,
                     'writeDisposition': self.write_disposition,
                     'sourceUris': source_uris,
                     'maxBadRecords': self.max_bad_records,
+                    'ignoreUnknownValues': self.ignore_unknown_values
                 }
             }
         }
+
+        if self.source_format == SourceFormat.CSV:
+            job['configuration']['load']['fieldDelimiter'] = self.field_delimter
+            job['configuration']['load']['skipLeadingRows'] = self.skip_leading_rows
+            job['configuration']['load']['allowJaggedRows'] = self.allow_jagged_rows
+            job['configuration']['load']['allowQuotedNewlines'] = self.allow_quoted_new_lines
+
         if self.schema:
             job['configuration']['load']['schema'] = {'fields': self.schema}
 
