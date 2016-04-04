@@ -28,6 +28,7 @@ from json import JSONEncoder
 from collections import OrderedDict, Mapping
 import operator
 import functools
+from ast import literal_eval
 
 try:
     from ConfigParser import NoOptionError, NoSectionError
@@ -798,3 +799,117 @@ class DictParameter(Parameter):
 
     def serialize(self, x):
         return json.dumps(x, cls=DictParameter.DictParamEncoder)
+
+
+class ListParameter(Parameter):
+    """
+    Parameter whose value is a ``list``.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+          grades = luigi.ListParameter()
+
+            def run(self):
+                sum = 0
+                for element in self.grades:
+                    sum += element
+                avg = sum / len(self.grades)
+
+
+    At the command line, use
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --grades <JSON string>
+
+    Simple example with two grades:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --grades '[100,70]'
+    """
+    def parse(self, x):
+        """
+        Parse an individual value from the input.
+
+        :param str x: the value to parse.
+        :return: the parsed value.
+        """
+        return list(json.loads(x))
+
+    def serialize(self, x):
+        """
+        Opposite of :py:meth:`parse`.
+
+        Converts the value ``x`` to a string.
+
+        :param x: the value to serialize.
+        """
+        return json.dumps(x)
+
+
+class TupleParameter(Parameter):
+    """
+    Parameter whose value is a ``tuple`` or ``tuple`` of tuples.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+          book_locations = luigi.TupleParameter()
+
+            def run(self):
+                for location in self.book_locations:
+                    print("Go to page %d, line %d" % (location[0], location[1]))
+
+
+    At the command line, use
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --book_locations <JSON string>
+
+    Simple example with two grades:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --book_locations '((12,3),(4,15),(52,1))'
+    """
+
+    def parse(self, x):
+        """
+        Parse an individual value from the input.
+
+        :param str x: the value to parse.
+        :return: the parsed value.
+        """
+        # Since the result of json.dumps(tuple) differs from a tuple string, we must handle either case.
+        # A tuple string may come from a config file or from cli execution.
+
+        # t = ((1, 2), (3, 4))
+        # t_str = '((1,2),(3,4))'
+        # t_json_str = json.dumps(t)
+        # t_json_str == '[[1, 2], [3, 4]]'
+        # json.loads(t_json_str) == t
+        # json.loads(t_str) == ValueError: No JSON object could be decoded
+
+        # Therefore, if json.loads(x) returns a ValueError, try ast.literal_eval(x).
+        # ast.literal_eval(t_str) == t
+        try:
+            return tuple(tuple(x) for x in json.loads(x))  # loop required to parse tuple of tuples
+        except ValueError:
+            return literal_eval(x)  # if this causes an error, let that error be raised.
+
+    def serialize(self, x):
+        """
+        Opposite of :py:meth:`parse`.
+
+        Converts the value ``x`` to a string.
+
+        :param x: the value to serialize.
+        """
+        return json.dumps(x)
