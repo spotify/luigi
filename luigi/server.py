@@ -68,6 +68,26 @@ class RPCHandler(tornado.web.RequestHandler):
         self._scheduler = scheduler
 
     def get(self, method):
+        if method not in [
+            'add_task',
+            'add_worker',
+            'dep_graph',
+            'disable_worker',
+            'fetch_error',
+            'get_work',
+            'graph',
+            'inverse_dep_graph',
+            'ping',
+            'prune',
+            're_enable_task',
+            'resource_list',
+            'task_list',
+            'task_search',
+            'update_resources',
+            'worker_list',
+        ]:
+            self.send_error(404)
+            return
         payload = self.get_argument('data', default="{}")
         arguments = json.loads(payload)
 
@@ -85,7 +105,6 @@ class RPCHandler(tornado.web.RequestHandler):
 
 
 class BaseTaskHistoryHandler(tornado.web.RequestHandler):
-
     def initialize(self, scheduler):
         self._scheduler = scheduler
 
@@ -94,7 +113,6 @@ class BaseTaskHistoryHandler(tornado.web.RequestHandler):
 
 
 class AllRunHandler(BaseTaskHistoryHandler):
-
     def get(self):
         all_tasks = self._scheduler.task_history.find_all_runs()
         tasknames = []
@@ -107,7 +125,6 @@ class AllRunHandler(BaseTaskHistoryHandler):
 
 
 class SelectedRunHandler(BaseTaskHistoryHandler):
-
     def get(self, name):
         tasks = {}
         statusResults = {}
@@ -130,8 +147,8 @@ class SelectedRunHandler(BaseTaskHistoryHandler):
                 # append the id, task_id, ts, y with 0, next_process with null
                 # for the status(running/failed/done) of the selected task
                 statusResults[status].append(({
-                    'id': str(task.id), 'task_id': str(task.task_id),
-                    'x': from_utc(str(task.ts)), 'y': 0, 'next_process': ''}))
+                                                  'id': str(task.id), 'task_id': str(task.task_id),
+                                                  'x': from_utc(str(task.ts)), 'y': 0, 'next_process': ''}))
                 # append the id, task_name, task_id, status, datetime, timestamp
                 # for the selected task
                 taskResults.append({
@@ -165,28 +182,24 @@ def from_utc(utcTime, fmt=None):
 
 
 class RecentRunHandler(BaseTaskHistoryHandler):
-
     def get(self):
         tasks = self._scheduler.task_history.find_latest_runs()
         self.render("recent.html", tasks=tasks)
 
 
 class ByNameHandler(BaseTaskHistoryHandler):
-
     def get(self, name):
         tasks = self._scheduler.task_history.find_all_by_name(name)
         self.render("recent.html", tasks=tasks)
 
 
 class ByIdHandler(BaseTaskHistoryHandler):
-
     def get(self, id):
         task = self._scheduler.task_history.find_task_by_id(id)
         self.render("show.html", task=task)
 
 
 class ByParamsHandler(BaseTaskHistoryHandler):
-
     def get(self, name):
         payload = self.get_argument('data', default="{}")
         arguments = json.loads(payload)
@@ -195,7 +208,6 @@ class ByParamsHandler(BaseTaskHistoryHandler):
 
 
 class StaticFileHandler(tornado.web.RequestHandler):
-
     def get(self, path):
         # Path checking taken from Flask's safe_join function:
         # https://github.com/mitsuhiko/flask/blob/1d55b8983/flask/helpers.py#L563-L587
@@ -211,13 +223,13 @@ class StaticFileHandler(tornado.web.RequestHandler):
 
 
 class RootPathHandler(BaseTaskHistoryHandler):
-
     def get(self):
         self.redirect("/static/visualiser/index.html")
 
 
 def app(scheduler):
-    settings = {"static_path": os.path.join(os.path.dirname(__file__), "static"), "unescape": tornado.escape.xhtml_unescape}
+    settings = {"static_path": os.path.join(os.path.dirname(__file__), "static"),
+                "unescape": tornado.escape.xhtml_unescape}
     handlers = [
         (r'/api/(.*)', RPCHandler, {"scheduler": scheduler}),
         (r'/static/(.*)', StaticFileHandler),
