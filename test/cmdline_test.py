@@ -181,6 +181,16 @@ class CmdlineTest(unittest.TestCase):
             self.assertTrue(server_run.called)
             self.assertTrue(basicConfig.called)
 
+    def test_luigid_missing_logging_conf(self):
+        with mock.patch('luigi.server.run') as server_run, \
+                mock.patch('logging.basicConfig') as basicConfig, \
+                mock.patch('luigi.configuration.get_config') as get_config:
+            get_config.return_value.getboolean.return_value = False  # no_configure_logging=False
+            get_config.return_value.get.return_value = "nonexistent.cfg"  # logging_conf_file=None
+            self.assertRaises(Exception, luigi.cmdline.luigid, [])
+            self.assertFalse(server_run.called)
+            self.assertFalse(basicConfig.called)
+
 
 class InvokeOverCmdlineTest(unittest.TestCase):
 

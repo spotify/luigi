@@ -46,7 +46,7 @@ def luigid(argv=sys.argv[1:]):
             if not config.getboolean('core', 'no_configure_logging', False):
                 logging_conf = config.get('core', 'logging_conf_file', None)
                 if logging_conf is not None and not os.path.exists(logging_conf):
-                    logging_conf = None
+                    raise Exception("Error: Unable to locate specified logging configuration file!")
             if logging_conf is not None:
                 logging.config.fileConfig(logging_conf)
             else:
