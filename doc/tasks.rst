@@ -179,21 +179,26 @@ For an example of a workflow using dynamic dependencies, see
 `examples/dynamic_requirements.py <https://github.com/spotify/luigi/blob/master/examples/dynamic_requirements.py>`_.
 
 
-Task Status messages
+Task status tracking
 ~~~~~~~~~~~~~~~~~~~~
 
-For long-running tasks it is convenient to see status messages not only on the command line or in
-your logs but also in the GUI of the central scheduler. For this purpose you can use the
-``status_message_callback`` which is passed opportunistically to Task.run_:
+For long-running or remote tasks it is convenient to see extended status information not only on 
+the command line or in your logs but also in the GUI of the central scheduler. Luigi implements
+dynamic status messages and tracking urls which may point to an external monitoring system. You 
+can set this information using callbacks within Task.run_:
 
 .. code:: python
 
     class MyTask(luigi.Task):
-        def run(self, status_message_callback):
+        def run(self):
+            # set a tracking url
+            self.set_tracking_url("http://...")
+
+            # set status messages during the workload
             for i in range(100):
                 # do some hard work here
                 if i % 10 == 0:
-                    status_message_callback("Progress: %d / 100" % i)
+                    self.set_status_message("Progress: %d / 100" % i)
 
 
 .. _Events:
