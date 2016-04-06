@@ -31,8 +31,8 @@ class TaskStatusMessageTest(LuigiTestCase):
         sch = luigi.scheduler.CentralPlannerScheduler()
         with luigi.worker.Worker(scheduler=sch) as w:
             class MyTask(luigi.Task):
-                def run(self, status_message_callback):
-                    status_message_callback(message)
+                def run(self):
+                    self.set_status_message(message)
 
             task = MyTask()
             w.add(task)
