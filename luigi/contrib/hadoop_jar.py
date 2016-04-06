@@ -22,6 +22,7 @@ import logging
 import os
 import pipes
 import random
+import warnings
 
 import luigi.contrib.hadoop
 import luigi.contrib.hdfs
