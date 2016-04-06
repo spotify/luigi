@@ -914,6 +914,11 @@ class JobTask(BaseHadoopJobTask):
         """
         Dump instance to file.
         """
+        _set_tracking_url = self.set_tracking_url
+        self.set_tracking_url = None
+        _set_status_message = self.set_status_message
+        self.set_status_message = None
+
         file_name = os.path.join(directory, 'job-instance.pickle')
         if self.__module__ == '__main__':
             d = pickle.dumps(self)
@@ -923,6 +928,9 @@ class JobTask(BaseHadoopJobTask):
 
         else:
             pickle.dump(self, open(file_name, "wb"))
+
+        self.set_tracking_url = _set_tracking_url
+        self.set_status_message = _set_status_message
 
     def _map_input(self, input_stream):
         """
