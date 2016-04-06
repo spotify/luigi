@@ -289,6 +289,9 @@ class Task(object):
         self.task_id = task_id_str(self.task_family, self.to_str_params(only_significant=True))
         self.__hash = hash(self.task_id)
 
+        self.set_tracking_url = None
+        self.set_status_message = None
+
     def initialized(self):
         """
         Returns ``True`` if the Task is initialized and ``False`` otherwise.
