@@ -34,6 +34,7 @@ import logging
 import multiprocessing  # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
 import os
 import signal
+import sys
 
 try:
     import Queue
@@ -509,7 +510,8 @@ class Worker(object):
 
     def _email_error(self, task, formatted_traceback, subject, headline):
         formatted_subject = subject.format(task=task, host=self.host)
-        message = notifications.format_task_error(headline, task, formatted_traceback)
+        command = ' '.join("'{}'".format(arg) for arg in sys.argv)
+        message = notifications.format_task_error(headline, task, command, formatted_traceback)
         notifications.send_error_email(formatted_subject, message, task.owner_email)
 
     def add(self, task, multiprocess=False):
