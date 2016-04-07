@@ -63,7 +63,7 @@ class TaskProcessTest(LuigiTestCase):
 
         task = SuccessTask()
         result_queue = multiprocessing.Queue()
-        task_process = TaskProcess(task, 1, result_queue)
+        task_process = TaskProcess(task, 1, result_queue, lambda: None, lambda: None)
 
         with mock.patch.object(result_queue, 'put') as mock_put:
             task_process.run()
@@ -81,7 +81,7 @@ class TaskProcessTest(LuigiTestCase):
 
         task = FailTask()
         result_queue = multiprocessing.Queue()
-        task_process = TaskProcess(task, 1, result_queue)
+        task_process = TaskProcess(task, 1, result_queue, lambda: None, lambda: None)
 
         with mock.patch.object(result_queue, 'put') as mock_put:
             task_process.run()
@@ -100,7 +100,7 @@ class TaskProcessTest(LuigiTestCase):
         queue = mock.Mock()
         worker_id = 1
 
-        task_process = TaskProcess(task, worker_id, queue)
+        task_process = TaskProcess(task, worker_id, queue, lambda: None, lambda: None)
         task_process.start()
 
         parent = Process(task_process.pid)

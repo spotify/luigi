@@ -45,6 +45,7 @@ import threading
 import time
 import traceback
 import types
+import warnings
 
 from luigi import six
 
@@ -93,28 +94,41 @@ class TaskProcess(multiprocessing.Process):
 
     Mainly for convenience since this is run in a separate process. """
 
-    def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0,
-                 tracking_url_callback=None):
+    def __init__(self, task, worker_id, result_queue, tracking_url_callback,
+                 status_message_callback, random_seed=False, worker_timeout=0):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
         self.result_queue = result_queue
-        self.random_seed = random_seed
         self.tracking_url_callback = tracking_url_callback
+        self.status_message_callback = status_message_callback
+        self.random_seed = random_seed
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
 
     def _run_get_new_deps(self):
+        self.task.set_tracking_url = self.tracking_url_callback
+        self.task.set_status_message = self.status_message_callback
+
+        def deprecated_tracking_url_callback(*args, **kwargs):
+            warnings.warn("tracking_url_callback in run() args is deprecated, use "
+                          "set_tracking_url instead.", DeprecationWarning)
+            self.tracking_url_callback(*args, **kwargs)
+
         run_again = False
         try:
-            task_gen = self.task.run(tracking_url_callback=self.tracking_url_callback)
+            task_gen = self.task.run(tracking_url_callback=deprecated_tracking_url_callback)
         except TypeError as ex:
             if 'unexpected keyword argument' not in str(ex):
                 raise
             run_again = True
         if run_again:
             task_gen = self.task.run()
+
+        self.task.set_tracking_url = None
+        self.task.set_status_message = None
+
         if not isinstance(task_gen, types.GeneratorType):
             return None
 
@@ -727,11 +741,13 @@ class Worker(object):
                 tracking_url=tracking_url,
             )
 
+        def update_status_message(message):
+            self._scheduler.set_task_status_message(task.task_id, message)
+
         return TaskProcess(
-            task, self._id, self._task_result_queue,
+            task, self._id, self._task_result_queue, update_tracking_url, update_status_message,
             random_seed=bool(self.worker_processes > 1),
-            worker_timeout=self._config.timeout,
-            tracking_url_callback=update_tracking_url,
+            worker_timeout=self._config.timeout
         )
 
     def _purge_children(self):

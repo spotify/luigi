@@ -19,6 +19,7 @@ import logging
 import os
 import re
 import subprocess
+import warnings
 
 from luigi import six
 
@@ -194,6 +195,10 @@ class ScaldingJobRunner(luigi.contrib.hadoop.JobRunner):
         return job_jar
 
     def run_job(self, job, tracking_url_callback=None):
+        if tracking_url_callback is not None:
+            warnings.warn("tracking_url_callback argument is deprecated, task.set_tracking_url is "
+                          "used instead.", DeprecationWarning)
+
         job_jar = self.build_job_jar(job)
         jars = [job_jar] + self.get_libjars() + job.extra_jars()
         scalding_core = self.get_scalding_core()
@@ -216,7 +221,7 @@ class ScaldingJobRunner(luigi.contrib.hadoop.JobRunner):
         env['HADOOP_CLASSPATH'] = hadoop_cp
         logger.info("Submitting Hadoop job: HADOOP_CLASSPATH=%s %s",
                     hadoop_cp, subprocess.list2cmdline(arglist))
-        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback, env=env)
+        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, job.set_tracking_url, env=env)
 
         for a, b in tmp_files:
             a.move(b)

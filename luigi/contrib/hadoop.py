@@ -416,6 +416,10 @@ class HadoopJobRunner(JobRunner):
         self.tmp_dir = False
 
     def run_job(self, job, tracking_url_callback=None):
+        if tracking_url_callback is not None:
+            warnings.warn("tracking_url_callback argument is deprecated, task.set_tracking_url is "
+                          "used instead.", DeprecationWarning)
+
         packages = [luigi] + self.modules + job.extra_modules() + list(_attached_packages)
 
         # find the module containing the job
@@ -528,7 +532,7 @@ class HadoopJobRunner(JobRunner):
 
         job.dump(self.tmp_dir)
 
-        run_and_track_hadoop_job(arglist, tracking_url_callback=tracking_url_callback)
+        run_and_track_hadoop_job(arglist, tracking_url_callback=job.set_tracking_url)
 
         if self.end_job_with_atomic_move_dir:
             luigi.contrib.hdfs.HdfsTarget(output_hadoop).move_dir(output_final)
@@ -676,7 +680,7 @@ class BaseHadoopJobTask(luigi.Task):
     # available formats are "python" and "json".
     data_interchange_format = "python"
 
-    def run(self, tracking_url_callback=None):
+    def run(self):
         # The best solution is to store them as lazy `cached_property`, but it
         # has extraneous dependency. And `property` is slow (need to be
         # calculated every time when called), so we save them as attributes
@@ -686,12 +690,7 @@ class BaseHadoopJobTask(luigi.Task):
         self.deserialize = DataInterchange[self.data_interchange_format]['deserialize']
 
         self.init_local()
-        try:
-            self.job_runner().run_job(self, tracking_url_callback=tracking_url_callback)
-        except TypeError as ex:
-            if 'unexpected keyword argument' not in ex.message:
-                raise
-            self.job_runner().run_job(self)
+        self.job_runner().run_job(self)
 
     def requires_local(self):
         """
@@ -915,6 +914,11 @@ class JobTask(BaseHadoopJobTask):
         """
         Dump instance to file.
         """
+        _set_tracking_url = self.set_tracking_url
+        self.set_tracking_url = None
+        _set_status_message = self.set_status_message
+        self.set_status_message = None
+
         file_name = os.path.join(directory, 'job-instance.pickle')
         if self.__module__ == '__main__':
             d = pickle.dumps(self)
@@ -924,6 +928,9 @@ class JobTask(BaseHadoopJobTask):
 
         else:
             pickle.dump(self, open(file_name, "wb"))
+
+        self.set_tracking_url = _set_tracking_url
+        self.set_status_message = _set_status_message
 
     def _map_input(self, input_stream):
         """

@@ -21,6 +21,7 @@ import operator
 import os
 import subprocess
 import tempfile
+import warnings
 
 from luigi import six
 
@@ -342,6 +343,10 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                         pass
 
     def run_job(self, job, tracking_url_callback=None):
+        if tracking_url_callback is not None:
+            warnings.warn("tracking_url_callback argument is deprecated, task.set_tracking_url is "
+                          "used instead.", DeprecationWarning)
+
         self.prepare_outputs(job)
         with tempfile.NamedTemporaryFile() as f:
             query = job.query()
@@ -361,7 +366,7 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                     arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
 
             logger.info(arglist)
-            return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, tracking_url_callback)
+            return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, job.set_tracking_url)
 
 
 class HiveTableTarget(luigi.Target):

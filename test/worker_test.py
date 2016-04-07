@@ -266,7 +266,7 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(a.has_run)
         self.assertFalse(b.has_run)
 
-    def test_tracking_url(self):
+    def test_tracking_url_deprecated(self):
         tracking_url = 'http://test_url.com/'
 
         class A(Task):
@@ -287,7 +287,7 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(1, len(tasks))
         self.assertEqual(tracking_url, tasks[a.task_id]['tracking_url'])
 
-    def test_type_error_in_tracking_run(self):
+    def test_type_error_in_tracking_run_deprecated(self):
         class A(Task):
             num_runs = 0
 
@@ -304,6 +304,26 @@ class WorkerTest(unittest.TestCase):
 
         # Should only run and fail once, not retry because of the type error
         self.assertEqual(1, a.num_runs)
+
+    def test_tracking_url(self):
+        tracking_url = 'http://test_url.com/'
+
+        class A(Task):
+            has_run = False
+
+            def complete(self):
+                return self.has_run
+
+            def run(self):
+                self.set_tracking_url(tracking_url)
+                self.has_run = True
+
+        a = A()
+        self.assertTrue(self.w.add(a))
+        self.assertTrue(self.w.run())
+        tasks = self.sch.task_list('DONE', '')
+        self.assertEqual(1, len(tasks))
+        self.assertEqual(tracking_url, tasks[a.task_id]['tracking_url'])
 
     def test_fail(self):
         class CustomException(BaseException):

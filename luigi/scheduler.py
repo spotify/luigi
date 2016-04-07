@@ -163,7 +163,7 @@ class Task(object):
 
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
                  params=None, disable_failures=None, disable_window=None, disable_hard_timeout=None,
-                 tracking_url=None):
+                 tracking_url=None, status_message=None):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -188,6 +188,7 @@ class Task(object):
         self.disable_hard_timeout = disable_hard_timeout
         self.failures = Failures(disable_window)
         self.tracking_url = tracking_url
+        self.status_message = status_message
         self.scheduler_disable_time = None
         self.runnable = False
 
@@ -870,6 +871,7 @@ class CentralPlannerScheduler(Scheduler):
             'priority': task.priority,
             'resources': task.resources,
             'tracking_url': getattr(task, "tracking_url", None),
+            'status_message': task.status_message
         }
         if task.status == DISABLED:
             ret['re_enable_able'] = task.scheduler_disable_time is not None
@@ -1095,6 +1097,18 @@ class CentralPlannerScheduler(Scheduler):
             return {"taskId": task_id, "error": task.expl, 'displayName': task.pretty_id}
         else:
             return {"taskId": task_id, "error": ""}
+
+    def set_task_status_message(self, task_id, status_message):
+        if self._state.has_task(task_id):
+            task = self._state.get_task(task_id)
+            task.status_message = status_message
+
+    def get_task_status_message(self, task_id):
+        if self._state.has_task(task_id):
+            task = self._state.get_task(task_id)
+            return {"taskId": task_id, "statusMessage": task.status_message}
+        else:
+            return {"taskId": task_id, "statusMessage": ""}
 
     def _update_task_history(self, task, status, host=None):
         try:
