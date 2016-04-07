@@ -315,8 +315,7 @@ class WorkerTest(unittest.TestCase):
                 return self.has_run
 
             def run(self):
-                if self.set_tracking_url is not None:
-                    self.set_tracking_url(tracking_url)
+                self.set_tracking_url(tracking_url)
                 self.has_run = True
 
         a = A()

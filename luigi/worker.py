@@ -94,18 +94,18 @@ class TaskProcess(multiprocessing.Process):
 
     Mainly for convenience since this is run in a separate process. """
 
-    def __init__(self, task, worker_id, result_queue, random_seed=False, worker_timeout=0,
-                 tracking_url_callback=None, status_message_callback=None):
+    def __init__(self, task, worker_id, result_queue, tracking_url_callback,
+                 status_message_callback, random_seed=False, worker_timeout=0):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
         self.result_queue = result_queue
+        self.tracking_url_callback = tracking_url_callback
+        self.status_message_callback = status_message_callback
         self.random_seed = random_seed
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
-        self.tracking_url_callback = tracking_url_callback
-        self.status_message_callback = status_message_callback
 
     def _run_get_new_deps(self):
         self.task.set_tracking_url = self.tracking_url_callback
@@ -745,11 +745,9 @@ class Worker(object):
             self._scheduler.set_task_status_message(task.task_id, message)
 
         return TaskProcess(
-            task, self._id, self._task_result_queue,
+            task, self._id, self._task_result_queue, update_tracking_url, update_status_message,
             random_seed=bool(self.worker_processes > 1),
-            worker_timeout=self._config.timeout,
-            tracking_url_callback=update_tracking_url,
-            status_message_callback=update_status_message
+            worker_timeout=self._config.timeout
         )
 
     def _purge_children(self):
