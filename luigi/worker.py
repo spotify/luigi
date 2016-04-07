@@ -527,7 +527,8 @@ class Worker(object):
 
     def _email_error(self, task, formatted_traceback, subject, headline):
         formatted_subject = subject.format(task=task, host=self.host)
-        message = notifications.format_task_error(headline, task, formatted_traceback)
+        scheduled_tasks = sorted(self._scheduled_tasks.itervalues(), key=lambda t: t.task_id)
+        message = notifications.format_task_error(headline, task, formatted_traceback, scheduled_tasks)
         notifications.send_error_email(formatted_subject, message, task.owner_email)
 
     def add(self, task, multiprocess=False):
