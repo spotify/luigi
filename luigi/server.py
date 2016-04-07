@@ -85,6 +85,8 @@ class RPCHandler(tornado.web.RequestHandler):
             'task_search',
             'update_resources',
             'worker_list',
+            'set_task_status_message',
+            'get_task_status_message',
         ]:
             self.send_error(404)
             return
