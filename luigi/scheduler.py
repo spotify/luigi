@@ -90,9 +90,9 @@ class scheduler(Config):
     # These disables last for disable_persist seconds.
     disable_window = parameter.IntParameter(default=3600,
                                             config_path=dict(section='scheduler', name='disable-window-seconds'))
-    disable_failures = parameter.IntParameter(default=None,
+    disable_failures = parameter.IntParameter(default=999999999,
                                               config_path=dict(section='scheduler', name='disable-num-failures'))
-    disable_hard_timeout = parameter.IntParameter(default=None,
+    disable_hard_timeout = parameter.IntParameter(default=999999999,
                                                   config_path=dict(section='scheduler', name='disable-hard-timeout'))
     disable_persist = parameter.IntParameter(default=86400,
                                              config_path=dict(section='scheduler', name='disable-persist-seconds'))
@@ -199,8 +199,7 @@ class Task(object):
         self.failures.add_failure()
 
     def has_excessive_failures(self):
-        if (self.failures.first_failure_time is not None and
-                self.disable_hard_timeout):
+        if self.failures.first_failure_time is not None:
             if (time.time() >= self.failures.first_failure_time +
                     self.disable_hard_timeout):
                 return True
@@ -209,10 +208,6 @@ class Task(object):
             return True
 
         return False
-
-    def can_disable(self):
-        return (self.disable_failures is not None or
-                self.disable_hard_timeout is not None)
 
     @property
     def pretty_id(self):
@@ -383,7 +378,7 @@ class SimpleTaskState(object):
             elif task.scheduler_disable_time is not None and new_status != DISABLED:
                 return
 
-        if new_status == FAILED and task.can_disable() and task.status != DISABLED:
+        if new_status == FAILED and task.status != DISABLED:
             task.add_failure()
             if task.has_excessive_failures():
                 task.scheduler_disable_time = time.time()

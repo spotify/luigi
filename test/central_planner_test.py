@@ -1126,3 +1126,25 @@ class CentralPlannerTest(unittest.TestCase):
             self.assertEqual(set([]), set(self.sch.task_list(status, '')))
 
         self.assertEqual(3, len(self.sch.task_list(None, '')))  # None == All statuses
+
+    def test_no_crash_on_only_disable_hard_timeout(self):
+        """
+        Scheduler shouldn't crash with only disable_hard_timeout
+
+        There was some failure happening when disable_hard_timeout was set but
+        disable_failures was not.
+        """
+        self.sch = CentralPlannerScheduler(retry_delay=5,
+                                           disable_hard_timeout=100)
+        self.setTime(1)
+        self.sch.add_worker(WORKER, [])
+        self.sch.ping(worker=WORKER)
+
+        self.setTime(2)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.add_task(worker=WORKER, task_id='B', deps=['A'])
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+        self.setTime(10)
+        self.sch.prune()
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
