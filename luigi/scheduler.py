@@ -98,7 +98,6 @@ class scheduler(Config):
                                              config_path=dict(section='scheduler', name='disable-persist-seconds'))
     max_shown_tasks = parameter.IntParameter(default=100000)
     max_graph_nodes = parameter.IntParameter(default=100000)
-    prune_done_tasks = parameter.BoolParameter(default=False)
 
     record_task_history = parameter.BoolParameter(default=False)
 
