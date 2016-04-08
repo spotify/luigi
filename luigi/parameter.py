@@ -154,7 +154,7 @@ class Parameter(object):
 
         if config_path is not None and ('section' not in config_path or 'name' not in config_path):
             raise ParameterException('config_path must be a hash containing entries for section and name')
-        self.__config = config_path
+        self._config_path = config_path
 
         self._counter = Parameter._counter  # We need to keep track of this to get the order right (see Task class)
         Parameter._counter += 1
@@ -194,10 +194,10 @@ class Parameter(object):
         yield (self._get_value_from_config(task_name, param_name.replace('_', '-')),
                'Configuration [{}] {} (with dashes) should be avoided. Please use underscores.'.format(
                task_name, param_name))
-        if self.__config:
-            yield (self._get_value_from_config(self.__config['section'], self.__config['name']),
+        if self._config_path:
+            yield (self._get_value_from_config(self._config_path['section'], self._config_path['name']),
                    'The use of the configuration [{}] {} is deprecated. Please use [{}] {}'.format(
-                   self.__config['section'], self.__config['name'], task_name, param_name))
+                   self._config_path['section'], self._config_path['name'], task_name, param_name))
         yield (self._default, None)
 
     def has_task_value(self, task_name, param_name):
