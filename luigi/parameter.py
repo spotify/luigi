@@ -419,6 +419,18 @@ class DateParameter(Parameter):
         return datetime.date(*map(int, s.split('-')))
 
 
+class DateSecondParameter(DateHourParameter):
+    """
+    Parameter whose value is a :py:class:`~datetime.datetime` specified to the second.
+
+    A DateSecondParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
+    date and time specified to the second. For example, ``2013-07-10T19H07M30`` specifies July 10, 2013 at
+    19:07:30.
+    """
+
+    date_format = '%Y-%m-%dT%HH%MM%S'  # ISO 8601 is to use 'T' and 'H'
+
+
 class IntParameter(Parameter):
     """
     Parameter whose value is an ``int``.
