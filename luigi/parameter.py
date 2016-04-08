@@ -427,8 +427,9 @@ class DateSecondParameter(DateHourParameter):
     date and time specified to the second. For example, ``2013-07-10T19H07M30`` specifies July 10, 2013 at
     19:07:30.
     """
+
     date_format = '%Y-%m-%dT%HH%MM%S'  # ISO 8601 is to use 'T' and 'H'
-    
+
 
 class IntParameter(Parameter):
     """

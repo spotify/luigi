@@ -43,10 +43,12 @@ class ParamTask(luigi.Task):
     param1 = luigi.Parameter()
     param2 = luigi.IntParameter()
 
+
 class ListDateParamTask(luigi.Task):
     param1 = luigi.Parameter()
     param2 = luigi.DateSecondParameter(default=datetime.now())
     param3 = luigi.Parameter(default=['something'])
+
 
 class SqsTaskHistoryTest(unittest.TestCase):
     def setUp(self):
