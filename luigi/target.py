@@ -252,9 +252,9 @@ class FileSystemTarget(Target):
 
 
 class AtomicLocalFile(io.BufferedWriter):
-    """Abstract class to create Target that create
-    a tempoprary file in the local filesystem before
-    moving it to there final destination
+    """Abstract class to create a Target that creates
+    a temporary file in the local filesystem before
+    moving it to its final destination.
 
     This class is just for the writing part of the Target. See
     :class:`luigi.file.LocalTarget` for example
