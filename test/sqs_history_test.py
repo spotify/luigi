@@ -22,6 +22,7 @@ try:
 except ImportError as e:
     raise unittest.SkipTest('Could not test sqs_history: %s' % e)
 
+from datetime import datetime
 import json
 import helpers
 import unittest
@@ -42,6 +43,10 @@ class ParamTask(luigi.Task):
     param1 = luigi.Parameter()
     param2 = luigi.IntParameter()
 
+class ListDateParamTask(luigi.Task):
+    param1 = luigi.Parameter()
+    param2 = luigi.DateSecondParameter(default=datetime.now())
+    param3 = luigi.Parameter(default=['something'])
 
 class SqsTaskHistoryTest(unittest.TestCase):
     def setUp(self):
@@ -67,6 +72,41 @@ class SqsTaskHistoryTest(unittest.TestCase):
         params = task.get("params")
         self.assertEquals("foo", params.get("param1"))
         self.assertEquals("bar", params.get("param2"))
+
+        meta = pending_message_fields.get("server_metadata")
+        self.assertEquals("data1", meta[0][1])
+
+        # Check Running
+        running_message_fields = sent_messages[1]
+
+        task = running_message_fields.get("task")
+        self.assertEquals(RUNNING, task.get("status"))
+
+        # Check Done
+        done_message_fields = sent_messages[2]
+        task = done_message_fields.get("task")
+        self.assertEquals(DONE, task.get("status"))
+
+    @helpers.with_config(dict(task_history=dict(sqs_queue_name='name', aws_access_key_id='key', aws_secret_access_key='secret_key'),
+                              server_metadata=dict(meta1='data1')))
+    def test_task_events_list_date_params(self):
+        self.history = SqsTaskHistory()
+        curr_time = datetime.now()
+        curr_time_str = curr_time.strftime(luigi.DateSecondParameter.date_format)
+        t = ListDateParamTask("foo", param2=curr_time)
+        self.run_task(t, "worker-id")
+        sent_messages = [json.loads(m.get_body()) for m in self.history._queue.messages]
+
+        # Check pending:
+        pending_message_fields = sent_messages[0]
+
+        task = pending_message_fields.get("task")
+        self.assertEquals(PENDING, task.get("status"))
+
+        params = task.get("params")
+        self.assertEquals("foo", params.get("param1"))
+        self.assertEquals(curr_time_str, params.get("param2"))
+        self.assertEquals([u"'something'"], params.get("param3"))
 
         meta = pending_message_fields.get("server_metadata")
         self.assertEquals("data1", meta[0][1])
