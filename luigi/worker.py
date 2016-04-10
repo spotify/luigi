@@ -271,7 +271,10 @@ class DequeQueue(collections.deque):
         return self.append(obj)
 
     def get(self, block=None, timeout=None):
-        return self.pop()
+        try:
+            return self.pop()
+        except IndexError:
+            raise Queue.Empty
 
 
 class AsyncCompletionException(Exception):
