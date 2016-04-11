@@ -299,6 +299,15 @@ class FileSystemTest(unittest.TestCase):
             pass
         self.assertTrue([self.path + '/file'], list(self.fs.listdir(self.path + '/')))
 
+    def test_move_to_new_dir(self):
+        # Regression test for a bug in LocalFileSystem.move
+        src = os.path.join(self.path, 'src.txt')
+        dest = os.path.join(self.path, 'newdir', 'dest.txt')
+
+        LocalTarget(src).open('w').close()
+        self.fs.move(src, dest)
+        self.assertTrue(os.path.exists(dest))
+
 
 class TestImportFile(unittest.TestCase):
 

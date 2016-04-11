@@ -88,7 +88,7 @@ class LocalFileSystem(FileSystem):
             raise RuntimeError('Destination exists: %s' % new_path)
         d = os.path.dirname(new_path)
         if d and not os.path.exists(d):
-            self.fs.mkdir(d)
+            self.mkdir(d)
         os.rename(old_path, new_path)
 
 
