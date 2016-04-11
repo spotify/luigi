@@ -35,6 +35,9 @@ class atomic_file(AtomicLocalFile):
     Also cleans up the temp file if close is not invoked
     """
 
+    def __init__(self, path, mode):
+        super(AtomicLocalFile, self).__init__(path, mode)
+
     def move_to_final_destination(self):
         os.rename(self.tmp_path, self.path)
 
@@ -123,7 +126,7 @@ class LocalTarget(FileSystemTarget):
         rwmode = mode.replace('b', '').replace('t', '')
         if rwmode == 'w':
             self.makedirs()
-            return self.format.pipe_writer(atomic_file(self.path))
+            return self.format.pipe_writer(atomic_file(self.path, mode))
 
         elif rwmode == 'r':
             fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, mode)))
