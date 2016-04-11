@@ -496,7 +496,7 @@ class CentralPlannerScheduler(Scheduler):
         Keyword Arguments:
         :param config: an object of class "scheduler" or None (in which the global instance will be used)
         :param resources: a dict of str->int constraints
-        :param task_history_override: ignore config and use this object as the task history
+        :param task_history_impl: ignore config and use this object as the task history
         """
         self._config = config or scheduler(**kwargs)
         self._state = SimpleTaskState(self._config.state_path)
