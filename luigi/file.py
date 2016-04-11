@@ -35,9 +35,6 @@ class atomic_file(AtomicLocalFile):
     Also cleans up the temp file if close is not invoked
     """
 
-    def __init__(self, path, mode):
-        super(AtomicLocalFile, self).__init__(path, mode)
-
     def move_to_final_destination(self):
         os.rename(self.tmp_path, self.path)
 
