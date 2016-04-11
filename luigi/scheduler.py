@@ -42,7 +42,7 @@ from luigi import task_history as history
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN
 from luigi.task import Config
 
-logger = logging.getLogger("luigi.server")
+logger = logging.getLogger(__name__)
 
 
 class Scheduler(object):
@@ -414,8 +414,8 @@ class SimpleTaskState(object):
         # Mark tasks with no remaining active stakeholders for deletion
         if not task.stakeholders:
             if task.remove is None:
-                logger.info("Task %r has stakeholders %r but none remain connected -> might remove "
-                            "task in %s seconds", task.id, task.stakeholders, config.remove_delay)
+                logger.debug("Task %r has stakeholders %r but none remain connected -> might remove "
+                             "task in %s seconds", task.id, task.stakeholders, config.remove_delay)
                 task.remove = time.time() + config.remove_delay
 
         # Re-enable task after the disable time expires
@@ -531,7 +531,7 @@ class CentralPlannerScheduler(Scheduler):
         remove_workers = []
         for worker in self._state.get_active_workers():
             if worker.prune(self._config):
-                logger.info("Worker %s timed out (no contact for >=%ss)", worker, self._config.worker_disconnect_delay)
+                logger.debug("Worker %s timed out (no contact for >=%ss)", worker, self._config.worker_disconnect_delay)
                 remove_workers.append(worker.id)
 
         self._state.inactivate_workers(remove_workers)
@@ -914,7 +914,7 @@ class CentralPlannerScheduler(Scheduler):
 
             task = self._state.get_task(task_id)
             if task is None or not task.family:
-                logger.warn('Missing task for id [%s]', task_id)
+                logger.debug('Missing task for id [%s]', task_id)
 
                 # NOTE : If a dependency is missing from self._state there is no way to deduce the
                 #        task family and parameters.
