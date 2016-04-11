@@ -263,8 +263,7 @@ class AtomicLocalFile(io.BufferedWriter):
     def __init__(self, path, mode='w'):
         self.__tmp_path = self.generate_tmp_path(path)
         self.path = path
-        self.mode = mode
-        super(AtomicLocalFile, self).__init__(io.FileIO(self.__tmp_path, self.mode))
+        super(AtomicLocalFile, self).__init__(io.FileIO(self.__tmp_path, mode))
 
     def close(self):
         super(AtomicLocalFile, self).close()
