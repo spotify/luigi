@@ -400,8 +400,8 @@ class HadoopJobRunner(JobRunner):
 
     def __init__(self, streaming_jar, modules=None, streaming_args=None,
                  libjars=None, libjars_in_hdfs=None, jobconfs=None,
-                 archives=None, input_format=None, output_format=None,
-                 end_job_with_atomic_move_dir=True):
+                 input_format=None, output_format=None,
+                 end_job_with_atomic_move_dir=True, archives=None):
         def get(x, default):
             return x is not None and x or default
         self.streaming_jar = streaming_jar
@@ -480,10 +480,8 @@ class HadoopJobRunner(JobRunner):
             arglist += ['-libjars', ','.join(libjars)]
 
         # 'archives' is also a generic option
-        archives = [archive for archive in self.archives]
-
-        if archives:
-            arglist += ['-archives', ','.join(archives)]
+        if self.archives:
+            arglist += ['-archives', ','.join(self.archives)]
 
         # Add static files and directories
         extra_files = get_extra_files(job.extra_files())
