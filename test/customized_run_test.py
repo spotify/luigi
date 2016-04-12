@@ -27,7 +27,7 @@ import luigi.worker
 
 
 class DummyTask(luigi.Task):
-    n = luigi.Parameter()
+    x = luigi.Parameter()
 
     def __init__(self, *args, **kwargs):
         super(DummyTask, self).__init__(*args, **kwargs)
@@ -126,7 +126,7 @@ class CustomizedWorkerTest(unittest.TestCase):
 
     def test_cmdline_custom_worker(self):
         self.assertFalse(self.worker_scheduler_factory.worker.complete())
-        luigi.run(['DummyTask', '--n', '4'], worker_scheduler_factory=self.worker_scheduler_factory)
+        luigi.run(['DummyTask', '--x', '4'], worker_scheduler_factory=self.worker_scheduler_factory)
         self.assertTrue(self.worker_scheduler_factory.worker.complete())
 
 if __name__ == '__main__':

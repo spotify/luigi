@@ -93,19 +93,18 @@ class CmdlineParser(object):
             is_the_root_task = task_name == root_task
             help = param_obj.description if any((is_the_root_task, help_all, param_obj.always_in_help)) else argparse.SUPPRESS
             flag_name_underscores = param_name if is_without_section else task_name + '_' + param_name
-            global_flag_name = '--' + flag_name_underscores.replace('_', '-')
-            parser.add_argument(global_flag_name,
-                                help=help,
-                                action=param_obj._parser_action(),
-                                dest=param_obj._parser_global_dest(param_name, task_name)
-                                )
+            global_flag_name = flag_name_underscores.replace('_', '-')
+            param_obj._parser_add_arguments(parser=parser,
+                                            flag_name=global_flag_name,
+                                            dest=param_obj._parser_global_dest(param_name, task_name),
+                                            help=help)
+
             if is_the_root_task:
-                local_flag_name = '--' + param_name.replace('_', '-')
-                parser.add_argument(local_flag_name,
-                                    help=help,
-                                    action=param_obj._parser_action(),
-                                    dest=param_name
-                                    )
+                local_flag_name = param_name.replace('_', '-')
+                param_obj._parser_add_arguments(parser=parser,
+                                                flag_name=local_flag_name,
+                                                dest=param_name,
+                                                help=help)
 
         return parser
 
@@ -129,7 +128,7 @@ class CmdlineParser(object):
         res = {}
         for (param_name, param_obj) in self._get_task_cls().get_params():
             attr = getattr(self.known_args, param_name)
-            if attr:
+            if attr is not None:
                 res.update(((param_name, param_obj.parse(attr)),))
 
         return res
