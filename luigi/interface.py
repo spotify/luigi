@@ -86,7 +86,7 @@ class core(task.Config):
         description='Port of remote scheduler api process',
         config_path=dict(section='core', name='default-scheduler-port'))
     scheduler_url = parameter.Parameter(
-        default=None,
+        default='',
         description='Full path to remote scheduler',
         config_path=dict(section='core', name='default-scheduler-url'),
     )
@@ -106,10 +106,10 @@ class core(task.Config):
         default=1,
         description='Maximum number of parallel tasks to run')
     logging_conf_file = parameter.Parameter(
-        default=None,
+        default='',
         description='Configuration file for logging')
     module = parameter.Parameter(
-        default=None,
+        default='',
         description='Used for dynamic loading of modules',
         always_in_help=True)
     parallel_scheduling = parameter.BoolParameter(
@@ -158,7 +158,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     # search for logging configuration path first on the command line, then
     # in the application config file
     logging_conf = env_params.logging_conf_file
-    if logging_conf is not None and not os.path.exists(logging_conf):
+    if logging_conf != '' and not os.path.exists(logging_conf):
         raise Exception(
             "Error: Unable to locate specified logging configuration file!"
         )
@@ -175,7 +175,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     if env_params.local_scheduler:
         sch = worker_scheduler_factory.create_local_scheduler()
     else:
-        if env_params.scheduler_url is not None:
+        if env_params.scheduler_url != '':
             url = env_params.scheduler_url
         else:
             url = 'http://{host}:{port:d}/'.format(
