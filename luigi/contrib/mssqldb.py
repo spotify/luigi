@@ -18,7 +18,6 @@
 import logging
 
 import luigi
-import abc
 
 logger = logging.getLogger('luigi-interface')
 
@@ -34,7 +33,9 @@ class MSSqlTarget(luigi.Target):
     Target for a resource in Microsoft SQL Server.
     """
 
-    marker_table = luigi.configuration.get_config().get('mssql', 'marker-table', 'table_updates')
+    marker_table = luigi.configuration.get_config().get('mssql',
+                                                        'marker-table',
+                                                        'table_updates')
 
     def __init__(self, host, database, user, password, table, update_id):
         """
@@ -78,18 +79,18 @@ class MSSqlTarget(luigi.Target):
 
         connection.execute_non_query(
             """IF NOT EXISTS(SELECT 1
-			                   FROM {marker_table}
-			                  WHERE update_id = %(update_id)s)
-	                INSERT INTO {marker_table} (update_id, target_table)
-                         VALUES (%(update_id)s, %(table)s)
+                            FROM {marker_table}
+                            WHERE update_id = %(update_id)s)
+                    INSERT INTO {marker_table} (update_id, target_table)
+                        VALUES (%(update_id)s, %(table)s)
                 ELSE
-	                UPDATE t
-		                  SET target_table = %(table)s
-			                    , inserted = GETDATE()
-	                FROM {marker_table} t
-	                WHERE update_id = %(update_id)s
+                    UPDATE t
+                    SET target_table = %(table)s
+                        , inserted = GETDATE()
+                    FROM {marker_table} t
+                    WHERE update_id = %(update_id)s
               """.format(marker_table=self.marker_table),
-              {"update_id":self.update_id, "table":self.table})
+            {"update_id": self.update_id, "table": self.table})
 
         # make sure update is properly marked
         assert self.exists(connection)
@@ -99,10 +100,12 @@ class MSSqlTarget(luigi.Target):
             connection = self.connect()
         try:
             row = connection.execute_row("""SELECT 1 FROM {marker_table}
-                WHERE update_id = %s""".format(marker_table=self.marker_table),
-                (self.update_id,))
+                                            WHERE update_id = %s
+                                    """.format(marker_table=self.marker_table),
+                                         (self.update_id,))
         except _mssql.MSSQLDatabaseException as e:
-            if e.number == 208: #This is number for table doesn't exist
+            # Error number for table doesn't exist
+            if e.number == 208:
                 row = None
             else:
                 raise
@@ -110,18 +113,20 @@ class MSSqlTarget(luigi.Target):
         return row is not None
 
     def connect(self):
+        """
+        Create a SQL Server connection and return a connection object
+        """
         connection = _mssql.connect(user=self.user,
-                                             password=self.password,
-                                             server=self.host,
-                                             port=self.port,
-                                             database=self.database)
+                                    password=self.password,
+                                    server=self.host,
+                                    port=self.port,
+                                    database=self.database)
         return connection
 
     def create_marker_table(self):
         """
         Create marker table if it doesn't exist.
-
-        Using a separate connection since the transaction might have to be reset.
+        Use a separate connection since the transaction might have to be reset.
         """
         connection = self.connect()
         try:
@@ -137,7 +142,8 @@ class MSSqlTarget(luigi.Target):
                 .format(marker_table=self.marker_table)
             )
         except _mssql.MSSQLDatabaseException as e:
-            if e.number == 2714: #Table already exists code
+            # Table already exists code
+            if e.number == 2714:
                 pass
             else:
                 raise
