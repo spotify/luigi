@@ -486,13 +486,13 @@ class Worker(object):
     def _email_complete_error(self, task, formatted_traceback):
         self._email_error(task, formatted_traceback,
                           subject="Luigi: {task} failed scheduling. Host: {host}",
-                          headline="Will not schedule task or any dependencies due to error in complete() method",
+                          headline="Will not run {task} or any dependencies due to error in complete() method",
                           )
 
     def _email_dependency_error(self, task, formatted_traceback):
         self._email_error(task, formatted_traceback,
                           subject="Luigi: {task} failed scheduling. Host: {host}",
-                          headline="Will not schedule task or any dependencies due to error in deps() method",
+                          headline="Will not run {task} or any dependencies due to error in deps() method",
                           )
 
     def _email_unexpected_error(self, task, formatted_traceback):
