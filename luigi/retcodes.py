@@ -88,6 +88,6 @@ def run_with_retcodes(argv):
         (retcodes.missing_data, has('still_pending_ext')),
         (retcodes.task_failed, has('failed')),
         (retcodes.already_running, has('run_by_other_worker')),
-        (retcodes.scheduling_error, has('unknown')),
+        (retcodes.scheduling_error, has('scheduling_error')),
     )
     sys.exit(max(code * (1 if cond else 0) for code, cond in codes_and_conds))
