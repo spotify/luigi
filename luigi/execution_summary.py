@@ -77,7 +77,7 @@ def _depth_first_search(set_tasks, current_task, visited):
         upstream_missing_dependency = False
         upstream_run_by_other_worker = False
         upstream_scheduling_error = False
-        for task in current_task._requires():
+        for task in current_task.deps():
             if task not in visited:
                 _depth_first_search(set_tasks, task, visited)
             if task in set_tasks["failed"] or task in set_tasks["upstream_failure"]:

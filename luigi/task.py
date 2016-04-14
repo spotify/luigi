@@ -440,10 +440,12 @@ class Task(object):
         provide consistent end-user experience), yet need to introduce
         (non-input) dependencies.
 
-        Must return an iterable which among others contains the _requires() of
-        the superclass.
+        Must return a structure of Tasks which among others contains
+        the _requires() of the superclass. The return value can be a single
+        Task, a list of Task instances, or a dict whose values are
+        Task instances.
         """
-        return flatten(self.requires())  # base impl
+        return self.requires()  # base impl
 
     def process_resources(self):
         """
@@ -459,10 +461,11 @@ class Task(object):
 
         See :ref:`Task.input`
 
-        :return: a list of :py:class:`Target` objects which are specified as
-                 outputs of all required Tasks.
+        :return: a structure of :py:class:`Target` objects which are specified
+                 as outputs of all required Tasks. Normally, the structure is
+                 the same as that returned by :py:meth:`requires`.
         """
-        return getpaths(self.requires())
+        return getpaths(self._requires())
 
     def deps(self):
         """
@@ -559,7 +562,7 @@ class WrapperTask(Task):
     """
 
     def complete(self):
-        return all(r.complete() for r in flatten(self.requires()))
+        return all(r.complete() for r in self.deps())
 
 
 class Config(Task):
@@ -636,6 +639,6 @@ def flatten_output(task):
     """
     r = flatten(task.output())
     if not r:
-        for dep in flatten(task.requires()):
+        for dep in flatten(task.deps()):
             r += flatten_output(dep)
     return r
