@@ -30,19 +30,26 @@ class retcode(luigi.Config):
     """
     See the :ref:`return codes configuration section <retcode-config>`.
     """
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     unhandled_exception = IntParameter(default=4,
                                        description='For scheduling errors or internal luigi errors.',
                                        )
+
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     missing_data = IntParameter(default=0,
                                 description="For when there are incomplete ExternalTask dependencies.",
                                 )
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     task_failed = IntParameter(default=0,
                                description='''For when a task's run() method fails.''',
                                )
+
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     already_running = IntParameter(default=0,
                                    description='For both local --lock and luigid "lock"',
                                    )
-    scheduling_error = IntParameter(default=4,
+
+    scheduling_error = IntParameter(default=35,
                                     description='''For when a task's complete() or requires() fails.'''
                                     )
 
