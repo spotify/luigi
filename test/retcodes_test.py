@@ -86,14 +86,14 @@ class RetcodesTest(LuigiTestCase):
             def requires(self):
                 yield FailingComplete()
 
-        self.run_and_expect('RequiringTask', 4)
+        self.run_and_expect('RequiringTask', 35)
 
     def test_failure_in_requires(self):
         class FailingRequires(luigi.Task):
             def requires(self):
                 raise Exception
 
-        self.run_and_expect('FailingRequires', 4)
+        self.run_and_expect('FailingRequires', 35)
 
     def test_validate_dependency_error(self):
         # requires() from RequiringTask expects a Task object
@@ -112,14 +112,14 @@ class RetcodesTest(LuigiTestCase):
                 return False
 
         class TaskA(luigi.Task):
-            def requires(sefl):
+            def requires(self):
                 yield TaskB()
 
         class TaskLimitTest(luigi.Task):
             def requires(self):
                 yield TaskA()
 
-        self.run_and_expect('TaskLimitTest --worker-task-limit 1', 4)
+        self.run_and_expect('TaskLimitTest --worker-task-limit 1', 35)
 
     def test_unhandled_exception(self):
         def new_func(*args, **kwargs):
