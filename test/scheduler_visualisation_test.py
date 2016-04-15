@@ -75,7 +75,7 @@ class BadReqTask(luigi.Task):
         return False
 
 
-class FailingTask(luigi.Task):
+class FailTask(luigi.Task):
     task_id = luigi.Parameter()
 
     def run(self):
@@ -373,12 +373,12 @@ class SchedulerVisualisationTest(unittest.TestCase):
                 self.assertNotIn('display_name', node)
 
     def test_task_list_failed(self):
-        self._build([FailingTask(8)])
+        self._build([FailTask(8)])
         remote = self._remote()
         failed = remote.task_list('FAILED', '')
         self.assertEqual(len(failed), 1)
 
-        f8 = failed.get(FailingTask(task_id=8).task_id)
+        f8 = failed.get(FailTask(task_id=8).task_id)
         self.assertEqual(f8[u'status'], u'FAILED')
 
         self.assertEqual(remote.task_list('DONE', ''), {})
@@ -460,7 +460,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
     def test_task_search(self):
         self._build([FactorTask(8)])
-        self._build([FailingTask(8)])
+        self._build([FailTask(8)])
         remote = self._remote()
         all_tasks = remote.task_search('Task')
         self.assertEqual(len(all_tasks), 2)
@@ -468,10 +468,10 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self._assert_all(all_tasks['FAILED'], 'FAILED')
 
     def test_fetch_error(self):
-        self._build([FailingTask(8)])
+        self._build([FailTask(8)])
         remote = self._remote()
-        error = remote.fetch_error(FailingTask(task_id=8).task_id)
-        self.assertEqual(error["taskId"], FailingTask(task_id=8).task_id)
+        error = remote.fetch_error(FailTask(task_id=8).task_id)
+        self.assertEqual(error["taskId"], FailTask(task_id=8).task_id)
         self.assertTrue("Error Message" in error["error"])
         self.assertTrue("Runtime error" in error["error"])
         self.assertTrue("Traceback" in error["error"])
