@@ -40,12 +40,12 @@ from luigi import execution_summary
 from luigi.cmdline_parser import CmdlineParser
 
 
-def setup_interface_logging(conf_file=None):
+def setup_interface_logging(conf_file=''):
     # use a variable in the function object to determine if it has run before
     if getattr(setup_interface_logging, "has_run", False):
         return
 
-    if conf_file is None:
+    if conf_file == '':
         logger = logging.getLogger('luigi-interface')
         logger.setLevel(logging.DEBUG)
 
