@@ -21,63 +21,43 @@ Currently the only subclass is :py:class:`~luigi.db_task_history.DbTaskHistory`.
 
 import abc
 import logging
+import threading
 
 from luigi import six
+from luigi.task_status import PENDING, FAILED, DONE, RUNNING
 
 logger = logging.getLogger('luigi-interface')
 
 
-class StoredTask(object):
-    """
-    Interface for methods on TaskHistory
-    """
-
-    # TODO : do we need this task as distinct from luigi.scheduler.Task?
-    #        this only records host and record_id in addition to task parameters.
-
+class StatusUpdate(object):
+    ''' Interface Status updates used by background workers
+    '''
     def __init__(self, task, status, host=None):
-        self._task = task
+        self.task = task
         self.status = status
-        self.record_id = None
         self.host = host
 
-    @property
-    def task_family(self):
-        return self._task.family
 
-    @property
-    def parameters(self):
-        return self._task.params
+class HistoryWorker(threading.Thread):
+    def __init__(self, queue, task_history):
+        threading.Thread.__init__(self)
+        self._queue = queue
+        self._task_history = task_history
 
-
-@six.add_metaclass(abc.ABCMeta)
-class TaskHistory(object):
-    """
-    Abstract Base Class for updating the run history of a task
-    """
-
-    @abc.abstractmethod
-    def task_scheduled(self, task):
-        pass
-
-    @abc.abstractmethod
-    def task_finished(self, task, successful):
-        pass
-
-    @abc.abstractmethod
-    def task_started(self, task, worker_host):
-        pass
-
-    # TODO(erikbern): should web method (find_latest_runs etc) be abstract?
-
-
-class NopHistory(TaskHistory):
-
-    def task_scheduled(self, task):
-        pass
-
-    def task_finished(self, task, successful):
-        pass
-
-    def task_started(self, task, worker_host):
-        pass
+    def run(self):
+        while True:
+            update = self._queue.get()
+            try:
+                if update.status == DONE or update.status == FAILED:
+                    successful = (update.status == DONE)
+                    self._task_history.task_finished(update.task, successful)
+                elif update.status == PENDING:
+                    self._task_history.task_scheduled(update.task)
+                elif update.status == RUNNING:
+                    self._task_history.task_started(update.task, update.host)
+                else:
+                    self._task_history.other_event(update.task, update.status)
+                logger.info("Task history updated for %s with %s" % (update.task.id, update.status))
+            except:
+                logger.warning("Error saving Task history for %s with %s" % (update.task, update.status), exc_info=1)
+            self._queue.task_done()

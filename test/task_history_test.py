@@ -22,22 +22,9 @@ import luigi.scheduler
 import luigi.task_history
 import luigi.worker
 
+from luigi.task_status import PENDING, DONE, RUNNING
+
 luigi.notifications.DEBUG = True
-
-
-class SimpleTaskHistory(luigi.task_history.TaskHistory):
-
-    def __init__(self):
-        self.actions = []
-
-    def task_scheduled(self, task):
-        self.actions.append(('scheduled', task.id))
-
-    def task_finished(self, task, successful):
-        self.actions.append(('finished', task.id))
-
-    def task_started(self, task, worker_host):
-        self.actions.append(('started', task.id))
 
 
 class TaskHistoryTest(LuigiTestCase):
@@ -53,8 +40,11 @@ class TaskHistoryTest(LuigiTestCase):
             w.add(task)
             w.run()
 
-            self.assertEqual(th.actions, [
-                ('scheduled', task.task_id),
-                ('started', task.task_id),
-                ('finished', task.task_id)
-            ])
+            self.check_event_for(sch, task.task_id, PENDING)
+            self.check_event_for(sch, task.task_id, RUNNING)
+            self.check_event_for(sch, task.task_id, DONE)
+
+    def check_event_for(self, sch, task_id, status):
+        status_update = sch._history_queue.get()
+        self.assertEqual(status_update.task.id, task_id)
+        self.assertEqual(status_update.status, status)

@@ -301,13 +301,13 @@ class HiveQueryTask(luigi.contrib.hadoop.BaseHadoopJobTask):
         jcs['mapred.job.name'] = "'" + self.task_id + "'"
         if self.n_reduce_tasks is not None:
             jcs['mapred.reduce.tasks'] = self.n_reduce_tasks
-        if self.pool is not None:
+        if self._get_pool() is not None:
             # Supporting two schedulers: fair (default) and capacity using the same option
             scheduler_type = luigi.configuration.get_config().get('hadoop', 'scheduler', 'fair')
             if scheduler_type == 'fair':
-                jcs['mapred.fairscheduler.pool'] = self.pool
+                jcs['mapred.fairscheduler.pool'] = self._get_pool()
             elif scheduler_type == 'capacity':
-                jcs['mapred.job.queue.name'] = self.pool
+                jcs['mapred.job.queue.name'] = self._get_pool()
         if self.bytes_per_reducer is not None:
             jcs['hive.exec.reducers.bytes.per.reducer'] = self.bytes_per_reducer
         if self.reducers_max is not None:

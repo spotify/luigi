@@ -45,14 +45,29 @@ import datetime
 import time
 
 import pkg_resources
+from threading import Thread
+import tornado.gen
+import tornado.httpclient
 import tornado.httpserver
 import tornado.ioloop
 import tornado.netutil
 import tornado.web
+from tornado.concurrent import Future
 
 from luigi.scheduler import Scheduler, RPC_METHODS
 
 logger = logging.getLogger("luigi.server")
+
+
+def call_in_thread(fun, *args, **kwargs):
+    future = Future()
+    def wrapper():
+        try:
+            future.set_result(fun(*args, **kwargs))
+        except Exception as e:
+            future.set_exception(e)
+    Thread(target=wrapper).start()
+    return future
 
 
 class RPCHandler(tornado.web.RequestHandler):
@@ -90,56 +105,6 @@ class BaseTaskHistoryHandler(tornado.web.RequestHandler):
         return pkg_resources.resource_filename(__name__, 'templates')
 
 
-class AllRunHandler(BaseTaskHistoryHandler):
-    def get(self):
-        all_tasks = self._scheduler.task_history.find_all_runs()
-        tasknames = []
-        for task in all_tasks:
-            tasknames.append(task.name)
-        # show all tasks with their name list to be selected
-        # why all tasks? the duration of the event history of a selected task
-        # can be more than 24 hours.
-        self.render("menu.html", tasknames=tasknames)
-
-
-class SelectedRunHandler(BaseTaskHistoryHandler):
-    def get(self, name):
-        tasks = {}
-        statusResults = {}
-        taskResults = []
-        # get all tasks that has been updated
-        all_tasks = self._scheduler.task_history.find_all_runs()
-        # get events history for all tasks
-        all_tasks_event_history = self._scheduler.task_history.find_all_events()
-        for task in all_tasks:
-            task_seq = task.id
-            task_name = task.name
-            # build the dictionary, tasks with index: id, value: task_name
-            tasks[task_seq] = str(task_name)
-        for task in all_tasks_event_history:
-            # if the name of user-selected task is in tasks, get its task_id
-            if tasks.get(task.task_id) == str(name):
-                status = str(task.event_name)
-                if status not in statusResults:
-                    statusResults[status] = []
-                # append the id, task_id, ts, y with 0, next_process with null
-                # for the status(running/failed/done) of the selected task
-                statusResults[status].append(({
-                                                  'id': str(task.id), 'task_id': str(task.task_id),
-                                                  'x': from_utc(str(task.ts)), 'y': 0, 'next_process': ''}))
-                # append the id, task_name, task_id, status, datetime, timestamp
-                # for the selected task
-                taskResults.append({
-                    'id': str(task.id), 'taskName': str(name), 'task_id': str(task.task_id),
-                    'status': str(task.event_name), 'datetime': str(task.ts),
-                    'timestamp': from_utc(str(task.ts))})
-        statusResults = json.dumps(statusResults)
-        taskResults = json.dumps(taskResults)
-        statusResults = tornado.escape.xhtml_unescape(str(statusResults))
-        taskResults = tornado.escape.xhtml_unescape(str(taskResults))
-        self.render('history.html', name=name, statusResults=statusResults, taskResults=taskResults)
-
-
 def from_utc(utcTime, fmt=None):
     """convert UTC time string to time.struct_time: change datetime.datetime to time, return time.struct_time type"""
     if fmt is None:
@@ -160,28 +125,32 @@ def from_utc(utcTime, fmt=None):
 
 
 class RecentRunHandler(BaseTaskHistoryHandler):
+    @tornado.gen.coroutine
     def get(self):
-        tasks = self._scheduler.task_history.find_latest_runs()
+        tasks = yield call_in_thread(self._scheduler.task_history.find_latest_runs)
         self.render("recent.html", tasks=tasks)
 
 
 class ByNameHandler(BaseTaskHistoryHandler):
+    @tornado.gen.coroutine
     def get(self, name):
-        tasks = self._scheduler.task_history.find_all_by_name(name)
+        tasks = yield call_in_thread(self._scheduler.task_history.find_all_by_name, name)
         self.render("recent.html", tasks=tasks)
 
 
 class ByIdHandler(BaseTaskHistoryHandler):
+    @tornado.gen.coroutine
     def get(self, id):
-        task = self._scheduler.task_history.find_task_by_id(id)
+        task = yield call_in_thread(self._scheduler.task_history.find_task_by_id, id)
         self.render("show.html", task=task)
 
 
 class ByParamsHandler(BaseTaskHistoryHandler):
+    @tornado.gen.coroutine
     def get(self, name):
         payload = self.get_argument('data', default="{}")
         arguments = json.loads(payload)
-        tasks = self._scheduler.task_history.find_all_by_parameters(name, session=None, **arguments)
+        tasks = yield call_in_thread(self._scheduler.task_history.find_all_by_parameters, name, session=None, **arguments)
         self.render("recent.html", tasks=tasks)
 
 
@@ -197,8 +166,6 @@ def app(scheduler):
     handlers = [
         (r'/api/(.*)', RPCHandler, {"scheduler": scheduler}),
         (r'/', RootPathHandler, {'scheduler': scheduler}),
-        (r'/tasklist', AllRunHandler, {'scheduler': scheduler}),
-        (r'/tasklist/(.*?)', SelectedRunHandler, {'scheduler': scheduler}),
         (r'/history', RecentRunHandler, {'scheduler': scheduler}),
         (r'/history/by_name/(.*?)', ByNameHandler, {'scheduler': scheduler}),
         (r'/history/by_id/(.*?)', ByIdHandler, {'scheduler': scheduler}),

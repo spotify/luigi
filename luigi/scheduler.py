@@ -38,6 +38,7 @@ import logging
 import os
 import re
 import time
+import Queue
 
 from luigi import six
 
@@ -642,23 +643,24 @@ class Scheduler(object):
     Can be run locally or on a server (using RemoteScheduler + server.Server).
     """
 
-    def __init__(self, config=None, resources=None, task_history_impl=None, **kwargs):
+    def __init__(self, config=None, resources=None, **kwargs):
         """
         Keyword Arguments:
         :param config: an object of class "scheduler" or None (in which the global instance will be used)
         :param resources: a dict of str->int constraints
-        :param task_history_impl: ignore config and use this object as the task history
         """
         self._config = config or scheduler(**kwargs)
         self._state = SimpleTaskState(self._config.state_path)
-
-        if task_history_impl:
-            self._task_history = task_history_impl
-        elif self._config.record_task_history:
+        self._history_queue = Queue.Queue()
+        self._task_history = None
+        if self._config.record_task_history:
             from luigi import db_task_history  # Needs sqlalchemy, thus imported here
             self._task_history = db_task_history.DbTaskHistory()
-        else:
-            self._task_history = history.NopHistory()
+            # set up workers to do db updates in the background
+            for i in range(5):
+                w = history.HistoryWorker(self._history_queue, self._task_history)
+                w.setDaemon(True)
+                w.start()
         self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
         self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}
@@ -758,6 +760,7 @@ class Scheduler(object):
         else:
             _default_task = None
 
+        should_update_history = not self._state.has_task(task_id)
         task = self._state.get_task(task_id, setdefault=_default_task)
 
         if task is None or (task.status != RUNNING and not worker.enabled):
@@ -800,7 +803,7 @@ class Scheduler(object):
                 # Update the DB only if there was a acctual change, to prevent noise.
                 # We also check for status == PENDING b/c that's the default value
                 # (so checking for status != task.status woule lie)
-                self._update_task_history(task, status)
+                should_update_history = True
             self._state.set_status(task, PENDING if status == SUSPENDED else status, self._config)
 
         if status == FAILED and self._config.batch_emails:
@@ -852,6 +855,9 @@ class Scheduler(object):
             task.workers.add(worker_id)
             self._state.get_worker(worker_id).tasks.add(task)
             task.runnable = runnable
+        
+        if should_update_history:
+            self._update_task_history(task, task.status)
 
     @rpc_method()
     def announce_scheduling_failure(self, task_name, family, params, expl, owners, **kwargs):
@@ -1425,16 +1431,8 @@ class Scheduler(object):
             return {"taskId": task_id, "statusMessage": ""}
 
     def _update_task_history(self, task, status, host=None):
-        try:
-            if status == DONE or status == FAILED:
-                successful = (status == DONE)
-                self._task_history.task_finished(task, successful)
-            elif status == PENDING:
-                self._task_history.task_scheduled(task)
-            elif status == RUNNING:
-                self._task_history.task_started(task, host)
-        except BaseException:
-            logger.warning("Error saving Task history", exc_info=True)
+        if self._task_history:
+            self._history_queue.put(history.StatusUpdate(task, status, host))
 
     @property
     def task_history(self):

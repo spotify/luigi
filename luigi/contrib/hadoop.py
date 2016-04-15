@@ -678,7 +678,8 @@ class BaseHadoopJobTask(luigi.Task):
 
     def jobconfs(self):
         jcs = []
-        jcs.append('mapred.job.name=%s' % self)
+        jcs.append('mapred.job.name=%s' % str(self))
+        jcs.append('luigi.task_id=%s' % self.task_id)
         if self.mr_priority != NotImplemented:
             jcs.append('mapred.job.priority=%s' % self.mr_priority())
         pool = self._get_pool()

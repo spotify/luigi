@@ -50,10 +50,10 @@ class LockTest(unittest.TestCase):
         os.rmdir(self.pid_dir)
 
     def test_get_info(self):
-        p = subprocess.Popen(["yes", "à我ф"], stdout=subprocess.PIPE)
+        p = subprocess.Popen(["yes", "hello"], stdout=subprocess.PIPE)
         pid, cmd, pid_file = luigi.lock.get_info(self.pid_dir, p.pid)
         p.kill()
-        self.assertEqual(cmd, 'yes à我ф')
+        self.assertEqual(cmd, 'yes hello')
 
     def test_acquiring_free_lock(self):
         acquired = luigi.lock.acquire_for(self.pid_dir)

@@ -33,7 +33,8 @@ Graph = (function() {
             name: task.name,
             taskId: task.taskId,
             status: task.status,
-            trackingUrl: "#"+task.taskId,
+            graphUrl: "#"+task.taskId,
+            trackingUrl: task.tracking_url,
             deps: deps,
             params: task.params,
             priority: task.priority,
@@ -198,15 +199,32 @@ Graph = (function() {
                 .attr("transform", "translate(" + node.x + "," + node.y +")")
                 .appendTo(self.svg);
 
+            var xPos = 0;
+            if (node.trackingUrl) {
+                xPos = 15;
+                $(svgLink(node.trackingUrl))
+                    .append(
+                        $(svgElement("text"))
+                            .append(
+                                $(svgElement("tspan"))
+                                  .attr("class", "fa")
+                                  .html("&#xf06e;"))
+                            .attr("x", 10)
+                            .attr("y", 3))
+                    .attr("target", "_blank")
+                    .appendTo(g);
+            }
+
             $(svgElement("circle"))
                 .addClass("nodeCircle")
                 .attr("r", 7)
                 .attr("fill", statusColors[node.status])
                 .appendTo(g);
-            $(svgLink(node.trackingUrl))
+            $(svgLink(node.graphUrl))
                 .append(
                     $(svgElement("text"))
                     .text(node.name)
+                    .attr("x", 10 + xPos)
                     .attr("y", 3))
                 .attr("class","graph-node-a")
                 .attr("data-task-status", node.status)

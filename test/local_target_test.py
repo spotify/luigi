@@ -41,16 +41,21 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
     def setUp(self):
         self.path = self.PATH_PREFIX + '-' + str(self.id())
         self.copy = self.PATH_PREFIX + '-copy-' + str(self.id())
+        self.yay = self.path + "-yay"
         if os.path.exists(self.path):
             os.remove(self.path)
         if os.path.exists(self.copy):
             os.remove(self.copy)
+        if os.path.exists(self.yay):
+            os.remove(self.yay)
 
     def tearDown(self):
         if os.path.exists(self.path):
             os.remove(self.path)
         if os.path.exists(self.copy):
             os.remove(self.copy)
+        if os.path.exists(self.yay):
+            os.remove(self.yay)
 
     def create_target(self, format=None):
         return LocalTarget(self.path, format=format)

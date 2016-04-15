@@ -58,8 +58,9 @@ class DbTaskHistoryTest(unittest.TestCase):
         self.assertEqual(len(tasks), 1)
         [task] = tasks
         self.assertEqual(task.name, 'DummyTask')
-        self.assertEqual(len(task.events), 3)
-        for (event, name) in zip(task.events, [DONE, RUNNING, PENDING]):
+        task_events = list(task.events)
+        self.assertEqual(len(task_events), 3)
+        for (event, name) in zip(task_events, [DONE, RUNNING, PENDING]):
             self.assertEqual(event.event_name, name)
 
     def test_task_by_params(self):

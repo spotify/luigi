@@ -311,7 +311,9 @@ class CopyToTable(rdbms.CopyToTable):
                 logger.info("Wrote %d lines", n)
             rowstr = self.column_separator.join(self.map_column(val) for val in row)
             rowstr += "\n"
-            tmp_file.write(rowstr.encode('utf-8'))
+            if isinstance(rowstr, six.text_type):
+                rowstr = rowstr.encode('utf-8')
+            tmp_file.write(rowstr)
 
         logger.info("Done writing, importing at %s", datetime.datetime.now())
         tmp_file.seek(0)

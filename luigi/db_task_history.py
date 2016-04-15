@@ -38,12 +38,12 @@ See :ref:`TaskHistory` for information about how to turn out the task history fe
 import datetime
 import logging
 from contextlib import contextmanager
+from copy import copy
 
 from luigi import six
 
 from luigi import configuration
-from luigi import task_history
-from luigi.task_status import DONE, FAILED, PENDING, RUNNING
+from luigi.task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
 
 import sqlalchemy
 import sqlalchemy.ext.declarative
@@ -52,15 +52,14 @@ import sqlalchemy.orm.collections
 from sqlalchemy.engine import reflection
 Base = sqlalchemy.ext.declarative.declarative_base()
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger('luigi.server')
 
 
-class DbTaskHistory(task_history.TaskHistory):
+class DbTaskHistory(object):
     """
     Task History that writes to a database using sqlalchemy.
     Also has methods for useful db queries.
     """
-    CURRENT_SOURCE_VERSION = 1
 
     @contextmanager
     def _session(self, session=None):
@@ -79,57 +78,94 @@ class DbTaskHistory(task_history.TaskHistory):
     def __init__(self):
         config = configuration.get_config()
         connection_string = config.get('task_history', 'db_connection')
-        self.engine = sqlalchemy.create_engine(connection_string)
+        if 'mysql' in connection_string:
+            self.engine = sqlalchemy.create_engine(
+                connection_string,
+                pool_size=config.getint('task_history', 'db_pool_size', 20),
+                max_overflow=config.getint('task_history', 'db_pool_max_overflow', 30),
+                pool_timeout=config.getint('task_history', 'db_pool_timeout', 60),
+                pool_recycle=config.getint('task_history', 'db_pool_recycle', 3600)
+            )
+        else:
+            self.engine = sqlalchemy.create_engine(connection_string)
         self.session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
-        self.tasks = {}  # task_id -> TaskRecord
-
-        _upgrade_schema(self.engine)
 
     def task_scheduled(self, task):
-        htask = self._get_task(task, status=PENDING)
-        self._add_task_event(htask, TaskEvent(event_name=PENDING, ts=datetime.datetime.now()))
+        for (task_record, session) in self._get_or_create_task_record(task):
+            # set only the very first scheduling timestamp
+            if task_record.scheduling_ts is None:
+                task_record.scheduling_ts = datetime.datetime.now()
+            # update status and add event
+            task_record.status = PENDING
+            task_record.events.append(TaskEvent(event_name=PENDING, ts=datetime.datetime.now()))
+            # record deps if needed
+            if task.deps and not task_record.deps:
+                for (dep_record, s) in self._get_or_create_deps_records(task.deps, session):
+                    task_record.deps.append(dep_record)
 
     def task_finished(self, task, successful):
-        event_name = DONE if successful else FAILED
-        htask = self._get_task(task, status=event_name)
-        self._add_task_event(htask, TaskEvent(event_name=event_name, ts=datetime.datetime.now()))
+        status = DONE if successful else FAILED
+        for (task_record, session) in self._get_or_create_task_record(task):
+            # if task is done, register completion time
+            if status == DONE and task_record.status != DONE:
+                task_record.completion_ts = datetime.datetime.now()
+            # update status and add event
+            task_record.status = status
+            task_record.events.append(TaskEvent(event_name=status, ts=datetime.datetime.now()))
 
     def task_started(self, task, worker_host):
-        htask = self._get_task(task, status=RUNNING, host=worker_host)
-        self._add_task_event(htask, TaskEvent(event_name=RUNNING, ts=datetime.datetime.now()))
+        for (task_record, session) in self._get_or_create_task_record(task):
+            # mark task as running
+            if task_record.status != RUNNING:
+                task_record.execution_ts = datetime.datetime.now()
+            # update status, worker host and add event
+            task_record.status = RUNNING
+            task_record.host = worker_host
+            task_record.events.append(TaskEvent(event_name=RUNNING, ts=datetime.datetime.now()))
 
-    def _get_task(self, task, status, host=None):
-        if task.id in self.tasks:
-            htask = self.tasks[task.id]
-            htask.status = status
-            if host:
-                htask.host = host
-        else:
-            htask = self.tasks[task.id] = task_history.StoredTask(task, status, host)
-        return htask
+    def other_event(self, task, event_name):
+        for (task_record, session) in self._get_or_create_task_record(task):
+            # update status and add event
+            task_record.status = event_name
+            task_record.events.append(TaskEvent(event_name=event_name, ts=datetime.datetime.now()))
 
-    def _add_task_event(self, task, event):
-        for (task_record, session) in self._find_or_create_task(task):
-            task_record.events.append(event)
-
-    def _find_or_create_task(self, task):
-        with self._session() as session:
-            if task.record_id is not None:
-                logger.debug("Finding task with record_id [%d]", task.record_id)
-                task_record = session.query(TaskRecord).get(task.record_id)
-                if not task_record:
-                    raise Exception("Task with record_id, but no matching Task record!")
-                yield (task_record, session)
-            else:
-                task_record = TaskRecord(task_id=task._task.id, name=task.task_family, host=task.host)
-                for (k, v) in six.iteritems(task.parameters):
+    def _get_or_create_task_record(self, task, session=None):
+        with self._session(session) as session:
+            logger.debug("Finding or creating task with id %s" % task.id)
+            # try to find existing task having given task id
+            task_record = session.query(TaskRecord).filter(TaskRecord.luigi_id == task.id).first()
+            if not task_record:
+                task_record = self._make_new_task_record(task.id, session)
+            # make sure we store all info about the task
+            task_record.name = task.family
+            for (k, v) in task.params.iteritems():
+                if k not in task_record.parameters:
                     task_record.parameters[k] = TaskParameter(name=k, value=v)
-                session.add(task_record)
+            # yield the record
+            yield (task_record, session)
+
+    def _get_or_create_deps_records(self, dep_ids, session=None):
+        task_ids = copy(dep_ids)
+        with self._session(session) as session:
+            logger.debug("Finding or creating deps with id %s" % task_ids)
+            # try to find existing task having given task id(s)
+            tasks = session.query(TaskRecord).filter(TaskRecord.luigi_id.in_(task_ids)).all()
+            # yield all the record we have found
+            for task_record in tasks:
+                task_ids.remove(task_record.luigi_id)
                 yield (task_record, session)
-            if task.host:
-                task_record.host = task.host
-        task.record_id = task_record.id
+            # create new record for ids not found and yield them
+            for task_id in task_ids:
+                task_record = self._make_new_task_record(task_id, session)
+                yield (task_record, session)
+
+    def _make_new_task_record(self, task_id, session):
+        task_record = TaskRecord(luigi_id=task_id, name=None, status=UNKNOWN, host=None)
+        session.add(task_record)
+        return task_record
+
+    # following methods are used by web server
 
     def find_all_by_parameters(self, task_name, session=None, **task_params):
         """
@@ -167,20 +203,6 @@ class DbTaskHistory(task_history.TaskHistory):
                 order_by(TaskEvent.ts.desc()).\
                 all()
 
-    def find_all_runs(self, session=None):
-        """
-        Return all tasks that have been updated.
-        """
-        with self._session(session) as session:
-            return session.query(TaskRecord).all()
-
-    def find_all_events(self, session=None):
-        """
-        Return all running/failed/done events.
-        """
-        with self._session(session) as session:
-            return session.query(TaskEvent).all()
-
     def find_task_by_id(self, id, session=None):
         """
         Find task with the given record ID.
@@ -210,10 +232,17 @@ class TaskEvent(Base):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'), index=True)
     event_name = sqlalchemy.Column(sqlalchemy.String(20))
+    # todo(stefano): add host over here as well, it's super useful for debugging
     ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP, index=True, nullable=False)
 
     def __repr__(self):
         return "TaskEvent(task_id=%s, event_name=%s, ts=%s" % (self.task_id, self.event_name, self.ts)
+
+
+deps_table = sqlalchemy.Table('task_dependencies', Base.metadata,
+    sqlalchemy.Column('task_id', sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'), primary_key=True),
+    sqlalchemy.Column('dep_id', sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'), primary_key=True)
+)
 
 
 class TaskRecord(Base):
@@ -224,9 +253,11 @@ class TaskRecord(Base):
     """
     __tablename__ = 'tasks'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
-    task_id = sqlalchemy.Column(sqlalchemy.String(200), index=True)
+    # note(stefano): this is task_id on master, we should migrate our db to comply to that
+    luigi_id = sqlalchemy.Column(sqlalchemy.String(600), index=True, unique=True)
     name = sqlalchemy.Column(sqlalchemy.String(128), index=True)
     host = sqlalchemy.Column(sqlalchemy.String(128))
+    status = sqlalchemy.Column(sqlalchemy.String(10))
     parameters = sqlalchemy.orm.relationship(
         'TaskParameter',
         collection_class=sqlalchemy.orm.collections.attribute_mapped_collection('name'),
@@ -234,23 +265,17 @@ class TaskRecord(Base):
     events = sqlalchemy.orm.relationship(
         'TaskEvent',
         order_by=(sqlalchemy.desc(TaskEvent.ts), sqlalchemy.desc(TaskEvent.id)),
-        backref='task')
+        backref='task',
+        lazy="dynamic")
+    deps = sqlalchemy.orm.relationship(
+        'TaskRecord',
+        secondary=deps_table,
+        primaryjoin=id==deps_table.c.task_id,
+        secondaryjoin=id==deps_table.c.dep_id,
+        passive_deletes=True)
+    scheduling_ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP)
+    execution_ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP)
+    completion_ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP)
 
     def __repr__(self):
         return "TaskRecord(name=%s, host=%s)" % (self.name, self.host)
-
-
-def _upgrade_schema(engine):
-    """
-    Ensure the database schema is up to date with the codebase.
-
-    :param engine: SQLAlchemy engine of the underlying database.
-    """
-    inspector = reflection.Inspector.from_engine(engine)
-    conn = engine.connect()
-
-    # Upgrade 1.  Add task_id column and index to tasks
-    if 'task_id' not in [x['name'] for x in inspector.get_columns('tasks')]:
-        logger.warn('Upgrading DbTaskHistory schema: Adding tasks.task_id')
-        conn.execute('ALTER TABLE tasks ADD COLUMN task_id VARCHAR(200)')
-        conn.execute('CREATE INDEX ix_task_id ON tasks (task_id)')
