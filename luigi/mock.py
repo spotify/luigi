@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 """
-This moduel provides a class :class:`MockTarget`, an implementation of :py:class:`~luigi.target.Target`.
+This module provides a class :class:`MockTarget`, an implementation of :py:class:`~luigi.target.Target`.
 :class:`MockTarget` contains all data in-memory.
 The main purpose is unit testing workflows without writing to disk.
 """
