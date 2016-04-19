@@ -54,7 +54,7 @@ from luigi import six
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, CentralPlannerScheduler
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, CentralPlannerScheduler
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
@@ -496,11 +496,11 @@ class Worker(object):
             raise TaskException('Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__)
 
     def _log_complete_error(self, task, tb):
-        log_msg = "Will not schedule {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task, tb=tb)
+        log_msg = "Will not run {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task, tb=tb)
         logger.warning(log_msg)
 
     def _log_dependency_error(self, task, tb):
-        log_msg = "Will not schedule {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task, tb=tb)
+        log_msg = "Will not run {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task, tb=tb)
         logger.warning(log_msg)
 
     def _log_unexpected_error(self, task):
@@ -509,13 +509,13 @@ class Worker(object):
     def _email_complete_error(self, task, formatted_traceback):
         self._email_error(task, formatted_traceback,
                           subject="Luigi: {task} failed scheduling. Host: {host}",
-                          headline="Will not schedule task or any dependencies due to error in complete() method",
+                          headline="Will not run {task} or any dependencies due to error in complete() method",
                           )
 
     def _email_dependency_error(self, task, formatted_traceback):
         self._email_error(task, formatted_traceback,
                           subject="Luigi: {task} failed scheduling. Host: {host}",
-                          headline="Will not schedule task or any dependencies due to error in deps() method",
+                          headline="Will not run {task} or any dependencies due to error in deps() method",
                           )
 
     def _email_unexpected_error(self, task, formatted_traceback):
@@ -576,6 +576,7 @@ class Worker(object):
             self._log_unexpected_error(task)
             task.trigger_event(Event.BROKEN_TASK, task, ex)
             self._email_unexpected_error(task, formatted_traceback)
+            raise
         finally:
             pool.close()
             pool.join()
@@ -601,13 +602,11 @@ class Worker(object):
             self._log_complete_error(task, formatted_traceback)
             task.trigger_event(Event.DEPENDENCY_MISSING, task)
             self._email_complete_error(task, formatted_traceback)
-            # abort, i.e. don't schedule any subtasks of a task with
-            # failing complete()-method since we don't know if the task
-            # is complete and subtasks might not be desirable to run if
-            # they have already ran before
-            return
+            deps = None
+            status = UNKNOWN
+            runnable = False
 
-        if is_complete:
+        elif is_complete:
             deps = None
             status = DONE
             runnable = False
@@ -632,9 +631,12 @@ class Worker(object):
                 self._log_dependency_error(task, formatted_traceback)
                 task.trigger_event(Event.BROKEN_TASK, task, ex)
                 self._email_dependency_error(task, formatted_traceback)
-                return
-            status = PENDING
-            runnable = True
+                deps = None
+                status = UNKNOWN
+                runnable = False
+            else:
+                status = PENDING
+                runnable = True
 
         if task.disabled:
             status = DISABLED
