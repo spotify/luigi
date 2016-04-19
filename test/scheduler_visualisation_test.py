@@ -76,6 +76,7 @@ class BadReqTask(luigi.Task):
 
 
 class FailingTask(luigi.Task):
+    task_namespace = __name__
     task_id = luigi.Parameter()
 
     def run(self):
