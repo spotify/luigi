@@ -34,6 +34,7 @@ from luigi import ExternalTask, RemoteScheduler, Task
 from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
+from luigi.rpc import RPCError
 from luigi import six
 from luigi.cmdline import luigi_run
 
@@ -825,10 +826,14 @@ class WorkerEmailTest(LuigiTestCase):
         a = A()
         self.assertEqual(emails, [])
         with Worker(scheduler=sch) as worker:
-            worker.add(a)
-            self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
-            self.assertNotEqual(emails, [])
-            self.assertTrue(emails[0].find("Luigi: Framework error while scheduling %s" % (a,)) != -1)
+            try:
+                worker.add(a)
+            except RPCError:
+                self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
+                self.assertNotEqual(emails, [])
+                self.assertTrue(emails[0].find("Luigi: Framework error while scheduling %s" % (a,)) != -1)
+            else:
+                self.fail()
 
     @email_patch
     def test_complete_error(self, emails):

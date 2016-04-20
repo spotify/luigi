@@ -482,16 +482,19 @@ We recommend that you copy this set of exit codes to your ``luigi.cfg`` file:
   already_running=10
   missing_data=20
   task_failed=30
+  scheduling_error=35
   unhandled_exception=40
 
 unhandled_exception
-  For exceptions during scheduling (if you raise from the ``complete()`` or
-  ``requires()`` methods for instance) or for internal luigi errors.  Defaults
-  to 4, since this type of error probably will not recover over time.
+  For internal luigi errors.  Defaults to 4, since this type of error
+  probably will not recover over time.
 missing_data
   For when an :py:class:`~luigi.task.ExternalTask` is not complete, and this
   caused the worker to give up.  As an alternative to fiddling with this, see
   the [worker] keep_alive option.
+scheduling_error
+  For when a task's ``complete()`` or ``requires()`` method fails with an
+  exception.
 task_failed
   For signaling that there were last known to have failed. Typically because
   some exception have been raised.

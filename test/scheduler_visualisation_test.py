@@ -76,6 +76,7 @@ class BadReqTask(luigi.Task):
 
 
 class FailingTask(luigi.Task):
+    task_namespace = __name__
     task_id = luigi.Parameter()
 
     def run(self):
@@ -292,7 +293,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         fail = dep_graph[BadReqTask(succeed=False).task_id]
         self.assertEqual(fail[u'name'], 'BadReqTask')
-        self.assertEqual(fail[u'params'], {'task_id': BadReqTask(succeed=False).task_id})
+        self.assertEqual(fail[u'params'], {'succeed': 'False'})
         self.assertEqual(fail[u'status'], 'UNKNOWN')
 
     def test_dep_graph_diamond(self):

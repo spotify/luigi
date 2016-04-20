@@ -30,18 +30,26 @@ class retcode(luigi.Config):
     """
     See the :ref:`return codes configuration section <retcode-config>`.
     """
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     unhandled_exception = IntParameter(default=4,
-                                       description='For scheduling errors or internal luigi errors.',
+                                       description='For internal luigi errors.',
                                        )
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     missing_data = IntParameter(default=0,
                                 description="For when there are incomplete ExternalTask dependencies.",
                                 )
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     task_failed = IntParameter(default=0,
                                description='''For when a task's run() method fails.''',
                                )
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     already_running = IntParameter(default=0,
                                    description='For both local --lock and luigid "lock"',
                                    )
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
+    scheduling_error = IntParameter(default=0,
+                                    description='''For when a task's complete() or requires() fails.'''
+                                    )
 
 
 def run_with_retcodes(argv):
@@ -78,5 +86,6 @@ def run_with_retcodes(argv):
         (retcodes.missing_data, has('still_pending_ext')),
         (retcodes.task_failed, has('failed')),
         (retcodes.already_running, has('run_by_other_worker')),
+        (retcodes.scheduling_error, has('scheduling_error')),
     )
     sys.exit(max(code * (1 if cond else 0) for code, cond in codes_and_conds))
