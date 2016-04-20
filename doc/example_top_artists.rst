@@ -77,6 +77,20 @@ Try running this using eg.
     $ cd examples
     $ luigi --module top_artists AggregateArtists --local-scheduler --date-interval 2012-06
 
+Note that  *AggregateArtists* needs to be in your PYTHONPATH, or else this can produce an error (*ImportError: No module named AggregateArtists*). A workaround for development is to prepend the path before the command:
+
+.. code-block:: console
+
+    $ PYTHONPATH='' luigi --module top_artists AggregateArtists --local-scheduler --date-interval 2012-06
+
+Or verbosely
+
+.. code-block:: console
+
+    $ cd /your/module/directory
+    $ PYTHONPATH='/your/module/directory' luigi --module top_artists AggregateArtists --local-scheduler --date-interval 2012-06
+
+
 You can also try to view the manual using `--help` which will give you an
 overview of the options.
 
