@@ -31,6 +31,10 @@ except ImportError as e:
 class MSSqlTarget(luigi.Target):
     """
     Target for a resource in Microsoft SQL Server.
+    This module is primarily derived from mysqldb.py.  Much of MSSqlTarget,
+    MySqlTarget and PostgresTarget are similar enough to potentially add a
+    RDBMSTarget abstract base class to rdbms.py that these classes could be
+    derived from.
     """
 
     marker_table = luigi.configuration.get_config().get('mssql',
