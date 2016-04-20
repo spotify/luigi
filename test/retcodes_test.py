@@ -86,14 +86,14 @@ class RetcodesTest(LuigiTestCase):
             def requires(self):
                 yield FailingComplete()
 
-        self.run_and_expect('RequiringTask', 35)
+        self.run_and_expect('RequiringTask', 0)
 
     def test_failure_in_requires(self):
         class FailingRequires(luigi.Task):
             def requires(self):
                 raise Exception
 
-        self.run_and_expect('FailingRequires', 35)
+        self.run_and_expect('FailingRequires', 0)
 
     def test_validate_dependency_error(self):
         # requires() from RequiringTask expects a Task object
