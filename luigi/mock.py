@@ -124,15 +124,13 @@ class MockTarget(target.FileSystemTarget):
                 self.wrapper = wrapper
 
             def write(self, data):
-                if six.PY3:
-                    stderrbytes = sys.stderr.buffer
-                else:
-                    stderrbytes = sys.stderr
-
                 if mock_target._mirror_on_stderr:
                     if self._write_line:
                         sys.stderr.write(fn + ": ")
-                    stderrbytes.write(data)
+                    if six.binary_type:
+                        sys.stderr.write(data.decode('utf8'))
+                    else:
+                        sys.stderr.write(data)
                     if (data[-1]) == '\n':
                         self._write_line = True
                     else:
