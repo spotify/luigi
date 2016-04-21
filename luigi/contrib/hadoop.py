@@ -457,9 +457,11 @@ class HadoopJobRunner(JobRunner):
         output_final = job.output().path
         # atomic output: replace output with a temporary work directory
         if self.end_job_with_atomic_move_dir:
-            if isinstance(job.output(), luigi.s3.S3FlagTarget):
+            illegal_targets = (
+                luigi.s3.S3FlagTarget, luigi.contrib.gcs.GCSFlagTarget)
+            if isinstance(job.output(), illegal_targets):
                 raise TypeError("end_job_with_atomic_move_dir is not supported"
-                                " for S3FlagTarget")
+                                " for {}".format(illegal_targets))
             output_hadoop = '{output}-temp-{time}'.format(
                 output=output_final,
                 time=datetime.datetime.now().isoformat().replace(':', '-'))
