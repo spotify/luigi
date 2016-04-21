@@ -156,7 +156,7 @@ class RemoteScheduler(Scheduler):
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None, priority=0,
                  family='', module=None, params=None, assistant=False,
-                 tracking_url=None):
+                 tracking_url=None, host_resources=None):
         self._request('/api/add_task', {
             'task_id': task_id,
             'worker': worker,
@@ -166,6 +166,7 @@ class RemoteScheduler(Scheduler):
             'new_deps': new_deps,
             'expl': expl,
             'resources': resources,
+            'host_resources': host_resources,
             'priority': priority,
             'family': family,
             'module': module,
@@ -223,6 +224,9 @@ class RemoteScheduler(Scheduler):
 
     def update_resources(self, **resources):
         return self._request('/api/update_resources', resources)
+
+    def set_host_resources(self, host, resources):
+        return self._request('/api/set_host_resources', {'host': host, 'resources': resources})
 
     def prune(self):
         return self._request('/api/prune', {})

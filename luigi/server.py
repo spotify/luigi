@@ -81,6 +81,7 @@ class RPCHandler(tornado.web.RequestHandler):
             'prune',
             're_enable_task',
             'resource_list',
+            'set_host_resources',
             'task_list',
             'task_search',
             'update_resources',

@@ -158,11 +158,15 @@ def _get_default(x, default):
         return default
 
 
+def host_resource(resource, hostname):
+    return '{resource}__{hostname}'.format(resource=resource, hostname=hostname)
+
+
 class Task(object):
 
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
                  params=None, disable_failures=None, disable_window=None, disable_hard_timeout=None,
-                 tracking_url=None, status_message=None):
+                 host_resources=None, tracking_url=None, status_message=None):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -176,10 +180,12 @@ class Task(object):
         self.retry = None
         self.remove = None
         self.worker_running = None  # the worker id that is currently running the task or None
+        self.host_running = None  # the name of the host that the task is
         self.time_running = None  # Timestamp when picked up by worker
         self.expl = None
         self.priority = priority
         self.resources = _get_default(resources, {})
+        self.host_resources = host_resources
         self.family = family
         self.module = module
         self.params = _get_default(params, {})
@@ -212,6 +218,21 @@ class Task(object):
     def pretty_id(self):
         param_str = ', '.join('{}={}'.format(key, value) for key, value in self.params.items())
         return '{}({})'.format(self.family, param_str)
+
+    def get_resources(self, hostname):
+        host_resources = getattr(self, 'host_resources', {})
+        if host_resources and hostname is not None:
+            resources = self.resources.copy()
+            resources.update({
+                host_resource(resource, hostname): amount
+                for resource, amount in six.iteritems(host_resources)
+            })
+            return resources
+        else:
+            return self.resources
+
+    def is_trivial(self):
+        return not self.resources and not getattr(self, 'host_resources', {})
 
 
 class Worker(object):
@@ -265,7 +286,7 @@ class Worker(object):
         """
         if self.assistant:
             return False
-        return all(not task.resources for task in self.get_pending_tasks(state))
+        return all(task.is_trivial() for task in self.get_pending_tasks(state))
 
     @property
     def assistant(self):
@@ -289,6 +310,7 @@ class SimpleTaskState(object):
         self._tasks = {}  # map from id to a Task object
         self._status_tasks = collections.defaultdict(dict)
         self._active_workers = {}  # map from id to a Worker object
+        self._host_resources = {}
 
     def get_state(self):
         return self._tasks, self._active_workers
@@ -407,6 +429,7 @@ class SimpleTaskState(object):
                         "FAILED with retry delay of %rs", task.id, task.worker_running,
                         config.retry_delay)
             task.worker_running = None
+            task.host_running = None
             self.set_status(task, FAILED, config)
             task.retry = time.time() + config.retry_delay
 
@@ -482,6 +505,20 @@ class SimpleTaskState(object):
                 necessary_tasks.update(task.deps)
                 necessary_tasks.add(task.id)
         return necessary_tasks
+
+    def host_resources(self, host):
+        try:
+            return self._host_resources.get(host, {})
+        except AttributeError:
+            return {}
+
+    def set_host_resources(self, host, resources):
+        if not hasattr(self, '_host_resources'):
+            self._host_resources = {}
+        self._host_resources[host] = {
+            host_resource(resource, host): amount
+            for resource, amount in six.iteritems(resources)
+        }
 
 
 class CentralPlannerScheduler(Scheduler):
@@ -578,7 +615,8 @@ class CentralPlannerScheduler(Scheduler):
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
-                 assistant=False, tracking_url=None, **kwargs):
+                 assistant=False, tracking_url=None, host_resources=None,
+                 **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -639,6 +677,9 @@ class CentralPlannerScheduler(Scheduler):
         if resources is not None:
             task.resources = resources
 
+        if host_resources is not None:
+            task.host_resources = host_resources
+
         if worker_enabled and not assistant:
             task.stakeholders.add(worker_id)
 
@@ -666,11 +707,21 @@ class CentralPlannerScheduler(Scheduler):
             self._resources = {}
         self._resources.update(resources)
 
-    def _has_resources(self, needed_resources, used_resources):
+    def set_host_resources(self, host, resources):
+        self._state.set_host_resources(host, resources)
+
+    def _available_resources(self, host):
+        if self._state.host_resources(host):
+            resources = self._resources.copy()
+            resources.update(self._state.host_resources(host))
+            return resources
+        else:
+            return self._resources
+
+    def _has_resources(self, needed_resources, used_resources, available_resources):
         if needed_resources is None:
             return True
 
-        available_resources = self._resources or {}
         for resource, amount in six.iteritems(needed_resources):
             if amount + used_resources[resource] > available_resources.get(resource, 1):
                 return False
@@ -680,8 +731,9 @@ class CentralPlannerScheduler(Scheduler):
         used_resources = collections.defaultdict(int)
         if self._resources is not None:
             for task in self._state.get_active_tasks(status=RUNNING):
-                if task.resources:
-                    for resource, amount in six.iteritems(task.resources):
+                task_resources = task.get_resources(task.host_running)
+                if task_resources:
+                    for resource, amount in six.iteritems(task_resources):
                         used_resources[resource] += amount
         return used_resources
 
@@ -757,6 +809,7 @@ class CentralPlannerScheduler(Scheduler):
                                   for worker in active_workers)
         tasks = list(relevant_tasks)
         tasks.sort(key=self._rank, reverse=True)
+        available_resources = self._available_resources(host)
 
         for task in tasks:
             in_workers = (assistant and getattr(task, 'runnable', bool(task.workers))) or worker_id in task.workers
@@ -775,17 +828,17 @@ class CentralPlannerScheduler(Scheduler):
                     locally_pending_tasks += 1
                     if len(task.workers) == 1 and not assistant:
                         n_unique_pending += 1
-
             if best_task:
                 continue
 
             if task.status == RUNNING and (task.worker_running in greedy_workers):
                 greedy_workers[task.worker_running] -= 1
-                for resource, amount in six.iteritems((task.resources or {})):
+                for resource, amount in six.iteritems((task.get_resources(task.host_running) or {})):
                     greedy_resources[resource] += amount
 
-            if self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
-                if in_workers and self._has_resources(task.resources, used_resources):
+            task_resources = task.get_resources(host)
+            if self._schedulable(task) and self._has_resources(task_resources, greedy_resources, available_resources):
+                if in_workers and self._has_resources(task_resources, used_resources, available_resources):
                     best_task = task
                 else:
                     workers = itertools.chain(task.workers, [worker_id]) if assistant else task.workers
@@ -795,7 +848,7 @@ class CentralPlannerScheduler(Scheduler):
                             greedy_workers[task_worker] -= 1
 
                             # keep track of the resources used in greedy scheduling
-                            for resource, amount in six.iteritems((task.resources or {})):
+                            for resource, amount in six.iteritems((task_resources or {})):
                                 greedy_resources[resource] += amount
 
                             break
@@ -808,6 +861,7 @@ class CentralPlannerScheduler(Scheduler):
         if best_task:
             self._state.set_status(best_task, RUNNING, self._config)
             best_task.worker_running = worker_id
+            best_task.host_running = host
             best_task.time_running = time.time()
             self._update_task_history(best_task, RUNNING, host=host)
 

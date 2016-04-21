@@ -516,6 +516,62 @@ class CentralPlannerTest(unittest.TestCase):
 
         self.assertEqual('C', self.sch.get_work(worker='Y')['task_id'])
 
+    def test_host_resources_prevent_get_work_per_host(self):
+        for i in range(10):
+            self.sch.add_task(worker=WORKER, task_id='A%i' % i, host_resources={'R': 1})
+
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+        self.assertIsNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER, host='host2')['task_id'])
+        self.assertIsNone(self.sch.get_work(worker=WORKER, host='host2')['task_id'])
+
+    def test_set_per_host_resource_limits(self):
+        for i in range(10):
+            self.sch.add_task(worker=WORKER, task_id='A%i' % i, host_resources={'R': 1})
+
+        self.sch.set_host_resources(host='host2', resources={'R': 2})
+
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+        self.assertIsNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER, host='host2')['task_id'])
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER, host='host2')['task_id'])
+        self.assertIsNone(self.sch.get_work(worker=WORKER, host='host2')['task_id'])
+
+    def test_increase_host_resource_limits(self):
+        for i in range(10):
+            self.sch.add_task(worker=WORKER, task_id='A%i' % i, host_resources={'R': 1})
+
+        self.sch.set_host_resources(host='host1', resources={'R': 2})
+        self.sch.set_host_resources(host='host1', resources={'R': 3})
+
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+        self.assertIsNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+
+    def test_decrease_host_resource_limits(self):
+        for i in range(10):
+            self.sch.add_task(worker=WORKER, task_id='A%i' % i, host_resources={'R': 1})
+
+        self.sch.set_host_resources(host='host1', resources={'R': 3})
+        self.sch.set_host_resources(host='host1', resources={'R': 2})
+
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+        self.assertIsNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+
+    def test_drop_specified_host_resource_limit(self):
+        for i in range(10):
+            self.sch.add_task(worker=WORKER, task_id='A%i' % i, host_resources={'R': 1})
+
+        self.sch.set_host_resources(host='host1', resources={'R': 3})
+        self.sch.set_host_resources(host='host1', resources={'Q': 2})
+
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+        self.assertIsNone(self.sch.get_work(worker=WORKER, host='host1')['task_id'])
+
     def test_priority_update_with_pruning(self):
         self.setTime(0)
         self.sch.add_task(task_id='A', worker='X')
