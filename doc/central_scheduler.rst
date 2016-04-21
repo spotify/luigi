@@ -18,7 +18,7 @@ This model may seem limited, but
 we believe that it makes things far more intuitive and easy to understand.
 
 .. figure:: dependency_graph.png
-   :alt: Dependency graph in the visualizer
+   :alt: Dependency graph in the visualiser
 
 The luigid server
 ~~~~~~~~~~~~~~~~~

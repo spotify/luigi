@@ -83,7 +83,7 @@ Dependency graph example
 ------------------------
 
 Just to give you an idea of what Luigi does, this is a screen shot from
-something we are running in production. Using Luigi's visualizer, we get
+something we are running in production. Using Luigi's visualiser, we get
 a nice visual overview of the dependency graph of the workflow. Each
 node represents a task which has to be run. Green tasks are already
 completed whereas yellow tasks are yet to be run. Most of these tasks
