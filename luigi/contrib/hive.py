@@ -366,7 +366,10 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                     arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
 
             logger.info(arglist)
-            return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, job.set_tracking_url)
+            result = luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, job.set_tracking_url)
+            if job.output():
+                job.output().open("w").close()
+            return result
 
 
 class HiveTableTarget(luigi.Target):
