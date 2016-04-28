@@ -23,6 +23,64 @@ import luigi.date_interval
 from luigi.util import get_previous_completed, previous
 
 
+class DateYearTaskOk(luigi.Task):
+    year = luigi.YearParameter()
+
+    def complete(self):
+        return self.year in [
+            1996,
+            1998,
+            2000,
+        ]
+
+
+class DateYearTaskOkTest(unittest.TestCase):
+
+    def test_previous(self):
+        task = DateYearTaskOk(datetime.datetime(2000, 1, 1, 1))
+        prev = previous(task)
+        self.assertEqual(prev.year, datetime.datetime(1999, 1, 1, 1))
+
+    def test_get_previous_completed(self):
+        task = DateHourTaskOk(datetime.datetime(2000, 1, 1, 1))
+        prev = get_previous_completed(task, 4)
+        self.assertEqual(prev.year, datetime.datetime(1998, 1, 1, 1))
+
+    def test_get_previous_completed_not_found(self):
+        task = DateHourTaskOk(datetime.datetime(2016, 3, 1, 2))
+        prev = get_previous_completed(task, 3)
+        self.assertEqual(None, prev)
+
+
+class DateMonthTaskOk(luigi.Task):
+    month = luigi.YearParameter()
+
+    def complete(self):
+        return self.month in [
+            datetime.datetime(2001, 6, 1, 1),
+            datetime.datetime(2000, 6, 1, 1),
+            datetime.datetime(1999, 6, 1, 1),
+        ]
+
+
+class DateMonthTaskOkTest(unittest.TestCase):
+
+    def test_previous(self):
+        task = DateYearTaskOk(datetime.datetime(2000, 1, 1, 1))
+        prev = previous(task)
+        self.assertEqual(prev.month, datetime.datetime(1999, 12, 1, 1))
+
+    def test_get_previous_completed(self):
+        task = DateHourTaskOk(datetime.datetime(2000, 5, 1, 1))
+        prev = get_previous_completed(task, 12)
+        self.assertEqual(prev.month, datetime.datetime(1998, 6, 1, 1))
+
+    def test_get_previous_completed_not_found(self):
+        task = DateHourTaskOk(datetime.datetime(2016, 1, 1, 1))
+        prev = get_previous_completed(task, 3)
+        self.assertEqual(None, prev)
+
+
 class DateTaskOk(luigi.Task):
     date = luigi.DateParameter()
 

@@ -232,6 +232,15 @@ if six.PY3:
 logger = logging.getLogger('luigi-interface')
 
 
+try:
+    # used for calculating the most recent complete task for tasks that use
+    # year or month parameters.
+    from dateutil.relativedelta import relativedelta
+except ImportError:
+    logger.warn('The dateutils module must be installed to take advantage of '
+                'all features in the luigi.utils module.')
+
+
 def common_params(task_instance, task_cls):
     """
     Grab all the values in task_instance that are found in task_cls.
@@ -412,7 +421,17 @@ def previous(task):
     for param_name, param_obj in params:
         param_value = getattr(task, param_name)
 
-        if isinstance(param_obj, parameter.DateParameter):
+        if isinstance(param_obj, parameter.YearParameter):
+            try:
+                previous_date_params[param_name] = param_value - relativedelta(years=1)
+            except NameError:
+                pass
+        elif isinstance(param_obj, parameter.MonthParameter):
+            try:
+                previous_date_params[param_name] = param_value - relativedelta(months=1)
+            except NameError:
+                pass
+        elif isinstance(param_obj, parameter.DateParameter):
             previous_date_params[param_name] = param_value - datetime.timedelta(days=1)
         elif isinstance(param_obj, parameter.DateMinuteParameter):
             previous_date_params[param_name] = param_value - datetime.timedelta(minutes=1)
