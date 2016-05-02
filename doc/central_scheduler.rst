@@ -60,6 +60,7 @@ When starting up,
 <http://docs.sqlalchemy.org/en/rel_0_9/core/metadata.html#sqlalchemy.schema.MetaData.create_all>`_.
 
 Example configuration
+
 .. code:: ini
 
     [scheduler]
