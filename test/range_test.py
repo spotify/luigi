@@ -738,3 +738,46 @@ class RangeInstantiationTest(LuigiTestCase):
                                 param_name='date_param')
         expected_task = MyTask('woo', datetime.date(2015, 12, 1))
         self.assertEqual(expected_task, list(range_task._requires())[0])
+
+    def test_of_param_distinction(self):
+        class MyTask(luigi.Task):
+            arbitrary_param = luigi.Parameter(default='foo')
+            arbitrary_integer_param = luigi.IntParameter(default=10)
+            date_param = luigi.DateParameter()
+
+            def output(self):
+                return MockTarget("{0}-{1}-{2}".format(date_param,arbitrary_param,arbitrary_integer_param))
+
+        range_task_1 = RangeDaily(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                of=MyTask,
+                                start=datetime.date(2015, 12, 1),
+                                stop=datetime.date(2015, 12, 2))
+        range_task_2 = RangeDaily(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                of=MyTask,
+                                of_params=dict(arbitrary_param="bar",abitrary_integer_param=2),
+                                start=datetime.date(2015, 12, 1),
+                                stop=datetime.date(2015, 12, 2))
+        self.assertNotEqual(range_task_1.task_id,range_task_2.task_id)
+
+    def test_of_param_commandline(self):
+        class MyTask(luigi.Task):
+            task_namespace = "wohoo"
+            date_param = luigi.DateParameter()
+            arbitrary_param = luigi.Parameter(default='foo')
+            arbitrary_integer_param = luigi.IntParameter(default=10)
+            state = (None,None)
+            comp = False
+
+            def output(self):
+                return MockTarget("{0}-{1}-{2}".format(date_param,arbitrary_param,arbitrary_integer_param))
+
+            def complete(self):
+                return self.comp
+
+            def run(self):
+                self.comp = True
+                MyTask.state = (self.arbitrary_param,self.arbitrary_integer_param)
+
+        now = str(int(datetime_to_epoch(datetime.datetime(2015, 12, 2))))
+        self.run_locally(['RangeDailyBase','--of','wohoo.MyTask','--of-params','{"arbitrary_param":"bar","arbitrary_integer_param":5}','--now','{0}'.format(now),'--start','2015-12-01','--stop','2015-12-02'])
+        self.assertEqual(MyTask.state,('bar',5))

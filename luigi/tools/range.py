@@ -88,6 +88,7 @@ class RangeBase(luigi.WrapperTask):
     # TODO lift the single parameter constraint by passing unknown parameters through WrapperTask?
     of = luigi.TaskParameter(
         description="task name to be completed. The task must take a single datetime parameter")
+    of_params = luigi.DictParameter(default=dict(),description="Arguments to be provided to the 'of' class when instantiating")
     # The common parameters 'start' and 'stop' have type (e.g. DateParameter,
     # DateHourParameter) dependent on the concrete subclass, cumbersome to
     # define here generically without dark magic. Refer to the overrides.
@@ -175,9 +176,10 @@ class RangeBase(luigi.WrapperTask):
 
     def _instantiate_task_cls(self, param):
         if self.param_name is None:
-            return self.of_cls(param)
+            return self.of_cls(param,**self.of_params)
         else:
-            kwargs = {self.param_name: param}
+            kwargs = self.of_params.copy()
+            kwargs[self.param_name] = param
             return self.of_cls(**kwargs)
 
     def requires(self):
