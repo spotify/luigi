@@ -566,6 +566,27 @@ class RangeDailyTest(unittest.TestCase):
         actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected)
 
+    def test_bulk_complete_of_params(self):
+        class BulkCompleteDailyTask(luigi.Task):
+            d = luigi.DateParameter()
+            arbitrary_argument = luigi.BoolParameter()
+
+            @classmethod
+            def bulk_complete(cls, parameter_tuples):
+                for t in map(cls, parameter_tuples):
+                    assert t.arbitrary_argument
+                return list(parameter_tuples)
+
+            def output(self):
+                raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
+
+        task = RangeDaily(now=datetime_to_epoch(datetime.datetime(2015, 12, 1)),
+                          of=BulkCompleteDailyTask,
+                          of_params=dict(arbitrary_argument=True),
+                          start=datetime.date(2015, 11, 1),
+                          stop=datetime.date(2015, 12, 1))
+        task.requires()
+
     @mock.patch('luigi.mock.MockFileSystem.listdir',
                 new=mock_listdir([
                     '/data/2014/p/v/z/2014_/_03-_-21octor/20/ZOOO',
@@ -650,6 +671,28 @@ class RangeHourlyTest(unittest.TestCase):
 
         actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected)
+
+    def test_bulk_complete_of_params(self):
+        class BulkCompleteHourlyTask(luigi.Task):
+            dh = luigi.DateHourParameter()
+            arbitrary_argument = luigi.BoolParameter()
+
+            @classmethod
+            def bulk_complete(cls, parameter_tuples):
+                for t in map(cls, parameter_tuples):
+                    assert t.arbitrary_argument
+                return parameter_tuples
+
+            def output(self):
+                raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
+
+        task = RangeHourly(now=datetime_to_epoch(datetime.datetime(2015, 12, 1)),
+                           of=BulkCompleteHourlyTask,
+                           of_params=dict(arbitrary_argument=True),
+                           start=datetime.datetime(2015, 11, 1),
+                           stop=datetime.datetime(2015, 12, 1))
+
+        task.requires()
 
     @mock.patch('luigi.mock.MockFileSystem.exists',
                 new=mock_exists_always_false)
