@@ -156,12 +156,7 @@ class LocalTarget(FileSystemTarget):
         self.fs.remove(self.path)
 
     def copy(self, new_path, raise_if_exists=False):
-        if raise_if_exists and os.path.exists(new_path):
-            raise RuntimeError('Destination exists: %s' % new_path)
-        tmp = LocalTarget(new_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10), is_tmp=True)
-        tmp.makedirs()
-        shutil.copy(self.path, tmp.fn)
-        tmp.move(new_path)
+        self.fs.copy(self.path, new_path, raise_if_exists)
 
     @property
     def fn(self):

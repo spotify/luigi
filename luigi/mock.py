@@ -72,12 +72,6 @@ class MockFileSystem(target.FileSystem):
         else:
             self.get_all_data().pop(path)
 
-    def rename(self, *args, **kwargs):
-        """
-        Calls Move to perform rename operation
-        """
-        self.move(*args, **kwargs)
-
     def move(self, path, dest, raise_if_exists=False):
         """
         Moves a single file from path to dest
@@ -86,6 +80,12 @@ class MockFileSystem(target.FileSystem):
             raise RuntimeError('Destination exists: %s' % path)
         contents = self.get_all_data().pop(path)
         self.get_all_data()[dest] = contents
+
+    def rename(self, *args, **kwargs):
+        """
+        Calls Move to perform rename operation
+        """
+        self.move(*args, **kwargs)
 
     def listdir(self, path):
         """
@@ -125,17 +125,17 @@ class MockTarget(target.FileSystemTarget):
     def exists(self,):
         return self._fn in self.fs.get_all_data()
 
-    def rename(self, path, raise_if_exists=False):
-        if raise_if_exists and path in self.fs.get_all_data():
-            raise RuntimeError('Destination exists: %s' % path)
-        contents = self.fs.get_all_data().pop(self._fn)
-        self.fs.get_all_data()[path] = contents
+    def move(self, path, raise_if_exists=False):
+        """
+        Call MockFileSystem's move command
+        """
+        self.fs.move(self._fn, path, raise_if_exists)
 
-    def move(self, *args, **kwargs):
+    def rename(self, *args, **kwargs):
         """
-        Call rename to move self
+        Call move to rename self
         """
-        self.rename(*args, **kwargs)
+        self.move(*args, **kwargs)
 
     @property
     def path(self):
