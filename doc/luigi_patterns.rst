@@ -103,7 +103,7 @@ Propagating parameters with Range
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Some tasks you want to recur may include additional parameters which need to be configured.
-The Range classes provide a parameter which accepts a :class:`~luigi.params.DictParameter`
+The Range classes provide a parameter which accepts a :class:`~luigi.parameter.DictParameter`
 and passes any parameters onwards for this purpose.
 
 .. code-block:: console
