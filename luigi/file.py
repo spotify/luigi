@@ -49,6 +49,14 @@ class LocalFileSystem(FileSystem):
     Work in progress - add things as needed.
     """
 
+    def copy(self, old_path, new_path, raise_if_exists=False):
+        if raise_if_exists and os.path.exists(new_path):
+            raise RuntimeError('Destination exists: %s' % new_path)
+        d = os.path.dirname(new_path)
+        if d and not os.path.exists(d):
+            self.mkdir(d)
+        shutil.copy(old_path, new_path)
+
     def exists(self, path):
         return os.path.exists(path)
 
@@ -82,6 +90,12 @@ class LocalFileSystem(FileSystem):
             shutil.rmtree(path)
         else:
             os.remove(path)
+
+    def rename(self, *args, **kwargs):
+        """
+        Calls ``move()``
+        """
+        self.move(*args, **kwargs)
 
     def move(self, old_path, new_path, raise_if_exists=False):
         if raise_if_exists and os.path.exists(new_path):

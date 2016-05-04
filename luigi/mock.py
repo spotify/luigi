@@ -37,6 +37,15 @@ class MockFileSystem(target.FileSystem):
     """
     _data = None
 
+    def copy(self, path, dest, raise_if_exists=False):
+        """
+        Copies the contents of a single file path to dest
+        """
+        if raise_if_exists and dest in self.get_all_data():
+            raise RuntimeError('Destination exists: %s' % path)
+        contents = self.get_all_data()[path]
+        self.get_all_data()[dest] = contents
+
     def get_all_data(self):
         # This starts a server in the background, so we don't want to do it in the global scope
         if MockFileSystem._data is None:
@@ -62,6 +71,21 @@ class MockFileSystem(target.FileSystem):
                 self.get_all_data().pop(s)
         else:
             self.get_all_data().pop(path)
+
+    def rename(self, *args, **kwargs):
+        """
+        Calls Move to perform rename operation
+        """
+        self.move(*args, **kwargs)
+
+    def move(self, path, dest, raise_if_exists=False):
+        """
+        Moves a single file from path to dest
+        """
+        if raise_if_exists and dest in self.get_all_data():
+            raise RuntimeError('Destination exists: %s' % path)
+        contents = self.get_all_data().pop(path)
+        self.get_all_data()[dest] = contents
 
     def listdir(self, path):
         """
@@ -106,6 +130,12 @@ class MockTarget(target.FileSystemTarget):
             raise RuntimeError('Destination exists: %s' % path)
         contents = self.fs.get_all_data().pop(self._fn)
         self.fs.get_all_data()[path] = contents
+
+    def move(self, *args, **kwargs):
+        """
+        Call rename to move self
+        """
+        self.rename(*args, **kwargs)
 
     @property
     def path(self):
