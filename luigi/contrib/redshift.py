@@ -365,7 +365,7 @@ class S3CopyJSONToTable(S3CopyToTable):
         """
         Defines copying JSON from s3 into redshift.
         """
-
+        logger.info("Inserting file: %s", f)
         cursor.execute("""
          COPY %s from '%s'
          CREDENTIALS 'aws_access_key_id=%s;aws_secret_access_key=%s'
