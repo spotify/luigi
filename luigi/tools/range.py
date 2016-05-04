@@ -128,9 +128,15 @@ class RangeBase(luigi.WrapperTask):
         raise NotImplementedError
 
     def datetime_to_parameters(self, dt):
+        """
+        Given a date-time, will produce a dictionary of of-params combined with the ranged task parameter
+        """
         raise NotImplementedError
 
     def parameters_to_datetime(self, p):
+        """
+        Given a dictionary of parameters, will extract the ranged task parameter value
+        """
         raise NotImplementedError
 
     def moving_start(self, now):
@@ -299,9 +305,15 @@ class RangeDailyBase(RangeBase):
         return datetime(p.year, p.month, p.day)
 
     def datetime_to_parameters(self, dt):
+        """
+        Given a date-time, will produce a dictionary of of-params combined with the ranged task parameter
+        """
         return self._task_parameters(dt.date())
 
     def parameters_to_datetime(self, p):
+        """
+        Given a dictionary of parameters, will extract the ranged task parameter value
+        """
         dt = p[self._param_name]
         return datetime(dt.year, dt.month, dt.day)
 
@@ -356,9 +368,15 @@ class RangeHourlyBase(RangeBase):
         return p
 
     def datetime_to_parameters(self, dt):
+        """
+        Given a date-time, will produce a dictionary of of-params combined with the ranged task parameter
+        """
         return self._task_parameters(dt)
 
     def parameters_to_datetime(self, p):
+        """
+        Given a dictionary of parameters, will extract the ranged task parameter value
+        """
         return p[self._param_name]
 
     def moving_start(self, now):
