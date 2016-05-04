@@ -568,14 +568,16 @@ class RangeDailyTest(unittest.TestCase):
 
     def test_bulk_complete_of_params(self):
         class BulkCompleteDailyTask(luigi.Task):
+            non_positional_arbitrary_argument = luigi.Parameter(default="whatever", positional=False, significant=False)
             d = luigi.DateParameter()
             arbitrary_argument = luigi.BoolParameter()
 
             @classmethod
             def bulk_complete(cls, parameter_tuples):
-                for t in map(cls, parameter_tuples):
+                ptuples = list(parameter_tuples)
+                for t in map(cls, ptuples):
                     assert t.arbitrary_argument
-                return list(parameter_tuples)
+                return ptuples[:-2]
 
             def output(self):
                 raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
@@ -585,7 +587,13 @@ class RangeDailyTest(unittest.TestCase):
                           of_params=dict(arbitrary_argument=True),
                           start=datetime.date(2015, 11, 1),
                           stop=datetime.date(2015, 12, 1))
-        task.requires()
+        expected = [
+            'BulkCompleteDailyTask(d=2015-11-29, arbitrary_argument=True)',
+            'BulkCompleteDailyTask(d=2015-11-30, arbitrary_argument=True)',
+        ]
+
+        actual = [str(t) for t in task.requires()]
+        self.assertEqual(actual, expected)
 
     @mock.patch('luigi.mock.MockFileSystem.listdir',
                 new=mock_listdir([
@@ -674,6 +682,7 @@ class RangeHourlyTest(unittest.TestCase):
 
     def test_bulk_complete_of_params(self):
         class BulkCompleteHourlyTask(luigi.Task):
+            non_positional_arbitrary_argument = luigi.Parameter(default="whatever", positional=False, significant=False)
             dh = luigi.DateHourParameter()
             arbitrary_argument = luigi.BoolParameter()
 
@@ -681,7 +690,7 @@ class RangeHourlyTest(unittest.TestCase):
             def bulk_complete(cls, parameter_tuples):
                 for t in map(cls, parameter_tuples):
                     assert t.arbitrary_argument
-                return parameter_tuples
+                return parameter_tuples[:-2]
 
             def output(self):
                 raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
@@ -692,7 +701,13 @@ class RangeHourlyTest(unittest.TestCase):
                            start=datetime.datetime(2015, 11, 1),
                            stop=datetime.datetime(2015, 12, 1))
 
-        task.requires()
+        expected = [
+            'BulkCompleteHourlyTask(dh=2015-11-30T22, arbitrary_argument=True)',
+            'BulkCompleteHourlyTask(dh=2015-11-30T23, arbitrary_argument=True)',
+        ]
+
+        actual = [str(t) for t in task.requires()]
+        self.assertEqual(actual, expected)
 
     @mock.patch('luigi.mock.MockFileSystem.exists',
                 new=mock_exists_always_false)

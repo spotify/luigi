@@ -186,7 +186,10 @@ class RangeBase(luigi.WrapperTask):
 
     @property
     def _param_name(self):
-        return self.of.get_params()[0][0] if self.param_name is None else self.param_name
+        if self.param_name is None:
+            return next(x[0] for x in self.of.get_params() if x[1].positional)
+        else:
+            return self.param_name
 
     def _task_parameters(self, param):
         kwargs = dict(**self.of_params)
