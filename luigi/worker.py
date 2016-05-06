@@ -145,11 +145,11 @@ class TaskProcess(multiprocessing.Process):
                 return None
 
             new_req = flatten(requires)
-            new_deps = [(t.task_module, t.task_family, t.to_str_params())
-                        for t in new_req]
             if all(t.complete() for t in new_req):
                 next_send = getpaths(requires)
             else:
+                new_deps = [(t.task_module, t.task_family, t.to_str_params())
+                            for t in new_req]
                 return new_deps
 
     def run(self):
