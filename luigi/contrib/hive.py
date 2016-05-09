@@ -383,7 +383,7 @@ class HiveTableTarget(luigi.Target):
         self.client = client
 
     def exists(self):
-        logger.debug("Checking Hive table '%s.%s' exists", self.database, self.table)
+        logger.debug("Checking if Hive table '%s.%s' exists", self.database, self.table)
         return self.client.table_exists(self.table, self.database)
 
     @property
