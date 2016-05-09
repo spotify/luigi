@@ -81,12 +81,6 @@ class MockFileSystem(target.FileSystem):
         contents = self.get_all_data().pop(path)
         self.get_all_data()[dest] = contents
 
-    def rename(self, *args, **kwargs):
-        """
-        Calls Move to perform rename operation
-        """
-        self.move(*args, **kwargs)
-
     def listdir(self, path):
         """
         listdir does a prefix match of self.get_all_data(), but doesn't yet support globs.

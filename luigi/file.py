@@ -91,12 +91,6 @@ class LocalFileSystem(FileSystem):
         else:
             os.remove(path)
 
-    def rename(self, *args, **kwargs):
-        """
-        Calls ``move()``
-        """
-        self.move(*args, **kwargs)
-
     def move(self, old_path, new_path, raise_if_exists=False):
         if raise_if_exists and os.path.exists(new_path):
             raise RuntimeError('Destination exists: %s' % new_path)

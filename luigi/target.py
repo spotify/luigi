@@ -184,6 +184,21 @@ class FileSystem(object):
             raise FileAlreadyExists()
         self.move(path, dest)
 
+    def rename(self, *args, **kwargs):
+        """
+        Alias for ``move()``
+        """
+        self.move(*args, **kwargs)
+
+    def copy(self, path, dest):
+        """
+        Copy a file or a directory with contents.
+        Currently, LocalFileSystem and MockFileSystem support only single file
+        copying but S3Client copies either a file or a directory as required.
+        """
+        raise NotImplementedError("copy() not implemented on {0}".
+                                  format(self.__class__.__name__))
+
 
 class FileSystemTarget(Target):
     """
