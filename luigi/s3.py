@@ -440,12 +440,6 @@ class S3Client(FileSystem):
                 mp.cancel_upload()
             raise
 
-    def rename(self, *args, **kwargs):
-        """
-        Alias for ``move()``
-        """
-        self.move(*args, **kwargs)
-
     def move(self, source_path, destination_path, **kwargs):
         """
         Rename/move an object from one S3 location to another.

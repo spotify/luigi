@@ -276,6 +276,15 @@ class FileSystemTest(unittest.TestCase):
     def tearDown(self):
         self.setUp()
 
+    def test_copy(self):
+        src = os.path.join(self.path, 'src.txt')
+        dest = os.path.join(self.path, 'newdir', 'dest.txt')
+
+        LocalTarget(src).open('w').close()
+        self.fs.copy(src, dest)
+        self.assertTrue(os.path.exists(src))
+        self.assertTrue(os.path.exists(dest))
+
     def test_mkdir(self):
         testpath = os.path.join(self.path, 'foo/bar')
 
