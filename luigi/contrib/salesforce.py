@@ -175,6 +175,7 @@ class QuerySalesforce(Task):
 
                 with open(self.output().fn, 'w') as outfile:
                     for result_id in result_ids:
+                        logger.info("Downloading batch result %s for batch: %s and job: %s" % (result_id, batch_id, job_id))
                         data = sf.get_batch_result(job_id, batch_id, result_id)
                         outfile.write(data)
         finally:
