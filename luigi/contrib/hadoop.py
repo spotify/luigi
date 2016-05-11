@@ -49,6 +49,7 @@ from luigi import six
 from luigi import configuration
 import luigi
 import luigi.task
+import luigi.contrib.gcs
 import luigi.contrib.hdfs
 import luigi.s3
 from luigi import mrrunner
@@ -456,9 +457,11 @@ class HadoopJobRunner(JobRunner):
         output_final = job.output().path
         # atomic output: replace output with a temporary work directory
         if self.end_job_with_atomic_move_dir:
-            if isinstance(job.output(), luigi.s3.S3FlagTarget):
+            illegal_targets = (
+                luigi.s3.S3FlagTarget, luigi.contrib.gcs.GCSFlagTarget)
+            if isinstance(job.output(), illegal_targets):
                 raise TypeError("end_job_with_atomic_move_dir is not supported"
-                                " for S3FlagTarget")
+                                " for {}".format(illegal_targets))
             output_hadoop = '{output}-temp-{time}'.format(
                 output=output_final,
                 time=datetime.datetime.now().isoformat().replace(':', '-'))
@@ -521,15 +524,23 @@ class HadoopJobRunner(JobRunner):
         if self.input_format:
             arglist += ['-inputformat', self.input_format]
 
+        allowed_input_targets = (
+            luigi.contrib.hdfs.HdfsTarget,
+            luigi.s3.S3Target,
+            luigi.contrib.gcs.GCSTarget)
         for target in luigi.task.flatten(job.input_hadoop()):
-            if not isinstance(target, luigi.contrib.hdfs.HdfsTarget) \
-                    and not isinstance(target, luigi.s3.S3Target):
-                raise TypeError('target must be an HdfsTarget or S3Target')
+            if not isinstance(target, allowed_input_targets):
+                raise TypeError('target must one of: {}'.format(
+                    allowed_input_targets))
             arglist += ['-input', target.path]
 
-        if not isinstance(job.output(), luigi.contrib.hdfs.HdfsTarget) \
-                and not isinstance(job.output(), luigi.s3.S3FlagTarget):
-            raise TypeError('output must be an HdfsTarget or S3FlagTarget')
+        allowed_output_targets = (
+            luigi.contrib.hdfs.HdfsTarget,
+            luigi.s3.S3FlagTarget,
+            luigi.contrib.gcs.GCSFlagTarget)
+        if not isinstance(job.output(), allowed_output_targets):
+            raise TypeError('output must be one of: {}'.format(
+                allowed_output_targets))
         arglist += ['-output', output_hadoop]
 
         # submit job
