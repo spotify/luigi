@@ -17,6 +17,7 @@
 import time
 import abc
 import logging
+import warnings
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 import re
@@ -170,11 +171,12 @@ class QuerySalesforce(Task):
                 if 'foreign key relationships not supported' not in status['state_message'].lower():
                     raise Exception(msg)
             else:
-                result_id = sf.get_batch_results(job_id, batch_id)
-                data = sf.get_batch_result(job_id, batch_id, result_id)
+                result_ids = sf.get_batch_result_ids(job_id, batch_id)
 
                 with open(self.output().fn, 'w') as outfile:
-                    outfile.write(data)
+                    for result_id in result_ids:
+                        data = sf.get_batch_result(job_id, batch_id, result_id)
+                        outfile.write(data)
         finally:
             logger.info("Closing job %s" % job_id)
             sf.close_job(job_id)
@@ -473,22 +475,27 @@ class SalesforceAPI(object):
 
     def get_batch_results(self, job_id, batch_id):
         """
-        Get results of a batch that has completed processing.
-        If the batch is a CSV file, the response is in CSV format.
-        If the batch is an XML file, the response is in XML format.
+        DEPRECATED: Use `get_batch_result_ids`
+        """
+        warnings.warn("get_batch_results is deprecated and only returns one batch result. Please use get_batch_result_ids")
+        return self.get_batch_result_ids(job_id, batch_id)[0]
+
+    def get_batch_result_ids(self, job_id, batch_id):
+        """
+        Get result IDs of a batch that has completed processing.
 
         :param job_id: job_id as returned by 'create_operation_job(...)'
         :param batch_id: batch_id as returned by 'create_batch(...)'
-        :return: batch result response as either CSV or XML, dependent on the batch
+        :return: list of batch result IDs to be used in 'get_batch_result(...)'
         """
         response = requests.get(self._get_batch_results_url(job_id, batch_id),
                                 headers=self._get_batch_info_headers())
         response.raise_for_status()
 
         root = ET.fromstring(response.text)
-        result = root.find('%sresult' % self.API_NS).text
+        result_ids = [r.text for r in root.findall('%sresult' % self.API_NS)]
 
-        return result
+        return result_ids
 
     def get_batch_result(self, job_id, batch_id, result_id):
         """
