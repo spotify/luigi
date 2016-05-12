@@ -20,11 +20,11 @@
 Unit test for the Salesforce contrib package
 """
 
-import luigi
 from luigi.contrib.salesforce import SalesforceAPI
 
 from helpers import unittest
 import mock
+
 
 def mocked_requests_get(*args, **kwargs):
     class MockResponse:
@@ -39,7 +39,13 @@ def mocked_requests_get(*args, **kwargs):
         def raise_for_status(self):
             return None
 
-    return MockResponse('<result-list xmlns="http://www.force.com/2009/06/asyncapi/dataload"><result>1234</result><result>1235</result><result>1236</result></result-list>', 200)
+    result_list = (
+        '<result-list xmlns="http://www.force.com/2009/06/asyncapi/dataload">'
+        '<result>1234</result><result>1235</result><result>1236</result>'
+        '</result-list>'
+    )
+    return MockResponse(result_list, 200)
+
 
 class TestSalesforceAPI(unittest.TestCase):
     # We patch 'requests.get' with our own method. The mock object is passed in to our test case method.
