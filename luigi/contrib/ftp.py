@@ -45,17 +45,21 @@ logger = logging.getLogger('luigi-interface')
 
 class RemoteFileSystem(luigi.target.FileSystem):
 
-    def __init__(self, host, username=None, password=None, port=21, tls=False, timeout=60, sftp=False):
+    def __init__(self, host, username=None, password=None, port=None, tls=False, timeout=60, sftp=False):
         self.host = host
         self.username = username
         self.password = password
-        self.port = port
         self.tls = tls
         self.timeout = timeout
         self.sftp = sftp
 
-        if self.sftp:
-            self.port = 22
+        if port is None:
+            if self.sftp:
+                self.port = 22
+            else:
+                self.port = 21
+        else:
+            self.port = port
 
     def _connect(self):
         """
@@ -347,7 +351,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
 
     def __init__(
         self, path, host, format=None, username=None,
-        password=None, port=21, mtime=None, tls=False,
+        password=None, port=None, mtime=None, tls=False,
         timeout=60, sftp=False
     ):
         if format is None:
