@@ -25,6 +25,7 @@ from luigi.contrib.salesforce import SalesforceAPI, QuerySalesforce
 from helpers import unittest
 import mock
 import re
+import sys
 from luigi.mock import MockTarget
 
 
@@ -88,7 +89,11 @@ class TestQuerySalesforce(QuerySalesforce):
 
 
 class TestSalesforceQuery(unittest.TestCase):
-    @mock.patch('__builtin__.open', side_effect=mocked_open)
+    patch_name = '__builtin__.open'
+    if sys.version_info.major > 2:
+        patch_name = 'builtins.open'
+
+    @mock.patch(patch_name, side_effect=mocked_open)
     def setUp(self, mock_open):
         MockTarget.fs.clear()
         self.result_ids = ['a', 'b', 'c']
@@ -104,7 +109,7 @@ class TestSalesforceQuery(unittest.TestCase):
                 self.all_lines += line+"\n"
                 counter += 2
 
-    @mock.patch('__builtin__.open', side_effect=mocked_open)
+    @mock.patch(patch_name, side_effect=mocked_open)
     def test_multi_csv_download(self, mock_open):
         qsf = TestQuerySalesforce()
 
