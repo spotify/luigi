@@ -20,10 +20,13 @@
 Unit test for the Salesforce contrib package
 """
 
-from luigi.contrib.salesforce import SalesforceAPI
+from luigi.contrib.salesforce import SalesforceAPI, QuerySalesforce
+from luigi import Task
 
 from helpers import unittest
-import mock
+import mock, re
+import __builtin__
+from luigi.mock import MockTarget
 
 
 def mocked_requests_get(*args, **kwargs):
@@ -46,6 +49,15 @@ def mocked_requests_get(*args, **kwargs):
     )
     return MockResponse(result_list, 200)
 
+old__open = open
+def mocked_open(*args, **kwargs):
+    print args
+    print kwargs
+    print 'DAMON"'
+    if re.match("job_data", args[0]):
+        return MockTarget(args[0]).open(args[1])
+    else:
+        return old__open(*args)
 
 class TestSalesforceAPI(unittest.TestCase):
     # We patch 'requests.get' with our own method. The mock object is passed in to our test case method.
@@ -60,3 +72,42 @@ class TestSalesforceAPI(unittest.TestCase):
         sf = SalesforceAPI('xx', 'xx', 'xx')
         result_ids = sf.get_batch_result_ids('job_id', 'batch_id')
         self.assertEqual(['1234', '1235', '1236'], result_ids)
+
+class TestQuerySalesforce(QuerySalesforce):
+    def output(self):
+        return MockTarget('job_data.csv')
+
+    @property
+    def object_name(self):
+        return 'dual'
+
+    @property
+    def soql(self):
+        return "SELECT * FROM %s" % self.object_name
+
+
+class TestSalesforceQuery(unittest.TestCase):
+    @mock.patch('__builtin__.open',side_effect=mocked_open)
+    def setUp(self, mock_open):
+        MockTarget.fs.clear()
+        self.result_ids = ['a', 'b', 'c']
+
+        counter = 1
+        self.all_lines  = "Lines\n"
+        self.header = "Lines"
+        for i, id in enumerate(self.result_ids):
+            filename = "%s.%d" % ('job_data.csv', i)
+            with MockTarget(filename).open('w') as f:
+                line = "%d line\n%d line" % ((counter), (counter+1))
+                f.write(self.header + "\n" + line + "\n")
+                self.all_lines+=line+"\n"
+                counter+=2
+
+
+    @mock.patch('__builtin__.open',side_effect=mocked_open)
+    def test_multi_csv_download(self, mock_open):
+        qsf = TestQuerySalesforce()
+
+        qsf.merge_batch_results(self.result_ids)
+        print qsf.output().fn
+        self.assertEqual(MockTarget(qsf.output().fn).open('r').read(), self.all_lines)
