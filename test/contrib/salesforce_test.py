@@ -24,9 +24,9 @@ from luigi.contrib.salesforce import SalesforceAPI, QuerySalesforce
 
 from helpers import unittest
 import mock
-import re
-import sys
 from luigi.mock import MockTarget
+from luigi.six import PY3
+import re
 
 
 def mocked_requests_get(*args, **kwargs):
@@ -90,7 +90,7 @@ class TestQuerySalesforce(QuerySalesforce):
 
 class TestSalesforceQuery(unittest.TestCase):
     patch_name = '__builtin__.open'
-    if sys.version_info.major > 2:
+    if PY3:
         patch_name = 'builtins.open'
 
     @mock.patch(patch_name, side_effect=mocked_open)
