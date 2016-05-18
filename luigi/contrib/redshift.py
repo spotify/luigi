@@ -224,7 +224,7 @@ class S3CopyToTable(rdbms.CopyToTable):
                 table_attributes=self.table_attributes)
 
             connection.cursor().execute(query)
-       else:
+        else:
             raise ValueError("create_table() found no columns for %r"
                              % self.table)
 
