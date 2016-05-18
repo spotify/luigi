@@ -114,4 +114,4 @@ class TestSalesforceQuery(unittest.TestCase):
         qsf = TestQuerySalesforce()
 
         qsf.merge_batch_results(self.result_ids)
-        self.assertEqual(MockTarget(qsf.output().fn).open('r').read(), self.all_lines)
+        self.assertEqual(MockTarget(qsf.output().path).open('r').read(), self.all_lines)
