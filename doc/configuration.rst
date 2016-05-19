@@ -211,6 +211,7 @@ smtp_timeout
 
 
 [worker]
+--------
 
 These parameters control Luigi worker behavior.
 
@@ -275,9 +276,6 @@ retry_external_tasks
   satisfied  while a workflow is in progress, so dependent tasks will remain
   PENDING until the workflow is reinvoked.
   Defaults to false for backwards compatibility.
-
-
-[worker]
 
 no_install_shutdown_handler
   By default, workers will stop requesting new work and finish running
