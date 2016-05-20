@@ -5,9 +5,6 @@
 .. image:: https://img.shields.io/travis/spotify/luigi/master.svg?style=flat
     :target: https://travis-ci.org/spotify/luigi
  
-.. image:: https://img.shields.io/codecov/c/github/spotify/luigi/master.svg?style=flat
-    :target: https://codecov.io/gh/spotify/luigi?branch=master
- 
 .. image:: https://landscape.io/github/spotify/luigi/master/landscape.svg?style=flat
    :target: https://landscape.io/github/spotify/luigi/master
  
