@@ -138,7 +138,7 @@ class LocalTarget(FileSystemTarget):
             return self.format.pipe_reader(fileobj)
 
         else:
-            raise Exception('mode must be r/w (got:%s)' % mode)
+            raise Exception("mode must be 'r' or 'w' (got: %s)" % mode)
 
     def move(self, new_path, raise_if_exists=False):
         self.fs.move(self.path, new_path, raise_if_exists=raise_if_exists)

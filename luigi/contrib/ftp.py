@@ -394,7 +394,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
                 FileWrapper(io.BufferedReader(io.FileIO(self.__tmp_path, 'r')))
             )
         else:
-            raise Exception('mode must be r/w')
+            raise Exception("mode must be 'r' or 'w' (got: %s)" % mode)
 
     def exists(self):
         return self.fs.exists(self.path, self.mtime)
