@@ -302,6 +302,16 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         self.assertTrue(stdout.find(b'[FileSystem] data/streams_2015_03_04_faked.tsv') != -1)
         self.assertTrue(stdout.find(b'[DB] localhost') != -1)
 
+    def test_deps_tree_py_script(self):
+        """
+        Test the deps_tree.py script.
+        """
+        args = 'python luigi/tools/deps_tree.py --module examples.top_artists AggregateArtists --date-interval 2012-06'.split()
+        returncode, stdout, stderr = self._run_cmdline(args)
+        self.assertEqual(0, returncode)
+        for i in range(1, 30):
+            self.assertTrue(stdout.find(("-[Streams-{{'date': '2012-06-{0}'}}".format(str(i).zfill(2))).encode('utf-8')) != -1)
+
     def test_bin_mentions_misspelled_task(self):
         """
         Test that the error message is informative when a task is misspelled.
