@@ -13,7 +13,7 @@ except ImportError:
     logger.warning("Loading hdf5 module without the python packages pandas. \
         This will crash at runtime if pandas functionality is used.")
 
-    class Object():
+    class Object(): # ensures docs are built will lead to fail at runtime
         HDFStore = object
     pd = Object()
 
