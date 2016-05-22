@@ -13,6 +13,17 @@ except ImportError:
     logger.warning("Loading hdf5 module without the python packages pandas. \
         This will crash at runtime if pandas functionality is used.")
 
+if sys.version_info < (3, 3):
+    FileExistsError = OSError
+
+logger = logging.getLogger('luigi-interface')
+
+try:
+    import pandas as pd
+except ImportError:
+    logger.warning("Loading hdf5 module without the python packages pandas. \
+        This will crash at runtime if pandas functionality is used.")
+
 if sys.version_info < (3,3):
     FileExistsError=OSError
 
@@ -20,6 +31,7 @@ class Hdf5FileSystem(luigi.target.FileSystem):
     """
         Simple class to represent a Filesystem inside a hdf5 storage
     """
+
     def __init__(self, hdf5_file):
         self.store = hdf5_file
 
@@ -49,8 +61,8 @@ class Hdf5FileSystem(luigi.target.FileSystem):
 class Hdf5TableTarget(luigi.target.FileSystemTarget):
     """
     A target that writes to a temporary node and then moves it to it's final destination. All targets are safe to use
-    for multithreading. As pytables does not allow simultaneous access to a storage each operation is protected by locking
-    the resource and unlocking it after finishing. Other targets requesting access will wait until it is freed.
+    for multithreading. As pytables does not allow simultaneous access to a storage each operation is protected by
+    locking the resource and unlocking it after finishing. Other targets requesting access will wait until it is freed.
 
     :note:
             When table is appended there is no atomicity of write operation. If you want atomic write operation consider
@@ -195,6 +207,7 @@ class Hdf5RowTarget(Hdf5TableTarget):
         if pd.Term specified returns anything the target will be regarded as existent.
         So be smart about how you define it.
     """
+
     def __init__(self, hdf5_file, key, row_expr=None, index_cols=(),
                  append=True, expected_rows=None, format="table"):
         """
@@ -240,6 +253,7 @@ class Hdf5RowTarget(Hdf5TableTarget):
                         return False
         except (OSError, KeyError, AttributeError):
             return False
+
 
 class SafeHDFStore(pd.HDFStore):
     """
