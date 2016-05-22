@@ -1,3 +1,4 @@
+import os
 import tempfile
 import shutil
 import numpy as np
@@ -6,7 +7,7 @@ import pandas as pd
 import unittest
 from datetime import datetime
 
-from luigi.contrib.hdf5 import *
+from luigi.contrib.hdf5 import Hdf5TableTarget, Hdf5RowTarget, SafeHDFStore
 
 
 class Hdf5TargetTest(unittest.TestCase):
@@ -128,7 +129,7 @@ class Hdf5TargetTest(unittest.TestCase):
         for df in target.read_chunks(expr_list=["id = {}".format(i) for i in range(10)]):
             parts.append(df)
         dfa = pd.concat(parts)
-        dfa.sort_values(["id","date"], inplace=True)
+        dfa.sort_values(["id", "date"], inplace=True)
         df = self.df.sort_values(["id", "date"])
         pdt.assert_frame_equal(dfa, df)
 

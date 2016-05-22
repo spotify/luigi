@@ -13,19 +13,13 @@ except ImportError:
     logger.warning("Loading hdf5 module without the python packages pandas. \
         This will crash at runtime if pandas functionality is used.")
 
+    class Object():
+        HDFStore = object
+    pd = Object()
+
 if sys.version_info < (3, 3):
     FileExistsError = OSError
 
-logger = logging.getLogger('luigi-interface')
-
-try:
-    import pandas as pd
-except ImportError:
-    logger.warning("Loading hdf5 module without the python packages pandas. \
-        This will crash at runtime if pandas functionality is used.")
-
-if sys.version_info < (3,3):
-    FileExistsError=OSError
 
 class Hdf5FileSystem(luigi.target.FileSystem):
     """
@@ -62,7 +56,8 @@ class Hdf5TableTarget(luigi.target.FileSystemTarget):
     """
     A target that writes to a temporary node and then moves it to it's final destination. All targets are safe to use
     for multithreading. As pytables does not allow simultaneous access to a storage each operation is protected by
-    locking the resource and unlocking it after finishing. Other targets requesting access will wait until it is freed.
+    locking the resource and unlocking it after finishing using file locks.
+    Other targets requesting access will wait until it is freed.
 
     :note:
             When table is appended there is no atomicity of write operation. If you want atomic write operation consider
@@ -76,7 +71,8 @@ class Hdf5TableTarget(luigi.target.FileSystemTarget):
 
         :param hdf5_file: path to hdf5file will be created if not existent.
         :param key: key or node inside the storage to write to.
-        :param index_cols: this columns will be fully indexed for faster searches consider indexing often used columns.
+        :param index_cols: this columns will be fully indexed for faster searches.
+                           Consider indexing often queried columns.
         :param append:  if True the created table will be appendable. Default is True.
         :param expected_rows: for better I/O a good estimate of the table size should be estimated.
         :param format: either 'fixed' or 'table'
@@ -103,6 +99,7 @@ class Hdf5TableTarget(luigi.target.FileSystemTarget):
     def open(self, **kwargs):
         """
         Opens the target and returns the whole table as a pd.DataFrame
+
         :param kwargs: optional kwargs will be passed to pytables
         :return: a pd:DataFrame containing the targets data
         """
@@ -115,20 +112,22 @@ class Hdf5TableTarget(luigi.target.FileSystemTarget):
         Or by a list of Expression. This is very useful if you want to aggregate your data as it allows for splitting
         this operation in chunks. For example consider:
 
-        :Example:
-            >>>class AggregateDailyTask(luigi.Task)
-            >>>
-            >>>...
-            >>>
-            >>>def run():
-            >>>     user_activites = self.input()
-            >>>     for df in user_activites.read_chunks(expr_list=[" user_id = {}".format(id) for id in users]):
-            >>>         self.output().write(df.groupby("date").sum())
+        .. code-block:: python
+
+            class AggregateDailyTask(luigi.Task)
+
+            ...
+
+            def run():
+                 user_activites = self.input()
+                 for df in user_activites.read_chunks(
+                           expr_list=[" user_id = {}".format(id) for id in users]):
+                     self.output().write(df.groupby("date").sum())
 
         This Allows for easily selecting only the interesting data from your store or splitting data for parallel processing
 
-        :param chunksize: specifies how many rows will be returned per chunk
-        :param expr_list: if not () chunks will be selected by evaluating each expression
+        :param chunksize: specifies how many rows will be returned per chunk.
+        :param expr_list: if not empty chunks will be selected by evaluating each expression.
         :return: an iterator returning the rows in a pandas.DataFrame
         """
         chunksize = int(chunksize)
@@ -185,6 +184,7 @@ class Hdf5TableTarget(luigi.target.FileSystemTarget):
     def _update_store(self, df, store):
         """
         Writes/appends or creates the store and indexes certain columns if specified.
+
         :param df: pd.DataFrame containing data to write
         :param store: open SafeHDFSStore object
         :return:
@@ -204,7 +204,7 @@ class Hdf5RowTarget(Hdf5TableTarget):
     A target that allows specifying certain rows using a pd.Term string
 
     :note:
-        if pd.Term specified returns anything the target will be regarded as existent.
+        if row expression returns anything the target will be regarded as existent.
         So be smart about how you define it.
     """
 
@@ -212,7 +212,11 @@ class Hdf5RowTarget(Hdf5TableTarget):
                  append=True, expected_rows=None, format="table"):
         """
         :param row_expr: The expression to identify the existence of this target e.g. "entry_id = 3".
-                         The columns used by the expression must be indexed for this to work
+                         The columns used by the expression must be indexed for this to work.
+                         See `pandas documentation <http://pandas.pydata.org/pandas-docs/stable/enhancingperf.html
+                         #expression-evaluation-via-eval-experimental>`_
+                         for more information.
+        :type row_expr: pd.Term, str
         :return: A target object pointing to the rows specified via the row_expr
         """
         super(Hdf5RowTarget, self).__init__(hdf5_file, key, index_cols,
@@ -222,11 +226,18 @@ class Hdf5RowTarget(Hdf5TableTarget):
             self.row_expr = pd.Term(row_expr)
 
     def write(self, df):
+        """
+        Same as :py:meth:`Hdf5TableTarget.close`
+
+        :param df:
+        :return:
+        """
         super(Hdf5RowTarget, self).write(df)
 
     def open(self, **kwargs):
         """
         Returns the data selected by row_expr as pd.DataFrame.
+
         :param kwargs: kwargs passed to pytables. The where argument will be replaced with row_expr if not None.
         :return: A pd.DataFrame containing the data the expression points to
         """
@@ -258,7 +269,12 @@ class Hdf5RowTarget(Hdf5TableTarget):
 class SafeHDFStore(pd.HDFStore):
     """
     Modified Piettro Battison's solution on handling safe multiprocessing HDFStore access. This solution currently creates
-    a file lock as is is hard to pass a shared Lock object to various luigi workers.
+    a file lock as it is hard to pass a shared Lock object to luigi workers. You can use this with a context manager.
+
+    .. code-block:: python
+
+        with SafeHDFStore("some_storage.h5", "w") as store:
+            store.put("/some_node", df)
     """
 
     def __init__(self, *args, **kwargs):
@@ -283,6 +299,10 @@ class SafeHDFStore(pd.HDFStore):
         self.close()
 
     def close(self):
+        """
+        Closes the store and realeses the file lock
+        :return:
+        """
         pd.HDFStore.close(self)
         os.close(self._flock)
         os.remove(self._lock)
