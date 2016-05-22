@@ -1,12 +1,12 @@
 import tempfile
-import unittest
-
+import shutil
+import numpy as np
 import pandas.util.testing as pdt
-from pandas import *
+import pandas as pd
+import unittest
+from datetime import datetime
 
-from drtools.pipeline_.target import *
-from drtools.pipeline_.utils import daterange
-from drtools.utils.synchron import SafeHDFStore
+from luigi.contrib.hdf5 import *
 
 
 class Hdf5TargetTest(unittest.TestCase):
@@ -18,9 +18,10 @@ class Hdf5TargetTest(unittest.TestCase):
         self.df = pd.DataFrame(dict(date=pd.date_range('20130101', periods=10000, freq="H"),
                                     page_id=pids,
                                     id=np.random.choice(np.arange(10), size=10000)))
-        self.hdf5_file_empty = os.path.join(tempfile.gettempdir(), "hdf5-luigi-target-test-write.h5")
+        self.dir = tempfile.mkdtemp()
+        self.hdf5_file_empty = os.path.join(self.dir, "hdf5-luigi-target-test-write.h5")
 
-        self.hdf5_file = os.path.join(tempfile.gettempdir(), "hdf5-luigi-target-test-read.h5")
+        self.hdf5_file = os.path.join(self.dir, "hdf5-luigi-target-test-read.h5")
         with SafeHDFStore(self.hdf5_file, "w") as store:
             store.put("/df", self.df, complevel=1, complib="blosc", data_columns=True, format="table", append=True)
 
@@ -60,7 +61,6 @@ class Hdf5TargetTest(unittest.TestCase):
         target = Hdf5TableTarget(self.hdf5_file, "/df")
         dfa = target.open()
         pdt.assert_frame_equal(dfa, self.df)
-
 
     def testRowRead(self):
         target = Hdf5RowTarget(self.hdf5_file, "/df", row_expr=pd.Term("date > 20130101 & date < 20140101"))
@@ -107,11 +107,6 @@ class Hdf5TargetTest(unittest.TestCase):
         # print(set(dfa.id.unique()), set(df.id.unique()) )
         pdt.assert_frame_equal(dfa, df)
 
-    def tearDown(self):
-        os.remove(self.hdf5_file)
-        if os.path.exists(self.hdf5_file_empty):
-            os.remove(self.hdf5_file_empty)
-
     def testAppend(self):
         target = Hdf5TableTarget(self.hdf5_file_empty, "/df")
         target.write(self.df.iloc[:100])
@@ -134,7 +129,7 @@ class Hdf5TargetTest(unittest.TestCase):
             parts.append(df)
         dfa = pd.concat(parts)
         dfa.sort_values(["id","date"], inplace=True)
-        df = self.df.sort_values(["id","date"])
+        df = self.df.sort_values(["id", "date"])
         pdt.assert_frame_equal(dfa, df)
 
     def testMixedTypeColumn(self):
@@ -143,6 +138,9 @@ class Hdf5TargetTest(unittest.TestCase):
         self.df.loc[1, "id"] = "somestring"
         with self.assertRaises(TypeError):
             target.write(self.df.iloc[:100])
+
+    def tearDown(self):
+        shutil.rmtree(self.dir)
 
 
 if __name__ == "__main__":
