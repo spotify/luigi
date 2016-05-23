@@ -1,3 +1,71 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2016 Alan Hoeng
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+#
+"""
+This module allows saving and reading from hdf5 storages by wrapping pandas HDFStore.
+It integrates luigi nicely with many pandas task, without worrying to much about saving and reading
+from hdf5 storages.
+
+The target also handles synchronous I/O operations as the default
+pytables storage does not allow parallel I/O. It also comes with a chunked reading
+method to save memory if necessary.
+
+It supports atomic write operations for non appendable storages. If you write to appendable storage
+only the initial write will be atomic. Subsequent ones will be made directly to the target table and
+therefore no atomicity is guaranteed.
+
+for more detailed documentation regarding the hdf5 file format and it's parameters be sure to visit
+`pandas doc <http://pandas.pydata.org/pandas-docs/stable/>`_ and/or
+`PyTables doc <http://www.pytables.org/>`_
+
+Below a simple example on how to read and write data from a storage:
+
+.. code-block:: python
+
+    import luigi
+    from luigi.contrib.hdf5 import Hdf5TableTarget, Hdf5RowTarget
+
+    class BaggedFeatures(luigi.Task)
+        users = luigi.ListParameter
+
+        def requires(self):
+            return GetUserActivity(users=self.users)
+
+        def output(self):
+            return Hdf5TableTarget("/data/storage.h5",
+                                key="bagged_features",
+                                format="table", append=True)
+
+        def run(self):
+            users = self.input()
+            df_bagged_features = aggregate_data(users, along="date")
+            self.output().write(df_bagged_features)
+
+    class GetUsersActivity(luigi.Task):
+        users = luigi.ListParameter()
+
+        def output(self):
+            return Hdf5RowTarget("/data/storage.h5", key="/user_log",
+                                 row_expr="id = [{}]".format(",".join(self.users)))
+
+        def run(self):
+            # get latest user activity
+
+"""
+
 import os
 import luigi
 import logging
@@ -13,7 +81,7 @@ except ImportError:
     logger.warning("Loading hdf5 module without the python packages pandas. \
         This will crash at runtime if pandas functionality is used.")
 
-    class Object(): # ensures docs are built will lead to fail at runtime
+    class Object():
         HDFStore = object
     pd = Object()
 
@@ -76,7 +144,7 @@ class Hdf5TableTarget(luigi.target.FileSystemTarget):
         :param append:  if True the created table will be appendable. Default is True.
         :param expected_rows: for better I/O a good estimate of the table size should be estimated.
         :param format: either 'fixed' or 'table'
-        :param complib: which compression library to use. Complevel is default set to 1 as results
+        :param complib: which compression library to use. Complevel is hard coded to 1 as results
                         do not differ to much using higher compression
         :return: A target object
         """
@@ -227,7 +295,7 @@ class Hdf5RowTarget(Hdf5TableTarget):
 
     def write(self, df):
         """
-        Same as :py:meth:`Hdf5TableTarget.close`
+        Same as :meth:`Hdf5TableTarget.close`
 
         :param df:
         :return:
@@ -268,7 +336,8 @@ class Hdf5RowTarget(Hdf5TableTarget):
 
 class SafeHDFStore(pd.HDFStore):
     """
-    Modified Piettro Battison's solution on handling safe multiprocessing HDFStore access. This solution currently creates
+    Modified `Piettro Battison's <http://stackoverflow.com/questions/22522551/pandas-hdf5-as-a-database/29014295>`_
+    solution on handling safe multiprocessing HDFStore access. This solution currently creates
     a file lock as it is hard to pass a shared Lock object to luigi workers. You can use this with a context manager.
 
     .. code-block:: python
@@ -300,7 +369,7 @@ class SafeHDFStore(pd.HDFStore):
 
     def close(self):
         """
-        Closes the store and realeses the file lock
+        Closes the store and releases the file lock
         :return:
         """
         pd.HDFStore.close(self)
