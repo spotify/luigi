@@ -142,7 +142,3 @@ class Hdf5TargetTest(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.dir)
-
-
-if __name__ == "__main__":
-    unittest.main()
