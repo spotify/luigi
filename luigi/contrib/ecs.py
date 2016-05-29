@@ -44,7 +44,7 @@ Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 
 .. _`docker run`: https://docs.docker.com/reference/commandline/run
 .. _taskDefinition: http://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_defintions.html
-.. _`boto3-powered`: https://boto3.readthedocs.org
+.. _`boto3-powered`: https://boto3.readthedocs.io
 .. _awscli: https://aws.amazon.com/cli
 .. _`ECS Get Started`: http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_GetStarted.html
 

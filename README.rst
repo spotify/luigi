@@ -26,11 +26,11 @@ Getting Started
 
 Run ``pip install luigi`` to install the latest stable version from `PyPI
 <https://pypi.python.org/pypi/luigi>`_. Documentation for the latest release is
-hosted `here <http://luigi.readthedocs.org/en/stable/>`__.
+hosted `here <https://luigi.readthedocs.io/en/stable/>`__.
 
 For the bleeding edge code, ``pip install
 git+https://github.com/spotify/luigi.git``. Bleeding edge documentation can be
-found `here <http://luigi.readthedocs.org/en/latest/>`__.
+found `here <https://luigi.readthedocs.io/en/latest/>`__.
 
 Background
 ----------
@@ -47,11 +47,11 @@ data processing, like `Hive <http://hive.apache.org/>`__,
 `Pig <http://pig.apache.org/>`_, or
 `Cascading <http://www.cascading.org/>`_. Luigi is not a framework to
 replace these. Instead it helps you stitch many tasks together, where
-each task can be a `Hive query <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.hive.html>`__,
-a `Hadoop job in Java <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.hadoop_jar.html>`_,
-a  `Spark job in Scala or Python <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.spark.html>`_
+each task can be a `Hive query <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hive.html>`__,
+a `Hadoop job in Java <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hadoop_jar.html>`_,
+a  `Spark job in Scala or Python <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.spark.html>`_
 a Python snippet,
-`dumping a table <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.sqla.html>`_
+`dumping a table <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.sqla.html>`_
 from a database, or anything else. It's easy to build up
 long-running pipelines that comprise thousands of tasks and take days or
 weeks to complete. Luigi takes care of a lot of the workflow management
@@ -60,12 +60,12 @@ so that you can focus on the tasks themselves and their dependencies.
 You can build pretty much any task you want, but Luigi also comes with a
 *toolbox* of several common task templates that you use. It includes
 support for running
-`Python mapreduce jobs <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.hadoop.html>`_
+`Python mapreduce jobs <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hadoop.html>`_
 in Hadoop, as well as
-`Hive <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.hive.html>`__,
-and `Pig <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.pig.html>`__,
+`Hive <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hive.html>`__,
+and `Pig <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.pig.html>`__,
 jobs. It also comes with
-`file system abstractions for HDFS <http://luigi.readthedocs.org/en/latest/api/luigi.hdfs.html>`_,
+`file system abstractions for HDFS <https://luigi.readthedocs.io/en/latest/api/luigi.hdfs.html>`_,
 and local files that ensures all file system operations are atomic. This
 is important because it means your data pipeline will not crash in a
 state containing partial data.
@@ -110,8 +110,8 @@ Python*. This makes it easy to build up complex dependency graphs of
 tasks, where the dependencies can involve date algebra or recursive
 references to other versions of the same task. However, the workflow can
 trigger things not in Python, such as running
-`Pig scripts <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.pig.html>`_
-or `scp'ing files <http://luigi.readthedocs.org/en/latest/api/luigi.contrib.ssh.html>`_.
+`Pig scripts <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.pig.html>`_
+or `scp'ing files <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.ssh.html>`_.
 
 Who uses Luigi?
 ---------------
