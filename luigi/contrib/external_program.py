@@ -26,7 +26,7 @@ from one command to the next, you're probably better off using something like
 `plumbum`_, and wrapping plumbum commands in normal luigi
 :py:class:`~luigi.task.Task` s.
 
-.. _plumbum: https://plumbum.readthedocs.org/
+.. _plumbum: https://plumbum.readthedocs.io/
 """
 
 import logging

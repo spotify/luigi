@@ -156,7 +156,7 @@ def send_email_ses(config, sender, subject, message, recipients, image_png):
       1/ configuration file
       2/ EC2 instance profile
 
-    See also http://boto3.readthedocs.org/en/latest/guide/configuration.html.
+    See also https://boto3.readthedocs.io/en/latest/guide/configuration.html.
     """
     from boto3 import client as boto3_client
 
@@ -215,7 +215,7 @@ def send_email_sns(config, sender, subject, message, topic_ARN, image_png):
       1/ configuration file
       2/ EC2 instance profile
 
-    See also http://boto3.readthedocs.org/en/latest/guide/configuration.html.
+    See also https://boto3.readthedocs.io/en/latest/guide/configuration.html.
     """
     from boto3 import resource as boto3_resource
 

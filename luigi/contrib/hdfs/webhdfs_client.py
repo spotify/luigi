@@ -50,7 +50,7 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
     A webhdfs that tries to confirm to luigis interface for file existence.
 
     The library is using `this api
-    <http://hdfscli.readthedocs.org/en/latest/api.html>`__.
+    <https://hdfscli.readthedocs.io/en/latest/api.html>`__.
     """
     def __init__(self, host=None, port=None, user=None):
         self.host = host or hdfs_config.hdfs().namenode_host
