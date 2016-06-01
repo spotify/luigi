@@ -53,7 +53,7 @@ except ImportError:
     pass
 
 
-def _warn_node(self, msg, node):
+def _warn_node(self, msg, node, *args, **kwargs):
     """
     Mute warnings that are like ``WARNING: nonlocal image URI found: https://img. ...``
 
@@ -62,7 +62,7 @@ def _warn_node(self, msg, node):
     http://stackoverflow.com/questions/12772927/specifying-an-online-image-in-sphinx-restructuredtext-format
     """
     if not msg.startswith('nonlocal image URI found:'):
-        self._warnfunc(msg, '%s:%s' % get_source_line(node))
+        self._warnfunc(msg, '%s:%s' % get_source_line(node), *args, **kwargs)
 
 sphinx.environment.BuildEnvironment.warn_node = _warn_node
 
