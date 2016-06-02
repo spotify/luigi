@@ -83,13 +83,6 @@ ACTIVE_WORKERS = 'active_workers'
 BATCH_TASKS = 'batch_tasks'
 RUNNING_BATCHES = 'running_batches'
 
-AGGREGATE_FUNCTIONS = {
-    'csv': ','.join,
-    'max': max,
-    'min': min,
-    'range': lambda args: '%s-%s' % (min(args), max(args)),
-}
-
 
 class scheduler(Config):
     # TODO(erikbern): the config_path is needed for backwards compatilibity. We
@@ -242,7 +235,7 @@ class TaskBatcher(object):
             raw_vals = [task.params[arg] for task in tasks]
             agg_function = self.aggregates.get(arg)
             if agg_function is not None:
-                arg_val = AGGREGATE_FUNCTIONS[agg_function](raw_vals)
+                arg_val = agg_function(raw_vals)
             elif any(v != raw_vals[0] for v in raw_vals):
                 return None, None
             else:
@@ -341,14 +334,19 @@ class SimpleTaskState(object):
         }
 
     def set_state(self, state):
+        # This check is for backward compatability as of 2016-06-02. In the future we should be able
+        # to assume a dictionary.
         if isinstance(state, dict):
             self._tasks = state.get(TASKS, {})
             self._active_workers = state.get(ACTIVE_WORKERS, {})
             self._batch_tasks = state.get(BATCH_TASKS, {})
             self._running_batches = state.get(RUNNING_BATCHES, {})
+
+        # TODO: remove this code path
         else:
             self._tasks, self._active_workers = state
             self._batch_tasks = {}
+            self._running_batches = {}
 
     def dump(self):
         try:
@@ -392,7 +390,7 @@ class SimpleTaskState(object):
         return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status])
                                              for status in [PENDING, RUNNING])
 
-    def get_batch(self, worker_id, tasks):
+    def create_batch_task(self, worker_id, tasks):
         if len(tasks) == 1:
             return tasks[0]
         families = set(task.family for task in tasks)
@@ -437,8 +435,8 @@ class SimpleTaskState(object):
         else:
             return self._tasks.get(task_id, default)
 
-    def get_batcher(self, worker, family):
-        return self._batch_tasks.get((worker, family))
+    def get_batcher(self, worker, task_family):
+        return self._batch_tasks.get((worker, task_family))
 
     def set_batcher(self, worker, family, batcher_aggregate_args, max_batch_size):
         batcher = TaskBatcher(batcher_aggregate_args, max_batch_size)
@@ -898,8 +896,9 @@ class CentralPlannerScheduler(Scheduler):
                     if len(task.workers) == 1 and not assistant:
                         n_unique_pending += 1
 
+            # batch as many tasks as possible together if multiple batchable tasks are available
             if (in_workers and best_tasks and task.batchable and
-                    self._state.get_batch(worker_id, best_tasks + [task]) is not None and
+                    self._state.create_batch_task(worker_id, best_tasks + [task]) is not None and
                     self._schedulable(task) and
                     self._has_resources(task.resources, greedy_resources)):
                 best_tasks.append(task)
@@ -934,7 +933,7 @@ class CentralPlannerScheduler(Scheduler):
                  'n_unique_pending': n_unique_pending}
 
         if best_tasks:
-            best_batch = self._state.get_batch(worker_id, best_tasks)
+            best_batch = self._state.create_batch_task(worker_id, best_tasks)
             best_task = self._state.get_task(best_batch.id, setdefault=best_batch)
             for task in best_tasks:
                 if task == best_task:

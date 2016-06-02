@@ -22,6 +22,7 @@ See :ref:`Parameter` for more info on how to define parameters.
 
 import abc
 import datetime
+import enum
 import warnings
 import json
 from json import JSONEncoder
@@ -42,6 +43,25 @@ from luigi.cmdline_parser import CmdlineParser
 
 
 _no_value = object()
+
+
+def join_with_commas(values):
+    """ Join all values with a comma.
+
+    This is necessary because ','.join is not picklable but top-level functions
+    are.
+
+    """
+    return ','.join(values)
+
+
+class BatchAggregation(enum.Enum):
+    COMMA_LIST = join_with_commas  # join all values with commas
+    MIN_VALUE = min  # choose just the minimum value by string representation
+    MAX_VALUE = max  # choose just the maximum value by string representation
+
+    def __call__(self, values):
+        return self.value(values)
 
 
 class ParameterException(Exception):
@@ -139,7 +159,10 @@ class Parameter(object):
                                 ``positional=False`` for abstract base classes and similar cases.
         :param bool always_in_help: For the --help option in the command line
                                     parsing. Set true to always show in --help.
-        :param str batch_method: How multiple
+        :param BatchAggregation batch_method: How multiple values of this argument are combined when
+                                              batching in the scheduler. See BatchAggregation for
+                                              details of what each one means. Default is None,
+                                              meaning that this parameter cannot be aggregated.
         """
         self._default = default
         if is_global:

@@ -19,6 +19,7 @@ import datetime
 from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
 import enum
+import pickle
 
 import luigi
 import luigi.date_interval
@@ -284,6 +285,18 @@ class ParameterTest(LuigiTestCase):
         a = luigi.TupleParameter()
         b_tuple = ((1, 2), (3, 4))
         self.assertEqual(b_tuple, a.parse(a.serialize(b_tuple)))
+
+
+class BatchAggregationTest(LuigiTestCase):
+    def test_batch_enum_values_picklable(self):
+        """ Check that all enum values are picklable
+
+        If any of these values are not picklable, any parameters containing
+        them won't be picklable.
+
+        """
+        for val in luigi.parameter.BatchAggregation:
+            self.assertIs(val, pickle.loads(pickle.dumps(val)))
 
 
 class TestNewStyleGlobalParameters(LuigiTestCase):

@@ -23,6 +23,7 @@ from nose.plugins.attrib import attr
 import luigi.notifications
 from luigi.scheduler import BATCH_RUNNING, DISABLED, DONE, FAILED, PENDING, \
     UNKNOWN, CentralPlannerScheduler
+from luigi.parameter import BatchAggregation
 from luigi.task import task_id_str
 
 luigi.notifications.DEBUG = True
@@ -976,27 +977,24 @@ class CentralPlannerTest(unittest.TestCase):
     def task_id_str(self, family, args):
         return task_id_str(family, args)
 
-    def test_aggregation(self, aggregate_type='csv', expected_args='1,3'):
+    def test_aggregation(self, aggregate_type=BatchAggregation.COMMA_LIST, expected_args='1,3'):
         self.sch.add_task(worker=WORKER, task_id='A(a=1)', family='A', params={'a': '1'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, batchable=True)
         self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': aggregate_type})
         self.check_task_order([self.task_id_str('A', {'a': expected_args})])
 
     def test_aggregation_min(self):
-        self.test_aggregation('min', '1')
+        self.test_aggregation(BatchAggregation.MIN_VALUE, '1')
 
     def test_aggregation_max(self):
-        self.test_aggregation('max', '3')
-
-    def test_aggregation_range(self):
-        self.test_aggregation('range', '1-3')
+        self.test_aggregation(BatchAggregation.MAX_VALUE, '3')
 
     def test_aggregation_ignores_jobs_with_pending_deps(self):
         self.sch.add_task(worker=WORKER, task_id='A(a=1)', family='A', params={'a': '1'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A(a=2)', family='A', params={'a': '2'}, deps=['B'], batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='B')
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST})
         self.check_task_order([
             self.task_id_str('A', {'a': '1,3'}),
             'B',
@@ -1008,14 +1006,14 @@ class CentralPlannerTest(unittest.TestCase):
             self.sch.add_task(worker=WORKER, task_id='A(a=1)', family='A', params={'a': '1'}, status=PENDING, batchable=True)
             self.sch.add_task(worker=WORKER, task_id='A(a=2)', family='A', params={'a': '2'}, status=status, batchable=True)
             self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, status=PENDING, batchable=True)
-            self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+            self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST})
             self.check_task_order([self.task_id_str('A', {'a': '1,3'})])
 
     def test_aggregation_ignores_running_jobs(self):
         self.sch.add_task(worker=WORKER, task_id='A(a=1)', family='A', params={'a': '1'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A(a=2)', family='A', params={'a': '2'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST})
 
         self.sch.add_task(worker='worker2', task_id='A(a=2)', family='A', params={'a': '2'}, batchable=True)
         self.assertEqual('A(a=2)', self.sch.get_work(worker='worker2')['task_id'])
@@ -1026,11 +1024,11 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='A(a=2)', family='A', params={'a': '2'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A(a=4)', family='A', params={'a': '4'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST})
 
         self.sch.add_task(worker='worker2', task_id='A(a=2)', family='A', params={'a': '2'}, batchable=True)
         self.sch.add_task(worker='worker2', task_id='A(a=4)', family='A', params={'a': '4'}, batchable=True)
-        self.sch.add_task_batcher(worker='worker2', family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.add_task_batcher(worker='worker2', family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST})
 
         worker2_task = self.task_id_str('A', {'a': '2,4'})
         self.assertEqual(worker2_task, self.sch.get_work(worker='worker2')['task_id'])
@@ -1039,7 +1037,7 @@ class CentralPlannerTest(unittest.TestCase):
     def test_aggregate_jobs_batch_running(self):
         self.sch.add_task(worker=WORKER, task_id='A(a=1)', family='A', params={'a': '1'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A(a=3)', family='A', params={'a': '3'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST})
         self.sch.get_work(worker=WORKER)
         self.assertEqual({'A(a=1)', 'A(a=3)'}, set(self.sch.task_list(BATCH_RUNNING, '').keys()))
 
@@ -1048,7 +1046,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='A(a=1,b=2)', family='A', params={'a': '1', 'b': '2'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A(a=2,b=1)', family='A', params={'a': '2', 'b': '1'}, batchable=True, priority=1)
         self.sch.add_task(worker=WORKER, task_id='A(a=2,b=2)', family='A', params={'a': '2', 'b': '2'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'b': 'csv'})
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'b': BatchAggregation.COMMA_LIST})
         self.check_task_order([
             self.task_id_str('A', {'a': '2', 'b': '1,2'}),
             self.task_id_str('A', {'a': '1', 'b': '1,2'}),
@@ -1059,7 +1057,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='A(a=1,b=2)', family='A', params={'a': '1', 'b': '2'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A(a=2,b=1)', family='A', params={'a': '2', 'b': '1'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A(a=2,b=2)', family='A', params={'a': '2', 'b': '2'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'min', 'b': 'max'})
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.MIN_VALUE, 'b': BatchAggregation.MAX_VALUE})
         self.check_task_order([self.task_id_str('A', {'a': '1', 'b': '2'})])
 
     def test_batch_tasks_result_in_complete_tasks(self):
@@ -1069,7 +1067,7 @@ class CentralPlannerTest(unittest.TestCase):
     def test_daily_overwrite_task(self):
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': BatchAggregation.MAX_VALUE})
         self.check_task_order([self.task_id_str('DOW', {'d': '2016-02-01'})])
         done_tasks = {'DOW(d=2016-01-31)', 'DOW(d=2016-02-01)'}
         self.assertEqual(done_tasks, set(self.sch.task_list(DONE, '').keys()))
@@ -1077,7 +1075,7 @@ class CentralPlannerTest(unittest.TestCase):
     def test_daily_overwrite_task_failure(self):
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': BatchAggregation.MAX_VALUE})
         expected_id = self.task_id_str('DOW', {'d': '2016-02-01'})
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], expected_id)
         self.sch.add_task(worker=WORKER, task_id=expected_id, status=FAILED)
@@ -1086,7 +1084,7 @@ class CentralPlannerTest(unittest.TestCase):
 
     def test_daily_overwrite_task_auto_disable(self):
         sch = CentralPlannerScheduler(disable_failures=2, disable_persist=10**8, disable_window=10**8)
-        sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'i': 'max'})
+        sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'i': BatchAggregation.MAX_VALUE})
         all_tasks = [self.task_id_str('A', {'i': str(i)}) for i in range(5)]
         batch_running = set(all_tasks[:-1])
 
@@ -1105,7 +1103,7 @@ class CentralPlannerTest(unittest.TestCase):
     def test_batch_task_does_not_batch_jobs_from_other_workers(self):
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True, resources={'a': 1})
         self.sch.add_task(worker='OTHER_WORKER', task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True, resources={'a': 1})
-        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': BatchAggregation.MAX_VALUE})
         done_tasks = {'DOW(d=2016-01-31)'}
         self.check_task_order(done_tasks)
         self.assertEqual(done_tasks, set(self.sch.task_list(DONE, '')))
@@ -1113,7 +1111,7 @@ class CentralPlannerTest(unittest.TestCase):
     def test_done_batch_tasks_fall_out_of_scheduler(self):
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': BatchAggregation.MAX_VALUE})
         self.check_task_order([self.task_id_str('DOW', {'d': '2016-02-01'})])
         done_tasks = {'DOW(d=2016-01-31)', 'DOW(d=2016-02-01)'}
         self.assertEqual(done_tasks, set(self.sch.task_list(DONE, '').keys()))
@@ -1121,7 +1119,7 @@ class CentralPlannerTest(unittest.TestCase):
     def test_failed_batch_tasks_fall_out_of_scheduler(self):
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': BatchAggregation.MAX_VALUE})
         expected_id = self.task_id_str('DOW', {'d': '2016-02-01'})
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], expected_id)
         self.sch.add_task(worker=WORKER, task_id=expected_id, status=FAILED)
@@ -1131,7 +1129,7 @@ class CentralPlannerTest(unittest.TestCase):
     def test_batch_task_failure_message(self):
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': BatchAggregation.MAX_VALUE})
         expected_id = self.task_id_str('DOW', {'d': '2016-02-01'})
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], expected_id)
 
@@ -1148,7 +1146,7 @@ class CentralPlannerTest(unittest.TestCase):
     def test_batch_task_update_tracking_url(self):
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'max'})
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': BatchAggregation.MAX_VALUE})
         expected_id = self.task_id_str('DOW', {'d': '2016-02-01'})
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], expected_id)
         tracking_url = 'http://sample.url/'
@@ -1165,10 +1163,10 @@ class CentralPlannerTest(unittest.TestCase):
 
     def test_batch_tasks_pruned_from_dead_worker(self):
         self.setTime(1)
-        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-01-31)', family='DOW', params={'d': '2016-01-31'}, batchable=True, priority=1)
         self.sch.add_task(worker=WORKER, task_id='DOW(d=2016-02-01)', family='DOW', params={'d': '2016-02-01'}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': 'range'})
-        expected_id = self.task_id_str('DOW', {'d': '2016-01-31-2016-02-01'})
+        self.sch.add_task_batcher(worker=WORKER, family='DOW', batcher_aggregate_args={'d': BatchAggregation.COMMA_LIST})
+        expected_id = self.task_id_str('DOW', {'d': '2016-01-31,2016-02-01'})
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], expected_id)
         self.setTime(1000)
         self.sch.prune()
@@ -1178,7 +1176,7 @@ class CentralPlannerTest(unittest.TestCase):
     def test_batch_task_combines_resources(self):
         self.sch.add_task(worker=WORKER, task_id='A', family='A', params={'a': '1'}, resources={'a': 1}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='B', family='A', params={'a': '2'}, resources={'b': 1}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST})
         self.assertEqual(self.task_id_str('A', {'a': '1,2'}), self.sch.get_work(worker=WORKER)['task_id'])
 
         # add tasks using a and b to make sure they can't schedule
@@ -1189,7 +1187,7 @@ class CentralPlannerTest(unittest.TestCase):
     def test_batch_task_takes_max_resource_values(self):
         self.sch.add_task(worker=WORKER, task_id='A', family='A', params={'a': '1'}, resources={'a': 1}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='B', family='A', params={'a': '2'}, resources={'a': 2}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST})
         self.sch.update_resources(a=2)
         self.assertEqual(self.task_id_str('A', {'a': '1,2'}), self.sch.get_work(worker=WORKER)['task_id'])
 
@@ -1202,26 +1200,26 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='A', family='A', params={'a': '1'}, resources={'a': 1}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='B', family='A', params={'a': '2'}, resources={'a': 2}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='C', family='A', params={'a': '3'}, resources={'a': 1}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST})
         self.sch.update_resources(a=1)
         self.assertEqual(self.task_id_str('A', {'a': '1,3'}), self.sch.get_work(worker=WORKER)['task_id'])
 
     def test_batch_task_not_used_for_single_task(self):
         self.sch.add_task(worker=WORKER, task_id='A', family='A', params={'a': '1'}, resources={'a': 1}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST})
         self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
 
     def test_batch_task_not_all_batchable(self):
         self.sch.add_task(worker=WORKER, task_id='A', family='A', params={'a': '1'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='B', family='A', params={'a': '2'}, batchable=True)
         self.sch.add_task(worker=WORKER, task_id='C', family='A', params={'a': '3'}, batchable=False)
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'})
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST})
         self.check_task_order([self.task_id_str('A', {'a': '1,2'}), 'C'])
 
     def test_batch_task_with_max_batch_size(self):
         for i in range(10):
             self.sch.add_task(worker=WORKER, task_id='A(a={})'.format(i), family='A', params={'a': str(i)}, batchable=True)
-        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': 'csv'}, max_batch_size=3)
+        self.sch.add_task_batcher(worker=WORKER, family='A', batcher_aggregate_args={'a': BatchAggregation.COMMA_LIST}, max_batch_size=3)
         self.check_task_order([
             self.task_id_str('A', {'a': '0,1,2'}),
             self.task_id_str('A', {'a': '3,4,5'}),

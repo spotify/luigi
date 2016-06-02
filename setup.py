@@ -13,6 +13,7 @@
 # the License.
 
 import os
+import sys
 
 from setuptools import setup
 
@@ -40,6 +41,9 @@ install_requires = [
     'tornado>=4.0,<5',
     'python-daemon<3.0',
 ]
+
+if sys.version_info < (3, 4):
+    install_requires.append('enum34==1.1.6')
 
 if os.environ.get('READTHEDOCS', None) == 'True':
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
