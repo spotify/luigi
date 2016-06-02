@@ -142,7 +142,6 @@ or held presentations about Luigi:
 * `enbrite.ly <http://enbrite.ly/>`_
 * `Dow Jones / The Wall Street Journal <http://wsj.com>`_
 * `Hotels.com <https://hotels.com>`_
-* `Simulmedia <http://www.simulmedia.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
