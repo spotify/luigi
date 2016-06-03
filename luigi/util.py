@@ -158,7 +158,7 @@ inheritance.
         param_b = luigi.Parameter()
 
         def requires(self):
-            t = self.clone(TaskB)
+            t = self.clone(TaskA)  # or t = self.clone_parent()
 
             # Wait... whats this clone thingy do?
             #
