@@ -236,9 +236,9 @@ class Parameter(object):
                                               The default is None, meaning that this parameter
                                               cannot be aggregated. The different values have the
                                               following meanings:
-                                                - COMMA_LIST combines serializations with a comma
-                                                - MIN_VALUE takes the minimum value
-                                                - MAX_VALUE takes the maximum value
+                                              - COMMA_LIST combines serializations with a comma
+                                              - MIN_VALUE takes the minimum value
+                                              - MAX_VALUE takes the maximum value
         """
         self._default = default
         if is_global:
