@@ -206,7 +206,7 @@ class ByIdHandler(BaseTaskHistoryHandler):
 class ByParamsHandler(BaseTaskHistoryHandler):
     def get(self, name):
         payload = self.get_argument('data', default="{}")
-        arguments = json.loads(payloadA)
+        arguments = json.loads(payload)
         tasks = self._scheduler.task_history.find_all_by_parameters(name, session=None, **arguments)
         self.render("recent.html", tasks=tasks)
 
