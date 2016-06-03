@@ -41,7 +41,7 @@ except ImportError:
 try:
     from StringIO import StringIO
 except ImportError:
-    from io.StringIO import StringIO
+    from io import StringIO
 
 from luigi import task_register
 from luigi import six
