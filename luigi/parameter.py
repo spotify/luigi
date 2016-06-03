@@ -28,6 +28,7 @@ import json
 from json import JSONEncoder
 from collections import OrderedDict, Mapping
 import operator
+import re
 import functools
 from ast import literal_eval
 
@@ -42,10 +43,13 @@ from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
 
 
+NUMBER_RE = re.compile(r'(\d+)')
+
+
 _no_value = object()
 
 
-def join_with_commas(values):
+def _join_with_commas(values):
     """ Join all values with a comma.
 
     This is necessary because ','.join is not picklable but top-level functions
@@ -55,13 +59,33 @@ def join_with_commas(values):
     return ','.join(values)
 
 
+def _split_out_numbers(str_val):
+    split_list = NUMBER_RE.split(str_val)
+    split_list[1::2] = map(int, split_list[1::2])
+    return tuple(split_list)
+
+
+def _max_number_str(values):
+    return max(values, key=_split_out_numbers)
+
+
+def _min_number_str(values):
+    return min(values, key=_split_out_numbers)
+
+
 class BatchAggregation(enum.Enum):
-    COMMA_LIST = join_with_commas  # join all values with commas
-    MIN_VALUE = min  # choose just the minimum value by string representation
-    MAX_VALUE = max  # choose just the maximum value by string representation
+    COMMA_LIST = (_join_with_commas,)
+    MIN_VALUE = (_min_number_str,)
+    MAX_VALUE = (_max_number_str,)
 
     def __call__(self, values):
-        return self.value(values)
+        """ Call the aggregation function associated with this value
+
+        The aggregation function is wrapped in a tuple to prevent Python from
+        treating it as an unbound method.
+
+        """
+        return self.value[0](values)
 
 
 class ParameterException(Exception):
@@ -159,10 +183,14 @@ class Parameter(object):
                                 ``positional=False`` for abstract base classes and similar cases.
         :param bool always_in_help: For the --help option in the command line
                                     parsing. Set true to always show in --help.
-        :param BatchAggregation batch_method: How multiple values of this argument are combined when
-                                              batching in the scheduler. See BatchAggregation for
-                                              details of what each one means. Default is None,
-                                              meaning that this parameter cannot be aggregated.
+        :param BatchAggregation batch_method: How the serializations of multiple values of this
+                                              parameter are combined when batching in the scheduler.
+                                              The default is None, meaning that this parameter
+                                              cannot be aggregated. The different values have the
+                                              following meanings:
+                                                - COMMA_LIST combines serializations with a comma
+                                                - MIN_VALUE takes the minimum value
+                                                - MAX_VALUE takes the maximum value
         """
         self._default = default
         if is_global:

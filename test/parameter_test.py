@@ -26,7 +26,7 @@ import luigi.date_interval
 import luigi.interface
 import luigi.notifications
 from luigi.mock import MockTarget
-from luigi.parameter import ParameterException
+from luigi.parameter import ParameterException, BatchAggregation
 from worker_test import email_patch
 
 luigi.notifications.DEBUG = True
@@ -295,8 +295,29 @@ class BatchAggregationTest(LuigiTestCase):
         them won't be picklable.
 
         """
-        for val in luigi.parameter.BatchAggregation:
+        for val in BatchAggregation:
             self.assertIs(val, pickle.loads(pickle.dumps(val)))
+
+    def test_comma_list(self):
+        self.assertEqual('ab,c,d', BatchAggregation.COMMA_LIST(['ab', 'c', 'd']))
+
+    def test_min_with_numbers(self):
+        self.assertEqual('9', BatchAggregation.MIN_VALUE(['9', '100', '10']))
+
+    def test_max_with_numbers(self):
+        self.assertEqual('100', BatchAggregation.MAX_VALUE(['9', '100', '10']))
+
+    def test_min_with_strings(self):
+        self.assertEqual('abbde', BatchAggregation.MIN_VALUE(['abcde', 'abdde', 'abbde']))
+
+    def test_max_with_strings(self):
+        self.assertEqual('abdde', BatchAggregation.MAX_VALUE(['abcde', 'abdde', 'abbde']))
+
+    def test_min_mixed_strings_and_numbers(self):
+        self.assertEqual('test1a', BatchAggregation.MIN_VALUE(['test1a', 'test001b', 'test01c']))
+
+    def test_max_mixed_strings_and_numbers(self):
+        self.assertEqual('test01c', BatchAggregation.MAX_VALUE(['test1a', 'test001b', 'test01c']))
 
 
 class TestNewStyleGlobalParameters(LuigiTestCase):
