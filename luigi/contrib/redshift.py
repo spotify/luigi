@@ -215,7 +215,6 @@ class S3CopyToTable(rdbms.CopyToTable):
                     name=name,
                     type=type) for name, type in self.columns
             )
-
             query = ("CREATE {type} TABLE "
                      "{table} ({coldefs}) "
                      "{table_attributes}").format(
@@ -225,6 +224,9 @@ class S3CopyToTable(rdbms.CopyToTable):
                 table_attributes=self.table_attributes)
 
             connection.cursor().execute(query)
+        else:
+            raise ValueError("create_table() found no columns for %r"
+                             % self.table)
 
     def run(self):
         """
