@@ -53,6 +53,7 @@ import tornado.ioloop
 import tornado.netutil
 import tornado.web
 
+from luigi.parameter import batch_aggregation_json_object_hook
 from luigi.scheduler import CentralPlannerScheduler
 
 
@@ -92,7 +93,7 @@ class RPCHandler(tornado.web.RequestHandler):
             self.send_error(404)
             return
         payload = self.get_argument('data', default="{}")
-        arguments = json.loads(payload)
+        arguments = json.loads(payload, object_hook=batch_aggregation_json_object_hook)
 
         # TODO: we should probably denote all methods on the scheduler that are "API-level"
         # versus internal methods. Right now you can do a REST method call to any method
@@ -205,7 +206,7 @@ class ByIdHandler(BaseTaskHistoryHandler):
 class ByParamsHandler(BaseTaskHistoryHandler):
     def get(self, name):
         payload = self.get_argument('data', default="{}")
-        arguments = json.loads(payload)
+        arguments = json.loads(payloadA)
         tasks = self._scheduler.task_history.find_all_by_parameters(name, session=None, **arguments)
         self.render("recent.html", tasks=tasks)
 

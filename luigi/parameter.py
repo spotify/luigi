@@ -49,8 +49,8 @@ from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
 
 
-NUMBER_RE = re.compile(r'(\d+)')
-
+_NUMBER_RE = re.compile(r'(\d+)')
+_BATCH_AGGREGATION_KEY = '__batch_aggregation__'
 
 _no_value = object()
 
@@ -64,7 +64,7 @@ def _csv_join(values):
 
 
 def _split_out_numbers(str_val):
-    split_list = NUMBER_RE.split(str_val)
+    split_list = _NUMBER_RE.split(str_val)
     split_list[1::2] = map(int, split_list[1::2])
     return tuple(split_list)
 
@@ -75,6 +75,20 @@ def _max_number_str(values):
 
 def _min_number_str(values):
     return min(values, key=_split_out_numbers)
+
+
+class BatchAggregationJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, BatchAggregation):
+            return {_BATCH_AGGREGATION_KEY: obj.name}
+        return obj
+
+
+def batch_aggregation_json_object_hook(obj):
+    if _BATCH_AGGREGATION_KEY in obj:
+        return BatchAggregation[obj[_BATCH_AGGREGATION_KEY]]
+    else:
+        return obj
 
 
 class BatchAggregation(enum.Enum):

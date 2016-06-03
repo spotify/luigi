@@ -16,6 +16,8 @@
 #
 
 import datetime
+import json
+
 from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
 import enum
@@ -321,6 +323,15 @@ class BatchAggregationTest(LuigiTestCase):
         """
         for val in BatchAggregation:
             self.assertIs(val, pickle.loads(pickle.dumps(val)))
+
+    def test_batch_enum_values_json_serializable(self):
+        json_encoder = luigi.parameter.BatchAggregationJsonEncoder
+        json_object_hook = luigi.parameter.batch_aggregation_json_object_hook
+
+        for val in BatchAggregation:
+            json_encoded = json.dumps(val, cls=json_encoder)
+            json_decoded = json.loads(json_encoded, object_hook=json_object_hook)
+            self.assertIs(val, json_decoded)
 
     def test_comma_list(self):
         self.assertEqual('ab,c,d', BatchAggregation.COMMA_LIST(['ab', 'c', 'd']))

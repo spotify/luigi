@@ -31,6 +31,7 @@ from luigi.six.moves.urllib.error import URLError
 
 from luigi import configuration
 from luigi.scheduler import PENDING, Scheduler
+from luigi.parameter import BatchAggregationJsonEncoder, batch_aggregation_json_object_hook
 
 
 HAS_UNIX_SOCKET = True
@@ -140,11 +141,11 @@ class RemoteScheduler(Scheduler):
         return response
 
     def _request(self, url, data, log_exceptions=True, attempts=3, allow_null=True):
-        body = {'data': json.dumps(data)}
+        body = {'data': json.dumps(data, cls=BatchAggregationJsonEncoder)}
 
         for _ in range(attempts):
             page = self._fetch(url, body, log_exceptions, attempts)
-            response = json.loads(page)["response"]
+            response = json.loads(page, object_hook=batch_aggregation_json_object_hook)["response"]
             if allow_null or response is not None:
                 return response
         raise RPCError("Received null response from remote scheduler %r" % self._url)
