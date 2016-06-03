@@ -21,6 +21,8 @@ See :ref:`Parameter` for more info on how to define parameters.
 '''
 
 import abc
+import contextlib
+import csv
 import datetime
 import enum
 import warnings
@@ -36,6 +38,10 @@ try:
     from ConfigParser import NoOptionError, NoSectionError
 except ImportError:
     from configparser import NoOptionError, NoSectionError
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io.StringIO import StringIO
 
 from luigi import task_register
 from luigi import six
@@ -49,14 +55,12 @@ NUMBER_RE = re.compile(r'(\d+)')
 _no_value = object()
 
 
-def _join_with_commas(values):
-    """ Join all values with a comma.
-
-    This is necessary because ','.join is not picklable but top-level functions
-    are.
-
-    """
-    return ','.join(values)
+def _csv_join(values):
+    """ Join all values as a csv """
+    with contextlib.closing(StringIO()) as io_obj:
+        writer = csv.writer(io_obj, lineterminator='')
+        writer.writerow(values)
+        return io_obj.getvalue()
 
 
 def _split_out_numbers(str_val):
@@ -74,7 +78,7 @@ def _min_number_str(values):
 
 
 class BatchAggregation(enum.Enum):
-    COMMA_LIST = (_join_with_commas,)
+    COMMA_LIST = (_csv_join,)
     MIN_VALUE = (_min_number_str,)
     MAX_VALUE = (_max_number_str,)
 
@@ -86,6 +90,36 @@ class BatchAggregation(enum.Enum):
 
         """
         return self.value[0](values)
+
+
+def aggregated_list_parameter(parameter_class):
+    class AggregatedListParameter(parameter_class):
+        def __init__(self, *args, **kwargs):
+            super(AggregatedListParameter, self).__init__(
+                *args, batch_method=BatchAggregation.COMMA_LIST, **kwargs)
+
+        def parse(self, csv_str):
+            """
+            Parse a csv from the input, turning it into a list of parsed values
+
+            :param str csv_str: the value to parse.
+            :return: the list of parsed values.
+            """
+            reader = csv.reader([csv_str])
+            return list(map(super(AggregatedListParameter, self).parse, reader.next()))
+
+        def serialize(self, list_val):
+            """
+            Opposite of :py:meth:`parse`.
+
+            Converts the value ``list_val`` to a list.
+
+            :param list_val: the value to serialize.
+            """
+            return BatchAggregation.COMMA_LIST(
+                map(super(AggregatedListParameter, self).serialize, list_val))
+
+    return AggregatedListParameter
 
 
 class ParameterException(Exception):

@@ -26,7 +26,7 @@ import luigi.date_interval
 import luigi.interface
 import luigi.notifications
 from luigi.mock import MockTarget
-from luigi.parameter import ParameterException, BatchAggregation
+from luigi.parameter import ParameterException, BatchAggregation, aggregated_list_parameter
 from worker_test import email_patch
 
 luigi.notifications.DEBUG = True
@@ -285,6 +285,30 @@ class ParameterTest(LuigiTestCase):
         a = luigi.TupleParameter()
         b_tuple = ((1, 2), (3, 4))
         self.assertEqual(b_tuple, a.parse(a.serialize(b_tuple)))
+
+    def test_aggregated_list_parameter(self):
+        value = ['abc', 'def', 'ghi']
+        param = aggregated_list_parameter(luigi.Parameter)()
+        self.assertEqual(value, param.parse(param.serialize(value)))
+
+    def test_aggregated_list_int_parameter(self):
+        value = [1, 2, 3, 4, 5]
+        param = aggregated_list_parameter(luigi.IntParameter)()
+        self.assertEqual(value, param.parse(param.serialize(value)))
+
+    def test_aggregated_list_parameter_with_commas(self):
+        value = ['a,b,c', 'd,e,f', 'g,h,i']
+        param = aggregated_list_parameter(luigi.Parameter)()
+        self.assertEqual(value, param.parse(param.serialize(value)))
+
+    def test_aggregated_list_parameter_as_decorator(self):
+        @aggregated_list_parameter
+        class IntListParameter(luigi.parameter.IntParameter):
+            pass
+
+        value = [1, 2, 3, 4, 5]
+        param = IntListParameter()
+        self.assertEqual(value, param.parse(param.serialize(value)))
 
 
 class BatchAggregationTest(LuigiTestCase):
