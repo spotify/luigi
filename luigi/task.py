@@ -464,6 +464,30 @@ class Task(object):
         """
         return getpaths(self.requires())
 
+    def getinstance(self):
+        """
+        Returns the outputs of the Tasks as an object returned by :py:meth:`requires`
+
+        :return: a list of objects of :py:class:`Target` objects which are
+                 specified as outputs of all required Tasks.
+        """
+        return getinstances(self.requires())
+
+    def instantiate(self):
+        """
+        The instantiation method used for :py:meth:`output`.
+        If this method is implemented by a user, `Task` can automatically
+        convert its target to a Python object via `self.getinstance()`.
+
+        .. code:: python
+
+            def instantiate(self):
+                with self.output().open() as outfile:
+                    outobject = [row for row in outfile]
+                return outobject
+        """
+        pass
+
     def deps(self):
         """
         Internal method used by the scheduler.
@@ -590,6 +614,27 @@ def getpaths(struct):
             raise Exception('Cannot map %s to Task/dict/list' % str(struct))
 
         return [getpaths(r) for r in s]
+
+
+def getinstances(struct):
+    """
+    Maps all Tasks in a structured data object to their .instantiate().
+    """
+    if isinstance(struct, Task):
+        return struct.instantiate()
+    elif isinstance(struct, dict):
+        r = {}
+        for k, v in six.iteritems(struct):
+            r[k] = getinstances(v)
+        return r
+    else:
+        # Remaining case: assume r is iterable...
+        try:
+            s = list(struct)
+        except TypeError:
+            raise Exception('Cannot map %s to Task/dict/list' % str(struct))
+
+        return [getinstances(r) for r in s]
 
 
 def flatten(struct):
