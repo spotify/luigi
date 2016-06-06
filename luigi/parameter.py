@@ -120,7 +120,7 @@ def aggregated_list_parameter(parameter_class):
             :return: the list of parsed values.
             """
             reader = csv.reader([csv_str])
-            return list(map(super(AggregatedListParameter, self).parse, reader.next()))
+            return list(map(super(AggregatedListParameter, self).parse, next(reader)))
 
         def serialize(self, list_val):
             """
