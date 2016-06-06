@@ -121,7 +121,7 @@ class S3Client(FileSystem):
         (bucket, key) = self._path_to_bucket_and_key(path)
 
         # grab and validate the bucket
-        s3_bucket = self.s3.get_bucket(bucket, validate=True)
+        s3_bucket = self.s3.get_bucket(bucket, validate=self._is_root(key))
 
         # root always exists
         if self._is_root(key):
