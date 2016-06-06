@@ -30,6 +30,8 @@ that <image_name> is available on the docker_host
 :class:`DockerImageBuildTask` is meant to provide a task being responsible
 for building a docker image
 
+:class:`DockerTask` is meant to run a given command within a docker container
+
 
 .. _docker-cli: https://docs.docker.com/engine/reference/commandline/cli/
 .. _docker-py: http://docker-py.readthedocs.io/en/stable/api/
@@ -41,6 +43,8 @@ from __future__ import absolute_import
 import logging
 import luigi
 import luigi.target
+import re
+import sys
 
 logger = logging.getLogger('luigi-interface')
 
@@ -118,23 +122,23 @@ class DockerImageTarget(DockerClient, luigi.target.Target):
 class DockerImageBuildTask(DockerClient, luigi.Task):
     """
     Task building a docker image
-    
+
     :param name:
         The name of the built image without
         registry and tag.
-    
+
     :param tag:
         The image tag to be built.
-    
+
     :param registry:
         The registry on which the image should
         be tagged.
-    
+
     :param dockerfile:
         Path of the Dockerfile within the build context.
-        It is the `Dockerfile.mine` of 
+        It is the `Dockerfile.mine` of
         `docker build -t <...> -f Dockerfile.mine .`
-    
+
     :param path:
         Path of the build context.
         It is the `.` of `docker build -t <...> .`
@@ -163,3 +167,151 @@ class DockerImageBuildTask(DockerClient, luigi.Task):
             tag=self.output().image_name,
             dockerfile=self.dockerfile
         )
+
+
+class DockerTask(DockerClient, luigi.Task):
+
+    """
+    Base class for a Docker container task. Like `docker run` command,
+    Image will be pulled when not available unless explicitely
+    instructed to pull it in any case.
+
+    :param image: The name of the image to run, include registry and tag
+        Example::
+
+            docker.company.com/namespace/image:tag
+
+    :param pull: Pulls the image even if it already exists on the host
+
+    :param remove: Instructs image removal at the end of the run
+
+    :param remove_volumes: Inctructs to remove volumes when removing image.
+        It has the same effects of the `-v` flag in `docker rm -v <container>`
+
+    :param create_args: a dict of arguments provided to docker create.
+        see docker-py-create-container_
+        for a full description example::
+
+            create_args = {
+                'image': 'hello-docker',
+            }
+
+    :param docker_host: the address of the docker socket
+        defaults to None to use docker defaults
+        example::
+
+            tcp://localhost:2375
+    """
+
+    imageNameRe = re.compile(r'^([^:]*)(?::([^:]*)|)$')
+    image = luigi.Parameter()
+    pull = luigi.BoolParameter(default=False, significant=False)
+    remove = luigi.BoolParameter(default=False, significant=False)
+    remove_volumes = luigi.BoolParameter(default=True, significant=False)
+    create_args = luigi.DictParameter(default=None)
+    docker_host = luigi.Parameter(default=None)
+
+    @property
+    def command(self):
+        """
+        Command passed to the containers
+
+        Override to return list of dicts with keys 'name' and 'command',
+        describing the container names and commands to pass to the container.
+
+        *Note*: The current API only supports a single command. List is provided
+        for a coherent interface with ECSTask
+
+        For example::
+
+            [
+                {
+                    'name': 'myContainer',
+                    'command': ['/bin/sleep', '60']
+                }
+            ]
+        """
+        pass
+
+    def run(self):
+        """
+        The actual run part.
+
+        Ran image resolution order is:
+
+        1. self.command[0]['image']
+        2. create_args['image']
+        3. task.image
+
+        Container name resolution order is:
+
+        1. self.command[0]['name']
+        2. create_args['name']
+        3. the default docker name allocation
+
+        Container command resolution order is:
+
+        1. self.command[0]['command']
+        2. create_args['command']
+        3. command specified in image
+        """
+        command = self.command
+        # duplicate dict handle to protect original
+        # one. We will update it
+        if self.create_args:
+            create_args = dict(self.create_args)
+        else:
+            create_args = {}
+
+        if self.image:
+            create_args['image'] = self.image
+
+        if command:
+            if len(command) != 1:
+                raise ValueError(('Current implementation of DockerTask only'
+                                  'supports a single command'))
+            create_args.update(command[0])
+
+        # Either when the user requests a systematic pull
+        # or when the image does not exist on the docker host,
+        # perform a `docker pull`
+        pull = False
+        if self.pull:
+            pull = True
+        else:
+            try:
+                self.client.inspect_image(create_args['image'])
+            except docker.errors.NotFound:
+                logger.debug("%s does not exist locally, pull it" %
+                             create_args['image'])
+                pull = True
+        if pull:
+            name, tag = self.imageNameRe.match(
+                create_args['image']
+            ).groups()
+            if tag is None:
+                tag = 'latest'
+            # silently pull the image
+            self.client.pull(name, tag)
+
+        container = self.client.create_container(**create_args)
+        self.client.start(container.get('Id'))
+        for line in self.client.logs(
+            container.get('Id'), stream=True,
+            stdout=True, stderr=True
+        ):
+            sys.stdout.write(line)
+            sys.stdout.flush()
+
+        exit_code = self.client.inspect_container(container).get("State", {}).get("ExitCode")
+
+        if self.remove:
+            self.client.remove_container(
+                container.get('Id'),
+                v=(
+                    True if self.remove_volumes else False
+                )
+            )
+
+        if exit_code != 0:
+            raise RuntimeError("Failed to run command %r in image %s" % (create_args.get('command', None), create_args.get('image', None)))

@@ -28,7 +28,7 @@ import unittest
 import uuid
 
 import luigi
-from luigi.contrib.docker import DockerImageTarget, DockerImageBuildTask
+from luigi.contrib.docker import DockerImageTarget, DockerImageBuildTask, DockerTask
 
 logger = logging.getLogger('luigi-interface')
 
@@ -119,6 +119,72 @@ class TestDockerImageBuildTask(DockerMocked, unittest.TestCase):
         DockerImageBuildTask(name='my.image', dockerfile='other', path='/build-root').run()
         self.client.build.assert_called_once_with(path='/build-root', tag='my.image:latest', dockerfile='other')
         self.client.build.reset_mock()
+
+
+class TestDockerTask(DockerMocked, unittest.TestCase):
+
+    def setUp(self):
+        super(TestDockerTask, self).setUp()
+        self.client.inspect_image.return_value = {}
+        self.client.inspect_container.return_value = {
+            "State": {
+                "ExitCode": 0,
+            },
+        }
+        self.client.log.return_value = []
+
+    def test_run_not_found_pull(self):
+        self.client.inspect_image.side_effect = DummyNotFound
+
+        DockerTask(image='my.image').run()
+        self.client.pull.assert_called_once_with("my.image", "latest")
+        self.client.pull.reset_mock()
+
+        DockerTask(image='some/registry/my.image:1.0').run()
+        self.client.pull.assert_called_once_with("some/registry/my.image", "1.0")
+
+    def test_run_force_pull(self):
+        DockerTask(image='my.image', pull=True).run()
+        self.client.pull.assert_called_once_with("my.image", "latest")
+
+    def test_run_runs_container(self):
+        self.client.create_container.return_value = {'Id': 'some.id'}
+        self.client.inspect_image.return_value = {}
+        # There is an instance caching, we are dealing with
+        # per test mock, we need to change task parameters for every
+        # test
+        DockerTask(image='my.other.image').run()
+        self.client.pull.assert_not_called()
+        self.client.create_container.assert_called_once_with(image='my.other.image')
+        self.client.start.assert_called_once_with('some.id')
+
+    @mock.patch('sys.stdout')
+    def test_run_dumps_stdout(self, stdout):
+        self.client.logs.return_value = ['line1', 'line2']
+        DockerTask(image='yet.some.other.image').run()
+        self.assertEqual(stdout.write.call_args_list, [
+            mock.call('line1'),
+            mock.call('line2')
+        ])
+
+    def test_run_removes_container(self):
+        self.client.create_container.return_value = {'Id': 'some.id'}
+        DockerTask(image='image.4', remove=True).run()
+        self.client.remove_container.assert_called_once_with('some.id', v=True)
+        self.client.remove_container.reset_mock()
+
+        self.client.create_container.return_value = {'Id': 'some.id'}
+        DockerTask(image='image.4', remove=True, remove_volumes=True).run()
+        self.client.remove_container.assert_called_once_with('some.id', v=True)
+        self.client.remove_container.reset_mock()
+
+        self.client.create_container.return_value = {'Id': 'some.id'}
+        DockerTask(image='image.4', remove=False, remove_volumes=True).run()
+        self.client.remove_container.assert_not_called()
+
+        self.client.create_container.return_value = {'Id': 'some.id'}
+        DockerTask(image='image.4', remove=False).run()
+        self.client.remove_container.assert_not_called()
 
 
 @unittest.skipIf(no_docker, "Failed to import/connect to docker")
