@@ -59,7 +59,7 @@ def _csv_join(values):
     """ Join all values as a csv """
     with contextlib.closing(StringIO()) as io_obj:
         writer = csv.writer(io_obj, lineterminator='')
-        writer.writerow(values)
+        writer.writerow(list(values))
         return io_obj.getvalue()
 
 
