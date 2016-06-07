@@ -786,9 +786,9 @@ class DictParameter(Parameter):
                 return obj.get_wrapped()
             return json.JSONEncoder.default(self, obj)
 
-    def normalize(self,value):
+    def normalize(self, value):
         """
-        Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be JSON serialized.
+        Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be hashed.
         """
         return FrozenOrderedDict(value)
 
