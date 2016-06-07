@@ -4,16 +4,16 @@
 
 .. image:: https://img.shields.io/travis/spotify/luigi/master.svg?style=flat
     :target: https://travis-ci.org/spotify/luigi
- 
+
 .. image:: https://img.shields.io/codecov/c/github/spotify/luigi/master.svg?style=flat
     :target: https://codecov.io/gh/spotify/luigi?branch=master
- 
+
 .. image:: https://landscape.io/github/spotify/luigi/master/landscape.svg?style=flat
    :target: https://landscape.io/github/spotify/luigi/master
- 
+
 .. image:: https://img.shields.io/pypi/dm/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
- 
+
 .. image:: https://img.shields.io/pypi/l/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
@@ -142,6 +142,7 @@ or held presentations about Luigi:
 * `enbrite.ly <http://enbrite.ly/>`_
 * `Dow Jones / The Wall Street Journal <http://wsj.com>`_
 * `Hotels.com <https://hotels.com>`_
+* `Custobar (Metrics Monday Helsinki) <http://www.slideshare.net/teemukurppa/managing-data-workflows-with-luigi>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
@@ -163,4 +164,3 @@ Luigi was built at `Spotify <https://www.spotify.com/us/>`_, mainly by
 have contributed since open sourcing in late 2012.
 `Arash Rouhani <https://github.com/tarrasch>`_ is currently the chief
 maintainer of Luigi.
-
