@@ -94,7 +94,7 @@ def _track_tasks(task_ids):
             break
         time.sleep(POLL_TIME)
         logger.debug('ECS task status for tasks {0}: {1}'.format(
-            ','.join(task_ids), status))
+            ','.join(task_ids), statuses))
 
 
 class ECSTask(luigi.Task):
@@ -133,6 +133,7 @@ class ECSTask(luigi.Task):
 
     task_def_arn = luigi.Parameter(default=None)
     task_def = luigi.Parameter(default=None)
+    cluster = luigi.Parameter(default='default')
 
     @property
     def ecs_task_ids(self):
@@ -176,8 +177,10 @@ class ECSTask(luigi.Task):
             overrides = {'containerOverrides': self.command}
         else:
             overrides = {}
-        response = client.run_task(taskDefinition=self.task_def_arn,
-                                   overrides=overrides)
+        response = client.run_task(
+            cluster=self.cluster,
+            taskDefinition=self.task_def_arn,
+            overrides=overrides)
         self._task_ids = [task['taskArn'] for task in response['tasks']]
 
         # Wait on task completion
