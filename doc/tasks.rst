@@ -156,7 +156,7 @@ Sometimes you might not know exactly what other tasks to depend on until runtime
 In that case, Luigi provides a mechanism to specify dynamic dependencies.
 If you yield another :class:`~luigi.task.Task` in the Task.run_ method,
 the current task will be suspended and the other task will be run.
-You can also return a list of tasks.
+You can also yield a list of tasks.
 
 .. code:: python
 
