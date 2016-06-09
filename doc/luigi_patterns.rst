@@ -108,7 +108,7 @@ and passes any parameters onwards for this purpose.
 
 .. code-block:: console
 
-	luigi RangeDaily --of MyTask --start 2014-10-31 --of-param '{"my-param": 123}'
+	luigi RangeDaily --of MyTask --start 2014-10-31 --of-params '{"my_string_param": "123", "my_int_param": 123}'
 
 Alternatively, you can specify parameters at the task family level (as described :ref:`here <Parameter-class-level-parameters>`),
 however these will not appear in the task name for the upstream Range task which
