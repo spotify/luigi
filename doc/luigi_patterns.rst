@@ -102,10 +102,17 @@ and stop (exclusive) parameters specified:
 Propagating parameters with Range
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When your recurring task has a parameter, you'll at first notice that the Range
-tasks do not recognize or propagate parameters passed to them. The easiest
-solution is to set the parameter at the task family level as described
-:ref:`here <Parameter-class-level-parameters>`.
+Some tasks you want to recur may include additional parameters which need to be configured.
+The Range classes provide a parameter which accepts a :class:`~luigi.parameter.DictParameter`
+and passes any parameters onwards for this purpose.
+
+.. code-block:: console
+
+	luigi RangeDaily --of MyTask --start 2014-10-31 --of-param '{"my-param": 123}'
+
+Alternatively, you can specify parameters at the task family level (as described :ref:`here <Parameter-class-level-parameters>`),
+however these will not appear in the task name for the upstream Range task which
+can have implications in how the scheduler and visualizer handle task instances.
 
 .. code-block:: console
 

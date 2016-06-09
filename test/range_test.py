@@ -566,6 +566,35 @@ class RangeDailyTest(unittest.TestCase):
         actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected)
 
+    def test_bulk_complete_of_params(self):
+        class BulkCompleteDailyTask(luigi.Task):
+            non_positional_arbitrary_argument = luigi.Parameter(default="whatever", positional=False, significant=False)
+            d = luigi.DateParameter()
+            arbitrary_argument = luigi.BoolParameter()
+
+            @classmethod
+            def bulk_complete(cls, parameter_tuples):
+                ptuples = list(parameter_tuples)
+                for t in map(cls, ptuples):
+                    assert t.arbitrary_argument
+                return ptuples[:-2]
+
+            def output(self):
+                raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
+
+        task = RangeDaily(now=datetime_to_epoch(datetime.datetime(2015, 12, 1)),
+                          of=BulkCompleteDailyTask,
+                          of_params=dict(arbitrary_argument=True),
+                          start=datetime.date(2015, 11, 1),
+                          stop=datetime.date(2015, 12, 1))
+        expected = [
+            'BulkCompleteDailyTask(d=2015-11-29, arbitrary_argument=True)',
+            'BulkCompleteDailyTask(d=2015-11-30, arbitrary_argument=True)',
+        ]
+
+        actual = [str(t) for t in task.requires()]
+        self.assertEqual(actual, expected)
+
     @mock.patch('luigi.mock.MockFileSystem.listdir',
                 new=mock_listdir([
                     '/data/2014/p/v/z/2014_/_03-_-21octor/20/ZOOO',
@@ -646,6 +675,35 @@ class RangeHourlyTest(unittest.TestCase):
         expected = [
             'BulkCompleteHourlyTask(dh=2015-11-30T22)',
             'BulkCompleteHourlyTask(dh=2015-11-30T23)',
+        ]
+
+        actual = [str(t) for t in task.requires()]
+        self.assertEqual(actual, expected)
+
+    def test_bulk_complete_of_params(self):
+        class BulkCompleteHourlyTask(luigi.Task):
+            non_positional_arbitrary_argument = luigi.Parameter(default="whatever", positional=False, significant=False)
+            dh = luigi.DateHourParameter()
+            arbitrary_argument = luigi.BoolParameter()
+
+            @classmethod
+            def bulk_complete(cls, parameter_tuples):
+                for t in map(cls, parameter_tuples):
+                    assert t.arbitrary_argument
+                return parameter_tuples[:-2]
+
+            def output(self):
+                raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
+
+        task = RangeHourly(now=datetime_to_epoch(datetime.datetime(2015, 12, 1)),
+                           of=BulkCompleteHourlyTask,
+                           of_params=dict(arbitrary_argument=True),
+                           start=datetime.datetime(2015, 11, 1),
+                           stop=datetime.datetime(2015, 12, 1))
+
+        expected = [
+            'BulkCompleteHourlyTask(dh=2015-11-30T22, arbitrary_argument=True)',
+            'BulkCompleteHourlyTask(dh=2015-11-30T23, arbitrary_argument=True)',
         ]
 
         actual = [str(t) for t in task.requires()]
@@ -738,3 +796,44 @@ class RangeInstantiationTest(LuigiTestCase):
                                 param_name='date_param')
         expected_task = MyTask('woo', datetime.date(2015, 12, 1))
         self.assertEqual(expected_task, list(range_task._requires())[0])
+
+    def test_of_param_distinction(self):
+        class MyTask(luigi.Task):
+            arbitrary_param = luigi.Parameter(default='foo')
+            arbitrary_integer_param = luigi.IntParameter(default=10)
+            date_param = luigi.DateParameter()
+
+            def complete(self):
+                return False
+
+        range_task_1 = RangeDaily(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                  of=MyTask,
+                                  start=datetime.date(2015, 12, 1),
+                                  stop=datetime.date(2015, 12, 2))
+        range_task_2 = RangeDaily(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                  of=MyTask,
+                                  of_params=dict(arbitrary_param="bar", abitrary_integer_param=2),
+                                  start=datetime.date(2015, 12, 1),
+                                  stop=datetime.date(2015, 12, 2))
+        self.assertNotEqual(range_task_1.task_id, range_task_2.task_id)
+
+    def test_of_param_commandline(self):
+        class MyTask(luigi.Task):
+            task_namespace = "wohoo"
+            date_param = luigi.DateParameter()
+            arbitrary_param = luigi.Parameter(default='foo')
+            arbitrary_integer_param = luigi.IntParameter(default=10)
+            state = (None, None)
+            comp = False
+
+            def complete(self):
+                return self.comp
+
+            def run(self):
+                self.comp = True
+                MyTask.state = (self.arbitrary_param, self.arbitrary_integer_param)
+
+        now = str(int(datetime_to_epoch(datetime.datetime(2015, 12, 2))))
+        self.run_locally(['RangeDailyBase', '--of', 'wohoo.MyTask', '--of-params', '{"arbitrary_param":"bar","arbitrary_integer_param":5}',
+                          '--now', '{0}'.format(now), '--start', '2015-12-01', '--stop', '2015-12-02'])
+        self.assertEqual(MyTask.state, ('bar', 5))
