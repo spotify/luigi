@@ -140,6 +140,10 @@ class Task(object):
     #: task requires 1 unit of the scp resource.
     resources = {}
 
+    #: Resources specific to the host used by the task. Should be formatted like {"cpu": 1} to
+    #: indicate that the task requires 1 unit of the cpu resource on the host that runs it.
+    host_resources = {}
+
     #: Number of seconds after which to time out the run function.
     #: No timeout if set to 0.
     #: Defaults to 0 or worker-timeout value in config file
@@ -452,6 +456,14 @@ class Task(object):
         the name for consistent end-user experience.
         """
         return self.resources  # default impl
+
+    def process_host_resources(self):
+        """
+        Override in "template" tasks which provide common resource functionality
+        but allow subclasses to specify additional resources while preserving
+        the name for consistent end-user experience.
+        """
+        return self.host_resources  # default impl
 
     def input(self):
         """

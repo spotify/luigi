@@ -51,6 +51,7 @@ import warnings
 
 from luigi import six
 
+from luigi import configuration
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
@@ -653,6 +654,7 @@ class Worker(object):
         self._add_task(worker=self._id, task_id=task.task_id, status=status,
                        deps=deps, runnable=runnable, priority=task.priority,
                        resources=task.process_resources(),
+                       host_resources=task.process_host_resources(),
                        params=task.to_str_params(),
                        family=task.task_family,
                        module=task.task_module)
@@ -672,6 +674,10 @@ class Worker(object):
     def _add_worker(self):
         self._worker_info.append(('first_task', self._first_task))
         self._scheduler.add_worker(self._id, self._worker_info)
+
+    def _add_host_resources(self):
+        config = configuration.get_config()
+        self._scheduler.set_host_resources(self.host, config.getintdict('host_resources'))
 
     def _log_remote_tasks(self, running_tasks, n_pending_tasks, n_unique_pending):
         logger.debug("Done")
@@ -819,6 +825,7 @@ class Worker(object):
                            status=status,
                            expl=json.dumps(expl),
                            resources=task.process_resources(),
+                           host_resources=task.process_host_resources(),
                            runnable=None,
                            params=task.to_str_params(),
                            family=task.task_family,
@@ -889,6 +896,7 @@ class Worker(object):
         self.run_succeeded = True
 
         self._add_worker()
+        self._add_host_resources()
 
         while True:
             while len(self._running_tasks) >= self.worker_processes:

@@ -288,6 +288,29 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual(1, len(tasks))
         self.assertEqual(tracking_url, tasks[a.task_id]['tracking_url'])
 
+    def test_insufficient_host_resources(self):
+        class HostResourceTask(DummyTask):
+            host_resources = {'r1': 2}
+
+        task = HostResourceTask()
+        self.assertTrue(self.w.add(task))
+        self.w.run()
+
+        pending = self.sch.task_list('PENDING', '')
+        self.assertEqual(1, len(pending))
+        self.assertIn(task.task_id, pending)
+        self.assertFalse(task.has_run)
+
+    @with_config({'host_resources': {'r1': '2'}})
+    def test_sufficient_host_resources(self):
+        class HostResourceTask(DummyTask):
+            host_resources = {'r1': 2}
+
+        task = HostResourceTask()
+        self.assertTrue(self.w.add(task))
+        self.assertTrue(self.w.run())
+        self.assertTrue(task.has_run)
+
     def test_type_error_in_tracking_run_deprecated(self):
         class A(Task):
             num_runs = 0
