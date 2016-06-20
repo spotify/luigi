@@ -36,7 +36,7 @@ By default, the server starts on AF_INET and AF_INET6 port ``8082``
 
 For a full list of configuration options and defaults,
 see the :ref:`scheduler configuration section <scheduler-config>`.
-Note that ``luigid`` uses the same configuration files as the luigi client
+Note that ``luigid`` uses the same configuration files as the Luigi client
 (i.e. ``luigi.cfg`` or ``/etc/luigi/client.cfg`` by default).
 
 .. _TaskHistory:

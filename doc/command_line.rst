@@ -3,7 +3,7 @@
 Running from the Command Line
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The prefered way to run luigi tasks is through the ``luigi`` command line tool
+The prefered way to run Luigi tasks is through the ``luigi`` command line tool
 that will be installed with the pip package.
 
 .. code-block:: python

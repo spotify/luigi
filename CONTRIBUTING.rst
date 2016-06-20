@@ -49,7 +49,7 @@ For more details, check out the ``.travis.yml`` and ``tox.ini`` files.
 Writing documentation
 =====================
 
-All documentation for luigi is written in `reStructuredText/Sphinx markup
+All documentation for Luigi is written in `reStructuredText/Sphinx markup
 <http://sphinx-doc.org/domains.html#the-python-domain>`_ and are both in the
 code as docstrings and in `.rst`. Pull requests should come with documentation
 when appropriate.
