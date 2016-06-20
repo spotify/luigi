@@ -47,7 +47,6 @@ import threading
 import time
 import traceback
 import types
-import warnings
 
 from luigi import six
 
@@ -113,20 +112,7 @@ class TaskProcess(multiprocessing.Process):
         self.task.set_tracking_url = self.tracking_url_callback
         self.task.set_status_message = self.status_message_callback
 
-        def deprecated_tracking_url_callback(*args, **kwargs):
-            warnings.warn("tracking_url_callback in run() args is deprecated, use "
-                          "set_tracking_url instead.", DeprecationWarning)
-            self.tracking_url_callback(*args, **kwargs)
-
-        run_again = False
-        try:
-            task_gen = self.task.run(tracking_url_callback=deprecated_tracking_url_callback)
-        except TypeError as ex:
-            if 'unexpected keyword argument' not in str(ex):
-                raise
-            run_again = True
-        if run_again:
-            task_gen = self.task.run()
+        task_gen = self.task.run()
 
         self.task.set_tracking_url = None
         self.task.set_status_message = None
