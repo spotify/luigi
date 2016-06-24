@@ -21,12 +21,16 @@ See :ref:`Parameter` for more info on how to define parameters.
 '''
 
 import abc
+import contextlib
+import csv
 import datetime
+import enum
 import warnings
 import json
 from json import JSONEncoder
 from collections import OrderedDict, Mapping
 import operator
+import re
 import functools
 from ast import literal_eval
 
@@ -34,6 +38,10 @@ try:
     from ConfigParser import NoOptionError, NoSectionError
 except ImportError:
     from configparser import NoOptionError, NoSectionError
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from luigi import task_register
 from luigi import six
@@ -41,7 +49,91 @@ from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
 
 
+_NUMBER_RE = re.compile(r'(\d+)')
+_BATCH_AGGREGATION_KEY = '__batch_aggregation__'
+
 _no_value = object()
+
+
+def _csv_join(values):
+    """ Join all values as a csv """
+    with contextlib.closing(StringIO()) as io_obj:
+        writer = csv.writer(io_obj, lineterminator='')
+        writer.writerow(list(values))
+        return io_obj.getvalue()
+
+
+def _split_out_numbers(str_val):
+    split_list = _NUMBER_RE.split(str_val)
+    split_list[1::2] = map(int, split_list[1::2])
+    return tuple(split_list)
+
+
+def _max_number_str(values):
+    return max(values, key=_split_out_numbers)
+
+
+def _min_number_str(values):
+    return min(values, key=_split_out_numbers)
+
+
+class BatchAggregationJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, BatchAggregation):
+            return {_BATCH_AGGREGATION_KEY: obj.name}
+        return obj
+
+
+def batch_aggregation_json_object_hook(obj):
+    if _BATCH_AGGREGATION_KEY in obj:
+        return BatchAggregation[obj[_BATCH_AGGREGATION_KEY]]
+    else:
+        return obj
+
+
+class BatchAggregation(enum.Enum):
+    COMMA_LIST = (_csv_join,)
+    MIN_VALUE = (_min_number_str,)
+    MAX_VALUE = (_max_number_str,)
+
+    def __call__(self, values):
+        """ Call the aggregation function associated with this value
+
+        The aggregation function is wrapped in a tuple to prevent Python from
+        treating it as an unbound method.
+
+        """
+        return self.value[0](values)
+
+
+def aggregated_list_parameter(parameter_class):
+    class AggregatedListParameter(parameter_class):
+        def __init__(self, *args, **kwargs):
+            super(AggregatedListParameter, self).__init__(
+                *args, batch_method=BatchAggregation.COMMA_LIST, **kwargs)
+
+        def parse(self, csv_str):
+            """
+            Parse a csv from the input, turning it into a list of parsed values
+
+            :param str csv_str: the value to parse.
+            :return: the list of parsed values.
+            """
+            reader = csv.reader([csv_str])
+            return list(map(super(AggregatedListParameter, self).parse, next(reader)))
+
+        def serialize(self, list_val):
+            """
+            Opposite of :py:meth:`parse`.
+
+            Converts the value ``list_val`` to a list.
+
+            :param list_val: the value to serialize.
+            """
+            return BatchAggregation.COMMA_LIST(
+                map(super(AggregatedListParameter, self).serialize, list_val))
+
+    return AggregatedListParameter
 
 
 class ParameterException(Exception):
@@ -116,7 +208,7 @@ class Parameter(object):
     _counter = 0  # non-atomically increasing counter used for ordering parameters.
 
     def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
-                 config_path=None, positional=True, always_in_help=False):
+                 config_path=None, positional=True, always_in_help=False, batch_method=None):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -139,6 +231,14 @@ class Parameter(object):
                                 ``positional=False`` for abstract base classes and similar cases.
         :param bool always_in_help: For the --help option in the command line
                                     parsing. Set true to always show in --help.
+        :param BatchAggregation batch_method: How the serializations of multiple values of this
+                                              parameter are combined when batching in the scheduler.
+                                              The default is None, meaning that this parameter
+                                              cannot be aggregated. The different values have the
+                                              following meanings:
+                                              - COMMA_LIST combines serializations with a comma
+                                              - MIN_VALUE takes the minimum value
+                                              - MAX_VALUE takes the maximum value
         """
         self._default = default
         if is_global:
@@ -151,6 +251,7 @@ class Parameter(object):
 
         self.description = description
         self.always_in_help = always_in_help
+        self.batch_method = batch_method
 
         if config_path is not None and ('section' not in config_path or 'name' not in config_path):
             raise ParameterException('config_path must be a hash containing entries for section and name')

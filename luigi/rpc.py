@@ -31,6 +31,7 @@ from luigi.six.moves.urllib.error import URLError
 
 from luigi import configuration
 from luigi.scheduler import PENDING, Scheduler
+from luigi.parameter import BatchAggregationJsonEncoder, batch_aggregation_json_object_hook
 
 
 HAS_UNIX_SOCKET = True
@@ -140,11 +141,11 @@ class RemoteScheduler(Scheduler):
         return response
 
     def _request(self, url, data, log_exceptions=True, attempts=3, allow_null=True):
-        body = {'data': json.dumps(data)}
+        body = {'data': json.dumps(data, cls=BatchAggregationJsonEncoder)}
 
         for _ in range(attempts):
             page = self._fetch(url, body, log_exceptions, attempts)
-            response = json.loads(page)["response"]
+            response = json.loads(page, object_hook=batch_aggregation_json_object_hook)["response"]
             if allow_null or response is not None:
                 return response
         raise RPCError("Received null response from remote scheduler %r" % self._url)
@@ -156,7 +157,7 @@ class RemoteScheduler(Scheduler):
     def add_task(self, worker, task_id, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None, priority=0,
                  family='', module=None, params=None, assistant=False,
-                 tracking_url=None):
+                 tracking_url=None, batchable=None):
         self._request('/api/add_task', {
             'task_id': task_id,
             'worker': worker,
@@ -172,6 +173,15 @@ class RemoteScheduler(Scheduler):
             'params': params,
             'assistant': assistant,
             'tracking_url': tracking_url,
+            'batchable': batchable,
+        })
+
+    def add_task_batcher(self, worker, family, batcher_aggregate_args, max_batch_size=None):
+        self._request('/api/add_task_batcher', {
+            'worker': worker,
+            'family': family,
+            'batcher_aggregate_args': batcher_aggregate_args,
+            'max_batch_size': max_batch_size,
         })
 
     def get_work(self, worker, host=None, assistant=False, current_tasks=None):

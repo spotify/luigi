@@ -16,16 +16,19 @@
 #
 
 import datetime
+import json
+
 from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
 import enum
+import pickle
 
 import luigi
 import luigi.date_interval
 import luigi.interface
 import luigi.notifications
 from luigi.mock import MockTarget
-from luigi.parameter import ParameterException
+from luigi.parameter import ParameterException, BatchAggregation, aggregated_list_parameter
 from worker_test import email_patch
 
 luigi.notifications.DEBUG = True
@@ -284,6 +287,72 @@ class ParameterTest(LuigiTestCase):
         a = luigi.TupleParameter()
         b_tuple = ((1, 2), (3, 4))
         self.assertEqual(b_tuple, a.parse(a.serialize(b_tuple)))
+
+    def test_aggregated_list_parameter(self):
+        value = ['abc', 'def', 'ghi']
+        param = aggregated_list_parameter(luigi.Parameter)()
+        self.assertEqual(value, param.parse(param.serialize(value)))
+
+    def test_aggregated_list_int_parameter(self):
+        value = [1, 2, 3, 4, 5]
+        param = aggregated_list_parameter(luigi.IntParameter)()
+        self.assertEqual(value, param.parse(param.serialize(value)))
+
+    def test_aggregated_list_parameter_with_commas(self):
+        value = ['a,b,c', 'd,e,f', 'g,h,i']
+        param = aggregated_list_parameter(luigi.Parameter)()
+        self.assertEqual(value, param.parse(param.serialize(value)))
+
+    def test_aggregated_list_parameter_as_decorator(self):
+        @aggregated_list_parameter
+        class IntListParameter(luigi.parameter.IntParameter):
+            pass
+
+        value = [1, 2, 3, 4, 5]
+        param = IntListParameter()
+        self.assertEqual(value, param.parse(param.serialize(value)))
+
+
+class BatchAggregationTest(LuigiTestCase):
+    def test_batch_enum_values_picklable(self):
+        """ Check that all enum values are picklable
+
+        If any of these values are not picklable, any parameters containing
+        them won't be picklable.
+
+        """
+        for val in BatchAggregation:
+            self.assertIs(val, pickle.loads(pickle.dumps(val)))
+
+    def test_batch_enum_values_json_serializable(self):
+        json_encoder = luigi.parameter.BatchAggregationJsonEncoder
+        json_object_hook = luigi.parameter.batch_aggregation_json_object_hook
+
+        for val in BatchAggregation:
+            json_encoded = json.dumps(val, cls=json_encoder)
+            json_decoded = json.loads(json_encoded, object_hook=json_object_hook)
+            self.assertIs(val, json_decoded)
+
+    def test_comma_list(self):
+        self.assertEqual('ab,c,d', BatchAggregation.COMMA_LIST(['ab', 'c', 'd']))
+
+    def test_min_with_numbers(self):
+        self.assertEqual('9', BatchAggregation.MIN_VALUE(['9', '100', '10']))
+
+    def test_max_with_numbers(self):
+        self.assertEqual('100', BatchAggregation.MAX_VALUE(['9', '100', '10']))
+
+    def test_min_with_strings(self):
+        self.assertEqual('abbde', BatchAggregation.MIN_VALUE(['abcde', 'abdde', 'abbde']))
+
+    def test_max_with_strings(self):
+        self.assertEqual('abdde', BatchAggregation.MAX_VALUE(['abcde', 'abdde', 'abbde']))
+
+    def test_min_mixed_strings_and_numbers(self):
+        self.assertEqual('test1a', BatchAggregation.MIN_VALUE(['test1a', 'test001b', 'test01c']))
+
+    def test_max_mixed_strings_and_numbers(self):
+        self.assertEqual('test01c', BatchAggregation.MAX_VALUE(['test1a', 'test001b', 'test01c']))
 
 
 class TestNewStyleGlobalParameters(LuigiTestCase):

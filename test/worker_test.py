@@ -679,6 +679,117 @@ class WorkerTest(unittest.TestCase):
             self.assertTrue(d.has_run)
             self.assertFalse(a.has_run)
 
+    def test_run_jobs_in_batch(self):
+        complete_jobs = set()
+
+        class BatchRunnableJob(DummyTask):
+            val = luigi.Parameter(batch_method=luigi.parameter.BatchAggregation.COMMA_LIST)
+
+            def run(self):
+                running = self.val.split(',')
+                assert len(running) == 5 and not complete_jobs
+                complete_jobs.update(running)
+
+            def complete(self):
+                return self.val in complete_jobs
+
+        jobs = [BatchRunnableJob(str(i)) for i in range(5)]
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        with Worker(scheduler=sch, worker_id="foo") as worker:
+            self.assertFalse(any(job.complete() for job in jobs))
+            for job in jobs:
+                self.assertTrue(worker.add(job))
+            self.assertTrue(worker.run())
+            self.assertTrue(all(job.complete() for job in jobs))
+            self.assertEqual({job.task_id for job in jobs}, set(sch.task_list('DONE', '').keys()))
+
+    def test_run_jobs_in_small_batches(self):
+        complete_jobs = set()
+
+        class SmallBatchRunnableJob(DummyTask):
+            val = luigi.Parameter(batch_method=luigi.parameter.BatchAggregation.COMMA_LIST)
+            batch_size = 10
+
+            def run(self):
+                running = self.val.split(',')
+                assert len(running) == 10 or (len(complete_jobs) == 30 and len(running) == 7)
+                complete_jobs.update(running)
+
+            def complete(self):
+                return self.val in complete_jobs
+
+        jobs = [SmallBatchRunnableJob(str(i)) for i in range(37)]
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        self.assertFalse(any(job.complete() for job in jobs))
+        with Worker(scheduler=sch, worker_id="foo") as worker:
+            for job in jobs:
+                self.assertTrue(worker.add(job))
+            self.assertTrue(worker.run())
+        self.assertTrue(all(job.complete() for job in jobs))
+        self.assertEqual({job.task_id for job in jobs}, set(sch.task_list('DONE', '').keys()))
+
+    def test_run_overwrite_job_as_max_batch(self):
+        complete_jobs = set()
+
+        class OverwriteWrapper(luigi.WrapperTask):
+            def requires(self):
+                return map(OverwriteJob, range(5))
+
+        class OverwriteJob(DummyTask):
+            val = luigi.IntParameter(batch_method=luigi.parameter.BatchAggregation.MAX_VALUE)
+
+            def run(self):
+                assert self.val == 4
+                complete_jobs.add(self.val)
+
+            def complete(self):
+                return bool(complete_jobs) and self.val <= max(complete_jobs)
+
+        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        job = OverwriteWrapper()
+        with Worker(scheduler=sch, worker_id="foo") as worker:
+            worker.add(job)
+            self.assertTrue(worker.run())
+        self.assertEqual({4}, complete_jobs)
+        complete = {job.task_id}
+        complete.update(subtask.task_id for subtask in job.requires())
+        self.assertEqual(complete, set(sch.task_list('DONE', '').keys()))
+        self.assertTrue(job.complete())
+
+    def test_run_jobs_with_multiple_aggregation_parameters(self):
+        jobs_ran = []
+
+        class CrazyAggregationJob(DummyTask):
+            comma_val1 = luigi.Parameter(batch_method=luigi.parameter.BatchAggregation.COMMA_LIST)
+            comma_val2 = luigi.Parameter(batch_method=luigi.parameter.BatchAggregation.COMMA_LIST)
+            max_val = luigi.Parameter(batch_method=luigi.parameter.BatchAggregation.MAX_VALUE)
+            min_val = luigi.Parameter(batch_method=luigi.parameter.BatchAggregation.MIN_VALUE)
+            plain_val = luigi.Parameter()
+            batch_size = 10
+
+            def run(self):
+                jobs_ran.append((
+                    self.comma_val1,
+                    self.comma_val2,
+                    self.max_val,
+                    self.min_val,
+                    self.plain_val,
+                ))
+
+            def complete(self):
+                return False
+
+        with Worker(scheduler=self.sch, worker_id='foo') as worker:
+            for i in range(10):
+                si = str(i)
+                worker.add(CrazyAggregationJob(si, str(9 - i), si, si, '1'))
+                worker.add(CrazyAggregationJob(str(9 - i), si, si + '0', si + '00', '2'))
+            self.assertTrue(worker.run())
+        self.assertEqual(jobs_ran, [
+            ('0,1,2,3,4,5,6,7,8,9', '9,8,7,6,5,4,3,2,1,0', '9', '0', '1'),
+            ('9,8,7,6,5,4,3,2,1,0', '0,1,2,3,4,5,6,7,8,9', '90', '000', '2'),
+        ])
+
 
 class DynamicDependenciesTest(unittest.TestCase):
     n_workers = 1

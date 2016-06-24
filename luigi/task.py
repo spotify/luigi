@@ -146,6 +146,10 @@ class Task(object):
     #: Only works when using multiple workers.
     worker_timeout = None
 
+    #: Maximum number of items that can be run in a single batch if task is batchable.
+    #: If None, there is no limit.
+    batch_size = None
+
     @property
     def owner_email(self):
         '''
@@ -193,6 +197,12 @@ class Task(object):
         # TODO(erikbern): we should think about a language-agnostic mechanism
         return self.__class__.__module__
 
+    #: By default, true if any batch parameters are defined. Also possible to override per
+    #: instance if there are some cases that can't or shouldn't be batched.
+    @property
+    def is_batchable(self):
+        return bool(self.get_batched_params())
+
     @property
     def task_family(self):
         """
@@ -221,6 +231,14 @@ class Task(object):
     @classmethod
     def get_param_names(cls, include_significant=False):
         return [name for name, p in cls.get_params() if include_significant or p.significant]
+
+    @classmethod
+    def get_batched_params(cls):
+        return {
+            param_name: param_obj.batch_method
+            for param_name, param_obj in cls.get_params()
+            if param_obj.batch_method is not None
+        }
 
     @classmethod
     def get_param_values(cls, params, args, kwargs):
