@@ -75,6 +75,31 @@ We can create a :py:class:`~luigi.Config` class:
 
     mysection().option
     mysection().intoption
+    
+Note that when using ``inherits`` or ``requires``
+(http://luigi.readthedocs.io/en/stable/api/luigi.util.html), the parameter needs to be set
+in the section corresponding to the calling class rather than the inner class that
+declares the parameter. For example:
+
+.. code:: python
+
+    class Inner(luigi.Task):
+        x = luigi.Parameter(default='ten')
+        def run(self):
+            with open(self.x + '.tmp', 'w') as f:
+                f.write(self.x)
+        def output(self):
+            return luigi.LocalTarget(self.x + '.tmp')
+
+    @requires(Inner)
+    class Outer(luigi.Task):
+        pass
+
+.. code:: ini
+
+    ; x=eleven must be defined in [Outer] rather than in [Inner]
+    [Outer]
+    x=eleven
 
 
 Configurable options
