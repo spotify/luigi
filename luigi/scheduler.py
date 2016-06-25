@@ -22,6 +22,8 @@ See :doc:`/central_scheduler` for more info.
 """
 
 import collections
+import inspect
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -76,6 +78,38 @@ STATUS_TO_UPSTREAM_MAP = {
 }
 
 TASK_FAMILY_RE = re.compile(r'([^(_]+)[(_]')
+
+RPC_METHODS = {}
+
+
+def rpc_method(fn=None, **request_args):
+
+    # If request args are passed, return this function again for use as
+    # the decorator function with the request args attached.
+    if fn is None:
+        return functools.partial(rpc_method, **request_args)
+    fn_args = inspect.getargspec(fn)
+
+    assert not fn_args.varargs
+    assert fn_args.args[0] == 'self'
+    all_args = fn_args.args[1:]
+    defaults = dict(zip(reversed(all_args), reversed(fn_args.defaults or ())))
+    required_args = frozenset(arg for arg in all_args if arg not in defaults)
+    fn_name = fn.__name__
+
+    @functools.wraps(fn)
+    def rpc_func(self, *args, **kwargs):
+        actual_args = defaults.copy()
+        actual_args.update(dict(zip(all_args, args)))
+        actual_args.update(kwargs)
+        if not all(arg in actual_args for arg in required_args):
+            raise TypeError('{} takes {} arguments ({} given)'.format(
+                fn_name, len(all_args), len(actual_args)))
+        print fn_name, actual_args
+        return self._request('/api/{}'.format(fn_name), actual_args, **request_args)
+
+    RPC_METHODS[fn_name] = rpc_func
+    return fn
 
 
 class scheduler(Config):
@@ -521,6 +555,7 @@ class CentralPlannerScheduler(Scheduler):
     def dump(self):
         self._state.dump()
 
+    @rpc_method
     def prune(self):
         logger.info("Starting pruning of task graph")
         self._prune_workers()
@@ -575,10 +610,11 @@ class CentralPlannerScheduler(Scheduler):
             if t is not None and prio > t.priority:
                 self._update_priority(t, prio, worker)
 
+    @rpc_method
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
-                 assistant=False, tracking_url=None, **kwargs):
+                 assistant=False, tracking_url=None, worker=None, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -586,7 +622,8 @@ class CentralPlannerScheduler(Scheduler):
         * add additional workers/stakeholders
         * update priority when needed
         """
-        worker_id = kwargs['worker']
+        assert worker is not None
+        worker_id = worker
         worker_enabled = self.update(worker_id)
 
         if worker_enabled:
@@ -655,12 +692,15 @@ class CentralPlannerScheduler(Scheduler):
             self._state.get_worker(worker_id).tasks.add(task)
             task.runnable = runnable
 
+    @rpc_method
     def add_worker(self, worker, info, **kwargs):
         self._state.get_worker(worker).add_info(info)
 
+    @rpc_method
     def disable_worker(self, worker):
         self._state.disable_workers({worker})
 
+    @rpc_method
     def update_resources(self, **resources):
         if self._resources is None:
             self._resources = {}
@@ -706,7 +746,8 @@ class CentralPlannerScheduler(Scheduler):
     def _retry_time(self, task, config):
         return time.time() + config.retry_delay
 
-    def get_work(self, host=None, assistant=False, current_tasks=None, **kwargs):
+    @rpc_method(allow_null=False)
+    def get_work(self, host=None, assistant=False, current_tasks=None, worker=None, **kwargs):
         # TODO: remove any expired nodes
 
         # Algo: iterate over all nodes, find the highest priority node no dependencies and available
@@ -723,7 +764,8 @@ class CentralPlannerScheduler(Scheduler):
         if self._config.prune_on_get_work:
             self.prune()
 
-        worker_id = kwargs['worker']
+        assert worker is not None
+        worker_id = worker
         # Return remaining tasks that have no FAILED descendants
         self.update(worker_id, {'host': host}, get_work=True)
         if assistant:
@@ -818,6 +860,7 @@ class CentralPlannerScheduler(Scheduler):
 
         return reply
 
+    @rpc_method(attempts=1)
     def ping(self, **kwargs):
         worker_id = kwargs['worker']
         self.update(worker_id)
@@ -873,6 +916,7 @@ class CentralPlannerScheduler(Scheduler):
             ret['deps'] = list(task.deps if deps is None else deps)
         return ret
 
+    @rpc_method
     def graph(self, **kwargs):
         self.prune()
         serialized = {}
@@ -948,12 +992,14 @@ class CentralPlannerScheduler(Scheduler):
 
         return serialized
 
+    @rpc_method
     def dep_graph(self, task_id, include_done=True, **kwargs):
         self.prune()
         if not self._state.has_task(task_id):
             return {}
         return self._traverse_graph(task_id, include_done=include_done)
 
+    @rpc_method
     def inverse_dep_graph(self, task_id, include_done=True, **kwargs):
         self.prune()
         if not self._state.has_task(task_id):
@@ -965,7 +1011,8 @@ class CentralPlannerScheduler(Scheduler):
         return self._traverse_graph(
             task_id, dep_func=lambda t: inverse_graph[t.id], include_done=include_done)
 
-    def task_list(self, status, upstream_status, limit=True, search=None, **kwargs):
+    @rpc_method
+    def task_list(self, status='', upstream_status='', limit=True, search=None, **kwargs):
         """
         Query for a subset of tasks by status.
         """
@@ -996,6 +1043,7 @@ class CentralPlannerScheduler(Scheduler):
         else:
             return task_id
 
+    @rpc_method
     def worker_list(self, include_running=True, **kwargs):
         self.prune()
         workers = [
@@ -1027,6 +1075,7 @@ class CentralPlannerScheduler(Scheduler):
                 worker['running'] = tasks
         return workers
 
+    @rpc_method
     def resource_list(self):
         """
         Resources usage info and their consumers (tasks).
@@ -1062,6 +1111,7 @@ class CentralPlannerScheduler(Scheduler):
                 ret[resource]['used'] = 0
         return ret
 
+    @rpc_method
     def task_search(self, task_str, **kwargs):
         """
         Query for a subset of tasks by task_id.
@@ -1077,6 +1127,7 @@ class CentralPlannerScheduler(Scheduler):
                 result[task.status][task.id] = serialized
         return result
 
+    @rpc_method
     def re_enable_task(self, task_id):
         serialized = {}
         task = self._state.get_task(task_id)
@@ -1085,6 +1136,7 @@ class CentralPlannerScheduler(Scheduler):
             serialized = self._serialize_task(task_id)
         return serialized
 
+    @rpc_method
     def fetch_error(self, task_id, **kwargs):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)
@@ -1092,11 +1144,13 @@ class CentralPlannerScheduler(Scheduler):
         else:
             return {"taskId": task_id, "error": ""}
 
+    @rpc_method
     def set_task_status_message(self, task_id, status_message):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)
             task.status_message = status_message
 
+    @rpc_method
     def get_task_status_message(self, task_id):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)

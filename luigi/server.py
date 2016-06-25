@@ -53,8 +53,7 @@ import tornado.ioloop
 import tornado.netutil
 import tornado.web
 
-from luigi.scheduler import CentralPlannerScheduler
-
+from luigi.scheduler import CentralPlannerScheduler, RPC_METHODS
 
 logger = logging.getLogger("luigi.server")
 
@@ -68,26 +67,7 @@ class RPCHandler(tornado.web.RequestHandler):
         self._scheduler = scheduler
 
     def get(self, method):
-        if method not in [
-            'add_task',
-            'add_worker',
-            'dep_graph',
-            'disable_worker',
-            'fetch_error',
-            'get_work',
-            'graph',
-            'inverse_dep_graph',
-            'ping',
-            'prune',
-            're_enable_task',
-            'resource_list',
-            'task_list',
-            'task_search',
-            'update_resources',
-            'worker_list',
-            'set_task_status_message',
-            'get_task_status_message',
-        ]:
+        if method not in RPC_METHODS:
             self.send_error(404)
             return
         payload = self.get_argument('data', default="{}")
