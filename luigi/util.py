@@ -211,6 +211,14 @@ behind the scenes!
         # def requires(self):
         #     return self.clone(TaskA)
 
+Note that if you set the parameter in a config file, it needs to be defined for the
+calling (outer) class rather than the inner class. In the above example, use:
+
+.. code-block: ini
+    ; Declare this for TaskB rather than for TaskA:
+    [TaskB]
+    param_a: extra-verbose
+    
 Use these helper functions effectively to avoid unnecessary
 repetition and dodge a few potentially nasty workflow pitfalls at the same
 time. Brilliant!
