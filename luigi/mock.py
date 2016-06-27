@@ -131,10 +131,6 @@ class MockTarget(target.FileSystemTarget):
         """
         self.move(*args, **kwargs)
 
-    @property
-    def path(self):
-        return self._fn
-
     def open(self, mode):
         fn = self._fn
         mock_target = self
