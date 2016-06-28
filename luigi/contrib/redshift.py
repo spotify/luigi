@@ -102,6 +102,14 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
+    @abc.abstractproperty
+    def delete_where_clause(self):
+        """
+        Override to return the where clause to use for deleting rows
+        if do_delete_existing_rows is specified.
+        """
+        return None
+
     def table_attributes(self):
         '''Add extra table attributes, for example:
         DISTSTYLE KEY
@@ -116,10 +124,29 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return False
 
+
+    def do_delete_existing_rows(self):
+        """
+        Return True if existing rows (for a given where_clause) should be deleted
+        before copying new data in.
+        """
+        return False
+
     def truncate_table(self, connection):
         query = "truncate %s" % self.table
         cursor = connection.cursor()
         try:
+            logger.info("Truncating table with: %s", query)
+            cursor.execute(query)
+        finally:
+            cursor.close()
+
+    def delete_existing_rows(self, connection):
+        assert self.delete_where_clause
+        query = "delete from %s where %s" % (self.table, self.delete_where_clause)
+        cursor = connection.cursor()
+        try:
+            logger.info("Deleting existing rows with: %s", query)
             cursor.execute(query)
         finally:
             cursor.close()
@@ -166,16 +193,6 @@ class S3CopyToTable(rdbms.CopyToTable):
         path = self.s3_load_path()
         connection = self.output().connect()
 
-        if not self.does_table_exist(connection):
-            # try creating table
-            logger.info("Creating table %s with columns %s" % (self.table, self.columns))
-            connection.reset()
-            self.create_table(connection)
-        elif self.do_truncate_table():
-            logger.info("Truncating table %s", self.table)
-            self.truncate_table(connection)
-            logger.info("Done truncating table %s", self.table)
-
         logger.info("Inserting file: %s", path)
         cursor = connection.cursor()
         self.init_copy(connection)
@@ -185,6 +202,24 @@ class S3CopyToTable(rdbms.CopyToTable):
 
         # commit and clean up
         connection.close()
+
+    def init_copy(self, connection):
+        if not self.does_table_exist(connection):
+            # try creating table
+            logger.info("Creating table %s with columns %s" % (self.table, self.columns))
+            connection.reset()
+            self.create_table(connection)
+        elif self.do_truncate_table():
+            logger.info("Truncating table %s", self.table)
+            self.truncate_table(connection)
+            logger.info("Done truncating table %s", self.table)
+        elif self.do_delete_existing_rows():
+            # delete existing rows by key before loading data
+            if not (self.delete_where_clause):
+                raise Exception("Must define delete_where_clause to delete existing rows before copy")
+
+            logger.info("Deleting existing rows from table %s before loading replacements", self.table)
+            self.delete_existing_rows(connection)
 
     def copy(self, cursor, f):
         """
