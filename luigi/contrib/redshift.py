@@ -102,7 +102,7 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return ''
 
-    @abc.abstractproperty
+    @property
     def delete_where_clause(self):
         """
         Override to return the where clause to use for deleting rows
