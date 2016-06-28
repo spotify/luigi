@@ -154,6 +154,7 @@ class LocalTarget(FileSystemTarget):
 
     @property
     def fn(self):
+        warnings.warn("Use LocalTarget.path to reference filename", DeprecationWarning, stacklevel=2)
         return self.path
 
     def __del__(self):
