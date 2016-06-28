@@ -124,7 +124,6 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return False
 
-
     def do_delete_existing_rows(self):
         """
         Return True if existing rows (for a given where_clause) should be deleted
