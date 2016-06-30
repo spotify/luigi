@@ -30,7 +30,7 @@ from helpers import unittest, with_config, skipOnTravis, LuigiTestCase
 import luigi.notifications
 import luigi.worker
 import mock
-from luigi import ExternalTask, RemoteScheduler, Task
+from luigi import ExternalTask, RemoteScheduler, Task, Event
 from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import CentralPlannerScheduler
 from luigi.worker import Worker
@@ -880,7 +880,7 @@ class WorkerEmailTest(LuigiTestCase):
     @email_patch
     def test_task_times_out(self, emails):
         class A(luigi.Task):
-            worker_timeout = 0.00001
+            worker_timeout = 0.0001
 
             def run(self):
                 time.sleep(5)
@@ -888,7 +888,7 @@ class WorkerEmailTest(LuigiTestCase):
         a = A()
         luigi.build([a], workers=2, local_scheduler=True)
         self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
-        self.assertTrue(emails[0].find("timed out and was terminated.") != -1)
+        self.assertTrue(emails[0].find("timed out after 0.0001 seconds and was terminated.") != -1)
 
     @with_config(dict(worker=dict(retry_external_tasks='true')))
     @email_patch
@@ -939,7 +939,7 @@ class SuicidalWorker(luigi.Task):
         os.kill(os.getpid(), self.signal)
 
 
-class HungWorker(luigi.Task):
+class HangTheWorkerTask(luigi.Task):
     worker_timeout = luigi.IntParameter(default=None)
 
     def run(self):
@@ -1005,7 +1005,7 @@ class MultipleWorkersTest(unittest.TestCase):
 
     def test_stop_worker_kills_subprocesses(self):
         with Worker(worker_processes=2) as w:
-            hung_task = HungWorker()
+            hung_task = HangTheWorkerTask()
             w.add(hung_task)
 
             w._run_task(hung_task.task_id)
@@ -1020,14 +1020,14 @@ class MultipleWorkersTest(unittest.TestCase):
         self.assertFalse(is_running())
 
     def test_time_out_hung_worker(self):
-        luigi.build([HungWorker(0.1)], workers=2, local_scheduler=True)
+        luigi.build([HangTheWorkerTask(0.1)], workers=2, local_scheduler=True)
 
     @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72953986')
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_default_timeout_time(self, mock_time):
         w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
         mock_time.time.return_value = 0
-        task = HungWorker()
+        task = HangTheWorkerTask()
         w.add(task)
         w._run_task(task.task_id)
 
@@ -1044,7 +1044,7 @@ class MultipleWorkersTest(unittest.TestCase):
     def test_purge_hung_worker_override_timeout_time(self, mock_time):
         w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
         mock_time.time.return_value = 0
-        task = HungWorker(worker_timeout=10)
+        task = HangTheWorkerTask(worker_timeout=10)
         w.add(task)
         w._run_task(task.task_id)
 
@@ -1243,3 +1243,46 @@ class KeyboardInterruptBehaviorTest(LuigiTestCase):
                           ['KeyboardInterruptTask', '--local-scheduler', '--no-lock'])
         self.assertRaises(KeyboardInterrupt, luigi_run,
                           ['ExternalKeyboardInterruptTask', '--local-scheduler', '--no-lock'])
+
+
+class WorkerPurgeEventHandlerTest(unittest.TestCase):
+
+    @mock.patch('luigi.worker.TaskProcess')
+    def test_process_killed_handler(self, task_proc):
+        result = []
+
+        @HangTheWorkerTask.event_handler(Event.PROCESS_FAILURE)
+        def store_task(t, error_msg):
+            self.assertTrue(error_msg)
+            result.append(t)
+
+        w = Worker()
+        task = HangTheWorkerTask()
+        task_process = mock.MagicMock(is_alive=lambda: False, exitcode=-14, task=task)
+        task_proc.return_value = task_process
+
+        w.add(task)
+        w._run_task(task.task_id)
+        w._handle_next_task()
+
+        self.assertEqual(result, [task])
+
+    @mock.patch('luigi.worker.time')
+    def test_timeout_handler(self, mock_time):
+        result = []
+
+        @HangTheWorkerTask.event_handler(Event.TIMEOUT)
+        def store_task(t, error_msg):
+            self.assertTrue(error_msg)
+            result.append(t)
+
+        w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
+        mock_time.time.return_value = 0
+        task = HangTheWorkerTask(worker_timeout=1)
+        w.add(task)
+        w._run_task(task.task_id)
+
+        mock_time.time.return_value = 3
+        w._handle_next_task()
+
+        self.assertEqual(result, [task])
