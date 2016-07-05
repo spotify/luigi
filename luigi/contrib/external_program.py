@@ -160,6 +160,8 @@ class ExternalProgramRunError(RuntimeError):
         if self.env:
             env_string = ' '.join(['='.join([k, '\'{}\''.format(v)]) for k, v in self.env.items()])
         info += '\nENVIRONMENT: {}'.format(env_string or '[empty]')
+        # reset terminal color in case the ENVIRONMENT changes colors
+        info += '\033[m'
         return info
 
 
