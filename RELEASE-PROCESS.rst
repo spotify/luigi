@@ -3,6 +3,8 @@ Luigi to pypi.
 
      1. Update version number in setup.py, if needed.
      2. Update version number in debian/changelog
+       * Use `date -R` to retrieve date
+       * Optionally verify with `dpkg-parsechangelog`
      3. Commit and push.
      4. pypi (Executing ``python setup.py sdist upload``)
      5. Add tag on github (https://github.com/spotify/luigi/releases), including changelog

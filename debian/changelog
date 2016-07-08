@@ -1,3 +1,9 @@
+luigi (2.2.0) stable; urgency=low
+
+  * See https://github.com/spotify/luigi/releases/tag/2.2.0
+
+ -- Arash Rouhani <arashrk@vng.com.vn>  Fri, 08 Jul 2016 17:41:32 +0700
+
 luigi (0.0) unstable; urgency=low
 
   * Initial release
