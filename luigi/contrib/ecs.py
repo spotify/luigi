@@ -36,17 +36,19 @@ registered ``taskDefinition``.
 Requires:
 
 - boto3 package
-- Amazon AWS credentials discoverable by boto3 (e.g., by using ``aws configure``
-  from awscli_)
+- Amazon AWS credentials discoverable by boto3 (e.g., by using
+  ``aws configure`` from awscli_)
 - A running ECS cluster (see `ECS Get Started`_)
 
 Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 
 .. _`docker run`: https://docs.docker.com/reference/commandline/run
-.. _taskDefinition: http://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_defintions.html
+.. _taskDefinition:
+    http://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_defintions.html
 .. _`boto3-powered`: https://boto3.readthedocs.io
 .. _awscli: https://aws.amazon.com/cli
-.. _`ECS Get Started`: http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_GetStarted.html
+.. _`ECS Get Started`:
+    http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_GetStarted.html
 
 """
 
@@ -65,13 +67,13 @@ except ImportError:
 POLL_TIME = 2
 
 
-def _get_task_statuses(task_ids):
+def _get_task_statuses(cluster, task_ids):
     """
     Retrieve task statuses from ECS API
 
     Returns list of {RUNNING|PENDING|STOPPED} for each id in task_ids
     """
-    response = client.describe_tasks(tasks=task_ids)
+    response = client.describe_tasks(cluster=cluster, tasks=task_ids)
 
     # Error checking
     if response['failures'] != []:
@@ -85,10 +87,10 @@ def _get_task_statuses(task_ids):
     return [t['lastStatus'] for t in response['tasks']]
 
 
-def _track_tasks(task_ids):
+def _track_tasks(cluster, task_ids):
     """Poll task status until STOPPED"""
     while True:
-        statuses = _get_task_statuses(task_ids)
+        statuses = _get_task_statuses(cluster, task_ids)
         if all([status == 'STOPPED' for status in statuses]):
             logger.info('ECS tasks {0} STOPPED'.format(','.join(task_ids)))
             break
@@ -184,4 +186,4 @@ class ECSTask(luigi.Task):
         self._task_ids = [task['taskArn'] for task in response['tasks']]
 
         # Wait on task completion
-        _track_tasks(self._task_ids)
+        _track_tasks(self.cluster, self._task_ids)
