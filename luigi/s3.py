@@ -307,6 +307,8 @@ class S3Client(FileSystem):
 
         When files are larger than `part_size`, multipart uploading will be used.
 
+        When copying a directory, method will return a tuple (number_of_files_copied, total_size_copied_in_bytes).
+
         :param source_path: The `s3://` path of the directory or key to copy from
         :param destination_path: The `s3://` path of the directory or key to copy to
         :param threads: Optional argument to define the number of threads to use when copying (min: 3 threads)
@@ -338,16 +340,23 @@ class S3Client(FileSystem):
             copy_jobs = []
             management_pool = ThreadPool(processes=threads)
 
+            (bucket, key) = self._path_to_bucket_and_key(source_path)
+            key_path = self._add_path_delimiter(key)
+            key_path_len = len(key_path)
+
+            total_size_bytes = 0
             src_prefix = self._add_path_delimiter(src_key)
             dst_prefix = self._add_path_delimiter(dst_key)
-            for key in self.list(source_path, start_time=start_time, end_time=end_time):
+            for item in self.list(source_path, start_time=start_time, end_time=end_time, return_key=True):
+                path = item.key[key_path_len:]
                 # prevents copy attempt of empty key in folder
-                if key != '' and key != '/':
+                if path != '' and path != '/':
                     total_keys += 1
+                    total_size_bytes += item.size
                     job = management_pool.apply_async(self.__copy_multipart,
                                                       args=(copy_pool,
-                                                            src_bucket, src_prefix + key,
-                                                            dst_bucket, dst_prefix + key,
+                                                            src_bucket, src_prefix + path,
+                                                            dst_bucket, dst_prefix + path,
                                                             part_size),
                                                       kwds=kwargs)
                     copy_jobs.append(job)
@@ -366,6 +375,8 @@ class S3Client(FileSystem):
             duration = end - start
             logger.info('%s : Complete : %s total keys copied in %s' %
                         (datetime.datetime.now(), total_keys, duration))
+
+            return total_keys, total_size_bytes
 
         # If the file isn't a directory just perform a simple copy
         else:
