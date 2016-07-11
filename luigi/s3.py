@@ -449,13 +449,14 @@ class S3Client(FileSystem):
         self.copy(source_path, destination_path, **kwargs)
         self.remove(source_path)
 
-    def listdir(self, path, start_time=None, end_time=None):
+    def listdir(self, path, start_time=None, end_time=None, return_key=False):
         """
         Get an iterable with S3 folder contents.
         Iterable contains paths relative to queried path.
 
         :param start_time: Optional argument to copy files with modified dates after start_time
         :param end_time: Optional argument to copy files with modified dates before end_time
+        :param return_key: Optional argument, when set to True will return a boto.s3.key.Key (instead of the filename)
         """
         (bucket, key) = self._path_to_bucket_and_key(path)
 
@@ -472,12 +473,18 @@ class S3Client(FileSystem):
                     (not start_time and end_time and last_modified_date < end_time) or  # end defined, prior to end
                     (start_time and end_time and start_time < last_modified_date < end_time)  # both defined, between
                ):
-                yield self._add_path_delimiter(path) + item.key[key_path_len:]
+                if return_key:
+                    yield item
+                else:
+                    yield self._add_path_delimiter(path) + item.key[key_path_len:]
 
-    def list(self, path, start_time=None, end_time=None):  # backwards compat
+    def list(self, path, start_time=None, end_time=None, return_key=False):  # backwards compat
         key_path_len = len(self._add_path_delimiter(path))
-        for item in self.listdir(path, start_time=start_time, end_time=end_time):
-            yield item[key_path_len:]
+        for item in self.listdir(path, start_time=start_time, end_time=end_time, return_key=return_key):
+            if return_key:
+                yield item
+            else:
+                yield item[key_path_len:]
 
     def isdir(self, path):
         """
