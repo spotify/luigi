@@ -47,7 +47,6 @@ import threading
 import time
 import traceback
 import types
-import warnings
 
 from luigi import six
 
@@ -113,20 +112,7 @@ class TaskProcess(multiprocessing.Process):
         self.task.set_tracking_url = self.tracking_url_callback
         self.task.set_status_message = self.status_message_callback
 
-        def deprecated_tracking_url_callback(*args, **kwargs):
-            warnings.warn("tracking_url_callback in run() args is deprecated, use "
-                          "set_tracking_url instead.", DeprecationWarning)
-            self.tracking_url_callback(*args, **kwargs)
-
-        run_again = False
-        try:
-            task_gen = self.task.run(tracking_url_callback=deprecated_tracking_url_callback)
-        except TypeError as ex:
-            if 'unexpected keyword argument' not in str(ex):
-                raise
-            run_again = True
-        if run_again:
-            task_gen = self.task.run()
+        task_gen = self.task.run()
 
         self.task.set_tracking_url = None
         self.task.set_status_message = None
@@ -766,10 +752,12 @@ class Worker(object):
         """
         for task_id, p in six.iteritems(self._running_tasks):
             if not p.is_alive() and p.exitcode:
-                error_msg = 'Task %s died unexpectedly with exit code %s' % (task_id, p.exitcode)
+                error_msg = 'Task {} died unexpectedly with exit code {}'.format(task_id, p.exitcode)
+                p.task.trigger_event(Event.PROCESS_FAILURE, p.task, error_msg)
             elif p.timeout_time is not None and time.time() > float(p.timeout_time) and p.is_alive():
                 p.terminate()
-                error_msg = 'Task %s timed out and was terminated.' % task_id
+                error_msg = 'Task {} timed out after {} seconds and was terminated.'.format(task_id, p.task.worker_timeout)
+                p.task.trigger_event(Event.TIMEOUT, p.task, error_msg)
             else:
                 continue
 

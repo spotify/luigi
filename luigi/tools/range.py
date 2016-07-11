@@ -26,6 +26,7 @@ TODO foolproof against that kind of misuse?
 """
 
 import itertools
+import functools
 import logging
 import warnings
 import operator
@@ -88,6 +89,7 @@ class RangeBase(luigi.WrapperTask):
     # TODO lift the single parameter constraint by passing unknown parameters through WrapperTask?
     of = luigi.TaskParameter(
         description="task name to be completed. The task must take a single datetime parameter")
+    of_params = luigi.DictParameter(default=dict(), description="Arguments to be provided to the 'of' class when instantiating")
     # The common parameters 'start' and 'stop' have type (e.g. DateParameter,
     # DateHourParameter) dependent on the concrete subclass, cumbersome to
     # define here generically without dark magic. Refer to the overrides.
@@ -123,6 +125,18 @@ class RangeBase(luigi.WrapperTask):
         raise NotImplementedError
 
     def parameter_to_datetime(self, p):
+        raise NotImplementedError
+
+    def datetime_to_parameters(self, dt):
+        """
+        Given a date-time, will produce a dictionary of of-params combined with the ranged task parameter
+        """
+        raise NotImplementedError
+
+    def parameters_to_datetime(self, p):
+        """
+        Given a dictionary of parameters, will extract the ranged task parameter value
+        """
         raise NotImplementedError
 
     def moving_start(self, now):
@@ -174,11 +188,19 @@ class RangeBase(luigi.WrapperTask):
         return '[%s, %s]' % (param_first, param_last)
 
     def _instantiate_task_cls(self, param):
+        return self.of(**self._task_parameters(param))
+
+    @property
+    def _param_name(self):
         if self.param_name is None:
-            return self.of_cls(param)
+            return next(x[0] for x in self.of.get_params() if x[1].positional)
         else:
-            kwargs = {self.param_name: param}
-            return self.of_cls(**kwargs)
+            return self.param_name
+
+    def _task_parameters(self, param):
+        kwargs = dict(**self.of_params)
+        kwargs[self._param_name] = param
+        return kwargs
 
     def requires(self):
         # cache because we anticipate a fair amount of computation
@@ -282,6 +304,19 @@ class RangeDailyBase(RangeBase):
     def parameter_to_datetime(self, p):
         return datetime(p.year, p.month, p.day)
 
+    def datetime_to_parameters(self, dt):
+        """
+        Given a date-time, will produce a dictionary of of-params combined with the ranged task parameter
+        """
+        return self._task_parameters(dt.date())
+
+    def parameters_to_datetime(self, p):
+        """
+        Given a dictionary of parameters, will extract the ranged task parameter value
+        """
+        dt = p[self._param_name]
+        return datetime(dt.year, dt.month, dt.day)
+
     def moving_start(self, now):
         return now - timedelta(days=self.days_back)
 
@@ -331,6 +366,18 @@ class RangeHourlyBase(RangeBase):
 
     def parameter_to_datetime(self, p):
         return p
+
+    def datetime_to_parameters(self, dt):
+        """
+        Given a date-time, will produce a dictionary of of-params combined with the ranged task parameter
+        """
+        return self._task_parameters(dt)
+
+    def parameters_to_datetime(self, p):
+        """
+        Given a dictionary of parameters, will extract the ranged task parameter value
+        """
+        return p[self._param_name]
 
     def moving_start(self, now):
         return now - timedelta(hours=self.hours_back)
@@ -529,7 +576,8 @@ class RangeDaily(RangeDailyBase):
 
     def missing_datetimes(self, finite_datetimes):
         try:
-            complete_parameters = self.of_cls.bulk_complete(map(self.datetime_to_parameter, finite_datetimes))
+            cls_with_params = functools.partial(self.of, **self.of_params)
+            complete_parameters = self.of.bulk_complete.__func__(cls_with_params, map(self.datetime_to_parameter, finite_datetimes))
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(
@@ -557,7 +605,8 @@ class RangeHourly(RangeHourlyBase):
     def missing_datetimes(self, finite_datetimes):
         try:
             # TODO: Why is there a list() here but not for the RangeDaily??
-            complete_parameters = self.of_cls.bulk_complete(list(map(self.datetime_to_parameter, finite_datetimes)))
+            cls_with_params = functools.partial(self.of, **self.of_params)
+            complete_parameters = self.of.bulk_complete.__func__(cls_with_params, list(map(self.datetime_to_parameter, finite_datetimes)))
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(

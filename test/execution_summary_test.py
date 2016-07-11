@@ -932,3 +932,56 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.run_task(Foo())
         s = self.summary()
         self.assertIn('yellow', s)
+
+    def test_with_dict_dependency(self):
+        """ Just test that it doesn't crash with dict params in dependencies """
+
+        args = dict(start=datetime.date(1998, 3, 23), num=3)
+
+        class Bar(RunOnceTask):
+            args = luigi.DictParameter()
+
+        class Foo(luigi.Task):
+            def requires(self):
+                for i in range(10):
+                    new_dict = args.copy()
+                    new_dict['start'] = str(new_dict['start'] + datetime.timedelta(days=i))
+                    yield Bar(args=new_dict)
+
+        self.run_task(Foo())
+        d = self.summary_dict()
+        exp_set = set()
+        for i in range(10):
+            new_dict = args.copy()
+            new_dict['start'] = str(new_dict['start'] + datetime.timedelta(days=i))
+            exp_set.add(Bar(new_dict))
+        exp_set.add(Foo())
+        self.assertEqual(exp_set, d['completed'])
+        s = self.summary()
+        self.assertIn('"num": 3', s)
+        self.assertIn('"start": "1998-0', s)
+        self.assertIn('Scheduled 11 tasks', s)
+        self.assertIn('Luigi Execution Summary', s)
+        self.assertNotIn('00:00:00', s)
+        self.assertNotIn('\n\n\n', s)
+
+    def test_with_dict_argument(self):
+        """ Just test that it doesn't crash with dict params """
+
+        args = dict(start=str(datetime.date(1998, 3, 23)), num=3)
+
+        class Bar(RunOnceTask):
+            args = luigi.DictParameter()
+
+        self.run_task(Bar(args=args))
+        d = self.summary_dict()
+        exp_set = set()
+        exp_set.add(Bar(args=args))
+        self.assertEqual(exp_set, d['completed'])
+        s = self.summary()
+        self.assertIn('"num": 3', s)
+        self.assertIn('"start": "1998-0', s)
+        self.assertIn('Scheduled 1 task', s)
+        self.assertIn('Luigi Execution Summary', s)
+        self.assertNotIn('00:00:00', s)
+        self.assertNotIn('\n\n\n', s)

@@ -317,6 +317,20 @@ class DateParameter(_DateParameterBase):
 
     A DateParameter is a Date string formatted ``YYYY-MM-DD``. For example, ``2013-07-10`` specifies
     July 10, 2013.
+
+    DateParameters are 90% of the time used to be interpolated into file system paths or the like.
+    Here is a gentle reminder of how to interpolate date parameters into strings:
+
+    .. code:: python
+
+        class MyTask(luigi.Task):
+            date = luigi.DateParameter()
+
+            def run(self):
+                templated_path = "/my/path/to/my/dataset/{date:%Y/%m/%d}/"
+                instantiated_path = templated_path.format(date=self.date)
+                // print(instantiated_path) --> /my/path/to/my/dataset/2016/06/09/
+                // ... use instantiated_path ...
     """
 
     date_format = '%Y-%m-%d'
@@ -785,6 +799,12 @@ class DictParameter(Parameter):
             if isinstance(obj, FrozenOrderedDict):
                 return obj.get_wrapped()
             return json.JSONEncoder.default(self, obj)
+
+    def normalize(self, value):
+        """
+        Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be hashed.
+        """
+        return FrozenOrderedDict(value)
 
     def parse(self, s):
         """

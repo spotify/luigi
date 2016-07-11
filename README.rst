@@ -73,7 +73,7 @@ state containing partial data.
 Visualiser page
 ---------------
 
-The luigi server comes with a web interface too, so you can search and filter
+The Luigi server comes with a web interface too, so you can search and filter
 among all your tasks.
 
 .. figure:: https://raw.githubusercontent.com/spotify/luigi/master/doc/visualiser_front_page.png
@@ -122,8 +122,8 @@ Most of these tasks are Hadoop jobs. Luigi provides an infrastructure
 that powers all kinds of stuff including recommendations, toplists, A/B
 test analysis, external reports, internal dashboards, etc.
 
-Since luigi is open source and without any registration walls, the exact number
-of luigi users is unknown. But based on the number of unique contributors, we
+Since Luigi is open source and without any registration walls, the exact number
+of Luigi users is unknown. But based on the number of unique contributors, we
 expect hundreds of enterprises to use it. Some users have written blog posts
 or held presentations about Luigi:
 

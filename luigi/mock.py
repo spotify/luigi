@@ -106,7 +106,7 @@ class MockTarget(target.FileSystemTarget):
 
     def __init__(self, fn, is_tmp=None, mirror_on_stderr=False, format=None):
         self._mirror_on_stderr = mirror_on_stderr
-        self._fn = fn
+        self.path = fn
         if format is None:
             format = get_default_format()
 
@@ -117,13 +117,13 @@ class MockTarget(target.FileSystemTarget):
         self.format = format
 
     def exists(self,):
-        return self._fn in self.fs.get_all_data()
+        return self.path in self.fs.get_all_data()
 
     def move(self, path, raise_if_exists=False):
         """
         Call MockFileSystem's move command
         """
-        self.fs.move(self._fn, path, raise_if_exists)
+        self.fs.move(self.path, path, raise_if_exists)
 
     def rename(self, *args, **kwargs):
         """
@@ -131,12 +131,8 @@ class MockTarget(target.FileSystemTarget):
         """
         self.move(*args, **kwargs)
 
-    @property
-    def path(self):
-        return self._fn
-
     def open(self, mode):
-        fn = self._fn
+        fn = self.path
         mock_target = self
 
         class Buffer(BytesIO):

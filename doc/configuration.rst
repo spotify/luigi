@@ -87,7 +87,7 @@ section and the parameters available within it.
 [core]
 ------
 
-These parameters control core luigi behavior, such as error e-mails and
+These parameters control core Luigi behavior, such as error e-mails and
 interactions between the worker and scheduler.
 
 default-scheduler-host
@@ -126,8 +126,8 @@ email-type
 
 error-email
   Recipient of all error e-mails. If this is not set, no error e-mails
-  are sent when luigi crashes unless the crashed job has owners set. If
-  luigi is run from the command line, no e-mails will be sent unless
+  are sent when Luigi crashes unless the crashed job has owners set. If
+  Luigi is run from the command line, no e-mails will be sent unless
   output is redirected to a file.
 
   Set it to SNS Topic ARN if you want to receive notifications through
@@ -315,7 +315,7 @@ type
   The default value is "smtp".
 
 In order to send messages through Amazon SNS or SES set up your AWS config
-files or run luigi on an EC2 instance with proper instance profile.
+files or run Luigi on an EC2 instance with proper instance profile.
 
 These parameters control sending error e-mails through SendGrid.
 
@@ -381,7 +381,7 @@ snakebite_autoconfig
   namenode for snakebite queries. Defaults to false.
 
 tmp_dir
-  Path to where luigi will put temporary files on hdfs
+  Path to where Luigi will put temporary files on hdfs
 
 
 [hive]
@@ -466,7 +466,7 @@ is good practice to do so when you have a fixed set of resources.
 [retcode]
 ----------
 
-Configure return codes for the luigi binary. In the case of multiple return
+Configure return codes for the Luigi binary. In the case of multiple return
 codes that could apply, for example a failing task and missing data, the
 *numerically greatest* return code is returned.
 
@@ -475,7 +475,7 @@ We recommend that you copy this set of exit codes to your ``luigi.cfg`` file:
 .. code:: ini
 
   [retcode]
-  # The following return codes are the recommended exit codes for luigi
+  # The following return codes are the recommended exit codes for Luigi
   # They are in increasing level of severity (for most applications)
   already_running=10
   missing_data=20
@@ -484,7 +484,7 @@ We recommend that you copy this set of exit codes to your ``luigi.cfg`` file:
   unhandled_exception=40
 
 unhandled_exception
-  For internal luigi errors.  Defaults to 4, since this type of error
+  For internal Luigi errors.  Defaults to 4, since this type of error
   probably will not recover over time.
 missing_data
   For when an :py:class:`~luigi.task.ExternalTask` is not complete, and this
@@ -571,7 +571,7 @@ retry-delay
   again. Defaults to 900 (15 minutes).
 
 state-path
-  Path in which to store the luigi scheduler's state. When the scheduler
+  Path in which to store the Luigi scheduler's state. When the scheduler
   is shut down, its state is stored in this path. The scheduler must be
   shut down cleanly for this to work, usually with a kill command. If
   the kill command includes the -9 flag, the scheduler will not be able
@@ -580,7 +580,7 @@ state-path
   jobs and other state from when the scheduler last shut down.
 
   Sometimes this path must be deleted when restarting the scheduler
-  after upgrading luigi, as old state files can become incompatible
+  after upgrading Luigi, as old state files can become incompatible
   with the new scheduler. When this happens, all workers should be
   restarted after the scheduler both to become compatible with the
   updated code and to reschedule the jobs that the scheduler has now
