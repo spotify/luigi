@@ -853,6 +853,15 @@ class ListParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --grades '[100,70]'
     """
+    def normalize(self, x):
+        """
+        Ensure that list parameter is converted to a tuple so it can be hashed.
+
+        :param str x: the value to parse.
+        :return: the normalized (hashable/immutable) value.
+        """
+        return tuple(x)
+
     def parse(self, x):
         """
         Parse an individual value from the input.
