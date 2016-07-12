@@ -347,6 +347,13 @@ class TestParametersHashability(LuigiTestCase):
         p = luigi.parameter.DictParameter()
         self.assertEqual(hash(Foo(args=dict(foo=1, bar="hello")).args), hash(p.parse('{"foo":1,"bar":"hello"}')))
 
+    def test_list(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.ListParameter()
+
+        p = luigi.parameter.ListParameter()
+        self.assertEqual(hash(Foo(args=[1, "hello"]).args), hash(p.normalize(p.parse('[1,"hello"]'))))
+
     def test_tuple(self):
         class Foo(luigi.Task):
             args = luigi.parameter.TupleParameter()
