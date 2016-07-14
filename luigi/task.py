@@ -350,6 +350,19 @@ class Task(object):
 
         return cls(**new_k)
 
+    def pass_params(self, task_class, include_significant=True):
+        """
+        Returns param_kwargs to be passed forward onto task_class
+
+        :param task_class: luigi.Task
+        :param include_significant: include significant parameters or not
+
+        :return: param_kwargs that can be passed onto task_class
+        """
+        param_kwargs = {key: value for key, value in self.param_kwargs.items() if
+                        key in task_class.get_param_names(include_significant)}
+        return param_kwargs
+
     def __hash__(self):
         return self.__hash
 
