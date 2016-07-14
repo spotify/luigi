@@ -25,7 +25,8 @@ import tempfile
 import threading
 import time
 import psutil
-from helpers import unittest, with_config, skipOnTravis, LuigiTestCase
+from helpers import (unittest, with_config, skipOnTravis, LuigiTestCase,
+                     temporary_unloaded_module)
 
 import luigi.notifications
 import luigi.worker
@@ -1098,6 +1099,15 @@ class AssistantTest(unittest.TestCase):
         self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), [d.task_id])
 
     def test_unimported_job_type(self):
+        MODULE_CONTENTS = b'''
+import luigi
+
+
+class UnimportedTask(luigi.Task):
+    def complete(self):
+        return False
+'''
+
         class NotImportedTask(luigi.Task):
             task_family = 'UnimportedTask'
             task_module = None
@@ -1110,10 +1120,10 @@ class AssistantTest(unittest.TestCase):
         self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), [task.task_id])
 
         # check that it can import with the right module
-        task.task_module = 'dummy_test_module.not_imported'
-        self.w.add(task)
-        self.assertTrue(self.assistant.run())
-        self.assertEqual(list(self.sch.task_list('DONE', '').keys()), [task.task_id])
+        with temporary_unloaded_module(MODULE_CONTENTS) as task.task_module:
+            self.w.add(task)
+            self.assertTrue(self.assistant.run())
+            self.assertEqual(list(self.sch.task_list('DONE', '').keys()), [task.task_id])
 
 
 class ForkBombTask(luigi.Task):
