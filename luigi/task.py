@@ -274,6 +274,17 @@ class Task(object):
         # Sort it by the correct order and make a list
         return [(param_name, list_to_tuple(result[param_name])) for param_name, param_obj in params]
 
+    @classmethod
+    def assert_passed_params(cls, kwargs, include_significant=True):
+        """
+        Checks if all the expected parameters passed onto the task class.
+
+        :param kwargs: keyword arguments.
+        :param include_significant: include significant parameters or not
+        """
+        not_passed = set(cls.get_param_names(include_significant)) - set(kwargs.keys())
+        assert len(not_passed) == 0, "{} expected params not passed to {}".format(not_passed, cls)
+
     def __init__(self, *args, **kwargs):
         params = self.get_params()
         param_values = self.get_param_values(params, args, kwargs)
