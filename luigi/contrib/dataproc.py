@@ -15,9 +15,14 @@ try:
     from googleapiclient import discovery
     from googleapiclient.errors import HttpError
 
-    DEFAULT_CREDENTIALS, _ = google.auth.default()
-    authenticate_kwargs = gcp.get_authenticate_kwargs(DEFAULT_CREDENTIALS)
-    _dataproc_client = discovery.build('dataproc', 'v1', cache_discovery=False, **authenticate_kwargs)
+    try:
+        DEFAULT_CREDENTIALS, _ = google.auth.default()
+        authenticate_kwargs = gcp.get_authenticate_kwargs(DEFAULT_CREDENTIALS)
+        _dataproc_client = discovery.build('dataproc', 'v1', cache_discovery=False, **authenticate_kwargs)
+    except google.auth.exceptions.DefaultCredentialsError as err:
+        logger.warning("Error loading default application credentials."
+                       " This will crash at runtime if Dataproc functionality is used. " +
+                       str(err))
 except ImportError:
     logger.warning("Loading Dataproc module without the python packages googleapiclient & google-auth. \
         This will crash at runtime if Dataproc functionality is used.")
