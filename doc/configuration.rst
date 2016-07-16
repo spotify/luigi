@@ -481,11 +481,14 @@ We recommend that you copy this set of exit codes to your ``luigi.cfg`` file:
   missing_data=20
   task_failed=30
   scheduling_error=35
+  unknown_reason=38
   unhandled_exception=40
 
 unhandled_exception
   For internal Luigi errors.  Defaults to 4, since this type of error
   probably will not recover over time.
+unknown_reason
+  For when a task has not completed for unknown reasons.
 missing_data
   For when an :py:class:`~luigi.task.ExternalTask` is not complete, and this
   caused the worker to give up.  As an alternative to fiddling with this, see

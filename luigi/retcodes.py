@@ -50,6 +50,10 @@ class retcode(luigi.Config):
     scheduling_error = IntParameter(default=0,
                                     description='''For when a task's complete() or requires() fails.'''
                                     )
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
+    unknown_reason = IntParameter(default=0,
+                                  description="For when a task fails or is left pending for unknown reasons."
+                                  )
 
 
 def run_with_retcodes(argv):
@@ -87,5 +91,6 @@ def run_with_retcodes(argv):
         (retcodes.task_failed, has('failed')),
         (retcodes.already_running, has('run_by_other_worker')),
         (retcodes.scheduling_error, has('scheduling_error')),
+        (retcodes.unknown_reason, has('unknown_reason')),
     )
     sys.exit(max(code * (1 if cond else 0) for code, cond in codes_and_conds))
