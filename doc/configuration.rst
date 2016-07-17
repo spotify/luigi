@@ -488,7 +488,7 @@ unhandled_exception
   For internal Luigi errors.  Defaults to 4, since this type of error
   probably will not recover over time.
 unknown_reason
-  For when a task has not completed for unknown reasons.
+  For when a task fails or is left pending for unknown reasons.
 missing_data
   For when an :py:class:`~luigi.task.ExternalTask` is not complete, and this
   caused the worker to give up.  As an alternative to fiddling with this, see
