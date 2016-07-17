@@ -153,3 +153,20 @@ class RetcodesTest(LuigiTestCase):
 
         self.run_and_expect('RequiringTask --retcode-task-failed 4 --retcode-missing-data 5', 5)
         self.run_and_expect('RequiringTask --retcode-task-failed 7 --retcode-missing-data 6', 7)
+
+    def test_unknown_reason(self):
+
+        class TaskA(luigi.Task):
+            def complete(self):
+                return True
+
+        class RequiringTask(luigi.Task):
+            def requires(self):
+                yield TaskA()
+
+        def new_func(*args, **kwargs):
+            return None
+
+        with mock.patch('luigi.scheduler.CentralPlannerScheduler.add_task', new_func):
+            self.run_and_expect('RequiringTask', 0)
+            self.run_and_expect('RequiringTask --retcode-unknown-reason 5', 5)
