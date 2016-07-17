@@ -378,6 +378,9 @@ def _summary_format(set_tasks, worker):
     elif set_tasks["scheduling_error"]:
         smiley = ":("
         reason = "there were tasks whose complete() or requires() failed"
+    elif set_tasks["unknown_reason"]:
+        smiley = ":("
+        reason = "there were tasks that failed or were left pending for unknown reason"
     elif set_tasks["still_pending_ext"]:
         smiley = ":|"
         reason = "there were missing external dependencies"
