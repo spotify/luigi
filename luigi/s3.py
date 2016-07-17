@@ -557,9 +557,9 @@ class AtomicS3File(AtomicLocalFile):
     :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
     """
 
-    def __init__(self, path, s3_client, **kwargs):
+    def __init__(self, path, s3_client, compressed=False, **kwargs):
         self.s3_client = s3_client
-        super(AtomicS3File, self).__init__(path)
+        super(AtomicS3File, self).__init__(path, compressed)
         self.s3_options = kwargs
 
     def move_to_final_destination(self):

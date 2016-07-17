@@ -103,7 +103,7 @@ class LocalFileSystem(FileSystem):
 class LocalTarget(FileSystemTarget):
     fs = LocalFileSystem()
 
-    def __init__(self, path=None, format=None, is_tmp=False):
+    def __init__(self, path=None, format=None, is_tmp=False, compressed=False):
         if format is None:
             format = get_default_format()
 
@@ -113,6 +113,7 @@ class LocalTarget(FileSystemTarget):
             path = os.path.join(tempfile.gettempdir(), 'luigi-tmp-%09d' % random.randint(0, 999999999))
         super(LocalTarget, self).__init__(path)
         self.format = format
+        self.compressed = compressed
         self.is_tmp = is_tmp
 
     def makedirs(self):
@@ -131,7 +132,7 @@ class LocalTarget(FileSystemTarget):
         rwmode = mode.replace('b', '').replace('t', '')
         if rwmode == 'w':
             self.makedirs()
-            return self.format.pipe_writer(atomic_file(self.path))
+            return self.format.pipe_writer(atomic_file(self.path, self.compressed))
 
         elif rwmode == 'r':
             fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, mode)))

@@ -104,9 +104,9 @@ class AtomicWebHdfsFile(AtomicLocalFile):
     An Hdfs file that writes to a temp file and put to WebHdfs on close.
     """
 
-    def __init__(self, path, client):
+    def __init__(self, path, client, compressed=False):
         self.client = client
-        super(AtomicWebHdfsFile, self).__init__(path)
+        super(AtomicWebHdfsFile, self).__init__(path, compressed)
 
     def move_to_final_destination(self):
         if not self.client.exists(self.path):
