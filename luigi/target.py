@@ -280,11 +280,10 @@ class AtomicLocalFile(io.BufferedWriter):
         self.path = path
         self.compressed = compressed
   
+        f = io.FileIO(self.__tmp_path, 'w')
         if self.compressed:
           import gzip
-          f = gzip.open(self.__tmp_path, 'w')
-        else:
-          f = io.FileIO(self.__tmp_path, 'w')
+          f = gzip.GzipFile(fileobj=f)
 
         super(AtomicLocalFile, self).__init__(f)
 
