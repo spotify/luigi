@@ -142,6 +142,54 @@ class ExecutionSummaryTest(LuigiTestCase):
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
 
+    def test_unknown_reason_error(self):
+        class Bar(luigi.Task):
+            def complete(self):
+                return True
+
+        class Foo(luigi.Task):
+            def requires(self):
+                yield Bar()
+
+        def new_func(*args, **kwargs):
+            return None
+
+        with mock.patch('luigi.scheduler.CentralPlannerScheduler.add_task', new_func):
+            self.run_task(Foo())
+
+        d = self.summary_dict()
+        self.assertEqual({Foo()}, d['still_pending_not_ext'])
+        self.assertEqual({Foo()}, d['unknown_reason'])
+        self.assertEqual({Bar()}, d['already_done'])
+        self.assertFalse(d['upstream_scheduling_error'])
+        self.assertFalse(d['scheduling_error'])
+        self.assertFalse(d['completed'])
+        self.assertFalse(d['failed'])
+        self.assertFalse(d['upstream_failure'])
+        self.assertFalse(d['upstream_missing_dependency'])
+        self.assertFalse(d['run_by_other_worker'])
+        self.assertFalse(d['still_pending_ext'])
+        summary = self.summary()
+        expected = ['',
+                    '===== Luigi Execution Summary =====',
+                    '',
+                    'Scheduled 2 tasks of which:',
+                    '* 1 present dependencies were encountered:',
+                    '    - 1 Bar()',
+                    '* 1 were left pending, among these:',
+                    "    * 1 were left pending because of unknown reason:",
+                    '        - 1 Foo()',
+                    '',
+                    'Did not run any tasks',
+                    'This progress looks :( because there were tasks that failed or were left pending for unknown reason',
+                    '',
+                    '===== Luigi Execution Summary =====',
+                    '']
+        result = summary.split('\n')
+        self.assertEqual(len(result), len(expected))
+        for i, line in enumerate(result):
+            self.assertEqual(line, expected[i])
+
     def test_deps_error(self):
         class Bar(luigi.Task):
             def run(self):
