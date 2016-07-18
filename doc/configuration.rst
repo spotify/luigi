@@ -495,7 +495,7 @@ missing_data
   the [worker] keep_alive option.
 scheduling_error
   For when a task's ``complete()`` or ``requires()`` method fails with an
-  exception.
+  exception, or when the limit number of tasks is reached.
 task_failed
   For signaling that there were last known to have failed. Typically because
   some exception have been raised.

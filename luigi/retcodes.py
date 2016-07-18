@@ -48,7 +48,8 @@ class retcode(luigi.Config):
                                    )
     # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     scheduling_error = IntParameter(default=0,
-                                    description='''For when a task's complete() or requires() fails.'''
+                                    description='''For when a task's complete() or requires() fails,
+                                                   or task-limit reached'''
                                     )
     # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     unknown_reason = IntParameter(default=0,

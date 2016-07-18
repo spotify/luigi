@@ -270,14 +270,14 @@ _COMMENTS = set((
     ("already_done", 'present dependencies were encountered'),
     ("completed", 'ran successfully'),
     ("failed", 'failed'),
-    ("scheduling_error", 'failed running complete() or requires()'),
+    ("scheduling_error", 'failed scheduling'),
     ("still_pending", 'were left pending, among these'),
     ("still_pending_ext", 'were missing external dependencies'),
     ("run_by_other_worker", 'were being run by another worker'),
     ("upstream_failure", 'had failed dependencies'),
     ("upstream_missing_dependency", 'had missing external dependencies'),
     ("upstream_run_by_other_worker", 'had dependencies that were being run by other worker'),
-    ("upstream_scheduling_error", 'had dependencies whose complete() or requires() failed'),
+    ("upstream_scheduling_error", 'had dependencies whose scheduling failed'),
     ("unknown_reason", 'were left pending because of unknown reason'),
 ))
 
@@ -374,10 +374,10 @@ def _summary_format(set_tasks, worker):
         smiley = ":("
         reason = "there were failed tasks"
         if set_tasks["scheduling_error"]:
-            reason += " and tasks whose complete() or requires() failed"
+            reason += " and tasks whose scheduling failed"
     elif set_tasks["scheduling_error"]:
         smiley = ":("
-        reason = "there were tasks whose complete() or requires() failed"
+        reason = "there were tasks whose scheduling failed"
     elif set_tasks["unknown_reason"]:
         smiley = ":("
         reason = "there were tasks that failed or were left pending for unknown reason"
