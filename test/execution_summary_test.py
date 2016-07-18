@@ -177,11 +177,11 @@ class ExecutionSummaryTest(LuigiTestCase):
                     '* 1 present dependencies were encountered:',
                     '    - 1 Bar()',
                     '* 1 were left pending, among these:',
-                    "    * 1 were left pending because of unknown reason:",
+                    "    * 1 did not run successfully because of unknown reason:",
                     '        - 1 Foo()',
                     '',
                     'Did not run any tasks',
-                    'This progress looks :( because there were tasks that failed or were left pending for unknown reason',
+                    'This progress looks :| because there were tasks that did not run successfully because of unknown reason',
                     '',
                     '===== Luigi Execution Summary =====',
                     '']
@@ -428,7 +428,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         s = self.summary()
         self.assertIn('\nScheduled 1 tasks of which:\n'
                       '* 1 were left pending, among these:\n'
-                      '    * 1 were left pending because of unknown reason:\n'
+                      '    * 1 did not run successfully because of unknown reason:\n'
                       '        - 1 AlreadyRunningTask()\n', s)
         self.assertNotIn('\n\n\n', s)
 

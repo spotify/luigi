@@ -53,7 +53,7 @@ class retcode(luigi.Config):
                                     )
     # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     unknown_reason = IntParameter(default=0,
-                                  description="For when a task fails or is left pending for unknown reasons."
+                                  description="For when a task does not run successfully because of unknown reason."
                                   )
 
 

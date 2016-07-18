@@ -278,7 +278,7 @@ _COMMENTS = set((
     ("upstream_missing_dependency", 'had missing external dependencies'),
     ("upstream_run_by_other_worker", 'had dependencies that were being run by other worker'),
     ("upstream_scheduling_error", 'had dependencies whose scheduling failed'),
-    ("unknown_reason", 'were left pending because of unknown reason'),
+    ("unknown_reason", 'did not run successfully because of unknown reason'),
 ))
 
 
@@ -379,8 +379,8 @@ def _summary_format(set_tasks, worker):
         smiley = ":("
         reason = "there were tasks whose scheduling failed"
     elif set_tasks["unknown_reason"]:
-        smiley = ":("
-        reason = "there were tasks that failed or were left pending for unknown reason"
+        smiley = ":|"
+        reason = "there were tasks that did not run successfully because of unknown reason"
     elif set_tasks["still_pending_ext"]:
         smiley = ":|"
         reason = "there were missing external dependencies"
