@@ -652,8 +652,13 @@ class Scheduler(object):
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
+<<<<<<< bfb62337011ec24ceda7eece5e8526aa57d1cf06
+                 assistant=False, tracking_url=None, worker=None,
+                 retry_policy_dict={}, **kwargs):
+=======
                  assistant=False, tracking_url=None, worker=None, batchable=None,
-                 batch_id=None, retry_policy_dict={}, **kwargs):
+                 batch_id=None, **kwargs):
+>>>>>>> Enables running of multiple tasks in batches
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list

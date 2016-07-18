@@ -118,6 +118,98 @@ can have implications in how the scheduler and visualizer handle task instances.
 
 	luigi RangeDaily --of MyTask --start 2014-10-31 --MyTask-my-param 123
 
+Batching mulitple parameter values into a single run
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sometimes it'll be faster to run multiple jobs together as a single
+batch rather than running them each individually. When this is the case,
+you can mark some parameters with a batch_method in their constructor
+to tell the worker how to combine multiple values. One common way to do
+this is by aggregating the items as a tuple. You can use this inline,
+like
+
+.. code-block:: python
+
+    class ExampleTask(luigi.Task):
+        my_param = batch_tuple_parameter(luigi.IntParameter)()
+
+or you can use it as a decorator to create a batch parameter like
+
+.. code-block:: python
+
+    @batch_tuple_parameter
+    class IntListParameter(luigi.IntParameter()):
+        pass
+
+
+    class ExampleTask(luigi.Task):
+        my_param = IntListParameter()
+
+In either case, ExampleTask.my_param will be a tuple of integers. What's
+exciting about this is that if you send multiple ExampleTasks to the
+scheduler, it can combine them and return one. So if
+ExampleTask(my_param=1), ExampleTask(my_param=2) and
+ExampleTask(my_param=3) are all ready to run, the scheduler will create
+a new task ExampleTask(my_param=1,2,3) and the my_param parameter will
+have a value of (1, 2, 3). While this is running, the scheduler will
+show ExampleTask(my_param=1), ExampleTask(my_param=2) and
+ExampleTask(my_param=3) as batch running while
+ExampleTask(my_param=1,2,3) is running.
+
+If you want to limit how big a batch can get, simply set batch_size.
+So if you have
+
+.. code-block:: python
+
+    class ExampleTask(luigi.Task):
+        my_param = batch_tuple_parameter(luigi.IntParameter)()
+
+        max_batch_size = 10
+
+then the scheduler will batch at most 10 jobs together.
+
+If you have two batch tuple parameters, you'll get a tuple of values
+for both of them. If you have parameters that don't have a batch method,
+they'll be aggregated separately. So if you have a class like
+
+.. code-block:: python
+
+    class ExampleTask(luigi.Task):
+        p1 = batch_tuple_parameter(luigi.IntParameter)()
+        p2 = batch_tuple_parameter(luigi.IntParameter)()
+        p3 = luigi.IntParameter()
+
+and you create tasks ExampleTask(p1=1, p2=2, p3=0),
+ExampleTask(p1=2, p2=3, p3=0), ExampleTask(p1=3, p2=4, p3=1), you'll get
+them batched as ExampleTask(p1=1,2, p2=2,3, p3=0) and
+ExampleTask(p1=3, p2=4, p3=1).
+
+Tasks that regularly overwrite the same data source
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+One common case where a simpler form of batching can help is daily
+overwriting of the same data source. You can do this pretty easily by
+setting batch_mode to max and setting a unique resource:
+
+.. code-block:: python
+
+    class DailyOverwriteTask(luigi.Task):
+        date = luigi.DateParameter(batch_mode=max)
+
+        resources = {'overwrite_resource': 1}
+
+Now if you have multiple tasks such as
+DailyOverwriteTask(date=2016-06-01),
+DailyOverwriteTask(date=2016-06-02),
+DailyOverwriteTask(date=2016-06-03), the scheduler will just tell you to
+run the highest available one and mark the lower ones as batch_running.
+Using a unique resource will prevent multiple tasks from writing to the
+same location at the same time if a new one becomes available while
+others are running.
+
+As with tuple batching, you can use multiple of these parameters
+together, along with batch tuple parameters and normal parameters.
+
 Monitoring task pipelines
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

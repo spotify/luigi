@@ -48,6 +48,7 @@ from luigi.task import Config
 
 logger = logging.getLogger(__name__)
 
+
 UPSTREAM_RUNNING = 'UPSTREAM_RUNNING'
 UPSTREAM_MISSING_INPUT = 'UPSTREAM_MISSING_INPUT'
 UPSTREAM_FAILED = 'UPSTREAM_FAILED'
@@ -71,17 +72,6 @@ STATUS_TO_UPSTREAM_MAP = {
 TASK_FAMILY_RE = re.compile(r'([^(_]+)[(_]')
 
 RPC_METHODS = {}
-
-_retry_policy_fields = [
-    "retry_count",
-    "disable_hard_timeout",
-    "disable_window",
-]
-RetryPolicy = collections.namedtuple("RetryPolicy", _retry_policy_fields)
-
-
-def _get_empty_retry_policy():
-    return RetryPolicy(*[None] * len(_retry_policy_fields))
 
 
 def rpc_method(**request_args):
@@ -109,7 +99,6 @@ def rpc_method(**request_args):
 
         RPC_METHODS[fn_name] = rpc_func
         return fn
-
     return _rpc_method
 
 
@@ -121,12 +110,12 @@ class scheduler(Config):
     worker_disconnect_delay = parameter.FloatParameter(default=60.0)
     state_path = parameter.Parameter(default='/var/lib/luigi-server/state.pickle')
 
-    # Jobs are disabled if we see more than retry_count failures in disable_window seconds.
+    # Jobs are disabled if we see more than disable_failures failures in disable_window seconds.
     # These disables last for disable_persist seconds.
     disable_window = parameter.IntParameter(default=3600,
                                             config_path=dict(section='scheduler', name='disable-window-seconds'))
-    retry_count = parameter.IntParameter(default=999999999,
-                                         config_path=dict(section='scheduler', name='disable_failures'))
+    disable_failures = parameter.IntParameter(default=999999999,
+                                              config_path=dict(section='scheduler', name='disable-num-failures'))
     disable_hard_timeout = parameter.IntParameter(default=999999999,
                                                   config_path=dict(section='scheduler', name='disable-hard-timeout'))
     disable_persist = parameter.IntParameter(default=86400,
@@ -137,9 +126,6 @@ class scheduler(Config):
     record_task_history = parameter.BoolParameter(default=False)
 
     prune_on_get_work = parameter.BoolParameter(default=False)
-
-    def _get_retry_policy(self):
-        return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
 
 
 class Failures(object):
@@ -197,8 +183,10 @@ def _get_default(x, default):
 
 
 class Task(object):
+
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
-                 params=None, tracking_url=None, status_message=None, retry_policy='notoptional'):
+                 params=None, disable_failures=None, disable_window=None, disable_hard_timeout=None,
+                 tracking_url=None, status_message=None):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -219,9 +207,9 @@ class Task(object):
         self.family = family
         self.module = module
         self.params = _get_default(params, {})
-
-        self.retry_policy = retry_policy
-        self.failures = Failures(self.retry_policy.disable_window)
+        self.disable_failures = disable_failures
+        self.disable_hard_timeout = disable_hard_timeout
+        self.failures = Failures(disable_window)
         self.tracking_url = tracking_url
         self.status_message = status_message
         self.scheduler_disable_time = None
@@ -243,12 +231,11 @@ class Task(object):
 
     def has_excessive_failures(self):
         if self.failures.first_failure_time is not None:
-            if (time.time() >= self.failures.first_failure_time + self.retry_policy.disable_hard_timeout):
+            if (time.time() >= self.failures.first_failure_time +
+                    self.disable_hard_timeout):
                 return True
 
-        logger.debug('%s task num failures is %s and limit is %s', self.id, self.failures.num_failures(), self.retry_policy.retry_count)
-        if self.failures.num_failures() >= self.retry_policy.retry_count:
-            logger.debug('%s task num failures limit(%s) is exceeded', self.id, self.retry_policy.retry_count)
+        if self.failures.num_failures() >= self.disable_failures:
             return True
 
         return False
@@ -465,7 +452,7 @@ class SimpleTaskState(object):
                     'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
                     '{task} failed {failures} times in the last {window} seconds, so it is being '
                     'disabled for {persist} seconds'.format(
-                        failures=task.retry_policy.retry_count,
+                        failures=config.disable_failures,
                         task=task.id,
                         window=config.disable_window,
                         persist=config.disable_persist,
@@ -529,7 +516,7 @@ class SimpleTaskState(object):
                 continue
             last_get_work = getattr(worker, 'last_get_work', None)
             if last_get_work_gt is not None and (
-                            last_get_work is None or last_get_work <= last_get_work_gt):
+                    last_get_work is None or last_get_work <= last_get_work_gt):
                 continue
             yield worker
 
@@ -585,7 +572,10 @@ class Scheduler(object):
         else:
             self._task_history = history.NopHistory()
         self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
-        self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
+        self._make_task = functools.partial(
+            Task, disable_failures=self._config.disable_failures,
+            disable_hard_timeout=self._config.disable_hard_timeout,
+            disable_window=self._config.disable_window)
         self._worker_requests = {}
 
     def load(self):
@@ -653,7 +643,7 @@ class Scheduler(object):
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
                  assistant=False, tracking_url=None, worker=None, batchable=None,
-                 batch_id=None, retry_policy_dict={}, **kwargs):
+                 batch_id=None, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -664,7 +654,6 @@ class Scheduler(object):
         assert worker is not None
         worker_id = worker
         worker_enabled = self.update(worker_id)
-        retry_policy = self._generate_retry_policy(retry_policy_dict)
 
         if worker_enabled:
             _default_task = self._make_task(
@@ -737,10 +726,6 @@ class Scheduler(object):
 
         self._update_priority(task, priority, worker_id)
 
-        # Because some tasks (non-dynamic dependencies) are `_make_task`ed
-        # before we know their retry_policy, we always set it here
-        task.retry_policy = retry_policy
-
         if runnable and status != FAILED and worker_enabled:
             task.workers.add(worker_id)
             self._state.get_worker(worker_id).tasks.add(task)
@@ -759,11 +744,6 @@ class Scheduler(object):
         if self._resources is None:
             self._resources = {}
         self._resources.update(resources)
-
-    def _generate_retry_policy(self, task_retry_policy_dict):
-        retry_policy_dict = self._config._get_retry_policy()._asdict()
-        retry_policy_dict.update({k: v for k, v in six.iteritems(task_retry_policy_dict) if v is not None})
-        return RetryPolicy(**retry_policy_dict)
 
     def _has_resources(self, needed_resources, used_resources):
         if needed_resources is None:
@@ -1136,7 +1116,8 @@ class Scheduler(object):
             def filter_func(t):
                 return all(term in t.pretty_id for term in terms)
         for task in filter(filter_func, self._state.get_active_tasks(status)):
-            if task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id, upstream_status_table):
+            if (task.status != PENDING or not upstream_status or
+                    upstream_status == self._upstream_status(task.id, upstream_status_table)):
                 serialized = self._serialize_task(task.id, False)
                 result[task.id] = serialized
         if limit and len(result) > self._config.max_shown_tasks:
