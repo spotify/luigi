@@ -81,6 +81,7 @@ def run_with_retcodes(argv):
         sys.exit(retcodes.unhandled_exception)
 
     task_sets = luigi.execution_summary._summary_dict(worker)
+    root_task = luigi.execution_summary._root_task(worker)
     non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
 
     def has(status):
@@ -94,4 +95,11 @@ def run_with_retcodes(argv):
         (retcodes.scheduling_error, has('scheduling_error')),
         (retcodes.unknown_reason, has('unknown_reason')),
     )
-    sys.exit(max(code * (1 if cond else 0) for code, cond in codes_and_conds))
+    expected_ret_code = max(code * (1 if cond else 0) for code, cond in codes_and_conds)
+
+    if expected_ret_code == 0 and \
+       root_task not in task_sets["completed"] and \
+       root_task not in task_sets["already_done"]:
+        sys.exit(retcodes.unknown_reason)
+    else:
+        sys.exit(expected_ret_code)
