@@ -52,9 +52,9 @@ class retcode(luigi.Config):
                                                    or task-limit reached'''
                                     )
     # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
-    unknown_reason = IntParameter(default=0,
-                                  description="For when a task does not run successfully because of unknown reason."
-                                  )
+    not_run = IntParameter(default=0,
+                           description="For when a task is not granted run permission by the scheduler."
+                           )
 
 
 def run_with_retcodes(argv):
@@ -93,13 +93,13 @@ def run_with_retcodes(argv):
         (retcodes.task_failed, has('failed')),
         (retcodes.already_running, has('run_by_other_worker')),
         (retcodes.scheduling_error, has('scheduling_error')),
-        (retcodes.unknown_reason, has('unknown_reason')),
+        (retcodes.not_run, has('not_run')),
     )
     expected_ret_code = max(code * (1 if cond else 0) for code, cond in codes_and_conds)
 
     if expected_ret_code == 0 and \
        root_task not in task_sets["completed"] and \
        root_task not in task_sets["already_done"]:
-        sys.exit(retcodes.unknown_reason)
+        sys.exit(retcodes.not_run)
     else:
         sys.exit(expected_ret_code)

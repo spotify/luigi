@@ -169,4 +169,4 @@ class RetcodesTest(LuigiTestCase):
 
         with mock.patch('luigi.scheduler.CentralPlannerScheduler.add_task', new_func):
             self.run_and_expect('RequiringTask', 0)
-            self.run_and_expect('RequiringTask --retcode-unknown-reason 5', 5)
+            self.run_and_expect('RequiringTask --retcode-not-run 5', 5)

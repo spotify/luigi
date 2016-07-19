@@ -113,7 +113,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertEqual({Foo()}, d['still_pending_not_ext'])
         self.assertEqual({Foo()}, d['upstream_scheduling_error'])
         self.assertEqual({Bar()}, d['scheduling_error'])
-        self.assertFalse(d['unknown_reason'])
+        self.assertFalse(d['not_run'])
         self.assertFalse(d['already_done'])
         self.assertFalse(d['completed'])
         self.assertFalse(d['failed'])
@@ -142,7 +142,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
 
-    def test_unknown_reason_error(self):
+    def test_not_run_error(self):
         class Bar(luigi.Task):
             def complete(self):
                 return True
@@ -159,7 +159,7 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         d = self.summary_dict()
         self.assertEqual({Foo()}, d['still_pending_not_ext'])
-        self.assertEqual({Foo()}, d['unknown_reason'])
+        self.assertEqual({Foo()}, d['not_run'])
         self.assertEqual({Bar()}, d['already_done'])
         self.assertFalse(d['upstream_scheduling_error'])
         self.assertFalse(d['scheduling_error'])
@@ -177,11 +177,11 @@ class ExecutionSummaryTest(LuigiTestCase):
                     '* 1 present dependencies were encountered:',
                     '    - 1 Bar()',
                     '* 1 were left pending, among these:',
-                    "    * 1 did not run successfully because of unknown reason:",
+                    "    * 1 was not granted run permission by the scheduler:",
                     '        - 1 Foo()',
                     '',
                     'Did not run any tasks',
-                    'This progress looks :| because there were tasks that did not run successfully because of unknown reason',
+                    'This progress looks :| because there were tasks that were not granted run permission by the scheduler',
                     '',
                     '===== Luigi Execution Summary =====',
                     '']
@@ -207,7 +207,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         d = self.summary_dict()
         self.assertEqual({Foo()}, d['scheduling_error'])
         self.assertFalse(d['upstream_scheduling_error'])
-        self.assertFalse(d['unknown_reason'])
+        self.assertFalse(d['not_run'])
         self.assertFalse(d['already_done'])
         self.assertFalse(d['completed'])
         self.assertFalse(d['failed'])
@@ -399,10 +399,10 @@ class ExecutionSummaryTest(LuigiTestCase):
         d = self.summary_dict()
         self.assertFalse(d['already_done'])
         self.assertFalse(d['completed'])
-        self.assertFalse(d['unknown_reason'])
+        self.assertFalse(d['not_run'])
         self.assertEqual({AlreadyRunningTask()}, d['run_by_other_worker'])
 
-    def test_unknown_reason(self):
+    def test_not_run(self):
         class AlreadyRunningTask(luigi.Task):
             def run(self):
                 pass
@@ -423,12 +423,12 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertFalse(d['already_done'])
         self.assertFalse(d['completed'])
         self.assertFalse(d['run_by_other_worker'])
-        self.assertEqual({AlreadyRunningTask()}, d['unknown_reason'])
+        self.assertEqual({AlreadyRunningTask()}, d['not_run'])
 
         s = self.summary()
         self.assertIn('\nScheduled 1 tasks of which:\n'
                       '* 1 were left pending, among these:\n'
-                      '    * 1 did not run successfully because of unknown reason:\n'
+                      '    * 1 was not granted run permission by the scheduler:\n'
                       '        - 1 AlreadyRunningTask()\n', s)
         self.assertNotIn('\n\n\n', s)
 
@@ -447,7 +447,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertFalse(d['already_done'])
         self.assertFalse(d['completed'])
         self.assertFalse(d['run_by_other_worker'])
-        self.assertEqual({SomeTask()}, d['unknown_reason'])
+        self.assertEqual({SomeTask()}, d['not_run'])
 
     def test_somebody_else_disables_task(self):
         class SomeTask(luigi.Task):
@@ -468,7 +468,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertFalse(d['already_done'])
         self.assertFalse(d['completed'])
         self.assertFalse(d['run_by_other_worker'])
-        self.assertEqual({SomeTask()}, d['unknown_reason'])
+        self.assertEqual({SomeTask()}, d['not_run'])
 
     def test_larger_tree(self):
 

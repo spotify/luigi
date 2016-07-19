@@ -54,7 +54,7 @@ def _partition_tasks(worker):
     set_tasks["upstream_missing_dependency"] = set()
     set_tasks["upstream_run_by_other_worker"] = set()
     set_tasks["upstream_scheduling_error"] = set()
-    set_tasks["unknown_reason"] = set()
+    set_tasks["not_run"] = set()
     return set_tasks
 
 
@@ -67,7 +67,7 @@ def _root_task(worker):
 
 def _populate_unknown_statuses(set_tasks):
     """
-    Add the "upstream_*" and "unknown_reason" statuses my mutating set_tasks.
+    Add the "upstream_*" and "not_run" statuses my mutating set_tasks.
     """
     visited = set()
     for task in set_tasks["still_pending_not_ext"]:
@@ -102,7 +102,7 @@ def _depth_first_search(set_tasks, current_task, visited):
         if not upstream_failure and not upstream_missing_dependency and \
                 not upstream_run_by_other_worker and not upstream_scheduling_error and \
                 current_task not in set_tasks["run_by_other_worker"]:
-            set_tasks["unknown_reason"].add(current_task)
+            set_tasks["not_run"].add(current_task)
 
 
 def _get_str(task_dict, extra_indent):
@@ -270,7 +270,7 @@ _ORDERED_STATUSES = (
     "upstream_missing_dependency",
     "upstream_run_by_other_worker",
     "upstream_scheduling_error",
-    "unknown_reason",
+    "not_run",
 )
 _PENDING_SUB_STATUSES = set(_ORDERED_STATUSES[_ORDERED_STATUSES.index("still_pending_ext"):])
 _COMMENTS = set((
@@ -285,7 +285,7 @@ _COMMENTS = set((
     ("upstream_missing_dependency", 'had missing external dependencies'),
     ("upstream_run_by_other_worker", 'had dependencies that were being run by other worker'),
     ("upstream_scheduling_error", 'had dependencies whose scheduling failed'),
-    ("unknown_reason", 'did not run successfully because of unknown reason'),
+    ("not_run", 'was not granted run permission by the scheduler'),
 ))
 
 
@@ -385,9 +385,9 @@ def _summary_format(set_tasks, worker):
     elif set_tasks["scheduling_error"]:
         smiley = ":("
         reason = "there were tasks whose scheduling failed"
-    elif set_tasks["unknown_reason"]:
+    elif set_tasks["not_run"]:
         smiley = ":|"
-        reason = "there were tasks that did not run successfully because of unknown reason"
+        reason = "there were tasks that were not granted run permission by the scheduler"
     elif set_tasks["still_pending_ext"]:
         smiley = ":|"
         reason = "there were missing external dependencies"
