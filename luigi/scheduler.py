@@ -47,16 +47,6 @@ from luigi.task import Config
 logger = logging.getLogger(__name__)
 
 
-class Scheduler(object):
-    """
-    Abstract base class.
-
-    Note that the methods all take string arguments, not Task objects...
-    """""
-    add_task = NotImplemented
-    get_work = NotImplemented
-    ping = NotImplemented
-
 UPSTREAM_RUNNING = 'UPSTREAM_RUNNING'
 UPSTREAM_MISSING_INPUT = 'UPSTREAM_MISSING_INPUT'
 UPSTREAM_FAILED = 'UPSTREAM_FAILED'
@@ -508,7 +498,7 @@ class SimpleTaskState(object):
             self.get_worker(worker).disabled = True
 
 
-class CentralPlannerScheduler(Scheduler):
+class CentralPlannerScheduler(object):
     """
     Async scheduler that can handle multiple workers, etc.
 

@@ -29,7 +29,7 @@ from luigi.six.moves.urllib.request import urlopen
 from luigi.six.moves.urllib.error import URLError
 
 from luigi import configuration
-from luigi.scheduler import Scheduler, RPC_METHODS
+from luigi.scheduler import RPC_METHODS
 
 HAS_UNIX_SOCKET = True
 HAS_REQUESTS = True
@@ -87,7 +87,7 @@ class RequestsFetcher(object):
         return resp.text
 
 
-class RemoteScheduler(Scheduler):
+class RemoteScheduler(object):
     """
     Scheduler proxy object. Talks to a RemoteSchedulerResponder.
     """
