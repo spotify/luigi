@@ -21,7 +21,7 @@ import sys
 import tempfile
 
 from target_test import FileSystemTargetTestMixin
-from helpers import with_config, unittest
+from helpers import with_config, unittest, skipOnTravis
 
 from boto.exception import S3ResponseError
 from boto.s3 import key
@@ -465,6 +465,7 @@ class TestS3Client(unittest.TestCase):
         """
         self._run_multipart_copy_test(self.test_put_multipart_empty_file)
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/145895385')
     def test_copy_dir(self):
         """
         Test copying 20 files from one folder to another
@@ -559,6 +560,3 @@ class TestS3Client(unittest.TestCase):
         key_size = s3_client.get_key(s3_path).size
         self.assertEqual(file_size, key_size)
         tmp_file.close()
-
-if __name__ == '__main__':
-    unittest.main()
