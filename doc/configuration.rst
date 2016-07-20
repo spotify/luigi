@@ -479,28 +479,37 @@ We recommend that you copy this set of exit codes to your ``luigi.cfg`` file:
   # They are in increasing level of severity (for most applications)
   already_running=10
   missing_data=20
+  not_run=25
   task_failed=30
   scheduling_error=35
   unhandled_exception=40
 
-unhandled_exception
-  For internal Luigi errors.  Defaults to 4, since this type of error
-  probably will not recover over time.
-missing_data
-  For when an :py:class:`~luigi.task.ExternalTask` is not complete, and this
-  caused the worker to give up.  As an alternative to fiddling with this, see
-  the [worker] keep_alive option.
-scheduling_error
-  For when a task's ``complete()`` or ``requires()`` method fails with an
-  exception.
-task_failed
-  For signaling that there were last known to have failed. Typically because
-  some exception have been raised.
 already_running
   This can happen in two different cases. Either the local lock file was taken
   at the time the invocation starts up. Or, the central scheduler have reported
   that some tasks could not have been run, because other workers are already
   running the tasks.
+missing_data
+  For when an :py:class:`~luigi.task.ExternalTask` is not complete, and this
+  caused the worker to give up.  As an alternative to fiddling with this, see
+  the [worker] keep_alive option.
+not_run
+  For when a task is not granted run permission by the scheduler. Typically
+  because of lack of resources, because the task has been already run by
+  another worker or because the attempted task is in DISABLED state.
+  Connectivity issues with the central scheduler might also cause this.
+  This does not include the cases for which a run is not allowed due to missing
+  dependencies (missing_data) or due to the fact that another worker is currently
+  running the task (already_running).
+task_failed
+  For signaling that there were last known to have failed. Typically because
+  some exception have been raised.
+scheduling_error
+  For when a task's ``complete()`` or ``requires()`` method fails with an
+  exception, or when the limit number of tasks is reached.
+unhandled_exception
+  For internal Luigi errors.  Defaults to 4, since this type of error
+  probably will not recover over time.
 
 If you customize return codes, prefer to set them in range 128 to 255 to avoid
 conflicts. Return codes in range 0 to 127 are reserved for possible future use
