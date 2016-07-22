@@ -50,7 +50,7 @@ class ErrorTask1(luigi.Task):
 
     def run(self):
         self.retry += 1
-        print 'Retry count for %s is %d' % (self.task_family, self.retry)
+        print('Retry count for %s is %d' % (self.task_family, self.retry))
         raise Exception('Test Exception')
 
     def output(self):
@@ -69,7 +69,7 @@ class ErrorTask2(luigi.Task):
 
     def run(self):
         self.retry += 1
-        print 'Retry count for %s is %d' % (self.task_family, self.retry)
+        print('Retry count for %s is %d' % (self.task_family, self.retry))
         raise Exception('Test Exception')
 
     def output(self):
