@@ -535,8 +535,7 @@ class Scheduler(object):
             self._task_history = db_task_history.DbTaskHistory()
         else:
             self._task_history = history.NopHistory()
-        self._resources = resources or configuration.get_config().getintdict(
-            'resources')  # TODO: Can we make this a Parameter?
+        self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
         self._make_task = functools.partial(
             Task, disable_failures=self._config.disable_failures,
             disable_hard_timeout=self._config.disable_hard_timeout,
@@ -1046,8 +1045,8 @@ class Scheduler(object):
             def filter_func(t):
                 return all(term in t.pretty_id for term in terms)
         for task in filter(filter_func, self._state.get_active_tasks(status)):
-            if (task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id,
-                                                                                                          upstream_status_table)):
+            if (task.status != PENDING or not upstream_status or
+                    upstream_status == self._upstream_status(task.id, upstream_status_table)):
                 serialized = self._serialize_task(task.id, False)
                 result[task.id] = serialized
         if limit and len(result) > self._config.max_shown_tasks:
