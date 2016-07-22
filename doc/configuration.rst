@@ -602,6 +602,19 @@ worker-disconnect-delay
   scheduler before removing it and marking all of its running tasks as
   failed. Defaults to 60.
 
+upstream-status-when-all
+  Definition of how to set a task status as its upstream task statuses. 
+  If this is set as ``True``, it means the task status set as min severity status among
+  upstream tasks. Otherwise it is set as max. For example; If this is set
+  as ``True``, the task status will be ``DISABLED`` or ``FAILED`` when all of its
+  upstream task statuses are ``DISABLED`` or ```FAILED```. Otherwise any of its
+  upstream task status will be set as the task status. This is helpfull
+  configuration while luigi tasks have a feature to define configuration
+  at task level and those have different ``disable-num-failures`` values.
+  Worker won't be shut down until last ``DISABLED`` task. Otherwise, First
+  ``DISABLED`` task will make the task ``DISABLED`` and cause the worker is
+  shutdown. Defaults to ``False``
+
 
 [spark]
 -------
@@ -731,3 +744,57 @@ user
   Perform file system operations as the specified user instead of $USER.  Since
   this parameter is not honored by any of the other hdfs clients, you should
   think twice before setting this parameter.
+
+
+Configuration at Task Level
+---------------------------
+
+Luigi also supports to define some configurations at task level like scheduling configurations. It is defined in ``config`` variable in the task.
+
+.. code-block:: python
+
+    class GenerateWordsFromHdfs(luigi.Task):
+
+        config = {
+          'disable-num-failures':5
+        }
+
+        ...
+
+    class GenerateWordsFromRDB(luigi.Task):
+
+        config = {
+          'disable-num-failures':3
+        }
+
+        ...
+
+    class CountLetters(luigi.Task):
+
+        config = {
+          'upstream-status-when-all':True
+        }
+
+        def requires(self):
+            return [GenerateWordsFromHdfs(),GenerateWordsFromRDB()]
+
+        ...
+
+Supported Configurations
+************************
+The configrations below are also definable in luigi config file. Check :ref:`scheduler-config`
+
++--------------------------+-----------+
+| Config                   | Section   |
++==========================+===========+
+| disable-num-failures     | scheduler |
++--------------------------+-----------+
+| disable-hard-timeout     | scheduler |
++--------------------------+-----------+
+| disable-window-seconds   | scheduler |
++--------------------------+-----------+
+| upstream-status-when-all | scheduler |
++--------------------------+-----------+
+
+
+
