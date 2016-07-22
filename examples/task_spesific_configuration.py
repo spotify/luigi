@@ -11,17 +11,17 @@ from uuid import uuid4
 import luigi
 
 
-class MyTask(luigi.WrapperTask):
+class MyTaskHasConfig(luigi.WrapperTask):
     """
         Wrapper class for some error and success tasks. Worker won't be shutdown unless there is
         pending tasks or failed tasks which will be retried. While keep-alive is active, workers
         are not shutdown while there is/are some pending task(s). This task also has a task level
         config which is ``upstream-status-when-all``;This configuration is about how workers behave
-        to set ``MyTask`` status according to it's upstream tasks which are ``ErrorTask1``,
+        to set ``MyTaskHasConfig`` status according to it's upstream tasks which are ``ErrorTask1``,
         ``ErrorTask2`` and ``SuccessTask``. If this config is set as ``False``, Any of upstream task
-        ``FAILED`` or ``DISABLED`` will make ``MyTask`` ``FAILED`` or ``DISABLED`` which also means,
+        ``FAILED`` or ``DISABLED`` will make ``MyTaskHasConfig`` ``FAILED`` or ``DISABLED`` which also means,
         shut the worker down immediately. While this is ``True``, all upstream tasks should be ``FAILED``
-        or ``DISABLED``, worker to set ``MyTask`` status as ``FAILED`` or ``DISABLED``. ``MyTask`` will
+        or ``DISABLED``, worker to set ``MyTaskHasConfig`` status as ``FAILED`` or ``DISABLED``. ``MyTaskHasConfig`` will
         remain as PENDING unless all of its upstream task severities (so does not contains SUCCESS tasks)
         are ``FAILED`` or ``DISABLED``
 
@@ -104,4 +104,4 @@ class SuccessSubTask(luigi.Task):
 
 
 if __name__ == '__main__':
-    luigi.run(['MyTask', '--workers', '1', '--local-scheduler'])
+    luigi.run()
