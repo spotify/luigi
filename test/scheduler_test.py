@@ -22,6 +22,7 @@ import time
 from helpers import unittest
 
 import luigi.scheduler
+from luigi.scheduler import scheduler
 from helpers import with_config
 import logging
 
@@ -111,6 +112,137 @@ class SchedulerTest(unittest.TestCase):
                 self.worker_disconnect_delay = 10
 
         worker.prune(TmpCfg())
+
+    @with_config({'scheduler': {'disable-num-failures': '44'}})
+    def test_scheduler_with_task_level_config(self):
+        cps = luigi.scheduler.CentralPlannerScheduler()
+
+        cps.add_task(worker='test_worker1', task_id='test_task_1', deps=['test_task_2', 'test_task_3'])
+        tasks = list(cps._state.get_active_tasks())
+        self.assertEqual(3, len(tasks))
+
+        tasks = sorted(tasks, key=lambda x: x.id)
+        task_1 = tasks[0]
+        task_2 = tasks[1]
+        task_3 = tasks[2]
+
+        self.assertEqual('test_task_1', task_1.id)
+        self.assertEqual('test_task_2', task_2.id)
+        self.assertEqual('test_task_3', task_3.id)
+
+        self.assertDictEqual({}, task_1.config)
+        self.assertDictEqual({}, task_2.config)
+        self.assertDictEqual({}, task_3.config)
+
+        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_1.scheduler)
+        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_2.scheduler)
+        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_3.scheduler)
+
+        cps._state._tasks = {}
+        cps.add_task(worker='test_worker2', task_id='test_task_4', deps=['test_task_5', 'test_task_6'],
+                     task_config={
+                         'disable-num-failures': 99,
+                         'disable-hard-timeout': 999,
+                         'disable-window-seconds': 9999,
+                         'upstream-status-when-all': True
+                     })
+
+        tasks = list(cps._state.get_active_tasks())
+        self.assertEqual(3, len(tasks))
+
+        tasks = sorted(tasks, key=lambda x: x.id)
+        task_4 = tasks[0]
+        task_5 = tasks[1]
+        task_6 = tasks[2]
+
+        self.assertEqual('test_task_4', task_4.id)
+        self.assertEqual('test_task_5', task_5.id)
+        self.assertEqual('test_task_6', task_6.id)
+
+        self.assertDictEqual({
+            'disable-num-failures': 99,
+            'disable-hard-timeout': 999,
+            'disable-window-seconds': 9999,
+            'upstream-status-when-all': True
+        }, task_4.config)
+        self.assertDictEqual({}, task_5.config)
+        self.assertDictEqual({}, task_6.config)
+
+        self.assertEqual(scheduler(disable_failures=99, disable_hard_timeout=999, disable_window=9999,
+                                   upstream_status_when_all=True), task_4.scheduler)
+        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_5.scheduler)
+        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_6.scheduler)
+
+        cps._state._tasks = {}
+        cps.add_task(worker='test_worker3', task_id='test_task_7', deps=['test_task_8', 'test_task_9'],
+                     deps_configs={
+                         'test_task_8': {
+                             'disable-num-failures': 99,
+                             'disable-hard-timeout': 999,
+                             'disable-window-seconds': 9999,
+                             'upstream-status-when-all': True
+                         },
+                         'test_task_9': {
+                             'disable-num-failures': 11,
+                             'disable-hard-timeout': 111,
+                             'disable-window-seconds': 1111,
+                             'upstream-status-when-all': False
+                         }
+                     })
+
+        tasks = list(cps._state.get_active_tasks())
+        self.assertEqual(3, len(tasks))
+
+        tasks = sorted(tasks, key=lambda x: x.id)
+        task_7 = tasks[0]
+        task_8 = tasks[1]
+        task_9 = tasks[2]
+
+        self.assertEqual('test_task_7', task_7.id)
+        self.assertEqual('test_task_8', task_8.id)
+        self.assertEqual('test_task_9', task_9.id)
+
+        self.assertDictEqual({}, task_7.config)
+        self.assertDictEqual({
+            'disable-num-failures': 99,
+            'disable-hard-timeout': 999,
+            'disable-window-seconds': 9999,
+            'upstream-status-when-all': True
+        }, task_8.config)
+        self.assertDictEqual({
+            'disable-num-failures': 11,
+            'disable-hard-timeout': 111,
+            'disable-window-seconds': 1111,
+            'upstream-status-when-all': False
+        }, task_9.config)
+
+        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_7.scheduler)
+        self.assertEqual(scheduler(disable_failures=99, disable_hard_timeout=999, disable_window=9999,
+                                   upstream_status_when_all=True), task_8.scheduler)
+        self.assertEqual(scheduler(disable_failures=11, disable_hard_timeout=111, disable_window=1111,
+                                   upstream_status_when_all=False), task_9.scheduler)
+
+        # Task 7 which is disable-failures 44 and its has_excessive_failures method returns False under 44
+        for i in range(43):
+            task_7.add_failure()
+        self.assertFalse(task_7.has_excessive_failures())
+        task_7.add_failure()
+        self.assertTrue(task_7.has_excessive_failures())
+
+        # Task 8 which is disable-failures 99 and its has_excessive_failures method returns False under 44
+        for i in range(98):
+            task_8.add_failure()
+        self.assertFalse(task_8.has_excessive_failures())
+        task_8.add_failure()
+        self.assertTrue(task_8.has_excessive_failures())
+
+        # Task 9 which is disable-failures 1 and its has_excessive_failures method returns False under 44
+        for i in range(10):
+            task_9.add_failure()
+        self.assertFalse(task_9.has_excessive_failures())
+        task_9.add_failure()
+        self.assertTrue(task_9.has_excessive_failures())
+
 
 if __name__ == '__main__':
     unittest.main()

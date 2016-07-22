@@ -135,6 +135,10 @@ class scheduler(Config):
 
     prune_on_get_work = parameter.BoolParameter(default=False)
 
+    upstream_status_when_all = parameter.BoolParameter(default=False,
+                                                       config_path=dict(section='scheduler',
+                                                                        name='upstream-status-when-all'))
+
 
 class Failures(object):
     """
@@ -194,7 +198,8 @@ class Task(object):
 
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
                  params=None, disable_failures=None, disable_window=None, disable_hard_timeout=None,
-                 tracking_url=None, status_message=None):
+                 tracking_url=None, status_message=None, task_config=None, deps_configs=None,
+                 upstream_status_when_all=None):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -202,6 +207,8 @@ class Task(object):
             self.deps = set()
         else:
             self.deps = set(deps)
+
+        self.deps_configs = _get_default(deps_configs, {})
         self.status = status  # PENDING, RUNNING, FAILED or DONE
         self.time = time.time()  # Timestamp when task was first added
         self.updated = self.time
@@ -215,9 +222,19 @@ class Task(object):
         self.family = family
         self.module = module
         self.params = _get_default(params, {})
-        self.disable_failures = disable_failures
-        self.disable_hard_timeout = disable_hard_timeout
-        self.failures = Failures(disable_window)
+
+        self.config = _get_default(task_config, {})
+        self.scheduler = scheduler(
+            disable_failures=self.config.get('disable-num-failures', disable_failures),
+            disable_hard_timeout=self.config.get('disable-hard-timeout', disable_hard_timeout),
+            disable_window=self.config.get('disable-window-seconds', disable_window),
+            upstream_status_when_all=self.config.get('upstream-status-when-all', upstream_status_when_all)
+        )
+
+        self.disable_failures = self.scheduler.disable_failures
+        self.disable_hard_timeout = self.scheduler.disable_hard_timeout
+        self.upstream_status_when_all = self.scheduler.upstream_status_when_all
+        self.failures = Failures(self.scheduler.disable_window)
         self.tracking_url = tracking_url
         self.status_message = status_message
         self.scheduler_disable_time = None
@@ -231,11 +248,13 @@ class Task(object):
 
     def has_excessive_failures(self):
         if self.failures.first_failure_time is not None:
-            if (time.time() >= self.failures.first_failure_time +
-                    self.disable_hard_timeout):
+            if (time.time() >= self.failures.first_failure_time + self.disable_hard_timeout):
                 return True
 
+        logger.debug('%s task num failures is %s and limit is %s', self.id, self.failures.num_failures(),
+                     self.disable_failures)
         if self.failures.num_failures() >= self.disable_failures:
+            logger.debug('%s task num failures limit(%s) is exceeded', self.id, self.disable_failures)
             return True
 
         return False
@@ -532,11 +551,14 @@ class CentralPlannerScheduler(Scheduler):
             self._task_history = db_task_history.DbTaskHistory()
         else:
             self._task_history = history.NopHistory()
-        self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
+        self._resources = resources or configuration.get_config().getintdict(
+            'resources')  # TODO: Can we make this a Parameter?
         self._make_task = functools.partial(
             Task, disable_failures=self._config.disable_failures,
             disable_hard_timeout=self._config.disable_hard_timeout,
-            disable_window=self._config.disable_window)
+            disable_window=self._config.disable_window,
+            upstream_status_when_all=self._config.upstream_status_when_all
+        )
         self._worker_requests = {}
 
     def load(self):
@@ -599,7 +621,8 @@ class CentralPlannerScheduler(Scheduler):
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
-                 assistant=False, tracking_url=None, worker=None, **kwargs):
+                 assistant=False, tracking_url=None, worker=None,
+                 task_config=None, deps_configs=None, new_deps_configs=None, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -615,6 +638,7 @@ class CentralPlannerScheduler(Scheduler):
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
                 priority=priority, family=family, module=module, params=params,
+                task_config=task_config, deps_configs=deps_configs
             )
         else:
             _default_task = None
@@ -655,8 +679,14 @@ class CentralPlannerScheduler(Scheduler):
         if deps is not None:
             task.deps = set(deps)
 
+        if deps_configs is not None:
+            task.deps_configs = deps_configs
+
         if new_deps is not None:
             task.deps.update(new_deps)
+
+        if new_deps_configs is not None:
+            task.deps_configs.update(new_deps_configs)
 
         if resources is not None:
             task.resources = resources
@@ -667,7 +697,9 @@ class CentralPlannerScheduler(Scheduler):
             # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
             # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
             for dep in task.deps or []:
-                t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
+                t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None,
+                                                                         priority=priority,
+                                                                         task_config=task.deps_configs.get(dep, None)))
                 t.stakeholders.add(worker_id)
 
         self._update_priority(task, priority, worker_id)
@@ -872,9 +904,13 @@ class CentralPlannerScheduler(Scheduler):
                     elif upstream_status_table[dep_id] == '' and dep.deps:
                         # This is the postorder update step when we set the
                         # status based on the previously calculated child elements
-                        status = max((upstream_status_table.get(a_task_id, '')
-                                      for a_task_id in dep.deps),
-                                     key=UPSTREAM_SEVERITY_KEY)
+                        if dep.upstream_status_when_all:
+                            func = min
+                        else:
+                            func = max
+
+                        status = func(list(upstream_status_table.get(a_task_id) for a_task_id in dep.deps if
+                                           a_task_id in upstream_status_table) or [''], key=UPSTREAM_SEVERITY_KEY)
                         upstream_status_table[dep_id] = status
             return upstream_status_table[dep_id]
 
@@ -1013,8 +1049,8 @@ class CentralPlannerScheduler(Scheduler):
             def filter_func(t):
                 return all(term in t.pretty_id for term in terms)
         for task in filter(filter_func, self._state.get_active_tasks(status)):
-            if (task.status != PENDING or not upstream_status or
-                    upstream_status == self._upstream_status(task.id, upstream_status_table)):
+            if (task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id,
+                                                                                                          upstream_status_table)):
                 serialized = self._serialize_task(task.id, False)
                 result[task.id] = serialized
         if limit and len(result) > self._config.max_shown_tasks:

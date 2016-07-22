@@ -146,6 +146,8 @@ class Task(object):
     #: Only works when using multiple workers.
     worker_timeout = None
 
+    config = {}
+
     @property
     def owner_email(self):
         '''
