@@ -90,6 +90,7 @@ class TaskException(Exception):
 
 
 class TaskProcess(multiprocessing.Process):
+
     """ Wrap all task execution in this class.
 
     Mainly for convenience since this is run in a separate process. """
@@ -171,7 +172,7 @@ class TaskProcess(multiprocessing.Process):
                 else:
                     status = FAILED
                     expl = 'Task is an external data dependency ' \
-                           'and data does not exist (yet?).'
+                        'and data does not exist (yet?).'
             else:
                 new_deps = self._run_get_new_deps()
                 status = DONE if not new_deps else PENDING
@@ -302,8 +303,8 @@ class worker(Config):
     count_uniques = BoolParameter(default=False,
                                   config_path=dict(section='core', name='worker-count-uniques'),
                                   description='worker-count-uniques means that we will keep a '
-                                              'worker alive only if it has a unique pending task, as '
-                                              'well as having keep-alive true')
+                                  'worker alive only if it has a unique pending task, as '
+                                  'well as having keep-alive true')
     wait_interval = FloatParameter(default=1.0,
                                    config_path=dict(section='core', name='worker-wait-interval'))
     wait_jitter = FloatParameter(default=5.0)
@@ -317,10 +318,10 @@ class worker(Config):
     retry_external_tasks = BoolParameter(default=False,
                                          config_path=dict(section='core', name='retry-external-tasks'),
                                          description='If true, incomplete external tasks will be '
-                                                     'retested for completion while Luigi is running.')
+                                         'retested for completion while Luigi is running.')
     no_install_shutdown_handler = BoolParameter(default=False,
                                                 description='If true, the SIGUSR1 shutdown handler will'
-                                                            'NOT be install on the worker')
+                                                'NOT be install on the worker')
 
 
 class KeepAliveThread(threading.Thread):
@@ -478,22 +479,18 @@ class Worker(object):
 
         if not task.initialized():
             # we can't get the repr of it since it's not initialized...
-            raise TaskException(
-                'Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__)
+            raise TaskException('Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__)
 
     def _log_complete_error(self, task, tb):
-        log_msg = "Will not run {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task,
-                                                                                                            tb=tb)
+        log_msg = "Will not run {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task, tb=tb)
         logger.warning(log_msg)
 
     def _log_dependency_error(self, task, tb):
-        log_msg = "Will not run {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task,
-                                                                                                        tb=tb)
+        log_msg = "Will not run {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task, tb=tb)
         logger.warning(log_msg)
 
     def _log_unexpected_error(self, task):
-        logger.exception("Luigi unexpected framework error while scheduling %s",
-                         task)  # needs to be called from within except clause
+        logger.exception("Luigi unexpected framework error while scheduling %s", task)  # needs to be called from within except clause
 
     def _email_complete_error(self, task, formatted_traceback):
         self._email_error(task, formatted_traceback,
@@ -574,8 +571,7 @@ class Worker(object):
     def _add(self, task, is_complete):
         deps_configs = None
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
-            logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task,
-                           self._config.task_limit)
+            logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task, self._config.task_limit)
             deps = None
             status = UNKNOWN
             runnable = False
@@ -766,8 +762,7 @@ class Worker(object):
                 p.task.trigger_event(Event.PROCESS_FAILURE, p.task, error_msg)
             elif p.timeout_time is not None and time.time() > float(p.timeout_time) and p.is_alive():
                 p.terminate()
-                error_msg = 'Task {} timed out after {} seconds and was terminated.'.format(task_id,
-                                                                                            p.task.worker_timeout)
+                error_msg = 'Task {} timed out after {} seconds and was terminated.'.format(task_id, p.task.worker_timeout)
                 p.task.trigger_event(Event.TIMEOUT, p.task, error_msg)
             else:
                 continue
