@@ -224,17 +224,11 @@ class Task(object):
         self.params = _get_default(params, {})
 
         self.config = _get_default(task_config, {})
-        self.scheduler = scheduler(
-            disable_failures=self.config.get('disable-num-failures', disable_failures),
-            disable_hard_timeout=self.config.get('disable-hard-timeout', disable_hard_timeout),
-            disable_window=self.config.get('disable-window-seconds', disable_window),
-            upstream_status_when_all=self.config.get('upstream-status-when-all', upstream_status_when_all)
-        )
 
-        self.disable_failures = self.scheduler.disable_failures
-        self.disable_hard_timeout = self.scheduler.disable_hard_timeout
-        self.upstream_status_when_all = self.scheduler.upstream_status_when_all
-        self.failures = Failures(self.scheduler.disable_window)
+        self.disable_failures = disable_failures
+        self.disable_hard_timeout = disable_hard_timeout
+        self.upstream_status_when_all = upstream_status_when_all
+        self.failures = Failures(disable_window)
         self.tracking_url = tracking_url
         self.status_message = status_message
         self.scheduler_disable_time = None
@@ -638,7 +632,7 @@ class CentralPlannerScheduler(Scheduler):
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
                 priority=priority, family=family, module=module, params=params,
-                task_config=task_config, deps_configs=deps_configs
+                **self._get_task_level_config(task_config)
             )
         else:
             _default_task = None
@@ -699,7 +693,8 @@ class CentralPlannerScheduler(Scheduler):
             for dep in task.deps or []:
                 t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None,
                                                                          priority=priority,
-                                                                         task_config=task.deps_configs.get(dep, None)))
+                                                                         **self._get_task_level_config(
+                                                                             task.deps_configs.get(dep, None))))
                 t.stakeholders.add(worker_id)
 
         self._update_priority(task, priority, worker_id)
@@ -722,6 +717,18 @@ class CentralPlannerScheduler(Scheduler):
         if self._resources is None:
             self._resources = {}
         self._resources.update(resources)
+
+    def _get_task_level_config(self, config):
+        if config:
+            return {
+                'disable_failures': config.get('disable-num-failures', self._config.disable_failures),
+                'disable_hard_timeout': config.get('disable-hard-timeout', self._config.disable_hard_timeout),
+                'disable_window': config.get('disable-window-seconds', self._config.disable_window),
+                'upstream_status_when_all': config.get('upstream-status-when-all',
+                                                       self._config.upstream_status_when_all)
+            }
+        else:
+            return {}
 
     def _has_resources(self, needed_resources, used_resources):
         if needed_resources is None:

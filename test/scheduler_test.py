@@ -22,7 +22,6 @@ import time
 from helpers import unittest
 
 import luigi.scheduler
-from luigi.scheduler import scheduler
 from helpers import with_config
 import logging
 
@@ -134,9 +133,12 @@ class SchedulerTest(unittest.TestCase):
         self.assertDictEqual({}, task_2.config)
         self.assertDictEqual({}, task_3.config)
 
-        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_1.scheduler)
-        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_2.scheduler)
-        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_3.scheduler)
+        self.assertEqual(44, task_1.disable_failures)
+        self.assertEqual(False, task_1.upstream_status_when_all)
+        self.assertEqual(44, task_2.disable_failures)
+        self.assertEqual(False, task_2.upstream_status_when_all)
+        self.assertEqual(44, task_3.disable_failures)
+        self.assertEqual(False, task_3.upstream_status_when_all)
 
         cps._state._tasks = {}
         cps.add_task(worker='test_worker2', task_id='test_task_4', deps=['test_task_5', 'test_task_6'],
@@ -159,19 +161,16 @@ class SchedulerTest(unittest.TestCase):
         self.assertEqual('test_task_5', task_5.id)
         self.assertEqual('test_task_6', task_6.id)
 
-        self.assertDictEqual({
-            'disable-num-failures': 99,
-            'disable-hard-timeout': 999,
-            'disable-window-seconds': 9999,
-            'upstream-status-when-all': True
-        }, task_4.config)
-        self.assertDictEqual({}, task_5.config)
-        self.assertDictEqual({}, task_6.config)
+        self.assertEqual(99, task_4.disable_failures)
+        self.assertEqual(999, task_4.disable_hard_timeout)
+        self.assertEqual(9999, task_4.failures.window)
+        self.assertEqual(True, task_4.upstream_status_when_all)
 
-        self.assertEqual(scheduler(disable_failures=99, disable_hard_timeout=999, disable_window=9999,
-                                   upstream_status_when_all=True), task_4.scheduler)
-        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_5.scheduler)
-        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_6.scheduler)
+        self.assertEqual(44, task_5.disable_failures)
+        self.assertEqual(False, task_5.upstream_status_when_all)
+
+        self.assertEqual(44, task_6.disable_failures)
+        self.assertEqual(False, task_6.upstream_status_when_all)
 
         cps._state._tasks = {}
         cps.add_task(worker='test_worker3', task_id='test_task_7', deps=['test_task_8', 'test_task_9'],
@@ -202,25 +201,18 @@ class SchedulerTest(unittest.TestCase):
         self.assertEqual('test_task_8', task_8.id)
         self.assertEqual('test_task_9', task_9.id)
 
-        self.assertDictEqual({}, task_7.config)
-        self.assertDictEqual({
-            'disable-num-failures': 99,
-            'disable-hard-timeout': 999,
-            'disable-window-seconds': 9999,
-            'upstream-status-when-all': True
-        }, task_8.config)
-        self.assertDictEqual({
-            'disable-num-failures': 11,
-            'disable-hard-timeout': 111,
-            'disable-window-seconds': 1111,
-            'upstream-status-when-all': False
-        }, task_9.config)
+        self.assertEqual(44, task_7.disable_failures)
+        self.assertEqual(False, task_7.upstream_status_when_all)
 
-        self.assertEqual(scheduler(disable_failures=44, upstream_status_when_all=False), task_7.scheduler)
-        self.assertEqual(scheduler(disable_failures=99, disable_hard_timeout=999, disable_window=9999,
-                                   upstream_status_when_all=True), task_8.scheduler)
-        self.assertEqual(scheduler(disable_failures=11, disable_hard_timeout=111, disable_window=1111,
-                                   upstream_status_when_all=False), task_9.scheduler)
+        self.assertEqual(99, task_8.disable_failures)
+        self.assertEqual(999, task_8.disable_hard_timeout)
+        self.assertEqual(9999, task_8.failures.window)
+        self.assertEqual(True, task_8.upstream_status_when_all)
+
+        self.assertEqual(11, task_9.disable_failures)
+        self.assertEqual(111, task_9.disable_hard_timeout)
+        self.assertEqual(1111, task_9.failures.window)
+        self.assertEqual(False, task_9.upstream_status_when_all)
 
         # Task 7 which is disable-failures 44 and its has_excessive_failures method returns False under 44
         for i in range(43):
