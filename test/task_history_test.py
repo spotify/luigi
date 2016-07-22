@@ -44,7 +44,7 @@ class TaskHistoryTest(LuigiTestCase):
 
     def test_run(self):
         th = SimpleTaskHistory()
-        sch = luigi.scheduler.CentralPlannerScheduler(task_history_impl=th)
+        sch = luigi.scheduler.Scheduler(task_history_impl=th)
         with luigi.worker.Worker(scheduler=sch) as w:
             class MyTask(luigi.Task):
                 pass

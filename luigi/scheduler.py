@@ -498,7 +498,7 @@ class SimpleTaskState(object):
             self.get_worker(worker).disabled = True
 
 
-class CentralPlannerScheduler(object):
+class Scheduler(object):
     """
     Async scheduler that can handle multiple workers, etc.
 

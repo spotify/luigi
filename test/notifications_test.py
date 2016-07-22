@@ -22,7 +22,7 @@ import sys
 from helpers import with_config
 from luigi import notifications
 from luigi import configuration
-from luigi.scheduler import CentralPlannerScheduler
+from luigi.scheduler import Scheduler
 from luigi.worker import Worker
 from luigi import six
 import luigi
@@ -69,7 +69,7 @@ class FailRunTask(TestTask):
 class ExceptionFormatTest(unittest.TestCase):
 
     def setUp(self):
-        self.sch = CentralPlannerScheduler()
+        self.sch = Scheduler()
 
     def test_fail_run(self):
         task = FailRunTask(foo='foo', bar='bar')

@@ -16,7 +16,7 @@
 #
 """
 Simple REST server that takes commands in a JSON payload
-Interface to the :py:class:`~luigi.scheduler.CentralPlannerScheduler` class.
+Interface to the :py:class:`~luigi.scheduler.Scheduler` class.
 See :doc:`/central_scheduler` for more info.
 """
 #
@@ -53,7 +53,7 @@ import tornado.ioloop
 import tornado.netutil
 import tornado.web
 
-from luigi.scheduler import CentralPlannerScheduler, RPC_METHODS
+from luigi.scheduler import Scheduler, RPC_METHODS
 
 logger = logging.getLogger("luigi.server")
 
@@ -247,7 +247,7 @@ def run(api_port=8082, address=None, unix_socket=None, scheduler=None, responder
     Runs one instance of the API server.
     """
     if scheduler is None:
-        scheduler = CentralPlannerScheduler()
+        scheduler = Scheduler()
 
     # load scheduler state
     scheduler.load()

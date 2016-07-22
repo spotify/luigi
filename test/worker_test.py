@@ -33,7 +33,7 @@ import luigi.worker
 import mock
 from luigi import ExternalTask, RemoteScheduler, Task, Event
 from luigi.mock import MockTarget, MockFileSystem
-from luigi.scheduler import CentralPlannerScheduler
+from luigi.scheduler import Scheduler
 from luigi.worker import Worker
 from luigi.rpc import RPCError
 from luigi import six
@@ -112,7 +112,7 @@ class DynamicRequiresOtherModule(Task):
 class WorkerTest(unittest.TestCase):
 
     def run(self, result=None):
-        self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        self.sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         self.time = time.time
         with Worker(scheduler=self.sch, worker_id='X') as w, Worker(scheduler=self.sch, worker_id='Y') as w2:
             self.w = w
@@ -345,7 +345,7 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse(b.has_run)
 
     def test_unknown_dep(self):
-        # see central_planner_test.CentralPlannerTest.test_remove_dep
+        # see related test_remove_dep test (grep for it)
         class A(ExternalTask):
 
             def complete(self):
@@ -511,7 +511,7 @@ class WorkerTest(unittest.TestCase):
         eb = ExternalB()
         self.assertEqual(str(eb), "B()")
 
-        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         with Worker(scheduler=sch, worker_id='X') as w, Worker(scheduler=sch, worker_id='Y') as w2:
             self.assertTrue(w.add(b))
             self.assertTrue(w2.add(eb))
@@ -540,7 +540,7 @@ class WorkerTest(unittest.TestCase):
 
         self.assertEqual(str(eb), "B()")
 
-        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         with Worker(scheduler=sch, worker_id='X') as w, Worker(scheduler=sch, worker_id='Y') as w2:
             self.assertTrue(w2.add(eb))
             self.assertTrue(w.add(b))
@@ -571,7 +571,7 @@ class WorkerTest(unittest.TestCase):
 
         b = B()
 
-        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
 
         with Worker(scheduler=sch, worker_id='X', keep_alive=True, count_uniques=True) as w:
             with Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1) as w2:
@@ -605,7 +605,7 @@ class WorkerTest(unittest.TestCase):
 
         b = B()
 
-        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
 
         with Worker(scheduler=sch, worker_id='X', keep_alive=True, count_uniques=True) as w:
             with Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1) as w2:
@@ -638,7 +638,7 @@ class WorkerTest(unittest.TestCase):
                 return a, c
 
         b = B()
-        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         with Worker(scheduler=sch, worker_id="foo") as w:
             self.assertFalse(w.add(b))
             self.assertTrue(w.run())
@@ -671,7 +671,7 @@ class WorkerTest(unittest.TestCase):
                 return c, a
 
         b = B()
-        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         with Worker(scheduler=sch, worker_id="foo") as w:
             self.assertFalse(w.add(b))
             self.assertTrue(w.run())
@@ -725,7 +725,7 @@ class WorkerPingThreadTests(unittest.TestCase):
 
         Kind of ugly since it uses actual timing with sleep to test the thread
         """
-        sch = CentralPlannerScheduler(
+        sch = Scheduler(
             retry_delay=100,
             remove_delay=1000,
             worker_disconnect_delay=10,
@@ -785,7 +785,7 @@ class WorkerEmailTest(LuigiTestCase):
 
     def run(self, result=None):
         super(WorkerEmailTest, self).setUp()
-        sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         with Worker(scheduler=sch, worker_id="foo") as self.worker:
             super(WorkerEmailTest, self).run(result)
 
@@ -1072,7 +1072,7 @@ class Dummy2Task(Task):
 
 class AssistantTest(unittest.TestCase):
     def run(self, result=None):
-        self.sch = CentralPlannerScheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+        self.sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         self.assistant = Worker(scheduler=self.sch, worker_id='Y', assistant=True)
         with Worker(scheduler=self.sch, worker_id='X') as w:
             self.w = w
