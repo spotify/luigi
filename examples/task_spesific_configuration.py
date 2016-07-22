@@ -31,7 +31,7 @@ class MyTaskHasConfig(luigi.WrapperTask):
     }
 
     def requires(self):
-        return [ErrorTask1(), ErrorTask2(), SuccessTask()]
+        return [ErrorTask1(), ErrorTask2(), SuccessTask1()]
 
     def output(self):
         return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % uuid4())
@@ -76,9 +76,9 @@ class ErrorTask2(luigi.Task):
         return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % uuid4())
 
 
-class SuccessTask(luigi.Task):
+class SuccessTask1(luigi.Task):
     def requires(self):
-        return [SuccessSubTask()]
+        return [SuccessSubTask1()]
 
     def run(self):
         with self.output().open('w') as output:
@@ -88,7 +88,7 @@ class SuccessTask(luigi.Task):
         return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
 
 
-class SuccessSubTask(luigi.Task):
+class SuccessSubTask1(luigi.Task):
     """
         This success task sleeps for a while and then it is completed successfully.
     """
