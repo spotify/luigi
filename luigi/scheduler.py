@@ -278,6 +278,13 @@ class Worker(object):
         else:
             return state.get_pending_tasks()
 
+    def get_failed_tasks(self):
+        return six.moves.filter(lambda task: task.status == FAILED, self.tasks)
+
+    def get_num_failed_tasks(self):
+        tasks = list(self.get_failed_tasks())
+        return len(tasks)
+
     def is_trivial_worker(self, state):
         """
         If it's not an assistant having only tasks that are without
@@ -772,6 +779,7 @@ class CentralPlannerScheduler(object):
             active_workers = self._state.get_active_workers(last_get_work_gt=activity_limit)
             greedy_workers = dict((worker.id, worker.info.get('workers', 1))
                                   for worker in active_workers)
+        n_failed_tasks = worker.get_num_failed_tasks()
         tasks = list(relevant_tasks)
         tasks.sort(key=self._rank, reverse=True)
 
@@ -820,7 +828,8 @@ class CentralPlannerScheduler(object):
         reply = {'n_pending_tasks': locally_pending_tasks,
                  'running_tasks': running_tasks,
                  'task_id': None,
-                 'n_unique_pending': n_unique_pending}
+                 'n_unique_pending': n_unique_pending,
+                 'n_failed_tasks': n_failed_tasks}
 
         if best_task:
             self._state.set_status(best_task, RUNNING, self._config)
