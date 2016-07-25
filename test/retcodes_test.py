@@ -54,7 +54,7 @@ class RetcodesTest(LuigiTestCase):
             def run(self):
                 pass
 
-        old_func = luigi.scheduler.CentralPlannerScheduler.get_work
+        old_func = luigi.scheduler.Scheduler.get_work
 
         def new_func(*args, **kwargs):
             kwargs['current_tasks'] = None
@@ -63,7 +63,7 @@ class RetcodesTest(LuigiTestCase):
             res['running_tasks'][0]['worker'] = "not me :)"  # Otherwise it will be filtered
             return res
 
-        with mock.patch('luigi.scheduler.CentralPlannerScheduler.get_work', new_func):
+        with mock.patch('luigi.scheduler.Scheduler.get_work', new_func):
             self.run_and_expect('AlreadyRunningTask', 0)  # Test default value to be 0
             self.run_and_expect('AlreadyRunningTask --retcode-already-running 5', 5)
             self.run_with_config(dict(already_running='3'), 'AlreadyRunningTask', 3)
@@ -167,6 +167,6 @@ class RetcodesTest(LuigiTestCase):
         def new_func(*args, **kwargs):
             return None
 
-        with mock.patch('luigi.scheduler.CentralPlannerScheduler.add_task', new_func):
+        with mock.patch('luigi.scheduler.Scheduler.add_task', new_func):
             self.run_and_expect('RequiringTask', 0)
             self.run_and_expect('RequiringTask --retcode-not-run 5', 5)

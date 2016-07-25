@@ -20,7 +20,7 @@ The worker communicates with the scheduler and does two things:
 1. Sends all tasks that has to be run
 2. Gets tasks from the scheduler that should be run
 
-When running in local mode, the worker talks directly to a :py:class:`~luigi.scheduler.CentralPlannerScheduler` instance.
+When running in local mode, the worker talks directly to a :py:class:`~luigi.scheduler.Scheduler` instance.
 When you run a central server, the worker will talk to the scheduler using a :py:class:`~luigi.rpc.RemoteScheduler` instance.
 
 Everything in this module is private to luigi and may change in incompatible
@@ -53,7 +53,7 @@ from luigi import six
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, CentralPlannerScheduler
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
@@ -364,7 +364,7 @@ class Worker(object):
 
     def __init__(self, scheduler=None, worker_id=None, worker_processes=1, assistant=False, **kwargs):
         if scheduler is None:
-            scheduler = CentralPlannerScheduler()
+            scheduler = Scheduler()
 
         self.worker_processes = int(worker_processes)
         self._worker_info = self._generate_worker_info()

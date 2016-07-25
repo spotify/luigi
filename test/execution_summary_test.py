@@ -30,7 +30,7 @@ class ExecutionSummaryTest(LuigiTestCase):
 
     def setUp(self):
         super(ExecutionSummaryTest, self).setUp()
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(prune_on_get_work=False)
+        self.scheduler = luigi.scheduler.Scheduler(prune_on_get_work=False)
         self.worker = luigi.worker.Worker(scheduler=self.scheduler)
 
     def run_task(self, task):
@@ -154,7 +154,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         def new_func(*args, **kwargs):
             return None
 
-        with mock.patch('luigi.scheduler.CentralPlannerScheduler.add_task', new_func):
+        with mock.patch('luigi.scheduler.Scheduler.add_task', new_func):
             self.run_task(Foo())
 
         d = self.summary_dict()
@@ -385,7 +385,7 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         other_worker = luigi.worker.Worker(scheduler=self.scheduler, worker_id="other_worker")
         other_worker.add(AlreadyRunningTask())  # This also registers this worker
-        old_func = luigi.scheduler.CentralPlannerScheduler.get_work
+        old_func = luigi.scheduler.Scheduler.get_work
 
         def new_func(*args, **kwargs):
             new_kwargs = kwargs.copy()
@@ -393,7 +393,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             old_func(*args, **new_kwargs)
             return old_func(*args, **kwargs)
 
-        with mock.patch('luigi.scheduler.CentralPlannerScheduler.get_work', new_func):
+        with mock.patch('luigi.scheduler.Scheduler.get_work', new_func):
             self.run_task(AlreadyRunningTask())
 
         d = self.summary_dict()
@@ -409,14 +409,14 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         other_worker = luigi.worker.Worker(scheduler=self.scheduler, worker_id="other_worker")
         other_worker.add(AlreadyRunningTask())  # This also registers this worker
-        old_func = luigi.scheduler.CentralPlannerScheduler.get_work
+        old_func = luigi.scheduler.Scheduler.get_work
 
         def new_func(*args, **kwargs):
             kwargs['current_tasks'] = None
             old_func(*args, **kwargs)
             return old_func(*args, **kwargs)
 
-        with mock.patch('luigi.scheduler.CentralPlannerScheduler.get_work', new_func):
+        with mock.patch('luigi.scheduler.Scheduler.get_work', new_func):
             self.run_task(AlreadyRunningTask())
 
         d = self.summary_dict()

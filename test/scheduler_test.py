@@ -23,13 +23,9 @@ from helpers import unittest
 
 import luigi.scheduler
 from helpers import with_config
-import logging
-
-logging.config.fileConfig('test/testconfig/logging.cfg', disable_existing_loggers=False)
-luigi.notifications.DEBUG = True
 
 
-class SchedulerTest(unittest.TestCase):
+class SchedulerIoTest(unittest.TestCase):
 
     def test_load_old_state(self):
         tasks = {}
@@ -60,20 +56,20 @@ class SchedulerTest(unittest.TestCase):
 
     @with_config({'scheduler': {'disable-num-failures': '44', 'worker-disconnect-delay': '55'}})
     def test_scheduler_with_config(self):
-        cps = luigi.scheduler.CentralPlannerScheduler()
-        self.assertEqual(44, cps._config.disable_failures)
-        self.assertEqual(55, cps._config.worker_disconnect_delay)
+        scheduler = luigi.scheduler.Scheduler()
+        self.assertEqual(44, scheduler._config.disable_failures)
+        self.assertEqual(55, scheduler._config.worker_disconnect_delay)
 
         # Override
-        cps = luigi.scheduler.CentralPlannerScheduler(disable_failures=66,
-                                                      worker_disconnect_delay=77)
-        self.assertEqual(66, cps._config.disable_failures)
-        self.assertEqual(77, cps._config.worker_disconnect_delay)
+        scheduler = luigi.scheduler.Scheduler(disable_failures=66,
+                                              worker_disconnect_delay=77)
+        self.assertEqual(66, scheduler._config.disable_failures)
+        self.assertEqual(77, scheduler._config.worker_disconnect_delay)
 
     @with_config({'resources': {'a': '100', 'b': '200'}})
     def test_scheduler_with_resources(self):
-        cps = luigi.scheduler.CentralPlannerScheduler()
-        self.assertEqual({'a': 100, 'b': 200}, cps._resources)
+        scheduler = luigi.scheduler.Scheduler()
+        self.assertEqual({'a': 100, 'b': 200}, scheduler._resources)
 
     @with_config({'scheduler': {'record_task_history': 'True'},
                   'task_history': {'db_connection': 'sqlite:////none/existing/path/hist.db'}})
@@ -82,28 +78,31 @@ class SchedulerTest(unittest.TestCase):
         self.assertEqual(False, ls._config.record_task_history)
 
     def test_load_recovers_tasks_index(self):
-        cps = luigi.scheduler.CentralPlannerScheduler()
-        cps.add_task(worker='A', task_id='1')
-        cps.add_task(worker='B', task_id='2')
-        cps.add_task(worker='C', task_id='3')
-        cps.add_task(worker='D', task_id='4')
-        self.assertEqual(cps.get_work(worker='A')['task_id'], '1')
+        scheduler = luigi.scheduler.Scheduler()
+        scheduler.add_task(worker='A', task_id='1')
+        scheduler.add_task(worker='B', task_id='2')
+        scheduler.add_task(worker='C', task_id='3')
+        scheduler.add_task(worker='D', task_id='4')
+        self.assertEqual(scheduler.get_work(worker='A')['task_id'], '1')
 
         with tempfile.NamedTemporaryFile(delete=True) as fn:
-            def reload_from_disk(cps):
-                cps._state._state_path = fn.name
-                cps.dump()
-                cps = luigi.scheduler.CentralPlannerScheduler()
-                cps._state._state_path = fn.name
-                cps.load()
-                return cps
-            cps = reload_from_disk(cps=cps)
-            self.assertEqual(cps.get_work(worker='B')['task_id'], '2')
-            self.assertEqual(cps.get_work(worker='C')['task_id'], '3')
-            cps = reload_from_disk(cps=cps)
-            self.assertEqual(cps.get_work(worker='D')['task_id'], '4')
+            def reload_from_disk(scheduler):
+                scheduler._state._state_path = fn.name
+                scheduler.dump()
+                scheduler = luigi.scheduler.Scheduler()
+                scheduler._state._state_path = fn.name
+                scheduler.load()
+                return scheduler
+            scheduler = reload_from_disk(scheduler=scheduler)
+            self.assertEqual(scheduler.get_work(worker='B')['task_id'], '2')
+            self.assertEqual(scheduler.get_work(worker='C')['task_id'], '3')
+            scheduler = reload_from_disk(scheduler=scheduler)
+            self.assertEqual(scheduler.get_work(worker='D')['task_id'], '4')
 
     def test_worker_prune_after_init(self):
+        """
+        See https://github.com/spotify/luigi/pull/1019
+        """
         worker = luigi.scheduler.Worker(123)
 
         class TmpCfg:
@@ -111,6 +110,3 @@ class SchedulerTest(unittest.TestCase):
                 self.worker_disconnect_delay = 10
 
         worker.prune(TmpCfg())
-
-if __name__ == '__main__':
-    unittest.main()

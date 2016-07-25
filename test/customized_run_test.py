@@ -41,7 +41,7 @@ class DummyTask(luigi.Task):
         self.has_run = True
 
 
-class CustomizedLocalScheduler(luigi.scheduler.CentralPlannerScheduler):
+class CustomizedLocalScheduler(luigi.scheduler.Scheduler):
 
     def __init__(self, *args, **kwargs):
         super(CustomizedLocalScheduler, self).__init__(*args, **kwargs)

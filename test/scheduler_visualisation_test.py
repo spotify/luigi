@@ -102,7 +102,7 @@ class OddFibTask(luigi.Task):
 class SchedulerVisualisationTest(unittest.TestCase):
 
     def setUp(self):
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler()
+        self.scheduler = luigi.scheduler.Scheduler()
 
     def tearDown(self):
         pass
@@ -160,7 +160,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = LinearTask(100)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.dep_graph(root_task.task_id)
@@ -181,7 +181,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = LinearTask(100)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.inverse_dep_graph(LinearTask(0).task_id)
@@ -199,7 +199,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = BinaryTreeTask(1)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.dep_graph(root_task.task_id)
@@ -221,7 +221,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = LinearTask(100)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.dep_graph(root_task.task_id)
