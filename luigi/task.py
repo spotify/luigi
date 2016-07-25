@@ -146,7 +146,33 @@ class Task(object):
     #: Only works when using multiple workers.
     worker_timeout = None
 
-    config = {}
+    @property
+    def disable_num_failures(self):
+        """
+        Override this to have different ``disable_num_failures`` at task level
+        """
+        return None
+
+    @property
+    def disable_hard_timeout(self):
+        """
+        Override this to have different ``disable_hard_timeout`` at task level
+        """
+        return None
+
+    @property
+    def disable_window_seconds(self):
+        """
+        Override this to have different ``disable_window_seconds`` at task level
+        """
+        return None
+
+    @property
+    def upstream_status_when_all(self):
+        """
+        Override this to have different ``upstream_status_when_all`` at task level
+        """
+        return None
 
     @property
     def owner_email(self):

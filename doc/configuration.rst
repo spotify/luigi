@@ -749,31 +749,32 @@ user
 Configuration at Task Level
 ---------------------------
 
-Luigi also supports to define some configurations at task level like scheduling configurations. It is defined in ``config`` variable in the task.
+Luigi also supports to define some configurations at task level like scheduling configurations. It is as their names as a property variable in the task.
 
 .. code-block:: python
 
     class GenerateWordsFromHdfs(luigi.Task):
 
-        config = {
-          'disable-num-failures':5
-        }
+       @property
+       def disable_num_failures(self):
+           return 5
 
         ...
 
     class GenerateWordsFromRDB(luigi.Task):
 
-        config = {
-          'disable-num-failures':3
-        }
+       @property
+       def disable_num_failures(self):
+           return 3
 
         ...
 
     class CountLetters(luigi.Task):
 
-        config = {
-          'upstream-status-when-all':True
-        }
+       @property
+       def upstream_status_when_all(self):
+           return True
+
 
         def requires(self):
             return [GenerateWordsFromHdfs(),GenerateWordsFromRDB()]
