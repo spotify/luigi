@@ -127,6 +127,11 @@ class scheduler(Config):
 
     upstream_status_when_all = parameter.BoolParameter(default=False)
 
+    @property
+    def retry_policy(self):
+        return RetryPolicy(self.disable_failures, self.disable_hard_timeout, self.disable_window,
+                           self.upstream_status_when_all)
+
 
 class Failures(object):
     """
@@ -176,7 +181,7 @@ class Failures(object):
 
 
 _retry_policy_fields = [
-    "disable_num_failures",
+    "retry_count",
     "disable_hard_timeout",
     "disable_window",
     "upstream_status_when_all",
@@ -221,9 +226,6 @@ class Task(object):
         self.params = _get_default(params, {})
 
         self.retry_policy = _get_default(retry_policy, _get_empty_retry_policy())
-        self.disable_failures = self.retry_policy.disable_num_failures
-        self.disable_hard_timeout = self.retry_policy.disable_hard_timeout
-        self.upstream_status_when_all = self.retry_policy.upstream_status_when_all
         self.failures = Failures(self.retry_policy.disable_window)
         self.tracking_url = tracking_url
         self.status_message = status_message
@@ -238,13 +240,12 @@ class Task(object):
 
     def has_excessive_failures(self):
         if self.failures.first_failure_time is not None:
-            if (time.time() >= self.failures.first_failure_time + self.disable_hard_timeout):
+            if (time.time() >= self.failures.first_failure_time + self.retry_policy.disable_hard_timeout):
                 return True
 
-        logger.debug('%s task num failures is %s and limit is %s', self.id, self.failures.num_failures(),
-                     self.disable_failures)
-        if self.failures.num_failures() >= self.disable_failures:
-            logger.debug('%s task num failures limit(%s) is exceeded', self.id, self.disable_failures)
+        logger.debug('%s task num failures is %s and limit is %s', self.id, self.failures.num_failures(), self.retry_policy.retry_count)
+        if self.failures.num_failures() >= self.retry_policy.retry_count:
+            logger.debug('%s task num failures limit(%s) is exceeded', self.id, self.retry_policy.retry_count)
             return True
 
         return False
@@ -542,7 +543,7 @@ class Scheduler(object):
         else:
             self._task_history = history.NopHistory()
         self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
-        self._make_task = functools.partial(Task)
+        self._make_task = functools.partial(Task, retry_policy=self._config.retry_policy)
         self._worker_requests = {}
 
     def load(self):
@@ -703,18 +704,10 @@ class Scheduler(object):
             self._resources = {}
         self._resources.update(resources)
 
-    def _get_retry_policy(self, retry_policy_dict):
-        if retry_policy_dict:
-            retry_policy = RetryPolicy(**retry_policy_dict)
-        else:
-            retry_policy = _get_empty_retry_policy()
-
-        return RetryPolicy(
-            retry_policy.disable_num_failures or self._config.disable_failures,
-            retry_policy.disable_hard_timeout or self._config.disable_hard_timeout,
-            retry_policy.disable_window or self._config.disable_window,
-            retry_policy.upstream_status_when_all or self._config.upstream_status_when_all
-        )
+    def _get_retry_policy(self, task_retry_policy_dict):
+        retry_policy_dict = self._config.retry_policy._asdict()
+        retry_policy_dict.update({k: v for k, v in _get_default(task_retry_policy_dict, {}).iteritems() if v is not None})
+        return RetryPolicy(**retry_policy_dict)
 
     def _has_resources(self, needed_resources, used_resources):
         if needed_resources is None:
@@ -897,7 +890,7 @@ class Scheduler(object):
                     elif upstream_status_table[dep_id] == '' and dep.deps:
                         # This is the postorder update step when we set the
                         # status based on the previously calculated child elements
-                        if dep.upstream_status_when_all:
+                        if dep.retry_policy.upstream_status_when_all:
                             func = min
                         else:
                             func = max

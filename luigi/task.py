@@ -149,28 +149,31 @@ class Task(object):
     @property
     def disable_num_failures(self):
         """
-        Override this to have different ``disable_num_failures`` at task level
+        Override this positive integer to have different ``disable_num_failures`` at task level
+        Check :ref:`scheduler-config`
         """
         return None
 
     @property
     def disable_hard_timeout(self):
         """
-        Override this to have different ``disable_hard_timeout`` at task level
+        Override this positive integer to have different ``disable_hard_timeout`` at task level.
+        Check :ref:`scheduler-config`
         """
         return None
 
     @property
     def disable_window_seconds(self):
         """
-        Override this to have different ``disable_window_seconds`` at task level
+        Override this positive integer to have different ``disable_window_seconds`` at task level.
+        Check :ref:`scheduler-config`
         """
         return None
 
     @property
     def upstream_status_when_all(self):
         """
-        Override this to have different ``upstream_status_when_all`` at task level
+        Override this boolean to have different ``upstream_status_when_all`` at task level. Check :ref:`scheduler-config`
         """
         return None
 

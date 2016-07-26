@@ -132,13 +132,6 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600, False), task_2.retry_policy)
         self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600, False), task_3.retry_policy)
 
-        self.assertEqual(44, task_1.disable_failures)
-        self.assertEqual(False, task_1.upstream_status_when_all)
-        self.assertEqual(44, task_2.disable_failures)
-        self.assertEqual(False, task_2.upstream_status_when_all)
-        self.assertEqual(44, task_3.disable_failures)
-        self.assertEqual(False, task_3.upstream_status_when_all)
-
         cps._state._tasks = {}
         cps.add_task(worker='test_worker2', task_id='test_task_4', deps=['test_task_5', 'test_task_6'],
                      retry_policy_dict=luigi.scheduler.RetryPolicy(99, 999, 9999, True)._asdict())
@@ -159,16 +152,6 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600, False), task_5.retry_policy)
         self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600, False), task_6.retry_policy)
 
-        self.assertEqual(99, task_4.disable_failures)
-        self.assertEqual(999, task_4.disable_hard_timeout)
-        self.assertEqual(9999, task_4.failures.window)
-        self.assertEqual(True, task_4.upstream_status_when_all)
-
-        self.assertEqual(44, task_5.disable_failures)
-        self.assertEqual(False, task_5.upstream_status_when_all)
-
-        self.assertEqual(44, task_6.disable_failures)
-        self.assertEqual(False, task_6.upstream_status_when_all)
 
         cps._state._tasks = {}
         cps.add_task(worker='test_worker3', task_id='test_task_7', deps=['test_task_8', 'test_task_9'],
@@ -193,18 +176,6 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertEqual(luigi.scheduler.RetryPolicy(99, 999, 9999, True), task_8.retry_policy)
         self.assertEqual(luigi.scheduler.RetryPolicy(11, 111, 1111, False), task_9.retry_policy)
 
-        self.assertEqual(44, task_7.disable_failures)
-        self.assertEqual(False, task_7.upstream_status_when_all)
-
-        self.assertEqual(99, task_8.disable_failures)
-        self.assertEqual(999, task_8.disable_hard_timeout)
-        self.assertEqual(9999, task_8.failures.window)
-        self.assertEqual(True, task_8.upstream_status_when_all)
-
-        self.assertEqual(11, task_9.disable_failures)
-        self.assertEqual(111, task_9.disable_hard_timeout)
-        self.assertEqual(1111, task_9.failures.window)
-        self.assertEqual(False, task_9.upstream_status_when_all)
 
         # Task 7 which is disable-failures 44 and its has_excessive_failures method returns False under 44
         for i in range(43):

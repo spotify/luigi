@@ -1,85 +1,29 @@
 # -*- coding: utf-8 -*-
 
-#
-# DO NOT FORGET to set keep-alive as True.
-#
-
-
 """
 You can run this example like this:
 
     .. code:: console
 
-            $ luigi --module examples.task_level_retry_policy examples.TaskLevelRetryPolicy --worker-keep-alive --local-scheduler --scheduler-retry-delay 5
+            $ luigi --module examples.task_level_retry_policy examples.TaskLevelRetryPolicy --worker-keep-alive --local-scheduler --scheduler-retry-delay 5  --logging-conf-file test/testconfig/logging.cfg
             ...
             ... lots of spammy output
             ...
-            INFO: Informed scheduler that task   examples.TaskLevelRetryPolicy__99914b932b   has status   PENDING
-            INFO: Informed scheduler that task   SuccessTask1__99914b932b   has status   DONE
-            INFO: Informed scheduler that task   ErrorTask2__99914b932b   has status   PENDING
-            INFO: Informed scheduler that task   ErrorTask1__99914b932b   has status   PENDING
-            INFO: Done scheduling tasks
-            INFO: Running Worker with 1 processes
-            INFO: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) running   ErrorTask1()
-            ERROR: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) failed    ErrorTask1()
-            Traceback (most recent call last):
-                .....Some trace
-                raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
-            Exception: Test Exception. Retry Index 1 for ErrorTask1
-            INFO: Informed scheduler that task   ErrorTask1__99914b932b   has status   FAILED
-            INFO: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) running   ErrorTask2()
-            ERROR: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) failed    ErrorTask2()
-            Traceback (most recent call last):
-                .....Some trace
-                raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
-            Exception: Test Exception. Retry Index 1 for ErrorTask2
-            INFO: Skipping error email. Set `error-email` in the `core` section of the Luigi config file or override `owner_email` in the task to receive error emails.
-            INFO: Informed scheduler that task   ErrorTask2__99914b932b   has status   FAILED
-            INFO: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) running   ErrorTask1()
-            ERROR: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) failed    ErrorTask1()
-            Traceback (most recent call last):
-                .....Some trace
-                raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
-            Exception: Test Exception. Retry Index 2 for ErrorTask1
-            INFO: Skipping error email. Set `error-email` in the `core` section of the Luigi config file or override `owner_email` in the task to receive error emails.
-            INFO: Informed scheduler that task   ErrorTask1__99914b932b   has status   FAILED
-            INFO: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) running   ErrorTask2()
-            ERROR: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) failed    ErrorTask2()
-            Traceback (most recent call last):
-                .....Some trace
-                raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
-            Exception: Test Exception. Retry Index 2 for ErrorTask2
-            INFO: Skipping error email. Set `error-email` in the `core` section of the Luigi config file or override `owner_email` in the task to receive error emails.
-            INFO: Skipping error email. Set `error-email` in the `core` section of the Luigi config file or override `owner_email` in the task to receive error emails.
-            INFO: Informed scheduler that task   ErrorTask2__99914b932b   has status   FAILED
-            INFO: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) running   ErrorTask1()
-            ERROR: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) failed    ErrorTask1()
-            Traceback (most recent call last):
-                .....Some trace
-                raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
-            Exception: Test Exception. Retry Index 3 for ErrorTask1
-            INFO: Informed scheduler that task   ErrorTask1__99914b932b   has status   FAILED
-            INFO: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) running   ErrorTask1()
-            ERROR: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) failed    ErrorTask1()
-            Traceback (most recent call last):
-                .....Some trace
-                raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
-            Exception: Test Exception. Retry Index 4 for ErrorTask1
-            INFO: Skipping error email. Set `error-email` in the `core` section of the Luigi config file or override `owner_email` in the task to receive error emails.
-            INFO: Informed scheduler that task   ErrorTask1__99914b932b   has status   FAILED
-            INFO: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) running   ErrorTask1()
-            ERROR: [pid 90370] Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) failed    ErrorTask1()
-            Traceback (most recent call last):
-                .....Some trace
-                raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
-            Exception: Test Exception. Retry Index 5 for ErrorTask1
-            INFO: Informed scheduler that task   ErrorTask1__99914b932b   has status   FAILED
-            INFO: Worker Worker(salt=055067228, workers=1, host=Ahmets-MacBook-Air.local, username=ahmetdal, pid=90370) was stopped. Shutting down Keep-Alive thread
+            DEBUG: ErrorTask1__99914b932b task num failures is 1 and limit is 5
+            DEBUG: ErrorTask2__99914b932b task num failures is 1 and limit is 2
+            DEBUG: ErrorTask2__99914b932b task num failures limit(2) is exceeded
+            DEBUG: ErrorTask1__99914b932b task num failures is 2 and limit is 5
+            DEBUG: ErrorTask2__99914b932b task num failures is 2 and limit is 2
+            DEBUG: ErrorTask1__99914b932b task num failures is 3 and limit is 5
+            DEBUG: ErrorTask1__99914b932b task num failures is 4 and limit is 5
+            DEBUG: ErrorTask1__99914b932b task num failures is 5 and limit is 5
+            DEBUG: ErrorTask1__99914b932b task num failures limit(5) is exceeded
             INFO:
             ===== Luigi Execution Summary =====
 
-            Scheduled 4 tasks of which:
-            * 1 present dependencies were encountered:
+            Scheduled 5 tasks of which:
+            * 2 ran successfully:
+                - 1 SuccessSubTask1()
                 - 1 SuccessTask1()
             * 2 failed:
                 - 1 ErrorTask1()
@@ -97,8 +41,6 @@ As it seems, While ``ErrorTask1`` is retried 5 times (Exception: Test Exception.
 ``ErrorTask2`` is retried 2 times (Exception: Test Exception. Retry Index 2 for ErrorTask2). Luigi keeps retrying
 while keep-alive mode is active.
 """
-
-from uuid import uuid4
 
 import luigi
 
@@ -121,15 +63,13 @@ class TaskLevelRetryPolicy(luigi.WrapperTask):
 
     task_namespace = 'examples'
 
-    @property
-    def upstream_status_when_all(self):
-        return True
+    upstream_status_when_all = True
 
     def requires(self):
         return [ErrorTask1(), ErrorTask2(), SuccessTask1()]
 
     def output(self):
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % uuid4())
+        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
 
 
 class ErrorTask1(luigi.Task):
@@ -139,16 +79,14 @@ class ErrorTask1(luigi.Task):
 
     retry = 0
 
-    @property
-    def disable_num_failures(self):
-        return 5
+    disable_num_failures = 5
 
     def run(self):
         self.retry += 1
         raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
 
     def output(self):
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % uuid4())
+        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
 
 
 class ErrorTask2(luigi.Task):
@@ -158,16 +96,14 @@ class ErrorTask2(luigi.Task):
 
     retry = 0
 
-    @property
-    def disable_num_failures(self):
-        return 2
+    disable_num_failures = 2
 
     def run(self):
         self.retry += 1
         raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
 
     def output(self):
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % uuid4())
+        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj'  % self.task_id)
 
 
 class SuccessTask1(luigi.Task):
@@ -194,6 +130,3 @@ class SuccessSubTask1(luigi.Task):
     def output(self):
         return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
 
-
-if __name__ == '__main__':
-    luigi.run()
