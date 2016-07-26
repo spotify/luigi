@@ -11,9 +11,6 @@
 .. image:: https://landscape.io/github/spotify/luigi/master/landscape.svg?style=flat
    :target: https://landscape.io/github/spotify/luigi/master
 
-.. image:: https://img.shields.io/pypi/dm/luigi.svg?style=flat
-   :target: https://pypi.python.org/pypi/luigi
-
 .. image:: https://img.shields.io/pypi/v/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
