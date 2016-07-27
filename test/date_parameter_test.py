@@ -34,6 +34,10 @@ class DateMinuteTask(luigi.Task):
     dm = luigi.DateMinuteParameter()
 
 
+class DateSecondTask(luigi.Task):
+    ds = luigi.DateSecondParameter()
+
+
 class MonthTask(luigi.Task):
     month = luigi.MonthParameter()
 
@@ -106,6 +110,24 @@ class DateMinuteParameterTest(unittest.TestCase):
     def test_serialize_task(self):
         t = DateMinuteTask(datetime.datetime(2013, 2, 1, 18, 42, 0))
         self.assertEqual(str(t), 'DateMinuteTask(dm=2013-02-01T1842)')
+
+
+class DateSecondParameterTest(unittest.TestCase):
+    def test_parse(self):
+        ds = luigi.DateSecondParameter().parse('2013-02-01T184227')
+        self.assertEqual(ds, datetime.datetime(2013, 2, 1, 18, 42, 27))
+
+    def test_serialize(self):
+        ds = luigi.DateSecondParameter().serialize(datetime.datetime(2013, 2, 1, 18, 42, 27))
+        self.assertEqual(ds, '2013-02-01T184227')
+
+    def test_parse_interface(self):
+        in_parse(["DateSecondTask", "--ds", "2013-02-01T184227"],
+                 lambda task: self.assertEqual(task.ds, datetime.datetime(2013, 2, 1, 18, 42, 27)))
+
+    def test_serialize_task(self):
+        t = DateSecondTask(datetime.datetime(2013, 2, 1, 18, 42, 27))
+        self.assertEqual(str(t), 'DateSecondTask(ds=2013-02-01T184227)')
 
 
 class MonthParameterTest(unittest.TestCase):
