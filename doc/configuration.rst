@@ -269,7 +269,7 @@ retry_external_tasks
   This means that if external dependencies are satisfied after a workflow has
   started, any tasks dependent on that resource will be eligible for running.
   Note: Every time the task remains incomplete, it will count as FAILED, so
-  normal retry logic applies (see: `disable-num-failures` and `retry-delay`).
+  normal retry logic applies (see: `retry-count` and `retry-delay`).
   This setting works best with `worker-keep-alive: true`.
   If false, external tasks will only be evaluated when Luigi is first invoked.
   In this case, Luigi will not check whether external dependencies are
@@ -550,10 +550,10 @@ disable-hard-timeout
   **again** after this amount of time. E.g. if this was set to 600
   (i.e. 10 minutes), and the task first failed at 10:00am, the task would
   be disabled if it failed again any time after 10:10am. Note: This setting
-  does not consider the values of the `disable-num-failures` or
+  does not consider the values of the `retry-count` or
   `disable-window-seconds` settings.
 
-disable-num-failures
+retry-count
   Number of times a task can fail within disable-window-seconds before
   the scheduler will automatically disable it. If not set, the scheduler
   will not automatically disable jobs.
@@ -563,7 +563,7 @@ disable-persist-seconds
   Defaults to 86400 (1 day).
 
 disable-window-seconds
-  Number of seconds during which disable-num-failures failures must
+  Number of seconds during which retry-count failures must
   occur in order for an automatic disable by the scheduler. The
   scheduler forgets about disables that have occurred longer ago than
   this amount of time. Defaults to 3600 (1 hour).
@@ -763,15 +763,15 @@ Supported Configurations
 ************************
 The configrations below are also definable in luigi config file. Check :ref:`scheduler-config`
 
-+--------------------------+-----------+
-| Config                   | Section   |
-+==========================+===========+
-| disable-num-failures     | scheduler |
-+--------------------------+-----------+
-| disable-hard-timeout     | scheduler |
-+--------------------------+-----------+
-| disable-window-seconds   | scheduler |
-+--------------------------+-----------+
++------------------------+-----------+
+| Config                 | Section   |
++========================+===========+
+| retry-count            | scheduler |
++------------------------+-----------+
+| disable-hard-timeout   | scheduler |
++------------------------+-----------+
+| disable-window-seconds | scheduler |
++------------------------+-----------+
 
 
 

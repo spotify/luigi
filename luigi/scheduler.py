@@ -113,7 +113,7 @@ class scheduler(Config):
     disable_window = parameter.IntParameter(default=3600,
                                             config_path=dict(section='scheduler', name='disable-window-seconds'))
     retry_count = parameter.IntParameter(default=999999999,
-                                              config_path=dict(section='scheduler', name='disable-num-failures'))
+                                         config_path=dict(section='scheduler', name='retry-count'))
     disable_hard_timeout = parameter.IntParameter(default=999999999,
                                                   config_path=dict(section='scheduler', name='disable-hard-timeout'))
     disable_persist = parameter.IntParameter(default=86400,
@@ -125,7 +125,7 @@ class scheduler(Config):
 
     prune_on_get_work = parameter.BoolParameter(default=False)
 
-    def get_retry_policy(self):
+    def _get_retry_policy(self):
         return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
 
 
@@ -538,7 +538,7 @@ class Scheduler(object):
         else:
             self._task_history = history.NopHistory()
         self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
-        self._make_task = functools.partial(Task, retry_policy=self._config.get_retry_policy())
+        self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}
 
     def load(self):
@@ -618,7 +618,7 @@ class Scheduler(object):
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
                 priority=priority, family=family, module=module, params=params,
-                retry_policy=self._get_retry_policy(retry_policy_dict)
+                retry_policy=self._generate_retry_policy(retry_policy_dict)
             )
         else:
             _default_task = None
@@ -674,7 +674,7 @@ class Scheduler(object):
             for dep in task.deps or []:
                 t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None,
                                                                          priority=priority,
-                                                                         retry_policy=self._get_retry_policy(
+                                                                         retry_policy=self._generate_retry_policy(
                                                                              deps_retry_policy_dicts.get(dep))))
                 t.stakeholders.add(worker_id)
 
@@ -699,8 +699,8 @@ class Scheduler(object):
             self._resources = {}
         self._resources.update(resources)
 
-    def _get_retry_policy(self, task_retry_policy_dict):
-        retry_policy_dict = self._config.get_retry_policy()._asdict()
+    def _generate_retry_policy(self, task_retry_policy_dict):
+        retry_policy_dict = self._config._get_retry_policy()._asdict()
         retry_policy_dict.update({k: v for k, v in _get_default(task_retry_policy_dict, {}).iteritems() if v is not None})
         return RetryPolicy(**retry_policy_dict)
 
@@ -885,8 +885,8 @@ class Scheduler(object):
                     elif upstream_status_table[dep_id] == '' and dep.deps:
                         # This is the postorder update step when we set the
                         # status based on the previously calculated child elements
-                        status = min(list(upstream_status_table.get(a_task_id) for a_task_id in dep.deps if
-                                           a_task_id in upstream_status_table) or [''], key=UPSTREAM_SEVERITY_KEY)
+                        upstream_severities = list(upstream_status_table.get(a_task_id) for a_task_id in dep.deps if a_task_id in upstream_status_table) or ['']
+                        status = min(upstream_severities, key=UPSTREAM_SEVERITY_KEY)
                         upstream_status_table[dep_id] = status
             return upstream_status_table[dep_id]
 
@@ -1025,8 +1025,7 @@ class Scheduler(object):
             def filter_func(t):
                 return all(term in t.pretty_id for term in terms)
         for task in filter(filter_func, self._state.get_active_tasks(status)):
-            if (task.status != PENDING or not upstream_status or
-                    upstream_status == self._upstream_status(task.id, upstream_status_table)):
+            if task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id, upstream_status_table):
                 serialized = self._serialize_task(task.id, False)
                 result[task.id] = serialized
         if limit and len(result) > self._config.max_shown_tasks:

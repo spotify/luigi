@@ -19,14 +19,13 @@ from __future__ import print_function
 import pickle
 import tempfile
 import time
-from helpers import unittest
 
 import luigi.scheduler
+from helpers import unittest
 from helpers import with_config
 
 
 class SchedulerIoTest(unittest.TestCase):
-
     def test_load_old_state(self):
         tasks = {}
         active_workers = {'Worker1': 1e9, 'Worker2': time.time()}
@@ -54,7 +53,7 @@ class SchedulerIoTest(unittest.TestCase):
 
             self.assertEqual(list(state.get_worker_ids()), [])
 
-    @with_config({'scheduler': {'disable-num-failures': '44', 'worker-disconnect-delay': '55'}})
+    @with_config({'scheduler': {'retry-count': '44', 'worker-disconnect-delay': '55'}})
     def test_scheduler_with_config(self):
         scheduler = luigi.scheduler.Scheduler()
         self.assertEqual(44, scheduler._config.retry_count)
@@ -93,6 +92,7 @@ class SchedulerIoTest(unittest.TestCase):
                 scheduler._state._state_path = fn.name
                 scheduler.load()
                 return scheduler
+
             scheduler = reload_from_disk(scheduler=scheduler)
             self.assertEqual(scheduler.get_work(worker='B')['task_id'], '2')
             self.assertEqual(scheduler.get_work(worker='C')['task_id'], '3')
@@ -111,7 +111,7 @@ class SchedulerIoTest(unittest.TestCase):
 
         worker.prune(TmpCfg())
 
-    @with_config({'scheduler': {'disable-num-failures': '44'}})
+    @with_config({'scheduler': {'retry-count': '44'}})
     def test_scheduler_with_task_level_retry_policy(self):
         cps = luigi.scheduler.Scheduler()
 
@@ -152,7 +152,6 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600), task_5.retry_policy)
         self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600), task_6.retry_policy)
 
-
         cps._state._tasks = {}
         cps.add_task(worker='test_worker3', task_id='test_task_7', deps=['test_task_8', 'test_task_9'],
                      deps_retry_policy_dicts={
@@ -175,7 +174,6 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600), task_7.retry_policy)
         self.assertEqual(luigi.scheduler.RetryPolicy(99, 999, 9999), task_8.retry_policy)
         self.assertEqual(luigi.scheduler.RetryPolicy(11, 111, 1111), task_9.retry_policy)
-
 
         # Task 7 which is disable-failures 44 and its has_excessive_failures method returns False under 44
         for i in range(43):

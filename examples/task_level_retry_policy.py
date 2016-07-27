@@ -5,7 +5,9 @@ You can run this example like this:
 
     .. code:: console
 
-            $ luigi --module examples.task_level_retry_policy examples.TaskLevelRetryPolicy --worker-keep-alive --local-scheduler --scheduler-retry-delay 5  --logging-conf-file test/testconfig/logging.cfg
+            $ luigi --module examples.task_level_retry_policy examples.TaskLevelRetryPolicy --worker-keep-alive \
+            --local-scheduler --scheduler-retry-delay 5  --logging-conf-file test/testconfig/logging.cfg
+
             ...
             ... lots of spammy output
             ...
@@ -93,7 +95,7 @@ class ErrorTask2(luigi.Task):
         raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
 
     def output(self):
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj'  % self.task_id)
+        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
 
 
 class SuccessTask1(luigi.Task):
@@ -119,4 +121,3 @@ class SuccessSubTask1(luigi.Task):
 
     def output(self):
         return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
-
