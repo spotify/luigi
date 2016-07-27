@@ -108,11 +108,11 @@ class scheduler(Config):
     worker_disconnect_delay = parameter.FloatParameter(default=60.0)
     state_path = parameter.Parameter(default='/var/lib/luigi-server/state.pickle')
 
-    # Jobs are disabled if we see more than disable_failures failures in disable_window seconds.
+    # Jobs are disabled if we see more than retry_count failures in disable_window seconds.
     # These disables last for disable_persist seconds.
     disable_window = parameter.IntParameter(default=3600,
                                             config_path=dict(section='scheduler', name='disable-window-seconds'))
-    disable_failures = parameter.IntParameter(default=999999999,
+    retry_count = parameter.IntParameter(default=999999999,
                                               config_path=dict(section='scheduler', name='disable-num-failures'))
     disable_hard_timeout = parameter.IntParameter(default=999999999,
                                                   config_path=dict(section='scheduler', name='disable-hard-timeout'))
@@ -125,12 +125,8 @@ class scheduler(Config):
 
     prune_on_get_work = parameter.BoolParameter(default=False)
 
-    upstream_status_when_all = parameter.BoolParameter(default=False)
-
-    @property
-    def retry_policy(self):
-        return RetryPolicy(self.disable_failures, self.disable_hard_timeout, self.disable_window,
-                           self.upstream_status_when_all)
+    def get_retry_policy(self):
+        return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
 
 
 class Failures(object):
@@ -184,7 +180,6 @@ _retry_policy_fields = [
     "retry_count",
     "disable_hard_timeout",
     "disable_window",
-    "upstream_status_when_all",
 ]
 RetryPolicy = collections.namedtuple("RetryPolicy", _retry_policy_fields)
 
@@ -428,7 +423,7 @@ class SimpleTaskState(object):
                     'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
                     '{task} failed {failures} times in the last {window} seconds, so it is being '
                     'disabled for {persist} seconds'.format(
-                        failures=config.disable_failures,
+                        failures=task.retry_policy.retry_count,
                         task=task.id,
                         window=config.disable_window,
                         persist=config.disable_persist,
@@ -543,7 +538,7 @@ class Scheduler(object):
         else:
             self._task_history = history.NopHistory()
         self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
-        self._make_task = functools.partial(Task, retry_policy=self._config.retry_policy)
+        self._make_task = functools.partial(Task, retry_policy=self._config.get_retry_policy())
         self._worker_requests = {}
 
     def load(self):
@@ -705,7 +700,7 @@ class Scheduler(object):
         self._resources.update(resources)
 
     def _get_retry_policy(self, task_retry_policy_dict):
-        retry_policy_dict = self._config.retry_policy._asdict()
+        retry_policy_dict = self._config.get_retry_policy()._asdict()
         retry_policy_dict.update({k: v for k, v in _get_default(task_retry_policy_dict, {}).iteritems() if v is not None})
         return RetryPolicy(**retry_policy_dict)
 
@@ -890,12 +885,7 @@ class Scheduler(object):
                     elif upstream_status_table[dep_id] == '' and dep.deps:
                         # This is the postorder update step when we set the
                         # status based on the previously calculated child elements
-                        if dep.retry_policy.upstream_status_when_all:
-                            func = min
-                        else:
-                            func = max
-
-                        status = func(list(upstream_status_table.get(a_task_id) for a_task_id in dep.deps if
+                        status = min(list(upstream_status_table.get(a_task_id) for a_task_id in dep.deps if
                                            a_task_id in upstream_status_table) or [''], key=UPSTREAM_SEVERITY_KEY)
                         upstream_status_table[dep_id] = status
             return upstream_status_table[dep_id]

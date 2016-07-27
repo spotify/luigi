@@ -171,13 +171,6 @@ class Task(object):
         return None
 
     @property
-    def upstream_status_when_all(self):
-        """
-        Override this boolean to have different ``upstream_status_when_all`` at task level. Check :ref:`scheduler-config`
-        """
-        return None
-
-    @property
     def owner_email(self):
         '''
         Override this to send out additional error emails to task owner, in addition to the one

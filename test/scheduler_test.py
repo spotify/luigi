@@ -57,13 +57,13 @@ class SchedulerIoTest(unittest.TestCase):
     @with_config({'scheduler': {'disable-num-failures': '44', 'worker-disconnect-delay': '55'}})
     def test_scheduler_with_config(self):
         scheduler = luigi.scheduler.Scheduler()
-        self.assertEqual(44, scheduler._config.disable_failures)
-        self.assertEqual(55, scheduler._config.worker_disconnect_delay)
+        self.assertEqual(44, scheduler._config.retry_count)
+        self.assertEqual(55, scheduler._config.retry_count)
 
         # Override
-        scheduler = luigi.scheduler.Scheduler(disable_failures=66,
+        scheduler = luigi.scheduler.Scheduler(retry_count=66,
                                               worker_disconnect_delay=77)
-        self.assertEqual(66, scheduler._config.disable_failures)
+        self.assertEqual(66, scheduler._config.retry_count)
         self.assertEqual(77, scheduler._config.worker_disconnect_delay)
 
     @with_config({'resources': {'a': '100', 'b': '200'}})
@@ -128,13 +128,13 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertEqual('test_task_2', task_2.id)
         self.assertEqual('test_task_3', task_3.id)
 
-        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600, False), task_1.retry_policy)
-        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600, False), task_2.retry_policy)
-        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600, False), task_3.retry_policy)
+        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600), task_1.retry_policy)
+        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600), task_2.retry_policy)
+        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600), task_3.retry_policy)
 
         cps._state._tasks = {}
         cps.add_task(worker='test_worker2', task_id='test_task_4', deps=['test_task_5', 'test_task_6'],
-                     retry_policy_dict=luigi.scheduler.RetryPolicy(99, 999, 9999, True)._asdict())
+                     retry_policy_dict=luigi.scheduler.RetryPolicy(99, 999, 9999)._asdict())
 
         tasks = list(cps._state.get_active_tasks())
         self.assertEqual(3, len(tasks))
@@ -148,16 +148,16 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertEqual('test_task_5', task_5.id)
         self.assertEqual('test_task_6', task_6.id)
 
-        self.assertEqual(luigi.scheduler.RetryPolicy(99, 999, 9999, True), task_4.retry_policy)
-        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600, False), task_5.retry_policy)
-        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600, False), task_6.retry_policy)
+        self.assertEqual(luigi.scheduler.RetryPolicy(99, 999, 9999), task_4.retry_policy)
+        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600), task_5.retry_policy)
+        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600), task_6.retry_policy)
 
 
         cps._state._tasks = {}
         cps.add_task(worker='test_worker3', task_id='test_task_7', deps=['test_task_8', 'test_task_9'],
                      deps_retry_policy_dicts={
-                         'test_task_8': luigi.scheduler.RetryPolicy(99, 999, 9999, True)._asdict(),
-                         'test_task_9': luigi.scheduler.RetryPolicy(11, 111, 1111, False)._asdict(),
+                         'test_task_8': luigi.scheduler.RetryPolicy(99, 999, 9999)._asdict(),
+                         'test_task_9': luigi.scheduler.RetryPolicy(11, 111, 1111)._asdict(),
                      })
 
         tasks = list(cps._state.get_active_tasks())
@@ -172,9 +172,9 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertEqual('test_task_8', task_8.id)
         self.assertEqual('test_task_9', task_9.id)
 
-        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600, False), task_7.retry_policy)
-        self.assertEqual(luigi.scheduler.RetryPolicy(99, 999, 9999, True), task_8.retry_policy)
-        self.assertEqual(luigi.scheduler.RetryPolicy(11, 111, 1111, False), task_9.retry_policy)
+        self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600), task_7.retry_policy)
+        self.assertEqual(luigi.scheduler.RetryPolicy(99, 999, 9999), task_8.retry_policy)
+        self.assertEqual(luigi.scheduler.RetryPolicy(11, 111, 1111), task_9.retry_policy)
 
 
         # Task 7 which is disable-failures 44 and its has_excessive_failures method returns False under 44

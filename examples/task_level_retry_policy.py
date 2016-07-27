@@ -49,21 +49,11 @@ class TaskLevelRetryPolicy(luigi.WrapperTask):
     """
         Wrapper class for some error and success tasks. Worker won't be shutdown unless there is
         pending tasks or failed tasks which will be retried. While keep-alive is active, workers
-        are not shutdown while there is/are some pending task(s). This task also has a task level
-        config which is ``upstream-status-when-all``;This configuration is about how workers behaves
-        to set ``TaskLevelRetryPolicy`` status according to it's upstream tasks which are ``ErrorTask1``,
-        ``ErrorTask2`` and ``SuccessTask1``. If this config is set as ``False``, Any of upstream task
-        ``FAILED`` or ``DISABLED`` will make ``TaskLevelRetryPolicy`` ``FAILED`` or ``DISABLED`` which also means,
-        shut the worker down immediately. While this is ``True``, all upstream tasks should be ``FAILED``
-        or ``DISABLED``, worker to set ``TaskLevelRetryPolicy`` status as ``FAILED`` or ``DISABLED``.
-        ``TaskLevelRetryPolicy`` will remain as PENDING unless all of its upstream task severities (so does not
-        contains SUCCESS tasks) are ``FAILED`` or ``DISABLED``
+        are not shutdown while there is/are some pending task(s).
 
     """
 
     task_namespace = 'examples'
-
-    upstream_status_when_all = True
 
     def requires(self):
         return [ErrorTask1(), ErrorTask2(), SuccessTask1()]

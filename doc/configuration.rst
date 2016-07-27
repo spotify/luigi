@@ -602,19 +602,6 @@ worker-disconnect-delay
   scheduler before removing it and marking all of its running tasks as
   failed. Defaults to 60.
 
-upstream-status-when-all
-  Definition of how to set a task status as its upstream task statuses. 
-  If this is set as ``True``, it means the task status set as min severity status among
-  upstream tasks. Otherwise it is set as max. For example; If this is set
-  as ``True``, the task status will be ``DISABLED`` or ``FAILED`` when all of its
-  upstream task statuses are ``DISABLED`` or ```FAILED```. Otherwise any of its
-  upstream task status will be set as the task status. This is helpfull
-  configuration while luigi tasks have a feature to define configuration
-  at task level and those have different ``disable-num-failures`` values.
-  Worker won't be shut down until last ``DISABLED`` task. Otherwise, First
-  ``DISABLED`` task will make the task ``DISABLED`` and cause the worker is
-  shutdown. Defaults to ``False``
-
 
 [spark]
 -------
@@ -755,29 +742,20 @@ Luigi also supports to define some configurations at task level like scheduling 
 
     class GenerateWordsFromHdfs(luigi.Task):
 
-       @property
-       def disable_num_failures(self):
-           return 5
+       disable_num_failures = 5
 
         ...
 
-    class GenerateWordsFromRDB(luigi.Task):
+    class GenerateWordsFromRDBM(luigi.Task):
 
-       @property
-       def disable_num_failures(self):
-           return 3
+       disable_num_failures = 3
 
         ...
 
     class CountLetters(luigi.Task):
 
-       @property
-       def upstream_status_when_all(self):
-           return True
-
-
         def requires(self):
-            return [GenerateWordsFromHdfs(),GenerateWordsFromRDB()]
+            return [GenerateWordsFromHdfs(),GenerateWordsFromRDBM()]
 
         ...
 
@@ -793,8 +771,6 @@ The configrations below are also definable in luigi config file. Check :ref:`sch
 | disable-hard-timeout     | scheduler |
 +--------------------------+-----------+
 | disable-window-seconds   | scheduler |
-+--------------------------+-----------+
-| upstream-status-when-all | scheduler |
 +--------------------------+-----------+
 
 
