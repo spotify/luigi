@@ -34,7 +34,7 @@ Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 import unittest
 
 import luigi
-from luigi.contrib.ecs import ECSTask, _get_task_statuses
+from luigi.contrib.ecs import ECSTask, _get_task_statuses, _get_task_descriptions
 
 try:
     import boto3
@@ -56,13 +56,64 @@ TEST_TASK_DEF = {
     ]
 }
 
+MISSING_COMMAND_TASK_DEF = {
+    'family': 'hello-world',
+    'volumes': [],
+    'containerDefinitions': [
+        {
+            'memory': 1,
+            'essential': True,
+            'name': 'hello-world',
+            'image': 'ubuntu',
+            'command': ['doesnotexist']
+        }
+    ]
+}
+
+NON_ZERO_EXIT_CODE_TASK_DEF = {
+    'family': 'hello-world',
+    'volumes': [],
+    'containerDefinitions': [
+        {
+            'memory': 1,
+            'essential': True,
+            'name': 'hello-world',
+            'image': 'ubuntu',
+            'command': ['sh', '-c', 'exit 123']
+        }
+    ]
+}
+
+
+NON_ESSENTIAL_FAILURE = {
+    'family': 'hello-world',
+    'volumes': [],
+    'containerDefinitions': [
+        {
+            'memory': 1,
+            'essential': True,
+            'name': 'hello-world',
+            'image': 'ubuntu',
+            'command': ['/bin/echo', 'hello world']
+        },
+        {
+            'memory': 1,
+            'essential': False,
+            'name': 'non-essential-hello-world',
+            'image': 'ubuntu',
+            'command': ['doesnotexist']
+        }
+    ]
+}
+
 
 class ECSTaskNoOutput(ECSTask):
 
     def complete(self):
         if self.ecs_task_ids:
+            task_definitions = _get_task_descriptions(self.ecs_task_ids)
             return all([status == 'STOPPED'
-                        for status in _get_task_statuses(self.ecs_task_ids)])
+                        for status in _get_task_statuses(task_definitions)])
         return False
 
 
@@ -91,3 +142,18 @@ class TestECSTask(unittest.TestCase):
     def test_override_command(self):
         t = ECSTaskOverrideCommand(task_def_arn=self.arn)
         luigi.build([t], local_scheduler=True)
+
+    def test_missing_command_failure_task(self):
+        t = ECSTaskNoOutput(task_def=MISSING_COMMAND_TASK_DEF)
+        scheduled = luigi.build([t], local_scheduler=True)
+        self.assertFalse(scheduled)
+
+    def test_non_zero_exit_code_failure_task(self):
+        t = ECSTaskNoOutput(task_def=NON_ZERO_EXIT_CODE_TASK_DEF)
+        scheduled = luigi.build([t], local_scheduler=True)
+        self.assertFalse(scheduled)
+
+    def test_ignore_non_essential_failure_task(self):
+        t = ECSTaskNoOutput(task_def=NON_ESSENTIAL_FAILURE)
+        scheduled = luigi.build([t], local_scheduler=True)
+        self.assertTrue(scheduled)
