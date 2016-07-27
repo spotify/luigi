@@ -46,17 +46,6 @@ from luigi.task import Config
 
 logger = logging.getLogger(__name__)
 
-
-class Scheduler(object):
-    """
-    Abstract base class.
-
-    Note that the methods all take string arguments, not Task objects...
-    """""
-    add_task = NotImplemented
-    get_work = NotImplemented
-    ping = NotImplemented
-
 UPSTREAM_RUNNING = 'UPSTREAM_RUNNING'
 UPSTREAM_MISSING_INPUT = 'UPSTREAM_MISSING_INPUT'
 UPSTREAM_FAILED = 'UPSTREAM_FAILED'
@@ -107,6 +96,7 @@ def rpc_method(**request_args):
 
         RPC_METHODS[fn_name] = rpc_func
         return fn
+
     return _rpc_method
 
 
@@ -118,12 +108,12 @@ class scheduler(Config):
     worker_disconnect_delay = parameter.FloatParameter(default=60.0)
     state_path = parameter.Parameter(default='/var/lib/luigi-server/state.pickle')
 
-    # Jobs are disabled if we see more than disable_failures failures in disable_window seconds.
+    # Jobs are disabled if we see more than retry_count failures in disable_window seconds.
     # These disables last for disable_persist seconds.
     disable_window = parameter.IntParameter(default=3600,
                                             config_path=dict(section='scheduler', name='disable-window-seconds'))
-    disable_failures = parameter.IntParameter(default=999999999,
-                                              config_path=dict(section='scheduler', name='disable-num-failures'))
+    retry_count = parameter.IntParameter(default=999999999,
+                                         config_path=dict(section='scheduler', name='retry-count'))
     disable_hard_timeout = parameter.IntParameter(default=999999999,
                                                   config_path=dict(section='scheduler', name='disable-hard-timeout'))
     disable_persist = parameter.IntParameter(default=86400,
@@ -135,9 +125,8 @@ class scheduler(Config):
 
     prune_on_get_work = parameter.BoolParameter(default=False)
 
-    upstream_status_when_all = parameter.BoolParameter(default=False,
-                                                       config_path=dict(section='scheduler',
-                                                                        name='upstream-status-when-all'))
+    def _get_retry_policy(self):
+        return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
 
 
 class Failures(object):
@@ -187,6 +176,18 @@ class Failures(object):
         self.failures.clear()
 
 
+_retry_policy_fields = [
+    "retry_count",
+    "disable_hard_timeout",
+    "disable_window",
+]
+RetryPolicy = collections.namedtuple("RetryPolicy", _retry_policy_fields)
+
+
+def _get_empty_retry_policy():
+    return RetryPolicy(*[None] * len(_retry_policy_fields))
+
+
 def _get_default(x, default):
     if x is not None:
         return x
@@ -195,11 +196,8 @@ def _get_default(x, default):
 
 
 class Task(object):
-
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
-                 params=None, disable_failures=None, disable_window=None, disable_hard_timeout=None,
-                 tracking_url=None, status_message=None, task_config=None, deps_configs=None,
-                 upstream_status_when_all=None):
+                 params=None, tracking_url=None, status_message=None, retry_policy=None):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -208,7 +206,6 @@ class Task(object):
         else:
             self.deps = set(deps)
 
-        self.deps_configs = _get_default(deps_configs, {})
         self.status = status  # PENDING, RUNNING, FAILED or DONE
         self.time = time.time()  # Timestamp when task was first added
         self.updated = self.time
@@ -223,12 +220,8 @@ class Task(object):
         self.module = module
         self.params = _get_default(params, {})
 
-        self.config = _get_default(task_config, {})
-
-        self.disable_failures = disable_failures
-        self.disable_hard_timeout = disable_hard_timeout
-        self.upstream_status_when_all = upstream_status_when_all
-        self.failures = Failures(disable_window)
+        self.retry_policy = _get_default(retry_policy, _get_empty_retry_policy())
+        self.failures = Failures(self.retry_policy.disable_window)
         self.tracking_url = tracking_url
         self.status_message = status_message
         self.scheduler_disable_time = None
@@ -242,13 +235,12 @@ class Task(object):
 
     def has_excessive_failures(self):
         if self.failures.first_failure_time is not None:
-            if (time.time() >= self.failures.first_failure_time + self.disable_hard_timeout):
+            if (time.time() >= self.failures.first_failure_time + self.retry_policy.disable_hard_timeout):
                 return True
 
-        logger.debug('%s task num failures is %s and limit is %s', self.id, self.failures.num_failures(),
-                     self.disable_failures)
-        if self.failures.num_failures() >= self.disable_failures:
-            logger.debug('%s task num failures limit(%s) is exceeded', self.id, self.disable_failures)
+        logger.debug('%s task num failures is %s and limit is %s', self.id, self.failures.num_failures(), self.retry_policy.retry_count)
+        if self.failures.num_failures() >= self.retry_policy.retry_count:
+            logger.debug('%s task num failures limit(%s) is exceeded', self.id, self.retry_policy.retry_count)
             return True
 
         return False
@@ -431,7 +423,7 @@ class SimpleTaskState(object):
                     'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
                     '{task} failed {failures} times in the last {window} seconds, so it is being '
                     'disabled for {persist} seconds'.format(
-                        failures=config.disable_failures,
+                        failures=task.retry_policy.retry_count,
                         task=task.id,
                         window=config.disable_window,
                         persist=config.disable_persist,
@@ -490,7 +482,7 @@ class SimpleTaskState(object):
                 continue
             last_get_work = getattr(worker, 'last_get_work', None)
             if last_get_work_gt is not None and (
-                    last_get_work is None or last_get_work <= last_get_work_gt):
+                            last_get_work is None or last_get_work <= last_get_work_gt):
                 continue
             yield worker
 
@@ -521,7 +513,7 @@ class SimpleTaskState(object):
             self.get_worker(worker).disabled = True
 
 
-class CentralPlannerScheduler(Scheduler):
+class Scheduler(object):
     """
     Async scheduler that can handle multiple workers, etc.
 
@@ -546,12 +538,7 @@ class CentralPlannerScheduler(Scheduler):
         else:
             self._task_history = history.NopHistory()
         self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
-        self._make_task = functools.partial(
-            Task, disable_failures=self._config.disable_failures,
-            disable_hard_timeout=self._config.disable_hard_timeout,
-            disable_window=self._config.disable_window,
-            upstream_status_when_all=self._config.upstream_status_when_all
-        )
+        self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}
 
     def load(self):
@@ -615,7 +602,7 @@ class CentralPlannerScheduler(Scheduler):
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
                  assistant=False, tracking_url=None, worker=None,
-                 task_config=None, deps_configs=None, new_deps_configs=None, **kwargs):
+                 retry_policy_dict=None, deps_retry_policy_dicts=None, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -631,7 +618,7 @@ class CentralPlannerScheduler(Scheduler):
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
                 priority=priority, family=family, module=module, params=params,
-                **self._get_task_level_config(task_config)
+                retry_policy=self._generate_retry_policy(retry_policy_dict)
             )
         else:
             _default_task = None
@@ -672,14 +659,8 @@ class CentralPlannerScheduler(Scheduler):
         if deps is not None:
             task.deps = set(deps)
 
-        if deps_configs is not None:
-            task.deps_configs = deps_configs
-
         if new_deps is not None:
             task.deps.update(new_deps)
-
-        if new_deps_configs is not None:
-            task.deps_configs.update(new_deps_configs)
 
         if resources is not None:
             task.resources = resources
@@ -689,11 +670,12 @@ class CentralPlannerScheduler(Scheduler):
 
             # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
             # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
+            deps_retry_policy_dicts = _get_default(deps_retry_policy_dicts, {})
             for dep in task.deps or []:
                 t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None,
                                                                          priority=priority,
-                                                                         **self._get_task_level_config(
-                                                                             task.deps_configs.get(dep, None))))
+                                                                         retry_policy=self._generate_retry_policy(
+                                                                             deps_retry_policy_dicts.get(dep))))
                 t.stakeholders.add(worker_id)
 
         self._update_priority(task, priority, worker_id)
@@ -717,17 +699,10 @@ class CentralPlannerScheduler(Scheduler):
             self._resources = {}
         self._resources.update(resources)
 
-    def _get_task_level_config(self, config):
-        if config:
-            return {
-                'disable_failures': config.get('disable-num-failures', self._config.disable_failures),
-                'disable_hard_timeout': config.get('disable-hard-timeout', self._config.disable_hard_timeout),
-                'disable_window': config.get('disable-window-seconds', self._config.disable_window),
-                'upstream_status_when_all': config.get('upstream-status-when-all',
-                                                       self._config.upstream_status_when_all)
-            }
-        else:
-            return {}
+    def _generate_retry_policy(self, task_retry_policy_dict):
+        retry_policy_dict = self._config._get_retry_policy()._asdict()
+        retry_policy_dict.update({k: v for k, v in _get_default(task_retry_policy_dict, {}).iteritems() if v is not None})
+        return RetryPolicy(**retry_policy_dict)
 
     def _has_resources(self, needed_resources, used_resources):
         if needed_resources is None:
@@ -910,13 +885,8 @@ class CentralPlannerScheduler(Scheduler):
                     elif upstream_status_table[dep_id] == '' and dep.deps:
                         # This is the postorder update step when we set the
                         # status based on the previously calculated child elements
-                        if dep.upstream_status_when_all:
-                            func = min
-                        else:
-                            func = max
-
-                        status = func(list(upstream_status_table.get(a_task_id) for a_task_id in dep.deps if
-                                           a_task_id in upstream_status_table) or [''], key=UPSTREAM_SEVERITY_KEY)
+                        upstream_severities = list(upstream_status_table.get(a_task_id) for a_task_id in dep.deps if a_task_id in upstream_status_table) or ['']
+                        status = min(upstream_severities, key=UPSTREAM_SEVERITY_KEY)
                         upstream_status_table[dep_id] = status
             return upstream_status_table[dep_id]
 
@@ -1055,8 +1025,7 @@ class CentralPlannerScheduler(Scheduler):
             def filter_func(t):
                 return all(term in t.pretty_id for term in terms)
         for task in filter(filter_func, self._state.get_active_tasks(status)):
-            if (task.status != PENDING or not upstream_status or
-                    upstream_status == self._upstream_status(task.id, upstream_status_table)):
+            if task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id, upstream_status_table):
                 serialized = self._serialize_task(task.id, False)
                 result[task.id] = serialized
         if limit and len(result) > self._config.max_shown_tasks:

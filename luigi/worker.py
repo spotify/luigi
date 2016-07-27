@@ -20,7 +20,7 @@ The worker communicates with the scheduler and does two things:
 1. Sends all tasks that has to be run
 2. Gets tasks from the scheduler that should be run
 
-When running in local mode, the worker talks directly to a :py:class:`~luigi.scheduler.CentralPlannerScheduler` instance.
+When running in local mode, the worker talks directly to a :py:class:`~luigi.scheduler.Scheduler` instance.
 When you run a central server, the worker will talk to the scheduler using a :py:class:`~luigi.rpc.RemoteScheduler` instance.
 
 Everything in this module is private to luigi and may change in incompatible
@@ -53,7 +53,7 @@ from luigi import six
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, CentralPlannerScheduler
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
@@ -83,6 +83,10 @@ _WAIT_INTERVAL_EPS = 0.00001
 
 def _is_external(task):
     return task.run is None or task.run == NotImplemented
+
+
+def _get_retry_policy_dict(task):
+    return RetryPolicy(task.disable_num_failures, task.disable_hard_timeout, task.disable_window_seconds)._asdict()
 
 
 class TaskException(Exception):
@@ -364,7 +368,7 @@ class Worker(object):
 
     def __init__(self, scheduler=None, worker_id=None, worker_processes=1, assistant=False, **kwargs):
         if scheduler is None:
-            scheduler = CentralPlannerScheduler()
+            scheduler = Scheduler()
 
         self.worker_processes = int(worker_processes)
         self._worker_info = self._generate_worker_info()
@@ -569,7 +573,7 @@ class Worker(object):
         return self.add_succeeded
 
     def _add(self, task, is_complete):
-        deps_configs = None
+        deps_retry_policy_dicts = None
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
             logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task, self._config.task_limit)
             deps = None
@@ -636,7 +640,7 @@ class Worker(object):
                     task.trigger_event(Event.DEPENDENCY_DISCOVERED, task, d)
                     yield d  # return additional tasks to add
 
-                deps_configs = {d.task_id: d.config for d in deps if hasattr(d, 'config')}
+                deps_retry_policy_dicts = {d.task_id: _get_retry_policy_dict(d) for d in deps}
                 deps = [d.task_id for d in deps]
 
         self._scheduled_tasks[task.task_id] = task
@@ -646,8 +650,8 @@ class Worker(object):
                        params=task.to_str_params(),
                        family=task.task_family,
                        module=task.task_module,
-                       task_config=task.config,
-                       deps_configs=deps_configs)
+                       retry_policy_dict=_get_retry_policy_dict(task),
+                       deps_retry_policy_dicts=deps_retry_policy_dicts)
 
     def _validate_dependency(self, dependency):
         if isinstance(dependency, Target):
@@ -801,13 +805,11 @@ class Worker(object):
                 self._email_task_failure(task, expl)
 
             new_deps = []
-            new_deps_configs = None
             if new_requirements:
                 new_req = [load_task(module, name, params)
                            for module, name, params in new_requirements]
                 for t in new_req:
                     self.add(t)
-                new_deps_configs = {d.task_id: d.config for d in new_req or [] if hasattr(d, 'config')}
                 new_deps = [t.task_id for t in new_req]
 
             self._add_task(worker=self._id,
@@ -821,8 +823,6 @@ class Worker(object):
                            module=task.task_module,
                            new_deps=new_deps,
                            assistant=self._assistant,
-                           task_config=task.config,
-                           new_deps_configs=new_deps_configs
                            )
 
             self._running_tasks.pop(task_id)

@@ -14,7 +14,7 @@
 
 import luigi
 from luigi.file import LocalTarget
-from luigi.scheduler import CentralPlannerScheduler
+from luigi.scheduler import Scheduler
 import luigi.server
 import luigi.worker
 import luigi.task
@@ -92,7 +92,7 @@ class WorkerExternalTaskTest(unittest.TestCase):
             w.run()
 
     def _make_worker(self):
-        self.scheduler = CentralPlannerScheduler(prune_on_get_work=True)
+        self.scheduler = Scheduler(prune_on_get_work=True)
         return luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1)
 
     def test_external_dependency_already_complete(self):

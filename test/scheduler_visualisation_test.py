@@ -102,7 +102,7 @@ class OddFibTask(luigi.Task):
 class SchedulerVisualisationTest(unittest.TestCase):
 
     def setUp(self):
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler()
+        self.scheduler = luigi.scheduler.Scheduler()
 
     def tearDown(self):
         pass
@@ -160,7 +160,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = LinearTask(100)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.dep_graph(root_task.task_id)
@@ -181,7 +181,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = LinearTask(100)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.inverse_dep_graph(LinearTask(0).task_id)
@@ -199,7 +199,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = BinaryTreeTask(1)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.dep_graph(root_task.task_id)
@@ -221,7 +221,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = LinearTask(100)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.dep_graph(root_task.task_id)
@@ -423,7 +423,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(db['status'], 'DONE')
 
         missing_input = remote.task_list('PENDING', 'UPSTREAM_MISSING_INPUT')
-        self.assertEqual(len(missing_input), 2)
+        self.assertEqual(len(missing_input), 3)
 
         pa = missing_input.get(A().task_id)
         self.assertEqual(pa['status'], 'PENDING')
@@ -433,14 +433,15 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(pc['status'], 'PENDING')
         self.assertEqual(remote._upstream_status(C().task_id, {}), 'UPSTREAM_MISSING_INPUT')
 
-        upstream_failed = remote.task_list('PENDING', 'UPSTREAM_FAILED')
-        self.assertEqual(len(upstream_failed), 2)
-        pe = upstream_failed.get(E().task_id)
+        pe = missing_input.get(E().task_id)
         self.assertEqual(pe['status'], 'PENDING')
-        self.assertEqual(remote._upstream_status(E().task_id, {}), 'UPSTREAM_FAILED')
+        self.assertEqual(remote._upstream_status(E().task_id, {}), 'UPSTREAM_MISSING_INPUT')
 
-        pe = upstream_failed.get(D().task_id)
-        self.assertEqual(pe['status'], 'PENDING')
+        upstream_failed = remote.task_list('PENDING', 'UPSTREAM_FAILED')
+        self.assertEqual(len(upstream_failed), 1)
+
+        pd = upstream_failed.get(D().task_id)
+        self.assertEqual(pd['status'], 'PENDING')
         self.assertEqual(remote._upstream_status(D().task_id, {}), 'UPSTREAM_FAILED')
 
         pending = dict(missing_input)

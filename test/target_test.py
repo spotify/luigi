@@ -255,7 +255,7 @@ class FileSystemTargetTestMixin(object):
         fs.move(t.path, t.path+"-yay")
         self.assertFalse(t.exists())
 
-    def test_rename_dont_move_on_fs(self):
+    def test_renamegs_dont_move_on_fs(self):
         # We're cheating and retrieving the fs from target.
         # TODO: maybe move to "filesystem_test.py" or something
         t = self.create_target()

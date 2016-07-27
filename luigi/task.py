@@ -149,6 +149,30 @@ class Task(object):
     config = {}
 
     @property
+    def disable_num_failures(self):
+        """
+        Override this positive integer to have different ``disable_num_failures`` at task level
+        Check :ref:`scheduler-config`
+        """
+        return None
+
+    @property
+    def disable_hard_timeout(self):
+        """
+        Override this positive integer to have different ``disable_hard_timeout`` at task level.
+        Check :ref:`scheduler-config`
+        """
+        return None
+
+    @property
+    def disable_window_seconds(self):
+        """
+        Override this positive integer to have different ``disable_window_seconds`` at task level.
+        Check :ref:`scheduler-config`
+        """
+        return None
+
+    @property
     def owner_email(self):
         '''
         Override this to send out additional error emails to task owner, in addition to the one
