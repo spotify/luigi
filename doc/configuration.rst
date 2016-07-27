@@ -766,11 +766,11 @@ The configrations below are also definable in luigi config file. Check :ref:`sch
 +------------------------+-----------+
 | Config                 | Section   |
 +========================+===========+
-| retry-count            | scheduler |
+| retry_count            | scheduler |
 +------------------------+-----------+
-| disable-hard-timeout   | scheduler |
+| disable_hard_timeout   | scheduler |
 +------------------------+-----------+
-| disable-window-seconds | scheduler |
+| disable_window_seconds | scheduler |
 +------------------------+-----------+
 
 
