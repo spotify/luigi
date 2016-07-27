@@ -701,7 +701,7 @@ class Scheduler(object):
 
     def _generate_retry_policy(self, task_retry_policy_dict):
         retry_policy_dict = self._config._get_retry_policy()._asdict()
-        retry_policy_dict.update({k: v for k, v in _get_default(task_retry_policy_dict, {}).iteritems() if v is not None})
+        retry_policy_dict.update({k: v for k, v in six.iteritems(_get_default(task_retry_policy_dict, {})) if v is not None})
         return RetryPolicy(**retry_policy_dict)
 
     def _has_resources(self, needed_resources, used_resources):
