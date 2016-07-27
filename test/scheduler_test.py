@@ -57,7 +57,7 @@ class SchedulerIoTest(unittest.TestCase):
     def test_scheduler_with_config(self):
         scheduler = luigi.scheduler.Scheduler()
         self.assertEqual(44, scheduler._config.retry_count)
-        self.assertEqual(55, scheduler._config.retry_count)
+        self.assertEqual(55, scheduler._config.worker_disconnect_delay)
 
         # Override
         scheduler = luigi.scheduler.Scheduler(retry_count=66,
