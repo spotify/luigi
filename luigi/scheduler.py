@@ -113,7 +113,7 @@ class scheduler(Config):
     disable_window = parameter.IntParameter(default=3600,
                                             config_path=dict(section='scheduler', name='disable-window-seconds'))
     retry_count = parameter.IntParameter(default=999999999,
-                                         config_path=dict(section='scheduler', name='retry-count'))
+                                         config_path=dict(section='scheduler', name='disable-num-failures'))
     disable_hard_timeout = parameter.IntParameter(default=999999999,
                                                   config_path=dict(section='scheduler', name='disable-hard-timeout'))
     disable_persist = parameter.IntParameter(default=86400,

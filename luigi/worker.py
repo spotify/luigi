@@ -86,7 +86,7 @@ def _is_external(task):
 
 
 def _get_retry_policy_dict(task):
-    return RetryPolicy(task.disable_num_failures, task.disable_hard_timeout, task.disable_window_seconds)._asdict()
+    return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window_seconds)._asdict()
 
 
 class TaskException(Exception):

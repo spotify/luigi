@@ -147,7 +147,7 @@ class Task(object):
     worker_timeout = None
 
     @property
-    def disable_num_failures(self):
+    def retry_count(self):
         """
         Override this positive integer to have different ``disable_num_failures`` at task level
         Check :ref:`scheduler-config`gs

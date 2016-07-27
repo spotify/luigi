@@ -53,7 +53,7 @@ class SchedulerIoTest(unittest.TestCase):
 
             self.assertEqual(list(state.get_worker_ids()), [])
 
-    @with_config({'scheduler': {'retry-count': '44', 'worker-disconnect-delay': '55'}})
+    @with_config({'scheduler': {'retry_count': '44', 'worker-disconnect-delay': '55'}})
     def test_scheduler_with_config(self):
         scheduler = luigi.scheduler.Scheduler()
         self.assertEqual(44, scheduler._config.retry_count)
@@ -111,7 +111,7 @@ class SchedulerIoTest(unittest.TestCase):
 
         worker.prune(TmpCfg())
 
-    @with_config({'scheduler': {'retry-count': '44'}})
+    @with_config({'scheduler': {'retry_count': '44'}})
     def test_scheduler_with_task_level_retry_policy(self):
         cps = luigi.scheduler.Scheduler()
 
