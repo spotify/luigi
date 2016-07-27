@@ -146,13 +146,11 @@ class Task(object):
     #: Only works when using multiple workers.
     worker_timeout = None
 
-    config = {}
-
     @property
     def disable_num_failures(self):
         """
         Override this positive integer to have different ``disable_num_failures`` at task level
-        Check :ref:`scheduler-config`
+        Check :ref:`scheduler-config`gs
         """
         return None
 
