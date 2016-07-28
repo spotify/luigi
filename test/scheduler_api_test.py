@@ -42,7 +42,7 @@ class SchedulerApiTest(unittest.TestCase):
             'worker_disconnect_delay': 10,
             'disable_persist': 10,
             'disable_window': 10,
-            'disable_failures': 3,
+            'retry_count': 3,
             'disable_hard_timeout': 60 * 60,
         }
 
@@ -742,7 +742,7 @@ class SchedulerApiTest(unittest.TestCase):
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
 
     def test_automatic_re_enable(self):
-        self.sch = Scheduler(disable_failures=2, disable_persist=100)
+        self.sch = Scheduler(retry_count=2, disable_persist=100)
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
         self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
@@ -755,7 +755,7 @@ class SchedulerApiTest(unittest.TestCase):
         self.assertEqual(FAILED, self.sch.task_list('', '')['A']['status'])
 
     def test_automatic_re_enable_with_one_failure_allowed(self):
-        self.sch = Scheduler(disable_failures=1, disable_persist=100)
+        self.sch = Scheduler(retry_count=1, disable_persist=100)
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
 
@@ -779,7 +779,7 @@ class SchedulerApiTest(unittest.TestCase):
         self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
 
     def test_no_automatic_re_enable_after_auto_then_manual_disable(self):
-        self.sch = Scheduler(disable_failures=2, disable_persist=100)
+        self.sch = Scheduler(retry_count=2, disable_persist=100)
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
         self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
