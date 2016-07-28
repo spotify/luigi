@@ -32,7 +32,7 @@ from luigi.rpc import RemoteScheduler, RPCError
 from luigi import parameter
 from luigi.parameter import (
     Parameter,
-    DateParameter, MonthParameter, YearParameter, DateHourParameter, DateMinuteParameter,
+    DateParameter, MonthParameter, YearParameter, DateHourParameter, DateMinuteParameter, DateSecondParameter,
     DateIntervalParameter, TimeDeltaParameter,
     IntParameter, FloatParameter, BooleanParameter, BoolParameter,
     TaskParameter, EnumParameter, DictParameter, ListParameter, TupleParameter
@@ -53,7 +53,7 @@ __all__ = [
     'task', 'Task', 'Config', 'ExternalTask', 'WrapperTask', 'namespace',
     'target', 'Target', 'File', 'LocalTarget', 'rpc', 'RemoteScheduler',
     'RPCError', 'parameter', 'Parameter', 'DateParameter', 'MonthParameter',
-    'YearParameter', 'DateHourParameter', 'DateMinuteParameter', 'range',
+    'YearParameter', 'DateHourParameter', 'DateMinuteParameter', 'DateSecondParameter', 'range',
     'DateIntervalParameter', 'TimeDeltaParameter', 'IntParameter',
     'FloatParameter', 'BooleanParameter', 'BoolParameter', 'TaskParameter',
     'ListParameter', 'TupleParameter', 'EnumParameter', 'DictParameter',
