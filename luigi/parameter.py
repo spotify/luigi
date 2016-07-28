@@ -502,6 +502,21 @@ class DateMinuteParameter(_DatetimeParameterBase):
             return super(DateMinuteParameter, self).parse(s)
 
 
+class DateSecondParameter(_DatetimeParameterBase):
+    """
+    Parameter whose value is a :py:class:`~datetime.datetime` specified to the second.
+
+    A DateSecondParameter is a `ISO 8601 <http://en.wikipedia.org/wiki/ISO_8601>`_ formatted
+    date and time specified to the second. For example, ``2013-07-10T190738`` specifies July 10, 2013 at
+    19:07:38.
+
+    The interval parameter can be used to clamp this parameter to every N seconds, instead of every second.
+    """
+
+    date_format = '%Y-%m-%dT%H%M%S'
+    _timedelta = datetime.timedelta(seconds=1)
+
+
 class IntParameter(Parameter):
     """
     Parameter whose value is an ``int``.
