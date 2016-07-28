@@ -53,7 +53,7 @@ from luigi import six
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
@@ -83,6 +83,10 @@ _WAIT_INTERVAL_EPS = 0.00001
 
 def _is_external(task):
     return task.run is None or task.run == NotImplemented
+
+
+def _get_retry_policy_dict(task):
+    return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window_seconds)._asdict()
 
 
 class TaskException(Exception):
@@ -569,6 +573,7 @@ class Worker(object):
         return self.add_succeeded
 
     def _add(self, task, is_complete):
+        deps_retry_policy_dicts = None
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
             logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task, self._config.task_limit)
             deps = None
@@ -635,6 +640,7 @@ class Worker(object):
                     task.trigger_event(Event.DEPENDENCY_DISCOVERED, task, d)
                     yield d  # return additional tasks to add
 
+                deps_retry_policy_dicts = {d.task_id: _get_retry_policy_dict(d) for d in deps}
                 deps = [d.task_id for d in deps]
 
         self._scheduled_tasks[task.task_id] = task
@@ -643,7 +649,9 @@ class Worker(object):
                        resources=task.process_resources(),
                        params=task.to_str_params(),
                        family=task.task_family,
-                       module=task.task_module)
+                       module=task.task_module,
+                       retry_policy_dict=_get_retry_policy_dict(task),
+                       deps_retry_policy_dicts=deps_retry_policy_dicts)
 
     def _validate_dependency(self, dependency):
         if isinstance(dependency, Target):
@@ -814,7 +822,8 @@ class Worker(object):
                            family=task.task_family,
                            module=task.task_module,
                            new_deps=new_deps,
-                           assistant=self._assistant)
+                           assistant=self._assistant,
+                           )
 
             self._running_tasks.pop(task_id)
 
