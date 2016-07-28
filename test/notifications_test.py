@@ -185,7 +185,7 @@ class TestSMTPEmail(unittest.TestCase, NotificationFixture):
 
     def setUp(self):
         sys.modules['smtplib'] = mock.MagicMock()
-        import smtplib  # NOQA  silent flake8
+        import smtplib  # noqa: F401
 
     def tearDown(self):
         del sys.modules['smtplib']
@@ -266,7 +266,7 @@ class TestSendgridEmail(unittest.TestCase, NotificationFixture):
 
     def setUp(self):
         sys.modules['sendgrid'] = mock.MagicMock()
-        import sendgrid  # NOQA  silent flake8
+        import sendgrid  # noqa: F401
 
     def tearDown(self):
         del sys.modules['sendgrid']
@@ -294,7 +294,7 @@ class TestSESEmail(unittest.TestCase, NotificationFixture):
 
     def setUp(self):
         sys.modules['boto3'] = mock.MagicMock()
-        import boto3  # NOQA  silent flake8
+        import boto3  # noqa: F401
 
     def tearDown(self):
         del sys.modules['boto3']
@@ -328,7 +328,7 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
 
     def setUp(self):
         sys.modules['boto3'] = mock.MagicMock()
-        import boto3  # NOQA  silent flake8
+        import boto3  # noqa: F401
 
     def tearDown(self):
         del sys.modules['boto3']
