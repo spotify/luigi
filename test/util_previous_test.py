@@ -80,7 +80,7 @@ class DateMinuteTaskOk(luigi.Task):
 
     def complete(self):
         # test against 2000.03.01T02H03
-        return self.minute in [datetime.datetime(2000, 3, 1, 2, 0), datetime.datetime(2000, 3, 1, 2, 3), datetime.datetime(2000, 3, 1, 2, 4)]
+        return self.minute in [datetime.datetime(2000, 3, 1, 2, 0)]
 
 
 class DateMinuteTaskOkTest(unittest.TestCase):
@@ -97,6 +97,31 @@ class DateMinuteTaskOkTest(unittest.TestCase):
 
     def test_get_previous_completed_not_found(self):
         task = DateMinuteTaskOk(datetime.datetime(2000, 3, 1, 2, 3))
+        prev = get_previous_completed(task, 2)
+        self.assertEqual(None, prev)
+
+
+class DateSecondTaskOk(luigi.Task):
+    second = luigi.DateSecondParameter()
+
+    def complete(self):
+        return self.second in [datetime.datetime(2000, 3, 1, 2, 3, 4)]
+
+
+class DateSecondTaskOkTest(unittest.TestCase):
+
+    def test_previous(self):
+        task = DateSecondTaskOk(datetime.datetime(2000, 3, 1, 2, 3, 7))
+        prev = previous(task)
+        self.assertEqual(prev.second, datetime.datetime(2000, 3, 1, 2, 3, 6))
+
+    def test_get_previous_completed(self):
+        task = DateSecondTaskOk(datetime.datetime(2000, 3, 1, 2, 3, 7))
+        prev = get_previous_completed(task, 3)
+        self.assertEqual(prev.second, datetime.datetime(2000, 3, 1, 2, 3, 4))
+
+    def test_get_previous_completed_not_found(self):
+        task = DateSecondTaskOk(datetime.datetime(2000, 3, 1, 2, 3))
         prev = get_previous_completed(task, 2)
         self.assertEqual(None, prev)
 

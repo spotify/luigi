@@ -21,7 +21,7 @@ import sys
 import tempfile
 
 from target_test import FileSystemTargetTestMixin
-from helpers import with_config, unittest
+from helpers import with_config, unittest, skipOnTravis
 
 from boto.exception import S3ResponseError
 from boto.s3 import key
@@ -345,12 +345,36 @@ class TestS3Client(unittest.TestCase):
 
         self.assertEqual(['s3://mybucket/hello/frank', 's3://mybucket/hello/world'],
                          list(s3_client.listdir('s3://mybucket/hello')))
-        self.assertEqual(['s3://mybucket/hello/frank', 's3://mybucket/hello/world'],
-                         list(s3_client.listdir('s3://mybucket/hello/')))
+
+    def test_list(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+
+        s3_client.put_string("", 's3://mybucket/hello/frank')
+        s3_client.put_string("", 's3://mybucket/hello/world')
+
         self.assertEqual(['frank', 'world'],
                          list(s3_client.list('s3://mybucket/hello')))
-        self.assertEqual(['frank', 'world'],
-                         list(s3_client.list('s3://mybucket/hello/')))
+
+    def test_listdir_key(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+
+        s3_client.put_string("", 's3://mybucket/hello/frank')
+        s3_client.put_string("", 's3://mybucket/hello/world')
+
+        self.assertEqual([True, True],
+                         [x.exists() for x in s3_client.listdir('s3://mybucket/hello', return_key=True)])
+
+    def test_list_key(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+
+        s3_client.put_string("", 's3://mybucket/hello/frank')
+        s3_client.put_string("", 's3://mybucket/hello/world')
+
+        self.assertEqual([True, True],
+                         [x.exists() for x in s3_client.list('s3://mybucket/hello', return_key=True)])
 
     def test_remove(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
@@ -441,6 +465,7 @@ class TestS3Client(unittest.TestCase):
         """
         self._run_multipart_copy_test(self.test_put_multipart_empty_file)
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/145895385')
     def test_copy_dir(self):
         """
         Test copying 20 files from one folder to another
@@ -535,6 +560,3 @@ class TestS3Client(unittest.TestCase):
         key_size = s3_client.get_key(s3_path).size
         self.assertEqual(file_size, key_size)
         tmp_file.close()
-
-if __name__ == '__main__':
-    unittest.main()

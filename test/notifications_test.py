@@ -22,7 +22,7 @@ import sys
 from helpers import with_config
 from luigi import notifications
 from luigi import configuration
-from luigi.scheduler import CentralPlannerScheduler
+from luigi.scheduler import Scheduler
 from luigi.worker import Worker
 from luigi import six
 import luigi
@@ -69,7 +69,7 @@ class FailRunTask(TestTask):
 class ExceptionFormatTest(unittest.TestCase):
 
     def setUp(self):
-        self.sch = CentralPlannerScheduler()
+        self.sch = Scheduler()
 
     def test_fail_run(self):
         task = FailRunTask(foo='foo', bar='bar')
@@ -185,7 +185,7 @@ class TestSMTPEmail(unittest.TestCase, NotificationFixture):
 
     def setUp(self):
         sys.modules['smtplib'] = mock.MagicMock()
-        import smtplib  # NOQA  silent flake8
+        import smtplib  # noqa: F401
 
     def tearDown(self):
         del sys.modules['smtplib']
@@ -266,7 +266,7 @@ class TestSendgridEmail(unittest.TestCase, NotificationFixture):
 
     def setUp(self):
         sys.modules['sendgrid'] = mock.MagicMock()
-        import sendgrid  # NOQA  silent flake8
+        import sendgrid  # noqa: F401
 
     def tearDown(self):
         del sys.modules['sendgrid']
@@ -294,7 +294,7 @@ class TestSESEmail(unittest.TestCase, NotificationFixture):
 
     def setUp(self):
         sys.modules['boto3'] = mock.MagicMock()
-        import boto3  # NOQA  silent flake8
+        import boto3  # noqa: F401
 
     def tearDown(self):
         del sys.modules['boto3']
@@ -328,7 +328,7 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
 
     def setUp(self):
         sys.modules['boto3'] = mock.MagicMock()
-        import boto3  # NOQA  silent flake8
+        import boto3  # noqa: F401
 
     def tearDown(self):
         del sys.modules['boto3']

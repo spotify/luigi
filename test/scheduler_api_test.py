@@ -17,24 +17,22 @@
 
 import time
 from helpers import unittest
-
 from nose.plugins.attrib import attr
-
 import luigi.notifications
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, \
-    UNKNOWN, CentralPlannerScheduler
+    UNKNOWN, RUNNING, Scheduler
 
 luigi.notifications.DEBUG = True
 WORKER = 'myworker'
 
 
 @attr('scheduler')
-class CentralPlannerTest(unittest.TestCase):
+class SchedulerApiTest(unittest.TestCase):
 
     def setUp(self):
-        super(CentralPlannerTest, self).setUp()
+        super(SchedulerApiTest, self).setUp()
         conf = self.get_scheduler_config()
-        self.sch = CentralPlannerScheduler(**conf)
+        self.sch = Scheduler(**conf)
         self.time = time.time
 
     def get_scheduler_config(self):
@@ -49,7 +47,7 @@ class CentralPlannerTest(unittest.TestCase):
         }
 
     def tearDown(self):
-        super(CentralPlannerTest, self).tearDown()
+        super(SchedulerApiTest, self).tearDown()
         if time.time != self.time:
             time.time = self.time
 
@@ -343,19 +341,28 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.ping(worker='X')  # worker still alive
         self.assertEqual('PENDING', self.sch.task_list('', '')['A']['status'])
 
-    def test_fail_job_from_dead_worker_with_live_assistant(self):
+    def test_assistant_doesnt_keep_alive_task(self):
         self.setTime(0)
         self.sch.add_task(worker='X', task_id='A')
         self.assertEqual('A', self.sch.get_work(worker='X')['task_id'])
-        self.sch.add_worker('Y', [('assistant', True)])
+        self.sch.add_worker('Y', {'assistant': True})
 
-        self.setTime(600)
+        remove_delay = self.get_scheduler_config()['remove_delay'] + 1.0
+        self.setTime(remove_delay)
         self.sch.ping(worker='Y')
         self.sch.prune()
+        self.assertEqual(['A'], list(self.sch.task_list(status='FAILED', upstream_status='').keys()))
+        self.assertEqual(['A'], list(self.sch.task_list(status='', upstream_status='').keys()))
 
-        self.assertEqual(['A'], list(self.sch.task_list('FAILED', '').keys()))
+        self.setTime(2*remove_delay)
+        self.sch.ping(worker='Y')
+        self.sch.prune()
+        self.assertEqual([], list(self.sch.task_list(status='', upstream_status='').keys()))
 
     def test_assistant_request_runnable_task(self):
+        """
+        Test that an assistant gets a task despite it havent registered for it
+        """
         self.setTime(0)
         self.sch.add_task(worker='X', task_id='A', runnable=True)
         self.setTime(600)
@@ -367,27 +374,31 @@ class CentralPlannerTest(unittest.TestCase):
         self.sch.add_task(worker='X', task_id='A', runnable=False)
         self.assertIsNone(self.sch.get_work(worker='Y', assistant=True)['task_id'])
 
-    def test_prune_done_tasks(self, expected=None):
+    def _test_prune_done_tasks(self, expected=None):
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A', status=DONE)
         self.sch.add_task(worker=WORKER, task_id='B', deps=['A'], status=DONE)
         self.sch.add_task(worker=WORKER, task_id='C', deps=['B'])
 
         self.setTime(600)
-        self.sch.ping(worker='ASSISTANT')
+        self.sch.ping(worker='MAYBE_ASSITANT')
         self.sch.prune()
         self.setTime(2000)
-        self.sch.ping(worker='ASSISTANT')
+        self.sch.ping(worker='MAYBE_ASSITANT')
         self.sch.prune()
 
-        self.assertEqual(set(expected or ()), set(self.sch.task_list('', '').keys()))
+        self.assertEqual(set(expected), set(self.sch.task_list('', '').keys()))
+
+    def test_prune_done_tasks_not_assistant(self, expected=None):
+        # Here, MAYBE_ASSISTANT isnt an assistant
+        self._test_prune_done_tasks(expected=[])
 
     def test_keep_tasks_for_assistant(self):
-        self.sch.get_work(worker='ASSISTANT', assistant=True)  # tell the scheduler this is an assistant
-        self.test_prune_done_tasks(['B', 'C'])
+        self.sch.get_work(worker='MAYBE_ASSITANT', assistant=True)  # tell the scheduler this is an assistant
+        self._test_prune_done_tasks([])
 
     def test_keep_scheduler_disabled_tasks_for_assistant(self):
-        self.sch.get_work(worker='ASSISTANT', assistant=True)  # tell the scheduler this is an assistant
+        self.sch.get_work(worker='MAYBE_ASSITANT', assistant=True)  # tell the scheduler this is an assistant
 
         # create a scheduler disabled task and a worker disabled task
         for i in range(10):
@@ -396,12 +407,12 @@ class CentralPlannerTest(unittest.TestCase):
 
         # scheduler prunes the worker disabled task
         self.assertEqual(set(['D', 'E']), set(self.sch.task_list(DISABLED, '')))
-        self.test_prune_done_tasks(['B', 'C', 'D'])
+        self._test_prune_done_tasks([])
 
     def test_keep_failed_tasks_for_assistant(self):
-        self.sch.get_work(worker='ASSISTANT', assistant=True)  # tell the scheduler this is an assistant
-        self.sch.add_task(worker=WORKER, task_id='D', status=FAILED, deps='A')
-        self.test_prune_done_tasks(['A', 'B', 'C', 'D'])
+        self.sch.get_work(worker='MAYBE_ASSITANT', assistant=True)  # tell the scheduler this is an assistant
+        self.sch.add_task(worker=WORKER, task_id='D', status=FAILED, deps=['A'])
+        self._test_prune_done_tasks([])
 
     def test_scheduler_resources_none_allow_one(self):
         self.sch.add_task(worker='X', task_id='A', resources={'R1': 1})
@@ -731,7 +742,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
 
     def test_automatic_re_enable(self):
-        self.sch = CentralPlannerScheduler(disable_failures=2, disable_persist=100)
+        self.sch = Scheduler(disable_failures=2, disable_persist=100)
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
         self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
@@ -744,7 +755,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(FAILED, self.sch.task_list('', '')['A']['status'])
 
     def test_automatic_re_enable_with_one_failure_allowed(self):
-        self.sch = CentralPlannerScheduler(disable_failures=1, disable_persist=100)
+        self.sch = Scheduler(disable_failures=1, disable_persist=100)
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
 
@@ -756,7 +767,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(FAILED, self.sch.task_list('', '')['A']['status'])
 
     def test_no_automatic_re_enable_after_manual_disable(self):
-        self.sch = CentralPlannerScheduler(disable_persist=100)
+        self.sch = Scheduler(disable_persist=100)
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A', status=DISABLED)
 
@@ -768,7 +779,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertEqual(DISABLED, self.sch.task_list('', '')['A']['status'])
 
     def test_no_automatic_re_enable_after_auto_then_manual_disable(self):
-        self.sch = CentralPlannerScheduler(disable_failures=2, disable_persist=100)
+        self.sch = Scheduler(disable_failures=2, disable_persist=100)
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
         self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
@@ -869,20 +880,20 @@ class CentralPlannerTest(unittest.TestCase):
         self.assertFalse(self.sch.worker_list())
 
     def test_task_list_beyond_limit(self):
-        sch = CentralPlannerScheduler(max_shown_tasks=3)
+        sch = Scheduler(max_shown_tasks=3)
         for c in 'ABCD':
             sch.add_task(worker=WORKER, task_id=c)
         self.assertEqual(set('ABCD'), set(sch.task_list('PENDING', '', False).keys()))
         self.assertEqual({'num_tasks': 4}, sch.task_list('PENDING', ''))
 
     def test_task_list_within_limit(self):
-        sch = CentralPlannerScheduler(max_shown_tasks=4)
+        sch = Scheduler(max_shown_tasks=4)
         for c in 'ABCD':
             sch.add_task(worker=WORKER, task_id=c)
         self.assertEqual(set('ABCD'), set(sch.task_list('PENDING', '').keys()))
 
     def test_task_lists_some_beyond_limit(self):
-        sch = CentralPlannerScheduler(max_shown_tasks=3)
+        sch = Scheduler(max_shown_tasks=3)
         for c in 'ABCD':
             sch.add_task(worker=WORKER, task_id=c, status=DONE)
         for c in 'EFG':
@@ -952,7 +963,7 @@ class CentralPlannerTest(unittest.TestCase):
         self.search_pending('ClassA 2016-02-01 num', {expected})
 
     def test_search_results_beyond_limit(self):
-        sch = CentralPlannerScheduler(max_shown_tasks=3)
+        sch = Scheduler(max_shown_tasks=3)
         for i in range(4):
             sch.add_task(worker=WORKER, family='Test', params={'p': str(i)}, task_id='Test_%i' % i)
         self.assertEqual({'num_tasks': 4}, sch.task_list('PENDING', '', search='Test'))
@@ -1089,11 +1100,12 @@ class CentralPlannerTest(unittest.TestCase):
 
     def test_assistants_dont_nurture_finished_statuses(self):
         """
-        Assistants should not affect longevity of DONE tasks
+        Test how assistants affect longevity of tasks
 
-        Also check for statuses DISABLED and UNKNOWN.
+        Assistants should not affect longevity expect for the tasks that it is
+        running, par the one it's actually running.
         """
-        self.sch = CentralPlannerScheduler(retry_delay=100000000000)  # Never pendify failed tasks
+        self.sch = Scheduler(retry_delay=100000000000)  # Never pendify failed tasks
         self.setTime(1)
         self.sch.add_worker('assistant', [('assistant', True)])
         self.sch.ping(worker='assistant')
@@ -1114,8 +1126,8 @@ class CentralPlannerTest(unittest.TestCase):
         self.setTime(200000)
         self.sch.ping(worker='assistant')
         self.sch.prune()
-        nurtured_statuses = ['PENDING', 'FAILED', 'RUNNING']
-        not_nurtured_statuses = ['DONE', 'UNKNOWN', 'DISABLED']
+        nurtured_statuses = [RUNNING]
+        not_nurtured_statuses = [DONE, UNKNOWN, DISABLED, PENDING, FAILED]
 
         for status in nurtured_statuses:
             print(status)
@@ -1125,7 +1137,7 @@ class CentralPlannerTest(unittest.TestCase):
             print(status)
             self.assertEqual(set([]), set(self.sch.task_list(status, '')))
 
-        self.assertEqual(3, len(self.sch.task_list(None, '')))  # None == All statuses
+        self.assertEqual(1, len(self.sch.task_list(None, '')))  # None == All statuses
 
     def test_no_crash_on_only_disable_hard_timeout(self):
         """
@@ -1134,8 +1146,8 @@ class CentralPlannerTest(unittest.TestCase):
         There was some failure happening when disable_hard_timeout was set but
         disable_failures was not.
         """
-        self.sch = CentralPlannerScheduler(retry_delay=5,
-                                           disable_hard_timeout=100)
+        self.sch = Scheduler(retry_delay=5,
+                             disable_hard_timeout=100)
         self.setTime(1)
         self.sch.add_worker(WORKER, [])
         self.sch.ping(worker=WORKER)
@@ -1148,3 +1160,30 @@ class CentralPlannerTest(unittest.TestCase):
         self.setTime(10)
         self.sch.prune()
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+
+    def test_assistant_running_task_dont_disappear(self):
+        """
+        Tasks run by an assistant shouldn't be pruned
+        """
+        self.setTime(1)
+        self.sch.add_worker(WORKER, [])
+        self.sch.ping(worker=WORKER)
+
+        self.setTime(2)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+        self.sch.add_task(worker=WORKER, task_id='B')
+        self.sch.add_worker('assistant', [('assistant', True)])
+        self.sch.ping(worker='assistant')
+        self.assertEqual(self.sch.get_work(worker='assistant', assistant=True)['task_id'], 'B')
+
+        self.setTime(100000)
+        # Here, lets say WORKER disconnects (doesnt ping)
+        self.sch.ping(worker='assistant')
+        self.sch.prune()
+
+        self.setTime(200000)
+        self.sch.ping(worker='assistant')
+        self.sch.prune()
+        self.assertEqual({'B'}, set(self.sch.task_list(RUNNING, '')))
+        self.assertEqual({'B'}, set(self.sch.task_list('', '')))

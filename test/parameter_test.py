@@ -347,6 +347,13 @@ class TestParametersHashability(LuigiTestCase):
         p = luigi.parameter.DictParameter()
         self.assertEqual(hash(Foo(args=dict(foo=1, bar="hello")).args), hash(p.parse('{"foo":1,"bar":"hello"}')))
 
+    def test_list(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.ListParameter()
+
+        p = luigi.parameter.ListParameter()
+        self.assertEqual(hash(Foo(args=[1, "hello"]).args), hash(p.normalize(p.parse('[1,"hello"]'))))
+
     def test_tuple(self):
         class Foo(luigi.Task):
             args = luigi.parameter.TupleParameter()
@@ -535,6 +542,16 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
     def testDateMinuteDeprecated(self):
         p = luigi.DateMinuteParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), _value(p))
+
+    @with_config({"foo": {"bar": "2001-02-03T040506"}})
+    def testDateSecond(self):
+        p = luigi.DateSecondParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(datetime.datetime(2001, 2, 3, 4, 5, 6), _value(p))
+
+    @with_config({"foo": {"bar": "2001-02-03T040507"}})
+    def testDateSecondWithInterval(self):
+        p = luigi.DateSecondParameter(config_path=dict(section="foo", name="bar"), interval=2)
+        self.assertEqual(datetime.datetime(2001, 2, 3, 4, 5, 6), _value(p))
 
     @with_config({"foo": {"bar": "2001-02-03"}})
     def testDate(self):

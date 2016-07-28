@@ -307,6 +307,8 @@ class S3Client(FileSystem):
 
         When files are larger than `part_size`, multipart uploading will be used.
 
+        When copying a directory, method will return a tuple (number_of_files_copied, total_size_copied_in_bytes).
+
         :param source_path: The `s3://` path of the directory or key to copy from
         :param destination_path: The `s3://` path of the directory or key to copy to
         :param threads: Optional argument to define the number of threads to use when copying (min: 3 threads)
@@ -338,16 +340,23 @@ class S3Client(FileSystem):
             copy_jobs = []
             management_pool = ThreadPool(processes=threads)
 
+            (bucket, key) = self._path_to_bucket_and_key(source_path)
+            key_path = self._add_path_delimiter(key)
+            key_path_len = len(key_path)
+
+            total_size_bytes = 0
             src_prefix = self._add_path_delimiter(src_key)
             dst_prefix = self._add_path_delimiter(dst_key)
-            for key in self.list(source_path, start_time=start_time, end_time=end_time):
+            for item in self.list(source_path, start_time=start_time, end_time=end_time, return_key=True):
+                path = item.key[key_path_len:]
                 # prevents copy attempt of empty key in folder
-                if key != '' and key != '/':
+                if path != '' and path != '/':
                     total_keys += 1
+                    total_size_bytes += item.size
                     job = management_pool.apply_async(self.__copy_multipart,
                                                       args=(copy_pool,
-                                                            src_bucket, src_prefix + key,
-                                                            dst_bucket, dst_prefix + key,
+                                                            src_bucket, src_prefix + path,
+                                                            dst_bucket, dst_prefix + path,
                                                             part_size),
                                                       kwds=kwargs)
                     copy_jobs.append(job)
@@ -366,6 +375,8 @@ class S3Client(FileSystem):
             duration = end - start
             logger.info('%s : Complete : %s total keys copied in %s' %
                         (datetime.datetime.now(), total_keys, duration))
+
+            return total_keys, total_size_bytes
 
         # If the file isn't a directory just perform a simple copy
         else:
@@ -449,13 +460,14 @@ class S3Client(FileSystem):
         self.copy(source_path, destination_path, **kwargs)
         self.remove(source_path)
 
-    def listdir(self, path, start_time=None, end_time=None):
+    def listdir(self, path, start_time=None, end_time=None, return_key=False):
         """
         Get an iterable with S3 folder contents.
         Iterable contains paths relative to queried path.
 
         :param start_time: Optional argument to copy files with modified dates after start_time
         :param end_time: Optional argument to copy files with modified dates before end_time
+        :param return_key: Optional argument, when set to True will return a boto.s3.key.Key (instead of the filename)
         """
         (bucket, key) = self._path_to_bucket_and_key(path)
 
@@ -472,12 +484,18 @@ class S3Client(FileSystem):
                     (not start_time and end_time and last_modified_date < end_time) or  # end defined, prior to end
                     (start_time and end_time and start_time < last_modified_date < end_time)  # both defined, between
                ):
-                yield self._add_path_delimiter(path) + item.key[key_path_len:]
+                if return_key:
+                    yield item
+                else:
+                    yield self._add_path_delimiter(path) + item.key[key_path_len:]
 
-    def list(self, path, start_time=None, end_time=None):  # backwards compat
+    def list(self, path, start_time=None, end_time=None, return_key=False):  # backwards compat
         key_path_len = len(self._add_path_delimiter(path))
-        for item in self.listdir(path, start_time=start_time, end_time=end_time):
-            yield item[key_path_len:]
+        for item in self.listdir(path, start_time=start_time, end_time=end_time, return_key=return_key):
+            if return_key:
+                yield item
+            else:
+                yield item[key_path_len:]
 
     def isdir(self, path):
         """

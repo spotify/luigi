@@ -47,16 +47,6 @@ from luigi.task import Config
 logger = logging.getLogger(__name__)
 
 
-class Scheduler(object):
-    """
-    Abstract base class.
-
-    Note that the methods all take string arguments, not Task objects...
-    """""
-    add_task = NotImplemented
-    get_work = NotImplemented
-    ping = NotImplemented
-
 UPSTREAM_RUNNING = 'UPSTREAM_RUNNING'
 UPSTREAM_MISSING_INPUT = 'UPSTREAM_MISSING_INPUT'
 UPSTREAM_FAILED = 'UPSTREAM_FAILED'
@@ -444,11 +434,12 @@ class SimpleTaskState(object):
 
     def update_status(self, task, config):
         # Mark tasks with no remaining active stakeholders for deletion
-        if not task.stakeholders:
-            if task.remove is None:
-                logger.debug("Task %r has stakeholders %r but none remain connected -> might remove "
-                             "task in %s seconds", task.id, task.stakeholders, config.remove_delay)
-                task.remove = time.time() + config.remove_delay
+        if (not task.stakeholders) and (task.remove is None) and (task.status != RUNNING):
+            # We don't check for the RUNNING case, because that is already handled
+            # by the fail_dead_worker_task function.
+            logger.debug("Task %r has no stakeholders anymore -> might remove "
+                         "task in %s seconds", task.id, config.remove_delay)
+            task.remove = time.time() + config.remove_delay
 
         # Re-enable task after the disable time expires
         if task.status == DISABLED and task.scheduler_disable_time is not None:
@@ -506,17 +497,8 @@ class SimpleTaskState(object):
         for worker in workers:
             self.get_worker(worker).disabled = True
 
-    def get_necessary_tasks(self):
-        necessary_tasks = set()
-        for task in self.get_active_tasks():
-            if task.status not in (DONE, DISABLED, UNKNOWN) or \
-                    task.scheduler_disable_time is not None:
-                necessary_tasks.update(task.deps)
-                necessary_tasks.add(task.id)
-        return necessary_tasks
 
-
-class CentralPlannerScheduler(Scheduler):
+class Scheduler(object):
     """
     Async scheduler that can handle multiple workers, etc.
 
@@ -573,15 +555,10 @@ class CentralPlannerScheduler(Scheduler):
         assistant_ids = set(w.id for w in self._state.get_assistants())
         remove_tasks = []
 
-        if assistant_ids:
-            necessary_tasks = self._state.get_necessary_tasks()
-        else:
-            necessary_tasks = ()
-
         for task in self._state.get_active_tasks():
             self._state.fail_dead_worker_task(task, self._config, assistant_ids)
             self._state.update_status(task, self._config)
-            if self._state.may_prune(task) and task.id not in necessary_tasks:
+            if self._state.may_prune(task):
                 logger.info("Removing task %r", task.id)
                 remove_tasks.append(task.id)
 

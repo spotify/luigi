@@ -224,7 +224,6 @@ from luigi import six
 
 from luigi import task
 from luigi import parameter
-from luigi.deprecate_kwarg import deprecate_kwarg  # NOQA: removing this breaks code
 
 if six.PY3:
     xrange = range
@@ -415,6 +414,8 @@ def previous(task):
 
         if isinstance(param_obj, parameter.DateParameter):
             previous_date_params[param_name] = param_value - datetime.timedelta(days=1)
+        elif isinstance(param_obj, parameter.DateSecondParameter):
+            previous_date_params[param_name] = param_value - datetime.timedelta(seconds=1)
         elif isinstance(param_obj, parameter.DateMinuteParameter):
             previous_date_params[param_name] = param_value - datetime.timedelta(minutes=1)
         elif isinstance(param_obj, parameter.DateHourParameter):

@@ -60,7 +60,7 @@ class ImportTest(unittest.TestCase):
             luigi.RPCError,
             luigi.run, luigi.build,
             luigi.Parameter,
-            luigi.DateHourParameter, luigi.DateMinuteParameter, luigi.DateParameter,
+            luigi.DateHourParameter, luigi.DateMinuteParameter, luigi.DateSecondParameter, luigi.DateParameter,
             luigi.MonthParameter, luigi.YearParameter,
             luigi.DateIntervalParameter, luigi.TimeDeltaParameter,
             luigi.IntParameter, luigi.FloatParameter,

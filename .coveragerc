@@ -1,6 +1,7 @@
 [report]
 omit =
     luigi/mrrunner.py
+    test/_test_time_generated_module*.py
     */python?.?/*
     */site-packages/nose/*
     *__init__*
@@ -9,9 +10,8 @@ omit =
     */.tox/*
     */setup.py
     */bin/luigidc
-    */dummy_test_module/*
-    sitecustomize.py
     hadoop_test.py
     minicluster.py
 [run]
 parallel=True
+concurrency=multiprocessing
