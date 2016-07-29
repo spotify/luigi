@@ -764,6 +764,7 @@ DataInterchange = {
 
 
 class JobTask(BaseHadoopJobTask):
+    jobconf_truncate = 20000
     n_reduce_tasks = 25
     reducer = NotImplemented
 
@@ -773,6 +774,8 @@ class JobTask(BaseHadoopJobTask):
             jcs.append('mapred.reduce.tasks=0')
         else:
             jcs.append('mapred.reduce.tasks=%s' % self.n_reduce_tasks)
+        if self.jobconf_truncate >= 0:
+            jcs.append('stream.jobconf.truncate.limit=%i' % self.jobconf_truncate)
         return jcs
 
     def init_mapper(self):
