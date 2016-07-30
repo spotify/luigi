@@ -1299,6 +1299,7 @@ class WorkerPurgeEventHandlerTest(unittest.TestCase):
 
         self.assertEqual(result, [task])
 
+
 class PerTaskRetryPolicyBehaviorTest(unittest.TestCase):
     def setUp(self):
         self.per_task_retry_count = 2
