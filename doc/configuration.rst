@@ -209,6 +209,7 @@ smtp_timeout
   Optionally sets the number of seconds after which smtp attempts should
   time out.
 
+.. _worker-config:
 
 [worker]
 --------
@@ -742,33 +743,35 @@ Luigi also supports defining retry-policy per task.
 
     class GenerateWordsFromHdfs(luigi.Task):
 
-       retry_count = 5
+       retry_count = 2
 
         ...
 
     class GenerateWordsFromRDBM(luigi.Task):
 
-       retry_count = 3
+       retry_count = 5
 
         ...
 
     class CountLetters(luigi.Task):
 
         def requires(self):
-            return [GenerateWordsFromHdfs(),GenerateWordsFromRDBM()]
+            return [GenerateWordsFromHdfs()]
+
+        def run():
+            yield GenerateWordsFromRDBM()
 
         ...
 
-Supported Configurations
-************************
-The configurations below are also definable in luigi config file. Check :ref:`scheduler-config`
+If none of retry-policy fields is defined per task, the field value will be **default** value which is defined in luigi config file. 
 
-+------------------------+-----------+
-| Config                 | Section   |
-+========================+===========+
-| retry_count            | scheduler |
-+------------------------+-----------+
-| disable_hard_timeout   | scheduler |
-+------------------------+-----------+
-| disable_window_seconds | scheduler |
-+------------------------+-----------+
+To make luigi sticks to the given retry-policy, be sure you run luigi worker with `keep_alive` config. Please check ``keep_alive`` config in :ref:`worker-config` section.
+
+Retry-Policy Fields
+-------------------
+
+The fields below are in retry-policy and they can be defined per task.
+
+* retry_count
+* disable_hard_timeout
+* disable_window_seconds

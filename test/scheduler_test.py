@@ -225,7 +225,3 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertFalse(task_9.has_excessive_failures())
         task_9.add_failure()
         self.assertTrue(task_9.has_excessive_failures())
-
-
-if __name__ == '__main__':
-    unittest.main()

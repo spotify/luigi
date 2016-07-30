@@ -24,6 +24,8 @@ import signal
 import tempfile
 import threading
 import time
+from uuid import uuid4
+
 import psutil
 from helpers import (unittest, with_config, skipOnTravis, LuigiTestCase,
                      temporary_unloaded_module)
@@ -1296,3 +1298,357 @@ class WorkerPurgeEventHandlerTest(unittest.TestCase):
         w._handle_next_task()
 
         self.assertEqual(result, [task])
+
+class PerTaskRetryPolicyBehaviorTest(unittest.TestCase):
+    def setUp(self):
+        self.per_task_retry_count = 2
+        self.default_retry_count = 1
+        self.sch = Scheduler(retry_delay=0.1, retry_count=self.default_retry_count, prune_on_get_work=True, record_task_history=False)
+
+        self.test_instance_id = str(uuid4())
+
+    def test_with_all_disabled_with_single_worker(self):
+        """
+            With this test, a case which has a task (A), requires two another tasks (B,C) which both is failed, is tested.
+
+            Task C has default retry_count which is 1, but Task B has retry_count at task level as 2.
+
+            This test is running on single worker
+        """
+        class C(luigi.Task):
+            task_namespace = self.test_instance_id
+
+            retry_index = 0
+
+            def run(self):
+                self.retry_index += 1
+                raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
+
+        c = C()
+
+        class B(Task):
+            task_namespace = self.test_instance_id
+
+            retry_count = self.per_task_retry_count
+
+            retry_index = 0
+
+            def run(self):
+                self.retry_index += 1
+                raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
+
+        b = B()
+
+        class A(luigi.WrapperTask):
+            task_namespace = self.test_instance_id
+
+            def requires(self):
+                return [b, c]
+
+        a = A()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            self.assertTrue(w1.add(a))
+
+            self.assertFalse(w1.run())
+
+            self.assertEqual([a.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+
+            self.assertEqual(sorted([b.task_id, c.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
+
+            self.assertEqual(0, self.sch._state.get_task(a.task_id).failures.num_failures())
+            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(b.task_id).failures.num_failures())
+            self.assertEqual(self.default_retry_count, self.sch._state.get_task(c.task_id).failures.num_failures())
+
+    def test_with_all_disabled_with_multiple_worker(self):
+        """
+            With this test, a case which has a task (A), requires two another tasks (B,C) which both is failed, is tested.
+
+            Task C has default retry_count which is 1, but Task B has retry_count at task level as 2.
+
+            This test is running on multiple worker
+        """
+
+        class C(luigi.Task):
+            task_namespace = self.test_instance_id
+
+            retry_index = 0
+
+            def run(self):
+                self.retry_index += 1
+                raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
+
+        c = C()
+
+        class B(Task):
+            task_namespace = self.test_instance_id
+
+            retry_count = self.per_task_retry_count
+
+            retry_index = 0
+
+            def run(self):
+                self.retry_index += 1
+                raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
+
+        b = B()
+
+        class A(luigi.WrapperTask):
+            task_namespace = self.test_instance_id
+
+            def requires(self):
+                return [b, c]
+
+        a = A()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1) as w2:
+                with Worker(scheduler=self.sch, worker_id='Z', keep_alive=True, wait_interval=0.1) as w3:
+                    self.assertTrue(w1.add(a))
+                    self.assertTrue(w2.add(b))
+                    self.assertTrue(w3.add(c))
+
+                    self.assertFalse(w3.run())
+                    self.assertFalse(w2.run())
+                    self.assertFalse(w1.run())
+
+                    self.assertEqual([a.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+
+                    self.assertEqual(sorted([b.task_id, c.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
+
+                    self.assertEqual(0, self.sch._state.get_task(a.task_id).failures.num_failures())
+                    self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(b.task_id).failures.num_failures())
+                    self.assertEqual(self.default_retry_count, self.sch._state.get_task(c.task_id).failures.num_failures())
+
+    def test_with_includes_success_with_single_worker(self):
+        """
+            With this test, a case which has a task (A), requires one (B) FAILED and one (C) SUCCESS, is tested.
+
+            Task C will be DONE successfully, but Task B will be failed and it has retry_count at task level as 2.
+
+            This test is running on single worker
+        """
+
+        class C(DummyTask):
+            task_namespace = self.test_instance_id
+
+        c = C()
+
+        class B(Task):
+            task_namespace = self.test_instance_id
+
+            retry_count = self.per_task_retry_count
+
+            retry_index = 0
+
+            def run(self):
+                self.retry_index += 1
+                raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
+
+        b = B()
+
+        class A(luigi.WrapperTask):
+            task_namespace = self.test_instance_id
+
+            def requires(self):
+                return [b, c]
+
+        a = A()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            self.assertTrue(w1.add(a))
+
+            self.assertFalse(w1.run())
+
+            self.assertEqual([a.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+            self.assertEqual([b.task_id], sorted(self.sch.task_list('DISABLED', '').keys()))
+            self.assertEqual([c.task_id], list(self.sch.task_list('DONE', '').keys()))
+
+            self.assertEqual(0, self.sch._state.get_task(a.task_id).failures.num_failures())
+            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(b.task_id).failures.num_failures())
+            self.assertEqual(0, self.sch._state.get_task(c.task_id).failures.num_failures())
+
+    def test_with_includes_success_with_multiple_worker(self):
+        """
+            With this test, a case which has a task (A), requires one (B) FAILED and one (C) SUCCESS, is tested.
+
+            Task C will be DONE successfully, but Task B will be failed and it has retry_count at task level as 2.
+
+            This test is running on multiple worker
+        """
+
+        class C(DummyTask):
+            task_namespace = self.test_instance_id
+
+        c = C()
+
+        class B(Task):
+            task_namespace = self.test_instance_id
+
+            retry_count = self.per_task_retry_count
+
+            retry_index = 0
+
+            def run(self):
+                self.retry_index += 1
+                raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
+
+        b = B()
+
+        class A(luigi.WrapperTask):
+            task_namespace = self.test_instance_id
+
+            def requires(self):
+                return [b, c]
+
+        a = A()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1) as w2:
+                with Worker(scheduler=self.sch, worker_id='Z', keep_alive=True, wait_interval=0.1) as w3:
+                    self.assertTrue(w1.add(a))
+                    self.assertTrue(w2.add(b))
+                    self.assertTrue(w3.add(c))
+
+                    self.assertTrue(w3.run())
+                    self.assertFalse(w2.run())
+                    self.assertFalse(w1.run())
+
+                    self.assertEqual([a.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+                    self.assertEqual([b.task_id], sorted(self.sch.task_list('DISABLED', '').keys()))
+                    self.assertEqual([c.task_id], list(self.sch.task_list('DONE', '').keys()))
+
+                    self.assertEqual(0, self.sch._state.get_task(a.task_id).failures.num_failures())
+                    self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(b.task_id).failures.num_failures())
+                    self.assertEqual(0, self.sch._state.get_task(c.task_id).failures.num_failures())
+
+    def test_with_dynamic_dependencies_with_single_worker(self):
+        """
+            With this test, a case includes dependency tasks(C,D) which both are failed.
+
+            Task D has default retry_count which is 1, but Task C has retry_count at task level as 2.
+
+            This test is running on single worker
+        """
+
+        class D(Task):
+            task_namespace = self.test_instance_id
+
+            retry_index = 0
+
+            def run(self):
+                self.retry_index += 1
+                raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
+
+        d = D()
+
+        class C(Task):
+            task_namespace = self.test_instance_id
+
+            retry_count = self.per_task_retry_count
+
+            retry_index = 0
+
+            def run(self):
+                self.retry_index += 1
+                raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
+
+        c = C()
+
+        class B(DummyTask):
+            task_namespace = self.test_instance_id
+
+        b = B()
+
+        class A(DummyTask):
+            task_namespace = self.test_instance_id
+
+            def requires(self):
+                return [b]
+
+            def run(self):
+                super(A, self).run()
+                yield c, d
+
+        a = A()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            self.assertTrue(w1.add(a))
+
+            self.assertFalse(w1.run())
+
+            self.assertEqual([a.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+
+            self.assertEqual(sorted([c.task_id, d.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
+
+            self.assertEqual(0, self.sch._state.get_task(a.task_id).failures.num_failures())
+            self.assertEqual(0, self.sch._state.get_task(b.task_id).failures.num_failures())
+            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(c.task_id).failures.num_failures())
+            self.assertEqual(self.default_retry_count, self.sch._state.get_task(d.task_id).failures.num_failures())
+
+    def test_with_dynamic_dependencies_with_multiple_workers(self):
+        """
+            With this test, a case includes dependency tasks(C,D) which both are failed.
+
+            Task D has default retry_count which is 1, but Task C has retry_count at task level as 2.
+
+            This test is running on multiple worker
+        """
+
+        class D(Task):
+            task_namespace = self.test_instance_id
+
+            retry_index = 0
+
+            def run(self):
+                self.retry_index += 1
+                raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
+
+        d = D()
+
+        class C(Task):
+            task_namespace = self.test_instance_id
+
+            retry_count = self.per_task_retry_count
+
+            retry_index = 0
+
+            def run(self):
+                self.retry_index += 1
+                raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
+
+        c = C()
+
+        class B(DummyTask):
+            task_namespace = self.test_instance_id
+
+        b = B()
+
+        class A(DummyTask):
+            task_namespace = self.test_instance_id
+
+            def requires(self):
+                return [b]
+
+            def run(self):
+                super(A, self).run()
+                yield c, d
+
+        a = A()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1) as w2:
+                self.assertTrue(w1.add(a))
+                self.assertTrue(w2.add(b))
+
+                self.assertTrue(w2.run())
+                self.assertFalse(w1.run())
+
+                self.assertEqual([a.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+
+                self.assertEqual(sorted([c.task_id, d.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
+
+                self.assertEqual(0, self.sch._state.get_task(a.task_id).failures.num_failures())
+                self.assertEqual(0, self.sch._state.get_task(b.task_id).failures.num_failures())
+                self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(c.task_id).failures.num_failures())
+                self.assertEqual(self.default_retry_count, self.sch._state.get_task(d.task_id).failures.num_failures())
