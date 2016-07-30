@@ -33,7 +33,7 @@ class WorkerKeepAliveUpstreamTest(LuigiTestCase):
         """
         Common setup code. Due to the contextmanager cant use normal setup
         """
-        self.sch = Scheduler(retry_delay=0.00000001, disable_failures=2)
+        self.sch = Scheduler(retry_delay=0.00000001, retry_count=2)
 
         with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1, wait_jitter=0) as w:
             self.w = w
