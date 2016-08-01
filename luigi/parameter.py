@@ -1046,6 +1046,9 @@ class ChoiceParameter(Parameter):
         super(ChoiceParameter, self).__init__(*args, **kwargs)
         self.choices = set(var_type(choice) for choice in choices)
         self.var_type = var_type
+        self.description += ("(" + ",".join(str(choice) for choice in choices)
+                             + ")")
+        print(self.description)
 
     def parse(self, s):
         var = self.var_type(s)
