@@ -94,7 +94,6 @@ import time
 import sys
 import logging
 import random
-import shutil
 try:
     import cPickle as pickle
 except ImportError:
