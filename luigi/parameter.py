@@ -29,6 +29,7 @@ from collections import OrderedDict, Mapping
 import operator
 import functools
 from ast import literal_eval
+from sys import maxsize
 
 try:
     from ConfigParser import NoOptionError, NoSectionError
@@ -959,3 +960,30 @@ class TupleParameter(Parameter):
         :param x: the value to serialize.
         """
         return json.dumps(x)
+
+
+class NumericalParameter(Parameter):
+    """Parameter that restricts values to the given numerical type, i.e. int or
+    float, and to the specified range
+    """
+    def __init__(self, var_type=int, min_value=0, max_value=maxint,
+                 left_op=operator.lt, right_op=operator.le, *args, **kwargs):
+        super(NumericalParameter, self).__init__(*args, **kwargs)
+        self.var_type = var_type
+        self.min_value = min_value
+        self.max_value = max_value
+        self.left_op = left_op
+        self.right_op = right_op
+
+    def parse(self, s):
+        value = self.var_type(s)
+        if (self.left_op(self.min_value, value) and
+            self.right_op(value, self.max_value)):
+            return value
+        else:
+            raise ValueError(
+                "{s} is not in the permitted range: {left_endpoint}{min_value} "
+                ", {max_value}{right_endpoint}".format(
+                    s=s, min_value=self.min_value, max_value=self.max_value,
+                    left_endpoint="(" if self.left_op == operator.lt else "[",
+                    right_endpoint="]" if self.right_op == operator.le else ")"))
