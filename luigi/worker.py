@@ -583,12 +583,15 @@ class Worker(object):
     def _add_task_batcher(self, task):
         family = task.task_family
         if family not in self._batch_classes_sent:
-            self._scheduler.add_task_batcher(
-                worker=self._id,
-                task_family=family,
-                batched_args=task.batch_param_names(),
-                max_batch_size=task.max_batch_size,
-            )
+            task_class = type(task)
+            batch_param_names = task_class.batch_param_names()
+            if batch_param_names:
+                self._scheduler.add_task_batcher(
+                    worker=self._id,
+                    task_family=family,
+                    batched_args=batch_param_names,
+                    max_batch_size=task.max_batch_size,
+                )
             self._batch_classes_sent.add(family)
 
     def _add(self, task, is_complete):
