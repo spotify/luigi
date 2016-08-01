@@ -31,7 +31,7 @@ ways between versions. The exception is the exception types and the
 import collections
 import getpass
 import logging
-import multiprocessing  # Note: this seems to have some stability issues: https://github.com/spotify/luigi/pull/438
+import multiprocessing
 import os
 import signal
 import subprocess
