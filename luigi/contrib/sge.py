@@ -168,12 +168,16 @@ class SGEJobTask(luigi.Task):
           Task classes and dependencies are pickled to a temporary folder on
           this drive. The default is ``/home``, the NFS share location setup
           by StarCluster
+    - run_locally: Run locally instead of on the cluster.
 
     """
 
     n_cpu = luigi.IntParameter(default=2, significant=False)
     shared_tmp_dir = luigi.Parameter(default='/home', significant=False)
     parallel_env = luigi.Parameter(default='orte', significant=False)
+    run_locally = luigi.BoolParameter(
+        default=False, significant=False,
+        description="run locally instead of on the cluster")
 
     def _fetch_task_failures(self):
         if not os.path.exists(self.errfile):
@@ -210,15 +214,18 @@ class SGEJobTask(luigi.Task):
         luigi.hadoop.create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
 
     def run(self):
-        self._init_local()
-        self._run_job()
-        # The procedure:
-        # - Pickle the class
-        # - Tarball the dependencies
-        # - Construct a qsub argument that runs a generic runner function with the path to the pickled class
-        # - Runner function loads the class from pickle
-        # - Runner class untars the dependencies
-        # - Runner function hits the button on the class's work() method
+        if self.run_locally:
+            self.work()
+        else:
+            self._init_local()
+            self._run_job()
+            # The procedure:
+            # - Pickle the class
+            # - Tarball the dependencies
+            # - Construct a qsub argument that runs a generic runner function with the path to the pickled class
+            # - Runner function loads the class from pickle
+            # - Runner class untars the dependencies
+            # - Runner function hits the button on the class's work() method
 
     def work(self):
         """Override this method, rather than ``run()``,  for your actual work."""
