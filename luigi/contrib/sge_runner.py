@@ -82,6 +82,8 @@ def main(args=sys.argv):
         logging.basicConfig(level=logging.WARN)
         work_dir = args[1]
         assert os.path.exists(work_dir), "First argument to sge_runner.py must be a directory that exists"
+        project_dir = args[2]
+        sys.path.append(project_dir)
         _do_work_on_compute_node(work_dir)
     except Exception as e:
         # Dump encoded data that we will try to fetch using mechanize
