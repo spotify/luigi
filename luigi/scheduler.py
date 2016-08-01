@@ -196,7 +196,7 @@ def _get_default(x, default):
 
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
-                 params=None, tracking_url=None, status_message=None, retry_policy=None):
+                 params=None, tracking_url=None, status_message=None, retry_policy='notoptional'):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -218,7 +218,7 @@ class Task(object):
         self.module = module
         self.params = _get_default(params, {})
 
-        self.retry_policy = _get_default(retry_policy, _get_empty_retry_policy())
+        self.retry_policy = retry_policy
         self.failures = Failures(self.retry_policy.disable_window)
         self.tracking_url = tracking_url
         self.status_message = status_message
@@ -600,7 +600,7 @@ class Scheduler(object):
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
                  assistant=False, tracking_url=None, worker=None,
-                 retry_policy_dict=None, deps_retry_policy_dicts=None, **kwargs):
+                 retry_policy_dict={}, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -611,12 +611,12 @@ class Scheduler(object):
         assert worker is not None
         worker_id = worker
         worker_enabled = self.update(worker_id)
+        retry_policy = self._generate_retry_policy(retry_policy_dict)
 
         if worker_enabled:
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
                 priority=priority, family=family, module=module, params=params,
-                retry_policy=self._generate_retry_policy(retry_policy_dict)
             )
         else:
             _default_task = None
@@ -668,14 +668,15 @@ class Scheduler(object):
 
             # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
             # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
-            deps_retry_policy_dicts = _get_default(deps_retry_policy_dicts, {})
             for dep in task.deps or []:
-                t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority,
-                                                                         retry_policy=self._generate_retry_policy(
-                                                                             deps_retry_policy_dicts.get(dep))))
+                t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
                 t.stakeholders.add(worker_id)
 
         self._update_priority(task, priority, worker_id)
+
+        # Because some tasks (non-dynamic dependencies) are `_make_task`ed
+        # before we know their retry_policy, we always set it here
+        task.retry_policy = retry_policy
 
         if runnable and status != FAILED and worker_enabled:
             task.workers.add(worker_id)
@@ -698,7 +699,7 @@ class Scheduler(object):
 
     def _generate_retry_policy(self, task_retry_policy_dict):
         retry_policy_dict = self._config._get_retry_policy()._asdict()
-        retry_policy_dict.update({k: v for k, v in six.iteritems(_get_default(task_retry_policy_dict, {})) if v is not None})
+        retry_policy_dict.update({k: v for k, v in six.iteritems(task_retry_policy_dict) if v is not None})
         return RetryPolicy(**retry_policy_dict)
 
     def _has_resources(self, needed_resources, used_resources):
