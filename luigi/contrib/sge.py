@@ -262,7 +262,7 @@ class SGEJobTask(luigi.Task):
         # Now delete the temporaries, if they're there.
         if self.tmp_dir and os.path.exists(self.tmp_dir):
             logger.info('Removing temporary directory %s' % self.tmp_dir)
-            shutil.rmtree(self.tmp_dir)
+            subprocess.call(["rm", "-rf", self.tmp_dir])
 
     def _track_job(self):
         while True:
