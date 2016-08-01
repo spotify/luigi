@@ -183,11 +183,9 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertEqual(luigi.scheduler.RetryPolicy(44, 999999999, 3600), task_6.retry_policy)
 
         cps._state._tasks = {}
-        cps.add_task(worker='test_worker3', task_id='test_task_7', deps=['test_task_8', 'test_task_9'],
-                     deps_retry_policy_dicts={
-                         'test_task_8': luigi.scheduler.RetryPolicy(99, 999, 9999)._asdict(),
-                         'test_task_9': luigi.scheduler.RetryPolicy(11, 111, 1111)._asdict(),
-                     })
+        cps.add_task(worker='test_worker3', task_id='test_task_7', deps=['test_task_8', 'test_task_9'])
+        cps.add_task(worker='test_worker3', task_id='test_task_8', retry_policy_dict=luigi.scheduler.RetryPolicy(99, 999, 9999)._asdict())
+        cps.add_task(worker='test_worker3', task_id='test_task_9', retry_policy_dict=luigi.scheduler.RetryPolicy(11, 111, 1111)._asdict())
 
         tasks = list(cps._state.get_active_tasks())
         self.assertEqual(3, len(tasks))
