@@ -1034,3 +1034,23 @@ class NumericalParameter(Parameter):
             raise ValueError(
                 "{s} is not in the set of {permitted_range}".format(
                     s=s, permitted_range=self._permitted_range))
+
+
+class ChoiceParameter(Parameter):
+    """Parameter that restricts options to the specified set
+    All choices must be of the same type that so that parse can
+    correctly infer type
+    Variable type is specified with var_type=...
+    """
+    def __init__(self, choices, var_type=str, *args, **kwargs):
+        super(ChoiceParameter, self).__init__(*args, **kwargs)
+        self.choices = set(var_type(choice) for choice in choices)
+        self.var_type = var_type
+
+    def parse(self, s):
+        var = self.var_type(s)
+        if var in self.choices:
+            return var
+        else:
+            raise ValueError("{s} is not a valid choice from {choices}".format(
+                s=s, choices=self.choices))

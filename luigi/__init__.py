@@ -36,7 +36,7 @@ from luigi.parameter import (
     DateIntervalParameter, TimeDeltaParameter,
     IntParameter, FloatParameter, BooleanParameter, BoolParameter,
     TaskParameter, EnumParameter, DictParameter, ListParameter, TupleParameter,
-    NumericalParameter
+    NumericalParameter, ChoiceParameter
 )
 
 from luigi import configuration
@@ -59,5 +59,5 @@ __all__ = [
     'FloatParameter', 'BooleanParameter', 'BoolParameter', 'TaskParameter',
     'ListParameter', 'TupleParameter', 'EnumParameter', 'DictParameter',
     'configuration', 'interface', 'file', 'run', 'build', 'event', 'Event',
-    'NumericalParameter'
+    'NumericalParameter', 'ChoiceParameter'
 ]
