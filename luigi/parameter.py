@@ -961,6 +961,7 @@ class TupleParameter(Parameter):
         """
         return json.dumps(x)
 
+
 class InputFileParameter(Parameter):
     """
     Paramater whose value is an existing file.
@@ -974,6 +975,7 @@ class InputFileParameter(Parameter):
             return os.path.realpath(s)
         else:
             raise OSError("{s} does not exist".format(s=s))
+
 
 class OutputFileParameter(Parameter):
     """
