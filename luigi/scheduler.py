@@ -942,7 +942,8 @@ class Scheduler(object):
                  'n_unique_pending': n_unique_pending}
 
         if len(batched_tasks) > 1:
-            batch_id = hashlib.md5('|'.join(task.id for task in batched_tasks)).hexdigest()
+            batch_string = '|'.join(task.id for task in batched_tasks)
+            batch_id = hashlib.md5(batch_string.encode('utf-8')).hexdigest()
             for task in batched_tasks:
                 self._state.set_batch_running(task, batch_id, worker_id)
 
