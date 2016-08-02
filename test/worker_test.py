@@ -24,6 +24,7 @@ import signal
 import tempfile
 import threading
 import time
+
 import psutil
 from helpers import (unittest, with_config, skipOnTravis, LuigiTestCase,
                      temporary_unloaded_module)
@@ -107,6 +108,14 @@ class DynamicRequiresOtherModule(Task):
 
         with self.output().open('w') as f:
             f.write('Done!')
+
+
+class DummyErrorTask(Task):
+    retry_index = 0
+
+    def run(self):
+        self.retry_index += 1
+        raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
 
 
 class WorkerTest(unittest.TestCase):
@@ -1296,3 +1305,276 @@ class WorkerPurgeEventHandlerTest(unittest.TestCase):
         w._handle_next_task()
 
         self.assertEqual(result, [task])
+
+
+class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
+    def setUp(self):
+        super(PerTaskRetryPolicyBehaviorTest, self).setUp()
+        self.per_task_retry_count = 2
+        self.default_retry_count = 1
+        self.sch = Scheduler(retry_delay=0.1, retry_count=self.default_retry_count, prune_on_get_work=True)
+
+    def test_with_all_disabled_with_single_worker(self):
+        """
+            With this test, a case which has a task (TestWrapperTask), requires two another tasks (TestErrorTask1,TestErrorTask1) which both is failed, is
+            tested.
+
+            Task TestErrorTask1 has default retry_count which is 1, but Task TestErrorTask2 has retry_count at task level as 2.
+
+            This test is running on single worker
+        """
+
+        class TestErrorTask1(DummyErrorTask):
+            pass
+
+        e1 = TestErrorTask1()
+
+        class TestErrorTask2(DummyErrorTask):
+            retry_count = self.per_task_retry_count
+
+        e2 = TestErrorTask2()
+
+        class TestWrapperTask(luigi.WrapperTask):
+            def requires(self):
+                return [e2, e1]
+
+        wt = TestWrapperTask()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            self.assertTrue(w1.add(wt))
+
+            self.assertFalse(w1.run())
+
+            self.assertEqual([wt.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+
+            self.assertEqual(sorted([e1.task_id, e2.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
+
+            self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
+            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).failures.num_failures())
+            self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())
+
+    def test_with_all_disabled_with_multiple_worker(self):
+        """
+            With this test, a case which has a task (TestWrapperTask), requires two another tasks (TestErrorTask1,TestErrorTask1) which both is failed, is
+            tested.
+
+            Task TestErrorTask1 has default retry_count which is 1, but Task TestErrorTask2 has retry_count at task level as 2.
+
+            This test is running on multiple worker
+        """
+
+        class TestErrorTask1(DummyErrorTask):
+            pass
+
+        e1 = TestErrorTask1()
+
+        class TestErrorTask2(DummyErrorTask):
+            retry_count = self.per_task_retry_count
+
+        e2 = TestErrorTask2()
+
+        class TestWrapperTask(luigi.WrapperTask):
+            def requires(self):
+                return [e2, e1]
+
+        wt = TestWrapperTask()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1) as w2:
+                with Worker(scheduler=self.sch, worker_id='Z', keep_alive=True, wait_interval=0.1) as w3:
+                    self.assertTrue(w1.add(wt))
+                    self.assertTrue(w2.add(e2))
+                    self.assertTrue(w3.add(e1))
+
+                    self.assertFalse(w3.run())
+                    self.assertFalse(w2.run())
+                    self.assertFalse(w1.run())
+
+                    self.assertEqual([wt.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+
+                    self.assertEqual(sorted([e1.task_id, e2.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
+
+                    self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
+                    self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).failures.num_failures())
+                    self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())
+
+    def test_with_includes_success_with_single_worker(self):
+        """
+            With this test, a case which has a task (TestWrapperTask), requires one (TestErrorTask1) FAILED and one (TestSuccessTask1) SUCCESS, is tested.
+
+            Task TestSuccessTask1 will be DONE successfully, but Task TestErrorTask1 will be failed and it has retry_count at task level as 2.
+
+            This test is running on single worker
+        """
+
+        class TestSuccessTask1(DummyTask):
+            pass
+
+        s1 = TestSuccessTask1()
+
+        class TestErrorTask1(DummyErrorTask):
+            retry_count = self.per_task_retry_count
+
+        e1 = TestErrorTask1()
+
+        class TestWrapperTask(luigi.WrapperTask):
+            def requires(self):
+                return [e1, s1]
+
+        wt = TestWrapperTask()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            self.assertTrue(w1.add(wt))
+
+            self.assertFalse(w1.run())
+
+            self.assertEqual([wt.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+            self.assertEqual([e1.task_id], list(self.sch.task_list('DISABLED', '').keys()))
+            self.assertEqual([s1.task_id], list(self.sch.task_list('DONE', '').keys()))
+
+            self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
+            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())
+            self.assertEqual(0, self.sch._state.get_task(s1.task_id).failures.num_failures())
+
+    def test_with_includes_success_with_multiple_worker(self):
+        """
+            With this test, a case which has a task (TestWrapperTask), requires one (TestErrorTask1) FAILED and one (TestSuccessTask1) SUCCESS, is tested.
+
+            Task TestSuccessTask1 will be DONE successfully, but Task TestErrorTask1 will be failed and it has retry_count at task level as 2.
+
+            This test is running on multiple worker
+        """
+
+        class TestSuccessTask1(DummyTask):
+            pass
+
+        s1 = TestSuccessTask1()
+
+        class TestErrorTask1(DummyErrorTask):
+            retry_count = self.per_task_retry_count
+
+        e1 = TestErrorTask1()
+
+        class TestWrapperTask(luigi.WrapperTask):
+            def requires(self):
+                return [e1, s1]
+
+        wt = TestWrapperTask()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1) as w2:
+                with Worker(scheduler=self.sch, worker_id='Z', keep_alive=True, wait_interval=0.1) as w3:
+                    self.assertTrue(w1.add(wt))
+                    self.assertTrue(w2.add(e1))
+                    self.assertTrue(w3.add(s1))
+
+                    self.assertTrue(w3.run())
+                    self.assertFalse(w2.run())
+                    self.assertFalse(w1.run())
+
+                    self.assertEqual([wt.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+                    self.assertEqual([e1.task_id], list(self.sch.task_list('DISABLED', '').keys()))
+                    self.assertEqual([s1.task_id], list(self.sch.task_list('DONE', '').keys()))
+
+                    self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
+                    self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())
+                    self.assertEqual(0, self.sch._state.get_task(s1.task_id).failures.num_failures())
+
+    def test_with_dynamic_dependencies_with_single_worker(self):
+        """
+            With this test, a case includes dependency tasks(TestErrorTask1,TestErrorTask2) which both are failed.
+
+            Task TestErrorTask1 has default retry_count which is 1, but Task TestErrorTask2 has retry_count at task level as 2.
+
+            This test is running on single worker
+        """
+
+        class TestErrorTask1(DummyErrorTask):
+            pass
+
+        e1 = TestErrorTask1()
+
+        class TestErrorTask2(DummyErrorTask):
+            retry_count = self.per_task_retry_count
+
+        e2 = TestErrorTask2()
+
+        class TestSuccessTask1(DummyTask):
+            pass
+
+        s1 = TestSuccessTask1()
+
+        class TestWrapperTask(DummyTask):
+            def requires(self):
+                return [s1]
+
+            def run(self):
+                super(TestWrapperTask, self).run()
+                yield e2, e1
+
+        wt = TestWrapperTask()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            self.assertTrue(w1.add(wt))
+
+            self.assertFalse(w1.run())
+
+            self.assertEqual([wt.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+
+            self.assertEqual(sorted([e1.task_id, e2.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
+
+            self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
+            self.assertEqual(0, self.sch._state.get_task(s1.task_id).failures.num_failures())
+            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).failures.num_failures())
+            self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())
+
+    def test_with_dynamic_dependencies_with_multiple_workers(self):
+        """
+            With this test, a case includes dependency tasks(TestErrorTask1,TestErrorTask2) which both are failed.
+
+            Task TestErrorTask1 has default retry_count which is 1, but Task TestErrorTask2 has retry_count at task level as 2.
+
+            This test is running on multiple worker
+        """
+
+        class TestErrorTask1(DummyErrorTask):
+            pass
+
+        e1 = TestErrorTask1()
+
+        class TestErrorTask2(DummyErrorTask):
+            retry_count = self.per_task_retry_count
+
+        e2 = TestErrorTask2()
+
+        class TestSuccessTask1(DummyTask):
+            pass
+
+        s1 = TestSuccessTask1()
+
+        class TestWrapperTask(DummyTask):
+            def requires(self):
+                return [s1]
+
+            def run(self):
+                super(TestWrapperTask, self).run()
+                yield e2, e1
+
+        wt = TestWrapperTask()
+
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1) as w2:
+                self.assertTrue(w1.add(wt))
+                self.assertTrue(w2.add(s1))
+
+                self.assertTrue(w2.run())
+                self.assertFalse(w1.run())
+
+                self.assertEqual([wt.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
+
+                self.assertEqual(sorted([e1.task_id, e2.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
+
+                self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
+                self.assertEqual(0, self.sch._state.get_task(s1.task_id).failures.num_failures())
+                self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).failures.num_failures())
+                self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())

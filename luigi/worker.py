@@ -53,7 +53,7 @@ from luigi import six
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
@@ -83,6 +83,10 @@ _WAIT_INTERVAL_EPS = 0.00001
 
 def _is_external(task):
     return task.run is None or task.run == NotImplemented
+
+
+def _get_retry_policy_dict(task):
+    return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window_seconds)._asdict()
 
 
 class TaskException(Exception):
@@ -643,7 +647,9 @@ class Worker(object):
                        resources=task.process_resources(),
                        params=task.to_str_params(),
                        family=task.task_family,
-                       module=task.task_module)
+                       module=task.task_module,
+                       retry_policy_dict=_get_retry_policy_dict(task),
+                       )
 
     def _validate_dependency(self, dependency):
         if isinstance(dependency, Target):
