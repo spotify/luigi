@@ -249,7 +249,8 @@ class SGEJobTask(luigi.Task):
         runner_path = sge_runner.__file__
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
-        job_str = 'python {0} "{1}"'.format(runner_path, self.tmp_dir)  # enclose tmp_dir in quotes to protect from special escape chars
+        job_str = 'python {0} "{1}" "{2}"'.format(
+            runner_path, self.tmp_dir, os.getcwd())  # enclose tmp_dir in quotes to protect from special escape chars
 
         # Build qsub submit command
         self.outfile = os.path.join(self.tmp_dir, 'job.out')
