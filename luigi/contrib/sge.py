@@ -169,6 +169,7 @@ class SGEJobTask(luigi.Task):
           this drive. The default is ``/home``, the NFS share location setup
           by StarCluster
     - run_locally: Run locally instead of on the cluster.
+    - poll_time: the length of time to wait in order to poll qstat
 
     """
 
@@ -178,6 +179,9 @@ class SGEJobTask(luigi.Task):
     run_locally = luigi.BoolParameter(
         default=False, significant=False,
         description="run locally instead of on the cluster")
+    poll_time = luigi.IntParameter(
+        significant=False, default=POLL_TIME,
+        description="specify the wait time to poll qstat for the job status")
 
     def _fetch_task_failures(self):
         if not os.path.exists(self.errfile):
@@ -274,7 +278,7 @@ class SGEJobTask(luigi.Task):
     def _track_job(self):
         while True:
             # Sleep for a little bit
-            time.sleep(POLL_TIME)
+            time.sleep(self.poll_time)
 
             # See what the job's up to
             # ASSUMPTION
