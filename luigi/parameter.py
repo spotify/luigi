@@ -974,6 +974,17 @@ class NumericalParameter(Parameter):
         self.max_value = max_value
         self.left_op = left_op
         self.right_op = right_op
+        self.permitted_range = (
+            "{var_type} in {left_endpoint}{min_value}, {max_value}{right_endpoint}".format(
+                var_type=var_type.__name__,
+                min_value=min_value, max_value=max_value,
+                left_endpoint="(" if self.left_op == operator.lt else "[",
+                right_endpoint="]" if self.right_op == operator.lt else ")"))
+        if self.description:
+            self.description += " "
+        else:
+            self.description = ""
+        self.description += "permitted values: " + self.permitted_range
 
     def parse(self, s):
         value = self.var_type(s)
@@ -982,8 +993,5 @@ class NumericalParameter(Parameter):
             return value
         else:
             raise ValueError(
-                "{s} is not in the permitted range: {left_endpoint}{min_value} "
-                ", {max_value}{right_endpoint}".format(
-                    s=s, min_value=self.min_value, max_value=self.max_value,
-                    left_endpoint="(" if self.left_op == operator.lt else "[",
-                    right_endpoint="]" if self.right_op == operator.le else ")"))
+                "{s} is not in the set of {description}".format(
+                    s=s, description=self.description))
