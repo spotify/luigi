@@ -1037,10 +1037,24 @@ class NumericalParameter(Parameter):
 
 
 class ChoiceParameter(Parameter):
-    """Parameter that restricts options to the specified set
-    All choices must be of the same type that so that parse can
-    correctly infer type
-    Variable type is specified with var_type=...
+    """
+    A parameter which takes two values:
+        1. an instance of :class:`~collections.Iterable` and
+        2. the class of the variables to convert to.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+            my_param = luigi.ChoiceParameter(choices=[0.1, 0.2, 0.3], var_type=float)
+
+    At the command line, use
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --my-param 0.1
+
     """
     def __init__(self, choices, var_type=str, *args, **kwargs):
         super(ChoiceParameter, self).__init__(*args, **kwargs)
