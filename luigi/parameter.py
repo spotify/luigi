@@ -969,12 +969,12 @@ class NumericalParameter(Parameter):
     def __init__(self, var_type=int, min_value=0, max_value=maxint,
                  left_op=operator.lt, right_op=operator.le, *args, **kwargs):
         super(NumericalParameter, self).__init__(*args, **kwargs)
-        self.var_type = var_type
-        self.min_value = min_value
-        self.max_value = max_value
-        self.left_op = left_op
-        self.right_op = right_op
-        self.permitted_range = (
+        self._var_type = var_type
+        self._min_value = min_value
+        self._max_value = max_value
+        self._left_op = left_op
+        self._right_op = right_op
+        self._permitted_range = (
             "{var_type} in {left_endpoint}{min_value}, {max_value}{right_endpoint}".format(
                 var_type=var_type.__name__,
                 min_value=min_value, max_value=max_value,
@@ -984,12 +984,12 @@ class NumericalParameter(Parameter):
             self.description += " "
         else:
             self.description = ""
-        self.description += "permitted values: " + self.permitted_range
+        self.description += "permitted values: " + self._permitted_range
 
     def parse(self, s):
-        value = self.var_type(s)
-        if (self.left_op(self.min_value, value) and
-            self.right_op(value, self.max_value)):
+        value = self._var_type(s)
+        if (self._left_op(self._min_value, value) and
+            self._right_op(value, self._max_value)):
             return value
         else:
             raise ValueError(
