@@ -1015,8 +1015,8 @@ class NumericalParameter(Parameter):
             "{var_type} in {left_endpoint}{min_value}, {max_value}{right_endpoint}".format(
                 var_type=var_type.__name__,
                 min_value=min_value, max_value=max_value,
-                left_endpoint="(" if self.left_op == operator.lt else "[",
-                right_endpoint=")" if self.right_op == operator.lt else "]"))
+                left_endpoint="(" if left_op == operator.lt else "[",
+                right_endpoint=")" if right_op == operator.lt else "]"))
         if self.description:
             self.description += " "
         else:
