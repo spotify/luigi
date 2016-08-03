@@ -963,11 +963,48 @@ class TupleParameter(Parameter):
 
 
 class NumericalParameter(Parameter):
-    """Parameter that restricts values to the given numerical type, i.e. int or
-    float, and to the specified range
+    """
+    Parameter whose value is a number of the specified type, e.g. ``int`` or
+    ``float`` and in the range specified.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+            my_param = luigi.NumericalParameter(
+                var_type=int, min_value=-3, max_value=7, left_op=operator.le, right_op=operator.lt)
+
+    At the command line, use
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --my-param -3
     """
     def __init__(self, var_type=int, min_value=0, max_value=maxint,
                  left_op=operator.lt, right_op=operator.le, *args, **kwargs):
+        """
+        :param function var_type: The type of the input variable, e.g. int or float.
+                                  Default: ``int``.
+        :param min_value: The minimum value permissible in the accepted values
+                          range.  May be inclusive or exclusive based on left_op parameter.
+                          This should be the same type as var_type.
+                          Default: ``0``.
+        :param max_value: The maximum value permissible in the accepted values
+                          range.  May be inclusive or exclusive based on right_op parameter.
+                          This should be the same type as var_type.
+                          Default: ``sys.maxsize``.
+        :param function left_op: The comparison operator for the left-most comparison in
+                                 the expression ``min_value left_op value right_op value``.
+                                 This operator should generally be either
+                                 ``operator.lt`` or ``operator.le``.
+                                 Default: ``operator.lt``.
+        :param function right_op: The comparison operator for the right-most comparison in
+                                  the expression ``min_value left_op value right_op value``.
+                                  This operator should generally be either
+                                  ``operator.lt`` or ``operator.le``.
+                                  Default: ``operator.le``.
+        """
         super(NumericalParameter, self).__init__(*args, **kwargs)
         self._var_type = var_type
         self._min_value = min_value
