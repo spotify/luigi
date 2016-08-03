@@ -1055,22 +1055,26 @@ class ChoiceParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --my-param 0.1
 
+    Consider using :class:`~luigi.EnumParameter` for a typed, structured
+    alternative.  This class can perform the same role when all choices are the
+    same type and transparency of parameter value on the command line is
+    desired.
     """
     def __init__(self, choices, var_type=str, *args, **kwargs):
         super(ChoiceParameter, self).__init__(*args, **kwargs)
-        self.choices = set(var_type(choice) for choice in choices)
-        self.var_type = var_type
+        self._choices = set(var_type(choice) for choice in choices)
+        self._var_type = var_type
         if self.description:
             self.description += " "
         else:
             self.description = ""
         self.description += (
-            "Choices: {" + ",".join(str(choice) for choice in choices) + "}")
+            "Choices: {" + ", ".join(str(choice) for choice in choices) + "}")
 
     def parse(self, s):
-        var = self.var_type(s)
-        if var in self.choices:
+        var = self._var_type(s)
+        if var in self._choices:
             return var
         else:
             raise ValueError("{s} is not a valid choice from {choices}".format(
-                s=s, choices=self.choices))
+                s=s, choices=self._choices))
