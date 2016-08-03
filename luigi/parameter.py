@@ -1060,16 +1060,18 @@ class ChoiceParameter(Parameter):
     same type and transparency of parameter value on the command line is
     desired.
     """
-    def __init__(self, choices, var_type=str, *args, **kwargs):
-        super(ChoiceParameter, self).__init__(*args, **kwargs)
-        self._choices = set(var_type(choice) for choice in choices)
+    def __init__(self, var_type=str, *args, **kwargs):
+        if "choices" not in kwargs:
+            raise ParameterException("A choices iterable must be specified")
+        self._choices = set(var_type(choice) for choice in kwargs.pop("choices"))
         self._var_type = var_type
+        super(ChoiceParameter, self).__init__(*args, **kwargs)
         if self.description:
             self.description += " "
         else:
             self.description = ""
         self.description += (
-            "Choices: {" + ", ".join(str(choice) for choice in choices) + "}")
+            "Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}")
 
     def parse(self, s):
         var = self._var_type(s)
