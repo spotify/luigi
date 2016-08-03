@@ -1030,5 +1030,5 @@ class NumericalParameter(Parameter):
             return value
         else:
             raise ValueError(
-                "{s} is not in the set of {description}".format(
-                    s=s, description=self.description))
+                "{s} is not in the set of {permitted_range}".format(
+                    s=s, permitted_range=self._permitted_range))
