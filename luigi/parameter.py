@@ -981,7 +981,7 @@ class NumericalParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --my-param -3
     """
-    def __init__(self, var_type=int, min_value=0, max_value=maxint,
+    def __init__(self, var_type=int, min_value=0, max_value=maxsize,
                  left_op=operator.lt, right_op=operator.le, *args, **kwargs):
         """
         :param function var_type: The type of the input variable, e.g. int or float.
