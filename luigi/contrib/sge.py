@@ -168,6 +168,9 @@ class SGEJobTask(luigi.Task):
           Task classes and dependencies are pickled to a temporary folder on
           this drive. The default is ``/home``, the NFS share location setup
           by StarCluster
+    - job_name_format: String that can be passed in to customize the job name
+        string passed to qsub; e.g. "Task123_{task_family}_{n_cpu}...".
+    - job_name: Exact job name to pass to qsub.
     - run_locally: Run locally instead of on the cluster.
     - poll_time: the length of time to wait in order to poll qstat
     - dont_remove_tmp_dir: Instead of deleting the temporary directory, keep it.
@@ -177,6 +180,12 @@ class SGEJobTask(luigi.Task):
     n_cpu = luigi.IntParameter(default=2, significant=False)
     shared_tmp_dir = luigi.Parameter(default='/home', significant=False)
     parallel_env = luigi.Parameter(default='orte', significant=False)
+    job_name_format = luigi.Parameter(
+        significant=False, default=None, description="A string that can be "
+        "formatted with class variables to name the job with qsub.")
+    job_name = luigi.Parameter(
+        significant=False, default=None,
+        description="Explicit job name given via qsub.")
     run_locally = luigi.BoolParameter(
         significant=False,
         description="run locally instead of on the cluster")
@@ -186,6 +195,18 @@ class SGEJobTask(luigi.Task):
     dont_remove_tmp_dir = luigi.BoolParameter(
         significant=False,
         description="don't delete the temporary directory used (for debugging)")
+
+    def __init__(self, *args, **kwargs):
+        if self.job_name:
+            # use explicitly provided job name
+            pass
+        elif self.job_name_format:
+            # define the job name with the provided format
+            self.job_name = self.job_name_format.format(
+                task_family=self.task_family, **self.__dict__)
+        else:
+            # default to the task family
+            self.job_name = self.task_family
 
     def _fetch_task_failures(self):
         if not os.path.exists(self.errfile):
