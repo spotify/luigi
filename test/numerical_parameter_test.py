@@ -62,3 +62,11 @@ class NumericalParameterTest(unittest.TestCase):
         d = luigi.NumericalParameter(var_type=float, min_value=-3, max_value=7,
                                 left_op=le, right_op=lt)
         self.assertRaises(ValueError, lambda: d.parse(7))
+
+    def test_defaults_start_range(self):
+        d = luigi.NumericalParameter()
+        self.assertEqual(0, d.parse(0))
+
+    def test_endpoint_default_exclusive(self):
+        d = luigi.NumericalParameter(max_value=10)
+        self.assertRaises(ValueError, lambda: d.parse(10))
