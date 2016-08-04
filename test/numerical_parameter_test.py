@@ -64,9 +64,18 @@ class NumericalParameterTest(unittest.TestCase):
         self.assertRaises(ValueError, lambda: d.parse(7))
 
     def test_defaults_start_range(self):
-        d = luigi.NumericalParameter()
-        self.assertEqual(0, d.parse(0))
+        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7)
+        self.assertEqual(-3, d.parse(-3))
 
     def test_endpoint_default_exclusive(self):
-        d = luigi.NumericalParameter(max_value=10)
-        self.assertRaises(ValueError, lambda: d.parse(10))
+        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7)
+        self.assertRaises(ValueError, lambda: d.parse(7))
+
+    def test_var_type_parameter_exception(self):
+        self.assertRaises(luigi.parameter.ParameterException, lambda: luigi.NumericalParameter(min_value=-3, max_value=7))
+
+    def test_min_value_parameter_exception(self):
+        self.assertRaises(luigi.parameter.ParameterException, lambda: luigi.NumericalParameter(var_type=int, max_value=7))
+
+    def test_max_value_parameter_exception(self):
+        self.assertRaises(luigi.parameter.ParameterException, lambda: luigi.NumericalParameter(var_type=int, min_value=-3))
