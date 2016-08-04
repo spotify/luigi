@@ -972,17 +972,19 @@ class NumericalParameter(Parameter):
     .. code-block:: python
 
         class MyTask(luigi.Task):
-            my_param = luigi.NumericalParameter(
-                var_type=int, min_value=-3, max_value=7, left_op=operator.le, right_op=operator.lt)
+            my_param_1 = luigi.NumericalParameter(
+                var_type=int, min_value=-3, max_value=7) # -3 <= my_param_1 < 7
+            my_param_2 = luigi.NumericalParameter(
+                var_type=int, min_value=-3, max_value=7, left_op=operator.lt, right_op=operator.le) # -3 < my_param_2 <= 7
 
     At the command line, use
 
     .. code-block:: console
 
-        $ luigi --module my_tasks MyTask --my-param -3
+        $ luigi --module my_tasks MyTask --my-param-1 -3 --my-param-2 -2
     """
     def __init__(self, var_type=int, min_value=0, max_value=maxsize,
-                 left_op=operator.lt, right_op=operator.le, *args, **kwargs):
+                 left_op=operator.le, right_op=operator.lt, *args, **kwargs):
         """
         :param function var_type: The type of the input variable, e.g. int or float.
                                   Default: ``int``.
@@ -998,12 +1000,12 @@ class NumericalParameter(Parameter):
                                  the expression ``min_value left_op value right_op value``.
                                  This operator should generally be either
                                  ``operator.lt`` or ``operator.le``.
-                                 Default: ``operator.lt``.
+                                 Default: ``operator.le``.
         :param function right_op: The comparison operator for the right-most comparison in
                                   the expression ``min_value left_op value right_op value``.
                                   This operator should generally be either
                                   ``operator.lt`` or ``operator.le``.
-                                  Default: ``operator.le``.
+                                  Default: ``operator.lt``.
         """
         super(NumericalParameter, self).__init__(*args, **kwargs)
         self._var_type = var_type
@@ -1015,7 +1017,7 @@ class NumericalParameter(Parameter):
             "{var_type} in {left_endpoint}{min_value}, {max_value}{right_endpoint}".format(
                 var_type=var_type.__name__,
                 min_value=min_value, max_value=max_value,
-                left_endpoint="(" if left_op == operator.lt else "[",
+                left_endpoint="[" if left_op == operator.le else "(",
                 right_endpoint=")" if right_op == operator.lt else "]"))
         if self.description:
             self.description += " "
