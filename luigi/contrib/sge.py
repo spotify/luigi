@@ -174,6 +174,9 @@ class SGEJobTask(luigi.Task):
     - run_locally: Run locally instead of on the cluster.
     - poll_time: the length of time to wait in order to poll qstat
     - dont_remove_tmp_dir: Instead of deleting the temporary directory, keep it.
+    - no_tarball: Don't create a tarball of the luigi project directory.  Can be
+        useful to reduce I/O requirements when the luigi directory is accessible
+        from cluster nodes already.
 
     """
 
@@ -195,6 +198,9 @@ class SGEJobTask(luigi.Task):
     dont_remove_tmp_dir = luigi.BoolParameter(
         significant=False,
         description="don't delete the temporary directory used (for debugging)")
+    no_tarball = luigi.BoolParameter(
+        significant=False,
+        description="don't tarball (and extract) the luigi project files")
 
     def __init__(self, *args, **kwargs):
         if self.job_name:
@@ -236,11 +242,13 @@ class SGEJobTask(luigi.Task):
         logging.debug("Dumping pickled class")
         self._dump(self.tmp_dir)
 
-        # Make sure that all the class's dependencies are tarred and available
-        logging.debug("Tarballing dependencies")
-        # Grab luigi and the module containing the code to be run
-        packages = [luigi] + [__import__(self.__module__, None, None, 'dummy')]
-        luigi.hadoop.create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
+        if not self.no_tarball:
+            # Make sure that all the class's dependencies are tarred and available
+            # This is not necessary if luigi is importable from the cluster node
+            logging.debug("Tarballing dependencies")
+            # Grab luigi and the module containing the code to be run
+            packages = [luigi] + [__import__(self.__module__, None, None, 'dummy')]
+            luigi.hadoop.create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
 
     def run(self):
         if self.run_locally:
@@ -280,6 +288,8 @@ class SGEJobTask(luigi.Task):
             runner_path = runner_path[:-3] + "py"
         job_str = 'python {0} "{1}" "{2}"'.format(
             runner_path, self.tmp_dir, os.getcwd())  # enclose tmp_dir in quotes to protect from special escape chars
+        if self.no_tarball:
+            job_str += ' "--no-tarball"'
 
         # Build qsub submit command
         self.outfile = os.path.join(self.tmp_dir, 'job.out')
