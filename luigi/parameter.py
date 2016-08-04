@@ -1025,8 +1025,7 @@ class NumericalParameter(Parameter):
 
     def parse(self, s):
         value = self._var_type(s)
-        if (self._left_op(self._min_value, value) and
-            self._right_op(value, self._max_value)):
+        if (self._left_op(self._min_value, value) and self._right_op(value, self._max_value)):
             return value
         else:
             raise ValueError(
