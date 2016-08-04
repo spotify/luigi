@@ -79,3 +79,25 @@ class NumericalParameterTest(unittest.TestCase):
 
     def test_max_value_parameter_exception(self):
         self.assertRaises(luigi.parameter.ParameterException, lambda: luigi.NumericalParameter(var_type=int, min_value=-3))
+
+    def test_hash_int(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.NumericalParameter(var_type=int, min_value=-3, max_value=7)
+        p = luigi.parameter.NumericalParameter(var_type=int, min_value=-3, max_value=7)
+        self.assertEqual(hash(Foo(args=-3).args), hash(p.parse("-3")))
+
+    def test_hash_float(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.NumericalParameter(var_type=float, min_value=-3, max_value=7)
+        p = luigi.parameter.NumericalParameter(var_type=float, min_value=-3, max_value=7)
+        self.assertEqual(hash(Foo(args=-3.0).args), hash(p.parse("-3.0")))
+
+    def test_int_serialize_parse(self):
+        a = luigi.parameter.NumericalParameter(var_type=int, min_value=-3, max_value=7)
+        b = -3
+        self.assertEqual(b, a.parse(a.serialize(b)))
+
+    def test_float_serialize_parse(self):
+        a = luigi.parameter.NumericalParameter(var_type=float, min_value=-3, max_value=7)
+        b = -3.0
+        self.assertEqual(b, a.parse(a.serialize(b)))
