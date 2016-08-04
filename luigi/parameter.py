@@ -29,7 +29,6 @@ from collections import OrderedDict, Mapping
 import operator
 import functools
 from ast import literal_eval
-from sys import maxsize
 
 try:
     from ConfigParser import NoOptionError, NoSectionError
@@ -983,19 +982,15 @@ class NumericalParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --my-param-1 -3 --my-param-2 -2
     """
-    def __init__(self, var_type=int, min_value=0, max_value=maxsize,
-                 left_op=operator.le, right_op=operator.lt, *args, **kwargs):
+    def __init__(self, left_op=operator.le, right_op=operator.lt, *args, **kwargs):
         """
         :param function var_type: The type of the input variable, e.g. int or float.
-                                  Default: ``int``.
         :param min_value: The minimum value permissible in the accepted values
                           range.  May be inclusive or exclusive based on left_op parameter.
                           This should be the same type as var_type.
-                          Default: ``0``.
         :param max_value: The maximum value permissible in the accepted values
                           range.  May be inclusive or exclusive based on right_op parameter.
                           This should be the same type as var_type.
-                          Default: ``sys.maxsize``.
         :param function left_op: The comparison operator for the left-most comparison in
                                  the expression ``min_value left_op value right_op value``.
                                  This operator should generally be either
@@ -1007,18 +1002,24 @@ class NumericalParameter(Parameter):
                                   ``operator.lt`` or ``operator.le``.
                                   Default: ``operator.lt``.
         """
-        super(NumericalParameter, self).__init__(*args, **kwargs)
-        self._var_type = var_type
-        self._min_value = min_value
-        self._max_value = max_value
+        if "var_type" not in kwargs:
+            raise ParameterException("var_type must be specified")
+        self._var_type = kwargs.pop("var_type")
+        if "min_value" not in kwargs:
+            raise ParameterException("min_value must be specified")
+        self._min_value = kwargs.pop("min_value")
+        if "max_value" not in kwargs:
+            raise ParameterException("max_value must be specified")
+        self._max_value = kwargs.pop("max_value")
         self._left_op = left_op
         self._right_op = right_op
         self._permitted_range = (
             "{var_type} in {left_endpoint}{min_value}, {max_value}{right_endpoint}".format(
-                var_type=var_type.__name__,
-                min_value=min_value, max_value=max_value,
+                var_type=self._var_type.__name__,
+                min_value=self._min_value, max_value=self._max_value,
                 left_endpoint="[" if left_op == operator.le else "(",
                 right_endpoint=")" if right_op == operator.lt else "]"))
+        super(NumericalParameter, self).__init__(*args, **kwargs)
         if self.description:
             self.description += " "
         else:
