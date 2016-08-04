@@ -44,3 +44,6 @@ class ChoiceParameterTest(unittest.TestCase):
 
     def test_choices_param_missing(self):
         self.assertRaises(luigi.parameter.ParameterException, lambda: luigi.ChoiceParameter())
+
+    def test_invalid_choice_type(self):
+        self.assertRaises(AssertionError, lambda: luigi.ChoiceParameter(choices=[1, 2, "5"], var_type=int))
