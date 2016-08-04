@@ -170,6 +170,7 @@ class SGEJobTask(luigi.Task):
           by StarCluster
     - run_locally: Run locally instead of on the cluster.
     - poll_time: the length of time to wait in order to poll qstat
+    - dont_remove_tmp_dir: Instead of deleting the temporary directory, keep it.
 
     """
 
@@ -177,11 +178,14 @@ class SGEJobTask(luigi.Task):
     shared_tmp_dir = luigi.Parameter(default='/home', significant=False)
     parallel_env = luigi.Parameter(default='orte', significant=False)
     run_locally = luigi.BoolParameter(
-        default=False, significant=False,
+        significant=False,
         description="run locally instead of on the cluster")
     poll_time = luigi.IntParameter(
         significant=False, default=POLL_TIME,
         description="specify the wait time to poll qstat for the job status")
+    dont_remove_tmp_dir = luigi.BoolParameter(
+        significant=False,
+        description="don't delete the temporary directory used (for debugging)")
 
     def _fetch_task_failures(self):
         if not os.path.exists(self.errfile):
@@ -271,7 +275,7 @@ class SGEJobTask(luigi.Task):
         self._track_job()
 
         # Now delete the temporaries, if they're there.
-        if self.tmp_dir and os.path.exists(self.tmp_dir):
+        if (self.tmp_dir and os.path.exists(self.tmp_dir) and not self.dont_remove_tmp_dir):
             logger.info('Removing temporary directory %s' % self.tmp_dir)
             subprocess.call(["rm", "-rf", self.tmp_dir])
 
