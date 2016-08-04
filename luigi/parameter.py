@@ -1063,8 +1063,9 @@ class ChoiceParameter(Parameter):
     def __init__(self, var_type=str, *args, **kwargs):
         if "choices" not in kwargs:
             raise ParameterException("A choices iterable must be specified")
-        self._choices = set(var_type(choice) for choice in kwargs.pop("choices"))
+        self._choices = set(kwargs.pop("choices"))
         self._var_type = var_type
+        assert all(type(choice) is self._var_type for choice in self._choices), "Invalid type in choices"
         super(ChoiceParameter, self).__init__(*args, **kwargs)
         if self.description:
             self.description += " "
