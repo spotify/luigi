@@ -834,6 +834,11 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
     def testTupleConfig(self):
         self.assertTrue(_value(luigi.TupleParameter(config_path=dict(section="foo", name="bar"))))
 
+    @with_config({"foo": {"bar": "-3"}})
+    def testNumericalParameter(self):
+        p = luigi.NumericalParameter(min_value=-3, max_value=7, var_type=int, config_path=dict(section="foo", name="bar"))
+        self.assertEqual(-3, _value(p))
+
 
 class OverrideEnvStuff(LuigiTestCase):
 
