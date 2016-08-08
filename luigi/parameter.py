@@ -959,3 +959,78 @@ class TupleParameter(Parameter):
         :param x: the value to serialize.
         """
         return json.dumps(x)
+
+
+class NumericalParameter(Parameter):
+    """
+    Parameter whose value is a number of the specified type, e.g. ``int`` or
+    ``float`` and in the range specified.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+            my_param_1 = luigi.NumericalParameter(
+                var_type=int, min_value=-3, max_value=7) # -3 <= my_param_1 < 7
+            my_param_2 = luigi.NumericalParameter(
+                var_type=int, min_value=-3, max_value=7, left_op=operator.lt, right_op=operator.le) # -3 < my_param_2 <= 7
+
+    At the command line, use
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --my-param-1 -3 --my-param-2 -2
+    """
+    def __init__(self, left_op=operator.le, right_op=operator.lt, *args, **kwargs):
+        """
+        :param function var_type: The type of the input variable, e.g. int or float.
+        :param min_value: The minimum value permissible in the accepted values
+                          range.  May be inclusive or exclusive based on left_op parameter.
+                          This should be the same type as var_type.
+        :param max_value: The maximum value permissible in the accepted values
+                          range.  May be inclusive or exclusive based on right_op parameter.
+                          This should be the same type as var_type.
+        :param function left_op: The comparison operator for the left-most comparison in
+                                 the expression ``min_value left_op value right_op value``.
+                                 This operator should generally be either
+                                 ``operator.lt`` or ``operator.le``.
+                                 Default: ``operator.le``.
+        :param function right_op: The comparison operator for the right-most comparison in
+                                  the expression ``min_value left_op value right_op value``.
+                                  This operator should generally be either
+                                  ``operator.lt`` or ``operator.le``.
+                                  Default: ``operator.lt``.
+        """
+        if "var_type" not in kwargs:
+            raise ParameterException("var_type must be specified")
+        self._var_type = kwargs.pop("var_type")
+        if "min_value" not in kwargs:
+            raise ParameterException("min_value must be specified")
+        self._min_value = kwargs.pop("min_value")
+        if "max_value" not in kwargs:
+            raise ParameterException("max_value must be specified")
+        self._max_value = kwargs.pop("max_value")
+        self._left_op = left_op
+        self._right_op = right_op
+        self._permitted_range = (
+            "{var_type} in {left_endpoint}{min_value}, {max_value}{right_endpoint}".format(
+                var_type=self._var_type.__name__,
+                min_value=self._min_value, max_value=self._max_value,
+                left_endpoint="[" if left_op == operator.le else "(",
+                right_endpoint=")" if right_op == operator.lt else "]"))
+        super(NumericalParameter, self).__init__(*args, **kwargs)
+        if self.description:
+            self.description += " "
+        else:
+            self.description = ""
+        self.description += "permitted values: " + self._permitted_range
+
+    def parse(self, s):
+        value = self._var_type(s)
+        if (self._left_op(self._min_value, value) and self._right_op(value, self._max_value)):
+            return value
+        else:
+            raise ValueError(
+                "{s} is not in the set of {permitted_range}".format(
+                    s=s, permitted_range=self._permitted_range))
