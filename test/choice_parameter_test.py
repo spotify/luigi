@@ -21,29 +21,35 @@ import luigi
 
 
 class ChoiceParameterTest(unittest.TestCase):
+    def test_parse_str(self):
+        d = luigi.ChoiceParameter(choices=["1", "2", "3"])
+        self.assertEqual("3", d.parse("3"))
 
-    _value = 2
+    def test_parse_int(self):
+        d = luigi.ChoiceParameter(var_type=int, choices=[1, 2, 3])
+        self.assertEqual(3, d.parse(3))
 
-    def test_parse(self):
-        v = luigi.ChoiceParameter(choices=[1, 2, 5], var_type=int)
-        self.assertEqual(v.parse(2), ChoiceParameterTest._value)
+    def test_parse_int_conv(self):
+        d = luigi.ChoiceParameter(var_type=int, choices=[1, 2, 3])
+        self.assertEqual(3, d.parse("3"))
 
-    def test_parse_convert(self):
-        v = luigi.ChoiceParameter(choices=[1, 2, 5], var_type=int)
-        self.assertEqual(v.parse("2"), ChoiceParameterTest._value)
-
-    def test_parse_convert2(self):
-        v = luigi.ChoiceParameter(choices=[1, 2, 5], var_type=int)
-        self.assertEqual(v.parse(2.0), ChoiceParameterTest._value)
-
-    def test_parse_invalid_choice(self):
-        self.assertRaises(ValueError, lambda: luigi.ChoiceParameter(choices=[1, 2, 5], var_type=int).parse("-2"))
-
-    def test_parse_invalid_input(self):
-        self.assertRaises(ValueError, lambda: luigi.ChoiceParameter(choices=[1, 2, 5], var_type=int).parse("a"))
-
-    def test_choices_param_missing(self):
-        self.assertRaises(luigi.parameter.ParameterException, lambda: luigi.ChoiceParameter())
+    def test_invalid_choice(self):
+        d = luigi.ChoiceParameter(choices=["1", "2", "3"])
+        self.assertRaises(ValueError, lambda: d.parse("xyz"))
 
     def test_invalid_choice_type(self):
-        self.assertRaises(AssertionError, lambda: luigi.ChoiceParameter(choices=[1, 2, "5"], var_type=int))
+        self.assertRaises(AssertionError, lambda: luigi.ChoiceParameter(var_type=int, choices=[1, 2, "3"]))
+
+    def test_choices_parameter_exception(self):
+        self.assertRaises(luigi.parameter.ParameterException, lambda: luigi.ChoiceParameter(var_type=int))
+
+    def test_hash_str(self):
+        class Foo(luigi.Task):
+            args = luigi.ChoiceParameter(var_type=str, choices=["1", "2", "3"])
+        p = luigi.ChoiceParameter(var_type=str, choices=["3", "2", "1"])
+        self.assertEqual(hash(Foo(args="3").args), hash(p.parse("3")))
+
+    def test_serialize_parse(self):
+        a = luigi.ChoiceParameter(var_type=str, choices=["1", "2", "3"])
+        b = "3"
+        self.assertEqual(b, a.parse(a.serialize(b)))
