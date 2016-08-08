@@ -1061,6 +1061,13 @@ class ChoiceParameter(Parameter):
     desired.
     """
     def __init__(self, var_type=str, *args, **kwargs):
+        """
+        :param function var_type: The type of the input variable, e.g. str, int,
+                                  float, etc.
+                                  Default: str
+        :param choices: An iterable, all of whose elements are of `var_type` to
+                        restrict parameter choices to.
+        """
         if "choices" not in kwargs:
             raise ParameterException("A choices iterable must be specified")
         self._choices = set(kwargs.pop("choices"))
