@@ -839,6 +839,11 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         p = luigi.NumericalParameter(min_value=-3, max_value=7, var_type=int, config_path=dict(section="foo", name="bar"))
         self.assertEqual(-3, _value(p))
 
+    @with_config({"foo": {"bar": "3"}})
+    def testChoiceParameter(self):
+        p = luigi.ChoiceParameter(var_type=int, choices=[1, 2, 3], config_path=dict(section="foo", name="bar"))
+        self.assertEqual(3, _value(p))
+
 
 class OverrideEnvStuff(LuigiTestCase):
 
