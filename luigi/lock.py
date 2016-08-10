@@ -42,7 +42,7 @@ def getpcmd(pid):
                 _, val = lines
                 return val
     else:
-        cmd = 'ps -xo pid,args'
+        cmd = 'ps x -wwo pid,args'
         with os.popen(cmd, 'r') as p:
             # Skip the column titles
             p.readline()
