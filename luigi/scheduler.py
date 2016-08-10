@@ -232,6 +232,8 @@ class Task(object):
     def __repr__(self):
         return "Task(%r)" % vars(self)
 
+    # TODO(2017-08-10) replace this function with direct calls to batchable
+    # this only exists for backward compatibility
     def is_batchable(self):
         try:
             return self.batchable
@@ -380,13 +382,11 @@ class SimpleTaskState(object):
                 yield task
 
     def get_batch_running_tasks(self, batch_id):
-        if batch_id is None:
-            return []
-        else:
-            return [
-                task for task in self.get_active_tasks(BATCH_RUNNING)
-                if task.batch_id == batch_id
-            ]
+        assert batch_id is not None
+        return [
+            task for task in self.get_active_tasks(BATCH_RUNNING)
+            if task.batch_id == batch_id
+        ]
 
     def get_running_tasks(self):
         return six.itervalues(self._status_tasks[RUNNING])
@@ -396,8 +396,6 @@ class SimpleTaskState(object):
                                              for status in [PENDING, RUNNING])
 
     def set_batcher(self, worker_id, family, batcher_args, max_batch_size):
-        if max_batch_size is None:
-            max_batch_size = float('inf')
         self._task_batchers.setdefault(worker_id, {})
         self._task_batchers[worker_id][family] = (batcher_args, max_batch_size)
 
@@ -645,7 +643,7 @@ class Scheduler(object):
                 self._update_priority(t, prio, worker)
 
     @rpc_method()
-    def add_task_batcher(self, worker, task_family, batched_args, max_batch_size=None):
+    def add_task_batcher(self, worker, task_family, batched_args, max_batch_size=float('inf')):
         self._state.set_batcher(worker, task_family, batched_args, max_batch_size)
 
     @rpc_method()
@@ -694,8 +692,9 @@ class Scheduler(object):
 
         if tracking_url is not None or task.status != RUNNING:
             task.tracking_url = tracking_url
-            for batch_task in self._state.get_batch_running_tasks(task.batch_id):
-                batch_task.tracking_url = tracking_url
+            if task.batch_id is not None:
+                for batch_task in self._state.get_batch_running_tasks(task.batch_id):
+                    batch_task.tracking_url = tracking_url
 
         if batchable is not None:
             task.batchable = batchable
@@ -705,8 +704,9 @@ class Scheduler(object):
 
         if expl is not None:
             task.expl = expl
-            for batch_task in self._state.get_batch_running_tasks(task.batch_id):
-                batch_task.expl = expl
+            if task.batch_id is not None:
+                for batch_task in self._state.get_batch_running_tasks(task.batch_id):
+                    batch_task.expl = expl
 
         if not (task.status in (RUNNING, BATCH_RUNNING) and status == PENDING) or new_deps:
             # don't allow re-scheduling of task while it is running, it must either fail or succeed first

@@ -131,25 +131,24 @@ setting the batch_method to max, like so:
 
 .. code-block:: python
 
-    class ExampleTask(luigi.Task):
+    class A(luigi.Task):
         date = luigi.DateParameter(batch_method=max)
 
-What's exciting about this is that if you send multiple ExampleTasks to
-the scheduler, it can combine them and return one. So if
-ExampleTask(date=2016-07-28), ExampleTask(date=2016-07-29) and
-ExampleTask(date=2016-07-30) are all ready to run, you will start running
-ExampleTask(date=2016-07-30). While this is running, the scheduler will
-show ExampleTask(date=2016-07-28), ExampleTask(date=2016-07-29) as batch
-running while ExampleTask(date=2016-07-30) is running. When
-ExampleTask(date=2016-07-30) is done running and becomes FAILED or DONE,
-the other two tasks will be updated to the same status.
+What's exciting about this is that if you send multiple As to the
+scheduler, it can combine them and return one. So if A(date=2016-07-28),
+A(date=2016-07-29) and A(date=2016-07-30) are all ready to run, you will
+start running A(date=2016-07-30). While this is running, the scheduler
+will show A(date=2016-07-28), A(date=2016-07-29) as batch running while
+A(date=2016-07-30) is running. When A(date=2016-07-30) is done running
+and becomes FAILED or DONE, the other two tasks will be updated to the
+same status.
 
-If you want to limit how big a batch can get, simply set batch_size.
+If you want to limit how big a batch can get, simply set max_batch_size.
 So if you have
 
 .. code-block:: python
 
-    class ExampleTask(luigi.Task):
+    class A(luigi.Task):
         date = luigi.DateParameter(batch_method=max)
 
         max_batch_size = 10
@@ -165,15 +164,14 @@ be aggregated separately. So if you have a class like
 
 .. code-block:: python
 
-    class ExampleTask(luigi.Task):
+    class A(luigi.Task):
         p1 = luigi.IntParameter(batch_method=max)
         p2 = luigi.IntParameter(batch_method=max)
         p3 = luigi.IntParameter()
 
-and you create tasks ExampleTask(p1=1, p2=2, p3=0),
-ExampleTask(p1=2, p2=3, p3=0), ExampleTask(p1=3, p2=4, p3=1), you'll get
-them batched as ExampleTask(p1=2, p2=3, p3=0) and
-ExampleTask(p1=3, p2=4, p3=1).
+and you create tasks A(p1=1, p2=2, p3=0),A(p1=2, p2=3, p3=0),
+A(p1=3, p2=4, p3=1), you'll get them batched as A(p1=2, p2=3, p3=0) and
+A(p1=3, p2=4, p3=1).
 
 Tasks that regularly overwrite the same data source
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

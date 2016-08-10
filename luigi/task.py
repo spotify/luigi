@@ -146,8 +146,8 @@ class Task(object):
     #: Only works when using multiple workers.
     worker_timeout = None
 
-    #: Maximum number of tasks to run together as a batch. If None, there is no limit.
-    max_batch_size = None
+    #: Maximum number of tasks to run together as a batch. Infinite by default
+    max_batch_size = float('inf')
 
     @property
     def batchable(self):

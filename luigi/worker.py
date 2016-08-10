@@ -390,7 +390,7 @@ class Worker(object):
         self._scheduled_tasks = {}
         self._suspended_tasks = {}
         self._batch_running_tasks = {}
-        self._batch_classes_sent = set()
+        self._batch_families_sent = set()
 
         self._first_task = None
 
@@ -582,7 +582,7 @@ class Worker(object):
 
     def _add_task_batcher(self, task):
         family = task.task_family
-        if family not in self._batch_classes_sent:
+        if family not in self._batch_families_sent:
             task_class = type(task)
             batch_param_names = task_class.batch_param_names()
             if batch_param_names:
@@ -592,7 +592,7 @@ class Worker(object):
                     batched_args=batch_param_names,
                     max_batch_size=task.max_batch_size,
                 )
-            self._batch_classes_sent.add(family)
+            self._batch_families_sent.add(family)
 
     def _add(self, task, is_complete):
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
