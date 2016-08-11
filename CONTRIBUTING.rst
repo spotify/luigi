@@ -54,8 +54,14 @@ All documentation for Luigi is written in `reStructuredText/Sphinx markup
 code as docstrings and in `.rst`. Pull requests should come with documentation
 when appropriate.
 
-You can check the syntax for your documentation by running
+You verify that your documentation code compiles by running
 
 .. code:: bash
 
     tox -e docs
+
+After that, you can check how it renders locally with your browser
+
+.. code:: bash
+
+    firefox doc/_build/html/index.html
