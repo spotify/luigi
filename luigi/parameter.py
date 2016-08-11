@@ -140,7 +140,7 @@ class Parameter(object):
                                 ``positional=False`` for abstract base classes and similar cases.
         :param bool always_in_help: For the --help option in the command line
                                     parsing. Set true to always show in --help.
-        :param function(iterable[A]) -> A batch_method: Method to combine an iterable of parsed
+        :param function(iterable[A])->A batch_method: Method to combine an iterable of parsed
                                                         parameter values into a single value. Used
                                                         when receiving batched parameter lists from
                                                         the scheduler. See :ref:`batch_method`
@@ -216,7 +216,7 @@ class Parameter(object):
         else:
             return self.normalize(value)
 
-    def is_batchable(self):
+    def _is_batchable(self):
         return self._batch_method is not None
 
     def parse(self, x):
@@ -231,7 +231,7 @@ class Parameter(object):
         """
         return x  # default impl
 
-    def parse_list(self, xs):
+    def _parse_list(self, xs):
         """
         Parse a list of values from the scheduler.
 
@@ -241,7 +241,7 @@ class Parameter(object):
         :param xs: list of values to parse and combine
         :return: the combined parsed values
         """
-        if not self.is_batchable():
+        if not self._is_batchable():
             raise NotImplementedError('No batch method found')
         elif not xs:
             raise ValueError('Empty parameter list passed to parse_list')

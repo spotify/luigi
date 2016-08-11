@@ -288,24 +288,24 @@ class ParameterTest(LuigiTestCase):
     def test_parse_list_without_batch_method(self):
         param = luigi.Parameter()
         for xs in [], ['x'], ['x', 'y']:
-            self.assertRaises(NotImplementedError, param.parse_list, xs)
+            self.assertRaises(NotImplementedError, param._parse_list, xs)
 
     def test_parse_empty_list_raises_value_error(self):
         for batch_method in (max, min, tuple, ','.join):
             param = luigi.Parameter(batch_method=batch_method)
-            self.assertRaises(ValueError, param.parse_list, [])
+            self.assertRaises(ValueError, param._parse_list, [])
 
     def test_parse_int_list_max(self):
         param = luigi.IntParameter(batch_method=max)
-        self.assertEqual(17, param.parse_list(['7', '17', '5']))
+        self.assertEqual(17, param._parse_list(['7', '17', '5']))
 
     def test_parse_string_list_max(self):
         param = luigi.Parameter(batch_method=max)
-        self.assertEqual('7', param.parse_list(['7', '17', '5']))
+        self.assertEqual('7', param._parse_list(['7', '17', '5']))
 
     def test_parse_list_as_tuple(self):
         param = luigi.IntParameter(batch_method=tuple)
-        self.assertEqual((7, 17, 5), param.parse_list(['7', '17', '5']))
+        self.assertEqual((7, 17, 5), param._parse_list(['7', '17', '5']))
 
 
 class TestParametersHashability(LuigiTestCase):

@@ -255,7 +255,7 @@ class Task(object):
 
     @classmethod
     def batch_param_names(cls):
-        return [name for name, p in cls.get_params() if p.is_batchable()]
+        return [name for name, p in cls.get_params() if p._is_batchable()]
 
     @classmethod
     def get_param_names(cls, include_significant=False):
@@ -349,7 +349,7 @@ class Task(object):
             if param_name in params_str:
                 param_str = params_str[param_name]
                 if isinstance(param_str, list):
-                    kwargs[param_name] = param.parse_list(param_str)
+                    kwargs[param_name] = param._parse_list(param_str)
                 else:
                     kwargs[param_name] = param.parse(param_str)
 
