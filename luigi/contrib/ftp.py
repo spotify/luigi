@@ -45,13 +45,15 @@ logger = logging.getLogger('luigi-interface')
 
 class RemoteFileSystem(luigi.target.FileSystem):
 
-    def __init__(self, host, username=None, password=None, port=None, tls=False, timeout=60, sftp=False):
+    def __init__(self, host, username=None, password=None, port=None,
+                 tls=False, timeout=60, sftp=False, pysftp_conn_kwargs=None):
         self.host = host
         self.username = username
         self.password = password
         self.tls = tls
         self.timeout = timeout
         self.sftp = sftp
+        self.pysftp_conn_kwargs = pysftp_conn_kwargs
 
         if port is None:
             if self.sftp:
@@ -76,7 +78,8 @@ class RemoteFileSystem(luigi.target.FileSystem):
         except ImportError:
             logger.warning('Please install pysftp to use SFTP.')
 
-        self.conn = pysftp.Connection(self.host, username=self.username, password=self.password, port=self.port)
+        self.conn = pysftp.Connection(self.host, username=self.username, password=self.password,
+                                      port=self.port, **self.pysftp_conn_kwargs)
 
     def _ftp_connect(self):
         if self.tls:
