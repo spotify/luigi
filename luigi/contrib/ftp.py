@@ -353,7 +353,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
     def __init__(
         self, path, host, format=None, username=None,
         password=None, port=None, mtime=None, tls=False,
-        timeout=60, sftp=False
+            timeout=60, sftp=False, pysftp_conn_kwargs=None
     ):
         if format is None:
             format = luigi.format.get_default_format()
@@ -364,7 +364,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
         self.tls = tls
         self.timeout = timeout
         self.sftp = sftp
-        self._fs = RemoteFileSystem(host, username, password, port, tls, timeout, sftp)
+        self._fs = RemoteFileSystem(host, username, password, port, tls, timeout, sftp, pysftp_conn_kwargs)
 
     @property
     def fs(self):
