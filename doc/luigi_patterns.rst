@@ -118,7 +118,9 @@ can have implications in how the scheduler and visualizer handle task instances.
 
 	luigi RangeDaily --of MyTask --start 2014-10-31 --MyTask-my-param 123
 
-Batching mulitple parameter values into a single run
+.. _batch_method:
+
+Batching multiple parameter values into a single run
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Sometimes it'll be faster to run multiple jobs together as a single
@@ -172,6 +174,11 @@ be aggregated separately. So if you have a class like
 and you create tasks ``A(p1=1, p2=2, p3=0)``, ``A(p1=2, p2=3, p3=0)``,
 ``A(p1=3, p2=4, p3=1)``, you'll get them batched as
 ``A(p1=2, p2=3, p3=0)`` and ``A(p1=3, p2=4, p3=1)``.
+
+Note that batched tasks do not take up resources, only the task that
+ends up running will use resources. The scheduler only checks that there
+are sufficient resources for each task individually before batching them
+all together.
 
 Tasks that regularly overwrite the same data source
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

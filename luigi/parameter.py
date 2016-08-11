@@ -143,7 +143,7 @@ class Parameter(object):
         :param function(iterable[A]) -> A batch_method: Method to combine an iterable of parsed
                                                         parameter values into a single value. Used
                                                         when receiving batched parameter lists from
-                                                        the scheduler.
+                                                        the scheduler. See :ref:`batch_method`
         """
         self._default = default
         self._batch_method = batch_method
