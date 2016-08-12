@@ -15,12 +15,13 @@
 # limitations under the License.
 #
 
+import itertools
 import time
 from helpers import unittest
 from nose.plugins.attrib import attr
 import luigi.notifications
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, \
-    UNKNOWN, RUNNING, Scheduler
+    UNKNOWN, RUNNING, BATCH_RUNNING, Scheduler
 
 luigi.notifications.DEBUG = True
 WORKER = 'myworker'
@@ -154,6 +155,351 @@ class SchedulerApiTest(unittest.TestCase):
                 self.sch.prune()
 
         self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'A')
+
+    def test_get_work_single_batch_item(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_1', family='A', params={'a': '1'}, batchable=True)
+
+        response = self.sch.get_work(worker=WORKER)
+        self.assertEqual('A_a_1', response['task_id'])
+
+        param_values = response['task_params'].values()
+        self.assertTrue(not any(isinstance(param, list)) for param in param_values)
+
+    def test_get_work_multiple_batch_items(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_1', family='A', params={'a': '1'}, batchable=True)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_2', family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_3', family='A', params={'a': '3'}, batchable=True)
+
+        response = self.sch.get_work(worker=WORKER)
+        self.assertIsNone(response['task_id'])
+        self.assertEqual({'a': ['1', '2', '3']}, response['task_params'])
+        self.assertEqual('A', response['task_family'])
+
+    def test_get_work_with_batch_items_with_resources(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_1', family='A', params={'a': '1'}, batchable=True,
+            resources={'r1': 1})
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_2', family='A', params={'a': '2'}, batchable=True,
+            resources={'r1': 1})
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_3', family='A', params={'a': '3'}, batchable=True,
+            resources={'r1': 1})
+
+        response = self.sch.get_work(worker=WORKER)
+        self.assertIsNone(response['task_id'])
+        self.assertEqual({'a': ['1', '2', '3']}, response['task_params'])
+        self.assertEqual('A', response['task_family'])
+
+    def test_get_work_limited_batch_size(self):
+        self.sch.add_task_batcher(
+            worker=WORKER, task_family='A', batched_args=['a'], max_batch_size=2)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_1', family='A', params={'a': '1'}, batchable=True,
+            priority=1)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_2', family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_3', family='A', params={'a': '3'}, batchable=True,
+            priority=2)
+
+        response = self.sch.get_work(worker=WORKER)
+        self.assertIsNone(response['task_id'])
+        self.assertEqual({'a': ['3', '1']}, response['task_params'])
+        self.assertEqual('A', response['task_family'])
+
+        response2 = self.sch.get_work(worker=WORKER)
+        self.assertEqual('A_a_2', response2['task_id'])
+
+    def test_get_work_do_not_batch_non_batchable_item(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_1', family='A', params={'a': '1'}, batchable=True,
+            priority=1)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_2', family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_3', family='A', params={'a': '3'}, batchable=False,
+            priority=2)
+
+        response = self.sch.get_work(worker=WORKER)
+        self.assertEqual('A_a_3', response['task_id'])
+
+        response2 = self.sch.get_work(worker=WORKER)
+        self.assertIsNone(response2['task_id'])
+        self.assertEqual({'a': ['1', '2']}, response2['task_params'])
+        self.assertEqual('A', response2['task_family'])
+
+    def test_get_work_group_on_non_batch_params(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['b'])
+        for a, b, c in itertools.product((1, 2), repeat=3):
+            self.sch.add_task(
+                worker=WORKER, task_id='A_%i_%i_%i' % (a, b, c), family='A',
+                params={'a': str(a), 'b': str(b), 'c': str(c)}, batchable=True,
+                priority=9 * a + 3 * c + b)
+
+        for a, c in [('2', '2'), ('2', '1'), ('1', '2'), ('1', '1')]:
+            response = self.sch.get_work(worker=WORKER)
+            self.assertIsNone(response['task_id'])
+            self.assertEqual({'a': a, 'b': ['2', '1'], 'c': c}, response['task_params'])
+            self.assertEqual('A', response['task_family'])
+
+    def test_get_work_multiple_batched_params(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a', 'b'])
+        self.sch.add_task(
+            worker=WORKER, task_id='A_1_1', family='A', params={'a': '1', 'b': '1'}, priority=1,
+            batchable=True)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_1_2', family='A', params={'a': '1', 'b': '2'}, priority=2,
+            batchable=True)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_2_1', family='A', params={'a': '2', 'b': '1'}, priority=3,
+            batchable=True)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_2_2', family='A', params={'a': '2', 'b': '2'}, priority=4,
+            batchable=True)
+
+        response = self.sch.get_work(worker=WORKER)
+        self.assertIsNone(response['task_id'])
+
+        expected_params = {
+            'a': ['2', '2', '1', '1'],
+            'b': ['2', '1', '2', '1'],
+        }
+        self.assertEqual(expected_params, response['task_params'])
+
+    def test_get_work_with_unbatched_worker_on_batched_task(self):
+        self.sch.add_task_batcher(worker='batcher', task_family='A', batched_args=['a'])
+        for i in range(5):
+            self.sch.add_task(
+                worker=WORKER, task_id='A_%i' % i, family='A', params={'a': str(i)}, priority=i,
+                batchable=False)
+            self.sch.add_task(
+                worker='batcher', task_id='A_%i' % i, family='A', params={'a': str(i)}, priority=i,
+                batchable=True)
+        self.assertEqual('A_4', self.sch.get_work(worker=WORKER)['task_id'])
+        batch_response = self.sch.get_work(worker='batcher')
+        self.assertIsNone(batch_response['task_id'])
+        self.assertEqual({'a': ['3', '2', '1', '0']}, batch_response['task_params'])
+
+    def test_batched_tasks_become_batch_running(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': 1}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': 2}, batchable=True)
+        self.sch.get_work(worker=WORKER)
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list('BATCH_RUNNING', '').keys()))
+
+    def test_set_batch_runner_new_task(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
+                          batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
+                          batchable=True)
+        response = self.sch.get_work(worker=WORKER)
+        batch_id = response['batch_id']
+        self.sch.add_task(
+            worker=WORKER, task_id='A_1_2', task_family='A', params={'a': '1,2'},
+            batch_id=batch_id, status='RUNNING')
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list('BATCH_RUNNING', '').keys()))
+        self.assertEqual({'A_1_2'}, set(self.sch.task_list('RUNNING', '').keys()))
+
+        self.sch.add_task(worker=WORKER, task_id='A_1_2', status=DONE)
+        self.assertEqual({'A_1', 'A_2', 'A_1_2'}, set(self.sch.task_list(DONE, '').keys()))
+
+    def test_set_batch_runner_max(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
+                          batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
+                          batchable=True)
+        response = self.sch.get_work(worker=WORKER)
+        batch_id = response['batch_id']
+        self.sch.add_task(
+            worker=WORKER, task_id='A_2', task_family='A', params={'a': '2'},
+            batch_id=batch_id, status='RUNNING')
+        self.assertEqual({'A_1'}, set(self.sch.task_list('BATCH_RUNNING', '').keys()))
+        self.assertEqual({'A_2'}, set(self.sch.task_list('RUNNING', '').keys()))
+
+        self.sch.add_task(worker=WORKER, task_id='A_2', status=DONE)
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(DONE, '').keys()))
+
+    def _start_simple_batch(self, use_max=False):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
+                          batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
+                          batchable=True)
+        response = self.sch.get_work(worker=WORKER)
+        batch_id = response['batch_id']
+        task_id, params = ('A_2', {'a': '2'}) if use_max else ('A_1_2', {'a': '1,2'})
+        self.sch.add_task(
+            worker=WORKER, task_id=task_id, task_family='A', params=params, batch_id=batch_id,
+            status='RUNNING')
+
+    def test_batch_fail(self):
+        self._start_simple_batch()
+        self.sch.add_task(worker=WORKER, task_id='A_1_2', status=FAILED, expl='bad failure')
+
+        task_ids = {'A_1', 'A_2'}
+        self.assertEqual(task_ids, set(self.sch.task_list(FAILED, '').keys()))
+        for task_id in task_ids:
+            expl = self.sch.fetch_error(task_id)['error']
+            self.assertEqual('bad failure', expl)
+
+    def test_batch_fail_max(self):
+        self._start_simple_batch(use_max=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', status=FAILED, expl='bad max failure')
+
+        task_ids = {'A_1', 'A_2'}
+        self.assertEqual(task_ids, set(self.sch.task_list(FAILED, '').keys()))
+        for task_id in task_ids:
+            response = self.sch.fetch_error(task_id)
+            self.assertEqual('bad max failure', response['error'])
+
+    def test_batch_fail_from_dead_worker(self):
+        self.setTime(1)
+        self._start_simple_batch()
+        self.setTime(10000)
+        self.sch.prune()
+        self.setTime(10001)
+        self.sch.prune()
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(FAILED, '').keys()))
+
+    def test_batch_fail_max_from_dead_worker(self):
+        self.setTime(1)
+        self._start_simple_batch(use_max=True)
+        self.setTime(601)
+        self.sch.prune()
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(FAILED, '').keys()))
+
+    def test_batch_update_status(self):
+        self._start_simple_batch()
+        self.sch.set_task_status_message('A_1_2', 'test message')
+        for task_id in ('A_1', 'A_2', 'A_1_2'):
+            self.assertEqual('test message', self.sch.get_task_status_message(task_id)['statusMessage'])
+
+    def test_batch_tracking_url(self):
+        self._start_simple_batch()
+        self.sch.add_task(worker=WORKER, task_id='A_1_2', tracking_url='http://test.tracking.url/')
+
+        tasks = self.sch.task_list('', '')
+        for task_id in ('A_1', 'A_2', 'A_1_2'):
+            self.assertEqual('http://test.tracking.url/', tasks[task_id]['tracking_url'])
+
+    def test_finish_batch(self):
+        self._start_simple_batch()
+        self.sch.add_task(worker=WORKER, task_id='A_1_2', status=DONE)
+        self.assertEqual({'A_1', 'A_2', 'A_1_2'}, set(self.sch.task_list(DONE, '').keys()))
+
+    def test_reschedule_max_batch(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(
+            worker=WORKER, task_id='A_1', family='A', params={'a': '1'}, batchable=True)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_2', family='A', params={'a': '2'}, batchable=True)
+        response = self.sch.get_work(worker=WORKER)
+        batch_id = response['batch_id']
+        self.sch.add_task(
+            worker=WORKER, task_id='A_2', task_family='A', params={'a': '2'}, batch_id=batch_id,
+            status='RUNNING')
+        self.sch.add_task(worker=WORKER, task_id='A_2', status=DONE)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_2', task_family='A', params={'a': '2'}, batchable=True)
+
+        self.assertEqual({'A_2'}, set(self.sch.task_list(PENDING, '').keys()))
+        self.assertEqual({'A_1'}, set(self.sch.task_list(DONE, '').keys()))
+
+    def test_resend_batch_on_get_work_retry(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
+                          batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
+                          batchable=True)
+        response = self.sch.get_work(worker=WORKER)
+        response2 = self.sch.get_work(worker=WORKER, current_tasks=())
+        self.assertEqual(response['task_id'], response2['task_id'])
+        self.assertEqual(response['task_family'], response2.get('task_family'))
+        self.assertEqual(response['task_params'], response2.get('task_params'))
+
+    def test_resend_batch_runner_on_get_work_retry(self):
+        self._start_simple_batch()
+        get_work = self.sch.get_work(worker=WORKER, current_tasks=())
+        self.assertEqual('A_1_2', get_work['task_id'])
+
+    def test_resend_max_batch_runner_on_get_work_retry(self):
+        self._start_simple_batch(use_max=True)
+        get_work = self.sch.get_work(worker=WORKER, current_tasks=())
+        self.assertEqual('A_2', get_work['task_id'])
+
+    def test_do_not_resend_batch_runner_on_get_work(self):
+        self._start_simple_batch()
+        get_work = self.sch.get_work(worker=WORKER, current_tasks=('A_1_2',))
+        self.assertIsNone(get_work['task_id'])
+
+    def test_do_not_resend_max_batch_runner_on_get_work(self):
+        self._start_simple_batch(use_max=True)
+        get_work = self.sch.get_work(worker=WORKER, current_tasks=('A_2',))
+        self.assertIsNone(get_work['task_id'])
+
+    def test_rescheduled_batch_running_tasks_stay_batch_running_before_runner(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
+                          batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
+                          batchable=True)
+        self.sch.get_work(worker=WORKER)
+
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
+                          batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
+                          batchable=True)
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(BATCH_RUNNING, '').keys()))
+
+    def test_rescheduled_batch_running_tasks_stay_batch_running_after_runner(self):
+        self._start_simple_batch()
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
+                          batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
+                          batchable=True)
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(BATCH_RUNNING, '').keys()))
+
+    def test_disabled_batch_running_tasks_stay_batch_running_before_runner(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
+                          batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
+                          batchable=True)
+        self.sch.get_work(worker=WORKER)
+
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
+                          batchable=True, status=DISABLED)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
+                          batchable=True, status=DISABLED)
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(BATCH_RUNNING, '').keys()))
+
+    def test_get_work_returns_batch_task_id_list(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
+                          batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
+                          batchable=True)
+        response = self.sch.get_work(worker=WORKER)
+        self.assertEqual({'A_1', 'A_2'}, set(response['batch_task_ids']))
+
+    def test_disabled_batch_running_tasks_stay_batch_running_after_runner(self):
+        self._start_simple_batch()
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
+                          batchable=True, status=DISABLED)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
+                          batchable=True, status=DISABLED)
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(BATCH_RUNNING, '').keys()))
 
     def test_do_not_overwrite_tracking_url_while_running(self):
         self.sch.add_task(task_id='A', worker='X', status='RUNNING', tracking_url='trackme')

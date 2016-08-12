@@ -118,6 +118,91 @@ can have implications in how the scheduler and visualizer handle task instances.
 
 	luigi RangeDaily --of MyTask --start 2014-10-31 --MyTask-my-param 123
 
+.. _batch_method:
+
+Batching multiple parameter values into a single run
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sometimes it'll be faster to run multiple jobs together as a single
+batch rather than running them each individually. When this is the case,
+you can mark some parameters with a batch_method in their constructor
+to tell the worker how to combine multiple values. One common way to do
+this is by simply running the maximum value. This is good for tasks that
+overwrite older data when a newer one runs. You accomplish this by
+setting the batch_method to max, like so:
+
+.. code-block:: python
+
+    class A(luigi.Task):
+        date = luigi.DateParameter(batch_method=max)
+
+What's exciting about this is that if you send multiple As to the
+scheduler, it can combine them and return one. So if
+``A(date=2016-07-28)``, ``A(date=2016-07-29)`` and
+``A(date=2016-07-30)`` are all ready to run, you will start running
+``A(date=2016-07-30)``. While this is running, the scheduler will show
+``A(date=2016-07-28)``, ``A(date=2016-07-29)`` as batch running while
+``A(date=2016-07-30)`` is running. When ``A(date=2016-07-30)`` is done
+running and becomes FAILED or DONE, the other two tasks will be updated
+to the same status.
+
+If you want to limit how big a batch can get, simply set max_batch_size.
+So if you have
+
+.. code-block:: python
+
+    class A(luigi.Task):
+        date = luigi.DateParameter(batch_method=max)
+
+        max_batch_size = 10
+
+then the scheduler will batch at most 10 jobs together. You probably do
+not want to do this with the max batch method, but it can be helpful if
+you use other methods. You can use any method that takes a list of
+parameter values and returns a single parameter value.
+
+If you have two max batch parameters, you'll get the max values for both
+of them. If you have parameters that don't have a batch method, they'll
+be aggregated separately. So if you have a class like
+
+.. code-block:: python
+
+    class A(luigi.Task):
+        p1 = luigi.IntParameter(batch_method=max)
+        p2 = luigi.IntParameter(batch_method=max)
+        p3 = luigi.IntParameter()
+
+and you create tasks ``A(p1=1, p2=2, p3=0)``, ``A(p1=2, p2=3, p3=0)``,
+``A(p1=3, p2=4, p3=1)``, you'll get them batched as
+``A(p1=2, p2=3, p3=0)`` and ``A(p1=3, p2=4, p3=1)``.
+
+Note that batched tasks do not take up :ref:`resources-config`, only the
+task that ends up running will use resources. The scheduler only checks
+that there are sufficient resources for each task individually before
+batching them all together.
+
+Tasks that regularly overwrite the same data source
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you are overwriting of the same data source with every run, you'll
+need to ensure that two batches can't run at the same time. You can do
+this pretty easily by setting batch_mode to max and setting a unique
+resource:
+
+.. code-block:: python
+
+    class A(luigi.Task):
+        date = luigi.DateParameter(batch_mode=max)
+
+        resources = {'overwrite_resource': 1}
+
+Now if you have multiple tasks such as ``A(date=2016-06-01)``,
+``A(date=2016-06-02)``, ``A(date=2016-06-03)``, the scheduler will just
+tell you to run the highest available one and mark the lower ones as
+batch_running. Using a unique resource will prevent multiple tasks from
+writing to the same location at the same time if a new one becomes
+available while others are running.
+
 Monitoring task pipelines
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

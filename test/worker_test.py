@@ -689,6 +689,128 @@ class WorkerTest(unittest.TestCase):
             self.assertTrue(d.has_run)
             self.assertFalse(a.has_run)
 
+    def test_run_csv_batch_job(self):
+        completed = set()
+
+        class CsvBatchJob(luigi.Task):
+            values = luigi.parameter.Parameter(batch_method=','.join)
+            has_run = False
+
+            def run(self):
+                completed.update(self.values.split(','))
+                self.has_run = True
+
+            def complete(self):
+                return all(value in completed for value in self.values.split(','))
+
+        tasks = [CsvBatchJob(str(i)) for i in range(10)]
+        for task in tasks:
+            self.assertTrue(self.w.add(task))
+        self.assertTrue(self.w.run())
+
+        for task in tasks:
+            self.assertTrue(task.complete())
+            self.assertFalse(task.has_run)
+
+    def test_run_max_batch_job(self):
+        completed = set()
+
+        class MaxBatchJob(luigi.Task):
+            value = luigi.IntParameter(batch_method=max)
+            has_run = False
+
+            def run(self):
+                completed.add(self.value)
+                self.has_run = True
+
+            def complete(self):
+                return any(self.value <= ran for ran in completed)
+
+        tasks = [MaxBatchJob(i) for i in range(10)]
+        for task in tasks:
+            self.assertTrue(self.w.add(task))
+        self.assertTrue(self.w.run())
+
+        for task in tasks:
+            self.assertTrue(task.complete())
+            # only task number 9 should run
+            self.assertFalse(task.has_run and task.value < 9)
+
+    def test_run_batch_job_unbatched(self):
+        completed = set()
+
+        class MaxNonBatchJob(luigi.Task):
+            value = luigi.IntParameter(batch_method=max)
+            has_run = False
+
+            batchable = False
+
+            def run(self):
+                completed.add(self.value)
+                self.has_run = True
+
+            def complete(self):
+                return self.value in completed
+
+        tasks = [MaxNonBatchJob((i,)) for i in range(10)]
+        for task in tasks:
+            self.assertTrue(self.w.add(task))
+        self.assertTrue(self.w.run())
+
+        for task in tasks:
+            self.assertTrue(task.complete())
+            self.assertTrue(task.has_run)
+
+    def test_run_batch_job_limit_batch_size(self):
+        completed = set()
+        runs = []
+
+        class CsvLimitedBatchJob(luigi.Task):
+            value = luigi.parameter.Parameter(batch_method=','.join)
+            has_run = False
+
+            max_batch_size = 4
+
+            def run(self):
+                completed.update(self.value.split(','))
+                runs.append(self)
+
+            def complete(self):
+                return all(value in completed for value in self.value.split(','))
+
+        tasks = [CsvLimitedBatchJob(str(i)) for i in range(11)]
+        for task in tasks:
+            self.assertTrue(self.w.add(task))
+        self.assertTrue(self.w.run())
+
+        for task in tasks:
+            self.assertTrue(task.complete())
+
+        self.assertEqual(3, len(runs))
+
+    def test_fail_max_batch_job(self):
+        class MaxBatchFailJob(luigi.Task):
+            value = luigi.IntParameter(batch_method=max)
+            has_run = False
+
+            def run(self):
+                self.has_run = True
+                assert False
+
+            def complete(self):
+                return False
+
+        tasks = [MaxBatchFailJob(i) for i in range(10)]
+        for task in tasks:
+            self.assertTrue(self.w.add(task))
+        self.assertFalse(self.w.run())
+
+        for task in tasks:
+            # only task number 9 should run
+            self.assertFalse(task.has_run and task.value < 9)
+
+        self.assertEqual({task.task_id for task in tasks}, set(self.sch.task_list('FAILED', '')))
+
 
 class DynamicDependenciesTest(unittest.TestCase):
     n_workers = 1

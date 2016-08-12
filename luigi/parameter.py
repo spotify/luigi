@@ -116,7 +116,7 @@ class Parameter(object):
     _counter = 0  # non-atomically increasing counter used for ordering parameters.
 
     def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
-                 config_path=None, positional=True, always_in_help=False):
+                 config_path=None, positional=True, always_in_help=False, batch_method=None):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -139,8 +139,13 @@ class Parameter(object):
                                 ``positional=False`` for abstract base classes and similar cases.
         :param bool always_in_help: For the --help option in the command line
                                     parsing. Set true to always show in --help.
+        :param function(iterable[A])->A batch_method: Method to combine an iterable of parsed
+                                                        parameter values into a single value. Used
+                                                        when receiving batched parameter lists from
+                                                        the scheduler. See :ref:`batch_method`
         """
         self._default = default
+        self._batch_method = batch_method
         if is_global:
             warnings.warn("is_global support is removed. Assuming positional=False",
                           DeprecationWarning,
@@ -210,6 +215,9 @@ class Parameter(object):
         else:
             return self.normalize(value)
 
+    def _is_batchable(self):
+        return self._batch_method is not None
+
     def parse(self, x):
         """
         Parse an individual value from the input.
@@ -221,6 +229,23 @@ class Parameter(object):
         :return: the parsed value.
         """
         return x  # default impl
+
+    def _parse_list(self, xs):
+        """
+        Parse a list of values from the scheduler.
+
+        Only possible if this is_batchable() is True. This will combine the list into a single
+        parameter value using batch method. This should never need to be overridden.
+
+        :param xs: list of values to parse and combine
+        :return: the combined parsed values
+        """
+        if not self._is_batchable():
+            raise NotImplementedError('No batch method found')
+        elif not xs:
+            raise ValueError('Empty parameter list passed to parse_list')
+        else:
+            return self._batch_method(map(self.parse, xs))
 
     def serialize(self, x):
         """

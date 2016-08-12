@@ -95,6 +95,59 @@ class ExecutionSummaryTest(LuigiTestCase):
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
 
+    def test_batch_complete(self):
+        ran_tasks = set()
+
+        class MaxBatchTask(luigi.Task):
+            param = luigi.IntParameter(batch_method=max)
+
+            def run(self):
+                ran_tasks.add(self.param)
+
+            def complete(self):
+                return any(self.param <= ran_param for ran_param in ran_tasks)
+
+        class MaxBatches(luigi.WrapperTask):
+            def requires(self):
+                return map(MaxBatchTask, range(5))
+
+        self.run_task(MaxBatches())
+        d = self.summary_dict()
+        expected_completed = {
+            MaxBatchTask(0),
+            MaxBatchTask(1),
+            MaxBatchTask(2),
+            MaxBatchTask(3),
+            MaxBatchTask(4),
+            MaxBatches(),
+        }
+        self.assertEqual(expected_completed, d['completed'])
+
+    def test_batch_fail(self):
+        class MaxBatchFailTask(luigi.Task):
+            param = luigi.IntParameter(batch_method=max)
+
+            def run(self):
+                assert self.param < 4
+
+            def complete(self):
+                return False
+
+        class MaxBatches(luigi.WrapperTask):
+            def requires(self):
+                return map(MaxBatchFailTask, range(5))
+
+        self.run_task(MaxBatches())
+        d = self.summary_dict()
+        expected_failed = {
+            MaxBatchFailTask(0),
+            MaxBatchFailTask(1),
+            MaxBatchFailTask(2),
+            MaxBatchFailTask(3),
+            MaxBatchFailTask(4),
+        }
+        self.assertEqual(expected_failed, d['failed'])
+
     def test_check_complete_error(self):
         class Bar(luigi.Task):
             def run(self):

@@ -442,6 +442,7 @@ marker-table
   Table in which to store status of table updates. This table will be
   created if it doesn't already exist. Defaults to "table_updates".
 
+.. _resources-config:
 
 [resources]
 -----------
@@ -763,7 +764,7 @@ Luigi also supports defining retry-policy per task.
 
         ...
 
-If none of retry-policy fields is defined per task, the field value will be **default** value which is defined in luigi config file. 
+If none of retry-policy fields is defined per task, the field value will be **default** value which is defined in luigi config file.
 
 To make luigi sticks to the given retry-policy, be sure you run luigi worker with `keep_alive` config. Please check ``keep_alive`` config in :ref:`worker-config` section.
 

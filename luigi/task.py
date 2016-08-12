@@ -146,6 +146,17 @@ class Task(object):
     #: Only works when using multiple workers.
     worker_timeout = None
 
+    #: Maximum number of tasks to run together as a batch. Infinite by default
+    max_batch_size = float('inf')
+
+    @property
+    def batchable(self):
+        """
+        True if this instance can be run as part of a batch. By default, True
+        if it has any batched parameters
+        """
+        return bool(self.batch_param_names())
+
     @property
     def retry_count(self):
         """
@@ -243,6 +254,10 @@ class Task(object):
         return params
 
     @classmethod
+    def batch_param_names(cls):
+        return [name for name, p in cls.get_params() if p._is_batchable()]
+
+    @classmethod
     def get_param_names(cls, include_significant=False):
         return [name for name, p in cls.get_params() if include_significant or p.significant]
 
@@ -332,7 +347,11 @@ class Task(object):
         kwargs = {}
         for param_name, param in cls.get_params():
             if param_name in params_str:
-                kwargs[param_name] = param.parse(params_str[param_name])
+                param_str = params_str[param_name]
+                if isinstance(param_str, list):
+                    kwargs[param_name] = param._parse_list(param_str)
+                else:
+                    kwargs[param_name] = param.parse(param_str)
 
         return cls(**kwargs)
 

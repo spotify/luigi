@@ -389,11 +389,14 @@ class Worker(object):
         self.host = socket.gethostname()
         self._scheduled_tasks = {}
         self._suspended_tasks = {}
+        self._batch_running_tasks = {}
+        self._batch_families_sent = set()
 
         self._first_task = None
 
         self.add_succeeded = True
         self.run_succeeded = True
+
         self.unfulfilled_counts = collections.defaultdict(int)
 
         # note that ``signal.signal(signal.SIGUSR1, fn)`` only works inside the main execution thread, which is why we
@@ -428,6 +431,11 @@ class Worker(object):
         if task:
             msg = (task, status, runnable)
             self._add_task_history.append(msg)
+
+        if task_id in self._batch_running_tasks:
+            for batch_task in self._batch_running_tasks.pop(task_id):
+                self._add_task_history.append((batch_task, status, True))
+
         self._scheduler.add_task(*args, **kwargs)
 
         logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
@@ -572,6 +580,20 @@ class Worker(object):
             pool.join()
         return self.add_succeeded
 
+    def _add_task_batcher(self, task):
+        family = task.task_family
+        if family not in self._batch_families_sent:
+            task_class = type(task)
+            batch_param_names = task_class.batch_param_names()
+            if batch_param_names:
+                self._scheduler.add_task_batcher(
+                    worker=self._id,
+                    task_family=family,
+                    batched_args=batch_param_names,
+                    max_batch_size=task.max_batch_size,
+                )
+            self._batch_families_sent.add(family)
+
     def _add(self, task, is_complete):
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
             logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task, self._config.task_limit)
@@ -617,6 +639,7 @@ class Worker(object):
             else:
                 try:
                     deps = task.deps()
+                    self._add_task_batcher(task)
                 except Exception as ex:
                     formatted_traceback = traceback.format_exc()
                     self.add_succeeded = False
@@ -642,14 +665,20 @@ class Worker(object):
                 deps = [d.task_id for d in deps]
 
         self._scheduled_tasks[task.task_id] = task
-        self._add_task(worker=self._id, task_id=task.task_id, status=status,
-                       deps=deps, runnable=runnable, priority=task.priority,
-                       resources=task.process_resources(),
-                       params=task.to_str_params(),
-                       family=task.task_family,
-                       module=task.task_module,
-                       retry_policy_dict=_get_retry_policy_dict(task),
-                       )
+        self._add_task(
+            worker=self._id,
+            task_id=task.task_id,
+            status=status,
+            deps=deps,
+            runnable=runnable,
+            priority=task.priority,
+            resources=task.process_resources(),
+            params=task.to_str_params(),
+            family=task.task_family,
+            module=task.task_module,
+            batchable=task.batchable,
+            retry_policy_dict=_get_retry_policy_dict(task),
+        )
 
     def _validate_dependency(self, dependency):
         if isinstance(dependency, Target):
@@ -678,6 +707,26 @@ class Worker(object):
             if n_unique_pending:
                 logger.debug("There are %i pending tasks unique to this worker", n_unique_pending)
 
+    def _get_work_task_id(self, get_work_response):
+        if get_work_response['task_id'] is not None:
+            return get_work_response['task_id']
+        elif 'batch_id' in get_work_response:
+            task = load_task(
+                module=get_work_response.get('task_module'),
+                task_name=get_work_response['task_family'],
+                params_str=get_work_response['task_params'],
+            )
+            self._scheduler.add_task(
+                worker=self._id,
+                task_id=task.task_id,
+                module=get_work_response.get('task_module'),
+                family=get_work_response['task_family'],
+                params=task.to_str_params(),
+                status=RUNNING,
+                batch_id=get_work_response['batch_id'],
+            )
+            return task.task_id
+
     def _get_work(self):
         if self._stop_requesting_work:
             return None, 0, 0, 0
@@ -689,14 +738,14 @@ class Worker(object):
             current_tasks=list(self._running_tasks.keys()),
         )
         n_pending_tasks = r['n_pending_tasks']
-        task_id = r['task_id']
         running_tasks = r['running_tasks']
         n_unique_pending = r['n_unique_pending']
+        task_id = self._get_work_task_id(r)
 
-        self._get_work_response_history.append(dict(
-            task_id=task_id,
-            running_tasks=running_tasks,
-        ))
+        self._get_work_response_history.append({
+            'task_id': task_id,
+            'running_tasks': running_tasks,
+        })
 
         if task_id is not None and task_id not in self._scheduled_tasks:
             logger.info('Did not schedule %s, will load it dynamically', task_id)
@@ -717,6 +766,11 @@ class Worker(object):
                                assistant=self._assistant)
                 task_id = None
                 self.run_succeeded = False
+
+        if task_id is not None and 'batch_task_ids' in r:
+            batch_tasks = filter(None, [
+                self._scheduled_tasks.get(batch_id) for batch_id in r['batch_task_ids']])
+            self._batch_running_tasks[task_id] = batch_tasks
 
         return task_id, running_tasks, n_pending_tasks, n_unique_pending
 
