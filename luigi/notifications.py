@@ -136,16 +136,20 @@ def send_email_smtp(config, sender, subject, message, recipients, image_png):
 
     smtp_login = config.get('core', 'smtp_login', None)
     smtp_password = config.get('core', 'smtp_password', None)
-    smtp = smtplib.SMTP(**kwargs) if not smtp_ssl else smtplib.SMTP_SSL(**kwargs)
-    smtp.ehlo_or_helo_if_needed()
-    if smtp.has_extn('starttls') and not smtp_without_tls:
-        smtp.starttls()
-    if smtp_login and smtp_password:
-        smtp.login(smtp_login, smtp_password)
 
-    msg_root = generate_email(sender, subject, message, recipients, image_png)
+    try:
+        smtp = smtplib.SMTP(**kwargs) if not smtp_ssl else smtplib.SMTP_SSL(**kwargs)
+        smtp.ehlo_or_helo_if_needed()
+        if smtp.has_extn('starttls') and not smtp_without_tls:
+            smtp.starttls()
+        if smtp_login and smtp_password:
+            smtp.login(smtp_login, smtp_password)
 
-    smtp.sendmail(sender, recipients, msg_root.as_string())
+        msg_root = generate_email(sender, subject, message, recipients, image_png)
+
+        smtp.sendmail(sender, recipients, msg_root.as_string())
+    except socket.error:
+        logger.error("Not able to connect to smtp server")
 
 
 def send_email_ses(config, sender, subject, message, recipients, image_png):
