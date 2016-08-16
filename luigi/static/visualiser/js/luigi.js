@@ -99,6 +99,12 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.getBatchRunningTaskList = function(callback) {
+        return jsonRPC(this.urlRoot + "/task_list", {status: "BATCH_RUNNING", upstream_status: "", search: searchTerm()}, function(response) {
+            callback(flatten(response.response));
+        });
+    };
+
     LuigiAPI.prototype.getPendingTaskList = function(callback) {
         return jsonRPC(this.urlRoot + "/task_list", {status: "PENDING", upstream_status: "", search: searchTerm()}, function(response) {
             callback(flatten(response.response));

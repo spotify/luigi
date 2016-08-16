@@ -2,6 +2,7 @@ Graph = (function() {
     var statusColors = {
         "FAILED":"#DD0000",
         "RUNNING":"#0044DD",
+        "BATCH_RUNNING":"#BB00BB",
         "PENDING":"#EEBB00",
         "DONE":"#00DD00",
         "DISABLED":"#808080",
@@ -22,6 +23,8 @@ Graph = (function() {
     var legendMaxY = (function () {
         return Object.keys(statusColors).length * legendLineHeight + ( legendLineHeight / 2 )
     })();
+
+    var legendWidth = 110;
 
     function nodeFromTask(task) {
         var deps = task.deps;
@@ -230,7 +233,7 @@ Graph = (function() {
         $(svgElement("rect"))
             .attr("x", -1)
             .attr("y", -1)
-            .attr("width", "100px")
+            .attr("width", legendWidth + "px")
             .attr("height", legendMaxY + "px")
             .attr("fill", "#FFF")
             .attr("stroke", "#DDD")
@@ -247,7 +250,7 @@ Graph = (function() {
                 .appendTo(legend)
 
             $(svgElement("text"))
-                .text(key.charAt(0).toUpperCase() + key.substring(1).toLowerCase())
+                .text(key.charAt(0).toUpperCase() + key.substring(1).toLowerCase().replace(/_./gi, function (x) { return " " + x[1].toUpperCase(); }))
                 .attr("x", legendLineHeight + 14)
                 .attr("y", legendLineHeight+(x*legendLineHeight))
                 .appendTo(legend);
