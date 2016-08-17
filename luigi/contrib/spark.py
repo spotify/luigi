@@ -285,6 +285,13 @@ class PySparkTask(SparkSubmitTask):
             shutil.rmtree(self.run_path)
 
     def _dump(self, fd):
+        # set_tracking_url and set_status_message is not picklable
+        # ignore them before dump and resume them after dump
+        _set_tracking_url = self.set_tracking_url
+        self.set_tracking_url = None
+        _set_status_message = self.set_status_message
+        self.set_status_message = None
+
         if self.__module__ == '__main__':
             d = pickle.dumps(self)
             module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
@@ -292,6 +299,9 @@ class PySparkTask(SparkSubmitTask):
             fd.write(d)
         else:
             pickle.dump(self, fd)
+
+        self.set_tracking_url = _set_tracking_url
+        self.set_status_message = _set_status_message
 
     def _setup_packages(self, sc):
         """
