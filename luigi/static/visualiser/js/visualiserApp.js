@@ -247,6 +247,7 @@ function visualiserApp(luigi) {
         resource.percent_used = 100 * resource.num_used / resource.num_total;
         if (resource.percent_used >= 100) {
             resource.bar_type = 'danger';
+            resource.percent_used = 100;
         } else if (resource.percent_used > 50) {
             resource.bar_type = 'warning';
         } else {
