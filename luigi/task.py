@@ -571,12 +571,11 @@ class Task(object):
 
         """
         unpicklable_properties = ('set_tracking_url', 'set_status_message')
-        placeholder_during_pickling = None
         reserved_properties = {}
         for property_name in unpicklable_properties:
             if hasattr(self, property_name):
                 reserved_properties[property_name] = getattr(self, property_name)
-                setattr(self, property_name, placeholder_during_pickling)
+                setattr(self, property_name, 'placeholder_during_pickling')
 
         yield
 
