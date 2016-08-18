@@ -30,6 +30,7 @@ import os.path
 
 import time
 from multiprocessing.pool import ThreadPool
+import threading
 
 try:
     from urlparse import urlsplit
@@ -570,7 +571,7 @@ class S3Client(FileSystem):
 
 class AtomicS3File(AtomicLocalFile):
     """
-    An S3 file that writes to a temp file and put to S3 on close.
+    An S3 file that writes to a local temp file and put to S3 on close.
 
     :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
     """
@@ -582,6 +583,175 @@ class AtomicS3File(AtomicLocalFile):
 
     def move_to_final_destination(self):
         self.s3_client.put_multipart(self.tmp_path, self.path, **self.s3_options)
+
+
+class AtomicRemoteWritableS3File(object):
+    """
+    An S3 file that writes to a remote temp object on S3; copies to the true key on close.
+
+    This class requires boto3 v1.4.0+ for its non-seekable file object upload ability.
+
+    Useful for performing operations on large S3 objects when you don't have
+    sufficient space on local drives.
+
+    Works around AWS S3's multipart transfer size requirements and boto3's
+    idiosyncratic implementation that requires an initial buffer size
+    larger than the multipart transfer threshold in order to correctly
+    select the 'read-until-empty' behavior needed for a streaming upload.
+    """
+    _boto3_default_multipart_threshold = 8 * 1024 * 1024
+
+    def __init__(self, s3_bucket, s3_key, boto3_s3_client=None):
+        import boto3
+        from s3transfer.manager import TransferManager, TransferConfig
+
+        self.s3_bucket = s3_bucket
+        self.s3_key = s3_key
+        self.s3_client = boto3_s3_client
+        if self.s3_client is None:
+            self.s3_client = boto3.client('s3')
+
+        self._internal_queue = BlockingReaderWriterByteStream()
+        self._boto3_multipart_upload_workaround_buffer = b''
+
+        # don't start the upload until we've written at least
+        # boto3.TransferConfig.multipart_threshold bytes
+        self._transfer_manager = TransferManager(self.s3_client, TransferConfig())
+        self._upload_future = None
+
+    def write(self, some_bytes):
+        """
+        Writes bytes to S3.
+
+        This method may not be safely called by multiple writers in different threads.
+        """
+        self._write(some_bytes)
+
+    def _write(self, some_bytes, close_and_flush=False):
+        """
+        Buffers writes until they're large enough to be safely sent to boto3.
+        """
+        buffer_write = (len(self._boto3_multipart_upload_workaround_buffer) + len(some_bytes) <
+                        self._boto3_default_multipart_threshold)
+        self._boto3_multipart_upload_workaround_buffer += some_bytes
+        if not buffer_write or close_and_flush:
+            self._internal_queue.write(self._boto3_multipart_upload_workaround_buffer)
+            self._boto3_multipart_upload_workaround_buffer = b''
+            if not self._upload_future:
+                self._submit_upload()
+
+    def _submit_upload(self):
+        self._upload_future = self._transfer_manager.upload(
+            fileobj=self._internal_queue,
+            bucket=self.s3_bucket, key=self.s3_key + '.TMP')
+
+    def close(self):
+        """
+        Closes the writer, so that it will flush to the reader.
+
+        This method will block until the file has been fully flushed to S3,
+        and until it has been properly moved to its final destination.
+        """
+        self._write(b'', close_and_flush=True)
+        self._internal_queue.close()
+        self._upload_future.result()  # wait for upload to complete before moving
+        self._move_to_final_destination()
+
+    def _move_to_final_destination(self):
+        self.s3_client.copy_object(Bucket=self.s3_bucket, Key=self.s3_key,
+                                   CopySource={'Bucket': self.s3_bucket, 'Key': self.s3_key + '.TMP'})
+        self.s3_client.delete_object(Bucket=self.s3_bucket, Key=self.s3_key + '.TMP')
+
+    def __del__(self):
+        self.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            print('**** WARNING: Failed to properly close AtomicRemoteWritableS3File because of error.')
+            self._internal_queue.error('Pipe not properly closed.')
+            return
+        else:
+            self.close()
+
+
+class BlockingReaderWriterByteStream(object):
+    """
+    Class which implements a temporary, thread-safe buffer between a reader
+    and a writer in different threads.
+
+    Presents a normal EOF semantic to the reader.
+    """
+    def __init__(self, initial_bytes=b''):
+        self._condition_v = threading.Condition()
+        self._buf = initial_bytes
+        self._closed = False
+        self._error = None
+
+    def write(self, some_bytes):
+        """
+        Writes bytes to the internal buffer and notifies the reader if it is waiting.
+
+        Call from the writer only.
+        """
+        if not self._closed:
+            with self._condition_v:
+                self._buf += some_bytes
+                self._condition_v.notify()  # notify reader
+
+    def read(self, amount=None):
+        """
+        Implements a blocking read on the internal buffer.
+
+        If an empty byte buffer is returned, no further data will be received because
+        the object has been closed by the writer.
+
+        Call from reader only.
+        """
+        ret_bytes = None
+        while not ret_bytes:
+            with self._condition_v:
+                if not amount:
+                    amount = len(self._buf)
+                if len(self._buf) > 0:
+                    if len(self._buf) >= amount:
+                        ret_bytes = self._buf[:amount]
+                        self._buf = self._buf[amount:]  # truncate buffer
+                    else:
+                        ret_bytes = self._buf
+                        self._buf = b''  # start new buffer, return current one in full
+                elif self._closed:
+                    ret_bytes = self._buf  # return empty buffer, because no more data is coming!
+                    break
+                else:
+                    self._condition_v.wait(10.0)
+        if self._error:
+            raise Exception(self._error)
+        return ret_bytes  # if this is empty, it indicates EOF
+
+    def close(self):
+        """
+        Subsequent read() calls where the internal buffer
+        is empty will no longer block, but will return an empty buffer.
+
+        Call from writer only.
+        """
+        with self._condition_v:
+            self._closed = True
+            self._condition_v.notify()
+
+    def error(self, msg):
+        """
+        Communicate to reader an error that indicates no further reads are necessary.
+
+        Call from writer only.
+        """
+        with self._condition_v:
+            print('ERROR! {}'.format(self._error))
+            self._error = msg
+            self._condition_v.notify()
 
 
 class ReadableS3File(object):
@@ -673,7 +843,13 @@ class S3Target(FileSystemTarget):
 
     fs = None
 
-    def __init__(self, path, format=None, client=None, **kwargs):
+    def __init__(self, path, format=None, client=None, remote_temp_write=False, **kwargs):
+        """
+        Creates an S3Target that can be opened for reading or writing.
+
+        Setting remote_temp_write to True will place the temporary file on S3
+        instead of the local file system. Requires boto3 >=1.4.0.
+        """
         super(S3Target, self).__init__(path)
         if format is None:
             format = get_default_format()
@@ -682,6 +858,7 @@ class S3Target(FileSystemTarget):
         self.format = format
         self.fs = client or S3Client()
         self.s3_options = kwargs
+        self.remote_temp_write = remote_temp_write
 
     def open(self, mode='r'):
         """
@@ -697,7 +874,11 @@ class S3Target(FileSystemTarget):
             fileobj = ReadableS3File(s3_key)
             return self.format.pipe_reader(fileobj)
         else:
-            return self.format.pipe_writer(AtomicS3File(self.path, self.fs, **self.s3_options))
+            if self.remote_temp_write:
+                bucket, key = self.fs._path_to_bucket_and_key(self.path)
+                return self.format.pipe_writer(AtomicRemoteWritableS3File(bucket, key))
+            else:
+                return self.format.pipe_writer(AtomicS3File(self.path, self.fs, **self.s3_options))
 
 
 class S3FlagTarget(S3Target):
