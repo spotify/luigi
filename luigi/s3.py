@@ -672,6 +672,9 @@ class AtomicRemoteWritableS3File(object):
         if exc_type:
             print('**** WARNING: Failed to properly close AtomicRemoteWritableS3File because of error.')
             self._internal_queue.error('Pipe not properly closed.')
+            if self._upload_future:
+                self._upload_future.result()
+                self.s3_client.delete_object(Bucket=self.s3_bucket, Key=self.s3_key + '.TMP')
             return
         else:
             self.close()
