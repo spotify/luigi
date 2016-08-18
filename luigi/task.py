@@ -579,7 +579,7 @@ class Task(object):
 
         yield
 
-        for property_name, value in reserved_properties.iteritems():
+        for property_name, value in six.iteritems(reserved_properties):
             setattr(self, property_name, value)
 
 
