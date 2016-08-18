@@ -552,7 +552,7 @@ class Task(object):
         pass
 
     @contextmanager
-    def _without_unpicklable_properties(self):
+    def no_unpicklable_properties(self):
         """
         Remove unpicklable properties before dump task and resume them after.
 
@@ -566,16 +566,17 @@ class Task(object):
             class DummyTask(luigi):
 
                 def _dump(self):
-                    with self._without_unpicklable_properties():
+                    with self.no_unpicklable_properties():
                         pickle.dumps(self)
 
         """
         unpicklable_properties = ('set_tracking_url', 'set_status_message')
+        placeholder_during_pickling = None
         reserved_properties = {}
         for property_name in unpicklable_properties:
             if hasattr(self, property_name):
                 reserved_properties[property_name] = getattr(self, property_name)
-                setattr(self, property_name, None)
+                setattr(self, property_name, placeholder_during_pickling)
 
         yield
 

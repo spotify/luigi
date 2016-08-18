@@ -91,11 +91,11 @@ class TaskTest(unittest.TestCase):
         pickled_task = pickle.dumps(task)
         self.assertEqual(task, pickle.loads(pickled_task))
 
-    def test_without_unpicklable_properties(self):
+    def test_no_unpicklable_properties(self):
         task = luigi.Task()
         task.set_tracking_url = lambda tracking_url: tracking_url
         task.set_status_message = lambda message: message
-        with task._without_unpicklable_properties():
+        with task.no_unpicklable_properties():
             pickle.dumps(task)
         self.assertIsNotNone(task.set_tracking_url)
         self.assertIsNotNone(task.set_status_message)

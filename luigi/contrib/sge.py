@@ -271,7 +271,7 @@ class SGEJobTask(luigi.Task):
 
     def _dump(self, out_dir=''):
         """Dump instance to file."""
-        with self._without_unpicklable_properties():
+        with self.no_unpicklable_properties():
             self.job_file = os.path.join(out_dir, 'job-instance.pickle')
             if self.__module__ == '__main__':
                 d = pickle.dumps(self)

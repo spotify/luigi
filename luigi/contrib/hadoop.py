@@ -944,7 +944,7 @@ class JobTask(BaseHadoopJobTask):
         """
         Dump instance to file.
         """
-        with self._without_unpicklable_properties():
+        with self.no_unpicklable_properties():
             file_name = os.path.join(directory, 'job-instance.pickle')
             if self.__module__ == '__main__':
                 d = pickle.dumps(self)

@@ -285,7 +285,7 @@ class PySparkTask(SparkSubmitTask):
             shutil.rmtree(self.run_path)
 
     def _dump(self, fd):
-        with self._without_unpicklable_properties():
+        with self.no_unpicklable_properties():
             if self.__module__ == '__main__':
                 d = pickle.dumps(self)
                 module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
