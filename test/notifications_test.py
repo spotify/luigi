@@ -18,6 +18,7 @@
 from helpers import unittest
 import mock
 import sys
+import socket
 
 from helpers import with_config
 from luigi import notifications
@@ -257,6 +258,40 @@ class TestSMTPEmail(unittest.TestCase, NotificationFixture):
                 SMTP.return_value.sendmail \
                     .assert_called_once_with(self.sender, self.recipients,
                                              self.mocked_email_msg)
+
+    @with_config({"core": {"smtp_ssl": "False",
+                           "smtp_host": "my.smtp.local",
+                           "smtp_port": "999",
+                           "smtp_local_hostname": "ptms",
+                           "smtp_timeout": "1200",
+                           "smtp_login": "Robin",
+                           "smtp_password": "dooH",
+                           "smtp_without_tls": "True"}})
+    def test_sends_smtp_email_exceptions(self):
+        """
+        Call notificaions.send_email_smtp when it cannot connect to smtp server (socket.error)
+        starttls.
+        """
+        smtp_kws = {"host": "my.smtp.local",
+                    "port": 999,
+                    "local_hostname": "ptms",
+                    "timeout": 1200}
+
+        with mock.patch('smtplib.SMTP') as SMTP:
+            with mock.patch('luigi.notifications.generate_email') as generate_email:
+                SMTP.side_effect = socket.error()
+                generate_email.return_value \
+                    .as_string.return_value = self.mocked_email_msg
+
+                try:
+                    notifications.send_email_smtp(configuration.get_config(),
+                                                  *self.notification_args)
+                except socket.error:
+                    self.fail("send_email_smtp() raised expection unexpectedly")
+
+                SMTP.assert_called_once_with(**smtp_kws)
+                self.assertEqual(notifications.generate_email.called, False)
+                self.assertEqual(SMTP.sendemail.called, False)
 
 
 class TestSendgridEmail(unittest.TestCase, NotificationFixture):
