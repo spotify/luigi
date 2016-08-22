@@ -27,6 +27,7 @@ import itertools
 import logging
 import os
 import os.path
+import random
 
 import time
 from multiprocessing.pool import ThreadPool
@@ -614,6 +615,8 @@ class AtomicRemoteWritableS3File(object):
         self._internal_queue = BlockingReaderWriterByteStream()
         self._boto3_multipart_upload_workaround_buffer = b''
 
+        self.temp_s3_key = self.s3_key + '-{:0>10}-tmp'.format(random.randrange(0, 1e10))
+
         # don't start the upload until we've written at least
         # boto3.TransferConfig.multipart_threshold bytes
         self._transfer_manager = TransferManager(self.s3_client, TransferConfig())
@@ -643,7 +646,7 @@ class AtomicRemoteWritableS3File(object):
     def _submit_upload(self):
         self._upload_future = self._transfer_manager.upload(
             fileobj=self._internal_queue,
-            bucket=self.s3_bucket, key=self.s3_key + '.TMP')
+            bucket=self.s3_bucket, key=self.temp_s3_key)
 
     def close(self):
         """
@@ -659,8 +662,8 @@ class AtomicRemoteWritableS3File(object):
 
     def _move_to_final_destination(self):
         self.s3_client.copy_object(Bucket=self.s3_bucket, Key=self.s3_key,
-                                   CopySource={'Bucket': self.s3_bucket, 'Key': self.s3_key + '.TMP'})
-        self.s3_client.delete_object(Bucket=self.s3_bucket, Key=self.s3_key + '.TMP')
+                                   CopySource={'Bucket': self.s3_bucket, 'Key': self.temp_s3_key})
+        self.s3_client.delete_object(Bucket=self.s3_bucket, Key=self.temp_s3_key)
 
     def __del__(self):
         self.close()
@@ -670,11 +673,10 @@ class AtomicRemoteWritableS3File(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
-            print('**** WARNING: Failed to properly close AtomicRemoteWritableS3File because of error.')
             self._internal_queue.error('Pipe not properly closed.')
             if self._upload_future:
                 self._upload_future.result()
-                self.s3_client.delete_object(Bucket=self.s3_bucket, Key=self.s3_key + '.TMP')
+                self.s3_client.delete_object(Bucket=self.s3_bucket, Key=self.temp_s3_key)
             return
         else:
             self.close()
@@ -754,6 +756,7 @@ class BlockingReaderWriterByteStream(object):
         with self._condition_v:
             print('ERROR! {}'.format(self._error))
             self._error = msg
+            self._closed = True
             self._condition_v.notify()
 
 
