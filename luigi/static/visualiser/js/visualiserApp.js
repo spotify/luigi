@@ -14,6 +14,7 @@ function visualiserApp(luigi) {
     var taskIcons = {
         PENDING: 'pause',
         RUNNING: 'play',
+        BATCH_RUNNING: 'play',
         DONE: 'check',
         FAILED: 'times',
         UPSTREAM_FAILED: 'warning',
@@ -101,6 +102,10 @@ function visualiserApp(luigi) {
             case 'RUNNING':
                 iconClass = 'fa-play';
                 iconColor = 'aqua';
+                break;
+            case 'BATCH_RUNNING':
+                iconClass = 'fa-play';
+                iconColor = 'purple';
                 break;
             case 'DONE':
                 iconClass = 'fa-check';
@@ -631,6 +636,7 @@ function visualiserApp(luigi) {
         var mostImportantCategory = function (cat1, cat2) {
             var priorities = [
                 'RUNNING',
+                'BATCH_RUNNING',
                 'DONE',
                 'PENDING',
                 'UPSTREAM_DISABLED',
@@ -734,31 +740,35 @@ function visualiserApp(luigi) {
             updateTaskCategory(dt, 'RUNNING', runningTasks);
         });
 
-        var ajax2 = luigi.getFailedTaskList(function(failedTasks) {
+        var ajax2 = luigi.getBatchRunningTaskList(function(batchRunningTasks) {
+            updateTaskCategory(dt, 'BATCH_RUNNING', batchRunningTasks);
+        });
+
+        var ajax3 = luigi.getFailedTaskList(function(failedTasks) {
             updateTaskCategory(dt, 'FAILED', failedTasks);
         });
 
-        var ajax3 = luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
+        var ajax4 = luigi.getUpstreamFailedTaskList(function(upstreamFailedTasks) {
             updateTaskCategory(dt, 'UPSTREAM_FAILED', upstreamFailedTasks);
         });
 
-        var ajax4 = luigi.getDisabledTaskList(function(disabledTasks) {
+        var ajax5 = luigi.getDisabledTaskList(function(disabledTasks) {
             updateTaskCategory(dt, 'DISABLED', disabledTasks);
         });
 
-        var ajax5 = luigi.getUpstreamDisabledTaskList(function(upstreamDisabledTasks) {
+        var ajax6 = luigi.getUpstreamDisabledTaskList(function(upstreamDisabledTasks) {
             updateTaskCategory(dt, 'UPSTREAM_DISABLED', upstreamDisabledTasks);
         });
 
-        var ajax6 = luigi.getPendingTaskList(function(pendingTasks) {
+        var ajax7 = luigi.getPendingTaskList(function(pendingTasks) {
             updateTaskCategory(dt, 'PENDING', pendingTasks);
         });
 
-        var ajax7 = luigi.getDoneTaskList(function(doneTasks) {
+        var ajax8 = luigi.getDoneTaskList(function(doneTasks) {
             updateTaskCategory(dt, 'DONE', doneTasks);
         });
 
-        $.when(ajax1, ajax2, ajax3, ajax4, ajax5, ajax6, ajax7).done(function () {
+        $.when(ajax1, ajax2, ajax3, ajax4, ajax5, ajax6, ajax7, ajax8).done(function () {
             dt.draw();
 
             $('.sidebar').html(renderSidebar(dt.column(1).data()));
