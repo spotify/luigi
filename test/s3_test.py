@@ -28,8 +28,6 @@ from boto.s3 import key
 from moto import mock_s3
 from moto import mock_sts
 
-import boto3  # remote temp file on S3Target write
-
 from luigi import configuration
 from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
 from luigi.target import MissingParentDirectory
