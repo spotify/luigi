@@ -116,6 +116,43 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         path = t.path
         self.assertEqual('s3://mybucket/test_file', path)
 
+    def test_remote_temp_upload_4MB(self):
+        self._run_remote_temp_upload_test(1024 ** 2 * 4)
+
+    def test_remote_temp_upload_6MB(self):
+        self._run_remote_temp_upload_test(1024 ** 2 * 6)
+
+    def test_remote_temp_upload_10MB(self):
+        self._run_remote_temp_upload_test(1024 ** 2 * 10)
+
+    def test_remote_temp_upload_20MB(self):
+        self._run_remote_temp_upload_test(1024 ** 2 * 20)
+
+    def _run_remote_temp_upload_test(self, file_size):
+        file_contents = b"a" * file_size
+
+        tmp_file = tempfile.NamedTemporaryFile(mode='wb', delete=True)
+        tmp_file_path = tmp_file.name
+        tmp_file.write(file_contents)
+        tmp_file.flush()
+
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+
+        s3_path = 's3://mybucket/remote_test_file'
+        t = S3Target(s3_path, remote_temp_write=True)
+        with open(tmp_file_path, 'rb') as source_file:
+            with t.open('w') as write_file:
+                for line in source_file:
+                    write_file.write(line)
+
+        self.assertTrue(s3_client.exists(s3_path))
+        file_size = os.path.getsize(tmp_file.name)
+        key_size = s3_client.get_key(s3_path).size
+        self.assertEqual(file_size, key_size)
+
+        tmp_file.close()
+
 
 class TestS3Client(unittest.TestCase):
 
