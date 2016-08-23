@@ -431,6 +431,7 @@ class SimpleTaskState(object):
         self.set_status(task, BATCH_RUNNING)
         task.batch_id = batch_id
         task.worker_running = worker_id
+        task.time_running = time.time()
 
     def set_status(self, task, new_status, config=None):
         if new_status == FAILED:
