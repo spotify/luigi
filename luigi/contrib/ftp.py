@@ -53,7 +53,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.tls = tls
         self.timeout = timeout
         self.sftp = sftp
-        self.pysftp_conn_kwargs = pysftp_conn_kwargs
+        self.pysftp_conn_kwargs = pysftp_conn_kwargs or {}
 
         if port is None:
             if self.sftp:
