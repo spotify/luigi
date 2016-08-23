@@ -849,7 +849,7 @@ class S3Target(FileSystemTarget):
 
     fs = None
 
-    def __init__(self, path, format=None, client=None, remote_temp_write=False, boto3_session_kwargs={}, **kwargs):
+    def __init__(self, path, format=None, client=None, remote_temp_write=False, boto3_session_kwargs=None, **kwargs):
         """
         Creates an S3Target that can be opened for reading or writing.
 
