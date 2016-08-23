@@ -849,7 +849,7 @@ class S3Target(FileSystemTarget):
 
     fs = None
 
-    def __init__(self, path, format=None, client=None, remote_temp_write=False, **kwargs):
+    def __init__(self, path, format=None, client=None, remote_temp_write=False, boto3_session_kwargs=None, **kwargs):
         """
         Creates an S3Target that can be opened for reading or writing.
 
@@ -865,6 +865,7 @@ class S3Target(FileSystemTarget):
         self.fs = client or S3Client()
         self.s3_options = kwargs
         self.remote_temp_write = remote_temp_write
+        self.boto3_session_kwargs = boto3_session_kwargs
 
     def open(self, mode='r'):
         """
@@ -882,7 +883,11 @@ class S3Target(FileSystemTarget):
         else:
             if self.remote_temp_write:
                 bucket, key = self.fs._path_to_bucket_and_key(self.path)
-                return self.format.pipe_writer(AtomicRemoteWritableS3File(bucket, key))
+                boto3_session = None
+                if self.boto3_session_kwargs:
+                    import boto3
+                    boto3_session = boto3.client('s3', **self.boto3_session_kwargs)
+                return self.format.pipe_writer(AtomicRemoteWritableS3File(bucket, key, boto3_session))
             else:
                 return self.format.pipe_writer(AtomicS3File(self.path, self.fs, **self.s3_options))
 
