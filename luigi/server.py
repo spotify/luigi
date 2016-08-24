@@ -234,7 +234,7 @@ def _init_api(scheduler, responder=None, api_port=None, address=None, unix_socke
     if unix_socket is not None:
         api_sockets = [tornado.netutil.bind_unix_socket(unix_socket)]
     else:
-        api_sockets = tornado.netutil.bind_sockets(api_port, address=address)
+        api_sockets = tornado.netutil.bind_sockets(api_port, address=address, reuse_port=True)
     server = tornado.httpserver.HTTPServer(api_app)
     server.add_sockets(api_sockets)
 
