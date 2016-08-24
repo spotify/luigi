@@ -58,11 +58,13 @@ logger = logging.getLogger('luigi-interface')
 
 try:
     import boto3
-    client = boto3.client('ecs')
+    try:
+        import botocore.exceptions
+        client = boto3.client('ecs')
+    except botocore.exceptions.NoRegionError:
+        logger.warning('Your AWS config is missing Region information, ECSTask requires a working config.')
 except ImportError:
     logger.warning('boto3 is not installed. ECSTasks require boto3')
-except NoRegionError:
-    logger.warning('Your AWS config is missing Region information, ECSTask requires a working config.')
 
 POLL_TIME = 2
 

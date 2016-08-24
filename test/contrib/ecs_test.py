@@ -40,17 +40,19 @@ use_moto = False
 
 try:
     import boto3
-    client = boto3.client('ecs')
+    try:
+        import botocore.exceptions
+        client = boto3.client('ecs')
+    except botocore.exceptions.NoRegionError:
+        # the guess is that this is a Travis testing scenario, where
+        # AWS is not actually available. Therefore, try setting up mocks instead.
+        try:
+            from moto import mock_ecs
+            use_moto = True
+        except ImportError:
+            raise unittest.SkipTest('moto is not installed, and AWS config was unavailable. Skipping ECSTask tests.')
 except ImportError:
     raise unittest.SkipTest('boto3 is not installed. ECSTasks require boto3')
-except NoRegionError:
-    # the guess is that this is a Travis testing scenario, where
-    # AWS is not actually available. Therefore, try setting up mocks instead.
-    try:
-        from moto import mock_ecs
-        use_moto = True
-    except ImportError:
-        raise unittest.SkipTest('moto is not installed, and AWS config was unavailable. Skipping ECSTask tests.')
 
 
 TEST_TASK_DEF = {
@@ -93,7 +95,7 @@ class TestECSTask(unittest.TestCase):
             self.addCleanup(self.mock_ecs.stop)
             self.client = boto3.client('ecs', region_name='us-east-1', aws_access_key_id='XXXXXXXXXXXX', aws_secret_access_key='XXXXXXXXXXXXX')
             import luigi.contrib.ecs
-            luigi.contrib.ecs.client = client  # necessary because contrib/ecs.py uses a module-level client.
+            luigi.contrib.ecs.client = self.client  # necessary because contrib/ecs.py uses a module-level client.
         else:
             self.client = client
         # Register the test task definition
