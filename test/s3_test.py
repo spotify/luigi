@@ -116,17 +116,17 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         path = t.path
         self.assertEqual('s3://mybucket/test_file', path)
 
-    def test_remote_temp_upload_4MB(self):
-        self._run_remote_temp_upload_test(1024 ** 2 * 4)
+    # def test_remote_temp_upload_4MB(self):
+    #     self._run_remote_temp_upload_test(1024 ** 2 * 4)
 
-    def test_remote_temp_upload_6MB(self):
-        self._run_remote_temp_upload_test(1024 ** 2 * 6)
+    # def test_remote_temp_upload_6MB(self):
+    #     self._run_remote_temp_upload_test(1024 ** 2 * 6)
 
-    def test_remote_temp_upload_10MB(self):
-        self._run_remote_temp_upload_test(1024 ** 2 * 10)
+    # def test_remote_temp_upload_10MB(self):
+    #     self._run_remote_temp_upload_test(1024 ** 2 * 10)
 
-    def test_remote_temp_upload_20MB(self):
-        self._run_remote_temp_upload_test(1024 ** 2 * 20)
+    # def test_remote_temp_upload_20MB(self):
+    #     self._run_remote_temp_upload_test(1024 ** 2 * 20)
 
     def _run_remote_temp_upload_test(self, file_size):
         file_contents = b"a" * file_size
@@ -328,7 +328,7 @@ class TestS3Client(unittest.TestCase):
         tmp_file_path = tmp_file.name
 
         s3_client.get('s3://mybucket/putMe', tmp_file_path)
-        self.assertEquals(tmp_file.read(), self.tempFileContents)
+        self.assertEqual(tmp_file.read(), self.tempFileContents)
 
         tmp_file.close()
 
@@ -340,7 +340,7 @@ class TestS3Client(unittest.TestCase):
 
         contents = s3_client.get_as_string('s3://mybucket/putMe')
 
-        self.assertEquals(contents, self.tempFileContents)
+        self.assertEqual(contents, self.tempFileContents)
 
     def test_get_key(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
