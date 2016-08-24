@@ -140,7 +140,7 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         s3_client.s3.create_bucket('mybucket')
 
         s3_path = 's3://mybucket/remote_test_file'
-        t = S3Target(s3_path, remote_temp_write=True)
+        t = S3Target(s3_path, client=s3_client, remote_temp_write=True)
         with open(tmp_file_path, 'rb') as source_file:
             with t.open('w') as write_file:
                 for line in source_file:
