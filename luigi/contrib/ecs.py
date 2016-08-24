@@ -61,6 +61,8 @@ try:
     client = boto3.client('ecs')
 except ImportError:
     logger.warning('boto3 is not installed. ECSTasks require boto3')
+except NoRegionError:
+    logger.warning('Your AWS config is missing Region information, ECSTask requires a working config.')
 
 POLL_TIME = 2
 
