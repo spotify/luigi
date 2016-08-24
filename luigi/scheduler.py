@@ -556,6 +556,12 @@ class SimpleTaskState(object):
     def get_worker(self, worker_id):
         return self._active_workers.setdefault(worker_id, Worker(worker_id))
 
+    def get_worker_starts(self):
+        return {
+            worker_id: worker.started
+            for worker_id, worker in six.iteritems(self._active_workers)
+        }
+
     def inactivate_workers(self, delete_workers):
         # Mark workers as inactive
         for worker in delete_workers:
@@ -829,6 +835,26 @@ class Scheduler(object):
         ]
         for task in orphaned_tasks:
             self._state.set_status(task, PENDING)
+
+    @rpc_method()
+    def count_pending(self, worker):
+        worker_id, worker = worker, self._state.get_worker(worker)
+
+        num_pending, num_unique_pending, num_last_scheduled = 0, 0, 0
+
+        worker_starts = self._state.get_worker_starts()
+        for task in worker.get_pending_tasks(self._state):
+            num_pending += 1
+            num_unique_pending += int(len(task.workers) == 1)
+            if task.workers:
+                last_scheduled = max(task.workers, key=worker_starts.get)
+                num_last_scheduled += int(last_scheduled == worker_id)
+        return {
+            'n_pending_tasks': num_pending,
+            'n_unique_pending': num_unique_pending,
+            'n_pending_last_scheduled': num_last_scheduled,
+            'worker_state': worker.state,
+        }
 
     @rpc_method(allow_null=False)
     def get_work(self, host=None, assistant=False, current_tasks=None, worker=None, **kwargs):

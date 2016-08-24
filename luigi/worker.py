@@ -732,25 +732,37 @@ class Worker(object):
     def _get_work(self):
         if self._stop_requesting_work:
             return None, 0, 0, 0, WORKER_STATE_DISABLED
-        logger.debug("Asking scheduler for work...")
-        r = self._scheduler.get_work(
-            worker=self._id,
-            host=self.host,
-            assistant=self._assistant,
-            current_tasks=list(self._running_tasks.keys()),
-        )
-        n_pending_tasks = r['n_pending_tasks']
-        running_tasks = r['running_tasks']
-        n_unique_pending = r['n_unique_pending']
-        # TODO: For a tiny amount of time (a month?) we'll keep forwards compatibility
-        # That is you can user a newer client than server (Sep 2016)
-        worker_state = r.get('worker_state', WORKER_STATE_ACTIVE)  # state according to server!
-        task_id = self._get_work_task_id(r)
 
-        self._get_work_response_history.append({
-            'task_id': task_id,
-            'running_tasks': running_tasks,
-        })
+        if self.worker_processes > 0:
+            logger.debug("Asking scheduler for work...")
+            r = self._scheduler.get_work(
+                worker=self._id,
+                host=self.host,
+                assistant=self._assistant,
+                current_tasks=list(self._running_tasks.keys()),
+            )
+            n_pending_tasks = r['n_pending_tasks']
+            running_tasks = r['running_tasks']
+            n_unique_pending = r['n_unique_pending']
+            # TODO: For a tiny amount of time (a month?) we'll keep forwards compatibility
+            # That is you can user a newer client than server (Sep 2016)
+            worker_state = r.get('worker_state', WORKER_STATE_ACTIVE)  # state according to server!
+            task_id = self._get_work_task_id(r)
+
+            self._get_work_response_history.append({
+                'task_id': task_id,
+                'running_tasks': running_tasks,
+            })
+
+        # Just keeping tasks alive for assistants
+        else:
+            logger.debug("Checking if tasks are still pending")
+            r = self._scheduler.count_pending(worker=self._id)
+            n_pending_tasks = r['n_pending_tasks']
+            running_tasks = 0
+            n_unique_pending = r['n_pending_last_scheduled']
+            worker_state = r['worker_state']
+            task_id = None
 
         if task_id is not None and task_id not in self._scheduled_tasks:
             logger.info('Did not schedule %s, will load it dynamically', task_id)
@@ -953,7 +965,7 @@ class Worker(object):
         self._add_worker()
 
         while True:
-            while len(self._running_tasks) >= self.worker_processes:
+            while len(self._running_tasks) >= self.worker_processes > 0:
                 logger.debug('%d running tasks, waiting for next task to finish', len(self._running_tasks))
                 self._handle_next_task()
 
