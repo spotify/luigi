@@ -203,6 +203,7 @@ class SGEJobTask(luigi.Task):
         description="don't tarball (and extract) the luigi project files")
 
     def __init__(self, *args, **kwargs):
+        super(SGEJobTask, self).__init__(*args, **kwargs)
         if self.job_name:
             # use explicitly provided job name
             pass
@@ -270,15 +271,15 @@ class SGEJobTask(luigi.Task):
 
     def _dump(self, out_dir=''):
         """Dump instance to file."""
-        self.job_file = os.path.join(out_dir, 'job-instance.pickle')
-        if self.__module__ == '__main__':
-            d = pickle.dumps(self)
-            module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-            d = d.replace('(c__main__', "(c" + module_name)
-            open(self.job_file, "w").write(d)
-
-        else:
-            pickle.dump(self, open(self.job_file, "w"))
+        with self.no_unpicklable_properties():
+            self.job_file = os.path.join(out_dir, 'job-instance.pickle')
+            if self.__module__ == '__main__':
+                d = pickle.dumps(self)
+                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
+                d = d.replace('(c__main__', "(c" + module_name)
+                open(self.job_file, "w").write(d)
+            else:
+                pickle.dump(self, open(self.job_file, "w"))
 
     def _run_job(self):
 

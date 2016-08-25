@@ -197,6 +197,18 @@ class PySparkTaskTest(unittest.TestCase):
         self.assertTrue(os.path.exists(proc_arg_list[7]))
         self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
 
+    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077"}})
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_run_with_pickle_dump(self, proc):
+        setup_run_process(proc)
+        job = TestPySparkTask()
+        luigi.build([job], local_scheduler=True)
+        self.assertEqual(proc.call_count, 1)
+        proc_arg_list = proc.call_args[0][0]
+        self.assertEqual(proc_arg_list[0:7], ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'client', '--name', 'TestPySparkTask'])
+        self.assertTrue(os.path.exists(proc_arg_list[7]))
+        self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
+
     @patch.dict('sys.modules', {'pyspark': MagicMock()})
     @patch('pyspark.SparkContext')
     def test_pyspark_runner(self, spark_context):

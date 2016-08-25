@@ -24,6 +24,7 @@ try:
     from itertools import imap as map
 except ImportError:
     pass
+from contextlib import contextmanager
 import logging
 import traceback
 import warnings
@@ -549,6 +550,37 @@ class Task(object):
 
         Default behavior is to send an None value"""
         pass
+
+    @contextmanager
+    def no_unpicklable_properties(self):
+        """
+        Remove unpicklable properties before dump task and resume them after.
+
+        This method could be called in subtask's dump method, to ensure unpicklable
+        properties won't break dump.
+
+        This method is a context-manager which can be called as below:
+
+        .. code-block: python
+
+            class DummyTask(luigi):
+
+                def _dump(self):
+                    with self.no_unpicklable_properties():
+                        pickle.dumps(self)
+
+        """
+        unpicklable_properties = ('set_tracking_url', 'set_status_message')
+        reserved_properties = {}
+        for property_name in unpicklable_properties:
+            if hasattr(self, property_name):
+                reserved_properties[property_name] = getattr(self, property_name)
+                setattr(self, property_name, 'placeholder_during_pickling')
+
+        yield
+
+        for property_name, value in six.iteritems(reserved_properties):
+            setattr(self, property_name, value)
 
 
 class MixinNaiveBulkComplete(object):

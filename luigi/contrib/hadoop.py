@@ -944,23 +944,16 @@ class JobTask(BaseHadoopJobTask):
         """
         Dump instance to file.
         """
-        _set_tracking_url = self.set_tracking_url
-        self.set_tracking_url = None
-        _set_status_message = self.set_status_message
-        self.set_status_message = None
+        with self.no_unpicklable_properties():
+            file_name = os.path.join(directory, 'job-instance.pickle')
+            if self.__module__ == '__main__':
+                d = pickle.dumps(self)
+                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
+                d = d.replace(b'(c__main__', "(c" + module_name)
+                open(file_name, "wb").write(d)
 
-        file_name = os.path.join(directory, 'job-instance.pickle')
-        if self.__module__ == '__main__':
-            d = pickle.dumps(self)
-            module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-            d = d.replace(b'(c__main__', "(c" + module_name)
-            open(file_name, "wb").write(d)
-
-        else:
-            pickle.dump(self, open(file_name, "wb"))
-
-        self.set_tracking_url = _set_tracking_url
-        self.set_status_message = _set_status_message
+            else:
+                pickle.dump(self, open(file_name, "wb"))
 
     def _map_input(self, input_stream):
         """

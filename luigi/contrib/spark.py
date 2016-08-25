@@ -285,13 +285,14 @@ class PySparkTask(SparkSubmitTask):
             shutil.rmtree(self.run_path)
 
     def _dump(self, fd):
-        if self.__module__ == '__main__':
-            d = pickle.dumps(self)
-            module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-            d = d.replace(b'(c__main__', "(c" + module_name)
-            fd.write(d)
-        else:
-            pickle.dump(self, fd)
+        with self.no_unpicklable_properties():
+            if self.__module__ == '__main__':
+                d = pickle.dumps(self)
+                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
+                d = d.replace(b'(c__main__', "(c" + module_name)
+                fd.write(d)
+            else:
+                pickle.dump(self, fd)
 
     def _setup_packages(self, sc):
         """
