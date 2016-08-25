@@ -6,7 +6,8 @@ Luigi to pypi.
 
    - Use ``date -R`` to retrieve date
    - Optionally verify with ``dpkg-parsechangelog``
-#. Commit and push.
+#. Commit, perhaps simply with a commit message like ``Version x.y.z``.
+#. Push to GitHub at [spotify/luigi](https://github.com/spotify/luigi).
 #. Upload to pypi by executing ``python setup.py sdist upload``
 #. Add a tag on github (https://github.com/spotify/luigi/releases),
    including a handwritten changelog, possibly inspired from previous notes.
