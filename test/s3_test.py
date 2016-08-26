@@ -575,7 +575,7 @@ def _write_s3_part_files(fpath, local_file_names):
 
 
 def _write_n_local_temp_files(n, data):
-    tempfiles = list():
+    tempfiles = list()
     for i in range(n):
         tmpfile = tempfile.NamedTemporaryFile(mode='wb', delete=True)
         tmpfile.write(data)
