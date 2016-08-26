@@ -50,6 +50,7 @@ from luigi.format import get_default_format
 from luigi.parameter import Parameter
 from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
 from luigi.task import ExternalTask
+from luigi import partitions
 
 logger = logging.getLogger('luigi-interface')
 
@@ -718,11 +719,16 @@ class S3FlagTarget(S3Target):
     The AtomicFile approach can be burdensome for S3 since there are no directories, per se.
 
     If we have 1,000,000 output files, then we have to rename 1,000,000 objects.
+
+    Can be opened as readable, which will use PartitionedFilesReader to read
+    each file in turn as though it was a single large file.
     """
 
     fs = None
 
-    def __init__(self, path, format=None, client=None, flag='_SUCCESS'):
+    def __init__(self, path, format=None, client=None, flag='_SUCCESS',
+                 filter_line_fcn=None, filter_bytes_fcn=None,
+                 listdir_chooser=partitions.splitting_prefix_chooser):
         """
         Initializes a S3FlagTarget.
 
@@ -732,6 +738,12 @@ class S3FlagTarget(S3Target):
         :type client:
         :param flag:
         :type flag: str
+        :param filter_line_fcn
+        :type filter_line_fcn: callable
+        :param filter_bytes_fcn:
+        :type filter_bytes_fcn: callable
+        :param listdir_chooser
+        :type listdir_chooser: callable
         """
         if format is None:
             format = get_default_format()
@@ -742,9 +754,21 @@ class S3FlagTarget(S3Target):
         super(S3FlagTarget, self).__init__(path, format, client)
         self.flag = flag
 
+        self.filter_line_fcn = filter_line_fcn
+        self.filter_bytes_fcn = filter_bytes_fcn
+        self.listdir_chooser = listdir_chooser
+
     def exists(self):
         hadoopSemaphore = self.path + self.flag
         return self.fs.exists(hadoopSemaphore)
+
+    def open(self, mode='r'):
+        if mode != 'r':
+            raise ValueError("mode must be 'r' or 'w' (got: {})".format(mode))
+        return partitions.PartitionedFilesReader(self, S3Target,
+                                                 filter_line_fcn=self.filter_line_fcn,
+                                                 filter_bytes_fcn=self.filter_bytes_fcn,
+                                                 listdir_chooser=self.listdir_chooser)
 
 
 class S3EmrTarget(S3FlagTarget):
