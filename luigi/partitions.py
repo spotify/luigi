@@ -70,6 +70,7 @@ class PartitionedFilesReader(object):
                 return '\n'.join(byte_buf.split('\n')[1:])
         return byte_buf
     """
+    
     def __init__(self, fs_target, target_creator, listdir_chooser=splitting_prefix_chooser,
                  filter_line_fcn=None, filter_bytes_fcn=None):
         self.fs_target = fs_target
