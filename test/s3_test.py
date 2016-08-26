@@ -29,7 +29,7 @@ from moto import mock_s3
 from moto import mock_sts
 
 from luigi import configuration
-from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
+from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target, S3FlagTarget
 from luigi.target import MissingParentDirectory
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
@@ -560,3 +560,65 @@ class TestS3Client(unittest.TestCase):
         key_size = s3_client.get_key(s3_path).size
         self.assertEqual(file_size, key_size)
         tmp_file.close()
+
+
+def _s3_fpath(self, bucket, folder):
+    return 's3://{}/{}'.format(bucket, folder)
+
+
+def _write_s3_part_files(fpath, local_file_names):
+    for i in range(len(local_file_names)):
+        with S3Target(fpath + '/' + 'part-{:0>5}'.format(i)).open('w') as writable:
+            with open(local_file_names[i], 'rb') as readable:
+                for line in readable:
+                    writeable.write(line)
+
+
+def _write_n_local_temp_files(n, data):
+    tempfiles = list():
+    for i in range(n):
+        tmpfile = tempfile.NamedTemporaryFile(mode='wb', delete=True)
+        tmpfile.write(data)
+        tmpfile.flush()
+        tempfiles.append(tmpfile)
+    return tempfiles
+
+
+class TestS3FlagTarget(unittest.TestCase, FileSystemTargetTestMixin):
+
+    def setUp(self):
+        self.mock_s3 = mock_s3()
+        self.mock_s3.start()
+        self.addCleanup(self.mock_s3.stop)
+
+    def test_read_2_part(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+
+        single_filedata = (b'P' * 50 + b'\n') * 100
+
+        tempfiles = _write_n_local_temp_files(2, single_filedata)
+
+        BUCKET = 'test_bucket'
+        FOLDER = 'test_2part'
+        s3_client.s3.create_bucket(BUCKET)
+        try:
+            s3_client.mkdir(FPATH)
+        except FileAlreadyExists:
+            pass
+
+        fpath = _s3_fpath(BUCKET, FOLDER)
+        _write_s3_part_files(fpath, [tf.name for tf in tempfiles])
+
+        local_combined_file = tempfile.NamedTemporaryFile(mode='wb', delete=True)
+        readable_target = S3FlagTarget(fpath + '/').open('r')
+
+        for line in readable_target:
+            local_combined_file.write(line)
+        local_combined_file.flush()
+
+        assertEqual(os.path.getsize(local_combined_file.name), len(single_filedata) * 2)
+
+        # clean up
+        s3_client.remove(fpath, recursive=True)
+        for tf in tempfiles:
+            tf.close()
