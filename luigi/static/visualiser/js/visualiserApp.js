@@ -911,26 +911,9 @@ function visualiserApp(luigi) {
             var tr = $(this).closest('tr');
             var row = dt.row( tr );
             var data = row.data();
-
-            if ( row.child.isShown() ) {
-                // This row is already open - close it
-                row.child.hide();
-            }
-            else {
-                // Open this row
-                row.child(Mustache.render(templates['rowDetailsTemplate'], data)).show();
-
-                // If error state is present retrieve the error
-                if (data.error) {
-                    errorTrace = row.child().find('.error-trace');
-                    luigi.getErrorTrace(data.taskId, function(error) {
-                        errorTrace.html('<pre class="pre-scrollable">'+decodeError(error.error)+'</pre>');
-                    });
-                }
-
-
-            }
-
+            luigi.getErrorTrace(data.taskId, function(error) {
+                showErrorTrace(error);
+            });
         } );
 
         $('#taskTable tbody').on('click', 'td.details-control .re-enable-button', function () {

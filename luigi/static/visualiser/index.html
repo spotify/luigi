@@ -231,16 +231,6 @@
                 {{#statusMessage}}<button class="btn btn-primary btn-xs statusMessage" title="Status message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name={{displayName}}><i class="fa fa-comment"></i></button>{{/statusMessage}}
             </div>
         </script>
-        <script type="text/template" name="rowDetailsTemplate">
-          <table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px;">
-          {{#error}}
-            <tr>
-              <td>Exception:</td>
-              <td class="error-trace"></td>
-            </tr>
-          {{ /error }}
-          </table>
-        </script>
         <script type="text/template" name="errorTemplate">
           <div class="modal-dialog">
             <div class="modal-content">
