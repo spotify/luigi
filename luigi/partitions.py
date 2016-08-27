@@ -40,26 +40,25 @@ class PartitionedFilesReader(object):
 
     Examples:
 
-    # The line-by-line filter function receives each line once. It can choose to
-    # accept (return), reject (return blank), or modify (return bytes)
-    # the line. It will not receive this line again.
+    The line-by-line filter function receives each line once. It can choose to
+    accept (return), reject (return blank), or modify (return bytes)
+    the line. It will not receive this line again.
 
     def filter_lines_skip_csv_headers_except_first(line, file_num, line_num):
         if line_num == 0 and file_num > 0:
             return ''  # blank lines are not delivered to the reader at all
         return line
 
-
-    # The byte-by-byte filter function receives a byte buffer containing bytes read
-    # that have not yet been passed to the reader. If the function returns any bytes,
-    # those bytes will be returned to the reader as though they were what was read from
-    # the file. If the function returns no bytes, the bytes will be buffered,
-    # and the next call to this function will contain those same bytes plus
-    # the bytes from the subsequent file read. These buffered bytes will not be discarded
-    # even as the PartitionedFilesReader moves on to the next readable partition file.
-    # In this way, the filter bytes function is guaranteed to see the raw file bytes in
-    # chunks of whatever size is necessary for it to make its decisions, as if the
-    # partitioned files were in fact one big file.
+    The byte-by-byte filter function receives a byte buffer containing bytes read
+    that have not yet been passed to the reader. If the function returns any bytes,
+    those bytes will be returned to the reader as though they were what was read from
+    the file. If the function returns no bytes, the bytes will be buffered,
+    and the next call to this function will contain those same bytes plus
+    the bytes from the subsequent file read. These buffered bytes will not be discarded
+    even as the PartitionedFilesReader moves on to the next readable partition file.
+    In this way, the filter bytes function is guaranteed to see the raw file bytes in
+    chunks of whatever size is necessary for it to make its decisions, as if the
+    partitioned files were in fact one big file.
 
     def filter_bytes_skip_csv_headers(byte_buf, file_num, start_byte_idx, num_bytes_from_current_file):
         if start_byte_idx == 0 and file_num > 0:
@@ -69,8 +68,9 @@ class PartitionedFilesReader(object):
                 byte_buf = byte_buf[-num_bytes_from_current_file:]  # get rid of bytes from previous files
                 return '\n'.join(byte_buf.split('\n')[1:])
         return byte_buf
+
     """
-    
+
     def __init__(self, fs_target, target_creator, listdir_chooser=splitting_prefix_chooser,
                  filter_line_fcn=None, filter_bytes_fcn=None):
         self.fs_target = fs_target
