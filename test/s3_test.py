@@ -571,7 +571,7 @@ def _write_s3_part_files(fpath, local_file_names):
         with S3Target(fpath + '/' + 'part-{:0>5}'.format(i)).open('w') as writable:
             with open(local_file_names[i], 'rb') as readable:
                 for line in readable:
-                    writable.write(line.encode('utf-8'))
+                    writable.write(str(line, 'utf-8'))
 
 
 def _write_n_local_temp_files(n, data):

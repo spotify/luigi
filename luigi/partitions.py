@@ -25,12 +25,13 @@ class PartitionedFilesReader(object):
     """
     Reads a Flag Target of part-* files as if it were a single file.
 
-    Pass this a Target representing a directory full of part-* files,
-    such as an S3FlagTarget, and it will allow you to read the part-* files
+    Pass this a File System Target which has an underlying filesystem 'fs' 
+    having a listdir method, and which represents a directory full 
+    of part-* files, and it will allow you to read the part-* files
     underneath that directory one by one as though they were a single file.
     A target creator callable, such as S3Target, is also necessary.
     It will be passed the canonical URL of each part file in turn, and must return a
-    Target-like object that can be opened as readable (e.g., open('r')).
+    Target-like object that can be opened as readable, e.g., open('r').
 
     The user should check that the flag target 'exists()' before using
     this class, otherwise the user may end up reading partial part-* files.
@@ -39,12 +40,15 @@ class PartitionedFilesReader(object):
     about how to handle the start of a file, e.g. if your CSV files have a header
     that you want to ignore for all files except the first one. This function
     will differ based on whether the reader will be reading by bytes or by lines.
+    """
+    
+    '''
+    Filter function examples --
 
-    Examples:
-
-    The line-by-line filter function receives each line once. It can choose to
-    accept (return), reject (return blank), or modify (return bytes)
-    the line. It will not receive this line again.
+    The line-by-line filter function receives each line once. It also receives
+    the sequence number of the file and the line number in the file, both 0-indexed.
+    It can choose to accept (return the line), reject (return empty bytes), or 
+    modify (return bytes) the line. It will not receive this line again.
 
     def filter_lines_skip_csv_headers_except_first(line, file_num, line_num):
         if line_num == 0 and file_num > 0:
@@ -70,8 +74,7 @@ class PartitionedFilesReader(object):
                 byte_buf = byte_buf[-num_bytes_from_current_file:]  # get rid of bytes from previous files
                 return '\n'.join(byte_buf.split('\n')[1:])
         return byte_buf
-
-    """
+    '''
 
     def __init__(self, fs_target, target_creator, listdir_chooser=splitting_prefix_chooser,
                  filter_line_fcn=None, filter_bytes_fcn=None):
