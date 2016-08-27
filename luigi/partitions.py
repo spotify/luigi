@@ -23,6 +23,8 @@ def splitting_prefix_chooser(fs_url, prefix='part-'):
 
 class PartitionedFilesReader(object):
     """
+    Reads a Flag Target of part-* files as if it were a single file.
+
     Pass this a Target representing a directory full of part-* files,
     such as an S3FlagTarget, and it will allow you to read the part-* files
     underneath that directory one by one as though they were a single file.
