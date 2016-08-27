@@ -30,7 +30,7 @@ from moto import mock_sts
 
 from luigi import configuration
 from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target, S3FlagTarget
-from luigi.target import MissingParentDirectory
+from luigi.target import MissingParentDirectory, FileAlreadyExists
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
     # spulec/moto#308
@@ -571,7 +571,7 @@ def _write_s3_part_files(fpath, local_file_names):
         with S3Target(fpath + '/' + 'part-{:0>5}'.format(i)).open('w') as writable:
             with open(local_file_names[i], 'rb') as readable:
                 for line in readable:
-                    writeable.write(line)
+                    writable.write(line)
 
 
 def _write_n_local_temp_files(n, data):
@@ -584,7 +584,7 @@ def _write_n_local_temp_files(n, data):
     return tempfiles
 
 
-class TestS3FlagTarget(unittest.TestCase, FileSystemTargetTestMixin):
+class TestS3FlagTarget(unittest.TestCase):
 
     def setUp(self):
         self.mock_s3 = mock_s3()
@@ -601,12 +601,12 @@ class TestS3FlagTarget(unittest.TestCase, FileSystemTargetTestMixin):
         BUCKET = 'test_bucket'
         FOLDER = 'test_2part'
         s3_client.s3.create_bucket(BUCKET)
+        fpath = _s3_fpath(BUCKET, FOLDER)
         try:
-            s3_client.mkdir(FPATH)
+            s3_client.mkdir(fpath)
         except FileAlreadyExists:
             pass
 
-        fpath = _s3_fpath(BUCKET, FOLDER)
         _write_s3_part_files(fpath, [tf.name for tf in tempfiles])
 
         local_combined_file = tempfile.NamedTemporaryFile(mode='wb', delete=True)
@@ -616,7 +616,7 @@ class TestS3FlagTarget(unittest.TestCase, FileSystemTargetTestMixin):
             local_combined_file.write(line)
         local_combined_file.flush()
 
-        assertEqual(os.path.getsize(local_combined_file.name), len(single_filedata) * 2)
+        self.assertEqual(os.path.getsize(local_combined_file.name), len(single_filedata) * 2)
 
         # clean up
         s3_client.remove(fpath, recursive=True)
