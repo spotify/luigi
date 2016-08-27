@@ -562,7 +562,7 @@ class TestS3Client(unittest.TestCase):
         tmp_file.close()
 
 
-def _s3_fpath(self, bucket, folder):
+def _s3_fpath(bucket, folder):
     return 's3://{}/{}'.format(bucket, folder)
 
 
