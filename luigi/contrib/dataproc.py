@@ -144,6 +144,7 @@ class CreateDataprocClusterTask(_DataprocBaseTask):
     worker_disk_size = luigi.Parameter(default="100")
     worker_normal_count = luigi.Parameter(default="2")
     worker_preemptible_count = luigi.Parameter(default="0")
+    image_version = luigi.Parameter(default="1.1")
 
     def _get_cluster_status(self):
         return self.dataproc_client.projects().regions().clusters()\
@@ -193,7 +194,8 @@ class CreateDataprocClusterTask(_DataprocBaseTask):
                 "secondaryWorkerConfig": {
                     "numInstances": self.worker_preemptible_count,
                     "isPreemptible": True
-                }
+                },
+                "imageVersion": self.image_version 
             }
         }
 
