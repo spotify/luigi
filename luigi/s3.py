@@ -738,14 +738,13 @@ class S3FlagTarget(S3Target):
         :type client:
         :param flag:
         :type flag: str
-        :param filter_line_fcn
+        :param filter_line_fcn:
         :type filter_line_fcn: callable
         :param filter_bytes_fcn:
         :type filter_bytes_fcn: callable
-        :param listdir_chooser
+        :param listdir_chooser:
         :type listdir_chooser: callable
         """
-
         if format is None:
             format = get_default_format()
 
