@@ -195,7 +195,9 @@ class CreateDataprocClusterTask(_DataprocBaseTask):
                     "numInstances": self.worker_preemptible_count,
                     "isPreemptible": True
                 },
-                "imageVersion": self.image_version 
+                "softwareConfig": {
+                    "imageVersion": self.image_version
+                }
             }
         }
 
