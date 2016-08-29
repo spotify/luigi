@@ -569,9 +569,9 @@ def _s3_fpath(bucket, folder):
 def _write_s3_part_files(fpath, local_file_names):
     for i in range(len(local_file_names)):
         with S3Target(fpath + '/' + 'part-{:0>5}'.format(i)).open('w') as writable:
-            with open(local_file_names[i], 'rb') as readable:
+            with open(local_file_names[i], 'r') as readable:
                 for line in readable:
-                    writable.write(str(line, 'utf-8'))
+                    writable.write(line)
 
 
 def _write_n_local_temp_files(n, data):
@@ -609,7 +609,7 @@ class TestS3FlagTarget(unittest.TestCase):
 
         _write_s3_part_files(fpath, [tf.name for tf in tempfiles])
 
-        local_combined_file = tempfile.NamedTemporaryFile(mode='wb', delete=True)
+        local_combined_file = tempfile.NamedTemporaryFile(mode='w', delete=True)
         readable_target = S3FlagTarget(fpath + '/').open('r')
 
         for line in readable_target:

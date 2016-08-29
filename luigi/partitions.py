@@ -25,8 +25,8 @@ class PartitionedFilesReader(object):
     """
     Reads a Flag Target of part-* files as if it were a single file.
 
-    Pass this a File System Target which has an underlying filesystem 'fs' 
-    having a listdir method, and which represents a directory full 
+    Pass this a File System Target which has an underlying filesystem 'fs'
+    having a listdir method, and which represents a directory full
     of part-* files, and it will allow you to read the part-* files
     underneath that directory one by one as though they were a single file.
     A target creator callable, such as S3Target, is also necessary.
@@ -41,13 +41,13 @@ class PartitionedFilesReader(object):
     that you want to ignore for all files except the first one. This function
     will differ based on whether the reader will be reading by bytes or by lines.
     """
-    
+
     '''
     Filter function examples --
 
     The line-by-line filter function receives each line once. It also receives
     the sequence number of the file and the line number in the file, both 0-indexed.
-    It can choose to accept (return the line), reject (return empty bytes), or 
+    It can choose to accept (return the line), reject (return empty bytes), or
     modify (return bytes) the line. It will not receive this line again.
 
     def filter_lines_skip_csv_headers_except_first(line, file_num, line_num):
