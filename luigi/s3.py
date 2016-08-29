@@ -744,8 +744,8 @@ class S3FlagTarget(S3Target):
         :type filter_bytes_fcn: callable
         :param listdir_chooser
         :type listdir_chooser: callable
-
         """
+
         if format is None:
             format = get_default_format()
 
