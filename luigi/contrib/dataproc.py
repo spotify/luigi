@@ -163,10 +163,7 @@ class CreateDataprocClusterTask(_DataprocBaseTask):
 
     def run(self):
         base_uri = "https://www.googleapis.com/compute/v1/projects/{}".format(self.gcloud_project_id)
-        software_config = {}
-
-        if self.image_version:
-            software_config["imageVersion"] = self.image_version
+        software_config = { "imageVersion": self.image_version } if self.image_version else {}
 
         cluster_conf = {
             "clusterName": self.dataproc_cluster_name,
