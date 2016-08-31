@@ -143,6 +143,7 @@ or held presentations about Luigi:
 * `Dow Jones / The Wall Street Journal <http://wsj.com>`_
 * `Hotels.com <https://hotels.com>`_
 * `Custobar (Metrics Monday Helsinki) <http://www.slideshare.net/teemukurppa/managing-data-workflows-with-luigi>`_
+* `Blendle <http://www.anneschuth.nl/wp-content/uploads/sea-anneschuth-streamingblendle.pdf#page=126>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
