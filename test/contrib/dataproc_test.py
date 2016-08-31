@@ -138,3 +138,12 @@ class DataprocTaskTest(_DataprocBaseTestCase):
                              '--dataproc-cluster-name=' + CLUSTER_NAME])
         self.assertTrue(success)
         self.assertLess(time.time() - job_start, 3)
+
+    def test_8_create_cluster_1_0(self):
+        success = luigi.run(['--local-scheduler',
+                             '--no-lock',
+                             'CreateDataprocClusterTask',
+                             '--gcloud-project-id=' + PROJECT_ID,
+                             '--dataproc-cluster-name=' + CLUSTER_NAME,
+                             '--image-version=1.0'])
+        self.assertTrue(success)
