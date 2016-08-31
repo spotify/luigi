@@ -29,6 +29,7 @@ CLUSTER_NAME = os.environ.get('DATAPROC_TEST_CLUSTER', 'unit-test-cluster')
 REGION = os.environ.get('DATAPROC_REGION', 'global')
 IMAGE_VERSION = '1.0'
 
+
 class _DataprocBaseTestCase(unittest.TestCase):
 
     def setUp(self):
