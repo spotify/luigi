@@ -176,7 +176,7 @@ def _get_fake_Popen(arglist_result, return_code, *args, **kwargs):
             number_of_process_polls = 5
 
             def __init__(self):
-                self._process_polls_left = self.number_of_process_polls 
+                self._process_polls_left = self.number_of_process_polls
 
             def wait(self):
                 pass
