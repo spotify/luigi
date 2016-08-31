@@ -27,7 +27,7 @@ from nose.plugins.attrib import attr
 PROJECT_ID = os.environ.get('DATAPROC_TEST_PROJECT_ID', 'your_project_id_here')
 CLUSTER_NAME = os.environ.get('DATAPROC_TEST_CLUSTER', 'unit-test-cluster')
 REGION = os.environ.get('DATAPROC_REGION', 'global')
-
+IMAGE_VERSION = '1.0'
 
 class _DataprocBaseTestCase(unittest.TestCase):
 
@@ -139,11 +139,19 @@ class DataprocTaskTest(_DataprocBaseTestCase):
         self.assertTrue(success)
         self.assertLess(time.time() - job_start, 3)
 
-    def test_8_create_cluster_1_0(self):
+    def test_8_create_cluster_image_version(self):
         success = luigi.run(['--local-scheduler',
                              '--no-lock',
                              'CreateDataprocClusterTask',
                              '--gcloud-project-id=' + PROJECT_ID,
-                             '--dataproc-cluster-name=' + CLUSTER_NAME,
+                             '--dataproc-cluster-name=' + CLUSTER_NAME + '-' + IMAGE_VERSION,
                              '--image-version=1.0'])
+        self.assertTrue(success)
+
+    def test_9_delete_cluster_image_version(self):
+        success = luigi.run(['--local-scheduler',
+                             '--no-lock',
+                             'DeleteDataprocClusterTask',
+                             '--gcloud-project-id=' + PROJECT_ID,
+                             '--dataproc-cluster-name=' + CLUSTER_NAME + '-' + IMAGE_VERSION])
         self.assertTrue(success)
