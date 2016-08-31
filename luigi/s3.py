@@ -765,7 +765,7 @@ class S3FlagTarget(S3Target):
     def open(self, mode='r'):
         if mode != 'r':
             raise ValueError("mode must be 'r' or 'w' (got: {})".format(mode))
-        return partitions.PartitionedFilesReader(self, S3Target,
+        return partitions.PartitionedFilesReader(self.fs.listdir(self.path), S3Target,
                                                  filter_line_fcn=self.filter_line_fcn,
                                                  filter_bytes_fcn=self.filter_bytes_fcn,
                                                  listdir_chooser=self.listdir_chooser)

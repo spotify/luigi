@@ -76,15 +76,15 @@ class PartitionedFilesReader(object):
         return byte_buf
     '''
 
-    def __init__(self, fs_target, target_creator, listdir_chooser=splitting_prefix_chooser,
+    def __init__(self, listdir_generator, target_creator, listdir_chooser=splitting_prefix_chooser,
                  filter_line_fcn=None, filter_bytes_fcn=None):
-        self.fs_target = fs_target
+        self.listdir_generator = listdir_generator
         self.target_creator = target_creator
+
         self.listdir_chooser = listdir_chooser
         self.filter_line_fcn = filter_line_fcn
         self.filter_bytes_fcn = filter_bytes_fcn
 
-        self.dir_list_gen = self.fs_target.fs.listdir(self.fs_target.path)
         self.part_file_num = -1
         self.finished = False
 
@@ -106,7 +106,7 @@ class PartitionedFilesReader(object):
                 # AWS S3 generator is guaranteed to return items in UTF-8 binary order,
                 # which should suffice for making sure we get them in part-00000, part-00001, etc. order.
                 # If used for targets other than S3, they will need to be investigated separately.
-                next_url = next(self.dir_list_gen)
+                next_url = next(self.listdir_generator)
                 if not self.listdir_chooser(next_url):
                     next_url = None  # keep iterating
             except StopIteration:
