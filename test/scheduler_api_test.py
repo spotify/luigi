@@ -1193,7 +1193,17 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='A')
         self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
 
-    def test_disable_worker_can_finish_task(self, new_status=DONE, new_deps=[]):
+    def test_disable_worker_cannot_add_tasks(self):
+        """
+        Verify that a disabled worker cannot add tasks
+        """
+        self.sch.disable_worker(worker=WORKER)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.assertIsNone(self.sch.get_work(worker='assistant', assistant=True)['task_id'])
+        self.sch.add_task(worker='third_enabled_worker', task_id='A')
+        self.assertIsNotNone(self.sch.get_work(worker='assistant', assistant=True)['task_id'])
+
+    def _test_disable_worker_helper(self, new_status, new_deps):
         self.sch.add_task(worker=WORKER, task_id='A')
         self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
 
@@ -1210,11 +1220,14 @@ class SchedulerApiTest(unittest.TestCase):
         for task in self.sch.task_list('', '').values():
             self.assertFalse(task['workers'])
 
+    def test_disable_worker_can_finish_task(self):
+        self._test_disable_worker_helper(new_status=DONE, new_deps=[])
+
     def test_disable_worker_can_fail_task(self):
-        self.test_disable_worker_can_finish_task(new_status=FAILED)
+        self._test_disable_worker_helper(new_status=FAILED, new_deps=[])
 
     def test_disable_worker_stays_disabled_on_new_deps(self):
-        self.test_disable_worker_can_finish_task(new_status='PENDING', new_deps=['B', 'C'])
+        self._test_disable_worker_helper(new_status='PENDING', new_deps=['B', 'C'])
 
     def test_prune_worker(self):
         self.setTime(1)
