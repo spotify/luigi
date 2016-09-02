@@ -127,7 +127,7 @@ class PigJobTask(luigi.Task):
             self.track_and_progress(cmd)
 
     def track_and_progress(self, cmd):
-        temp_stdout = tempfile.TemporaryFile()
+        temp_stdout = tempfile.TemporaryFile('wb')
         env = os.environ.copy()
         env['PIG_HOME'] = self.pig_home()
         for k, v in six.iteritems(self.pig_env_vars()):
