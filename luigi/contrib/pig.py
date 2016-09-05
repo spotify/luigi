@@ -127,7 +127,7 @@ class PigJobTask(luigi.Task):
             self.track_and_progress(cmd)
 
     def track_and_progress(self, cmd):
-        temp_stdout = tempfile.TemporaryFile()
+        temp_stdout = tempfile.TemporaryFile('wb')
         env = os.environ.copy()
         env['PIG_HOME'] = self.pig_home()
         for k, v in six.iteritems(self.pig_env_vars()):
@@ -145,8 +145,9 @@ class PigJobTask(luigi.Task):
                         line = proc.stderr.readline().decode('utf8')
                         err_lines.append(line)
                     if fd == proc.stdout.fileno():
-                        line = proc.stdout.readline().decode('utf8')
-                        temp_stdout.write(line)
+                        line_bytes = proc.stdout.readline()
+                        temp_stdout.write(line_bytes)
+                        line = line_bytes.decode('utf8')
 
                 err_line = line.lower()
                 if err_line.find('More information at:') != -1:
