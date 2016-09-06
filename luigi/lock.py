@@ -88,30 +88,29 @@ def acquire_for(pid_dir, num_available=1, kill_signal=None):
         os.mkdir(pid_dir)
         os.chmod(pid_dir, 0o777)
 
-    pids = set()
-    pid_cmds = {}
-    if os.path.exists(pid_file):
-        # There is such a file - read the pid and look up its process name
-        pids.update(filter(None, map(str.strip, open(pid_file))))
-        pid_cmds = dict((pid, getpcmd(pid)) for pid in pids)
-        matching_pids = list(filter(lambda pid: pid_cmds[pid] == my_cmd, pids))
+    pids = _read_pids_file(pid_file)
+    matching_pids = {pid for pid in pids if getpcmd(pid) == my_cmd}
 
+    if kill_signal is not None:
+        for pid in matching_pids:
+            os.kill(pid, kill_signal)
+        print('Sent kill signal to Pids: {}'.format(matching_pids))
+        # We allow for the killer to progress, yet we don't want these to stack
+        # up! So we only allow it once.
+        num_available += 1
+    if len(matching_pids) >= num_available:
+        # We are already running under a different pid
+        print('Pid(s) {} already running'.format(matching_pids))
         if kill_signal is not None:
-            for pid in map(int, matching_pids):
-                os.kill(pid, kill_signal)
-        elif len(matching_pids) >= num_available:
-            # We are already running under a different pid
-            print('Pid(s)', ', '.join(matching_pids), 'already running')
-            return False
-        else:
-            # The pid belongs to something else, we could
-            pass
-    pid_cmds[str(my_pid)] = my_cmd
+            print('Note: There have (probably) been 1 other "--take-lock"'
+                  ' process which continued to run! Probably no need to run'
+                  ' this one as well.')
+        return False
+    else:
+        # The pid belongs to something else, we could
+        pass
 
-    # Write pids
-    pids.add(str(my_pid))
-    with open(pid_file, 'w') as f:
-        f.writelines('%s\n' % (pid, ) for pid in filter(pid_cmds.__getitem__, pids))
+    _write_pids_file(pid_file, matching_pids | {my_pid})
 
     # Make the file writable by all
     if os.name == 'nt':
@@ -122,3 +121,25 @@ def acquire_for(pid_dir, num_available=1, kill_signal=None):
             os.chmod(pid_file, s.st_mode | 0o777)
 
     return True
+
+
+def _read_pids_file(pid_file_path):
+    # First setup a python 2 vs 3 compatibility
+    # http://stackoverflow.com/a/21368622/621449
+    try:
+        FileNotFoundError
+    except NameError:
+        # Should only happen on python 2
+        FileNotFoundError = IOError
+    # If the file happen to not exist, simply return
+    # an empty set()
+    try:
+        with open(pid_file_path, 'r') as f:
+            return {int(pid_str.strip()) for pid_str in f if pid_str.strip()}
+    except FileNotFoundError:
+        return set()
+
+
+def _write_pids_file(pid_file_path, pids_set):
+    with open(pid_file_path, 'w') as f:
+        f.writelines('{}\n'.format(pid) for pid in pids_set)

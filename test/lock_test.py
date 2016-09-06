@@ -96,3 +96,46 @@ class LockTest(unittest.TestCase):
         acquired = luigi.lock.acquire_for(self.pid_dir, kill_signal=kill_signal)
         self.assertTrue(acquired)
         kill_fn.assert_called_once_with(self.pid, kill_signal)
+
+    @mock.patch('os.kill')
+    @mock.patch('luigi.lock.getpcmd')
+    def test_take_lock_has_only_one_extra_life(self, getpcmd, kill_fn):
+        def side_effect(pid):
+            if pid in [self.pid, self.pid + 1, self.pid + 2]:
+                return self.cmd  # We could return something else too, actually
+            else:
+                return "echo something_else"
+
+        getpcmd.side_effect = side_effect
+        with open(self.pid_file, 'w') as f:
+            f.write('{}\n{}\n'.format(self.pid + 1, self.pid + 2))
+
+        kill_signal = 77777
+        acquired = luigi.lock.acquire_for(self.pid_dir, kill_signal=kill_signal)
+        self.assertFalse(acquired)  # So imagine +2 was runnig first, then +1 was run with --take-lock
+        kill_fn.assert_any_call(self.pid + 1, kill_signal)
+        kill_fn.assert_any_call(self.pid + 2, kill_signal)
+
+    @mock.patch('luigi.lock.getpcmd')
+    def test_cleans_old_pid_entries(self, getpcmd):
+        assert self.pid > 10  # I've never seen so low pids so
+        SAME_ENTRIES = {1, 2, 3, 4, 5, self.pid}
+        ALL_ENTRIES = SAME_ENTRIES | {6, 7, 8, 9, 10}
+
+        def side_effect(pid):
+            if pid in SAME_ENTRIES:
+                return self.cmd  # We could return something else too, actually
+            elif pid == 8:
+                return None
+            else:
+                return "echo something_else"
+
+        getpcmd.side_effect = side_effect
+        with open(self.pid_file, 'w') as f:
+            f.writelines('{}\n'.format(pid) for pid in ALL_ENTRIES)
+
+        acquired = luigi.lock.acquire_for(self.pid_dir, num_available=100)
+        self.assertTrue(acquired)
+
+        with open(self.pid_file, 'r') as f:
+            self.assertEqual({int(pid_str.strip()) for pid_str in f}, SAME_ENTRIES)
