@@ -27,7 +27,7 @@ from nose.plugins.attrib import attr
 PROJECT_ID = os.environ.get('DATAPROC_TEST_PROJECT_ID', 'your_project_id_here')
 CLUSTER_NAME = os.environ.get('DATAPROC_TEST_CLUSTER', 'unit-test-cluster')
 REGION = os.environ.get('DATAPROC_REGION', 'global')
-IMAGE_VERSION = '1.0'
+IMAGE_VERSION = '1-0'
 
 
 class _DataprocBaseTestCase(unittest.TestCase):
