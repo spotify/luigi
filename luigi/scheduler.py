@@ -894,7 +894,8 @@ class Scheduler(object):
 
             if (best_task and batched_params and task.family == best_task.family and
                     len(batched_tasks) < max_batch_size and task.is_batchable() and all(
-                    task.params.get(name) == value for name, value in unbatched_params.items())):
+                    task.params.get(name) == value for name, value in unbatched_params.items()) and
+                    self._schedulable(task)):
                 for name, params in batched_params.items():
                     params.append(task.params.get(name))
                 batched_tasks.append(task)
