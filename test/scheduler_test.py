@@ -223,3 +223,22 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertFalse(task_9.has_excessive_failures())
         task_9.add_failure()
         self.assertTrue(task_9.has_excessive_failures())
+
+
+class SchedulerWorkerTest(unittest.TestCase):
+    def get_pending_ids(self, worker, state):
+        return {task.id for task in worker.get_pending_tasks(state)}
+
+    def test_get_pending_tasks_with_many_done_tasks(self):
+        sch = luigi.scheduler.Scheduler()
+        sch.add_task(worker='NON_TRIVIAL', task_id='A', resources={'a': 1})
+        sch.add_task(worker='TRIVIAL', task_id='B', status='PENDING')
+        sch.add_task(worker='TRIVIAL', task_id='C', status='DONE')
+        sch.add_task(worker='TRIVIAL', task_id='D', status='DONE')
+
+        scheduler_state = sch._state
+        trivial_worker = scheduler_state.get_worker('TRIVIAL')
+        self.assertEqual({'B'}, self.get_pending_ids(trivial_worker, scheduler_state))
+
+        non_trivial_worker = scheduler_state.get_worker('NON_TRIVIAL')
+        self.assertEqual({'A'}, self.get_pending_ids(non_trivial_worker, scheduler_state))
