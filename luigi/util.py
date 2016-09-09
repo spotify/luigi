@@ -214,7 +214,7 @@ behind the scenes!
 Note that if you set the parameter in a config file, it needs to be defined for the
 calling (outer) class rather than the inner class. In the above example, use:
 
-.. code-block:: ini
+.. code-block:: cfg
 
     ; Declare this for TaskB rather than for TaskA:
     [TaskB]
