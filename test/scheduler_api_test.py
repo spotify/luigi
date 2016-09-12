@@ -385,18 +385,20 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='A_2', status=DONE)
         self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(DONE, '').keys()))
 
-    def _start_simple_batch(self, use_max=False):
+    def _start_simple_batch(self, use_max=False, mark_running=True):
         self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
         self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
                           batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
                           batchable=True)
         response = self.sch.get_work(worker=WORKER)
-        batch_id = response['batch_id']
-        task_id, params = ('A_2', {'a': '2'}) if use_max else ('A_1_2', {'a': '1,2'})
-        self.sch.add_task(
-            worker=WORKER, task_id=task_id, task_family='A', params=params, batch_id=batch_id,
-            status='RUNNING')
+        if mark_running:
+            batch_id = response['batch_id']
+            task_id, params = ('A_2', {'a': '2'}) if use_max else ('A_1_2', {'a': '1,2'})
+
+            self.sch.add_task(
+                worker=WORKER, task_id=task_id, task_family='A', params=params, batch_id=batch_id,
+                status='RUNNING')
 
     def test_batch_fail(self):
         self._start_simple_batch()
@@ -421,15 +423,20 @@ class SchedulerApiTest(unittest.TestCase):
     def test_batch_fail_from_dead_worker(self):
         self.setTime(1)
         self._start_simple_batch()
-        self.setTime(10000)
-        self.sch.prune()
-        self.setTime(10001)
+        self.setTime(601)
         self.sch.prune()
         self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(FAILED, '').keys()))
 
     def test_batch_fail_max_from_dead_worker(self):
         self.setTime(1)
         self._start_simple_batch(use_max=True)
+        self.setTime(601)
+        self.sch.prune()
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(FAILED, '').keys()))
+
+    def test_batch_fail_from_dead_worker_without_running(self):
+        self.setTime(1)
+        self._start_simple_batch(mark_running=False)
         self.setTime(601)
         self.sch.prune()
         self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(FAILED, '').keys()))
