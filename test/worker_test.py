@@ -176,6 +176,26 @@ class WorkerTest(unittest.TestCase):
         self.w.run()
         self.assertFalse(d.complete())
 
+    @mock.patch('luigi.worker.signal')
+    def test_signal_interrupt_disabled(self, worker_signal):
+        w = Worker(scheduler=self.sch)
+        worker_signal.signal.assert_called_once_with(worker_signal.SIGUSR1, w.handle_interrupt)
+        worker_signal.siginterrupt.assert_called_once_with(worker_signal.SIGUSR1, False)
+
+    @mock.patch('luigi.worker.signal')
+    def test_signal_interrupt_not_disabled_without_shutdown_handler(self, worker_signal):
+        Worker(scheduler=self.sch, no_install_shutdown_handler=True)
+        self.assertEqual(0, worker_signal.signal.call_count)
+        self.assertEqual(0, worker_signal.siginterrupt.call_count)
+
+    @mock.patch('luigi.worker.signal')
+    def test_signal_interrupt_ok_to_not_exist(self, worker_signal):
+        worker_signal.siginterrupt.side_effect = AttributeError
+        w = Worker(scheduler=self.sch)  # may fail due to the AttributeError
+
+        # we still register the handler when the siginterrupt disable fails
+        worker_signal.signal.assert_called_once_with(worker_signal.SIGUSR1, w.handle_interrupt)
+
     def test_disabled_shutdown_hook(self):
         w = Worker(scheduler=self.sch, keep_alive=True, no_install_shutdown_handler=True)
         with w:

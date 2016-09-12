@@ -404,6 +404,7 @@ class Worker(object):
         if not self._config.no_install_shutdown_handler:
             try:
                 signal.signal(signal.SIGUSR1, self.handle_interrupt)
+                signal.siginterrupt(signal.SIGUSR1, False)
             except AttributeError:
                 pass
 
