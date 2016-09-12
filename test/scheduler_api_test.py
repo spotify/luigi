@@ -21,7 +21,7 @@ from helpers import unittest
 from nose.plugins.attrib import attr
 import luigi.notifications
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, \
-    UNKNOWN, RUNNING, BATCH_RUNNING, Scheduler
+    UNKNOWN, RUNNING, BATCH_RUNNING, UPSTREAM_RUNNING, Scheduler
 
 luigi.notifications.DEBUG = True
 WORKER = 'myworker'
@@ -340,6 +340,16 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': 2}, batchable=True)
         self.sch.get_work(worker=WORKER)
         self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list('BATCH_RUNNING', '').keys()))
+
+    def test_downstream_jobs_from_batch_running_have_upstream_running_status(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': 1}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': 2}, batchable=True)
+        self.sch.get_work(worker=WORKER)
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list('BATCH_RUNNING', '').keys()))
+
+        self.sch.add_task(worker=WORKER, task_id='B', deps=['A_1'])
+        self.assertEqual({'B'}, set(self.sch.task_list(PENDING, UPSTREAM_RUNNING).keys()))
 
     def test_set_batch_runner_new_task(self):
         self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
