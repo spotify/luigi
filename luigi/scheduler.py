@@ -302,7 +302,7 @@ class Worker(object):
             return six.moves.filter(lambda task: task.status in [PENDING, RUNNING],
                                     self.tasks)
         else:
-            return state.get_pending_tasks()
+            return six.moves.filter(lambda task: self.id in task.workers, state.get_pending_tasks())
 
     def is_trivial_worker(self, state):
         """
