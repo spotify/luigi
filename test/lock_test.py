@@ -16,7 +16,9 @@
 #
 
 import hashlib
+import mock
 import os
+import shutil
 import subprocess
 import tempfile
 from helpers import unittest
@@ -36,6 +38,36 @@ class TestCmd(unittest.TestCase):
             luigi.lock.getpcmd(p.pid) in ["sleep 1", '[sleep]']
         )
         p.kill()
+
+real_exists = os.path.exists
+def _make_path_exists_mock(returns):
+    """ Returns the mock function that takes a list of return values to use on
+        subsequent calls.  Once all values from returns are returned the mock
+        function reverts back to the real function.
+    """
+    def _mock_function(path):
+        return returns.pop(0) if returns else real_exists(path)
+    return _mock_function
+
+class CreatePidDirTest(unittest.TestCase):
+    def setUp(self):
+        self.pid_dir = os.path.join(tempfile.gettempdir(), 'luigi-test')
+        # Create the file so the mkdir call will fail in the function.
+        if not os.path.exists(self.pid_dir):
+            os.mkdir(self.pid_dir)
+
+    def tearDown(self):
+        if os.path.exists(self.pid_dir):
+            shutil.rmtree(self.pid_dir)
+
+    @mock.patch('os.path.exists', side_effect=_make_path_exists_mock([False,False]))
+    def test_race_condition_works_third_time(self, os_exist_function):
+        acquired = luigi.lock.acquire_for(self.pid_dir)
+        self.assertTrue(acquired)
+
+    @mock.patch('os.path.exists', side_effect=_make_path_exists_mock([False,False,False]))
+    def test_race_condition_fails(self, os_exist_function):
+        self.assertRaises(OSError, luigi.lock.acquire_for, self.pid_dir)
 
 
 class LockTest(unittest.TestCase):

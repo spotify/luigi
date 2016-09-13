@@ -26,6 +26,7 @@ import os
 
 from luigi import six
 
+MAX_PID_DIR_CREATE_ATTEMPTS = 3
 
 def getpcmd(pid):
     """
@@ -67,11 +68,22 @@ def acquire_for(pid_dir, num_available=1):
 
     my_pid, my_cmd, pid_file = get_info(pid_dir)
 
-    # Check if there is a pid file corresponding to this name
-    if not os.path.exists(pid_dir):
-        os.mkdir(pid_dir)
-        os.chmod(pid_dir, 0o777)
+    # Ensure directory used for pid files exists.  Multiple attempts
+    # so we don't get errors when two jobs try to create the pid_dir
+    # at the same time.
+    for i in range(MAX_PID_DIR_CREATE_ATTEMPTS):
+        if not os.path.exists(pid_dir):
+            try:
+                os.mkdir(pid_dir)
+                os.chmod(pid_dir, 0o777)
+                break
+            except OSError:
+                if i < MAX_PID_DIR_CREATE_ATTEMPTS - 1:
+                    continue
+                else:
+                    raise
 
+    # Check if there is a pid file corresponding to this name. 
     pids = set()
     pid_cmds = {}
     if os.path.exists(pid_file):
