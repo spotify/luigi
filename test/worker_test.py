@@ -822,6 +822,30 @@ class WorkerInterruptedTest(unittest.TestCase):
         self.assertTrue(task.complete())
 
 
+class WorkerDisabledTest(unittest.TestCase):
+    def setUp(self):
+        self.sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+
+    def _test_stop_getting_new_work(self, **worker_kwargs):
+        d = DummyTask()
+        worker_kwargs['worker_id'] = 'my_worker_id'
+        worker_kwargs['scheduler'] = self.sch
+        with Worker(**worker_kwargs) as worker:
+            worker.add(d)  # For assistant its ok that other tasks add it
+            self.assertFalse(d.complete())
+            self.sch.disable_worker('my_worker_id')
+            worker.run()  # Note: Test could fail by hanging on this line
+            self.assertFalse(d.complete())
+
+    def test_stop_getting_new_work_keep_alive(self):
+        self._test_stop_getting_new_work(keep_alive=True, assistant=False)
+
+    def test_stop_getting_new_work_assistant(self):
+        self._test_stop_getting_new_work(keep_alive=False, assistant=True)
+
+    def test_stop_getting_new_work_assistant_keep_alive(self):
+        self._test_stop_getting_new_work(keep_alive=True, assistant=True)
+
 
 class DynamicDependenciesTest(unittest.TestCase):
     n_workers = 1

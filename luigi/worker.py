@@ -54,6 +54,7 @@ from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
+from luigi.scheduler import WORKER_STATE_ACTIVE, WORKER_STATE_DISABLED
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
@@ -730,7 +731,7 @@ class Worker(object):
 
     def _get_work(self):
         if self._stop_requesting_work:
-            return None, 0, 0, 0
+            return None, 0, 0, 0, WORKER_STATE_DISABLED
         logger.debug("Asking scheduler for work...")
         r = self._scheduler.get_work(
             worker=self._id,
@@ -741,6 +742,9 @@ class Worker(object):
         n_pending_tasks = r['n_pending_tasks']
         running_tasks = r['running_tasks']
         n_unique_pending = r['n_unique_pending']
+        # TODO: For a tiny amount of time (a month?) we'll keep forwards compatibility
+        # That is you can user a newer client than server (Sep 2016)
+        worker_state = r.get('worker_state', WORKER_STATE_ACTIVE)  # state according to server!
         task_id = self._get_work_task_id(r)
 
         self._get_work_response_history.append({
@@ -773,7 +777,7 @@ class Worker(object):
                 self._scheduled_tasks.get(batch_id) for batch_id in r['batch_task_ids']])
             self._batch_running_tasks[task_id] = batch_tasks
 
-        return task_id, running_tasks, n_pending_tasks, n_unique_pending
+        return task_id, running_tasks, n_pending_tasks, n_unique_pending, worker_state
 
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
@@ -927,8 +931,15 @@ class Worker(object):
         Stops the assistant from asking for more work on SIGUSR1
         """
         if signum == signal.SIGUSR1:
-            self._config.keep_alive = False
-            self._stop_requesting_work = True
+            self._start_phasing_out()
+
+    def _start_phasing_out(self):
+        """
+        Go into a mode where we dont ask for more work and quit once existing
+        tasks are done.
+        """
+        self._config.keep_alive = False
+        self._stop_requesting_work = True
 
     def run(self):
         """
@@ -946,7 +957,10 @@ class Worker(object):
                 logger.debug('%d running tasks, waiting for next task to finish', len(self._running_tasks))
                 self._handle_next_task()
 
-            task_id, running_tasks, n_pending_tasks, n_unique_pending = self._get_work()
+            task_id, running_tasks, n_pending_tasks, n_unique_pending, worker_state = self._get_work()
+
+            if worker_state == WORKER_STATE_DISABLED:
+                self._start_phasing_out()
 
             if task_id is None:
                 if not self._stop_requesting_work:

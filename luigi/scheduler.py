@@ -69,6 +69,9 @@ STATUS_TO_UPSTREAM_MAP = {
     DISABLED: UPSTREAM_DISABLED,
 }
 
+WORKER_STATE_DISABLED = 'disabled'
+WORKER_STATE_ACTIVE = 'active'
+
 TASK_FAMILY_RE = re.compile(r'([^(_]+)[(_]')
 
 RPC_METHODS = {}
@@ -845,7 +848,9 @@ class Scheduler(object):
             reply = {'n_pending_tasks': 0,
                      'running_tasks': 0,
                      'task_id': None,
-                     'n_unique_pending': 0}
+                     'n_unique_pending': 0,
+                     'worker_state': WORKER_STATE_DISABLED,
+                     }
             return reply
 
         self.update(worker_id, {'host': host}, get_work=True)
@@ -952,7 +957,9 @@ class Scheduler(object):
         reply = {'n_pending_tasks': locally_pending_tasks,
                  'running_tasks': running_tasks,
                  'task_id': None,
-                 'n_unique_pending': n_unique_pending}
+                 'n_unique_pending': n_unique_pending,
+                 'worker_state': WORKER_STATE_ACTIVE
+                 }
 
         if len(batched_tasks) > 1:
             batch_string = '|'.join(task.id for task in batched_tasks)
