@@ -1305,6 +1305,15 @@ class SchedulerApiTest(unittest.TestCase):
     def test_disable_worker_stays_disabled_on_new_deps(self):
         self._test_disable_worker_helper(new_status='PENDING', new_deps=['B', 'C'])
 
+    def test_disable_worker_assistant_gets_no_task(self):
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.add_worker('assistant', [('assistant', True)])
+        self.sch.ping(worker='assistant')
+        self.sch.disable_worker('assistant')
+        self.assertIsNone(self.sch.get_work(worker='assistant', assistant=True)['task_id'])
+        self.assertIsNotNone(self.sch.get_work(worker=WORKER)['task_id'])
+
     def test_prune_worker(self):
         self.setTime(1)
         self.sch.add_worker(worker=WORKER, info={})
