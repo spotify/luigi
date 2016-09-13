@@ -181,6 +181,20 @@ class SchedulerApiTest(unittest.TestCase):
         self.assertEqual({'a': ['1', '2', '3']}, response['task_params'])
         self.assertEqual('A', response['task_family'])
 
+    def test_batch_time_running(self):
+        self.setTime(1234)
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_1', family='A', params={'a': '1'}, batchable=True)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_2', family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(
+            worker=WORKER, task_id='A_a_3', family='A', params={'a': '3'}, batchable=True)
+
+        self.sch.get_work(worker=WORKER)
+        for task in self.sch.task_list().values():
+            self.assertEqual(1234, task['time_running'])
+
     def test_batch_ignore_items_not_ready(self):
         self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
         self.sch.add_task(
