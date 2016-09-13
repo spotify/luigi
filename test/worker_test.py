@@ -849,9 +849,9 @@ class DynamicDependenciesTest(unittest.TestCase):
         self.assertTrue(t.complete())
 
         # loop through output and verify
-        f = t.output().open('r')
-        for i in range(7):
-            self.assertEqual(f.readline().strip(), '%d: Done!' % i)
+        with t.output().open('r') as f:
+            for i in range(7):
+                self.assertEqual(f.readline().strip(), '%d: Done!' % i)
 
         self.assertTrue(time.time() - t0 < self.timeout)
 
