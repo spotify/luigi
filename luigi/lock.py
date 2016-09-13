@@ -78,9 +78,7 @@ def acquire_for(pid_dir, num_available=1):
                 os.chmod(pid_dir, 0o777)
                 break
             except OSError:
-                if i < MAX_PID_DIR_CREATE_ATTEMPTS - 1:
-                    continue
-                else:
+                if i >= MAX_PID_DIR_CREATE_ATTEMPTS - 1:
                     raise
 
     # Check if there is a pid file corresponding to this name. 
