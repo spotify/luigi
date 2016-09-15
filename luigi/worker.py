@@ -108,10 +108,10 @@ class TaskProcess(multiprocessing.Process):
         self.result_queue = result_queue
         self.tracking_url_callback = tracking_url_callback
         self.status_message_callback = status_message_callback
-        self.random_seed = random_seed
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
+        self.random_seed = random_seed or self.timeout_time is not None
 
     def _run_get_new_deps(self):
         self.task.set_tracking_url = self.tracking_url_callback
@@ -410,11 +410,7 @@ class Worker(object):
                 pass
 
         # Keep info about what tasks are running (could be in other processes)
-        if worker_processes == 1:
-            self._task_result_queue = DequeQueue()
-        else:
-            self._task_result_queue = multiprocessing.Queue()
-
+        self._task_result_queue = multiprocessing.Queue()
         self._running_tasks = {}
 
         # Stuff for execution_summary
@@ -786,7 +782,7 @@ class Worker(object):
 
         self._running_tasks[task_id] = p
 
-        if self.worker_processes > 1:
+        if p.random_seed:
             with fork_lock:
                 p.start()
         else:
