@@ -822,20 +822,51 @@ class WorkerInterruptedTest(unittest.TestCase):
         self.assertTrue(task.complete())
 
 
-class WorkerDisabledTest(unittest.TestCase):
-    def setUp(self):
-        self.sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+class WorkerDisabledTest(LuigiTestCase):
+    def make_sch(self):
+        return Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
 
-    def _test_stop_getting_new_work(self, **worker_kwargs):
+    def _test_stop_getting_new_work_build(self, sch, worker):
+        """
+        I got motivated to create this test case when I saw that the
+        execution_summary crashed after my first attemted solution.
+        """
+        class KillWorkerTask(luigi.Task):
+            did_actually_run = False
+
+            def run(self):
+                sch.disable_worker('my_worker_id')
+                KillWorkerTask.did_actually_run = True
+
+        class Factory(object):
+            def create_local_scheduler(self, *args, **kwargs):
+                return sch
+
+            def create_worker(self, *args, **kwargs):
+                return worker
+
+        luigi.build([KillWorkerTask()], worker_scheduler_factory=Factory(), local_scheduler=True)
+        self.assertTrue(KillWorkerTask.did_actually_run)
+
+    def _test_stop_getting_new_work_manual(self, sch, worker):
         d = DummyTask()
-        worker_kwargs['worker_id'] = 'my_worker_id'
-        worker_kwargs['scheduler'] = self.sch
-        with Worker(**worker_kwargs) as worker:
+        with worker:
             worker.add(d)  # For assistant its ok that other tasks add it
             self.assertFalse(d.complete())
-            self.sch.disable_worker('my_worker_id')
+            sch.disable_worker('my_worker_id')
             worker.run()  # Note: Test could fail by hanging on this line
             self.assertFalse(d.complete())
+
+    def _test_stop_getting_new_work(self, **worker_kwargs):
+        worker_kwargs['worker_id'] = 'my_worker_id'
+
+        sch = self.make_sch()
+        worker_kwargs['scheduler'] = sch
+        self._test_stop_getting_new_work_manual(sch, Worker(**worker_kwargs))
+
+        sch = self.make_sch()
+        worker_kwargs['scheduler'] = sch
+        self._test_stop_getting_new_work_build(sch, Worker(**worker_kwargs))
 
     def test_stop_getting_new_work_keep_alive(self):
         self._test_stop_getting_new_work(keep_alive=True, assistant=False)

@@ -856,7 +856,7 @@ class Scheduler(object):
             get_work=True)
         if not worker.enabled:
             reply = {'n_pending_tasks': 0,
-                     'running_tasks': 0,
+                     'running_tasks': [],
                      'task_id': None,
                      'n_unique_pending': 0,
                      'worker_state': worker.state,
