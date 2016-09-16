@@ -45,7 +45,6 @@ import datetime
 import time
 
 import pkg_resources
-import tornado.httpclient
 import tornado.httpserver
 import tornado.ioloop
 import tornado.netutil
