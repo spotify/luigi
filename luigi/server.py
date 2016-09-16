@@ -73,10 +73,6 @@ class RPCHandler(tornado.web.RequestHandler):
         payload = self.get_argument('data', default="{}")
         arguments = json.loads(payload)
 
-        # TODO: we should probably denote all methods on the scheduler that are "API-level"
-        # versus internal methods. Right now you can do a REST method call to any method
-        # defined on the scheduler, which is pretty bad from a security point of view.
-
         if hasattr(self._scheduler, method):
             result = getattr(self._scheduler, method)(**arguments)
             self.write({"response": result})  # wrap all json response in a dictionary
