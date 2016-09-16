@@ -240,6 +240,7 @@ function visualiserApp(luigi) {
         worker.tasks.sort(function(task1, task2) { return task1.timeRunning - task2.timeRunning; });
         worker.start_time = new Date(worker.started * 1000).toLocaleString();
         worker.active = new Date(worker.last_active * 1000).toLocaleString();
+        worker.is_disabled = worker.state === 'disabled';
         return worker;
     }
 

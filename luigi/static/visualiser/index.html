@@ -283,22 +283,22 @@
               </div>
             </div>
             {{#workers}}
-            {{#num_pending}}
-            <div class="box">
-            {{/num_pending}}
-            {{^num_pending}}
+            {{#is_disabled}}
             <div class="box box-solid box-default">
-            {{/num_pending}}
+            {{/is_disabled}}
+            {{^is_disabled}}
+            <div class="box">
+            {{/is_disabled}}
                 <div class="box-header with-border">
                     <h3 class="box-title">{{name}}</h3>
                     <div class="box-tools pull-right">
-                      {{#num_pending}}
+                      {{^is_disabled}}
                       <div class="button-tooltip" data-toggle="tooltip" title="Disable Worker">
                         <button type="button" class="btn btn-danger btn-disable-worker" data-toggle="modal" data-target="#disableWorkerModal" data-worker="{{name}}">
                           <i class="fa fa-fire-extinguisher"></i>
                         </button>
                       </div>
-                      {{/num_pending}}
+                      {{/is_disabled}}
                     </div>
                 </div>
                 <div class="box-body">
