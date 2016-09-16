@@ -38,6 +38,7 @@ The following is an example usage (and can also be found in ``sge_tests.py``)
 
     import logging
     import luigi
+    import os
     from luigi.contrib.sge import SGEJobTask
 
     logger = logging.getLogger('luigi-interface')
