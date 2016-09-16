@@ -206,9 +206,7 @@ def app(scheduler):
     return api_app
 
 
-def _init_api(scheduler, responder=None, api_port=None, address=None, unix_socket=None):
-    if responder:
-        raise Exception('The "responder" argument is no longer supported')
+def _init_api(scheduler, api_port=None, address=None, unix_socket=None):
     api_app = app(scheduler)
     if unix_socket is not None:
         api_sockets = [tornado.netutil.bind_unix_socket(unix_socket)]
@@ -221,7 +219,7 @@ def _init_api(scheduler, responder=None, api_port=None, address=None, unix_socke
     return [s.getsockname() for s in api_sockets]
 
 
-def run(api_port=8082, address=None, unix_socket=None, scheduler=None, responder=None):
+def run(api_port=8082, address=None, unix_socket=None, scheduler=None):
     """
     Runs one instance of the API server.
     """
@@ -233,7 +231,6 @@ def run(api_port=8082, address=None, unix_socket=None, scheduler=None, responder
 
     _init_api(
         scheduler=scheduler,
-        responder=responder,
         api_port=api_port,
         address=address,
         unix_socket=unix_socket,
