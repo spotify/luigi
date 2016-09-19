@@ -38,16 +38,13 @@ See :doc:`/central_scheduler` for more info.
 import atexit
 import json
 import logging
-import mimetypes
 import os
-import posixpath
 import signal
 import sys
 import datetime
 import time
 
 import pkg_resources
-import tornado.httpclient
 import tornado.httpserver
 import tornado.ioloop
 import tornado.netutil
@@ -185,21 +182,6 @@ class ByParamsHandler(BaseTaskHistoryHandler):
         self.render("recent.html", tasks=tasks)
 
 
-class StaticFileHandler(tornado.web.RequestHandler):
-    def get(self, path):
-        # Path checking taken from Flask's safe_join function:
-        # https://github.com/mitsuhiko/flask/blob/1d55b8983/flask/helpers.py#L563-L587
-        path = posixpath.normpath(path)
-        if os.path.isabs(path) or path.startswith(".."):
-            return self.send_error(404)
-
-        extension = os.path.splitext(path)[1]
-        if extension in mimetypes.types_map:
-            self.set_header("Content-Type", mimetypes.types_map[extension])
-        data = pkg_resources.resource_string(__name__, os.path.join("static", path))
-        self.write(data)
-
-
 class RootPathHandler(BaseTaskHistoryHandler):
     def get(self):
         self.redirect("/static/visualiser/index.html")
@@ -207,10 +189,10 @@ class RootPathHandler(BaseTaskHistoryHandler):
 
 def app(scheduler):
     settings = {"static_path": os.path.join(os.path.dirname(__file__), "static"),
-                "unescape": tornado.escape.xhtml_unescape}
+                "unescape": tornado.escape.xhtml_unescape,
+                }
     handlers = [
         (r'/api/(.*)', RPCHandler, {"scheduler": scheduler}),
-        (r'/static/(.*)', StaticFileHandler),
         (r'/', RootPathHandler, {'scheduler': scheduler}),
         (r'/tasklist', AllRunHandler, {'scheduler': scheduler}),
         (r'/tasklist/(.*?)', SelectedRunHandler, {'scheduler': scheduler}),
@@ -223,9 +205,7 @@ def app(scheduler):
     return api_app
 
 
-def _init_api(scheduler, responder=None, api_port=None, address=None, unix_socket=None):
-    if responder:
-        raise Exception('The "responder" argument is no longer supported')
+def _init_api(scheduler, api_port=None, address=None, unix_socket=None):
     api_app = app(scheduler)
     if unix_socket is not None:
         api_sockets = [tornado.netutil.bind_unix_socket(unix_socket)]
@@ -238,7 +218,7 @@ def _init_api(scheduler, responder=None, api_port=None, address=None, unix_socke
     return [s.getsockname() for s in api_sockets]
 
 
-def run(api_port=8082, address=None, unix_socket=None, scheduler=None, responder=None):
+def run(api_port=8082, address=None, unix_socket=None, scheduler=None):
     """
     Runs one instance of the API server.
     """
@@ -250,7 +230,6 @@ def run(api_port=8082, address=None, unix_socket=None, scheduler=None, responder
 
     _init_api(
         scheduler=scheduler,
-        responder=responder,
         api_port=api_port,
         address=address,
         unix_socket=unix_socket,
