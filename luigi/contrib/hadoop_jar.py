@@ -52,7 +52,12 @@ def fix_paths(job):
                 logger.info('Using temp path: %s for path %s', y.path, x.path)
                 args.append(y.path)
         else:
-            args.append(str(x))
+            try:
+                # hopefully the target has a path to use
+                args.append(x.path)
+            except AttributeError:
+                # if there's no path then hope converting it to a string will work
+                args.append(str(x))
 
     return (tmp_files, args)
 
