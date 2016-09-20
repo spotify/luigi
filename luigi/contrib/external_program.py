@@ -83,7 +83,7 @@ class ExternalProgramTask(luigi.Task):
 
     def _clean_output_file(self, file_object):
         file_object.seek(0)
-        return ''.join(map(lambda s: s.decode('utf-8'), file_object.readlines()))
+        return file_object.read()
 
     def run(self):
         args = list(map(str, self.program_args()))
