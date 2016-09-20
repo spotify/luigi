@@ -713,11 +713,25 @@ class Worker(object):
         if get_work_response['task_id'] is not None:
             return get_work_response['task_id']
         elif 'batch_id' in get_work_response:
-            task = load_task(
-                module=get_work_response.get('task_module'),
-                task_name=get_work_response['task_family'],
-                params_str=get_work_response['task_params'],
-            )
+            try:
+                task = load_task(
+                    module=get_work_response.get('task_module'),
+                    task_name=get_work_response['task_family'],
+                    params_str=get_work_response['task_params'],
+                )
+            except Exception as ex:
+                batch_task_ids = get_work_response['batch_task_ids']
+                msg = 'Cannot load batch task for %s' % ', '.join(batch_task_ids)
+                logger.exception(msg)
+                subject = 'Luigi: %s' % msg
+                error_message = notifications.wrap_traceback(ex)
+                notifications.send_error_email(subject, error_message)
+                for batch_task_id in batch_task_ids:
+                    self._scheduler.add_task(
+                        worker=self._id, status=FAILED, task_id=batch_task_id, expl=error_message)
+                self.run_succeeded = False
+                return None
+
             self._scheduler.add_task(
                 worker=self._id,
                 task_id=task.task_id,

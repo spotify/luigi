@@ -30,6 +30,7 @@ from helpers import (unittest, with_config, skipOnTravis, LuigiTestCase,
                      temporary_unloaded_module)
 
 import luigi.notifications
+import luigi.task_register
 import luigi.worker
 import mock
 from luigi import ExternalTask, RemoteScheduler, Task, Event
@@ -130,6 +131,14 @@ class WorkerTest(unittest.TestCase):
 
         if time.time != self.time:
             time.time = self.time
+
+    def setUp(self):
+        # ensure that other tests don't leak information into these via the task register
+        luigi.task_register.Register.clear_instance_cache()
+
+    def tearDown(self):
+        # ensure these tasks don't leak into others via the task register
+        luigi.task_register.Register.clear_instance_cache()
 
     def setTime(self, t):
         time.time = lambda: t
@@ -771,6 +780,41 @@ class WorkerTest(unittest.TestCase):
             self.assertFalse(task.has_run and task.value < 9)
 
         self.assertEqual({task.task_id for task in tasks}, set(self.sch.task_list('FAILED', '')))
+
+    def test_gracefully_handle_batch_method_failure(self):
+        class BadBatchMethodTask(DummyTask):
+            priority = 10
+            batch_int_param = luigi.IntParameter(batch_method=int.__add__)  # should be sum
+
+        bad_tasks = [BadBatchMethodTask(i) for i in range(5)]
+        good_tasks = [DummyTask()]
+        all_tasks = good_tasks + bad_tasks
+
+        self.assertFalse(any(task.complete() for task in all_tasks))
+
+        worker = Worker(scheduler=self.sch, keep_alive=True)
+
+        for task in all_tasks:
+            self.assertTrue(worker.add(task))
+        self.assertFalse(worker.run())
+        self.assertFalse(any(task.complete() for task in bad_tasks))
+
+        # we only get to run the good task if the bad task failures were handled gracefully
+        self.assertTrue(all(task.complete() for task in good_tasks))
+
+    def test_post_error_message_for_failed_batch_methods(self):
+        class BadBatchMethodTask(DummyTask):
+            batch_int_param = luigi.IntParameter(batch_method=int.__add__)  # should be sum
+
+        tasks = [BadBatchMethodTask(1), BadBatchMethodTask(2)]
+
+        for task in tasks:
+            self.assertTrue(self.w.add(task))
+        self.assertFalse(self.w.run())
+
+        failed_ids = set(self.sch.task_list('FAILED', ''))
+        self.assertEqual({task.task_id for task in tasks}, failed_ids)
+        self.assertTrue(all(self.sch.fetch_error(task_id)['error'] for task_id in failed_ids))
 
 
 class WorkerInterruptedTest(unittest.TestCase):
