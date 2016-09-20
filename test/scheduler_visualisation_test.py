@@ -532,6 +532,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(0, worker['num_pending'])
         self.assertEqual(0, worker['num_uniques'])
         self.assertEqual(0, worker['num_running'])
+        self.assertEqual('active', worker['state'])
         self.assertEqual(1, worker['workers'])
 
     def test_worker_list_pending_uniques(self):
@@ -583,6 +584,17 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(1, worker['num_pending'])
         self.assertEqual(1, worker['num_uniques'])
 
+    def test_worker_list_disabled_worker(self):
+        class X(luigi.Task):
+            pass
 
-if __name__ == '__main__':
-    unittest.main()
+        with luigi.worker.Worker(worker_id='w', scheduler=self.scheduler) as w:
+            w.add(X())  #
+            workers = self._remote().worker_list()
+            self.assertEqual(1, len(workers))
+            self.assertEqual('active', workers[0]['state'])
+            self.scheduler.disable_worker('w')
+            workers = self._remote().worker_list()
+            self.assertEqual(1, len(workers))
+            self.assertEqual(1, len(workers))
+            self.assertEqual('disabled', workers[0]['state'])

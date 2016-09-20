@@ -164,65 +164,6 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(a.has_run)
         self.assertTrue(b.has_run)
 
-    def test_stop_getting_new_work(self):
-        d = DummyTask()
-        self.w.add(d)
-
-        self.assertFalse(d.complete())
-        try:
-            self.w.handle_interrupt(signal.SIGUSR1, None)
-        except AttributeError:
-            raise unittest.SkipTest('signal.SIGUSR1 not found on this system')
-        self.w.run()
-        self.assertFalse(d.complete())
-
-    @mock.patch('luigi.worker.signal')
-    def test_signal_interrupt_disabled(self, worker_signal):
-        w = Worker(scheduler=self.sch)
-        worker_signal.signal.assert_called_once_with(worker_signal.SIGUSR1, w.handle_interrupt)
-        worker_signal.siginterrupt.assert_called_once_with(worker_signal.SIGUSR1, False)
-
-    @mock.patch('luigi.worker.signal')
-    def test_signal_interrupt_not_disabled_without_shutdown_handler(self, worker_signal):
-        Worker(scheduler=self.sch, no_install_shutdown_handler=True)
-        self.assertEqual(0, worker_signal.signal.call_count)
-        self.assertEqual(0, worker_signal.siginterrupt.call_count)
-
-    @mock.patch('luigi.worker.signal')
-    def test_signal_interrupt_ok_to_not_exist(self, worker_signal):
-        worker_signal.siginterrupt.side_effect = AttributeError
-        w = Worker(scheduler=self.sch)  # may fail due to the AttributeError
-
-        # we still register the handler when the siginterrupt disable fails
-        worker_signal.signal.assert_called_once_with(worker_signal.SIGUSR1, w.handle_interrupt)
-
-    def test_disabled_shutdown_hook(self):
-        w = Worker(scheduler=self.sch, keep_alive=True, no_install_shutdown_handler=True)
-        with w:
-            try:
-                # try to kill the worker!
-                os.kill(os.getpid(), signal.SIGUSR1)
-            except AttributeError:
-                raise unittest.SkipTest('signal.SIGUSR1 not found on this system')
-            # try to kill the worker... AGAIN!
-            t = SuicidalWorker(signal.SIGUSR1)
-            w.add(t)
-            w.run()
-            # task should have stepped away from the ledge, and completed successfully despite all the SIGUSR1 signals
-            self.assertEqual(list(self.sch.task_list('DONE', '').keys()), [t.task_id])
-
-    @with_config({"worker": {"no_install_shutdown_handler": "True"}})
-    def test_can_run_luigi_in_thread(self):
-        class A(DummyTask):
-            pass
-        task = A()
-        # Note that ``signal.signal(signal.SIGUSR1, fn)`` can only be called in the main thread.
-        # So if we do not disable the shutdown handler, this would fail.
-        t = threading.Thread(target=lambda: luigi.build([task], local_scheduler=True))
-        t.start()
-        t.join()
-        self.assertTrue(task.complete())
-
     def test_external_dep(self):
         class A(ExternalTask):
 
@@ -832,6 +773,111 @@ class WorkerTest(unittest.TestCase):
         self.assertEqual({task.task_id for task in tasks}, set(self.sch.task_list('FAILED', '')))
 
 
+class WorkerInterruptedTest(unittest.TestCase):
+    def setUp(self):
+        self.sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+
+    requiring_sigusr = unittest.skipUnless(hasattr(signal, 'SIGUSR1'),
+                                           'signal.SIGUSR1 not found on this system')
+
+    def _test_stop_getting_new_work(self, worker):
+        d = DummyTask()
+        with worker:
+            worker.add(d)  # For assistant its ok that other tasks add it
+            self.assertFalse(d.complete())
+            worker.handle_interrupt(signal.SIGUSR1, None)
+            worker.run()
+            self.assertFalse(d.complete())
+
+    @requiring_sigusr
+    def test_stop_getting_new_work(self):
+        self._test_stop_getting_new_work(
+            Worker(scheduler=self.sch))
+
+    @requiring_sigusr
+    def test_stop_getting_new_work_assistant(self):
+        self._test_stop_getting_new_work(
+            Worker(scheduler=self.sch, keep_alive=False, assistant=True))
+
+    @requiring_sigusr
+    def test_stop_getting_new_work_assistant_keep_alive(self):
+        self._test_stop_getting_new_work(
+            Worker(scheduler=self.sch, keep_alive=True, assistant=True))
+
+    def test_existence_of_disabling_option(self):
+        # any code equivalent of `os.kill(os.getpid(), signal.SIGUSR1)`
+        # seem to give some sort of a "InvocationError"
+        Worker(no_install_shutdown_handler=True)
+
+    @with_config({"worker": {"no_install_shutdown_handler": "True"}})
+    def test_can_run_luigi_in_thread(self):
+        class A(DummyTask):
+            pass
+        task = A()
+        # Note that ``signal.signal(signal.SIGUSR1, fn)`` can only be called in the main thread.
+        # So if we do not disable the shutdown handler, this would fail.
+        t = threading.Thread(target=lambda: luigi.build([task], local_scheduler=True))
+        t.start()
+        t.join()
+        self.assertTrue(task.complete())
+
+
+class WorkerDisabledTest(LuigiTestCase):
+    def make_sch(self):
+        return Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
+
+    def _test_stop_getting_new_work_build(self, sch, worker):
+        """
+        I got motivated to create this test case when I saw that the
+        execution_summary crashed after my first attemted solution.
+        """
+        class KillWorkerTask(luigi.Task):
+            did_actually_run = False
+
+            def run(self):
+                sch.disable_worker('my_worker_id')
+                KillWorkerTask.did_actually_run = True
+
+        class Factory(object):
+            def create_local_scheduler(self, *args, **kwargs):
+                return sch
+
+            def create_worker(self, *args, **kwargs):
+                return worker
+
+        luigi.build([KillWorkerTask()], worker_scheduler_factory=Factory(), local_scheduler=True)
+        self.assertTrue(KillWorkerTask.did_actually_run)
+
+    def _test_stop_getting_new_work_manual(self, sch, worker):
+        d = DummyTask()
+        with worker:
+            worker.add(d)  # For assistant its ok that other tasks add it
+            self.assertFalse(d.complete())
+            sch.disable_worker('my_worker_id')
+            worker.run()  # Note: Test could fail by hanging on this line
+            self.assertFalse(d.complete())
+
+    def _test_stop_getting_new_work(self, **worker_kwargs):
+        worker_kwargs['worker_id'] = 'my_worker_id'
+
+        sch = self.make_sch()
+        worker_kwargs['scheduler'] = sch
+        self._test_stop_getting_new_work_manual(sch, Worker(**worker_kwargs))
+
+        sch = self.make_sch()
+        worker_kwargs['scheduler'] = sch
+        self._test_stop_getting_new_work_build(sch, Worker(**worker_kwargs))
+
+    def test_stop_getting_new_work_keep_alive(self):
+        self._test_stop_getting_new_work(keep_alive=True, assistant=False)
+
+    def test_stop_getting_new_work_assistant(self):
+        self._test_stop_getting_new_work(keep_alive=False, assistant=True)
+
+    def test_stop_getting_new_work_assistant_keep_alive(self):
+        self._test_stop_getting_new_work(keep_alive=True, assistant=True)
+
+
 class DynamicDependenciesTest(unittest.TestCase):
     n_workers = 1
     timeout = float('inf')
@@ -1024,7 +1070,7 @@ class WorkerEmailTest(LuigiTestCase):
 
     @email_patch
     def test_task_process_dies(self, emails):
-        a = SuicidalWorker(signal.SIGKILL)
+        a = SendSignalTask(signal.SIGKILL)
         luigi.build([a], workers=2, local_scheduler=True)
         self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
         self.assertTrue(emails[0].find("died unexpectedly with exit code -9") != -1)
@@ -1084,7 +1130,7 @@ class RaiseSystemExit(luigi.Task):
         raise SystemExit("System exit!!")
 
 
-class SuicidalWorker(luigi.Task):
+class SendSignalTask(luigi.Task):
     signal = luigi.IntParameter()
 
     def run(self):
@@ -1135,15 +1181,15 @@ class MultipleWorkersTest(unittest.TestCase):
         luigi.build([RaiseSystemExit()], workers=2, local_scheduler=True)
 
     def test_term_worker(self):
-        luigi.build([SuicidalWorker(signal.SIGTERM)], workers=2, local_scheduler=True)
+        luigi.build([SendSignalTask(signal.SIGTERM)], workers=2, local_scheduler=True)
 
     def test_kill_worker(self):
-        luigi.build([SuicidalWorker(signal.SIGKILL)], workers=2, local_scheduler=True)
+        luigi.build([SendSignalTask(signal.SIGKILL)], workers=2, local_scheduler=True)
 
     def test_purge_multiple_workers(self):
         w = Worker(worker_processes=2, wait_interval=0.01)
-        t1 = SuicidalWorker(signal.SIGTERM)
-        t2 = SuicidalWorker(signal.SIGKILL)
+        t1 = SendSignalTask(signal.SIGTERM)
+        t2 = SendSignalTask(signal.SIGKILL)
         w.add(t1)
         w.add(t2)
 
