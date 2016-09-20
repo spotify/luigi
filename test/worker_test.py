@@ -1358,6 +1358,17 @@ class UnimportedTask(luigi.Task):
             self.assertTrue(self.assistant.run())
             self.assertEqual(list(self.sch.task_list('DONE', '').keys()), [task.task_id])
 
+    def test_unimported_job_sends_failure_message(self):
+        class NotInAssistantTask(luigi.Task):
+            task_family = 'Unknown'
+            task_module = None
+
+        task = NotInAssistantTask()
+        self.w.add(task)
+        self.assertFalse(self.assistant.run())
+        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), [task.task_id])
+        self.assertTrue(self.sch.fetch_error(task.task_id)['error'])
+
 
 class ForkBombTask(luigi.Task):
     depth = luigi.IntParameter()
