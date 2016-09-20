@@ -768,7 +768,7 @@ class Worker(object):
                 error_message = notifications.wrap_traceback(ex)
                 notifications.send_error_email(subject, error_message)
                 self._add_task(worker=self._id, task_id=task_id, status=FAILED, runnable=False,
-                               assistant=self._assistant)
+                               assistant=self._assistant, expl=error_message)
                 task_id = None
                 self.run_succeeded = False
 
