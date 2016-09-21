@@ -101,7 +101,7 @@ class TaskProcess(multiprocessing.Process):
     Mainly for convenience since this is run in a separate process. """
 
     def __init__(self, task, worker_id, result_queue, tracking_url_callback,
-                 status_message_callback, random_seed=False, worker_timeout=0):
+                 status_message_callback, use_multiprocessing=False, worker_timeout=0):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
@@ -111,7 +111,7 @@ class TaskProcess(multiprocessing.Process):
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
-        self.random_seed = random_seed or self.timeout_time is not None
+        self.use_multiprocessing = use_multiprocessing or self.timeout_time is not None
 
     def _run_get_new_deps(self):
         self.task.set_tracking_url = self.tracking_url_callback
@@ -146,7 +146,7 @@ class TaskProcess(multiprocessing.Process):
     def run(self):
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task)
 
-        if self.random_seed:
+        if self.use_multiprocessing:
             # Need to have different random seeds if running in separate processes
             random.seed((os.getpid(), time.time()))
 
@@ -782,7 +782,7 @@ class Worker(object):
 
         self._running_tasks[task_id] = task_process
 
-        if task_process.random_seed:
+        if task_process.use_multiprocessing:
             with fork_lock:
                 task_process.start()
         else:
@@ -803,7 +803,7 @@ class Worker(object):
 
         return TaskProcess(
             task, self._id, self._task_result_queue, update_tracking_url, update_status_message,
-            random_seed=bool(self.worker_processes > 1),
+            use_multiprocessing=bool(self.worker_processes > 1),
             worker_timeout=self._config.timeout
         )
 
