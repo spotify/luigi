@@ -107,10 +107,10 @@ class ExternalProgramTask(luigi.Task):
             stderr = self._clean_output_file(tmp_stderr)
 
             if stdout:
-                logger.info('Program stdout:\n{}'.format(stdout))
+                logger.info(u'Program stdout:\n{}'.format(stdout))
             if stderr:
                 if self.always_log_stderr or not success:
-                    logger.info('Program stderr:\n{}'.format(stderr))
+                    logger.info(u'Program stderr:\n{}'.format(stderr))
 
             if not success:
                 raise ExternalProgramRunError(
