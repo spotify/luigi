@@ -778,16 +778,16 @@ class Worker(object):
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
 
-        p = self._create_task_process(task)
+        task_process = self._create_task_process(task)
 
-        self._running_tasks[task_id] = p
+        self._running_tasks[task_id] = task_process
 
-        if p.random_seed:
+        if task_process.random_seed:
             with fork_lock:
-                p.start()
+                task_process.start()
         else:
             # Run in the same process
-            p.run()
+            task_process.run()
 
     def _create_task_process(self, task):
         def update_tracking_url(tracking_url):
