@@ -536,6 +536,21 @@ class Worker(object):
         message = notifications.format_task_error(headline, task, command, formatted_traceback)
         notifications.send_error_email(formatted_subject, message, task.owner_email)
 
+    def _handle_task_load_error(self, exception, task_ids):
+        msg = 'Cannot find task(s) sent by scheduler: {}'.format(','.join(task_ids))
+        logger.exception(msg)
+        subject = 'Luigi: {}'.format(msg)
+        error_message = notifications.wrap_traceback(exception)
+        for task_id in task_ids:
+            self._add_task(
+                worker=self._id,
+                task_id=task_id,
+                status=FAILED,
+                runnable=False,
+                expl=error_message,
+            )
+        notifications.send_error_email(subject, error_message)
+
     def add(self, task, multiprocess=False):
         """
         Add a Task for the worker to check and possibly schedule and run.
@@ -720,15 +735,7 @@ class Worker(object):
                     params_str=get_work_response['task_params'],
                 )
             except Exception as ex:
-                batch_task_ids = get_work_response['batch_task_ids']
-                msg = 'Cannot load batch task for %s' % ', '.join(batch_task_ids)
-                logger.exception(msg)
-                subject = 'Luigi: %s' % msg
-                error_message = notifications.wrap_traceback(ex)
-                notifications.send_error_email(subject, error_message)
-                for batch_task_id in batch_task_ids:
-                    self._scheduler.add_task(
-                        worker=self._id, status=FAILED, task_id=batch_task_id, expl=error_message)
+                self._handle_task_load_error(ex, get_work_response['batch_task_ids'])
                 self.run_succeeded = False
                 return None
 
@@ -776,13 +783,7 @@ class Worker(object):
                               task_name=r['task_family'],
                               params_str=r['task_params'])
             except TaskClassException as ex:
-                msg = 'Cannot find task for %s' % task_id
-                logger.exception(msg)
-                subject = 'Luigi: %s' % msg
-                error_message = notifications.wrap_traceback(ex)
-                notifications.send_error_email(subject, error_message)
-                self._add_task(worker=self._id, task_id=task_id, status=FAILED, runnable=False,
-                               assistant=self._assistant)
+                self._handle_task_load_error(ex, [task_id])
                 task_id = None
                 self.run_succeeded = False
 
