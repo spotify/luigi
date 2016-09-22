@@ -843,6 +843,7 @@ class SchedulerApiTest(unittest.TestCase):
                 'n_pending_tasks': num_tasks,
                 'n_unique_pending': num_tasks,
                 'n_pending_last_scheduled': num_tasks,
+                'running_tasks': [],
                 'worker_state': 'active',
             }
             self.assertEqual(expected, self.sch.count_pending(WORKER))
@@ -853,6 +854,7 @@ class SchedulerApiTest(unittest.TestCase):
             'n_pending_tasks': 0,
             'n_unique_pending': 0,
             'n_pending_last_scheduled': 0,
+            'running_tasks': [],
             'worker_state': 'active',
         }
         self.assertEqual(expected, self.sch.count_pending('other_worker'))
@@ -868,6 +870,7 @@ class SchedulerApiTest(unittest.TestCase):
             'n_pending_tasks': 3,
             'n_unique_pending': 2,
             'n_pending_last_scheduled': 2,
+            'running_tasks': [],
             'worker_state': 'active',
         }
         self.assertEqual(expected, self.sch.count_pending(WORKER))
@@ -885,6 +888,7 @@ class SchedulerApiTest(unittest.TestCase):
             'n_pending_tasks': 3,
             'n_unique_pending': 0,
             'n_pending_last_scheduled': 0,
+            'running_tasks': [],
             'worker_state': 'active',
         }
         self.assertEqual(expected, self.sch.count_pending(WORKER))
@@ -893,6 +897,7 @@ class SchedulerApiTest(unittest.TestCase):
             'n_pending_tasks': 3,
             'n_unique_pending': 0,
             'n_pending_last_scheduled': 3,
+            'running_tasks': [],
             'worker_state': 'active',
         }
         self.assertEqual(expected_other_worker, self.sch.count_pending('other_worker'))
@@ -900,9 +905,37 @@ class SchedulerApiTest(unittest.TestCase):
     def test_count_pending_disabled_worker(self):
         self.sch.add_task(worker=WORKER,  task_id='A', status=PENDING)
 
-        self.assertEqual('active', self.sch.count_pending(worker=WORKER)['worker_state'])
+        expected_active_state = {
+            'n_pending_tasks': 1,
+            'n_unique_pending': 1,
+            'n_pending_last_scheduled': 1,
+            'running_tasks': [],
+            'worker_state': 'active',
+        }
+        self.assertEqual(expected_active_state, self.sch.count_pending(worker=WORKER))
+
+        expected_disabled_state = {
+            'n_pending_tasks': 0,
+            'n_unique_pending': 0,
+            'n_pending_last_scheduled': 0,
+            'running_tasks': [],
+            'worker_state': 'disabled',
+        }
         self.sch.disable_worker(worker=WORKER)
-        self.assertEqual('disabled', self.sch.count_pending(worker=WORKER)['worker_state'])
+        self.assertEqual(expected_disabled_state, self.sch.count_pending(worker=WORKER))
+
+    def test_count_pending_running_tasks(self):
+        self.sch.add_task(worker=WORKER,  task_id='A', status=PENDING)
+        self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
+
+        expected_active_state = {
+            'n_pending_tasks': 0,
+            'n_unique_pending': 0,
+            'n_pending_last_scheduled': 0,
+            'running_tasks': [{'task_id': 'A', 'worker': 'myworker'}],
+            'worker_state': 'active',
+        }
+        self.assertEqual(expected_active_state, self.sch.count_pending(worker=WORKER))
 
     def test_scheduler_resources_none_allow_one(self):
         self.sch.add_task(worker='X', task_id='A', resources={'R1': 1})
