@@ -867,7 +867,7 @@ class Scheduler(object):
     def count_pending(self, worker):
         worker_id, worker = worker, self._state.get_worker(worker)
 
-        num_pending, num_unique_pending, num_last_scheduled = 0, 0, 0
+        num_pending, num_unique_pending, num_pending_last_scheduled = 0, 0, 0
         running_tasks = []
 
         upstream_status_table = {}
@@ -885,11 +885,11 @@ class Scheduler(object):
             elif task.status == PENDING:
                 num_pending += 1
                 num_unique_pending += int(len(task.workers) == 1)
-                num_last_scheduled += int(task.workers[-1] == worker_id)
+                num_pending_last_scheduled += int(task.workers[-1] == worker_id)
         return {
             'n_pending_tasks': num_pending,
             'n_unique_pending': num_unique_pending,
-            'n_pending_last_scheduled': num_last_scheduled,
+            'n_pending_last_scheduled': num_pending_last_scheduled,
             'worker_state': worker.state,
             'running_tasks': running_tasks,
         }
