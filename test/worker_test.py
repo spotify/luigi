@@ -30,6 +30,7 @@ from helpers import (unittest, with_config, skipOnTravis, LuigiTestCase,
                      temporary_unloaded_module)
 
 import luigi.notifications
+import luigi.task_register
 import luigi.worker
 import mock
 from luigi import ExternalTask, RemoteScheduler, Task, Event
@@ -118,7 +119,7 @@ class DummyErrorTask(Task):
         raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
 
 
-class WorkerTest(unittest.TestCase):
+class WorkerTest(LuigiTestCase):
 
     def run(self, result=None):
         self.sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
@@ -772,6 +773,41 @@ class WorkerTest(unittest.TestCase):
 
         self.assertEqual({task.task_id for task in tasks}, set(self.sch.task_list('FAILED', '')))
 
+    def test_gracefully_handle_batch_method_failure(self):
+        class BadBatchMethodTask(DummyTask):
+            priority = 10
+            batch_int_param = luigi.IntParameter(batch_method=int.__add__)  # should be sum
+
+        bad_tasks = [BadBatchMethodTask(i) for i in range(5)]
+        good_tasks = [DummyTask()]
+        all_tasks = good_tasks + bad_tasks
+
+        self.assertFalse(any(task.complete() for task in all_tasks))
+
+        worker = Worker(scheduler=self.sch, keep_alive=True)
+
+        for task in all_tasks:
+            self.assertTrue(worker.add(task))
+        self.assertFalse(worker.run())
+        self.assertFalse(any(task.complete() for task in bad_tasks))
+
+        # we only get to run the good task if the bad task failures were handled gracefully
+        self.assertTrue(all(task.complete() for task in good_tasks))
+
+    def test_post_error_message_for_failed_batch_methods(self):
+        class BadBatchMethodTask(DummyTask):
+            batch_int_param = luigi.IntParameter(batch_method=int.__add__)  # should be sum
+
+        tasks = [BadBatchMethodTask(1), BadBatchMethodTask(2)]
+
+        for task in tasks:
+            self.assertTrue(self.w.add(task))
+        self.assertFalse(self.w.run())
+
+        failed_ids = set(self.sch.task_list('FAILED', ''))
+        self.assertEqual({task.task_id for task in tasks}, failed_ids)
+        self.assertTrue(all(self.sch.fetch_error(task_id)['error'] for task_id in failed_ids))
+
 
 class WorkerInterruptedTest(unittest.TestCase):
     def setUp(self):
@@ -1321,6 +1357,17 @@ class UnimportedTask(luigi.Task):
             self.w.add(task)
             self.assertTrue(self.assistant.run())
             self.assertEqual(list(self.sch.task_list('DONE', '').keys()), [task.task_id])
+
+    def test_unimported_job_sends_failure_message(self):
+        class NotInAssistantTask(luigi.Task):
+            task_family = 'Unknown'
+            task_module = None
+
+        task = NotInAssistantTask()
+        self.w.add(task)
+        self.assertFalse(self.assistant.run())
+        self.assertEqual(list(self.sch.task_list('FAILED', '').keys()), [task.task_id])
+        self.assertTrue(self.sch.fetch_error(task.task_id)['error'])
 
 
 class ForkBombTask(luigi.Task):
