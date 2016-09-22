@@ -1256,6 +1256,9 @@ class MultipleWorkersTest(unittest.TestCase):
     def test_time_out_hung_worker(self):
         luigi.build([HangTheWorkerTask(0.1)], workers=2, local_scheduler=True)
 
+    def test_time_out_hung_single_worker(self):
+        luigi.build([HangTheWorkerTask(0.1)], workers=1, local_scheduler=True)
+
     @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72953986')
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_default_timeout_time(self, mock_time):

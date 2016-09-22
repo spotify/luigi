@@ -101,17 +101,17 @@ class TaskProcess(multiprocessing.Process):
     Mainly for convenience since this is run in a separate process. """
 
     def __init__(self, task, worker_id, result_queue, tracking_url_callback,
-                 status_message_callback, random_seed=False, worker_timeout=0):
+                 status_message_callback, use_multiprocessing=False, worker_timeout=0):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
         self.result_queue = result_queue
         self.tracking_url_callback = tracking_url_callback
         self.status_message_callback = status_message_callback
-        self.random_seed = random_seed
         if task.worker_timeout is not None:
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
+        self.use_multiprocessing = use_multiprocessing or self.timeout_time is not None
 
     def _run_get_new_deps(self):
         self.task.set_tracking_url = self.tracking_url_callback
@@ -146,7 +146,7 @@ class TaskProcess(multiprocessing.Process):
     def run(self):
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task)
 
-        if self.random_seed:
+        if self.use_multiprocessing:
             # Need to have different random seeds if running in separate processes
             random.seed((os.getpid(), time.time()))
 
@@ -410,11 +410,7 @@ class Worker(object):
                 pass
 
         # Keep info about what tasks are running (could be in other processes)
-        if worker_processes == 1:
-            self._task_result_queue = DequeQueue()
-        else:
-            self._task_result_queue = multiprocessing.Queue()
-
+        self._task_result_queue = multiprocessing.Queue()
         self._running_tasks = {}
 
         # Stuff for execution_summary
@@ -797,16 +793,16 @@ class Worker(object):
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
 
-        p = self._create_task_process(task)
+        task_process = self._create_task_process(task)
 
-        self._running_tasks[task_id] = p
+        self._running_tasks[task_id] = task_process
 
-        if self.worker_processes > 1:
+        if task_process.use_multiprocessing:
             with fork_lock:
-                p.start()
+                task_process.start()
         else:
             # Run in the same process
-            p.run()
+            task_process.run()
 
     def _create_task_process(self, task):
         def update_tracking_url(tracking_url):
@@ -822,7 +818,7 @@ class Worker(object):
 
         return TaskProcess(
             task, self._id, self._task_result_queue, update_tracking_url, update_status_message,
-            random_seed=bool(self.worker_processes > 1),
+            use_multiprocessing=bool(self.worker_processes > 1),
             worker_timeout=self._config.timeout
         )
 
