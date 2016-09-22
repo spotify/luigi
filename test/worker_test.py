@@ -119,7 +119,7 @@ class DummyErrorTask(Task):
         raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
 
 
-class WorkerTest(unittest.TestCase):
+class WorkerTest(LuigiTestCase):
 
     def run(self, result=None):
         self.sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
@@ -131,14 +131,6 @@ class WorkerTest(unittest.TestCase):
 
         if time.time != self.time:
             time.time = self.time
-
-    def setUp(self):
-        # ensure that other tests don't leak information into these via the task register
-        luigi.task_register.Register.clear_instance_cache()
-
-    def tearDown(self):
-        # ensure these tasks don't leak into others via the task register
-        luigi.task_register.Register.clear_instance_cache()
 
     def setTime(self, t):
         time.time = lambda: t
