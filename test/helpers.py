@@ -141,14 +141,18 @@ class RunOnceTask(luigi.Task):
 class LuigiTestCase(unittest.TestCase):
     """
     Tasks registred within a test case will get unregistered in a finalizer
+
+    Instance caches are cleared before and after all runs
     """
     def setUp(self):
         super(LuigiTestCase, self).setUp()
         self._stashed_reg = luigi.task_register.Register._get_reg()
+        luigi.task_register.Register.clear_instance_cache()
 
     def tearDown(self):
         luigi.task_register.Register._set_reg(self._stashed_reg)
         super(LuigiTestCase, self).tearDown()
+        luigi.task_register.Register.clear_instance_cache()
 
     def run_locally(self, args):
         """ Helper for running tests testing more of the stack, the command
