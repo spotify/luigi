@@ -200,12 +200,45 @@ def _get_default(x, default):
         return default
 
 
+class OrderedSet(object):
+    def __init__(self):
+        self._order = set()
+        self._items = []
+
+    def add(self, item):
+        if item not in self._items:
+            self._order.add(item)
+            self._items.append(item)
+
+    def _filter_items(self):
+        self._items = [item for item in self._items if item in self._order]
+
+    def difference_update(self, removed_items):
+        self._order.difference_update(removed_items)
+        self._filter_items()
+
+    def __contains__(self, item):
+        return item in self._order
+
+    def __nonzero__(self):
+        return bool(self._items)
+
+    def __len__(self):
+        return len(self._items)
+
+    def __iter__(self):
+        return iter(self._items)
+
+    def __getitem__(self, idx):
+        return self._items[idx]
+
+
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
                  params=None, tracking_url=None, status_message=None, retry_policy='notoptional'):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
-        self.workers = set()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
+        self.workers = OrderedSet()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
         if deps is None:
             self.deps = set()
         else:
@@ -556,12 +589,6 @@ class SimpleTaskState(object):
     def get_worker(self, worker_id):
         return self._active_workers.setdefault(worker_id, Worker(worker_id))
 
-    def get_worker_start_times(self):
-        return {
-            worker_id: worker.started
-            for worker_id, worker in six.iteritems(self._active_workers)
-        }
-
     def inactivate_workers(self, delete_workers):
         # Mark workers as inactive
         for worker in delete_workers:
@@ -844,7 +871,6 @@ class Scheduler(object):
         running_tasks = []
 
         upstream_status_table = {}
-        worker_starts = self._state.get_worker_start_times()
         for task in worker.get_pending_tasks(self._state):
             if self._upstream_status(task.id, upstream_status_table) == UPSTREAM_DISABLED:
                 continue
@@ -859,9 +885,7 @@ class Scheduler(object):
             elif task.status == PENDING:
                 num_pending += 1
                 num_unique_pending += int(len(task.workers) == 1)
-                if task.workers:
-                    last_scheduled = max(task.workers, key=worker_starts.get)
-                    num_last_scheduled += int(last_scheduled == worker_id)
+                num_last_scheduled += int(task.workers[-1] == worker_id)
         return {
             'n_pending_tasks': num_pending,
             'n_unique_pending': num_unique_pending,
