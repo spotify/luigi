@@ -267,6 +267,7 @@ class OrderedSet(collections.MutableSet):
             return len(self) == len(other) and list(self) == list(other)
         return set(self) == set(other)
 
+
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
                  params=None, tracking_url=None, status_message=None, retry_policy='notoptional'):
