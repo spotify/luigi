@@ -100,7 +100,7 @@ GetWorkResponse = collections.namedtuple('GetWorkResponse', (
     'n_pending_tasks',
     'n_unique_pending',
     'n_pending_last_scheduled',
-    'worker_state'
+    'worker_state',
 ))
 
 
@@ -802,9 +802,6 @@ class Worker(object):
                 self._scheduled_tasks.get(batch_id) for batch_id in r['batch_task_ids']])
             self._batch_running_tasks[task_id] = batch_tasks
 
-        r.setdefault('worker_state', WORKER_STATE_ACTIVE)
-        r.setdefault('n_pending_last_scheduled', 0)
-
         return GetWorkResponse(
             task_id=task_id,
             running_tasks=running_tasks,
@@ -814,7 +811,7 @@ class Worker(object):
             # TODO: For a tiny amount of time (a month?) we'll keep forwards compatibility
             #  That is you can user a newer client than server (Sep 2016)
             n_pending_last_scheduled=r.get('n_pending_last_scheduled', 0),
-            worker_state=r.get('worker_state', 0),
+            worker_state=r.get('worker_state', WORKER_STATE_ACTIVE),
         )
 
     def _run_task(self, task_id):

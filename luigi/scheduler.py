@@ -200,38 +200,72 @@ def _get_default(x, default):
         return default
 
 
-class OrderedSet(object):
-    def __init__(self):
-        self._order = set()
-        self._items = []
+class OrderedSet(collections.MutableSet):
+    """
+    Standard Python OrderedSet recipe found at http://code.activestate.com/recipes/576694/
 
-    def add(self, item):
-        if item not in self._items:
-            self._order.add(item)
-            self._items.append(item)
+    Modified to include a peek function to get the last element
+    """
 
-    def _filter_items(self):
-        self._items = [item for item in self._items if item in self._order]
-
-    def difference_update(self, removed_items):
-        self._order.difference_update(removed_items)
-        self._filter_items()
-
-    def __contains__(self, item):
-        return item in self._order
-
-    def __nonzero__(self):
-        return bool(self._items)
+    def __init__(self, iterable=None):
+        self.end = end = []
+        end += [None, end, end]         # sentinel node for doubly linked list
+        self.map = {}                   # key --> [key, prev, next]
+        if iterable is not None:
+            self |= iterable
 
     def __len__(self):
-        return len(self._items)
+        return len(self.map)
+
+    def __contains__(self, key):
+        return key in self.map
+
+    def add(self, key):
+        if key not in self.map:
+            end = self.end
+            curr = end[1]
+            curr[2] = end[1] = self.map[key] = [key, curr, end]
+
+    def discard(self, key):
+        if key in self.map:
+            key, prev, next = self.map.pop(key)
+            prev[2] = next
+            next[1] = prev
 
     def __iter__(self):
-        return iter(self._items)
+        end = self.end
+        curr = end[2]
+        while curr is not end:
+            yield curr[0]
+            curr = curr[2]
 
-    def __getitem__(self, idx):
-        return self._items[idx]
+    def __reversed__(self):
+        end = self.end
+        curr = end[1]
+        while curr is not end:
+            yield curr[0]
+            curr = curr[1]
 
+    def peek(self, last=True):
+        if not self:
+            raise KeyError('set is empty')
+        key = self.end[1][0] if last else self.end[2][0]
+        return key
+
+    def pop(self, last=True):
+        key = self.peek(last)
+        self.discard(key)
+        return key
+
+    def __repr__(self):
+        if not self:
+            return '%s()' % (self.__class__.__name__,)
+        return '%s(%r)' % (self.__class__.__name__, list(self))
+
+    def __eq__(self, other):
+        if isinstance(other, OrderedSet):
+            return len(self) == len(other) and list(self) == list(other)
+        return set(self) == set(other)
 
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
@@ -599,7 +633,7 @@ class SimpleTaskState(object):
         for task in self.get_active_tasks():
             if remove_stakeholders:
                 task.stakeholders.difference_update(workers)
-            task.workers.difference_update(workers)
+            task.workers -= workers
 
     def disable_workers(self, worker_ids):
         self._remove_workers_from_tasks(worker_ids, remove_stakeholders=False)
@@ -885,7 +919,7 @@ class Scheduler(object):
             elif task.status == PENDING:
                 num_pending += 1
                 num_unique_pending += int(len(task.workers) == 1)
-                num_pending_last_scheduled += int(task.workers[-1] == worker_id)
+                num_pending_last_scheduled += int(task.workers.peek(last=True) == worker_id)
         return {
             'n_pending_tasks': num_pending,
             'n_unique_pending': num_unique_pending,
