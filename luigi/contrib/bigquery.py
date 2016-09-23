@@ -96,6 +96,9 @@ class BQTable(collections.namedtuple('BQTable', 'project_id dataset_id table_id'
         return "bq://" + self.project_id + "/" + \
                self.dataset.dataset_id + "/" + self.table_id
 
+    def __str__(self):
+        return "%s:%s.%s" % (self.project_id, self.dataset_id, self.table_id)
+
 
 class BigqueryClient(object):
     """A client for Google BigQuery.
