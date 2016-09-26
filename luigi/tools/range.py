@@ -428,7 +428,7 @@ class RangeByMinutesBase(RangeBase):
 
     minutes_interval = luigi.IntParameter(
         default=1,
-        description="separation between events in minutes"
+        description="separation between events in minutes. It must evenly divide 60"
     )
 
     def datetime_to_parameter(self, dt):
@@ -460,6 +460,11 @@ class RangeByMinutesBase(RangeBase):
         """
         Simply returns the points in time that correspond to a whole number of minutes intervals.
         """
+        # Validate that the minutes_interval can divide 60 and it is greater than 0.
+        if self.minutes_interval <= 0:
+            raise ParameterException('minutes-interval must be > 0')
+        if (60 / self.minutes_interval) * self.minutes_interval != 60:
+            raise ParameterException('minutes-interval does not evenly divide 60')
         # start of a complete interval, e.g. 20:13 and the interval is 5 -> 20:10
         start_minute = int(finite_start.minute/self.minutes_interval)*self.minutes_interval
         datehour_start = datetime(

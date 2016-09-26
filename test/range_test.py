@@ -592,6 +592,49 @@ class RangeByMinutesBaseTest(unittest.TestCase):
         self.assertEqual(self.events, expected_events)
         self.assertFalse(task.complete())
 
+    def test_negative_interval(self):
+        class SomeByMinutesTask(luigi.Task):
+            d = luigi.DateMinuteParameter()
+
+            def output(self):
+                return MockTarget(self.d.strftime('/data/2014/p/v/z/%Y_/_%m-_-%doctor/20/%HZ%MOOO'))
+
+        for task_path in task_a_paths:
+            MockTarget(task_path)
+        # this test takes a few seconds. Since stop is not defined,
+        # finite_datetimes constitute many years to consider
+        task = RangeByMinutes(now=datetime_to_epoch(datetime.datetime(2016, 4, 1)),
+                              of=SomeByMinutesTask,
+                              start=datetime.datetime(2014, 3, 20, 17),
+                              minutes_interval=-1)
+        try:
+            task.requires()
+        except luigi.parameter.ParameterException:
+            return
+        self.fail("Expected a parameter exception")
+
+    def test_non_dividing_interval(self):
+        class SomeByMinutesTask(luigi.Task):
+            d = luigi.DateMinuteParameter()
+
+            def output(self):
+                return MockTarget(self.d.strftime('/data/2014/p/v/z/%Y_/_%m-_-%doctor/20/%HZ%MOOO'))
+
+        for task_path in task_a_paths:
+            MockTarget(task_path)
+        # this test takes a few seconds. Since stop is not defined,
+        # finite_datetimes constitute many years to consider
+        task = RangeByMinutes(now=datetime_to_epoch(datetime.datetime(2016, 4, 1)),
+                              of=SomeByMinutesTask,
+                              start=datetime.datetime(2014, 3, 20, 17),
+                              minutes_interval=8)
+        try:
+            task.requires()
+        except luigi.parameter.ParameterException:
+            return
+        self.fail("Expected a parameter exception")
+
+
     def test_start_and_minutes_period(self):
         self._nonempty_subcase(
             {
