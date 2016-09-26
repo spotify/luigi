@@ -34,9 +34,6 @@ See :ref:`TaskHistory` for information about how to turn out the task history fe
 # Copyright 2015 Naver Corp.
 # Author Yeseul Park (yeseul.park@navercorp.com)
 #
-from future.standard_library import install_aliases
-install_aliases()
-
 import datetime
 import logging
 from contextlib import contextmanager
@@ -47,7 +44,10 @@ from luigi import configuration
 from luigi import task_history
 from luigi.task_status import DONE, FAILED, PENDING, RUNNING
 
-from urllib.parse import urlparse, parse_qs
+try:
+    from urllib.parse import urlparse, parse_qs
+except ImportError:
+    from urlparse import urlparse, parse_qs
 
 import sqlalchemy
 import sqlalchemy.ext.declarative
