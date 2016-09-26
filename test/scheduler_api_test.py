@@ -836,6 +836,107 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='D', status=FAILED, deps=['A'])
         self._test_prune_done_tasks([])
 
+    def test_count_pending(self):
+        for num_tasks in range(1, 20):
+            self.sch.add_task(worker=WORKER, task_id=str(num_tasks), status=PENDING)
+            expected = {
+                'n_pending_tasks': num_tasks,
+                'n_unique_pending': num_tasks,
+                'n_pending_last_scheduled': num_tasks,
+                'running_tasks': [],
+                'worker_state': 'active',
+            }
+            self.assertEqual(expected, self.sch.count_pending(WORKER))
+
+    def test_count_pending_missing_worker(self):
+        self.sch.add_task(worker=WORKER, task_id='A', status=PENDING)
+        expected = {
+            'n_pending_tasks': 0,
+            'n_unique_pending': 0,
+            'n_pending_last_scheduled': 0,
+            'running_tasks': [],
+            'worker_state': 'active',
+        }
+        self.assertEqual(expected, self.sch.count_pending('other_worker'))
+
+    def test_count_pending_uniques(self):
+        self.sch.add_task(worker=WORKER, task_id='A', status=PENDING)
+        self.sch.add_task(worker=WORKER, task_id='B', status=PENDING)
+        self.sch.add_task(worker=WORKER, task_id='C', status=PENDING)
+
+        self.sch.add_task(worker='other_worker', task_id='A', status=PENDING)
+
+        expected = {
+            'n_pending_tasks': 3,
+            'n_unique_pending': 2,
+            'n_pending_last_scheduled': 2,
+            'running_tasks': [],
+            'worker_state': 'active',
+        }
+        self.assertEqual(expected, self.sch.count_pending(WORKER))
+
+    def test_count_pending_last_scheduled(self):
+        self.sch.add_task(worker=WORKER, task_id='A', status=PENDING)
+        self.sch.add_task(worker=WORKER, task_id='B', status=PENDING)
+        self.sch.add_task(worker=WORKER, task_id='C', status=PENDING)
+
+        self.sch.add_task(worker='other_worker', task_id='A', status=PENDING)
+        self.sch.add_task(worker='other_worker', task_id='B', status=PENDING)
+        self.sch.add_task(worker='other_worker', task_id='C', status=PENDING)
+
+        expected = {
+            'n_pending_tasks': 3,
+            'n_unique_pending': 0,
+            'n_pending_last_scheduled': 0,
+            'running_tasks': [],
+            'worker_state': 'active',
+        }
+        self.assertEqual(expected, self.sch.count_pending(WORKER))
+
+        expected_other_worker = {
+            'n_pending_tasks': 3,
+            'n_unique_pending': 0,
+            'n_pending_last_scheduled': 3,
+            'running_tasks': [],
+            'worker_state': 'active',
+        }
+        self.assertEqual(expected_other_worker, self.sch.count_pending('other_worker'))
+
+    def test_count_pending_disabled_worker(self):
+        self.sch.add_task(worker=WORKER,  task_id='A', status=PENDING)
+
+        expected_active_state = {
+            'n_pending_tasks': 1,
+            'n_unique_pending': 1,
+            'n_pending_last_scheduled': 1,
+            'running_tasks': [],
+            'worker_state': 'active',
+        }
+        self.assertEqual(expected_active_state, self.sch.count_pending(worker=WORKER))
+
+        expected_disabled_state = {
+            'n_pending_tasks': 0,
+            'n_unique_pending': 0,
+            'n_pending_last_scheduled': 0,
+            'running_tasks': [],
+            'worker_state': 'disabled',
+        }
+        self.sch.disable_worker(worker=WORKER)
+        self.assertEqual(expected_disabled_state, self.sch.count_pending(worker=WORKER))
+
+    def test_count_pending_running_tasks(self):
+        self.sch.add_task(worker=WORKER,  task_id='A', status=PENDING)
+        self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
+
+        expected_active_state = {
+            'n_pending_tasks': 0,
+            'n_unique_pending': 0,
+            'n_pending_last_scheduled': 0,
+            'running_tasks': [{'task_id': 'A', 'worker': 'myworker'}],
+            'worker_state': 'active',
+        }
+        self.assertEqual(expected_active_state, self.sch.count_pending(worker=WORKER))
+
     def test_scheduler_resources_none_allow_one(self):
         self.sch.add_task(worker='X', task_id='A', resources={'R1': 1})
         self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')

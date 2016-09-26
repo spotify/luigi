@@ -809,6 +809,72 @@ class WorkerTest(LuigiTestCase):
         self.assertTrue(all(self.sch.fetch_error(task_id)['error'] for task_id in failed_ids))
 
 
+class WorkerKeepAliveTests(LuigiTestCase):
+    def setUp(self):
+        self.sch = Scheduler()
+        super(WorkerKeepAliveTests, self).setUp()
+
+    def _worker_keep_alive_test(self, first_should_live, second_should_live, **worker_args):
+        worker_args.update({
+            'scheduler': self.sch,
+            'worker_processes': 0,
+            'wait_interval': 0.01,
+            'wait_jitter': 0.0,
+        })
+        w1 = Worker(worker_id='w1', **worker_args)
+        w2 = Worker(worker_id='w2', **worker_args)
+        with w1 as worker1, w2 as worker2:
+            worker1.add(DummyTask())
+            t1 = threading.Thread(target=worker1.run)
+            t1.start()
+
+            worker2.add(DummyTask())
+            t2 = threading.Thread(target=worker2.run)
+            t2.start()
+
+            # allow workers to run their get work loops a few times
+            time.sleep(0.1)
+
+            try:
+                self.assertEqual(first_should_live, t1.isAlive())
+                self.assertEqual(second_should_live, t2.isAlive())
+
+            finally:
+                # mark the task done so the worker threads will die
+                self.sch.add_task(worker='DummyWorker', task_id=DummyTask().task_id, status='DONE')
+                t1.join()
+                t2.join()
+
+    def test_no_keep_alive(self):
+        self._worker_keep_alive_test(
+            first_should_live=False,
+            second_should_live=False,
+        )
+
+    def test_keep_alive(self):
+        self._worker_keep_alive_test(
+            first_should_live=True,
+            second_should_live=True,
+            keep_alive=True,
+        )
+
+    def test_keep_alive_count_uniques(self):
+        self._worker_keep_alive_test(
+            first_should_live=False,
+            second_should_live=False,
+            keep_alive=True,
+            count_uniques=True,
+        )
+
+    def test_keep_alive_count_last_scheduled(self):
+        self._worker_keep_alive_test(
+            first_should_live=False,
+            second_should_live=True,
+            keep_alive=True,
+            count_last_scheduled=True,
+        )
+
+
 class WorkerInterruptedTest(unittest.TestCase):
     def setUp(self):
         self.sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)

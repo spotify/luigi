@@ -94,6 +94,16 @@ class TaskException(Exception):
     pass
 
 
+GetWorkResponse = collections.namedtuple('GetWorkResponse', (
+    'task_id',
+    'running_tasks',
+    'n_pending_tasks',
+    'n_unique_pending',
+    'n_pending_last_scheduled',
+    'worker_state',
+))
+
+
 class TaskProcess(multiprocessing.Process):
 
     """ Wrap all task execution in this class.
@@ -310,6 +320,10 @@ class worker(Config):
                                   description='worker-count-uniques means that we will keep a '
                                   'worker alive only if it has a unique pending task, as '
                                   'well as having keep-alive true')
+    count_last_scheduled = BoolParameter(default=False,
+                                         description='Keep a worker alive only if there are '
+                                                     'pending tasks which it was the last to '
+                                                     'schedule.')
     wait_interval = FloatParameter(default=1.0,
                                    config_path=dict(section='core', name='worker-wait-interval'))
     wait_jitter = FloatParameter(default=5.0)
@@ -709,19 +723,27 @@ class Worker(object):
         self._worker_info.append(('first_task', self._first_task))
         self._scheduler.add_worker(self._id, self._worker_info)
 
-    def _log_remote_tasks(self, running_tasks, n_pending_tasks, n_unique_pending):
+    def _log_remote_tasks(self, get_work_response):
         logger.debug("Done")
         logger.debug("There are no more tasks to run at this time")
-        if running_tasks:
-            for r in running_tasks:
+        if get_work_response.running_tasks:
+            for r in get_work_response.running_tasks:
                 logger.debug('%s is currently run by worker %s', r['task_id'], r['worker'])
-        elif n_pending_tasks:
-            logger.debug("There are %s pending tasks possibly being run by other workers", n_pending_tasks)
-            if n_unique_pending:
-                logger.debug("There are %i pending tasks unique to this worker", n_unique_pending)
+        elif get_work_response.n_pending_tasks:
+            logger.debug(
+                "There are %s pending tasks possibly being run by other workers",
+                get_work_response.n_pending_tasks)
+            if get_work_response.n_unique_pending:
+                logger.debug(
+                    "There are %i pending tasks unique to this worker",
+                    get_work_response.n_unique_pending)
+            if get_work_response.n_pending_last_scheduled:
+                logger.debug(
+                    "There are %i pending tasks last scheduled by this worker",
+                    get_work_response.n_pending_last_scheduled)
 
     def _get_work_task_id(self, get_work_response):
-        if get_work_response['task_id'] is not None:
+        if get_work_response.get('task_id') is not None:
             return get_work_response['task_id']
         elif 'batch_id' in get_work_response:
             try:
@@ -745,23 +767,26 @@ class Worker(object):
                 batch_id=get_work_response['batch_id'],
             )
             return task.task_id
+        else:
+            return None
 
     def _get_work(self):
         if self._stop_requesting_work:
-            return None, 0, 0, 0, WORKER_STATE_DISABLED
-        logger.debug("Asking scheduler for work...")
-        r = self._scheduler.get_work(
-            worker=self._id,
-            host=self.host,
-            assistant=self._assistant,
-            current_tasks=list(self._running_tasks.keys()),
-        )
-        n_pending_tasks = r['n_pending_tasks']
+            return GetWorkResponse(None, 0, 0, 0, 0, WORKER_STATE_DISABLED)
+
+        if self.worker_processes > 0:
+            logger.debug("Asking scheduler for work...")
+            r = self._scheduler.get_work(
+                worker=self._id,
+                host=self.host,
+                assistant=self._assistant,
+                current_tasks=list(self._running_tasks.keys()),
+            )
+        else:
+            logger.debug("Checking if tasks are still pending")
+            r = self._scheduler.count_pending(worker=self._id)
+
         running_tasks = r['running_tasks']
-        n_unique_pending = r['n_unique_pending']
-        # TODO: For a tiny amount of time (a month?) we'll keep forwards compatibility
-        # That is you can user a newer client than server (Sep 2016)
-        worker_state = r.get('worker_state', WORKER_STATE_ACTIVE)  # state according to server!
         task_id = self._get_work_task_id(r)
 
         self._get_work_response_history.append({
@@ -788,7 +813,17 @@ class Worker(object):
                 self._scheduled_tasks.get(batch_id) for batch_id in r['batch_task_ids']])
             self._batch_running_tasks[task_id] = batch_tasks
 
-        return task_id, running_tasks, n_pending_tasks, n_unique_pending, worker_state
+        return GetWorkResponse(
+            task_id=task_id,
+            running_tasks=running_tasks,
+            n_pending_tasks=r['n_pending_tasks'],
+            n_unique_pending=r['n_unique_pending'],
+
+            # TODO: For a tiny amount of time (a month?) we'll keep forwards compatibility
+            #  That is you can user a newer client than server (Sep 2016)
+            n_pending_last_scheduled=r.get('n_pending_last_scheduled', 0),
+            worker_state=r.get('worker_state', WORKER_STATE_ACTIVE),
+        )
 
     def _run_task(self, task_id):
         task = self._scheduled_tasks[task_id]
@@ -919,7 +954,7 @@ class Worker(object):
             time.sleep(wait_interval)
             yield
 
-    def _keep_alive(self, n_pending_tasks, n_unique_pending):
+    def _keep_alive(self, get_work_response):
         """
         Returns true if a worker should stay alive given.
 
@@ -934,8 +969,12 @@ class Worker(object):
             return False
         elif self._assistant:
             return True
+        elif self._config.count_last_scheduled:
+            return get_work_response.n_pending_last_scheduled > 0
+        elif self._config.count_uniques:
+            return get_work_response.n_unique_pending > 0
         else:
-            return n_pending_tasks and (n_unique_pending or not self._config.count_uniques)
+            return get_work_response.n_pending_tasks > 0
 
     def handle_interrupt(self, signum, _):
         """
@@ -964,20 +1003,20 @@ class Worker(object):
         self._add_worker()
 
         while True:
-            while len(self._running_tasks) >= self.worker_processes:
+            while len(self._running_tasks) >= self.worker_processes > 0:
                 logger.debug('%d running tasks, waiting for next task to finish', len(self._running_tasks))
                 self._handle_next_task()
 
-            task_id, running_tasks, n_pending_tasks, n_unique_pending, worker_state = self._get_work()
+            get_work_response = self._get_work()
 
-            if worker_state == WORKER_STATE_DISABLED:
+            if get_work_response.worker_state == WORKER_STATE_DISABLED:
                 self._start_phasing_out()
 
-            if task_id is None:
+            if get_work_response.task_id is None:
                 if not self._stop_requesting_work:
-                    self._log_remote_tasks(running_tasks, n_pending_tasks, n_unique_pending)
+                    self._log_remote_tasks(get_work_response)
                 if len(self._running_tasks) == 0:
-                    if self._keep_alive(n_pending_tasks, n_unique_pending):
+                    if self._keep_alive(get_work_response):
                         six.next(sleeper)
                         continue
                     else:
@@ -987,8 +1026,8 @@ class Worker(object):
                     continue
 
             # task_id is not None:
-            logger.debug("Pending tasks: %s", n_pending_tasks)
-            self._run_task(task_id)
+            logger.debug("Pending tasks: %s", get_work_response.n_pending_tasks)
+            self._run_task(get_work_response.task_id)
 
         while len(self._running_tasks):
             logger.debug('Shut down Worker, %d more tasks to go', len(self._running_tasks))
