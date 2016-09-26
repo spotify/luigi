@@ -427,7 +427,7 @@ class RangeByMinutesBase(RangeBase):
                     "in minutes from current time. Prevents infinite loop when stop is none")
 
     minutes_interval = luigi.IntParameter(
-        default=5,
+        default=1,
         description="separation between events in minutes"
     )
 
