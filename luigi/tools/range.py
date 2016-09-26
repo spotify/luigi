@@ -402,6 +402,89 @@ class RangeHourlyBase(RangeBase):
         return luigi.DateHourParameter().serialize(dt)
 
 
+class RangeByMinutesBase(RangeBase):
+    """
+    Produces a contiguous completed range of an recurring tasks separated a specified number of minutes.
+    """
+    start = luigi.DateMinuteParameter(
+        default=None,
+        description="beginning date-hour-minute, inclusive. Default: None - work backward forever (requires reverse=True)")
+    stop = luigi.DateMinuteParameter(
+        default=None,
+        description="ending date-hour-minute, exclusive. Default: None - work forward forever")
+    minutes_back = luigi.IntParameter(
+        default=60*24,  # one day
+        description=("extent to which contiguousness is to be assured into "
+                     "past, in minutes from current time. Prevents infinite "
+                     "loop when start is none. If the dataset has limited "
+                     "retention (i.e. old outputs get removed), this should "
+                     "be set shorter to that, too, to prevent the oldest "
+                     "outputs flapping. Increase freely if you intend to "
+                     "process old dates - worker's memory is the limit"))
+    minutes_forward = luigi.IntParameter(
+        default=0,
+        description="extent to which contiguousness is to be assured into future, "
+                    "in minutes from current time. Prevents infinite loop when stop is none")
+
+    minutes_interval = luigi.IntParameter(
+        default=1,
+        description="separation between events in minutes. It must evenly divide 60"
+    )
+
+    def datetime_to_parameter(self, dt):
+        return dt
+
+    def parameter_to_datetime(self, p):
+        return p
+
+    def datetime_to_parameters(self, dt):
+        """
+        Given a date-time, will produce a dictionary of of-params combined with the ranged task parameter
+        """
+        return self._task_parameters(dt)
+
+    def parameters_to_datetime(self, p):
+        """
+        Given a dictionary of parameters, will extract the ranged task parameter value
+        """
+        dt = p[self._param_name]
+        return datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute)
+
+    def moving_start(self, now):
+        return now - timedelta(minutes=self.minutes_back)
+
+    def moving_stop(self, now):
+        return now + timedelta(minutes=self.minutes_forward)
+
+    def finite_datetimes(self, finite_start, finite_stop):
+        """
+        Simply returns the points in time that correspond to a whole number of minutes intervals.
+        """
+        # Validate that the minutes_interval can divide 60 and it is greater than 0 and lesser than 60
+        if not (0 < self.minutes_interval < 60):
+            raise ParameterException('minutes-interval must be within 0..60')
+        if (60 / self.minutes_interval) * self.minutes_interval != 60:
+            raise ParameterException('minutes-interval does not evenly divide 60')
+        # start of a complete interval, e.g. 20:13 and the interval is 5 -> 20:10
+        start_minute = int(finite_start.minute/self.minutes_interval)*self.minutes_interval
+        datehour_start = datetime(
+            year=finite_start.year,
+            month=finite_start.month,
+            day=finite_start.day,
+            hour=finite_start.hour,
+            minute=start_minute)
+        datehours = []
+        for i in itertools.count():
+            t = datehour_start + timedelta(minutes=i*self.minutes_interval)
+            if t >= finite_stop:
+                return datehours
+            if t >= finite_start:
+                datehours.append(t)
+
+    def _format_datetime(self, dt):
+        return luigi.DateMinuteParameter().serialize(dt)
+
+
 def _constrain_glob(glob, paths, limit=5):
     """
     Tweaks glob into a list of more specific globs that together still cover paths and not too much extra.
@@ -613,3 +696,31 @@ class RangeHourly(RangeHourlyBase):
                 finite_datetimes,
                 lambda d: self._instantiate_task_cls(self.datetime_to_parameter(d)),
                 lambda d: d.strftime('(%Y).*(%m).*(%d).*(%H)'))
+
+
+class RangeByMinutes(RangeByMinutesBase):
+    """Efficiently produces a contiguous completed range of an recurring
+    task every interval minutes that takes a single DateMinuteParameter.
+
+    Benefits from bulk_complete information to efficiently cover gaps.
+
+    Falls back to infer it from output filesystem listing to facilitate the
+    common case usage.
+
+    Convenient to use even from command line, like:
+
+    .. code-block:: console
+
+        luigi --module your.module RangeByMinutes --of YourActualTask --start 2014-01-01T0123
+    """
+
+    def missing_datetimes(self, finite_datetimes):
+        try:
+            cls_with_params = functools.partial(self.of, **self.of_params)
+            complete_parameters = self.of.bulk_complete.__func__(cls_with_params, map(self.datetime_to_parameter, finite_datetimes))
+            return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
+        except NotImplementedError:
+            return infer_bulk_complete_from_fs(
+                finite_datetimes,
+                lambda d: self._instantiate_task_cls(self.datetime_to_parameter(d)),
+                lambda d: d.strftime('(%Y).*(%m).*(%d).*(%H).*(%M)'))
