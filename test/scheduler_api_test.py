@@ -413,6 +413,26 @@ class SchedulerApiTest(unittest.TestCase):
             self.sch.add_task(
                 worker=WORKER, task_id=task_id, task_family='A', params=params, batch_id=batch_id,
                 status='RUNNING')
+            return batch_id, task_id, params
+
+    def test_set_batch_runner_retry(self):
+        batch_id, task_id, params = self._start_simple_batch()
+        self.sch.add_task(
+            worker=WORKER, task_id=task_id, task_family='A', params=params, batch_id=batch_id,
+            status='RUNNING'
+        )
+        self.assertEqual({task_id}, set(self.sch.task_list('RUNNING', '').keys()))
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(BATCH_RUNNING, '').keys()))
+
+    def test_set_batch_runner_multiple_retries(self):
+        batch_id, task_id, params = self._start_simple_batch()
+        for _ in range(3):
+            self.sch.add_task(
+                worker=WORKER, task_id=task_id, task_family='A', params=params, batch_id=batch_id,
+                status='RUNNING'
+            )
+        self.assertEqual({task_id}, set(self.sch.task_list('RUNNING', '').keys()))
+        self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(BATCH_RUNNING, '').keys()))
 
     def test_batch_fail(self):
         self._start_simple_batch()
