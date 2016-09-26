@@ -528,7 +528,8 @@ class RangeByMinutesBaseTest(unittest.TestCase):
 
     def test_consistent_formatting(self):
         task = RangeByMinutesBase(of=CommonDateMinuteTask,
-                                  start=datetime.datetime(2016, 1, 1, 13))
+                                  start=datetime.datetime(2016, 1, 1, 13),
+                                  minutes_interval=5)
         self.assertEqual(task._format_range(
             [datetime.datetime(2016, 1, 2, 13, 10), datetime.datetime(2016, 2, 29, 23, 20)]),
             '[2016-01-02T1310, 2016-02-29T2320]')
@@ -558,6 +559,7 @@ class RangeByMinutesBaseTest(unittest.TestCase):
                 'start': datetime.datetime(2014, 3, 20, 17, 10),
                 'minutes_back': 4,
                 'minutes_forward': 20,
+                'minutes_interval': 5,
             },
             {
                 'event.tools.range.delay': [
@@ -629,6 +631,7 @@ class RangeByMinutesBaseTest(unittest.TestCase):
                 'start': datetime.datetime(1960, 1, 1, 0, 0, 0),
                 'minutes_back': 5,
                 'minutes_forward': 20,
+                'minutes_interval': 5,
             },
             (datetime.datetime(2000, 1, 1, 0, 0), datetime.datetime(2000, 1, 1, 0, 20, 0)),
             [
@@ -658,6 +661,7 @@ class RangeByMinutesBaseTest(unittest.TestCase):
                 'start': datetime.datetime(2014, 3, 20, 17, 10),
                 'task_limit': 4,
                 'minutes_back': 365 * 24 * 60,
+                'minutes_interval': 5,
             },
             (datetime.datetime(2014, 3, 20, 17, 10, 0), datetime.datetime(2014, 3, 20, 18, 0, 0)),
             [
@@ -687,6 +691,7 @@ class RangeByMinutesBaseTest(unittest.TestCase):
                 'task_limit': 4,
                 'minutes_back': 365 * 24 * 60,
                 'minutes_forward': 365 * 24 * 60,
+                'minutes_interval': 5,
             },
             (datetime.datetime(2016, 3, 22, 20, 5), datetime.datetime(2018, 3, 22, 20, 0)),
             [
@@ -1002,7 +1007,8 @@ class RangeByMinutesTest(unittest.TestCase):
                               of=SomeByMinutesTask,
                               start=datetime.datetime(2014, 3, 20, 17),
                               task_limit=3,
-                              minutes_back=24 * 60)
+                              minutes_back=24 * 60,
+                              minutes_interval=5)
         actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected_tasks)
 
@@ -1020,7 +1026,8 @@ class RangeByMinutesTest(unittest.TestCase):
             of=CommonWrapperTaskMinutes,
             start=datetime.datetime(2014, 3, 20, 23, 0, 0),
             stop=datetime.datetime(2014, 3, 20, 23, 20, 0),
-            minutes_back=30 * 365 * 24 * 60)
+            minutes_back=30 * 365 * 24 * 60,
+            minutes_interval=5)
         actual = [str(t) for t in task.requires()]
         self.assertEqual(actual, expected_wrapper)
 
@@ -1038,7 +1045,8 @@ class RangeByMinutesTest(unittest.TestCase):
         task = RangeByMinutes(now=datetime_to_epoch(datetime.datetime(2015, 12, 1)),
                               of=BulkCompleteByMinutesTask,
                               start=datetime.datetime(2015, 11, 1),
-                              stop=datetime.datetime(2015, 12, 1))
+                              stop=datetime.datetime(2015, 12, 1),
+                              minutes_interval=5)
 
         expected = [
             'BulkCompleteByMinutesTask(dh=2015-11-30T2350)',
@@ -1067,7 +1075,8 @@ class RangeByMinutesTest(unittest.TestCase):
                               of=BulkCompleteByMinutesTask,
                               of_params=dict(arbitrary_argument=True),
                               start=datetime.datetime(2015, 11, 1),
-                              stop=datetime.datetime(2015, 12, 1))
+                              stop=datetime.datetime(2015, 12, 1),
+                              minutes_interval=5)
 
         expected = [
             'BulkCompleteByMinutesTask(dh=2015-11-30T2350, arbitrary_argument=True)',
@@ -1084,7 +1093,8 @@ class RangeByMinutesTest(unittest.TestCase):
                            datetime.datetime(2014, 3, 21, 0, 0)),
                            of=TaskMinutesC,
                            start=datetime.datetime(2014, 3, 20, 23, 11),
-                           stop=datetime.datetime(2014, 3, 20, 23, 21))
+                           stop=datetime.datetime(2014, 3, 20, 23, 21),
+                           minutes_interval=5)
         self.assertFalse(task.complete())
         expected = [
             'TaskMinutesC(dm=2014-03-20T2315)',
