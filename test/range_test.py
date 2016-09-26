@@ -634,7 +634,6 @@ class RangeByMinutesBaseTest(unittest.TestCase):
             return
         self.fail("Expected a parameter exception")
 
-
     def test_start_and_minutes_period(self):
         self._nonempty_subcase(
             {
