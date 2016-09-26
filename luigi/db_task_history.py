@@ -34,6 +34,8 @@ See :ref:`TaskHistory` for information about how to turn out the task history fe
 # Copyright 2015 Naver Corp.
 # Author Yeseul Park (yeseul.park@navercorp.com)
 #
+from future.standard_library import install_aliases
+install_aliases()
 
 import datetime
 import logging
@@ -44,6 +46,8 @@ from luigi import six
 from luigi import configuration
 from luigi import task_history
 from luigi.task_status import DONE, FAILED, PENDING, RUNNING
+
+from urllib.parse import urlparse, parse_qs
 
 import sqlalchemy
 import sqlalchemy.ext.declarative
@@ -79,12 +83,20 @@ class DbTaskHistory(task_history.TaskHistory):
     def __init__(self):
         config = configuration.get_config()
         connection_string = config.get('task_history', 'db_connection')
-        self.engine = sqlalchemy.create_engine(connection_string)
+        connection_options = self._get_connection_options(connection_string)
+
+        self.engine = sqlalchemy.create_engine(connection_string, **connection_options)
         self.session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
         self.tasks = {}  # task_id -> TaskRecord
 
         _upgrade_schema(self.engine)
+
+    def _get_connection_options(self, connection_string):
+        o = urlparse(connection_string)
+        q = parse_qs(o.query)
+        # `parse_qs` produces `{k: [v]}`, lets `{k: v}``
+        return {k: q[k][0] for k in q}
 
     def task_scheduled(self, task):
         htask = self._get_task(task, status=PENDING)

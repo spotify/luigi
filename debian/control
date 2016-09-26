@@ -13,6 +13,7 @@ Build-Depends:	debhelper (>= 7),
 		python-daemon,
 		openssh-client,
 		python-sqlalchemy,
+		python-future,
 		python-unittest2,
 		snakebite
 Standards-Version: 3.7.3
@@ -25,6 +26,7 @@ Depends: ${shlibs:Depends},
 	 ${python:Depends},
 	 python-pyparsing,
 	 python-sqlalchemy,
+	 python-future,
 	 python-mechanize
 Description: Workflow mgmgt + task scheduling + dependency resolution
 
@@ -36,5 +38,6 @@ Depends:	${shlibs:Depends},
 		python-daemon,
 		python-pyparsing,
 		python-sqlalchemy,
+		python-future,
 		python-tornado (>= 2.3)
 Description: Luigi central planner server
