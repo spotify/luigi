@@ -532,7 +532,7 @@ class SimpleTaskState(object):
             elif task.scheduler_disable_time is not None and new_status != DISABLED:
                 return
 
-        if task.status == RUNNING and task.batch_id is not None:
+        if task.status == RUNNING and task.batch_id is not None and new_status != RUNNING:
             for batch_task in self.get_batch_running_tasks(task.batch_id):
                 self.set_status(batch_task, new_status, config)
                 batch_task.batch_id = None
