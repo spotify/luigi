@@ -98,6 +98,17 @@ class ServerTest(ServerTestBase):
     def test_api_404(self):
         self._test_404('/api/foo')
 
+    def test_api_cors_headers(self):
+        response = self.fetch('/api/graph')
+        headers = dict(response.headers)
+
+        def _set(name):
+            return set(headers[name].replace(" ", "").split(","))
+
+        self.assertSetEqual(_set("Access-Control-Allow-Headers"), {"Content-Type", "Accept", "Authorization", "Origin"})
+        self.assertSetEqual(_set("Access-Control-Allow-Methods"), {"GET", "OPTIONS"})
+        self.assertEqual(headers["Access-Control-Allow-Origin"], "*")
+
 
 class _ServerTest(unittest.TestCase):
     """
