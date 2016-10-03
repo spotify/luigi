@@ -140,19 +140,19 @@ class sendgrid(luigi.Config):
 
 
 def generate_email(sender, subject, message, recipients, image_png):
-    import email.mime.multipart
-    import email.mime.text
-    import email.mime.image
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.mime.image import MIMEImage
 
-    msg_root = email.mime.multipart.MIMEMultipart('related')
+    msg_root = MIMEMultipart('related')
 
-    msg_text = email.mime.text.MIMEText(message, email().format)
+    msg_text = MIMEText(message, email().format)
     msg_text.set_charset('utf-8')
     msg_root.attach(msg_text)
 
     if image_png:
         with open(image_png, 'rb') as fp:
-            msg_image = email.mime.image.MIMEImage(fp.read(), 'png')
+            msg_image = MIMEImage(fp.read(), 'png')
         msg_root.attach(msg_image)
 
     msg_root['Subject'] = subject
