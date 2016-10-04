@@ -22,7 +22,6 @@ import socket
 
 from helpers import with_config
 from luigi import notifications
-from luigi import configuration
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
 from luigi import six
@@ -289,8 +288,6 @@ class TestSMTPEmail(unittest.TestCase, NotificationFixture):
                 SMTP.assert_called_once_with(**smtp_kws)
                 self.assertEqual(notifications.generate_email.called, False)
                 self.assertEqual(SMTP.sendemail.called, False)
-
-
 
 
 class TestSendgridEmail(unittest.TestCase, NotificationFixture):
