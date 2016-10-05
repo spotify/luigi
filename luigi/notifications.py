@@ -19,14 +19,12 @@
 
 This needs some more documentation.
 See :doc:`/configuration` for configuration options.
-In particular using the config `error-email` should set up Luigi so that it will send emails when tasks fail.
+In particular using the config `receiver` should set up Luigi so that it will send emails when tasks fail.
 
 .. code-block:: ini
 
-    [core]
-    error-email=foo@bar.baz
-
-TODO: Eventually, all email configuration should move into the [email] section.
+    [email]
+    receiver=foo@bar.baz
 '''
 
 import logging
