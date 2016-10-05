@@ -22,7 +22,6 @@ import socket
 
 from helpers import with_config
 from luigi import notifications
-from luigi import configuration
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
 from luigi import six
@@ -215,8 +214,7 @@ class TestSMTPEmail(unittest.TestCase, NotificationFixture):
                 generate_email.return_value\
                     .as_string.return_value = self.mocked_email_msg
 
-                notifications.send_email_smtp(configuration.get_config(),
-                                              *self.notification_args)
+                notifications.send_email_smtp(*self.notification_args)
 
                 SMTP.assert_called_once_with(**smtp_kws)
                 SMTP.return_value.login.assert_called_once_with("Robin", "dooH")
@@ -249,8 +247,7 @@ class TestSMTPEmail(unittest.TestCase, NotificationFixture):
                 generate_email.return_value \
                     .as_string.return_value = self.mocked_email_msg
 
-                notifications.send_email_smtp(configuration.get_config(),
-                                              *self.notification_args)
+                notifications.send_email_smtp(*self.notification_args)
 
                 SMTP.assert_called_once_with(**smtp_kws)
                 self.assertEqual(SMTP.return_value.starttls.called, False)
@@ -284,8 +281,7 @@ class TestSMTPEmail(unittest.TestCase, NotificationFixture):
                     .as_string.return_value = self.mocked_email_msg
 
                 try:
-                    notifications.send_email_smtp(configuration.get_config(),
-                                                  *self.notification_args)
+                    notifications.send_email_smtp(*self.notification_args)
                 except socket.error:
                     self.fail("send_email_smtp() raised expection unexpectedly")
 
@@ -315,8 +311,7 @@ class TestSendgridEmail(unittest.TestCase, NotificationFixture):
         """
 
         with mock.patch('sendgrid.SendGridClient') as SendgridClient:
-            notifications.send_email_sendgrid(configuration.get_config(),
-                                              *self.notification_args)
+            notifications.send_email_sendgrid(*self.notification_args)
 
             SendgridClient.assert_called_once_with("Nikola", "jahuS", raise_errors=True)
             self.assertTrue(SendgridClient.return_value.send.called)
@@ -346,8 +341,7 @@ class TestSESEmail(unittest.TestCase, NotificationFixture):
                 generate_email.return_value\
                     .as_string.return_value = self.mocked_email_msg
 
-                notifications.send_email_ses(configuration.get_config(),
-                                             *self.notification_args)
+                notifications.send_email_ses(*self.notification_args)
 
                 SES = boto_client.return_value
                 SES.send_raw_email.assert_called_once_with(
@@ -376,8 +370,7 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
         """
 
         with mock.patch('boto3.resource') as res:
-            notifications.send_email_sns(configuration.get_config(),
-                                         *self.notification_args)
+            notifications.send_email_sns(*self.notification_args)
 
             SNS = res.return_value
             SNS.Topic.assert_called_once_with(self.recipients[0])
@@ -395,8 +388,7 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
                        'mailFailure=False, mongodb=mongodb://localhost/stats) FAILED'
 
         with mock.patch('boto3.resource') as res:
-            notifications.send_email_sns(configuration.get_config(),
-                                         self.sender, long_subject, self.message,
+            notifications.send_email_sns(self.sender, long_subject, self.message,
                                          self.recipients, self.image_png)
 
             SNS = res.return_value
@@ -406,7 +398,7 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
                             "Subject can be max 100 chars long! Found {}.".format(len(called_subj)))
 
 
-class Test_Notification_Dispatcher(unittest.TestCase, NotificationFixture):
+class TestNotificationDispatcher(unittest.TestCase, NotificationFixture):
     """
     Test dispatching of notifications on configuration values.
     """
@@ -425,7 +417,7 @@ class Test_Notification_Dispatcher(unittest.TestCase, NotificationFixture):
 
             self.assertTrue(sender.called)
 
-            call_args = sender.call_args[0][1:]
+            call_args = sender.call_args[0]
 
             self.assertEqual(tuple(expected_args), call_args)
 

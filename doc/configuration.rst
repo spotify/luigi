@@ -105,34 +105,6 @@ default-scheduler-url
   non-standard URI scheme: ``http+unix``
   example: ``http+unix://%2Fvar%2Frun%2Fluigid%2Fluigid.sock/``
 
-email-prefix
-  Optional prefix to add to the subject line of all e-mails. For
-  example, setting this to "[LUIGI]" would change the subject line of an
-  e-mail from "Luigi: Framework error" to "[LUIGI] Luigi: Framework
-  error"
-
-email-sender
-  User name in from field of error e-mails.
-  Default value: luigi-client@<server_name>
-
-email-type
-  Type of e-mail to send. Valid values are "plain", "html" and "none".
-  When set to html, tracebacks are wrapped in <pre> tags to get fixed-
-  width font.
-
-  New in version 2.1.0: When set to none, no e-mails will be sent.
-
-  Default value is plain.
-
-error-email
-  Recipient of all error e-mails. If this is not set, no error e-mails
-  are sent when Luigi crashes unless the crashed job has owners set. If
-  Luigi is run from the command line, no e-mails will be sent unless
-  output is redirected to a file.
-
-  Set it to SNS Topic ARN if you want to receive notifications through
-  Amazon SNS. See also section `[email]`_.
-
 hdfs-tmp-dir
   Base directory in which to store temporary files on hdfs. Defaults to
   tempfile.gettempdir()
@@ -182,32 +154,6 @@ rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0
 
-smtp_host
-  Hostname for sending mail throug smtp. Defaults to localhost.
-
-smtp_local_hostname
-  If specified, overrides the FQDN of localhost in the HELO/EHLO
-  command.
-
-smtp_login
-  Username to log in to your smtp server, if necessary.
-
-smtp_password
-  Password to log in to your smtp server. Must be specified for
-  smtp_login to have an effect.
-
-smtp_port
-  Port number for smtp on smtp_host. Defaults to 0.
-
-smtp_ssl
-  If true, connects to smtp through SSL. Defaults to false.
-
-smtp_without_tls
-  If true, connects to smtp without TLS. Defaults to false.
-
-smtp_timeout
-  Optionally sets the number of seconds after which smtp attempts should
-  time out.
 
 .. _worker-config:
 
@@ -310,19 +256,46 @@ force-send
   If true, e-mails are sent in all run configurations (even if stdout is
   connected to a tty device).  Defaults to False.
 
-type
+format
+  Type of e-mail to send. Valid values are "plain", "html" and "none".
+  When set to html, tracebacks are wrapped in <pre> tags to get fixed-
+  width font. When set to none, no e-mails will be sent.
+
+  Default value is plain.
+
+method
   Valid values are "smtp", "sendgrid", "ses" and "sns". SES and SNS are
   services of Amazon web services. SendGrid is an email delivery service.
   The default value is "smtp".
 
-In order to send messages through Amazon SNS or SES set up your AWS config
-files or run Luigi on an EC2 instance with proper instance profile.
+  In order to send messages through Amazon SNS or SES set up your AWS
+  config files or run Luigi on an EC2 instance with proper instance
+  profile.
 
-These parameters control sending error e-mails through SendGrid.
+  In order to use sendgrid, fill in your sendgrid username and password
+  in the `[sendgrid]`_ section.
 
-SENDGRID_USERNAME
+  In order to use smtp, fill in the appropriate fields in the `[smtp]`_
+  section.
 
-SENDGRID_PASSWORD
+prefix
+  Optional prefix to add to the subject line of all e-mails. For
+  example, setting this to "[LUIGI]" would change the subject line of an
+  e-mail from "Luigi: Framework error" to "[LUIGI] Luigi: Framework
+  error"
+
+receiver
+  Recipient of all error e-mails. If this is not set, no error e-mails
+  are sent when Luigi crashes unless the crashed job has owners set. If
+  Luigi is run from the command line, no e-mails will be sent unless
+  output is redirected to a file.
+
+  Set it to SNS Topic ARN if you want to receive notifications through
+  Amazon SNS. Make sure to set method to sns in this case too.
+
+sender
+  User name in from field of error e-mails.
+  Default value: luigi-client@<server_name>
 
 
 [hadoop]
@@ -603,6 +576,51 @@ worker-disconnect-delay
   Number of seconds to wait after a worker has stopped pinging the
   scheduler before removing it and marking all of its running tasks as
   failed. Defaults to 60.
+
+
+[sendgrid]
+----------
+
+These parameters control sending error e-mails through SendGrid.
+
+password
+  Password used for sendgrid login
+
+username
+  Name of the user for the sendgrid login
+
+
+[smtp]
+------
+
+These parameters control the smtp server setup.
+
+host
+  Hostname for sending mail throug smtp. Defaults to localhost.
+
+local_hostname
+  If specified, overrides the FQDN of localhost in the HELO/EHLO
+  command.
+
+no_tls
+  If true, connects to smtp without TLS. Defaults to false.
+
+password
+  Password to log in to your smtp server. Must be specified for
+  username to have an effect.
+
+port
+  Port number for smtp on smtp_host. Defaults to 0.
+
+ssl
+  If true, connects to smtp through SSL. Defaults to false.
+
+timeout
+  Sets the number of seconds after which smtp attempts should time out.
+  Defaults to 10.
+
+username
+  Username to log in to your smtp server, if necessary.
 
 
 [spark]

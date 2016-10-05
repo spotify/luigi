@@ -19,14 +19,12 @@
 
 This needs some more documentation.
 See :doc:`/configuration` for configuration options.
-In particular using the config `error-email` should set up Luigi so that it will send emails when tasks fail.
+In particular using the config `receiver` should set up Luigi so that it will send emails when tasks fail.
 
 .. code-block:: ini
 
-    [core]
-    error-email=foo@bar.baz
-
-TODO: Eventually, all email configuration should move into the [email] section.
+    [email]
+    receiver=foo@bar.baz
 '''
 
 import logging
@@ -34,7 +32,6 @@ import socket
 import sys
 import textwrap
 
-from luigi import configuration
 import luigi.task
 import luigi.parameter
 
@@ -68,26 +65,92 @@ class TestNotificationsTask(luigi.task.Task):
         return False
 
 
-def email_type():
-    return configuration.get_config().get('core', 'email-type', 'plain')
+class email(luigi.Config):
+    force_send = luigi.parameter.BoolParameter(
+        default=False,
+        description='Send e-mail even from a tty or with DEBUG set')
+    format = luigi.parameter.ChoiceParameter(
+        default='plain',
+        config_path=dict(section='core', name='email-type'),
+        choices=('plain', 'html', 'none'),
+        description='Format type for sent e-mails')
+    method = luigi.parameter.ChoiceParameter(
+        default='smtp',
+        config_path=dict(section='email', name='type'),
+        choices=('smtp', 'sendgrid', 'ses', 'sns'),
+        description='Method for sending e-mail')
+    prefix = luigi.parameter.Parameter(
+        default=None,
+        config_path=dict(section='core', name='email-prefix'),
+        description='Prefix for subject lines of all e-mails')
+    receiver = luigi.parameter.Parameter(
+        default=None,
+        config_path=dict(section='core', name='error-email'),
+        description='Address to send error e-mails to')
+    sender = luigi.parameter.Parameter(
+        default=DEFAULT_CLIENT_EMAIL,
+        config_path=dict(section='core', name='email-sender'),
+        description='Address to send e-mails from')
+
+
+class smtp(luigi.Config):
+    host = luigi.parameter.Parameter(
+        default='localhost',
+        config_path=dict(section='core', name='smtp_host'),
+        description='Hostname of smtp server')
+    local_hostname = luigi.parameter.Parameter(
+        default=None,
+        config_path=dict(section='core', name='smtp_local_hostname'),
+        description='If specified, local_hostname is used as the FQDN of the local host in the HELO/EHLO command')
+    no_tls = luigi.parameter.BoolParameter(
+        default=False,
+        config_path=dict(section='core', name='smtp_without_tls'),
+        description='Do not use TLS in SMTP connections')
+    password = luigi.parameter.Parameter(
+        default=None,
+        config_path=dict(section='core', name='smtp_password'),
+        description='Password for the SMTP server login')
+    port = luigi.parameter.IntParameter(
+        default=0,
+        config_path=dict(section='core', name='smtp_port'),
+        description='Port number for smtp server')
+    ssl = luigi.parameter.BoolParameter(
+        default=False,
+        config_path=dict(section='core', name='smtp_ssl'),
+        description='Use SSL for the SMTP connection.')
+    timeout = luigi.parameter.FloatParameter(
+        default=10.0,
+        config_path=dict(section='core', name='smtp_timeout'),
+        description='Number of seconds before timing out the smtp connection')
+    username = luigi.parameter.Parameter(
+        default=None,
+        config_path=dict(section='core', name='smtp_login'),
+        description='Username used to log in to the SMTP host')
+
+
+class sendgrid(luigi.Config):
+    username = luigi.parameter.Parameter(
+        config_path=dict(section='email', name='SENDGRID_USERNAME'),
+        description='Username for sendgrid login')
+    password = luigi.parameter.Parameter(
+        config_path=dict(section='email', name='SENDGRID_PASSWORD'),
+        description='Username for sendgrid login')
 
 
 def generate_email(sender, subject, message, recipients, image_png):
-    import email
-    import email.mime
-    import email.mime.multipart
-    import email.mime.text
-    import email.mime.image
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.mime.image import MIMEImage
 
-    msg_root = email.mime.multipart.MIMEMultipart('related')
+    msg_root = MIMEMultipart('related')
 
-    msg_text = email.mime.text.MIMEText(message, email_type())
+    msg_text = MIMEText(message, email().format)
     msg_text.set_charset('utf-8')
     msg_root.attach(msg_text)
 
     if image_png:
         with open(image_png, 'rb') as fp:
-            msg_image = email.mime.image.MIMEImage(fp.read(), 'png')
+            msg_image = MIMEImage(fp.read(), 'png')
         msg_root.attach(msg_image)
 
     msg_root['Subject'] = subject
@@ -101,7 +164,7 @@ def wrap_traceback(traceback):
     """
     For internal use only (until further notice)
     """
-    if email_type() == 'html':
+    if email().format == 'html':
         try:
             from pygments import highlight
             from pygments.lexers import PythonTracebackLexer
@@ -121,38 +184,34 @@ def wrap_traceback(traceback):
     return wrapped
 
 
-def send_email_smtp(config, sender, subject, message, recipients, image_png):
+def send_email_smtp(sender, subject, message, recipients, image_png):
     import smtplib
 
-    smtp_ssl = config.getboolean('core', 'smtp_ssl', False)
-    smtp_without_tls = config.getboolean('core', 'smtp_without_tls', False)
-    smtp_host = config.get('core', 'smtp_host', 'localhost')
-    smtp_port = config.getint('core', 'smtp_port', 0)
-    smtp_local_hostname = config.get('core', 'smtp_local_hostname', None)
-    smtp_timeout = config.getfloat('core', 'smtp_timeout', None)
-    kwargs = dict(host=smtp_host, port=smtp_port, local_hostname=smtp_local_hostname)
-    if smtp_timeout:
-        kwargs['timeout'] = smtp_timeout
-
-    smtp_login = config.get('core', 'smtp_login', None)
-    smtp_password = config.get('core', 'smtp_password', None)
+    smtp_config = smtp()
+    kwargs = dict(
+        host=smtp_config.host,
+        port=smtp_config.port,
+        local_hostname=smtp_config.local_hostname,
+    )
+    if smtp_config.timeout:
+        kwargs['timeout'] = smtp_config.timeout
 
     try:
-        smtp = smtplib.SMTP(**kwargs) if not smtp_ssl else smtplib.SMTP_SSL(**kwargs)
-        smtp.ehlo_or_helo_if_needed()
-        if smtp.has_extn('starttls') and not smtp_without_tls:
-            smtp.starttls()
-        if smtp_login and smtp_password:
-            smtp.login(smtp_login, smtp_password)
+        smtp_conn = smtplib.SMTP_SSL(**kwargs) if smtp_config.ssl else smtplib.SMTP(**kwargs)
+        smtp_conn.ehlo_or_helo_if_needed()
+        if smtp_conn.has_extn('starttls') and not smtp_config.no_tls:
+            smtp_conn.starttls()
+        if smtp_config.username and smtp_config.password:
+            smtp_conn.login(smtp_config.username, smtp_config.password)
 
         msg_root = generate_email(sender, subject, message, recipients, image_png)
 
-        smtp.sendmail(sender, recipients, msg_root.as_string())
+        smtp_conn.sendmail(sender, recipients, msg_root.as_string())
     except socket.error:
         logger.error("Not able to connect to smtp server")
 
 
-def send_email_ses(config, sender, subject, message, recipients, image_png):
+def send_email_ses(sender, subject, message, recipients, image_png):
     """
     Sends notification through AWS SES.
 
@@ -177,16 +236,15 @@ def send_email_ses(config, sender, subject, message, recipients, image_png):
                                                response['ResponseMetadata']['HTTPStatusCode']))
 
 
-def send_email_sendgrid(config, sender, subject, message, recipients, image_png):
-    import sendgrid
-    client = sendgrid.SendGridClient(config.get('email', 'SENDGRID_USERNAME', None),
-                                     config.get('email', 'SENDGRID_PASSWORD', None),
-                                     raise_errors=True)
-    to_send = sendgrid.Mail()
+def send_email_sendgrid(sender, subject, message, recipients, image_png):
+    import sendgrid as sendgrid_lib
+    client = sendgrid_lib.SendGridClient(
+        sendgrid().username, sendgrid().password, raise_errors=True)
+    to_send = sendgrid_lib.Mail()
     to_send.add_to(recipients)
     to_send.set_from(sender)
     to_send.set_subject(subject)
-    if email_type() == 'html':
+    if email().format == 'html':
         to_send.set_html(message)
     else:
         to_send.set_text(message)
@@ -197,10 +255,10 @@ def send_email_sendgrid(config, sender, subject, message, recipients, image_png)
 
 
 def _email_disabled():
-    if email_type() == 'none':
-        logger.info("Not sending email when email-type is none")
+    if email().format == 'none':
+        logger.info("Not sending email when email format is none")
         return True
-    elif configuration.get_config().getboolean('email', 'force-send', False):
+    elif email().force_send:
         return False
     elif sys.stdout.isatty():
         logger.info("Not sending email when running from a tty")
@@ -211,7 +269,7 @@ def _email_disabled():
         return False
 
 
-def send_email_sns(config, sender, subject, message, topic_ARN, image_png):
+def send_email_sns(sender, subject, message, topic_ARN, image_png):
     """
     Sends notification through AWS SNS. Takes Topic ARN from recipients.
 
@@ -243,18 +301,17 @@ def send_email(subject, message, sender, recipients, image_png=None):
     Decides whether to send notification. Notification is cancelled if there are
     no recipients or if stdout is onto tty or if in debug mode.
 
-    Dispatches on config value email.type.  Default is 'smtp'.
+    Dispatches on config value email.method.  Default is 'smtp'.
     """
-    config = configuration.get_config()
-    notifiers = {'ses': send_email_ses,
-                 'sendgrid': send_email_sendgrid,
-                 'smtp': send_email_smtp,
-                 'sns': send_email_sns}
+    notifiers = {
+        'ses': send_email_ses,
+        'sendgrid': send_email_sendgrid,
+        'smtp': send_email_smtp,
+        'sns': send_email_sns,
+    }
 
     subject = _prefix(subject)
-    if not recipients or recipients == (None,):
-        return
-    if _email_disabled():
+    if not recipients or recipients == (None,) or _email_disabled():
         return
 
     # Clean the recipients lists to allow multiple error-email addresses, comma
@@ -267,14 +324,12 @@ def send_email(subject, message, sender, recipients, image_png=None):
     recipients = recipients_tmp
 
     # Get appropriate sender and call it to send the notification
-    email_sender_type = config.get('email', 'type', None)
-    email_sender = notifiers.get(email_sender_type, send_email_smtp)
-    email_sender(config, sender, subject, message, recipients, image_png)
+    email_sender = notifiers[email().method]
+    email_sender(sender, subject, message, recipients, image_png)
 
 
 def _email_recipients(additional_recipients=None):
-    config = configuration.get_config()
-    receiver = config.get('core', 'error-email', None)
+    receiver = email().receiver
     recipients = [receiver] if receiver else []
     if additional_recipients:
         if isinstance(additional_recipients, str):
@@ -290,10 +345,9 @@ def send_error_email(subject, message, additional_recipients=None):
 
     If no error-email is configured, then a message is logged.
     """
-    config = configuration.get_config()
     recipients = _email_recipients(additional_recipients)
     if recipients:
-        sender = config.get('core', 'email-sender', DEFAULT_CLIENT_EMAIL)
+        sender = email().sender
         logger.info("Sending warning email to %r", recipients)
         send_email(
             subject=subject,
@@ -312,11 +366,10 @@ def _prefix(subject):
     If the config has a special prefix for emails then this function adds
     this prefix.
     """
-    config = configuration.get_config()
-    email_prefix = config.get('core', 'email-prefix', None)
-    if email_prefix is not None:
-        subject = "%s %s" % (email_prefix, subject)
-    return subject
+    if email().prefix is not None:
+        return "{} {}".format(email().prefix, subject)
+    else:
+        return subject
 
 
 def format_task_error(headline, task, command, formatted_exception=None):
@@ -330,13 +383,12 @@ def format_task_error(headline, task, command, formatted_exception=None):
     :return: message body
     """
 
-    typ = email_type()
     if formatted_exception:
         formatted_exception = wrap_traceback(formatted_exception)
     else:
         formatted_exception = ""
 
-    if typ == 'html':
+    if email().format == 'html':
         msg_template = textwrap.dedent('''
         <html>
         <body>
