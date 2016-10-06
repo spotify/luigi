@@ -147,9 +147,8 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
     def test_format_chain_reverse(self):
         t = LocalTarget(self.path, luigi.format.UTF8 >> luigi.format.Gzip)
 
-        f = gzip.open(self.path, 'wb')
-        f.write(b'\xe6\x88\x91\xc3\xa9\r\n\xc3\xa7\xd1\x84')
-        f.close()
+        with gzip.open(self.path, 'wb') as f:
+            f.write(b'\xe6\x88\x91\xc3\xa9\r\n\xc3\xa7\xd1\x84')
 
         with t.open('r') as f:
             b = f.read()
