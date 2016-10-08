@@ -25,6 +25,7 @@ import shutil
 import tempfile
 import io
 import warnings
+import errno
 
 from luigi.format import FileWrapper, get_default_format
 from luigi.target import FileAlreadyExists, MissingParentDirectory, NotADirectory, FileSystem, FileSystemTarget, AtomicLocalFile
@@ -92,12 +93,26 @@ class LocalFileSystem(FileSystem):
             os.remove(path)
 
     def move(self, old_path, new_path, raise_if_exists=False):
+        """
+        Move file atomically. If source and destination are located
+        on different filesystems, atomicity is approximated
+        but cannot be guaranteed.
+        """
         if raise_if_exists and os.path.exists(new_path):
             raise RuntimeError('Destination exists: %s' % new_path)
         d = os.path.dirname(new_path)
         if d and not os.path.exists(d):
             self.mkdir(d)
-        os.rename(old_path, new_path)
+        try:
+            os.rename(old_path, new_path)
+        except OSError as err:
+            if err.errno == errno.EXDEV:
+                new_path_tmp = '%s-%09d' % (new_path, random.randint(0, 999999999))
+                shutil.copy(old_path, new_path_tmp)
+                os.rename(new_path_tmp, new_path)
+                os.remove(old_path)
+            else:
+                raise err
 
 
 class LocalTarget(FileSystemTarget):
