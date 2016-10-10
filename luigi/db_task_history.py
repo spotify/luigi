@@ -44,11 +44,6 @@ from luigi import configuration
 from luigi import task_history
 from luigi.task_status import DONE, FAILED, PENDING, RUNNING
 
-try:
-    from urllib.parse import urlparse, parse_qs
-except ImportError:
-    from urlparse import urlparse, parse_qs
-
 import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
@@ -83,7 +78,7 @@ class DbTaskHistory(task_history.TaskHistory):
     def __init__(self):
         config = configuration.get_config()
         connection_string = config.get('task_history', 'db_connection')
-        connection_options = self._get_connection_options(connection_string)
+        connection_options = self._prepare_connection_options(config)
 
         self.engine = sqlalchemy.create_engine(connection_string, **connection_options)
         self.session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine, expire_on_commit=False)
@@ -92,11 +87,26 @@ class DbTaskHistory(task_history.TaskHistory):
 
         _upgrade_schema(self.engine)
 
-    def _get_connection_options(self, connection_string):
-        o = urlparse(connection_string)
-        q = parse_qs(o.query)
-        # `parse_qs` produces `{k: [v]}`, lets `{k: v}``
-        return {k: q[k][0] for k in q}
+    def _prepare_connection_options(self, config):
+        options = {}
+
+        pool_size = config.get('task_history', 'db_pool_size', default=None)
+        if pool_size:
+            options['pool_size'] = int(pool_size)
+
+        max_overflow = config.get('task_history', 'db_max_overflow', default=None)
+        if max_overflow:
+            options['max_overflow'] = int(max_overflow)
+
+        pool_timeout = config.get('task_history', 'db_pool_timeout', default=None)
+        if pool_timeout:
+            options['pool_timeout'] = int(pool_timeout)
+
+        pool_recycle = config.get('task_history', 'db_pool_recycle', default=None)
+        if pool_recycle:
+            options['pool_timeout'] = int(pool_recycle)
+
+        return options
 
     def task_scheduled(self, task):
         htask = self._get_task(task, status=PENDING)
