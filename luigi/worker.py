@@ -338,6 +338,9 @@ class worker(Config):
                                          config_path=dict(section='core', name='retry-external-tasks'),
                                          description='If true, incomplete external tasks will be '
                                          'retested for completion while Luigi is running.')
+    send_failure_email = BoolParameter(default=True,
+                                       description='If true, send e-mails directly from the worker'
+                                                   'on failure')
     no_install_shutdown_handler = BoolParameter(default=False,
                                                 description='If true, the SIGUSR1 shutdown handler will'
                                                 'NOT be install on the worker')
@@ -535,10 +538,11 @@ class Worker(object):
                           )
 
     def _email_task_failure(self, task, formatted_traceback):
-        self._email_error(task, formatted_traceback,
-                          subject="Luigi: {task} FAILED. Host: {host}",
-                          headline="A task failed when running. Most likely run() raised an exception.",
-                          )
+        if self._config.send_failure_email:
+            self._email_error(task, formatted_traceback,
+                              subject="Luigi: {task} FAILED. Host: {host}",
+                              headline="A task failed when running. Most likely run() raised an exception.",
+                              )
 
     def _email_error(self, task, formatted_traceback, subject, headline):
         formatted_subject = subject.format(task=task, host=self.host)

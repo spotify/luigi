@@ -1165,17 +1165,33 @@ class WorkerEmailTest(LuigiTestCase):
                 raise Exception("b0rk")
 
         a = A()
-        self.worker.add(a)
-        self.assertEqual(emails, [])
-        self.worker.run()
+        luigi.build([a], workers=1, local_scheduler=True)
+        self.assertEqual(1, len(emails))
         self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
 
+    @with_config({'worker': {'send_failure_email': 'False'}})
     @email_patch
-    def test_task_process_dies(self, emails):
+    def test_run_error_no_email(self, emails):
+        class A(luigi.Task):
+            def run(self):
+                raise Exception("b0rk")
+
+        luigi.build([A()], workers=1, local_scheduler=True)
+        self.assertFalse(emails)
+
+    @email_patch
+    def test_task_process_dies_with_email(self, emails):
         a = SendSignalTask(signal.SIGKILL)
         luigi.build([a], workers=2, local_scheduler=True)
+        self.assertEqual(1, len(emails))
         self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
         self.assertTrue(emails[0].find("died unexpectedly with exit code -9") != -1)
+
+    @with_config({'worker': {'send_failure_email': 'False'}})
+    @email_patch
+    def test_task_process_dies_no_email(self, emails):
+        luigi.build([SendSignalTask(signal.SIGKILL)], workers=2, local_scheduler=True)
+        self.assertEqual([], emails)
 
     @email_patch
     def test_task_times_out(self, emails):
@@ -1187,8 +1203,21 @@ class WorkerEmailTest(LuigiTestCase):
 
         a = A()
         luigi.build([a], workers=2, local_scheduler=True)
+        self.assertEqual(1, len(emails))
         self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
         self.assertTrue(emails[0].find("timed out after 0.0001 seconds and was terminated.") != -1)
+
+    @with_config({'worker': {'send_failure_email': 'False'}})
+    @email_patch
+    def test_task_times_out_no_email(self, emails):
+        class A(luigi.Task):
+            worker_timeout = 0.0001
+
+            def run(self):
+                time.sleep(5)
+
+        luigi.build([A()], workers=2, local_scheduler=True)
+        self.assertEqual([], emails)
 
     @with_config(dict(worker=dict(retry_external_tasks='true')))
     @email_patch
