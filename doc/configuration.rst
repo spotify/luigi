@@ -233,6 +233,13 @@ no_install_shutdown_handler
   thread.
   Defaults to false.
 
+send-failure-email
+  Controls whether the worker will send e-mails on task and scheduling
+  failures. If set to false, workers will only send e-mails on
+  framework errors during scheduling and all other e-mail must be
+  handled by the scheduler.
+  Defaults to true.
+
 
 [elasticsearch]
 ---------------
