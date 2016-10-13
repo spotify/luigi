@@ -126,7 +126,7 @@ class DataprocPysparkTask(DataprocBaseTask):
     job_args = luigi.Parameter(default="")
 
     def run(self):
-        self.submit_pyspark_job(job_file="main_job.py",
+        self.submit_pyspark_job(job_file=self.job_file,
                                 extra_files=self.extra_files.split(",") if self.extra_files else [],
                                 job_args=self.job_args.split(",") if self.job_args else [])
         self.wait_for_job()
