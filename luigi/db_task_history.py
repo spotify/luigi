@@ -196,7 +196,7 @@ class TaskParameter(Base):
     __tablename__ = 'task_parameters'
     task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'), primary_key=True)
     name = sqlalchemy.Column(sqlalchemy.String(128), primary_key=True)
-    value = sqlalchemy.Column(sqlalchemy.String(256))
+    value = sqlalchemy.Column(sqlalchemy.Text)
 
     def __repr__(self):
         return "TaskParameter(task_id=%d, name=%s, value=%s)" % (self.task_id, self.name, self.value)
