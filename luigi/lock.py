@@ -23,6 +23,7 @@ from __future__ import print_function
 
 import hashlib
 import os
+import subprocess
 
 from luigi import six
 
@@ -42,7 +43,21 @@ def getpcmd(pid):
                 _, val = lines
                 return val
     else:
+        # Use the proc filesystem if available.
+        # At least on android this may not be readable to the current
+        # user, so a fallback is provided
+        try:
+            with open('/proc/{0}/cmdline'.format(pid), 'r') as fh:
+                return fh.read().replace('\0', ' ').rstrip()
+        except IOError:
+            pass
+
+        # fallback using the 'ps' command
         cmd = 'ps x -wwo pid,args'
+        if _ps_command_implementation_name() == 'busybox':
+            # busybox does not support the extra-wide output
+            # of the 'ww' flags
+            cmd = 'ps x -o pid,args'
         with os.popen(cmd, 'r') as p:
             # Skip the column titles
             p.readline()
@@ -140,3 +155,17 @@ def _write_pids_file(pid_file, pids_set):
         s = os.stat(pid_file)
         if os.getuid() == s.st_uid:
             os.chmod(pid_file, s.st_mode | 0o777)
+
+
+def _ps_command_implementation_name():
+    """
+    Attempt to collect some info on which version
+    of the 'ps' command is available
+    """
+    stdout, stderr = subprocess.Popen("ps --help", shell=True,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE).communicate()
+    if any([x.startswith(b'BusyBox') for x in (stdout, stderr)]):
+        return 'busybox'
+    else:
+        return 'unknown'
