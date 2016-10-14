@@ -16,7 +16,7 @@
 #
 
 """
-This is an integration test for the Bigquery-luigi binding.
+This is an integration test for the BigQuery-luigi binding.
 
 This test requires credentials that can access GCS & access to a bucket below.
 Follow the directions in the gcloud tools to set up local credentials.
@@ -36,7 +36,7 @@ DATASET_ID = os.environ.get('BQ_TEST_DATASET_ID', 'luigi_tests')
 
 
 @attr('gcloud')
-class TestLoadTask(bigquery.BigqueryLoadTask):
+class TestLoadTask(bigquery.BigQueryLoadTask):
     source = luigi.Parameter()
     table = luigi.Parameter()
 
@@ -51,23 +51,23 @@ class TestLoadTask(bigquery.BigqueryLoadTask):
         return [self.source]
 
     def output(self):
-        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table)
+        return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, self.table)
 
 
 @attr('gcloud')
-class TestRunQueryTask(bigquery.BigqueryRunQueryTask):
+class TestRunQueryTask(bigquery.BigQueryRunQueryTask):
     query = ''' SELECT 'hello' as field1, 2 as field2 '''
     table = luigi.Parameter()
 
     def output(self):
-        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table)
+        return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, self.table)
 
 
 @attr('gcloud')
-class BigqueryGcloudTest(gcs_test._GCSBaseTestCase):
+class BigQueryGcloudTest(gcs_test._GCSBaseTestCase):
     def setUp(self):
-        super(BigqueryGcloudTest, self).setUp()
-        self.bq_client = bigquery.BigqueryClient(gcs_test.CREDENTIALS)
+        super(BigQueryGcloudTest, self).setUp()
+        self.bq_client = bigquery.BigQueryClient(gcs_test.CREDENTIALS)
 
         self.table = bigquery.BQTable(project_id=PROJECT_ID, dataset_id=DATASET_ID,
                                       table_id=self.id().split('.')[-1])

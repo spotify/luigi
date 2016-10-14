@@ -16,7 +16,7 @@
 #
 
 """
-These are the unit tests for the Bigquery-luigi binding.
+These are the unit tests for the BigQuery-luigi binding.
 """
 
 
@@ -30,13 +30,13 @@ PROJECT_ID = 'projectid'
 DATASET_ID = 'dataset'
 
 
-class TestRunQueryTask(bigquery.BigqueryRunQueryTask):
+class TestRunQueryTask(bigquery.BigQueryRunQueryTask):
     client = MagicMock()
     query = ''' SELECT 'hello' as field1, 2 as field2 '''
     table = luigi.Parameter()
 
     def output(self):
-        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
+        return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
 
 
 class TestRunQueryTaskDontFlattenResults(TestRunQueryTask):
@@ -46,7 +46,7 @@ class TestRunQueryTaskDontFlattenResults(TestRunQueryTask):
         return False
 
 
-class TestRunQueryTaskWithRequires(bigquery.BigqueryRunQueryTask):
+class TestRunQueryTaskWithRequires(bigquery.BigQueryRunQueryTask):
     client = MagicMock()
     table = luigi.Parameter()
 
@@ -61,25 +61,25 @@ class TestRunQueryTaskWithRequires(bigquery.BigqueryRunQueryTask):
         return 'SELECT * FROM [{dataset}.{table}]'.format(dataset=dataset, table=table)
 
     def output(self):
-        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
+        return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
 
 
-class TestExternalBigqueryTask(bigquery.ExternalBigqueryTask):
+class TestExternalBigQueryTask(bigquery.ExternalBigQueryTask):
     client = MagicMock()
 
     def output(self):
-        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, 'table1', client=self.client)
+        return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, 'table1', client=self.client)
 
 
-class TestCreateViewTask(bigquery.BigqueryCreateViewTask):
+class TestCreateViewTask(bigquery.BigQueryCreateViewTask):
     client = MagicMock()
     view = '''SELECT * FROM table LIMIT 10'''
 
     def output(self):
-        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, 'view1', client=self.client)
+        return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, 'view1', client=self.client)
 
 
-class BigqueryTest(unittest.TestCase):
+class BigQueryTest(unittest.TestCase):
 
     def test_bulk_complete(self):
         parameters = ['table1', 'table2']
@@ -122,9 +122,9 @@ class BigqueryTest(unittest.TestCase):
         self.assertEqual(query, task.query)
 
     def test_external_task(self):
-        task = TestExternalBigqueryTask()
+        task = TestExternalBigQueryTask()
         self.assertIsInstance(task, luigi.ExternalTask)
-        self.assertIsInstance(task, bigquery.MixinBigqueryBulkComplete)
+        self.assertIsInstance(task, bigquery.MixinBigQueryBulkComplete)
 
     def test_create_view(self):
         task = TestCreateViewTask()
