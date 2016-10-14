@@ -87,25 +87,21 @@ class DbTaskHistory(task_history.TaskHistory):
 
         _upgrade_schema(self.engine)
 
+    CONNECTION_OPTIONS_MAPPING = {
+            'db_pool_size': {'type': 'int', 'name': 'pool_size'},
+            'db_max_overflow': {'type': 'int', 'name': 'max_overflow'},
+            'db_pool_timeout': {'type': 'int', 'name': 'pool_timeout'},
+            'db_pool_recycle': {'type': 'int', 'name': 'pool_recycle'},
+            }
+
     def _prepare_connection_options(self, config):
         options = {}
-
-        pool_size = config.get('task_history', 'db_pool_size', default=None)
-        if pool_size:
-            options['pool_size'] = int(pool_size)
-
-        max_overflow = config.get('task_history', 'db_max_overflow', default=None)
-        if max_overflow:
-            options['max_overflow'] = int(max_overflow)
-
-        pool_timeout = config.get('task_history', 'db_pool_timeout', default=None)
-        if pool_timeout:
-            options['pool_timeout'] = int(pool_timeout)
-
-        pool_recycle = config.get('task_history', 'db_pool_recycle', default=None)
-        if pool_recycle:
-            options['pool_timeout'] = int(pool_recycle)
-
+        for (config_key, column_settings) in six.iteritems(self.CONNECTION_OPTIONS_MAPPING):
+            column_name = column_settings['name']
+            if column_settings['type'] == 'int':
+                column_value = config.getint(config_key, column_name, default=None)
+                if column_value:
+                    options[column_name] = column_value
         return options
 
     def task_scheduled(self, task):
