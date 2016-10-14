@@ -50,6 +50,7 @@ class QueryMode(object):
 
 
 class SourceFormat(object):
+    AVRO = 'AVRO'
     CSV = 'CSV'
     DATASTORE_BACKUP = 'DATASTORE_BACKUP'
     NEWLINE_DELIMITED_JSON = 'NEWLINE_DELIMITED_JSON'
@@ -452,7 +453,7 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
     def schema(self):
         """Schema in the format defined at https://cloud.google.com/bigquery/docs/reference/v2/jobs#configuration.load.schema.
 
-        If the value is falsy, it is omitted and inferred by BigQuery, which only works for CSV inputs."""
+        If the value is falsy, it is omitted and inferred by BigQuery, which only works for AVRO and CSV inputs."""
         return []
 
     @property
