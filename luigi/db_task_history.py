@@ -99,7 +99,7 @@ class DbTaskHistory(task_history.TaskHistory):
         for (config_key, column_settings) in six.iteritems(self.CONNECTION_OPTIONS_MAPPING):
             column_name = column_settings['name']
             if column_settings['type'] == 'int':
-                column_value = config.getint(config_key, column_name, default=None)
+                column_value = config.getint('task_history', config_key, default=None)
                 if column_value:
                     options[column_name] = column_value
         return options

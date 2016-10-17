@@ -710,23 +710,23 @@ Parameters controlling storage of task history in a database
 
 db_connection
   Connection string for connecting to the task history db using
-  sqlalchemy.
+  SQLAlchemy.
 
 db_pool_size
   The number of connections to keep open inside the connection pool.
-  It defaults to 5.
+  It defaults to 5 by SQLAlchemy.
 
 db_pool_timeout
   Number of seconds to wait before giving up on getting a connection
-  from the pool. It defaults to 30.
+  from the pool. It defaults to 30 by SQLAlchemy.
 
 db_pool_recycle
   This setting causes the pool to recycle connections after the given
-  number of seconds has passed. It defaults to -1, or no timeout.
+  number of seconds has passed. It defaults to -1 or no timeout by SQLAlchemy.
 
 db_max_overflow
   The number of connections to allow in connection pool “overflow”.
-  It defaults to 10
+  It defaults to 10 by SQLAlchemy
 
 
 [execution_summary]
