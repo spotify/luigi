@@ -1204,6 +1204,22 @@ class SchedulerApiTest(unittest.TestCase):
         # C doesn't block B, so it can go first
         self.check_task_order('C')
 
+    def test_do_not_allow_stowaway_resources(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A1', resources={'r1': 1}, family='A', params={'a': '1'}, batchable=True, priority=1)
+        self.sch.add_task(worker=WORKER, task_id='A2', resources={'r1': 2}, family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A3', resources={'r2': 1}, family='A', params={'a': '3'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A4', resources={'r1': 1}, family='A', params={'a': '4'}, batchable=True)
+        self.assertEqual({'A1', 'A4'}, set(self.sch.get_work(worker=WORKER)['batch_task_ids']))
+
+    def test_do_not_allow_same_resources(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A1', resources={'r1': 1}, family='A', params={'a': '1'}, batchable=True, priority=1)
+        self.sch.add_task(worker=WORKER, task_id='A2', resources={'r1': 1}, family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A3', resources={'r1': 1}, family='A', params={'a': '3'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A4', resources={'r1': 1}, family='A', params={'a': '4'}, batchable=True)
+        self.assertEqual({'A1', 'A2', 'A3', 'A4'}, set(self.sch.get_work(worker=WORKER)['batch_task_ids']))
+
     def test_allow_resource_use_while_scheduling(self):
         self.sch.update_resources(r1=1)
         self.sch.add_task(worker='SCHEDULING', task_id='A', resources={'r1': 1}, priority=10)
