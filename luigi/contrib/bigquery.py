@@ -452,11 +452,10 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         return 0
 
     @property
-    def field_delimter(self):
+    def field_delimiter(self):
         """The separator for fields in a CSV file. The separator can be any ISO-8859-1 single-byte character."""
         return FieldDelimiter.COMMA
 
-    @property
     def source_uris(self):
         """The fully-qualified URIs that point to your data in Google Cloud Storage.
 
@@ -526,7 +525,7 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         }
 
         if self.source_format == SourceFormat.CSV:
-            job['configuration']['load']['fieldDelimiter'] = self.field_delimter
+            job['configuration']['load']['fieldDelimiter'] = self.field_delimiter
             job['configuration']['load']['skipLeadingRows'] = self.skip_leading_rows
             job['configuration']['load']['allowJaggedRows'] = self.allow_jagged_rows
             job['configuration']['load']['allowQuotedNewlines'] = self.allow_quoted_new_lines
