@@ -218,3 +218,17 @@ class BigQueryGcloudTest(unittest.TestCase):
         task.run()
 
         self.assertTrue(self.bq_client.table_exists(self.table))
+
+
+# @attr('gcloud')
+# class BigQueryLoadAvroTest(gcs_test._GCSBaseTestCase):
+#     def setUp(self):
+#         super(BigQueryLoadAvro, self).setUp()
+#         self.bq_client = bigquery.BigQueryClient(gcs_test.CREDENTIALS)
+
+#         self.table = bigquery.BQTable(project_id=PROJECT_ID, dataset_id=DATASET_ID,
+#                                       table_id=self.id().split('.')[-1])
+#         self.addCleanup(self.bq_client.delete_table, self.table)
+
+#     def test_load_avro_and_propagate_doc
+

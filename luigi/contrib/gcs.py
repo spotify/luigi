@@ -332,7 +332,29 @@ class GCSClient(luigi.target.FileSystem):
         for it in self._list_iter(bucket, obj_prefix):
             yield self._add_path_delimiter(path) + it['name'][obj_prefix_len:]
 
-    def download(self, path, chunksize=None):
+    def list_wildcard(self, wildcard_path):
+        """Yields full object URIs matching the given wildcard.
+
+        Currently only the '*' wildcard after the last path delimiter is supported.
+
+        (If we need "full" wildcard functionality we should bring in gsutil dependency with its
+        https://github.com/GoogleCloudPlatform/gsutil/blob/master/gslib/wildcard_iterator.py...)
+        """
+        path, wildcard_obj = wildcard_path.rsplit('/', 1)
+        assert '*' not in path, "The '*' wildcard character is only supported after the last '/'"
+        wildcard_parts = wildcard_obj.split('*')
+        assert len(wildcard_parts) == 2, "Only one '*' wildcard is supported"
+
+        for it in self.listdir(path):
+            if it.startswith('/' + wildcard_parts[0]) and it.endswith(wildcard_parts[1]) and \
+                   len(it) > len(wildcard_parts[0]) + len(wildcard_parts[1]):
+                yield path + it
+
+    def download(self, path, chunksize=None, chunk_callback=lambda _: False):
+        """Downloads the object contents to local file system.
+
+        Optionally stops after the first chunk for which chunk_callback returns True.
+        """
         chunksize = chunksize or self.chunksize
         bucket, obj = self._path_to_bucket_and_key(path)
 
@@ -354,6 +376,8 @@ class GCSClient(luigi.target.FileSystem):
                 error = None
                 try:
                     _, done = downloader.next_chunk()
+                    if chunk_callback(fp):
+                        done = True
                 except errors.HttpError as err:
                     error = err
                     if err.resp.status < 500:
