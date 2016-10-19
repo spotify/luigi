@@ -566,6 +566,12 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
         """The query mode. See :py:class:`QueryMode`."""
         return QueryMode.INTERACTIVE
 
+    @property
+    def udf_resource_uris(self):
+        """Iterator of code resource to load from a Google Cloud Storage URI (gs://bucket/path).
+        """
+        return []
+
     def run(self):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
@@ -593,7 +599,8 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
                     'allowLargeResults': True,
                     'createDisposition': self.create_disposition,
                     'writeDisposition': self.write_disposition,
-                    'flattenResults': self.flatten_results
+                    'flattenResults': self.flatten_results,
+                    'userDefinedFunctionResources': [{"resourceUri": v} for v in self.udf_resource_uris],
                 }
             }
         }

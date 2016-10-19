@@ -64,6 +64,22 @@ class TestRunQueryTaskWithRequires(bigquery.BigQueryRunQueryTask):
         return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
 
 
+class TestRunQueryTaskWithUdf(bigquery.BigqueryRunQueryTask):
+    client = MagicMock()
+    table = luigi.Parameter()
+
+    @property
+    def udf_resource_uris(self):
+        return ["gs://test/file1.js", "gs://test/file2.js"]
+
+    @property
+    def query(self):
+        return 'SELECT 1'
+
+    def output(self):
+        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
+
+
 class TestExternalBigQueryTask(bigquery.ExternalBigQueryTask):
     client = MagicMock()
 
@@ -120,6 +136,20 @@ class BigQueryTest(unittest.TestCase):
         expected_table = '[' + DATASET_ID + '.' + task.requires().output().table.table_id + ']'
         self.assertIn(expected_table, query)
         self.assertEqual(query, task.query)
+
+    def test_query_udf(self):
+        task = TestRunQueryTaskWithUdf(table='table2')
+        task.client = MagicMock()
+        task.run()
+
+        (_, job), _ = task.client.run_job.call_args
+
+        udfs = [
+            {'resourceUri': 'gs://test/file1.js'},
+            {'resourceUri': 'gs://test/file2.js'},
+        ]
+
+        self.assertEqual(job['configuration']['query']['userDefinedFunctionResources'], udfs)
 
     def test_external_task(self):
         task = TestExternalBigQueryTask()
