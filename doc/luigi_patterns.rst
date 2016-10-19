@@ -186,13 +186,13 @@ Tasks that regularly overwrite the same data source
 
 If you are overwriting of the same data source with every run, you'll
 need to ensure that two batches can't run at the same time. You can do
-this pretty easily by setting batch_mode to max and setting a unique
+this pretty easily by setting batch_method to max and setting a unique
 resource:
 
 .. code-block:: python
 
     class A(luigi.Task):
-        date = luigi.DateParameter(batch_mode=max)
+        date = luigi.DateParameter(batch_method=max)
 
         resources = {'overwrite_resource': 1}
 
