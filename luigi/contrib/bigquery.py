@@ -601,7 +601,7 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
                     'createDisposition': self.create_disposition,
                     'writeDisposition': self.write_disposition,
                     'flattenResults': self.flatten_results,
-                    'userDefinedFunctionResources': [{"resourceUri": v} for v in self.udf_resource_uris]
+                    'userDefinedFunctionResources': [{"resourceUri": v} for v in self.udf_resource_uris],
                 }
             }
         }
