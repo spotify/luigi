@@ -515,6 +515,7 @@ class SimpleTaskState(object):
         self.set_status(task, BATCH_RUNNING)
         task.batch_id = batch_id
         task.worker_running = worker_id
+        task.resources_running = task.resources
         task.time_running = time.time()
 
     def set_status(self, task, new_status, config=None):
@@ -800,6 +801,9 @@ class Scheduler(object):
             task.batch_id = batch_id
         if status == RUNNING and not task.worker_running:
             task.worker_running = worker_id
+            if batch_id:
+                task.resources_running = self._state.get_batch_running_tasks(batch_id)[0].resources_running
+            task.time_running = time.time()
 
         if tracking_url is not None or task.status != RUNNING:
             task.tracking_url = tracking_url
@@ -943,8 +947,8 @@ class Scheduler(object):
         used_resources = collections.defaultdict(int)
         if self._resources is not None:
             for task in self._state.get_active_tasks_by_status(RUNNING):
-                if task.resources:
-                    for resource, amount in six.iteritems(task.resources):
+                if getattr(task, 'resources_running', task.resources):
+                    for resource, amount in six.iteritems(getattr(task, 'resources_running', task.resources)):
                         used_resources[resource] += amount
         return used_resources
 
@@ -1093,7 +1097,7 @@ class Scheduler(object):
 
             if task.status == RUNNING and (task.worker_running in greedy_workers):
                 greedy_workers[task.worker_running] -= 1
-                for resource, amount in six.iteritems((task.resources or {})):
+                for resource, amount in six.iteritems((getattr(task, 'resources_running', task.resources) or {})):
                     greedy_resources[resource] += amount
 
             if self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
@@ -1148,6 +1152,7 @@ class Scheduler(object):
         elif best_task:
             self._state.set_status(best_task, RUNNING, self._config)
             best_task.worker_running = worker_id
+            best_task.resources_running = best_task.resources
             best_task.time_running = time.time()
             self._update_task_history(best_task, RUNNING, host=host)
 
