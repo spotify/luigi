@@ -51,6 +51,8 @@ def getpcmd(pid):
             with open('/proc/{0}/cmdline'.format(pid), 'r') as fh:
                 return fh.read().replace('\0', ' ').rstrip()
         except IOError:
+            # the system may not allow reading the command line
+            # of a process owned by another user
             pass
 
     # Fallback instead of None, for e.g. Cygwin where -o is an "unknown option" for the ps command:
