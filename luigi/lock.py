@@ -42,14 +42,19 @@ def getpcmd(pid):
                 _, val = lines
                 return val
     else:
-        cmd = 'ps x -wwo pid,args'
-        with os.popen(cmd, 'r') as p:
-            # Skip the column titles
-            p.readline()
-            for line in p:
-                spid, scmd = line.strip().split(' ', 1)
-                if int(spid) == int(pid):
-                    return scmd
+        # Use the /proc filesystem
+        # At least on android there have been some issues with not all
+        # process infos being readable. In these cases using the `ps` command
+        # worked. See the pull request at
+        # https://github.com/spotify/luigi/pull/1876
+        try:
+            with open('/proc/{0}/cmdline'.format(pid), 'r') as fh:
+                return fh.read().replace('\0', ' ').rstrip()
+        except IOError:
+            # the system may not allow reading the command line
+            # of a process owned by another user
+            pass
+
     # Fallback instead of None, for e.g. Cygwin where -o is an "unknown option" for the ps command:
     return '[PROCESS_WITH_PID={}]'.format(pid)
 
