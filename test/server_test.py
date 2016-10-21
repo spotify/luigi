@@ -153,6 +153,7 @@ class _ServerTest(unittest.TestCase):
     def test_raw_ping_extended(self):
         self.sch._request('/api/ping', {'worker': 'xyz', 'foo': 'bar'})
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/166833694')
     def test_404(self):
         with self.assertRaises(luigi.rpc.RPCError):
             self.sch._request('/api/fdsfds', {'dummy': 1})
