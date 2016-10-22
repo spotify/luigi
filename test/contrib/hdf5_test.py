@@ -110,7 +110,7 @@ class Hdf5TableTest(unittest.TestCase):
         self.data = pd.get_dummies(df, columns=["page_id"], prefix="", prefix_sep="")
 
     @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                    'unittest.TestCase.subTest not present.')
+                     'unittest.TestCase.subTest not present.')
     def test_single_io(self):
         with self.subTest("simple write"):
             with AtomicHdf5Table(self.store, key="/df", mode="w", index_cols=("id",)) as table:
@@ -125,7 +125,7 @@ class Hdf5TableTest(unittest.TestCase):
             self.assertTrue(cols_sorted(df))
 
     @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                    'unittest.TestCase.subTest not present.')
+                     'unittest.TestCase.subTest not present.')
     def test_single_chunked_io(self):
         with self.subTest("appending write"):
             with AtomicHdf5Table(self.store, key="/df", mode="a", index_cols=("id",)) as table:
@@ -151,7 +151,7 @@ class Hdf5TableTest(unittest.TestCase):
             self.assertTrue(cols_sorted(df))
 
     @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                    'unittest.TestCase.subTest not present.')
+                     'unittest.TestCase.subTest not present.')
     def test_splitted_io(self):
         with self.subTest("simple write"):
             with AtomicHdf5Table(self.store, key="/df", mode="w", index_cols=("id",), split=4) as table:
@@ -175,7 +175,7 @@ class Hdf5TableTest(unittest.TestCase):
             self.assertTrue(cols_sorted(df))
 
     @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                    'unittest.TestCase.subTest not present.')
+                     'unittest.TestCase.subTest not present.')
     def test_manual_writing_splitted(self):
         data_splits = [self.data[c_split] for c_split in np.array_split(self.data.columns, 4)]
 
@@ -199,7 +199,7 @@ class Hdf5TableTest(unittest.TestCase):
             pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
 
     @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                    'unittest.TestCase.subTest not present.')
+                     'unittest.TestCase.subTest not present.')
     def test_splitted_chunked_io(self):
         with self.subTest("appending write"):
             with AtomicHdf5Table(self.store, key="/df", mode="a", index_cols=("id",), split=4) as table:
@@ -221,7 +221,7 @@ class Hdf5TableTest(unittest.TestCase):
             pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
 
     @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                    'unittest.TestCase.subTest not present.')
+                     'unittest.TestCase.subTest not present.')
     def test_multi_key_io(self):
         keys = ["table_{}".format(i) for i in range(10)]
         with self.subTest("write multiple tables in same storage"):
@@ -241,7 +241,7 @@ class Hdf5TableTest(unittest.TestCase):
                                    sorted_df[(sorted_df.id >= 0) & (sorted_df.id <= 5)].reset_index(drop=1))
 
     @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                    'unittest.TestCase.subTest not present.')
+                     'unittest.TestCase.subTest not present.')
     def test_attributes(self):
 
         with self.subTest("nrows"):
