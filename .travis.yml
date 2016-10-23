@@ -15,18 +15,18 @@ env:
   matrix:
     - TOXENV=flake8
     - TOXENV=docs
-#    - TOXENV=py27-nonhdfs
-#    - TOXENV=py33-nonhdfs
-#    - TOXENV=py34-nonhdfs
-#    - TOXENV=py27-unixsocket
-#    - TOXENV=py33-unixsocket
-#    - TOXENV=py34-unixsocket
-#    - TOXENV=py27-cdh
-#    - TOXENV=py33-cdh
-#    - TOXENV=py34-cdh
-#    - TOXENV=pypy-scheduler
-#    - TOXENV=py27-gcloud
-#    - TOXENV=py27-postgres
+    - TOXENV=py27-nonhdfs
+    - TOXENV=py33-nonhdfs
+    - TOXENV=py34-nonhdfs
+    - TOXENV=py27-unixsocket
+    - TOXENV=py33-unixsocket
+    - TOXENV=py34-unixsocket
+    - TOXENV=py27-cdh
+    - TOXENV=py33-cdh
+    - TOXENV=py34-cdh
+    - TOXENV=pypy-scheduler
+    - TOXENV=py27-gcloud
+    - TOXENV=py27-postgres
     - TOXENV=py27-hdf5
     - TOXENV=py33-hdf5
     - TOXENV=py34-hdf5
@@ -37,12 +37,12 @@ env:
 # https://github.com/travis-ci/travis-ci/issues/4794#issuecomment-143758799
 matrix:
   include:
-#    - python: 3.5
-#      env: TOXENV=py35-nonhdfs
-#    - python: 3.5
-#      env: TOXENV=py35-unixsocket
-#    - python: 3.5
-#      env: TOXENV=py35-cdh
+    - python: 3.5
+      env: TOXENV=py35-nonhdfs
+    - python: 3.5
+      env: TOXENV=py35-unixsocket
+    - python: 3.5
+      env: TOXENV=py35-cdh
     - python: 3.5
       env: TOXENV=py35-hdf5
 

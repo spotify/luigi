@@ -10,7 +10,7 @@ try:
     import pandas.util.testing as pdt
     import pandas as pd
 except ImportError:
-    unittest.SkipTest("unable to load pandas module")
+    raise unittest.SkipTest("unable to load pandas module")
 
 
 def cols_sorted(df):
@@ -18,7 +18,7 @@ def cols_sorted(df):
     return all([l[i] <= l[i + 1] for i in range(len(l) - 1)])
 
 
-@attr("hdf5")
+@attr('hdf5')
 class Hdf5TableTargetTest(unittest.TestCase):
     def setUp(self):
         self.existing = tempfile.mktemp()
@@ -109,148 +109,131 @@ class Hdf5TableTest(unittest.TestCase):
                                id=np.random.choice(np.arange(10), size=10000)))
         self.data = pd.get_dummies(df, columns=["page_id"], prefix="", prefix_sep="")
 
-    @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                     'unittest.TestCase.subTest not present.')
     def test_single_io(self):
-        with self.subTest("simple write"):
-            with AtomicHdf5Table(self.store, key="/df", mode="w", index_cols=("id",)) as table:
-                table.write(self.data)
+        # simple write
+        with AtomicHdf5Table(self.store, key="/df", mode="w", index_cols=("id",)) as table:
+            table.write(self.data)
 
-        with self.subTest("simple read"):
-            with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",)) as table:
-                df = table.read()
+        # simple read
+        with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",)) as table:
+            df = table.read()
         pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
 
-        with self.subTest("test_columns_sorted"):
-            self.assertTrue(cols_sorted(df))
+        # test_columns_sorted
+        self.assertTrue(cols_sorted(df))
 
-    @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                     'unittest.TestCase.subTest not present.')
     def test_single_chunked_io(self):
-        with self.subTest("appending write"):
-            with AtomicHdf5Table(self.store, key="/df", mode="a", index_cols=("id",)) as table:
-                for i in range(0, self.data.shape[0], 1000):
-                    chunk = self.data.iloc[i:i + 1000]
-                    table.write(chunk)
-                df = table.read()
-            pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
+        # appending write
+        with AtomicHdf5Table(self.store, key="/df", mode="a", index_cols=("id",)) as table:
+            for i in range(0, self.data.shape[0], 1000):
+                chunk = self.data.iloc[i:i + 1000]
+                table.write(chunk)
+            df = table.read()
+        pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
 
-        with self.subTest("chunked read"):
-            with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",)) as table:
-                frames = []
-                for chunk in table.read(chunksize=1000):
-                    frames.append(chunk)
-                    self.assertTrue(cols_sorted(chunk))
-                df = pd.concat(frames, axis=0)
-            pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
+        # chunked read
+        with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",)) as table:
+            frames = []
+            for chunk in table.read(chunksize=1000):
+                frames.append(chunk)
+                self.assertTrue(cols_sorted(chunk))
+            df = pd.concat(frames, axis=0)
+        pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
 
-        with self.subTest("read with start, stop"):
-            with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",)) as table:
-                df = table.read(start=0, stop=1)
-            self.assertEqual(df.shape[0], 1)
-            self.assertTrue(cols_sorted(df))
+        # read with start, stop
+        with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",)) as table:
+            df = table.read(start=0, stop=1)
+        self.assertEqual(df.shape[0], 1)
+        self.assertTrue(cols_sorted(df))
 
-    @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                     'unittest.TestCase.subTest not present.')
     def test_splitted_io(self):
-        with self.subTest("simple write"):
-            with AtomicHdf5Table(self.store, key="/df", mode="w", index_cols=("id",), split=4) as table:
-                table.write(self.data)
+        # simple write
+        with AtomicHdf5Table(self.store, key="/df", mode="w", index_cols=("id",), split=4) as table:
+            table.write(self.data)
 
-            with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",), split=4) as table:
-                self.assertTrue("/df/index_table" in table.fs)
-                self.assertTrue("/df/subtable_1" in table.fs)
-                self.assertTrue("/df/subtable_2" in table.fs)
-                self.assertTrue("/df/subtable_3" in table.fs)
+        with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",), split=4) as table:
+            self.assertTrue("/df/index_table" in table.fs)
+            self.assertTrue("/df/subtable_1" in table.fs)
+            self.assertTrue("/df/subtable_2" in table.fs)
+            self.assertTrue("/df/subtable_3" in table.fs)
 
-        with self.subTest("simple read"):
-            with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",), split=4) as table:
-                df = table.read()
-            pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
+        # simple read
+        with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",), split=4) as table:
+            df = table.read()
+        pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
 
-        with self.subTest("read with start, stop"):
-            with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",), split=4) as table:
-                df = table.read(start=0, stop=1)
-            self.assertEqual(df.shape[0], 1)
-            self.assertTrue(cols_sorted(df))
+        # read with start, stop
+        with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",), split=4) as table:
+            df = table.read(start=0, stop=1)
+        self.assertEqual(df.shape[0], 1)
+        self.assertTrue(cols_sorted(df))
 
-    @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                     'unittest.TestCase.subTest not present.')
     def test_manual_writing_splitted(self):
         data_splits = [self.data[c_split] for c_split in np.array_split(self.data.columns, 4)]
 
-        with self.subTest("write table with sub_key"):
-            with AtomicHdf5Table(self.store, key="/df", mode="a") as table:
-                for i, char in enumerate(list("WHAT")):
-                    table.write(data_splits[i], sub_key="{}_table".format(char))
+        # write table with sub_key
+        with AtomicHdf5Table(self.store, key="/df", mode="a") as table:
+            for i, char in enumerate(list("WHAT")):
+                table.write(data_splits[i], sub_key="{}_table".format(char))
 
-        with self.subTest("full read"):
-            with AtomicHdf5Table(self.store, key="/df", mode="r") as table:
-                df = table.read()
-            pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
+        # full read
+        with AtomicHdf5Table(self.store, key="/df", mode="r") as table:
+            df = table.read()
+        pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
 
-        with self.subTest("chunked read"):
-            with AtomicHdf5Table(self.store, key="/df", mode="r") as table:
-                frames = []
-                for chunk in table.read(chunksize=1000):
-                    frames.append(chunk)
-                #                    self.assertTrue(cols_sorted(chunk))
-                df = pd.concat(frames, axis=0)
-            pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
+        # chunked read
+        with AtomicHdf5Table(self.store, key="/df", mode="r") as table:
+            frames = []
+            for chunk in table.read(chunksize=1000):
+                frames.append(chunk)
+            df = pd.concat(frames, axis=0)
+        pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
 
-    @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                     'unittest.TestCase.subTest not present.')
     def test_splitted_chunked_io(self):
-        with self.subTest("appending write"):
-            with AtomicHdf5Table(self.store, key="/df", mode="a", index_cols=("id",), split=4) as table:
-                for i in range(0, self.data.shape[0], 1000):
-                    chunk = self.data.iloc[i:i + 1000]
-                    table.write(chunk)
+        # appending write
+        with AtomicHdf5Table(self.store, key="/df", mode="a", index_cols=("id",), split=4) as table:
+            for i in range(0, self.data.shape[0], 1000):
+                chunk = self.data.iloc[i:i + 1000]
+                table.write(chunk)
 
-            with AtomicHdf5Table(self.store, key="/df", mode="r") as table:
-                df = table.read()
-            pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
+        with AtomicHdf5Table(self.store, key="/df", mode="r") as table:
+            df = table.read()
+        pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
 
-        with self.subTest("chunked read"):
-            with AtomicHdf5Table(self.store, key="/df", mode="r") as table:
-                frames = []
-                for chunk in table.read(chunksize=1000):
-                    frames.append(chunk)
-                    self.assertTrue(cols_sorted(chunk))
-                df = pd.concat(frames, axis=0)
-            pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
+        # chunked read
+        with AtomicHdf5Table(self.store, key="/df", mode="r") as table:
+            frames = []
+            for chunk in table.read(chunksize=1000):
+                frames.append(chunk)
+                self.assertTrue(cols_sorted(chunk))
+            df = pd.concat(frames, axis=0)
+        pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
 
-    @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                     'unittest.TestCase.subTest not present.')
     def test_multi_key_io(self):
         keys = ["table_{}".format(i) for i in range(10)]
-        with self.subTest("write multiple tables in same storage"):
-            for idx, key in enumerate(keys):
-                chunk = self.data.iloc[idx * 1000:(idx + 1) * 1000]
-                with AtomicHdf5Table(self.store, key=key, mode="a", index_cols=("id",)) as table:
-                    table.write(chunk)
-        with self.subTest("simple read"):
-            with AtomicHdf5Table(self.store, key=None, mode="r", index_cols=("id",)) as table:
-                df = table.read(keys=keys)
-            pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
-        with self.subTest("read with select expr"):
-            with AtomicHdf5Table(self.store, key=None, mode="r", index_cols=("id",)) as table:
-                df = table.read(keys=keys, where="id >= 0 & id <=5")
-            sorted_df = self.data.sort_index(axis=1)
-            pdt.assert_frame_equal(df.reset_index(drop=1),
-                                   sorted_df[(sorted_df.id >= 0) & (sorted_df.id <= 5)].reset_index(drop=1))
+        # write multiple tables in same storage
+        for idx, key in enumerate(keys):
+            chunk = self.data.iloc[idx * 1000:(idx + 1) * 1000]
+            with AtomicHdf5Table(self.store, key=key, mode="a", index_cols=("id",)) as table:
+                table.write(chunk)
+        # simple read
+        with AtomicHdf5Table(self.store, key=None, mode="r", index_cols=("id",)) as table:
+            df = table.read(keys=keys)
+        pdt.assert_frame_equal(df, self.data.sort_index(axis=1))
+        # read with select expr
+        with AtomicHdf5Table(self.store, key=None, mode="r", index_cols=("id",)) as table:
+            df = table.read(keys=keys, where="id >= 0 & id <=5")
+        sorted_df = self.data.sort_index(axis=1)
+        pdt.assert_frame_equal(df.reset_index(drop=1),
+                               sorted_df[(sorted_df.id >= 0) & (sorted_df.id <= 5)].reset_index(drop=1))
 
-    @unittest.skipIf(not hasattr(unittest.TestCase, 'subTest'),
-                     'unittest.TestCase.subTest not present.')
     def test_attributes(self):
 
-        with self.subTest("nrows"):
-            with AtomicHdf5Table(self.store, key="/df", mode="w", index_cols=("id",)) as table:
-                table.write(self.data)
-                self.assertEqual(table.nrows, self.nrows)
-        with self.subTest("fn"):
-            with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",)) as table:
-                self.assertEqual(table.fn, self.store)
+        with AtomicHdf5Table(self.store, key="/df", mode="w", index_cols=("id",)) as table:
+            table.write(self.data)
+            self.assertEqual(table.nrows, self.nrows)
+        with AtomicHdf5Table(self.store, key="/df", mode="r", index_cols=("id",)) as table:
+            self.assertEqual(table.fn, self.store)
 
     def test_forbidden_params(self):
         pass

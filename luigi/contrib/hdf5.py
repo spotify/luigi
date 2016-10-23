@@ -334,7 +334,8 @@ class Hdf5Table(object):
         if self._key_is_table:
             # settings.logger.debug("NORMAL OPEN")
             with pd.HDFStore(self.store, mode="r") as store:
-                return store.select(self.key, **kwargs)
+                data = store.select(self.key, **kwargs)
+            return data
         else:
             # pandas bug does not allow start stop in select as multiple
             keys = self.filesystem.listdir(self.key)
@@ -347,12 +348,13 @@ class Hdf5Table(object):
             return pd.concat(frames, axis=1)
 
     def _read_chunked(self, chunksize):
+        is_table = self._key_is_table
         store = pd.HDFStore(self.store, "r")
         try:
-            if self._key_is_table:
+            if is_table:
                 return store.select(key=self.key, chunksize=chunksize, auto_close=1)
             else:
-                keys = self.filesystem.listdir(self.key)
+                keys = self.filesystem.listdir(self.key, store)
                 return store.select_as_multiple(keys, chunksize=chunksize, auto_close=1)
         except:
             store.close()
