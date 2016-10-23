@@ -15,15 +15,11 @@
 # the License.
 #
 """
-This module allows saving and reading from hdf5 storages by wrapping pandas HDFStore.
+This module allows saving and reading dataframes from hdf5 storages by wrapping pandas HDFStore.
 It integrates luigi nicely with many pandas task, without worrying to much about saving and reading
 from hdf5 storages.
 
-The target also handles synchronous I/O operations as the default
-pytables storage does not allow parallel I/O. It also comes with a chunked reading
-method to save memory if necessary.
-
-It supports atomic write operations if if inside the context manager.
+It supports atomic write/append operations.
 
 for more detailed documentation regarding the hdf5 file format and it's parameters be sure to visit
 `pandas doc <http://pandas.pydata.org/pandas-docs/stable/>`_ and/or
@@ -168,14 +164,6 @@ class Hdf5StoreTarget(Hdf5TableTarget):
         if mode != "r":
             raise ValueError("Hdf5StoreTarget is not writeable. Use Hdf5TableTarget instead")
         return super(Hdf5StoreTarget, self).open(mode="r", **kwargs)
-
-
-def multi_target_read(target_list, concat_axis=0, **kwargs):
-    frames = []
-    for t in target_list:
-        with t.open("r") as table:
-            frames.append(table.read(**kwargs))
-    return pd.concat(frames, axis=concat_axis).sort_index(axis=1)
 
 
 class Hdf5FileSystem(luigi.target.FileSystem):
