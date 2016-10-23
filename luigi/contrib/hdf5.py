@@ -1,3 +1,62 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2016 Alan Hoeng
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+#
+"""
+This module allows saving and reading from hdf5 storages by wrapping pandas HDFStore.
+It integrates luigi nicely with many pandas task, without worrying to much about saving and reading
+from hdf5 storages.
+
+The target also handles synchronous I/O operations as the default
+pytables storage does not allow parallel I/O. It also comes with a chunked reading
+method to save memory if necessary.
+
+It supports atomic write operations if if inside the context manager.
+
+for more detailed documentation regarding the hdf5 file format and it's parameters be sure to visit
+`pandas doc <http://pandas.pydata.org/pandas-docs/stable/>`_ and/or
+`PyTables doc <http://www.pytables.org/>`_
+
+Below a simple example on how to read and write data from a storage:
+
+.. code-block:: python
+
+    import luigi
+    from luigi.contrib.hdf5 import Hdf5TableTarget
+
+    class BaggedFeatures(luigi.Task)
+        users = luigi.ListParameter
+
+        def requires(self):
+            return GetUserActivity(users=self.users)
+
+        def output(self):
+            return Hdf5TableTarget("/data/storage.h5",
+                                key="bagged_features",
+                                format="table", append=True)
+
+        def run(self):
+            with self.input().open() as storage:
+                frames = [df for df in storage.read(chunksize=1000)]
+                users = pd.concat(frames)
+
+            df_bagged_features = aggregate_data(users, group_by="date")
+            with self.output().open("w") as storage:
+                storage.write(df_bagged_features)
+
+"""
 import io
 import os
 import sys
