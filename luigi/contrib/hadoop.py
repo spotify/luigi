@@ -408,7 +408,7 @@ class HadoopJobRunner(JobRunner):
         self.streaming_jar = streaming_jar
         self.modules = get(modules, [])
         self.streaming_args = get(streaming_args, [])
-        self.libjars = libjars
+        self.libjars = get(libjars, [])
         self.libjars_in_hdfs = get(libjars_in_hdfs, [])
         self.archives = get(archives, [])
         self.jobconfs = get(jobconfs, {})
@@ -474,9 +474,7 @@ class HadoopJobRunner(JobRunner):
         arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
 
         # 'libjars' is a generic option, so place it first
-        libjars = []
-        if self.libjars:
-            libjars = libjars.split(',')
+        libjars = [libjar for libjar in self.libjars]
         
         for libjar in self.libjars_in_hdfs:
             run_cmd = luigi.contrib.hdfs.load_hadoop_cmd() + ['fs', '-get', libjar, self.tmp_dir]
@@ -590,13 +588,15 @@ class DefaultHadoopJobRunner(HadoopJobRunner):
     def __init__(self):
         config = configuration.get_config()
         streaming_jar = config.get('hadoop', 'streaming-jar')
-        cmdenvs = config.get('hadoop', 'cmdenvs', default=None).split(';')
+        cmdenvs = config.get('hadoop', 'cmdenvs', default=None)
         archives = config.get('hadoop', 'archives', default=None)
+        
+        if cmdenvs:
+            cmdenvs = cmdenvs.split(';')
         if archives:
             archives = archives.split(';')
-        libjars = config.get('hadoop', 'libjars', default=None)
-        super(DefaultHadoopJobRunner, self).__init__(streaming_jar=streaming_jar, cmdenvs=cmdenvs, 
-                                                     libjars=libjars, archives=archives)
+        
+        super(DefaultHadoopJobRunner, self).__init__(streaming_jar=streaming_jar, cmdenvs=cmdenvs, archives=archives)
         # TODO: add more configurable options
 
 
