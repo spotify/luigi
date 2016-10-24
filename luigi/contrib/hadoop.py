@@ -401,19 +401,20 @@ class HadoopJobRunner(JobRunner):
 
     def __init__(self, streaming_jar, modules=None, streaming_args=None,
                  libjars=None, libjars_in_hdfs=None, jobconfs=None,
-                 input_format=None, output_format=None,
+                 input_format=None, output_format=None, cmdenvs=None,
                  end_job_with_atomic_move_dir=True, archives=None):
         def get(x, default):
             return x is not None and x or default
         self.streaming_jar = streaming_jar
         self.modules = get(modules, [])
         self.streaming_args = get(streaming_args, [])
-        self.libjars = get(libjars, [])
+        self.libjars = libjars
         self.libjars_in_hdfs = get(libjars_in_hdfs, [])
         self.archives = get(archives, [])
         self.jobconfs = get(jobconfs, {})
         self.input_format = input_format
         self.output_format = output_format
+        self.cmdenvs = get(cmdenvs,[])
         self.end_job_with_atomic_move_dir = end_job_with_atomic_move_dir
         self.tmp_dir = False
 
@@ -473,8 +474,10 @@ class HadoopJobRunner(JobRunner):
         arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
 
         # 'libjars' is a generic option, so place it first
-        libjars = [libjar for libjar in self.libjars]
-
+        libjars = []
+        if self.libjars:
+            libjars = libjars.split(',')
+        
         for libjar in self.libjars_in_hdfs:
             run_cmd = luigi.contrib.hdfs.load_hadoop_cmd() + ['fs', '-get', libjar, self.tmp_dir]
             logger.debug(subprocess.list2cmdline(run_cmd))
@@ -487,7 +490,8 @@ class HadoopJobRunner(JobRunner):
         # 'archives' is also a generic option
         if self.archives:
             arglist += ['-archives', ','.join(self.archives)]
-
+       
+        
         # Add static files and directories
         extra_files = get_extra_files(job.extra_files())
 
@@ -502,7 +506,7 @@ class HadoopJobRunner(JobRunner):
             arglist += ['-files', ','.join(files)]
 
         jobconfs = job.jobconfs()
-
+        
         for k, v in six.iteritems(self.jobconfs):
             jobconfs.append('%s=%s' % (k, v))
 
@@ -550,6 +554,10 @@ class HadoopJobRunner(JobRunner):
                 allowed_output_targets))
         arglist += ['-output', output_hadoop]
 
+        # environment variables for streaming commands
+        for cmdenv in self.cmdenvs:
+            arglist += ['-cmdenv', cmdenv]
+
         # submit job
         if job.package_binary is not None:
             shutil.copy(job.package_binary, os.path.join(self.tmp_dir, 'mrrunner.pex'))
@@ -582,7 +590,13 @@ class DefaultHadoopJobRunner(HadoopJobRunner):
     def __init__(self):
         config = configuration.get_config()
         streaming_jar = config.get('hadoop', 'streaming-jar')
-        super(DefaultHadoopJobRunner, self).__init__(streaming_jar=streaming_jar)
+        cmdenvs = config.get('hadoop', 'cmdenvs', default=None).split(';')
+        archives = config.get('hadoop', 'archives', default=None)
+        if archives:
+            archives = archives.split(';')
+        libjars = config.get('hadoop', 'libjars', default=None)
+        super(DefaultHadoopJobRunner, self).__init__(streaming_jar=streaming_jar, cmdenvs=cmdenvs, 
+                                                     libjars=libjars, archives=archives)
         # TODO: add more configurable options
 
 
