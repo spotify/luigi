@@ -414,7 +414,7 @@ class HadoopJobRunner(JobRunner):
         self.jobconfs = get(jobconfs, {})
         self.input_format = input_format
         self.output_format = output_format
-        self.cmdenvs = get(cmdenvs,[])
+        self.cmdenvs = get(cmdenvs, [])
         self.end_job_with_atomic_move_dir = end_job_with_atomic_move_dir
         self.tmp_dir = False
 
@@ -587,15 +587,7 @@ class DefaultHadoopJobRunner(HadoopJobRunner):
     def __init__(self):
         config = configuration.get_config()
         streaming_jar = config.get('hadoop', 'streaming-jar')
-        cmdenvs = config.get('hadoop', 'cmdenvs', default=None)
-        archives = config.get('hadoop', 'archives', default=None)
-        
-        if cmdenvs:
-            cmdenvs = cmdenvs.split(';')
-        if archives:
-            archives = archives.split(';')
-        
-        super(DefaultHadoopJobRunner, self).__init__(streaming_jar=streaming_jar, cmdenvs=cmdenvs, archives=archives)
+        super(DefaultHadoopJobRunner, self).__init__(streaming_jar=streaming_jar)
         # TODO: add more configurable options
 
 
