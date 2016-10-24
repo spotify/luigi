@@ -475,7 +475,7 @@ class HadoopJobRunner(JobRunner):
 
         # 'libjars' is a generic option, so place it first
         libjars = [libjar for libjar in self.libjars]
-        
+
         for libjar in self.libjars_in_hdfs:
             run_cmd = luigi.contrib.hdfs.load_hadoop_cmd() + ['fs', '-get', libjar, self.tmp_dir]
             logger.debug(subprocess.list2cmdline(run_cmd))
@@ -488,8 +488,7 @@ class HadoopJobRunner(JobRunner):
         # 'archives' is also a generic option
         if self.archives:
             arglist += ['-archives', ','.join(self.archives)]
-       
-        
+
         # Add static files and directories
         extra_files = get_extra_files(job.extra_files())
 
@@ -504,7 +503,7 @@ class HadoopJobRunner(JobRunner):
             arglist += ['-files', ','.join(files)]
 
         jobconfs = job.jobconfs()
-        
+
         for k, v in six.iteritems(self.jobconfs):
             jobconfs.append('%s=%s' % (k, v))
 
