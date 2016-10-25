@@ -275,10 +275,10 @@ class AtomicLocalFile(io.BufferedWriter):
     :class:`luigi.file.LocalTarget` for example
     """
 
-    def __init__(self, path):
+    def __init__(self, path, mode='w'):
         self.__tmp_path = self.generate_tmp_path(path)
         self.path = path
-        super(AtomicLocalFile, self).__init__(io.FileIO(self.__tmp_path, 'w'))
+        super(AtomicLocalFile, self).__init__(io.FileIO(self.__tmp_path, mode))
 
     def close(self):
         super(AtomicLocalFile, self).close()
