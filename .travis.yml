@@ -28,7 +28,6 @@ env:
     - TOXENV=py27-gcloud
     - TOXENV=py27-postgres
     - TOXENV=py27-hdf5
-    - TOXENV=py33-hdf5
     - TOXENV=py34-hdf5
       # - TOXENV=visualiser
       # Disabling this test because of intermittent failures :-/
