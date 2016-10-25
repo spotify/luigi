@@ -32,7 +32,7 @@ from target_test import FileSystemTargetTestMixin
 
 import itertools
 import io
-from errno import EEXIST
+from errno import EEXIST, EXDEV
 
 
 class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
@@ -129,6 +129,32 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         t.move(self.copy)
         self.assertFalse(os.path.exists(self.path))
         self.assertTrue(os.path.exists(self.copy))
+
+    def test_move_across_filesystems(self):
+        t = LocalTarget(self.path)
+        with t.open('w') as f:
+            f.write('test_data')
+
+        def rename_across_filesystems(src, dst):
+            err = OSError()
+            err.errno = EXDEV
+            raise err
+
+        real_rename = os.rename
+
+        def mockrename(src, dst):
+            if '-across-fs' in src:
+                real_rename(src, dst)
+            else:
+                rename_across_filesystems(src, dst)
+
+        copy = '%s-across-fs' % self.copy
+        with mock.patch('os.rename', mockrename):
+            t.move(copy)
+
+        self.assertFalse(os.path.exists(self.path))
+        self.assertTrue(os.path.exists(copy))
+        self.assertEqual('test_data', LocalTarget(copy).open('r').read())
 
     def test_format_chain(self):
         UTF8WIN = luigi.format.TextFormat(encoding='utf8', newline='\r\n')
