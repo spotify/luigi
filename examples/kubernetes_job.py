@@ -20,27 +20,14 @@ from luigi.contrib.k8s import KubernetesJobTask
 
 class PerlPi(KubernetesJobTask):
 
-    job_def = {
-        "apiVersion": "batch/v1",
-        "kind": "Job",
-        "metadata": {
-            "name": "pi"
-        },
-        "spec": {
-            "template": {
-                "metadata": {
-                    "name": "pi"
-                },
-                "spec": {
-                    "containers": [{
-                        "name": "pi",
-                        "image": "perl",
-                        "command": ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
-                    }],
-                    "restartPolicy": "Never"
-                }
-            }
-        }
+    name = "pi"
+    max_retrials = 3
+    spec_schema = {
+        "containers": [{
+            "name": "pi",
+            "image": "perl",
+            "command": ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+        }]
     }
 
 if __name__ == "__main__":

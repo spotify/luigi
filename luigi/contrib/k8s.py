@@ -37,6 +37,10 @@ class KubernetesJobTask(luigi.Task):
         super(KubernetesJobTask, self).__init__(*args, **kwargs)
         self.__kube_api = HTTPClient(KubeConfig.from_file(self.kubeconfig_path))
         self.__logger = logging.getLogger('luigi-interface')
+        self.__job_uuid = str(uuid.uuid4().hex)
+        self.__uu_name = self.name + "-luigi-" + self.__job_uuid
+        if (self.max_retrials > 0):
+            self.spec_schema["restartPolicy"] = "OnFailure"
 
     @property
     def kubeconfig_path(self):
@@ -51,137 +55,93 @@ class KubernetesJobTask(luigi.Task):
         return configuration.get_config().get("k8s", "kubeconfig_path", "~/.kube/config")
 
     @property
-    def job_def(self):
+    def name(self):
         """
-        Kubernetes Job definition in JSON format, example::
-
-        {
-            "apiVersion": "batch/v1",
-            "kind": "Job",
-            "metadata": {
-                "name": "pi"
-            },
-            "spec": {
-                "template": {
-                    "metadata": {
-                        "name": "pi"
-                    },
-                    "spec": {
-                        "containers": [{
-                            "name": "pi",
-                            "image": "perl",
-                            "command": ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
-                        }],
-                        "restartPolicy": "Never"
-                    }
-                }
-            }
-        }
-
-        For more details please refer to: http://kubernetes.io/docs/user-guide/jobs
+        A name for this job. This task will automatically append a UUID to the
+        name before to submit to Kubernetes.
         """
         pass
 
     @property
+    def spec_schema(self):
+        """
+        Kubernetes Job spec schema in JSON format, example::
+
+            {
+                "containers": [{
+                    "name": "pi",
+                    "image": "perl",
+                    "command": ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+                }],
+                "restartPolicy": "Never"
+            }
+
+        For more informations please refer to:
+        http://kubernetes.io/docs/user-guide/pods/multi-container/#the-spec-schema
+        """
+
+    @property
     def max_retrials(self):
         """
-        Maximum number of allowed job failures. If this is greater than 0,
-        RestartPolicy will be automatically set to "OnFailure" in the
-        Job definition (job_def).
+        Maximum number of retrials in case of failure. If this is greater than 0,
+        the RestartPolicy will be automatically set to "OnFailure" in the
+        spec schema definition (spec_schema).
         """
         return 0
 
     def __track_job(self):
         """Poll job status while active"""
-        job_uuid = self.job_def["metadata"]["labels"]["luigi_task_id"]
-        job_name = self.job_def["metadata"]["name"]
-        status = self.__get_job_status()
-        while (status == "running"):
-            self.__logger.debug("Kubernetes job " + job_name + " is still running")
+        while (self.__get_job_status() == "running"):
+            self.__logger.debug("Kubernetes job " + self.__uu_name + " is still running")
             time.sleep(self.__POLL_TIME)
-            status = self.__get_job_status()
-        if(status == "succeeded"):
-            self.__logger.info("Kubernetes job " + job_name + " succeeded")
+        if(self.__get_job_status() == "succeeded"):
+            self.__logger.info("Kubernetes job " + self.__uu_name + " succeeded")
         else:
-            self.__logger.warning("Kubernetes job " + job_name + " failed")
+            raise Exception("Kubernetes job " + self.__uu_name + " failed")
 
     def __get_job_status(self):
         """It returns the Kubernetes job status"""
         # Look for the required job
-        job_uuid = self.job_def["metadata"]["labels"]["luigi_task_id"]
-        jobs = Job.objects(self.__kube_api).filter(selector="luigi_task_id=" + job_uuid)
-        job_name = self.job_def["metadata"]["name"]
+        jobs = Job.objects(self.__kube_api).filter(selector="luigi_task_id=" + self.__job_uuid)
         # Raise an exception if no such job found
         if len(jobs.response["items"]) == 0:
-            raise Exception("Kubernetes job " + job_name + " not found")
-
-        # Compute success threshold for parallel jobs
-        success_thr = 1
-        if("completions" in self.job_def["spec"]):
-            success_thr = int(self.job_def["spec"]["completions"])
-        elif("parallelism" in self.job_def["spec"]):
-            success_thr = int(self.job_def["spec"]["parallelism"])
-
+            raise Exception("Kubernetes job " + self.__uu_name + " not found")
         # Figure out status and return it
         job = Job(self.__kube_api, jobs.response["items"][0])
-        if ("succeeded" in job.obj["status"]):
-            succeeded_cnt = job.obj["status"]["succeeded"]
-            self.__logger.debug("Kubernetes job " + job_name +
-                " status.succeeded: " + str(succeeded_cnt))
-            if(succeeded_cnt >= success_thr):
-                return "succeeded"
+        if ("succeeded" in job.obj["status"] and job.obj["status"]["succeeded"] > 0):
+            return "succeeded"
         if ("failed" in job.obj["status"]):
             failed_cnt = job.obj["status"]["failed"]
-            self.__logger.debug("Kubernetes job " + job_name +
-                " status.failed: " + str(succeeded_cnt))
-            if (failed_cnt > self.max_retrials * success_thr):
+            self.__logger.debug("Kubernetes job " + self.__uu_name +
+                " status.failed: " + str(failed_cnt))
+            if (failed_cnt > self.max_retrials):
                 job.scale(replicas=0) # avoid more retrials
                 return "failed"
         return "running"
 
-    def __validate_job_def(self):
-        """Validate Job Definition (job_def)"""
-        if (not self.job_def):
-            raise ValueError("Missing Job definition (job_def)")
-        if("metadata" not in self.job_def):
-            raise ValueError("Missing .metadata in Job definition (job_def)")
-        if("name" not in self.job_def["metadata"]):
-            raise ValueError("Missing .metadata.name in Job definition (job_def)")
-        if("spec" not in self.job_def):
-            raise ValueError("Missing .spec in Job definition (job_def)")
-        if("template" not in self.job_def["spec"]):
-            raise ValueError("Missing .spec.template in Job definition (job_def)")
-        if("spec" not in self.job_def["spec"]["template"]):
-            raise ValueError("Missing .spec.template.spec in Job definition (job_def)")
-
-    def __format_job_def(self):
-        """
-        Add some additional informations to the user-provided
-        Job definition (job_def).
-        """
-        # Add a label to track the job
-        job_uuid = str(uuid.uuid4().hex)
-        if ("labels" in self.job_def["metadata"]):
-            self.job_def["metadata"]["labels"]["luigi_task_id"] = job_uuid
-        else:
-            self.job_def["metadata"]["labels"] = { "luigi_task_id": job_uuid }
-        # Add a suffix to the name
-        self.job_def["metadata"]["name"] = \
-            self.job_def["metadata"]["name"] + "-luigi-" + job_uuid
-        # If max_retrials > 0 set RestartPolicy to OnFailure
-        if (self.max_retrials > 0):
-            self.job_def["spec"]["template"]["spec"]["restartPolicy"] = "OnFailure"
-
     def run(self):
-        # Start by validating job_def
-        self.__validate_job_def()
-        # Format Job definition
-        self.__format_job_def()
         # Submit the Job
-        job_name = self.job_def["metadata"]["name"]
-        self.__logger.info("Submitting Kubernetes Job: " + job_name)
-        job = Job(self.__kube_api, self.job_def)
+        self.__logger.info("Submitting Kubernetes Job: " + self.__uu_name)
+        job_json = {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "name": self.__uu_name,
+                "labels": {
+                    "luigi_task_id": self.__job_uuid
+                }
+            },
+            "spec": {
+                "template": {
+                    "metadata": {
+                        "name": self.__uu_name
+                    },
+                    "spec": self.spec_schema
+                }
+            }
+        }
+        job = Job(self.__kube_api, job_json)
         job.create()
         # Track the Job (wait while active)
-        self.__logger.info("Start tracking Kubernetes Job: " + job_name)
+        self.__logger.info("Start tracking Kubernetes Job: " + self.__uu_name)
         self.__track_job()
