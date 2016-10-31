@@ -20,7 +20,6 @@ from luigi import configuration
 import logging
 import uuid
 import time
-import sys
 
 try:
     from pykube.config import KubeConfig
