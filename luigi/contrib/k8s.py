@@ -48,6 +48,9 @@ class KubernetesJobTask(luigi.Task):
         It defaults to "~/.kube/config", which is the default location
         when using minikube (http://kubernetes.io/docs/getting-started-guides/minikube).
 
+        WARNING: For Python versions < 3.5 kubeconfing must point to a Kubernetes API
+        hostname, and NOT to an IP address.
+
         For more details please referer to:
         http://kubernetes.io/docs/user-guide/kubeconfig-file
         """
