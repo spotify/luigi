@@ -381,16 +381,15 @@ class Task(object):
         :param kwargs:
         :return:
         """
-        k = self.param_kwargs.copy()
-        k.update(six.iteritems(kwargs))
-
         if cls is None:
             cls = self.__class__
 
         new_k = {}
         for param_name, param_class in cls.get_params():
-            if param_name in k:
-                new_k[param_name] = k[param_name]
+            if param_name in kwargs:
+                new_k[param_name] = kwargs[param_name]
+            elif hasattr(self, param_name):
+                new_k[param_name] = getattr(self, param_name)
 
         return cls(**new_k)
 
