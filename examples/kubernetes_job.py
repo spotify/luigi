@@ -16,7 +16,7 @@
 #
 
 import luigi
-from luigi.contrib.k8s import KubernetesJobTask
+from luigi.contrib.k8s_job import KubernetesJobTask
 
 class PerlPi(KubernetesJobTask):
 

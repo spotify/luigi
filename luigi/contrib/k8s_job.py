@@ -17,7 +17,7 @@
 
 
 """
-Kubernetes Job wrapper for Luigi
+Kubernetes Job wrapper for Luigi.
 
 From the Kubernetes website:
 
@@ -30,7 +30,7 @@ Requires:
 
 - pykube: ``pip install pykube``
 
-Written and maintained by Marco Capuccini (@mcapuccini)
+Written and maintained by Marco Capuccini (@mcapuccini).
 """
 
 import luigi
@@ -54,10 +54,10 @@ class KubernetesJobTask(luigi.Task):
         super(KubernetesJobTask, self).__init__(*args, **kwargs)
         self.__kube_api = HTTPClient(KubeConfig.from_file(self.kubeconfig_path))
         self.__logger = logging.getLogger('luigi-interface')
-        self.__job_uuid = str(uuid.uuid4().hex)
-        self.__uu_name = self.name + "-luigi-" + self.__job_uuid
-        if (self.max_retrials > 0):
-            self.spec_schema["restartPolicy"] = "OnFailure"
+        self.job_uuid = str(uuid.uuid4().hex)
+        self.uu_name = self.name + "-luigi-" + self.job_uuid
+        if ("restartPolicy" not in self.spec_schema):
+            self.spec_schema["restartPolicy"] = "Never"
 
     @property
     def kubeconfig_path(self):
@@ -96,6 +96,13 @@ class KubernetesJobTask(luigi.Task):
                 "restartPolicy": "Never"
             }
 
+        **restartPolicy**
+
+        - If restartPolicy is not defined, it will be set to "Never" by default.
+
+        - **Warning**: restartPolicy=OnFailure will bypass max_retrials, and restart
+        the container until success, with the risk of blocking the Luigi task.
+
         For more informations please refer to:
         http://kubernetes.io/docs/user-guide/pods/multi-container/#the-spec-schema
         """
@@ -103,36 +110,35 @@ class KubernetesJobTask(luigi.Task):
     @property
     def max_retrials(self):
         """
-        Maximum number of retrials in case of failure. If this is greater than 0,
-        the RestartPolicy will be automatically set to "OnFailure" in the
-        spec schema definition (spec_schema).
+        Maximum number of retrials in case of failure.
         """
         return 0
 
     def __track_job(self):
         """Poll job status while active"""
         while (self.__get_job_status() == "running"):
-            self.__logger.debug("Kubernetes job " + self.__uu_name + " is still running")
+            self.__logger.debug("Kubernetes job " + self.uu_name + " is still running")
             time.sleep(self.__POLL_TIME)
         if(self.__get_job_status() == "succeeded"):
-            self.__logger.info("Kubernetes job " + self.__uu_name + " succeeded")
+            self.__logger.info("Kubernetes job " + self.uu_name + " succeeded")
         else:
-            raise Exception("Kubernetes job " + self.__uu_name + " failed")
+            raise RuntimeError("Kubernetes job " + self.uu_name + " failed")
 
     def __get_job_status(self):
         """It returns the Kubernetes job status"""
         # Look for the required job
-        jobs = Job.objects(self.__kube_api).filter(selector="luigi_task_id=" + self.__job_uuid)
+        jobs = Job.objects(self.__kube_api).filter(selector="luigi_task_id=" + self.job_uuid)
         # Raise an exception if no such job found
         if len(jobs.response["items"]) == 0:
-            raise Exception("Kubernetes job " + self.__uu_name + " not found")
+            raise RuntimeError("Kubernetes job " + self.uu_name + " not found")
         # Figure out status and return it
         job = Job(self.__kube_api, jobs.response["items"][0])
         if ("succeeded" in job.obj["status"] and job.obj["status"]["succeeded"] > 0):
+            job.scale(replicas=0) # Downscale the job, but keep it there for logging
             return "succeeded"
         if ("failed" in job.obj["status"]):
             failed_cnt = job.obj["status"]["failed"]
-            self.__logger.debug("Kubernetes job " + self.__uu_name +
+            self.__logger.debug("Kubernetes job " + self.uu_name +
                 " status.failed: " + str(failed_cnt))
             if (failed_cnt > self.max_retrials):
                 job.scale(replicas=0) # avoid more retrials
@@ -141,20 +147,20 @@ class KubernetesJobTask(luigi.Task):
 
     def run(self):
         # Submit the Job
-        self.__logger.info("Submitting Kubernetes Job: " + self.__uu_name)
+        self.__logger.info("Submitting Kubernetes Job: " + self.uu_name)
         job_json = {
             "apiVersion": "batch/v1",
             "kind": "Job",
             "metadata": {
-                "name": self.__uu_name,
+                "name": self.uu_name,
                 "labels": {
-                    "luigi_task_id": self.__job_uuid
+                    "luigi_task_id": self.job_uuid
                 }
             },
             "spec": {
                 "template": {
                     "metadata": {
-                        "name": self.__uu_name
+                        "name": self.uu_name
                     },
                     "spec": self.spec_schema
                 }
@@ -163,5 +169,5 @@ class KubernetesJobTask(luigi.Task):
         job = Job(self.__kube_api, job_json)
         job.create()
         # Track the Job (wait while active)
-        self.__logger.info("Start tracking Kubernetes Job: " + self.__uu_name)
+        self.__logger.info("Start tracking Kubernetes Job: " + self.uu_name)
         self.__track_job()
