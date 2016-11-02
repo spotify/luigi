@@ -36,10 +36,7 @@ import luigi.task
 import luigi.parameter
 
 logger = logging.getLogger("luigi-interface")
-
-
 DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.gethostname()
-DEBUG = False
 
 
 class TestNotificationsTask(luigi.task.Task):
@@ -68,7 +65,7 @@ class TestNotificationsTask(luigi.task.Task):
 class email(luigi.Config):
     force_send = luigi.parameter.BoolParameter(
         default=False,
-        description='Send e-mail even from a tty or with DEBUG set')
+        description='Send e-mail even from a tty')
     format = luigi.parameter.ChoiceParameter(
         default='plain',
         config_path=dict(section='core', name='email-type'),
@@ -254,19 +251,15 @@ def send_email_sendgrid(sender, subject, message, recipients, image_png):
     client.send(to_send)
 
 
-def _email_disabled():
+def _email_disabled_reason():
     if email().format == 'none':
-        logger.info("Not sending email when email format is none")
-        return True
+        return "email format is 'none'"
     elif email().force_send:
-        return False
+        return None
     elif sys.stdout.isatty():
-        logger.info("Not sending email when running from a tty")
-        return True
-    elif DEBUG:
-        logger.info("Not sending email when running in debug mode")
+        return "running from a tty"
     else:
-        return False
+        return None
 
 
 def send_email_sns(sender, subject, message, topic_ARN, image_png):
@@ -311,7 +304,12 @@ def send_email(subject, message, sender, recipients, image_png=None):
     }
 
     subject = _prefix(subject)
-    if not recipients or recipients == (None,) or _email_disabled():
+    if not recipients or recipients == (None,):
+        return
+
+    if _email_disabled_reason():
+        logger.info("Not sending email to %r because %s",
+                    recipients, _email_disabled_reason())
         return
 
     # Clean the recipients lists to allow multiple email addresses, comma
@@ -322,6 +320,8 @@ def send_email(subject, message, sender, recipients, image_png=None):
 
     # Replace original recipients with the clean list
     recipients = recipients_tmp
+
+    logger.info("Sending email to %r", recipients)
 
     # Get appropriate sender and call it to send the notification
     email_sender = notifiers[email().method]
@@ -341,20 +341,16 @@ def _email_recipients(additional_recipients=None):
 
 def send_error_email(subject, message, additional_recipients=None):
     """
-    Sends an email to the configured error email.
-
-    If no error email is configured, then a message is logged.
+    Sends an email to the configured error email, if it's configured.
     """
     recipients = _email_recipients(additional_recipients)
-    if recipients:
-        sender = email().sender
-        logger.info("Sending warning email to %r", recipients)
-        send_email(
-            subject=subject,
-            message=message,
-            sender=sender,
-            recipients=recipients
-        )
+    sender = email().sender
+    send_email(
+        subject=subject,
+        message=message,
+        sender=sender,
+        recipients=recipients
+    )
 
 
 def _prefix(subject):
