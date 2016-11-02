@@ -21,8 +21,7 @@ The config file is broken into sections, each controlling a different part of th
     streaming-jar=/usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
 
     [core]
-    default-scheduler-host=luigi-host.mycompany.foo
-    error-email=foo@bar.baz
+    scheduler_host=luigi-host.mycompany.foo
 
 
 .. _ParamConfigIngestion:

@@ -206,9 +206,8 @@ available while others are running.
 Monitoring task pipelines
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Set error-email in :doc:`../configuration` to receive notifications whenever
-tasks crash. (This can get noisy with growing numbers of tasks and
-intermittent failures.)
+Luigi comes with some existing ways in :py:mod:`luigi.notifications` to receive
+notifications whenever tasks crash. Email is the most common way.
 
 The above mentioned range tools for recurring tasks not only implement
 reliable scheduling for you, but also emit events which you can use to
