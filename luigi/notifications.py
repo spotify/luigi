@@ -49,7 +49,7 @@ class TestNotificationsTask(luigi.task.Task):
 
     .. code-block:: console
 
-            $ luigi TestNotifications --local-scheduler
+            $ luigi TestNotificationsTask --local-scheduler --email-force-send
 
     And then check your email inbox to see if you got an error email or any
     other kind of notifications that you expected.
@@ -314,7 +314,7 @@ def send_email(subject, message, sender, recipients, image_png=None):
     if not recipients or recipients == (None,) or _email_disabled():
         return
 
-    # Clean the recipients lists to allow multiple error-email addresses, comma
+    # Clean the recipients lists to allow multiple email addresses, comma
     # separated in luigi.cfg
     recipients_tmp = []
     for r in recipients:
@@ -341,9 +341,9 @@ def _email_recipients(additional_recipients=None):
 
 def send_error_email(subject, message, additional_recipients=None):
     """
-    Sends an email to the configured error-email.
+    Sends an email to the configured error email.
 
-    If no error-email is configured, then a message is logged.
+    If no error email is configured, then a message is logged.
     """
     recipients = _email_recipients(additional_recipients)
     if recipients:
@@ -355,10 +355,6 @@ def send_error_email(subject, message, additional_recipients=None):
             sender=sender,
             recipients=recipients
         )
-    else:
-        logger.info("Skipping error email. Set `error-email` in the `core`"
-                    " section of the Luigi config file or override `owner_email`"
-                    " in the task to receive error emails.")
 
 
 def _prefix(subject):

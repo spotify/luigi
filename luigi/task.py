@@ -186,7 +186,7 @@ class Task(object):
     def owner_email(self):
         '''
         Override this to send out additional error emails to task owner, in addition to the one
-        defined in `core`.`error-email`. This should return a string or a list of strings. e.g.
+        defined in the global configuration. This should return a string or a list of strings. e.g.
         'test@exmaple.com' or ['test1@example.com', 'test2@example.com']
         '''
         return None
