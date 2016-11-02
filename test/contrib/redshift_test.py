@@ -232,7 +232,7 @@ class TestRedshiftUnloadTask(unittest.TestCase):
 
         # Check the Unload query.
         mock_cursor.execute.assert_called_with(
-            "UNLOAD ( 'SELECT \'a\' as col_a, current_date as col_b' ) TO 's3://bucket/key' "
+            "UNLOAD ( 'SELECT \\'a\\' as col_a, current_date as col_b' ) TO 's3://bucket/key' "
             "credentials 'aws_access_key_id=AWS_ACCESS_KEY;aws_secret_access_key=AWS_SECRET_KEY' "
             "DELIMITER ',' ADDQUOTES GZIP ALLOWOVERWRITE PARALLEL OFF;"
         )
