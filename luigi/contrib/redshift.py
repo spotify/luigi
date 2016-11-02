@@ -637,7 +637,7 @@ class RedshiftUnloadTask(postgres.PostgresQuery):
             self.aws_secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY']
 
         unload_query = self.unload_query.format(
-            query=self.query().replace("'", "\'"),
+            query=self.query().replace("'", r"\'"),
             s3_unload_path=self.s3_unload_path,
             unload_options=self.unload_options,
             s3_access_key=self.aws_access_key_id,
