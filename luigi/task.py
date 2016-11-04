@@ -34,6 +34,7 @@ import re
 from luigi import six
 
 from luigi import parameter
+from luigi.target import Target
 from luigi.task_register import Register
 
 Parameter = parameter.Parameter
@@ -609,6 +610,8 @@ def flatten(struct):
     """
     if struct is None:
         return []
+    if isinstance(struct, Target):
+        return [struct]
     flat = []
     if isinstance(struct, dict):
         for _, result in six.iteritems(struct):

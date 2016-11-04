@@ -43,6 +43,10 @@ class DefaultInsignificantParamTask(luigi.Task):
     necessary_param = luigi.Parameter(significant=False)
 
 
+class DummyListTarget(luigi.Target, list):
+    pass
+
+
 class TaskTest(unittest.TestCase):
 
     def test_tasks_doctest(self):
@@ -84,6 +88,10 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(flatten('foo'), ['foo'])
         self.assertEqual(flatten(42), [42])
         self.assertEqual(flatten((len(i) for i in ["foo", "troll"])), [3, 5])
+
+        dummy_list_target = DummyListTarget()
+        self.assertEqual(flatten(dummy_list_target), [dummy_list_target])
+
         self.assertRaises(TypeError, flatten, (len(i) for i in ["foo", "troll", None]))
 
     def test_externalized_task_picklable(self):
