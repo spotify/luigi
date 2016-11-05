@@ -398,9 +398,9 @@ class AtomicGCSFile(luigi.target.AtomicLocalFile):
     A GCS file that writes to a temp file and put to GCS on close.
     """
 
-    def __init__(self, path, gcs_client):
+    def __init__(self, path, gcs_client, compressed=False):
         self.gcs_client = gcs_client
-        super(AtomicGCSFile, self).__init__(path)
+        super(AtomicGCSFile, self).__init__(path, compressed)
 
     def move_to_final_destination(self):
         self.gcs_client.put(self.tmp_path, self.path)

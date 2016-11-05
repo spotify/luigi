@@ -325,7 +325,7 @@ class AtomicFtpFile(luigi.target.AtomicLocalFile):
     Also cleans up the temp file if close is not invoked.
     """
 
-    def __init__(self, fs, path):
+    def __init__(self, fs, path, compressed=False):
         """
         Initializes an AtomicFtpfile instance.
         :param fs:
@@ -333,7 +333,7 @@ class AtomicFtpFile(luigi.target.AtomicLocalFile):
         :type path: str
         """
         self._fs = fs
-        super(AtomicFtpFile, self).__init__(path)
+        super(AtomicFtpFile, self).__init__(path, compressed)
 
     def move_to_final_destination(self):
         self._fs.put(self.tmp_path, self.path)

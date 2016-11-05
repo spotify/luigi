@@ -275,10 +275,17 @@ class AtomicLocalFile(io.BufferedWriter):
     :class:`luigi.file.LocalTarget` for example
     """
 
-    def __init__(self, path):
+    def __init__(self, path, compressed=False):
         self.__tmp_path = self.generate_tmp_path(path)
         self.path = path
-        super(AtomicLocalFile, self).__init__(io.FileIO(self.__tmp_path, 'w'))
+        self.compressed = compressed
+  
+        f = io.FileIO(self.__tmp_path, 'w')
+        if self.compressed:
+          import gzip
+          f = gzip.GzipFile(fileobj=f)
+
+        super(AtomicLocalFile, self).__init__(f)
 
     def close(self):
         super(AtomicLocalFile, self).close()
