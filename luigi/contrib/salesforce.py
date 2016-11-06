@@ -474,7 +474,7 @@ class SalesforceAPI(object):
             raise Exception("Can not create a batch without a valid job_id and an active session.")
 
         headers = self._get_create_batch_content_headers(file_type)
-        headers['Content-Length'] = len(data)
+        headers['Content-Length'] = str(len(data))
 
         response = requests.post(self._get_create_batch_url(job_id),
                                  headers=headers,
