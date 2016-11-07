@@ -304,6 +304,51 @@ sender
   Default value: luigi-client@<server_name>
 
 
+[batch_notifier]
+----------------
+
+Parameters controlling the contents of batch notifications send from the
+scheduler
+
+email-interval
+  Number of minutes between e-mail sends. Making this larger results in
+  fewer, bigger e-mails.
+  Defaults to 60.
+
+batch-mode
+  Controls how tasks are grouped together in the e-mail. Can be set to
+  "family", "all", or "unbatched_params". If "family", all tasks of the
+  same family are treated identically. If "all", only identical tasks
+  are grouped together. If "unbatched_params", tasks are grouped
+  together if they are of the same family and all parameters other than
+  batch parameters are equal.
+  Defaults to "unbatched_params"
+
+error-lines
+  Number of lines to include from each error message in the batch
+  e-mail. This can be used to keep e-mails shorter while preserving the
+  more useful information usually found near the bottom of stack traces.
+  This can be set to 0 to include all lines. If you don't wish to see
+  error messages, instead set `error-messages` to 0.
+  Defaults to 20.
+
+error-messages
+  Number of messages to preserve for each task group. As most tasks that
+  fail repeatedly do so for similar reasons each time, it's not usually
+  necessary to keep every message. This controls how many messages are
+  kept for each task or task group. Set to 0 to not include error
+  messages in the e-mails.
+  Defaults to 1.
+
+group-by-error-messages
+  Quite often, a system or cluster failure will cause many disparate
+  task types to fail for the same reason. This can cause a lot of noise
+  in the batch e-mails. This cuts down on the noise by listing items
+  with identical error messages together. Error messages are compared
+  after limiting by `error-lines`.
+  Defaults to true.
+
+
 [hadoop]
 --------
 
