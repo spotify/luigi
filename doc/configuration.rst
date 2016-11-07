@@ -570,6 +570,12 @@ scalding-libjars
 
 Parameters controlling scheduler behavior
 
+batch-emails
+  Whether to send batch e-mails for failures and disables rather than
+  sending immediate disable e-mails and just relying on workers to send
+  immediate batch e-mails.
+  Defaults to false.
+
 disable-hard-timeout
   Hard time limit after which tasks will be disabled by the server if
   they fail again, in seconds. It will disable the task if it fails

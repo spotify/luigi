@@ -191,6 +191,18 @@ class Task(object):
         '''
         return None
 
+    def _owner_list(self):
+        """
+        Turns the owner_email property into a list. This should not be overridden.
+        """
+        owner_email = self.owner_email
+        if owner_email is None:
+            return []
+        elif isinstance(owner_email, six.string_types):
+            return owner_email.split(',')
+        else:
+            return owner_email
+
     @property
     def use_cmdline_section(self):
         ''' Property used by core config such as `--workers` etc.
