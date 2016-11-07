@@ -23,6 +23,9 @@ See :doc:`/central_scheduler` for more info.
 
 import collections
 import inspect
+import json
+
+from luigi.batch_notifier import BatchNotifier
 
 try:
     import cPickle as pickle
@@ -124,6 +127,8 @@ class scheduler(Config):
     remove_delay = parameter.FloatParameter(default=600.0)
     worker_disconnect_delay = parameter.FloatParameter(default=60.0)
     state_path = parameter.Parameter(default='/var/lib/luigi-server/state.pickle')
+
+    batch_emails = parameter.BoolParameter(default=False, description="Send e-mails in batches rather than immediately")
 
     # Jobs are disabled if we see more than retry_count failures in disable_window seconds.
     # These disables last for disable_persist seconds.
@@ -543,15 +548,16 @@ class SimpleTaskState(object):
             if task.has_excessive_failures():
                 task.scheduler_disable_time = time.time()
                 new_status = DISABLED
-                notifications.send_error_email(
-                    'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
-                    '{task} failed {failures} times in the last {window} seconds, so it is being '
-                    'disabled for {persist} seconds'.format(
-                        failures=task.retry_policy.retry_count,
-                        task=task.id,
-                        window=config.disable_window,
-                        persist=config.disable_persist,
-                    ))
+                if not config.batch_emails:
+                    notifications.send_error_email(
+                        'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
+                        '{task} failed {failures} times in the last {window} seconds, so it is being '
+                        'disabled for {persist} seconds'.format(
+                            failures=task.retry_policy.retry_count,
+                            task=task.id,
+                            window=config.disable_window,
+                            persist=config.disable_persist,
+                        ))
         elif new_status == DISABLED:
             task.scheduler_disable_time = None
 
@@ -670,17 +676,23 @@ class Scheduler(object):
         self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}
 
+        if self._config.batch_emails:
+            self._email_batcher = BatchNotifier()
+
     def load(self):
         self._state.load()
 
     def dump(self):
         self._state.dump()
+        if self._config.batch_emails:
+            self._email_batcher.send_email()
 
     @rpc_method()
     def prune(self):
         logger.info("Starting pruning of task graph")
         self._prune_workers()
         self._prune_tasks()
+        self._prune_emails()
         logger.info("Done pruning task graph")
 
     def _prune_workers(self):
@@ -704,6 +716,10 @@ class Scheduler(object):
                 remove_tasks.append(task.id)
 
         self._state.inactivate_tasks(remove_tasks)
+
+    def _prune_emails(self):
+        if self._config.batch_emails:
+            self._email_batcher.update()
 
     def _update_worker(self, worker_id, worker_reference=None, get_work=False):
         # Keep track of whenever the worker was last active.
@@ -734,7 +750,7 @@ class Scheduler(object):
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
                  assistant=False, tracking_url=None, worker=None, batchable=None,
-                 batch_id=None, retry_policy_dict={}, **kwargs):
+                 batch_id=None, retry_policy_dict={}, owners=None, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -800,6 +816,26 @@ class Scheduler(object):
                 self._update_task_history(task, status)
             self._state.set_status(task, PENDING if status == SUSPENDED else status, self._config)
 
+        if status == FAILED and self._config.batch_emails:
+            batched_params, _ = self._state.get_batcher(worker_id, family)
+            if batched_params:
+                unbatched_params = {
+                    param: value
+                    for param, value in six.iteritems(task.params)
+                    if param not in batched_params
+                }
+            else:
+                unbatched_params = task.params
+            try:
+                expl_raw = json.loads(expl)
+            except ValueError:
+                expl_raw = expl
+            self._email_batcher.add_failure(
+                task.pretty_id, task.family, unbatched_params, expl_raw, owners)
+            if task.status == DISABLED:
+                self._email_batcher.add_disable(
+                    task.pretty_id, task.family, unbatched_params, owners)
+
         if deps is not None:
             task.deps = set(deps)
 
@@ -828,6 +864,22 @@ class Scheduler(object):
             task.workers.add(worker_id)
             self._state.get_worker(worker_id).tasks.add(task)
             task.runnable = runnable
+
+    @rpc_method()
+    def announce_scheduling_failure(self, task_name, family, params, expl, owners, **kwargs):
+        if not self._config.batch_emails:
+            return
+        worker_id = kwargs['worker']
+        batched_params, _ = self._state.get_batcher(worker_id, family)
+        if batched_params:
+            unbatched_params = {
+                param: value
+                for param, value in six.iteritems(params)
+                if param not in batched_params
+            }
+        else:
+            unbatched_params = params
+        self._email_batcher.add_scheduling_fail(task_name, family, unbatched_params, expl, owners)
 
     @rpc_method()
     def add_worker(self, worker, info, **kwargs):

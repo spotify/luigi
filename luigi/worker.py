@@ -446,6 +446,7 @@ class Worker(object):
         if task:
             msg = (task, status, runnable)
             self._add_task_history.append(msg)
+            kwargs['owners'] = task._owner_list()
 
         if task_id in self._batch_running_tasks:
             for batch_task in self._batch_running_tasks.pop(task_id):
@@ -519,17 +520,36 @@ class Worker(object):
     def _log_unexpected_error(self, task):
         logger.exception("Luigi unexpected framework error while scheduling %s", task)  # needs to be called from within except clause
 
+    def _announce_scheduling_failure(self, task, expl):
+        try:
+            self._scheduler.announce_scheduling_failure(
+                worker=self._id,
+                task_name=str(task),
+                family=task.task_family,
+                params=task.to_str_params(only_significant=True),
+                expl=expl,
+                owners=task._owner_list(),
+            )
+        except Exception:
+            raise
+            formatted_traceback = traceback.format_exc()
+            self._email_unexpected_error(task, formatted_traceback)
+
     def _email_complete_error(self, task, formatted_traceback):
-        self._email_error(task, formatted_traceback,
-                          subject="Luigi: {task} failed scheduling. Host: {host}",
-                          headline="Will not run {task} or any dependencies due to error in complete() method",
-                          )
+        self._announce_scheduling_failure(task, formatted_traceback)
+        if self._config.send_failure_email:
+            self._email_error(task, formatted_traceback,
+                              subject="Luigi: {task} failed scheduling. Host: {host}",
+                              headline="Will not run {task} or any dependencies due to error in complete() method",
+                              )
 
     def _email_dependency_error(self, task, formatted_traceback):
-        self._email_error(task, formatted_traceback,
-                          subject="Luigi: {task} failed scheduling. Host: {host}",
-                          headline="Will not run {task} or any dependencies due to error in deps() method",
-                          )
+        self._announce_scheduling_failure(task, formatted_traceback)
+        if self._config.send_failure_email:
+            self._email_error(task, formatted_traceback,
+                              subject="Luigi: {task} failed scheduling. Host: {host}",
+                              headline="Will not run {task} or any dependencies due to error in deps() method",
+                              )
 
     def _email_unexpected_error(self, task, formatted_traceback):
         self._email_error(task, formatted_traceback,
