@@ -175,9 +175,3 @@ class LocalTarget(FileSystemTarget):
     def __del__(self):
         if self.is_tmp and self.exists():
             self.remove()
-
-
-class File(LocalTarget):
-    def __init__(self, *args, **kwargs):
-        warnings.warn("File has been renamed LocalTarget", DeprecationWarning, stacklevel=2)
-        super(File, self).__init__(*args, **kwargs)
