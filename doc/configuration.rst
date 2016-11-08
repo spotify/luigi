@@ -307,7 +307,7 @@ sender
 [batch_notifier]
 ----------------
 
-Parameters controlling the contents of batch notifications send from the
+Parameters controlling the contents of batch notifications sent from the
 scheduler
 
 email-interval
@@ -316,13 +316,42 @@ email-interval
   Defaults to 60.
 
 batch-mode
-  Controls how tasks are grouped together in the e-mail. Can be set to
-  "family", "all", or "unbatched_params". If "family", all tasks of the
-  same family are treated identically. If "all", only identical tasks
-  are grouped together. If "unbatched_params", tasks are grouped
-  together if they are of the same family and all parameters other than
-  batch parameters are equal.
-  Defaults to "unbatched_params"
+  Controls how tasks are grouped together in the e-mail. Suppose we have
+  the following sequence of failures:
+
+  1. TaskA(a=1, b=1)
+  2. TaskA(a=1, b=1)
+  3. TaskA(a=2, b=1)
+  4. TaskA(a=1, b=2)
+  5. TaskB(a=1, b=1)
+
+  For any setting of batch-mode, the batch e-mail will record 5 failures
+  and mention them in the subject. The difference is in how they will
+  be displayed in the body. Here are example bodies with error-messages
+  set to 0.
+
+  "all" only groups together failures for the exact same task:
+
+  - TaskA(a=1, b=1) (2 failures)
+  - TaskA(a=1, b=2) (1 failure)
+  - TaskA(a=2, b=1) (1 failure)
+  - TaskB(a=1, b=1) (1 failure)
+
+  "family" groups together failures for tasks of the same family:
+
+  - TaskA (4 failures)
+  - TaskB (1 failure)
+
+  "unbatched_params" groups together tasks that look the same after
+  removing batched parameters. So if TaskA has a batch_method set for
+  parameter a, we get the following:
+
+  - TaskA(b=1) (3 failures)
+  - TaskA(b=2) (1 failure)
+  - TaskB(a=1, b=2) (1 failure)
+
+  Defaults to "unbatched_params", which is identical to "all" if you are
+  not using batched parameters.
 
 error-lines
   Number of lines to include from each error message in the batch
