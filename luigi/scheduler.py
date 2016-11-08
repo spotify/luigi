@@ -334,7 +334,7 @@ class Task(object):
 
     @property
     def pretty_id(self):
-        param_str = ', '.join('{}={}'.format(key, value) for key, value in self.params.items())
+        param_str = ', '.join('{}={}'.format(key, value) for key, value in sorted(self.params.items()))
         return '{}({})'.format(self.family, param_str)
 
 
