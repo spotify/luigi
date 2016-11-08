@@ -83,13 +83,13 @@ class Encoding(object):
     ISO_8859_1 = 'ISO-8859-1'
 
 
-BQDataset = collections.namedtuple('BQDataset', 'project_id dataset_id')
+BQDataset = collections.namedtuple('BQDataset', 'project_id dataset_id location')
 
 
-class BQTable(collections.namedtuple('BQTable', 'project_id dataset_id table_id')):
+class BQTable(collections.namedtuple('BQTable', 'project_id dataset_id table_id location')):
     @property
     def dataset(self):
-        return BQDataset(project_id=self.project_id, dataset_id=self.dataset_id)
+        return BQDataset(project_id=self.project_id, dataset_id=self.dataset_id, location=self.location)
 
     @property
     def uri(self):
@@ -163,8 +163,10 @@ class BigQueryClient(object):
         """
 
         try:
-            self.client.datasets().insert(projectId=dataset.project_id, body=dict(
-                {'id': '{}:{}'.format(dataset.project_id, dataset.dataset_id)}, **body)).execute()
+            body['id'] = '{}:{}'.format(dataset.project_id, dataset.dataset_id)
+            if dataset.location is not None:
+                body['location'] = dataset.location
+            self.client.datasets().insert(projectId=dataset.project_id, body=body).execute()
         except http.HttpError as ex:
             if ex.resp.status == 409:
                 if raise_if_exists:
@@ -364,8 +366,8 @@ class BigQueryClient(object):
 
 
 class BigQueryTarget(luigi.target.Target):
-    def __init__(self, project_id, dataset_id, table_id, client=None):
-        self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id)
+    def __init__(self, project_id, dataset_id, table_id, client=None, location=None):
+        self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id, location=location)
         self.client = client or BigQueryClient()
 
     @classmethod
