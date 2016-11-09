@@ -214,3 +214,56 @@ reliable scheduling for you, but also emit events which you can use to
 set up delay monitoring. That way you can implement alerts for when
 jobs are stuck for prolonged periods lacking input data or otherwise
 requiring attention.
+
+.. _AtomicWrites:
+
+Atomic Writes Problem
+~~~~~~~~~~~~~~~~~~~~~
+
+A very common mistake done by luigi plumbers is to write data partially to the
+final destination, that is, not atomically. The problem arises because
+completion checks in luigi are exactly as naive as running
+:meth:`luigi.target.Target.exists`. And in many cases it just means to check if
+a folder exist on disk. During the time we have partially written data, a task
+depending on that output would think its input is complete. This can have
+devestating effects, as in `the thanksgiving bug
+<http://tarrasch.github.io/luigi-budapest-bi-oct-2015/#/21>`__.
+
+The concept can be illustrated by imagining that we deal with data stored on
+local disk and by running commands:
+
+.. code-block:: console
+
+    # This the BAD way
+    $ mkdir /outputs/final_output
+    $ big-slow-calculation > /outputs/final_output/foo.data
+
+As stated earlier, the problem is that only partial data exists for a duration,
+yet we consider the data to be :meth:`~luigi.task.Task.complete` because the
+output folder already exists. Here is a robust version of this:
+
+.. code-block:: console
+
+    # This is the good way
+    $ mkdir /outputs/final_output-tmp-123456
+    $ big-slow-calculation > /outputs/final_output-tmp-123456/foo.data
+    $ mv --no-target-directory --no-clobber /outputs/final_output{-tmp-123456,}
+    $ [[ -d /outputs/final_output-tmp-123456 ]] && rm -r /outputs/final_output-tmp-123456
+
+Indeed, the good way is not as trivial. It involves coming up with a unique
+directory name and a pretty complex ``mv`` line, the reason ``mv`` need all
+those is because we don't want ``mv`` to move a directory into a potentially
+existing directory. A directory could already exist in exceptional cases, for
+example when central locking fails and the same task would somehow run twice at
+the same time. Lastly, in the exceptional case where the file was never moved,
+one might want to remove the temporary directory that never got used.
+
+Note that this was an example where the storage was on local disk. But for
+every storage (hard disk file, hdfs file, database table, etc.) this procedure
+will look different. But do every luigi user need to implement that complexity?
+Nope, thankfully luigi developers are aware of these and luigi comes with many
+built-in solutions. In the case of you're dealing with a file system
+(:class:`~luigi.target.FileSystemTarget`), you should consider using
+:meth:`~luigi.target.FileSystemTarget.temporary_path`. For other targets, you
+should ensure that the way you're writing your final output directory is
+atomic.
