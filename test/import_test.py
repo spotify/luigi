@@ -54,7 +54,7 @@ class ImportTest(unittest.TestCase):
             luigi.Event,
             luigi.Config,
             luigi.Task, luigi.ExternalTask, luigi.WrapperTask,
-            luigi.Target, luigi.LocalTarget, luigi.File,
+            luigi.Target, luigi.LocalTarget,
             luigi.namespace,
             luigi.RemoteScheduler,
             luigi.RPCError,

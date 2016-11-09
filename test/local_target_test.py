@@ -26,7 +26,7 @@ import mock
 
 import luigi.format
 from luigi import LocalTarget
-from luigi.file import LocalFileSystem
+from luigi.local_target import LocalFileSystem
 from luigi.target import FileAlreadyExists, MissingParentDirectory
 from target_test import FileSystemTargetTestMixin
 
@@ -342,10 +342,3 @@ class FileSystemTest(unittest.TestCase):
         LocalTarget(src).open('w').close()
         self.fs.move(src, dest)
         self.assertTrue(os.path.exists(dest))
-
-
-class TestImportFile(unittest.TestCase):
-
-    def test_file(self):
-        from luigi.file import File
-        self.assertTrue(isinstance(File('foo'), LocalTarget))
