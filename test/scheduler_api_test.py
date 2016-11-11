@@ -869,6 +869,61 @@ class SchedulerApiTest(unittest.TestCase):
             }
             self.assertEqual(expected, self.sch.count_pending(WORKER))
 
+    def test_count_pending_include_failures(self):
+        for num_tasks in range(1, 20):
+            # must be scheduled as pending before failed to ensure WORKER is in the task's workers
+            self.sch.add_task(worker=WORKER, task_id=str(num_tasks), status=PENDING)
+            self.sch.add_task(worker=WORKER, task_id=str(num_tasks), status=FAILED)
+            expected = {
+                'n_pending_tasks': num_tasks,
+                'n_unique_pending': num_tasks,
+                'n_pending_last_scheduled': num_tasks,
+                'running_tasks': [],
+                'worker_state': 'active',
+            }
+            self.assertEqual(expected, self.sch.count_pending(WORKER))
+
+    def test_count_pending_do_not_include_done_or_disabled(self):
+        for num_tasks in range(1, 20, 2):
+            self.sch.add_task(worker=WORKER, task_id=str(num_tasks), status=PENDING)
+            self.sch.add_task(worker=WORKER, task_id=str(num_tasks + 1), status=PENDING)
+            self.sch.add_task(worker=WORKER, task_id=str(num_tasks), status=DONE)
+            self.sch.add_task(worker=WORKER, task_id=str(num_tasks + 1), status=DISABLED)
+        expected = {
+            'n_pending_tasks': 0,
+            'n_unique_pending': 0,
+            'n_pending_last_scheduled': 0,
+            'running_tasks': [],
+            'worker_state': 'active',
+        }
+        self.assertEqual(expected, self.sch.count_pending(WORKER))
+
+    def test_count_pending_do_not_count_upstream_disabled(self):
+        self.sch.add_task(worker=WORKER, task_id='A', status=PENDING)
+        self.sch.add_task(worker=WORKER, task_id='B', status=DISABLED)
+        self.sch.add_task(worker=WORKER, task_id='C', status=PENDING, deps=['A', 'B'])
+        expected = {
+            'n_pending_tasks': 1,
+            'n_unique_pending': 1,
+            'n_pending_last_scheduled': 1,
+            'running_tasks': [],
+            'worker_state': 'active',
+        }
+        self.assertEqual(expected, self.sch.count_pending(WORKER))
+
+    def test_count_pending_count_upstream_failed(self):
+        self.sch.add_task(worker=WORKER, task_id='A', status=PENDING)
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+        self.sch.add_task(worker=WORKER, task_id='B', status=PENDING, deps=['A'])
+        expected = {
+            'n_pending_tasks': 2,
+            'n_unique_pending': 2,
+            'n_pending_last_scheduled': 2,
+            'running_tasks': [],
+            'worker_state': 'active',
+        }
+        self.assertEqual(expected, self.sch.count_pending(WORKER))
+
     def test_count_pending_missing_worker(self):
         self.sch.add_task(worker=WORKER, task_id='A', status=PENDING)
         expected = {

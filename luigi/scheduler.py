@@ -368,17 +368,19 @@ class Worker(object):
         if self.last_active + config.worker_disconnect_delay < time.time():
             return True
 
-    def get_pending_tasks(self, state):
+    def get_pending_tasks(self, state, include_failed=False):
         """
         Get PENDING (and RUNNING) tasks for this worker.
 
         You have to pass in the state for optimization reasons.
         """
         if len(self.tasks) < state.num_pending_tasks():
-            return six.moves.filter(lambda task: task.status in [PENDING, RUNNING],
-                                    self.tasks)
+            statuses = [PENDING, RUNNING]
+            if include_failed:
+                statuses.append(FAILED)
+            return six.moves.filter(lambda task: task.status in statuses, self.tasks)
         else:
-            return six.moves.filter(lambda task: self.id in task.workers, state.get_pending_tasks())
+            return six.moves.filter(lambda task: self.id in task.workers, state.get_pending_tasks(include_failed))
 
     def is_trivial_worker(self, state):
         """
@@ -479,9 +481,12 @@ class SimpleTaskState(object):
     def get_running_tasks(self):
         return six.itervalues(self._status_tasks[RUNNING])
 
-    def get_pending_tasks(self):
+    def get_pending_tasks(self, include_failed=False):
+        statuses = [PENDING, RUNNING]
+        if include_failed:
+            statuses.append(FAILED)
         return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status])
-                                             for status in [PENDING, RUNNING])
+                                             for status in statuses)
 
     def set_batcher(self, worker_id, family, batcher_args, max_batch_size):
         self._task_batchers.setdefault(worker_id, {})
@@ -959,7 +964,7 @@ class Scheduler(object):
         running_tasks = []
 
         upstream_status_table = {}
-        for task in worker.get_pending_tasks(self._state):
+        for task in worker.get_pending_tasks(self._state, include_failed=True):
             if self._upstream_status(task.id, upstream_status_table) == UPSTREAM_DISABLED:
                 continue
             if task.status == RUNNING:
@@ -970,7 +975,7 @@ class Scheduler(object):
                     more_info = {'task_id': task.id, 'worker': str(other_worker)}
                     more_info.update(other_worker.info)
                     running_tasks.append(more_info)
-            elif task.status == PENDING:
+            elif task.status in (PENDING, FAILED):
                 num_pending += 1
                 num_unique_pending += int(len(task.workers) == 1)
                 num_pending_last_scheduled += int(task.workers.peek(last=True) == worker_id)

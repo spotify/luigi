@@ -784,7 +784,7 @@ class WorkerTest(LuigiTestCase):
 
         self.assertFalse(any(task.complete() for task in all_tasks))
 
-        worker = Worker(scheduler=self.sch, keep_alive=True)
+        worker = Worker(scheduler=Scheduler(retry_count=1), keep_alive=True)
 
         for task in all_tasks:
             self.assertTrue(worker.add(task))
@@ -814,7 +814,7 @@ class WorkerKeepAliveTests(LuigiTestCase):
         self.sch = Scheduler()
         super(WorkerKeepAliveTests, self).setUp()
 
-    def _worker_keep_alive_test(self, first_should_live, second_should_live, **worker_args):
+    def _worker_keep_alive_test(self, first_should_live, second_should_live, task_status=None, **worker_args):
         worker_args.update({
             'scheduler': self.sch,
             'worker_processes': 0,
@@ -831,6 +831,9 @@ class WorkerKeepAliveTests(LuigiTestCase):
             worker2.add(DummyTask())
             t2 = threading.Thread(target=worker2.run)
             t2.start()
+
+            if task_status:
+                self.sch.add_task(worker='DummyWorker', task_id=DummyTask().task_id, status=task_status)
 
             # allow workers to run their get work loops a few times
             time.sleep(0.1)
@@ -872,6 +875,22 @@ class WorkerKeepAliveTests(LuigiTestCase):
             second_should_live=True,
             keep_alive=True,
             count_last_scheduled=True,
+        )
+
+    def test_keep_alive_through_failure(self):
+        self._worker_keep_alive_test(
+            first_should_live=True,
+            second_should_live=True,
+            keep_alive=True,
+            task_status='FAILED',
+        )
+
+    def test_do_not_keep_alive_through_disable(self):
+        self._worker_keep_alive_test(
+            first_should_live=False,
+            second_should_live=False,
+            keep_alive=True,
+            task_status='DISABLED',
         )
 
 
@@ -1835,7 +1854,7 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
                     self.assertFalse(w3.run())
                     self.assertFalse(w2.run())
-                    self.assertFalse(w1.run())
+                    self.assertTrue(w1.run())
 
                     self.assertEqual([wt.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
 
@@ -1917,7 +1936,7 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
                     self.assertTrue(w3.run())
                     self.assertFalse(w2.run())
-                    self.assertFalse(w1.run())
+                    self.assertTrue(w1.run())
 
                     self.assertEqual([wt.task_id], list(self.sch.task_list('PENDING', 'UPSTREAM_DISABLED').keys()))
                     self.assertEqual([e1.task_id], list(self.sch.task_list('DISABLED', '').keys()))
