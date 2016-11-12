@@ -26,17 +26,36 @@ import json
 import os
 
 import luigi
-from luigi.contrib import bigquery
+import unittest
+from luigi.contrib import bigquery, gcs
 
-from contrib import gcs_test
+try:
+    import googleapiclient.errors
+    import oauth2client
+except ImportError:
+    raise unittest.SkipTest('Unable to load googleapiclient module')
+
 from nose.plugins.attrib import attr
-
 from testfixtures import should_raise
 
-PROJECT_ID = gcs_test.PROJECT_ID
+# In order to run this test, you should set your GCS/BigQuert project/bucket.
+# Unfortunately there's no mock
+PROJECT_ID = os.environ.get('BQ_TEST_PROJECT_ID', 'your_project_id_here')
+BUCKET_NAME = os.environ.get('BQ_TEST_INPUT_BUCKET', 'your_test_bucket_here')
+TEST_FOLDER = os.environ.get('TRAVIS_BUILD_ID', 'bigquery_test_folder')
 DATASET_ID = os.environ.get('BQ_TEST_DATASET_ID', 'luigi_tests')
 EU_DATASET_ID = os.environ.get('BQ_TEST_EU_DATASET_ID', 'luigi_tests_eu')
+
+CREDENTIALS = oauth2client.client.GoogleCredentials.get_application_default()
+
 UNDEFINED_LOCATION = 'undefined'
+
+
+def bucket_url(suffix):
+    """
+    Actually it's bucket + test folder name
+    """
+    return 'gs://{}/{}/{}'.format(BUCKET_NAME, TEST_FOLDER, suffix)
 
 
 @attr('gcloud')
@@ -78,27 +97,40 @@ class TestRunQueryTask(bigquery.BigQueryRunQueryTask):
 
 
 @attr('gcloud')
-class BigQueryGcloudTest(gcs_test._GCSBaseTestCase):
+class BigQueryGcloudTest(unittest.TestCase):
     def setUp(self):
-        super(BigQueryGcloudTest, self).setUp()
-        self.bq_client = bigquery.BigQueryClient(gcs_test.CREDENTIALS)
+        self.bq_client = bigquery.BigQueryClient(CREDENTIALS)
+        self.gcs_client = gcs.GCSClient(CREDENTIALS)
+
+        # Setup GCS input data
+        try:
+            self.gcs_client.client.buckets().insert(
+                project=PROJECT_ID, body={'name': BUCKET_NAME, 'location': 'EU'}).execute()
+        except googleapiclient.errors.HttpError as ex:
+            # todo verify that existing dataset is not US
+            if ex.resp.status != 409:  # bucket already exists
+                raise
+
+        self.gcs_client.remove(bucket_url(''), recursive=True)
+        self.gcs_client.mkdir(bucket_url(''))
 
         text = '\n'.join(map(json.dumps, [{'field1': 'hi', 'field2': 1}, {'field1': 'bye', 'field2': 2}]))
-        self.gcs_file = gcs_test.bucket_url(self.id())
-        self.client.put_string(text, self.gcs_file)
+        self.gcs_file = bucket_url(self.id())
+        self.gcs_client.put_string(text, self.gcs_file)
 
+        # Setup BigQuery datasets
         self.table = bigquery.BQTable(project_id=PROJECT_ID, dataset_id=DATASET_ID,
                                       table_id=self.id().split('.')[-1], location=None)
         self.table_eu = bigquery.BQTable(project_id=PROJECT_ID, dataset_id=EU_DATASET_ID,
                                          table_id=self.id().split('.')[-1] + '_eu', location='EU')
 
-        # Ensure empty datasets at the beginning of each test
         self.bq_client.delete_dataset(self.table.dataset)
         self.bq_client.delete_dataset(self.table_eu.dataset)
         self.bq_client.make_dataset(self.table.dataset, body={})
         self.bq_client.make_dataset(self.table_eu.dataset, body={})
 
     def tearDown(self):
+        self.gcs_client.remove(bucket_url(''), recursive=True)
         self.bq_client.delete_dataset(self.table.dataset)
         self.bq_client.delete_dataset(self.table_eu.dataset)
 
