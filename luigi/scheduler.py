@@ -287,7 +287,8 @@ class Task(object):
         self.time_running = None  # Timestamp when picked up by worker
         self.expl = None
         self.priority = priority
-        self.resources = _get_default(resources, {})
+        self.resources = collections.defaultdict(
+            dict, _get_default(resources, {}))
         self.family = family
         self.module = module
         self.params = _get_default(params, {})
@@ -807,7 +808,8 @@ class Scheduler(object):
             task.deps.update(new_deps)
 
         if resources is not None:
-            task.resources = resources
+            task.resources[worker_id] = resources
+
 
         if worker.enabled and not assistant:
             task.stakeholders.add(worker_id)
@@ -840,7 +842,7 @@ class Scheduler(object):
     @rpc_method()
     def update_resources(self, **resources):
         if self._resources is None:
-            self._resources = {}
+            self._resources = collections.defaultdict(dict)
         self._resources.update(resources)
 
     def _generate_retry_policy(self, task_retry_policy_dict):
@@ -862,8 +864,9 @@ class Scheduler(object):
         used_resources = collections.defaultdict(int)
         if self._resources is not None:
             for task in self._state.get_active_tasks(status=RUNNING):
-                if task.resources:
-                    for resource, amount in six.iteritems(task.resources):
+                task_resources = task.resources[task.worker_running]
+                if task_resources:
+                    for resource, amount in six.iteritems(task_resources):
                         used_resources[resource] += amount
         return used_resources
 
@@ -1005,14 +1008,15 @@ class Scheduler(object):
             if best_task:
                 continue
 
+            task_resources = task.resources[worker_id]
             if task.status == RUNNING and (task.worker_running in greedy_workers):
                 greedy_workers[task.worker_running] -= 1
-                for resource, amount in six.iteritems((task.resources or {})):
+                for resource, amount in six.iteritems((task_resources or {})):
                     greedy_resources[resource] += amount
 
-            if self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
+            if self._schedulable(task) and self._has_resources(task_resources, greedy_resources):
                 in_workers = (assistant and task.runnable) or worker_id in task.workers
-                if in_workers and self._has_resources(task.resources, used_resources):
+                if in_workers and self._has_resources(task_resources, used_resources):
                     best_task = task
                     batch_param_names, max_batch_size = self._state.get_batcher(
                         worker_id, task.family)
@@ -1036,7 +1040,7 @@ class Scheduler(object):
                             greedy_workers[task_worker] -= 1
 
                             # keep track of the resources used in greedy scheduling
-                            for resource, amount in six.iteritems((task.resources or {})):
+                            for resource, amount in six.iteritems((task_resources or {})):
                                 greedy_resources[resource] += amount
 
                             break
@@ -1305,8 +1309,9 @@ class Scheduler(object):
         if self._resources is not None:
             consumers = collections.defaultdict(dict)
             for task in self._state.get_running_tasks():
-                if task.status == RUNNING and task.resources:
-                    for resource, amount in six.iteritems(task.resources):
+                if task.status == RUNNING and task.resources[task.worker_running]:
+                    task_resources = task.resources[task.worker_running]
+                    for resource, amount in six.iteritems(task_resources):
                         consumers[resource][task.id] = self._serialize_task(task.id, include_deps=False)
             for resource in resources:
                 tasks = consumers[resource['name']]
