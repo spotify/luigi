@@ -36,9 +36,8 @@ except ImportError:
     raise unittest.SkipTest('Unable to load googleapiclient module')
 
 from nose.plugins.attrib import attr
-from testfixtures import should_raise
 
-# In order to run this test, you should set your GCS/BigQuert project/bucket.
+# In order to run this test, you should set your GCS/BigQuery project/bucket.
 # Unfortunately there's no mock
 PROJECT_ID = os.environ.get('BQ_TEST_PROJECT_ID', 'your_project_id_here')
 BUCKET_NAME = os.environ.get('BQ_TEST_INPUT_BUCKET', 'your_test_bucket_here')
@@ -134,21 +133,19 @@ class BigQueryGcloudTest(unittest.TestCase):
         self.bq_client.delete_dataset(self.table.dataset)
         self.bq_client.delete_dataset(self.table_eu.dataset)
 
-    @should_raise(Exception)
     def test_load_eu_to_undefined(self):
         task = TestLoadTask(source=self.gcs_file,
                             dataset=self.table.dataset.dataset_id,
                             table=self.table.table_id,
                             location='EU')
-        task.run()
+        self.assertRaises(Exception, task.run)
 
-    @should_raise(Exception)
     def test_load_us_to_eu(self):
         task = TestLoadTask(source=self.gcs_file,
                             dataset=self.table_eu.dataset.dataset_id,
                             table=self.table_eu.table_id,
                             location='US')
-        task.run()
+        self.assertRaises(Exception, task.run)
 
     def test_load_eu_to_eu(self):
         task = TestLoadTask(source=self.gcs_file,
