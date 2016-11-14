@@ -27,13 +27,17 @@ import os
 
 import luigi
 import unittest
-from luigi.contrib import bigquery, gcs
 
 try:
     import googleapiclient.errors
     import oauth2client
 except ImportError:
     raise unittest.SkipTest('Unable to load googleapiclient module')
+from luigi.contrib import bigquery, bigquery_avro, gcs
+import oauth2client
+import avro.schema
+from avro.datafile import DataFileWriter
+from avro.io import DatumWriter
 
 from nose.plugins.attrib import attr
 
@@ -220,15 +224,51 @@ class BigQueryGcloudTest(unittest.TestCase):
         self.assertTrue(self.bq_client.table_exists(self.table))
 
 
-# @attr('gcloud')
-# class BigQueryLoadAvroTest(gcs_test._GCSBaseTestCase):
-#     def setUp(self):
-#         super(BigQueryLoadAvro, self).setUp()
-#         self.bq_client = bigquery.BigQueryClient(gcs_test.CREDENTIALS)
+@attr('gcloud')
+class BigQueryLoadAvroTest(unittest.TestCase):
+    def _produce_test_input(self):
+        schema = avro.schema.parse("""{
+            "name": "TestQueryTask_record",
+            "type": "record",
+            "doc": "The description",
+            "fields": [
+                {"name": "col0", "type": "int", "doc": "The bold"},
+                {"name": "col1", "type": "int", "doc": "The beautiful"}
+            ]
+        }""")
+        writer = DataFileWriter(open("tmp.avro", "wb"), DatumWriter(), schema)
+        writer.append({'col0': 1000, 'col1': 1001})
+        writer.close()
+        # FIXME don't need a tmp.avro; use GCS API like objects().insert that accepts file contents in a string:
+        # https://developers.google.com/resources/api-libraries/documentation/storage/v1/python/latest/storage_v1.objects.html#insert
 
-#         self.table = bigquery.BQTable(project_id=PROJECT_ID, dataset_id=DATASET_ID,
-#                                       table_id=self.id().split('.')[-1])
-#         self.addCleanup(self.bq_client.delete_table, self.table)
+    def setUp(self):
+        self.gcs_client = gcs.GCSClient(CREDENTIALS).client
+        self.bq_client = bigquery.BigQueryClient(CREDENTIALS).client
 
-#     def test_load_avro_and_propagate_doc
+        self.table_id = self.id().split('.')[-1]
+        self.gcs_dir_url = 'gs://' + self.id() +
+        # self.addCleanup(self.bq_client.delete_table, self.table)
+        # self.addCleanup(self.gcs_client.)
 
+    def test_load_avro_dir_and_propagate_doc(self):
+        class BigQueryLoadAvroTestInput(luigi.ExternalTask):
+            def output(_):
+                return gcs.GcsTarget(self.gcs_dir_url)
+
+        class BigQueryLoadAvroTestTask(bigquery_avro.BigQueryLoadAvro):
+            def requires(_):
+                return DummyGcsInput()
+
+            def output(_):
+                return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, self.table_id)
+
+        task = BigQueryLoadAvroTestTask()
+        self.assertFalse(task.complete())
+        task.run()
+        self.assertTrue(task.complete())
+
+        table = self.bq_client.dataset(DATASET_ID).table(self.table_id)
+        self.assertTrue(table.exists)
+        table.reload()
+        self.assertEqual(table.description, 'The description')
