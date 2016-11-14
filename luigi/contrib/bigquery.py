@@ -129,11 +129,11 @@ class BigQueryClient(object):
             response = self.client.datasets().get(projectId=dataset.project_id,
                                                   datasetId=dataset.dataset_id).execute()
             if dataset.location is not None:
-                fetched_location = response.get('location', '')
-                if not fetched_location:
-                    fetched_location = 'undefined'
+                fetched_location = response.get('location')
                 if dataset.location != fetched_location:
-                    raise Exception('''Dataset already exists with regional location {}. Can't use {}.'''.format(fetched_location, dataset.location))
+                    raise Exception('''Dataset already exists with regional location {}. Can't use {}.'''.format(
+                        fetched_location if fetched_location is not None else 'unspecified',
+                        dataset.location))
 
         except http.HttpError as ex:
             if ex.resp.status == 404:
