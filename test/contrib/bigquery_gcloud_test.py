@@ -47,8 +47,6 @@ EU_DATASET_ID = os.environ.get('BQ_TEST_EU_DATASET_ID', 'luigi_tests_eu')
 
 CREDENTIALS = oauth2client.client.GoogleCredentials.get_application_default()
 
-UNDEFINED_LOCATION = 'undefined'
-
 
 def bucket_url(suffix):
     """
@@ -62,7 +60,7 @@ class TestLoadTask(bigquery.BigQueryLoadTask):
     source = luigi.Parameter()
     table = luigi.Parameter()
     dataset = luigi.Parameter()
-    location = luigi.Parameter()
+    location = luigi.Parameter(default=None)
 
     @property
     def schema(self):
@@ -75,10 +73,7 @@ class TestLoadTask(bigquery.BigQueryLoadTask):
         return [self.source]
 
     def output(self):
-        if self.location == UNDEFINED_LOCATION:
-            return bigquery.BigQueryTarget(PROJECT_ID, self.dataset, self.table)
-        else:
-            return bigquery.BigQueryTarget(PROJECT_ID, self.dataset, self.table, location=self.location)
+        return bigquery.BigQueryTarget(PROJECT_ID, self.dataset, self.table, location=self.location)
 
 
 @attr('gcloud')
@@ -86,13 +81,9 @@ class TestRunQueryTask(bigquery.BigQueryRunQueryTask):
     query = ''' SELECT 'hello' as field1, 2 as field2 '''
     table = luigi.Parameter()
     dataset = luigi.Parameter()
-    location = luigi.Parameter()
 
     def output(self):
-        if self.location == UNDEFINED_LOCATION:
-            return bigquery.BigQueryTarget(PROJECT_ID, self.dataset, self.table)
-        else:
-            return bigquery.BigQueryTarget(PROJECT_ID, self.dataset, self.table, location=self.location)
+        return bigquery.BigQueryTarget(PROJECT_ID, self.dataset, self.table)
 
 
 @attr('gcloud')
@@ -164,8 +155,7 @@ class BigQueryGcloudTest(unittest.TestCase):
     def test_load_undefined_to_eu(self):
         task = TestLoadTask(source=self.gcs_file,
                             dataset=self.table_eu.dataset.dataset_id,
-                            table=self.table_eu.table_id,
-                            location=UNDEFINED_LOCATION)
+                            table=self.table_eu.table_id)
         task.run()
 
         self.assertTrue(self.bq_client.dataset_exists(self.table_eu))
@@ -197,8 +187,7 @@ class BigQueryGcloudTest(unittest.TestCase):
     def test_copy(self):
         task = TestLoadTask(source=self.gcs_file,
                             dataset=self.table.dataset.dataset_id,
-                            table=self.table.table_id,
-                            location=UNDEFINED_LOCATION)
+                            table=self.table.table_id)
         task.run()
 
         self.assertTrue(self.bq_client.dataset_exists(self.table))
@@ -224,8 +213,7 @@ class BigQueryGcloudTest(unittest.TestCase):
 
     def test_run_query(self):
         task = TestRunQueryTask(table=self.table.table_id,
-                                dataset=self.table.dataset.dataset_id,
-                                location=UNDEFINED_LOCATION)
+                                dataset=self.table.dataset.dataset_id)
         task._BIGQUERY_CLIENT = self.bq_client
         task.run()
 
