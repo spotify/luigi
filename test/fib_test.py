@@ -77,5 +77,6 @@ class FibTest(FibTestBase):
         self.assertEqual(MockTarget.fs.get_data('/tmp/fib_10'), b'55\n')
         self.assertEqual(MockTarget.fs.get_data('/tmp/fib_100'), b'354224848179261915075\n')
 
+
 if __name__ == '__main__':
     luigi.run()

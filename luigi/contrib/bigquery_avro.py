@@ -1,16 +1,19 @@
 """Specialized tasks for handling Avro data in BigQuery from GCS.
 """
-from itertools import iter, next
 import logging
 
 from luigi.contrib.bigquery import BigQueryLoadTask, SourceFormat
 from luigi.contrib.gcs import GCSClient
 from luigi.task import flatten
 
+logger = logging.getLogger('luigi-interface')
+
 try:
     import avro
+    import avro.datafile
 except ImportError:
-    raise Exception('bigquery_avro module imported, but avro is not installed.')
+    logger.warning('BigQuery module imported, but svro is '
+                   'not installed. Any BigQueryLoadAvro task will fail')
 
 logger = logging.getLogger(__name__)
 
@@ -38,11 +41,11 @@ class BigQueryLoadAvro(BigQueryLoadTask):
 
     def _get_input_schema(self):
         '''Arbitrarily picks an object in input and reads the Avro schema from it.'''
-        input_target = next(iter(flatten(self.input())))
+        input_target = flatten(self.input())[0]
         input_fs = input_target.fs if hasattr(input_target, 'fs') else GCSClient()
-        input_uri = next(iter(self.source_uris()))
+        input_uri = self.source_uris()[0]
         if '*' in input_uri:
-            input_uri = next(iter(input_fs.list_wildcard(input_uri)))
+            input_uri = input_fs.list_wildcard(input_uri)[0]
 
         schema = []
 
@@ -52,33 +55,45 @@ class BigQueryLoadAvro(BigQueryLoadTask):
             try:
                 reader = avro.datafile.DataFileReader(fp, avro.io.DatumReader())
                 schema.append(reader.datum_reader.writers_schema)
-            except Exception as e:
-                logger.info('%s', e)
+            except Exception:
                 return False
             return True
 
-        input_fs.download(input_uri, 64 * 1024, read_schema).close()  # TODO check with various chunksizes (suspect the file position might matter)
+        input_fs.download(input_uri, 64 * 1024, read_schema).close()
 
         return schema[0]
 
     def _set_output_doc(self, avro_schema):
         table = self.output().table
-        current = self.client.tables().get(projectId=table.project_id,
-                                           datasetId=table.dataset_id,
-                                           tableId=table.table_id).execute()
-        patch = {
-            'description': avro_schema['doc'],
-            'schema': current['schema'],
-        }
-        # TODO update patch['schema']
+        current_bq_schema = self._bq_client.tables().get(projectId=table.project_id,
+                                                         datasetId=table.dataset_id,
+                                                         tableId=table.table_id).execute()
 
-        self.client.tables().patch(projectId=table.project_id,
-                                   datasetId=table.dataset_id,
-                                   tableId=table.table_id,
-                                   body=patch).execute()
+        def get_fields_with_description(current_fields, avro_fields_dict):
+            new_fields = []
+            for record in current_fields:
+                record[u'description'] = avro_fields_dict[record[u'name']].doc
+                if record[u'type'] == u'RECORD':
+                    record[u'fields'] = \
+                        get_fields_with_description(record[u'fields'], avro_fields_dict[record[u'name']].type.fields_dict)
+                new_fields.append(record)
+            return new_fields
+
+        field_descriptions = get_fields_with_description(current_bq_schema['schema']['fields'], avro_schema.fields_dict)
+        patch = {
+            'description': avro_schema.doc,
+            'schema': {'fields': field_descriptions, },
+        }
+
+        self._bq_client.tables().patch(projectId=table.project_id,
+                                       datasetId=table.dataset_id,
+                                       tableId=table.table_id,
+                                       body=patch).execute()
 
     def run(self):
         super(BigQueryLoadAvro, self).run()
+
+        self._bq_client = self.output().client.client
 
         # We propagate documentation in one fire-and-forget attempt; the output table will
         # be left to exist but without documentation if this step raises an exception.

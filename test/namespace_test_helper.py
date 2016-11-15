@@ -27,4 +27,5 @@ class Foo(luigi.Task):
 class Bar(Foo):
     task_namespace = "othernamespace"  # namespace override
 
+
 luigi.namespace()

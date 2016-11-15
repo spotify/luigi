@@ -34,20 +34,22 @@ try:
 except ImportError:
     raise unittest.SkipTest('Unable to load googleapiclient module')
 from luigi.contrib import bigquery, bigquery_avro, gcs
-import oauth2client
 import avro.schema
 from avro.datafile import DataFileWriter
 from avro.io import DatumWriter
 
 from nose.plugins.attrib import attr
+from helpers import unittest
 
 # In order to run this test, you should set your GCS/BigQuery project/bucket.
 # Unfortunately there's no mock
-PROJECT_ID = os.environ.get('BQ_TEST_PROJECT_ID', 'your_project_id_here')
-BUCKET_NAME = os.environ.get('BQ_TEST_INPUT_BUCKET', 'your_test_bucket_here')
+PROJECT_ID = os.environ.get('GCS_TEST_PROJECT_ID', 'your_project_id_here')
+BUCKET_NAME = os.environ.get('GCS_TEST_BUCKET', 'your_test_bucket_here')
 TEST_FOLDER = os.environ.get('TRAVIS_BUILD_ID', 'bigquery_test_folder')
 DATASET_ID = os.environ.get('BQ_TEST_DATASET_ID', 'luigi_tests')
 EU_DATASET_ID = os.environ.get('BQ_TEST_EU_DATASET_ID', 'luigi_tests_eu')
+EU_LOCATION = 'EU'
+US_LOCATION = 'US'
 
 CREDENTIALS = oauth2client.client.GoogleCredentials.get_application_default()
 
@@ -99,7 +101,7 @@ class BigQueryGcloudTest(unittest.TestCase):
         # Setup GCS input data
         try:
             self.gcs_client.client.buckets().insert(
-                project=PROJECT_ID, body={'name': BUCKET_NAME, 'location': 'EU'}).execute()
+                project=PROJECT_ID, body={'name': BUCKET_NAME, 'location': EU_LOCATION}).execute()
         except googleapiclient.errors.HttpError as ex:
             # todo verify that existing dataset is not US
             if ex.resp.status != 409:  # bucket already exists
@@ -116,37 +118,36 @@ class BigQueryGcloudTest(unittest.TestCase):
         self.table = bigquery.BQTable(project_id=PROJECT_ID, dataset_id=DATASET_ID,
                                       table_id=self.id().split('.')[-1], location=None)
         self.table_eu = bigquery.BQTable(project_id=PROJECT_ID, dataset_id=EU_DATASET_ID,
-                                         table_id=self.id().split('.')[-1] + '_eu', location='EU')
+                                         table_id=self.id().split('.')[-1] + '_eu', location=EU_LOCATION)
+
+        self.addCleanup(self.gcs_client.remove, bucket_url(''), recursive=True)
+        self.addCleanup(self.bq_client.delete_dataset, self.table.dataset)
+        self.addCleanup(self.bq_client.delete_dataset, self.table_eu.dataset)
 
         self.bq_client.delete_dataset(self.table.dataset)
         self.bq_client.delete_dataset(self.table_eu.dataset)
         self.bq_client.make_dataset(self.table.dataset, body={})
         self.bq_client.make_dataset(self.table_eu.dataset, body={})
 
-    def tearDown(self):
-        self.gcs_client.remove(bucket_url(''), recursive=True)
-        self.bq_client.delete_dataset(self.table.dataset)
-        self.bq_client.delete_dataset(self.table_eu.dataset)
-
     def test_load_eu_to_undefined(self):
         task = TestLoadTask(source=self.gcs_file,
                             dataset=self.table.dataset.dataset_id,
                             table=self.table.table_id,
-                            location='EU')
+                            location=EU_LOCATION)
         self.assertRaises(Exception, task.run)
 
     def test_load_us_to_eu(self):
         task = TestLoadTask(source=self.gcs_file,
                             dataset=self.table_eu.dataset.dataset_id,
                             table=self.table_eu.table_id,
-                            location='US')
+                            location=US_LOCATION)
         self.assertRaises(Exception, task.run)
 
     def test_load_eu_to_eu(self):
         task = TestLoadTask(source=self.gcs_file,
                             dataset=self.table_eu.dataset.dataset_id,
                             table=self.table_eu.table_id,
-                            location='EU')
+                            location=EU_LOCATION)
         task.run()
 
         self.assertTrue(self.bq_client.dataset_exists(self.table_eu))
@@ -178,7 +179,7 @@ class BigQueryGcloudTest(unittest.TestCase):
         task = TestLoadTask(source=self.gcs_file,
                             dataset=self.table_eu.dataset.dataset_id,
                             table=self.table_eu.table_id,
-                            location='EU')
+                            location=EU_LOCATION)
         task.run()
 
         self.assertTrue(self.bq_client.dataset_exists(self.table_eu))
@@ -227,38 +228,49 @@ class BigQueryGcloudTest(unittest.TestCase):
 @attr('gcloud')
 class BigQueryLoadAvroTest(unittest.TestCase):
     def _produce_test_input(self):
-        schema = avro.schema.parse("""{
+        schema = avro.schema.parse("""
+        {
             "name": "TestQueryTask_record",
             "type": "record",
             "doc": "The description",
             "fields": [
                 {"name": "col0", "type": "int", "doc": "The bold"},
-                {"name": "col1", "type": "int", "doc": "The beautiful"}
+                {"name": "col1", "type": {
+                    "name": "inner_record",
+                    "type": "record",
+                    "doc": "This field shall be an inner",
+                    "fields": [
+                        {"name": "inner", "type": "int", "doc": "A inner field"},
+                        {"name": "col0", "type": "int", "doc": "Same name as outer but different doc"}
+                    ]
+                }, "doc": "This field shall be an inner"},
+                {"name": "col2", "type": "int", "doc": "The beautiful"}
             ]
         }""")
+        self.addCleanup(os.remove, "tmp.avro")
         writer = DataFileWriter(open("tmp.avro", "wb"), DatumWriter(), schema)
-        writer.append({'col0': 1000, 'col1': 1001})
+        writer.append({'col0': 1000, 'col1': {'inner': 1234, 'col0': 3000}, 'col2': 1001})
         writer.close()
-        # FIXME don't need a tmp.avro; use GCS API like objects().insert that accepts file contents in a string:
-        # https://developers.google.com/resources/api-libraries/documentation/storage/v1/python/latest/storage_v1.objects.html#insert
+        self.gcs_client.put("tmp.avro", self.gcs_dir_url)
 
     def setUp(self):
-        self.gcs_client = gcs.GCSClient(CREDENTIALS).client
-        self.bq_client = bigquery.BigQueryClient(CREDENTIALS).client
+        self.gcs_client = gcs.GCSClient(CREDENTIALS)
+        self.bq_client = bigquery.BigQueryClient(CREDENTIALS)
 
-        self.table_id = self.id().split('.')[-1]
-        self.gcs_dir_url = 'gs://' + self.id() +
-        # self.addCleanup(self.bq_client.delete_table, self.table)
-        # self.addCleanup(self.gcs_client.)
+        self.table_id = "avro_bq_table"
+        self.gcs_dir_url = 'gs://' + BUCKET_NAME + "/foo/tmp.avro"
+        self.addCleanup(self.gcs_client.remove, self.gcs_dir_url)
+        self.addCleanup(self.bq_client.delete_dataset, bigquery.BQDataset(PROJECT_ID, DATASET_ID, EU_LOCATION))
+        self._produce_test_input()
 
     def test_load_avro_dir_and_propagate_doc(self):
         class BigQueryLoadAvroTestInput(luigi.ExternalTask):
             def output(_):
-                return gcs.GcsTarget(self.gcs_dir_url)
+                return gcs.GCSTarget(self.gcs_dir_url)
 
         class BigQueryLoadAvroTestTask(bigquery_avro.BigQueryLoadAvro):
             def requires(_):
-                return DummyGcsInput()
+                return BigQueryLoadAvroTestInput()
 
             def output(_):
                 return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, self.table_id)
@@ -268,7 +280,12 @@ class BigQueryLoadAvroTest(unittest.TestCase):
         task.run()
         self.assertTrue(task.complete())
 
-        table = self.bq_client.dataset(DATASET_ID).table(self.table_id)
-        self.assertTrue(table.exists)
-        table.reload()
-        self.assertEqual(table.description, 'The description')
+        table = self.bq_client.client.tables().get(projectId=PROJECT_ID,
+                                                   datasetId=DATASET_ID,
+                                                   tableId=self.table_id).execute()
+        self.assertEqual(table['description'], 'The description')
+        self.assertEqual(table['schema']['fields'][0]['description'], 'The bold')
+        self.assertEqual(table['schema']['fields'][1]['description'], 'This field shall be an inner')
+        self.assertEqual(table['schema']['fields'][1]['fields'][0]['description'], 'A inner field')
+        self.assertEqual(table['schema']['fields'][1]['fields'][1]['description'], 'Same name as outer but different doc')
+        self.assertEqual(table['schema']['fields'][2]['description'], 'The beautiful')

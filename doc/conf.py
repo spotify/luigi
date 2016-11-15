@@ -64,6 +64,7 @@ def _warn_node(self, msg, node, *args, **kwargs):
     if not msg.startswith('nonlocal image URI found:'):
         self._warnfunc(msg, '%s:%s' % get_source_line(node), *args, **kwargs)
 
+
 sphinx.environment.BuildEnvironment.warn_node = _warn_node
 
 if os.environ.get('READTHEDOCS', None) == 'True':

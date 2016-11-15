@@ -503,6 +503,7 @@ class Bzip2Format(Format):
     def pipe_writer(self, output_pipe):
         return OutputPipeProcessWrapper(['bzip2'], output_pipe)
 
+
 Text = TextFormat()
 UTF8 = TextFormat(encoding='utf8')
 Nop = NopFormat()

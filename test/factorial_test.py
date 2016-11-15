@@ -49,5 +49,6 @@ class FactorialTest(unittest.TestCase):
         luigi.build([Factorial(100)], local_scheduler=True)
         self.assertEqual(Factorial(42).value, 1405006117752879898543142606244511569936384000000000)
 
+
 if __name__ == '__main__':
     luigi.run()
