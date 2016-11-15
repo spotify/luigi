@@ -83,13 +83,13 @@ class Encoding(object):
     ISO_8859_1 = 'ISO-8859-1'
 
 
-BQDataset = collections.namedtuple('BQDataset', 'project_id dataset_id')
+BQDataset = collections.namedtuple('BQDataset', 'project_id dataset_id location')
 
 
-class BQTable(collections.namedtuple('BQTable', 'project_id dataset_id table_id')):
+class BQTable(collections.namedtuple('BQTable', 'project_id dataset_id table_id location')):
     @property
     def dataset(self):
-        return BQDataset(project_id=self.project_id, dataset_id=self.dataset_id)
+        return BQDataset(project_id=self.project_id, dataset_id=self.dataset_id, location=self.location)
 
     @property
     def uri(self):
@@ -118,14 +118,23 @@ class BigQueryClient(object):
 
     def dataset_exists(self, dataset):
         """Returns whether the given dataset exists.
+        If regional location is specified for the dataset, that is also checked
+        to be compatible with the remote dataset, otherwise an exception is thrown.
 
            :param dataset:
            :type dataset: BQDataset
         """
 
         try:
-            self.client.datasets().get(projectId=dataset.project_id,
-                                       datasetId=dataset.dataset_id).execute()
+            response = self.client.datasets().get(projectId=dataset.project_id,
+                                                  datasetId=dataset.dataset_id).execute()
+            if dataset.location is not None:
+                fetched_location = response.get('location')
+                if dataset.location != fetched_location:
+                    raise Exception('''Dataset already exists with regional location {}. Can't use {}.'''.format(
+                        fetched_location if fetched_location is not None else 'unspecified',
+                        dataset.location))
+
         except http.HttpError as ex:
             if ex.resp.status == 404:
                 return False
@@ -163,8 +172,10 @@ class BigQueryClient(object):
         """
 
         try:
-            self.client.datasets().insert(projectId=dataset.project_id, body=dict(
-                {'id': '{}:{}'.format(dataset.project_id, dataset.dataset_id)}, **body)).execute()
+            body['id'] = '{}:{}'.format(dataset.project_id, dataset.dataset_id)
+            if dataset.location is not None:
+                body['location'] = dataset.location
+            self.client.datasets().insert(projectId=dataset.project_id, body=body).execute()
         except http.HttpError as ex:
             if ex.resp.status == 409:
                 if raise_if_exists:
@@ -364,8 +375,8 @@ class BigQueryClient(object):
 
 
 class BigQueryTarget(luigi.target.Target):
-    def __init__(self, project_id, dataset_id, table_id, client=None):
-        self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id)
+    def __init__(self, project_id, dataset_id, table_id, client=None, location=None):
+        self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id, location=location)
         self.client = client or BigQueryClient()
 
     @classmethod
