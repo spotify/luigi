@@ -65,7 +65,6 @@ class BigQueryLoadAvro(BigQueryLoadTask):
                 # Save but assume benign unless schema reading ultimately fails. The benign
                 # exception in case of insufficiently big downloaded file part seems to be:
                 # TypeError('ord() expected a character, but string of length 0 found',).
-                logger.debug('%r', e)
                 exception_reading_schema[:] = [e]
                 return False
             return True
@@ -83,21 +82,18 @@ class BigQueryLoadAvro(BigQueryLoadTask):
                                                    datasetId=table.dataset_id,
                                                    tableId=table.table_id).execute()
 
-        def get_fields_with_description(current_fields, avro_fields_dict):
+        def get_fields_with_description(bq_fields, avro_fields):
             new_fields = []
-            for record in current_fields:
-                record[u'description'] = avro_fields_dict[record[u'name']].doc
-                if record[u'type'] == u'RECORD':
-                    record[u'fields'] = \
-                        get_fields_with_description(record[u'fields'], avro_fields_dict[record[u'name']].type.fields_dict)
-                new_fields.append(record)
+            for field in bq_fields:
+                avro_field = avro_fields[field[u'name']]
+                field[u'description'] = avro_field.doc
+                if field[u'type'] == u'RECORD' and hasattr(avro_field.type, 'fields_dict'):
+                    field[u'fields'] = \
+                        get_fields_with_description(field[u'fields'], avro_field.type.fields_dict)
+                new_fields.append(field)
             return new_fields
 
-        try:
-            field_descriptions = get_fields_with_description(current_bq_schema['schema']['fields'], avro_schema.fields_dict)
-        except Exception:
-            logger.debug('Exception while getting field descriptions from Avro schema: %s', avro_schema)
-            raise
+        field_descriptions = get_fields_with_description(current_bq_schema['schema']['fields'], avro_schema.fields_dict)
 
         patch = {
             'description': avro_schema.doc,

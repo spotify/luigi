@@ -241,15 +241,21 @@ class BigQueryLoadAvroTest(unittest.TestCase):
                     "doc": "This field shall be an inner",
                     "fields": [
                         {"name": "inner", "type": "int", "doc": "A inner field"},
-                        {"name": "col0", "type": "int", "doc": "Same name as outer but different doc"}
+                        {"name": "col0", "type": "int", "doc": "Same name as outer but different doc"},
+                        {"name": "col1", "type": ["null", "string"], "default": null, "doc": "Nullable primitive"},
+                        {"name": "col2", "type": ["null", {
+                            "type": "map",
+                            "values": "string"
+                        }], "default": null, "doc": "Nullable map"}
                     ]
                 }, "doc": "This field shall be an inner"},
-                {"name": "col2", "type": "int", "doc": "The beautiful"}
+                {"name": "col2", "type": "int", "doc": "The beautiful"},
+                {"name": "col3", "type": "double"}
             ]
         }""")
         self.addCleanup(os.remove, "tmp.avro")
         writer = DataFileWriter(open("tmp.avro", "wb"), DatumWriter(), schema)
-        writer.append({'col0': 1000, 'col1': {'inner': 1234, 'col0': 3000}, 'col2': 1001})
+        writer.append({'col0': 1000, 'col1': {'inner': 1234, 'col0': 3000}, 'col2': 1001, 'col3': 1.001})
         writer.close()
         self.gcs_client.put("tmp.avro", self.gcs_dir_url + "/tmp.avro")
 
@@ -288,4 +294,7 @@ class BigQueryLoadAvroTest(unittest.TestCase):
         self.assertEqual(table['schema']['fields'][1]['description'], 'This field shall be an inner')
         self.assertEqual(table['schema']['fields'][1]['fields'][0]['description'], 'A inner field')
         self.assertEqual(table['schema']['fields'][1]['fields'][1]['description'], 'Same name as outer but different doc')
+        self.assertEqual(table['schema']['fields'][1]['fields'][2]['description'], 'Nullable primitive')
+        self.assertEqual(table['schema']['fields'][1]['fields'][3]['description'], 'Nullable map')
         self.assertEqual(table['schema']['fields'][2]['description'], 'The beautiful')
+        self.assertFalse('description' in table['schema']['fields'][3])
