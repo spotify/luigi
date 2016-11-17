@@ -88,20 +88,18 @@ class DbTaskHistory(task_history.TaskHistory):
         _upgrade_schema(self.engine)
 
     CONNECTION_OPTIONS_MAPPING = {
-            'db_pool_size': {'type': 'int', 'name': 'pool_size'},
-            'db_max_overflow': {'type': 'int', 'name': 'max_overflow'},
-            'db_pool_timeout': {'type': 'int', 'name': 'pool_timeout'},
-            'db_pool_recycle': {'type': 'int', 'name': 'pool_recycle'},
+            'db_pool_size': 'pool_size',
+            'db_max_overflow': 'max_overflow',
+            'db_pool_timeout': 'pool_timeout',
+            'db_pool_recycle': 'pool_recycle',
             }
 
     def _prepare_connection_options(self, config):
         options = {}
-        for (config_key, column_settings) in six.iteritems(self.CONNECTION_OPTIONS_MAPPING):
-            column_name = column_settings['name']
-            if column_settings['type'] == 'int':
-                column_value = config.getint('task_history', config_key, default=None)
-                if column_value:
-                    options[column_name] = column_value
+        for (config_key, column_name) in six.iteritems(self.CONNECTION_OPTIONS_MAPPING):
+            column_value = config.getint('task_history', config_key, default=None)
+            if column_value:
+                options[column_name] = column_value
         return options
 
     def task_scheduled(self, task):
