@@ -354,7 +354,3 @@ class SubtaskTest(unittest.TestCase):
         # the same name
         from luigi.task import Register
         self.assertEqual(Register.get_task_cls('SubtaskDelegator'), SubtaskDelegator)
-
-
-if __name__ == '__main__':
-    unittest.main()

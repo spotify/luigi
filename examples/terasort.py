@@ -110,7 +110,3 @@ class TeraSort(luigi.contrib.hadoop_jar.HadoopJarJobTask):
 
     def args(self):
         return [self.input(), self.output()]
-
-
-if __name__ == '__main__':
-    luigi.run()

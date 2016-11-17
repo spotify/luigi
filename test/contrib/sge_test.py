@@ -100,7 +100,3 @@ class TestSGEJob(unittest.TestCase):
                 os.remove(fpath)
             except OSError:
                 pass
-
-
-if __name__ == '__main__':
-    unittest.main()

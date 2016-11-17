@@ -15,8 +15,6 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-
 import luigi
 import luigi.date_interval
 import luigi.notifications
@@ -95,7 +93,3 @@ class InterfaceTest(LuigiTestCase):
 
     def _run_interface(self):
         return luigi.interface.build([self.task_a, self.task_b], worker_scheduler_factory=self.worker_scheduler_factory)
-
-
-if __name__ == '__main__':
-    unittest.main()

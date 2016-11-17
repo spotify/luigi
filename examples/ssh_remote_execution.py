@@ -97,7 +97,3 @@ class ProcessRemoteData(luigi.Task):
         :rtype: object (:py:class:`~luigi.target.Target`)
         """
         return MockFile("output", mirror_on_stderr=True)
-
-
-if __name__ == "__main__":
-    luigi.run()

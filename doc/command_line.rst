@@ -1,4 +1,4 @@
-.. highlight:: bash
+.. _CommandLine:
 
 Running from the Command Line
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
