@@ -12,10 +12,8 @@ try:
     import avro
     import avro.datafile
 except ImportError:
-    logger.warning('BigQuery module imported, but svro is '
-                   'not installed. Any BigQueryLoadAvro task will fail')
-
-logger = logging.getLogger(__name__)
+    logger.warning('bigquery_avro module imported, but avro is not installed. Any '
+                   'BigQueryLoadAvro task will fail to propagate schema documentation')
 
 
 class BigQueryLoadAvro(BigQueryLoadTask):
@@ -41,6 +39,8 @@ class BigQueryLoadAvro(BigQueryLoadTask):
 
     def _get_input_schema(self):
         '''Arbitrarily picks an object in input and reads the Avro schema from it.'''
+        assert avro, 'avro module required'
+
         input_target = flatten(self.input())[0]
         input_fs = input_target.fs if hasattr(input_target, 'fs') else GCSClient()
         input_uri = self.source_uris()[0]
@@ -52,27 +52,36 @@ class BigQueryLoadAvro(BigQueryLoadTask):
                 raise RuntimeError('No match for ' + input_uri)
 
         schema = []
+        exception_reading_schema = []
 
         def read_schema(fp):
-            # We rely on that the DataFileReader will initialize itself fine as soon as the file
-            # header with schema is downloaded, without requiring the remainder of the file...
+            # fp contains the file part downloaded thus far. We rely on that the DataFileReader
+            # initializes itself fine as soon as the file header with schema is downloaded, without
+            # requiring the remainder of the file...
             try:
                 reader = avro.datafile.DataFileReader(fp, avro.io.DatumReader())
-                schema.append(reader.datum_reader.writers_schema)
-            except Exception:
+                schema[:] = [reader.datum_reader.writers_schema]
+            except Exception as e:
+                # Save but assume benign unless schema reading ultimately fails. The benign
+                # exception in case of insufficiently big downloaded file part seems to be:
+                # TypeError('ord() expected a character, but string of length 0 found',).
+                logger.debug('%r', e)
+                exception_reading_schema[:] = [e]
                 return False
             return True
 
-        # FIXME Don't download the entire file. Make the chunked downloading work.
-        input_fs.download(input_uri, 1024 * 1024 * 1024, read_schema).close()
-
+        input_fs.download(input_uri, 64 * 1024, read_schema).close()
+        if not schema:
+            raise exception_reading_schema[0]
         return schema[0]
 
     def _set_output_doc(self, avro_schema):
+        bq_client = self.output().client.client
         table = self.output().table
-        current_bq_schema = self._bq_client.tables().get(projectId=table.project_id,
-                                                         datasetId=table.dataset_id,
-                                                         tableId=table.table_id).execute()
+
+        current_bq_schema = bq_client.tables().get(projectId=table.project_id,
+                                                   datasetId=table.dataset_id,
+                                                   tableId=table.table_id).execute()
 
         def get_fields_with_description(current_fields, avro_fields_dict):
             new_fields = []
@@ -84,22 +93,28 @@ class BigQueryLoadAvro(BigQueryLoadTask):
                 new_fields.append(record)
             return new_fields
 
-        field_descriptions = get_fields_with_description(current_bq_schema['schema']['fields'], avro_schema.fields_dict)
+        try:
+            field_descriptions = get_fields_with_description(current_bq_schema['schema']['fields'], avro_schema.fields_dict)
+        except Exception:
+            logger.debug('Exception while getting field descriptions from Avro schema: %s', avro_schema)
+            raise
+
         patch = {
             'description': avro_schema.doc,
             'schema': {'fields': field_descriptions, },
         }
 
-        self._bq_client.tables().patch(projectId=table.project_id,
-                                       datasetId=table.dataset_id,
-                                       tableId=table.table_id,
-                                       body=patch).execute()
+        bq_client.tables().patch(projectId=table.project_id,
+                                 datasetId=table.dataset_id,
+                                 tableId=table.table_id,
+                                 body=patch).execute()
 
     def run(self):
         super(BigQueryLoadAvro, self).run()
 
-        self._bq_client = self.output().client.client
-
-        # We propagate documentation in one fire-and-forget attempt; the output table will
-        # be left to exist but without documentation if this step raises an exception.
-        self._set_output_doc(self._get_input_schema())
+        # We propagate documentation in one fire-and-forget attempt; the output table is
+        # left to exist without documentation if this step raises an exception.
+        try:
+            self._set_output_doc(self._get_input_schema())
+        except Exception as e:
+            logger.info('Could not propagate Avro doc to BigQuery table field descriptions: %r', e)
