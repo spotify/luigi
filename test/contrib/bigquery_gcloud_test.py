@@ -251,14 +251,14 @@ class BigQueryLoadAvroTest(unittest.TestCase):
         writer = DataFileWriter(open("tmp.avro", "wb"), DatumWriter(), schema)
         writer.append({'col0': 1000, 'col1': {'inner': 1234, 'col0': 3000}, 'col2': 1001})
         writer.close()
-        self.gcs_client.put("tmp.avro", self.gcs_dir_url)
+        self.gcs_client.put("tmp.avro", self.gcs_dir_url + "/tmp.avro")
 
     def setUp(self):
         self.gcs_client = gcs.GCSClient(CREDENTIALS)
         self.bq_client = bigquery.BigQueryClient(CREDENTIALS)
 
         self.table_id = "avro_bq_table"
-        self.gcs_dir_url = 'gs://' + BUCKET_NAME + "/foo/tmp.avro"
+        self.gcs_dir_url = 'gs://' + BUCKET_NAME + "/foo"
         self.addCleanup(self.gcs_client.remove, self.gcs_dir_url)
         self.addCleanup(self.bq_client.delete_dataset, bigquery.BQDataset(PROJECT_ID, DATASET_ID, EU_LOCATION))
         self._produce_test_input()

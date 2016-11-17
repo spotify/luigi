@@ -45,7 +45,11 @@ class BigQueryLoadAvro(BigQueryLoadTask):
         input_fs = input_target.fs if hasattr(input_target, 'fs') else GCSClient()
         input_uri = self.source_uris()[0]
         if '*' in input_uri:
-            input_uri = input_fs.list_wildcard(input_uri)[0]
+            file_uris = list(input_fs.list_wildcard(input_uri))
+            if file_uris:
+                input_uri = file_uris[0]
+            else:
+                raise RuntimeError('No match for ' + input_uri)
 
         schema = []
 
@@ -59,7 +63,8 @@ class BigQueryLoadAvro(BigQueryLoadTask):
                 return False
             return True
 
-        input_fs.download(input_uri, 64 * 1024, read_schema).close()
+        # FIXME Don't download the entire file. Make the chunked downloading work.
+        input_fs.download(input_uri, 1024 * 1024 * 1024, read_schema).close()
 
         return schema[0]
 

@@ -346,9 +346,9 @@ class GCSClient(luigi.target.FileSystem):
         assert len(wildcard_parts) == 2, "Only one '*' wildcard is supported"
 
         for it in self.listdir(path):
-            if it.startswith('/' + wildcard_parts[0]) and it.endswith(wildcard_parts[1]) and \
-                   len(it) > len(wildcard_parts[0]) + len(wildcard_parts[1]):
-                yield path + it
+            if it.startswith(path + '/' + wildcard_parts[0]) and it.endswith(wildcard_parts[1]) and \
+                   len(it) >= len(path + '/' + wildcard_parts[0]) + len(wildcard_parts[1]):
+                yield it
 
     def download(self, path, chunksize=None, chunk_callback=lambda _: False):
         """Downloads the object contents to local file system.
