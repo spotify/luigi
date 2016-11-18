@@ -57,5 +57,6 @@ class AbstractSubclassTest(unittest.TestCase):
     def test_instantiate(self):
         self.assertEqual("bar,hellohello", Implementation(k=2).run())
 
+
 if __name__ == '__main__':
     luigi.run()

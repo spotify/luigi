@@ -61,5 +61,6 @@ class ScaldingTest(unittest.TestCase):
         self.assertTrue(success)
         # TODO: check more stuff
 
+
 if __name__ == '__main__':
     luigi.run()

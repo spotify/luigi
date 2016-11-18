@@ -49,6 +49,7 @@ def mocked_requests_get(*args, **kwargs):
     )
     return MockResponse(result_list, 200)
 
+
 # Keep open around so we can use it in the mock responses
 old__open = open
 

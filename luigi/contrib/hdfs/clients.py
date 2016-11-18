@@ -62,6 +62,7 @@ def _with_ac(method_name):
         return getattr(get_autoconfig_client(), method_name)(*args, **kwargs)
     return result
 
+
 exists = _with_ac('exists')
 rename = _with_ac('rename')
 remove = _with_ac('remove')

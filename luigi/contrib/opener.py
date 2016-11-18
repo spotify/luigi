@@ -261,6 +261,7 @@ class S3Opener(Opener):
         return S3Target('{scheme}://{hostname}{path}'.format(
             scheme=scheme, hostname=hostname, path=path), **query)
 
+
 opener = OpenerRegistry([
     MockOpener,
     LocalOpener,

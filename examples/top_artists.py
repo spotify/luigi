@@ -278,5 +278,6 @@ class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
         """
         return Top10Artists(self.date_interval, self.use_hadoop)
 
+
 if __name__ == "__main__":
     luigi.run()
