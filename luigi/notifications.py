@@ -373,7 +373,8 @@ def _prefix(subject):
     If the config has a special prefix for emails then this function adds
     this prefix.
     """
-    if email().prefix is not None:
+    prefix = email().prefix
+    if prefix is not None and prefix != '':
         return "{} {}".format(email().prefix, subject)
     else:
         return subject
