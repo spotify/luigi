@@ -423,7 +423,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(db['status'], 'DONE')
 
         missing_input = remote.task_list('PENDING', 'UPSTREAM_MISSING_INPUT')
-        self.assertEqual(len(missing_input), 3)
+        self.assertEqual(len(missing_input), 2)
 
         pa = missing_input.get(A().task_id)
         self.assertEqual(pa['status'], 'PENDING')
@@ -433,15 +433,14 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(pc['status'], 'PENDING')
         self.assertEqual(remote._upstream_status(C().task_id, {}), 'UPSTREAM_MISSING_INPUT')
 
-        pe = missing_input.get(E().task_id)
-        self.assertEqual(pe['status'], 'PENDING')
-        self.assertEqual(remote._upstream_status(E().task_id, {}), 'UPSTREAM_MISSING_INPUT')
-
         upstream_failed = remote.task_list('PENDING', 'UPSTREAM_FAILED')
-        self.assertEqual(len(upstream_failed), 1)
+        self.assertEqual(len(upstream_failed), 2)
+        pe = upstream_failed.get(E().task_id)
+        self.assertEqual(pe['status'], 'PENDING')
+        self.assertEqual(remote._upstream_status(E().task_id, {}), 'UPSTREAM_FAILED')
 
-        pd = upstream_failed.get(D().task_id)
-        self.assertEqual(pd['status'], 'PENDING')
+        pe = upstream_failed.get(D().task_id)
+        self.assertEqual(pe['status'], 'PENDING')
         self.assertEqual(remote._upstream_status(D().task_id, {}), 'UPSTREAM_FAILED')
 
         pending = dict(missing_input)
