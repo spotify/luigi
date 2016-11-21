@@ -496,7 +496,7 @@ class BatchNotifierTest(unittest.TestCase):
             )
 
     def test_unicode_param_value_html(self):
-        self.email().format='html'
+        self.email().format = 'html'
         for batch_mode in ('all', 'unbatched_params'):
             self.send_email.reset_mock()
             bn = BatchNotifier(batch_mode=batch_mode)
@@ -523,7 +523,7 @@ class BatchNotifierTest(unittest.TestCase):
             )
 
     def test_unicode_param_name_html(self):
-        self.email().format='html'
+        self.email().format = 'html'
         for batch_mode in ('all', 'unbatched_params'):
             self.send_email.reset_mock()
             bn = BatchNotifier(batch_mode=batch_mode)
