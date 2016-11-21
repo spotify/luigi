@@ -34,8 +34,6 @@ import textwrap
 
 import luigi.task
 import luigi.parameter
-import luigi.configuration
-
 
 logger = logging.getLogger("luigi-interface")
 DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.gethostname()
@@ -79,11 +77,11 @@ class email(luigi.Config):
         choices=('smtp', 'sendgrid', 'ses', 'sns'),
         description='Method for sending e-mail')
     prefix = luigi.parameter.Parameter(
-        default=None,
+        default='',
         config_path=dict(section='core', name='email-prefix'),
         description='Prefix for subject lines of all e-mails')
     receiver = luigi.parameter.Parameter(
-        default=None,
+        default='',
         config_path=dict(section='core', name='error-email'),
         description='Address to send error e-mails to')
     sender = luigi.parameter.Parameter(
@@ -345,19 +343,6 @@ def send_error_email(subject, message, additional_recipients=None):
     """
     Sends an email to the configured error email, if it's configured.
     """
-    # Check if email settings are configured before sending error email
-    config = luigi.configuration.get_config()
-    section = "email"
-    if not config.has_section(section):
-        logger.warning("No error email sent because email is not configured on this system.  " +
-                       "See http://luigi.readthedocs.io/en/stable/configuration.html#email for more details")
-        return
-
-    if not config.has_option(section, "receiver"):
-        logger.warning("No error email sent because there is no 'receiver' option in the 'email' configuration.  " +
-                       "See http://luigi.readthedocs.io/en/stable/configuration.html#email for more details")
-        return
-
     recipients = _email_recipients(additional_recipients)
     sender = email().sender
     send_email(
