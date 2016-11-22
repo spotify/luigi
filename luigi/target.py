@@ -128,11 +128,6 @@ class FileSystem(object):
                              exist, raise luigi.target.MissingParentDirectory
         :param bool raise_if_exists: raise luigi.target.FileAlreadyExists if
                                      the folder already exists.
-
-        *Note*: This method is optional, not all FileSystem subclasses implements it.
-
-        *Note*: parents and raise_if_exists were added in August 2014. Some
-                implementations might not support these flags yet.
         """
         raise NotImplementedError("mkdir() not implemented on {0}".format(self.__class__.__name__))
 
@@ -258,12 +253,15 @@ class FileSystemTarget(Target):
     def temporary_path(self):
         """
         A context manager that enables a reasonably short, general and
-        magic-less way to solve the :ref:`AtomicWrites`. When the context
-        manager enters it will not do anything, but when it exits it will move
-        the file if there was no exception thrown.
+        magic-less way to solve the :ref:`AtomicWrites`.
 
-        The final move operation will be carried out by calling
-        :py:meth:`FileSystem.rename_dont_move` on :py:attr:`fs`.
+         * On *entering*, it will create the parent directories so the
+           temporary_path is writeable right away.
+           This step uses :py:meth:`FileSystem.mkdir`.
+         * On *exiting*, it will move the temporary file if there was no exception thrown.
+           This step uses :py:meth:`FileSystem.rename_dont_move`
+
+        The file system operations will be carried out by calling them on :py:attr:`fs`.
 
         The typical use case looks like this:
 
@@ -275,17 +273,21 @@ class FileSystemTarget(Target):
 
                 def run(self):
                     with self.output().temporary_path() as self.temp_output_path:
-                        run_some_external_command(output_dir=self.temp_output_path)
+                        run_some_external_command(output_path=self.temp_output_path)
         """
         class _Manager(object):
             target = self
 
             def __init__(self):
                 num = random.randrange(0, 1e10)
+                slashless_path = self.target.path.rstrip('/').rstrip("\\")
                 self._temp_path = '{}-luigi-tmp-{:010}{}'.format(
-                    self.target.path.rstrip('/').rstrip("\\"),
+                    slashless_path,
                     num,
                     self.target._trailing_slash())
+                # TODO: os.path doesn't make sense here as it's os-dependent
+                tmp_dir = os.path.dirname(slashless_path)
+                self.target.fs.mkdir(tmp_dir, parents=True, raise_if_exists=False)
 
             def __enter__(self):
                 return self._temp_path

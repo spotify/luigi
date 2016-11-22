@@ -332,3 +332,15 @@ class TemporaryPathTest(unittest.TestCase):
         with target.temporary_path() as tmp_path:
             assert re.match(r'''hdfs:///user/arash/myfile.uids-luigi-tmp-\d{10}''', tmp_path)
         self.fs.rename_dont_move.assert_called_once_with(tmp_path, target.path)
+
+    def test_creates_dir_for_file(self):
+        target = self.target_cls('/my/file/is/awesome.txt')
+
+        with target.temporary_path():
+            self.fs.mkdir.assert_called_once_with('/my/file/is', parents=True, raise_if_exists=False)
+
+    def test_creates_dir_for_dir(self):
+        target = self.target_cls('/my/dir/is/awesome/')
+
+        with target.temporary_path():
+            self.fs.mkdir.assert_called_once_with('/my/dir/is', parents=True, raise_if_exists=False)
