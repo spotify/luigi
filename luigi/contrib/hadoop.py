@@ -509,6 +509,12 @@ class HadoopJobRunner(JobRunner):
         for conf in jobconfs:
             arglist += ['-D', conf]
 
+        extra_arguments = job.extra_arguments()
+        for (arg, value) in extra_arguments:
+            if not arg.startswith('-'):  # safety first
+                arg = '-' + arg
+            arglist += [arg, value]
+
         arglist += self.streaming_args
 
         arglist += ['-mapper', map_cmd]
@@ -751,6 +757,13 @@ class BaseHadoopJobTask(luigi.Task):
       """.format(message=exception.message, stdout=exception.out, stderr=exception.err)
         else:
             return super(BaseHadoopJobTask, self).on_failure(exception)
+
+    def extra_arguments(self):
+        """
+        Extra arguments to Hadoop command line.
+        Return here a list of (parameter, value) tuples.
+        """
+        return []  # can be overridden in subclass
 
 
 DataInterchange = {
