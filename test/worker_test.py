@@ -545,7 +545,7 @@ class WorkerTest(LuigiTestCase):
         sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
 
         with Worker(scheduler=sch, worker_id='X', keep_alive=True, count_uniques=True) as w:
-            with Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1) as w2:
+            with Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1, wait_jitter=0.05) as w2:
                 self.assertTrue(w.add(a))
                 self.assertTrue(w2.add(b))
 
@@ -579,7 +579,7 @@ class WorkerTest(LuigiTestCase):
         sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
 
         with Worker(scheduler=sch, worker_id='X', keep_alive=True, count_uniques=True) as w:
-            with Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1) as w2:
+            with Worker(scheduler=sch, worker_id='Y', keep_alive=True, count_uniques=True, wait_interval=0.1, wait_jitter=0.05) as w2:
                 self.assertTrue(w.add(b))
                 self.assertTrue(w2.add(b))
 
@@ -1644,7 +1644,7 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
         wt = TestWrapperTask()
 
-        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w1:
             self.assertTrue(w1.add(wt))
 
             self.assertFalse(w1.run())
@@ -1683,9 +1683,9 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
         wt = TestWrapperTask()
 
-        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
-            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1) as w2:
-                with Worker(scheduler=self.sch, worker_id='Z', keep_alive=True, wait_interval=0.1) as w3:
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w1:
+            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w2:
+                with Worker(scheduler=self.sch, worker_id='Z', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w3:
                     self.assertTrue(w1.add(wt))
                     self.assertTrue(w2.add(e2))
                     self.assertTrue(w3.add(e1))
@@ -1727,7 +1727,7 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
         wt = TestWrapperTask()
 
-        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w1:
             self.assertTrue(w1.add(wt))
 
             self.assertFalse(w1.run())
@@ -1765,9 +1765,9 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
         wt = TestWrapperTask()
 
-        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
-            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1) as w2:
-                with Worker(scheduler=self.sch, worker_id='Z', keep_alive=True, wait_interval=0.1) as w3:
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w1:
+            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w2:
+                with Worker(scheduler=self.sch, worker_id='Z', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w3:
                     self.assertTrue(w1.add(wt))
                     self.assertTrue(w2.add(e1))
                     self.assertTrue(w3.add(s1))
@@ -1818,7 +1818,7 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
         wt = TestWrapperTask()
 
-        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w1:
             self.assertTrue(w1.add(wt))
 
             self.assertFalse(w1.run())
@@ -1866,8 +1866,8 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
         wt = TestWrapperTask()
 
-        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1) as w1:
-            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1) as w2:
+        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w1:
+            with Worker(scheduler=self.sch, worker_id='Y', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w2:
                 self.assertTrue(w1.add(wt))
                 self.assertTrue(w2.add(s1))
 
