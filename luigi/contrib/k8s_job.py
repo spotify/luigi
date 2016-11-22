@@ -52,7 +52,12 @@ class KubernetesJobTask(luigi.Task):
 
     def __init__(self, *args, **kwargs):
         super(KubernetesJobTask, self).__init__(*args, **kwargs)
-        self.__kube_api = HTTPClient(KubeConfig.from_file(self.kubeconfig_path))
+        if(self.auth_method == "kubeconfing"):
+            self.__kube_api = HTTPClient(KubeConfig.from_file(self.kubeconfig_path))
+        elif(self.auth_method == "ServiceAccount"):
+            self.__kube_api = HTTPClient(KubeConfig.from_service_account())
+        else:
+            raise ValueError("Illegal auth_method: " + self.auth_method)
         self.__logger = logging.getLogger('luigi-interface')
         self.job_uuid = str(uuid.uuid4().hex)
         self.uu_name = self.name + "-luigi-" + self.job_uuid
@@ -60,11 +65,25 @@ class KubernetesJobTask(luigi.Task):
             self.spec_schema["restartPolicy"] = "Never"
 
     @property
+    def auth_method(self):
+        """
+        This can be set to ``kubeconfing`` or ``ServiceAccount``.
+        It defaults to ``kubeconfing``.
+
+        For more details please referer to:
+
+        - kubeconfing: http://kubernetes.io/docs/user-guide/kubeconfig-file
+        - ServiceAccount: http://kubernetes.io/docs/user-guide/service-accounts
+        """
+        return configuration.get_config().get("k8s", "auth_method", "kubeconfing")
+
+    @property
     def kubeconfig_path(self):
         """
         Path to kubeconfing file, for cluster authentication.
         It defaults to "~/.kube/config", which is the default location
         when using minikube (http://kubernetes.io/docs/getting-started-guides/minikube).
+        When auth_method is ``ServiceAccount`` this properity is ignored.
 
         **WARNING**: For Python versions < 3.5 kubeconfing must point to a Kubernetes API
         hostname, and NOT to an IP address.
