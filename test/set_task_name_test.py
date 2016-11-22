@@ -42,7 +42,3 @@ class SetTaskNameTest(unittest.TestCase):
 
     def test_set_task_name(self):
         luigi.run(['--local-scheduler', '--no-lock', 'MyNewTask'])
-
-
-if __name__ == '__main__':
-    luigi.run()

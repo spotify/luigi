@@ -315,7 +315,3 @@ class TestHiveTarget(unittest.TestCase):
         target = luigi.contrib.hive.HivePartitionTarget(database='db', table='foo', partition='bar', client=client)
         target.exists()
         client.table_exists.assert_called_with('foo', 'db', 'bar')
-
-
-if __name__ == '__main__':
-    unittest.main()

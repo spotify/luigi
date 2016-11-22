@@ -1,3 +1,12 @@
+"""
+You can run this example like this:
+
+    .. code:: console
+
+            $ luigi --module examples.hello_world examples.HelloWorldTask --local-scheduler
+
+If that does not work, see :ref:`CommandLine`.
+"""
 import luigi
 
 

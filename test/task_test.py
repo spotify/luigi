@@ -103,7 +103,3 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(tracking_url, 'http://test.luigi.com/')
         message = task.set_status_message('message')
         self.assertEqual(message, 'message')
-
-
-if __name__ == '__main__':
-    unittest.main()

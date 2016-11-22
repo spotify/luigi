@@ -166,7 +166,3 @@ class ParallelSchedulingTest(unittest.TestCase):
         send.check_called_once()
         self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]['status'])
         self.assertFalse(self.sch.add_task.call_args[1]['runnable'])
-
-
-if __name__ == '__main__':
-    unittest.main()
