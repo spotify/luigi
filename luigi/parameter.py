@@ -354,8 +354,17 @@ class DateParameter(_DateParameterBase):
             def run(self):
                 templated_path = "/my/path/to/my/dataset/{date:%Y/%m/%d}/"
                 instantiated_path = templated_path.format(date=self.date)
-                // print(instantiated_path) --> /my/path/to/my/dataset/2016/06/09/
-                // ... use instantiated_path ...
+                # print(instantiated_path) --> /my/path/to/my/dataset/2016/06/09/
+                # ... use instantiated_path ...
+
+    To set this parameter to default to the current day. You can write code like this:
+
+    .. code:: python
+
+        import datetime
+
+        class MyTask(luigi.Task):
+            date = luigi.DateParameter(default=datetime.date.today())
     """
 
     date_format = '%Y-%m-%d'
