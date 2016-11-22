@@ -227,7 +227,7 @@ class SchedulerIoTest(unittest.TestCase):
 
 class SchedulerWorkerTest(unittest.TestCase):
     def get_pending_ids(self, worker, state):
-        return {task.id for task in worker.get_pending_tasks(state)}
+        return {task.id for task in worker.get_tasks(state, 'PENDING')}
 
     def test_get_pending_tasks_with_many_done_tasks(self):
         sch = luigi.scheduler.Scheduler()

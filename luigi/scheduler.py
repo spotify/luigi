@@ -368,19 +368,13 @@ class Worker(object):
         if self.last_active + config.worker_disconnect_delay < time.time():
             return True
 
-    def get_pending_tasks(self, state, include_failed=False):
-        """
-        Get PENDING (and RUNNING) tasks for this worker.
-
-        You have to pass in the state for optimization reasons.
-        """
-        if len(self.tasks) < state.num_pending_tasks():
-            statuses = [PENDING, RUNNING]
-            if include_failed:
-                statuses.append(FAILED)
+    def get_tasks(self, state, *statuses):
+        num_self_tasks = len(self.tasks)
+        num_state_tasks = sum(len(state._status_tasks[status]) for status in statuses)
+        if num_self_tasks < num_state_tasks:
             return six.moves.filter(lambda task: task.status in statuses, self.tasks)
         else:
-            return six.moves.filter(lambda task: self.id in task.workers, state.get_pending_tasks(include_failed))
+            return six.moves.filter(lambda task: self.id in task.workers, state.get_active_tasks_by_status(*statuses))
 
     def is_trivial_worker(self, state):
         """
@@ -391,7 +385,7 @@ class Worker(object):
         """
         if self.assistant:
             return False
-        return all(not task.resources for task in self.get_pending_tasks(state))
+        return all(not task.resources for task in self.get_tasks(state, PENDING))
 
     @property
     def assistant(self):
@@ -463,30 +457,18 @@ class SimpleTaskState(object):
         else:
             logger.info("No prior state file exists at %s. Starting with empty state", self._state_path)
 
-    def get_active_tasks(self, status=None):
-        if status:
-            for task in six.itervalues(self._status_tasks[status]):
-                yield task
-        else:
-            for task in six.itervalues(self._tasks):
-                yield task
+    def get_active_tasks(self):
+        return six.itervalues(self._tasks)
+
+    def get_active_tasks_by_status(self, *statuses):
+        return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status]) for status in statuses)
 
     def get_batch_running_tasks(self, batch_id):
         assert batch_id is not None
         return [
-            task for task in self.get_active_tasks(BATCH_RUNNING)
+            task for task in self.get_active_tasks_by_status(BATCH_RUNNING)
             if task.batch_id == batch_id
         ]
-
-    def get_running_tasks(self):
-        return six.itervalues(self._status_tasks[RUNNING])
-
-    def get_pending_tasks(self, include_failed=False):
-        statuses = [PENDING, RUNNING]
-        if include_failed:
-            statuses.append(FAILED)
-        return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status])
-                                             for status in statuses)
 
     def set_batcher(self, worker_id, family, batcher_args, max_batch_size):
         self._task_batchers.setdefault(worker_id, {})
@@ -919,7 +901,7 @@ class Scheduler(object):
     def _used_resources(self):
         used_resources = collections.defaultdict(int)
         if self._resources is not None:
-            for task in self._state.get_active_tasks(status=RUNNING):
+            for task in self._state.get_active_tasks_by_status(RUNNING):
                 if task.resources:
                     for resource, amount in six.iteritems(task.resources):
                         used_resources[resource] += amount
@@ -946,11 +928,11 @@ class Scheduler(object):
     def _reset_orphaned_batch_running_tasks(self, worker_id):
         running_batch_ids = {
             task.batch_id
-            for task in self._state.get_running_tasks()
+            for task in self._state.get_active_tasks_by_status(RUNNING)
             if task.worker_running == worker_id
         }
         orphaned_tasks = [
-            task for task in self._state.get_active_tasks(BATCH_RUNNING)
+            task for task in self._state.get_active_tasks_by_status(BATCH_RUNNING)
             if task.worker_running == worker_id and task.batch_id not in running_batch_ids
         ]
         for task in orphaned_tasks:
@@ -964,21 +946,24 @@ class Scheduler(object):
         running_tasks = []
 
         upstream_status_table = {}
-        for task in worker.get_pending_tasks(self._state, include_failed=True):
+        for task in worker.get_tasks(self._state, RUNNING):
             if self._upstream_status(task.id, upstream_status_table) == UPSTREAM_DISABLED:
                 continue
-            if task.status == RUNNING:
-                # Return a list of currently running tasks to the client,
-                # makes it easier to troubleshoot
-                other_worker = self._state.get_worker(task.worker_running)
-                if other_worker is not None:
-                    more_info = {'task_id': task.id, 'worker': str(other_worker)}
-                    more_info.update(other_worker.info)
-                    running_tasks.append(more_info)
-            elif task.status in (PENDING, FAILED):
-                num_pending += 1
-                num_unique_pending += int(len(task.workers) == 1)
-                num_pending_last_scheduled += int(task.workers.peek(last=True) == worker_id)
+            # Return a list of currently running tasks to the client,
+            # makes it easier to troubleshoot
+            other_worker = self._state.get_worker(task.worker_running)
+            if other_worker is not None:
+                more_info = {'task_id': task.id, 'worker': str(other_worker)}
+                more_info.update(other_worker.info)
+                running_tasks.append(more_info)
+
+        for task in worker.get_tasks(self._state, PENDING, FAILED):
+            if self._upstream_status(task.id, upstream_status_table) == UPSTREAM_DISABLED:
+                continue
+            num_pending += 1
+            num_unique_pending += int(len(task.workers) == 1)
+            num_pending_last_scheduled += int(task.workers.peek(last=True) == worker_id)
+
         return {
             'n_pending_tasks': num_pending,
             'n_unique_pending': num_unique_pending,
@@ -1027,7 +1012,7 @@ class Scheduler(object):
         best_task = None
         if current_tasks is not None:
             ct_set = set(current_tasks)
-            for task in sorted(self._state.get_running_tasks(), key=self._rank):
+            for task in sorted(self._state.get_active_tasks_by_status(RUNNING), key=self._rank):
                 if task.worker_running == worker_id and task.id not in ct_set:
                     best_task = task
 
@@ -1039,11 +1024,11 @@ class Scheduler(object):
 
         worker = self._state.get_worker(worker_id)
         if worker.is_trivial_worker(self._state):
-            relevant_tasks = worker.get_pending_tasks(self._state)
+            relevant_tasks = worker.get_tasks(self._state, PENDING, RUNNING)
             used_resources = collections.defaultdict(int)
             greedy_workers = dict()  # If there's no resources, then they can grab any task
         else:
-            relevant_tasks = self._state.get_pending_tasks()
+            relevant_tasks = self._state.get_active_tasks_by_status(PENDING, RUNNING)
             used_resources = self._used_resources()
             activity_limit = time.time() - self._config.worker_disconnect_delay
             active_workers = self._state.get_active_workers(last_get_work_gt=activity_limit)
@@ -1301,7 +1286,9 @@ class Scheduler(object):
 
             def filter_func(t):
                 return all(term in t.pretty_id for term in terms)
-        for task in filter(filter_func, self._state.get_active_tasks(status)):
+
+        tasks = self._state.get_active_tasks_by_status(status) if status else self._state.get_active_tasks()
+        for task in filter(filter_func, tasks):
             if task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id, upstream_status_table):
                 serialized = self._serialize_task(task.id, include_deps=False)
                 result[task.id] = serialized
@@ -1331,16 +1318,18 @@ class Scheduler(object):
         workers.sort(key=lambda worker: worker['started'], reverse=True)
         if include_running:
             running = collections.defaultdict(dict)
+            for task in self._state.get_active_tasks_by_status(RUNNING):
+                if task.worker_running:
+                    running[task.worker_running][task.id] = self._serialize_task(task.id, include_deps=False)
+
             num_pending = collections.defaultdict(int)
             num_uniques = collections.defaultdict(int)
-            for task in self._state.get_pending_tasks():
-                if task.status == RUNNING and task.worker_running:
-                    running[task.worker_running][task.id] = self._serialize_task(task.id, include_deps=False)
-                elif task.status == PENDING:
-                    for worker in task.workers:
-                        num_pending[worker] += 1
-                    if len(task.workers) == 1:
-                        num_uniques[list(task.workers)[0]] += 1
+            for task in self._state.get_active_tasks_by_status(PENDING):
+                for worker in task.workers:
+                    num_pending[worker] += 1
+                if len(task.workers) == 1:
+                    num_uniques[list(task.workers)[0]] += 1
+
             for worker in workers:
                 tasks = running[worker['name']]
                 worker['num_running'] = len(tasks)
@@ -1363,7 +1352,7 @@ class Scheduler(object):
             ) for resource, r_dict in six.iteritems(self.resources())]
         if self._resources is not None:
             consumers = collections.defaultdict(dict)
-            for task in self._state.get_running_tasks():
+            for task in self._state.get_active_tasks_by_status(RUNNING):
                 if task.status == RUNNING and task.resources:
                     for resource, amount in six.iteritems(task.resources):
                         consumers[resource][task.id] = self._serialize_task(task.id, include_deps=False)
