@@ -77,11 +77,11 @@ class email(luigi.Config):
         choices=('smtp', 'sendgrid', 'ses', 'sns'),
         description='Method for sending e-mail')
     prefix = luigi.parameter.Parameter(
-        default=None,
+        default='',
         config_path=dict(section='core', name='email-prefix'),
         description='Prefix for subject lines of all e-mails')
     receiver = luigi.parameter.Parameter(
-        default=None,
+        default='',
         config_path=dict(section='core', name='error-email'),
         description='Address to send error e-mails to')
     sender = luigi.parameter.Parameter(
@@ -358,7 +358,7 @@ def _prefix(subject):
     If the config has a special prefix for emails then this function adds
     this prefix.
     """
-    if email().prefix is not None:
+    if email().prefix:
         return "{} {}".format(email().prefix, subject)
     else:
         return subject
