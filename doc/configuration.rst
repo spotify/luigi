@@ -365,8 +365,8 @@ error-messages
   Number of messages to preserve for each task group. As most tasks that
   fail repeatedly do so for similar reasons each time, it's not usually
   necessary to keep every message. This controls how many messages are
-  kept for each task or task group. Set to 0 to not include error
-  messages in the e-mails.
+  kept for each task or task group. The most recent error messages are
+  kept. Set to 0 to not include error messages in the e-mails.
   Defaults to 1.
 
 group-by-error-messages

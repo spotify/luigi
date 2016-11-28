@@ -1,3 +1,8 @@
+"""
+Library for sending batch notifications from the Luigi scheduler. This module
+is internal to Luigi and not designed for use in other contexts.
+"""
+
 import collections
 from datetime import datetime
 import time
@@ -108,21 +113,21 @@ class BatchNotifier(object):
             return six.u('- {}').format(six.u('\n  ').join(lines))
 
     def _owners(self, owners):
-        return self._default_owner | set(owners or ())
+        return self._default_owner | set(owners)
 
-    def add_failure(self, task_name, family, unbatched_args, expl, owners=None):
+    def add_failure(self, task_name, family, unbatched_args, expl, owners):
         key = self._key(task_name, family, unbatched_args)
         for owner in self._owners(owners):
             self._fail_counts[owner][key] += 1
             self._fail_expls[owner][key].enqueue(expl)
 
-    def add_disable(self, task_name, family, unbatched_args, owners=None):
+    def add_disable(self, task_name, family, unbatched_args, owners):
         key = self._key(task_name, family, unbatched_args)
         for owner in self._owners(owners):
             self._disabled_counts[owner][key] += 1
             self._fail_counts[owner].setdefault(key, 0)
 
-    def add_scheduling_fail(self, task_name, family, unbatched_args, expl, owners=None):
+    def add_scheduling_fail(self, task_name, family, unbatched_args, expl, owners):
         key = self._key(task_name, family, unbatched_args)
         for owner in self._owners(owners):
             self._scheduling_fail_counts[owner][key] += 1

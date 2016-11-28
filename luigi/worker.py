@@ -552,6 +552,9 @@ class Worker(object):
                               )
 
     def _email_unexpected_error(self, task, formatted_traceback):
+        # this sends even if failure e-mails are disabled, as they may indicate
+        # a more severe failure that may not reach other alerting methods such
+        # as scheduler batch notification
         self._email_error(task, formatted_traceback,
                           subject="Luigi: Framework error while scheduling {task}. Host: {host}",
                           headline="Luigi framework error",

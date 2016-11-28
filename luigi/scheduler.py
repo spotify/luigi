@@ -830,6 +830,7 @@ class Scheduler(object):
                 expl_raw = json.loads(expl)
             except ValueError:
                 expl_raw = expl
+
             self._email_batcher.add_failure(
                 task.pretty_id, task.family, unbatched_params, expl_raw, owners)
             if task.status == DISABLED:
