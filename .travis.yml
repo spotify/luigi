@@ -27,7 +27,7 @@ env:
     - TOXENV=py33-cdh
     - TOXENV=py34-cdh
     - TOXENV=pypy-scheduler
-    - TOXENV=py27-gcloud
+    # - TOXENV=py27-gcloud # At least broken as of  https://github.com/spotify/luigi/pull/1917
     - TOXENV=py27-postgres
       # - TOXENV=visualiser
       # Disabling this test because of intermittent failures :-/
