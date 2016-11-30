@@ -70,6 +70,11 @@ function visualiserApp(luigi) {
             time_running = task.time_running;
             displayTime += " | " + minutes_running + " minutes";
         }
+        if(task.status == 'RUNNING'){
+            r = task.resources[task.worker_running]
+        }else{
+            r = task.resources
+        }
         return {
             taskId: task.taskId,
             encodedTaskId: encodeURIComponent(task.taskId),
@@ -77,7 +82,7 @@ function visualiserApp(luigi) {
             taskParams: taskParams,
             displayName: task.display_name,
             priority: task.priority,
-            resources: JSON.stringify(task.resources).replace(/,"/g, ', "'),
+            resources: JSON.stringify(r).replace(/,"/g, ', "'),
             displayTime: displayTime,
             displayTimestamp: task.last_updated,
             timeRunning: time_running,
