@@ -378,10 +378,14 @@ def _summary_format(set_tasks, worker):
     smiley = ""
     reason = ""
     if set_tasks["failed"]:
-        smiley = ":("
-        reason = "there were failed tasks"
-        if set_tasks["scheduling_error"]:
-            reason += " and tasks whose scheduling failed"
+        if not (set_tasks["failed"] - set_tasks["completed"]):
+            smiley = ":)"
+            reason = "there were failed tasks but suceeded in retry"
+        else:
+            smiley = ":("
+            reason = "there were failed tasks"
+            if set_tasks["scheduling_error"]:
+                reason += " and tasks whose scheduling failed"
     elif set_tasks["scheduling_error"]:
         smiley = ":("
         reason = "there were tasks whose scheduling failed"

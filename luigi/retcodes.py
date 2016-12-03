@@ -82,6 +82,11 @@ def run_with_retcodes(argv):
 
     task_sets = luigi.execution_summary._summary_dict(worker)
     root_task = luigi.execution_summary._root_task(worker)
+    if root_task in task_sets['completed']:
+        completed_tasks = task_sets['completed']
+        for key in task_sets.keys():
+            if key != 'completed':
+                task_sets[key] = task_sets[key] - completed_tasks
     non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
 
     def has(status):
