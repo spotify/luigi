@@ -67,7 +67,7 @@ class Register(abc.ABCMeta):
         """
         cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
 
-        if getattr(cls, "task_namespace", None) is None:
+        if cls.task_namespace is None:
             cls.task_namespace = metacls._default_namespace
 
         metacls._reg.append(cls)
