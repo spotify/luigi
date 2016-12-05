@@ -62,12 +62,14 @@ class Register(abc.ABCMeta):
 
         Also register all subclasses.
 
-        Set the task namespace to whatever the currently declared namespace is.
+        When the set or inherited namespace evaluates to ``None``, set the task namespace to
+        whatever the currently declared namespace is.
         """
-        if "task_namespace" not in classdict:
-            classdict["task_namespace"] = metacls._default_namespace
-
         cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
+
+        if getattr(cls, "task_namespace", None) is None:
+            cls.task_namespace = metacls._default_namespace
+
         metacls._reg.append(cls)
 
         return cls

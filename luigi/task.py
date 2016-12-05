@@ -125,7 +125,7 @@ class Task(object):
 
     ``Task.task_namespace``
       optional string which is prepended to the task name for the sake of
-      scheduling. If it isn't overridden in a Task, whatever was last declared
+      scheduling. If it isn't overridden in or inherited by a Task, whatever was last declared
       using `luigi.namespace` will be used.
     """
 
