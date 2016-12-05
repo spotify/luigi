@@ -136,3 +136,13 @@ class ExternalizeTaskTest(LuigiTestCase):
         task_class = luigi.task.externalize(MyTask)
         self.assertIsNot(task_class, MyTask)
         self.assertIn("MyTask", task_class.__name__)
+
+    def test_externalize_taskclass_instance_cache(self):
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+
+        task_class = luigi.task.externalize(MyTask)
+        self.assertIsNot(task_class, MyTask)
+        self.assertIs(MyTask(), MyTask())  # Assert it have enabled the instance caching
+        self.assertIsNot(task_class(), MyTask())  # Now, they should not be the same of course
