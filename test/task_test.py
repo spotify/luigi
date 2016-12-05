@@ -18,7 +18,7 @@
 import doctest
 import pickle
 
-from helpers import unittest
+from helpers import unittest, LuigiTestCase
 from datetime import datetime, timedelta
 
 import luigi
@@ -103,3 +103,36 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(tracking_url, 'http://test.luigi.com/')
         message = task.set_status_message('message')
         self.assertEqual(message, 'message')
+
+
+class ExternalizeTaskTest(LuigiTestCase):
+
+    def test_externalize_taskclass(self):
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+
+        self.assertIsNotNone(MyTask.run)  # Assert what we believe
+        task_object = luigi.task.externalize(MyTask)()
+        self.assertIsNone(task_object.run)
+        self.assertIsNotNone(MyTask.run)  # Check immutability
+        self.assertIsNotNone(MyTask().run)  # Check immutability
+
+    def test_externalize_taskobject(self):
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+
+        task_object = luigi.task.externalize(MyTask())
+        self.assertIsNone(task_object.run)
+        self.assertIsNotNone(MyTask.run)  # Check immutability
+        self.assertIsNotNone(MyTask().run)  # Check immutability
+
+    def test_externalize_taskclass_readable_name(self):
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+
+        task_class = luigi.task.externalize(MyTask)
+        self.assertIsNot(task_class, MyTask)
+        self.assertIn("MyTask", task_class.__name__)
