@@ -95,7 +95,7 @@ class TestSGEJob(unittest.TestCase):
         self.assertEqual(mock_check_output.call_count, 2)
 
     def tearDown(self):
-        for fpath in glob(os.path.join(DEFAULT_HOME, 'test_file_*')):
+        for fpath in glob(os.path.join(DEFAULT_HOME, 'testfile_*')):
             try:
                 os.remove(fpath)
             except OSError:
