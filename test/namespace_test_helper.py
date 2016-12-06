@@ -21,11 +21,15 @@ luigi.namespace("mynamespace")
 
 
 class Foo(luigi.Task):
-    p = luigi.Parameter()
+    p = luigi.IntParameter()
 
 
 class Bar(Foo):
     task_namespace = "othernamespace"  # namespace override
+
+
+class Baz(Bar):  # inherits namespace for Bar
+    pass
 
 
 luigi.namespace()
