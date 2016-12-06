@@ -328,12 +328,12 @@ class BigQueryClient(object):
         while True:
             status = self.client.jobs().get(projectId=project_id, jobId=job_id).execute()
             if status['status']['state'] == 'DONE':
-                if status['status'].get('errors'):
-                    raise Exception('BigQuery job failed: {}'.format(status['status']['errors']))
+                if status['status'].get('errorResult'):
+                    raise Exception('BigQuery job failed: {}'.format(status['status']['errorResult']))
                 return
 
             logger.info('Waiting for job %s:%s to complete...', project_id, job_id)
-            time.sleep(5.0)
+            time.sleep(5)
 
     def copy(self,
              source_table,
