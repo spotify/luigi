@@ -326,7 +326,7 @@ class BigQueryClient(object):
         job_id = new_job['jobReference']['jobId']
         logger.info('Started import job %s:%s', project_id, job_id)
         while True:
-            status = self.client.jobs().get(projectId=project_id, jobId=job_id).execute()
+            status = self.client.jobs().get(projectId=project_id, jobId=job_id).execute(num_retries=10)
             if status['status']['state'] == 'DONE':
                 if status['status'].get('errorResult'):
                     raise Exception('BigQuery job failed: {}'.format(status['status']['errorResult']))
