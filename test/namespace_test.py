@@ -34,7 +34,6 @@ class FooSubclass(Foo):
 class TestNamespacing(unittest.TestCase):
 
     def test_vanilla(self):
-        print(Foo.task_namespace)
         self.assertEqual(Foo.task_namespace, Register._UNSET_NAMESPACE)
         self.assertEqual(Foo.task_family, "Foo")
         self.assertEqual(str(Foo()), "Foo()")
