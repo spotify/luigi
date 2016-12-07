@@ -51,12 +51,10 @@ def namespace(namespace=None):
     """
     Call to set namespace of tasks declared after the call.
 
-    If called without arguments or with ``None`` as the namespace, the namespace
-    is reset to :py:attr:`Register._UNSET_NAMESPACE`., which is recommended to do
-    at the end of any file where the namespace is set to avoid unintentionally
-    setting namespace on tasks outside of the scope of the current file.
+    It is best practice to call this function without arguments at the end of any file it has been
+    used in. That is to ensure that subsequent tasks have the default namespace again.
 
-    The namespace of a Task can also be changed by specifying the property
+    The namespace of a :py:class:`Task` can also be changed by specifying the property
     ``task_namespace``. This solution has the advantage that the namespace
     doesn't have to be restored.
 
