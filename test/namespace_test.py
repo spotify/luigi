@@ -18,6 +18,8 @@
 from helpers import unittest
 
 import luigi
+from luigi.task_register import Register
+
 import namespace_test_helper  # declares another Foo in namespace mynamespace
 
 
@@ -32,11 +34,11 @@ class FooSubclass(Foo):
 class TestNamespacing(unittest.TestCase):
 
     def test_vanilla(self):
-        self.assertEqual(Foo.task_namespace, None)
+        self.assertEqual(Foo.task_namespace, Register._UNSET_NAMESPACE)
         self.assertEqual(Foo.task_family, "Foo")
         self.assertEqual(str(Foo()), "Foo()")
 
-        self.assertEqual(FooSubclass.task_namespace, None)
+        self.assertEqual(FooSubclass.task_namespace, Register._UNSET_NAMESPACE)
         self.assertEqual(FooSubclass.task_family, "FooSubclass")
         self.assertEqual(str(FooSubclass()), "FooSubclass()")
 
@@ -48,3 +50,7 @@ class TestNamespacing(unittest.TestCase):
         self.assertEqual(namespace_test_helper.Bar.task_namespace, "othernamespace")
         self.assertEqual(namespace_test_helper.Bar.task_family, "othernamespace.Bar")
         self.assertEqual(str(namespace_test_helper.Bar(1)), "othernamespace.Bar(p=1)")
+
+        self.assertEqual(namespace_test_helper.Baz.task_namespace, "othernamespace")
+        self.assertEqual(namespace_test_helper.Baz.task_family, "othernamespace.Baz")
+        self.assertEqual(str(namespace_test_helper.Baz(1)), "othernamespace.Baz(p=1)")

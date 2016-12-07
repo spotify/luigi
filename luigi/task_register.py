@@ -49,7 +49,8 @@ class Register(abc.ABCMeta):
     2. Keep track of all subclasses of :py:class:`Task` and expose them.
     """
     __instance_cache = {}
-    _default_namespace = None
+    _UNSET_NAMESPACE = object()
+    _default_namespace = _UNSET_NAMESPACE
     _reg = []
     AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
     """If this value is returned by :py:meth:`_get_reg` then there is an
@@ -62,12 +63,16 @@ class Register(abc.ABCMeta):
 
         Also register all subclasses.
 
-        Set the task namespace to whatever the currently declared namespace is.
+        When the set or inherited namespace evaluates to ``None``, set the task namespace to
+        whatever the currently declared namespace is.
         """
-        if "task_namespace" not in classdict:
-            classdict["task_namespace"] = metacls._default_namespace
-
         cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
+
+        # check if the namespace is not set, and if so, set it to the current default,
+        # which might not be the _UNSET_NAMESPACE
+        if cls.task_namespace == metacls._UNSET_NAMESPACE:
+            cls.task_namespace = metacls._default_namespace
+
         metacls._reg.append(cls)
 
         return cls
@@ -122,10 +127,10 @@ class Register(abc.ABCMeta):
         """
         The task family for the given class.
 
-        If ``cls.task_namespace is None`` then it's the name of the class.
+        If ``cls.task_namespace`` is not set, then it's the name of the class.
         Otherwise, ``<task_namespace>.`` is prefixed to the class name.
         """
-        if cls.task_namespace is None:
+        if cls.task_namespace == cls._UNSET_NAMESPACE:
             return cls.__name__
         else:
             return "%s.%s" % (cls.task_namespace, cls.__name__)
