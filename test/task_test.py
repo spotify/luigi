@@ -146,3 +146,28 @@ class ExternalizeTaskTest(LuigiTestCase):
         self.assertIsNot(task_class, MyTask)
         self.assertIs(MyTask(), MyTask())  # Assert it have enabled the instance caching
         self.assertIsNot(task_class(), MyTask())  # Now, they should not be the same of course
+
+    def test_externalize_same_id(self):
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+
+        task_normal = MyTask()
+        task_ext_1 = luigi.task.externalize(MyTask)()
+        task_ext_2 = luigi.task.externalize(MyTask())
+        self.assertEqual(task_normal.task_id, task_ext_1.task_id)
+        self.assertEqual(task_normal.task_id, task_ext_2.task_id)
+
+    def test_externalize_same_id_with_task_namespace(self):
+        # Dependent on the new behavior from spotify/luigi#1953
+        class MyTask(luigi.Task):
+            task_namespace = "something.domething"
+
+            def run(self):
+                pass
+
+        task_normal = MyTask()
+        task_ext_1 = luigi.task.externalize(MyTask())
+        task_ext_2 = luigi.task.externalize(MyTask)()
+        self.assertEqual(task_normal.task_id, task_ext_1.task_id)
+        self.assertEqual(task_normal.task_id, task_ext_2.task_id)
