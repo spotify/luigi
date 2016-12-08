@@ -669,15 +669,18 @@ def externalize(taskclass_or_taskobject):
     If you however want a task class to be external from the beginning, you're
     better off inheriting :py:class:`ExternalTask` rather than :py:class:`Task`.
 
-    This function tries to be side-effect free by creating a (shallow) copy of
-    the class or the object passed in and then modify that object. In
-    particular this code shouldn't do anything.
+    This function tries to be side-effect free by creating a copy of the class
+    or the object passed in and then modify that object. In particular this
+    code shouldn't do anything.
 
     .. code-block:: python
 
         externalize(MyTask)  # BAD: This does nothing (as after luigi 2.4.0)
     """
-    copied_value = copy.copy(taskclass_or_taskobject)
+    # Seems like with python < 3.3 copy.copy can't copy classes
+    # and objects with specified metaclass http://bugs.python.org/issue11480
+    compatible_copy = copy.copy if six.PY3 else copy.deepcopy
+    copied_value = compatible_copy(taskclass_or_taskobject)
     if copied_value is taskclass_or_taskobject:
         # Assume it's a class
         clazz = taskclass_or_taskobject
