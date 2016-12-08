@@ -31,6 +31,7 @@ import warnings
 import json
 import hashlib
 import re
+import copy
 
 from luigi import six
 
@@ -622,16 +623,6 @@ class MixinNaiveBulkComplete(object):
         return generated_tuples
 
 
-def externalize(task):
-    """
-    Returns an externalized version of the Task.
-
-    See :py:class:`ExternalTask`.
-    """
-    task.run = None
-    return task
-
-
 class ExternalTask(Task):
     """
     Subclass for references to external dependencies.
@@ -641,6 +632,73 @@ class ExternalTask(Task):
     Luigi.
     """
     run = None
+
+
+def externalize(taskclass_or_taskobject):
+    """
+    Returns an externalized version of a Task. You may both pass an
+    instantiated task object or a task class. Some examples:
+
+    .. code-block:: python
+
+        class RequiringTask(luigi.Task):
+            def requires(self):
+                task_object = self.clone(MyTask)
+                return externalize(task_object)
+
+            ...
+
+    Here's mostly equivalent code, but ``externalize`` is applied to a task
+    class instead.
+
+    .. code-block:: python
+
+        @luigi.util.requires(externalize(MyTask))
+        class RequiringTask(luigi.Task):
+            pass
+            ...
+
+    Of course, it may also be used directly on classes and objects (for example
+    for reexporting or other usage).
+
+    .. code-block:: python
+
+        MyTask = externalize(MyTask)
+        my_task_2 = externalize(MyTask2(param='foo'))
+
+    If you however want a task class to be external from the beginning, you're
+    better off inheriting :py:class:`ExternalTask` rather than :py:class:`Task`.
+
+    This function tries to be side-effect free by creating a copy of the class
+    or the object passed in and then modify that object. In particular this
+    code shouldn't do anything.
+
+    .. code-block:: python
+
+        externalize(MyTask)  # BAD: This does nothing (as after luigi 2.4.0)
+    """
+    # Seems like with python < 3.3 copy.copy can't copy classes
+    # and objects with specified metaclass http://bugs.python.org/issue11480
+    compatible_copy = copy.copy if six.PY3 else copy.deepcopy
+    copied_value = compatible_copy(taskclass_or_taskobject)
+    if copied_value is taskclass_or_taskobject:
+        # Assume it's a class
+        clazz = taskclass_or_taskobject
+        new_name = clazz.__name__
+
+        class _CopyOfClass(clazz):
+            # How to copy a class: http://stackoverflow.com/a/9541120/621449
+            pass
+        # I was tempted to use functools.update_wrapper to not manually copy
+        # over the __name__ and not miss any important attributes. But it seems
+        # it's only only for functions, not classes
+        _CopyOfClass.__name__ = new_name
+        _CopyOfClass.run = None
+        return _CopyOfClass
+    else:
+        # We assume it's an object
+        copied_value.run = None
+        return copied_value
 
 
 class WrapperTask(Task):

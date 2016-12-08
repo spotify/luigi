@@ -18,7 +18,7 @@
 import doctest
 import pickle
 
-from helpers import unittest
+from helpers import unittest, LuigiTestCase
 from datetime import datetime, timedelta
 
 import luigi
@@ -103,3 +103,71 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(tracking_url, 'http://test.luigi.com/')
         message = task.set_status_message('message')
         self.assertEqual(message, 'message')
+
+
+class ExternalizeTaskTest(LuigiTestCase):
+
+    def test_externalize_taskclass(self):
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+
+        self.assertIsNotNone(MyTask.run)  # Assert what we believe
+        task_object = luigi.task.externalize(MyTask)()
+        self.assertIsNone(task_object.run)
+        self.assertIsNotNone(MyTask.run)  # Check immutability
+        self.assertIsNotNone(MyTask().run)  # Check immutability
+
+    def test_externalize_taskobject(self):
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+
+        task_object = luigi.task.externalize(MyTask())
+        self.assertIsNone(task_object.run)
+        self.assertIsNotNone(MyTask.run)  # Check immutability
+        self.assertIsNotNone(MyTask().run)  # Check immutability
+
+    def test_externalize_taskclass_readable_name(self):
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+
+        task_class = luigi.task.externalize(MyTask)
+        self.assertIsNot(task_class, MyTask)
+        self.assertIn("MyTask", task_class.__name__)
+
+    def test_externalize_taskclass_instance_cache(self):
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+
+        task_class = luigi.task.externalize(MyTask)
+        self.assertIsNot(task_class, MyTask)
+        self.assertIs(MyTask(), MyTask())  # Assert it have enabled the instance caching
+        self.assertIsNot(task_class(), MyTask())  # Now, they should not be the same of course
+
+    def test_externalize_same_id(self):
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+
+        task_normal = MyTask()
+        task_ext_1 = luigi.task.externalize(MyTask)()
+        task_ext_2 = luigi.task.externalize(MyTask())
+        self.assertEqual(task_normal.task_id, task_ext_1.task_id)
+        self.assertEqual(task_normal.task_id, task_ext_2.task_id)
+
+    def test_externalize_same_id_with_task_namespace(self):
+        # Dependent on the new behavior from spotify/luigi#1953
+        class MyTask(luigi.Task):
+            task_namespace = "something.domething"
+
+            def run(self):
+                pass
+
+        task_normal = MyTask()
+        task_ext_1 = luigi.task.externalize(MyTask())
+        task_ext_2 = luigi.task.externalize(MyTask)()
+        self.assertEqual(task_normal.task_id, task_ext_1.task_id)
+        self.assertEqual(task_normal.task_id, task_ext_2.task_id)
