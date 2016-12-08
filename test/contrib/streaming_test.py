@@ -21,8 +21,11 @@ class MockStreamingJob(JobTask):
 class MockStreamingJobWithExtraArguments(JobTask):
     package_binary = Parameter(default=None)
 
-    def extra_arguments(self,):
+    def extra_streaming_arguments(self):
         return [('myargument', '/path/to/coolvalue')]
+
+    def extra_archives(self):
+        return ['/path/to/myarchive.zip', '/path/to/other_archive.zip']
 
     def output(self):
         rv = mock.MagicMock(HdfsTarget)
@@ -76,3 +79,4 @@ class StreamingRunTest(unittest.TestCase):
         mr_args = rath_job.call_args[0][0]
         mr_args_pairs = zip(mr_args, mr_args[1:])
         self.assertIn(('-myargument', '/path/to/coolvalue'), mr_args_pairs)
+        self.assertIn(('-archives', '/path/to/myarchive.zip,/path/to/other_archive.zip'), mr_args_pairs)
