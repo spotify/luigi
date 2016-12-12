@@ -604,20 +604,6 @@ class BoolParameter(Parameter):
         return 'store_true'
 
 
-class BooleanParameter(BoolParameter):
-    """
-    DEPRECATED. Use :py:class:`~BoolParameter`
-    """
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            'BooleanParameter is deprecated, use BoolParameter instead',
-            DeprecationWarning,
-            stacklevel=2
-        )
-        super(BooleanParameter, self).__init__(*args, **kwargs)
-
-
 class DateIntervalParameter(Parameter):
     """
     A Parameter whose value is a :py:class:`~luigi.date_interval.DateInterval`.
