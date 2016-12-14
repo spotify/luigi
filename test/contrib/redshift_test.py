@@ -23,11 +23,14 @@ import unittest
 AWS_ACCESS_KEY = 'key'
 AWS_SECRET_KEY = 'secret'
 
+AWS_ACCOUNT_ID = '0123456789012'
+AWS_ROLE_NAME = 'MyRedshiftRole'
+
 BUCKET = 'bucket'
 KEY = 'key'
 
 
-class DummyS3CopyToTable(luigi.contrib.redshift.S3CopyToTable):
+class DummyS3CopyToTableBase(luigi.contrib.redshift.S3CopyToTable):
     # Class attributes taken from `DummyPostgresImporter` in
     # `../postgres_test.py`.
     host = 'dummy_host'
@@ -40,8 +43,8 @@ class DummyS3CopyToTable(luigi.contrib.redshift.S3CopyToTable):
         ('some_int', 'int'),
     )
 
-    aws_access_key_id = 'AWS_ACCESS_KEY'
-    aws_secret_access_key = 'AWS_SECRET_KEY'
+    aws_access_key_id = AWS_ACCESS_KEY
+    aws_secret_access_key = AWS_SECRET_KEY
     copy_options = ''
     prune_table = ''
     prune_column = ''
@@ -50,8 +53,17 @@ class DummyS3CopyToTable(luigi.contrib.redshift.S3CopyToTable):
     def s3_load_path(self):
         return 's3://%s/%s' % (BUCKET, KEY)
 
+class DummyS3CopyToTableKey(DummyS3CopyToTableBase):
+    aws_access_key_id = AWS_ACCESS_KEY
+    aws_secret_access_key = AWS_SECRET_KEY
 
-class DummyS3CopyToTempTable(DummyS3CopyToTable):
+
+class DummyS3CopyToTableRole(DummyS3CopyToTableBase):
+    aws_account_id = AWS_ACCESS_KEY
+    aws_arn_role_name = AWS_SECRET_KEY
+
+
+class DummyS3CopyToTempTable(DummyS3CopyToTableKey):
     # Extend/alter DummyS3CopyToTable for temp table copying
     table = luigi.Parameter(default='stage_dummy_table')
 
@@ -66,9 +78,16 @@ class DummyS3CopyToTempTable(DummyS3CopyToTable):
 
 class TestS3CopyToTable(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
+    def test_copy_missing_creds(self, mock_copy):
+        task = DummyS3CopyToTableBase()
+        task.run()
+
+        self.assertRaises(NotImplementedError, mock_copy)
+
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
     def test_s3_copy_to_table(self, mock_redshift_target, mock_copy):
-        task = DummyS3CopyToTable()
+        task = DummyS3CopyToTableKey()
         task.run()
 
         # The mocked connection cursor passed to
@@ -112,7 +131,7 @@ class TestS3CopyToTable(unittest.TestCase):
         Test missing table creation
         """
         # Ensure `S3CopyToTable.create_table` does not throw an error.
-        task = DummyS3CopyToTable()
+        task = DummyS3CopyToTableKey()
         task.run()
 
         # Make sure the cursor was successfully used to create the table in
@@ -171,7 +190,7 @@ class TestS3CopyToSchemaTable(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
     def test_s3_copy_to_table(self, mock_redshift_target, mock_copy):
-        task = DummyS3CopyToTable(table='dummy_schema.dummy_table')
+        task = DummyS3CopyToTableKey(table='dummy_schema.dummy_table')
         task.run()
 
         # The mocked connection cursor passed to
