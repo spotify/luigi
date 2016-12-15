@@ -53,6 +53,7 @@ class DummyS3CopyToTableBase(luigi.contrib.redshift.S3CopyToTable):
     def s3_load_path(self):
         return 's3://%s/%s' % (BUCKET, KEY)
 
+
 class DummyS3CopyToTableKey(DummyS3CopyToTableBase):
     aws_access_key_id = AWS_ACCESS_KEY
     aws_secret_access_key = AWS_SECRET_KEY
