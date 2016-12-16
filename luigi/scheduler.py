@@ -672,6 +672,7 @@ class Scheduler(object):
         self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
         self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}
+        self._paused = False
 
         if self._config.batch_emails:
             self._email_batcher = BatchNotifier()
@@ -906,6 +907,18 @@ class Scheduler(object):
         self._state.get_worker(worker).add_rpc_message('set_worker_processes', n=n)
 
     @rpc_method()
+    def is_paused(self):
+        return {'paused': self._paused}
+
+    @rpc_method()
+    def pause(self):
+        self._paused = True
+
+    @rpc_method()
+    def unpause(self):
+        self._paused = False
+
+    @rpc_method()
     def update_resources(self, **resources):
         if self._resources is None:
             self._resources = {}
@@ -1051,7 +1064,9 @@ class Scheduler(object):
         greedy_resources = collections.defaultdict(int)
 
         worker = self._state.get_worker(worker_id)
-        if worker.is_trivial_worker(self._state):
+        if self._paused:
+            relevant_tasks = []
+        elif worker.is_trivial_worker(self._state):
             relevant_tasks = worker.get_tasks(self._state, PENDING, RUNNING)
             used_resources = collections.defaultdict(int)
             greedy_workers = dict()  # If there's no resources, then they can grab any task

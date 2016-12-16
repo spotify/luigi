@@ -926,8 +926,32 @@ function visualiserApp(luigi) {
         });
     }
 
+    /**
+     * Create the pause/unpause toggle
+     */
+    function createPauseToggle(checked) {
+        var check = checked ? " checked" : "";
+        var html = $('<input id="pause" type="checkbox"' + check + ' data-toggle="toggle">');
+        $('#pause-form').append(html);
+        $('#pause').bootstrapToggle({
+            on: 'Running',
+            off: 'Paused',
+            onstyle: 'success',
+            offstyle: 'danger'
+        });
+        $('#pause').change(function() {
+            if (this.checked) {
+                luigi.unpause();
+            } else {
+                luigi.pause();
+            }
+        })
+    }
+
     $(document).ready(function() {
         loadTemplates();
+
+        luigi.isPaused(createPauseToggle);
 
         luigi.getWorkerList(function(workers) {
             $("#workerList").append(renderWorkers(workers));

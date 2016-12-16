@@ -152,5 +152,19 @@ var LuigiAPI = (function() {
         });
     }
 
+    LuigiAPI.prototype.pause = function() {
+        jsonRPC(this.urlRoot + '/pause');
+    }
+
+    LuigiAPI.prototype.unpause = function() {
+        jsonRPC(this.urlRoot + '/unpause');
+    }
+
+    LuigiAPI.prototype.isPaused = function(callback) {
+        jsonRPC(this.urlRoot + "/is_paused", {}, function(response) {
+            callback(!response.response.paused);
+        });
+    }
+
     return LuigiAPI;
 })();
