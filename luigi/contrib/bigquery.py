@@ -584,6 +584,12 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
         """
         return []
 
+    @property
+    def use_legacy_sql(self):
+        """Whether to use legacy SQL
+        """
+        return True
+
     def run(self):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
@@ -613,6 +619,7 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
                     'writeDisposition': self.write_disposition,
                     'flattenResults': self.flatten_results,
                     'userDefinedFunctionResources': [{"resourceUri": v} for v in self.udf_resource_uris],
+                    'useLegacySql': self.use_legacy_sql,
                 }
             }
         }

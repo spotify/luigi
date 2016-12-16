@@ -80,6 +80,22 @@ class TestRunQueryTaskWithUdf(bigquery.BigqueryRunQueryTask):
         return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
 
 
+class TestRunQueryTaskWithoutLegacySql(bigquery.BigqueryRunQueryTask):
+    client = MagicMock()
+    table = luigi.Parameter()
+
+    @property
+    def use_legacy_sql(self):
+        return False
+
+    @property
+    def query(self):
+        return 'SELECT 1'
+
+    def output(self):
+        return bigquery.BigqueryTarget(PROJECT_ID, DATASET_ID, self.table, client=self.client)
+
+
 class TestExternalBigQueryTask(bigquery.ExternalBigQueryTask):
     client = MagicMock()
 
@@ -150,6 +166,24 @@ class BigQueryTest(unittest.TestCase):
         ]
 
         self.assertEqual(job['configuration']['query']['userDefinedFunctionResources'], udfs)
+
+    def test_query_with_legacy_sql(self):
+        task = TestRunQueryTask(table='table2')
+        task.client = MagicMock()
+        task.run()
+
+        (_, job), _ = task.client.run_job.call_args
+
+        self.assertEqual(job['configuration']['query']['useLegacySql'], True)
+
+    def test_query_without_legacy_sql(self):
+        task = TestRunQueryTaskWithoutLegacySql(table='table2')
+        task.client = MagicMock()
+        task.run()
+
+        (_, job), _ = task.client.run_job.call_args
+
+        self.assertEqual(job['configuration']['query']['useLegacySql'], False)
 
     def test_external_task(self):
         task = TestExternalBigQueryTask()
