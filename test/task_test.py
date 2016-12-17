@@ -23,6 +23,7 @@ from datetime import datetime, timedelta
 
 import luigi
 import luigi.task
+import luigi.util
 from luigi.task_register import load_task
 
 
@@ -171,3 +172,16 @@ class ExternalizeTaskTest(LuigiTestCase):
         task_ext_2 = luigi.task.externalize(MyTask)()
         self.assertEqual(task_normal.task_id, task_ext_1.task_id)
         self.assertEqual(task_normal.task_id, task_ext_2.task_id)
+
+    def test_externalize_with_requires(self):
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
+
+        @luigi.util.requires(luigi.task.externalize(MyTask))
+        class Requirer(luigi.Task):
+            def run(self):
+                pass
+
+        self.assertIsNotNone(MyTask.run)  # Check immutability
+        self.assertIsNotNone(MyTask().run)  # Check immutability
