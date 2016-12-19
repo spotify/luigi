@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 import luigi
 import luigi.task
 import luigi.util
+import collections
 from luigi.task_register import load_task
 
 
@@ -185,3 +186,45 @@ class ExternalizeTaskTest(LuigiTestCase):
 
         self.assertIsNotNone(MyTask.run)  # Check immutability
         self.assertIsNotNone(MyTask().run)  # Check immutability
+
+
+class TaskNamespaceTest(LuigiTestCase):
+
+    def setup_tasks(self):
+        class Foo(luigi.Task):
+            pass
+        class FooSubclass(Foo):
+            pass
+        return (Foo, FooSubclass, self.go_mynamespace())
+
+    def go_mynamespace(self):
+        luigi.namespace("mynamespace")
+        class Foo(luigi.Task):
+            p = luigi.IntParameter()
+        class Bar(Foo):
+            task_namespace = "othernamespace"  # namespace override
+        class Baz(Bar):  # inherits namespace for Bar
+            pass
+        luigi.namespace()
+        return collections.namedtuple('mynamespace', 'Foo Bar Baz')(Foo, Bar, Baz)
+
+    def test_vanilla(self):
+        (Foo, FooSubclass, namespace_test_helper) = self.setup_tasks()
+        self.assertEqual(Foo.task_family, "Foo")
+        self.assertEqual(str(Foo()), "Foo()")
+
+        self.assertEqual(FooSubclass.task_family, "FooSubclass")
+        self.assertEqual(str(FooSubclass()), "FooSubclass()")
+
+    def test_namespace(self):
+        (Foo, FooSubclass, namespace_test_helper) = self.setup_tasks()
+        self.assertEqual(namespace_test_helper.Foo.task_family, "mynamespace.Foo")
+        self.assertEqual(str(namespace_test_helper.Foo(1)), "mynamespace.Foo(p=1)")
+
+        self.assertEqual(namespace_test_helper.Bar.task_namespace, "othernamespace")
+        self.assertEqual(namespace_test_helper.Bar.task_family, "othernamespace.Bar")
+        self.assertEqual(str(namespace_test_helper.Bar(1)), "othernamespace.Bar(p=1)")
+
+        self.assertEqual(namespace_test_helper.Baz.task_namespace, "othernamespace")
+        self.assertEqual(namespace_test_helper.Baz.task_family, "othernamespace.Baz")
+        self.assertEqual(str(namespace_test_helper.Baz(1)), "othernamespace.Baz(p=1)")
