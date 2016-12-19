@@ -32,6 +32,7 @@ import json
 import hashlib
 import re
 import copy
+import functools
 
 from luigi import six
 
@@ -63,11 +64,10 @@ def namespace(namespace=None):
 
         class Task2(luigi.Task):
             task_namespace = 'namespace2'
-    """
-    if namespace is None:
-        namespace = Register._UNSET_NAMESPACE
 
-    Register._default_namespace = namespace
+    There's no equivalent way to set the ``task_family``.
+    """
+    Register._default_namespace = namespace or ''
 
 
 def task_id_str(task_family, params):
@@ -125,10 +125,6 @@ class Task(object):
     non-declared properties, which are created by the :py:class:`Register`
     metaclass:
 
-    ``Task.task_namespace``
-      optional string which is prepended to the task name for the sake of
-      scheduling. If it isn't overridden in or inherited by a Task, whatever was last declared
-      using `luigi.namespace` will be used.
     """
 
     _event_callbacks = {}
@@ -151,9 +147,6 @@ class Task(object):
 
     #: Maximum number of tasks to run together as a batch. Infinite by default
     max_batch_size = float('inf')
-
-    #: Default namespace of the task.
-    task_namespace = Register._default_namespace
 
     @property
     def batchable(self):
@@ -246,12 +239,55 @@ class Task(object):
         # TODO(erikbern): we should think about a language-agnostic mechanism
         return self.__class__.__module__
 
+    __not_user_specified = '__not_user_specified'
+
+    task_namespace = __not_user_specified
+    """
+    This value can be overriden to set the namespace that will be used.
+    (See :ref:`Task.namespaces_famlies_and_ids`)
+    If it's not specified and you try to read this value anyway, it will return
+    garbage. Please use :py:meth:`get_task_namespace` to read the namespace.
+
+    Note that setting this value with ``@property`` will not work, because this
+    is a class level value.
+    """
+
+    @classmethod
+    def get_task_namespace(cls):
+        """
+        The task family for the given class.
+
+        Note: You normally don't want to override this.
+        """
+        if cls.task_namespace != cls.__not_user_specified:
+            return cls.task_namespace
+        return cls._namespace_at_class_time
+
     @property
     def task_family(self):
         """
-        Convenience method since a property on the metaclass isn't directly accessible through the class instances.
+        DEPRECATED since after 2.4.0. See :py:meth:`get_task_family` instead.
+        Hopefully there will be less meta magic in Luigi.
+
+        Convenience method since a property on the metaclass isn't directly
+        accessible through the class instances.
         """
         return self.__class__.task_family
+
+    @classmethod
+    def get_task_family(cls):
+        """
+        The task family for the given class.
+
+        If ``task_namespace`` is not set, then it's simply the name of the
+        class.  Otherwise, ``<task_namespace>.`` is prefixed to the class name.
+
+        Note: You normally don't want to override this.
+        """
+        if not cls.get_task_namespace():
+            return cls.__name__
+        else:
+            return "{}.{}".format(cls.get_task_namespace(), cls.__name__)
 
     @classmethod
     def get_params(cls):
@@ -293,11 +329,11 @@ class Task(object):
 
         params_dict = dict(params)
 
-        task_name = cls.task_family
+        task_family = cls.get_task_family()
 
         # In case any exceptions are thrown, create a helpful description of how the Task was invoked
         # TODO: should we detect non-reprable arguments? These will lead to mysterious errors
-        exc_desc = '%s[args=%s, kwargs=%s]' % (task_name, args, kwargs)
+        exc_desc = '%s[args=%s, kwargs=%s]' % (task_family, args, kwargs)
 
         # Fill in the positional arguments
         positional_params = [(n, p) for n, p in params if p.positional]
@@ -318,9 +354,9 @@ class Task(object):
         # Then use the defaults for anything not filled in
         for param_name, param_obj in params:
             if param_name not in result:
-                if not param_obj.has_task_value(task_name, param_name):
+                if not param_obj.has_task_value(task_family, param_name):
                     raise parameter.MissingParameterException("%s: requires the '%s' parameter to be set" % (exc_desc, param_name))
-                result[param_name] = param_obj.task_value(task_name, param_name)
+                result[param_name] = param_obj.task_value(task_family, param_name)
 
         def list_to_tuple(x):
             """ Make tuples out of lists and sets to allow hashing """
@@ -343,7 +379,7 @@ class Task(object):
         self.param_args = tuple(value for key, value in param_values)
         self.param_kwargs = dict(param_values)
 
-        self.task_id = task_id_str(self.task_family, self.to_str_params(only_significant=True))
+        self.task_id = task_id_str(self.get_task_family(), self.to_str_params(only_significant=True))
         self.__hash = hash(self.task_id)
 
         self.set_tracking_url = None
@@ -427,7 +463,7 @@ class Task(object):
             if param_objs[param_name].significant:
                 repr_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
 
-        task_str = '{}({})'.format(self.task_family, ', '.join(repr_parts))
+        task_str = '{}({})'.format(self.get_task_family(), ', '.join(repr_parts))
 
         return task_str
 
@@ -684,15 +720,11 @@ def externalize(taskclass_or_taskobject):
     if copied_value is taskclass_or_taskobject:
         # Assume it's a class
         clazz = taskclass_or_taskobject
-        new_name = clazz.__name__
 
+        @_task_wraps(clazz)
         class _CopyOfClass(clazz):
             # How to copy a class: http://stackoverflow.com/a/9541120/621449
             pass
-        # I was tempted to use functools.update_wrapper to not manually copy
-        # over the __name__ and not miss any important attributes. But it seems
-        # it's only only for functions, not classes
-        _CopyOfClass.__name__ = new_name
         _CopyOfClass.run = None
         return _CopyOfClass
     else:
@@ -787,3 +819,13 @@ def flatten_output(task):
         for dep in flatten(task.requires()):
             r += flatten_output(dep)
     return r
+
+
+def _task_wraps(task_class):
+    # In order to make the behavior of a wrapper class nicer, we set the name of the
+    # new class to the wrapped class, and copy over the docstring and module as well.
+    # This makes it possible to pickle the wrapped class etc.
+    # Btw, this is a slight abuse of functools.wraps. It's meant to be used only for
+    # functions, but it works for classes too, if you pass updated=[]
+    assigned = functools.WRAPPER_ASSIGNMENTS + ('_namespace_at_class_time',)
+    return functools.wraps(task_class, assigned=assigned, updated=[])
