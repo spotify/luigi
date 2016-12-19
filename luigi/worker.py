@@ -569,8 +569,10 @@ class Worker(object):
 
     def _email_error(self, task, formatted_traceback, subject, headline):
         formatted_subject = subject.format(task=task, host=self.host)
+        formatted_headline = headline.format(task=task, host=self.host)
         command = subprocess.list2cmdline(sys.argv)
-        message = notifications.format_task_error(headline, task, command, formatted_traceback)
+        message = notifications.format_task_error(
+            formatted_headline, task, command, formatted_traceback)
         notifications.send_error_email(formatted_subject, message, task.owner_email)
 
     def _handle_task_load_error(self, exception, task_ids):

@@ -472,11 +472,7 @@ class WorkerTest(LuigiTestCase):
             def requires(self):
                 return a
 
-        class ExternalB(ExternalTask):
-            task_family = "B"
-
-            def complete(self):
-                return False
+        ExternalB = luigi.task.externalize(B)
 
         b = B()
         eb = ExternalB()
@@ -500,11 +496,7 @@ class WorkerTest(LuigiTestCase):
         class B(DummyTask):
             pass
 
-        class ExternalB(ExternalTask):
-            task_family = "B"
-
-            def complete(self):
-                return False
+        ExternalB = luigi.task.externalize(B)
 
         b = B()
         eb = ExternalB()
@@ -1571,12 +1563,13 @@ class UnimportedTask(luigi.Task):
     def complete(self):
         return False
 '''
+        reg = luigi.task_register.Register._get_reg()
 
-        class NotImportedTask(luigi.Task):
-            task_family = 'UnimportedTask'
-            task_module = None
+        class UnimportedTask(luigi.Task):
+            task_module = None  # Set it here, so it's generally settable
+        luigi.task_register.Register._set_reg(reg)
 
-        task = NotImportedTask()
+        task = UnimportedTask()
 
         # verify that it can't run the task without the module info necessary to import it
         self.w.add(task)
