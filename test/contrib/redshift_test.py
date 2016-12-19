@@ -43,8 +43,6 @@ class DummyS3CopyToTableBase(luigi.contrib.redshift.S3CopyToTable):
         ('some_int', 'int'),
     )
 
-    aws_access_key_id = AWS_ACCESS_KEY
-    aws_secret_access_key = AWS_SECRET_KEY
     copy_options = ''
     prune_table = ''
     prune_column = ''
@@ -78,12 +76,20 @@ class DummyS3CopyToTempTable(DummyS3CopyToTableKey):
 
 
 class TestS3CopyToTable(unittest.TestCase):
-    @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
-    def test_copy_missing_creds(self, mock_copy):
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_copy_missing_creds(self, mock_redshift_target):
         task = DummyS3CopyToTableBase()
-        task.run()
 
-        self.assertRaises(NotImplementedError, mock_copy)
+        # The mocked connection cursor passed to
+        # S3CopyToTable.copy(self, cursor, f).
+        mock_cursor = (mock_redshift_target.return_value
+                       .connect
+                       .return_value
+                       .cursor
+                       .return_value)
+
+        with self.assertRaises(NotImplementedError):
+            task.copy(mock_cursor, task.s3_load_path())
 
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
