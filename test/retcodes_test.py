@@ -16,10 +16,11 @@
 #
 from helpers import LuigiTestCase, with_config
 import mock
+import os
+import time
 import luigi
 import luigi.scheduler
 from luigi.cmdline import luigi_run
-
 
 class RetcodesTest(LuigiTestCase):
 
@@ -170,3 +171,68 @@ class RetcodesTest(LuigiTestCase):
         with mock.patch('luigi.scheduler.Scheduler.add_task', new_func):
             self.run_and_expect('RequiringTask', 0)
             self.run_and_expect('RequiringTask --retcode-not-run 5', 5)
+
+class RetcodesWithTaskRetryTest(LuigiTestCase):
+
+    def run_and_expect(self, joined_params, retcode, extra_args=['--local-scheduler', '--no-lock', '--workers=2', '--scheduler-retry-delay=1']):
+        with self.assertRaises(SystemExit) as cm:
+            luigi_run((joined_params.split(' ') + extra_args))
+        self.assertEqual(cm.exception.code, retcode)
+
+    def run_with_config(self, retcode_config, *args, **kwargs):
+        with_config({"scheduler": {"retry-delay": "1", "retry-count": "3"}, "retcode": retcode_config})(self.run_and_expect)(*args, **kwargs)
+
+    def clear_work_dir(self, work_dir):
+        for file in os.listdir(work_dir):
+           file_path = os.path.join(work_dir, file)
+           try:
+              if os.path.isfile(file_path):
+                  os.unlink(file_path)
+           except Exception as e:
+              print(e)
+
+    def test_retry_sucess_task(self):
+        class Bar(luigi.Task):
+            num = luigi.IntParameter()
+            work_dir = '/tmp/bar'
+
+            @property
+            def priority(self):
+                if self.num == 0:
+                    return 100
+                else:
+                    return 0
+
+            def run(self):
+                flag_file_path = os.path.join(self.work_dir, 'flag')
+                if self.num == 0 and not os.path.exists(flag_file_path):
+                    f = open(flag_file_path, 'w')
+                    f.write('foobar')
+                    f.close()
+                    raise ValueError()
+                time.sleep(self.num)
+                self.output().open('w').close()
+
+            def output(self):
+                out_file_path = os.path.join(self.work_dir, str(self.num))
+                return luigi.LocalTarget(out_file_path)
+
+        class Foo(luigi.Task):
+            def requires(self):
+                return [
+                   Bar(0),
+                   Bar(1),
+                   Bar(2),
+                   Bar(3)
+                ]
+
+        work_dir = '/tmp/bar'
+        if os.path.exists(work_dir):
+            self.clear_work_dir(work_dir)
+        else:
+            os.mkdir(work_dir)
+        self.run_and_expect('Foo', 0)
+        self.clear_work_dir(work_dir)
+        self.run_and_expect('Foo --retcode-task-failed 5', 0)
+        self.clear_work_dir(work_dir)
+        self.run_with_config(dict(task_failed='3'), 'Foo', 0)

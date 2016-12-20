@@ -43,12 +43,13 @@ def _partition_tasks(worker):
     set_tasks["completed"] = {task for (task, status, ext) in task_history if status == 'DONE' and task in pending_tasks}
     set_tasks["already_done"] = {task for (task, status, ext) in task_history
                                  if status == 'DONE' and task not in pending_tasks and task not in set_tasks["completed"]}
-    set_tasks["failed"] = {task for (task, status, ext) in task_history if status == 'FAILED'}
+    set_tasks["ever_failed"] = {task for (task, status, ext) in task_history if status == 'FAILED'}
+    set_tasks["failed"] = set_tasks["ever_failed"] - set_tasks["completed"]
     set_tasks["scheduling_error"] = {task for(task, status, ext) in task_history if status == 'UNKNOWN'}
     set_tasks["still_pending_ext"] = {task for (task, status, ext) in task_history
-                                      if status == 'PENDING' and task not in set_tasks["failed"] and task not in set_tasks["completed"] and not ext}
+                                      if status == 'PENDING' and task not in set_tasks["ever_failed"] and task not in set_tasks["completed"] and not ext}
     set_tasks["still_pending_not_ext"] = {task for (task, status, ext) in task_history
-                                          if status == 'PENDING' and task not in set_tasks["failed"] and task not in set_tasks["completed"] and ext}
+                                          if status == 'PENDING' and task not in set_tasks["ever_failed"] and task not in set_tasks["completed"] and ext}
     set_tasks["run_by_other_worker"] = set()
     set_tasks["upstream_failure"] = set()
     set_tasks["upstream_missing_dependency"] = set()
@@ -87,7 +88,7 @@ def _depth_first_search(set_tasks, current_task, visited):
         for task in current_task._requires():
             if task not in visited:
                 _depth_first_search(set_tasks, task, visited)
-            if task in set_tasks["failed"] or task in set_tasks["upstream_failure"]:
+            if task in set_tasks["ever_failed"] or task in set_tasks["upstream_failure"]:
                 set_tasks["upstream_failure"].add(current_task)
                 upstream_failure = True
             if task in set_tasks["still_pending_ext"] or task in set_tasks["upstream_missing_dependency"]:
@@ -261,6 +262,7 @@ def _get_comments(group_tasks):
 _ORDERED_STATUSES = (
     "already_done",
     "completed",
+    "ever_failed",
     "failed",
     "scheduling_error",
     "still_pending",
@@ -276,6 +278,7 @@ _PENDING_SUB_STATUSES = set(_ORDERED_STATUSES[_ORDERED_STATUSES.index("still_pen
 _COMMENTS = set((
     ("already_done", 'present dependencies were encountered'),
     ("completed", 'ran successfully'),
+    ("ever_failed", 'ever failed'),
     ("failed", 'failed'),
     ("scheduling_error", 'failed scheduling'),
     ("still_pending", 'were left pending, among these'),
@@ -351,6 +354,8 @@ def _summary_format(set_tasks, worker):
     for status in _ORDERED_STATUSES:
         if status not in comments:
             continue
+        if status == 'ever_failed' and (set_tasks["ever_failed"]==set_tasks["failed"]):
+            continue
         str_output += '{0}'.format(comments[status])
         if status != 'still_pending':
             str_output += '{0}\n'.format(_get_str(group_tasks[status], status in _PENDING_SUB_STATUSES))
@@ -377,8 +382,8 @@ def _summary_format(set_tasks, worker):
         str_output += 'Did not run any tasks'
     smiley = ""
     reason = ""
-    if set_tasks["failed"]:
-        if not (set_tasks["failed"] - set_tasks["completed"]):
+    if set_tasks["ever_failed"]:
+        if not set_tasks["failed"]:
             smiley = ":)"
             reason = "there were failed tasks but suceeded in retry"
         else:

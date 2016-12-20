@@ -22,6 +22,8 @@ import luigi.worker
 import luigi.execution_summary
 import threading
 import datetime
+import time
+import os
 import mock
 from enum import Enum
 
@@ -1086,3 +1088,87 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertIn('Luigi Execution Summary', s)
         self.assertNotIn('00:00:00', s)
         self.assertNotIn('\n\n\n', s)
+
+class ExecutionSummaryWithTaskRetryTest(LuigiTestCase):
+    work_dir = '/tmp/bar'
+
+    def setUp(self):
+        super(ExecutionSummaryWithTaskRetryTest, self).setUp()
+        self.scheduler = luigi.scheduler.Scheduler(prune_on_get_work=True, retry_delay=1)
+        self.worker = luigi.worker.Worker(scheduler=self.scheduler, keep_alive=True)
+        if os.path.exists(self.work_dir):
+            self.clear_work_dir()
+        else:
+           os.mkdir(self.work_dir)
+
+    def clear_work_dir(self):
+        for file in os.listdir(self.work_dir):
+           file_path = os.path.join(self.work_dir, file)
+           try:
+              if os.path.isfile(file_path):
+                  os.unlink(file_path)
+           except Exception as e:
+              print(e)
+
+    def tearDown(self):
+        super(ExecutionSummaryWithTaskRetryTest, self).tearDown()
+        self.clear_work_dir()
+
+    def run_task(self, task):
+        self.worker.add(task)  # schedule
+        self.worker.run()  # run
+
+    def summary_dict(self):
+        return luigi.execution_summary._summary_dict(self.worker)
+
+    def summary(self):
+        return luigi.execution_summary.summary(self.worker)
+
+    def test_statuse_with_task_retry(self):
+        class FooBar(luigi.Task):
+            work_dir = '/tmp/bar'
+
+            def run(self):
+                flag_file_path = os.path.join(self.work_dir, 'flag')
+                if not os.path.exists(flag_file_path):
+                    f = open(flag_file_path, 'w')
+                    f.write('foobar')
+                    f.close()
+                    raise ValueError()
+                self.output().open('w').close()
+
+            def output(self):
+                out_file_path = os.path.join(self.work_dir, 'FooBar')
+                return luigi.LocalTarget(out_file_path)
+
+        class Bar(luigi.Task):
+            num = luigi.IntParameter()
+            work_dir = '/tmp/bar'
+
+            def requires(self):
+               return FooBar()
+
+            def run(self):
+                time.sleep(3)
+                self.output().open('w').close()
+
+            def output(self):
+                out_file_path = os.path.join(self.work_dir, str(self.num))
+                return luigi.LocalTarget(out_file_path)
+
+        class Foo(luigi.Task):
+            def requires(self):
+                return [
+                   Bar(0),
+                   Bar(1),
+                   Bar(2)
+                ]
+
+        self.run_task(Foo())
+        d = self.summary_dict()
+        self.assertEqual({Foo(), FooBar(), Bar(num=0), Bar(num=1), Bar(num=2)}, d['completed'])
+        self.assertEqual({FooBar()}, d['ever_failed'])
+        self.assertFalse(d['upstream_failure'])
+        self.assertFalse(d['upstream_missing_dependency'])
+        self.assertFalse(d['run_by_other_worker'])
+        self.assertFalse(d['still_pending_ext'])
