@@ -249,7 +249,7 @@ class CopyToTable(rdbms.CopyToTable):
         """
         with self.input().open('r') as fobj:
             for line in fobj:
-                yield line.strip('\n').split('\t')
+                yield line.strip('\n').split(column_separator)
 
     def map_column(self, value):
         """
