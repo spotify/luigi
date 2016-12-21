@@ -647,13 +647,14 @@ class TimeDeltaParameter(Parameter):
     def _apply_regex(self, regex, input):
         import re
         re_match = re.match(regex, input)
-        if re_match:
+        if re_match and any(re_match.groups()):
             kwargs = {}
             has_val = False
             for k, v in six.iteritems(re_match.groupdict(default="0")):
                 val = int(v)
-                has_val = has_val or val > -1
-                kwargs[k] = val
+                if val > -1:
+                    has_val = True
+                    kwargs[k] = val
             if has_val:
                 return datetime.timedelta(**kwargs)
 
@@ -683,7 +684,7 @@ class TimeDeltaParameter(Parameter):
         result = self._parseIso8601(input)
         if not result:
             result = self._parseSimple(input)
-        if result:
+        if result is not None:
             return result
         else:
             raise ParameterException("Invalid time delta - could not parse %s" % input)
