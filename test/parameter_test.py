@@ -629,6 +629,16 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         expected = luigi.date_interval.Custom.parse("2001-02-03-2001-02-28")
         self.assertEqual(expected, _value(p))
 
+    @with_config({"foo": {"bar": "0 seconds"}})
+    def testTimeDeltaNoSeconds(self):
+        p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(timedelta(seconds=0), _value(p))
+
+    @with_config({"foo": {"bar": "0 d"}})
+    def testTimeDeltaNoDays(self):
+        p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(timedelta(days=0), _value(p))
+
     @with_config({"foo": {"bar": "1 day"}})
     def testTimeDelta(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
