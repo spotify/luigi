@@ -1,4 +1,5 @@
 # coding=utf-8
+from smtplib import SMTPServerDisconnected
 
 import mock
 import unittest
@@ -292,6 +293,17 @@ class BatchNotifierTest(unittest.TestCase):
         bn.send_email()
         self.send_email.assert_not_called()
 
+    def test_email_gets_cleared_on_failure(self):
+        bn = BatchNotifier(batch_mode='all')
+
+        bn.add_failure('Task(a=5)', 'Task', {'a': 1}, '', [])
+        self.send_email.side_effect = SMTPServerDisconnected('timeout')
+        self.assertRaises(SMTPServerDisconnected, bn.send_email)
+
+        self.send_email.reset_mock()
+        bn.send_email()
+        self.send_email.assert_not_called()
+
     def test_send_clears_all_old_data(self):
         bn = BatchNotifier(batch_mode='all', error_messages=100)
 
@@ -361,6 +373,25 @@ class BatchNotifierTest(unittest.TestCase):
             'Luigi: 1 failure in the last 60 minutes',
             '- Task(a=5) (1 failure)'
         )
+
+    def test_no_auto_send_for_interval_after_exception(self):
+        bn = BatchNotifier(batch_mode='all')
+        bn.add_failure('Task(a=5)', 'Task', {'a': 5}, 'error', [])
+        self.send_email.side_effect = SMTPServerDisconnected
+
+        self.incr_time(minutes=60)
+        self.assertRaises(SMTPServerDisconnected, bn.update)
+
+        self.send_email.reset_mock()
+        self.send_email.side_effect = None
+        bn.add_failure('Task(a=5)', 'Task', {'a': 5}, 'error', [])
+        for i in range(60):
+            bn.update()
+            self.send_email.assert_not_called()
+            self.incr_time(minutes=1)
+
+        bn.update()
+        self.assertEqual(1, self.send_email.call_count)
 
     def test_send_batch_failure_emails_to_owners(self):
         bn = BatchNotifier(batch_mode='all')
