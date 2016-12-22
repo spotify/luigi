@@ -30,6 +30,7 @@ from __future__ import print_function
 import string
 import luigi
 import json
+from datetime import timedelta
 
 import hypothesis as hyp
 from hypothesis.extra.datetime import datetimes as hyp_datetimes
@@ -96,6 +97,10 @@ def _task_from_dict(task_cls, param_dict):
     return task_cls(**task_params)
 
 
+class TimeDeltaTask(luigi.Task):
+    time = luigi.TimeDeltaParameter()
+
+
 @hyp.given(tasks_with_defaults)
 def test_serializable(task_cls):
     task = task_cls()
@@ -125,5 +130,23 @@ def test_task_id_alphanumeric(task_cls):
     valid = string.ascii_letters + string.digits + '_'
 
     assert [x for x in task_id if x not in valid] == []
+
+
+def test_timedelta_params():
+    task = TimeDeltaTask(timedelta(weeks=5, days=4, hours=3, minutes=2, seconds=1))
+
+    param_dict = _task_to_dict(task)
+    task2 = _task_from_dict(TimeDeltaTask, param_dict)
+
+    assert task.time == task2.time
+
+
+def test_no_time_timedelta_params():
+    task = TimeDeltaTask(timedelta(seconds=0))
+
+    param_dict = _task_to_dict(task)
+    task2 = _task_from_dict(TimeDeltaTask, param_dict)
+
+    assert task.time == task2.time
 
 # TODO : significant an non-significant parameters
