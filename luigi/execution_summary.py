@@ -278,7 +278,6 @@ _PENDING_SUB_STATUSES = set(_ORDERED_STATUSES[_ORDERED_STATUSES.index("still_pen
 _COMMENTS = set((
     ("already_done", 'present dependencies were encountered'),
     ("completed", 'ran successfully'),
-    ("ever_failed", 'ever failed'),
     ("failed", 'failed'),
     ("scheduling_error", 'failed scheduling'),
     ("still_pending", 'were left pending, among these'),
@@ -354,7 +353,7 @@ def _summary_format(set_tasks, worker):
     for status in _ORDERED_STATUSES:
         if status not in comments:
             continue
-        if status == 'ever_failed' and (set_tasks["ever_failed"]==set_tasks["failed"]):
+        if status == 'ever_failed' and (set_tasks["ever_failed"] == set_tasks["failed"]):
             continue
         str_output += '{0}'.format(comments[status])
         if status != 'still_pending':
@@ -385,7 +384,7 @@ def _summary_format(set_tasks, worker):
     if set_tasks["ever_failed"]:
         if not set_tasks["failed"]:
             smiley = ":)"
-            reason = "there were failed tasks but suceeded in retry"
+            reason = "there were failed tasks but they all suceeded in a retry"
         else:
             smiley = ":("
             reason = "there were failed tasks"
