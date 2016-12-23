@@ -190,8 +190,6 @@ class RetcodesTest(LuigiTestCase):
                 self.run_count += 1
                 if self.num == 0 and self.run_count == 1:
                     raise ValueError()
-                else:
-                    pass
 
             def complete(self):
                 return self.has_run

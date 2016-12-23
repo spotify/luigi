@@ -1087,8 +1087,8 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertNotIn('00:00:00', s)
         self.assertNotIn('\n\n\n', s)
 
-    def test_statuse_with_task_retry(self):
-        class FooBar(luigi.Task):
+    def test_status_with_task_retry(self):
+        class Foo(luigi.Task):
             run_count = 0
 
             def run(self):
@@ -1097,36 +1097,18 @@ class ExecutionSummaryTest(LuigiTestCase):
                     raise ValueError()
 
             def complete(self):
-                if self.run_count == 0:
-                    return False
-                else:
-                    return True
+                return self.run_count > 0
 
-        class Bar(luigi.Task):
-            num = luigi.IntParameter()
-            has_run = False
-
-            def requires(self):
-                return FooBar()
-
-            def run(self):
-                self.has_run = True
-
-            def complete(self):
-                return self.has_run
-
-        class Foo(luigi.Task):
-            def requires(self):
-                for i in range(3):
-                    yield Bar(i)
-
-        self.scheduler = luigi.scheduler.Scheduler(prune_on_get_work=True, retry_delay=0)
-        self.worker = luigi.worker.Worker(scheduler=self.scheduler, keep_alive=True)
+        self.run_task(Foo())
         self.run_task(Foo())
         d = self.summary_dict()
-        self.assertEqual({Foo(), FooBar(), Bar(num=0), Bar(num=1), Bar(num=2)}, d['completed'])
-        self.assertEqual({FooBar()}, d['ever_failed'])
+        self.assertEqual({Foo()}, d['completed'])
+        self.assertEqual({Foo()}, d['ever_failed'])
         self.assertFalse(d['upstream_failure'])
         self.assertFalse(d['upstream_missing_dependency'])
         self.assertFalse(d['run_by_other_worker'])
         self.assertFalse(d['still_pending_ext'])
+        s = self.summary()
+        self.assertIn('Scheduled 1 task', s)
+        self.assertIn('Luigi Execution Summary', s)
+        self.assertIn('\n\nThis progress looks :) because there were failed tasks but they all suceeded in a retry', s)
