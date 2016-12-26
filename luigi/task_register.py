@@ -18,7 +18,6 @@
 Define the centralized register of all :class:`~luigi.task.Task` classes.
 """
 
-import abc
 from collections import OrderedDict
 
 from luigi import six
@@ -38,7 +37,7 @@ class TaskClassAmbigiousException(TaskClassException):
     pass
 
 
-class Register(abc.ABCMeta):
+class Register(type):
     """
     The Metaclass of :py:class:`Task`.
 
