@@ -629,6 +629,16 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         expected = luigi.date_interval.Custom.parse("2001-02-03-2001-02-28")
         self.assertEqual(expected, _value(p))
 
+    @with_config({"foo": {"bar": "0 seconds"}})
+    def testTimeDeltaNoSeconds(self):
+        p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(timedelta(seconds=0), _value(p))
+
+    @with_config({"foo": {"bar": "0 d"}})
+    def testTimeDeltaNoDays(self):
+        p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(timedelta(days=0), _value(p))
+
     @with_config({"foo": {"bar": "1 day"}})
     def testTimeDelta(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
@@ -894,6 +904,15 @@ class TestSerializeDateParameters(LuigiTestCase):
         self.assertEqual(luigi.MonthParameter().serialize(date), '2013-02')
         dt = datetime.datetime(2013, 2, 3, 4, 5)
         self.assertEqual(luigi.DateHourParameter().serialize(dt), '2013-02-03T04')
+
+
+class TestSerializeTimeDeltaParameters(LuigiTestCase):
+
+    def testSerialize(self):
+        tdelta = timedelta(weeks=5, days=4, hours=3, minutes=2, seconds=1)
+        self.assertEqual(luigi.TimeDeltaParameter().serialize(tdelta), '5 w 4 d 3 h 2 m 1 s')
+        tdelta = timedelta(seconds=0)
+        self.assertEqual(luigi.TimeDeltaParameter().serialize(tdelta), '0 w 0 d 0 h 0 m 0 s')
 
 
 class TestTaskParameter(LuigiTestCase):
