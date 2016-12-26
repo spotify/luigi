@@ -353,7 +353,7 @@ def _summary_format(set_tasks, worker):
     for status in _ORDERED_STATUSES:
         if status not in comments:
             continue
-        if status == 'ever_failed' and (set_tasks["ever_failed"] == set_tasks["failed"]):
+        if status == 'ever_failed':
             continue
         str_output += '{0}'.format(comments[status])
         if status != 'still_pending':

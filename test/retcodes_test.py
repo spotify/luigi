@@ -173,12 +173,10 @@ class RetcodesTest(LuigiTestCase):
 
     @with_config({'worker': {'keep_alive': 'True'}})
     def test_retry_sucess_task(self):
-        class Bar(luigi.Task):
+        class Foo(luigi.Task):
             num = luigi.IntParameter()
-            has_run = False
             run_count = 0
 
-            @property
             def priority(self):
                 if self.num == 0:
                     return 100
@@ -186,19 +184,13 @@ class RetcodesTest(LuigiTestCase):
                     return 0
 
             def run(self):
-                self.has_run = True
                 self.run_count += 1
                 if self.num == 0 and self.run_count == 1:
                     raise ValueError()
 
             def complete(self):
-                return self.has_run
+                return self.run_count > 0
 
-        class Foo(luigi.Task):
-            def requires(self):
-                for i in range(3):
-                    yield Bar(i)
-
-        self.run_and_expect('Foo --scheduler-retry-delay=0', 0)
-        self.run_and_expect('Foo --scheduler-retry-delay=0 --retcode-task-failed 5', 0)
-        self.run_with_config(dict(task_failed='3'), 'Foo', 0)
+        self.run_and_expect('Foo --scheduler-retry-delay=0 --num 0', 0)
+        self.run_and_expect('Foo --scheduler-retry-delay=0 --retcode-task-failed 5 --num 0', 0)
+        self.run_with_config(dict(task_failed='3'), 'Foo --num 0', 0)
