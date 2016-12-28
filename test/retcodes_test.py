@@ -171,17 +171,13 @@ class RetcodesTest(LuigiTestCase):
             self.run_and_expect('RequiringTask', 0)
             self.run_and_expect('RequiringTask --retcode-not-run 5', 5)
 
-    @with_config({'worker': {'keep_alive': 'True'}})
+    """
+    Test that a task once crashing and then succeeding should be counted as no failure.
+    """
     def test_retry_sucess_task(self):
         class Foo(luigi.Task):
             num = luigi.IntParameter()
             run_count = 0
-
-            def priority(self):
-                if self.num == 0:
-                    return 100
-                else:
-                    return 0
 
             def run(self):
                 self.run_count += 1

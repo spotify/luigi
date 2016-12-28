@@ -82,11 +82,6 @@ def run_with_retcodes(argv):
 
     task_sets = luigi.execution_summary._summary_dict(worker)
     root_task = luigi.execution_summary._root_task(worker)
-    if root_task in task_sets['completed']:
-        completed_tasks = task_sets['completed']
-        for key in task_sets.keys():
-            if key != 'completed':
-                task_sets[key] = task_sets[key] - completed_tasks
     non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
 
     def has(status):
@@ -95,7 +90,7 @@ def run_with_retcodes(argv):
 
     codes_and_conds = (
         (retcodes.missing_data, has('still_pending_ext')),
-        (retcodes.task_failed, has('ever_failed')),
+        (retcodes.task_failed, has('failed')),
         (retcodes.already_running, has('run_by_other_worker')),
         (retcodes.scheduling_error, has('scheduling_error')),
         (retcodes.not_run, has('not_run')),
