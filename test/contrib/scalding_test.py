@@ -60,7 +60,3 @@ class ScaldingTest(unittest.TestCase):
         success = luigi.run(['MyScaldingTask', '--scala-source', self.scala_source, '--local-scheduler', '--no-lock'])
         self.assertTrue(success)
         # TODO: check more stuff
-
-
-if __name__ == '__main__':
-    luigi.run()
