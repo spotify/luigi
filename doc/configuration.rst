@@ -929,3 +929,98 @@ The fields below are in retry-policy and they can be defined per task.
 * retry_count
 * disable_hard_timeout
 * disable_window_seconds
+
+Logging Configuration
+=====================
+
+Configuring the logging of luigi workers can be accomplished by using command line arguments like ``--logging-conf-file`` and ``--log-level``.
+
+If you want more control over how the logging is configured, you can use a "driver" program to setup the logging configuation and then run luigi by calling ``luigi.run()``:
+
+Here's an example using an .ini configuration:
+
+.. code-block:: ini
+
+   [loggers]
+   keys=root,luigi
+
+   [handlers]
+   keys=consoleHandler
+
+   [formatters]
+   keys=consoleFormatter
+
+   [logger_root]
+   level=WARNING
+   handlers=consoleHandler
+
+   [logger_luigi]
+   level=DEBUG
+   handlers=consoleHandler
+   qualname=luigi-interface
+   propagate=0
+
+   [handler_consoleHandler]
+   class=StreamHandler
+   level=DEBUG
+   formatter=consoleFormatter
+   args=(sys.stdout,)
+
+   [formatter_consoleFormatter]
+   format=%(levelname)s: %(message)s
+   datefmt=
+
+.. code-block:: python
+
+   import luigi
+
+   # Either define the logging params here or load it from a file
+   # Here we parse a YAML file:
+   # configure the logging
+   luigi.interface.setup_interface_logging("config_file.ini")
+   luigi.run()
+
+
+
+Here's an example using a dictionary based configuration:
+
+.. code-block:: python
+
+   import luigi
+
+   # Either define the logging params here or load it from a file
+   # Here we parse a YAML string:
+   dict_based_config = yaml.load("""
+   root:
+       level: INFO
+       handlers: [default_handler]
+   loggers:
+       luigi:
+           level: WARNING
+           handlers: [default_handler]
+           propagate: yes
+       luigi-interface:
+           level: WARNING
+           handlers: [default_handler]
+           propagate: yes
+   handlers:
+       default_handler:
+           level: DEBUG
+           formatter: default
+   formatters:
+       default:
+           format: "%(asctime)s.%(msecs)03d [%(process)d] %(levelname)-4s <%(name)s:%(funcName)s> %(message)s"
+           datefmt: "%Y.%m.%d %H:%M:%S"
+   version: 1
+   disable_existing_loggers: False
+   """
+
+   # configure the logging
+   luigi.interface.setup_interface_logging(dict_based_config)
+   luigi.run()
+
+Then run the program:
+
+.. code-block:: bash
+
+   python my_driver_program.py SomeTask

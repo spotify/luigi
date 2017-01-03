@@ -40,12 +40,30 @@ from luigi import execution_summary
 from luigi.cmdline_parser import CmdlineParser
 
 
-def setup_interface_logging(conf_file='', level_name='DEBUG'):
+def setup_interface_logging(path_or_dict='', level_name='DEBUG'):
+    '''
+    Luigi logging can be configured in the following ways:
+
+        * Pass in the file name of a .ini style logging configuration.
+
+          The ``path_or_dict`` is passed to logging.config.fileConfig()
+
+        * Pass in a dictionary containing the logging configuation format as specified
+          in the `Python 3 documentation
+          <https://docs.python.org/3/library/logging.config.html#logging-config-dictschema>`_,
+          or as in the `Python 2 documentation
+          <https://docs.python.org/2/library/logging.config.html#logging-config-dictschema>`_.
+
+          The ''path_or_dict`` is passed to logging.config.dictConfig()
+
+    If no ``path_or_dict`` is passed, then a default logging configuration is used.
+
+    '''
     # use a variable in the function object to determine if it has run before
     if getattr(setup_interface_logging, "has_run", False):
         return
 
-    if conf_file == '':
+    if path_or_dict == '':
         # no log config given, setup default logging
         level = getattr(logging, level_name, logging.DEBUG)
 
@@ -59,8 +77,10 @@ def setup_interface_logging(conf_file='', level_name='DEBUG'):
         stream_handler.setFormatter(formatter)
 
         logger.addHandler(stream_handler)
+    elif isinstance(path_or_dict, dict):
+        logging.config.dictConfig(path_or_dict)
     else:
-        logging.config.fileConfig(conf_file, disable_existing_loggers=False)
+        logging.config.fileConfig(path_or_dict, disable_existing_loggers=False)
 
     setup_interface_logging.has_run = True
 
