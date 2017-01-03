@@ -56,6 +56,8 @@ def setup_interface_logging(conf_file=''):
         stream_handler.setFormatter(formatter)
 
         logger.addHandler(stream_handler)
+    elif isinstance(conf_file, dict):
+        logging.config.dictConfig(conf_file)
     else:
         logging.config.fileConfig(conf_file, disable_existing_loggers=False)
 
