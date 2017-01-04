@@ -176,17 +176,16 @@ class RetcodesTest(LuigiTestCase):
     """
     def test_retry_sucess_task(self):
         class Foo(luigi.Task):
-            num = luigi.IntParameter()
             run_count = 0
 
             def run(self):
                 self.run_count += 1
-                if self.num == 0 and self.run_count == 1:
+                if self.run_count == 1:
                     raise ValueError()
 
             def complete(self):
                 return self.run_count > 0
 
-        self.run_and_expect('Foo --scheduler-retry-delay=0 --num 0', 0)
-        self.run_and_expect('Foo --scheduler-retry-delay=0 --retcode-task-failed 5 --num 0', 0)
-        self.run_with_config(dict(task_failed='3'), 'Foo --num 0', 0)
+        self.run_and_expect('Foo --scheduler-retry-delay=0', 0)
+        self.run_and_expect('Foo --scheduler-retry-delay=0 --retcode-task-failed=5', 0)
+        self.run_with_config(dict(task_failed='3'), 'Foo', 0)
