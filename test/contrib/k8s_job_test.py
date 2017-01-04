@@ -32,7 +32,10 @@ Written and maintained by Marco Capuccini (@mcapuccini).
 
 import unittest
 import luigi
+import logging
 from luigi.contrib.k8s_job import KubernetesJobTask
+
+logger = logging.getLogger('luigi-interface')
 
 try:
     from pykube.config import KubeConfig
@@ -40,6 +43,7 @@ try:
     from pykube.objects import Job
 except ImportError:
     logger.warning('pykube is not installed. This test requires pykube.')
+
 
 class SuccessJob(KubernetesJobTask):
     name = "success"
@@ -50,6 +54,11 @@ class SuccessJob(KubernetesJobTask):
             "command": ["echo",  "Hello World!"]
         }]
     }
+
+    def output(self):
+        target = "/tmp/successjob"
+        return luigi.LocalTarget(target)
+
 
 class FailJob(KubernetesJobTask):
     name = "fail"
@@ -62,6 +71,11 @@ class FailJob(KubernetesJobTask):
         }]
     }
 
+    def output(self):
+        target = "/tmp/failjob"
+        return luigi.LocalTarget(target)
+
+
 class TestK8STask(unittest.TestCase):
 
     def test_success_job(self):
@@ -72,12 +86,10 @@ class TestK8STask(unittest.TestCase):
         fail = FailJob()
         self.assertRaises(RuntimeError, fail.run)
         # Check for retrials
-        kube_api = HTTPClient(KubeConfig.from_file("~/.kube/config")) # assumes minikube
-        jobs = Job.objects(kube_api).filter(selector="luigi_task_id=" + fail.job_uuid)
-        self.assertEqual(len(jobs.response["items"]),1)
+        kube_api = HTTPClient(KubeConfig.from_file("~/.kube/config"))  # assumes minikube
+        jobs = Job.objects(kube_api).filter(selector="luigi_task_id="
+                                                     + fail.job_uuid)
+        self.assertEqual(len(jobs.response["items"]), 1)
         job = Job(kube_api, jobs.response["items"][0])
         self.assertTrue("failed" in job.obj["status"])
         self.assertTrue(job.obj["status"]["failed"] > fail.max_retrials)
-
-if __name__ == "__main__":
-    unittest.main()

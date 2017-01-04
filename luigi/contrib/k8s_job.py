@@ -39,6 +39,8 @@ import logging
 import uuid
 import time
 
+logger = logging.getLogger('luigi-interface')
+
 try:
     from pykube.config import KubeConfig
     from pykube.http import HTTPClient
@@ -46,12 +48,12 @@ try:
 except ImportError:
     logger.warning('pykube is not installed. KubernetesJobTask requires pykube.')
 
+
 class KubernetesJobTask(luigi.Task):
 
-    __POLL_TIME = 5 # see __track_job
+    __POLL_TIME = 5  # see __track_job
 
-    def __init__(self, *args, **kwargs):
-        super(KubernetesJobTask, self).__init__(*args, **kwargs)
+    def initialize_k8s_job(self):
         self.__logger = logging.getLogger('luigi-interface')
         self.__logger.debug("Kubernetes auth method: " + self.auth_method)
         if(self.auth_method == "kubeconfing"):
@@ -100,7 +102,7 @@ class KubernetesJobTask(luigi.Task):
         A name for this job. This task will automatically append a UUID to the
         name before to submit to Kubernetes.
         """
-        pass
+        raise NotImplementedError("subclass must define name")
 
     @property
     def spec_schema(self):
@@ -126,6 +128,7 @@ class KubernetesJobTask(luigi.Task):
         For more informations please refer to:
         http://kubernetes.io/docs/user-guide/pods/multi-container/#the-spec-schema
         """
+        raise NotImplementedError("subclass must define spec_schema")
 
     @property
     def max_retrials(self):
@@ -137,35 +140,40 @@ class KubernetesJobTask(luigi.Task):
     def __track_job(self):
         """Poll job status while active"""
         while (self.__get_job_status() == "running"):
-            self.__logger.debug("Kubernetes job " + self.uu_name + " is still running")
+            self.__logger.debug("Kubernetes job " + self.uu_name
+                                + " is still running")
             time.sleep(self.__POLL_TIME)
         if(self.__get_job_status() == "succeeded"):
             self.__logger.info("Kubernetes job " + self.uu_name + " succeeded")
+            with self.output().open('w') as output_file:
+                output_file.write('')
         else:
             raise RuntimeError("Kubernetes job " + self.uu_name + " failed")
 
     def __get_job_status(self):
         """It returns the Kubernetes job status"""
         # Look for the required job
-        jobs = Job.objects(self.__kube_api).filter(selector="luigi_task_id=" + self.job_uuid)
+        jobs = Job.objects(self.__kube_api).filter(selector="luigi_task_id="
+                                                            + self.job_uuid)
         # Raise an exception if no such job found
         if len(jobs.response["items"]) == 0:
             raise RuntimeError("Kubernetes job " + self.uu_name + " not found")
         # Figure out status and return it
         job = Job(self.__kube_api, jobs.response["items"][0])
         if ("succeeded" in job.obj["status"] and job.obj["status"]["succeeded"] > 0):
-            job.scale(replicas=0) # Downscale the job, but keep it there for logging
+            job.scale(replicas=0)  # Downscale the job, but keep it for logging
             return "succeeded"
         if ("failed" in job.obj["status"]):
             failed_cnt = job.obj["status"]["failed"]
-            self.__logger.debug("Kubernetes job " + self.uu_name +
-                " status.failed: " + str(failed_cnt))
+            self.__logger.debug("Kubernetes job " + self.uu_name
+                                + " status.failed: " + str(failed_cnt))
             if (failed_cnt > self.max_retrials):
-                job.scale(replicas=0) # avoid more retrials
+                job.scale(replicas=0)  # avoid more retrials
                 return "failed"
         return "running"
 
     def run(self):
+        self.initialize_k8s_job()
         # Submit the Job
         self.__logger.info("Submitting Kubernetes Job: " + self.uu_name)
         job_json = {
@@ -191,3 +199,7 @@ class KubernetesJobTask(luigi.Task):
         # Track the Job (wait while active)
         self.__logger.info("Start tracking Kubernetes Job: " + self.uu_name)
         self.__track_job()
+
+    def output(self):
+        """Touch a file to signal successful kubernetes job completion"""
+        raise NotImplementedError("Subclass must define output")
