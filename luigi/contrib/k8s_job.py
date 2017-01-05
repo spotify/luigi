@@ -105,6 +105,15 @@ class KubernetesJobTask(luigi.Task):
         raise NotImplementedError("subclass must define name")
 
     @property
+    def labels(self):
+        """
+        Return custom labels for kubernetes job.
+        example::
+            ``{"run_dt": datetime.date.today().strftime('%F')}``
+        """
+        return {}
+
+    @property
     def spec_schema(self):
         """
         Kubernetes Job spec schema in JSON format, example::
@@ -207,6 +216,7 @@ class KubernetesJobTask(luigi.Task):
                 }
             }
         }
+        job_json['metadata']['labels'].update(self.labels)
         job = Job(self.__kube_api, job_json)
         job.create()
         # Track the Job (wait while active)
