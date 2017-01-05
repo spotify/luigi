@@ -206,6 +206,26 @@ class ExternalizeTaskTest(LuigiTestCase):
         self.assertIsNotNone(MyTask.run)  # Check immutability
         self.assertIsNotNone(MyTask().run)  # Check immutability
 
+    def test_externalize_doesnt_affect_the_registry(self):
+        class MyTask(luigi.Task):
+            pass
+        reg_orig = luigi.task_register.Register._get_reg()
+        luigi.task.externalize(MyTask)
+        reg_afterwards = luigi.task_register.Register._get_reg()
+        self.assertEqual(reg_orig, reg_afterwards)
+
+    def test_can_uniquely_command_line_parse(self):
+        class MyTask(luigi.Task):
+            pass
+        # This first check is just an assumption rather than assertion
+        self.assertTrue(self.run_locally(['MyTask']))
+        luigi.task.externalize(MyTask)
+        # Now we check we don't encounter "ambiguous task" issues
+        self.assertTrue(self.run_locally(['MyTask']))
+        # We do this once again, is there previously was a bug like this.
+        luigi.task.externalize(MyTask)
+        self.assertTrue(self.run_locally(['MyTask']))
+
 
 class TaskNamespaceTest(LuigiTestCase):
 
