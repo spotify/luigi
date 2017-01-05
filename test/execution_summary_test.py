@@ -1086,3 +1086,34 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertIn('Luigi Execution Summary', s)
         self.assertNotIn('00:00:00', s)
         self.assertNotIn('\n\n\n', s)
+
+    """
+    Test that a task once crashing and then succeeding should be counted as no failure.
+    """
+    def test_status_with_task_retry(self):
+        class Foo(luigi.Task):
+            run_count = 0
+
+            def run(self):
+                self.run_count += 1
+                if self.run_count == 1:
+                    raise ValueError()
+
+            def complete(self):
+                return self.run_count > 0
+
+        self.run_task(Foo())
+        self.run_task(Foo())
+        d = self.summary_dict()
+        self.assertEqual({Foo()}, d['completed'])
+        self.assertEqual({Foo()}, d['ever_failed'])
+        self.assertFalse(d['failed'])
+        self.assertFalse(d['upstream_failure'])
+        self.assertFalse(d['upstream_missing_dependency'])
+        self.assertFalse(d['run_by_other_worker'])
+        self.assertFalse(d['still_pending_ext'])
+        s = self.summary()
+        self.assertIn('Scheduled 1 task', s)
+        self.assertIn('Luigi Execution Summary', s)
+        self.assertNotIn('ever failed', s)
+        self.assertIn('\n\nThis progress looks :) because there were failed tasks but they all suceeded in a retry', s)
