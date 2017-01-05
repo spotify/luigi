@@ -22,7 +22,7 @@ Requires:
 - pykube: ``pip install pykube``
 - A local minikube custer up and running: http://kubernetes.io/docs/getting-started-guides/minikube/
 
-**WARNING**: For Python versions < 3.5 the kubeconfing file must point to a Kubernetes API
+**WARNING**: For Python versions < 3.5 the kubeconfig file must point to a Kubernetes API
 hostname, and NOT to an IP address.
 
 You can run this code example like this:
@@ -33,10 +33,11 @@ You can run this code example like this:
 Running this code will create a pi-luigi-uuid kubernetes job within the cluster
 pointed to by the default context in "~/.kube/config".
 
-When working within a kubernetes cluster, set auth_method = "ServiceAccount" to
+If running within a kubernetes cluster, set auth_method = "service-account" to
 access the local cluster.
 """
 
+import os
 import luigi
 from luigi.contrib.k8s_job import KubernetesJobTask
 
@@ -53,6 +54,10 @@ class PerlPi(KubernetesJobTask):
         }]
     }
 
+    def signal_complete(self):
+        with self.output().open('w') as output:
+            output.write('')
+
     def output(self):
-        target = "/tmp/PerlPi"
+        target = os.path.join("/tmp", "PerlPi")
         return luigi.LocalTarget(target)

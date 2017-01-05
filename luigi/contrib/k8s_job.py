@@ -53,12 +53,12 @@ class KubernetesJobTask(luigi.Task):
 
     __POLL_TIME = 5  # see __track_job
 
-    def initialize_k8s_job(self):
-        self.__logger = logging.getLogger('luigi-interface')
+    def _init_k8s(self):
+        self.__logger = logger
         self.__logger.debug("Kubernetes auth method: " + self.auth_method)
-        if(self.auth_method == "kubeconfing"):
+        if(self.auth_method == "kubeconfig"):
             self.__kube_api = HTTPClient(KubeConfig.from_file(self.kubeconfig_path))
-        elif(self.auth_method == "ServiceAccount"):
+        elif(self.auth_method == "service-account"):
             self.__kube_api = HTTPClient(KubeConfig.from_service_account())
         else:
             raise ValueError("Illegal auth_method")
@@ -70,28 +70,28 @@ class KubernetesJobTask(luigi.Task):
     @property
     def auth_method(self):
         """
-        This can be set to ``kubeconfing`` or ``ServiceAccount``.
-        It defaults to ``kubeconfing``.
+        This can be set to ``kubeconfig`` or ``service-account``.
+        It defaults to ``kubeconfig``.
 
-        For more details please referer to:
+        For more details, please refer to:
 
-        - kubeconfing: http://kubernetes.io/docs/user-guide/kubeconfig-file
-        - ServiceAccount: http://kubernetes.io/docs/user-guide/service-accounts
+        - kubeconfig: http://kubernetes.io/docs/user-guide/kubeconfig-file
+        - service-account: http://kubernetes.io/docs/user-guide/service-accounts
         """
-        return configuration.get_config().get("k8s", "auth_method", "kubeconfing")
+        return configuration.get_config().get("k8s", "auth_method", "kubeconfig")
 
     @property
     def kubeconfig_path(self):
         """
-        Path to kubeconfing file, for cluster authentication.
+        Path to kubeconfig file used for cluster authentication.
         It defaults to "~/.kube/config", which is the default location
         when using minikube (http://kubernetes.io/docs/getting-started-guides/minikube).
-        When auth_method is ``ServiceAccount`` this properity is ignored.
+        When auth_method is ``service-account`` this property is ignored.
 
-        **WARNING**: For Python versions < 3.5 kubeconfing must point to a Kubernetes API
+        **WARNING**: For Python versions < 3.5 kubeconfig must point to a Kubernetes API
         hostname, and NOT to an IP address.
 
-        For more details please referer to:
+        For more details, please refer to:
         http://kubernetes.io/docs/user-guide/kubeconfig-file
         """
         return configuration.get_config().get("k8s", "kubeconfig_path", "~/.kube/config")
@@ -108,6 +108,7 @@ class KubernetesJobTask(luigi.Task):
     def spec_schema(self):
         """
         Kubernetes Job spec schema in JSON format, example::
+        .. code-block:: javascript
 
             {
                 "containers": [{
@@ -135,7 +136,7 @@ class KubernetesJobTask(luigi.Task):
         """
         Maximum number of retrials in case of failure.
         """
-        return 0
+        return configuration.get_config().get("k8s", "max_retrials", 0)
 
     def __track_job(self):
         """Poll job status while active"""
@@ -145,13 +146,24 @@ class KubernetesJobTask(luigi.Task):
             time.sleep(self.__POLL_TIME)
         if(self.__get_job_status() == "succeeded"):
             self.__logger.info("Kubernetes job " + self.uu_name + " succeeded")
-            with self.output().open('w') as output_file:
-                output_file.write('')
+            # Use signal_complete to notify of job completion
+            self.signal_complete()
         else:
             raise RuntimeError("Kubernetes job " + self.uu_name + " failed")
 
+    def signal_complete(self):
+        """Signal job completion for scheduler and dependent tasks.
+
+         Touching a system file is an easy way to signal completion. example::
+         .. code-block:: python
+
+         with self.output().open('w') as output_file:
+             output_file.write('')
+        """
+        raise NotImplementedError("subclass must define signal_completion")
+
     def __get_job_status(self):
-        """It returns the Kubernetes job status"""
+        """Return the Kubernetes job status"""
         # Look for the required job
         jobs = Job.objects(self.__kube_api).filter(selector="luigi_task_id="
                                                             + self.job_uuid)
@@ -173,7 +185,7 @@ class KubernetesJobTask(luigi.Task):
         return "running"
 
     def run(self):
-        self.initialize_k8s_job()
+        self._init_k8s()
         # Submit the Job
         self.__logger.info("Submitting Kubernetes Job: " + self.uu_name)
         job_json = {
@@ -182,6 +194,7 @@ class KubernetesJobTask(luigi.Task):
             "metadata": {
                 "name": self.uu_name,
                 "labels": {
+                    "spawned_by": "luigi",
                     "luigi_task_id": self.job_uuid
                 }
             },
@@ -201,5 +214,6 @@ class KubernetesJobTask(luigi.Task):
         self.__track_job()
 
     def output(self):
-        """Touch a file to signal successful kubernetes job completion"""
+        """An output target is necessary for checking job completion. example::
+        ``return luigi.LocalTarget(os.path.join('/tmp', 'example'))``"""
         raise NotImplementedError("Subclass must define output")

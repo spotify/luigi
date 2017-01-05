@@ -24,12 +24,13 @@ Requires:
 - pykube: ``pip install pykube``
 - A local minikube custer up and running: http://kubernetes.io/docs/getting-started-guides/minikube/
 
-**WARNING**: For Python versions < 3.5 the kubeconfing file must point to a Kubernetes API
+**WARNING**: For Python versions < 3.5 the kubeconfig file must point to a Kubernetes API
 hostname, and NOT to an IP address.
 
 Written and maintained by Marco Capuccini (@mcapuccini).
 """
 
+import os
 import unittest
 import luigi
 import logging
@@ -55,8 +56,12 @@ class SuccessJob(KubernetesJobTask):
         }]
     }
 
+    def signal_complete(self):
+        with self.output().open('w') as output:
+            output.write('')
+
     def output(self):
-        target = "/tmp/successjob"
+        target = os.path.join("/tmp", "successjob")
         return luigi.LocalTarget(target)
 
 
@@ -71,8 +76,13 @@ class FailJob(KubernetesJobTask):
         }]
     }
 
+    def signal_complete(self):
+        with self.output().open('w') as output:
+            output.write('')
+
     def output(self):
-        target = "/tmp/failjob"
+        """This will not be written to."""
+        target = os.path.join("/tmp", "failjob")
         return luigi.LocalTarget(target)
 
 
@@ -81,6 +91,10 @@ class TestK8STask(unittest.TestCase):
     def test_success_job(self):
         success = luigi.run(["SuccessJob", "--local-scheduler"])
         self.assertTrue(success)
+
+        # a file should have been touched on job completion
+        output_location = SuccessJob().output().path
+        self.assertTrue(os.path.exists(output_location))
 
     def test_fail_job(self):
         fail = FailJob()
@@ -93,3 +107,7 @@ class TestK8STask(unittest.TestCase):
         job = Job(kube_api, jobs.response["items"][0])
         self.assertTrue("failed" in job.obj["status"])
         self.assertTrue(job.obj["status"]["failed"] > fail.max_retrials)
+
+        # and a file should not have been touched here
+        output_location = fail.output().path
+        self.assertFalse(os.path.exists(output_location))
