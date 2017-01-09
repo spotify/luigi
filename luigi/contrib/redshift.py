@@ -59,6 +59,7 @@ class S3CopyToTable(rdbms.CopyToTable):
     Usage:
 
     * Subclass and override the required attributes:
+
       * `host`,
       * `database`,
       * `user`,
