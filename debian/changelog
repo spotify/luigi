@@ -1,5 +1,9 @@
-luigi (2.4.0) stable; urgency=low
+luigi (2.5.0) stable; urgency=low
+  * See https://github.com/spotify/luigi/releases/tag/2.5.0
 
+ -- Arash Rouhani <arashrk@vng.com.vn>  Tue, 10 Jan 2017 14:52:05 +0700
+
+luigi (2.4.0) stable; urgency=low
   * See https://github.com/spotify/luigi/releases/tag/2.4.0
 
  -- Arash Rouhani <arashrk@vng.com.vn>  Fri, 02 Dec 2016 11:49:56 +0700
