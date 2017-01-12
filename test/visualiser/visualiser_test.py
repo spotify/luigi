@@ -13,6 +13,8 @@ import unittest
 import time
 import threading
 
+from selenium import webdriver
+
 here = os.path.dirname(__file__)
 
 # Patch-up path so that we can import from the directory above this one.r
@@ -84,6 +86,94 @@ class TestVisualiser(ServerTestBase):
         else:
             print('PhantomJS return status is {}'.format(status))
             assert status == 0
+
+    def test_keeps_entries_after_page_refresh(self):
+
+        port = self.get_http_port()
+        driver = webdriver.PhantomJS()
+
+        driver.get('http://localhost:{}'.format(port))
+
+        length_select = driver.find_element_by_css_selector('select[name="taskTable_length"]')
+        assert length_select.get_attribute('value') == '10'
+        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 10
+
+        # Now change entries select box and check again.
+        clicked = False
+        for option in length_select.find_elements_by_css_selector('option'):
+            if option.text == '50':
+                option.click()
+                clicked = True
+                break
+
+        assert clicked, 'Could not click option with "50" entries.'
+
+        assert length_select.get_attribute('value') == '50'
+        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 50
+
+        # Now refresh page and check. Select box should be 50 and table should contain 50 rows.
+        driver.refresh()
+
+        # Once page refreshed we have to find all selectors again.
+        length_select = driver.find_element_by_css_selector('select[name="taskTable_length"]')
+        assert length_select.get_attribute('value') == '50'
+        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 50
+
+    def test_keeps_table_filter_after_page_refresh(self):
+
+        port = self.get_http_port()
+        driver = webdriver.PhantomJS()
+
+        driver.get('http://localhost:{}'.format(port))
+
+        # Check initial state.
+        search_input = driver.find_element_by_css_selector('input[type="search"]')
+        assert search_input.get_attribute('value') == ''
+        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 10
+
+        # Now filter and check filtered table.
+        search_input.send_keys('ber')
+        # UberTask only should be displayed.
+        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 1
+
+        # Now refresh page and check. Filter input should contain 'ber' and table should contain
+        # one row (UberTask).
+        driver.refresh()
+
+        # Once page refreshed we have to find all selectors again.
+        search_input = driver.find_element_by_css_selector('input[type="search"]')
+        assert search_input.get_attribute('value') == 'ber'
+        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 1
+
+    def test_keeps_order_after_page_refresh(self):
+
+        port = self.get_http_port()
+        driver = webdriver.PhantomJS()
+
+        driver.get('http://localhost:{}'.format(port))
+
+        # Order by name (asc).
+        column = driver.find_elements_by_css_selector('#taskTable thead th')[1]
+        column.click()
+
+        table_body = driver.find_element_by_css_selector('#taskTable tbody')
+        assert self._get_cell_value(table_body, 0, 1) == 'FailingMergeSort_0'
+
+        # Ordery by name (desc).
+        column.click()
+        assert self._get_cell_value(table_body, 0, 1) == 'UberTask'
+
+        # Now refresh page and check. Table should be ordered by name (desc).
+        driver.refresh()
+
+        # Once page refreshed we have to find all selectors again.
+        table_body = driver.find_element_by_css_selector('#taskTable tbody')
+        assert self._get_cell_value(table_body, 0, 1) == 'UberTask'
+
+    def _get_cell_value(self, elem, row, column):
+        tr = elem.find_elements_by_css_selector('#taskTable tbody tr')[row]
+        td = tr.find_elements_by_css_selector('td')[column]
+        return td.text
 
 
 # ---------------------------------------------------------------------------

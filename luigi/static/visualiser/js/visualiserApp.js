@@ -850,6 +850,53 @@ function visualiserApp(luigi) {
         });
 
         dt = $('#taskTable').DataTable({
+            stateSave: true,
+            stateSaveCallback: function(settings, data) {
+                // Convert data table state to query and save to the browser history.
+                var params = {};
+
+                if (data.search.search) {
+                    params.search__search = data.search.search;
+                }
+
+                if (data.order && data.order.length) {
+                    params.order = '' + data.order[0][0] + ',' + data.order[0][1];
+                }
+
+                if (data.length) {
+                    params.length = data.length;
+                }
+                console.log(data.order);
+
+                var uri = URI().query(params);
+                history.pushState(data, 'task-table', uri.toString());
+            },
+            stateLoadCallback: function(settings) {
+                // Restore datatable state from browser's history.
+                var uri = URI(window.location).search(true);
+                var order = [];
+                if (uri.order) {
+                    order = [uri.order.split(',')];
+                }
+                var o = {
+                    order: order,
+                    length: uri.length,
+                    start: 0,
+                    time: new Date().getTime(),
+                    columns: [
+                        {visible: true, search: {}},
+                        {visible: true, search: {}},
+                        {visible: true, search: {}},
+                        {visible: true, search: {}},
+                        {visible: true, search: {}},
+                        {visible: true, search: {}}
+                    ],
+                    search: {
+                        caseInsensitive: true,
+                        search: uri.search__search}};
+
+                return o;
+            },
             dom: 'l<"#serverSide">frtip',
             language: {
                 search: 'Filter table:'
