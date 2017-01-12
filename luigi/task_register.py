@@ -19,7 +19,6 @@ Define the centralized register of all :class:`~luigi.task.Task` classes.
 """
 
 import abc
-from collections import OrderedDict
 
 from luigi import six
 import logging
@@ -129,23 +128,24 @@ class Register(abc.ABCMeta):
     def _get_reg(cls):
         """Return all of the registered classes.
 
-        :return:  an ``collections.OrderedDict`` of task_family -> class
+        :return:  an ``dict`` of task_family -> class
         """
         # We have to do this on-demand in case task names have changed later
-        # We return this in a topologically sorted list of inheritance: this is useful in some cases (#822)
-        reg = OrderedDict()
-        for cls in cls._reg:
-            name = cls.task_family
+        reg = dict()
+        for task_cls in cls._reg:
+            if not task_cls._visible_in_registry:
+                continue
 
-            if name in reg and reg[name] != cls and \
-                    reg[name] != cls.AMBIGUOUS_CLASS and \
-                    not issubclass(cls, reg[name]):
+            name = task_cls.get_task_family()
+            if name in reg and \
+                    (reg[name] == Register.AMBIGUOUS_CLASS or  # Check so issubclass doesn't crash
+                     not issubclass(task_cls, reg[name])):
                 # Registering two different classes - this means we can't instantiate them by name
                 # The only exception is if one class is a subclass of the other. In that case, we
                 # instantiate the most-derived class (this fixes some issues with decorator wrappers).
-                reg[name] = cls.AMBIGUOUS_CLASS
+                reg[name] = Register.AMBIGUOUS_CLASS
             else:
-                reg[name] = cls
+                reg[name] = task_cls
 
         return reg
 

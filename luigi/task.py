@@ -239,6 +239,8 @@ class Task(object):
         # TODO(erikbern): we should think about a language-agnostic mechanism
         return self.__class__.__module__
 
+    _visible_in_registry = True  # TODO: Consider using in luigi.util as well
+
     __not_user_specified = '__not_user_specified'
 
     task_namespace = __not_user_specified
@@ -724,7 +726,7 @@ def externalize(taskclass_or_taskobject):
         @_task_wraps(clazz)
         class _CopyOfClass(clazz):
             # How to copy a class: http://stackoverflow.com/a/9541120/621449
-            pass
+            _visible_in_registry = False
         _CopyOfClass.run = None
         return _CopyOfClass
     else:

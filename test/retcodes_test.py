@@ -170,3 +170,22 @@ class RetcodesTest(LuigiTestCase):
         with mock.patch('luigi.scheduler.Scheduler.add_task', new_func):
             self.run_and_expect('RequiringTask', 0)
             self.run_and_expect('RequiringTask --retcode-not-run 5', 5)
+
+    """
+    Test that a task once crashing and then succeeding should be counted as no failure.
+    """
+    def test_retry_sucess_task(self):
+        class Foo(luigi.Task):
+            run_count = 0
+
+            def run(self):
+                self.run_count += 1
+                if self.run_count == 1:
+                    raise ValueError()
+
+            def complete(self):
+                return self.run_count > 0
+
+        self.run_and_expect('Foo --scheduler-retry-delay=0', 0)
+        self.run_and_expect('Foo --scheduler-retry-delay=0 --retcode-task-failed=5', 0)
+        self.run_with_config(dict(task_failed='3'), 'Foo', 0)
