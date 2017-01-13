@@ -866,7 +866,6 @@ function visualiserApp(luigi) {
                 if (data.length) {
                     params.length = data.length;
                 }
-                console.log(data.order);
 
                 var uri = URI().query(params);
                 history.pushState(data, 'task-table', uri.toString());
