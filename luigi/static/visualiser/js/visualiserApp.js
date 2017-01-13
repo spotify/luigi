@@ -878,19 +878,22 @@ function visualiserApp(luigi) {
                 if (uri.order) {
                     order = [uri.order.split(',')];
                 }
+
+                // Prepare state for datatable.
                 var o = {
-                    order: order,
-                    length: uri.length,
-                    start: 0,
-                    time: new Date().getTime(),
+                    order: order,                 // Table rows order.
+                    length: uri.length,           // Entries on page.
+                    start: 0,                     // Pagination initial page.
+                    time: new Date().getTime(),   // Current time to help datatable.js to handle asynchronous.
                     columns: [
                         {visible: true, search: {}},
-                        {visible: true, search: {}},
-                        {visible: true, search: {}},
-                        {visible: true, search: {}},
-                        {visible: true, search: {}},
-                        {visible: true, search: {}}
+                        {visible: true, search: {}},  // Name column
+                        {visible: true, search: {}},  // Details column
+                        {visible: true, search: {}},  // Priority column
+                        {visible: true, search: {}},  // Time column
+                        {visible: true, search: {}}   // Actions column
                     ],
+                    // Search input state.
                     search: {
                         caseInsensitive: true,
                         search: uri.search__search}};
