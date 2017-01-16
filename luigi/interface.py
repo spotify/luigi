@@ -46,11 +46,15 @@ def setup_interface_logging(conf_file=''):
         return
 
     if conf_file == '':
+        # no log config given, setup default logging
+        level_name = os.environ.get('LUIGI_DEFAULT_LOG_LEVEL', "DEBUG")
+        level = getattr(logging, level_name, logging.DEBUG)
+
         logger = logging.getLogger('luigi-interface')
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(level)
 
         stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setLevel(level)
 
         formatter = logging.Formatter('%(levelname)s: %(message)s')
         stream_handler.setFormatter(formatter)
