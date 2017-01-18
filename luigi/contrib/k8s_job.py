@@ -169,7 +169,7 @@ class KubernetesJobTask(luigi.Task):
          with self.output().open('w') as output_file:
              output_file.write('')
         """
-        raise NotImplementedError("subclass must define signal_completion")
+        pass
 
     def __get_job_status(self):
         """Return the Kubernetes job status"""
@@ -224,6 +224,8 @@ class KubernetesJobTask(luigi.Task):
         self.__track_job()
 
     def output(self):
-        """An output target is necessary for checking job completion. example::
+        """An output target is necessary for checking job completion unless
+        alternative complete method is defined.
+         example::
         ``return luigi.LocalTarget(os.path.join('/tmp', 'example'))``"""
-        raise NotImplementedError("Subclass must define output")
+        pass

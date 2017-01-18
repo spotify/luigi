@@ -37,8 +37,8 @@ If running within a kubernetes cluster, set auth_method = "service-account" to
 access the local cluster.
 """
 
-import os
-import luigi
+# import os
+# import luigi
 from luigi.contrib.k8s_job import KubernetesJobTask
 
 
@@ -54,10 +54,12 @@ class PerlPi(KubernetesJobTask):
         }]
     }
 
-    def signal_complete(self):
-        with self.output().open('w') as output:
-            output.write('')
-
-    def output(self):
-        target = os.path.join("/tmp", "PerlPi")
-        return luigi.LocalTarget(target)
+    # defining the two functions below allows for dependency checking,
+    # but isn't a requirement
+    # def signal_complete(self):
+    #     with self.output().open('w') as output:
+    #         output.write('')
+    #
+    # def output(self):
+    #     target = os.path.join("/tmp", "PerlPi")
+    #     return luigi.LocalTarget(target)

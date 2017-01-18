@@ -30,10 +30,10 @@ hostname, and NOT to an IP address.
 Written and maintained by Marco Capuccini (@mcapuccini).
 """
 
-import os
 import unittest
 import luigi
 import logging
+import mock
 from luigi.contrib.k8s_job import KubernetesJobTask
 
 logger = logging.getLogger('luigi-interface')
@@ -56,14 +56,6 @@ class SuccessJob(KubernetesJobTask):
         }]
     }
 
-    def signal_complete(self):
-        with self.output().open('w') as output:
-            output.write('')
-
-    def output(self):
-        target = os.path.join("/tmp", "successjob")
-        return luigi.LocalTarget(target)
-
 
 class FailJob(KubernetesJobTask):
     name = "fail"
@@ -76,25 +68,12 @@ class FailJob(KubernetesJobTask):
         }]
     }
 
-    def signal_complete(self):
-        with self.output().open('w') as output:
-            output.write('')
-
-    def output(self):
-        """This will not be written to."""
-        target = os.path.join("/tmp", "failjob")
-        return luigi.LocalTarget(target)
-
 
 class TestK8STask(unittest.TestCase):
 
     def test_success_job(self):
         success = luigi.run(["SuccessJob", "--local-scheduler"])
         self.assertTrue(success)
-
-        # a file should have been touched on job completion
-        output_location = SuccessJob().output().path
-        self.assertTrue(os.path.exists(output_location))
 
     def test_fail_job(self):
         fail = FailJob()
@@ -108,6 +87,17 @@ class TestK8STask(unittest.TestCase):
         self.assertTrue("failed" in job.obj["status"])
         self.assertTrue(job.obj["status"]["failed"] > fail.max_retrials)
 
-        # and a file should not have been touched here
-        output_location = fail.output().path
-        self.assertFalse(os.path.exists(output_location))
+    @mock.patch.object(KubernetesJobTask, "_KubernetesJobTask__get_job_status")
+    @mock.patch.object(KubernetesJobTask, "signal_complete")
+    def test_output(self, mock_signal, mock_job_status):
+        # mock that the job succeeded
+        mock_job_status.return_value = "succeeded"
+        # create a kubernetes job
+        k8s_job = KubernetesJobTask()
+        # set logger and uu_name due to logging in __track_job()
+        k8s_job._KubernetesJobTask__logger = logger
+        k8s_job.uu_name = "test"
+        # track the job (bc included in run method)
+        k8s_job._KubernetesJobTask__track_job()
+        # Make sure successful job signals
+        self.assertTrue(mock_signal.called)
