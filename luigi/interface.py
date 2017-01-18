@@ -40,17 +40,20 @@ from luigi import execution_summary
 from luigi.cmdline_parser import CmdlineParser
 
 
-def setup_interface_logging(conf_file=''):
+def setup_interface_logging(conf_file='', level_name='DEBUG'):
     # use a variable in the function object to determine if it has run before
     if getattr(setup_interface_logging, "has_run", False):
         return
 
     if conf_file == '':
+        # no log config given, setup default logging
+        level = getattr(logging, level_name, logging.DEBUG)
+
         logger = logging.getLogger('luigi-interface')
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(level)
 
         stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setLevel(level)
 
         formatter = logging.Formatter('%(levelname)s: %(message)s')
         stream_handler.setFormatter(formatter)
@@ -108,6 +111,10 @@ class core(task.Config):
     logging_conf_file = parameter.Parameter(
         default='',
         description='Configuration file for logging')
+    log_level = parameter.ChoiceParameter(
+        default='DEBUG',
+        choices=['NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        description="Default log level to use when logging_conf_file is not set")
     module = parameter.Parameter(
         default='',
         description='Used for dynamic loading of modules',
@@ -165,7 +172,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
 
     if not configuration.get_config().getboolean(
             'core', 'no_configure_logging', False):
-        setup_interface_logging(logging_conf)
+        setup_interface_logging(logging_conf, env_params.log_level)
 
     kill_signal = signal.SIGUSR1 if env_params.take_lock else None
     if (not env_params.no_lock and

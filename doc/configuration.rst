@@ -114,6 +114,12 @@ history-filename
   configuration where no history is stored in the output directory by
   Hadoop.
 
+log_level
+  The default log level to use when no logging_conf_file is set. Must be
+  a valid name of a `Python log level
+  <https://docs.python.org/2/library/logging.html#logging-levels>`_.
+  Default is ``DEBUG``.
+
 logging_conf_file
   Location of the logging configuration file.
 
