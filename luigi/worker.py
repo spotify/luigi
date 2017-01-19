@@ -111,7 +111,7 @@ class TaskProcess(multiprocessing.Process):
     Mainly for convenience since this is run in a separate process. """
 
     def __init__(self, task, worker_id, result_queue, status_reporter,
-            use_multiprocessing=False, worker_timeout=0):
+                 use_multiprocessing=False, worker_timeout=0):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
