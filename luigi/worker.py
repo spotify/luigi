@@ -369,6 +369,7 @@ class KeepAliveThread(threading.Thread):
                 logger.info("Worker %s was stopped. Shutting down Keep-Alive thread" % self._worker_id)
                 break
             with fork_lock:
+                response = None
                 try:
                     response = self._scheduler.ping(worker=self._worker_id)
                 except:  # httplib.BadStatusLine:
