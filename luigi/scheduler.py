@@ -887,6 +887,10 @@ class Scheduler(object):
         self._state.disable_workers({worker})
 
     @rpc_method()
+    def set_worker_processes(self, worker, n, diff):
+        self._state.get_worker(worker).add_message(("set_worker_processes", n, diff))
+
+    @rpc_method()
     def update_resources(self, **resources):
         if self._resources is None:
             self._resources = {}

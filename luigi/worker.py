@@ -1095,3 +1095,19 @@ class Worker(object):
         else:
             logger.info("Worker %s successfully dispatched message to function %s" % tpl)
             func(*args)
+
+    @message_callback
+    def set_worker_processes(self, n, diff):
+        # determine the new number of worker processes
+        worker_processes = self.worker_processes
+        if diff:
+            worker_processes += n
+        else:
+            worker_processes = n
+        worker_processes = max(0, worker_processes)
+
+        # set it
+        self.worker_processes = worker_processes
+
+        # tell the scheduler
+        self._scheduler.add_worker(self._id, {"workers": worker_processes})

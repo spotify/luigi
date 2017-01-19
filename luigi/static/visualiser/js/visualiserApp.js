@@ -833,6 +833,30 @@ function visualiserApp(luigi) {
         return htmls.join(', ');
     }
 
+    /**
+     * Updates the number of worker processes of a worker
+     * @param worker: the id of the worker
+     * @param n: the number of processes to set
+     * @param diff: if true, n is considered a difference
+     */
+    function updateWorkerProcesses(worker, n, diff) {
+        // get the current number of worker processes by parsing the label
+        // the label will be updated using that info, i.e., there is no return value holding
+        // the updated number of worker processes due to luigis worker-scheduler approach
+        // (this might change in the future, e.g., when the worker-scheduler communication uses
+        // bi-directional (web)socket transports)
+        $label = $('#workerList').find('#label-n-workers[data-worker="' + worker + '"]');
+        var currentN = parseInt($label.text());
+
+        // the spinner is just for visual feedback
+        $label.html('<i class="fa fa-spinner fa-spin" aria-hidden="true"></i>');
+
+        luigi.setWorkerProcesses(worker, n, diff, function() {
+            var newN = Math.max(0, !diff ? n : (currentN + n));
+            $label.text(newN);
+        });
+    }
+
     $(document).ready(function() {
         loadTemplates();
 
@@ -948,6 +972,41 @@ function visualiserApp(luigi) {
             // show the worker as disabled in the visualiser
             triggerButton.parents('.box').addClass('box-solid box-default');
             triggerButton.remove();
+        });
+
+        $('#workerList').on('click', '#btn-increment-workers', function($event) {
+            var worker = $(this).data("worker");
+            updateWorkerProcesses(worker, 1, true);
+            $event.preventDefault();
+        });
+
+        $('#workerList').on('click', '#btn-decrement-workers', function($event) {
+            var worker = $(this).data("worker");
+            updateWorkerProcesses(worker, -1, true);
+            $event.preventDefault();
+        });
+
+        $('#workerList').on('show.bs.modal', '#setWorkersModal', function(event) {
+            $('#setWorkersButton').data('worker', $(event.relatedTarget).data('worker'));
+            var $input = $(this).find('#setWorkersInput').on('keypress', function(event) {
+                if (event.keyCode == 13) {
+                    $('#workerList').find('#setWorkersButton').trigger('click');
+                }
+            });
+            setTimeout(function() {
+                $input.focus();
+            }.bind(this), 600);
+        });
+
+        $('#workerList').on('hidden.bs.modal', '#setWorkersModal', function() {
+            $(this).find('#setWorkersInput').off('keypress').val('');
+        });
+
+        $('#workerList').on('click', '#setWorkersButton', function($event) {
+            var worker = $(this).data('worker');
+            var n = parseInt($("#setWorkersInput").val());
+            updateWorkerProcesses(worker, n, false);
+            $event.preventDefault();
         });
 
         visType = getVisType();
