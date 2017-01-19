@@ -47,6 +47,7 @@ import threading
 import time
 import traceback
 import types
+import functools
 
 from luigi import six
 
@@ -351,12 +352,13 @@ class KeepAliveThread(threading.Thread):
     Periodically tell the scheduler that the worker still lives.
     """
 
-    def __init__(self, scheduler, worker_id, ping_interval):
+    def __init__(self, scheduler, worker_id, ping_interval, message_callback):
         super(KeepAliveThread, self).__init__()
         self._should_stop = threading.Event()
         self._scheduler = scheduler
         self._worker_id = worker_id
         self._ping_interval = ping_interval
+        self._message_callback = message_callback
 
     def stop(self):
         self._should_stop.set()
@@ -369,9 +371,18 @@ class KeepAliveThread(threading.Thread):
                 break
             with fork_lock:
                 try:
-                    self._scheduler.ping(worker=self._worker_id)
+                    response = self._scheduler.ping(worker=self._worker_id)
                 except:  # httplib.BadStatusLine:
                     logger.warning('Failed pinging scheduler')
+
+                # handle messages
+                for message in response["messages"]:
+                    self._message_callback(message)
+
+
+def message_callback(fn):
+    fn.is_message_callback = True
+    return fn
 
 
 class Worker(object):
@@ -460,7 +471,8 @@ class Worker(object):
         """
         Start the KeepAliveThread.
         """
-        self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id, self._config.ping_interval)
+        self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id,
+            self._config.ping_interval, self._handle_message)
         self._keep_alive_thread.daemon = True
         self._keep_alive_thread.start()
         return self
@@ -1063,3 +1075,23 @@ class Worker(object):
             self._handle_next_task()
 
         return self.run_succeeded
+
+    def _handle_message(self, message):
+        logger.debug("Worker %s got message %s" % (self._id, message))
+
+        # the message is a tuple where the first element is an string that defines
+        # the function to call and the remaining elements are its arguments
+        name = message[0]
+        args = message[1:]
+
+        # find the function and check if it's callable and configured to work
+        # as a message callback
+        func = getattr(self, name, None)
+        tpl = (self._id, name)
+        if not callable(func):
+            logger.info("Worker %s has no function %s" % tpl)
+        elif not getattr(func, "is_message_callback", False):
+            logger.info("Worker %s function %s is not availale as message callback" % tpl)
+        else:
+            logger.info("Worker %s successfully dispatched message to function %s" % tpl)
+            func(*args)
