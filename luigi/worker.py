@@ -47,7 +47,6 @@ import threading
 import time
 import traceback
 import types
-import functools
 
 from luigi import six
 
