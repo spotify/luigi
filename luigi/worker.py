@@ -375,8 +375,9 @@ class KeepAliveThread(threading.Thread):
                     logger.warning('Failed pinging scheduler')
 
                 # handle messages
-                for message in response["messages"]:
-                    self._message_callback(message)
+                if response is not None:
+                    for message in response["messages"]:
+                        self._message_callback(message)
 
 
 def message_callback(fn):
@@ -471,7 +472,7 @@ class Worker(object):
         Start the KeepAliveThread.
         """
         self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id,
-            self._config.ping_interval, self._handle_message)
+                                                  self._config.ping_interval, self._handle_message)
         self._keep_alive_thread.daemon = True
         self._keep_alive_thread.start()
         return self
