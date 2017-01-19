@@ -14,9 +14,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+Example Kubernetes Job Task.
 
-import luigi
+Requires:
+
+- pykube: ``pip install pykube``
+- A local minikube custer up and running: http://kubernetes.io/docs/getting-started-guides/minikube/
+
+**WARNING**: For Python versions < 3.5 the kubeconfig file must point to a Kubernetes API
+hostname, and NOT to an IP address.
+
+You can run this code example like this:
+
+    .. code:: console
+        $ luigi --module examples.kubernetes_job PerlPi --local-scheduler
+
+Running this code will create a pi-luigi-uuid kubernetes job within the cluster
+pointed to by the default context in "~/.kube/config".
+
+If running within a kubernetes cluster, set auth_method = "service-account" to
+access the local cluster.
+"""
+
+# import os
+# import luigi
 from luigi.contrib.k8s_job import KubernetesJobTask
+
 
 class PerlPi(KubernetesJobTask):
 
@@ -30,5 +54,12 @@ class PerlPi(KubernetesJobTask):
         }]
     }
 
-if __name__ == "__main__":
-    luigi.run(['PerlPi', '--local-scheduler'])
+    # defining the two functions below allows for dependency checking,
+    # but isn't a requirement
+    # def signal_complete(self):
+    #     with self.output().open('w') as output:
+    #         output.write('')
+    #
+    # def output(self):
+    #     target = os.path.join("/tmp", "PerlPi")
+    #     return luigi.LocalTarget(target)

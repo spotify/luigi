@@ -39,6 +39,8 @@ import logging
 import uuid
 import time
 
+logger = logging.getLogger('luigi-interface')
+
 try:
     from pykube.config import KubeConfig
     from pykube.http import HTTPClient
@@ -46,17 +48,17 @@ try:
 except ImportError:
     logger.warning('pykube is not installed. KubernetesJobTask requires pykube.')
 
+
 class KubernetesJobTask(luigi.Task):
 
-    __POLL_TIME = 5 # see __track_job
+    __POLL_TIME = 5  # see __track_job
 
-    def __init__(self, *args, **kwargs):
-        super(KubernetesJobTask, self).__init__(*args, **kwargs)
-        self.__logger = logging.getLogger('luigi-interface')
+    def _init_k8s(self):
+        self.__logger = logger
         self.__logger.debug("Kubernetes auth method: " + self.auth_method)
-        if(self.auth_method == "kubeconfing"):
+        if(self.auth_method == "kubeconfig"):
             self.__kube_api = HTTPClient(KubeConfig.from_file(self.kubeconfig_path))
-        elif(self.auth_method == "ServiceAccount"):
+        elif(self.auth_method == "service-account"):
             self.__kube_api = HTTPClient(KubeConfig.from_service_account())
         else:
             raise ValueError("Illegal auth_method")
@@ -68,28 +70,28 @@ class KubernetesJobTask(luigi.Task):
     @property
     def auth_method(self):
         """
-        This can be set to ``kubeconfing`` or ``ServiceAccount``.
-        It defaults to ``kubeconfing``.
+        This can be set to ``kubeconfig`` or ``service-account``.
+        It defaults to ``kubeconfig``.
 
-        For more details please referer to:
+        For more details, please refer to:
 
-        - kubeconfing: http://kubernetes.io/docs/user-guide/kubeconfig-file
-        - ServiceAccount: http://kubernetes.io/docs/user-guide/service-accounts
+        - kubeconfig: http://kubernetes.io/docs/user-guide/kubeconfig-file
+        - service-account: http://kubernetes.io/docs/user-guide/service-accounts
         """
-        return configuration.get_config().get("k8s", "auth_method", "kubeconfing")
+        return configuration.get_config().get("k8s", "auth_method", "kubeconfig")
 
     @property
     def kubeconfig_path(self):
         """
-        Path to kubeconfing file, for cluster authentication.
+        Path to kubeconfig file used for cluster authentication.
         It defaults to "~/.kube/config", which is the default location
         when using minikube (http://kubernetes.io/docs/getting-started-guides/minikube).
-        When auth_method is ``ServiceAccount`` this properity is ignored.
+        When auth_method is ``service-account`` this property is ignored.
 
-        **WARNING**: For Python versions < 3.5 kubeconfing must point to a Kubernetes API
+        **WARNING**: For Python versions < 3.5 kubeconfig must point to a Kubernetes API
         hostname, and NOT to an IP address.
 
-        For more details please referer to:
+        For more details, please refer to:
         http://kubernetes.io/docs/user-guide/kubeconfig-file
         """
         return configuration.get_config().get("k8s", "kubeconfig_path", "~/.kube/config")
@@ -100,12 +102,22 @@ class KubernetesJobTask(luigi.Task):
         A name for this job. This task will automatically append a UUID to the
         name before to submit to Kubernetes.
         """
-        pass
+        raise NotImplementedError("subclass must define name")
+
+    @property
+    def labels(self):
+        """
+        Return custom labels for kubernetes job.
+        example::
+            ``{"run_dt": datetime.date.today().strftime('%F')}``
+        """
+        return {}
 
     @property
     def spec_schema(self):
         """
         Kubernetes Job spec schema in JSON format, example::
+        .. code-block:: javascript
 
             {
                 "containers": [{
@@ -126,46 +138,63 @@ class KubernetesJobTask(luigi.Task):
         For more informations please refer to:
         http://kubernetes.io/docs/user-guide/pods/multi-container/#the-spec-schema
         """
+        raise NotImplementedError("subclass must define spec_schema")
 
     @property
     def max_retrials(self):
         """
         Maximum number of retrials in case of failure.
         """
-        return 0
+        return configuration.get_config().get("k8s", "max_retrials", 0)
 
     def __track_job(self):
         """Poll job status while active"""
         while (self.__get_job_status() == "running"):
-            self.__logger.debug("Kubernetes job " + self.uu_name + " is still running")
+            self.__logger.debug("Kubernetes job " + self.uu_name
+                                + " is still running")
             time.sleep(self.__POLL_TIME)
         if(self.__get_job_status() == "succeeded"):
             self.__logger.info("Kubernetes job " + self.uu_name + " succeeded")
+            # Use signal_complete to notify of job completion
+            self.signal_complete()
         else:
             raise RuntimeError("Kubernetes job " + self.uu_name + " failed")
 
+    def signal_complete(self):
+        """Signal job completion for scheduler and dependent tasks.
+
+         Touching a system file is an easy way to signal completion. example::
+         .. code-block:: python
+
+         with self.output().open('w') as output_file:
+             output_file.write('')
+        """
+        pass
+
     def __get_job_status(self):
-        """It returns the Kubernetes job status"""
+        """Return the Kubernetes job status"""
         # Look for the required job
-        jobs = Job.objects(self.__kube_api).filter(selector="luigi_task_id=" + self.job_uuid)
+        jobs = Job.objects(self.__kube_api).filter(selector="luigi_task_id="
+                                                            + self.job_uuid)
         # Raise an exception if no such job found
         if len(jobs.response["items"]) == 0:
             raise RuntimeError("Kubernetes job " + self.uu_name + " not found")
         # Figure out status and return it
         job = Job(self.__kube_api, jobs.response["items"][0])
         if ("succeeded" in job.obj["status"] and job.obj["status"]["succeeded"] > 0):
-            job.scale(replicas=0) # Downscale the job, but keep it there for logging
+            job.scale(replicas=0)  # Downscale the job, but keep it for logging
             return "succeeded"
         if ("failed" in job.obj["status"]):
             failed_cnt = job.obj["status"]["failed"]
-            self.__logger.debug("Kubernetes job " + self.uu_name +
-                " status.failed: " + str(failed_cnt))
+            self.__logger.debug("Kubernetes job " + self.uu_name
+                                + " status.failed: " + str(failed_cnt))
             if (failed_cnt > self.max_retrials):
-                job.scale(replicas=0) # avoid more retrials
+                job.scale(replicas=0)  # avoid more retrials
                 return "failed"
         return "running"
 
     def run(self):
+        self._init_k8s()
         # Submit the Job
         self.__logger.info("Submitting Kubernetes Job: " + self.uu_name)
         job_json = {
@@ -174,6 +203,7 @@ class KubernetesJobTask(luigi.Task):
             "metadata": {
                 "name": self.uu_name,
                 "labels": {
+                    "spawned_by": "luigi",
                     "luigi_task_id": self.job_uuid
                 }
             },
@@ -186,8 +216,16 @@ class KubernetesJobTask(luigi.Task):
                 }
             }
         }
+        job_json['metadata']['labels'].update(self.labels)
         job = Job(self.__kube_api, job_json)
         job.create()
         # Track the Job (wait while active)
         self.__logger.info("Start tracking Kubernetes Job: " + self.uu_name)
         self.__track_job()
+
+    def output(self):
+        """An output target is necessary for checking job completion unless
+        alternative complete method is defined.
+         example::
+        ``return luigi.LocalTarget(os.path.join('/tmp', 'example'))``"""
+        pass
