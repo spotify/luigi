@@ -351,13 +351,13 @@ class KeepAliveThread(threading.Thread):
     Periodically tell the scheduler that the worker still lives.
     """
 
-    def __init__(self, scheduler, worker_id, ping_interval, message_callback):
+    def __init__(self, scheduler, worker_id, ping_interval, rpc_message_callback):
         super(KeepAliveThread, self).__init__()
         self._should_stop = threading.Event()
         self._scheduler = scheduler
         self._worker_id = worker_id
         self._ping_interval = ping_interval
-        self._message_callback = message_callback
+        self._rpc_message_callback = rpc_message_callback
 
     def stop(self):
         self._should_stop.set()
@@ -375,14 +375,14 @@ class KeepAliveThread(threading.Thread):
                 except:  # httplib.BadStatusLine:
                     logger.warning('Failed pinging scheduler')
 
-                # handle messages
-                if response is not None:
-                    for message in response["messages"]:
-                        self._message_callback(message)
+                # handle rpc messages
+                if response:
+                    for message in response["rpc_messages"]:
+                        self._rpc_message_callback(message)
 
 
-def message_callback(fn):
-    fn.is_message_callback = True
+def rpc_message_callback(fn):
+    fn.is_rpc_message_callback = True
     return fn
 
 
@@ -473,7 +473,8 @@ class Worker(object):
         Start the KeepAliveThread.
         """
         self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id,
-                                                  self._config.ping_interval, self._handle_message)
+                                                  self._config.ping_interval,
+                                                  self._handle_rpc_message)
         self._keep_alive_thread.daemon = True
         self._keep_alive_thread.start()
         return self
@@ -1077,38 +1078,29 @@ class Worker(object):
 
         return self.run_succeeded
 
-    def _handle_message(self, message):
-        logger.debug("Worker %s got message %s" % (self._id, message))
+    def _handle_rpc_message(self, message):
+        logger.info("Worker %s got message %s" % (self._id, message))
 
-        # the message is a tuple where the first element is an string that defines
-        # the function to call and the remaining elements are its arguments
-        name = message[0]
-        args = message[1:]
+        # the message is a dict {'name': <function_name>, 'kwargs': <function_kwargs>}
+        name = message['name']
+        kwargs = message['kwargs']
 
         # find the function and check if it's callable and configured to work
         # as a message callback
         func = getattr(self, name, None)
         tpl = (self._id, name)
         if not callable(func):
-            logger.info("Worker %s has no function %s" % tpl)
-        elif not getattr(func, "is_message_callback", False):
-            logger.info("Worker %s function %s is not availale as message callback" % tpl)
+            logger.error("Worker %s has no function '%s'" % tpl)
+        elif not getattr(func, "is_rpc_message_callback", False):
+            logger.error("Worker %s function '%s' is not available as rpc message callback" % tpl)
         else:
-            logger.info("Worker %s successfully dispatched message to function %s" % tpl)
-            func(*args)
+            logger.info("Worker %s successfully dispatched rpc message to function '%s'" % tpl)
+            func(**kwargs)
 
-    @message_callback
-    def set_worker_processes(self, n, diff):
-        # determine the new number of worker processes
-        worker_processes = self.worker_processes
-        if diff:
-            worker_processes += n
-        else:
-            worker_processes = n
-        worker_processes = max(0, worker_processes)
-
-        # set it
-        self.worker_processes = worker_processes
+    @rpc_message_callback
+    def set_worker_processes(self, n):
+        # set the new value
+        self.worker_processes = max(1, n)
 
         # tell the scheduler
-        self._scheduler.add_worker(self._id, {"workers": worker_processes})
+        self._scheduler.add_worker(self._id, {'workers': self.worker_processes})

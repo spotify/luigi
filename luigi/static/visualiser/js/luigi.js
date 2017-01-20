@@ -139,8 +139,8 @@ var LuigiAPI = (function() {
         jsonRPC(this.urlRoot + "/disable_worker", {'worker': workerId});
     }
 
-    LuigiAPI.prototype.setWorkerProcesses = function(workerId, n, diff, callback) {
-        var data = {worker: workerId, n: n, diff: diff};
+    LuigiAPI.prototype.setWorkerProcesses = function(workerId, n, callback) {
+        var data = {worker: workerId, n: n};
         jsonRPC(this.urlRoot + "/set_worker_processes", data, function(response) {
             callback();
         });
