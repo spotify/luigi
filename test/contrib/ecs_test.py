@@ -33,6 +33,8 @@ Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 
 import unittest
 
+from nose.plugins.attrib import attr
+
 import luigi
 from luigi.contrib.ecs import ECSTask, _get_task_statuses
 
@@ -73,6 +75,7 @@ class ECSTaskOverrideCommand(ECSTaskNoOutput):
         return [{'name': 'hello-world', 'command': ['/bin/sleep', '10']}]
 
 
+@attr('awsecs')
 class TestECSTask(unittest.TestCase):
 
     def setUp(self):
