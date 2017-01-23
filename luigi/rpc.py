@@ -104,7 +104,7 @@ class RemoteScheduler(object):
             connect_timeout = config.getfloat('core', 'rpc-connect-timeout', 10.0)
         self._connect_timeout = connect_timeout
 
-        self._rpc_retry_attemps = config.getint('core', 'rpc-retry-attempts', 3)
+        self._rpc_retry_attempts = config.getint('core', 'rpc-retry-attempts', 3)
         self._rpc_retry_wait = config.getint('core', 'rpc-retry-wait', 30)
 
         if HAS_REQUESTS:
@@ -120,10 +120,10 @@ class RemoteScheduler(object):
         full_url = _urljoin(self._url, url_suffix)
         last_exception = None
         attempt = 0
-        while attempt < self._rpc_retry_attemps:
+        while attempt < self._rpc_retry_attempts:
             attempt += 1
             if last_exception:
-                logger.info("Retrying %r/%r" %(attempt, self._rpc_retry_attemps))
+                logger.info("Retrying attempt %r of %r (max)" % (attempt, self._rpc_retry_attempts))
                 self._wait()  # wait for a bit and retry
             try:
                 response = self._fetcher.fetch(full_url, body, self._connect_timeout)
@@ -136,7 +136,7 @@ class RemoteScheduler(object):
         else:
             raise RPCError(
                 "Errors (%d attempts) when connecting to remote scheduler %r" %
-                (self._rpc_retry_attemps, self._url),
+                (self._rpc_retry_attempts, self._url),
                 last_exception
             )
         return response
