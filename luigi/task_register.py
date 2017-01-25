@@ -48,7 +48,7 @@ class Register(abc.ABCMeta):
     2. Keep track of all subclasses of :py:class:`Task` and expose them.
     """
     __instance_cache = {}
-    _default_namespace = ''
+    _default_namespace_dict = {}
     _reg = []
     AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
     """If this value is returned by :py:meth:`_get_reg` then there is an
@@ -65,7 +65,7 @@ class Register(abc.ABCMeta):
         whatever the currently declared namespace is.
         """
         cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
-        cls._namespace_at_class_time = metacls._default_namespace
+        cls._namespace_at_class_time = metacls._get_namespace(cls.__module__)
         metacls._reg.append(cls)
         return cls
 
@@ -221,6 +221,26 @@ class Register(abc.ABCMeta):
             return "No task %s. Did you mean:\n%s" % (task_name, '\n'.join(candidates))
         else:
             return "No task %s. Candidates are: %s" % (task_name, cls.tasks_str())
+
+    @classmethod
+    def _get_namespace(mcs, module_name):
+        for parent in mcs._module_parents(module_name):
+            entry = mcs._default_namespace_dict.get(parent)
+            if entry:
+                return entry
+        return ''  # Default if nothing specifies
+
+    @staticmethod
+    def _module_parents(module_name):
+        '''
+        >>> list(Register._module_parents('a.b'))
+        ['a.b', 'a', '']
+        '''
+        spl = module_name.split('.')
+        for i in range(len(spl), 0, -1):
+            yield '.'.join(spl[0:i])
+        if module_name:
+            yield ''
 
 
 def load_task(module, task_name, params_str):
