@@ -169,8 +169,10 @@ class WorkerSchedulerCommunicationTest(LuigiTestCase):
         # but this is not possible in py 2 due to wrapped method lookup, see
         # http://stackoverflow.com/questions/9523370/adding-attributes-to-instance-methods-in-python
         set_worker_processes_orig = self.w.set_worker_processes
+
         def set_worker_processes_replacement(*args, **kwargs):
             return set_worker_processes_orig(*args, **kwargs)
+
         self.w.set_worker_processes = set_worker_processes_replacement
         self.assertFalse(getattr(self.w.set_worker_processes, "is_rpc_message_callback", False))
 
