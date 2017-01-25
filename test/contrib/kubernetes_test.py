@@ -34,7 +34,7 @@ import unittest
 import luigi
 import logging
 import mock
-from luigi.contrib.k8s_job import KubernetesJobTask
+from luigi.contrib.kubernetes import KubernetesJobTask
 
 logger = logging.getLogger('luigi-interface')
 
@@ -93,11 +93,11 @@ class TestK8STask(unittest.TestCase):
         # mock that the job succeeded
         mock_job_status.return_value = "succeeded"
         # create a kubernetes job
-        k8s_job = KubernetesJobTask()
+        kubernetes_job = KubernetesJobTask()
         # set logger and uu_name due to logging in __track_job()
-        k8s_job._KubernetesJobTask__logger = logger
-        k8s_job.uu_name = "test"
+        kubernetes_job._KubernetesJobTask__logger = logger
+        kubernetes_job.uu_name = "test"
         # track the job (bc included in run method)
-        k8s_job._KubernetesJobTask__track_job()
+        kubernetes_job._KubernetesJobTask__track_job()
         # Make sure successful job signals
         self.assertTrue(mock_signal.called)

@@ -34,7 +34,6 @@ Written and maintained by Marco Capuccini (@mcapuccini).
 """
 
 import luigi
-from luigi import configuration
 import logging
 import uuid
 import time
@@ -49,11 +48,24 @@ except ImportError:
     logger.warning('pykube is not installed. KubernetesJobTask requires pykube.')
 
 
+class kubernetes(luigi.Config):
+    auth_method = luigi.Parameter(
+        default="kubeconfig",
+        description="Authorization method to access the cluster")
+    kubeconfig_path = luigi.Parameter(
+        default="~/.kube/config",
+        description="Path to kubeconfig file for cluster authentication")
+    max_retrials = luigi.IntParameter(
+        default=0,
+        description="Max retrials in event of job failure")
+
+
 class KubernetesJobTask(luigi.Task):
 
     __POLL_TIME = 5  # see __track_job
+    kubernetes_config = kubernetes()
 
-    def _init_k8s(self):
+    def _init_kubernetes(self):
         self.__logger = logger
         self.__logger.debug("Kubernetes auth method: " + self.auth_method)
         if(self.auth_method == "kubeconfig"):
@@ -78,7 +90,7 @@ class KubernetesJobTask(luigi.Task):
         - kubeconfig: http://kubernetes.io/docs/user-guide/kubeconfig-file
         - service-account: http://kubernetes.io/docs/user-guide/service-accounts
         """
-        return configuration.get_config().get("k8s", "auth_method", "kubeconfig")
+        return self.kubernetes_config.auth_method
 
     @property
     def kubeconfig_path(self):
@@ -94,7 +106,7 @@ class KubernetesJobTask(luigi.Task):
         For more details, please refer to:
         http://kubernetes.io/docs/user-guide/kubeconfig-file
         """
-        return configuration.get_config().get("k8s", "kubeconfig_path", "~/.kube/config")
+        return self.kubernetes_config.kubeconfig_path
 
     @property
     def name(self):
@@ -109,7 +121,7 @@ class KubernetesJobTask(luigi.Task):
         """
         Return custom labels for kubernetes job.
         example::
-            ``{"run_dt": datetime.date.today().strftime('%F')}``
+        ``{"run_dt": datetime.date.today().strftime('%F')}``
         """
         return {}
 
@@ -145,7 +157,7 @@ class KubernetesJobTask(luigi.Task):
         """
         Maximum number of retrials in case of failure.
         """
-        return configuration.get_config().get("k8s", "max_retrials", 0)
+        return self.kubernetes_config.max_retrials
 
     def __track_job(self):
         """Poll job status while active"""
@@ -194,7 +206,7 @@ class KubernetesJobTask(luigi.Task):
         return "running"
 
     def run(self):
-        self._init_k8s()
+        self._init_kubernetes()
         # Submit the Job
         self.__logger.info("Submitting Kubernetes Job: " + self.uu_name)
         job_json = {

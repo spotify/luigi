@@ -39,7 +39,7 @@ access the local cluster.
 
 # import os
 # import luigi
-from luigi.contrib.k8s_job import KubernetesJobTask
+from luigi.contrib.kubernetes import KubernetesJobTask
 
 
 class PerlPi(KubernetesJobTask):
