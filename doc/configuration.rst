@@ -382,7 +382,7 @@ release
   "cdh4".
 
 
-[k8s]
+[kubernetes]
 -------
 
 Parameters controlling Kubernetes Job Tasks
