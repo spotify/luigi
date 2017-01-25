@@ -53,18 +53,23 @@ class WorkerSchedulerCommunicationTest(LuigiTestCase):
         tmp = tempfile.mkdtemp()
 
         class MyTask(luigi.Task):
+
             n = luigi.IntParameter()
             delay = 3
+
             def output(self):
                 basename = "%s_%s.txt" % (self.__class__.__name__, self.n)
                 return luigi.LocalTarget(os.path.join(tmp, basename))
+
             def run(self):
                 time.sleep(self.delay)
                 with self.output().open('w') as f:
                     f.write("content\n")
 
         class Wrapper(MyTask):
+
             delay = 0
+
             def requires(self):
                 return [MyTask(n=n) for n in range(self.n)]
 
@@ -159,9 +164,7 @@ class WorkerSchedulerCommunicationTest(LuigiTestCase):
     def test_dispatch_unregistered_message(self):
         # this test is identical to test_dispatch_valid_message, except that the number of processes
         # is not increased during running as we disable the particular callback to work as a
-        # callback
-
-        # we want to achieve sth like
+        # callback, so we want to achieve sth like
         # self.w.set_worker_processes.is_rpc_message_callback = False
         # but this is not possible in py 2 due to wrapped method lookup, see
         # http://stackoverflow.com/questions/9523370/adding-attributes-to-instance-methods-in-python
