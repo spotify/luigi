@@ -445,10 +445,10 @@
                         </div>
                         <div class="collapse navbar-collapse">
                             <ul class="nav navbar-nav">
-                                <li><a href="#" data-tab="taskList">Task List</a></li>
-                                <li><a href="#g" data-tab="dependencyGraph">Dependency Graph</a></li>
-                                <li><a href="#w" data-tab="workerList">Workers</a></li>
-                                <li><a href="#r" data-tab="resourceList">Resources</a></li>
+                                <li><a class="js-nav-link" href="#tab=tasks" data-tab="taskList">Task List</a></li>
+                                <li><a class="js-nav-link" href="#tab=graph" data-tab="dependencyGraph">Dependency Graph</a></li>
+                                <li><a class="js-nav-link" href="#tab=workers" data-tab="workerList">Workers</a></li>
+                                <li><a class="js-nav-link" href="#tab=resource" data-tab="resourceList">Resources</a></li>
                             </ul>
                         </div>
                     </div>
@@ -572,7 +572,7 @@
               <div class="container-fluid">
                     <div class="form-group col-md-6 col-sm-4">
                       <form class="form-inline" id="loadTaskForm">
-                        <input type="text" class="search-query form-control" placeholder="TaskId">
+                        <input id="js-task-id" type="text" class="search-query form-control" placeholder="TaskId">
                         <button type="submit" class="btn btn-default form-control">Show task details</button>
                       </form>
                     </div>
@@ -587,12 +587,12 @@
                       </div>
                       <div class="form-group col-md-3">
                         <label>Visualisation Type</label>
-                        <div class="btn-group" id="toggleVisButtons" data-toggle="buttons">
+                        <div id="toggleVisButtons" class="btn-group" data-toggle="buttons">
                             <label class="btn btn-default active">
-                                <input type="radio" name="D3" value="d3"/> D3
+                                <input type="radio" name="vis-type" value="d3"/> D3
                             </label>
                             <label class="btn btn-default">
-                                <input type="radio" name="SVG" value="svg"/> SVG
+                                <input type="radio" name="vis-type" value="svg"/> SVG
                             </label>
                         </div>
                        </div>

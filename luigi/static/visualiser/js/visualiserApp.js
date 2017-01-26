@@ -1,9 +1,6 @@
 function visualiserApp(luigi) {
     var templates = {};
-    var invertDependencies = false;
-    var hideDone = false;
     var typingTimer = 0;
-    var visType;
     var dt; // DataTable instantiated in $(document).ready()
     var missingCategories = {};
     var currentFilter = {
@@ -22,25 +19,13 @@ function visualiserApp(luigi) {
         UPSTREAM_DISABLED: 'warning'
     }
 
-    function getVisType() {
-        var cookieParts = document.cookie.match(/visType=(.*)/);
-        if (cookieParts === null) {
-            return 'svg';
-        }
-        else {
-            return cookieParts[1];
-        }
+    /*
+     * Updates view of the Visualization type.
+     */
+    function updateVisType (newVisType) {
+        $('#toggleVisButtons label').removeClass('active');
+        $('#toggleVisButtons input[value="' + newVisType + '"]').parent().addClass('active');
     }
-    function setVisType (newVisType) {
-        visType = newVisType;
-        document.cookie = 'visType=' + visType;
-
-        $('#toggleVisButtons').find('label').removeClass('active');
-        $('#toggleVisButtons').find('input[value="' + visType + '"]').parent().addClass('active');
-
-        return visType;
-    }
-
 
     function loadTemplates() {
         $("script[type='text/template']").each(function(i, element) {
@@ -286,8 +271,9 @@ function visualiserApp(luigi) {
     function switchTab(tabId) {
         $(".tabButton").parent().removeClass("active");
         $(".tab-pane").removeClass("active");
-        $("#"+tabId).addClass("active");
-        $(".tabButton[data-tab="+tabId+"]").parent().addClass("active");
+        $("#" + tabId).addClass("active");
+        $(".navbar-nav li").removeClass("active");
+        $(".js-nav-link[data-tab=" + tabId + "]").parent().addClass("active");
         updateSidebar(tabId);
     }
 
@@ -402,23 +388,42 @@ function visualiserApp(luigi) {
 
     function processHashChange(paint) {
         var hash = decodeURIComponent(location.hash);
-        if (hash == "#w") {
+        // Convert fragment params to object.
+        var fragmentQuery = URI.parseQuery(location.hash.replace('#', '')); // "http://example.org/#!/foo/bar/baz.html");
+
+        if (fragmentQuery.tab == "workers") {
             switchTab("workerList");
-        } else if (hash == "#r") {
+        } else if (fragmentQuery.tab == "resources") {
             switchTab("resourceList");
-        } else if (hash) {
-            var taskId = decodeURIComponent(hash.substr(1));
+        } else if (fragmentQuery.tab == "graph") {
+            var taskId = fragmentQuery.taskId;
+            var hideDone = fragmentQuery.hideDone === '1' ? true : false;
+
+            // Populate fields values from hash.
+            $('#hideDoneCheckbox').prop('checked', hideDone);
+            $("#invertCheckbox").prop('checked', fragmentQuery.invert === '1' ? true : false);
+            $("#js-task-id").val(fragmentQuery.taskId);
+            if (fragmentQuery.visType == 'svg') {
+                $("input[name=vis-type][value=svg]").prop('checked', true);
+            } else {
+                // d3 is default visualization.
+                $("input[name=vis-type][value=d3]").prop('checked', true);
+            }
+
+            // Empty errors.
             $("#searchError").empty();
             $("#searchError").removeClass();
-            if (taskId != "g") {
-                var depGraphCallback = makeGraphCallback(visType, taskId, paint);
+            if (taskId) {
+                var depGraphCallback = makeGraphCallback(fragmentQuery.visType, taskId, paint);
 
-                if (invertDependencies) {
+                if (fragmentQuery.invertDependencies) {
                     luigi.getInverseDependencyGraph(taskId, depGraphCallback, !hideDone);
                 } else {
                     luigi.getDependencyGraph(taskId, depGraphCallback, !hideDone);
                 }
             }
+            updateVisType(fragmentQuery.visType || 'd3');
+            initVisualisation(fragmentQuery.visType);
             switchTab("dependencyGraph");
         } else {
             switchTab("taskList");
@@ -426,6 +431,8 @@ function visualiserApp(luigi) {
     }
 
     function bindGraphEvents() {
+        var fragmentQuery = URI.parseQuery(location.hash.replace('#', ''));
+        var visType = fragmentQuery.visType;
         if (visType === 'd3') {
             $('.node').click(function(event) {
                 var taskDiv = $(this).find('.taskNode');
@@ -438,7 +445,7 @@ function visualiserApp(luigi) {
                     });
                 }
                 else {
-                    window.location.href = 'index.html#' + taskId;
+                    window.location.href = 'index.html#taskId=' + taskId;
                 }
             })
         }
@@ -458,20 +465,22 @@ function visualiserApp(luigi) {
 
     function bindListEvents() {
         $(window).on('hashchange', processHashChange);
-        invertDependencies = $('#invertCheckbox')[0].checked;
-        $("#invertCheckbox").click(function() {
-            invertDependencies = this.checked;
-            processHashChange(true);
+
+        $("#invertCheckbox").click(function(e) {
+            e.preventDefault();
+            changeState('invert', this.checked ? '1' : null);
         });
-        hideDone = $('#hideDoneCheckbox')[0].checked;
-        $('#hideDoneCheckbox').click(function() {
-            hideDone = this.checked;
-            processHashChange(true);
+
+        $('#hideDoneCheckbox').click(function(e) {
+            // Copy checkbox value to hash.
+            e.preventDefault();
+            changeState('hideDone', this.checked ? '1' : null);
         });
         $("a[href=#list]").click(function() { location.hash=""; });
         $("#loadTaskForm").submit(function(event) {
             event.preventDefault();
-            location.hash = $(this).find("input").val();
+            var taskId = $(this).find("input").val();
+            changeState('taskId', taskId.length > 0 ? taskId : null);
         });
 
         $('.info-box').on('click', function () {
@@ -479,9 +488,11 @@ function visualiserApp(luigi) {
             filterByCategory(dt);
         });
 
-        $('#toggleVisButtons').on('click', 'label', function () {
-            setVisType($(this).find('input')[0].value);
+        $('input[name=vis-type]').on('change', function () {
+            changeState('visType', $(this).val());
+
             initVisualisation(visType);
+            updateVisType(fragmentQuery.visType);
         });
 
         /*
@@ -716,10 +727,9 @@ function visualiserApp(luigi) {
     }
 
     function initVisualisation(newVisType) {
-        visType = newVisType;
 
         // Prepare graphPlaceholder for D3 code
-        if (visType == 'd3') {
+        if (newVisType == 'd3') {
             $('#graphPlaceholder').empty();
             $('#graphPlaceholder').html('<div class="live map"><svg width="100%" height="100%" id="mysvg"><g/></svg></div>');
         }
@@ -728,9 +738,6 @@ function visualiserApp(luigi) {
             var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
             $("#graphPlaceholder")[0].graph = graph;
         }
-
-        processHashChange(true);
-
     }
 
     function updateTasks() {
@@ -831,6 +838,16 @@ function visualiserApp(luigi) {
                 '</span>=<span class="param-value">' + params[key] + '</span>');
         }
         return htmls.join(', ');
+    }
+
+    function changeState(key, value) {
+        var fragmentQuery = URI.parseQuery(location.hash.replace('#', ''));
+        if (value) {
+            fragmentQuery[key] = value;
+        } else {
+            delete fragmentQuery[key];
+        }
+        location.hash = '#' + URI.buildQuery(fragmentQuery);
     }
 
     $(document).ready(function() {
@@ -999,9 +1016,39 @@ function visualiserApp(luigi) {
             triggerButton.remove();
         });
 
-        visType = getVisType();
-        setVisType(visType);
-        initVisualisation(visType);
+        $('.js-nav-link').click(function(e) {
+            // User followed tab from navigation link. Copy state from fields to hash.
+            e.preventDefault();
+            var state = {};
+            var tabId = $(this).attr('data-tab');
 
+            if (tabId == 'dependencyGraph') {
+                state.tab = 'graph';
+
+                // Get state from fields.
+
+                if ($('#hideDoneCheckbox').is(':checked')) {
+                    state.hideDone = '1';
+                }
+
+                if ($('#idTaskForm input.search-query').val()) {
+                    state.taskId = $('#idTaskForm input.search-query').val();
+                }
+
+                if ($('#invertCheckbox').is(':checked')) {
+                    state.invert = '1';
+                }
+
+                state.visType = $('input[name=vis-type]:checked').val();
+            } else if (tabId == 'workerList') {
+                state.tab = 'workers';
+            } else if (tabId == 'resourceList') {
+                state.tab = 'resources';
+            }
+
+            location.hash = '#' + URI.buildQuery(state);
+        });
+
+        processHashChange();
     });
 }
