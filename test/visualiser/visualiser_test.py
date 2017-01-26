@@ -87,6 +87,7 @@ class TestVisualiser(ServerTestBase):
             print('PhantomJS return status is {}'.format(status))
             assert status == 0
 
+    # tasks tab tests.
     def test_keeps_entries_after_page_refresh(self):
 
         port = self.get_http_port()
@@ -169,6 +170,155 @@ class TestVisualiser(ServerTestBase):
         # Once page refreshed we have to find all selectors again.
         table_body = driver.find_element_by_css_selector('#taskTable tbody')
         assert self._get_cell_value(table_body, 0, 1) == 'UberTask'
+
+    def test_keeps_filter_on_server_after_page_refresh(self):
+        port = self.get_http_port()
+        driver = webdriver.PhantomJS()
+
+        driver.get('http://localhost:{}/static/visualiser/index.html#tab=tasks'.format(port))
+
+        # Check initial state.
+        checkbox = driver.find_element_by_css_selector('#serverSideCheckbox')
+        assert checkbox.is_selected() is False
+
+        # Change invert checkbox.
+        checkbox.click()
+
+        # Now refresh page and check. Invert checkbox shoud be checked.
+        driver.refresh()
+
+        # Once page refreshed we have to find all selectors again.
+        checkbox = driver.find_element_by_css_selector('#serverSideCheckbox')
+        assert checkbox.is_selected()
+
+    def test_synchronizes_fields_on_tasks_tab(self):
+        # Check fields population if tasks tab was opened by direct link
+        port = self.get_http_port()
+        driver = webdriver.PhantomJS()
+        url = 'http://localhost:{}/static/visualiser/index.html' \
+              '#tab=tasks&length=50&search__search=er&filterOnServer=1&order=1,desc' \
+              .format(port)
+
+        driver.get(url)
+
+        length_select = driver.find_element_by_css_selector('select[name="taskTable_length"]')
+        assert length_select.get_attribute('value') == '50'
+
+        search_input = driver.find_element_by_css_selector('input[type="search"]')
+        assert search_input.get_attribute('value') == 'er'
+        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 50
+
+        # Table is ordered by first column (name)
+        table_body = driver.find_element_by_css_selector('#taskTable tbody')
+        assert self._get_cell_value(table_body, 0, 1) == 'UberTask'
+
+    # graph tab tests.
+
+    def test_keeps_invert_after_page_refresh(self):
+        port = self.get_http_port()
+        driver = webdriver.PhantomJS()
+
+        driver.get('http://localhost:{}/static/visualiser/index.html#tab=graph'.format(port))
+
+        # Check initial state.
+        invert_checkbox = driver.find_element_by_css_selector('#invertCheckbox')
+        assert invert_checkbox.is_selected() is False
+
+        # Change invert checkbox.
+        invert_checkbox.click()
+
+        # Now refresh page and check. Invert checkbox shoud be checked.
+        driver.refresh()
+
+        # Once page refreshed we have to find all selectors again.
+        invert_checkbox = driver.find_element_by_css_selector('#invertCheckbox')
+        assert invert_checkbox.is_selected()
+
+    def test_keeps_task_id_after_page_refresh(self):
+
+        port = self.get_http_port()
+        driver = webdriver.PhantomJS()
+
+        driver.get('http://localhost:{}/static/visualiser/index.html#tab=graph'.format(port))
+
+        # Check initial state.
+        task_id_input = driver.find_element_by_css_selector('#js-task-id')
+        assert task_id_input.get_attribute('value') == ''
+
+        # Change task id
+        task_id_input.send_keys('1')
+        driver.find_element_by_css_selector('#loadTaskForm button[type=submit]').click()
+
+        # Now refresh page and check. Task ID field should contain 1
+        driver.refresh()
+
+        # Once page refreshed we have to find all selectors again.
+        task_id_input = driver.find_element_by_css_selector('#js-task-id')
+        assert task_id_input.get_attribute('value') == '1'
+
+    def test_keeps_hide_done_after_page_refresh(self):
+        port = self.get_http_port()
+        driver = webdriver.PhantomJS()
+
+        driver.get('http://localhost:{}/static/visualiser/index.html#tab=graph'.format(port))
+
+        # Check initial state.
+        hide_done_checkbox = driver.find_element_by_css_selector('#hideDoneCheckbox')
+        assert hide_done_checkbox.is_selected() is False
+
+        # Change invert checkbox.
+        hide_done_checkbox.click()
+
+        # Now refresh page and check. Invert checkbox shoud be checked.
+        driver.refresh()
+
+        # Once page refreshed we have to find all selectors again.
+        hide_done_checkbox = driver.find_element_by_css_selector('#hideDoneCheckbox')
+        assert hide_done_checkbox.is_selected()
+
+    def test_keeps_svg_visualisation_after_page_refresh(self):
+        port = self.get_http_port()
+        driver = webdriver.PhantomJS()
+
+        driver.get('http://localhost:{}/static/visualiser/index.html#tab=graph'.format(port))
+
+        # Check initial state.
+        svg_radio = driver.find_element_by_css_selector('input[value=svg]')
+        assert svg_radio.is_selected() is False
+
+        # Change invert checkbox by clicking on label.
+        svg_radio.find_element_by_xpath('..').click()
+
+        # Now refresh page and check. Invert checkbox shoud be checked.
+        driver.refresh()
+
+        # Once page refreshed we have to find all selectors again.
+        svg_radio = driver.find_element_by_css_selector('input[value=svg]')
+        assert svg_radio.is_selected()
+
+    def test_synchronizes_fields_on_graph_tab(self):
+        # Check fields population if tasks tab was opened by direct link.
+        port = self.get_http_port()
+        driver = webdriver.PhantomJS()
+        url = 'http://localhost:{}/static/visualiser/index.html' \
+              '#tab=graph&taskId=1&invert=1&hideDone=1&visType=svg' \
+              .format(port)
+        driver.get(url)
+
+        # Check task id input
+        task_id_input = driver.find_element_by_css_selector('#js-task-id')
+        assert task_id_input.get_attribute('value') == '1'
+
+        # Check Show Upstream Dependencies checkbox.
+        invert_checkbox = driver.find_element_by_css_selector('#invertCheckbox')
+        assert invert_checkbox.is_selected()
+
+        # Check Hide Done checkbox.
+        hide_done_checkbox = driver.find_element_by_css_selector('#hideDoneCheckbox')
+        assert hide_done_checkbox.is_selected()
+
+        svg_radio = driver.find_element_by_css_selector('input[value=svg]')
+        assert svg_radio.get_attribute('checked')
 
     def _get_cell_value(self, elem, row, column):
         tr = elem.find_elements_by_css_selector('#taskTable tbody tr')[row]
