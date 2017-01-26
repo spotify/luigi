@@ -399,7 +399,7 @@ function visualiserApp(luigi) {
             var taskId = fragmentQuery.taskId;
             var hideDone = fragmentQuery.hideDone === '1' ? true : false;
 
-            // Populate fields values from hash.
+            // Populate fields with values from hash.
             $('#hideDoneCheckbox').prop('checked', hideDone);
             $("#invertCheckbox").prop('checked', fragmentQuery.invert === '1' ? true : false);
             $("#js-task-id").val(fragmentQuery.taskId);
@@ -426,6 +426,18 @@ function visualiserApp(luigi) {
             initVisualisation(fragmentQuery.visType);
             switchTab("dependencyGraph");
         } else {
+            // Tasks tab.
+
+            // Populate fields with values from hash.
+            if (fragmentQuery.length) {
+                $('select[name=taskTable_length').val(fragmentQuery.length);
+            }
+            $("#serverSideCheckbox").prop('checked', fragmentQuery.filterOnServer === '1' ? true : false);
+            dt.search(fragmentQuery.search__search);
+            if (fragmentQuery.order) {
+                dt.order = [fragmentQuery.order.split(',')];
+            }
+            dt.draw();
             switchTab("taskList");
         }
     }
@@ -465,6 +477,11 @@ function visualiserApp(luigi) {
 
     function bindListEvents() {
         $(window).on('hashchange', processHashChange);
+
+        $('#serverSideCheckbox').click(function(e) {
+            e.preventDefault();
+            changeState('filterOnServer', this.checked ? '1' : null);
+        });
 
         $("#invertCheckbox").click(function(e) {
             e.preventDefault();
@@ -869,36 +886,40 @@ function visualiserApp(luigi) {
         dt = $('#taskTable').DataTable({
             stateSave: true,
             stateSaveCallback: function(settings, data) {
-                // Convert data table state to query and save to the browser history.
-                var params = {};
+                // Save data table state to browser's hash.
+                var state = URI.parseQuery(location.hash.replace('#', ''));
 
                 if (data.search.search) {
-                    params.search__search = data.search.search;
+                    state.search__search = data.search.search;
                 }
 
                 if (data.order && data.order.length) {
-                    params.order = '' + data.order[0][0] + ',' + data.order[0][1];
+                    state.order = '' + data.order[0][0] + ',' + data.order[0][1];
                 }
 
-                if (data.length) {
-                    params.length = data.length;
+                if (data.length && data.length !== 10) {
+                    // Keep in hash only if length is not default.
+                    state.length = data.length;
                 }
 
-                var uri = URI().query(params);
-                history.pushState(data, 'task-table', uri.toString());
+                if (state.filterOnServer) {
+                    state.filterOnServer = '1';
+                }
+                location.hash = '#' + URI.buildQuery(state);
             },
             stateLoadCallback: function(settings) {
-                // Restore datatable state from browser's history.
-                var uri = URI(window.location).search(true);
+                // Restore datatable state from browser's hash.
+                var fragmentQuery = URI.parseQuery(location.hash.replace('#', ''));
+
                 var order = [];
-                if (uri.order) {
-                    order = [uri.order.split(',')];
+                if (fragmentQuery.order) {
+                    order = [fragmentQuery.order.split(',')];
                 }
 
                 // Prepare state for datatable.
                 var o = {
                     order: order,                 // Table rows order.
-                    length: uri.length,           // Entries on page.
+                    length: fragmentQuery.length, // Entries on page.
                     start: 0,                     // Pagination initial page.
                     time: new Date().getTime(),   // Current time to help datatable.js to handle asynchronous.
                     columns: [
@@ -912,7 +933,7 @@ function visualiserApp(luigi) {
                     // Search input state.
                     search: {
                         caseInsensitive: true,
-                        search: uri.search__search}};
+                        search: fragmentQuery.search__search}};
 
                 return o;
             },
@@ -1022,7 +1043,29 @@ function visualiserApp(luigi) {
             var state = {};
             var tabId = $(this).attr('data-tab');
 
-            if (tabId == 'dependencyGraph') {
+            if (tabId == 'taskList') {
+                var order = dt.order();
+                var search = dt.search();
+                state.tab = 'tasks';
+
+                if ($('select[name=taskTable_length]').val() !== '10') {
+                    // Add length to hash only if the value is not default.
+                    state.length = $('select[name=taskTable_length]').val();
+                }
+
+                if ($('#serverSideCheckbox').is(':checked')) {
+                    state.filterOnServer = '1';
+                }
+
+                if (search) {
+                    state.search__search = search;
+                }
+
+                if (order.length > 0) {
+                    state.order = '' + order[0][0] + ',' + order[0][1];
+                }
+
+            } else if (tabId == 'dependencyGraph') {
                 state.tab = 'graph';
 
                 // Get state from fields.
