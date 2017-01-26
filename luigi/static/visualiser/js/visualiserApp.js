@@ -938,7 +938,7 @@ function visualiserApp(luigi) {
                 {
                     data: 'category',
                     render: function (data, type, row) {
-                        return taskCategoryIcon(data)+' '+data;
+                        return taskCategoryIcon(data) + ' ' + data;
                     }
                 },
                 {data: 'taskName'},
@@ -948,8 +948,7 @@ function visualiserApp(luigi) {
                         var params = JSON.parse(data);
                         if (row.resources !== '{}') {
                             return '<div>' + renderParams(params) + '</div><div>' + row.resources + '</div>';
-                        }
-                        else {
+                        } else {
                             return '<div>' + renderParams(params) + '</div>';
                         }
                     }
