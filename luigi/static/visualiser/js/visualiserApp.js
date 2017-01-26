@@ -17,7 +17,7 @@ function visualiserApp(luigi) {
         UPSTREAM_FAILED: 'warning',
         DISABLED: 'minus-circle',
         UPSTREAM_DISABLED: 'warning'
-    }
+    };
 
     /*
      * Updates view of the Visualization type.
@@ -75,7 +75,6 @@ function visualiserApp(luigi) {
         };
     }
 
-
     function taskCategoryIcon(category) {
         var iconClass;
         var iconColor;
@@ -119,7 +118,6 @@ function visualiserApp(luigi) {
         }
         return '<span class="status-icon bg-' + iconColor + '"><i class="fa ' + iconClass + '"></i></span>';
     }
-
 
     /**
      * Filter table by all activated info boxes.
@@ -214,8 +212,9 @@ function visualiserApp(luigi) {
     }
 
     function renderWarnings() {
-        return renderTemplate("warningsTemplate",
-            {missingCategories: $.map(missingCategories, function (v, k) {return v})}
+        return renderTemplate(
+            "warningsTemplate",
+            {missingCategories: $.map(missingCategories, function (v, k) {return v;})}
         );
     }
 
@@ -278,7 +277,7 @@ function visualiserApp(luigi) {
     }
 
     function showErrorTrace(data) {
-        data.error = decodeError(data.error)
+        data.error = decodeError(data.error);
         $("#errorModal").empty().append(renderTemplate("errorTemplate", data));
         $("#errorModal").modal({});
     }
@@ -335,20 +334,20 @@ function visualiserApp(luigi) {
                     for (var id in dependencyGraph) {
                         if (dependencyGraph[id].deps.length > 0) {
                             //console.log(asingInput(dependencyGraph, id));
-                            dependencyGraph[id]['inputQueue']=asingInput(dependencyGraph, id);
-                            dependencyGraph[id]['inputThroughput']=50;
-                            dependencyGraph[id]['count']=5;
-                            dependencyGraph[id]['consumers']=1;
+                            dependencyGraph[id].inputQueue = asingInput(dependencyGraph, id);
+                            dependencyGraph[id].inputThroughput = 50;
+                            dependencyGraph[id].count = 5;
+                            dependencyGraph[id].consumers = 1;
                         }else{
-                            dependencyGraph[id]['inputThroughput']=50;
-                            dependencyGraph[id]['count']=5;
-                            dependencyGraph[id]['consumers']=1;
+                            dependencyGraph[id].inputThroughput = 50;
+                            dependencyGraph[id].count = 5;
+                            dependencyGraph[id].consumers = 1;
                         }
                     }
                 }
             } else {
-              $("#searchError").addClass("alert alert-error");
-              $("#searchError").append("Couldn't find task " + taskId);
+                $("#searchError").addClass("alert alert-error");
+                $("#searchError").append("Couldn't find task " + taskId);
             }
             drawGraphETL(dependencyGraph, paint);
             bindGraphEvents();
@@ -359,13 +358,13 @@ function visualiserApp(luigi) {
             $("#searchError").empty();
             $("#searchError").removeClass();
             if(dependencyGraph.length > 0) {
-              $("#dependencyTitle").text(dependencyGraph[0].display_name);
-              $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
-              $("#graphContainer").show();
-              bindGraphEvents();
+                $("#dependencyTitle").text(dependencyGraph[0].display_name);
+                $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
+                $("#graphContainer").show();
+                bindGraphEvents();
             } else {
-              $("#searchError").addClass("alert alert-error");
-              $("#searchError").append("Couldn't find task " + taskId);
+                $("#searchError").addClass("alert alert-error");
+                $("#searchError").append("Couldn't find task " + taskId);
             }
         }
 
@@ -376,14 +375,12 @@ function visualiserApp(luigi) {
             return processed;
         }
 
-
         if (visType == 'd3') {
             return processedCallback(depGraphCallbackD3);
         }
         else {
             return processedCallback(depGraphCallback);
         }
-
     }
 
     function processHashChange(paint) {
@@ -459,7 +456,7 @@ function visualiserApp(luigi) {
                 else {
                     window.location.href = 'index.html#taskId=' + taskId;
                 }
-            })
+            });
         }
         else {
             $(".graph-node-a").click(function(event) {
@@ -518,11 +515,8 @@ function visualiserApp(luigi) {
          */
         $('#serverSide').on('change', 'label', function () {
             updateTasks();
-        })
-
+        });
     }
-
-
 
     function asingInput(worker, id){
         if (worker[id].deps.length > 0) {
@@ -540,31 +534,34 @@ function visualiserApp(luigi) {
                     var startTime = new Date(tasks[j].start_time*1000);
                     var durationTime = new Date((finishTime - startTime)*1000).getSeconds();
                     times[listId[i]] = durationTime;
-                };
-            };
-        };
+                }
+            }
+        }
         return times;
     }
+
     function getParam(tasks, id){
         for (var i = 0; i < tasks.length; i++) {
             if (tasks[i].taskId === id) {
                 return tasks[i].worker_running;
-            };
-        };
+            }
+        }
     }
+
     function getStatusTasks(tasks){
         var status;
         for (var i = 0; i < tasks.length; i++) {
             if (tasks[i].status === "DONE") {
                 status = true;
-            }else{
+            } else {
                 return false;
             }
-        };
+        }
         return status;
     }
+
     function drawGraphETL(tasks, paint){
-    // Set up zoom support
+        // Set up zoom support
         var svg = d3.select("#mysvg");
         var inner = svg.select("g"),
             zoom = d3.behavior.zoom().on("zoom", function() {
@@ -649,7 +646,7 @@ function visualiserApp(luigi) {
             }
 
             inner.selectAll("g.node")
-                .attr("title", function(v) { return styleTooltip(v, getParam(tasks, v)) })
+                .attr("title", function(v) { return styleTooltip(v, getParam(tasks, v)); })
                 .each(function(v) { $(this).tipsy({ gravity: "w", opacity: 1, html: true }); });
         }
         draw();
@@ -714,10 +711,8 @@ function visualiserApp(luigi) {
             delete missingCategories[category];
         }
 
-
         $('#'+category+'_info').find('.info-box-number').html(taskCount);
         $('#'+category+'_info i.fa').removeClass().addClass('fa fa-'+taskIcons[category]);
-
     }
 
     function updateCurrentFilter() {
@@ -818,7 +813,6 @@ function visualiserApp(luigi) {
                 $('#warnings').html(renderWarnings());
             }
         });
-
     }
 
     function updateSidebar(tabName) {
@@ -828,7 +822,6 @@ function visualiserApp(luigi) {
         else {
             $('body').addClass('sidebar-collapse');
         }
-
     }
 
     // Error strings may or may not be JSON encoded, depending on client version
@@ -968,7 +961,7 @@ function visualiserApp(luigi) {
                     orderable: false,
                     data: null,
                     render: function (data, type, row) {
-                        return Mustache.render(templates['actionsTemplate'], row);
+                        return Mustache.render(templates.actionsTemplate, row);
                     }
                 }
             ]
@@ -990,7 +983,6 @@ function visualiserApp(luigi) {
                 }
             }
         });
-
 
         updateTasks();
         bindListEvents();
