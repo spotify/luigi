@@ -159,6 +159,15 @@ rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0
 
+rpc-retry-attempts
+  The maximum number of retries to connect the central scheduler before giving up.
+  Defaults to 3
+
+rpc-retry-wait
+  Number of seconds to wait before the next attempt will be started to
+  connect to the central scheduler between two retry attempts.
+  Defaults to 30
+
 
 .. _worker-config:
 
