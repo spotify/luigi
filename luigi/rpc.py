@@ -104,22 +104,26 @@ class RemoteScheduler(object):
             connect_timeout = config.getfloat('core', 'rpc-connect-timeout', 10.0)
         self._connect_timeout = connect_timeout
 
+        self._rpc_retry_attempts = config.getint('core', 'rpc-retry-attempts', 3)
+        self._rpc_retry_wait = config.getint('core', 'rpc-retry-wait', 30)
+
         if HAS_REQUESTS:
             self._fetcher = RequestsFetcher(requests.Session())
         else:
             self._fetcher = URLLibFetcher()
 
     def _wait(self):
-        time.sleep(30)
+        logger.info("Wait for %d seconds" % self._rpc_retry_wait)
+        time.sleep(self._rpc_retry_wait)
 
-    def _fetch(self, url_suffix, body, log_exceptions=True, attempts=3):
+    def _fetch(self, url_suffix, body, log_exceptions=True):
         full_url = _urljoin(self._url, url_suffix)
         last_exception = None
         attempt = 0
-        while attempt < attempts:
+        while attempt < self._rpc_retry_attempts:
             attempt += 1
             if last_exception:
-                logger.info("Retrying...")
+                logger.info("Retrying attempt %r of %r (max)" % (attempt, self._rpc_retry_attempts))
                 self._wait()  # wait for a bit and retry
             try:
                 response = self._fetcher.fetch(full_url, body, self._connect_timeout)
@@ -132,7 +136,7 @@ class RemoteScheduler(object):
         else:
             raise RPCError(
                 "Errors (%d attempts) when connecting to remote scheduler %r" %
-                (attempts, self._url),
+                (self._rpc_retry_attempts, self._url),
                 last_exception
             )
         return response
@@ -141,7 +145,7 @@ class RemoteScheduler(object):
         body = {'data': json.dumps(data)}
 
         for _ in range(attempts):
-            page = self._fetch(url, body, log_exceptions, attempts)
+            page = self._fetch(url, body, log_exceptions)
             response = json.loads(page)["response"]
             if allow_null or response is not None:
                 return response
