@@ -182,6 +182,13 @@ class S3Client(FileSystem):
         return False
 
     def get_key(self, path):
+        """
+        Returns just the key from the path.
+
+        An s3 path is composed of a bucket and a key.
+
+        Suppose we have a path `s3://my_bucket/some/files/my_file`. The key is `some/files/my_file`.
+        """
         (bucket, key) = self._path_to_bucket_and_key(path)
 
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
@@ -307,8 +314,6 @@ class S3Client(FileSystem):
 
         When files are larger than `part_size`, multipart uploading will be used.
 
-        When copying a directory, method will return a tuple (number_of_files_copied, total_size_copied_in_bytes).
-
         :param source_path: The `s3://` path of the directory or key to copy from
         :param destination_path: The `s3://` path of the directory or key to copy to
         :param threads: Optional argument to define the number of threads to use when copying (min: 3 threads)
@@ -316,6 +321,8 @@ class S3Client(FileSystem):
         :param end_time: Optional argument to copy files with modified dates before end_time
         :param part_size: Part size in bytes. Default: 67108864 (64MB), must be >= 5MB and <= 5 GB.
         :param kwargs: Keyword arguments are passed to the boto function `copy_key`
+
+        :returns tuple (number_of_files_copied, total_size_copied_in_bytes)
         """
         start = datetime.datetime.now()
 
@@ -465,8 +472,8 @@ class S3Client(FileSystem):
         Get an iterable with S3 folder contents.
         Iterable contains paths relative to queried path.
 
-        :param start_time: Optional argument to copy files with modified dates after start_time
-        :param end_time: Optional argument to copy files with modified dates before end_time
+        :param start_time: Optional argument to list files with modified dates after start_time
+        :param end_time: Optional argument to list files with modified dates before end_time
         :param return_key: Optional argument, when set to True will return a boto.s3.key.Key (instead of the filename)
         """
         (bucket, key) = self._path_to_bucket_and_key(path)
@@ -570,7 +577,7 @@ class S3Client(FileSystem):
 
 class AtomicS3File(AtomicLocalFile):
     """
-    An S3 file that writes to a temp file and put to S3 on close.
+    An S3 file that writes to a temp file and puts to S3 on close.
 
     :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
     """
@@ -667,6 +674,7 @@ class ReadableS3File(object):
 
 class S3Target(FileSystemTarget):
     """
+    Target S3 file object
 
     :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
     """
@@ -684,8 +692,6 @@ class S3Target(FileSystemTarget):
         self.s3_options = kwargs
 
     def open(self, mode='r'):
-        """
-        """
         if mode not in ('r', 'w'):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
