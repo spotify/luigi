@@ -78,17 +78,31 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return None
 
-    @abc.abstractproperty
+    @property
     def aws_access_key_id(self):
         """
         Override to return the key id.
         """
         return None
 
-    @abc.abstractproperty
+    @property
     def aws_secret_access_key(self):
         """
         Override to return the secret access key.
+        """
+        return None
+
+    @property
+    def aws_account_id(self):
+        """
+        Override to return the account id.
+        """
+        return None
+
+    @property
+    def aws_arn_role_name(self):
+        """
+        Override to return the arn role name.
         """
         return None
 
@@ -263,22 +277,38 @@ class S3CopyToTable(rdbms.CopyToTable):
     def copy(self, cursor, f):
         """
         Defines copying from s3 into redshift.
+
+        If both key-based and role-based credentials are provided, role-based will be used.
         """
-        # if session token is set, create token string
-        if self.aws_session_token:
-            token = ';token=%s' % self.aws_session_token
-        # otherwise, leave token string empty
+        # format the credentials string dependent upon which type of credentials were provided
+        if self.aws_account_id and self.aws_arn_role_name:
+            cred_str = 'aws_iam_role=arn:aws:iam::{id}:role/{role}'.format(
+                id=self.aws_account_id,
+                role=self.aws_arn_role_name
+            )
+        elif self.aws_access_key_id and self.aws_secret_access_key:
+            cred_str = 'aws_access_key_id={key};aws_secret_key={secret}{opt}'.format(
+                key=self.aws_access_key_id,
+                secret=self.aws_secret_access_key,
+                opt=';token={}'.format(self.aws_session_token) if self.aws_session_token else ''
+            )
         else:
-            token = ''
+            raise NotImplementedError("Missing Credentials. "
+                                      "Override one of the following pairs of auth-args: "
+                                      "'aws_access_key_id' AND 'aws_secret_access_key' OR "
+                                      "'aws_account_id' AND 'aws_arn_role_name'")
 
         logger.info("Inserting file: %s", f)
         cursor.execute("""
-         COPY %s from '%s'
-         CREDENTIALS 'aws_access_key_id=%s;aws_secret_access_key=%s%s'
-         %s
-         ;""" % (self.table, f, self.aws_access_key_id,
-                 self.aws_secret_access_key, token,
-                 self.copy_options))
+         COPY {table} from '{source}'
+         CREDENTIALS '{creds}'
+         {options}
+         ;""".format(
+            table=self.table,
+            source=f,
+            creds=cred_str,
+            options=self.copy_options)
+        )
 
     def output(self):
         """

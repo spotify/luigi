@@ -21,6 +21,7 @@
         <script src="lib/jquery.slimscroll.min.js"></script>
         <script src="lib/AdminLTE/js/app.min.js"></script>
         <script src="lib/datatables/js/jquery.dataTables.min.js"></script>
+        <script src="lib/URI.js/1.18.2/URI.js"></script>
 
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -220,11 +221,19 @@
             width: 20em;
           }
 
+          #workerList .box-tools > div {
+            display: inline-block;
+          }
+
+          #workerList .btn-set-workers > span.caret {
+            margin-left: 4px;
+          }
+
         </style>
 
         <script type="text/template" name="actionsTemplate">
             <div class="span2">
-                <a href="#{{encodedTaskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip"><i class="fa fa-sitemap"></i></a>
+                <a href="#tab=graph&taskId={{encodedTaskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip"><i class="fa fa-sitemap"></i></a>
                 {{#error}}<button class="btn btn-danger btn-xs showError" title="Show error" data-toggle="tooltip"><i class="fa fa-bug"></i></button>{{/error}}
                 {{#re_enable}}<a class="btn btn-warning btn-xs re-enable-button" title="Re-enable" data-toggle="tooltip" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
                 {{#trackingUrl}}<a target="_blank" href="{{trackingUrl}}" class="btn btn-primary btn-xs" title="Track Progress" data-toggle="tooltip"><i class="fa fa-eye"></i></a>{{/trackingUrl}}
@@ -265,6 +274,28 @@
           </div>
         </script>
         <script type="text/template" name="workerTemplate">
+            <div class="modal fade" id="setWorkersModal" tabindex="-1" role="dialog" aria-labelledby="setWorkersLabel">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="setWorkersLabel">Set workers</h4>
+                  </div>
+                  <div class="modal-body">
+                    <form>
+                      <div class="form-group">
+                        <label for="setWorkersInput">New number of workers:</label>
+                        <input type="text" class="form-control" id="setWorkersInput" placeholder="positive number">
+                      </div>
+                    </form>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="button" id="setWorkersButton" data-dismiss="modal" class="btn btn-primary">Set</button>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="modal fade" id="disableWorkerModal" tabindex="-1" role="dialog" aria-labelledby="disableWorkerLabel">
               <div class="modal-dialog" role="document">
                 <div class="modal-content">
@@ -296,8 +327,24 @@
                     <h3 class="box-title">{{name}}</h3>
                     <div class="box-tools pull-right">
                       {{^is_disabled}}
+                      <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-default dropdown-toggle btn-set-workers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                          Workers: <span id="label-n-workers" data-worker="{{name}}">{{workers}}</span> <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                          <li><a href="#" id="btn-increment-workers" data-worker="{{name}}">
+                            <i class="glyphicon glyphicon-plus"></i> Add 1 worker
+                          </a></li>
+                          <li><a href="#" id="btn-decrement-workers" data-worker="{{name}}">
+                            <i class="glyphicon glyphicon-minus"></i> Remove 1 worker
+                          </a></li>
+                          <li><a href="#" id="btn-set-workers" data-toggle="modal" data-target="#setWorkersModal" data-worker="{{name}}">
+                            <i class="glyphicon glyphicon-pencil"></i> Set workers ...
+                          </a></li>
+                        </ul>
+                      </div>
                       <div class="button-tooltip" data-toggle="tooltip" title="Disable Worker">
-                        <button type="button" class="btn btn-danger btn-disable-worker" data-toggle="modal" data-target="#disableWorkerModal" data-worker="{{name}}">
+                        <button type="button" class="btn btn-sm btn-danger btn-disable-worker" data-toggle="modal" data-target="#disableWorkerModal" data-worker="{{name}}">
                           <i class="fa fa-fire-extinguisher"></i>
                         </button>
                       </div>
@@ -444,10 +491,10 @@
                         </div>
                         <div class="collapse navbar-collapse">
                             <ul class="nav navbar-nav">
-                                <li><a href="#" data-tab="taskList">Task List</a></li>
-                                <li><a href="#g" data-tab="dependencyGraph">Dependency Graph</a></li>
-                                <li><a href="#w" data-tab="workerList">Workers</a></li>
-                                <li><a href="#r" data-tab="resourceList">Resources</a></li>
+                                <li><a class="js-nav-link" href="#tab=tasks" data-tab="taskList">Task List</a></li>
+                                <li><a class="js-nav-link" href="#tab=graph" data-tab="dependencyGraph">Dependency Graph</a></li>
+                                <li><a class="js-nav-link" href="#tab=workers" data-tab="workerList">Workers</a></li>
+                                <li><a class="js-nav-link" href="#tab=resource" data-tab="resourceList">Resources</a></li>
                             </ul>
                         </div>
                     </div>
@@ -571,7 +618,7 @@
               <div class="container-fluid">
                     <div class="form-group col-md-6 col-sm-4">
                       <form class="form-inline" id="loadTaskForm">
-                        <input type="text" class="search-query form-control" placeholder="TaskId">
+                        <input id="js-task-id" type="text" class="search-query form-control" placeholder="TaskId">
                         <button type="submit" class="btn btn-default form-control">Show task details</button>
                       </form>
                     </div>
@@ -586,12 +633,12 @@
                       </div>
                       <div class="form-group col-md-3">
                         <label>Visualisation Type</label>
-                        <div class="btn-group" id="toggleVisButtons" data-toggle="buttons">
+                        <div id="toggleVisButtons" class="btn-group" data-toggle="buttons">
                             <label class="btn btn-default active">
-                                <input type="radio" name="D3" value="d3"/> D3
+                                <input type="radio" name="vis-type" value="d3"/> D3
                             </label>
                             <label class="btn btn-default">
-                                <input type="radio" name="SVG" value="svg"/> SVG
+                                <input type="radio" name="vis-type" value="svg"/> SVG
                             </label>
                         </div>
                        </div>

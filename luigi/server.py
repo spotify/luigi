@@ -193,6 +193,7 @@ class RootPathHandler(BaseTaskHistoryHandler):
 def app(scheduler):
     settings = {"static_path": os.path.join(os.path.dirname(__file__), "static"),
                 "unescape": tornado.escape.xhtml_unescape,
+                "compress_response": True,
                 }
     handlers = [
         (r'/api/(.*)', RPCHandler, {"scheduler": scheduler}),

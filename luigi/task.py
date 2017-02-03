@@ -47,27 +47,72 @@ TASK_ID_INCLUDE_PARAMS = 3
 TASK_ID_TRUNCATE_PARAMS = 16
 TASK_ID_TRUNCATE_HASH = 10
 TASK_ID_INVALID_CHAR_REGEX = re.compile(r'[^A-Za-z0-9_]')
+_SAME_AS_PYTHON_MODULE = '_same_as_python_module'
 
 
-def namespace(namespace=None):
+def namespace(namespace=None, scope=''):
     """
     Call to set namespace of tasks declared after the call.
 
-    It is best practice to call this function without arguments at the end of any file it has been
-    used in. That is to ensure that subsequent tasks have the default namespace again.
+    It is often desired to call this function with the keyword argument
+    ``scope=__name__``.
+
+    The ``scope`` keyword makes it so that this call is only effective for task
+    classes with a matching [*]_ ``__module__``. The default value for
+    ``scope`` is the empty string, which means all classes. Multiple calls with
+    the same scope simply replace each other.
 
     The namespace of a :py:class:`Task` can also be changed by specifying the property
-    ``task_namespace``. This solution has the advantage that the namespace
-    doesn't have to be restored.
+    ``task_namespace``.
 
     .. code-block:: python
 
         class Task2(luigi.Task):
             task_namespace = 'namespace2'
 
+    This explicit setting takes priority over whatever is set in the
+    ``namespace()`` method, and it's also inherited through normal python
+    inheritence.
+
     There's no equivalent way to set the ``task_family``.
+
+    *New since Luigi 2.6.0:* ``scope`` keyword argument.
+
+    .. [*] When there are multiple levels of matching module scopes like
+           ``a.b`` vs ``a.b.c``, the more specific one (``a.b.c``) wins.
+    .. seealso:: The new and better scaling :py:func:`auto_namespace`
     """
-    Register._default_namespace = namespace or ''
+    Register._default_namespace_dict[scope] = namespace or ''
+
+
+def auto_namespace(scope=''):
+    """
+    Same as :py:func:`namespace`, but instead of a constant namespace, it will
+    be set to the ``__module__`` of the task class. This is desirable for these
+    reasons:
+
+     * Two tasks with the same name will not have conflicting task families
+     * It's more pythonic, as modules are Python's recommended way to
+       do namespacing.
+     * It's traceable. When you see the full name of a task, you can immediately
+       identify where it is defined.
+
+    We recommend calling this function from your package's outermost
+    ``__init__.py`` file. The file contents could look like this:
+
+    .. code-block:: python
+
+        import luigi
+
+        luigi.auto_namespace(scope=__name__)
+
+    To reset an ``auto_namespace()`` call, you can use
+    ``namespace(scope='my_scope'``).  But this will not be
+    needed (and is also discouraged) if you use the ``scope`` kwarg.
+
+    *New since Luigi 2.6.0.*
+    """
+    namespace(namespace=_SAME_AS_PYTHON_MODULE, scope=scope)
 
 
 def task_id_str(task_family, params):
@@ -243,6 +288,10 @@ class Task(object):
 
     __not_user_specified = '__not_user_specified'
 
+    # This is here just to help pylint, the Register metaclass will always set
+    # this value anyway.
+    _namespace_at_class_time = None
+
     task_namespace = __not_user_specified
     """
     This value can be overriden to set the namespace that will be used.
@@ -263,6 +312,8 @@ class Task(object):
         """
         if cls.task_namespace != cls.__not_user_specified:
             return cls.task_namespace
+        elif cls._namespace_at_class_time == _SAME_AS_PYTHON_MODULE:
+            return cls.__module__
         return cls._namespace_at_class_time
 
     @property

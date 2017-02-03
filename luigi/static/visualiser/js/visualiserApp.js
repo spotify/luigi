@@ -1,9 +1,6 @@
 function visualiserApp(luigi) {
     var templates = {};
-    var invertDependencies = false;
-    var hideDone = false;
     var typingTimer = 0;
-    var visType;
     var dt; // DataTable instantiated in $(document).ready()
     var missingCategories = {};
     var currentFilter = {
@@ -20,27 +17,15 @@ function visualiserApp(luigi) {
         UPSTREAM_FAILED: 'warning',
         DISABLED: 'minus-circle',
         UPSTREAM_DISABLED: 'warning'
+    };
+
+    /*
+     * Updates view of the Visualization type.
+     */
+    function updateVisType (newVisType) {
+        $('#toggleVisButtons label').removeClass('active');
+        $('#toggleVisButtons input[value="' + newVisType + '"]').parent().addClass('active');
     }
-
-    function getVisType() {
-        var cookieParts = document.cookie.match(/visType=(.*)/);
-        if (cookieParts === null) {
-            return 'svg';
-        }
-        else {
-            return cookieParts[1];
-        }
-    }
-    function setVisType (newVisType) {
-        visType = newVisType;
-        document.cookie = 'visType=' + visType;
-
-        $('#toggleVisButtons').find('label').removeClass('active');
-        $('#toggleVisButtons').find('input[value="' + visType + '"]').parent().addClass('active');
-
-        return visType;
-    }
-
 
     function loadTemplates() {
         $("script[type='text/template']").each(function(i, element) {
@@ -90,7 +75,6 @@ function visualiserApp(luigi) {
         };
     }
 
-
     function taskCategoryIcon(category) {
         var iconClass;
         var iconColor;
@@ -134,7 +118,6 @@ function visualiserApp(luigi) {
         }
         return '<span class="status-icon bg-' + iconColor + '"><i class="fa ' + iconClass + '"></i></span>';
     }
-
 
     /**
      * Filter table by all activated info boxes.
@@ -229,8 +212,9 @@ function visualiserApp(luigi) {
     }
 
     function renderWarnings() {
-        return renderTemplate("warningsTemplate",
-            {missingCategories: $.map(missingCategories, function (v, k) {return v})}
+        return renderTemplate(
+            "warningsTemplate",
+            {missingCategories: $.map(missingCategories, function (v, k) {return v;})}
         );
     }
 
@@ -286,13 +270,14 @@ function visualiserApp(luigi) {
     function switchTab(tabId) {
         $(".tabButton").parent().removeClass("active");
         $(".tab-pane").removeClass("active");
-        $("#"+tabId).addClass("active");
-        $(".tabButton[data-tab="+tabId+"]").parent().addClass("active");
+        $("#" + tabId).addClass("active");
+        $(".navbar-nav li").removeClass("active");
+        $(".js-nav-link[data-tab=" + tabId + "]").parent().addClass("active");
         updateSidebar(tabId);
     }
 
     function showErrorTrace(data) {
-        data.error = decodeError(data.error)
+        data.error = decodeError(data.error);
         $("#errorModal").empty().append(renderTemplate("errorTemplate", data));
         $("#errorModal").modal({});
     }
@@ -349,20 +334,20 @@ function visualiserApp(luigi) {
                     for (var id in dependencyGraph) {
                         if (dependencyGraph[id].deps.length > 0) {
                             //console.log(asingInput(dependencyGraph, id));
-                            dependencyGraph[id]['inputQueue']=asingInput(dependencyGraph, id);
-                            dependencyGraph[id]['inputThroughput']=50;
-                            dependencyGraph[id]['count']=5;
-                            dependencyGraph[id]['consumers']=1;
+                            dependencyGraph[id].inputQueue = asingInput(dependencyGraph, id);
+                            dependencyGraph[id].inputThroughput = 50;
+                            dependencyGraph[id].count = 5;
+                            dependencyGraph[id].consumers = 1;
                         }else{
-                            dependencyGraph[id]['inputThroughput']=50;
-                            dependencyGraph[id]['count']=5;
-                            dependencyGraph[id]['consumers']=1;
+                            dependencyGraph[id].inputThroughput = 50;
+                            dependencyGraph[id].count = 5;
+                            dependencyGraph[id].consumers = 1;
                         }
                     }
                 }
             } else {
-              $("#searchError").addClass("alert alert-error");
-              $("#searchError").append("Couldn't find task " + taskId);
+                $("#searchError").addClass("alert alert-error");
+                $("#searchError").append("Couldn't find task " + taskId);
             }
             drawGraphETL(dependencyGraph, paint);
             bindGraphEvents();
@@ -373,13 +358,13 @@ function visualiserApp(luigi) {
             $("#searchError").empty();
             $("#searchError").removeClass();
             if(dependencyGraph.length > 0) {
-              $("#dependencyTitle").text(dependencyGraph[0].display_name);
-              $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
-              $("#graphContainer").show();
-              bindGraphEvents();
+                $("#dependencyTitle").text(dependencyGraph[0].display_name);
+                $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
+                $("#graphContainer").show();
+                bindGraphEvents();
             } else {
-              $("#searchError").addClass("alert alert-error");
-              $("#searchError").append("Couldn't find task " + taskId);
+                $("#searchError").addClass("alert alert-error");
+                $("#searchError").append("Couldn't find task " + taskId);
             }
         }
 
@@ -390,42 +375,73 @@ function visualiserApp(luigi) {
             return processed;
         }
 
-
         if (visType == 'd3') {
             return processedCallback(depGraphCallbackD3);
         }
         else {
             return processedCallback(depGraphCallback);
         }
-
     }
 
     function processHashChange(paint) {
         var hash = decodeURIComponent(location.hash);
-        if (hash == "#w") {
+        // Convert fragment params to object.
+        var fragmentQuery = URI.parseQuery(location.hash.replace('#', '')); // "http://example.org/#!/foo/bar/baz.html");
+
+        if (fragmentQuery.tab == "workers") {
             switchTab("workerList");
-        } else if (hash == "#r") {
+        } else if (fragmentQuery.tab == "resources") {
             switchTab("resourceList");
-        } else if (hash) {
-            var taskId = decodeURIComponent(hash.substr(1));
+        } else if (fragmentQuery.tab == "graph") {
+            var taskId = fragmentQuery.taskId;
+            var hideDone = fragmentQuery.hideDone === '1' ? true : false;
+
+            // Populate fields with values from hash.
+            $('#hideDoneCheckbox').prop('checked', hideDone);
+            $("#invertCheckbox").prop('checked', fragmentQuery.invert === '1' ? true : false);
+            $("#js-task-id").val(fragmentQuery.taskId);
+            if (fragmentQuery.visType == 'svg') {
+                $("input[name=vis-type][value=svg]").prop('checked', true);
+            } else {
+                // d3 is default visualization.
+                $("input[name=vis-type][value=d3]").prop('checked', true);
+            }
+
+            // Empty errors.
             $("#searchError").empty();
             $("#searchError").removeClass();
-            if (taskId != "g") {
-                var depGraphCallback = makeGraphCallback(visType, taskId, paint);
+            if (taskId) {
+                var depGraphCallback = makeGraphCallback(fragmentQuery.visType, taskId, paint);
 
-                if (invertDependencies) {
+                if (fragmentQuery.invertDependencies) {
                     luigi.getInverseDependencyGraph(taskId, depGraphCallback, !hideDone);
                 } else {
                     luigi.getDependencyGraph(taskId, depGraphCallback, !hideDone);
                 }
             }
+            updateVisType(fragmentQuery.visType || 'd3');
+            initVisualisation(fragmentQuery.visType);
             switchTab("dependencyGraph");
         } else {
+            // Tasks tab.
+
+            // Populate fields with values from hash.
+            if (fragmentQuery.length) {
+                $('select[name=taskTable_length').val(fragmentQuery.length);
+            }
+            $("#serverSideCheckbox").prop('checked', fragmentQuery.filterOnServer === '1' ? true : false);
+            dt.search(fragmentQuery.search__search);
+            if (fragmentQuery.order) {
+                dt.order = [fragmentQuery.order.split(',')];
+            }
+            dt.draw();
             switchTab("taskList");
         }
     }
 
     function bindGraphEvents() {
+        var fragmentQuery = URI.parseQuery(location.hash.replace('#', ''));
+        var visType = fragmentQuery.visType;
         if (visType === 'd3') {
             $('.node').click(function(event) {
                 var taskDiv = $(this).find('.taskNode');
@@ -438,9 +454,9 @@ function visualiserApp(luigi) {
                     });
                 }
                 else {
-                    window.location.href = 'index.html#' + taskId;
+                    window.location.href = 'index.html#taskId=' + taskId;
                 }
-            })
+            });
         }
         else {
             $(".graph-node-a").click(function(event) {
@@ -458,20 +474,27 @@ function visualiserApp(luigi) {
 
     function bindListEvents() {
         $(window).on('hashchange', processHashChange);
-        invertDependencies = $('#invertCheckbox')[0].checked;
-        $("#invertCheckbox").click(function() {
-            invertDependencies = this.checked;
-            processHashChange(true);
+
+        $('#serverSideCheckbox').click(function(e) {
+            e.preventDefault();
+            changeState('filterOnServer', this.checked ? '1' : null);
         });
-        hideDone = $('#hideDoneCheckbox')[0].checked;
-        $('#hideDoneCheckbox').click(function() {
-            hideDone = this.checked;
-            processHashChange(true);
+
+        $("#invertCheckbox").click(function(e) {
+            e.preventDefault();
+            changeState('invert', this.checked ? '1' : null);
+        });
+
+        $('#hideDoneCheckbox').click(function(e) {
+            // Copy checkbox value to hash.
+            e.preventDefault();
+            changeState('hideDone', this.checked ? '1' : null);
         });
         $("a[href=#list]").click(function() { location.hash=""; });
         $("#loadTaskForm").submit(function(event) {
             event.preventDefault();
-            location.hash = $(this).find("input").val();
+            var taskId = $(this).find("input").val();
+            changeState('taskId', taskId.length > 0 ? taskId : null);
         });
 
         $('.info-box').on('click', function () {
@@ -479,9 +502,11 @@ function visualiserApp(luigi) {
             filterByCategory(dt);
         });
 
-        $('#toggleVisButtons').on('click', 'label', function () {
-            setVisType($(this).find('input')[0].value);
+        $('input[name=vis-type]').on('change', function () {
+            changeState('visType', $(this).val());
+
             initVisualisation(visType);
+            updateVisType(fragmentQuery.visType);
         });
 
         /*
@@ -490,11 +515,8 @@ function visualiserApp(luigi) {
          */
         $('#serverSide').on('change', 'label', function () {
             updateTasks();
-        })
-
+        });
     }
-
-
 
     function asingInput(worker, id){
         if (worker[id].deps.length > 0) {
@@ -512,31 +534,34 @@ function visualiserApp(luigi) {
                     var startTime = new Date(tasks[j].start_time*1000);
                     var durationTime = new Date((finishTime - startTime)*1000).getSeconds();
                     times[listId[i]] = durationTime;
-                };
-            };
-        };
+                }
+            }
+        }
         return times;
     }
+
     function getParam(tasks, id){
         for (var i = 0; i < tasks.length; i++) {
             if (tasks[i].taskId === id) {
                 return tasks[i].worker_running;
-            };
-        };
+            }
+        }
     }
+
     function getStatusTasks(tasks){
         var status;
         for (var i = 0; i < tasks.length; i++) {
             if (tasks[i].status === "DONE") {
                 status = true;
-            }else{
+            } else {
                 return false;
             }
-        };
+        }
         return status;
     }
+
     function drawGraphETL(tasks, paint){
-    // Set up zoom support
+        // Set up zoom support
         var svg = d3.select("#mysvg");
         var inner = svg.select("g"),
             zoom = d3.behavior.zoom().on("zoom", function() {
@@ -621,7 +646,7 @@ function visualiserApp(luigi) {
             }
 
             inner.selectAll("g.node")
-                .attr("title", function(v) { return styleTooltip(v, getParam(tasks, v)) })
+                .attr("title", function(v) { return styleTooltip(v, getParam(tasks, v)); })
                 .each(function(v) { $(this).tipsy({ gravity: "w", opacity: 1, html: true }); });
         }
         draw();
@@ -686,10 +711,8 @@ function visualiserApp(luigi) {
             delete missingCategories[category];
         }
 
-
         $('#'+category+'_info').find('.info-box-number').html(taskCount);
         $('#'+category+'_info i.fa').removeClass().addClass('fa fa-'+taskIcons[category]);
-
     }
 
     function updateCurrentFilter() {
@@ -716,10 +739,9 @@ function visualiserApp(luigi) {
     }
 
     function initVisualisation(newVisType) {
-        visType = newVisType;
 
         // Prepare graphPlaceholder for D3 code
-        if (visType == 'd3') {
+        if (newVisType == 'd3') {
             $('#graphPlaceholder').empty();
             $('#graphPlaceholder').html('<div class="live map"><svg width="100%" height="100%" id="mysvg"><g/></svg></div>');
         }
@@ -728,9 +750,6 @@ function visualiserApp(luigi) {
             var graph = new Graph.DependencyGraph($("#graphPlaceholder")[0]);
             $("#graphPlaceholder")[0].graph = graph;
         }
-
-        processHashChange(true);
-
     }
 
     function updateTasks() {
@@ -794,7 +813,6 @@ function visualiserApp(luigi) {
                 $('#warnings').html(renderWarnings());
             }
         });
-
     }
 
     function updateSidebar(tabName) {
@@ -804,7 +822,6 @@ function visualiserApp(luigi) {
         else {
             $('body').addClass('sidebar-collapse');
         }
-
     }
 
     // Error strings may or may not be JSON encoded, depending on client version
@@ -833,6 +850,33 @@ function visualiserApp(luigi) {
         return htmls.join(', ');
     }
 
+    /**
+     * Updates the number of worker processes of a worker
+     * @param worker: the id of the worker
+     * @param n: the number of processes to set
+     */
+    function updateWorkerProcesses(worker, n) {
+        n = Math.max(1, n);
+
+        // the spinner is just for visual feedback
+        var $label = $('#workerList').find('#label-n-workers[data-worker="' + worker + '"]');
+        $label.html('<i class="fa fa-spinner fa-spin" aria-hidden="true"></i>');
+
+        luigi.setWorkerProcesses(worker, n, function() {
+            $label.text(n);
+        });
+    }
+
+    function changeState(key, value) {
+        var fragmentQuery = URI.parseQuery(location.hash.replace('#', ''));
+        if (value) {
+            fragmentQuery[key] = value;
+        } else {
+            delete fragmentQuery[key];
+        }
+        location.hash = '#' + URI.buildQuery(fragmentQuery);
+    }
+
     $(document).ready(function() {
         loadTemplates();
 
@@ -850,6 +894,59 @@ function visualiserApp(luigi) {
         });
 
         dt = $('#taskTable').DataTable({
+            stateSave: true,
+            stateSaveCallback: function(settings, data) {
+                // Save data table state to browser's hash.
+                var state = URI.parseQuery(location.hash.replace('#', ''));
+
+                if (data.search.search) {
+                    state.search__search = data.search.search;
+                }
+
+                if (data.order && data.order.length) {
+                    state.order = '' + data.order[0][0] + ',' + data.order[0][1];
+                }
+
+                if (data.length && data.length !== 10) {
+                    // Keep in hash only if length is not default.
+                    state.length = data.length;
+                }
+
+                if (state.filterOnServer) {
+                    state.filterOnServer = '1';
+                }
+                location.hash = '#' + URI.buildQuery(state);
+            },
+            stateLoadCallback: function(settings) {
+                // Restore datatable state from browser's hash.
+                var fragmentQuery = URI.parseQuery(location.hash.replace('#', ''));
+
+                var order = [];
+                if (fragmentQuery.order) {
+                    order = [fragmentQuery.order.split(',')];
+                }
+
+                // Prepare state for datatable.
+                var o = {
+                    order: order,                 // Table rows order.
+                    length: fragmentQuery.length, // Entries on page.
+                    start: 0,                     // Pagination initial page.
+                    time: new Date().getTime(),   // Current time to help datatable.js to handle asynchronous.
+                    columns: [
+                        {visible: true, search: {}},
+                        {visible: true, search: {}},  // Name column
+                        {visible: true, search: {}},  // Details column
+                        {visible: true, search: {}},  // Priority column
+                        {visible: true, search: {}},  // Time column
+                        {visible: true, search: {}}   // Actions column
+                    ],
+                    // Search input state.
+                    search: {
+                        caseInsensitive: true,
+                        search: fragmentQuery.search__search}};
+
+                return o;
+            },
             dom: 'l<"#serverSide">frtip',
             language: {
                 search: 'Filter table:'
@@ -858,7 +955,7 @@ function visualiserApp(luigi) {
                 {
                     data: 'category',
                     render: function (data, type, row) {
-                        return taskCategoryIcon(data)+' '+data;
+                        return taskCategoryIcon(data) + ' ' + data;
                     }
                 },
                 {data: 'taskName'},
@@ -868,8 +965,7 @@ function visualiserApp(luigi) {
                         var params = JSON.parse(data);
                         if (row.resources !== '{}') {
                             return '<div>' + renderParams(params) + '</div><div>' + row.resources + '</div>';
-                        }
-                        else {
+                        } else {
                             return '<div>' + renderParams(params) + '</div>';
                         }
                     }
@@ -881,7 +977,7 @@ function visualiserApp(luigi) {
                     orderable: false,
                     data: null,
                     render: function (data, type, row) {
-                        return Mustache.render(templates['actionsTemplate'], row);
+                        return Mustache.render(templates.actionsTemplate, row);
                     }
                 }
             ]
@@ -903,7 +999,6 @@ function visualiserApp(luigi) {
                 }
             }
         });
-
 
         updateTasks();
         bindListEvents();
@@ -950,9 +1045,107 @@ function visualiserApp(luigi) {
             triggerButton.remove();
         });
 
-        visType = getVisType();
-        setVisType(visType);
-        initVisualisation(visType);
+        $('#workerList').on('click', '#btn-increment-workers', function($event) {
+            var worker = $(this).data("worker");
+            var $label = $('#workerList').find('#label-n-workers[data-worker="' + worker + '"]');
+            var n = parseInt($label.text());
+            if (!isNaN(n)) {
+                updateWorkerProcesses(worker, n + 1);
+            }
+            $event.preventDefault();
+        });
 
+        $('#workerList').on('click', '#btn-decrement-workers', function($event) {
+            var worker = $(this).data("worker");
+            var $label = $('#workerList').find('#label-n-workers[data-worker="' + worker + '"]');
+            var n = parseInt($label.text());
+            if (!isNaN(n)) {
+                updateWorkerProcesses(worker, n - 1);
+            }
+            $event.preventDefault();
+        });
+
+        $('#workerList').on('show.bs.modal', '#setWorkersModal', function($event) {
+            $('#setWorkersButton').data('worker', $($event.relatedTarget).data('worker'));
+            var $input = $(this).find('#setWorkersInput').on('keypress', function($event) {
+                if (event.keyCode == 13) {
+                    $('#workerList').find('#setWorkersButton').trigger('click');
+                }
+                $event.stopPropagation();
+            });
+            setTimeout(function() {
+                $input.focus();
+            }.bind(this), 600);
+        });
+
+        $('#workerList').on('hidden.bs.modal', '#setWorkersModal', function() {
+            $(this).find('#setWorkersInput').off('keypress').val('');
+        });
+
+        $('#workerList').on('click', '#setWorkersButton', function($event) {
+            var worker = $(this).data('worker');
+            var n = parseInt($("#setWorkersInput").val());
+            if (!isNaN(n)) {
+                updateWorkerProcesses(worker, n);
+            }
+            $event.preventDefault();
+        });
+
+        $('.js-nav-link').click(function(e) {
+            // User followed tab from navigation link. Copy state from fields to hash.
+            e.preventDefault();
+            var state = {};
+            var tabId = $(this).attr('data-tab');
+
+            if (tabId == 'taskList') {
+                var order = dt.order();
+                var search = dt.search();
+                state.tab = 'tasks';
+
+                if ($('select[name=taskTable_length]').val() !== '10') {
+                    // Add length to hash only if the value is not default.
+                    state.length = $('select[name=taskTable_length]').val();
+                }
+
+                if ($('#serverSideCheckbox').is(':checked')) {
+                    state.filterOnServer = '1';
+                }
+
+                if (search) {
+                    state.search__search = search;
+                }
+
+                if (order.length > 0) {
+                    state.order = '' + order[0][0] + ',' + order[0][1];
+                }
+
+            } else if (tabId == 'dependencyGraph') {
+                state.tab = 'graph';
+
+                // Get state from fields.
+
+                if ($('#hideDoneCheckbox').is(':checked')) {
+                    state.hideDone = '1';
+                }
+
+                if ($('#idTaskForm input.search-query').val()) {
+                    state.taskId = $('#idTaskForm input.search-query').val();
+                }
+
+                if ($('#invertCheckbox').is(':checked')) {
+                    state.invert = '1';
+                }
+
+                state.visType = $('input[name=vis-type]:checked').val();
+            } else if (tabId == 'workerList') {
+                state.tab = 'workers';
+            } else if (tabId == 'resourceList') {
+                state.tab = 'resources';
+            }
+
+            location.hash = '#' + URI.buildQuery(state);
+        });
+
+        processHashChange();
     });
 }

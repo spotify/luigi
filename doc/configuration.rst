@@ -7,9 +7,9 @@ All configuration can be done by adding configuration files. They are looked for
  * ``luigi.cfg`` (or its legacy name ``client.cfg``) in your current working directory
  * ``LUIGI_CONFIG_PATH`` environment variable
 
-in increasing order of preference. The order only matters in case of key conflicts (see docs for ConfigParser_). These files are meant for both the client and ``luigid``. If you decide to specify your own configuration you should make sure that both the client and ``luigid`` load it properly.
+in increasing order of preference. The order only matters in case of key conflicts (see docs for ConfigParser.read_). These files are meant for both the client and ``luigid``. If you decide to specify your own configuration you should make sure that both the client and ``luigid`` load it properly.
 
-.. _ConfigParser: https://docs.python.org/2/library/configparser.html
+.. _ConfigParser.read: https://docs.python.org/3.6/library/configparser.html#configparser.ConfigParser.read
 
 The config file is broken into sections, each controlling a different part of the config. Example configuration file:
 
@@ -114,6 +114,12 @@ history-filename
   configuration where no history is stored in the output directory by
   Hadoop.
 
+log_level
+  The default log level to use when no logging_conf_file is set. Must be
+  a valid name of a `Python log level
+  <https://docs.python.org/2/library/logging.html#logging-levels>`_.
+  Default is ``DEBUG``.
+
 logging_conf_file
   Location of the logging configuration file.
 
@@ -152,6 +158,15 @@ parallel-scheduling
 rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0
+
+rpc-retry-attempts
+  The maximum number of retries to connect the central scheduler before giving up.
+  Defaults to 3
+
+rpc-retry-wait
+  Number of seconds to wait before the next attempt will be started to
+  connect to the central scheduler between two retry attempts.
+  Defaults to 30
 
 
 .. _worker-config:

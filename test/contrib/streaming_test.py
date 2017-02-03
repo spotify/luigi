@@ -3,7 +3,8 @@ import os
 
 import unittest
 
-from luigi import mrrunner, Parameter
+from luigi import Parameter
+from luigi.contrib import mrrunner
 
 from luigi.contrib.hadoop import HadoopJobRunner, JobTask
 from luigi.contrib.hdfs import HdfsTarget

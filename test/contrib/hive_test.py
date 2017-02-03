@@ -279,13 +279,6 @@ class HiveCommandClientTest(unittest.TestCase):
         self.assertEqual("", returned)
 
 
-class TestHiveMisc(unittest.TestCase):
-
-    def test_import_old(self):
-        import luigi.hive
-        self.assertEqual(luigi.hive.HiveQueryTask, luigi.contrib.hive.HiveQueryTask)
-
-
 class MyHiveTask(luigi.contrib.hive.HiveQueryTask):
     param = luigi.Parameter()
 

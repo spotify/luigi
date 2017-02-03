@@ -65,7 +65,7 @@ in Hadoop, as well as
 `Hive <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hive.html>`__,
 and `Pig <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.pig.html>`__,
 jobs. It also comes with
-`file system abstractions for HDFS <https://luigi.readthedocs.io/en/latest/api/luigi.hdfs.html>`_,
+`file system abstractions for HDFS <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hdfs.html>`_,
 and local files that ensures all file system operations are atomic. This
 is important because it means your data pipeline will not crash in a
 state containing partial data.
@@ -145,6 +145,7 @@ or held presentations about Luigi:
 * `Custobar (Metrics Monday Helsinki) <http://www.slideshare.net/teemukurppa/managing-data-workflows-with-luigi>`_
 * `Blendle <http://www.anneschuth.nl/wp-content/uploads/sea-anneschuth-streamingblendle.pdf#page=126>`_
 * `TrustYou (PyData Berlin 2015) <https://speakerdeck.com/mfcabrera/pydata-berlin-2015-processing-hotel-reviews-with-python>`_
+* `Groupon / OrderUp <https://github.com/groupon/luigi-warehouse>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
