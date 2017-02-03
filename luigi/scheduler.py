@@ -352,6 +352,7 @@ class Worker(object):
         self.tasks = set()  # task objects
         self.info = {}
         self.disabled = False
+        self.rpc_messages = []
 
     def add_info(self, info):
         self.info.update(info)
@@ -401,6 +402,15 @@ class Worker(object):
             return WORKER_STATE_ACTIVE
         else:
             return WORKER_STATE_DISABLED
+
+    def add_rpc_message(self, name, **kwargs):
+        # the message has the format {'name': <function_name>, 'kwargs': <function_kwargs>}
+        self.rpc_messages.append({'name': name, 'kwargs': kwargs})
+
+    def fetch_rpc_messages(self):
+        messages = self.rpc_messages[:]
+        del self.rpc_messages[:]
+        return messages
 
     def __str__(self):
         return self.id
@@ -878,6 +888,10 @@ class Scheduler(object):
         self._state.disable_workers({worker})
 
     @rpc_method()
+    def set_worker_processes(self, worker, n):
+        self._state.get_worker(worker).add_rpc_message('set_worker_processes', n=n)
+
+    @rpc_method()
     def update_resources(self, **resources):
         if self._resources is None:
             self._resources = {}
@@ -1121,7 +1135,8 @@ class Scheduler(object):
     @rpc_method(attempts=1)
     def ping(self, **kwargs):
         worker_id = kwargs['worker']
-        self._update_worker(worker_id)
+        worker = self._update_worker(worker_id)
+        return {"rpc_messages": worker.fetch_rpc_messages()}
 
     def _upstream_status(self, task_id, upstream_status_table):
         if task_id in upstream_status_table:

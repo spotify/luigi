@@ -850,6 +850,23 @@ function visualiserApp(luigi) {
         return htmls.join(', ');
     }
 
+    /**
+     * Updates the number of worker processes of a worker
+     * @param worker: the id of the worker
+     * @param n: the number of processes to set
+     */
+    function updateWorkerProcesses(worker, n) {
+        n = Math.max(1, n);
+
+        // the spinner is just for visual feedback
+        var $label = $('#workerList').find('#label-n-workers[data-worker="' + worker + '"]');
+        $label.html('<i class="fa fa-spinner fa-spin" aria-hidden="true"></i>');
+
+        luigi.setWorkerProcesses(worker, n, function() {
+            $label.text(n);
+        });
+    }
+
     function changeState(key, value) {
         var fragmentQuery = URI.parseQuery(location.hash.replace('#', ''));
         if (value) {
@@ -1026,6 +1043,52 @@ function visualiserApp(luigi) {
             // show the worker as disabled in the visualiser
             triggerButton.parents('.box').addClass('box-solid box-default');
             triggerButton.remove();
+        });
+
+        $('#workerList').on('click', '#btn-increment-workers', function($event) {
+            var worker = $(this).data("worker");
+            var $label = $('#workerList').find('#label-n-workers[data-worker="' + worker + '"]');
+            var n = parseInt($label.text());
+            if (!isNaN(n)) {
+                updateWorkerProcesses(worker, n + 1);
+            }
+            $event.preventDefault();
+        });
+
+        $('#workerList').on('click', '#btn-decrement-workers', function($event) {
+            var worker = $(this).data("worker");
+            var $label = $('#workerList').find('#label-n-workers[data-worker="' + worker + '"]');
+            var n = parseInt($label.text());
+            if (!isNaN(n)) {
+                updateWorkerProcesses(worker, n - 1);
+            }
+            $event.preventDefault();
+        });
+
+        $('#workerList').on('show.bs.modal', '#setWorkersModal', function($event) {
+            $('#setWorkersButton').data('worker', $($event.relatedTarget).data('worker'));
+            var $input = $(this).find('#setWorkersInput').on('keypress', function($event) {
+                if (event.keyCode == 13) {
+                    $('#workerList').find('#setWorkersButton').trigger('click');
+                }
+                $event.stopPropagation();
+            });
+            setTimeout(function() {
+                $input.focus();
+            }.bind(this), 600);
+        });
+
+        $('#workerList').on('hidden.bs.modal', '#setWorkersModal', function() {
+            $(this).find('#setWorkersInput').off('keypress').val('');
+        });
+
+        $('#workerList').on('click', '#setWorkersButton', function($event) {
+            var worker = $(this).data('worker');
+            var n = parseInt($("#setWorkersInput").val());
+            if (!isNaN(n)) {
+                updateWorkerProcesses(worker, n);
+            }
+            $event.preventDefault();
         });
 
         $('.js-nav-link').click(function(e) {

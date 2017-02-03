@@ -374,12 +374,13 @@ class KeepAliveThread(threading.Thread):
     Periodically tell the scheduler that the worker still lives.
     """
 
-    def __init__(self, scheduler, worker_id, ping_interval):
+    def __init__(self, scheduler, worker_id, ping_interval, rpc_message_callback):
         super(KeepAliveThread, self).__init__()
         self._should_stop = threading.Event()
         self._scheduler = scheduler
         self._worker_id = worker_id
         self._ping_interval = ping_interval
+        self._rpc_message_callback = rpc_message_callback
 
     def stop(self):
         self._should_stop.set()
@@ -391,10 +392,21 @@ class KeepAliveThread(threading.Thread):
                 logger.info("Worker %s was stopped. Shutting down Keep-Alive thread" % self._worker_id)
                 break
             with fork_lock:
+                response = None
                 try:
-                    self._scheduler.ping(worker=self._worker_id)
+                    response = self._scheduler.ping(worker=self._worker_id)
                 except:  # httplib.BadStatusLine:
                     logger.warning('Failed pinging scheduler')
+
+                # handle rpc messages
+                if response:
+                    for message in response["rpc_messages"]:
+                        self._rpc_message_callback(message)
+
+
+def rpc_message_callback(fn):
+    fn.is_rpc_message_callback = True
+    return fn
 
 
 class Worker(object):
@@ -483,7 +495,9 @@ class Worker(object):
         """
         Start the KeepAliveThread.
         """
-        self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id, self._config.ping_interval)
+        self._keep_alive_thread = KeepAliveThread(self._scheduler, self._id,
+                                                  self._config.ping_interval,
+                                                  self._handle_rpc_message)
         self._keep_alive_thread.daemon = True
         self._keep_alive_thread.start()
         return self
@@ -1076,3 +1090,30 @@ class Worker(object):
             self._handle_next_task()
 
         return self.run_succeeded
+
+    def _handle_rpc_message(self, message):
+        logger.info("Worker %s got message %s" % (self._id, message))
+
+        # the message is a dict {'name': <function_name>, 'kwargs': <function_kwargs>}
+        name = message['name']
+        kwargs = message['kwargs']
+
+        # find the function and check if it's callable and configured to work
+        # as a message callback
+        func = getattr(self, name, None)
+        tpl = (self._id, name)
+        if not callable(func):
+            logger.error("Worker %s has no function '%s'" % tpl)
+        elif not getattr(func, "is_rpc_message_callback", False):
+            logger.error("Worker %s function '%s' is not available as rpc message callback" % tpl)
+        else:
+            logger.info("Worker %s successfully dispatched rpc message to function '%s'" % tpl)
+            func(**kwargs)
+
+    @rpc_message_callback
+    def set_worker_processes(self, n):
+        # set the new value
+        self.worker_processes = max(1, n)
+
+        # tell the scheduler
+        self._scheduler.add_worker(self._id, {'workers': self.worker_processes})
