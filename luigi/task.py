@@ -57,10 +57,10 @@ def namespace(namespace=None, scope=''):
     It is often desired to call this function with the keyword argument
     ``scope=__name__``.
 
-    The ``scope`` keyword makes so this call is only affective for task classes
-    with a matching [*]_ ``__module__``. The default value for ``scope`` is the
-    empty string, which means all classes. Multiple calls with the same scope
-    simply replace each other.
+    The ``scope`` keyword makes it so that this call is only effective for task
+    classes with a matching [*]_ ``__module__``. The default value for
+    ``scope`` is the empty string, which means all classes. Multiple calls with
+    the same scope simply replace each other.
 
     The namespace of a :py:class:`Task` can also be changed by specifying the property
     ``task_namespace``.
@@ -70,7 +70,7 @@ def namespace(namespace=None, scope=''):
         class Task2(luigi.Task):
             task_namespace = 'namespace2'
 
-    This explicit setting takes priority over whatever is set in
+    This explicit setting takes priority over whatever is set in the
     ``namespace()`` method, and it's also inherited through normal python
     inheritence.
 
@@ -79,7 +79,7 @@ def namespace(namespace=None, scope=''):
     *New since Luigi 2.6.0:* ``scope`` keyword argument.
 
     .. [*] When there are multiple levels of matching module scopes like
-           ``a.b`` vs ``a.b.c``, the more specific one wins.
+           ``a.b`` vs ``a.b.c``, the more specific one (``a.b.c``) wins.
     .. seealso:: The new and better scaling :py:func:`auto_namespace`
     """
     Register._default_namespace_dict[scope] = namespace or ''
@@ -92,12 +92,12 @@ def auto_namespace(scope=''):
     reasons:
 
      * Two tasks with the same name will not have conflicting task families
-     * It's more pythonic, as modules are pythons recommended way to
+     * It's more pythonic, as modules are Python's recommended way to
        do namespacing.
-     * It's traceable, when you see the full name of a task, you can immedietly
+     * It's traceable. When you see the full name of a task, you can immediately
        identify where it is defined.
 
-    We recommend to call this function from your package's outermost
+    We recommend calling this function from your package's outermost
     ``__init__.py`` file. The file contents could look like this:
 
     .. code-block:: python
