@@ -285,3 +285,64 @@ class TaskNamespaceTest(LuigiTestCase):
         child_task = _ChildTask()
         self.assertEqual(child_task.task_family, 'b._ChildTask')
         self.assertEqual(str(child_task), 'b._ChildTask()')
+
+    def test_with_scope(self):
+        luigi.namespace('wohoo', scope='task_test')
+        luigi.namespace('bleh', scope='')
+
+        class MyTask(luigi.Task):
+            pass
+        luigi.namespace(scope='task_test')
+        luigi.namespace(scope='')
+        self.assertEqual(MyTask.get_task_namespace(), 'wohoo')
+
+    def test_with_scope_not_matching(self):
+        luigi.namespace('wohoo', scope='incorrect_namespace')
+        luigi.namespace('bleh', scope='')
+
+        class MyTask(luigi.Task):
+            pass
+        luigi.namespace(scope='incorrect_namespace')
+        luigi.namespace(scope='')
+        self.assertEqual(MyTask.get_task_namespace(), 'bleh')
+
+
+class AutoNamespaceTest(LuigiTestCase):
+    this_module = 'task_test'
+
+    def test_auto_namespace_global(self):
+        luigi.auto_namespace()
+
+        class MyTask(luigi.Task):
+            pass
+
+        luigi.namespace()
+        self.assertEqual(MyTask.get_task_namespace(), self.this_module)
+
+    def test_auto_namespace_scope(self):
+        luigi.auto_namespace(scope='task_test')
+        luigi.namespace('bleh', scope='')
+
+        class MyTask(luigi.Task):
+            pass
+        luigi.namespace(scope='task_test')
+        luigi.namespace(scope='')
+        self.assertEqual(MyTask.get_task_namespace(), self.this_module)
+
+    def test_auto_namespace_not_matching(self):
+        luigi.auto_namespace(scope='incorrect_namespace')
+        luigi.namespace('bleh', scope='')
+
+        class MyTask(luigi.Task):
+            pass
+        luigi.namespace(scope='incorrect_namespace')
+        luigi.namespace(scope='')
+        self.assertEqual(MyTask.get_task_namespace(), 'bleh')
+
+    def test_auto_namespace_not_matching_2(self):
+        luigi.auto_namespace(scope='incorrect_namespace')
+
+        class MyTask(luigi.Task):
+            pass
+        luigi.namespace(scope='incorrect_namespace')
+        self.assertEqual(MyTask.get_task_namespace(), '')

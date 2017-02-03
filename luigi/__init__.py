@@ -19,7 +19,7 @@ Package containing core luigi functionality.
 """
 
 from luigi import task
-from luigi.task import Task, Config, ExternalTask, WrapperTask, namespace
+from luigi.task import Task, Config, ExternalTask, WrapperTask, namespace, auto_namespace
 
 from luigi import target
 from luigi.target import Target
@@ -51,7 +51,7 @@ from .tools import range  # just makes the tool classes available from command l
 
 
 __all__ = [
-    'task', 'Task', 'Config', 'ExternalTask', 'WrapperTask', 'namespace',
+    'task', 'Task', 'Config', 'ExternalTask', 'WrapperTask', 'namespace', 'auto_namespace',
     'target', 'Target', 'LocalTarget', 'rpc', 'RemoteScheduler',
     'RPCError', 'parameter', 'Parameter', 'DateParameter', 'MonthParameter',
     'YearParameter', 'DateHourParameter', 'DateMinuteParameter', 'DateSecondParameter', 'range',
