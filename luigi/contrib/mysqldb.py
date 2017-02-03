@@ -87,8 +87,7 @@ class MySqlTarget(luigi.Target):
         self.create_marker_table()
 
         if connection is None:
-            connection = self.connect()
-            connection.autocommit = True  # if connection created here, we commit it here
+            connection = self.connect(autocommit=True) # if connection created here, we commit it here
 
         connection.cursor().execute(
             """INSERT INTO {marker_table} (update_id, target_table)
@@ -103,8 +102,7 @@ class MySqlTarget(luigi.Target):
 
     def exists(self, connection=None):
         if connection is None:
-            connection = self.connect()
-            connection.autocommit = True
+            connection = self.connect(autocommit=True)
         cursor = connection.cursor()
         try:
             cursor.execute("""SELECT 1 FROM {marker_table}
