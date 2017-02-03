@@ -53,7 +53,7 @@ setup(
     version='2.5.0',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
-    author='Erik Bernhardsson',
+    author='The Luigi Authors',
     url='https://github.com/spotify/luigi',
     license='Apache License 2.0',
     packages=[
