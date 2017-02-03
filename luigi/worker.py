@@ -981,7 +981,8 @@ class Worker(object):
                            family=task.task_family,
                            module=task.task_module,
                            new_deps=new_deps,
-                           assistant=self._assistant)
+                           assistant=self._assistant,
+                           retry_policy_dict=_get_retry_policy_dict(task))
 
             self._running_tasks.pop(task_id)
 
