@@ -231,8 +231,9 @@
 
           #workerList .box-tools > span.label-unread-worker-messages {
             margin-right: 6px;
-            font-style: italic;
             vertical-align: middle;
+            font-style: italic;
+            color: red;
           }
 
         </style>
@@ -332,9 +333,9 @@
                 <div class="box-header with-border">
                     <h3 class="box-title">{{name}}</h3>
                     <div class="box-tools pull-right">
-                      {{#unread_messages}}
-                      <span class="label-unread-worker-messages">{{unread_messages}} unread message(s)</span>
-                      {{/unread_messages}}
+                      {{#num_unread_rpc_messages}}
+                      <span class="label-unread-worker-messages">{{num_unread_rpc_messages}} unread message(s)</span>
+                      {{/num_unread_rpc_messages}}
                       {{^is_disabled}}
                       <div class="btn-group">
                         <button type="button" class="btn btn-sm btn-default dropdown-toggle btn-set-workers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
