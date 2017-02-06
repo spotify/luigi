@@ -23,6 +23,7 @@ from collections import OrderedDict
 import re
 import csv
 import tempfile
+from StringIO import StringIO
 
 import luigi
 from luigi import Task
@@ -183,8 +184,13 @@ class QuerySalesforce(Task):
                 # If there's only one result, just download it, otherwise we need to merge the resulting downloads
                 if len(result_ids) == 1:
                     data = sf.get_batch_result(job_id, batch_id, result_ids[0])
+                    # ensure that bulk api response is written in order expected
+                    fields = get_soql_fields(self.soql)
                     with open(self.output().path, 'w') as outfile:
-                        outfile.write(data)
+                        writer = csv.DictWriter(outfile, fieldnames=fields)
+                        writer.writeheader()
+                        for row in csv.DictReader(StringIO(data)):
+                            writer.writerow(row)
                 else:
                     # Download each file to disk, and then merge into one.
                     # Preferring to do it this way so as to minimize memory consumption.
