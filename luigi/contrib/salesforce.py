@@ -23,7 +23,7 @@ from collections import OrderedDict
 import re
 import csv
 import tempfile
-from StringIO import StringIO
+from luigi.six.moves import StringIO
 
 import luigi
 from luigi import Task
