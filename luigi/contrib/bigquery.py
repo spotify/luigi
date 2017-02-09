@@ -24,9 +24,6 @@ from luigi.contrib import gcp
 logger = logging.getLogger('luigi-interface')
 
 try:
-    import httplib2
-    import oauth2client
-
     from googleapiclient import discovery
     from googleapiclient import http
 except ImportError:

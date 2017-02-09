@@ -37,7 +37,6 @@ logger = logging.getLogger('luigi-interface')
 
 try:
     import httplib2
-    import oauth2client.client
 
     from googleapiclient import errors
     from googleapiclient import discovery
