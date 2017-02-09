@@ -62,12 +62,12 @@ class DataprocBaseTask(_DataprocBaseTask):
             },
             "sparkJob": {
                 "args": job_args,
-                "mainClass": main_class,
+                "mainJarFileUri": main_class,
                 "jarFileUris": jars
             }
         }}
         self.submit_job(job_config)
-        self._job_name = os.path.basename(self._job['sparkJob']['mainClass'])
+        self._job_name = os.path.basename(self._job['sparkJob']['mainJarFileUri'])
         logger.info("Submitted new dataproc job:{} id:{}".format(self._job_name, self._job_id))
         return self._job
 
