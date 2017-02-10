@@ -51,8 +51,8 @@ import luigi
 import luigi.task
 import luigi.contrib.gcs
 import luigi.contrib.hdfs
-import luigi.s3
-from luigi import mrrunner
+import luigi.contrib.s3
+from luigi.contrib import mrrunner
 
 if six.PY2:
     from itertools import imap as map
@@ -460,7 +460,7 @@ class HadoopJobRunner(JobRunner):
         # atomic output: replace output with a temporary work directory
         if self.end_job_with_atomic_move_dir:
             illegal_targets = (
-                luigi.s3.S3FlagTarget, luigi.contrib.gcs.GCSFlagTarget)
+                luigi.contrib.s3.S3FlagTarget, luigi.contrib.gcs.GCSFlagTarget)
             if isinstance(job.output(), illegal_targets):
                 raise TypeError("end_job_with_atomic_move_dir is not supported"
                                 " for {}".format(illegal_targets))
@@ -533,7 +533,7 @@ class HadoopJobRunner(JobRunner):
 
         allowed_input_targets = (
             luigi.contrib.hdfs.HdfsTarget,
-            luigi.s3.S3Target,
+            luigi.contrib.s3.S3Target,
             luigi.contrib.gcs.GCSTarget)
         for target in luigi.task.flatten(job.input_hadoop()):
             if not isinstance(target, allowed_input_targets):
@@ -543,7 +543,7 @@ class HadoopJobRunner(JobRunner):
 
         allowed_output_targets = (
             luigi.contrib.hdfs.HdfsTarget,
-            luigi.s3.S3FlagTarget,
+            luigi.contrib.s3.S3FlagTarget,
             luigi.contrib.gcs.GCSFlagTarget)
         if not isinstance(job.output(), allowed_output_targets):
             raise TypeError('output must be one of: {}'.format(

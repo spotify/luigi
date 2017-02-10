@@ -28,6 +28,7 @@ try:
 except ImportError:
     from urllib.parse import urlsplit
 
+from luigi.contrib import gcp
 import luigi.target
 from luigi import six
 from luigi.six.moves import xrange
@@ -36,7 +37,6 @@ logger = logging.getLogger('luigi-interface')
 
 try:
     import httplib2
-    import oauth2client.client
 
     from googleapiclient import errors
     from googleapiclient import discovery
@@ -110,15 +110,12 @@ class GCSClient(luigi.target.FileSystem):
     def __init__(self, oauth_credentials=None, descriptor='', http_=None,
                  chunksize=CHUNKSIZE):
         self.chunksize = chunksize
-        http_ = http_ or httplib2.Http()
-
-        if not oauth_credentials:
-            oauth_credentials = oauth2client.client.GoogleCredentials.get_application_default()
+        authenticate_kwargs = gcp.get_authenticate_kwargs(oauth_credentials, http_)
 
         if descriptor:
-            self.client = discovery.build_from_document(descriptor, credentials=oauth_credentials, http=http_)
+            self.client = discovery.build_from_document(descriptor, **authenticate_kwargs)
         else:
-            self.client = discovery.build('storage', 'v1', credentials=oauth_credentials, http=http_)
+            self.client = discovery.build('storage', 'v1', **authenticate_kwargs)
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, _, _) = urlsplit(path)
