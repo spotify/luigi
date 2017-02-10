@@ -570,10 +570,8 @@ class Task(object):
         :py:class:`luigi.task.Task`'s :py:meth:`run` method is not implemented.
 
         The returned value is json encoded and sent to the scheduler as the `expl` argument.
-
-        Default behavior is to send a None value
         """
-        pass
+        return 'Task is an external data dependency and data does not exist (yet?).'
 
     @contextmanager
     def no_unpicklable_properties(self):

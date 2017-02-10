@@ -187,9 +187,6 @@ class TaskProcess(multiprocessing.Process):
                 else:
                     status = FAILED
                     expl = self.task.on_external_failure()
-                    if not expl:
-                        expl = 'Task is an external data dependency ' \
-                            'and data does not exist (yet?).'
             else:
                 new_deps = self._run_get_new_deps()
                 status = DONE if not new_deps else PENDING
