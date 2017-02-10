@@ -454,7 +454,7 @@ function visualiserApp(luigi) {
                     });
                 }
                 else {
-                    window.location.href = 'index.html#taskId=' + taskId;
+                    window.location.href = 'index.html#tab=graph&taskId=' + taskId;
                 }
             });
         }
