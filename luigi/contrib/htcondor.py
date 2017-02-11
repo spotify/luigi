@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from __future__ import absolute_import
 import shutil
 import stat
 import glob
@@ -26,8 +27,8 @@ Adapted by Luke Kreczko (@kreczko) from
 by Jake Feala (@jfeala)
 
 HTCondor (http://research.cs.wisc.edu/htcondor/) is a job scheduler used to allocate compute resources on a
-shared cluster. Jobs are submitted using the ``condor_submit`` command and monitored
-using ``condor_q``. To get started, install luigi on all nodes.
+shared cluster. Jobs are submitted and monitored using the HTCondor python bindings.
+To get started, install luigi on all nodes.
 
 To run luigi workflows on an HTCondor cluster, subclass
 :class:`luigi.contrib.htcondor.HTCondorJobTask` as you would any :class:`luigi.Task`,
@@ -35,7 +36,7 @@ but override the ``work()`` method, instead of ``run()``, to define the job
 code. Then, run your Luigi workflow from the master node, assigning > 1
 ``workers`` in order to distribute the tasks in parallel across the cluster.
 
-The following is an example usage (and can also be found in ``sge_tests.py``)
+The following is an example usage (and can also be found in ``htcondor_test.py``)
 
 .. code-block:: python
 
@@ -115,66 +116,11 @@ fi
 """
 
 
-def _parse_condorq_state(condorq_out, job_id):
-    """Parse "state" column from `condor_q` output for given job_id
-
-    Returns state for the *first* job matching job_id. Returns 'u' if
-    `condor_q` output is empty or job_id is not found.
-     ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
-    3.2   user2        11/20 09:55   0+01:40:38 R  0   976.6 batchScript.sh
-    Possible job states:
-    0   Unexpanded     U
-    1   Idle           I
-    2   Running        R
-    3   Removed        X
-    4   Completed      C
-    5   Held           H
-    6   Submission_err E
-    """
-    logger.debug('Parsing condor_q output \n {0}'.format(condorq_out))
-    if condorq_out.strip() == '':
-        return 'unknown'
-    lines = condorq_out.split('\n')
-    for line in lines:
-        line = line.strip()
-        # skip past header
-        if line.startswith('--') or line.startswith('ID'):
-            continue
-        if line:
-            # job, user, submit_day, submit_time, run_time, state, prio, size, cmd
-            job, _, _, _, _, state = line.split()[0:6]
-            if float(job) == float(job_id):
-                return state.upper()
-    return 'unknown'
-
-
-def _parse_condor_submit_job_id(condor_submit_out):
-    """Parse job id from condor_submit output string.
-
-    Assume format:
-
-        Submitting job(s).
-        1 job(s) submitted to cluster 8.
-
-    """
-    return float(condor_submit_out.split()[-1])
-
-
-def _build_job_description(job_params, N):
+def _build_job_description(job_params):
+    from classad import ClassAd
     submit_params = DEFAULT_JOB_PARAMETERS.copy()
     submit_params.update(job_params)
-    lines = ['{0}={1}'.format(k, v) for k, v in six.iteritems(submit_params)]
-    lines = "\n".join(lines)
-    lines += '\nqueue {0}'.format(N)
-
-    return lines
-
-
-def _build_condor_submit_command(job_params):
-    template = """echo "{job_params}" | condor_submit"""
-    return template.format(
-        job_params=job_params,
-    )
+    return ClassAd(submit_params)
 
 
 def _copy_script_to_tmp_dir(script, tmp_dir, dst_file_name=""):
@@ -288,7 +234,6 @@ class HTCondorJobTask(luigi.Task):
                 pickle.dump(self, open(self.job_file, "w"))
 
     def _run_job(self):
-
         # copy runner into job folder
         # add job_file to input files
         # enable transfer of input files
@@ -315,29 +260,24 @@ class HTCondorJobTask(luigi.Task):
         self.outfile = os.path.join(self.tmp_dir, 'job.out')
         self.errfile = os.path.join(self.tmp_dir, 'job.err')
         job_params = {
-            'Executable': run_sh,
-            'transfer_input_files': ','.join(glob.glob(self.tmp_dir + '/*')),
-            'output': self.outfile,
-            'error': self.errfile,
-            'log': os.path.join(self.tmp_dir, 'job.log'),
+            'Cmd': run_sh,
+            'TransferIn': ','.join(glob.glob(self.tmp_dir + '/*')),
+            'Out': self.outfile,
+            'Err': self.errfile,
+            'UserLog': os.path.join(self.tmp_dir, 'job.log'),
             'request_cpus': self.n_cpu,
-            'request_memory': self.memory,
+            'MemoryUsage': self.memory,
         }
-
         # build job description (mostly for debugging)
-        job_desc = _build_job_description(job_params, self.copies)
-        job_desc_file = os.path.join(self.tmp_dir, 'job.desc')
-        with open(job_desc_file, 'w') as f:
-            f.write(job_desc)
-        # Build condor_submit command
-        submit_cmd = _build_condor_submit_command(job_desc)
-        logger.debug('condor_submit command: \n' + submit_cmd)
-
+        job_desc = _build_job_description(job_params)
+        logger.debug('Submitting htcondor job description: \n' + str(job_desc))
+        from htcondor import Schedd
+        # connect to HTCondor scheduler
+        schedd = Schedd()
         # Submit the job and grab job ID.
-        output = subprocess.check_output(submit_cmd, shell=True)
-        self.job_id = _parse_condor_submit_job_id(output)
+        self.job_id = schedd.submit(job_desc)
         logger.debug(
-            "Submitted job to condor_submit with response:\n" + output)
+            "Submitted job to condor_submit with ID:\n{0}".format(self.job_id))
 
         self._track_job()
 
@@ -359,37 +299,48 @@ class HTCondorJobTask(luigi.Task):
         < transferring input
         > transferring output
         """
-        known_statuses = ['U', 'E', 'R', 'X', 'C', 'H', 'E', '<', '>']
+        from htcondor import Schedd
+        known_statuses = [
+            'Unexpanded', 'Idle', 'Running', 'Removed', 'Completed', 'Held',
+            'Error', '<', '>'
+        ]
+        schedd = Schedd()
+        contraint = 'JobId =?= {0}'.format(self.job_id)
         while True:
             # Sleep for a little bit
             time.sleep(self.poll_time)
-            condorq_out = subprocess.check_output(
-                ['condor_q', str(self.job_id)])
-            job_status = _parse_condorq_state(condorq_out, self.job_id)
-            if job_status == 'unknown':
+            job_ad = schedd.query(contraint)
+            if not job_ad:
+                # there are delays after a job finishes and before it appears
+                # in the history, take a short break
+                time.sleep(1)
                 # try condor_history for finished jobs
-                condorq_out = subprocess.check_output(
-                    ['condor_history', str(self.job_id), '-limit 1'])
-                job_status = _parse_condorq_state(condorq_out, self.job_id)
-                if job_status == 'unknown':
+                history = list(schedd.history(contraint.replace(
+                    'JobId', 'ClusterId'), ['JobStatus'], 1)
+                )
+                if not history:
                     logger.error('Job status is UNKNOWN!')
-                    raise Exception("job status isn't one of [{0}]: {1}".format(
-                        ','.join(known_statuses), job_status))
+                    raise Exception(
+                        "Could not find job with job id = {0}".format(self.job_id))
+                else:
+                    job_ad = list(history)[0]
+            job_status = known_statuses[job_ad['JobStatus']]
+
             logger.debug('Job status is : {0}'.format(job_status))
-            if job_status == 'X':
+            if job_status == 'Removed':
                 # just about to be completed
                 continue
 
-            if job_status in ['R', '<', '>']:
+            if job_status in ['Running', '<', '>']:
                 logger.info('Job is running')
-            elif job_status == 'H':
+            elif job_status == 'Held':
                 logger.info('Job is on hold - something went wrong.')
-            elif job_status == 'I':
+            elif job_status == 'Idle':
                 logger.info('Job is pending')
-            elif job_status == 'E':
+            elif job_status == 'Error':
                 logger.error(
                     'Job has failed:\n' + '\n'.join(self._fetch_task_failures()))
                 break
-            elif job_status == 'C':
+            elif job_status == 'Completed':
                 logger.info('Job is done')
                 break
