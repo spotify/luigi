@@ -3,12 +3,13 @@
 <!--- Provide a general summary of your changes in the Title above -->
 
 ## Description
-<!--- Describe your changes -->
+Changed URI.js route, modified luigi/contrib/postgres.py, create_marker_table() method adding
+"IF NOT EXISTS" to the sql statements
 
 ## Motivation and Context
-<!--- Why is this change required? What problem does it solve? -->
-<!--- If it fixes an open issue, please link to the issue here. -->
+Luigi does not build properly, referencing issue #2028
+Postgres create a error log for each query trying to create the marker table if it already exists
+
 
 ## Have you tested this? If so, how?
-<!--- Valid responses are "I have included unit tests." or --> 
-<!--- "I ran my jobs with this code and it works for me." -->
+The project has passed the travis tests, luigid is running properly.
