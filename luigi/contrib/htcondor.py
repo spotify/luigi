@@ -68,18 +68,17 @@ The following is an example usage (and can also be found in ``htcondor_test.py``
 """
 
 
-# This extension is modeled after the hadoop.py approach.
+# This extension is modelled after the hadoop.py approach.
 #
 # Implementation notes
 # The procedure:
 # - Pickle the class
-# - Construct a qsub argument that runs a generic runner function with the path to the pickled class
+# - Construct a htcondor job classad that runs a generic runner function with
+#   the path to the pickled class
 # - Runner function loads the class from pickle
 # - Runner function hits the work button on it
 
 import luigi
-import luigi.hadoop
-from luigi import six
 import subprocess
 import os
 import logging
@@ -88,7 +87,7 @@ import pwd
 import pickle
 import sys
 
-from luigi.contrib import sge_runner
+from luigi.contrib import sge_runner, hadoop
 
 logger = logging.getLogger('luigi-interface')
 logger.propagate = 0
@@ -200,7 +199,7 @@ class HTCondorJobTask(luigi.Task):
             # Grab luigi and the module containing the code to be run
             packages = [luigi] + \
                 [__import__(self.__module__, None, None, 'dummy')]
-            luigi.hadoop.create_packages_archive(
+            hadoop.create_packages_archive(
                 packages, os.path.join(self.tmp_dir, "packages.tar"))
 
     def run(self):
