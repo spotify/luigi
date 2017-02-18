@@ -76,8 +76,6 @@ class KubernetesJobTask(luigi.Task):
             raise ValueError("Illegal auth_method")
         self.job_uuid = str(uuid.uuid4().hex)
         self.uu_name = self.name + "-luigi-" + self.job_uuid
-        if ("restartPolicy" not in self.spec_schema):
-            self.spec_schema["restartPolicy"] = "Never"
 
     @property
     def auth_method(self):
@@ -207,8 +205,7 @@ class KubernetesJobTask(luigi.Task):
 
     def run(self):
         self._init_kubernetes()
-        # Submit the Job
-        self.__logger.info("Submitting Kubernetes Job: " + self.uu_name)
+        # Render job
         job_json = {
             "apiVersion": "batch/v1",
             "kind": "Job",
@@ -228,7 +225,13 @@ class KubernetesJobTask(luigi.Task):
                 }
             }
         }
+        # Update user labels
         job_json['metadata']['labels'].update(self.labels)
+        # Add default restartPolicy if not specified
+        if ("restartPolicy" not in self.spec_schema):
+            job_json["spec"]["template"]["spec"]["restartPolicy"] = "Never"
+        # Submit job
+        self.__logger.info("Submitting Kubernetes Job: " + self.uu_name)
         job = Job(self.__kube_api, job_json)
         job.create()
         # Track the Job (wait while active)
