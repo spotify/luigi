@@ -20,7 +20,8 @@ Integration test for the Luigi wrapper of EC2 Container Service (ECSTask)
 
 Requires:
 
-- boto3 package
+- LUIGI_ECS_TEST environment variable must be set (i.e. you need to opt-in to
+this test, to prevent accidental changes to your AWS account)
 - Amazon AWS credentials discoverable by boto3 (e.g., by using ``aws configure``
 from awscli_)
 - A running ECS cluster (see `ECS Get Started`_)
@@ -31,16 +32,18 @@ Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 .. _`ECS Get Started`: http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_GetStarted.html
 """
 
+import os
 import unittest
 
 import luigi
-from luigi.contrib.ecs import ECSTask, _get_task_statuses
 
-try:
+if 'LUIGI_ECS_TEST' not in os.environ:
+    raise unittest.SkipTest('ecs_test.py will only run if LUIGI_ECS_TEST environment variable is set')
+else:
+    from luigi.contrib.ecs import ECSTask, _get_task_statuses
+
     import boto3
     client = boto3.client('ecs')
-except ImportError:
-    raise unittest.SkipTest('boto3 is not installed. ECSTasks require boto3')
 
 TEST_TASK_DEF = {
     'family': 'hello-world',
