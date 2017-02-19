@@ -184,7 +184,7 @@ class QuerySalesforce(Task):
                 if len(result_ids) == 1:
                     data = sf.get_batch_result(job_id, batch_id, result_ids[0])
                     with open(self.output().path,
-                              format=luigi.format.get_default_format()) as outfile:
+                              luigi.format.get_default_format()) as outfile:
                         outfile.write(data)
                 else:
                     # Download each file to disk, and then merge into one.
@@ -192,7 +192,7 @@ class QuerySalesforce(Task):
                     for i, result_id in enumerate(result_ids):
                         logger.info("Downloading batch result %s for batch: %s and job: %s" % (result_id, batch_id, job_id))
                         with open("%s.%d" % (self.output().path, i),
-                                  format=luigi.format.get_default_format()) as outfile:
+                                  luigi.format.get_default_format()) as outfile:
                             outfile.write(sf.get_batch_result(job_id, batch_id, result_id))
 
                     logger.info("Merging results of batch %s" % batch_id)
@@ -207,7 +207,7 @@ class QuerySalesforce(Task):
 
             reader = csv.reader(data_file)
             with open(self.output().path,
-                      format=luigi.format.get_default_format()) as outfile:
+                      luigi.format.get_default_format()) as outfile:
                 writer = csv.writer(outfile, dialect='excel')
                 for row in reader:
                     writer.writerow(row)
@@ -217,7 +217,7 @@ class QuerySalesforce(Task):
         Merges the resulting files of a multi-result batch bulk query.
         """
         outfile = open(self.output().path,
-                  format=luigi.format.get_default_format())
+                       luigi.format.get_default_format())
 
         if self.content_type.lower() == 'csv':
             for i, result_id in enumerate(result_ids):
