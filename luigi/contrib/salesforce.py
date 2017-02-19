@@ -183,14 +183,16 @@ class QuerySalesforce(Task):
                 # If there's only one result, just download it, otherwise we need to merge the resulting downloads
                 if len(result_ids) == 1:
                     data = sf.get_batch_result(job_id, batch_id, result_ids[0])
-                    with open(self.output().path, format=self.output().format) as outfile:
+                    with open(self.output().path,
+                              format=luigi.format.get_default_format()) as outfile:
                         outfile.write(data)
                 else:
                     # Download each file to disk, and then merge into one.
                     # Preferring to do it this way so as to minimize memory consumption.
                     for i, result_id in enumerate(result_ids):
                         logger.info("Downloading batch result %s for batch: %s and job: %s" % (result_id, batch_id, job_id))
-                        with open("%s.%d" % (self.output().path, i), format=self.output().format) as outfile:
+                        with open("%s.%d" % (self.output().path, i),
+                                  format=luigi.format.get_default_format()) as outfile:
                             outfile.write(sf.get_batch_result(job_id, batch_id, result_id))
 
                     logger.info("Merging results of batch %s" % batch_id)
@@ -204,7 +206,8 @@ class QuerySalesforce(Task):
             data_file = sf.query_all(self.soql)
 
             reader = csv.reader(data_file)
-            with open(self.output().path, format=self.output().format) as outfile:
+            with open(self.output().path,
+                      format=luigi.format.get_default_format()) as outfile:
                 writer = csv.writer(outfile, dialect='excel')
                 for row in reader:
                     writer.writerow(row)
@@ -213,7 +216,8 @@ class QuerySalesforce(Task):
         """
         Merges the resulting files of a multi-result batch bulk query.
         """
-        outfile = open(self.output().path, format=self.output().format)
+        outfile = open(self.output().path,
+                  format=luigi.format.get_default_format())
 
         if self.content_type.lower() == 'csv':
             for i, result_id in enumerate(result_ids):
