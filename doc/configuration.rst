@@ -383,7 +383,7 @@ release
 
 
 [kubernetes]
--------
+------------
 
 Parameters controlling Kubernetes Job Tasks
 
