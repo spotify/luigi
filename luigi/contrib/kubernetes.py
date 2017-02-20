@@ -126,7 +126,8 @@ class KubernetesJobTask(luigi.Task):
     @property
     def spec_schema(self):
         """
-        Kubernetes Job spec schema in JSON format, example::
+        Kubernetes Job spec schema in JSON format, an example follows.
+
         .. code-block:: javascript
 
             {
