@@ -239,8 +239,13 @@ class KubernetesJobTask(luigi.Task):
         self.__track_job()
 
     def output(self):
-        """An output target is necessary for checking job completion unless
-        alternative complete method is defined.
-         example::
-        ``return luigi.LocalTarget(os.path.join('/tmp', 'example'))``"""
+        """
+        An output target is necessary for checking job completion unless
+        an alternative complete method is defined.
+
+        Example::
+
+            return luigi.LocalTarget(os.path.join('/tmp', 'example'))
+
+        """
         pass
