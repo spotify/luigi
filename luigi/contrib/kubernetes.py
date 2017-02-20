@@ -142,7 +142,6 @@ class KubernetesJobTask(luigi.Task):
         **restartPolicy**
 
         - If restartPolicy is not defined, it will be set to "Never" by default.
-
         - **Warning**: restartPolicy=OnFailure will bypass max_retrials, and restart
         the container until success, with the risk of blocking the Luigi task.
 
