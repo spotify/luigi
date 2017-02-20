@@ -43,7 +43,7 @@ try:
     from pykube.http import HTTPClient
     from pykube.objects import Job
 except ImportError:
-    logger.warning('pykube is not installed. This test requires pykube.')
+    raise unittest.SkipTest('pykube is not installed. This test requires pykube.')
 
 
 class SuccessJob(KubernetesJobTask):
