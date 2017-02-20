@@ -213,7 +213,7 @@ class QuerySalesforce(Task):
         """
         Merges the resulting files of a multi-result batch bulk query.
         """
-        outfile = open(self.output().path, 'wb')
+        outfile = open(self.output().path, 'w')
 
         if self.content_type.lower() == 'csv':
             for i, result_id in enumerate(result_ids):
