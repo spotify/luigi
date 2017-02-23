@@ -149,8 +149,10 @@ class HTCondorJobTask(luigi.Task):
         description="run locally instead of on the cluster")
     poll_time = luigi.IntParameter(
         significant=False, default=10,
-        description="specify time between queries to condor scheduler for the"
-                    " job status")
+        description=(
+            "specify time between queries to condor scheduler for the job "
+            "status")
+        )
     dont_remove_tmp_dir = luigi.BoolParameter(
         significant=False,
         description="don't delete the temporary directory (for debugging)")
@@ -169,6 +171,16 @@ class HTCondorJobTask(luigi.Task):
         default='',
         significant=False,
         description="shell script to be run after the payload"
+    )
+    additional_hooks = luigi.DictParameter(
+        default={},
+        significant=False,
+        description=(
+            "Additional htcondor hooks to be used for job submission "
+            "(expert-only - read the htcondor documentation).\n"
+            "Example: "
+            "--additional_hooks '{\"+AccountingGroup\": \"group_physics\"}'"
+        )
     )
 
     def __init__(self, *args, **kwargs):
@@ -277,6 +289,7 @@ class HTCondorJobTask(luigi.Task):
             'request_cpus': self.n_cpu,
             'MemoryUsage': self.memory,
         }
+        job_params.update(self.additional_hooks)
         # build job description (mostly for debugging)
         job_desc = _build_job_description(job_params)
         logger.debug('Submitting htcondor job description: \n' + str(job_desc))
