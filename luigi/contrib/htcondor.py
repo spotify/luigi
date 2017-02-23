@@ -23,20 +23,23 @@ import time
 """HTCondor batch system Tasks.
 
 Adapted by Luke Kreczko (@kreczko) from
-`SGE extension <https://github.com/spotify/luigi/blob/master/luigi/contrib/sge.py>`_
+`SGE extension
+<https://github.com/spotify/luigi/blob/master/luigi/contrib/sge.py>`_
 by Jake Feala (@jfeala)
 
-HTCondor (http://research.cs.wisc.edu/htcondor/) is a job scheduler used to allocate compute resources on a
-shared cluster. Jobs are submitted and monitored using the HTCondor python bindings.
+HTCondor (http://research.cs.wisc.edu/htcondor/) is a job scheduler used to
+allocate compute resources on a shared cluster.
+Jobs are submitted and monitored using the HTCondor python bindings.
 To get started, install luigi on all nodes.
 
 To run luigi workflows on an HTCondor cluster, subclass
-:class:`luigi.contrib.htcondor.HTCondorJobTask` as you would any :class:`luigi.Task`,
-but override the ``work()`` method, instead of ``run()``, to define the job
-code. Then, run your Luigi workflow from the master node, assigning > 1
-``workers`` in order to distribute the tasks in parallel across the cluster.
+:class:`luigi.contrib.htcondor.HTCondorJobTask` as you would any
+:class:`luigi.Task`, but override the ``work()`` method, instead of ``run()``,
+to define the job code. Then, run your Luigi workflow from the master node,
+assigning > 1 ``workers`` in order to distribute the tasks in parallel across
+the cluster.
 
-The following is an example usage (and can also be found in ``htcondor_test.py``)
+The following is an example usage (and can also be found in `htcondor_test.py`)
 
 .. code-block:: python
 
@@ -58,7 +61,8 @@ The following is an example usage (and can also be found in ``htcondor_test.py``
                 f.write('this is a test')
 
         def output(self):
-            return luigi.LocalTarget(os.path.join('/tmp', 'testfile_' + str(self.i)))
+            return luigi.LocalTarget(
+                os.path.join('/tmp', 'testfile_' + str(self.i)))
 
 
     if __name__ == '__main__':
@@ -145,15 +149,17 @@ class HTCondorJobTask(luigi.Task):
         description="run locally instead of on the cluster")
     poll_time = luigi.IntParameter(
         significant=False, default=10,
-        description="specify the wait time to poll condor_q for the job status")
+        description="specify time between queries to condor scheduler for the"
+                    " job status")
     dont_remove_tmp_dir = luigi.BoolParameter(
         significant=False,
-        description="don't delete the temporary directory used (for debugging)")
+        description="don't delete the temporary directory (for debugging)")
     no_tarball = luigi.BoolParameter(
         significant=False,
         description="don't tarball (and extract) the luigi project files")
     base_tmp_dir = luigi.Parameter(
-        default='/tmp', significant=False, description="base location for the temporary job logs")
+        default='/tmp', significant=False,
+        description="base location for the temporary job logs")
     pre_script = luigi.Parameter(
         default='',
         significant=False,
@@ -192,7 +198,8 @@ class HTCondorJobTask(luigi.Task):
         self._dump(self.tmp_dir)
 
         if not self.no_tarball:
-            # Make sure that all the class's dependencies are tarred and available
+            # Make sure that all the class's dependencies are tarred and
+            # available
             # This is not necessary if luigi is importable from the cluster
             # node
             logging.debug("Tarballing dependencies")
@@ -211,13 +218,16 @@ class HTCondorJobTask(luigi.Task):
             # The procedure:
             # - Pickle the class
             # - Tarball the dependencies
-            # - Construct a condor_submit argument that runs a generic runner function with the path to the pickled class
+            # - Construct a condor_submit argument that runs a generic runner
+            #   function with the path to the pickled class
             # - Runner function loads the class from pickle
             # - Runner class untars the dependencies
             # - Runner function hits the button on the class's work() method
 
     def work(self):
-        """Override this method, rather than ``run()``,  for your actual work."""
+        """
+            Override this method, rather than ``run()``, for your actual work.
+        """
         pass
 
     def _dump(self, out_dir=''):
@@ -282,7 +292,7 @@ class HTCondorJobTask(luigi.Task):
 
         # Now delete the temporaries, if they're there.
         # unless transfer_output files is on.
-        if (self.tmp_dir and os.path.exists(self.tmp_dir) and not self.dont_remove_tmp_dir):
+        if os.path.exists(self.tmp_dir) and not self.dont_remove_tmp_dir:
             logger.info('Removing temporary directory %s' % self.tmp_dir)
             subprocess.call(["rm", "-rf", self.tmp_dir])
 
@@ -319,8 +329,10 @@ class HTCondorJobTask(luigi.Task):
                 )
                 if not history:
                     logger.error('Job status is UNKNOWN!')
-                    raise Exception(
-                        "Could not find job with job id = {0}".format(self.job_id))
+                    msg = "Could not find job with job id = {0}".format(
+                        self.job_id
+                    )
+                    raise Exception(msg)
                 else:
                     job_ad = list(history)[0]
             job_status = known_statuses[job_ad['JobStatus']]
@@ -337,8 +349,8 @@ class HTCondorJobTask(luigi.Task):
             elif job_status == 'Idle':
                 logger.info('Job is pending')
             elif job_status == 'Error':
-                logger.error(
-                    'Job has failed:\n' + '\n'.join(self._fetch_task_failures()))
+                task_failures = '\n'.join(self._fetch_task_failures())
+                logger.error('Job has failed:\n' + task_failures)
                 break
             elif job_status == 'Completed':
                 logger.info('Job is done')

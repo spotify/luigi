@@ -20,14 +20,13 @@ import os
 from glob import glob
 import unittest
 import logging
-from mock import patch
-
 import luigi
 from luigi.contrib.htcondor import HTCondorJobTask
 
 OUTPUT_DIR = '/tmp'
 
 logger = logging.getLogger('luigi-interface')
+
 
 def on_sge_master():
     try:
