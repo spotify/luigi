@@ -477,6 +477,29 @@ release
   "cdh4".
 
 
+[kubernetes]
+------------
+
+Parameters controlling Kubernetes Job Tasks
+
+auth_method
+  Authorization method to access the cluster.
+  Options are "kubeconfig_" or "service-account_"
+
+kubeconfig_path
+  Path to kubeconfig file, for cluster authentication.
+  It defaults to ``~/.kube/config``, which is the default location when
+  using minikube_.
+  When auth_method is "service-account" this property is ignored.
+
+max_retrials
+  Maximum number of retrials in case of job failure.
+
+.. _service-account: http://kubernetes.io/docs/user-guide/kubeconfig-file
+.. _kubeconfig: http://kubernetes.io/docs/user-guide/service-accounts
+.. _minikube: http://kubernetes.io/docs/getting-started-guides/minikube
+
+
 [mysql]
 -------
 

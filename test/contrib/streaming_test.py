@@ -19,6 +19,21 @@ class MockStreamingJob(JobTask):
         return rv
 
 
+class MockStreamingJobWithExtraArguments(JobTask):
+    package_binary = Parameter(default=None)
+
+    def extra_streaming_arguments(self):
+        return [('myargument', '/path/to/coolvalue')]
+
+    def extra_archives(self):
+        return ['/path/to/myarchive.zip', '/path/to/other_archive.zip']
+
+    def output(self):
+        rv = mock.MagicMock(HdfsTarget)
+        rv.path = 'test_path'
+        return rv
+
+
 class StreamingRunTest(unittest.TestCase):
 
     @mock.patch('luigi.contrib.hadoop.shutil')
@@ -52,3 +67,17 @@ class StreamingRunTest(unittest.TestCase):
         mr_args_pairs = zip(mr_args, mr_args[1:])
         self.assertIn(('-mapper', 'python mrrunner.py map'), mr_args_pairs)
         self.assertIn(('-file', mrrunner.__file__.rstrip('c')), mr_args_pairs)
+
+    @mock.patch('luigi.contrib.hadoop.create_packages_archive')
+    @mock.patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
+    def test_run_with_extra_arguments(self, rath_job, cpa):
+        job_runner = HadoopJobRunner('jar_path', end_job_with_atomic_move_dir=False)
+        job_runner.run_job(MockStreamingJobWithExtraArguments())
+
+        self.assertEqual(1, cpa.call_count)
+
+        self.assertEqual(1, rath_job.call_count)
+        mr_args = rath_job.call_args[0][0]
+        mr_args_pairs = list(zip(mr_args, mr_args[1:]))
+        self.assertIn(('-myargument', '/path/to/coolvalue'), mr_args_pairs)
+        self.assertIn(('-archives', '/path/to/myarchive.zip,/path/to/other_archive.zip'), mr_args_pairs)
