@@ -22,7 +22,7 @@ function visualiserApp(luigi) {
     /*
      * Updates view of the Visualization type.
      */
-    function updateVisType (newVisType) {
+    function updateVisType(newVisType) {
         $('#toggleVisButtons label').removeClass('active');
         $('#toggleVisButtons input[value="' + newVisType + '"]').parent().addClass('active');
     }
