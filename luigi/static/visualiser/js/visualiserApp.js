@@ -504,9 +504,6 @@ function visualiserApp(luigi) {
 
         $('input[name=vis-type]').on('change', function () {
             changeState('visType', $(this).val());
-
-            initVisualisation(visType);
-            updateVisType(fragmentQuery.visType);
         });
 
         /*
