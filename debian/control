@@ -1,7 +1,7 @@
 Source: luigi
 Section: libs
 Priority: extra
-Maintainer: Elias Freider <freider@spotify.com>
+Maintainer: The Luigi Authors <luigi-user@googlegroups.com>
 Build-Depends:	debhelper (>= 7),
 		python-all (>= 2.7),
 		python-psycopg2,

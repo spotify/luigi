@@ -1328,6 +1328,7 @@ class Scheduler(object):
                 started=worker.started,
                 state=worker.state,
                 first_task_display_name=self._first_task_display_name(worker),
+                num_unread_rpc_messages=len(worker.rpc_messages),
                 **worker.info
             ) for worker in self._state.get_active_workers()]
         workers.sort(key=lambda worker: worker['started'], reverse=True)

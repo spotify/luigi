@@ -713,7 +713,7 @@ class TaskParameter(Parameter):
     When used programatically, the parameter should be specified
     directly with the :py:class:`luigi.task.Task` (sub) class. Like
     ``MyMetaTask(my_task_param=my_tasks.MyTask)``. On the command line,
-    you specify the :py:attr:`luigi.task.Task.task_family`. Like
+    you specify the :py:meth:`luigi.task.Task.get_task_family`. Like
 
     .. code-block:: console
 
@@ -735,7 +735,7 @@ class TaskParameter(Parameter):
         """
         Converts the :py:class:`luigi.task.Task` (sub) class to its family name.
         """
-        return cls.task_family
+        return cls.get_task_family()
 
 
 class EnumParameter(Parameter):

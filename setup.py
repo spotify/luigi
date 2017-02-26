@@ -50,10 +50,10 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 
 setup(
     name='luigi',
-    version='2.5.0',
+    version='2.6.0',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
-    author='Erik Bernhardsson',
+    author='The Luigi Authors',
     url='https://github.com/spotify/luigi',
     license='Apache License 2.0',
     packages=[

@@ -485,8 +485,17 @@ class HadoopJobRunner(JobRunner):
             arglist += ['-libjars', ','.join(libjars)]
 
         # 'archives' is also a generic option
+        archives = []
+        extra_archives = job.extra_archives()
+
         if self.archives:
-            arglist += ['-archives', ','.join(self.archives)]
+            archives = self.archives
+
+        if extra_archives:
+            archives += extra_archives
+
+        if archives:
+            arglist += ['-archives', ','.join(archives)]
 
         # Add static files and directories
         extra_files = get_extra_files(job.extra_files())
@@ -511,7 +520,15 @@ class HadoopJobRunner(JobRunner):
 
         arglist += self.streaming_args
 
+        # Add additonal non-generic  per-job streaming args
+        extra_streaming_args = job.extra_streaming_arguments()
+        for (arg, value) in extra_streaming_args:
+            if not arg.startswith('-'):  # safety first
+                arg = '-' + arg
+            arglist += [arg, value]
+
         arglist += ['-mapper', map_cmd]
+
         if job.combiner != NotImplemented:
             arglist += ['-combiner', cmb_cmd]
         if job.reducer != NotImplemented:
@@ -911,6 +928,17 @@ class JobTask(BaseHadoopJobTask):
 
         Uses Hadoop's -files option so that the same file is reused across tasks.
         """
+        return []
+
+    def extra_streaming_arguments(self):
+        """
+        Extra arguments to Hadoop command line.
+        Return here a list of (parameter, value) tuples.
+        """
+        return []
+
+    def extra_archives(self):
+        """List of paths to archives """
         return []
 
     def add_link(self, src, dst):

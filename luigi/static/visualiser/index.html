@@ -21,10 +21,9 @@
         <script src="lib/jquery.slimscroll.min.js"></script>
         <script src="lib/AdminLTE/js/app.min.js"></script>
         <script src="lib/datatables/js/jquery.dataTables.min.js"></script>
-        <script src="lib/URI.js/1.18.2/URI.js"></script>
+        <script src="lib/URI/1.18.2/URI.js"></script>
 
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 
         <style>
         .nodeCircle {
@@ -229,6 +228,13 @@
             margin-left: 4px;
           }
 
+          #workerList .box-tools > span.label-unread-worker-messages {
+            margin-right: 6px;
+            vertical-align: middle;
+            font-style: italic;
+            color: red;
+          }
+
         </style>
 
         <script type="text/template" name="actionsTemplate">
@@ -326,6 +332,9 @@
                 <div class="box-header with-border">
                     <h3 class="box-title">{{name}}</h3>
                     <div class="box-tools pull-right">
+                      {{#num_unread_rpc_messages}}
+                      <span class="label-unread-worker-messages">{{num_unread_rpc_messages}} unread message(s)</span>
+                      {{/num_unread_rpc_messages}}
                       {{^is_disabled}}
                       <div class="btn-group">
                         <button type="button" class="btn btn-sm btn-default dropdown-toggle btn-set-workers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
