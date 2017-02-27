@@ -128,6 +128,9 @@ class ECSTask(luigi.Task):
                 ]
             }
 
+    :param cluster: str defining the ECS cluster to use.
+        When this is not defined it will use the default one.
+
     """
 
     task_def_arn = luigi.Parameter(default=None)
