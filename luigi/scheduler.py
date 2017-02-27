@@ -147,6 +147,8 @@ class scheduler(Config):
 
     prune_on_get_work = parameter.BoolParameter(default=False)
 
+    metrics_collection = parameter.Parameter(default=None)
+
     def _get_retry_policy(self):
         return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
 
@@ -354,7 +356,7 @@ class Worker(object):
         self.disabled = False
         self.rpc_messages = []
 
-    def add_info(self, info):
+    def update_info(self, info):
         self.info.update(info)
 
     def update(self, worker_reference, get_work=False):
@@ -431,6 +433,7 @@ class SimpleTaskState(object):
         self._status_tasks = collections.defaultdict(dict)
         self._active_workers = {}  # map from id to a Worker object
         self._task_batchers = {}
+        self._metrics_collector = None
 
     def get_state(self):
         return self._tasks, self._active_workers, self._task_batchers
@@ -495,8 +498,11 @@ class SimpleTaskState(object):
 
     def get_task(self, task_id, default=None, setdefault=None):
         if setdefault:
+            new_task = task_id not in self._tasks
             task = self._tasks.setdefault(task_id, setdefault)
             self._status_tasks[task.status][task.id] = task
+            if new_task:
+                self._update_metrics_task_status_change(task, task.status)
             return task
         else:
             return self._tasks.get(task_id, default)
@@ -563,6 +569,7 @@ class SimpleTaskState(object):
             self._status_tasks[new_status][task.id] = task
             task.status = new_status
             task.updated = time.time()
+            self._update_metrics_task_status_change(task, new_status)
 
         if new_status == FAILED:
             task.retry = time.time() + config.retry_delay
@@ -621,17 +628,31 @@ class SimpleTaskState(object):
     def get_assistants(self, last_active_lt=None):
         return filter(lambda w: w.assistant, self.get_active_workers(last_active_lt))
 
+    def update_worker_info(self, worker_id, new_info):
+        worker = self.get_worker(worker_id)
+        old_info_empty = worker.info == {}
+
+        worker.update_info(new_info)
+
+        if old_info_empty:
+            logger.debug('setting info for first time')
+            self._update_metrics_worker_status_change(worker, 'connected')
+
     def get_worker_ids(self):
         return self._active_workers.keys()  # only used for unit tests
 
     def get_worker(self, worker_id):
         return self._active_workers.setdefault(worker_id, Worker(worker_id))
 
-    def inactivate_workers(self, delete_workers):
+    def remove_worker(self, worker_id):
+        self.inactivate_workers([worker_id], reason='disconnected')
+
+    def inactivate_workers(self, worker_ids, reason='failed'):
         # Mark workers as inactive
-        for worker in delete_workers:
-            self._active_workers.pop(worker)
-        self._remove_workers_from_tasks(delete_workers)
+        for worker_id in worker_ids:
+            worker = self._active_workers.pop(worker_id)
+            self._update_metrics_worker_status_change(worker, reason)
+        self._remove_workers_from_tasks(worker_ids)
 
     def _remove_workers_from_tasks(self, workers, remove_stakeholders=True):
         for task in self.get_active_tasks():
@@ -642,7 +663,16 @@ class SimpleTaskState(object):
     def disable_workers(self, worker_ids):
         self._remove_workers_from_tasks(worker_ids, remove_stakeholders=False)
         for worker_id in worker_ids:
-            self.get_worker(worker_id).disabled = True
+            worker = self.get_worker(worker_id)
+            worker.disabled = True
+            self._update_metrics_worker_status_change(worker, 'disabled')
+
+    def _update_metrics_task_status_change(self, task, status):
+        if status != UNKNOWN:
+            self._metrics_collector.handle_task_status_change(task, status)
+
+    def _update_metrics_worker_status_change(self, worker, status):
+        self._metrics_collector.handle_worker_status_change(worker, status)
 
 
 class Scheduler(object):
@@ -675,6 +705,14 @@ class Scheduler(object):
 
         if self._config.batch_emails:
             self._email_batcher = BatchNotifier()
+
+        if self._config.metrics_collection == 'prometheus':
+            import luigi.contrib.prometheus as prometheus
+            self._state._metrics_collector = prometheus.PrometheusMetricsCollector(self)
+        else:
+            from luigi.metrics import MetricsCollector
+            self._state._metrics_collector = MetricsCollector(self)
+
 
     def load(self):
         self._state.load()
@@ -881,11 +919,15 @@ class Scheduler(object):
 
     @rpc_method()
     def add_worker(self, worker, info, **kwargs):
-        self._state.get_worker(worker).add_info(info)
+        self._state.update_worker_info(worker, info)
 
     @rpc_method()
     def disable_worker(self, worker):
         self._state.disable_workers({worker})
+
+    @rpc_method()
+    def remove_worker(self, worker_id):
+        self._state.remove_worker(worker_id)
 
     @rpc_method()
     def set_worker_processes(self, worker, n):
