@@ -135,7 +135,7 @@ class ECSTask(luigi.Task):
 
     task_def_arn = luigi.Parameter(default=None)
     task_def = luigi.Parameter(default=None)
-    cluster = luigi.Parameter(default=None)
+    cluster = luigi.Parameter(default='default')
 
     @property
     def ecs_task_ids(self):
