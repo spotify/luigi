@@ -54,7 +54,7 @@ class DockerTask(luigi.Task):
 
     @property
     def name(self):
-        return "luigi-test"
+        return None
 
     @property
     def container_options(self):
