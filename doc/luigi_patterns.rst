@@ -206,9 +206,13 @@ available while others are running.
 Avoiding concurrent writes to a single file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you are updating a single file from several tasks, you may need to ensure that
-no two tasks try to do so simultaneously.  By turning 'resources' into a Python
-property, it can return a value dependent on the task parameters or other dynamic attributes:
+Updating a single file from several tasks is almost always a bad idea, and you 
+need to be very confident that no other good solution exists before doing this.
+If, however, you have no other option, then you will probably at least need to ensure that
+no two tasks try to write to the file _simultaneously_.  
+
+By turning 'resources' into a Python property, it can return a value dependent on 
+the task parameters or other dynamic attributes:
 
 .. code-block:: python
 
