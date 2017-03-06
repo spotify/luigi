@@ -363,7 +363,7 @@
                 <div class="box-body">
                     Started: {{start_time}}<br>
                     Last Checkin: {{active}}<br>
-                    Root Task: <a href="#{{{encoded_first_task}}}">{{first_task_display_name}}</a><br>
+                    Root Task: <a href="#tab=graph&taskId={{{encoded_first_task}}}">{{first_task_display_name}}</a><br>
                     Running: {{num_running}}<br>
                     Pending: {{num_pending}}<br>
                     Unique Pending: {{num_uniques}}<br>
@@ -388,9 +388,9 @@
                         <td>{{priority}}</td>
                         <td>{{resources}}</td>
                         <td>{{displayTime}}</td>
-                        <td><a href="#{{encodedTaskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a>
-                            {{#trackingUrl}}<a target="_blank" href="{{trackingUrl}}" class="btn btn-primary btn-xs" title="Track Progress" data-toggle="tooltip"><i class="fa fa-eye"></i></a>{{/trackingUrl}}
-                            {{#statusMessage}}<button class="btn btn-primary btn-xs statusMessage" title="Status message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name="{{displayName}}"><i class="fa fa-comment"></i></button>{{/statusMessage}}
+                        <td><a href="#tab=graph&taskId={{encodedTaskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a>
+                          {{#trackingUrl}}<a target="_blank" href="{{trackingUrl}}" class="btn btn-primary btn-xs" title="Track Progress" data-toggle="tooltip"><i class="fa fa-eye"></i></a>{{/trackingUrl}}
+                          {{#statusMessage}}<button class="btn btn-primary btn-xs statusMessage" title="Status message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name="{{displayName}}"><i class="fa fa-comment"></i></button>{{/statusMessage}}
                         </td>
                       </tr>
                       {{/tasks}}
