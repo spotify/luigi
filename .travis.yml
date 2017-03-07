@@ -42,6 +42,12 @@ matrix:
       env: TOXENV=py35-unixsocket
     - python: 3.5
       env: TOXENV=py35-cdh
+    - python: 3.6
+      env: TOXENV=py36-nonhdfs
+    - python: 3.6
+      env: TOXENV=py36-unixsocket
+    - python: 3.6
+      env: TOXENV=py36-cdh
 
 sudo: false
 
