@@ -57,29 +57,30 @@ class FailJobImageNotFound(DockerTask):
     name = "FailJobImageNotFound"
 
 class FailJobContainer(DockerTask):
-    image = "ubuntu"
+    image = "busybox"
     name = "FailJobContainer"
-    command = ['/bin/cat','not-existing-file']
+    command = 'cat this-file-does-not-exist'
 
 class WriteToTmpDir(DockerTask):
-    image = "ubuntu"
+    image = "busybox"
     name = "WriteToTmpDir"
-    command = ['bash', '-c', '"test -d /tmp/luigi && echo ok >/tmp/luigi/test"']
-class MountLocalFileAsVolume(DockerTask):
+    tmp_dir = '/tmp/luigi-test'
+    command = 'test -d  /tmp/luigi-test'
+    # command = 'test -d $LUIGI_TMP_DIR'# && echo ok >$LUIGI_TMP_DIR/test'
 
-    image = "ubuntu"
+class MountLocalFileAsVolume(DockerTask):
+    image = "busybox"
     name = "MountLocalFileAsVolume"
     # volumes= {'/tmp/local_file_test': {'bind': local_file.name, 'mode': 'rw'}}
     volumes=[local_file.name+':/tmp/local_file_test']
-
-    command = ['/bin/bash -c "test -f /tmp/local_file_test"']
+    command = 'test -f /tmp/local_file_test'
 
 
 
 class TestDockerTask(unittest.TestCase):
 
-    def tearDown(self):
-        local_file.close()
+    # def tearDown(self):
+    #     local_file.close()
 
     def test_success_job(self):
         success = luigi.run(["SuccessJob", "--local-scheduler"])
