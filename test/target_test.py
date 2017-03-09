@@ -347,3 +347,10 @@ class TemporaryPathTest(unittest.TestCase):
 
         with target.temporary_path():
             self.fs.mkdir.assert_called_once_with('/my/dir/is', parents=True, raise_if_exists=False)
+
+    def test_file_in_current_dir(self):
+        target = self.target_cls('foo.txt')
+
+        with target.temporary_path() as tmp_path:
+            self.fs.mkdir.assert_not_called()  # there is no dir to create
+        self.fs.rename_dont_move.assert_called_once_with(tmp_path, target.path)
