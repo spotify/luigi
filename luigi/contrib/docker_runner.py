@@ -113,7 +113,6 @@ class DockerTask(luigi.Task):
         except APIError as e:
             self.__logger.error("Error in Docker API: "+e.explanation )
             raise
-        print 'hi'
 
 
 
