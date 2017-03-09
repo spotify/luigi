@@ -80,6 +80,10 @@ class DockerTask(luigi.Task):
 
     def run(self):
         self.__logger = logger
+        '''
+        using the low level API as the higher level API does not allow to mount single
+        files as volumes
+        '''
         client = docker.APIClient(self.docker_url)
         try:
             container=client.create_container(self.image,

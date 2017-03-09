@@ -57,6 +57,12 @@ class FailJobContainer(DockerTask):
     name = "failcontainer"
     command = ['/bin/ash','-c', '"exit 1"']
 
+class VolumeJobContainer(DockerTask):
+    image = "alpine"
+    container_options = {
+        'volumes': {'/tmp/unixversion.txt': {'bind': '/etc/os-release', 'mode': 'rw'}}
+    }
+
 
 
 class TestDockerTask(unittest.TestCase):
@@ -72,3 +78,7 @@ class TestDockerTask(unittest.TestCase):
     def test_fail_job_container(self):
         fail = FailJobContainer()
         self.assertRaises(ContainerError, fail.run)
+    
+    def test_volume_job_container(self):
+        success = VolumeJobContainer()
+        self.assertTrue(success)
