@@ -40,6 +40,7 @@ try:
 
 except ImportError:
     logger.warning('docker is not installed. DockerTask requires docker.')
+    docker = None
 
 
 class DockerTask(luigi.Task):
@@ -69,7 +70,7 @@ class DockerTask(luigi.Task):
         return ''
 
     @property
-    def docker_api_addr(self):
+    def docker_url(self):
         return None
 
     @property
@@ -79,7 +80,7 @@ class DockerTask(luigi.Task):
 
     def run(self):
         self.__logger = logger
-        client = docker.APIClient(self.docker_api_addr)
+        client = docker.APIClient(self.docker_url)
         try:
             container=client.create_container(self.image,
                                   command=self.command,
