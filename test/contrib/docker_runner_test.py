@@ -26,10 +26,10 @@ Requires:
 
 Written and maintained by Andrea Pierleoni (@apierleoni).
 """
-
-
-
+import tempfile
 import unittest
+from tempfile import NamedTemporaryFile
+
 import luigi
 import logging
 from luigi.contrib.docker_runner import DockerTask
@@ -42,26 +42,37 @@ try:
 except ImportError:
     raise unittest.SkipTest('docker is not installed. This test requires docker.')
 
+tempfile.tempdir = '/tmp' #set it explicitely to make it work out of the box in mac os
+local_file = NamedTemporaryFile().name
+print local_file
 
 class SuccessJob(DockerTask):
     image = "alpine"
-    name = "success"
+    name = "SuccessJob"
 
 
 class FailJobImageNotFound(DockerTask):
     image = "image-does-not-exists"
-    name = "failimage"
+    name = "FailJobImageNotFound"
 
 class FailJobContainer(DockerTask):
-    image = "alpine"
-    name = "failcontainer"
-    command = ['/bin/ash','-c', '"exit 1"']
+    image = "yikaus/alpine-bash"
+    name = "FailJobContainer"
+    command = ['/bin/bash','-c','"exit 1"']
 
-class VolumeJobContainer(DockerTask):
-    image = "alpine"
-    container_options = {
-        'volumes': {'/tmp/unixversion.txt': {'bind': '/etc/os-release', 'mode': 'rw'}}
-    }
+class WriteToTmpDir(DockerTask):
+    image = "yikaus/alpine-bash"
+    name = "WriteToTmpDir"
+    command = ['/bin/bash', '-c', '"echo test > $LUIGI_TMP_DIR/test"']
+
+class MountLocalFileAsVolume(DockerTask):
+
+    image = "yikaus/alpine-bash"
+    name = "MountLocalFileAsVolume"
+    # volumes= {'/tmp/local_file_test': {'bind': local_file, 'mode': 'rw'}}
+    volumes=[local_file+':/tmp/local_file_test']
+
+    command = ['/bin/bash', '-c', '"cat /tmp/local_file_test"']
 
 
 
@@ -71,6 +82,16 @@ class TestDockerTask(unittest.TestCase):
         success = luigi.run(["SuccessJob", "--local-scheduler"])
         self.assertTrue(success)
 
+    def test_temp_file_creation(self):
+        writedir = WriteToTmpDir()
+        success = writedir.run()
+        success=True
+        self.assertTrue(success)
+
+    def test_local_file_mount(self):
+        localfile = MountLocalFileAsVolume()
+        success = localfile.run()
+
     def test_fail_job_image_not_found(self):
         fail = FailJobImageNotFound()
         self.assertRaises(ImageNotFound, fail.run)
@@ -78,7 +99,3 @@ class TestDockerTask(unittest.TestCase):
     def test_fail_job_container(self):
         fail = FailJobContainer()
         self.assertRaises(ContainerError, fail.run)
-    
-    def test_volume_job_container(self):
-        success = VolumeJobContainer()
-        self.assertTrue(success)

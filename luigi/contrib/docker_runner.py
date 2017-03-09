@@ -27,10 +27,14 @@ Requires:
 
 Written and maintained by Andrea Pierleoni (@apierleoni).
 """
+import json
+import tempfile
+from tempfile import mkdtemp
 
 import luigi
 import logging
 
+from luigi.local_target import LocalFileSystem
 
 logger = logging.getLogger('luigi-interface')
 
@@ -55,7 +59,7 @@ class DockerTask(luigi.Task):
 
     @property
     def name(self):
-        return None
+        return ''
 
     @property
     def container_options(self):
@@ -77,19 +81,63 @@ class DockerTask(luigi.Task):
     def auto_remove(self):
         return True
 
+    @property
+    def environment(self):
+        return {}
+
+    @property
+    def tmp_dir(self):
+        return '/tmp/luigi'
+
+    @property
+    def force_pull(self):
+        return False
+
 
     def run(self):
         self.__logger = logger
-        '''
+
+        '''init docker client
         using the low level API as the higher level API does not allow to mount single
         files as volumes
         '''
         client = docker.APIClient(self.docker_url)
+
+
+        '''create temp dir'''
+        tempfile.tempdir = '/tmp' #set it explicitely to make it work out of the box in mac os
+        host_tmp_dir =  mkdtemp(suffix=self.name, prefix='luigi-docker-tmp-dir-',)
+        environment = self.environment
+        environment['LUIGI_TMP_DIR'] = self.tmp_dir
+        volumes = self.volumes
+        mounted_volumes = []
+        if isinstance(volumes, list):
+            volumes.append('{0}:{1}'.format(host_tmp_dir, self.tmp_dir))
+            mounted_volumes = [v.split(':')[1] for v in volumes ]
+
+        '''get image if missing'''
+        if self.force_pull or len(client.images(name=self.image)) == 0:
+            logger.info('Pulling docker image ' + self.image)
+            for l in client.pull(self.image, stream=True):
+                logger.info(l.decode('utf-8'))
+
+        '''remove clashing container if needed'''
+        if self.auto_remove and self.name:
+            try:
+                client.remove_container(self.name,
+                                        force=True)
+            except APIError as e:
+                self.__logger.warning("Ignored error in Docker API: " + e.explanation)
+
+
+        '''run the container'''
         try:
             container=client.create_container(self.image,
                                   command=self.command,
-                                  name = self.name,
-                                  host_config=client.create_host_config(binds=self.volumes,
+                                  name=self.name,
+                                  environment=environment,
+                                  volumes = mounted_volumes,
+                                  host_config=client.create_host_config(binds=volumes,
                                                                         network_mode=self.network_mode),
                                   **self.container_options)
             client.start(container['Id'])
@@ -118,6 +166,12 @@ class DockerTask(luigi.Task):
         except APIError as e:
             self.__logger.error("Error in Docker API: "+e.explanation )
             raise
+
+        '''delete temp dir'''
+        fs = LocalFileSystem()
+        if fs.exists(host_tmp_dir):
+            fs.remove(host_tmp_dir, recursive=True)
+
 
 
 
