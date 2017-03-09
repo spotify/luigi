@@ -55,7 +55,7 @@ class FailJobImageNotFound(DockerTask):
 class FailJobContainer(DockerTask):
     image = "alpine"
     name = "failcontainer"
-    command = ['/bin/ash','-c', '" this should fail"']
+    command = ['/bin/ash','-c', '"exit 1"']
 
 
 

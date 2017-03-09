@@ -60,19 +60,48 @@ class DockerTask(luigi.Task):
     def container_options(self):
         return {}
 
+    @property
+    def volumes(self):
+        return []
+
+    @property
+    def network_mode(self):
+        return ''
+
+    @property
+    def docker_api_addr(self):
+        return None
+
+    @property
+    def auto_remove(self):
+        return True
+
 
     def run(self):
         self.__logger = logger
-        client = docker.from_env()
+        client = docker.APIClient(self.docker_api_addr)
         try:
-            client.containers.run(self.image,
+            container=client.create_container(self.image,
                                   command=self.command,
                                   name = self.name,
-                                  stdout=True,
-                                  stderr=False,
-                                  remove=True,
+                                  host_config=client.create_host_config(binds=self.volumes,
+                                                                        network_mode=self.network_mode),
                                   **self.container_options)
+            client.start(container['Id'])
+
+            exit_status = client.wait(container['Id'])
+            if exit_status != 0:
+                stdout = False
+                stderr = True
+                error = client.logs(container['Id'],stdout=stdout, stderr=stderr)
+            if self.auto_remove:
+                client.remove_container(container['Id'])
+            if exit_status != 0:
+                raise ContainerError(container, exit_status, self.command, self.image, error)
+
+
         except ContainerError as e:
+            '''catch non zero exti status and return it'''
             container_name = ''
             if self.name:
                 container_name = self.name
@@ -84,6 +113,8 @@ class DockerTask(luigi.Task):
         except APIError as e:
             self.__logger.error("Error in Docker API: "+e.explanation )
             raise
+        print 'hi'
+
 
 
 
