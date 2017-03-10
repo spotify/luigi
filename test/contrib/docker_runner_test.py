@@ -40,7 +40,7 @@ try:
     import docker
     from docker.errors import ContainerError, ImageNotFound
 except ImportError:
-    raise unittest.SkipTest('docker is not installed. This test requires docker.')
+    raise unittest.SkipTest('Unable to load docker module')
 
 tempfile.tempdir = '/tmp' #set it explicitely to make it work out of the box in mac os
 local_file = NamedTemporaryFile()
@@ -48,7 +48,7 @@ local_file.write('this is a test file\n')
 local_file.flush()
 
 class SuccessJob(DockerTask):
-    image = "alpine"
+    image = "busybox"
     name = "SuccessJob"
 
 
