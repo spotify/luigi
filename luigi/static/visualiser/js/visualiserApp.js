@@ -1038,8 +1038,10 @@ function visualiserApp(luigi) {
             luigi.disableWorker(worker);
 
             // show the worker as disabled in the visualiser
-            triggerButton.parents('.box').addClass('box-solid box-default');
-            triggerButton.remove();
+            var box = triggerButton.parents('.box').addClass('box-solid box-default');
+
+            // remove the worker tools
+            box.find('.box-tools').remove();
         });
 
         $('#workerList').on('click', '#btn-increment-workers', function($event) {
