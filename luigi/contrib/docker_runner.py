@@ -119,7 +119,7 @@ class DockerTask(luigi.Task):
         if self.force_pull or len(client.images(name=self.image)) == 0:
             logger.info('Pulling docker image ' + self.image)
             for l in client.pull(self.image, stream=True):
-                logger.info(l.decode('utf-8'))
+                logger.debug(l.decode('utf-8'))
 
         '''remove clashing container if needed'''
         if self.auto_remove and self.name:
