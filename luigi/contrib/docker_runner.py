@@ -158,7 +158,11 @@ class DockerTask(luigi.Task):
             container_name = ''
             if self.name:
                 container_name = self.name
-            self.__logger.error("Container" + container_name + " exited with non zero code: "+ e.message)
+            try:
+                message = e.message
+            except:
+                message = str(e)
+            self.__logger.error("Container" + container_name + " exited with non zero code: "+ message)
             raise
         except ImageNotFound as e:
             self.__logger.error("Image" + self.image + " not found")
