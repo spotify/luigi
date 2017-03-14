@@ -322,7 +322,7 @@
                 </div>
               </div>
             </div>
-            {{#workers}}
+            {{#workerList}}
             {{#is_disabled}}
             <div class="box box-solid box-default">
             {{/is_disabled}}
@@ -336,6 +336,7 @@
                       <span class="label-unread-worker-messages">{{num_unread_rpc_messages}} unread message(s)</span>
                       {{/num_unread_rpc_messages}}
                       {{^is_disabled}}
+                      {{#workers}}
                       <div class="btn-group">
                         <button type="button" class="btn btn-sm btn-default dropdown-toggle btn-set-workers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                           Workers: <span id="label-n-workers" data-worker="{{name}}">{{workers}}</span> <span class="caret"></span>
@@ -352,6 +353,7 @@
                           </a></li>
                         </ul>
                       </div>
+                      {{/workers}}
                       <div class="button-tooltip" data-toggle="tooltip" title="Disable Worker">
                         <button type="button" class="btn btn-sm btn-danger btn-disable-worker" data-toggle="modal" data-target="#disableWorkerModal" data-worker="{{name}}">
                           <i class="fa fa-fire-extinguisher"></i>
@@ -399,7 +401,7 @@
                     </table>
                 </div>
             </div>
-            {{/workers}}
+            {{/workerList}}
         </script>
 
         <script type="text/template" name="resourceTemplate">

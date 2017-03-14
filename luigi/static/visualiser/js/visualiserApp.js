@@ -229,7 +229,7 @@ function visualiserApp(luigi) {
     }
 
     function renderWorkers(workers) {
-        return renderTemplate("workerTemplate", {"workers": workers.map(processWorker)});
+        return renderTemplate("workerTemplate", {"workerList": workers.map(processWorker)});
     }
 
     function processResource(resource) {
