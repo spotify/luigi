@@ -18,17 +18,21 @@
 
 from helpers import unittest
 
-try:
-    import pymongo
-except ImportError:
-    raise unittest.SkipTest('Unable to load pymongo module')
-
 from luigi.contrib.mongodb import MongoCellTarget, MongoRangeTarget
 
 HOST = 'localhost'
 PORT = 27017
 INDEX = 'luigi_test'
 COLLECTION = 'luigi_collection'
+
+try:
+    import pymongo
+    mongo_client = pymongo.MongoClient(HOST, PORT)
+    mongo_client.server_info()
+except ImportError:
+    raise unittest.SkipTest('Unable to load pymongo module')
+except Exception:
+    raise unittest.SkipTest('Unable to connect to local mongoDB instance')
 
 
 class MongoCellTargetTest(unittest.TestCase):

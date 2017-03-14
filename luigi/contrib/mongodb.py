@@ -133,12 +133,10 @@ class MongoRangeTarget(MongoTarget):
     def write(self, values):
         """
         Write values to the targeted documents
-        Values need to be a dict as :
-            {document_id: value}
+        Values need to be a dict as : {document_id: value}
         """
         # Insert only for docs targeted by the target
-        filtered = {_id: value for _id, value in values.items()
-                if _id in self._document_ids}
+        filtered = {_id: value for _id, value in values.items() if _id in self._document_ids}
 
         if not filtered:
             return
