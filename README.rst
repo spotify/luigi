@@ -147,6 +147,7 @@ or held presentations about Luigi:
 * `TrustYou (PyData Berlin 2015) <https://speakerdeck.com/mfcabrera/pydata-berlin-2015-processing-hotel-reviews-with-python>`_
 * `Groupon / OrderUp <https://github.com/groupon/luigi-warehouse>`_
 * `Newsela <https://newsela.com>`_
+
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
 External links
