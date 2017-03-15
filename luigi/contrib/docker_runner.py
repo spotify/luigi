@@ -110,10 +110,10 @@ class DockerTask(luigi.Task):
         environment = self.environment
         environment['LUIGI_TMP_DIR'] = self.tmp_dir
         volumes = self.volumes
-        mounted_volumes = []
+        # mounted_volumes = []
         if isinstance(volumes, list):
             volumes.append('{0}:{1}'.format(host_tmp_dir, self.tmp_dir))
-            mounted_volumes = [v.split(':')[1] for v in volumes ]
+            # mounted_volumes = [v.split(':')[1] for v in volumes ]
 
         '''get image if missing'''
         if self.force_pull or len(client.images(name=self.image)) == 0:
@@ -136,7 +136,7 @@ class DockerTask(luigi.Task):
                                   command=self.command,
                                   name=self.name,
                                   environment=environment,
-                                  volumes = mounted_volumes,
+                                  # volumes = mounted_volumes,
                                   host_config=client.create_host_config(binds=volumes,
                                                                         network_mode=self.network_mode),
                                   **self.container_options)
