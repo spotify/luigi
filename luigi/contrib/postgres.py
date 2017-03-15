@@ -218,10 +218,8 @@ class PostgresTarget(luigi.Target):
                       target_table TEXT,
                       inserted TIMESTAMP);
                   """.format(marker_table=self.marker_table)
-        try:
-            cursor.execute(sql)
-        except psycopg2.ProgrammingError as e:
-            raise
+
+        cursor.execute(sql) 
         connection.close()
 
     def open(self, mode):
