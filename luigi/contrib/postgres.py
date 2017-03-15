@@ -219,7 +219,7 @@ class PostgresTarget(luigi.Target):
                       inserted TIMESTAMP);
                   """.format(marker_table=self.marker_table)
 
-        cursor.execute(sql) 
+        cursor.execute(sql)
         connection.close()
 
     def open(self, mode):
