@@ -21,6 +21,11 @@ import logging
 import time
 import os
 
+try:
+    from ConfigParser import NoSectionError
+except:
+    from configparser import NoSectionError
+
 import luigi
 from luigi import postgres
 from luigi.contrib import rdbms
@@ -37,60 +42,26 @@ except ImportError:
                    "Will crash at runtime if postgres functionality is used.")
 
 
-class RedshiftTarget(postgres.PostgresTarget):
+class _CredentialsMixin():
     """
-    Target for a resource in Redshift.
-
-    Redshift is similar to postgres with a few adjustments
-    required by redshift.
+    This mixin is used to provide the same credential properties
+    for AWS to all Redshift tasks. It also provides a helper method
+    to generate the credentials string for the task.
     """
-    marker_table = luigi.configuration.get_config().get(
-        'redshift',
-        'marker-table',
-        'table_updates')
-
-    use_db_timestamps = False
-
-
-class S3CopyToTable(rdbms.CopyToTable):
-    """
-    Template task for inserting a data set into Redshift from s3.
-
-    Usage:
-
-    * Subclass and override the required attributes:
-
-      * `host`,
-      * `database`,
-      * `user`,
-      * `password`,
-      * `table`,
-      * `columns`,
-      * `aws_access_key_id`,
-      * `aws_secret_access_key`,
-      * `s3_load_path`.
-    """
-
-    @abc.abstractmethod
-    def s3_load_path(self):
-        """
-        Override to return the load path.
-        """
-        return None
 
     @property
     def aws_access_key_id(self):
         """
         Override to return the key id.
         """
-        return None
+        return self._get_s3_configuration_attribute('aws_access_key_id')
 
     @property
     def aws_secret_access_key(self):
         """
         Override to return the secret access key.
         """
-        return None
+        return self._get_s3_configuration_attribute('aws_secret_access_key')
 
     @property
     def aws_account_id(self):
@@ -110,6 +81,85 @@ class S3CopyToTable(rdbms.CopyToTable):
     def aws_session_token(self):
         """
         Override to return the session token.
+        """
+        return None
+
+    def _get_s3_configuration_attribute(self, attribute):
+        config = luigi.configuration.get_config()
+
+        try:
+            value = config.get('s3', attribute)
+        except NoSectionError:
+            value = None
+
+        if value is None or value == '':
+            value = os.environ.get(attribute.upper(), None)
+
+        return value
+
+    def _credentials(self):
+        """
+        Return a credentials string for the provided task. If no valid
+        credentials are set, raise a NotImplementedError.
+        """
+
+        if self.aws_account_id and self.aws_arn_role_name:
+            return 'aws_iam_role=arn:aws:iam::{id}:role/{role}'.format(
+                id=self.aws_account_id,
+                role=self.aws_arn_role_name
+            )
+        elif self.aws_access_key_id and self.aws_secret_access_key:
+            return 'aws_access_key_id={key};aws_secret_access_key={secret}{opt}'.format(
+                key=self.aws_access_key_id,
+                secret=self.aws_secret_access_key,
+                opt=';token={}'.format(self.aws_session_token) if self.aws_session_token else ''
+            )
+        else:
+            raise NotImplementedError("Missing Credentials. "
+                                      "Override one of the following pairs of auth-args: "
+                                      "'aws_access_key_id' AND 'aws_secret_access_key' OR "
+                                      "'aws_account_id' AND 'aws_arn_role_name'")
+
+
+class RedshiftTarget(postgres.PostgresTarget):
+    """
+    Target for a resource in Redshift.
+
+    Redshift is similar to postgres with a few adjustments
+    required by redshift.
+    """
+    marker_table = luigi.configuration.get_config().get(
+        'redshift',
+        'marker-table',
+        'table_updates')
+
+    use_db_timestamps = False
+
+
+class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
+    """
+    Template task for inserting a data set into Redshift from s3.
+
+    Usage:
+
+    * Subclass and override the required attributes:
+
+      * `host`,
+      * `database`,
+      * `user`,
+      * `password`,
+      * `table`,
+      * `columns`,
+      * `s3_load_path`.
+
+    * You must also override the attributes provided by the
+      CredentialsMixin.
+    """
+
+    @abc.abstractmethod
+    def s3_load_path(self):
+        """
+        Override to return the load path.
         """
         return None
 
@@ -280,24 +330,6 @@ class S3CopyToTable(rdbms.CopyToTable):
 
         If both key-based and role-based credentials are provided, role-based will be used.
         """
-        # format the credentials string dependent upon which type of credentials were provided
-        if self.aws_account_id and self.aws_arn_role_name:
-            cred_str = 'aws_iam_role=arn:aws:iam::{id}:role/{role}'.format(
-                id=self.aws_account_id,
-                role=self.aws_arn_role_name
-            )
-        elif self.aws_access_key_id and self.aws_secret_access_key:
-            cred_str = 'aws_access_key_id={key};aws_secret_access_key={secret}{opt}'.format(
-                key=self.aws_access_key_id,
-                secret=self.aws_secret_access_key,
-                opt=';token={}'.format(self.aws_session_token) if self.aws_session_token else ''
-            )
-        else:
-            raise NotImplementedError("Missing Credentials. "
-                                      "Override one of the following pairs of auth-args: "
-                                      "'aws_access_key_id' AND 'aws_secret_access_key' OR "
-                                      "'aws_account_id' AND 'aws_arn_role_name'")
-
         logger.info("Inserting file: %s", f)
         cursor.execute("""
          COPY {table} from '{source}'
@@ -306,7 +338,7 @@ class S3CopyToTable(rdbms.CopyToTable):
          ;""".format(
             table=self.table,
             source=f,
-            creds=cred_str,
+            creds=self._credentials(),
             options=self.copy_options)
         )
 
@@ -371,7 +403,7 @@ class S3CopyToTable(rdbms.CopyToTable):
             cursor.execute(query)
 
 
-class S3CopyJSONToTable(S3CopyToTable):
+class S3CopyJSONToTable(S3CopyToTable, _CredentialsMixin):
     """
     Template task for inserting a JSON data set into Redshift from s3.
 
@@ -385,11 +417,12 @@ class S3CopyJSONToTable(S3CopyToTable):
             * `password`,
             * `table`,
             * `columns`,
-            * `aws_access_key_id`,
-            * `aws_secret_access_key`,
             * `s3_load_path`,
             * `jsonpath`,
             * `copy_json_options`.
+
+    * You must also override the attributes provided by the
+      CredentialsMixin.
     """
 
     @abc.abstractproperty
@@ -413,21 +446,14 @@ class S3CopyJSONToTable(S3CopyToTable):
         """
         Defines copying JSON from s3 into redshift.
         """
-        # if session token is set, create token string
-        if self.aws_session_token:
-            token = ';token=%s' % self.aws_session_token
-        # otherwise, leave token string empty
-        else:
-            token = ''
 
         logger.info("Inserting file: %s", f)
         cursor.execute("""
          COPY %s from '%s'
-         CREDENTIALS 'aws_access_key_id=%s;aws_secret_access_key=%s%s'
+         CREDENTIALS '%s'
          JSON AS '%s' %s
          %s
-         ;""" % (self.table, f, self.aws_access_key_id,
-                 self.aws_secret_access_key, token,
+         ;""" % (self.table, f, self._credentials(),
                  self.jsonpath, self.copy_json_options, self.copy_options))
 
 
@@ -604,7 +630,7 @@ class RedshiftQuery(postgres.PostgresQuery):
         )
 
 
-class RedshiftUnloadTask(postgres.PostgresQuery):
+class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
     """
     Template task for running UNLOAD on an Amazon Redshift database
 
@@ -613,21 +639,8 @@ class RedshiftUnloadTask(postgres.PostgresQuery):
     Override the `run` method if your use case requires some action with the query result.
     Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
     To customize the query signature as recorded in the database marker table, override the `update_id` property.
+    You must also override the attributes provided by the CredentialsMixin.
     """
-
-    @abc.abstractproperty
-    def aws_access_key_id(self):
-        """
-        Override to return the key id.
-        """
-        return None
-
-    @abc.abstractproperty
-    def aws_secret_access_key(self):
-        """
-        Override to return the secret access key.
-        """
-        return None
 
     @property
     def s3_unload_path(self):
@@ -649,30 +662,18 @@ class RedshiftUnloadTask(postgres.PostgresQuery):
         Default UNLOAD command
         """
         return ("UNLOAD ( '{query}' ) TO '{s3_unload_path}' "
-                "credentials 'aws_access_key_id={s3_access_key};aws_secret_access_key={s3_security_key}' "
+                "credentials '{credentials}' "
                 "{unload_options};")
 
     def run(self):
         connection = self.output().connect()
         cursor = connection.cursor()
 
-        # Retrieve AWS s3 credentials
-        config = luigi.configuration.get_config()
-        if self.aws_access_key_id is None or self.aws_secret_access_key is None:
-            self.aws_access_key_id = config.get('s3', 'aws_access_key_id')
-            self.aws_secret_access_key = config.get('s3', 'aws_secret_access_key')
-        # Optionally we can access env variables to get the keys
-        if self.aws_access_key_id is None or self.aws_access_key_id.strip() == '' \
-                or self.aws_secret_access_key is None or self.aws_secret_access_key.strip() == '':
-            self.aws_access_key_id = os.environ['AWS_ACCESS_KEY_ID']
-            self.aws_secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY']
-
         unload_query = self.unload_query.format(
             query=self.query().replace("'", r"\'"),
             s3_unload_path=self.s3_unload_path,
             unload_options=self.unload_options,
-            s3_access_key=self.aws_access_key_id,
-            s3_security_key=self.aws_secret_access_key)
+            credentials=self._credentials())
 
         logger.info('Executing unload query from task: {name}'.format(name=self.__class__))
         try:
