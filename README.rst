@@ -146,6 +146,7 @@ or held presentations about Luigi:
 * `Blendle <http://www.anneschuth.nl/wp-content/uploads/sea-anneschuth-streamingblendle.pdf#page=126>`_
 * `TrustYou (PyData Berlin 2015) <https://speakerdeck.com/mfcabrera/pydata-berlin-2015-processing-hotel-reviews-with-python>`_
 * `Groupon / OrderUp <https://github.com/groupon/luigi-warehouse>`_
+* `Red Hat - Marketing Operations <https://github.com/rh-marketingops/rh-mo-scc-luigi>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
