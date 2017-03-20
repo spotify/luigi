@@ -377,10 +377,7 @@ class HiveTableTarget(luigi.Target):
     def __init__(self, table, database='default', client=None):
         self.database = database
         self.table = table
-        self.hive_cmd = load_hive_cmd()
-        if client is None:
-            client = get_default_client()
-        self.client = client
+        self.client = client or get_default_client()
 
     def exists(self):
         logger.debug("Checking if Hive table '%s.%s' exists", self.database, self.table)
@@ -409,9 +406,7 @@ class HivePartitionTarget(luigi.Target):
         self.database = database
         self.table = table
         self.partition = partition
-        if client is None:
-            client = get_default_client()
-        self.client = client
+        self.client = client or get_default_client()
 
         self.fail_missing_table = fail_missing_table
 

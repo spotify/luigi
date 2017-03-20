@@ -1769,7 +1769,7 @@ class WorkerPurgeEventHandlerTest(unittest.TestCase):
 class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
     def setUp(self):
         super(PerTaskRetryPolicyBehaviorTest, self).setUp()
-        self.per_task_retry_count = 2
+        self.per_task_retry_count = 3
         self.default_retry_count = 1
         self.sch = Scheduler(retry_delay=0.1, retry_count=self.default_retry_count, prune_on_get_work=True)
 

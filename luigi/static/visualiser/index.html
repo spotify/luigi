@@ -21,10 +21,9 @@
         <script src="lib/jquery.slimscroll.min.js"></script>
         <script src="lib/AdminLTE/js/app.min.js"></script>
         <script src="lib/datatables/js/jquery.dataTables.min.js"></script>
-        <script src="lib/URI.js/1.18.2/URI.js"></script>
+        <script src="lib/URI/1.18.2/URI.js"></script>
 
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 
         <style>
         .nodeCircle {
@@ -323,7 +322,7 @@
                 </div>
               </div>
             </div>
-            {{#workers}}
+            {{#workerList}}
             {{#is_disabled}}
             <div class="box box-solid box-default">
             {{/is_disabled}}
@@ -337,6 +336,7 @@
                       <span class="label-unread-worker-messages">{{num_unread_rpc_messages}} unread message(s)</span>
                       {{/num_unread_rpc_messages}}
                       {{^is_disabled}}
+                      {{#workers}}
                       <div class="btn-group">
                         <button type="button" class="btn btn-sm btn-default dropdown-toggle btn-set-workers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                           Workers: <span id="label-n-workers" data-worker="{{name}}">{{workers}}</span> <span class="caret"></span>
@@ -353,6 +353,7 @@
                           </a></li>
                         </ul>
                       </div>
+                      {{/workers}}
                       <div class="button-tooltip" data-toggle="tooltip" title="Disable Worker">
                         <button type="button" class="btn btn-sm btn-danger btn-disable-worker" data-toggle="modal" data-target="#disableWorkerModal" data-worker="{{name}}">
                           <i class="fa fa-fire-extinguisher"></i>
@@ -364,7 +365,7 @@
                 <div class="box-body">
                     Started: {{start_time}}<br>
                     Last Checkin: {{active}}<br>
-                    Root Task: <a href="#{{{encoded_first_task}}}">{{first_task_display_name}}</a><br>
+                    Root Task: <a href="#tab=graph&taskId={{{encoded_first_task}}}">{{first_task_display_name}}</a><br>
                     Running: {{num_running}}<br>
                     Pending: {{num_pending}}<br>
                     Unique Pending: {{num_uniques}}<br>
@@ -389,9 +390,9 @@
                         <td>{{priority}}</td>
                         <td>{{resources}}</td>
                         <td>{{displayTime}}</td>
-                        <td><a href="#{{encodedTaskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a>
-                            {{#trackingUrl}}<a target="_blank" href="{{trackingUrl}}" class="btn btn-primary btn-xs" title="Track Progress" data-toggle="tooltip"><i class="fa fa-eye"></i></a>{{/trackingUrl}}
-                            {{#statusMessage}}<button class="btn btn-primary btn-xs statusMessage" title="Status message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name="{{displayName}}"><i class="fa fa-comment"></i></button>{{/statusMessage}}
+                        <td><a href="#tab=graph&taskId={{encodedTaskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a>
+                          {{#trackingUrl}}<a target="_blank" href="{{trackingUrl}}" class="btn btn-primary btn-xs" title="Track Progress" data-toggle="tooltip"><i class="fa fa-eye"></i></a>{{/trackingUrl}}
+                          {{#statusMessage}}<button class="btn btn-primary btn-xs statusMessage" title="Status message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name="{{displayName}}"><i class="fa fa-comment"></i></button>{{/statusMessage}}
                         </td>
                       </tr>
                       {{/tasks}}
@@ -400,7 +401,7 @@
                     </table>
                 </div>
             </div>
-            {{/workers}}
+            {{/workerList}}
         </script>
 
         <script type="text/template" name="resourceTemplate">

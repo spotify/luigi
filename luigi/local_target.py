@@ -99,7 +99,7 @@ class LocalFileSystem(FileSystem):
         but cannot be guaranteed.
         """
         if raise_if_exists and os.path.exists(new_path):
-            raise RuntimeError('Destination exists: %s' % new_path)
+            raise FileAlreadyExists('Destination exists: %s' % new_path)
         d = os.path.dirname(new_path)
         if d and not os.path.exists(d):
             self.mkdir(d)
@@ -113,6 +113,14 @@ class LocalFileSystem(FileSystem):
                 os.remove(old_path)
             else:
                 raise err
+
+    def rename_dont_move(self, path, dest):
+        """
+        Rename ``path`` to ``dest``, but don't move it into the ``dest``
+        folder (if it is a folder). This method is just a wrapper around the
+        ``move`` method of LocalTarget.
+        """
+        self.move(path, dest, raise_if_exists=True)
 
 
 class LocalTarget(FileSystemTarget):
