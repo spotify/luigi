@@ -51,11 +51,11 @@ class _CredentialsMixin():
 
     @property
     def configuration_section(self):
-      """
-      Override to change the configuration section used
-      to obtain default credentials.
-      """
-      return 'redshift'
+        """
+        Override to change the configuration section used
+        to obtain default credentials.
+        """
+        return 'redshift'
 
     @property
     def aws_access_key_id(self):
