@@ -50,45 +50,53 @@ class _CredentialsMixin():
     """
 
     @property
+    def configuration_section(self):
+      """
+      Override to change the configuration section used
+      to obtain default credentials.
+      """
+      return 'redshift'
+
+    @property
     def aws_access_key_id(self):
         """
         Override to return the key id.
         """
-        return self._get_s3_configuration_attribute('aws_access_key_id')
+        return self._get_configuration_attribute('aws_access_key_id')
 
     @property
     def aws_secret_access_key(self):
         """
         Override to return the secret access key.
         """
-        return self._get_s3_configuration_attribute('aws_secret_access_key')
+        return self._get_configuration_attribute('aws_secret_access_key')
 
     @property
     def aws_account_id(self):
         """
         Override to return the account id.
         """
-        return None
+        return self._get_configuration_attribute('aws_account_id')
 
     @property
     def aws_arn_role_name(self):
         """
         Override to return the arn role name.
         """
-        return None
+        return self._get_configuration_attribute('aws_arn_role_name')
 
     @property
     def aws_session_token(self):
         """
         Override to return the session token.
         """
-        return None
+        return self._get_configuration_attribute('aws_session_token')
 
-    def _get_s3_configuration_attribute(self, attribute):
+    def _get_configuration_attribute(self, attribute):
         config = luigi.configuration.get_config()
 
         try:
-            value = config.get('s3', attribute)
+            value = config.get(self.configuration_section, attribute)
         except NoSectionError:
             value = None
 
