@@ -21,11 +21,6 @@ import logging
 import time
 import os
 
-try:
-    from ConfigParser import NoSectionError
-except:
-    from configparser import NoSectionError
-
 import luigi
 from luigi import postgres
 from luigi.contrib import rdbms
@@ -95,10 +90,7 @@ class _CredentialsMixin():
     def _get_configuration_attribute(self, attribute):
         config = luigi.configuration.get_config()
 
-        try:
-            value = config.get(self.configuration_section, attribute)
-        except NoSectionError:
-            value = None
+        value = config.get(self.configuration_section, attribute, default=None)
 
         if not value:
             value = os.environ.get(attribute.upper(), None)
@@ -124,7 +116,9 @@ class _CredentialsMixin():
             )
         else:
             raise NotImplementedError("Missing Credentials. "
-                                      "Override one of the following pairs of auth-args: "
+                                      "Ensure one of the pairs of auth args below are set "
+                                      "in a configuration file, environment variables or by "
+                                      "being overridden in the task: "
                                       "'aws_access_key_id' AND 'aws_secret_access_key' OR "
                                       "'aws_account_id' AND 'aws_arn_role_name'")
 
