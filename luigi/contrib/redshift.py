@@ -92,14 +92,14 @@ class _CredentialsMixin():
         except NoSectionError:
             value = None
 
-        if value is None or value == '':
+        if not value:
             value = os.environ.get(attribute.upper(), None)
 
         return value
 
     def _credentials(self):
         """
-        Return a credentials string for the provided task. If no valid
+        Return a credential string for the provided task. If no valid
         credentials are set, raise a NotImplementedError.
         """
 
