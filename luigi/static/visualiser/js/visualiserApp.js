@@ -22,7 +22,7 @@ function visualiserApp(luigi) {
     /*
      * Updates view of the Visualization type.
      */
-    function updateVisType (newVisType) {
+    function updateVisType(newVisType) {
         $('#toggleVisButtons label').removeClass('active');
         $('#toggleVisButtons input[value="' + newVisType + '"]').parent().addClass('active');
     }
@@ -229,7 +229,7 @@ function visualiserApp(luigi) {
     }
 
     function renderWorkers(workers) {
-        return renderTemplate("workerTemplate", {"workers": workers.map(processWorker)});
+        return renderTemplate("workerTemplate", {"workerList": workers.map(processWorker)});
     }
 
     function processResource(resource) {
@@ -454,7 +454,7 @@ function visualiserApp(luigi) {
                     });
                 }
                 else {
-                    window.location.href = 'index.html#taskId=' + taskId;
+                    window.location.href = 'index.html#tab=graph&taskId=' + taskId;
                 }
             });
         }
@@ -504,9 +504,6 @@ function visualiserApp(luigi) {
 
         $('input[name=vis-type]').on('change', function () {
             changeState('visType', $(this).val());
-
-            initVisualisation(visType);
-            updateVisType(fragmentQuery.visType);
         });
 
         /*
@@ -1041,8 +1038,10 @@ function visualiserApp(luigi) {
             luigi.disableWorker(worker);
 
             // show the worker as disabled in the visualiser
-            triggerButton.parents('.box').addClass('box-solid box-default');
-            triggerButton.remove();
+            var box = triggerButton.parents('.box').addClass('box-solid box-default');
+
+            // remove the worker tools
+            box.find('.box-tools').remove();
         });
 
         $('#workerList').on('click', '#btn-increment-workers', function($event) {

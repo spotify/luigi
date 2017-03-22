@@ -1,4 +1,5 @@
-{% include "header.html" %}
+{% extends "layout.html" %}
+{% block content %}
 <h2>Luigi Task History</h2>
 <table class="table table-striped table-bordered">
   <thead>
@@ -24,3 +25,4 @@
     {% end %}
   </tbody>
 </table>
+{% end %}

@@ -12,3 +12,8 @@
 ## Have you tested this? If so, how?
 <!--- Valid responses are "I have included unit tests." or --> 
 <!--- "I ran my jobs with this code and it works for me." -->
+
+<!---
+for more information on how to submit valuable contributions,
+see https://opensource.guide/how-to-contribute/#how-to-submit-a-contribution
+-->

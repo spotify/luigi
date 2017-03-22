@@ -110,7 +110,7 @@ class PostgresTarget(luigi.Target):
     use_db_timestamps = True
 
     def __init__(
-        self, host, database, user, password, table, update_id, port=None
+        self, host, database, user, password, table, update_id, port=5432
     ):
         """
         Args:
