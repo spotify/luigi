@@ -182,9 +182,9 @@ For an example of a workflow using dynamic dependencies, see
 Task status tracking
 ~~~~~~~~~~~~~~~~~~~~
 
-For long-running or remote tasks it is convenient to see extended status information not only on 
+For long-running or remote tasks it is convenient to see extended status information not only on
 the command line or in your logs but also in the GUI of the central scheduler. Luigi implements
-dynamic status messages and tracking urls which may point to an external monitoring system. You 
+dynamic status messages and tracking urls which may point to an external monitoring system. You
 can set this information using callbacks within Task.run_:
 
 .. code:: python
@@ -298,6 +298,35 @@ if there is a task A with priority 1000 but still with unmet dependencies and
 a task B with priority 1 without any pending dependencies,
 task B will be picked first.
 
+.. _Task.namespaces_famlies_and_ids:
+
+Namespaces, families and ids
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order to avoid name clashes and to be able to have an identifier for tasks,
+Luigi introduces the concepts *task_namespace*, *task_family* and
+*task_id*. The namespace and family operate on class level meanwhile the task
+id only exists on instance level. The concepts are best illustrated using code.
+
+.. code:: python
+
+    import luigi
+    class MyTask(luigi.Task):
+        my_param = luigi.Parameter()
+        task_namespace = 'my_namespace'
+
+    my_task = MyTask(my_param='hello')
+    print(my_task)                      # --> my_namespace.MyTask(my_param=hello)
+
+    print(my_task.get_task_namespace()) # --> my_namespace
+    print(my_task.get_task_family())    # --> my_namespace.MyTask
+    print(my_task.task_id)              # --> my_namespace.MyTask_hello_890907e7ce
+
+    print(MyTask.get_task_namespace())  # --> my_namespace
+    print(MyTask.get_task_family())     # --> my_namespace.MyTask
+    print(MyTask.task_id)               # --> Error!
+
+The full documentation for this machinery exists in the :py:mod:`~luigi.task` module.
 
 Instance caching
 ~~~~~~~~~~~~~~~~

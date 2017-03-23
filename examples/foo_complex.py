@@ -23,6 +23,7 @@ You can run this example like this:
             $ luigi --module examples.foo_complex examples.Foo --workers 2 --local-scheduler
 
 """
+from __future__ import division
 import time
 import random
 
@@ -41,7 +42,7 @@ class Foo(luigi.Task):
 
     def requires(self):
         global current_nodes
-        for i in range(30 / max_depth):
+        for i in range(30 // max_depth):
             current_nodes += 1
             yield Bar(i)
 
@@ -60,16 +61,16 @@ class Bar(luigi.Task):
 
         if max_total_nodes > current_nodes:
             valor = int(random.uniform(1, 30))
-            for i in range(valor / max_depth):
+            for i in range(valor // max_depth):
                 current_nodes += 1
                 yield Bar(current_nodes)
 
     def output(self):
         """
-       Returns the target output for this task.
+        Returns the target output for this task.
 
-       :return: the target output for this task.
-       :rtype: object (:py:class:`~luigi.target.Target`)
-       """
+        :return: the target output for this task.
+        :rtype: object (:py:class:`~luigi.target.Target`)
+        """
         time.sleep(1)
         return luigi.LocalTarget('/tmp/bar/%d' % self.num)

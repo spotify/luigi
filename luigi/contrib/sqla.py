@@ -40,7 +40,7 @@ below:
         table = "item_property"  # name of the table to store data
 
         def rows(self):
-            for row in [("item1" "property1"), ("item2", "property2")]:
+            for row in [("item1", "property1"), ("item2", "property2")]:
                 yield row
 
     if __name__ == '__main__':
@@ -66,7 +66,7 @@ can be set as True. Here is a modified version of the above example:
         table = "item_property"  # name of the table to store data
 
         def rows(self):
-            for row in [("item1" "property1"), ("item2", "property2")]:
+            for row in [("item1", "property1"), ("item2", "property2")]:
                 yield row
 
     if __name__ == '__main__':

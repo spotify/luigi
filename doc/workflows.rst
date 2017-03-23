@@ -64,7 +64,7 @@ Parameter
 ~~~~~~~~~
 
 The Task class corresponds to some type of job that is run, but in
-general you want to allow some form of parametrization of it.
+general you want to allow some form of parameterization of it.
 For instance, if your Task class runs a Hadoop job to create a report every night,
 you probably want to make the date a parameter of the class.
 See :doc:`/parameters` for more info.
