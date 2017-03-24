@@ -154,8 +154,9 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
       * `columns`,
       * `s3_load_path`.
 
-    * You must also override the attributes provided by the
-      CredentialsMixin.
+    * You can also override the attributes provided by the
+      CredentialsMixin if they are not supplied by your
+      configuration or environment variables.
     """
 
     @abc.abstractmethod
@@ -423,8 +424,9 @@ class S3CopyJSONToTable(S3CopyToTable, _CredentialsMixin):
             * `jsonpath`,
             * `copy_json_options`.
 
-    * You must also override the attributes provided by the
-      CredentialsMixin.
+    * You can also override the attributes provided by the
+      CredentialsMixin if they are not supplied by your
+      configuration or environment variables.
     """
 
     @abc.abstractproperty
@@ -641,7 +643,7 @@ class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
     Override the `run` method if your use case requires some action with the query result.
     Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
     To customize the query signature as recorded in the database marker table, override the `update_id` property.
-    You must also override the attributes provided by the CredentialsMixin.
+    You can also override the attributes provided by the CredentialsMixin if they are not supplied by your configuration or environment variables.
     """
 
     @property
