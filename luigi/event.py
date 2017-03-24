@@ -29,4 +29,4 @@ class Event(object):
     SUCCESS = "event.core.success"
     PROCESSING_TIME = "event.core.processing_time"
     TIMEOUT = "event.core.timeout"  # triggered if a task times out
-    PROCESS_FAILURE = "event.core.process_failure"  # triggered if the process a task is running in dies unexpectedly
+    PROCESS_FAILURE = "event.core.process_failure" # triggered if the process a task is running in dies unexpected
