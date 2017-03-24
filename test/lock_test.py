@@ -40,6 +40,8 @@ class TestCmd(unittest.TestCase):
         p.kill()
 
 real_exists = os.path.exists
+
+
 def _make_path_exists_mock(returns):
     """ Returns the mock function that takes a list of return values to use on
         subsequent calls.  Once all values from returns are returned the mock
@@ -48,6 +50,7 @@ def _make_path_exists_mock(returns):
     def _mock_function(path):
         return returns.pop(0) if returns else real_exists(path)
     return _mock_function
+
 
 class CreatePidDirTest(unittest.TestCase):
     def setUp(self):
@@ -60,12 +63,12 @@ class CreatePidDirTest(unittest.TestCase):
         if os.path.exists(self.pid_dir):
             shutil.rmtree(self.pid_dir)
 
-    @mock.patch('os.path.exists', side_effect=_make_path_exists_mock([False,False]))
+    @mock.patch('os.path.exists', side_effect=_make_path_exists_mock([False, False]))
     def test_race_condition_works_third_time(self, os_exist_function):
         acquired = luigi.lock.acquire_for(self.pid_dir)
         self.assertTrue(acquired)
 
-    @mock.patch('os.path.exists', side_effect=_make_path_exists_mock([False,False,False]))
+    @mock.patch('os.path.exists', side_effect=_make_path_exists_mock([False, False, False]))
     def test_race_condition_fails(self, os_exist_function):
         self.assertRaises(OSError, luigi.lock.acquire_for, self.pid_dir)
 
