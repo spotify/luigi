@@ -1,10 +1,10 @@
-mock<2.0
-moto<1.0
+mock
+moto
 HTTPretty==0.8.10
 nose
 psycopg2
 unittest2
-boto<3.0
+boto
 sqlalchemy
 elasticsearch
 snakebite>=2.5.2
