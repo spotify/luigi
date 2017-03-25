@@ -1,6 +1,6 @@
 mock
 moto
-HTTPretty>=0.8.8
+HTTPretty==0.8.10
 nose
 psycopg2
 unittest2

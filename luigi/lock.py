@@ -28,6 +28,7 @@ from luigi import six
 
 MAX_PID_DIR_CREATE_ATTEMPTS = 3
 
+
 def getpcmd(pid):
     """
     Returns command of process.
@@ -81,7 +82,7 @@ def acquire_for(pid_dir, num_available=1):
                 if i >= MAX_PID_DIR_CREATE_ATTEMPTS - 1:
                     raise
 
-    # Check if there is a pid file corresponding to this name. 
+    # Check if there is a pid file corresponding to this name.
     pids = set()
     pid_cmds = {}
     if os.path.exists(pid_file):
