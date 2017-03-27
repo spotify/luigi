@@ -143,6 +143,9 @@ or held presentations about Luigi:
 * `TrustYou <http://www.trustyou.com/>`_ `(presentation, 2015) <https://speakerdeck.com/mfcabrera/pydata-berlin-2015-processing-hotel-reviews-with-python>`_
 * `Groupon <https://www.groupon.com/>`_ / `OrderUp <https://orderup.com>`_ `(alternative implementation) <https://github.com/groupon/luigi-warehouse>`_
 * `Red Hat - Marketing Operations <https://www.redhat.com>`_ `(blog, 2017) <https://github.com/rh-marketingops/rh-mo-scc-luigi>`_
+
+Some more companies are using Luigi but haven't had a chance yet to write about it:
+
 * `Schibsted <http://www.schibsted.com/>`_
 * `enbrite.ly <http://enbrite.ly/>`_
 * `Dow Jones / The Wall Street Journal <http://wsj.com>`_
