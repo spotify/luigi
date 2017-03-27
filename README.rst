@@ -155,7 +155,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `TrustYou (PyData Berlin 2015) <https://speakerdeck.com/mfcabrera/pydata-berlin-2015-processing-hotel-reviews-with-python>`_
 * `Groupon / OrderUp <https://github.com/groupon/luigi-warehouse>`_
 * `Red Hat - Marketing Operations <https://github.com/rh-marketingops/rh-mo-scc-luigi>`_
-* `Grovo <https://grovo.com>`
+* `Grovo <https://grovo.com>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
