@@ -42,7 +42,7 @@ with open('README.rst') as fobj:
 install_requires = [
     'cached_property',
     'tornado',
-    'python-daemon==2.1.1',
+    'python-daemon<2.1.2',
     'retrying'
 ]
 
