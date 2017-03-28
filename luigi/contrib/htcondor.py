@@ -19,6 +19,7 @@ import shutil
 import stat
 import glob
 import time
+from htcondor import Schedd
 
 """HTCondor batch system Tasks.
 
@@ -46,7 +47,7 @@ The following is an example usage (and can also be found in `htcondor_test.py`)
     import logging
     import luigi
     import os
-    from luigi.contrib.sge import HTCondorJobTask
+    from luigi.contrib.htcondor import HTCondorJobTask
 
     logger = logging.getLogger('luigi-interface')
 
@@ -120,10 +121,9 @@ fi
 
 
 def _build_job_description(job_params):
-    from classad import ClassAd
     submit_params = DEFAULT_JOB_PARAMETERS.copy()
     submit_params.update(job_params)
-    return ClassAd(submit_params)
+    return submit_params
 
 
 def _copy_script_to_tmp_dir(script, tmp_dir, dst_file_name=""):
@@ -152,7 +152,7 @@ class HTCondorJobTask(luigi.Task):
         description=(
             "specify time between queries to condor scheduler for the job "
             "status")
-        )
+    )
     dont_remove_tmp_dir = luigi.BoolParameter(
         significant=False,
         description="don't delete the temporary directory (for debugging)")
@@ -293,7 +293,6 @@ class HTCondorJobTask(luigi.Task):
         # build job description (mostly for debugging)
         job_desc = _build_job_description(job_params)
         logger.debug('Submitting htcondor job description: \n' + str(job_desc))
-        from htcondor import Schedd
         # connect to HTCondor scheduler
         schedd = Schedd()
         # Submit the job and grab job ID.
@@ -306,8 +305,9 @@ class HTCondorJobTask(luigi.Task):
         # Now delete the temporaries, if they're there.
         # unless transfer_output files is on.
         if os.path.exists(self.tmp_dir) and not self.dont_remove_tmp_dir:
-            logger.info('Removing temporary directory %s' % self.tmp_dir)
-            subprocess.call(["rm", "-rf", self.tmp_dir])
+            logger.info(
+                'Removing temporary directory {0}'.format(self.tmp_dir))
+            shutil.rmtree(self.tmp_dir)
 
     def _track_job(self):
         """ Known job statuses
@@ -321,7 +321,6 @@ class HTCondorJobTask(luigi.Task):
         < transferring input
         > transferring output
         """
-        from htcondor import Schedd
         known_statuses = [
             'Unexpanded', 'Idle', 'Running', 'Removed', 'Completed', 'Held',
             'Error', '<', '>'

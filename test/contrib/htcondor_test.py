@@ -28,7 +28,7 @@ OUTPUT_DIR = '/tmp'
 logger = logging.getLogger('luigi-interface')
 
 
-def on_sge_master():
+def on_htcondor_master():
     try:
         subprocess.check_output('condor_q', shell=True)
         return True
@@ -57,7 +57,7 @@ class TestHTCondorJob(unittest.TestCase):
     '''Test from HTCondor scheduler node'''
 
     def test_run_job(self):
-        if on_sge_master():
+        if on_htcondor_master():
             outfile = os.path.join(OUTPUT_DIR, 'testfile_1')
             tasks = [
                 TestJobTask(i=str(i), n_cpu=1, run_locally=True)
