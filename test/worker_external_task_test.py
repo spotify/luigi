@@ -13,7 +13,7 @@
 # the License.
 
 import luigi
-from luigi.file import LocalTarget
+from luigi.local_target import LocalTarget
 from luigi.scheduler import Scheduler
 import luigi.server
 import luigi.worker
@@ -28,7 +28,7 @@ import shutil
 class TestExternalFileTask(luigi.ExternalTask):
     """ Mocking tasks is a pain, so touch a file instead """
     path = luigi.Parameter()
-    times_to_call = luigi.Parameter()
+    times_to_call = luigi.IntParameter()
 
     def __init__(self, *args, **kwargs):
         super(TestExternalFileTask, self).__init__(*args, **kwargs)
@@ -54,7 +54,7 @@ class TestTask(luigi.Task):
     Requires a single file dependency
     """
     tempdir = luigi.Parameter()
-    complete_after = luigi.Parameter()
+    complete_after = luigi.IntParameter()
 
     def __init__(self, *args, **kwargs):
         super(TestTask, self).__init__(*args, **kwargs)
