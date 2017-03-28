@@ -124,6 +124,15 @@ class S3Client(FileSystem):
                                                    **options)
         return self._s3
 
+    @s3.setter
+    def s3(self, value):
+        self._s3 = value
+
+    @s3.deleter
+    def s3(self):
+        if hasattr(self, '_s3'):
+            del self._s3
+
     def exists(self, path):
         """
         Does provided path exist on S3?
