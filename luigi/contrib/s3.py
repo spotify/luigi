@@ -73,6 +73,8 @@ class S3Client(FileSystem):
     boto-powered S3 client.
     """
 
+    _s3 = None
+
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
                  **kwargs):
         from boto.s3.key import Key
@@ -94,7 +96,7 @@ class S3Client(FileSystem):
 
         options = dict(self._options)
 
-        if getattr(self, '_s3', None):
+        if self._s3:
             return self._s3
 
         aws_access_key_id = options.get('aws_access_key_id')
@@ -127,11 +129,6 @@ class S3Client(FileSystem):
     @s3.setter
     def s3(self, value):
         self._s3 = value
-
-    @s3.deleter
-    def s3(self):
-        if hasattr(self, '_s3'):
-            del self._s3
 
     def exists(self, path):
         """
