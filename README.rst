@@ -150,6 +150,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `enbrite.ly <http://enbrite.ly/>`_
 * `Dow Jones / The Wall Street Journal <http://wsj.com>`_
 * `Hotels.com <https://hotels.com>`_
+* `Squarespace <https://www.squarespace.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
