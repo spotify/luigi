@@ -150,10 +150,6 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `enbrite.ly <http://enbrite.ly/>`_
 * `Dow Jones / The Wall Street Journal <http://wsj.com>`_
 * `Hotels.com <https://hotels.com>`_
-* `Custobar (Metrics Monday Helsinki) <http://www.slideshare.net/teemukurppa/managing-data-workflows-with-luigi>`_
-* `Blendle <http://www.anneschuth.nl/wp-content/uploads/sea-anneschuth-streamingblendle.pdf#page=126>`_
-* `TrustYou (PyData Berlin 2015) <https://speakerdeck.com/mfcabrera/pydata-berlin-2015-processing-hotel-reviews-with-python>`_
-* `Groupon / OrderUp <https://github.com/groupon/luigi-warehouse>`_
 * `Newsela <https://newsela.com>`_
 * `Squarespace <https://www.squarespace.com/>`_
 
