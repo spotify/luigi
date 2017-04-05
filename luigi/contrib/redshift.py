@@ -332,11 +332,11 @@ class S3CopyToTable(rdbms.CopyToTable):
         if '.' in self.table:
             query = ("select 1 as table_exists "
                      "from information_schema.tables "
-                     "where table_schema = %s and table_name = %s limit 1")
+                     "where table_schema = lower(%s) and table_name = lower(%s) limit 1")
         else:
             query = ("select 1 as table_exists "
                      "from pg_table_def "
-                     "where tablename = %s limit 1")
+                     "where tablename = lower(%s) limit 1")
         cursor = connection.cursor()
         try:
             cursor.execute(query, tuple(self.table.split('.')))
