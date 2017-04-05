@@ -147,6 +147,27 @@ class WorkerExternalTaskTest(unittest.TestCase):
 
         self.assertGreaterEqual(test_task.dependency.times_called, 5)
 
+    def test_external_dependency_bare(self):
+        """
+        Test ExternalTask without altering global settings.
+        """
+        assert luigi.worker.worker().retry_external_tasks is False
+
+        test_task = TestTask(tempdir=self.tempdir, complete_after=5)
+
+        scheduler = luigi.scheduler.Scheduler(retry_delay=0.01,
+                                              prune_on_get_work=True)
+        with luigi.worker.Worker(
+                retry_external_tasks=True, scheduler=scheduler,
+                keep_alive=True, wait_interval=0.00001, wait_jitter=0) as w:
+            w.add(test_task)
+            w.run()
+
+        assert os.path.exists(test_task.dep_path)
+        assert os.path.exists(test_task.output_path)
+
+        self.assertGreaterEqual(test_task.dependency.times_called, 5)
+
     @with_config({'worker': {'retry_external_tasks': 'true', },
                   'scheduler': {'retry_delay': '0.0'}})
     def test_external_task_complete_but_missing_dep_at_runtime(self):
