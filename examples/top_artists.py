@@ -24,7 +24,7 @@ from luigi import six
 import luigi
 import luigi.contrib.hadoop
 import luigi.contrib.hdfs
-import luigi.postgres
+import luigi.contrib.postgres
 
 
 class ExternalStreams(luigi.ExternalTask):
@@ -244,7 +244,7 @@ class Top10Artists(luigi.Task):
                 yield int(streams), artist
 
 
-class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
+class ArtistToplistToDatabase(luigi.contrib.postgres.CopyToTable):
     """
     This task runs a :py:class:`luigi.postgres.CopyToTable` task
     over the target data returned by :py:meth:`~/.Top10Artists.output` and
