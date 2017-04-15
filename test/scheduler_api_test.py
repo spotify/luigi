@@ -2037,3 +2037,16 @@ class SchedulerApiTest(unittest.TestCase):
         self.setTime(2)
         self.sch.forgive_failures(task_id='A')
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+
+    def test_you_can_forgive_failures_twice(self):
+        # Try to build A but fails, forgive failures two times and will retry before 100s
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+        self.setTime(1)
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], None)
+        self.setTime(2)
+        self.sch.forgive_failures(task_id='A')
+        self.sch.forgive_failures(task_id='A')
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
