@@ -723,7 +723,7 @@ class Worker(object):
             elif _is_external(task):
                 deps = None
                 status = PENDING
-                runnable = worker().retry_external_tasks
+                runnable = self._config.retry_external_tasks
                 task.trigger_event(Event.DEPENDENCY_MISSING, task)
                 logger.warning('Data for %s does not exist (yet?). The task is an '
                                'external data depedency, so it can not be run from'
@@ -981,7 +981,8 @@ class Worker(object):
                            family=task.task_family,
                            module=task.task_module,
                            new_deps=new_deps,
-                           assistant=self._assistant)
+                           assistant=self._assistant,
+                           retry_policy_dict=_get_retry_policy_dict(task))
 
             self._running_tasks.pop(task_id)
 

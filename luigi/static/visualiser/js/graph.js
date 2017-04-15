@@ -33,7 +33,7 @@ Graph = (function() {
             name: task.name,
             taskId: task.taskId,
             status: task.status,
-            trackingUrl: "#"+task.taskId,
+            trackingUrl: "#tab=graph&taskId=" + task.taskId,
             deps: deps,
             params: task.params,
             priority: task.priority,

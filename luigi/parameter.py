@@ -74,7 +74,7 @@ class DuplicateParameterException(ParameterException):
 
 class Parameter(object):
     """
-    An untyped Parameter
+    Parameter whose value is a ``str``, and a base class for other parameter types.
 
     Parameters are objects set on the Task class level to make it possible to parameterize tasks.
     For instance:
@@ -107,9 +107,6 @@ class Parameter(object):
         * With ``[TASK_NAME]>PARAM_NAME: <serialized value>`` syntax. See :ref:`ParamConfigIngestion`
 
         * Any default value set using the ``default`` flag.
-
-    There are subclasses of ``Parameter`` that define what type the parameter has. This is not
-    enforced within Python, but are used for command line interaction.
 
     Parameter objects may be reused, but you must then set the ``positional=False`` flag.
     """
