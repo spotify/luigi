@@ -743,6 +743,20 @@ class Scheduler(object):
         self._state.set_batcher(worker, task_family, batched_args, max_batch_size)
 
     @rpc_method()
+    def forgive_failures(self, task_id=None):
+        status = PENDING
+        task = self._state.get_task(task_id)
+        if task is None:
+            return {"task_id": task_id, "status": None}
+
+        # we forgive only failures
+        if task.status == FAILED:
+            # forgive but do not forget
+            self._update_task_history(task, status)
+            self._state.set_status(task, status, self._config)
+        return {"task_id": task_id, "status": task.status}
+
+    @rpc_method()
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,

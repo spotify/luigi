@@ -57,6 +57,12 @@ var LuigiAPI = (function() {
         });
     }
 
+    LuigiAPI.prototype.forgiveFailures = function (taskId, callback) {
+        return jsonRPC(this.urlRoot + "/forgive_failures", {task_id: taskId}, function(response) {
+            callback(flatten(response.response));
+        });
+    }
+
     LuigiAPI.prototype.getFailedTaskList = function(callback) {
         return jsonRPC(this.urlRoot + "/task_list", {status: "FAILED", upstream_status: "", search: searchTerm()}, function(response) {
             callback(flatten(response.response));
