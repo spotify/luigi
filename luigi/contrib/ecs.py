@@ -82,15 +82,18 @@ def _get_task_statuses(task_ids):
         msg = 'Task status request received status code {0}:\n{1}'
         raise Exception(msg.format(status_code, response))
 
-    return [t['lastStatus'] for t in response['tasks']]
+    return [{ status: t['lastStatus'], exitCode: t['exitCode']} for t in response['tasks']]
 
 
 def _track_tasks(task_ids):
     """Poll task status until STOPPED"""
     while True:
         statuses = _get_task_statuses(task_ids)
-        if all([status == 'STOPPED' for status in statuses]):
+        if all([status['status']] == 'STOPPED' for status in statuses):
             logger.info('ECS tasks {0} STOPPED'.format(','.join(task_ids)))
+            if status['exitCode'] != 0:
+                logger.info('ECS exit code: {0}'.format(status['exitCode']))
+                raise Exception('ECS job failed: {}'.format(status['status']['exitCode']))
             break
         time.sleep(POLL_TIME)
         logger.debug('ECS task status for tasks {0}: {1}'.format(
