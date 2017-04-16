@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
+import os
 import sys
+# We need to mess around with the path for the unit test to pass.
+# Otherwise "import luigi.cmdline" will import the installed Luigi version (which could be old)
+sys.path.insert(0, os.getcwd())
 import warnings
 import luigi.cmdline
 
