@@ -450,7 +450,7 @@ function visualiserApp(luigi) {
                 // NOTE : hasClass() not reliable inside SVG
                 if ($(this).attr('class').match(/\bFAILED\b/)) {
                     luigi.getErrorTrace(taskId, function (error) {
-                        showErrorTraceshowErrorTrace(error);
+                        showErrorTrace(error);
                     });
                 }
                 else {
