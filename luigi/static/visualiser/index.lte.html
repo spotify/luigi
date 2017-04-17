@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Luigi Task Visualiser</title>
+        <script src="lib/jquery-1.10.0.min.js"></script>
+        <link href="lib/bootstrap3/css/bootstrap.min.css" rel="stylesheet">
+        <link href="lib/bootstrap3/css/bootstrap-theme.min.css" rel="stylesheet">
+        <script src="lib/bootstrap3/js/bootstrap.min.js"></script>
+        <link rel="stylesheet" href="css/tipsy.css">
+
+        <link href="css/AdminLTE.min.css" rel="stylesheet"/>
+        <link href="css/font-awesome.min.css" rel="stylesheet"/>
+        <link href="css/skin-green.min.css" rel="stylesheet"/>
+
+        <link href="lib/datatables/css/jquery.dataTables.min.css" rel="stylesheet"/>
+
+        <script src="http://d3js.org/d3.v3.js" charset="utf-8"></script>
+        <script src="js/dagre-d3.js"></script>
+        <script src="lib/mustache.js"></script>
+        <script src="js/luigi.d3.js"></script>
+        <script src="js/graph.js"></script>
+        <script src="js/visualiserApp.lte.js"></script>
+        <script src="js/tipsy.js"></script>
+
+        <script src="js/AdminLTE-app.min.js"></script>
+        <script src="lib/datatables/js/jquery.dataTables.min.js"></script>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <style type="text/css">
+            body .modal {
+              width: 90%; /* desired relative width */
+              left: 100%; /* (100%-width)/2 */
+              margin: auto auto auto auto; /* place center */
+            }
+            body .modal.fade.in {
+              top: auto; /* fade in to correct spot */
+            }
+            /* This styles the title of the tooltip */
+            .tipsy .name {
+              font-size: 1.5em;
+              font-weight: bold;
+              margin: 0;
+            }
+        </style>
+
+        <style>
+        .nodeCircle {
+          stroke: #fff;
+          stroke-width: 1.5px;
+        }
+        text {
+            font-size:8pt;
+        }
+
+        .link {
+          stroke: #999;
+          stroke-opacity: .6;
+        }
+
+        svg {
+            border:1px solid #DDDDDD;
+            overflow:scroll;
+        }
+
+        .taskRow {
+          word-break:break-all;
+        }
+        </style>
+
+        <style>
+
+          
+          @-webkit-keyframes flash {
+            0%, 50%, 100% {
+              opacity: 1;
+            }
+
+            25%, 75% {
+              opacity: 0.2;
+            }
+          }
+
+          @keyframes flash {
+            0%, 50%, 100% {
+              opacity: 1;
+            }
+
+            25%, 75% {
+              opacity: 0.2;
+            }
+          }
+
+          .RUNNING {
+            -webkit-animation-duration: 5s;
+            animation-duration: 5s;
+            -webkit-animation-fill-mode: both;
+            animation-fill-mode: both;
+            -webkit-animation-iteration-count: 1;
+            animation-iteration-count: 1;
+          }
+
+          .live.map {
+            width: 100%;
+            height: 600px;
+            background: #333;
+          }
+
+          svg {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+          }
+
+          .live.map text {
+            font-weight: 300;
+            font-size: 14px;
+          }
+
+          .live.map .node rect {
+            stroke-width: 1.5px;
+            stroke: #bbb;
+            fill: #666;
+          }
+
+          .live.map .status {
+            height: 100%;
+            width: 15px;
+            display: block;
+            float: left;
+            border-top-left-radius: 5px;
+            border-bottom-left-radius: 5px;
+            margin-right: 4px;
+          }
+
+          .live.map .DONE .status {
+            background-color: #7f7;
+          }
+
+          .live.map .RUNNING .status {
+            background-color: #7f7;
+          }
+
+          .live.map .PENDING .status {
+            background-color: #FFFF46;
+          }
+
+          .live.map .ERROR .status {
+            background-color: #f77;
+          }          
+
+          .live.map .RUNNING .queue {
+            color: #f77;
+          }
+
+          .RUNNING {
+            -webkit-animation-name: flash;
+            animation-name: flash;
+          }
+
+          .live.map .consumers {
+            margin-right: 2px;
+          }
+
+          .live.map .consumers,
+          .live.map .name {
+            margin-top: 4px;
+          }
+
+          .live.map .consumers:after {
+            content: "x";
+          }
+
+          .live.map .queue {
+            display: block;
+            float: left;
+            width: 130px;
+            height: 20px;
+            font-size: 12px;
+            margin-top: 2px;
+          }
+
+          .live.map .node g div {
+            width: 200px;
+            height: 40px;
+            color: #fff;
+          }
+
+          .live.map .node g div span.consumers {
+            display: inline-block;
+            width: 20px;
+          }
+
+          .live.map .edgeLabel text {
+            width: 50px;
+            fill: #fff;
+          }
+
+          .live.map .edgePath path {
+            stroke: #999;
+            stroke-width: 1.5px;
+            fill: #999;
+          }
+
+          td.details-control {
+            cursor: pointer;
+          }
+
+          span.status-icon {
+            border-top-left-radius: 2px;
+            border-top-right-radius: 2px;
+            border-bottom-right-radius: 2px;
+            border-bottom-left-radius: 2px;
+            display: inline-block;
+            height: 24px;
+            width: 24px;
+            text-align: center;
+            font-size: 12px;
+            line-height: 24px;
+
+          }
+
+        </style>
+
+        <script type="text/template" name="actionsTemplate">
+            <div class="span2">
+                <a href="#{{taskId}}" class="btn btn-info btn-xs" data-action="drawGraph"><i class="fa fa-sitemap"></i></a>
+                {{#re_enable}}<a class="btn btn-warning btn-xs re-enable-button" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
+            </div>
+        </script>
+        <script type="text/template" name="rowDetailsTemplate">
+          <table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px;">
+            <!-- TODO: decide where to display Priority and Resources
+            <tr>
+              <td>Priority:</td>
+              <td>{{ priority }}</td>
+            </tr>
+            <tr>
+              <td>Resources</td>
+              <td>{{ resources }}</td>
+            </tr>
+            -->
+          {{#error}}
+            <tr>
+              <td>Exception:</td>
+              <td class="error-trace"></td>
+            </tr>
+          {{ /error }}
+          </table>
+        </script>
+        <script type="text/template" name="errorTemplate">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel">Traceback for {{taskId}}</h4>
+              </div>
+              <div class="modal-body">
+                <pre class="pre-scrollable">{{error}}</pre>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </script>
+        <script type="text/template" name="workerTemplate">
+            {{#workers}}
+                <h3>{{name}}</h3>
+                <p><b>Started</b>: {{start_time}}</p>
+                <p><b>Last Checkin</b>: {{active}}</p>
+                <p><b>Root Task</b>: <a href="#{{{first_task}}}">{{first_task}}</a></p>
+                <p><b>Pending Tasks</b>: {{num_pending}}</p>
+                <p><b>Unique Pending Tasks</b>: {{num_uniques}}</p>
+                <p><b>Running Tasks</b>: {{num_running}}</p>
+                {{#tasks}}
+                <div class="taskRow row-fluid" data-task-id="{{taskId}}">
+                    <div class="span4"><strong>{{taskName}}</strong><em> ({{taskParams}})</em></div>
+                    <div class="span1">{{priority}}</div>
+                    <div class="span2">{{resources}}</div>
+                    <div class="span3">{{displayTime}}</div>
+                    <div class="span2">
+                        <a href="#{{taskId}}" class="btn btn-info btn-small" data-action="drawGraph">Dependency Graph</a>
+                        {{#error}}<a class="btn btn-primary btn-small error-trace-button" data-task-id="{{taskId}}">Show Error Trace</a>{{/error}}
+                        {{#re_enable}}<a class="btn btn-warning btn-small re-enable-button" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
+                    </div>
+                </div>
+                {{/tasks}}
+            {{/workers}}
+        </script>
+
+    </head>
+    <body class="skin-green sidebar-collapse">
+        <div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        </div>
+
+        <div class="wrapper">
+            <div class="main-header">
+                <a class="logo" href="#">Luigi Task Status</a>
+                <nav class="navbar navbar-static-top">
+                    <a href="#" class="sidebar-toggle" data-toggle="offcanvas" role="button">
+                        <span class="sr-only">Toggle navigation</span>
+                    </a>
+                    <div class="container-fluid">
+                        <div class="navbar-header">
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                                <span class="sr-only">Toggle navigation</span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                                <span class="icon-bar"></span>
+                            </button>
+                        </div>
+                        <div class="collapse navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li class="active"><a href="#" data-tab="taskList">Task List</a></li>
+                                <li><a href="#g" data-tab="dependencyGraph">Dependency Graph</a></li>
+                                <li><a href="#w" data-tab="workerList">Workers</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </nav>
+            </div>
+        </div>
+
+        <div class="content-wrapper">
+          <div class="content">
+                        <div class="row">
+                  <div class="col-md-3 col-sm-6 col-xs-12">
+                    <div class="info-box" id="pendingInfo">
+                      <span class="info-box-icon bg-yellow"><i class="fa fa-pause"></i></span>
+                      <div class="info-box-content">
+                        <span class="info-box-text">Pending Tasks</span>
+                        <span class="info-box-number">?</span>
+                      </div><!-- /.info-box-content -->
+                    </div><!-- /.info-box -->
+                  </div>
+
+                  <div class="col-md-3 col-sm-6 col-xs-12">
+                    <div class="info-box" id="runningInfo">
+                      <span class="info-box-icon bg-aqua"><i class="fa fa-play"></i></span>
+                      <div class="info-box-content">
+                        <span class="info-box-text">Running Tasks</span>
+                        <span class="info-box-number">?</span>
+                      </div><!-- /.info-box-content -->
+                    </div><!-- /.info-box -->
+                  </div>
+
+                  <div class="col-md-3 col-sm-6 col-xs-12">
+                    <div class="info-box" id="doneInfo">
+                      <span class="info-box-icon bg-green"><i class="fa fa-check"></i></span>
+                      <div class="info-box-content">
+                        <span class="info-box-text">Done Tasks</span>
+                        <span class="info-box-number">?</span>
+                      </div><!-- /.info-box-content -->
+                    </div><!-- /.info-box -->
+                  </div>
+
+                  <div class="col-md-3 col-sm-6 col-xs-12">
+                    <div class="info-box" id="failedInfo">
+                      <span class="info-box-icon bg-red"><i class="fa fa-times"></i></span>
+                      <div class="info-box-content">
+                        <span class="info-box-text">Failed Tasks</span>
+                        <span class="info-box-number">?</span>
+                      </div><!-- /.info-box-content -->
+                    </div><!-- /.info-box -->
+                  </div>
+
+                  <div class="col-md-3 col-sm-6 col-xs-12">
+                    <div class="info-box" id="upstreamFailedInfo">
+                      <span class="info-box-icon bg-maroon"><i class="fa fa-warning"></i></span>
+                      <div class="info-box-content">
+                        <span class="info-box-text">Upstream Failure</span>
+                        <span class="info-box-number">?</span>
+                      </div><!-- /.info-box-content -->
+                    </div><!-- /.info-box -->
+                  </div>
+
+                  <div class="col-md-3 col-sm-6 col-xs-12">
+                    <div class="info-box" id="disabledInfo">
+                      <span class="info-box-icon bg-gray"><i class="fa fa-minus-circle"></i></span>
+                      <div class="info-box-content">
+                        <span class="info-box-text">Disabled Tasks</span>
+                        <span class="info-box-number">?</span>
+                      </div><!-- /.info-box-content -->
+                    </div><!-- /.info-box -->
+                  </div>
+
+                  <div class="col-md-3 col-sm-6 col-xs-12">
+                    <div class="info-box" id="upstreamDisabledInfo">
+                      <span class="info-box-icon bg-gray"><i class="fa fa-warning"></i></span>
+                      <div class="info-box-content">
+                        <span class="info-box-text">Upstream Disabled</span>
+                        <span class="info-box-number">?</span>
+                      </div><!-- /.info-box-content -->
+                    </div><!-- /.info-box -->
+                  </div>
+
+                </div>
+
+        <div class="tab-content">
+            <section id="taskList" class="container-fluid tab-pane active">
+
+                <table id="taskTable" class="table table-striped">
+                  <thead>
+                    <th><!-- Colapse control --></th>
+                    <th><!-- Category --></th>
+                    <th>Name</th>
+                    <th>Parameters</th>
+                    <th>Time</th>
+                    <th>Actions</th>
+                  </thead>
+                </table>
+
+
+            </section>
+            <section id="dependencyGraph" class="tab-pane">
+                <div class="navbar">
+                  <div class="navbar-inner">
+                    <form class="navbar-form pull-left" id="loadTaskForm">
+                      <input type="text" class="search-query" placeholder="TaskId(param1=val1,param2=val2)">
+                      <button type="submit" class="btn">Show task details</button>
+                    </form>
+                    <form class="navbar-form pull-left">
+                        <label for="invertCheckbox">Show Upstream Dependencies
+                        <input type="checkbox" class="checkbox" id="invertCheckbox"/>
+                        </label>
+                    </form>
+                  </div>
+                </div>
+                <div id="searchError">
+                </div>
+                <div id="graphContainer" class="container-fluid">
+                    <h4 id="dependencyTitle"></h4>
+                    <h5>Dependency Graph</h5>
+                    <div class="live map">
+                        <svg id="mysvg"><g/></svg>
+                    </div>
+
+                </div>
+            </section>
+            <section id="workerList" class="container-fluid tab-pane active">
+            </section>
+        </div> <!-- /.tab-content -->
+        </div> <!-- /.content -->
+        </div> <!-- /.content-wrapper -->
+        <script>
+            visualiserApp(new LuigiAPI("../../api"));
+        </script>
+    </body>
+</html>
