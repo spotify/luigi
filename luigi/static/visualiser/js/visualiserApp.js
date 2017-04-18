@@ -1009,6 +1009,17 @@ function visualiserApp(luigi) {
             });
         } );
 
+        $('#taskTable tbody').on('click', 'td.details-control .forgiveFailures', function (ev) {
+            var tr = $(this).closest('tr');
+            var row = dt.row( tr );
+            var data = row.data();
+            luigi.forgiveFailures(data.taskId, function(data) {
+                if (ev.altKey){
+                    updateTasks(); // update may not be cheap
+                }
+            });
+        } );
+
         $('#taskTable tbody').on('click', 'td.details-control .re-enable-button', function () {
             var that = $(this);
             luigi.reEnable($(this).attr("data-task-id"), function(data) {
