@@ -71,7 +71,13 @@ class LocalFileSystem(FileSystem):
                 return
 
         if parents:
-            os.makedirs(path)
+            error_to_catch = getattr(__builtins__, 'FileExistsError', OSError)
+            try:
+                os.makedirs(path)
+            except error_to_catch as err:
+                # somebody already created the path
+                if getattr(err, 'errno', 0) != errno.EEXIST:
+                    raise
         else:
             if not os.path.exists(os.path.dirname(path)):
                 raise MissingParentDirectory()
