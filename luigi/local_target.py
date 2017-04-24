@@ -71,15 +71,9 @@ class LocalFileSystem(FileSystem):
                 return
 
         if parents:
-            # for Python 2 compatibility
-            try:
-                FileNotExistsError
-            except NameError:
-                FileNotExistsError = OSError
-
             try:
                 os.makedirs(path)
-            except FileNotExistsError as err:
+            except OSError as err:
                 # somebody already created the path
                 if err.errno != errno.EEXIST:
                     raise
