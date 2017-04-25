@@ -30,7 +30,7 @@ Written and maintained by Andrea Pierleoni (@apierleoni).
 import json
 import tempfile
 from tempfile import mkdtemp
-
+import uuid
 import luigi
 import logging
 
@@ -59,7 +59,7 @@ class DockerTask(luigi.Task):
 
     @property
     def name(self):
-        return ''
+        return None
 
     @property
     def container_options(self):
@@ -106,7 +106,12 @@ class DockerTask(luigi.Task):
 
         '''create temp dir'''
         tempfile.tempdir = '/tmp' #set it explicitely to make it work out of the box in mac os
-        host_tmp_dir =  mkdtemp(suffix=self.name, prefix='luigi-docker-tmp-dir-',)
+        if self.name:
+            tmpdir_suffix = self.name
+        else:
+            tmpdir_suffix = uuid.uuid4().hex[:8]
+
+        host_tmp_dir =  mkdtemp(suffix=tmpdir_suffix, prefix='luigi-docker-tmp-dir-',)
         environment = self.environment
         environment['LUIGI_TMP_DIR'] = self.tmp_dir
         volumes = self.volumes
@@ -121,7 +126,7 @@ class DockerTask(luigi.Task):
             for l in client.pull(self.image, stream=True):
                 logger.debug(l.decode('utf-8'))
 
-        '''remove clashing container if needed'''
+        '''remove clashing container if a container with the same name exists'''
         if self.auto_remove and self.name:
             try:
                 client.remove_container(self.name,
