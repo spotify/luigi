@@ -68,7 +68,9 @@ class KubernetesJobTask(luigi.Task):
     def _init_kubernetes(self):
         self.__logger = logger
         self.__logger.debug("Kubernetes auth method: " + self.auth_method)
-        if(self.auth_method == "kubeconfig"):
+        if(self.kube_config.__class__ == KubeConfig):
+            self.__kube_api = HTTPClient(self.kube_config)
+        elif(self.auth_method == "kubeconfig"):
             self.__kube_api = HTTPClient(KubeConfig.from_file(self.kubeconfig_path))
         elif(self.auth_method == "service-account"):
             self.__kube_api = HTTPClient(KubeConfig.from_service_account())
