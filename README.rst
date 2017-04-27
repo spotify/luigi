@@ -152,6 +152,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Hotels.com <https://hotels.com>`_
 * `Newsela <https://newsela.com>`_
 * `Squarespace <https://www.squarespace.com/>`_
+* `OAO <https://adops.com/>`_
 * `Grovo <https://grovo.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
