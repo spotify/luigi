@@ -42,8 +42,8 @@ class RunOnceTaskTest(LuigiTestCase):
         """
         Verify that RunOnceTask works as expected.
 
-        This task will fail if it was a normal ``luigi.Task``, because
-        RequiringTask wouldn't run becaue missing depedency at runtime.
+        This task will fail if it is a normal ``luigi.Task``, because
+        RequiringTask will not run (missing dependency at runtime).
         """
         class MyTask(RunOnceTask):
             pass
