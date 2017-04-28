@@ -74,6 +74,17 @@ class MountLocalFileAsVolume(DockerTask):
     volumes=[local_file.name+':/tmp/local_file_test']
     command = 'test -f /tmp/local_file_test'
 
+class MountLocalFileAsVolumeWithParam(DockerTask):
+    dummyopt = luigi.Parameter()
+    image = "busybox"
+    name = "MountLocalFileAsVolumeWithParam"
+    volumes=[local_file.name+':/tmp/local_file_test']
+    command = 'test -f /tmp/local_file_test'
+
+class MultipleDockerTask(DockerTask):
+    def requires(self):
+        return [MountLocalFileAsVolumeWithParam(dummyopt = opt) for opt in ['one','two']]
+
 
 class TestDockerTask(unittest.TestCase):
 
@@ -88,7 +99,6 @@ class TestDockerTask(unittest.TestCase):
         writedir = WriteToTmpDir()
         writedir.run()
 
-
     def test_local_file_mount(self):
         localfile = MountLocalFileAsVolume()
         localfile.run()
@@ -101,4 +111,6 @@ class TestDockerTask(unittest.TestCase):
         fail = FailJobContainer()
         self.assertRaises(ContainerError, fail.run)
 
-
+    def test_multiple_jobs(self):
+        worked = luigi.run(["MultipleDockerTask", "--local-scheduler"])
+        self.assertTrue(worked)
