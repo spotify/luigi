@@ -27,12 +27,11 @@ Requires:
 
 Written and maintained by Andrea Pierleoni (@apierleoni).
 """
-import json
 import tempfile
 from tempfile import mkdtemp
 import uuid
-import luigi
 import logging
+import luigi
 
 from luigi.local_target import LocalFileSystem
 
@@ -93,7 +92,6 @@ class DockerTask(luigi.Task):
     def force_pull(self):
         return False
 
-
     def run(self):
         self.__logger = logger
 
@@ -103,15 +101,14 @@ class DockerTask(luigi.Task):
         '''
         client = docker.APIClient(self.docker_url)
 
-
         '''create temp dir'''
-        tempfile.tempdir = '/tmp' #set it explicitely to make it work out of the box in mac os
+        tempfile.tempdir = '/tmp'  # set it explicitely to make it work out of the box in mac os
         if self.name:
             tmpdir_suffix = self.name
         else:
             tmpdir_suffix = uuid.uuid4().hex[:8]
 
-        host_tmp_dir =  mkdtemp(suffix=tmpdir_suffix, prefix='luigi-docker-tmp-dir-',)
+        host_tmp_dir = mkdtemp(suffix=tmpdir_suffix, prefix='luigi-docker-tmp-dir-',)
         environment = self.environment
         environment['LUIGI_TMP_DIR'] = self.tmp_dir
         volumes = self.volumes
@@ -134,29 +131,29 @@ class DockerTask(luigi.Task):
             except APIError as e:
                 self.__logger.warning("Ignored error in Docker API: " + e.explanation)
 
-
         '''run the container'''
         try:
-            container=client.create_container(self.image,
-                                  command=self.command,
-                                  name=self.name,
-                                  environment=environment,
-                                  # volumes = mounted_volumes,
-                                  host_config=client.create_host_config(binds=volumes,
-                                                                        network_mode=self.network_mode),
-                                  **self.container_options)
+            container = client.create_container(self.image,
+                                                command=self.command,
+                                                name=self.name,
+                                                environment=environment,
+                                                # volumes = mounted_volumes,
+                                                host_config=client.create_host_config(binds=volumes,
+                                                                                      network_mode=self.network_mode),
+                                                **self.container_options)
             client.start(container['Id'])
 
             exit_status = client.wait(container['Id'])
             if exit_status != 0:
                 stdout = False
                 stderr = True
-                error = client.logs(container['Id'],stdout=stdout, stderr=stderr)
+                error = client.logs(container['Id'],
+                                    stdout=stdout,
+                                    stderr=stderr)
             if self.auto_remove:
                 client.remove_container(container['Id'])
             if exit_status != 0:
                 raise ContainerError(container, exit_status, self.command, self.image, error)
-
 
         except ContainerError as e:
             '''catch non zero exti status and return it'''
@@ -167,22 +164,17 @@ class DockerTask(luigi.Task):
                 message = e.message
             except:
                 message = str(e)
-            self.__logger.error("Container" + container_name + " exited with non zero code: "+ message)
+            self.__logger.error("Container" + container_name +
+                                " exited with non zero code: " + message)
             raise
         except ImageNotFound as e:
             self.__logger.error("Image" + self.image + " not found")
             raise
         except APIError as e:
-            self.__logger.error("Error in Docker API: "+e.explanation )
+            self.__logger.error("Error in Docker API: "+e.explanation)
             raise
 
         '''delete temp dir'''
-        fs = LocalFileSystem()
-        if fs.exists(host_tmp_dir):
-            fs.remove(host_tmp_dir, recursive=True)
-
-
-
-
-
-
+        filesys = LocalFileSystem()
+        if filesys.exists(host_tmp_dir):
+            filesys.remove(host_tmp_dir, recursive=True)
