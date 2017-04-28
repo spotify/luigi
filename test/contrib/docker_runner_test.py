@@ -33,6 +33,7 @@ from tempfile import NamedTemporaryFile
 import luigi
 import logging
 from luigi.contrib.docker_runner import DockerTask
+from luigi.mock import MockTarget
 
 logger = logging.getLogger('luigi-interface')
 
@@ -71,17 +72,27 @@ class MountLocalFileAsVolume(DockerTask):
     image = "busybox"
     name = "MountLocalFileAsVolume"
     # volumes= {'/tmp/local_file_test': {'bind': local_file.name, 'mode': 'rw'}}
-    volumes=[local_file.name+':/tmp/local_file_test']
+    volumes = [local_file.name + ':/tmp/local_file_test']
     command = 'test -f /tmp/local_file_test'
 
 class MountLocalFileAsVolumeWithParam(DockerTask):
     dummyopt = luigi.Parameter()
     image = "busybox"
     name = "MountLocalFileAsVolumeWithParam"
-    volumes=[local_file.name+':/tmp/local_file_test']
-    command = 'test -f /tmp/local_file_test'
 
-class MultipleDockerTask(DockerTask):
+    @property
+    def volumes(self):
+        return [local_file.name  + ':/tmp/local_file_test' + self.dummyopt]
+    
+    @property
+    def command(self):
+        return 'test -f /tmp/local_file_test' + self.dummyopt
+
+    def complete(self):
+        return True
+
+
+class MultipleDockerTask(luigi.WrapperTask):
     def requires(self):
         return [MountLocalFileAsVolumeWithParam (dummyopt = opt) for opt in ['one','two']]
 
