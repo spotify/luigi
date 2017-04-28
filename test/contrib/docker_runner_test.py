@@ -83,7 +83,7 @@ class MountLocalFileAsVolumeWithParam(DockerTask):
 
 class MultipleDockerTask(DockerTask):
     def requires(self):
-        return [MountLocalFileAsVolumeWithParam(dummyopt = opt) for opt in ['one','two']]
+        return [MountLocalFileAsVolumeWithParam (dummyopt = opt) for opt in ['one','two']]
 
 
 class TestDockerTask(unittest.TestCase):
@@ -92,7 +92,8 @@ class TestDockerTask(unittest.TestCase):
     #     local_file.close()
 
     def test_success_job(self):
-        success = luigi.run(["SuccessJob", "--local-scheduler"])
+        success = SuccessJob()
+        luigi.build([success], local_scheduler=True)
         self.assertTrue(success)
 
     def test_temp_dir_creation(self):
