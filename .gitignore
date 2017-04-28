@@ -132,6 +132,9 @@ Session.vim
 # IntelliJ
 out/
 
+#visualstudiocode
+.vscode/
+
 # mpeltonen/sbt-idea plugin
 .idea_modules/
 

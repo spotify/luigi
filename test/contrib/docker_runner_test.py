@@ -27,7 +27,7 @@ Requires:
 Written and maintained by Andrea Pierleoni (@apierleoni).
 """
 import tempfile
-import unittest
+from helpers import unittest
 from tempfile import NamedTemporaryFile
 
 import luigi
