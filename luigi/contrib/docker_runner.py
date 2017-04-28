@@ -117,11 +117,19 @@ class DockerTask(luigi.Task):
             volumes.append('{0}:{1}'.format(host_tmp_dir, self.tmp_dir))
             # mounted_volumes = [v.split(':')[1] for v in volumes ]
 
+        '''add latest tag if nothing else is specified'''
+        if ':' not in self.image:
+            self.image = ':'.join([self.image,'latest'])
+
         '''get image if missing'''
         if self.force_pull or len(client.images(name=self.image)) == 0:
             logger.info('Pulling docker image ' + self.image)
-            for l in client.pull(self.image, stream=True):
-                logger.debug(l.decode('utf-8'))
+            try:
+                for logline in client.pull(self.image, stream=True):
+                    logger.debug(logline.decode('utf-8'))
+            except APIError as e:
+                self.__logger.warning("Error in Docker API: " + e.explanation)
+                raise
 
         '''remove clashing container if a container with the same name exists'''
         if self.auto_remove and self.name:
@@ -168,7 +176,7 @@ class DockerTask(luigi.Task):
                                 " exited with non zero code: " + message)
             raise
         except ImageNotFound as e:
-            self.__logger.error("Image" + self.image + " not found")
+            self.__logger.error("Image " + self.image + " not found")
             raise
         except APIError as e:
             self.__logger.error("Error in Docker API: "+e.explanation)

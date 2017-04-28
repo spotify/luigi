@@ -48,9 +48,8 @@ local_file.write('this is a test file\n')
 local_file.flush()
 
 class SuccessJob(DockerTask):
-    image = "busybox"
+    image = "busybox:latest"
     name = "SuccessJob"
-
 
 class FailJobImageNotFound(DockerTask):
     image = "image-does-not-exists"
@@ -74,7 +73,6 @@ class MountLocalFileAsVolume(DockerTask):
     # volumes= {'/tmp/local_file_test': {'bind': local_file.name, 'mode': 'rw'}}
     volumes=[local_file.name+':/tmp/local_file_test']
     command = 'test -f /tmp/local_file_test'
-
 
 
 class TestDockerTask(unittest.TestCase):
