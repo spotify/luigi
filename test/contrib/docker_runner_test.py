@@ -64,7 +64,7 @@ class FailJobContainer(DockerTask):
 class WriteToTmpDir(DockerTask):
     image = "busybox"
     name = "WriteToTmpDir"
-    tmp_dir = '/tmp/luigi-test'
+    container_tmp_dir = '/tmp/luigi-test'
     command = 'test -d  /tmp/luigi-test'
     # command = 'test -d $LUIGI_TMP_DIR'# && echo ok >$LUIGI_TMP_DIR/test'
 
@@ -76,6 +76,13 @@ class MountLocalFileAsVolume(DockerTask):
     command = 'test -f /tmp/local_file_test'
 
 class MountLocalFileAsVolumeWithParam(DockerTask):
+    dummyopt = luigi.Parameter()
+    image = "busybox"
+    name = "MountLocalFileAsVolumeWithParam"
+    volumes = [local_file.name  + ':/tmp/local_file_test' ]
+    command = 'test -f /tmp/local_file_test' 
+
+class MountLocalFileAsVolumeWithParamRedefProperties(DockerTask):
     dummyopt = luigi.Parameter()
     image = "busybox"
     name = "MountLocalFileAsVolumeWithParam"
@@ -93,8 +100,15 @@ class MountLocalFileAsVolumeWithParam(DockerTask):
 
 
 class MultipleDockerTask(luigi.WrapperTask):
+    '''because the volumes property is defined as a list, spinning multiple
+    containers led to conflict in the volume binds definition, with multiple
+    host directories pointing to the same container directory'''
     def requires(self):
-        return [MountLocalFileAsVolumeWithParam (dummyopt = opt) for opt in ['one','two']]
+        return [MountLocalFileAsVolumeWithParam(dummyopt = opt) for opt in ['one','two','three']]
+
+class MultipleDockerTaskRedefProperties(luigi.WrapperTask):
+    def requires(self):
+        return [MountLocalFileAsVolumeWithParamRedefProperties(dummyopt = opt) for opt in ['one','two','three']]
 
 
 class TestDockerTask(unittest.TestCase):
@@ -125,4 +139,8 @@ class TestDockerTask(unittest.TestCase):
 
     def test_multiple_jobs(self):
         worked = luigi.run(["MultipleDockerTask", "--local-scheduler"])
+        self.assertTrue(worked)
+
+    def test_multiple_jobs2(self):
+        worked = luigi.run(["MultipleDockerTaskRedefProperties", "--local-scheduler"])
         self.assertTrue(worked)
