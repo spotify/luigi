@@ -79,8 +79,8 @@ class MountLocalFileAsVolumeWithParam(DockerTask):
     dummyopt = luigi.Parameter()
     image = "busybox"
     name = "MountLocalFileAsVolumeWithParam"
-    volumes = [local_file.name  + ':/tmp/local_file_test' ]
-    command = 'test -f /tmp/local_file_test' 
+    volumes = [local_file.name  + ':/tmp/local_file_test']
+    command = 'test -f /tmp/local_file_test'
 
 class MountLocalFileAsVolumeWithParamRedefProperties(DockerTask):
     dummyopt = luigi.Parameter()
@@ -90,7 +90,7 @@ class MountLocalFileAsVolumeWithParamRedefProperties(DockerTask):
     @property
     def volumes(self):
         return [local_file.name  + ':/tmp/local_file_test' + self.dummyopt]
-    
+
     @property
     def command(self):
         return 'test -f /tmp/local_file_test' + self.dummyopt
@@ -104,11 +104,13 @@ class MultipleDockerTask(luigi.WrapperTask):
     containers led to conflict in the volume binds definition, with multiple
     host directories pointing to the same container directory'''
     def requires(self):
-        return [MountLocalFileAsVolumeWithParam(dummyopt = opt) for opt in ['one','two','three']]
+        return [MountLocalFileAsVolumeWithParam(dummyopt=opt)
+                for opt in ['one', 'two', 'three']]
 
 class MultipleDockerTaskRedefProperties(luigi.WrapperTask):
     def requires(self):
-        return [MountLocalFileAsVolumeWithParamRedefProperties(dummyopt = opt) for opt in ['one','two','three']]
+        return [MountLocalFileAsVolumeWithParamRedefProperties(dummyopt=opt)
+                for opt in ['one', 'two', 'three']]
 
 
 class TestDockerTask(unittest.TestCase):
