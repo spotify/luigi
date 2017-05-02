@@ -141,9 +141,6 @@ class DockerTask(luigi.Task):
         # update environment property with the (internal) location of tmp_dir
         self.environment['LUIGI_TMP_DIR'] = self.container_tmp_dir
 
-        logger.debug('>>ELISEO<< self._volumes is {0}'.format(self._volumes))
-        logger.debug('>>ELISEO<< self.volume is {0}'.format(self.volumes))
-
         # add additional volume binds specified by the user to the tmp_Dir bind
         if isinstance(self.volumes, six.string_types):
             return self._volumes.append(self.volumes)
@@ -167,22 +164,22 @@ class DockerTask(luigi.Task):
         if self.auto_remove and self.name:
             try:
                 self._client.remove_container(self.name,
-                                             force=True)
+                                              force=True)
             except APIError as e:
                 self.__logger.warning("Ignored error in Docker API: " + e.explanation)
 
         # run the container
         try:
-            logger.debug('>>ELISEO<< self.volumes is {0}'.format(self.volumes))
+            logger.debug('Creating image: %s command: %s volumes: %s' % (self._image, self.command, self._volumes))
 
             container = self._client.create_container(self._image,
-                                                command=self.command,
-                                                name=self.name,
-                                                environment=self.environment,
-                                                # volumes = mounted_volumes,
-                                                host_config=self._client.create_host_config(binds=self._volumes,
+                                                      command=self.command,
+                                                      name=self.name,
+                                                      environment=self.environment,
+                                                      # volumes = mounted_volumes,
+                                                      host_config=self._client.create_host_config(binds=self._volumes,
                                                                                       network_mode=self.network_mode),
-                                                **self.container_options)
+                                                      **self.container_options)
             self._client.start(container['Id'])
 
             exit_status = self._client.wait(container['Id'])
