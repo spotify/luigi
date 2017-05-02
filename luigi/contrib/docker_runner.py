@@ -107,7 +107,7 @@ class DockerTask(luigi.Task):
     def force_pull(self):
         return False
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         '''
         When a new instance of the DockerTask class gets created:
         - call the parent class __init__ method
