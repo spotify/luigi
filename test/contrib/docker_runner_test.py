@@ -85,7 +85,7 @@ class MountLocalFileAsVolumeWithParam(DockerTask):
 class MountLocalFileAsVolumeWithParamRedefProperties(DockerTask):
     dummyopt = luigi.Parameter()
     image = "busybox"
-    name = "MountLocalFileAsVolumeWithParam"
+    name = "MountLocalFileAsVolumeWithParamRedef"
 
     @property
     def volumes(self):
@@ -138,9 +138,11 @@ class TestDockerTask(unittest.TestCase):
         self.assertRaises(ContainerError, fail.run)
 
     def test_multiple_jobs(self):
-        worked = luigi.run(["MultipleDockerTask", "--local-scheduler"])
+        worked = MultipleDockerTask()
+        luigi.build([worked], local_scheduler=True)
         self.assertTrue(worked)
 
     def test_multiple_jobs2(self):
-        worked = luigi.run(["MultipleDockerTaskRedefProperties", "--local-scheduler"])
+        worked = MultipleDockerTaskRedefProperties()
+        luigi.build([worked], local_scheduler=True)
         self.assertTrue(worked)
