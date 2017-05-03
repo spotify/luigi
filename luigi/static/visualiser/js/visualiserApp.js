@@ -297,6 +297,14 @@ function visualiserApp(luigi) {
             });
         }).trigger('click');
         $("#statusMessageModal").modal({});
+        var refreshInterval = setInterval(function() {
+                if ($("#statusMessageModal").is(":hidden"))
+                    clearInterval(refreshInterval)
+                else
+                    $("#statusMessageModal .refresh").trigger('click');
+            },
+            500
+        );
     }
 
     function preProcessGraph(dependencyGraph) {
