@@ -482,6 +482,12 @@ class SchedulerApiTest(unittest.TestCase):
         for task_id in ('A_1', 'A_2', 'A_1_2'):
             self.assertEqual('test message', self.sch.get_task_status_message(task_id)['statusMessage'])
 
+    def test_batch_update_progress(self):
+        self._start_simple_batch()
+        self.sch.set_task_progress_percentage('A_1_2', 30)
+        for task_id in ('A_1', 'A_2', 'A_1_2'):
+            self.assertEqual(30, self.sch.get_task_progress_percentage(task_id)['progressPercentage'])
+
     def test_batch_tracking_url(self):
         self._start_simple_batch()
         self.sch.add_task(worker=WORKER, task_id='A_1_2', tracking_url='http://test.tracking.url/')

@@ -71,7 +71,8 @@ function visualiserApp(luigi) {
             graph: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DONE"),
             error: task.status == "FAILED",
             re_enable: task.status == "DISABLED" && task.re_enable_able,
-            statusMessage: task.status_message
+            statusMessage: task.status_message,
+            progressPercentage: task.progress_percentage
         };
     }
 
@@ -287,6 +288,12 @@ function visualiserApp(luigi) {
         $("#statusMessageModal .refresh").on('click', function() {
             luigi.getTaskStatusMessage(data.taskId, function(data) {
                 $("#statusMessageModal pre").html(data.statusMessage);
+            });
+            luigi.getTaskProgressPercentage(data.taskId, function(data) {
+                $("#statusMessageModal .progress-bar")
+                    .attr('aria-valuenow', data.progressPercentage)
+                    .text(data.progressPercentage + '%')
+                    .css({'width': data.progressPercentage + '%'});
             });
         }).trigger('click');
         $("#statusMessageModal").modal({});

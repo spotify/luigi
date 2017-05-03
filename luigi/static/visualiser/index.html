@@ -272,6 +272,11 @@
               </div>
               <div class="modal-body">
                 <pre class="pre-scrollable">{{statusMessage}}</pre>
+                <div class="progress">
+                  <div class="progress-bar" role="progressbar" aria-valuenow="{{progressPercentage}}" aria-valuemin="0" aria-valuemax="100" style="min-width: 2em;">
+                  {{progressPercentage}}%
+                  </div>
+                </div>
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-info refresh"><i class="fa fa-refresh"></i> Refresh</button>

@@ -99,6 +99,12 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.getTaskProgressPercentage = function(taskId, callback) {
+        return jsonRPC(this.urlRoot + "/get_task_progress_percentage", {task_id: taskId}, function(response) {
+            callback(response.response);
+        });
+    };
+
     LuigiAPI.prototype.getRunningTaskList = function(callback) {
         return jsonRPC(this.urlRoot + "/task_list", {status: "RUNNING", upstream_status: "", search: searchTerm()}, function(response) {
             callback(flatten(response.response));
