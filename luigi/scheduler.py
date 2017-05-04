@@ -1197,7 +1197,7 @@ class Scheduler(object):
             'resources': task.resources,
             'tracking_url': getattr(task, "tracking_url", None),
             'status_message': getattr(task, "status_message", None),
-            'progress_percentage': getattr(task, "progress_percentage", -1)
+            'progress_percentage': getattr(task, "progress_percentage", None)
         }
         if task.status == DISABLED:
             ret['re_enable_able'] = task.scheduler_disable_time is not None
