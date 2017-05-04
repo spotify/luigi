@@ -287,13 +287,22 @@ function visualiserApp(luigi) {
         $("#statusMessageModal").empty().append(renderTemplate("statusMessageTemplate", data));
         $("#statusMessageModal .refresh").on('click', function() {
             luigi.getTaskStatusMessage(data.taskId, function(data) {
-                $("#statusMessageModal pre").html(data.statusMessage);
+                if (data.statusMessage === null)
+                    $("#statusMessageModal pre").hide()
+                else {
+                    $("#statusMessageModal pre").html(data.statusMessage).show();
+                }
             });
             luigi.getTaskProgressPercentage(data.taskId, function(data) {
-                $("#statusMessageModal .progress-bar")
-                    .attr('aria-valuenow', data.progressPercentage)
-                    .text(data.progressPercentage + '%')
-                    .css({'width': data.progressPercentage + '%'});
+                if (data.progressPercentage === null)
+                    $("#statusMessageModal .progress").hide()
+                else {
+                    $("#statusMessageModal .progress").show()
+                    $("#statusMessageModal .progress-bar")
+                        .attr('aria-valuenow', data.progressPercentage)
+                        .text(data.progressPercentage + '%')
+                        .css({'width': data.progressPercentage + '%'});
+                }
             });
         }).trigger('click');
         $("#statusMessageModal").modal({});
