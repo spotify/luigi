@@ -285,32 +285,30 @@ function visualiserApp(luigi) {
 
     function showStatusMessage(data) {
         $("#statusMessageModal").empty().append(renderTemplate("statusMessageTemplate", data));
-        $("#statusMessageModal .refresh").on('click', function() {
-            luigi.getTaskStatusMessage(data.taskId, function(data) {
-                if (data.statusMessage === null)
-                    $("#statusMessageModal pre").hide()
-                else {
-                    $("#statusMessageModal pre").html(data.statusMessage).show();
-                }
-            });
-            luigi.getTaskProgressPercentage(data.taskId, function(data) {
-                if (data.progressPercentage === null)
-                    $("#statusMessageModal .progress").hide()
-                else {
-                    $("#statusMessageModal .progress").show()
-                    $("#statusMessageModal .progress-bar")
-                        .attr('aria-valuenow', data.progressPercentage)
-                        .text(data.progressPercentage + '%')
-                        .css({'width': data.progressPercentage + '%'});
-                }
-            });
-        }).trigger('click');
         $("#statusMessageModal").modal({});
         var refreshInterval = setInterval(function() {
                 if ($("#statusMessageModal").is(":hidden"))
                     clearInterval(refreshInterval)
-                else
-                    $("#statusMessageModal .refresh").trigger('click');
+                else {
+                    luigi.getTaskStatusMessage(data.taskId, function(data) {
+                        if (data.statusMessage === null)
+                            $("#statusMessageModal pre").hide()
+                        else {
+                            $("#statusMessageModal pre").html(data.statusMessage).show();
+                        }
+                    });
+                    luigi.getTaskProgressPercentage(data.taskId, function(data) {
+                        if (data.progressPercentage === null)
+                            $("#statusMessageModal .progress").hide()
+                        else {
+                            $("#statusMessageModal .progress").show()
+                            $("#statusMessageModal .progress-bar")
+                                .attr('aria-valuenow', data.progressPercentage)
+                                .text(data.progressPercentage + '%')
+                                .css({'width': data.progressPercentage + '%'});
+                        }
+                    });
+                }
             },
             500
         );
