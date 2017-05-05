@@ -252,9 +252,13 @@ class Parameter(object):
 
         :param x: the value to serialize.
         """
-        if not isinstance(x, six.string_types) and self.__class__ == Parameter:
-            warnings.warn("Parameter {0} is not of type string.".format(str(x)))
         return str(x)
+
+    def _warn_on_wrong_param_type(self, param_name, param_value):
+        if self.__class__ != Parameter:
+            return
+        if not isinstance(param_value, six.string_types):
+            warnings.warn('Parameter "{}" with value "{}" is not of type string.'.format(param_name, param_value))
 
     def normalize(self, x):
         """
@@ -692,8 +696,6 @@ class TimeDeltaParameter(Parameter):
 
         :param x: the value to serialize.
         """
-        if not isinstance(x, datetime.timedelta) and self.__class__ == TimeDeltaParameter:
-            warnings.warn("Parameter {0} is not of type timedelta.".format(str(x)))
         weeks = x.days // 7
         days = x.days % 7
         hours = x.seconds // 3600
@@ -701,6 +703,12 @@ class TimeDeltaParameter(Parameter):
         seconds = (x.seconds % 3600) % 60
         result = "{} w {} d {} h {} m {} s".format(weeks, days, hours, minutes, seconds)
         return result
+
+    def _warn_on_wrong_param_type(self, param_name, param_value):
+        if self.__class__ != TimeDeltaParameter:
+            return
+        if not isinstance(param_value, datetime.timedelta):
+            warnings.warn('Parameter "{}" with value "{}" is not of type timedelta.'.format(param_name, param_value))
 
 
 class TaskParameter(Parameter):
