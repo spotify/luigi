@@ -158,6 +158,19 @@ class ParameterTest(LuigiTestCase):
     def test_default_param(self):
         self.assertEqual(WithDefault().x, 'xyz')
 
+    def test_default_callable_param(self):
+        default_value = 'xyz'
+
+        class CallableDefaultParameterTask(luigi.Task):
+            x = luigi.Parameter(default=lambda: default_value)
+
+        task = CallableDefaultParameterTask()
+        self.assertEqual(task.x, 'xyz')
+
+        default_value = 'abc'
+        self.assertEqual(task.x, 'xyz')
+        self.assertEqual(CallableDefaultParameterTask().x, 'abc')
+
     def test_missing_param(self):
         def create_a():
             return A()

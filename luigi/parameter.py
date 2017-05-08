@@ -117,8 +117,8 @@ class Parameter(object):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
-                        ``IntParameter``. By default, no default is stored and
-                        the value must be specified at runtime.
+                        ``IntParameter``, or be a callable that returns the appropriate type. By
+                        default, no default is stored and the value must be specified at runtime.
         :param bool significant: specify ``False`` if the parameter should not be treated as part of
                                  the unique identifier for a Task. An insignificant Parameter might
                                  also be used to specify a password or other sensitive information
@@ -200,7 +200,7 @@ class Parameter(object):
             yield (self._get_value_from_config(self._config_path['section'], self._config_path['name']),
                    'The use of the configuration [{}] {} is deprecated. Please use [{}] {}'.format(
                    self._config_path['section'], self._config_path['name'], task_name, param_name))
-        yield (self._default, None)
+        yield (self._default() if six.callable(self._default) else self._default, None)
 
     def has_task_value(self, task_name, param_name):
         return self._get_value(task_name, param_name) != _no_value
