@@ -113,12 +113,13 @@ class Parameter(object):
     _counter = 0  # non-atomically increasing counter used for ordering parameters.
 
     def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
-                 config_path=None, positional=True, always_in_help=False, batch_method=None):
+                 config_path=None, positional=True, always_in_help=False, batch_method=None,
+                 default_callable=None):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
-                        ``IntParameter``, or be a callable that returns the appropriate type. By
-                        default, no default is stored and the value must be specified at runtime.
+                        ``IntParameter``. By default, no default is stored and
+                        the value must be specified at runtime.
         :param bool significant: specify ``False`` if the parameter should not be treated as part of
                                  the unique identifier for a Task. An insignificant Parameter might
                                  also be used to specify a password or other sensitive information
@@ -140,8 +141,15 @@ class Parameter(object):
                                                         parameter values into a single value. Used
                                                         when receiving batched parameter lists from
                                                         the scheduler. See :ref:`batch_method`
+        :param function()->A default_callable: Method to compute the default value for a parameter
+                                               when a task is initialized. Must not be specified if
+                                               a ``default`` value is provided. Default: ``None``.
         """
-        self._default = default
+        if default_callable and default != _no_value:
+            raise ParameterException('either default or default_callable may be provided, not both')
+        self._default = default_callable or default
+        self._call_default = bool(default_callable)
+
         self._batch_method = batch_method
         if is_global:
             warnings.warn("is_global support is removed. Assuming positional=False",
@@ -200,7 +208,7 @@ class Parameter(object):
             yield (self._get_value_from_config(self._config_path['section'], self._config_path['name']),
                    'The use of the configuration [{}] {} is deprecated. Please use [{}] {}'.format(
                    self._config_path['section'], self._config_path['name'], task_name, param_name))
-        yield (self._default() if six.callable(self._default) else self._default, None)
+        yield (self._default() if self._call_default else self._default, None)
 
     def has_task_value(self, task_name, param_name):
         return self._get_value(task_name, param_name) != _no_value

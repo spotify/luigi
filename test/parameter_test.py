@@ -158,19 +158,6 @@ class ParameterTest(LuigiTestCase):
     def test_default_param(self):
         self.assertEqual(WithDefault().x, 'xyz')
 
-    def test_default_callable_param(self):
-        default_value = 'xyz'
-
-        class CallableDefaultParameterTask(luigi.Task):
-            x = luigi.Parameter(default=lambda: default_value)
-
-        task = CallableDefaultParameterTask()
-        self.assertEqual(task.x, 'xyz')
-
-        default_value = 'abc'
-        self.assertEqual(task.x, 'xyz')
-        self.assertEqual(CallableDefaultParameterTask().x, 'abc')
-
     def test_missing_param(self):
         def create_a():
             return A()
@@ -319,6 +306,24 @@ class ParameterTest(LuigiTestCase):
     def test_parse_list_as_tuple(self):
         param = luigi.IntParameter(batch_method=tuple)
         self.assertEqual((7, 17, 5), param._parse_list(['7', '17', '5']))
+
+    def test_default_callable_param(self):
+        default_value = 'xyz'
+
+        class CallableDefaultParameterTask(luigi.Task):
+            x = luigi.Parameter(default_callable=lambda: default_value)
+
+        task = CallableDefaultParameterTask()
+        self.assertEqual(task.x, 'xyz')
+
+        default_value = 'abc'
+        self.assertEqual(task.x, 'xyz')
+        self.assertEqual(CallableDefaultParameterTask().x, 'abc')
+
+    def test_both_default_and_default_callable_param(self):
+        self.assertRaises(
+            ParameterException,
+            lambda: luigi.parameter.Parameter(default='abc', default_callable=lambda: 'xyz'))
 
 
 class TestParametersHashability(LuigiTestCase):
