@@ -401,7 +401,7 @@ class HadoopJobRunner(JobRunner):
 
     def __init__(self, streaming_jar, modules=None, streaming_args=None,
                  libjars=None, libjars_in_hdfs=None, jobconfs=None,
-                 input_format=None, output_format=None,
+                 input_format=None, output_format=None, cmdenvs=None,
                  end_job_with_atomic_move_dir=True, archives=None):
         def get(x, default):
             return x is not None and x or default
@@ -414,6 +414,7 @@ class HadoopJobRunner(JobRunner):
         self.jobconfs = get(jobconfs, {})
         self.input_format = input_format
         self.output_format = output_format
+        self.cmdenvs = get(cmdenvs, [])
         self.end_job_with_atomic_move_dir = end_job_with_atomic_move_dir
         self.tmp_dir = False
 
@@ -566,6 +567,10 @@ class HadoopJobRunner(JobRunner):
             raise TypeError('output must be one of: {}'.format(
                 allowed_output_targets))
         arglist += ['-output', output_hadoop]
+
+        # environment variables for streaming commands
+        for cmdenv in self.cmdenvs:
+            arglist += ['-cmdenv', cmdenv]
 
         # submit job
         if job.package_binary is not None:
