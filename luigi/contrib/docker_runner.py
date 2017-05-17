@@ -145,7 +145,7 @@ class DockerTask(luigi.Task):
         if isinstance(self.volumes, six.string_types):
             return self._volumes.append(self.volumes)
         elif isinstance(self.volumes, list):
-            return self._volumes.append(*self.volumes)
+            return self._volumes.extend(self.volumes)
 
 
     def run(self):
