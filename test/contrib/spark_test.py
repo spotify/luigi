@@ -72,6 +72,15 @@ class TestSparkSubmitTask(SparkSubmitTask):
         return luigi.LocalTarget('output')
 
 
+class TestSparkSubmitTaskWithExtraSparkSubmitArgs(TestSparkSubmitTask):
+
+    def extra_spark_submit_args(self):
+        return [
+            "--conf", "spark.mesos.executor.docker.image=blah",
+            "--conf", "spark.mesos.role=ImgProc=role1",
+        ]
+
+
 class TestDefaultSparkSubmitTask(SparkSubmitTask):
     app = 'test.py'
 
@@ -93,6 +102,7 @@ class TestPySparkTask(PySparkTask):
 
 class SparkSubmitTaskTest(unittest.TestCase):
     ss = 'ss-stub'
+    maxDiff=None
 
     @with_config({'spark': {'spark-submit': ss, 'master': "yarn-client", 'hadoop-conf-dir': 'path'}})
     @patch('luigi.contrib.external_program.subprocess.Popen')
@@ -103,6 +113,25 @@ class SparkSubmitTaskTest(unittest.TestCase):
 
         self.assertEqual(proc.call_args[0][0],
                          ['ss-stub', '--master', 'yarn-client', '--deploy-mode', 'client', '--name', 'AppName',
+                          '--class', 'org.test.MyClass', '--jars', 'jars/my.jar', '--py-files', 'file1.py,file2.py',
+                          '--files', 'file1,file2', '--archives', 'archive1,archive2', '--conf', 'Prop=Value',
+                          '--properties-file', 'conf/spark-defaults.conf', '--driver-memory', '4G', '--driver-java-options', '-Xopt',
+                          '--driver-library-path', 'library/path', '--driver-class-path', 'class/path', '--executor-memory', '8G',
+                          '--driver-cores', '8', '--supervise', '--total-executor-cores', '150', '--executor-cores', '10',
+                          '--queue', 'queue', '--num-executors', '2', 'file', 'arg1', 'arg2'])
+
+    @with_config({'spark': {'spark-submit': ss, 'master': "mesos", 'hadoop-conf-dir': 'path'}})
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_extra_spark_submit_args_are_passed(self, proc):
+        setup_run_process(proc)
+        job = TestSparkSubmitTaskWithExtraSparkSubmitArgs()
+        job.run()
+
+        self.assertEqual(proc.call_args[0][0],
+                         ['ss-stub',
+                          '--conf', 'spark.mesos.executor.docker.image=blah',
+                          '--conf', 'spark.mesos.role=ImgProc=role1',
+                          '--master', 'mesos', '--deploy-mode', 'client', '--name', 'AppName',
                           '--class', 'org.test.MyClass', '--jars', 'jars/my.jar', '--py-files', 'file1.py,file2.py',
                           '--files', 'file1,file2', '--archives', 'archive1,archive2', '--conf', 'Prop=Value',
                           '--properties-file', 'conf/spark-defaults.conf', '--driver-memory', '4G', '--driver-java-options', '-Xopt',
