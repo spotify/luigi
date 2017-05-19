@@ -348,7 +348,6 @@ class BigQueryClient(object):
         """
 
         job = {
-            "projectId": dest_table.project_id,
             "configuration": {
                 "copy": {
                     "sourceTable": {
@@ -513,7 +512,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         assert all(x.startswith('gs://') for x in source_uris)
 
         job = {
-            'projectId': output.table.project_id,
             'configuration': {
                 'load': {
                     'destinationTable': {
@@ -599,7 +597,6 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
         logger.info('Query SQL: %s', query)
 
         job = {
-            'projectId': output.table.project_id,
             'configuration': {
                 'query': {
                     'query': query,
