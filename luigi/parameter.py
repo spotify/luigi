@@ -857,11 +857,18 @@ class DictParameter(Parameter):
                 return obj.get_wrapped()
             return json.JSONEncoder.default(self, obj)
 
+    def _normalize_value(self, v):
+        if isinstance(v, Mapping):
+            return self.normalize(v)
+        elif isinstance(v, list):
+            return ListParameter().normalize(v)
+        return v
+
     def normalize(self, value):
         """
         Ensure that dictionary parameter is converted to a _FrozenOrderedDict so it can be hashed.
         """
-        return _FrozenOrderedDict(value)
+        return _FrozenOrderedDict({k: self._normalize_value(v) for k, v in value.items()})
 
     def parse(self, s):
         """
