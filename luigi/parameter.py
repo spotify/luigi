@@ -820,7 +820,7 @@ def _recursively_freeze(value):
     Recursively walks ``Mapping``s and ``list``s and converts them to ``_FrozenOrderedDict`` and ``tuples``, respectively.
     """
     if isinstance(value, Mapping):
-        return _FrozenOrderedDict({k: _recursively_freeze(v) for k, v in value.items()})
+        return _FrozenOrderedDict(((k, _recursively_freeze(v)) for k, v in value.items()))
     elif isinstance(value, list):
         return tuple(_recursively_freeze(v) for v in value)
     return value
