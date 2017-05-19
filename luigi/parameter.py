@@ -815,6 +815,17 @@ class _FrozenOrderedDict(Mapping):
         return self.__dict
 
 
+def _recursively_freeze(value):
+    """
+    Recursively walks ``Mapping``s and ``list``s and converts them to ``_FrozenOrderedDict`` and ``tuples``, respectively.
+    """
+    if isinstance(value, Mapping):
+        return _FrozenOrderedDict({k: _recursively_freeze(v) for k, v in value.items()})
+    elif isinstance(value, list):
+        return tuple(_recursively_freeze(v) for v in value)
+    return value
+
+
 class DictParameter(Parameter):
     """
     Parameter whose value is a ``dict``.
@@ -857,18 +868,11 @@ class DictParameter(Parameter):
                 return obj.get_wrapped()
             return json.JSONEncoder.default(self, obj)
 
-    def _normalize_value(self, v):
-        if isinstance(v, Mapping):
-            return self.normalize(v)
-        elif isinstance(v, list):
-            return ListParameter().normalize(v)
-        return v
-
     def normalize(self, value):
         """
         Ensure that dictionary parameter is converted to a _FrozenOrderedDict so it can be hashed.
         """
-        return _FrozenOrderedDict({k: self._normalize_value(v) for k, v in value.items()})
+        return _recursively_freeze(value)
 
     def parse(self, s):
         """
@@ -924,7 +928,7 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the normalized (hashable/immutable) value.
         """
-        return tuple(x)
+        return _recursively_freeze(x)
 
     def parse(self, x):
         """
