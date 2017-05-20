@@ -106,7 +106,7 @@ class S3Client(FileSystem):
         role_arn = options.get('aws_role_arn')
         role_session_name = options.get('aws_role_session_name')
 
-        aws_session_token = None
+        aws_session_token = os.environ.get('AWS_SESSION_TOKEN')
 
         if role_arn and role_session_name:
             from boto import sts
