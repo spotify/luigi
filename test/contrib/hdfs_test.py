@@ -83,12 +83,14 @@ class ConfigurationTest(MiniClusterTestCase):
         self.assertTrue(isinstance(client, HdfsClient))
         self.tezt_rename_dont_move(client)
 
+    @unittest.skipIf(six.PY3, "snakebite doesn't work on Python 3 yet.")
     @helpers.with_config({"hdfs": {"client": "snakebite"}})
     def test_snakebite(self):
         client = hdfs.get_autoconfig_client(threading.local())
         self.assertTrue(isinstance(client, SnakebiteHdfsClient))
         self.tezt_rename_dont_move(client)
 
+    @unittest.skipIf(six.PY3, "snakebite doesn't work on Python 3 yet.")
     @helpers.with_config({"hdfs": {"client": "snakebite_with_hadoopcli_fallback"}})
     def test_snakebite_with_hadoopcli_fallback(self):
         client = hdfs.get_autoconfig_client(threading.local())
