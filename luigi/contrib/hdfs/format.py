@@ -3,9 +3,14 @@ import logging
 import os
 from luigi.contrib.hdfs.config import load_hadoop_cmd
 from luigi.contrib.hdfs import config as hdfs_config
-from luigi.contrib.hdfs.clients import remove, rename, mkdir
+from luigi.contrib.hdfs.clients import remove, rename, mkdir, listdir
+from luigi.contrib.hdfs.error import HDFSCliError
 
 logger = logging.getLogger('luigi-interface')
+
+
+class HdfsAtomicWriteError(IOError):
+    pass
 
 
 class HdfsReadPipe(luigi.format.InputPipeProcessWrapper):
@@ -42,7 +47,12 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
 
     def close(self):
         super(HdfsAtomicWritePipe, self).close()
-        rename(self.tmppath, self.path)
+        try:
+            remove(self.path)
+        except HDFSCliError:
+            pass
+        if not all(result['result'] for result in rename(self.tmppath, self.path) or []):
+            raise HdfsAtomicWriteError('Atomic write to {} failed'.format(self.path))
 
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
@@ -64,7 +74,18 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
 
     def close(self):
         super(HdfsAtomicWriteDirPipe, self).close()
-        rename(self.tmppath, self.path)
+        try:
+            remove(self.path)
+        except HDFSCliError:
+            pass
+
+        # it's unlikely to fail in this way but better safe than sorry
+        if not all(result['result'] for result in rename(self.tmppath, self.path) or []):
+            raise HdfsAtomicWriteError('Atomic write to {} failed'.format(self.path))
+
+        if os.path.basename(self.tmppath) in map(os.path.basename, listdir(self.path)):
+            remove(self.path)
+            raise HdfsAtomicWriteError('Atomic write to {} failed'.format(self.path))
 
 
 class PlainFormat(luigi.format.Format):

@@ -30,6 +30,7 @@ from luigi.contrib import hdfs
 from luigi import six
 from luigi.contrib.hdfs import SnakebiteHdfsClient
 from luigi.contrib.hdfs.hadoopcli_clients import HdfsClient
+from luigi.contrib.hdfs.format import HdfsAtomicWriteError, HdfsReadPipe
 from luigi.contrib.target import CascadingClient
 from minicluster import MiniClusterTestCase
 from nose.plugins.attrib import attr
@@ -169,6 +170,59 @@ class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
         self.assertRaises(TestException, foo)
         self.assertFalse(self.fs.exists(testpath))
 
+    def test_target_path_exists(self):
+        testpath = self._test_file()
+        try:
+            if self.fs.exists(testpath):
+                self.fs.remove(testpath, skip_trash=True)
+        except:
+            if self.fs.exists(self._test_dir()):
+                self.fs.remove(self._test_dir(), skip_trash=True)
+
+        with hdfs.HdfsAtomicWritePipe(testpath) as fobj:
+            fobj.write(b'test1')
+        with hdfs.HdfsAtomicWritePipe(testpath) as fobj:
+            fobj.write(b'test2')
+
+        with HdfsReadPipe(testpath) as read_pipe:
+            contents = read_pipe.read()
+
+        self.assertEqual(b'test2', contents)
+
+    @mock.patch('luigi.contrib.hdfs.format.remove')
+    def test_target_path_exists_rename_fails_hadoopcli(self, remove):
+        testpath = self._test_file()
+        try:
+            if self.fs.exists(testpath):
+                self.fs.remove(testpath, skip_trash=True)
+        except:
+            if self.fs.exists(self._test_dir()):
+                self.fs.remove(self._test_dir(), skip_trash=True)
+
+        with hdfs.HdfsAtomicWritePipe(testpath) as fobj:
+            fobj.write(b'test1')
+        fobj = hdfs.HdfsAtomicWritePipe(testpath)
+        self.assertRaises(hdfs.HDFSCliError, fobj.close)
+
+    @unittest.skipIf(six.PY3, "snakebite doesn't work on Python 3 yet.")
+    @helpers.with_config({"hdfs": {"client": "snakebite"}})
+    @mock.patch('luigi.contrib.hdfs.format.rename')
+    @mock.patch('luigi.contrib.hdfs.format.remove')
+    def test_target_path_exists_rename_fails_snakebite(self, remove, rename):
+        rename.side_effect = hdfs.get_autoconfig_client(threading.local()).rename
+        testpath = self._test_file()
+        try:
+            if self.fs.exists(testpath):
+                self.fs.remove(testpath, skip_trash=True)
+        except:
+            if self.fs.exists(self._test_dir()):
+                self.fs.remove(self._test_dir(), skip_trash=True)
+
+        with hdfs.HdfsAtomicWritePipe(testpath) as fobj:
+            fobj.write(b'test1')
+        fobj = hdfs.HdfsAtomicWritePipe(testpath)
+        self.assertRaises(HdfsAtomicWriteError, fobj.close)
+
 
 @attr('minicluster')
 class HdfsAtomicWriteDirPipeTests(MiniClusterTestCase):
@@ -211,6 +265,42 @@ class HdfsAtomicWriteDirPipeTests(MiniClusterTestCase):
                 raise TestException('Test triggered exception')
         self.assertRaises(TestException, foo)
         self.assertFalse(self.fs.exists(self.path))
+
+    def test_target_path_exists(self):
+        with hdfs.HdfsAtomicWriteDirPipe(self.path) as fobj:
+            fobj.write(b'test1')
+        with hdfs.HdfsAtomicWritePipe(self.path) as fobj:
+            fobj.write(b'test2')
+
+        with HdfsReadPipe(self.path) as read_pipe:
+            contents = read_pipe.read()
+
+        self.assertEqual(b'test2', contents)
+
+    @mock.patch('luigi.contrib.hdfs.format.remove')
+    def test_rename_into_existing_subdir_after_failed_remove(self, remove):
+        with hdfs.HdfsAtomicWriteDirPipe(self.path) as fobj:
+            fobj.write(b'test1')
+        fobj = hdfs.HdfsAtomicWriteDirPipe(self.path)
+        self.assertRaises(HdfsAtomicWriteError, fobj.close)
+
+    @mock.patch('luigi.contrib.hdfs.format.remove')
+    def test_target_path_exists_rename_fails_hadoopcli(self, remove):
+        with hdfs.HdfsAtomicWritePipe(self.path) as fobj:
+            fobj.write(b'test1')
+        fobj = hdfs.HdfsAtomicWriteDirPipe(self.path)
+        self.assertRaises(hdfs.HDFSCliError, fobj.close)
+
+    @unittest.skipIf(six.PY3, "snakebite doesn't work on Python 3 yet.")
+    @helpers.with_config({"hdfs": {"client": "snakebite"}})
+    @mock.patch('luigi.contrib.hdfs.format.rename')
+    @mock.patch('luigi.contrib.hdfs.format.remove')
+    def test_target_path_exists_rename_fails_snakebite(self, remove, rename):
+        rename.side_effect = hdfs.get_autoconfig_client(threading.local()).rename
+        with hdfs.HdfsAtomicWritePipe(self.path) as fobj:
+            fobj.write(b'test1')
+        fobj = hdfs.HdfsAtomicWriteDirPipe(self.path)
+        self.assertRaises(HdfsAtomicWriteError, fobj.close)
 
 
 # This class is a mixin, and does not inherit from TestCase, in order to avoid running the base class as a test case.
