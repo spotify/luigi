@@ -782,7 +782,7 @@ class EnumParameter(Parameter):
         return e.name
 
 
-class FrozenOrderedDict(Mapping):
+class _FrozenOrderedDict(Mapping):
     """
     It is an immutable wrapper around ordered dictionaries that implements the complete :py:class:`collections.Mapping`
     interface. It can be used as a drop-in replacement for dictionaries where immutability and ordering are desired.
@@ -813,6 +813,17 @@ class FrozenOrderedDict(Mapping):
 
     def get_wrapped(self):
         return self.__dict
+
+
+def _recursively_freeze(value):
+    """
+    Recursively walks ``Mapping``s and ``list``s and converts them to ``_FrozenOrderedDict`` and ``tuples``, respectively.
+    """
+    if isinstance(value, Mapping):
+        return _FrozenOrderedDict(((k, _recursively_freeze(v)) for k, v in value.items()))
+    elif isinstance(value, list):
+        return tuple(_recursively_freeze(v) for v in value)
+    return value
 
 
 class DictParameter(Parameter):
@@ -848,20 +859,20 @@ class DictParameter(Parameter):
     values (like a database connection config).
     """
 
-    class DictParamEncoder(JSONEncoder):
+    class _DictParamEncoder(JSONEncoder):
         """
-        JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~FrozenOrderedDict` JSON serializable.
+        JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~_FrozenOrderedDict` JSON serializable.
         """
         def default(self, obj):
-            if isinstance(obj, FrozenOrderedDict):
+            if isinstance(obj, _FrozenOrderedDict):
                 return obj.get_wrapped()
             return json.JSONEncoder.default(self, obj)
 
     def normalize(self, value):
         """
-        Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be hashed.
+        Ensure that dictionary parameter is converted to a _FrozenOrderedDict so it can be hashed.
         """
-        return FrozenOrderedDict(value)
+        return _recursively_freeze(value)
 
     def parse(self, s):
         """
@@ -874,10 +885,10 @@ class DictParameter(Parameter):
 
         :param s: String to be parse
         """
-        return json.loads(s, object_pairs_hook=FrozenOrderedDict)
+        return json.loads(s, object_pairs_hook=_FrozenOrderedDict)
 
     def serialize(self, x):
-        return json.dumps(x, cls=DictParameter.DictParamEncoder)
+        return json.dumps(x, cls=DictParameter._DictParamEncoder)
 
 
 class ListParameter(Parameter):
@@ -917,7 +928,7 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the normalized (hashable/immutable) value.
         """
-        return tuple(x)
+        return _recursively_freeze(x)
 
     def parse(self, x):
         """
