@@ -19,6 +19,7 @@ import functools
 import re
 from helpers import unittest
 import random
+import threading
 import pickle
 
 import helpers
@@ -27,6 +28,9 @@ import mock
 import luigi.format
 from luigi.contrib import hdfs
 from luigi import six
+from luigi.contrib.hdfs import SnakebiteHdfsClient
+from luigi.contrib.hdfs.hadoopcli_clients import HdfsClient
+from luigi.contrib.target import CascadingClient
 from minicluster import MiniClusterTestCase
 from nose.plugins.attrib import attr
 import luigi.contrib.hdfs.clients
@@ -75,17 +79,22 @@ class ConfigurationTest(MiniClusterTestCase):
 
     @helpers.with_config({"hdfs": {"client": "hadoopcli"}})
     def test_hadoopcli(self):
-        client = hdfs.get_autoconfig_client()
+        client = hdfs.get_autoconfig_client(threading.local())
+        self.assertTrue(isinstance(client, HdfsClient))
         self.tezt_rename_dont_move(client)
 
+    @unittest.skipIf(six.PY3, "snakebite doesn't work on Python 3 yet.")
     @helpers.with_config({"hdfs": {"client": "snakebite"}})
     def test_snakebite(self):
-        client = hdfs.get_autoconfig_client()
+        client = hdfs.get_autoconfig_client(threading.local())
+        self.assertTrue(isinstance(client, SnakebiteHdfsClient))
         self.tezt_rename_dont_move(client)
 
+    @unittest.skipIf(six.PY3, "snakebite doesn't work on Python 3 yet.")
     @helpers.with_config({"hdfs": {"client": "snakebite_with_hadoopcli_fallback"}})
     def test_snakebite_with_hadoopcli_fallback(self):
-        client = hdfs.get_autoconfig_client()
+        client = hdfs.get_autoconfig_client(threading.local())
+        self.assertTrue(isinstance(client, CascadingClient))
         self.tezt_rename_dont_move(client)
 
 
