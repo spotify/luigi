@@ -237,8 +237,6 @@ class PySparkTask(SparkSubmitTask):
 
     # Path to the pyspark program passed to spark-submit
     app = os.path.join(os.path.dirname(__file__), 'pyspark_runner.py')
-    # Python only supports the client deploy mode, force it
-    deploy_mode = "client"
 
     @property
     def name(self):
@@ -249,6 +247,11 @@ class PySparkTask(SparkSubmitTask):
         packages = configuration.get_config().get('spark', 'py-packages', None)
         if packages:
             return map(lambda s: s.strip(), packages.split(','))
+
+    @property
+    def files(self):
+        if self.deploy_mode == "cluster":
+            return [self.run_pickle]
 
     def setup(self, conf):
         """
@@ -269,11 +272,12 @@ class PySparkTask(SparkSubmitTask):
         """
         raise NotImplementedError("subclass should define a main method")
 
-    def program_args(self):
-        return self.spark_command() + self.app_command()
-
     def app_command(self):
-        return [self.app, self.run_pickle] + self.app_options()
+        if self.deploy_mode == "cluster":
+            pickle_loc = os.path.basename(self.run_pickle)
+        else:
+            pickle_loc = self.run_pickle
+        return [self.app, pickle_loc] + self.app_options()
 
     def run(self):
         self.run_path = tempfile.mkdtemp(prefix=self.name)
