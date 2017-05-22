@@ -11,9 +11,12 @@ try:
     from luigi.contrib import dataproc
     from googleapiclient import discovery
 
-    default_credentials = oauth2client.client.GoogleCredentials.get_application_default()
-    default_client = discovery.build('dataproc', 'v1', credentials=default_credentials, http=httplib2.Http())
-    dataproc.set_dataproc_client(default_client)
+    try:
+        default_credentials = oauth2client.client.GoogleCredentials.get_application_default()
+        default_client = discovery.build('dataproc', 'v1', credentials=default_credentials, http=httplib2.Http())
+        dataproc.set_dataproc_client(default_client)
+    except oauth2client.client.ApplicationDefaultCredentialsError:
+        raise unittest.SkipTest('No default credentials to run dataproc tests')
 except ImportError:
     raise unittest.SkipTest('Unable to load google cloud dependencies')
 
