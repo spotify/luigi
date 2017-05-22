@@ -14,9 +14,13 @@ try:
     import oauth2client.client
     from googleapiclient import discovery
     from googleapiclient.errors import HttpError
-
-    DEFAULT_CREDENTIALS = oauth2client.client.GoogleCredentials.get_application_default()
-    _dataproc_client = discovery.build('dataproc', 'v1', credentials=DEFAULT_CREDENTIALS, http=httplib2.Http())
+    try:
+        DEFAULT_CREDENTIALS = oauth2client.client.GoogleCredentials.get_application_default()
+        _dataproc_client = discovery.build('dataproc', 'v1', credentials=DEFAULT_CREDENTIALS, http=httplib2.Http())
+    except oauth2client.client.ApplicationDefaultCredentialsError as err:
+        logger.warning("Error loading default application credentials."
+                       " This will crash at runtime if Dataproc functionality is used. " +
+                       str(err))
 except ImportError:
     logger.warning("Loading Dataproc module without the python packages googleapiclient & oauth2client. \
         This will crash at runtime if Dataproc functionality is used.")
