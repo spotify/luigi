@@ -1016,6 +1016,7 @@ class Worker(object):
         Returns true if a worker should stay alive given.
 
         If worker-keep-alive is not set, this will always return false.
+        If the keep-alive thread has been stopped, this returns false.
         For an assistant, it will always return the value of worker-keep-alive.
         Otherwise, it will return true for nonzero n_pending_tasks.
 
@@ -1023,6 +1024,8 @@ class Worker(object):
         require that one of the tasks is unique to this worker.
         """
         if not self._config.keep_alive:
+            return False
+        if not self._is_alive():
             return False
         elif self._assistant:
             return True
@@ -1032,6 +1035,22 @@ class Worker(object):
             return get_work_response.n_unique_pending > 0
         else:
             return get_work_response.n_pending_tasks > 0
+
+    def _is_alive(self):
+        """
+        Returns True if this worker is alive.
+
+        Returns False if the keep-alive thread has been stopped.
+        Returns False if the worker has not been initialized using a with statement.
+        Otherwise, this will return true.
+        """
+        try:
+            return self._keep_alive_thread.is_alive()
+        except AttributeError:
+            # self._keep_alive_thread is initialized in the __enter__ method, so this exception will occur if
+            # worker.run is called outside of a with block.
+            logger.error('Worker not fully initialized. You probably called worker.run() outside a "with" block')
+            return False
 
     def handle_interrupt(self, signum, _):
         """
