@@ -116,7 +116,7 @@ class DockerTask(luigi.Task):
         - create a tmp dir
         - add the temp dir to the volume binds specified in the task
         '''
-        super(DockerTask, self).__init__()
+        super(DockerTask, self).__init__(*args,**kwargs)
         self.__logger = logger
         
         '''init docker client
