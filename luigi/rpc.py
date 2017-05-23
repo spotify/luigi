@@ -132,6 +132,7 @@ class RemoteScheduler(object):
                 last_exception = e
                 if log_exceptions:
                     logger.exception("Failed connecting to remote scheduler %r", self._url)
+                    logger.exception(e)
                 continue
         else:
             raise RPCError(
