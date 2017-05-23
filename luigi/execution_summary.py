@@ -188,7 +188,7 @@ def _get_str_ranging_multiple_parameters(first, last, tasks, unique_param):
 def _get_set_of_params(tasks):
     params = {}
     for param in tasks[0].get_params():
-        params[param] = {getattr(task, param[0]) for task in tasks}
+        params[param[0]] = [getattr(task, param[0]) for task in tasks]
     return params
 
 
