@@ -321,9 +321,8 @@ class ParameterTest(LuigiTestCase):
         self.assertEqual(CallableDefaultParameterTask().x, 'abc')
 
     def test_both_default_and_default_callable_param(self):
-        self.assertRaises(
-            ParameterException,
-            lambda: luigi.parameter.Parameter(default='abc', default_callable=lambda: 'xyz'))
+        with self.assertRaises(ParameterException):
+            luigi.parameter.Parameter(default='abc', default_callable=lambda: 'xyz')
 
 
 class TestParametersHashability(LuigiTestCase):
