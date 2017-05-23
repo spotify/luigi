@@ -478,6 +478,7 @@ function visualiserApp(luigi) {
         $('#serverSideCheckbox').click(function(e) {
             e.preventDefault();
             changeState('filterOnServer', this.checked ? '1' : null);
+            updateTasks();
         });
 
         $("#invertCheckbox").click(function(e) {
