@@ -910,6 +910,8 @@ function visualiserApp(luigi) {
                 if (data.length && data.length !== 10) {
                     // Keep in hash only if length is not default.
                     state.length = data.length;
+                } else {
+                    delete state.length;
                 }
 
                 if (state.filterOnServer) {
