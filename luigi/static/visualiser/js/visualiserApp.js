@@ -413,7 +413,7 @@ function visualiserApp(luigi) {
             if (taskId) {
                 var depGraphCallback = makeGraphCallback(fragmentQuery.visType, taskId, paint);
 
-                if (fragmentQuery.invertDependencies) {
+                if (fragmentQuery.invert) {
                     luigi.getInverseDependencyGraph(taskId, depGraphCallback, !hideDone);
                 } else {
                     luigi.getDependencyGraph(taskId, depGraphCallback, !hideDone);
@@ -454,7 +454,7 @@ function visualiserApp(luigi) {
                     });
                 }
                 else {
-                    window.location.href = 'index.html#tab=graph&taskId=' + taskId;
+                    window.location.href = 'index.html#tab=graph&visType=d3&taskId=' + taskId;
                 }
             });
         }
