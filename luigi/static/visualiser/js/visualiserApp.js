@@ -435,6 +435,16 @@ function visualiserApp(luigi) {
             }
             $("#serverSideCheckbox").prop('checked', fragmentQuery.filterOnServer === '1' ? true : false);
             dt.search(fragmentQuery.search__search);
+
+            $('#familySidebar li').removeClass('active');
+            $('#familySidebar li .badge').removeClass('bg-green');
+            if (fragmentQuery.family) {
+                family_item = $('#familySidebar li[data-task="' + fragmentQuery.family + '"]');
+                family_item.addClass('active');
+                family_item.find('.badge').addClass('bg-green');
+                filterByTaskFamily(fragmentQuery.family, dt);
+            }
+
             if (fragmentQuery.order) {
                 dt.order = [fragmentQuery.order.split(',')];
             }
@@ -814,6 +824,8 @@ function visualiserApp(luigi) {
             else {
                 $('#warnings').html(renderWarnings());
             }
+
+            processHashChange();
         });
     }
 
@@ -944,6 +956,13 @@ function visualiserApp(luigi) {
                     delete state.search__search;
                 }
 
+                var family_search = data.columns[1].search.search;
+                if (family_search) {
+                    state.family = family_search.substring(1, family_search.length - 1);
+                } else {
+                    delete state.family;
+                }
+
                 if (data.order && data.order.length) {
                     state.order = '' + data.order[0][0] + ',' + data.order[0][1];
                 }
@@ -969,6 +988,11 @@ function visualiserApp(luigi) {
                     order = [fragmentQuery.order.split(',')];
                 }
 
+                var family_search = {};
+                if (fragmentQuery.family) {
+                    family_search = {'search': '^' + fragmentQuery.family + '$', 'regex': true};
+                }
+
                 // Prepare state for datatable.
                 var o = {
                     order: order,                 // Table rows order.
@@ -977,7 +1001,7 @@ function visualiserApp(luigi) {
                     time: new Date().getTime(),   // Current time to help datatable.js to handle asynchronous.
                     columns: [
                         {visible: true, search: {}},
-                        {visible: true, search: {}},  // Name column
+                        {visible: true, search: family_search},  // Name column
                         {visible: true, search: {}},  // Details column
                         {visible: true, search: {}},  // Priority column
                         {visible: true, search: {}},  // Time column
@@ -986,7 +1010,9 @@ function visualiserApp(luigi) {
                     // Search input state.
                     search: {
                         caseInsensitive: true,
-                        search: fragmentQuery.search__search}};
+                        search: fragmentQuery.search__search
+                    }
+                };
 
                 return o;
             },
@@ -1165,6 +1191,13 @@ function visualiserApp(luigi) {
 
                 if ($('#serverSideCheckbox').is(':checked')) {
                     state.filterOnServer = '1';
+                }
+
+                var family = $('#familySidebar li.active').attr('data-task')
+                if (family) {
+                    state.family = family;
+                } else {
+                    delete state.family;
                 }
 
                 if (search) {
