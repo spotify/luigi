@@ -21,7 +21,7 @@ Triggering Many Tasks
 
 A convenient pattern is to have a dummy Task at the end of several
 dependency chains, so you can trigger a multitude of pipelines by
-specifying just one task in command line, similarly to how e.g. `make <http://www.gnu.org/software/make/>`_
+specifying just one task in the command line, similarly to how `make <http://www.gnu.org/software/make/>`_
 works.
 
 .. code:: python
@@ -35,11 +35,11 @@ works.
             yield TPSReport(self.date)
             yield FooBarBazReport(self.date)
 
-This simple task will not do anything itself, but will invoke a bunch of
+This simple task will only invoke a bunch of
 other tasks. Per each invocation, Luigi will perform as many of the pending
 jobs as possible (those which have all their dependencies present).
 
-You'll need to use :class:`~luigi.task.WrapperTask` for this instead of the usual Task class, because this job will not produce any output of its own, and as such needs a way to indicate when it's complete. This class is used for tasks that only wrap other tasks and that by definition are done if all their requirements exist.
+You'll need to use :class:`~luigi.task.WrapperTask` for this instead of the usual Task class, because this job will not produce any output of its own, and as such needs a way to indicate when it's complete. This class is used for tasks that only wrap other tasks and that by definition are done when all their requirements exist.
 
 Triggering recurring tasks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -50,10 +50,10 @@ crashing or lacking their required dependencies for more than a day
 though, which would lead to a missing deliverable for some date. Oops.
 
 To ensure that the above AllReports task is eventually completed for
-every day (value of date parameter), one could e.g. add a loop in
-requires method to yield dependencies on the past few days preceding
-self.date. Then, so long as Luigi keeps being invoked, the backlog of
-jobs would catch up nicely after fixing intermittent problems.
+every day (given by the value of date parameter), one could, e.g., add a loop in
+the `requires` method to yield dependencies on the past few days preceding
+`self.date`. Then, so long as Luigi keeps being invoked, the backlog of
+jobs would catch up nicely after fixing any intermittent problems.
 
 Luigi actually comes with a reusable tool for achieving this, called
 :class:`~luigi.tools.range.RangeDailyBase` (resp. :class:`~luigi.tools.range.RangeHourlyBase`). Simply putting
@@ -63,15 +63,15 @@ Luigi actually comes with a reusable tool for achieving this, called
 	luigi --module all_reports RangeDailyBase --of AllReports --start 2015-01-01
 
 in your crontab will easily keep gaps from occurring from 2015-01-01
-onwards. NB - it will not always loop over everything from 2015-01-01
-till current time though, but rather a maximum of 3 months ago by
+onwards. N.B. - it will not always loop over everything from 2015-01-01
+till current time, but rather a maximum of 3 months ago by
 default - see :class:`~luigi.tools.range.RangeDailyBase` documentation for this and more knobs
 for tweaking behavior. See also Monitoring below.
 
 Efficiently triggering recurring tasks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-RangeDailyBase, described above, is named like that because a more
+`RangeDailyBase`, described above, is named that because a more
 efficient subclass exists, :class:`~luigi.tools.range.RangeDaily` (resp. :class:`~luigi.tools.range.RangeHourly`), tailored for
 hundreds of task classes scheduled concurrently with contiguousness
 requirements spanning years (which would incur redundant completeness
@@ -81,17 +81,17 @@ checks and scheduler overload using the naive looping approach.) Usage:
 
 	luigi --module all_reports RangeDaily --of AllReports --start 2015-01-01
 
-It has the same knobs as RangeDailyBase, with some added requirements.
-Namely the task must implement an efficient bulk_complete method, or
-must be writing output to file system Target with date parameter value
+It has the same knobs as `RangeDailyBase`, with some added requirements.
+Namely, the task must implement an efficient bulk_complete method, or
+must write output to file system Target with a date parameter value
 consistently represented in the file path.
 
 Backfilling tasks
 ~~~~~~~~~~~~~~~~~
 
-Also a common use case, sometimes you have tweaked existing recurring
+Another common use case is that sometimes you have tweaked existing recurring
 task code and you want to schedule recomputation of it over an interval
-of dates for that or another reason. Most conveniently it is achieved
+of dates for some reason. Most conveniently it is achieved
 with the above described range tools, just with both start (inclusive)
 and stop (exclusive) parameters specified:
 
@@ -243,10 +243,10 @@ requiring attention.
 Atomic Writes Problem
 ~~~~~~~~~~~~~~~~~~~~~
 
-A very common mistake done by luigi plumbers is to write data partially to the
-final destination, that is, not atomically. The problem arises because
-completion checks in luigi are exactly as naive as running
-:meth:`luigi.target.Target.exists`. And in many cases it just means to check if
+A very common mistake made by luigi plumbers is to partially write data to the
+final destination, that is, not atomically. The ensuing problem arises because
+completion checks in luigi are as naive as running
+:meth:`luigi.target.Target.exists`. And in many cases it just results in a check if
 a folder exist on disk. During the time we have partially written data, a task
 depending on that output would think its input is complete. This can have
 devestating effects, as in `the thanksgiving bug
@@ -261,9 +261,9 @@ local disk and by running commands:
     $ mkdir /outputs/final_output
     $ big-slow-calculation > /outputs/final_output/foo.data
 
-As stated earlier, the problem is that only partial data exists for a duration,
+As stated earlier, the problem is that only partial data exists for a period of time,
 yet we consider the data to be :meth:`~luigi.task.Task.complete` because the
-output folder already exists. Here is a robust version of this:
+output folder already exists. Here is a robust version which avoids this mishap:
 
 .. code-block:: console
 
@@ -274,17 +274,17 @@ output folder already exists. Here is a robust version of this:
     $ [[ -d /outputs/final_output-tmp-123456 ]] && rm -r /outputs/final_output-tmp-123456
 
 Indeed, the good way is not as trivial. It involves coming up with a unique
-directory name and a pretty complex ``mv`` line, the reason ``mv`` need all
-those is because we don't want ``mv`` to move a directory into a potentially
+directory name and a more complex ``mv`` line. The reason ``mv`` needs this complexity
+is because we don't want ``mv`` to move a directory into a potentially
 existing directory. A directory could already exist in exceptional cases, for
-example when central locking fails and the same task would somehow run twice at
+example, when central locking fails and the same task would somehow run twice at
 the same time. Lastly, in the exceptional case where the file was never moved,
-one might want to remove the temporary directory that never got used.
+one might want to remove a temporary directory that never got used.
 
 Note that this was an example where the storage was on local disk. But for
-every storage (hard disk file, hdfs file, database table, etc.) this procedure
-will look different. But do every luigi user need to implement that complexity?
-Nope, thankfully luigi developers are aware of these and luigi comes with many
+every storage type (hard disk file, hdfs file, database table, etc.) this procedure
+will look different. But does every luigi user need to implement that complexity?
+Nope, thankfully luigi developers are aware of these cases and luigi comes with many
 built-in solutions. In the case of you're dealing with a file system
 (:class:`~luigi.target.FileSystemTarget`), you should consider using
 :meth:`~luigi.target.FileSystemTarget.temporary_path`. For other targets, you
