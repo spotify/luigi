@@ -200,7 +200,7 @@ class ParameterTest(LuigiTestCase):
         self.assertTrue(WithDefaultTrue().x)
 
     def test_bool_coerce(self):
-        self.assertEquals(True, WithDefaultTrue(x='yes').x)
+        self.assertEqual(True, WithDefaultTrue(x='yes').x)
 
     def test_bool_no_coerce_none(self):
         self.assertIsNone(WithDefaultTrue(x=None).x)
