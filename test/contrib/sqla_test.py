@@ -29,7 +29,7 @@ from luigi import six
 import luigi
 import sqlalchemy
 from luigi.contrib import sqla
-from luigi.mock import MockFile
+from luigi.mock import MockTarget
 from nose.plugins.attrib import attr
 from helpers import skipOnTravis
 
@@ -42,7 +42,7 @@ class BaseTask(luigi.Task):
     TASK_LIST = ["item%d\tproperty%d\n" % (i, i) for i in range(10)]
 
     def output(self):
-        return MockFile("BaseTask", mirror_on_stderr=True)
+        return MockTarget("BaseTask", mirror_on_stderr=True)
 
     def run(self):
         out = self.output().open("w")
@@ -268,7 +268,7 @@ class TestSQLA(unittest.TestCase):
         class ModBaseTask(luigi.Task):
 
             def output(self):
-                return MockFile("ModBaseTask", mirror_on_stderr=True)
+                return MockTarget("ModBaseTask", mirror_on_stderr=True)
 
             def run(self):
                 out = self.output().open("w")
@@ -302,7 +302,7 @@ class TestSQLA(unittest.TestCase):
         class ModBaseTask(luigi.Task):
 
             def output(self):
-                return MockFile("BaseTask", mirror_on_stderr=True)
+                return MockTarget("BaseTask", mirror_on_stderr=True)
 
             def run(self):
                 out = self.output().open("w")

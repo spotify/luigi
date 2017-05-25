@@ -83,11 +83,11 @@ modified example would look as shown below:
     from sqlalchemy import String
     import luigi
     from luigi.contrib import sqla
-    from luigi.mock import MockFile
+    from luigi.mock import MockTarget
 
     class BaseTask(luigi.Task):
         def output(self):
-            return MockFile("BaseTask")
+            return MockTarget("BaseTask")
 
         def run(self):
             out = self.output().open("w")
