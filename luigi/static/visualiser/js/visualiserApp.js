@@ -359,7 +359,10 @@ function visualiserApp(luigi) {
             $("#searchError").removeClass();
             if(dependencyGraph.length > 0) {
                 $("#dependencyTitle").text(dependencyGraph[0].display_name);
-                $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
+                var hashBaseObj = URI.parseQuery(location.hash.replace('#', ''));
+                delete hashBaseObj.taskId;
+                var hashBase = '#' + URI.buildQuery(hashBaseObj) + '&taskId=';
+                $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph, hashBase);
                 $("#graphContainer").show();
                 bindGraphEvents();
             } else {
