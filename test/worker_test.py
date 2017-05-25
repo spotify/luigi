@@ -1616,7 +1616,7 @@ class TaskLimitTest(unittest.TestCase):
     def tearDown(self):
         MockFileSystem().remove('')
 
-    @with_config({'core': {'worker_task_limit': '6'}})
+    @with_config({'worker': {'task_limit': '6'}})
     def test_task_limit_exceeded(self):
         w = Worker()
         t = ForkBombTask(3, 2)
@@ -1627,7 +1627,7 @@ class TaskLimitTest(unittest.TestCase):
         self.assertEqual(3, sum(t.complete() for t in leaf_tasks),
                          "should have gracefully completed as much as possible even though the single last leaf didn't get scheduled")
 
-    @with_config({'core': {'worker_task_limit': '7'}})
+    @with_config({'worker': {'task_limit': '7'}})
     def test_task_limit_not_exceeded(self):
         w = Worker()
         t = ForkBombTask(3, 2)
