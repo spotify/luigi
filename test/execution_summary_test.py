@@ -286,7 +286,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
 
-    @with_config({'execution_summary': {'summary-length': '1'}})
+    @with_config({'execution_summary': {'summary_length': '1'}})
     def test_config_summary_limit(self):
         class Bar(luigi.Task):
             num = luigi.IntParameter()

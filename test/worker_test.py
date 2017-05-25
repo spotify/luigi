@@ -1069,7 +1069,7 @@ class WorkerPingThreadTests(unittest.TestCase):
 
 
 def email_patch(test_func, email_config=None):
-    EMAIL_CONFIG = {"core": {"error-email": "not-a-real-email-address-for-test-only"}, "email": {"force-send": "true"}}
+    EMAIL_CONFIG = {"email": {"receiver": "not-a-real-email-address-for-test-only", "force_send": "true"}}
     if email_config is not None:
         EMAIL_CONFIG.update(email_config)
     emails = []
@@ -1369,7 +1369,7 @@ class WorkerEmailTest(LuigiTestCase):
         self.assertEqual(emails, [])
         self.assertTrue(a.complete())
 
-    @custom_email_patch({"core": {"error-email": "not-a-real-email-address-for-test-only", 'email-type': 'none'}})
+    @custom_email_patch({"email": {"receiver": "not-a-real-email-address-for-test-only", 'format': 'none'}})
     def test_disable_emails(self, emails):
         class A(luigi.Task):
 
@@ -1616,7 +1616,7 @@ class TaskLimitTest(unittest.TestCase):
     def tearDown(self):
         MockFileSystem().remove('')
 
-    @with_config({'core': {'worker-task-limit': '6'}})
+    @with_config({'core': {'worker_task_limit': '6'}})
     def test_task_limit_exceeded(self):
         w = Worker()
         t = ForkBombTask(3, 2)
@@ -1627,7 +1627,7 @@ class TaskLimitTest(unittest.TestCase):
         self.assertEqual(3, sum(t.complete() for t in leaf_tasks),
                          "should have gracefully completed as much as possible even though the single last leaf didn't get scheduled")
 
-    @with_config({'core': {'worker-task-limit': '7'}})
+    @with_config({'core': {'worker_task_limit': '7'}})
     def test_task_limit_not_exceeded(self):
         w = Worker()
         t = ForkBombTask(3, 2)
