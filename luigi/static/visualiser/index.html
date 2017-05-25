@@ -412,7 +412,7 @@
                 <h3 class="box-title">{{name}}</h3>
                 {{#num_consumer}}
                 <div class="box-tools pull-right">
-                    <i class="fa fa-navicon" data-toggle="collapse" data-target="#collapse-{{name}}" aria-expanded="false" aria-controls="collapse-{{name}}"></i>
+                    <i class="fa fa-navicon resources-collapse" data-target="#collapse-{{name}}"></i>
                 </div><!-- /.box-tools -->
                 {{/num_consumer}}
             </div><!-- /.box-header -->
@@ -424,7 +424,7 @@
                 </div>
 
                 {{#num_consumer}}
-                <div class="collapse" id="collapse-{{name}}">
+                <div class="collapse resource-box" id="collapse-{{name}}" data-resource="{{name}}">
                     <table class="table table-striped worker-table">
                         <thead>
                             <th>Name</th>

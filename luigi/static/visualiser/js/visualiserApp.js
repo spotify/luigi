@@ -394,6 +394,7 @@ function visualiserApp(luigi) {
         if (fragmentQuery.tab == "workers") {
             switchTab("workerList");
         } else if (fragmentQuery.tab == "resources") {
+            expandResources(fragmentQuery.resources);
             switchTab("resourceList");
         } else if (fragmentQuery.tab == "graph") {
             var taskId = fragmentQuery.taskId;
@@ -878,6 +879,25 @@ function visualiserApp(luigi) {
         location.hash = '#' + URI.buildQuery(fragmentQuery);
     }
 
+   function expandedResources() {
+        return $('.resource-box.in').toArray().map(function (val) { return val.dataset.resource; });
+    }
+
+    function expandResources(resources) {        
+        if (resources === undefined) {
+            resources = [];
+        } else {
+            resources = JSON.parse(resources);
+        }
+        $('.resource-box').each(function (i, item) {
+            if (resources.indexOf(item.dataset.resource) === -1) {
+                $(item).collapse('hide');
+            } else {
+                $(item).collapse('show');
+            }
+        });
+    }
+
     $(document).ready(function() {
         loadTemplates();
 
@@ -892,6 +912,24 @@ function visualiserApp(luigi) {
 
         luigi.getResourceList(function(resources) {
             $("#resourceList").append(renderResources(resources));
+            expandResources(URI.parseQuery(location.hash.replace('#', '')).resources);
+            $('.resources-collapse').click(function (e) {
+                e.preventDefault();
+                var collapse_block = $(this.dataset.target);
+                if (collapse_block.hasClass('collapsing')) {
+                    return;
+                }
+                var resource = collapse_block.attr('data-resource');
+                var resourceList = expandedResources();
+                var resourceIdx = resourceList.indexOf(resource);
+                if (resourceIdx === -1) {
+                    resourceList.push(resource);
+                } else {
+                    resourceList.splice(resourceIdx, 1);
+                }
+                changeState('resources', resourceList.length > 0 ? JSON.stringify(resourceList) : null);
+                collapse_block.collapse('toggle');
+            });
         });
 
         dt = $('#taskTable').DataTable({
@@ -1158,6 +1196,7 @@ function visualiserApp(luigi) {
             } else if (tabId == 'workerList') {
                 state.tab = 'workers';
             } else if (tabId == 'resourceList') {
+                state.resources = JSON.stringify(expandedResources());
                 state.tab = 'resources';
             }
 
