@@ -122,7 +122,7 @@ class BigQueryTest(unittest.TestCase):
         TestRunQueryTask.client = client
 
         complete = list(TestRunQueryTask.bulk_complete(parameters))
-        self.assertEquals(complete, ['table2'])
+        self.assertEqual(complete, ['table2'])
 
     def test_dataset_doesnt_exist(self):
         client = MagicMock()
@@ -130,7 +130,7 @@ class BigQueryTest(unittest.TestCase):
         TestRunQueryTask.client = client
 
         complete = list(TestRunQueryTask.bulk_complete(['table1']))
-        self.assertEquals(complete, [])
+        self.assertEqual(complete, [])
 
     def test_query_property(self):
         task = TestRunQueryTask(table='table2')
