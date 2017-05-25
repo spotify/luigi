@@ -514,7 +514,7 @@ class TestRemoveGlobalParameters(LuigiTestCase):
                     x_g1 = luigi.Parameter(default='y', is_global=True, significant=True)
 
             self.assertRaises(luigi.parameter.UnknownParameterException,
-                            lambda: MyTask('arg'))
+                              lambda: MyTask('arg'))
 
         def test_global_insignificant_param_warning(self):
             """ We don't want any kind of global param to be positional """
@@ -524,7 +524,7 @@ class TestRemoveGlobalParameters(LuigiTestCase):
                     x_g2 = luigi.Parameter(default='y', is_global=True, significant=False)
 
             self.assertRaises(luigi.parameter.UnknownParameterException,
-                            lambda: MyTask('arg'))
+                              lambda: MyTask('arg'))
 
 
 class TestParamWithDefaultFromConfig(LuigiTestCase):

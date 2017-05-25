@@ -26,8 +26,6 @@ import os
 import sys
 from subprocess import Popen, PIPE
 
-from luigi import six
-
 
 def getpcmd(pid):
     """
