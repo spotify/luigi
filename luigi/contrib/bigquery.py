@@ -19,7 +19,14 @@ import collections
 import logging
 import luigi.target
 import time
+import random
 from luigi.contrib import gcp
+from luigi.contrib.gcs import GCSClient
+
+#  chunking parameters
+MAX_POPULATION_SIZE = 10  # sample pupulation
+MAX_UPLOAD_SIZE_BYTES = 500000000000  # 500GB
+MAX_SOURCE_URIS = 10000  # limit by Google
 
 logger = logging.getLogger('luigi-interface')
 
@@ -330,6 +337,19 @@ class BigQueryClient(object):
             logger.info('Waiting for job %s:%s to complete...', project_id, job_id)
             time.sleep(5)
 
+    def submit_job(self, project_id, body, dataset=None):
+        """Submits a BigQuery "job". Returns job id. See the documentation for the format of body.
+
+           :param dataset:
+           :type dataset: BQDataset
+        """
+
+        if dataset and not self.dataset_exists(dataset):
+            self.make_dataset(dataset)
+
+        new_job = self.client.jobs().insert(projectId=project_id, body=body).execute()
+        return new_job['jobReference']['jobId']
+
     def copy(self,
              source_table,
              dest_table,
@@ -507,40 +527,163 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
 
+        project_id = output.table.project_id
+
         bq_client = output.client
+        gcs_client = GCSClient()
 
         source_uris = self.source_uris()
         assert all(x.startswith('gs://') for x in source_uris)
 
-        job = {
+        partial_table_ids = []
+        source_counter = 0
+
+        job_ids = []
+
+        load_start_time = time.time()
+
+        def submit_load_job(uris, table_id):
+            job = {
+                'projectId': output.table.project_id,
+                'configuration': {
+                    'load': {
+                        'destinationTable': {
+                            'projectId': output.table.project_id,
+                            'datasetId': output.table.dataset_id,
+                            'tableId': table_id,
+                        },
+                        'encoding': self.encoding,
+                        'sourceFormat': self.source_format,
+                        'writeDisposition': self.write_disposition,
+                        'sourceUris': uris,
+                        'maxBadRecords': self.max_bad_records,
+                        'ignoreUnknownValues': self.ignore_unknown_values
+                    }
+                }
+            }
+
+            if self.source_format == SourceFormat.CSV:
+                job['configuration']['load']['fieldDelimiter'] = self.field_delimiter
+                job['configuration']['load']['skipLeadingRows'] = self.skip_leading_rows
+                job['configuration']['load']['allowJaggedRows'] = self.allow_jagged_rows
+                job['configuration']['load']['allowQuotedNewlines'] = self.allow_quoted_new_lines
+
+            if self.schema:
+                job['configuration']['load']['schema'] = {'fields': self.schema}
+
+            job_id = bq_client.submit_job(project_id, job, dataset=output.table.dataset)
+            job_ids.append(job_id)
+            partial_table_ids.append(output.table.project_id + "." + output.table.dataset_id + "." + table_id)
+
+        for source_uri in source_uris:
+            if '*' in source_uri:
+                # we chunk for every source_uri with a wildcard
+                print "Wildcard path for: " + source_uri
+
+                uris = []
+                for uri in gcs_client.list_wildcard(source_uri):
+                    uris.append(uri)
+
+                num_of_uris = len(uris)
+                population_size = min(MAX_POPULATION_SIZE, num_of_uris)
+                sampled_uris = random.sample(uris, population_size)
+
+                total_sampled_blobs_bytes = 0
+                for uri in sampled_uris:
+                    bucket_name = uri.split("/")[2]
+                    blob_name = "/".join(uri.split("/")[3:])
+                    blob = gcs_client.get_object(bucket_name, blob_name)
+                    if blob is not None:
+                        blob_size_bytes = blob['size']
+                        total_sampled_blobs_bytes += int(blob_size_bytes)
+                    else:
+                        raise Exception("BigQueryLoadTask failed: Object + " + uri + " doesn't exist")
+                avg_blob_size_bytes = total_sampled_blobs_bytes / population_size
+                #  todo: what if avg_blob_size_bytes * num_of_uris < MAX_UPLOAD_SIZE_BYTES ??
+                #  todo: then we will upload this data in one chunk, but at the end we will still merge this one table
+                #  todo: so this step could be skipped
+
+                print "Summary avg blob size is: " + str(avg_blob_size_bytes) + " bytes"
+
+                uris_per_chunk = min(MAX_SOURCE_URIS, max(1, MAX_UPLOAD_SIZE_BYTES / avg_blob_size_bytes))
+
+                chunk_intervals = range(0, num_of_uris, uris_per_chunk)
+
+                print "About to schedule " + str(len(chunk_intervals)) + " chunks, each max " \
+                      + str(uris_per_chunk) + " uris"
+
+                for chunk_num in chunk_intervals:
+                    chunk_uris = uris[chunk_num:min(chunk_num+uris_per_chunk, num_of_uris)]
+                    # min func to handle the very last chunk from the list, usualy shorter then "uris_per_chunk"
+                    partial_table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" \
+                                       + str(chunk_num) + "_" + str(int(load_start_time))
+
+                    submit_load_job(chunk_uris, partial_table_id)
+            else:
+                # we don't chunk for non-wildcard source_uri
+                print "Non-wildcard path for: " + source_uri
+                table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" + str(int(load_start_time))
+                submit_load_job([source_uri], table_id)
+
+            source_counter += 1
+
+        # all jobs submitted, now wait for them
+        start_wait = time.time()
+        for job_id in job_ids:
+            start_job_wait = time.time()
+            job_done = False
+            while not job_done:
+                status = bq_client.client.jobs().get(projectId=project_id, jobId=job_id).execute()
+                if status['status']['state'] == 'DONE':
+                    if status['status'].get('errors'):
+                        raise Exception('BigQuery job failed: {}'.format(status['status']['errors']))
+                    job_done = True
+
+                logger.info('Waiting for job %s:%s to complete...', project_id, job_id)
+                time.sleep(10.0)
+            end_job_wait = time.time()
+            print "Job " + job_id + " took " + str(end_job_wait - start_job_wait)
+        end_wait = time.time()
+        print "All " + str(len(job_ids)) + " jobs finished, it took " + str(end_wait - start_wait)
+
+        # all jobs done, now merge, select everything from all of the partial tables and union them
+        select_queries = map(lambda table_id: "(SELECT * FROM `{}`)".format(table_id), partial_table_ids)
+        merge_query = " UNION ALL ".join(select_queries)
+
+        merge_job = {
             'projectId': output.table.project_id,
             'configuration': {
-                'load': {
+                'query': {
+                    'query': merge_query,
+                    'useLegacySql': False,
                     'destinationTable': {
                         'projectId': output.table.project_id,
                         'datasetId': output.table.dataset_id,
                         'tableId': output.table.table_id,
                     },
-                    'encoding': self.encoding,
-                    'sourceFormat': self.source_format,
-                    'writeDisposition': self.write_disposition,
-                    'sourceUris': source_uris,
-                    'maxBadRecords': self.max_bad_records,
-                    'ignoreUnknownValues': self.ignore_unknown_values
+                    'writeDisposition': self.write_disposition
                 }
             }
         }
 
-        if self.source_format == SourceFormat.CSV:
-            job['configuration']['load']['fieldDelimiter'] = self.field_delimiter
-            job['configuration']['load']['skipLeadingRows'] = self.skip_leading_rows
-            job['configuration']['load']['allowJaggedRows'] = self.allow_jagged_rows
-            job['configuration']['load']['allowQuotedNewlines'] = self.allow_quoted_new_lines
-
         if self.schema:
-            job['configuration']['load']['schema'] = {'fields': self.schema}
+            merge_job['configuration']['query']['schema'] = {'fields': self.schema}
 
-        bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
+        print "Starting merge"
+        start_merge = time.time()
+        bq_client.run_job(project_id, merge_job, dataset=output.table.dataset)
+        end_merge = time.time()
+        print "Merge done, it took: " + str(end_merge - start_merge) + " seconds"
+
+        # merge is done, now remove partial tables
+        print "starting cleaning up"
+        for t in partial_table_ids:
+            table_params = t.split(".")
+            bq_client.client.tables().delete(projectId=table_params[0], datasetId=table_params[1], tableId=table_params[2]).execute()
+        print "Cleaning up is done, removed " + str(len(partial_table_ids)) + " tables"
+
+        load_end_time = time.time()
+        print "UPLOAD DONE, it took: " + str(load_end_time - load_start_time) + " seconds"
 
 
 class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
