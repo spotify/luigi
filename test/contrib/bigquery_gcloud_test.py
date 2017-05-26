@@ -37,6 +37,7 @@ from luigi.contrib import bigquery, bigquery_avro, gcs
 import avro.schema
 from avro.datafile import DataFileWriter
 from avro.io import DatumWriter
+from luigi.contrib.gcs import GCSTarget
 
 from nose.plugins.attrib import attr
 from helpers import unittest
@@ -93,6 +94,24 @@ class TestRunQueryTask(bigquery.BigQueryRunQueryTask):
 
 
 @attr('gcloud')
+class TestExtractTask(bigquery.BigQueryExtractTask):
+    source = luigi.Parameter()
+    table = luigi.Parameter()
+    dataset = luigi.Parameter()
+    location = luigi.Parameter(default=None)
+    extract_gcs_file = luigi.Parameter()
+
+    def output(self):
+        return GCSTarget(bucket_url(self.extract_gcs_file))
+
+    def requires(self):
+        return TestLoadTask(
+            source=self.source,
+            dataset=self.dataset,
+            table=self.table)
+
+
+@attr('gcloud')
 class BigQueryGcloudTest(unittest.TestCase):
     def setUp(self):
         self.bq_client = bigquery.BigQueryClient(CREDENTIALS)
@@ -128,6 +147,22 @@ class BigQueryGcloudTest(unittest.TestCase):
         self.bq_client.delete_dataset(self.table_eu.dataset)
         self.bq_client.make_dataset(self.table.dataset, body={})
         self.bq_client.make_dataset(self.table_eu.dataset, body={})
+
+    def test_extract_to_gcs(self):
+        task1 = TestLoadTask(
+            source=self.gcs_file,
+            dataset=self.table.dataset.dataset_id,
+            table=self.table.table_id)
+        task1.run()
+
+        task2 = TestExtractTask(
+            source=self.gcs_file,
+            dataset=self.table.dataset.dataset_id,
+            table=self.table.table_id,
+            extract_gcs_file=self.id() + '_extract_file')
+        task2.run()
+
+        self.assertTrue(task2.output().exists)
 
     def test_load_eu_to_undefined(self):
         task = TestLoadTask(source=self.gcs_file,
