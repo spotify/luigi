@@ -399,6 +399,7 @@ class GCSClient(luigi.target.FileSystem):
         else:
             return None
 
+
 class _DeleteOnCloseFile(io.FileIO):
     def close(self):
         super(_DeleteOnCloseFile, self).close()

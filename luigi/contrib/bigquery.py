@@ -25,7 +25,7 @@ from luigi.contrib.gcs import GCSClient
 
 #  chunking parameters
 MAX_POPULATION_SIZE = 10  # sample pupulation
-MAX_UPLOAD_SIZE_BYTES = 1000000000000  # 1TB
+GB_TO_BYTES = 1000000000
 MAX_SOURCE_URIS = 10000  # limit by Google
 
 logger = logging.getLogger('luigi-interface')
@@ -391,9 +391,11 @@ class BigQueryClient(object):
 
 
 class BigQueryTarget(luigi.target.Target):
-    def __init__(self, project_id, dataset_id, table_id, client=None, location=None):
+    def __init__(self, project_id, dataset_id, table_id, client=None, location=None, enable_chunking=False, chunk_size_gb=1000):
         self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id, location=location)
         self.client = client or BigQueryClient()
+        self.enable_chunking = enable_chunking
+        self.chunk_size_gb = chunk_size_gb
 
     @classmethod
     def from_bqtable(cls, table, client=None):
@@ -527,6 +529,8 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
 
+        print "Enable chunking :" + str(output.enable_chunking)
+        print "Chunk Size: " + str(output.chunk_size_gb)
         project_id = output.table.project_id
 
         bq_client = output.client
@@ -536,9 +540,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         assert all(x.startswith('gs://') for x in source_uris)
 
         partial_table_ids = []
-
-        job_ids = []
-
         load_start_time = time.time()
 
         def submit_load_job(uris, table_id):
@@ -570,46 +571,52 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
             if self.schema:
                 job['configuration']['load']['schema'] = {'fields': self.schema}
 
-            job_id = bq_client.submit_job(project_id, job, dataset=output.table.dataset)
-            job_ids.append(job_id)
-            partial_table_ids.append(output.table.project_id + "." + output.table.dataset_id + "." + table_id)
+            print "Job :" + str(job)
 
-        source_counter = 0
-        for source_uri in source_uris:
-            if '*' in source_uri:
-                # we chunk for every source_uri with a wildcard
-                print "Wildcard path for: " + source_uri
+            bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
+            if output.enable_chunking:
+                partial_table_ids.append(output.table.project_id + "." + output.table.dataset_id + "." + table_id)
 
-                uris = []
-                for uri in gcs_client.list_wildcard(source_uri):
-                    uris.append(uri)
-                num_of_uris = len(uris)
+        if not output.enable_chunking:
+            print "NO CHUNK"
+            # Default to previous behaviour
+            submit_load_job(source_uris, output.table.table_id)
+        else:
+            print "CHUNK"
+            source_counter = 0
+            for source_uri in source_uris:
+                if '*' in source_uri:
+                    # we chunk for every source_uri with a wildcard
+                    print "Wildcard path for: " + source_uri
 
-                chunk_intervals, uris_per_chunk = self.calculate_chunk_intervals(gcs_client, uris)
+                    uris = []
+                    for uri in gcs_client.list_wildcard(source_uri):
+                        uris.append(uri)
+                    num_of_uris = len(uris)
 
-                print "About to schedule " + str(len(chunk_intervals)) + " chunks, each max " \
-                      + str(uris_per_chunk) + " uris"
+                    chunk_intervals, uris_per_chunk = self.calculate_chunk_intervals(gcs_client, uris, output.chunk_size_gb)
 
-                for chunk_num in chunk_intervals:
-                    chunk_uris = uris[chunk_num:min(chunk_num+uris_per_chunk, num_of_uris)]
-                    # min func to handle the very last chunk from the list, usually shorter then "uris_per_chunk"
-                    partial_table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" \
-                                       + str(chunk_num) + "_" + str(int(load_start_time))
+                    print "About to schedule " + str(len(chunk_intervals)) + " chunks, each max " \
+                          + str(uris_per_chunk) + " uris"
 
-                    submit_load_job(chunk_uris, partial_table_id)
-            else:
-                # we don't chunk for non-wildcard source_uri
-                print "Non-wildcard path for: " + source_uri
-                table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" + str(int(load_start_time))
-                submit_load_job([source_uri], table_id)
+                    for chunk_num in chunk_intervals:
+                        chunk_uris = uris[chunk_num:min(chunk_num+uris_per_chunk, num_of_uris)]
+                        # min func to handle the very last chunk from the list, usually shorter then "uris_per_chunk"
+                        partial_table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" \
+                                           + str(chunk_num) + "_" + str(int(load_start_time))
 
-            source_counter += 1
+                        submit_load_job(chunk_uris, partial_table_id)
+                else:
+                    # we don't chunk for non-wildcard source_uri
+                    print "Non-wildcard path for: " + source_uri
+                    table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" + str(int(load_start_time))
+                    submit_load_job([source_uri], table_id)
 
-        self.wait_for_the_jobs(bq_client, job_ids, project_id)
+                source_counter += 1
 
-        self.merge_tables(bq_client, output, partial_table_ids, project_id)
+            self.merge_tables(bq_client, output, partial_table_ids, project_id)
 
-        self.remove_tables(bq_client, partial_table_ids)
+            self.remove_tables(bq_client, partial_table_ids)
 
         load_end_time = time.time()
         print "UPLOAD DONE, it took: " + str(load_end_time - load_start_time) + " seconds"
@@ -630,13 +637,14 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
                 raise Exception("BigQueryLoadTask failed: Object + " + uri + " doesn't exist")
         return total_sampled_blobs_bytes / population_size
 
-    def calculate_chunk_intervals(self, gcs_client, uris):
+    def calculate_chunk_intervals(self, gcs_client, uris, chunk_size_gb):
         avg_blob_size_bytes = self.calculate_avg_blob_size(gcs_client, uris)
         #  todo: what if avg_blob_size_bytes * num_of_uris < MAX_UPLOAD_SIZE_BYTES ??
         #  todo: then we will upload this data in one chunk, but at the end we will still merge this one table
         #  todo: so this step could be skipped
         print "Summary avg blob size is: " + str(avg_blob_size_bytes) + " bytes"
-        uris_per_chunk = min(MAX_SOURCE_URIS, max(1, MAX_UPLOAD_SIZE_BYTES / avg_blob_size_bytes))
+        chunk_size_bytes = chunk_size_gb * GB_TO_BYTES
+        uris_per_chunk = min(MAX_SOURCE_URIS, max(1, chunk_size_bytes / avg_blob_size_bytes))
         chunk_intervals = range(0, len(uris), uris_per_chunk)
         return chunk_intervals, uris_per_chunk
 
@@ -665,26 +673,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         bq_client.run_job(project_id, merge_job, dataset=output.table.dataset)
         end_merge = time.time()
         print "Merge done, it took: " + str(end_merge - start_merge) + " seconds"
-
-    @staticmethod
-    def wait_for_the_jobs(bq_client, job_ids, project_id):
-        start_wait = time.time()
-        for job_id in job_ids:
-            start_job_wait = time.time()
-            job_done = False
-            while not job_done:
-                status = bq_client.client.jobs().get(projectId=project_id, jobId=job_id).execute()
-                if status['status']['state'] == 'DONE':
-                    if status['status'].get('errors'):
-                        raise Exception('BigQuery job failed: {}'.format(status['status']['errors']))
-                    job_done = True
-
-                logger.info('Waiting for job %s:%s to complete...', project_id, job_id)
-                time.sleep(10.0)
-            end_job_wait = time.time()
-            print "Job " + job_id + " took " + str(end_job_wait - start_job_wait)
-        end_wait = time.time()
-        print "All " + str(len(job_ids)) + " jobs finished, it took " + str(end_wait - start_wait)
 
     @staticmethod
     def remove_tables(bq_client, table_ids):
