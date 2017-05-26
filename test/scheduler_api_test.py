@@ -1126,6 +1126,37 @@ class SchedulerApiTest(unittest.TestCase):
 
         self.assertEqual('C', self.sch.get_work(worker='Y')['task_id'])
 
+    def validate_resource_count(self, name, count):
+        counts = {resource['name']: resource['num_total'] for resource in self.sch.resource_list()}
+        self.assertEqual(count, counts.get(name))
+
+    def test_update_new_resource(self):
+        self.validate_resource_count('new_resource', None)  # new_resource is not in the scheduler
+        self.sch.update_resource('new_resource', 1)
+        self.validate_resource_count('new_resource', 1)
+
+    def test_update_existing_resource(self):
+        self.sch.update_resource('new_resource', 1)
+        self.sch.update_resource('new_resource', 2)
+        self.validate_resource_count('new_resource', 2)
+
+    def test_disable_existing_resource(self):
+        self.sch.update_resource('new_resource', 1)
+        self.sch.update_resource('new_resource', 0)
+        self.validate_resource_count('new_resource', 0)
+
+    def test_attempt_to_set_resource_to_negative_value(self):
+        self.sch.update_resource('new_resource', 1)
+        self.assertFalse(self.sch.update_resource('new_resource', -1))
+        self.validate_resource_count('new_resource', 1)
+
+    def test_attempt_to_set_resource_to_non_integer(self):
+        self.sch.update_resource('new_resource', 1)
+        self.assertFalse(self.sch.update_resource('new_resource', 1.3))
+        self.assertFalse(self.sch.update_resource('new_resource', '1'))
+        self.assertFalse(self.sch.update_resource('new_resource', None))
+        self.validate_resource_count('new_resource', 1)
+
     def test_priority_update_with_pruning(self):
         self.setTime(0)
         self.sch.add_task(task_id='A', worker='X')
