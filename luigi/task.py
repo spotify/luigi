@@ -817,18 +817,15 @@ def getpaths(struct):
     if isinstance(struct, Task):
         return struct.output()
     elif isinstance(struct, dict):
-        r = {}
-        for k, v in six.iteritems(struct):
-            r[k] = getpaths(v)
-        return r
+        return struct.__class__((k, getpaths(v)) for k, v in six.iteritems(struct))
+    elif isinstance(struct, (list, tuple)):
+        return struct.__class__(getpaths(r) for r in struct)
     else:
-        # Remaining case: assume r is iterable...
+        # Remaining case: assume struct is iterable...
         try:
-            s = list(struct)
+            return [getpaths(r) for r in struct]
         except TypeError:
             raise Exception('Cannot map %s to Task/dict/list' % str(struct))
-
-        return [getpaths(r) for r in s]
 
 
 def flatten(struct):

@@ -82,6 +82,29 @@ class TaskTest(unittest.TestCase):
         task = load_task("luigi", "ExternalTask", {})
         assert(isinstance(task, luigi.ExternalTask))
 
+    def test_getpaths(self):
+        class RequiredTask(luigi.Task):
+            def output(self):
+                return luigi.LocalTarget("/path/to/target/file")
+
+        t = RequiredTask()
+        reqs = {}
+        reqs["bare"] = t
+        reqs["dict"] = {"key": t}
+        reqs["OrderedDict"] = collections.OrderedDict([("key", t)])
+        reqs["list"] = [t]
+        reqs["tuple"] = (t,)
+        reqs["generator"] = (t for _ in range(10))
+
+        struct = luigi.task.getpaths(reqs)
+        self.assertIsInstance(struct, dict)
+        self.assertIsInstance(struct["bare"], luigi.Target)
+        self.assertIsInstance(struct["dict"], dict)
+        self.assertIsInstance(struct["OrderedDict"], collections.OrderedDict)
+        self.assertIsInstance(struct["list"], list)
+        self.assertIsInstance(struct["tuple"], tuple)
+        self.assertTrue(hasattr(struct["generator"], "__iter__"))
+
     def test_flatten(self):
         flatten = luigi.task.flatten
         self.assertEqual(sorted(flatten({'a': 'foo', 'b': 'bar'})), ['bar', 'foo'])
