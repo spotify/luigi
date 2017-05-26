@@ -103,7 +103,7 @@ class TaskTest(unittest.TestCase):
         self.assertIsInstance(struct["OrderedDict"], collections.OrderedDict)
         self.assertIsInstance(struct["list"], list)
         self.assertIsInstance(struct["tuple"], tuple)
-        self.assertIsInstance(struct["generator"], list)
+        self.assertTrue(hasattr(struct["generator"], "__iter__"))
 
     def test_flatten(self):
         flatten = luigi.task.flatten
