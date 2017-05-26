@@ -529,8 +529,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
 
-        print "Enable chunking :" + str(output.enable_chunking)
-        print "Chunk Size: " + str(output.chunk_size_gb)
         project_id = output.table.project_id
 
         bq_client = output.client
@@ -578,11 +576,9 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
                 partial_table_ids.append(output.table.project_id + "." + output.table.dataset_id + "." + table_id)
 
         if not output.enable_chunking:
-            print "NO CHUNK"
             # Default to previous behaviour
             submit_load_job(source_uris, output.table.table_id)
         else:
-            print "CHUNK"
             source_counter = 0
             for source_uri in source_uris:
                 if '*' in source_uri:
