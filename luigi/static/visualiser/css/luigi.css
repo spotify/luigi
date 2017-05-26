@@ -203,3 +203,7 @@ span.status-icon {
   font-style: italic;
   color: red;
 }
+
+#resourceList i.resources-collapse {
+  padding-left: 10px;
+}

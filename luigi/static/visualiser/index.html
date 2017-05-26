@@ -197,17 +197,55 @@
         </script>
 
         <script type="text/template" name="resourceTemplate">
+        <div class="modal fade" id="setResourcesModal" tabindex="-1" role="dialog" aria-labelledby="setResourcesLabel">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="setResourcesLabel">Set resources</h4>
+              </div>
+              <div class="modal-body">
+                <form>
+                  <div class="form-group">
+                    <label for="setResourcesInput">New number of resources:</label>
+                    <input type="text" class="form-control" id="setResourcesInput" placeholder="non-negative integer">
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" id="setResourcesButton" data-dismiss="modal" class="btn btn-primary">Set</button>
+              </div>
+            </div>
+          </div>
+        </div>
         {{#resources}}
         <div class="box">
             <div class="box-header with-border">
                 <h3 class="box-title">{{name}}</h3>
-                {{#num_consumer}}
                 <div class="box-tools pull-right">
+                    <div class="btn-group">
+                      <button type="button" class="btn btn-sm btn-default dropdown-toggle btn-set-resources" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Change resources
+                      </button>
+                      <ul class="dropdown-menu">
+                        <li><a href="#" class="btn-increment-resources" data-resource="{{name}}">
+                          <i class="glyphicon glyphicon-plus"></i> Add 1 resource
+                        </a></li>
+                        <li><a href="#" class="btn-decrement-resources" data-resource="{{name}}">
+                          <i class="glyphicon glyphicon-minus"></i> Remove 1 resource
+                        </a></li>
+                        <li><a href="#" class="btn-set-resources" data-toggle="modal" data-target="#setResourcesModal" data-resource="{{name}}">
+                          <i class="glyphicon glyphicon-pencil"></i> Set resources ...
+                        </a></li>
+                      </ul>
+                    </div>
+                    {{#num_consumer}}
                     <i class="fa fa-navicon resources-collapse" data-target="#collapse-{{name}}"></i>
+                    {{/num_consumer}}
                 </div><!-- /.box-tools -->
-                {{/num_consumer}}
             </div><!-- /.box-header -->
-            <div class="box-body">
+            <div class="box-body" id="{{name}}-resource-box">
                 <div class="progress">
                     <div class="progress-bar progress-bar-{{bar_type}}" style="width: {{percent_used}}%">
                         <b>{{num_used}}/{{num_total}}</b>

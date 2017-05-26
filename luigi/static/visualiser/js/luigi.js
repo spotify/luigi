@@ -166,5 +166,12 @@ var LuigiAPI = (function() {
         });
     }
 
+    LuigiAPI.prototype.updateResource = function(resource, n, callback) {
+        var data = {'resource': resource, 'amount': n};
+        jsonRPC(this.urlRoot + "/update_resource", data, function(response) {
+            callback();
+        });
+    }    
+
     return LuigiAPI;
 })();
