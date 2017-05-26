@@ -817,10 +817,7 @@ def getpaths(struct):
     if isinstance(struct, Task):
         return struct.output()
     elif isinstance(struct, dict):
-        r = struct.__class__()
-        for k, v in six.iteritems(struct):
-            r[k] = getpaths(v)
-        return r
+        return struct.__class__((k, getpaths(v)) for k, v in six.iteritems(struct))
     elif isinstance(struct, (list, tuple)):
         return struct.__class__(getpaths(r) for r in struct)
     else:
