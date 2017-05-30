@@ -379,11 +379,9 @@ class BigQueryClient(object):
 
 class BigQueryTarget(luigi.target.Target):
     # TODO: Pull enable_chunking and chunk_size_gb into
-    def __init__(self, project_id, dataset_id, table_id, client=None, location=None, enable_chunking=False, chunk_size_gb=1000):
+    def __init__(self, project_id, dataset_id, table_id, client=None, location=None):
         self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id, location=location)
         self.client = client or BigQueryClient()
-        self.enable_chunking = enable_chunking
-        self.chunk_size_gb = chunk_size_gb
 
     @classmethod
     def from_bqtable(cls, table, client=None):
@@ -436,6 +434,8 @@ class MixinBigQueryBulkComplete(object):
 
 class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
     """Load data into BigQuery from GCS."""
+    enable_chunking = luigi.BoolParameter(default=False)
+    chunk_size_gb = luigi.IntParameter(default=1000)
 
     @property
     def source_format(self):
@@ -558,10 +558,10 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
                 job['configuration']['load']['schema'] = {'fields': self.schema}
 
             bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
-            if output.enable_chunking:
+            if self.enable_chunking:
                 partial_table_ids.append(output.table.project_id + "." + output.table.dataset_id + "." + table_id)
 
-        if not output.enable_chunking:
+        if not self.enable_chunking:
             # Default to previous behaviour
             submit_load_job(source_uris, output.table.table_id)
         else:
@@ -571,9 +571,8 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
                     uris = []
                     for uri in gcs_client.list_wildcard(source_uri):
                         uris.append(uri)
-                    num_of_uris = len(uris)
 
-                    chunk_intervals, uris_per_chunk = self.calculate_chunk_intervals(gcs_client, uris, output.chunk_size_gb)
+                    chunk_intervals, uris_per_chunk = self.calculate_chunk_intervals(gcs_client, uris, self.chunk_size_gb)
 
                     print("About to schedule " + str(len(chunk_intervals)) + " chunks, each max "
                           + str(uris_per_chunk) + " uris")
