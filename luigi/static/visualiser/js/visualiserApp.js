@@ -18,7 +18,7 @@ function visualiserApp(luigi) {
         DISABLED: 'minus-circle',
         UPSTREAM_DISABLED: 'warning'
     };
-    var VISTYPE_DEFAULT = 'd3';
+    var VISTYPE_DEFAULT = 'svg';
 
     /*
      * Updates view of the Visualization type.
