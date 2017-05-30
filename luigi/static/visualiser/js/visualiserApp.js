@@ -486,7 +486,8 @@ function visualiserApp(luigi) {
                     });
                 }
                 else {
-                    window.location.href = 'index.html#tab=graph&visType=d3&taskId=' + taskId;
+                    fragmentQuery['taskId'] = taskId;
+                    window.location.href = 'index.html#' + URI.buildQuery(fragmentQuery);
                 }
             });
         }
