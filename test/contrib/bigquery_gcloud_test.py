@@ -271,6 +271,7 @@ class BigQueryGcloudTest(unittest.TestCase):
         self.assertEqual(chunk_intervals, [0, 1])
         self.assertEqual(uris_per_chunk, 1)
 
+
 @attr('gcloud')
 class BigQueryLoadAvroTest(unittest.TestCase):
     def _produce_test_input(self):

@@ -337,19 +337,6 @@ class BigQueryClient(object):
             logger.info('Waiting for job %s:%s to complete...', project_id, job_id)
             time.sleep(5)
 
-    def submit_job(self, project_id, body, dataset=None):
-        """Submits a BigQuery "job". Returns job id. See the documentation for the format of body.
-
-           :param dataset:
-           :type dataset: BQDataset
-        """
-
-        if dataset and not self.dataset_exists(dataset):
-            self.make_dataset(dataset)
-
-        new_job = self.client.jobs().insert(projectId=project_id, body=body).execute()
-        return new_job['jobReference']['jobId']
-
     def copy(self,
              source_table,
              dest_table,
@@ -391,6 +378,7 @@ class BigQueryClient(object):
 
 
 class BigQueryTarget(luigi.target.Target):
+    # TODO: Pull enable_chunking and chunk_size_gb into
     def __init__(self, project_id, dataset_id, table_id, client=None, location=None, enable_chunking=False, chunk_size_gb=1000):
         self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id, location=location)
         self.client = client or BigQueryClient()
@@ -569,8 +557,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
             if self.schema:
                 job['configuration']['load']['schema'] = {'fields': self.schema}
 
-            print "Job :" + str(job)
-
             bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
             if output.enable_chunking:
                 partial_table_ids.append(output.table.project_id + "." + output.table.dataset_id + "." + table_id)
@@ -582,9 +568,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
             source_counter = 0
             for source_uri in source_uris:
                 if '*' in source_uri:
-                    # we chunk for every source_uri with a wildcard
-                    print "Wildcard path for: " + source_uri
-
                     uris = []
                     for uri in gcs_client.list_wildcard(source_uri):
                         uris.append(uri)
@@ -592,11 +575,11 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
 
                     chunk_intervals, uris_per_chunk = self.calculate_chunk_intervals(gcs_client, uris, output.chunk_size_gb)
 
-                    print "About to schedule " + str(len(chunk_intervals)) + " chunks, each max " \
-                          + str(uris_per_chunk) + " uris"
+                    print("About to schedule " + str(len(chunk_intervals)) + " chunks, each max "
+                          + str(uris_per_chunk) + " uris")
 
                     for chunk_num in chunk_intervals:
-                        chunk_uris = uris[chunk_num:min(chunk_num+uris_per_chunk, num_of_uris)]
+                        chunk_uris = uris[chunk_num:chunk_num+uris_per_chunk]
                         # min func to handle the very last chunk from the list, usually shorter then "uris_per_chunk"
                         partial_table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" \
                                            + str(chunk_num) + "_" + str(int(load_start_time))
@@ -604,7 +587,7 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
                         submit_load_job(chunk_uris, partial_table_id)
                 else:
                     # we don't chunk for non-wildcard source_uri
-                    print "Non-wildcard path for: " + source_uri
+                    print("Non-wildcard path for: " + source_uri)
                     table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" + str(int(load_start_time))
                     submit_load_job([source_uri], table_id)
 
@@ -615,7 +598,7 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
             self.remove_tables(bq_client, partial_table_ids)
 
         load_end_time = time.time()
-        print "UPLOAD DONE, it took: " + str(load_end_time - load_start_time) + " seconds"
+        print("UPLOAD DONE, it took: " + str(load_end_time - load_start_time) + " seconds")
 
     @staticmethod
     def calculate_avg_blob_size(gcs_client, uris):
@@ -635,10 +618,10 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
 
     def calculate_chunk_intervals(self, gcs_client, uris, chunk_size_gb):
         avg_blob_size_bytes = self.calculate_avg_blob_size(gcs_client, uris)
-        #  todo: what if avg_blob_size_bytes * num_of_uris < MAX_UPLOAD_SIZE_BYTES ??
+        #  todo: what if avg_blob_size_bytes * num_of_uris < chunk_size_gb ??
         #  todo: then we will upload this data in one chunk, but at the end we will still merge this one table
         #  todo: so this step could be skipped
-        print "Summary avg blob size is: " + str(avg_blob_size_bytes) + " bytes"
+        print("Summary avg blob size is: " + str(avg_blob_size_bytes) + " bytes")
         chunk_size_bytes = chunk_size_gb * GB_TO_BYTES
         uris_per_chunk = min(MAX_SOURCE_URIS, max(1, chunk_size_bytes / avg_blob_size_bytes))
         chunk_intervals = range(0, len(uris), uris_per_chunk)
@@ -664,20 +647,20 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         }
         if self.schema:
             merge_job['configuration']['query']['schema'] = {'fields': self.schema}
-        print "Starting merge"
+        print("Starting merge")
         start_merge = time.time()
         bq_client.run_job(project_id, merge_job, dataset=output.table.dataset)
         end_merge = time.time()
-        print "Merge done, it took: " + str(end_merge - start_merge) + " seconds"
+        print("Merge done, it took: " + str(end_merge - start_merge) + " seconds")
 
     @staticmethod
     def remove_tables(bq_client, table_ids):
-        print "starting cleaning up"
+        print("Starting cleaning up")
         for t in table_ids:
             table_params = t.split(".")
             bq_client.client.tables().delete(projectId=table_params[0], datasetId=table_params[1],
                                              tableId=table_params[2]).execute()
-        print "Cleaning up is done, removed " + str(len(table_ids)) + " tables"
+        print("Cleaning up is done, removed " + str(len(table_ids)) + " tables")
 
 
 class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
