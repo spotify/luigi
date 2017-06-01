@@ -93,9 +93,7 @@ class BaseTaskHistoryHandler(tornado.web.RequestHandler):
 class AllRunHandler(BaseTaskHistoryHandler):
     def get(self):
         all_tasks = self._scheduler.task_history.find_all_runs()
-        tasknames = []
-        for task in all_tasks:
-            tasknames.append(task.name)
+        tasknames = [task.name for task in all_tasks]
         # show all tasks with their name list to be selected
         # why all tasks? the duration of the event history of a selected task
         # can be more than 24 hours.
@@ -104,18 +102,16 @@ class AllRunHandler(BaseTaskHistoryHandler):
 
 class SelectedRunHandler(BaseTaskHistoryHandler):
     def get(self, name):
-        tasks = {}
         statusResults = {}
         taskResults = []
         # get all tasks that has been updated
         all_tasks = self._scheduler.task_history.find_all_runs()
         # get events history for all tasks
         all_tasks_event_history = self._scheduler.task_history.find_all_events()
-        for task in all_tasks:
-            task_seq = task.id
-            task_name = task.name
-            # build the dictionary, tasks with index: id, value: task_name
-            tasks[task_seq] = str(task_name)
+
+        # build the dictionary tasks with index: id, value: task_name
+        tasks = {task.id: str(task.name) for task in all_tasks}
+
         for task in all_tasks_event_history:
             # if the name of user-selected task is in tasks, get its task_id
             if tasks.get(task.task_id) == str(name):
