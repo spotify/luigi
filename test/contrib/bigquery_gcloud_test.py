@@ -247,30 +247,6 @@ class BigQueryGcloudTest(unittest.TestCase):
         self.assertTrue(self.bq_client.dataset_exists(self.table))
         self.assertTrue(self.bq_client.table_exists(self.table))
 
-    def test_avg_blob_size(self):
-        uris = [
-            "gs://luigi-travistestenvironment/176348453/contrib.gcs_test.GCSTargetTest.test_writelines",
-            "gs://luigi-travistestenvironment-docker-bq-test/bigquery_test_folder/contrib.bigquery_gcloud_test.BigQueryGcloudTest.test_table_uri"
-        ]
-        avg_blob_size = TestLoadTask.calculate_avg_blob_size(self.gcs_client, uris)
-        self.assertEqual(avg_blob_size, 33)
-
-    def test_chunk_intervals(self):
-        uris = [
-            "gs://luigi-travistestenvironment/176348453/contrib.gcs_test.GCSTargetTest.test_writelines",
-            "gs://luigi-travistestenvironment-docker-bq-test/bigquery_test_folder/contrib.bigquery_gcloud_test.BigQueryGcloudTest.test_table_uri"
-        ]
-        task = TestLoadTask(source=self.gcs_file,
-                            dataset=self.table.dataset.dataset_id,
-                            table=self.table.table_id,
-                            enable_chunking=True,
-                            chunk_size_gb=500)
-        chunk_intervals, uris_per_chunk = task.calculate_chunk_intervals(self.gcs_client, uris, 0.00000003)
-        print chunk_intervals
-        print uris_per_chunk
-        self.assertEqual(chunk_intervals, [0, 1])
-        self.assertEqual(uris_per_chunk, 1)
-
 
 @attr('gcloud')
 class BigQueryLoadAvroTest(unittest.TestCase):

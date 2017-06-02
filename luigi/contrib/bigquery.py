@@ -574,9 +574,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
 
                     chunk_intervals, uris_per_chunk = self.calculate_chunk_intervals(gcs_client, uris, self.chunk_size_gb)
 
-                    print("About to schedule " + str(len(chunk_intervals)) + " chunks, each max "
-                          + str(uris_per_chunk) + " uris")
-
                     for chunk_num in chunk_intervals:
                         chunk_uris = uris[chunk_num:chunk_num+uris_per_chunk]
                         # min func to handle the very last chunk from the list, usually shorter then "uris_per_chunk"
@@ -586,7 +583,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
                         submit_load_job(chunk_uris, partial_table_id)
                 else:
                     # we don't chunk for non-wildcard source_uri
-                    print("Non-wildcard path for: " + source_uri)
                     table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" + str(int(load_start_time))
                     submit_load_job([source_uri], table_id)
 
@@ -597,7 +593,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
             self.remove_tables(bq_client, partial_table_ids)
 
         load_end_time = time.time()
-        print("UPLOAD DONE, it took: " + str(load_end_time - load_start_time) + " seconds")
 
     @staticmethod
     def calculate_avg_blob_size(gcs_client, uris):
@@ -620,7 +615,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         #  todo: what if avg_blob_size_bytes * num_of_uris < chunk_size_gb ??
         #  todo: then we will upload this data in one chunk, but at the end we will still merge this one table
         #  todo: so this step could be skipped
-        print("Summary avg blob size is: " + str(avg_blob_size_bytes) + " bytes")
         chunk_size_bytes = chunk_size_gb * GB_TO_BYTES
         uris_per_chunk = min(MAX_SOURCE_URIS, max(1, chunk_size_bytes / avg_blob_size_bytes))
         chunk_intervals = range(0, len(uris), uris_per_chunk)
@@ -646,20 +640,16 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         }
         if self.schema:
             merge_job['configuration']['query']['schema'] = {'fields': self.schema}
-        print("Starting merge")
         start_merge = time.time()
         bq_client.run_job(project_id, merge_job, dataset=output.table.dataset)
         end_merge = time.time()
-        print("Merge done, it took: " + str(end_merge - start_merge) + " seconds")
 
     @staticmethod
     def remove_tables(bq_client, table_ids):
-        print("Starting cleaning up")
         for t in table_ids:
             table_params = t.split(".")
             bq_client.client.tables().delete(projectId=table_params[0], datasetId=table_params[1],
                                              tableId=table_params[2]).execute()
-        print("Cleaning up is done, removed " + str(len(table_ids)) + " tables")
 
 
 class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
