@@ -520,7 +520,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         project_id = output.table.project_id
 
         bq_client = output.client
-        gcs_client = GCSClient()
 
         source_uris = self.source_uris()
         assert all(x.startswith('gs://') for x in source_uris)
@@ -558,13 +557,12 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
                 job['configuration']['load']['schema'] = {'fields': self.schema}
 
             bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
-            if self.enable_chunking:
-                partial_table_ids.append(output.table.project_id + "." + output.table.dataset_id + "." + table_id)
 
         if not self.enable_chunking:
             # Default to previous behaviour
             submit_load_job(source_uris, output.table.table_id)
         else:
+            gcs_client = GCSClient()
             source_counter = 0
             for source_uri in source_uris:
                 if '*' in source_uri:
@@ -581,6 +579,9 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
                                            + str(chunk_num) + "_" + str(int(load_start_time))
 
                         submit_load_job(chunk_uris, partial_table_id)
+                        partial_table_ids.append(output.table.project_id + "." + output.table.dataset_id +
+                                                 "." + partial_table_id)
+
                 else:
                     # we don't chunk for non-wildcard source_uri
                     table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" + str(int(load_start_time))
@@ -612,9 +613,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
 
     def calculate_chunk_intervals(self, gcs_client, uris, chunk_size_gb):
         avg_blob_size_bytes = self.calculate_avg_blob_size(gcs_client, uris)
-        #  todo: what if avg_blob_size_bytes * num_of_uris < chunk_size_gb ??
-        #  todo: then we will upload this data in one chunk, but at the end we will still merge this one table
-        #  todo: so this step could be skipped
         chunk_size_bytes = chunk_size_gb * GB_TO_BYTES
         uris_per_chunk = min(MAX_SOURCE_URIS, max(1, chunk_size_bytes / avg_blob_size_bytes))
         chunk_intervals = range(0, len(uris), uris_per_chunk)
