@@ -81,8 +81,7 @@ class TestLoadTask(bigquery.BigQueryLoadTask):
         return [self.source]
 
     def output(self):
-        return bigquery.BigQueryTarget(PROJECT_ID, self.dataset, self.table, location=self.location,
-                                       enable_chunking=self.enable_chunking, chunk_size_gb=self.chunk_size_gb)
+        return bigquery.BigQueryTarget(PROJECT_ID, self.dataset, self.table, location=self.location)
 
 
 @attr('gcloud')
