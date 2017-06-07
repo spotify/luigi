@@ -159,6 +159,7 @@ class TaskProcess(multiprocessing.Process):
             # Need to have different random seeds if running in separate processes
             random.seed((os.getpid(), time.time()))
 
+        t0 = time.time() # Failed task start time
         status = FAILED
         expl = ''
         missing = []
@@ -207,6 +208,8 @@ class TaskProcess(multiprocessing.Process):
             raise
         except BaseException as ex:
             status = FAILED
+            self.task.trigger_event(
+                Event.PROCESSING_TIME, self.task, time.time() - t0)
             logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
             self.task.trigger_event(Event.FAILURE, self.task, ex)
             raw_error_message = self.task.on_failure(ex)
