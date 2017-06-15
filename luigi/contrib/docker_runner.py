@@ -26,6 +26,7 @@ Requires:
 - docker: ``pip install docker``
 
 Written and maintained by Andrea Pierleoni (@apierleoni).
+Contributions by Eliseo Papa (@elipapa).
 """
 from tempfile import mkdtemp
 import uuid

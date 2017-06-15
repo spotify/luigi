@@ -25,6 +25,7 @@ Requires:
 - docker: ``pip install docker``
 
 Written and maintained by Andrea Pierleoni (@apierleoni).
+Contributions by Eliseo Papa (@elipapa)
 """
 import tempfile
 from helpers import unittest
