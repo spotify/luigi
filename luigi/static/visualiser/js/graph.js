@@ -33,7 +33,7 @@ Graph = (function() {
             name: task.name,
             taskId: task.taskId,
             status: task.status,
-            trackingUrl: "#"+task.taskId,
+            trackingUrl: this.hashBase + task.taskId,
             deps: deps,
             params: task.params,
             priority: task.priority,
@@ -125,9 +125,10 @@ Graph = (function() {
     }
 
     /* Parses a list of tasks to a graph format */
-    function createGraph(tasks) {
+    function createGraph(tasks, hashBase) {
         if (tasks.length === 0) return {nodes: [], links: []};
 
+        this.hashBase = hashBase;
         var nodes = $.map(tasks, nodeFromTask);
         var nodeIndex = uniqueIndexByProperty(nodes, "taskId");
 
@@ -259,9 +260,9 @@ Graph = (function() {
         });
     };
 
-    DependencyGraph.prototype.updateData = function(taskList) {
+    DependencyGraph.prototype.updateData = function(taskList, hashBase) {
         $('.popover').popover('destroy');
-        this.graph = createGraph(taskList);
+        this.graph = createGraph(taskList, hashBase);
         bounds = findBounds(this.graph.nodes);
         this.renderGraph();
         this.svg.attr("height", bounds.y+10);

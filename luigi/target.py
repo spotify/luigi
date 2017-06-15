@@ -287,7 +287,8 @@ class FileSystemTarget(Target):
                     self.target._trailing_slash())
                 # TODO: os.path doesn't make sense here as it's os-dependent
                 tmp_dir = os.path.dirname(slashless_path)
-                self.target.fs.mkdir(tmp_dir, parents=True, raise_if_exists=False)
+                if tmp_dir:
+                    self.target.fs.mkdir(tmp_dir, parents=True, raise_if_exists=False)
 
             def __enter__(self):
                 return self._temp_path

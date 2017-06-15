@@ -57,6 +57,12 @@ var LuigiAPI = (function() {
         });
     }
 
+    LuigiAPI.prototype.forgiveFailures = function (taskId, callback) {
+        return jsonRPC(this.urlRoot + "/forgive_failures", {task_id: taskId}, function(response) {
+            callback(flatten(response.response));
+        });
+    }
+
     LuigiAPI.prototype.getFailedTaskList = function(callback) {
         return jsonRPC(this.urlRoot + "/task_list", {status: "FAILED", upstream_status: "", search: searchTerm()}, function(response) {
             callback(flatten(response.response));
@@ -143,6 +149,20 @@ var LuigiAPI = (function() {
         var data = {worker: workerId, n: n};
         jsonRPC(this.urlRoot + "/set_worker_processes", data, function(response) {
             callback();
+        });
+    }
+
+    LuigiAPI.prototype.pause = function() {
+        jsonRPC(this.urlRoot + '/pause');
+    }
+
+    LuigiAPI.prototype.unpause = function() {
+        jsonRPC(this.urlRoot + '/unpause');
+    }
+
+    LuigiAPI.prototype.isPaused = function(callback) {
+        jsonRPC(this.urlRoot + "/is_paused", {}, function(response) {
+            callback(!response.response.paused);
         });
     }
 

@@ -432,6 +432,7 @@ class Task(object):
         self.param_args = tuple(value for key, value in param_values)
         self.param_kwargs = dict(param_values)
 
+        self._warn_on_wrong_param_types()
         self.task_id = task_id_str(self.get_task_family(), self.to_str_params(only_significant=True))
         self.__hash = hash(self.task_id)
 
@@ -443,6 +444,11 @@ class Task(object):
         Returns ``True`` if the Task is initialized and ``False`` otherwise.
         """
         return hasattr(self, 'task_id')
+
+    def _warn_on_wrong_param_types(self):
+        params = dict(self.get_params())
+        for param_name, param_value in six.iteritems(self.param_kwargs):
+            params[param_name]._warn_on_wrong_param_type(param_name, param_value)
 
     @classmethod
     def from_str_params(cls, params_str):
@@ -811,18 +817,15 @@ def getpaths(struct):
     if isinstance(struct, Task):
         return struct.output()
     elif isinstance(struct, dict):
-        r = {}
-        for k, v in six.iteritems(struct):
-            r[k] = getpaths(v)
-        return r
+        return struct.__class__((k, getpaths(v)) for k, v in six.iteritems(struct))
+    elif isinstance(struct, (list, tuple)):
+        return struct.__class__(getpaths(r) for r in struct)
     else:
-        # Remaining case: assume r is iterable...
+        # Remaining case: assume struct is iterable...
         try:
-            s = list(struct)
+            return [getpaths(r) for r in struct]
         except TypeError:
             raise Exception('Cannot map %s to Task/dict/list' % str(struct))
-
-        return [getpaths(r) for r in s]
 
 
 def flatten(struct):

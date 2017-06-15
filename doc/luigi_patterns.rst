@@ -203,6 +203,29 @@ batch_running. Using a unique resource will prevent multiple tasks from
 writing to the same location at the same time if a new one becomes
 available while others are running.
 
+Avoiding concurrent writes to a single file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Updating a single file from several tasks is almost always a bad idea, and you 
+need to be very confident that no other good solution exists before doing this.
+If, however, you have no other option, then you will probably at least need to ensure that
+no two tasks try to write to the file _simultaneously_.  
+
+By turning 'resources' into a Python property, it can return a value dependent on 
+the task parameters or other dynamic attributes:
+
+.. code-block:: python
+
+    class A(luigi.Task):
+        ...
+
+        @property
+        def resources(self):
+            return { self.important_file_name: 1 }
+
+Since, by default, resources have a usage limit of 1, no two instances of Task A 
+will now run if they have the same `important_file_name` property.
+
 Monitoring task pipelines
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
