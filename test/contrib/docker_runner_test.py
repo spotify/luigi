@@ -50,7 +50,7 @@ except Exception:
 
 tempfile.tempdir = '/tmp' #set it explicitely to make it work out of the box in mac os
 local_file = NamedTemporaryFile()
-local_file.write('this is a test file\n')
+local_file.write(b'this is a test file\n')
 local_file.flush()
 
 class SuccessJob(DockerTask):
