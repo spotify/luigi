@@ -41,8 +41,12 @@ logger = logging.getLogger('luigi-interface')
 try:
     import docker
     from docker.errors import ContainerError, ImageNotFound
+    client = docker.from_env()
+    client.version()
 except ImportError:
     raise unittest.SkipTest('Unable to load docker module')
+except Exception:
+    raise unittest.SkipTest('Unable to connect to docker daemon')
 
 tempfile.tempdir = '/tmp' #set it explicitely to make it work out of the box in mac os
 local_file = NamedTemporaryFile()
