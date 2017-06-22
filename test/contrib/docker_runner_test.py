@@ -34,7 +34,6 @@ from tempfile import NamedTemporaryFile
 import luigi
 import logging
 from luigi.contrib.docker_runner import DockerTask
-from luigi.mock import MockTarget
 
 logger = logging.getLogger('luigi-interface')
 
@@ -48,23 +47,27 @@ except ImportError:
 except Exception:
     raise unittest.SkipTest('Unable to connect to docker daemon')
 
-tempfile.tempdir = '/tmp' #set it explicitely to make it work out of the box in mac os
+tempfile.tempdir = '/tmp'  # set it explicitely to make it work out of the box in mac os
 local_file = NamedTemporaryFile()
 local_file.write(b'this is a test file\n')
 local_file.flush()
+
 
 class SuccessJob(DockerTask):
     image = "busybox:latest"
     name = "SuccessJob"
 
+
 class FailJobImageNotFound(DockerTask):
     image = "image-does-not-exists"
     name = "FailJobImageNotFound"
+
 
 class FailJobContainer(DockerTask):
     image = "busybox"
     name = "FailJobContainer"
     command = 'cat this-file-does-not-exist'
+
 
 class WriteToTmpDir(DockerTask):
     image = "busybox"
@@ -73,6 +76,7 @@ class WriteToTmpDir(DockerTask):
     command = 'test -d  /tmp/luigi-test'
     # command = 'test -d $LUIGI_TMP_DIR'# && echo ok >$LUIGI_TMP_DIR/test'
 
+
 class MountLocalFileAsVolume(DockerTask):
     image = "busybox"
     name = "MountLocalFileAsVolume"
@@ -80,12 +84,14 @@ class MountLocalFileAsVolume(DockerTask):
     volumes = [local_file.name + ':/tmp/local_file_test']
     command = 'test -f /tmp/local_file_test'
 
+
 class MountLocalFileAsVolumeWithParam(DockerTask):
     dummyopt = luigi.Parameter()
     image = "busybox"
     name = "MountLocalFileAsVolumeWithParam"
-    volumes = [local_file.name  + ':/tmp/local_file_test']
+    volumes = [local_file.name + ':/tmp/local_file_test']
     command = 'test -f /tmp/local_file_test'
+
 
 class MountLocalFileAsVolumeWithParamRedefProperties(DockerTask):
     dummyopt = luigi.Parameter()
@@ -94,7 +100,7 @@ class MountLocalFileAsVolumeWithParamRedefProperties(DockerTask):
 
     @property
     def volumes(self):
-        return [local_file.name  + ':/tmp/local_file_test' + self.dummyopt]
+        return [local_file.name + ':/tmp/local_file_test' + self.dummyopt]
 
     @property
     def command(self):
@@ -111,6 +117,7 @@ class MultipleDockerTask(luigi.WrapperTask):
     def requires(self):
         return [MountLocalFileAsVolumeWithParam(dummyopt=opt)
                 for opt in ['one', 'two', 'three']]
+
 
 class MultipleDockerTaskRedefProperties(luigi.WrapperTask):
     def requires(self):
