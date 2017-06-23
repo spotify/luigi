@@ -123,7 +123,7 @@ class TestS3CopyToTable(unittest.TestCase):
         # Check the SQL query in `S3CopyToTable.does_table_exist`.
         mock_cursor.execute.assert_called_with("select 1 as table_exists "
                                                "from pg_table_def "
-                                               "where tablename = %s limit 1",
+                                               "where tablename = lower(%s) limit 1",
                                                (task.table,))
 
         return
@@ -188,7 +188,7 @@ class TestS3CopyToTable(unittest.TestCase):
         mock_cursor.execute.assert_any_call(
             "select 1 as table_exists "
             "from pg_table_def "
-            "where tablename = %s limit 1",
+            "where tablename = lower(%s) limit 1",
             (task.table,),
         )
 
@@ -212,8 +212,8 @@ class TestS3CopyToSchemaTable(unittest.TestCase):
         mock_cursor.execute.assert_called_with(
             "select 1 as table_exists "
             "from information_schema.tables "
-            "where table_schema = %s and "
-            "table_name = %s limit 1",
+            "where table_schema = lower(%s) and "
+            "table_name = lower(%s) limit 1",
             tuple(task.table.split('.')),
         )
 
