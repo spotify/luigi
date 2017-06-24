@@ -19,7 +19,14 @@ import collections
 import logging
 import luigi.target
 import time
+import random
 from luigi.contrib import gcp
+from luigi.contrib.gcs import GCSClient
+
+#  chunking parameters
+MAX_POPULATION_SIZE = 10  # sample pupulation
+GB_TO_BYTES = 1000000000
+MAX_SOURCE_URIS = 10000  # limit by Google
 
 logger = logging.getLogger('luigi-interface')
 
@@ -371,6 +378,7 @@ class BigQueryClient(object):
 
 
 class BigQueryTarget(luigi.target.Target):
+    # TODO: Pull enable_chunking and chunk_size_gb into
     def __init__(self, project_id, dataset_id, table_id, client=None, location=None):
         self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id, location=location)
         self.client = client or BigQueryClient()
@@ -426,6 +434,8 @@ class MixinBigQueryBulkComplete(object):
 
 class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
     """Load data into BigQuery from GCS."""
+    enable_chunking = luigi.BoolParameter(default=False)
+    chunk_size_gb = luigi.IntParameter(default=1000)
 
     @property
     def source_format(self):
@@ -507,40 +517,137 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
 
+        project_id = output.table.project_id
+
         bq_client = output.client
 
         source_uris = self.source_uris()
         assert all(x.startswith('gs://') for x in source_uris)
 
-        job = {
+        partial_table_ids = []
+        load_start_time = time.time()
+
+        def submit_load_job(uris, table_id):
+            job = {
+                'projectId': output.table.project_id,
+                'configuration': {
+                    'load': {
+                        'destinationTable': {
+                            'projectId': output.table.project_id,
+                            'datasetId': output.table.dataset_id,
+                            'tableId': table_id,
+                        },
+                        'encoding': self.encoding,
+                        'sourceFormat': self.source_format,
+                        'writeDisposition': self.write_disposition,
+                        'sourceUris': uris,
+                        'maxBadRecords': self.max_bad_records,
+                        'ignoreUnknownValues': self.ignore_unknown_values
+                    }
+                }
+            }
+
+            if self.source_format == SourceFormat.CSV:
+                job['configuration']['load']['fieldDelimiter'] = self.field_delimiter
+                job['configuration']['load']['skipLeadingRows'] = self.skip_leading_rows
+                job['configuration']['load']['allowJaggedRows'] = self.allow_jagged_rows
+                job['configuration']['load']['allowQuotedNewlines'] = self.allow_quoted_new_lines
+
+            if self.schema:
+                job['configuration']['load']['schema'] = {'fields': self.schema}
+
+            bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
+
+        if not self.enable_chunking:
+            # Default to previous behaviour
+            submit_load_job(source_uris, output.table.table_id)
+        else:
+            gcs_client = GCSClient()
+            source_counter = 0
+            for source_uri in source_uris:
+                if '*' in source_uri:
+                    uris = []
+                    for uri in gcs_client.list_wildcard(source_uri):
+                        uris.append(uri)
+
+                    chunk_intervals, uris_per_chunk = self.calculate_chunk_intervals(gcs_client, uris, self.chunk_size_gb)
+
+                    for chunk_num in chunk_intervals:
+                        chunk_uris = uris[chunk_num:chunk_num+uris_per_chunk]
+                        # min func to handle the very last chunk from the list, usually shorter then "uris_per_chunk"
+                        partial_table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" \
+                                           + str(chunk_num) + "_" + str(int(load_start_time))
+
+                        submit_load_job(chunk_uris, partial_table_id)
+                        partial_table_ids.append(output.table.project_id + "." + output.table.dataset_id +
+                                                 "." + partial_table_id)
+
+                else:
+                    # we don't chunk for non-wildcard source_uri
+                    table_id = "TEMP_" + output.table.table_id + "_" + str(source_counter) + "_" + str(int(load_start_time))
+                    submit_load_job([source_uri], table_id)
+
+                source_counter += 1
+
+            self.merge_tables(bq_client, output, partial_table_ids, project_id)
+
+            self.remove_tables(bq_client, partial_table_ids)
+
+        load_end_time = time.time()
+
+    @staticmethod
+    def calculate_avg_blob_size(gcs_client, uris):
+        population_size = min(MAX_POPULATION_SIZE, len(uris))
+        sampled_uris = random.sample(uris, population_size)
+        total_sampled_blobs_bytes = 0
+        for uri in sampled_uris:
+            bucket_name = uri.split("/")[2]
+            blob_name = "/".join(uri.split("/")[3:])
+            blob = gcs_client.get_object(bucket_name, blob_name)
+            if blob is not None:
+                blob_size_bytes = blob['size']
+                total_sampled_blobs_bytes += int(blob_size_bytes)
+            else:
+                raise Exception("BigQueryLoadTask failed: Object + " + uri + " doesn't exist")
+        return total_sampled_blobs_bytes / population_size
+
+    def calculate_chunk_intervals(self, gcs_client, uris, chunk_size_gb):
+        avg_blob_size_bytes = self.calculate_avg_blob_size(gcs_client, uris)
+        chunk_size_bytes = chunk_size_gb * GB_TO_BYTES
+        uris_per_chunk = min(MAX_SOURCE_URIS, max(1, chunk_size_bytes / avg_blob_size_bytes))
+        chunk_intervals = range(0, len(uris), uris_per_chunk)
+        return chunk_intervals, uris_per_chunk
+
+    def merge_tables(self, bq_client, output, table_ids, project_id):
+        select_queries = map(lambda table_id: "(SELECT * FROM `{}`)".format(table_id), table_ids)
+        merge_query = " UNION ALL ".join(select_queries)
+        merge_job = {
             'projectId': output.table.project_id,
             'configuration': {
-                'load': {
+                'query': {
+                    'query': merge_query,
+                    'useLegacySql': False,
                     'destinationTable': {
                         'projectId': output.table.project_id,
                         'datasetId': output.table.dataset_id,
                         'tableId': output.table.table_id,
                     },
-                    'encoding': self.encoding,
-                    'sourceFormat': self.source_format,
-                    'writeDisposition': self.write_disposition,
-                    'sourceUris': source_uris,
-                    'maxBadRecords': self.max_bad_records,
-                    'ignoreUnknownValues': self.ignore_unknown_values
+                    'writeDisposition': self.write_disposition
                 }
             }
         }
-
-        if self.source_format == SourceFormat.CSV:
-            job['configuration']['load']['fieldDelimiter'] = self.field_delimiter
-            job['configuration']['load']['skipLeadingRows'] = self.skip_leading_rows
-            job['configuration']['load']['allowJaggedRows'] = self.allow_jagged_rows
-            job['configuration']['load']['allowQuotedNewlines'] = self.allow_quoted_new_lines
-
         if self.schema:
-            job['configuration']['load']['schema'] = {'fields': self.schema}
+            merge_job['configuration']['query']['schema'] = {'fields': self.schema}
+        start_merge = time.time()
+        bq_client.run_job(project_id, merge_job, dataset=output.table.dataset)
+        end_merge = time.time()
 
-        bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
+    @staticmethod
+    def remove_tables(bq_client, table_ids):
+        for t in table_ids:
+            table_params = t.split(".")
+            bq_client.client.tables().delete(projectId=table_params[0], datasetId=table_params[1],
+                                             tableId=table_params[2]).execute()
 
 
 class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):

@@ -67,6 +67,8 @@ class TestLoadTask(bigquery.BigQueryLoadTask):
     table = luigi.Parameter()
     dataset = luigi.Parameter()
     location = luigi.Parameter(default=None)
+    enable_chunking = luigi.BoolParameter(default=False)
+    chunk_size_gb = luigi.IntParameter(default=1000)
 
     @property
     def schema(self):
@@ -222,6 +224,26 @@ class BigQueryGcloudTest(unittest.TestCase):
         task._BIGQUERY_CLIENT = self.bq_client
         task.run()
 
+        self.assertTrue(self.bq_client.table_exists(self.table))
+
+    def test_chunk_disabled(self):
+        task = TestLoadTask(source=self.gcs_file,
+                            dataset=self.table.dataset.dataset_id,
+                            table=self.table.table_id,
+                            enable_chunking=False)
+
+        task.run()
+        self.assertTrue(self.bq_client.dataset_exists(self.table))
+        self.assertTrue(self.bq_client.table_exists(self.table))
+
+    def test_chunk_enabled(self):
+        task = TestLoadTask(source=self.gcs_file,
+                            dataset=self.table.dataset.dataset_id,
+                            table=self.table.table_id,
+                            enable_chunking=True,
+                            chunk_size_gb=500)
+        task.run()
+        self.assertTrue(self.bq_client.dataset_exists(self.table))
         self.assertTrue(self.bq_client.table_exists(self.table))
 
 

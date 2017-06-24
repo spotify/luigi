@@ -393,6 +393,12 @@ class GCSClient(luigi.target.FileSystem):
 
         return return_fp
 
+    def get_object(self, bucket_name, blob_name):
+        if self._obj_exists(bucket_name, blob_name):
+            return self.client.objects().get(bucket=bucket_name, object=blob_name).execute()
+        else:
+            return None
+
 
 class _DeleteOnCloseFile(io.FileIO):
     def close(self):
