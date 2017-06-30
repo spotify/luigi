@@ -289,7 +289,7 @@ class PySparkTask(SparkSubmitTask):
             if self.__module__ == '__main__':
                 d = pickle.dumps(self)
                 module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-                d = d.replace(b'(c__main__', "(c" + module_name)
+                d = d.replace(b'c__main__', b'c' + module_name.encode('ascii'))
                 fd.write(d)
             else:
                 pickle.dump(self, fd)
