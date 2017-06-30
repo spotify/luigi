@@ -48,7 +48,9 @@ except ImportError:
 # TODO: may need to implement this logic for remote hosts
 # class dockerconfig(luigi.Config):
 #     '''
-#     this class allows to use the luigi.cfg file to specify the path to the docker config.json. The docker client should look by default in the main directory, but on different systems this may need to be specified. 
+#     this class allows to use the luigi.cfg file to specify the path to the docker config.json.
+#     The docker client should look by default in the main directory, 
+#      but on different systems this may need to be specified. 
 #     '''
 #     docker_config_path = luigi.Parameter(
 #         default="~/.docker/config.json",
@@ -119,7 +121,7 @@ class DockerTask(luigi.Task):
         - create a tmp dir
         - add the temp dir to the volume binds specified in the task
         '''
-        super(DockerTask, self).__init__(*args,**kwargs)
+        super(DockerTask, self).__init__(*args, **kwargs)
         self.__logger = logger
         
         '''init docker client
@@ -130,7 +132,7 @@ class DockerTask(luigi.Task):
 
         # add latest tag if nothing else is specified by task
         if ':' not in self.image:
-            self._image = ':'.join([self.image,'latest'])
+            self._image = ':'.join([self.image, 'latest'])
         else:
             self._image = self.image
         
@@ -138,8 +140,8 @@ class DockerTask(luigi.Task):
             # create a tmp_dir, NOTE: /tmp needs to be specified for it to work on
             # macOS, despite what the python documentation says
             self._host_tmp_dir = mkdtemp(suffix=self.task_id,
-                                        prefix='luigi-docker-tmp-dir-',
-                                        dir='/tmp')
+                                         prefix='luigi-docker-tmp-dir-',
+                                         dir='/tmp')
 
             self._volumes = ['{0}:{1}'.format(self._host_tmp_dir, self.container_tmp_dir)]
         else:
@@ -153,7 +155,6 @@ class DockerTask(luigi.Task):
             self._volumes.append(self.volumes)
         elif isinstance(self.volumes, list):
             self._volumes.extend(self.volumes)
-
 
     def run(self):
 
@@ -177,7 +178,8 @@ class DockerTask(luigi.Task):
 
         # run the container
         try:
-            logger.debug('Creating image: %s command: %s volumes: %s' % (self._image, self.command, self._volumes))
+            logger.debug('Creating image: %s command: %s volumes: %s'
+                            % (self._image, self.command, self._volumes))
 
             container = self._client.create_container(self._image,
                                                       command=self.command,
@@ -194,8 +196,8 @@ class DockerTask(luigi.Task):
                 stdout = False
                 stderr = True
                 error = self._client.logs(container['Id'],
-                                    stdout=stdout,
-                                    stderr=stderr)
+                                          stdout=stdout,
+                                          stderr=stderr)
             if self.auto_remove:
                 self._client.remove_container(container['Id'])
             if exit_status != 0:
