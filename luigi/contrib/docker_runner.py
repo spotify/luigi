@@ -29,7 +29,6 @@ Written and maintained by Andrea Pierleoni (@apierleoni).
 Contributions by Eliseo Papa (@elipapa).
 """
 from tempfile import mkdtemp
-import uuid
 import logging
 import luigi
 
@@ -91,7 +90,6 @@ class DockerTask(luigi.Task):
         '''
         return None
 
-
     @property
     def network_mode(self):
         return ''
@@ -106,6 +104,10 @@ class DockerTask(luigi.Task):
 
     @property
     def force_pull(self):
+        return False
+
+    @property
+    def mount_tmp(self):
         return False
 
     def __init__(self, *args, **kwargs):
@@ -131,22 +133,26 @@ class DockerTask(luigi.Task):
             self._image = ':'.join([self.image,'latest'])
         else:
             self._image = self.image
+        
+        if self.mount_tmp:
+            # create a tmp_dir, NOTE: /tmp needs to be specified for it to work on
+            # macOS, despite what the python documentation says
+            self._host_tmp_dir = mkdtemp(suffix=self.task_id,
+                                        prefix='luigi-docker-tmp-dir-',
+                                        dir='/tmp')
 
-        # create a tmp_dir, NOTE: /tmp needs to be specified for it to work on
-        # macOS, despite what the python documentation says
-        self._host_tmp_dir = mkdtemp(suffix=self.task_id,
-                                     prefix='luigi-docker-tmp-dir-',
-                                     dir='/tmp')
-
-        self._volumes = ['{0}:{1}'.format(self._host_tmp_dir, self.container_tmp_dir)]
+            self._volumes = ['{0}:{1}'.format(self._host_tmp_dir, self.container_tmp_dir)]
+        else:
+            self._volumes = []
+            
         # update environment property with the (internal) location of tmp_dir
         self.environment['LUIGI_TMP_DIR'] = self.container_tmp_dir
 
         # add additional volume binds specified by the user to the tmp_Dir bind
         if isinstance(self.volumes, six.string_types):
-            return self._volumes.append(self.volumes)
+            self._volumes.append(self.volumes)
         elif isinstance(self.volumes, list):
-            return self._volumes.extend(self.volumes)
+            self._volumes.extend(self.volumes)
 
 
     def run(self):
