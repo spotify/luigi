@@ -224,5 +224,5 @@ class DockerTask(luigi.Task):
 
         # delete temp dir
         filesys = LocalFileSystem()
-        if filesys.exists(self._host_tmp_dir):
+        if self.mount_tmp and filesys.exists(self._host_tmp_dir):
             filesys.remove(self._host_tmp_dir, recursive=True)
