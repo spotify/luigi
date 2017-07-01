@@ -84,7 +84,7 @@ class DockerTask(luigi.Task):
         return '/tmp/luigi'
 
     @property
-    def volumes(self):
+    def binds(self):
         '''
         Override this to mount local volumes, in addition to the /tmp/luigi
         which gets defined by default. This should return a list of strings.
@@ -143,18 +143,22 @@ class DockerTask(luigi.Task):
                                          prefix='luigi-docker-tmp-dir-',
                                          dir='/tmp')
 
-            self._volumes = ['{0}:{1}'.format(self._host_tmp_dir, self.container_tmp_dir)]
+            self._binds = ['{0}:{1}'.format(self._host_tmp_dir, self.container_tmp_dir)]
         else:
-            self._volumes = []
+            self._binds = []
             
         # update environment property with the (internal) location of tmp_dir
         self.environment['LUIGI_TMP_DIR'] = self.container_tmp_dir
 
         # add additional volume binds specified by the user to the tmp_Dir bind
-        if isinstance(self.volumes, six.string_types):
-            self._volumes.append(self.volumes)
-        elif isinstance(self.volumes, list):
-            self._volumes.extend(self.volumes)
+        if isinstance(self.binds, six.string_types):
+            self._binds.append(self.binds)
+        elif isinstance(self.binds, list):
+            self._binds.extend(self.binds)
+        
+        # derive volumes (ie. list of container destination paths) from
+        # specified binds
+        self._volumes = [b.split(':')[1] for b in self._binds]
 
     def run(self):
 
@@ -179,15 +183,17 @@ class DockerTask(luigi.Task):
         # run the container
         try:
             logger.debug('Creating image: %s command: %s volumes: %s'
-                            % (self._image, self.command, self._volumes))
+                         % (self._image, self.command, self._binds))
+
+            host_config = self._client.create_host_config(binds=self._binds,
+                                                          network_mode=self.network_mode)
 
             container = self._client.create_container(self._image,
                                                       command=self.command,
                                                       name=self.name,
                                                       environment=self.environment,
-                                                      # volumes = mounted_volumes,
-                                                      host_config=self._client.create_host_config(binds=self._volumes,
-                                                                                      network_mode=self.network_mode),
+                                                      volumes=self._volumes,
+                                                      host_config=host_config,
                                                       **self.container_options)
             self._client.start(container['Id'])
 
