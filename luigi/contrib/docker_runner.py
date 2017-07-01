@@ -186,7 +186,8 @@ class DockerTask(luigi.Task):
                          % (self._image, self.command, self._binds))
 
             host_config = self._client.create_host_config(binds=self._binds,
-                                                          network_mode=self.network_mode)
+                                                          network_mode=self.network_mode,
+                                                          auto_remove=self.auto_remove)
 
             container = self._client.create_container(self._image,
                                                       command=self.command,
@@ -205,7 +206,11 @@ class DockerTask(luigi.Task):
                                           stdout=stdout,
                                           stderr=stderr)
             if self.auto_remove:
-                self._client.remove_container(container['Id'])
+                try:
+                    self._client.remove_container(container['Id'])
+                except docker.errors.APIError:
+                    self.__logger.warning("Container " + container['Id'] +
+                                          " could not be removed") 
             if exit_status != 0:
                 raise ContainerError(container, exit_status, self.command, self._image, error)
 
