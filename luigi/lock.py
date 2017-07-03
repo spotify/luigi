@@ -26,6 +26,8 @@ import os
 import sys
 from subprocess import Popen, PIPE
 
+from luigi import six
+
 
 def getpcmd(pid):
     """
@@ -62,8 +64,11 @@ def getpcmd(pid):
         # worked. See the pull request at
         # https://github.com/spotify/luigi/pull/1876
         try:
-            with open('/proc/{0}/cmdline'.format(pid), 'rb') as fh:
-                return fh.read().replace('\0', ' ').decode('utf8').rstrip()
+            with open('/proc/{0}/cmdline'.format(pid), 'r') as fh:
+                if six.PY3:
+                    return fh.read().replace('\0', ' ').rstrip()
+                else:
+                    return fh.read().replace('\0', ' ').decode('utf8').rstrip()
         except IOError:
             # the system may not allow reading the command line
             # of a process owned by another user
