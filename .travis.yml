@@ -21,7 +21,9 @@ env:
     - TOXENV=py33-nonhdfs
     - TOXENV=py34-nonhdfs
     - TOXENV=py27-unixsocket
-    - TOXENV=py27-cdh
+      # - TOXENV=py27-cdh
+      # minicluster (cdh) tests disabled as lack of love, #2140.
+      # Sometimes it runs too slow for Travis. And sometimes it crashes on downloading cdh
     - TOXENV=pypy-scheduler
     # - TOXENV=py27-gcloud # At least broken as of  https://github.com/spotify/luigi/pull/1917
     - TOXENV=py27-postgres
@@ -38,8 +40,6 @@ matrix:
       env: TOXENV=py36-nonhdfs
     - python: 3.6
       env: TOXENV=py36-unixsocket
-    - python: 3.6
-      env: TOXENV=py36-cdh
 
 sudo: false
 
