@@ -25,7 +25,8 @@ env:
       # minicluster (cdh) tests disabled as lack of love, #2140.
       # Sometimes it runs too slow for Travis. And sometimes it crashes on downloading cdh
     - TOXENV=pypy-scheduler
-    # - TOXENV=py27-gcloud # At least broken as of  https://github.com/spotify/luigi/pull/1917
+    - TOXENV=py27-gcloud
+    - TOXENV=py34-gcloud
     - TOXENV=py27-postgres
       # - TOXENV=visualiser
       # Disabling this test because of intermittent failures :-/
