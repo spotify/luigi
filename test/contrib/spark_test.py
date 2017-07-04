@@ -225,7 +225,7 @@ class PySparkTaskTest(unittest.TestCase):
             run_path = os.path.dirname(task.app_command()[1])
             self.assertTrue(os.path.exists(os.path.join(run_path, os.path.basename(__file__))))
             # Check that the python path contains the run_path
-            #self.assertTrue(run_path in sys.path)
+            self.assertTrue(run_path in sys.path)
             # Check if find_class finds the class for the correct module name.
             with open(task.app_command()[1], 'rb') as fp:
                 self.assertTrue(pickle.Unpickler(fp).find_class('spark_test', 'TestPySparkTask'))
