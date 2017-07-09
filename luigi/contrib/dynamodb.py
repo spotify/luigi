@@ -21,7 +21,7 @@ class DynamoDBTarget(luigi.Target):
         """
         Args:
             resource (DynamoDB.ServiceResource): created using boto3.resource()
-            update_id (str): An identifier for this dataset
+            update_id (str): An identifier for this dataset 
         """
         self.update_id = update_id
         self.resource = resource
