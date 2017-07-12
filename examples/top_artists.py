@@ -246,12 +246,13 @@ class Top10Artists(luigi.Task):
 
 class ArtistToplistToDatabase(luigi.contrib.postgres.CopyToTable):
     """
-    This task runs a :py:class:`luigi.postgres.CopyToTable` task
+    This task runs a :py:class:`luigi.contrib.postgres.CopyToTable` task
     over the target data returned by :py:meth:`~/.Top10Artists.output` and
     writes the result into its :py:meth:`~.ArtistToplistToDatabase.output` target which,
-    by default, is :py:class:`luigi.postgres.PostgresTarget` (a table in PostgreSQL).
+    by default, is :py:class:`luigi.contrib.postgres.PostgresTarget` (a table in PostgreSQL).
 
-    This class uses :py:meth:`luigi.postgres.CopyToTable.run` and :py:meth:`luigi.postgres.CopyToTable.output`.
+    This class uses :py:meth:`luigi.contrib.postgres.CopyToTable.run`
+    and :py:meth:`luigi.contrib.postgres.CopyToTable.output`.
     """
 
     date_interval = luigi.DateIntervalParameter()
