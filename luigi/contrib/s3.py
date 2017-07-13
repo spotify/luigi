@@ -565,6 +565,7 @@ class S3Client(FileSystem):
         return self.put_string("", self._add_path_delimiter(path))
 
     def _get_s3_config(self, key=None):
+        defaults = dict(configuration.get_config().defaults())
         try:
             config = dict(configuration.get_config().items('s3'))
         except NoSectionError:
@@ -577,7 +578,8 @@ class S3Client(FileSystem):
                 pass
         if key:
             return config.get(key)
-        return config
+        section_only = {k: v for k, v in config.items() if k not in defaults or v != defaults[k]}
+        return section_only
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, query, fragment) = urlsplit(path)
