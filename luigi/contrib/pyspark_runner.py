@@ -34,11 +34,15 @@ except ImportError:
     import pickle
 import logging
 import sys
+import os
 
 
 class PySparkRunner(object):
 
     def __init__(self, job, *args):
+        # Append job directory to PYTHON_PATH to enable dynamic import
+        # of the module in which the class resides on unpickling
+        sys.path.append(os.path.dirname(job))
         with open(job, "rb") as fd:
             self.job = pickle.load(fd)
         self.args = args
