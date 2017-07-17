@@ -161,3 +161,30 @@ class MongoRangeTarget(MongoTarget):
         )
 
         return set(self._document_ids) - set([doc['_id'] for doc in cursor])
+
+
+class MongoCountTarget(MongoTarget):
+
+    """ Target for a level 0 field in a range of documents """
+
+    def __init__(self, mongo_client, index, collection, target_count):
+        """
+        :param target_count: Value of the desired item count in the target
+        :type field: int
+        """
+        super(MongoCountTarget, self).__init__(mongo_client, index, collection)
+
+        self._target_count = target_count
+
+    def exists(self):
+        """
+        Test if the target has been run
+        Target is considered run if the number of items in the target matches value of self._target_count
+        """
+        return self.read() == self._target_count
+
+    def read(self):
+        """
+        Returns the count number of the target
+        """
+        return self.get_collection().count()
