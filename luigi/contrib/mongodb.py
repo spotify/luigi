@@ -187,4 +187,4 @@ class MongoCountTarget(MongoTarget):
         """
         Returns the count number of the target
         """
-        return self.get_collection().count()
+        return self.get_collection().find().count()
