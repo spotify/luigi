@@ -165,7 +165,7 @@ class MongoRangeTarget(MongoTarget):
 
 class MongoCountTarget(MongoTarget):
 
-    """ Target for a level 0 field in a range of documents """
+    """ Target for documents count """
 
     def __init__(self, mongo_client, index, collection, target_count):
         """
