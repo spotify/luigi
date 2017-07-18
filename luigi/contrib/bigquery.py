@@ -755,13 +755,17 @@ class BigQueryExtractTask(luigi.Task):
                         'tableId': input.table.table_id
                     },
                     'destinationUris': destination_uris,
-                    'printHeader': self.print_header,
-                    'fieldDelimiter': self.field_delimiter,
                     'destinationFormat': self.destination_format,
                     'compression': self.compression
                 }
             }
         }
+
+        if self.destination_format == 'CSV':
+            # "Only exports to CSV may specify a field delimiter."
+            job['configuration']['extract']['printHeader'] = self.print_header
+            job['configuration']['extract']['fieldDelimiter'] = \
+                self.field_delimiter
 
         bq_client.run_job(
             input.table.project_id,

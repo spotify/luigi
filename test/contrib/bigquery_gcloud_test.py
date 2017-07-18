@@ -101,6 +101,13 @@ class TestExtractTask(bigquery.BigQueryExtractTask):
     location = luigi.Parameter(default=None)
     extract_gcs_file = luigi.Parameter()
 
+    destination_format = luigi.Parameter(
+        default=bigquery.DestinationFormat.CSV)
+    print_header = luigi.Parameter(
+        default=bigquery.PrintHeader.TRUE)
+    field_delimiter = luigi.Parameter(
+        default=bigquery.FieldDelimiter.COMMA)
+
     def output(self):
         return GCSTarget(bucket_url(self.extract_gcs_file))
 
@@ -148,7 +155,7 @@ class BigQueryGcloudTest(unittest.TestCase):
         self.bq_client.make_dataset(self.table.dataset, body={})
         self.bq_client.make_dataset(self.table_eu.dataset, body={})
 
-    def test_extract_to_gcs(self):
+    def test_extract_to_gcs_csv(self):
         task1 = TestLoadTask(
             source=self.gcs_file,
             dataset=self.table.dataset.dataset_id,
@@ -159,7 +166,63 @@ class BigQueryGcloudTest(unittest.TestCase):
             source=self.gcs_file,
             dataset=self.table.dataset.dataset_id,
             table=self.table.table_id,
-            extract_gcs_file=self.id() + '_extract_file')
+            extract_gcs_file=self.id() + '_extract_file',
+            destination_format=bigquery.DestinationFormat.CSV)
+        task2.run()
+
+        self.assertTrue(task2.output().exists)
+
+    def test_extract_to_gcs_csv_alternate(self):
+        task1 = TestLoadTask(
+            source=self.gcs_file,
+            dataset=self.table.dataset.dataset_id,
+            table=self.table.table_id
+        )
+        task1.run()
+
+        task2 = TestExtractTask(
+            source=self.gcs_file,
+            dataset=self.table.dataset.dataset_id,
+            table=self.table.table_id,
+            extract_gcs_file=self.id() + '_extract_file',
+            destination_format=bigquery.DestinationFormat.CSV,
+            print_header=bigquery.PrintHeader.FALSE,
+            field_delimiter=bigquery.FieldDelimiter.PIPE
+        )
+        task2.run()
+
+        self.assertTrue(task2.output().exists)
+
+    def test_extract_to_gcs_json(self):
+        task1 = TestLoadTask(
+            source=self.gcs_file,
+            dataset=self.table.dataset.dataset_id,
+            table=self.table.table_id)
+        task1.run()
+
+        task2 = TestExtractTask(
+            source=self.gcs_file,
+            dataset=self.table.dataset.dataset_id,
+            table=self.table.table_id,
+            extract_gcs_file=self.id() + '_extract_file',
+            destination_format=bigquery.DestinationFormat.NEWLINE_DELIMITED_JSON)
+        task2.run()
+
+        self.assertTrue(task2.output().exists)
+
+    def test_extract_to_gcs_avro(self):
+        task1 = TestLoadTask(
+            source=self.gcs_file,
+            dataset=self.table.dataset.dataset_id,
+            table=self.table.table_id)
+        task1.run()
+
+        task2 = TestExtractTask(
+            source=self.gcs_file,
+            dataset=self.table.dataset.dataset_id,
+            table=self.table.table_id,
+            extract_gcs_file=self.id() + '_extract_file',
+            destination_format=bigquery.DestinationFormat.AVRO)
         task2.run()
 
         self.assertTrue(task2.output().exists)
