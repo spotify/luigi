@@ -42,6 +42,12 @@ class MongoTarget(Target):
         db_mongo = self._mongo_client[self._index]
         return db_mongo[self._collection]
 
+    def get_index(self):
+        """
+        Return targeted mongo index to query on
+        """
+        return self._mongo_client[self._index]
+
 
 class MongoCellTarget(MongoTarget):
 
@@ -185,8 +191,12 @@ class MongoCountTarget(MongoTarget):
 
     def read(self):
         """
-        Returns the count number of the target
+        Returns the count number of the target, -1 if the collection doesn't exist
         Using the aggregate method to avoid inaccurate count if using a sharded cluster
         https://docs.mongodb.com/manual/reference/method/db.collection.count/#behavior
         """
-        return self.get_collection().aggregate([{'$group': {'_id': None, 'count': {'$sum': 1}}}])
+        result_count = -1
+        if self._collection in self.get_index().collection_names():
+            result_count = next(self.get_collection()
+                                .aggregate([{'$group': {'_id': None, 'count': {'$sum': 1}}}])).get('count')
+        return result_count
