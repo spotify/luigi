@@ -42,14 +42,14 @@ with open('README.rst') as fobj:
 install_requires = [
     'cached_property',
     'tornado',
-    'python-daemon<2.1.2',
+    'python-daemon==2.1.1',
     'retrying'
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
     install_requires.append('sqlalchemy')
     # readthedocs don't like python-daemon, see #1342
-    install_requires.remove('python-daemon<3.0')
+    install_requires.remove('python-daemon==2.1.1')
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
 
 setup(
