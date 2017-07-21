@@ -255,6 +255,14 @@ send-failure-email
   handled by the scheduler.
   Defaults to true.
 
+check_unfulfilled_deps
+  If true, the worker checks for completeness of dependencies before running a
+  task. In case unfulfilled dependencies are detected, an exception is raised
+  and the task will not run. This mechanism is useful to detect situations
+  where tasks do not create their outputs properly, or when targets were
+  removed after the dependency tree was built.
+  Defaults to true.
+
 
 [elasticsearch]
 ---------------
