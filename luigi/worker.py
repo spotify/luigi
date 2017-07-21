@@ -368,9 +368,9 @@ class worker(Config):
     no_install_shutdown_handler = BoolParameter(default=False,
                                                 description='If true, the SIGUSR1 shutdown handler will'
                                                 'NOT be install on the worker')
-    check_unfulfilled_deps(default=True,
-                           description='If true, check for completeness of dependencies before '
-                                       'running a task')
+    check_unfulfilled_deps = BoolParameter(default=True,
+                                           description='If true, check for completeness of '
+                                           'dependencies before running a task')
 
 
 class KeepAliveThread(threading.Thread):
