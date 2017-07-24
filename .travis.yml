@@ -58,11 +58,6 @@ before_script:
   # TODO, only do this step for the postgres environment
   - psql -c 'create database spotify;' -U postgres
 
-  # allow ssh loopback
-  - ssh-keygen -t rsa -N '' -C '' -f ~/.ssh/id_rsa
-  - cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-  - ssh -o StrictHostKeyChecking=no localhost true
-
   # Create mysql database if possible but fail silently if not available.
   - mysql -e 'create database IF NOT EXISTS luigi_test;' -uroot || true
 
