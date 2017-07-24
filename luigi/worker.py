@@ -915,7 +915,7 @@ class Worker(object):
             task, self._id, self._task_result_queue, reporter,
             use_multiprocessing=bool(self.worker_processes > 1),
             worker_timeout=self._config.timeout,
-            check_unfulfilled_deps=self._config.check_unfulfilled_deps
+            check_unfulfilled_deps=self._config.check_unfulfilled_deps,
         )
 
     def _purge_children(self):
