@@ -18,7 +18,6 @@ env:
     - TOXENV=flake8
     - TOXENV=docs
     - TOXENV=py27-nonhdfs
-    - TOXENV=py33-nonhdfs
     - TOXENV=py34-nonhdfs
     - TOXENV=py27-unixsocket
       # - TOXENV=py27-cdh
