@@ -260,7 +260,10 @@ check_unfulfilled_deps
   task. In case unfulfilled dependencies are detected, an exception is raised
   and the task will not run. This mechanism is useful to detect situations
   where tasks do not create their outputs properly, or when targets were
-  removed after the dependency tree was built.
+  removed after the dependency tree was built. It is recommended to disable
+  this feature only when the completeness checks are known to be bottlenecks,
+  e.g. when the ``exists()`` calls of the dependencies' outputs are
+  resource-intensive.
   Defaults to true.
 
 
