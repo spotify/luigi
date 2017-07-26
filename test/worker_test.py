@@ -385,6 +385,56 @@ class WorkerTest(LuigiTestCase):
         self.assertTrue(a.complete())
         self.assertTrue(b.complete())
 
+    def test_check_unfulfilled_deps_config(self):
+        class A(Task):
+
+            i = luigi.IntParameter()
+
+            def __init__(self, *args, **kwargs):
+                super(A, self).__init__(*args, **kwargs)
+                self.complete_count = 0
+                self.has_run = False
+
+            def complete(self):
+                self.complete_count += 1
+                return self.has_run
+
+            def run(self):
+                self.has_run = True
+
+        class B(A):
+
+            def requires(self):
+                return A(i=self.i)
+
+        # test the enabled features
+        with Worker(scheduler=self.sch, worker_id='1') as w:
+            w._config.check_unfulfilled_deps = True
+            a1 = A(i=1)
+            b1 = B(i=1)
+            self.assertTrue(w.add(b1))
+            self.assertEqual(a1.complete_count, 1)
+            self.assertEqual(b1.complete_count, 1)
+            w.run()
+            self.assertTrue(a1.complete())
+            self.assertTrue(b1.complete())
+            self.assertEqual(a1.complete_count, 3)
+            self.assertEqual(b1.complete_count, 2)
+
+        # test the disabled features
+        with Worker(scheduler=self.sch, worker_id='2') as w:
+            w._config.check_unfulfilled_deps = False
+            a2 = A(i=2)
+            b2 = B(i=2)
+            self.assertTrue(w.add(b2))
+            self.assertEqual(a2.complete_count, 1)
+            self.assertEqual(b2.complete_count, 1)
+            w.run()
+            self.assertTrue(a2.complete())
+            self.assertTrue(b2.complete())
+            self.assertEqual(a2.complete_count, 2)
+            self.assertEqual(b2.complete_count, 2)
+
     def test_gets_missed_work(self):
         class A(Task):
             done = False
