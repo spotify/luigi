@@ -42,6 +42,12 @@ class MongoTarget(Target):
         db_mongo = self._mongo_client[self._index]
         return db_mongo[self._collection]
 
+    def get_index(self):
+        """
+        Return targeted mongo index to query on
+        """
+        return self._mongo_client[self._index]
+
 
 class MongoCellTarget(MongoTarget):
 
@@ -161,3 +167,53 @@ class MongoRangeTarget(MongoTarget):
         )
 
         return set(self._document_ids) - set([doc['_id'] for doc in cursor])
+
+
+class MongoCollectionTarget(MongoTarget):
+
+    """ Target for existing collection """
+
+    def __init__(self, mongo_client, index, collection):
+        super(MongoCollectionTarget, self).__init__(mongo_client, index, collection)
+
+    def exists(self):
+        """
+        Test if target has been run
+        Target is considered run if the targeted collection exists in the database
+        """
+        return self.read()
+
+    def read(self):
+        """
+        Return if the target collection exists in the database
+        """
+        return self._collection in self.get_index().collection_names()
+
+
+class MongoCountTarget(MongoTarget):
+
+    """ Target for documents count """
+
+    def __init__(self, mongo_client, index, collection, target_count):
+        """
+        :param target_count: Value of the desired item count in the target
+        :type field: int
+        """
+        super(MongoCountTarget, self).__init__(mongo_client, index, collection)
+
+        self._target_count = target_count
+
+    def exists(self):
+        """
+        Test if the target has been run
+        Target is considered run if the number of items in the target matches value of self._target_count
+        """
+        return self.read() == self._target_count
+
+    def read(self):
+        """
+        Returns the count number of the target, -1 if the collection doesn't exist
+        Using the aggregate method to avoid inaccurate count if using a sharded cluster
+        https://docs.mongodb.com/manual/reference/method/db.collection.count/#behavior
+        """
+        return next(self.get_collection().aggregate([{'$group': {'_id': None, 'count': {'$sum': 1}}}])).get('count')
