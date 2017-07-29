@@ -1233,6 +1233,26 @@ class WorkerEmailTest(LuigiTestCase):
             for email in emails))
 
     @email_patch
+    def test_announce_scheduling_failure_unexpected_error(self, emails):
+
+        class A(DummyTask):
+            owner_email = 'a_owner@test.com'
+
+            def complete(self):
+                pass
+
+        scheduler = Scheduler(batch_emails=True)
+        worker = Worker(scheduler)
+        a = A()
+
+        with mock.patch.object(worker._scheduler, 'announce_scheduling_failure', side_effect=Exception('Unexpected')),\
+                self.assertRaises(Exception):
+            worker.add(a)
+        self.assertTrue(len(emails) == 2)  # One for `complete` error, one for exception in announcing.
+        self.assertTrue('Luigi: Framework error while scheduling' in emails[1])
+        self.assertTrue('a_owner@test.com' in emails[1])
+
+    @email_patch
     def test_requires_error(self, emails):
         class A(DummyTask):
 
