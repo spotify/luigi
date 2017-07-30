@@ -572,9 +572,9 @@ class Worker(object):
                 owners=task._owner_list(),
             )
         except Exception:
-            raise
             formatted_traceback = traceback.format_exc()
             self._email_unexpected_error(task, formatted_traceback)
+            raise
 
     def _email_complete_error(self, task, formatted_traceback):
         self._announce_scheduling_failure(task, formatted_traceback)
