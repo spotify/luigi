@@ -18,13 +18,12 @@ env:
     - TOXENV=flake8
     - TOXENV=docs
     - TOXENV=py27-nonhdfs
-    - TOXENV=py33-nonhdfs
     - TOXENV=py34-nonhdfs
     - TOXENV=py27-unixsocket
       # - TOXENV=py27-cdh
       # minicluster (cdh) tests disabled as lack of love, #2140.
       # Sometimes it runs too slow for Travis. And sometimes it crashes on downloading cdh
-    - TOXENV=pypy-scheduler
+    # - TOXENV=pypy-scheduler # Disabled to unbreak https://github.com/spotify/luigi/pull/2190
     # - TOXENV=py27-gcloud # At least broken as of  https://github.com/spotify/luigi/pull/1917
     - TOXENV=py27-postgres
       # - TOXENV=visualiser
@@ -57,11 +56,6 @@ before_install:
 before_script:
   # TODO, only do this step for the postgres environment
   - psql -c 'create database spotify;' -U postgres
-
-  # allow ssh loopback
-  - ssh-keygen -t rsa -N '' -C '' -f ~/.ssh/id_rsa
-  - cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-  - ssh -o StrictHostKeyChecking=no localhost true
 
   # Create mysql database if possible but fail silently if not available.
   - mysql -e 'create database IF NOT EXISTS luigi_test;' -uroot || true

@@ -385,6 +385,56 @@ class WorkerTest(LuigiTestCase):
         self.assertTrue(a.complete())
         self.assertTrue(b.complete())
 
+    def test_check_unfulfilled_deps_config(self):
+        class A(Task):
+
+            i = luigi.IntParameter()
+
+            def __init__(self, *args, **kwargs):
+                super(A, self).__init__(*args, **kwargs)
+                self.complete_count = 0
+                self.has_run = False
+
+            def complete(self):
+                self.complete_count += 1
+                return self.has_run
+
+            def run(self):
+                self.has_run = True
+
+        class B(A):
+
+            def requires(self):
+                return A(i=self.i)
+
+        # test the enabled features
+        with Worker(scheduler=self.sch, worker_id='1') as w:
+            w._config.check_unfulfilled_deps = True
+            a1 = A(i=1)
+            b1 = B(i=1)
+            self.assertTrue(w.add(b1))
+            self.assertEqual(a1.complete_count, 1)
+            self.assertEqual(b1.complete_count, 1)
+            w.run()
+            self.assertTrue(a1.complete())
+            self.assertTrue(b1.complete())
+            self.assertEqual(a1.complete_count, 3)
+            self.assertEqual(b1.complete_count, 2)
+
+        # test the disabled features
+        with Worker(scheduler=self.sch, worker_id='2') as w:
+            w._config.check_unfulfilled_deps = False
+            a2 = A(i=2)
+            b2 = B(i=2)
+            self.assertTrue(w.add(b2))
+            self.assertEqual(a2.complete_count, 1)
+            self.assertEqual(b2.complete_count, 1)
+            w.run()
+            self.assertTrue(a2.complete())
+            self.assertTrue(b2.complete())
+            self.assertEqual(a2.complete_count, 2)
+            self.assertEqual(b2.complete_count, 2)
+
     def test_gets_missed_work(self):
         class A(Task):
             done = False
@@ -1181,6 +1231,26 @@ class WorkerEmailTest(LuigiTestCase):
         self.assertTrue(any(
             "1 scheduling failure" in email and 'a_owner@test.com' in email
             for email in emails))
+
+    @email_patch
+    def test_announce_scheduling_failure_unexpected_error(self, emails):
+
+        class A(DummyTask):
+            owner_email = 'a_owner@test.com'
+
+            def complete(self):
+                pass
+
+        scheduler = Scheduler(batch_emails=True)
+        worker = Worker(scheduler)
+        a = A()
+
+        with mock.patch.object(worker._scheduler, 'announce_scheduling_failure', side_effect=Exception('Unexpected')),\
+                self.assertRaises(Exception):
+            worker.add(a)
+        self.assertTrue(len(emails) == 2)  # One for `complete` error, one for exception in announcing.
+        self.assertTrue('Luigi: Framework error while scheduling' in emails[1])
+        self.assertTrue('a_owner@test.com' in emails[1])
 
     @email_patch
     def test_requires_error(self, emails):

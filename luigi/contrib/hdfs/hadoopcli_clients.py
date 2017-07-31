@@ -230,7 +230,8 @@ class HdfsClientCdh3(HdfsClient):
             self.call_check(load_hadoop_cmd() + ['fs', '-mkdir', path])
         except hdfs_error.HDFSCliError as ex:
             if "File exists" in ex.stderr:
-                raise FileAlreadyExists(ex.stderr)
+                if raise_if_exists:
+                    raise FileAlreadyExists(ex.stderr)
             else:
                 raise
 
