@@ -25,7 +25,9 @@ function visualiserApp(luigi) {
      */
     function updateVisType(newVisType) {
         $('#toggleVisButtons label').removeClass('active');
-        $('#toggleVisButtons input[value="' + newVisType + '"]').parent().addClass('active');
+        var visTypeInput = $('#toggleVisButtons input[value="' + newVisType + '"]');
+        visTypeInput.parent().addClass('active');
+        visTypeInput.prop('checked', true);
     }
 
     function loadTemplates() {
