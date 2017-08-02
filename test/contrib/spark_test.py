@@ -218,9 +218,10 @@ class PySparkTaskTest(unittest.TestCase):
         job = TestPySparkTask()
         job.run()
         proc_arg_list = proc.call_args[0][0]
-        self.assertEqual(proc_arg_list[0:7], ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'cluster', '--name', 'TestPySparkTask'])
-        self.assertTrue(os.path.exists(proc_arg_list[7]))
+        self.assertEqual(proc_arg_list[0:8], ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'cluster', '--name', 'TestPySparkTask', '--files'])
         self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
+        self.assertTrue(os.path.exists(proc_arg_list[9]))
+        self.assertEqual('TestPySparkTask.pickle', proc_arg_list[10])
 
     @patch.dict('sys.modules', {'pyspark': MagicMock()})
     @patch('pyspark.SparkContext')
