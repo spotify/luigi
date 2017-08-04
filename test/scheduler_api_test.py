@@ -1126,6 +1126,37 @@ class SchedulerApiTest(unittest.TestCase):
 
         self.assertEqual('C', self.sch.get_work(worker='Y')['task_id'])
 
+    def validate_resource_count(self, name, count):
+        counts = {resource['name']: resource['num_total'] for resource in self.sch.resource_list()}
+        self.assertEqual(count, counts.get(name))
+
+    def test_update_new_resource(self):
+        self.validate_resource_count('new_resource', None)  # new_resource is not in the scheduler
+        self.sch.update_resource('new_resource', 1)
+        self.validate_resource_count('new_resource', 1)
+
+    def test_update_existing_resource(self):
+        self.sch.update_resource('new_resource', 1)
+        self.sch.update_resource('new_resource', 2)
+        self.validate_resource_count('new_resource', 2)
+
+    def test_disable_existing_resource(self):
+        self.sch.update_resource('new_resource', 1)
+        self.sch.update_resource('new_resource', 0)
+        self.validate_resource_count('new_resource', 0)
+
+    def test_attempt_to_set_resource_to_negative_value(self):
+        self.sch.update_resource('new_resource', 1)
+        self.assertFalse(self.sch.update_resource('new_resource', -1))
+        self.validate_resource_count('new_resource', 1)
+
+    def test_attempt_to_set_resource_to_non_integer(self):
+        self.sch.update_resource('new_resource', 1)
+        self.assertFalse(self.sch.update_resource('new_resource', 1.3))
+        self.assertFalse(self.sch.update_resource('new_resource', '1'))
+        self.assertFalse(self.sch.update_resource('new_resource', None))
+        self.validate_resource_count('new_resource', 1)
+
     def test_priority_update_with_pruning(self):
         self.setTime(0)
         self.sch.add_task(task_id='A', worker='X')
@@ -1203,6 +1234,102 @@ class SchedulerApiTest(unittest.TestCase):
         self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
         # C doesn't block B, so it can go first
         self.check_task_order('C')
+
+    def test_do_not_allow_stowaway_resources(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A1', resources={'r1': 1}, family='A', params={'a': '1'}, batchable=True, priority=1)
+        self.sch.add_task(worker=WORKER, task_id='A2', resources={'r1': 2}, family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A3', resources={'r2': 1}, family='A', params={'a': '3'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A4', resources={'r1': 1}, family='A', params={'a': '4'}, batchable=True)
+        self.assertEqual({'A1', 'A4'}, set(self.sch.get_work(worker=WORKER)['batch_task_ids']))
+
+    def test_do_not_allow_same_resources(self):
+        self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
+        self.sch.add_task(worker=WORKER, task_id='A1', resources={'r1': 1}, family='A', params={'a': '1'}, batchable=True, priority=1)
+        self.sch.add_task(worker=WORKER, task_id='A2', resources={'r1': 1}, family='A', params={'a': '2'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A3', resources={'r1': 1}, family='A', params={'a': '3'}, batchable=True)
+        self.sch.add_task(worker=WORKER, task_id='A4', resources={'r1': 1}, family='A', params={'a': '4'}, batchable=True)
+        self.assertEqual({'A1', 'A2', 'A3', 'A4'}, set(self.sch.get_work(worker=WORKER)['batch_task_ids']))
+
+    def test_change_resources_on_running_task(self):
+        self.sch.add_task(worker=WORKER, task_id='A1', resources={'a': 1}, priority=10)
+        self.sch.add_task(worker=WORKER, task_id='A2', resources={'a': 1}, priority=1)
+
+        self.assertEqual('A1', self.sch.get_work(worker=WORKER)['task_id'])
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
+
+        # switch the resource of the running task
+        self.sch.add_task(worker='other', task_id='A1', resources={'b': 1}, priority=1)
+
+        # the running task should be using the resource it had when it started running
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
+
+    def test_interleave_resource_change_and_get_work(self):
+        for i in range(100):
+            self.sch.add_task(worker=WORKER, task_id='A{}'.format(i), resources={'a': 1}, priority=100-i)
+
+        for i in range(100):
+            self.sch.get_work(worker=WORKER)
+            self.sch.add_task(worker='other', task_id='A{}'.format(i), resources={'b': 1}, priority=100-i)
+
+        # we should only see 1 task  per resource rather than all 100 tasks running
+        self.assertEqual(2, len(self.sch.task_list(RUNNING, '')))
+
+    def test_assistant_has_different_resources_than_scheduled_max_task_id(self):
+        self.sch.add_task_batcher(worker='assistant', task_family='A', batched_args=['a'], max_batch_size=2)
+        self.sch.add_task(worker=WORKER, task_id='A1', resources={'a': 1}, family='A', params={'a': '1'}, batchable=True, priority=1)
+        self.sch.add_task(worker=WORKER, task_id='A2', resources={'a': 1}, family='A', params={'a': '2'}, batchable=True, priority=2)
+        self.sch.add_task(worker=WORKER, task_id='A3', resources={'a': 1}, family='A', params={'a': '3'}, batchable=True, priority=3)
+
+        result = self.sch.get_work(worker='assistant', assistant=True)
+        self.assertEqual({'A3', 'A2'}, set(result['batch_task_ids']))
+        self.sch.add_task(worker='assistant', task_id='A3', status=RUNNING, batch_id=result['batch_id'], resources={'b': 1})
+
+        # the assistant changed the status, but only after it was batch running
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
+
+    def test_assistant_has_different_resources_than_scheduled_new_task_id(self):
+        self.sch.add_task_batcher(worker='assistant', task_family='A', batched_args=['a'], max_batch_size=2)
+        self.sch.add_task(worker=WORKER, task_id='A1', resources={'a': 1}, family='A', params={'a': '1'}, batchable=True, priority=1)
+        self.sch.add_task(worker=WORKER, task_id='A2', resources={'a': 1}, family='A', params={'a': '2'}, batchable=True, priority=2)
+        self.sch.add_task(worker=WORKER, task_id='A3', resources={'a': 1}, family='A', params={'a': '3'}, batchable=True, priority=3)
+
+        result = self.sch.get_work(worker='assistant', assistant=True)
+        self.assertEqual({'A3', 'A2'}, set(result['batch_task_ids']))
+        self.sch.add_task(worker='assistant', task_id='A_2_3', status=RUNNING, batch_id=result['batch_id'], resources={'b': 1})
+
+        # the assistant changed the status, but only after it was batch running
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
+
+    def test_assistant_has_different_resources_than_scheduled_max_task_id_during_scheduling(self):
+        self.sch.add_task_batcher(worker='assistant', task_family='A', batched_args=['a'], max_batch_size=2)
+        self.sch.add_task(worker=WORKER, task_id='A1', resources={'a': 1}, family='A', params={'a': '1'}, batchable=True, priority=1)
+        self.sch.add_task(worker=WORKER, task_id='A2', resources={'a': 1}, family='A', params={'a': '2'}, batchable=True, priority=2)
+        self.sch.add_task(worker=WORKER, task_id='A3', resources={'a': 1}, family='A', params={'a': '3'}, batchable=True, priority=3)
+
+        result = self.sch.get_work(worker='assistant', assistant=True)
+        self.assertEqual({'A3', 'A2'}, set(result['batch_task_ids']))
+        self.sch.add_task(worker=WORKER, task_id='A2', resources={'b': 1}, family='A', params={'a': '2'}, batchable=True, priority=2)
+        self.sch.add_task(worker=WORKER, task_id='A3', resources={'b': 1}, family='A', params={'a': '3'}, batchable=True, priority=3)
+        self.sch.add_task(worker='assistant', task_id='A3', status=RUNNING, batch_id=result['batch_id'], resources={'b': 1})
+
+        # the statuses changed, but only after they wree batch running
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
+
+    def test_assistant_has_different_resources_than_scheduled_new_task_id_during_scheduling(self):
+        self.sch.add_task_batcher(worker='assistant', task_family='A', batched_args=['a'], max_batch_size=2)
+        self.sch.add_task(worker=WORKER, task_id='A1', resources={'a': 1}, family='A', params={'a': '1'}, batchable=True, priority=1)
+        self.sch.add_task(worker=WORKER, task_id='A2', resources={'a': 1}, family='A', params={'a': '2'}, batchable=True, priority=2)
+        self.sch.add_task(worker=WORKER, task_id='A3', resources={'a': 1}, family='A', params={'a': '3'}, batchable=True, priority=3)
+
+        result = self.sch.get_work(worker='assistant', assistant=True)
+        self.assertEqual({'A3', 'A2'}, set(result['batch_task_ids']))
+        self.sch.add_task(worker=WORKER, task_id='A2', resources={'b': 1}, family='A', params={'a': '2'}, batchable=True, priority=2)
+        self.sch.add_task(worker=WORKER, task_id='A3', resources={'b': 1}, family='A', params={'a': '3'}, batchable=True, priority=3)
+        self.sch.add_task(worker='assistant', task_id='A_2_3', status=RUNNING, batch_id=result['batch_id'], resources={'b': 1})
+
+        # the statuses changed, but only after they were batch running
+        self.assertIsNone(self.sch.get_work(worker=WORKER)['task_id'])
 
     def test_allow_resource_use_while_scheduling(self):
         self.sch.update_resources(r1=1)
@@ -1412,6 +1539,29 @@ class SchedulerApiTest(unittest.TestCase):
         self.assertEqual(0, work['n_unique_pending'])
         self.assertEqual(0, work['n_pending_tasks'])
         self.assertIsNone(work['task_id'])
+
+    def test_pause_work(self):
+        self.sch.add_task(worker=WORKER, task_id='A')
+
+        self.sch.pause()
+        self.assertEqual({
+            'n_pending_last_scheduled': 1,
+            'n_unique_pending': 1,
+            'n_pending_tasks': 1,
+            'running_tasks': [],
+            'task_id': None,
+            'worker_state': 'active',
+        }, self.sch.get_work(worker=WORKER))
+
+        self.sch.unpause()
+        self.assertEqual('A', self.sch.get_work(worker=WORKER)['task_id'])
+
+    def test_is_paused(self):
+        self.assertFalse(self.sch.is_paused()['paused'])
+        self.sch.pause()
+        self.assertTrue(self.sch.is_paused()['paused'])
+        self.sch.unpause()
+        self.assertFalse(self.sch.is_paused()['paused'])
 
     def test_disable_worker_leaves_jobs_running(self):
         self.sch.add_task(worker=WORKER, task_id='A')
@@ -2025,3 +2175,28 @@ class SchedulerApiTest(unittest.TestCase):
         BatchNotifier().update.assert_not_called()
         scheduler.prune()
         BatchNotifier().update.assert_called_once_with()
+
+    def test_forgive_failures(self):
+        # Try to build A but fails, forgive failures and will retry before 100s
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+        self.setTime(1)
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], None)
+        self.setTime(2)
+        self.sch.forgive_failures(task_id='A')
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+
+    def test_you_can_forgive_failures_twice(self):
+        # Try to build A but fails, forgive failures two times and will retry before 100s
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+        self.setTime(1)
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], None)
+        self.setTime(2)
+        self.sch.forgive_failures(task_id='A')
+        self.sch.forgive_failures(task_id='A')
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')

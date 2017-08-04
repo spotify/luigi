@@ -188,7 +188,7 @@ you can reuse for a lot of different tasks.
 
 .. code:: python
 
-    class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
+    class ArtistToplistToDatabase(luigi.contrib.postgres.CopyToTable):
         date_interval = luigi.DateIntervalParameter()
         use_hadoop = luigi.BoolParameter()
 

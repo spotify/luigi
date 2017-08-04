@@ -111,7 +111,7 @@ class TaskProcess(multiprocessing.Process):
     Mainly for convenience since this is run in a separate process. """
 
     def __init__(self, task, worker_id, result_queue, status_reporter,
-                 use_multiprocessing=False, worker_timeout=0):
+                 use_multiprocessing=False, worker_timeout=0, check_unfulfilled_deps=True):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
@@ -121,6 +121,7 @@ class TaskProcess(multiprocessing.Process):
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
         self.use_multiprocessing = use_multiprocessing or self.timeout_time is not None
+        self.check_unfulfilled_deps = check_unfulfilled_deps
 
     def _run_get_new_deps(self):
         self.task.set_tracking_url = self.status_reporter.update_tracking_url
@@ -168,7 +169,7 @@ class TaskProcess(multiprocessing.Process):
             # don't care about unfulfilled dependencies, because we are just
             # checking completeness of self.task so outputs of dependencies are
             # irrelevant.
-            if not _is_external(self.task):
+            if self.check_unfulfilled_deps and not _is_external(self.task):
                 missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
                 if missing:
                     deps = 'dependency' if len(missing) == 1 else 'dependencies'
@@ -367,6 +368,9 @@ class worker(Config):
     no_install_shutdown_handler = BoolParameter(default=False,
                                                 description='If true, the SIGUSR1 shutdown handler will'
                                                 'NOT be install on the worker')
+    check_unfulfilled_deps = BoolParameter(default=True,
+                                           description='If true, check for completeness of '
+                                           'dependencies before running a task')
 
 
 class KeepAliveThread(threading.Thread):
@@ -568,9 +572,9 @@ class Worker(object):
                 owners=task._owner_list(),
             )
         except Exception:
-            raise
             formatted_traceback = traceback.format_exc()
             self._email_unexpected_error(task, formatted_traceback)
+            raise
 
     def _email_complete_error(self, task, formatted_traceback):
         self._announce_scheduling_failure(task, formatted_traceback)
@@ -723,10 +727,10 @@ class Worker(object):
             elif _is_external(task):
                 deps = None
                 status = PENDING
-                runnable = worker().retry_external_tasks
+                runnable = self._config.retry_external_tasks
                 task.trigger_event(Event.DEPENDENCY_MISSING, task)
                 logger.warning('Data for %s does not exist (yet?). The task is an '
-                               'external data depedency, so it can not be run from'
+                               'external data dependency, so it cannot be run from'
                                ' this luigi process.', task)
 
             else:
@@ -910,7 +914,8 @@ class Worker(object):
         return TaskProcess(
             task, self._id, self._task_result_queue, reporter,
             use_multiprocessing=bool(self.worker_processes > 1),
-            worker_timeout=self._config.timeout
+            worker_timeout=self._config.timeout,
+            check_unfulfilled_deps=self._config.check_unfulfilled_deps,
         )
 
     def _purge_children(self):

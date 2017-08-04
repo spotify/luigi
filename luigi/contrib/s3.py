@@ -73,15 +73,35 @@ class S3Client(FileSystem):
     boto-powered S3 client.
     """
 
+    _s3 = None
+
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
                  **kwargs):
+        from boto.s3.key import Key
+        options = self._get_s3_config()
+        options.update(kwargs)
+        if aws_access_key_id:
+            options['aws_access_key_id'] = aws_access_key_id
+        if aws_secret_access_key:
+            options['aws_secret_access_key'] = aws_secret_access_key
+
+        self.Key = Key
+        self._options = options
+
+    @property
+    def s3(self):
         # only import boto when needed to allow top-lvl s3 module import
         import boto
         import boto.s3.connection
-        from boto.s3.key import Key
 
-        options = self._get_s3_config()
-        options.update(kwargs)
+        options = dict(self._options)
+
+        if self._s3:
+            return self._s3
+
+        aws_access_key_id = options.get('aws_access_key_id')
+        aws_secret_access_key = options.get('aws_secret_access_key')
+
         # Removing key args would break backwards compability
         role_arn = options.get('aws_role_arn')
         role_session_name = options.get('aws_role_session_name')
@@ -97,22 +117,18 @@ class S3Client(FileSystem):
             aws_access_key_id = assumed_role.credentials.access_key
             aws_session_token = assumed_role.credentials.session_token
 
-        else:
-            if not aws_access_key_id:
-                aws_access_key_id = options.get('aws_access_key_id')
-
-            if not aws_secret_access_key:
-                aws_secret_access_key = options.get('aws_secret_access_key')
-
         for key in ['aws_access_key_id', 'aws_secret_access_key', 'aws_role_session_name', 'aws_role_arn']:
             if key in options:
                 options.pop(key)
+        self._s3 = boto.s3.connection.S3Connection(aws_access_key_id,
+                                                   aws_secret_access_key,
+                                                   security_token=aws_session_token,
+                                                   **options)
+        return self._s3
 
-        self.s3 = boto.s3.connection.S3Connection(aws_access_key_id,
-                                                  aws_secret_access_key,
-                                                  security_token=aws_session_token,
-                                                  **options)
-        self.Key = Key
+    @s3.setter
+    def s3(self, value):
+        self._s3 = value
 
     def exists(self, path):
         """
@@ -549,6 +565,7 @@ class S3Client(FileSystem):
         return self.put_string("", self._add_path_delimiter(path))
 
     def _get_s3_config(self, key=None):
+        defaults = dict(configuration.get_config().defaults())
         try:
             config = dict(configuration.get_config().items('s3'))
         except NoSectionError:
@@ -561,7 +578,8 @@ class S3Client(FileSystem):
                 pass
         if key:
             return config.get(key)
-        return config
+        section_only = {k: v for k, v in config.items() if k not in defaults or v != defaults[k]}
+        return section_only
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, query, fragment) = urlsplit(path)

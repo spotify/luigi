@@ -18,6 +18,7 @@ function visualiserApp(luigi) {
         DISABLED: 'minus-circle',
         UPSTREAM_DISABLED: 'warning'
     };
+    var VISTYPE_DEFAULT = 'svg';
 
     /*
      * Updates view of the Visualization type.
@@ -122,7 +123,20 @@ function visualiserApp(luigi) {
     /**
      * Filter table by all activated info boxes.
      */
-    function filterByCategory(dt) {
+    function filterByCategory(dt, activeBoxes) {
+        if (activeBoxes === undefined) {
+            activeBoxes = getActiveBoxes();
+        }
+        currentFilter.taskCategory = activeBoxes;
+        dt.column(0).search(categoryQuery(activeBoxes), regex=true).draw();
+    }
+
+    function categoryQuery(activeBoxes) {
+        // Searched content will be <icon> <category>.
+        return '\\b(' + activeBoxes.join('|') + ')\\b';
+    }
+
+    function getActiveBoxes() {
         var infoBoxes = $('.info-box');
 
         var activeBoxes = [];
@@ -131,10 +145,7 @@ function visualiserApp(luigi) {
                 activeBoxes.push(infoBoxes[i].dataset.category);
             }
         });
-        // Searched content will be <icon> <category>.
-        var pattern = '\\b(' + activeBoxes.join('|') + ')\\b';
-        currentFilter.taskCategory = activeBoxes;
-        dt.column(0).search(pattern, regex=true).draw();
+        return activeBoxes;
     }
 
     function filterByTaskFamily(taskFamily, dt) {
@@ -147,12 +158,12 @@ function visualiserApp(luigi) {
         }
     }
 
-    function toggleInfoBox(infoBox) {
+    function toggleInfoBox(infoBox, activate) {
         var infoBoxColor = infoBox.dataset.color;
         var infoBoxIcon = $(infoBox).find('.info-box-icon');
         var colorClass = 'bg-' + infoBoxColor;
 
-        if ((infoBox.dataset.on === undefined) || (infoBox.dataset.on === 'no')) {
+        if ((infoBox.dataset.on === undefined) || (infoBox.dataset.on === 'no') || activate) {
             infoBox.dataset.on = 'yes';
             infoBoxIcon.removeClass(colorClass);
             $(infoBox).addClass(colorClass);
@@ -359,7 +370,10 @@ function visualiserApp(luigi) {
             $("#searchError").removeClass();
             if(dependencyGraph.length > 0) {
                 $("#dependencyTitle").text(dependencyGraph[0].display_name);
-                $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph);
+                var hashBaseObj = URI.parseQuery(location.hash.replace('#', ''));
+                delete hashBaseObj.taskId;
+                var hashBase = '#' + URI.buildQuery(hashBaseObj) + '&taskId=';
+                $("#graphPlaceholder").get(0).graph.updateData(dependencyGraph, hashBase);
                 $("#graphContainer").show();
                 bindGraphEvents();
             } else {
@@ -391,6 +405,7 @@ function visualiserApp(luigi) {
         if (fragmentQuery.tab == "workers") {
             switchTab("workerList");
         } else if (fragmentQuery.tab == "resources") {
+            expandResources(fragmentQuery.resources);
             switchTab("resourceList");
         } else if (fragmentQuery.tab == "graph") {
             var taskId = fragmentQuery.taskId;
@@ -400,27 +415,23 @@ function visualiserApp(luigi) {
             $('#hideDoneCheckbox').prop('checked', hideDone);
             $("#invertCheckbox").prop('checked', fragmentQuery.invert === '1' ? true : false);
             $("#js-task-id").val(fragmentQuery.taskId);
-            if (fragmentQuery.visType == 'svg') {
-                $("input[name=vis-type][value=svg]").prop('checked', true);
-            } else {
-                // d3 is default visualization.
-                $("input[name=vis-type][value=d3]").prop('checked', true);
-            }
 
             // Empty errors.
             $("#searchError").empty();
             $("#searchError").removeClass();
-            if (taskId) {
-                var depGraphCallback = makeGraphCallback(fragmentQuery.visType, taskId, paint);
 
-                if (fragmentQuery.invertDependencies) {
+            var visType = fragmentQuery.visType || VISTYPE_DEFAULT;
+            if (taskId) {
+                var depGraphCallback = makeGraphCallback(visType, taskId, paint);
+
+                if (fragmentQuery.invert) {
                     luigi.getInverseDependencyGraph(taskId, depGraphCallback, !hideDone);
                 } else {
                     luigi.getDependencyGraph(taskId, depGraphCallback, !hideDone);
                 }
             }
-            updateVisType(fragmentQuery.visType || 'd3');
-            initVisualisation(fragmentQuery.visType);
+            updateVisType(visType);
+            initVisualisation(visType);
             switchTab("dependencyGraph");
         } else {
             // Tasks tab.
@@ -431,8 +442,26 @@ function visualiserApp(luigi) {
             }
             $("#serverSideCheckbox").prop('checked', fragmentQuery.filterOnServer === '1' ? true : false);
             dt.search(fragmentQuery.search__search);
+
+            $('#familySidebar li').removeClass('active');
+            $('#familySidebar li .badge').removeClass('bg-green');
+            if (fragmentQuery.family) {
+                family_item = $('#familySidebar li[data-task="' + fragmentQuery.family + '"]');
+                family_item.addClass('active');
+                family_item.find('.badge').addClass('bg-green');
+                filterByTaskFamily(fragmentQuery.family, dt);
+            }
+
+            if (fragmentQuery.statuses) {
+                var statuses = JSON.parse(fragmentQuery.statuses);
+                $.each(statuses, function (status) {
+                    toggleInfoBox($('#' + statuses[status] + '_info')[0], true);
+                });
+                filterByCategory(dt, statuses);
+            }
+
             if (fragmentQuery.order) {
-                dt.order = [fragmentQuery.order.split(',')];
+                dt.order([fragmentQuery.order.split(',')]);
             }
             dt.draw();
             switchTab("taskList");
@@ -454,7 +483,8 @@ function visualiserApp(luigi) {
                     });
                 }
                 else {
-                    window.location.href = 'index.html#tab=graph&taskId=' + taskId;
+                    fragmentQuery['taskId'] = taskId;
+                    window.location.href = 'index.html#' + URI.buildQuery(fragmentQuery);
                 }
             });
         }
@@ -478,6 +508,7 @@ function visualiserApp(luigi) {
         $('#serverSideCheckbox').click(function(e) {
             e.preventDefault();
             changeState('filterOnServer', this.checked ? '1' : null);
+            updateTasks();
         });
 
         $("#invertCheckbox").click(function(e) {
@@ -809,6 +840,8 @@ function visualiserApp(luigi) {
             else {
                 $('#warnings').html(renderWarnings());
             }
+
+            processHashChange();
         });
     }
 
@@ -864,6 +897,42 @@ function visualiserApp(luigi) {
         });
     }
 
+    /**
+     * Updates the number of units of a given resource available in the scheduler
+     * @param resource: the name of the resource
+     * @param n: the number of units to set the resource limit to
+     */
+    function updateResourceCount(resource, n) {
+        var progressBar = $('#' + resource + '-resource-box .progress-bar');
+        var used = /(\S+)\//.exec(progressBar.text())[1];
+        nVal = parseInt(n);
+        if (isNaN(nVal) || nVal < 0) {
+            return;
+        }
+        usedVal = parseInt(used);
+        width = Math.floor(100 * usedVal / nVal);
+        if (width < 0) {
+            width = 0;
+        }
+        if (width > 100) {
+            width = 100;
+        }
+        luigi.updateResource(resource, n, function() {
+            progressBar.text(usedVal + '/' + nVal);
+            progressBar.attr('style', 'width: ' + width + '%');
+        });
+    }
+
+    /**
+     * Returns the current units of a resource used
+     * @param resource: the name of the resource
+     */
+    function currentResourceCount(resource) {
+        var progressBar = $('#' + resource + '-resource-box .progress-bar');
+        var count = /\/(\S+)/.exec(progressBar.text())[1];
+        return parseInt(count);
+    }
+
     function changeState(key, value) {
         var fragmentQuery = URI.parseQuery(location.hash.replace('#', ''));
         if (value) {
@@ -874,8 +943,51 @@ function visualiserApp(luigi) {
         location.hash = '#' + URI.buildQuery(fragmentQuery);
     }
 
+   function expandedResources() {
+        return $('.resource-box.in').toArray().map(function (val) { return val.dataset.resource; });
+    }
+
+    function expandResources(resources) {        
+        if (resources === undefined) {
+            resources = [];
+        } else {
+            resources = JSON.parse(resources);
+        }
+        $('.resource-box').each(function (i, item) {
+            if (resources.indexOf(item.dataset.resource) === -1) {
+                $(item).collapse('hide');
+            } else {
+                $(item).collapse('show');
+            }
+        });
+    }
+
+    /**
+     * Create the pause/unpause toggle
+     */
+    function createPauseToggle(checked) {
+        var check = checked ? " checked" : "";
+        var html = $('<input id="pause" type="checkbox"' + check + ' data-toggle="toggle">');
+        $('#pause-form').append(html);
+        $('#pause').bootstrapToggle({
+            on: 'Running',
+            off: 'Paused',
+            onstyle: 'success',
+            offstyle: 'danger'
+        });
+        $('#pause').change(function() {
+            if (this.checked) {
+                luigi.unpause();
+            } else {
+                luigi.pause();
+            }
+        })
+    }
+
     $(document).ready(function() {
         loadTemplates();
+
+        luigi.isPaused(createPauseToggle);
 
         luigi.getWorkerList(function(workers) {
             $("#workerList").append(renderWorkers(workers));
@@ -888,6 +1000,24 @@ function visualiserApp(luigi) {
 
         luigi.getResourceList(function(resources) {
             $("#resourceList").append(renderResources(resources));
+            expandResources(URI.parseQuery(location.hash.replace('#', '')).resources);
+            $('.resources-collapse').click(function (e) {
+                e.preventDefault();
+                var collapse_block = $(this.dataset.target);
+                if (collapse_block.hasClass('collapsing')) {
+                    return;
+                }
+                var resource = collapse_block.attr('data-resource');
+                var resourceList = expandedResources();
+                var resourceIdx = resourceList.indexOf(resource);
+                if (resourceIdx === -1) {
+                    resourceList.push(resource);
+                } else {
+                    resourceList.splice(resourceIdx, 1);
+                }
+                changeState('resources', resourceList.length > 0 ? JSON.stringify(resourceList) : null);
+                collapse_block.collapse('toggle');
+            });
         });
 
         dt = $('#taskTable').DataTable({
@@ -898,6 +1028,21 @@ function visualiserApp(luigi) {
 
                 if (data.search.search) {
                     state.search__search = data.search.search;
+                } else {
+                    delete state.search__search;
+                }
+
+                var family_search = data.columns[1].search.search;
+                if (family_search) {
+                    state.family = family_search.substring(1, family_search.length - 1);
+                } else {
+                    delete state.family;
+                }
+
+                if (currentFilter.taskCategory.length > 0) {
+                    state.statuses = JSON.stringify(currentFilter.taskCategory);
+                } else {
+                    delete state.statuses;
                 }
 
                 if (data.order && data.order.length) {
@@ -907,6 +1052,8 @@ function visualiserApp(luigi) {
                 if (data.length && data.length !== 10) {
                     // Keep in hash only if length is not default.
                     state.length = data.length;
+                } else {
+                    delete state.length;
                 }
 
                 if (state.filterOnServer) {
@@ -923,6 +1070,18 @@ function visualiserApp(luigi) {
                     order = [fragmentQuery.order.split(',')];
                 }
 
+                var family_search = {};
+                if (fragmentQuery.family) {
+                    family_search = {'search': '^' + fragmentQuery.family + '$', 'regex': true};
+                }
+
+                var status_search = {};
+                if (fragmentQuery.statuses) {
+                    var statuses = JSON.parse(fragmentQuery.statuses);
+                    currentFilter.taskCategory = statuses;
+                    status_search = {'search': categoryQuery(statuses), 'regex': true};
+                }
+
                 // Prepare state for datatable.
                 var o = {
                     order: order,                 // Table rows order.
@@ -930,8 +1089,8 @@ function visualiserApp(luigi) {
                     start: 0,                     // Pagination initial page.
                     time: new Date().getTime(),   // Current time to help datatable.js to handle asynchronous.
                     columns: [
-                        {visible: true, search: {}},
-                        {visible: true, search: {}},  // Name column
+                        {visible: true, search: status_search},
+                        {visible: true, search: family_search},  // Name column
                         {visible: true, search: {}},  // Details column
                         {visible: true, search: {}},  // Priority column
                         {visible: true, search: {}},  // Time column
@@ -940,7 +1099,9 @@ function visualiserApp(luigi) {
                     // Search input state.
                     search: {
                         caseInsensitive: true,
-                        search: fragmentQuery.search__search}};
+                        search: fragmentQuery.search__search
+                    }
+                };
 
                 return o;
             },
@@ -1006,6 +1167,17 @@ function visualiserApp(luigi) {
             var data = row.data();
             luigi.getErrorTrace(data.taskId, function(error) {
                 showErrorTrace(error);
+            });
+        } );
+
+        $('#taskTable tbody').on('click', 'td.details-control .forgiveFailures', function (ev) {
+            var tr = $(this).closest('tr');
+            var row = dt.row( tr );
+            var data = row.data();
+            luigi.forgiveFailures(data.taskId, function(data) {
+                if (ev.altKey){
+                    updateTasks(); // update may not be cheap
+                }
             });
         } );
 
@@ -1090,6 +1262,43 @@ function visualiserApp(luigi) {
             $event.preventDefault();
         });
 
+        $('#resourceList').on('click', '.btn-increment-resources', function($event) {
+            $event.preventDefault();
+            var resource = $(this).data('resource');
+            var count = currentResourceCount(resource);
+            updateResourceCount(resource, count + 1);
+        });
+
+        $('#resourceList').on('click', '.btn-decrement-resources', function($event) {
+            $event.preventDefault();
+            var resource = $(this).data('resource');
+            var count = currentResourceCount(resource);
+            updateResourceCount(resource, count - 1);
+        });
+
+        $('#resourceList').on('show.bs.modal', '#setResourcesModal', function($event) {
+            $('#setResourcesButton').data('resource', $($event.relatedTarget).data('resource'));
+            var $input = $(this).find('#setResourcesInput').on('keypress', function($event) {
+                if (event.keyCode == 13) {
+                    $('#resourceList').find('#setResourcesButton').trigger('click');
+                }
+                $event.stopPropagation();
+            });
+            setTimeout(function() {
+                $input.focus();
+            }.bind(this), 600);
+        });
+
+        $('#resourceList').on('hidden.bs.modal', '#setResourcesModal', function() {
+            $(this).find('#setResourcesInput').off('keypress').val('');
+        });
+
+        $('#resourceList').on('click', '#setResourcesButton', function($event) {
+            var resource = $(this).data('resource');
+            var n = parseInt($("#setResourcesInput").val());
+            updateResourceCount(resource, n);
+            $event.preventDefault();
+        });
         $('.js-nav-link').click(function(e) {
             // User followed tab from navigation link. Copy state from fields to hash.
             e.preventDefault();
@@ -1108,6 +1317,19 @@ function visualiserApp(luigi) {
 
                 if ($('#serverSideCheckbox').is(':checked')) {
                     state.filterOnServer = '1';
+                }
+
+                var family = $('#familySidebar li.active').attr('data-task')
+                if (family) {
+                    state.family = family;
+                } else {
+                    delete state.family;
+                }
+
+                if (currentFilter.taskCategory.length > 0) {
+                    state.statuses = JSON.stringify(currentFilter.taskCategory);
+                } else {
+                    delete state.statuses;
                 }
 
                 if (search) {
@@ -1139,6 +1361,7 @@ function visualiserApp(luigi) {
             } else if (tabId == 'workerList') {
                 state.tab = 'workers';
             } else if (tabId == 'resourceList') {
+                state.resources = JSON.stringify(expandedResources());
                 state.tab = 'resources';
             }
 

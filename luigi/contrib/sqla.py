@@ -83,11 +83,11 @@ modified example would look as shown below:
     from sqlalchemy import String
     import luigi
     from luigi.contrib import sqla
-    from luigi.mock import MockFile
+    from luigi.mock import MockTarget
 
     class BaseTask(luigi.Task):
         def output(self):
-            return MockFile("BaseTask")
+            return MockTarget("BaseTask")
 
         def run(self):
             out = self.output().open("w")
@@ -259,7 +259,7 @@ class SQLAlchemyTarget(luigi.Target):
                     sqlalchemy.Column("inserted", sqlalchemy.DateTime, default=datetime.datetime.now()))
                 metadata.create_all(engine)
             else:
-                metadata.reflect(bind=engine)
+                metadata.reflect(only=[self.marker_table], bind=engine)
                 self.marker_table_bound = metadata.tables[self.marker_table]
 
     def open(self, mode):
@@ -335,7 +335,7 @@ class CopyToTable(luigi.Task):
                         self.table_bound = sqlalchemy.Table(self.table, metadata, *sqla_columns)
                         metadata.create_all(engine)
                     else:
-                        metadata.reflect(bind=engine)
+                        metadata.reflect(only=[self.table], bind=engine)
                         self.table_bound = metadata.tables[self.table]
                 except Exception as e:
                     self._logger.exception(self.table + str(e))

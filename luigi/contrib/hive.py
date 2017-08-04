@@ -446,11 +446,10 @@ class ExternalHiveTask(luigi.ExternalTask):
 
     database = luigi.Parameter(default='default')
     table = luigi.Parameter()
-    # since this is an external task and will never be initialized from the CLI, partition can be any python object, in this case a dictionary
-    partition = luigi.Parameter(default=None, description='Python dictionary specifying the target partition e.g. {"date": "2013-01-25"}')
+    partition = luigi.DictParameter(default={}, description='Python dictionary specifying the target partition e.g. {"date": "2013-01-25"}')
 
     def output(self):
-        if self.partition is not None:
+        if len(self.partition) != 0:
             assert self.partition, "partition required"
             return HivePartitionTarget(table=self.table,
                                        partition=self.partition,

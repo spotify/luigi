@@ -22,6 +22,7 @@ import tempfile
 import shutil
 import importlib
 import tarfile
+import inspect
 try:
     import cPickle as pickle
 except ImportError:
@@ -278,6 +279,9 @@ class PySparkTask(SparkSubmitTask):
         self.run_path = tempfile.mkdtemp(prefix=self.name)
         self.run_pickle = os.path.join(self.run_path, '.'.join([self.name.replace(' ', '_'), 'pickle']))
         with open(self.run_pickle, 'wb') as fd:
+            # Copy module file to run path.
+            module_path = os.path.abspath(inspect.getfile(self.__class__))
+            shutil.copy(module_path, os.path.join(self.run_path, '.'))
             self._dump(fd)
         try:
             super(PySparkTask, self).run()
@@ -289,7 +293,7 @@ class PySparkTask(SparkSubmitTask):
             if self.__module__ == '__main__':
                 d = pickle.dumps(self)
                 module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-                d = d.replace(b'(c__main__', "(c" + module_name)
+                d = d.replace(b'c__main__', b'c' + module_name.encode('ascii'))
                 fd.write(d)
             else:
                 pickle.dump(self, fd)

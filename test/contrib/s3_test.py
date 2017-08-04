@@ -288,7 +288,7 @@ class TestS3Client(unittest.TestCase):
         tmp_file_path = tmp_file.name
 
         s3_client.get('s3://mybucket/putMe', tmp_file_path)
-        self.assertEquals(tmp_file.read(), self.tempFileContents)
+        self.assertEqual(tmp_file.read(), self.tempFileContents)
 
         tmp_file.close()
 
@@ -300,7 +300,7 @@ class TestS3Client(unittest.TestCase):
 
         contents = s3_client.get_as_string('s3://mybucket/putMe')
 
-        self.assertEquals(contents, self.tempFileContents)
+        self.assertEqual(contents, self.tempFileContents)
 
     def test_get_key(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
@@ -438,7 +438,6 @@ class TestS3Client(unittest.TestCase):
         """
         self._run_copy_test(self.test_put_multipart_empty_file)
 
-    @unittest.skip("bug in moto 0.4.21 causing failure: https://github.com/spulec/moto/issues/526")
     def test_copy_multipart_multiple_parts_non_exact_fit(self):
         """
         Test a multipart copy with two parts, where the parts are not exactly the split size.
@@ -446,7 +445,6 @@ class TestS3Client(unittest.TestCase):
         # First, put a file into S3
         self._run_multipart_copy_test(self.test_put_multipart_multiple_parts_non_exact_fit)
 
-    @unittest.skip("bug in moto 0.4.21 causing failure: https://github.com/spulec/moto/issues/526")
     def test_copy_multipart_multiple_parts_exact_fit(self):
         """
         Test a multipart copy with multiple parts, where the parts are exactly the split size.

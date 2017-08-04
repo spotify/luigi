@@ -109,7 +109,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
     def _assert_complete(self, tasks):
         for t in tasks:
-            self.assert_(t.complete())
+            self.assertTrue(t.complete())
 
     def _build(self, tasks):
         with luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1) as w:
@@ -135,7 +135,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         remote = self._remote()
         graph = remote.graph()
         self.assertEqual(len(graph), 2)
-        self.assert_(DummyTask(task_id=1).task_id in graph)
+        self.assertTrue(DummyTask(task_id=1).task_id in graph)
         d1 = graph[DummyTask(task_id=1).task_id]
         self.assertEqual(d1[u'status'], u'DONE')
         self.assertEqual(d1[u'deps'], [])

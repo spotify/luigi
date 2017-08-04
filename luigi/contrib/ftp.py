@@ -317,6 +317,27 @@ class RemoteFileSystem(luigi.target.FileSystem):
     def _ftp_get(self, path, tmp_local_path):
         self.conn.retrbinary('RETR %s' % path, open(tmp_local_path, 'wb').write)
 
+    def listdir(self, path='.'):
+        """
+        Gets an list of the contents of path in (s)FTP
+        """
+        self._connect()
+
+        if self.sftp:
+            contents = self._sftp_listdir(path)
+        else:
+            contents = self._ftp_listdir(path)
+
+        self._close()
+
+        return contents
+
+    def _sftp_listdir(self, path):
+        return self.conn.listdir(remotepath=path)
+
+    def _ftp_listdir(self, path):
+        return self.conn.nlst(path)
+
 
 class AtomicFtpFile(luigi.target.AtomicLocalFile):
     """
