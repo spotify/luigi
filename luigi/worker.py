@@ -896,6 +896,11 @@ class Worker(object):
         )
 
     def _run_task(self, task_id):
+        if task_id in self._running_tasks:
+            logger.debug('Got already running task id {} from scheduler, taking a break'.format(task_id))
+            next(self._sleeper())
+            return
+
         task = self._scheduled_tasks[task_id]
 
         task_process = self._create_task_process(task)

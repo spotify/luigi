@@ -1543,6 +1543,26 @@ class MultipleWorkersTest(unittest.TestCase):
             self.assertTrue(is_running())
         self.assertFalse(is_running())
 
+    @mock.patch('luigi.worker.time')
+    def test_no_process_leak_from_repeatedly_running_same_task(self, worker_time):
+        with Worker(worker_processes=2) as w:
+            hung_task = HangTheWorkerTask()
+            w.add(hung_task)
+
+            w._run_task(hung_task.task_id)
+            children = set(psutil.Process().children())
+
+            # repeatedly try to run the same task id
+            for _ in range(10):
+                worker_time.sleep.reset_mock()
+                w._run_task(hung_task.task_id)
+
+                # should sleep after each attempt
+                worker_time.sleep.assert_called_once_with(mock.ANY)
+
+            # only one process should be running
+            self.assertEqual(children, set(psutil.Process().children()))
+
     def test_time_out_hung_worker(self):
         luigi.build([HangTheWorkerTask(0.1)], workers=2, local_scheduler=True)
 
