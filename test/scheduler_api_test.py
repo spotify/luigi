@@ -906,6 +906,13 @@ class SchedulerApiTest(unittest.TestCase):
         }
         self.assertEqual(expected, self.sch.count_pending(WORKER))
 
+    def test_count_pending_on_disabled_worker(self):
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.add_task(worker='other', task_id='B')  # needed to trigger right get_tasks code path
+        self.assertEqual(1, self.sch.count_pending(WORKER)['n_pending_tasks'])
+        self.sch.disable_worker(WORKER)
+        self.assertEqual(0, self.sch.count_pending(WORKER)['n_pending_tasks'])
+
     def test_count_pending_do_not_count_upstream_disabled(self):
         self.sch.add_task(worker=WORKER, task_id='A', status=PENDING)
         self.sch.add_task(worker=WORKER, task_id='B', status=DISABLED)
