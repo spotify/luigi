@@ -643,7 +643,9 @@ class SimpleTaskState(object):
     def disable_workers(self, worker_ids):
         self._remove_workers_from_tasks(worker_ids, remove_stakeholders=False)
         for worker_id in worker_ids:
-            self.get_worker(worker_id).disabled = True
+            worker = self.get_worker(worker_id)
+            worker.disabled = True
+            worker.tasks.clear()
 
 
 class Scheduler(object):
