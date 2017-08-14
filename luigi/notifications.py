@@ -141,8 +141,7 @@ def generate_email(sender, subject, message, recipients, image_png):
 
     msg_root = MIMEMultipart('related')
 
-    msg_text = MIMEText(message, email().format)
-    msg_text.set_charset('utf-8')
+    msg_text = MIMEText(message, email().format, 'utf-8')
     msg_root.attach(msg_text)
 
     if image_png:
