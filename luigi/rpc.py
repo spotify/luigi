@@ -112,9 +112,11 @@ class RemoteScheduler(object):
         else:
             self._fetcher = URLLibFetcher()
 
-    def _wait(self):
-        logger.info("Wait for %d seconds" % self._rpc_retry_wait)
-        time.sleep(self._rpc_retry_wait)
+    def _wait(self, timeout=None):
+        if timeout is None:
+            timeout = self._rpc_retry_wait
+        logger.info("Wait for %d seconds" % timeout)
+        time.sleep(timeout)
 
     def _fetch(self, url_suffix, body, log_exceptions=True):
         full_url = _urljoin(self._url, url_suffix)
@@ -141,14 +143,17 @@ class RemoteScheduler(object):
             )
         return response
 
-    def _request(self, url, data, log_exceptions=True, attempts=3, allow_null=True):
+    def _request(self, url, data, log_exceptions=True, attempts=30, allow_null=True):
         body = {'data': json.dumps(data)}
 
-        for _ in range(attempts):
+        for attempt in range(attempts):
             page = self._fetch(url, body, log_exceptions)
             response = json.loads(page)["response"]
             if allow_null or response is not None:
                 return response
+            logger.error("Request unsuccessfull, attempt %d/%d", attempt, attempts)
+            self._wait(timeout=2)
+
         raise RPCError("Received null response from remote scheduler %r" % self._url)
 
 
