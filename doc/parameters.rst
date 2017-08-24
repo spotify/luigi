@@ -17,7 +17,7 @@ Internally, the DailyReport object can now be constructed by running
 ``DailyReport(datetime.date(2012, 5, 10))`` or just ``DailyReport()``.
 Luigi also creates a command line parser that automatically handles the
 conversion from strings to Python types.
-This way you can invoke the job on the command line eg. by passing ``--date 2012-15-10``.
+This way you can invoke the job on the command line eg. by passing ``--date 2012-05-10``.
 
 The parameters are all set to their values on the Task object instance,
 i.e.
