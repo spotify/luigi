@@ -33,7 +33,7 @@ import json
 
 from luigi.file import LocalTarget
 from luigi.mock import MockTarget
-from luigi.s3 import S3Target
+from luigi.contrib.s3 import S3Target
 from luigi.target import FileSystemException
 from six.moves.urllib.parse import urlsplit, parse_qs
 

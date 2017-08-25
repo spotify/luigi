@@ -22,9 +22,9 @@ import time
 import os
 
 import luigi
-from luigi import postgres
+from luigi.contrib import postgres
 from luigi.contrib import rdbms
-from luigi.s3 import S3PathTask, S3Target
+from luigi.contrib.s3 import S3PathTask, S3Target
 
 logger = logging.getLogger('luigi-interface')
 
