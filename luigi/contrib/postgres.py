@@ -162,9 +162,6 @@ class PostgresTarget(luigi.Target):
                 (self.update_id, self.table,
                  datetime.datetime.now()))
 
-        # make sure update is properly marked
-        assert self.exists(connection)
-
     def exists(self, connection=None):
         if connection is None:
             connection = self.connect()
