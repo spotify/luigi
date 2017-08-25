@@ -16,6 +16,7 @@
 #
 from __future__ import print_function
 
+import email.parser
 import functools
 import logging
 import os
@@ -1374,13 +1375,19 @@ class WorkerEmailTest(LuigiTestCase):
         luigi.build([A()], workers=1, local_scheduler=True)
         self.assertFalse(emails)
 
+    @staticmethod
+    def read_email(email_msg):
+        subject_obj, body_obj = email.parser.Parser().parsestr(email_msg).walk()
+        return str(subject_obj['Subject']), str(body_obj.get_payload(decode=True))
+
     @email_patch
     def test_task_process_dies_with_email(self, emails):
         a = SendSignalTask(signal.SIGKILL)
         luigi.build([a], workers=2, local_scheduler=True)
         self.assertEqual(1, len(emails))
-        self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
-        self.assertTrue(emails[0].find("died unexpectedly with exit code -9") != -1)
+        subject, body = self.read_email(emails[0])
+        self.assertIn("Luigi: {} FAILED".format(a), subject)
+        self.assertIn("died unexpectedly with exit code -9", body)
 
     @with_config({'worker': {'send_failure_email': 'False'}})
     @email_patch
@@ -1399,8 +1406,9 @@ class WorkerEmailTest(LuigiTestCase):
         a = A()
         luigi.build([a], workers=2, local_scheduler=True)
         self.assertEqual(1, len(emails))
-        self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
-        self.assertTrue(emails[0].find("timed out after 0.0001 seconds and was terminated.") != -1)
+        subject, body = self.read_email(emails[0])
+        self.assertIn("Luigi: %s FAILED" % (a,), subject)
+        self.assertIn("timed out after 0.0001 seconds and was terminated.", body)
 
     @with_config({'worker': {'send_failure_email': 'False'}})
     @email_patch
