@@ -89,7 +89,6 @@ class TestVisualiser(ServerTestBase):
 
     # tasks tab tests.
     def test_keeps_entries_after_page_refresh(self):
-
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
@@ -121,7 +120,6 @@ class TestVisualiser(ServerTestBase):
         assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 50
 
     def test_keeps_table_filter_after_page_refresh(self):
-
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
@@ -147,7 +145,6 @@ class TestVisualiser(ServerTestBase):
         assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 1
 
     def test_keeps_order_after_page_refresh(self):
-
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
@@ -235,7 +232,6 @@ class TestVisualiser(ServerTestBase):
         assert invert_checkbox.is_selected()
 
     def test_keeps_task_id_after_page_refresh(self):
-
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
@@ -276,7 +272,7 @@ class TestVisualiser(ServerTestBase):
         hide_done_checkbox = driver.find_element_by_css_selector('#hideDoneCheckbox')
         assert hide_done_checkbox.is_selected()
 
-    def test_keeps_svg_visualisation_after_page_refresh(self):
+    def test_keeps_visualisation_type_after_page_refresh(self):
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
@@ -284,17 +280,18 @@ class TestVisualiser(ServerTestBase):
 
         # Check initial state.
         svg_radio = driver.find_element_by_css_selector('input[value=svg]')
-        assert svg_radio.is_selected() is False
+        assert svg_radio.is_selected()
 
-        # Change invert checkbox by clicking on label.
-        svg_radio.find_element_by_xpath('..').click()
+        # Change vistype to d3 by clicking on its label.
+        d3_radio = driver.find_element_by_css_selector('input[value=d3]')
+        d3_radio.find_element_by_xpath('..').click()
 
-        # Now refresh page and check. Invert checkbox shoud be checked.
+        # Now refresh page and check. D3 checkbox shoud be checked.
         driver.refresh()
 
         # Once page refreshed we have to find all selectors again.
-        svg_radio = driver.find_element_by_css_selector('input[value=svg]')
-        assert svg_radio.is_selected()
+        d3_radio = driver.find_element_by_css_selector('input[value=d3]')
+        assert d3_radio.is_selected()
 
     def test_synchronizes_fields_on_graph_tab(self):
         # Check fields population if tasks tab was opened by direct link.
@@ -353,7 +350,7 @@ class UberTask(luigi.Task):
     """
     _done = False
 
-    base_task = luigi.Parameter()
+    base_task = luigi.TaskParameter()
     x = luigi.Parameter()
     copies = luigi.IntParameter()
 

@@ -412,7 +412,7 @@ class S3Client(FileSystem):
         """
         Copy a single S3 object to another S3 object, falling back to multipart copy where necessary
 
-        NOTE: This is a private method and should only be called from within the `luigi.s3.copy` method
+        NOTE: This is a private method and should only be called from within the `s3.copy` method
 
         :param pool: The threadpool to put the s3 copy processes onto
         :param src_bucket: source bucket name
@@ -565,6 +565,7 @@ class S3Client(FileSystem):
         return self.put_string("", self._add_path_delimiter(path))
 
     def _get_s3_config(self, key=None):
+        defaults = dict(configuration.get_config().defaults())
         try:
             config = dict(configuration.get_config().items('s3'))
         except NoSectionError:
@@ -577,7 +578,8 @@ class S3Client(FileSystem):
                 pass
         if key:
             return config.get(key)
-        return config
+        section_only = {k: v for k, v in config.items() if k not in defaults or v != defaults[k]}
+        return section_only
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, query, fragment) = urlsplit(path)
