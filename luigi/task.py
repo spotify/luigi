@@ -438,6 +438,7 @@ class Task(object):
 
         self.set_tracking_url = None
         self.set_status_message = None
+        self.set_progress_percentage = None
 
     def initialized(self):
         """
@@ -681,7 +682,7 @@ class Task(object):
                         pickle.dumps(self)
 
         """
-        unpicklable_properties = ('set_tracking_url', 'set_status_message')
+        unpicklable_properties = ('set_tracking_url', 'set_status_message', 'set_progress_percentage')
         reserved_properties = {}
         for property_name in unpicklable_properties:
             if hasattr(self, property_name):

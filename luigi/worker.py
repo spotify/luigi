@@ -126,11 +126,13 @@ class TaskProcess(multiprocessing.Process):
     def _run_get_new_deps(self):
         self.task.set_tracking_url = self.status_reporter.update_tracking_url
         self.task.set_status_message = self.status_reporter.update_status
+        self.task.set_progress_percentage = self.status_reporter.update_progress_percentage
 
         task_gen = self.task.run()
 
         self.task.set_tracking_url = None
         self.task.set_status_message = None
+        self.task.set_progress_percentage = None
 
         if not isinstance(task_gen, types.GeneratorType):
             return None
@@ -268,6 +270,9 @@ class TaskStatusReporter(object):
 
     def update_status(self, message):
         self._scheduler.set_task_status_message(self._task_id, message)
+
+    def update_progress_percentage(self, percentage):
+        self._scheduler.set_task_progress_percentage(self._task_id, percentage)
 
 
 class SingleProcessPool(object):
