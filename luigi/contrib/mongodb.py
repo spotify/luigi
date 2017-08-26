@@ -212,7 +212,6 @@ class MongoCountTarget(MongoTarget):
 
     def read(self):
         """
-        Returns the count number of the target, -1 if the collection doesn't exist
         Using the aggregate method to avoid inaccurate count if using a sharded cluster
         https://docs.mongodb.com/manual/reference/method/db.collection.count/#behavior
         """
