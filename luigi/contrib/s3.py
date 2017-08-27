@@ -752,6 +752,8 @@ class S3FlagTarget(S3Target):
 
         :param path: the directory where the files are stored.
         :type path: str
+        :param format: see the luigi.format module for options
+        :type format: luigi.format.[Text|UTF8|Nop]
         :param client:
         :type client:
         :param flag:
