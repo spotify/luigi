@@ -215,4 +215,6 @@ class MongoCountTarget(MongoTarget):
         Using the aggregate method to avoid inaccurate count if using a sharded cluster
         https://docs.mongodb.com/manual/reference/method/db.collection.count/#behavior
         """
-        return next(self.get_collection().aggregate([{'$group': {'_id': None, 'count': {'$sum': 1}}}])).get('count')
+        for res in self.get_collection().aggregate([{'$group': {'_id': None, 'count': {'$sum': 1}}}]):
+            return res.get('count', None)
+        return None
