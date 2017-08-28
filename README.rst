@@ -25,12 +25,12 @@ Getting Started
 ---------------
 
 Run ``pip install luigi`` to install the latest stable version from `PyPI
-<https://pypi.python.org/pypi/luigi>`_. Documentation for the latest release is
-hosted `here <https://luigi.readthedocs.io/en/stable/>`__.
+<https://pypi.python.org/pypi/luigi>`_. `Documentation for the latest release
+<https://luigi.readthedocs.io/en/stable/>`__ is hosted on readthedocs.
 
 For the bleeding edge code, ``pip install
-git+https://github.com/spotify/luigi.git``. Bleeding edge documentation can be
-found `here <https://luigi.readthedocs.io/en/latest/>`__.
+git+https://github.com/spotify/luigi.git``. `Bleeding edge documentation
+<https://luigi.readthedocs.io/en/latest/>`__ is also available.
 
 Background
 ----------
