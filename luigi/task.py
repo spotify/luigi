@@ -140,7 +140,7 @@ class BulkCompleteNotImplementedError(NotImplementedError):
 
     pylint thinks anything raising NotImplementedError needs to be implemented
     in any subclass. bulk_complete isn't like that. This tricks pylint into
-    thinking that the default implementation is a valid implementation and no
+    thinking that the default implementation is a valid implementation and not
     an abstract method."""
     pass
 
