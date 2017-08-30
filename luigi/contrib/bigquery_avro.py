@@ -20,7 +20,10 @@ class BigQueryLoadAvro(BigQueryLoadTask):
     """A helper for loading specifically Avro data into BigQuery from GCS.
 
     Additional goodies - takes field documentation from the input data and propagates it
-    to BigQuery table description and field descriptions.
+    to BigQuery table description and field descriptions.  Supports the following Avro schema
+    types: Primitives, Enums, Records, Arrays, Unions, and Maps.  For Map schemas nested maps
+    and unions are not supported.  For Union Schemas only nested Primitive and Record Schemas
+    are currently supported.
 
     Suitable for use via subclassing: override requires() to return Task(s) that output
     to GCS Targets; their paths are expected to be URIs of .avro files or URI prefixes
@@ -88,61 +91,63 @@ class BigQueryLoadAvro(BigQueryLoadTask):
                 avro_field = avro_fields[field[u'name']]
                 field_type = type(avro_field.type)
 
-                #Primitive and top level complex type support
-                field[u'description'] = avro_field.doc
+                # Primitive Support
+                if field_type is avro.schema.PrimitiveSchema:
+                    field[u'description'] = avro_field.doc
 
-                #Enum Support
+                # Enum Support
                 if field_type is avro.schema.EnumSchema:
                     field[u'description'] = avro_field.type.doc
 
-                #Record Support
+                # Record Support
                 if field_type is avro.schema.RecordSchema:
                     field[u'description'] = avro_field.type.doc
                     field[u'fields'] = get_fields_with_description(field[u'fields'], avro_field.type.fields_dict)
 
-                #Array Support
+                # Array Support
                 if field_type is avro.schema.ArraySchema:
                     field[u'description'] = avro_field.type.items.doc
                     field[u'fields'] = get_fields_with_description(field[u'fields'], avro_field.type.items.fields_dict)
 
-                #Union Support
+                # Union Support
                 if type(avro_field.type) is avro.schema.UnionSchema:
                     for schema in avro_field.type.schemas:
+                        if type(schema) is avro.schema.PrimitiveSchema:
+                            field[u'description'] = avro_field.doc
+
                         if type(schema) is avro.schema.RecordSchema:
                             field[u'description'] = schema.doc
                             field[u'fields'] = get_fields_with_description(field[u'fields'], schema.fields_dict)
 
-                #Map Support
+                            # Support for Enums, Arrays, Maps, and Unions inside of a union is not yet implemented
+
+                # Map Support
                 if field_type is avro.schema.MapSchema:
-                    #directly bypass the key and value attributes in BigQuery Schema
+                    field[u'description'] = avro_field.doc
+
+                    # Big Query Avro loader creates artificial key and value attributes in the Big Query schema we will ignore the key and operate directly on the value
+                    # https://cloud.google.com/bigquery/data-formats#avro_format
                     bq_map_value_field = field[u'fields'][-1]
                     avro_map_value = avro_field.type.values
                     value_field_type = type(avro_map_value)
 
-                    #Primitive Support
-                    # -- Unfortunately the map element doesn't directly have a doc attribute so there is no way to get documentation on the primitive types for the value attribute
+                    # Primitive Support: Unfortunately the map element doesn't directly have a doc attribute so there is no way to get documentation on the primitive types for the value attribute
 
                     if value_field_type is avro.schema.EnumSchema:
                         bq_map_value_field[u'description'] = avro_map_value.type.doc
 
                     if value_field_type is avro.schema.RecordSchema:
-                        #Set values description using type's doc
+                        # Set values description using type's doc
                         bq_map_value_field[u'description'] = avro_map_value.doc
 
-                        #This is jumping into the map value directly and working with that
+                        # This is jumping into the map value directly and working with that
                         bq_map_value_field[u'fields'] = get_fields_with_description(bq_map_value_field[u'fields'], avro_map_value.fields_dict)
 
                     if value_field_type is avro.schema.ArraySchema:
                         bq_map_value_field[u'description'] = avro_map_value.items.doc
                         bq_map_value_field[u'fields'] = get_fields_with_description(bq_map_value_field[u'fields'], avro_map_value.items.fields_dict)
 
-                    #Unions nested in maps are not supported
-                    if value_field_type is avro.schema.UnionSchema:
-                        logger.info("Unions inside of maps are not supported for documentation.")
-
-                    #Nested Maps are not supported
-                    if value_field_type is avro.schema.MapSchema:
-                        logger.info("Nested Maps are not supported for documentation.")
+                        # Support for unions and maps nested inside of a map is not yet implemented
 
                 new_fields.append(field)
             return new_fields
