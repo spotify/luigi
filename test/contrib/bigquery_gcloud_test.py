@@ -230,32 +230,160 @@ class BigQueryLoadAvroTest(unittest.TestCase):
     def _produce_test_input(self):
         schema = avro.schema.parse("""
         {
-            "name": "TestQueryTask_record",
-            "type": "record",
-            "doc": "The description",
-            "fields": [
-                {"name": "col0", "type": "int", "doc": "The bold"},
-                {"name": "col1", "type": {
-                    "name": "inner_record",
-                    "type": "record",
-                    "doc": "This field shall be an inner",
-                    "fields": [
-                        {"name": "inner", "type": "int", "doc": "A inner field"},
-                        {"name": "col0", "type": "int", "doc": "Same name as outer but different doc"},
-                        {"name": "col1", "type": ["null", "string"], "default": null, "doc": "Nullable primitive"},
-                        {"name": "col2", "type": ["null", {
-                            "type": "map",
-                            "values": "string"
-                        }], "default": null, "doc": "Nullable map"}
-                    ]
-                }, "doc": "This field shall be an inner"},
-                {"name": "col2", "type": "int", "doc": "The beautiful"},
-                {"name": "col3", "type": "double"}
-            ]
+          "type":"record",
+          "name":"TrackEntity2",
+          "namespace":"com.spotify.entity.schema",
+          "doc":"Track entity merged from various sources",
+          "fields":[
+            {
+              "name":"map_record",
+              "type":{
+                "type":"map",
+                "values":{
+                  "type":"record",
+                  "name":"MapNestedRecordObj",
+                  "doc":"Nested Record in a map doc",
+                  "fields":[
+                    {
+                      "name":"element1",
+                      "type":"string",
+                      "doc":"element 1 doc"
+                    },
+                    {
+                      "name":"element2",
+                      "type":[
+                        "null",
+                        "string"
+                      ],
+                      "doc":"element 2 doc"
+                    }
+                  ]
+                }
+              },
+              "doc":"doc for map"
+            },
+            {
+              "name":"additional",
+              "type":{
+                "type":"map",
+                "values":"string"
+              },
+              "doc":"doc for second map record"
+            },
+            {
+              "name":"track_gid",
+              "type":"string",
+              "doc":"Track GID in hexadecimal string"
+            },
+            {
+              "name":"track_uri",
+              "type":"string",
+              "doc":"Track URI in base62 string"
+            },
+            {
+              "name":"Suit",
+              "type":{
+                "type":"enum",
+                "name":"Suit",
+                "doc":"enum documentation broz",
+                "symbols":[
+                  "SPADES",
+                  "HEARTS",
+                  "DIAMONDS",
+                  "CLUBS"
+                ]
+              }
+            },
+            {
+              "name":"FakeRecord",
+              "type":{
+                "type":"record",
+                "name":"FakeRecord",
+                "namespace":"com.spotify.data.types.coolType",
+                "doc":"My Fake Record doc",
+                "fields":[
+                  {
+                    "name":"coolName",
+                    "type":"string",
+                    "doc":"Cool Name doc"
+                  }
+                ]
+              }
+            },
+            {
+              "name":"master_metadata",
+              "type":[
+                "null",
+                {
+                  "type":"record",
+                  "name":"MasterMetadata",
+                  "namespace":"com.spotify.data.types.metadata",
+                  "doc":"metadoc",
+                  "fields":[
+                    {
+                      "name":"track",
+                      "type":[
+                        "null",
+                        {
+                          "type":"record",
+                          "name":"Track",
+                          "doc":"Sqoop import of track",
+                          "fields":[
+                            {
+                              "name":"id",
+                              "type":[
+                                "null",
+                                "int"
+                              ],
+                              "doc":"id description field",
+                              "default":null,
+                              "columnName":"id",
+                              "sqlType":"4"
+                            },
+                            {
+                              "name":"name",
+                              "type":[
+                                "null",
+                                "string"
+                              ],
+                              "doc":"name description field",
+                              "default":null,
+                              "columnName":"name",
+                              "sqlType":"12"
+                            }
+                          ],
+                          "tableName":"track"
+                        }
+                      ],
+                      "default":null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name":"children",
+              "type":{
+                "type":"array",
+                "items":{
+                  "type":"record",
+                  "name":"Child",
+                  "doc":"array of children documentation",
+                  "fields":[
+                    {
+                      "name":"name",
+                      "type":"string",
+                      "doc":"my specific child\'s doc"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
         }""")
         self.addCleanup(os.remove, "tmp.avro")
         writer = DataFileWriter(open("tmp.avro", "wb"), DatumWriter(), schema)
-        writer.append({'col0': 1000, 'col1': {'inner': 1234, 'col0': 3000}, 'col2': 1001, 'col3': 1.001})
+        writer.append({u'track_gid': u'Cool guid', u'map_record': {u'Cool key': {u'element1': u'element 1 data', u'element2': u'element 2 data'}}, u'additional': {u'key1': u'value1'}, u'master_metadata': {u'track': {u'id': 1, u'name': u'Cool Track Name'}}, u'track_uri': u'Totally a url here', u'FakeRecord': {u'coolName': u'Cool Fake Record Name'}, u'Suit': u'DIAMONDS', u'children': [{u'name': u'Bob'}, {u'name': u'Joe'}]})
         writer.close()
         self.gcs_client.put("tmp.avro", self.gcs_dir_url + "/tmp.avro")
 
@@ -289,12 +417,41 @@ class BigQueryLoadAvroTest(unittest.TestCase):
         table = self.bq_client.client.tables().get(projectId=PROJECT_ID,
                                                    datasetId=DATASET_ID,
                                                    tableId=self.table_id).execute()
-        self.assertEqual(table['description'], 'The description')
-        self.assertEqual(table['schema']['fields'][0]['description'], 'The bold')
-        self.assertEqual(table['schema']['fields'][1]['description'], 'This field shall be an inner')
-        self.assertEqual(table['schema']['fields'][1]['fields'][0]['description'], 'A inner field')
-        self.assertEqual(table['schema']['fields'][1]['fields'][1]['description'], 'Same name as outer but different doc')
-        self.assertEqual(table['schema']['fields'][1]['fields'][2]['description'], 'Nullable primitive')
-        self.assertEqual(table['schema']['fields'][1]['fields'][3]['description'], 'Nullable map')
-        self.assertEqual(table['schema']['fields'][2]['description'], 'The beautiful')
-        self.assertFalse('description' in table['schema']['fields'][3])
+        self.assertEqual(table['description'], 'Track entity merged from various sources')
+        # First map
+        self.assertEqual(table['schema']['fields'][0]['description'], 'doc for map')
+        # key
+        # self.assertEqual(table['schema']['fields'][0]['fields'][0]['description'], '')
+        self.assertFalse('description' in table['schema']['fields'][0]['fields'][0])
+        # Value
+        self.assertEqual(table['schema']['fields'][0]['fields'][1]['description'], 'Nested Record in a map doc')
+        # Value record data
+        self.assertEqual(table['schema']['fields'][0]['fields'][1]['fields'][0]['description'], 'element 1 doc')
+        self.assertEqual(table['schema']['fields'][0]['fields'][1]['fields'][1]['description'], 'element 2 doc')
+
+        # Second map
+        self.assertEqual(table['schema']['fields'][1]['description'], 'doc for second map record')
+        # key
+        self.assertFalse('description' in table['schema']['fields'][1]['fields'][0])
+        # Value
+        self.assertFalse('description' in table['schema']['fields'][1]['fields'][1])
+
+        # Several top level Primitive and Enums
+        self.assertEqual(table['schema']['fields'][2]['description'], 'Track GID in hexadecimal string')
+        self.assertEqual(table['schema']['fields'][3]['description'], 'Track URI in base62 string')
+        self.assertEqual(table['schema']['fields'][4]['description'], 'enum documentation broz')
+
+        # Nested Record containing primitive
+        self.assertEqual(table['schema']['fields'][5]['description'], 'My Fake Record doc')
+        self.assertEqual(table['schema']['fields'][5]['fields'][0]['description'], 'Cool Name doc')
+
+        # Union with internal Record
+        self.assertEqual(table['schema']['fields'][6]['description'], 'metadoc')
+        self.assertEqual(table['schema']['fields'][6]['fields'][0]['description'], 'Sqoop import of track')
+        self.assertEqual(table['schema']['fields'][6]['fields'][0]['fields'][0]['description'], 'id description field')
+        self.assertEqual(table['schema']['fields'][6]['fields'][0]['fields'][1]['description'], 'name description field')
+
+        # Array of Primitive
+        self.assertEqual(table['schema']['fields'][7]['description'], 'array of children documentation')
+        self.assertEqual(table['schema']['fields'][7]['fields'][0]['description'], 'my specific child\'s doc')
+
