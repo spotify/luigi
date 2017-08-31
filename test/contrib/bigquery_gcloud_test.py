@@ -383,7 +383,35 @@ class BigQueryLoadAvroTest(unittest.TestCase):
         }""")
         self.addCleanup(os.remove, "tmp.avro")
         writer = DataFileWriter(open("tmp.avro", "wb"), DatumWriter(), schema)
-        writer.append({u'track_gid': u'Cool guid', u'map_record': {u'Cool key': {u'element1': u'element 1 data', u'element2': u'element 2 data'}}, u'additional': {u'key1': u'value1'}, u'master_metadata': {u'track': {u'id': 1, u'name': u'Cool Track Name'}}, u'track_uri': u'Totally a url here', u'FakeRecord': {u'coolName': u'Cool Fake Record Name'}, u'Suit': u'DIAMONDS', u'children': [{u'name': u'Bob'}, {u'name': u'Joe'}]})
+        writer.append({
+            u'track_gid': u'Cool guid',
+            u'map_record': {
+                u'Cool key': {
+                    u'element1': u'element 1 data',
+                    u'element2': u'element 2 data'
+                }
+            },
+            u'additional': {
+                u'key1': u'value1'
+            }, u'master_metadata': {
+                u'track': {
+                    u'id': 1,
+                    u'name': u'Cool Track Name'
+                }
+            }, u'track_uri': u'Totally a url here',
+            u'FakeRecord': {
+                u'coolName': u'Cool Fake Record Name'
+            },
+            u'Suit': u'DIAMONDS',
+            u'children': [
+                {
+                    u'name': u'Bob'
+                },
+                {
+                    u'name': u'Joe'
+                }
+            ]
+        })
         writer.close()
         self.gcs_client.put("tmp.avro", self.gcs_dir_url + "/tmp.avro")
 
@@ -453,4 +481,3 @@ class BigQueryLoadAvroTest(unittest.TestCase):
         # Array of Primitive
         self.assertEqual(table['schema']['fields'][7]['description'], 'array of children documentation')
         self.assertEqual(table['schema']['fields'][7]['fields'][0]['description'], 'my specific child\'s doc')
-

@@ -125,13 +125,15 @@ class BigQueryLoadAvro(BigQueryLoadTask):
                 if field_type is avro.schema.MapSchema:
                     field[u'description'] = avro_field.doc
 
-                    # Big Query Avro loader creates artificial key and value attributes in the Big Query schema we will ignore the key and operate directly on the value
+                    # Big Query Avro loader creates artificial key and value attributes in the Big Query schema
+                    # ignoring the key and operating directly on the value
                     # https://cloud.google.com/bigquery/data-formats#avro_format
                     bq_map_value_field = field[u'fields'][-1]
                     avro_map_value = avro_field.type.values
                     value_field_type = type(avro_map_value)
 
-                    # Primitive Support: Unfortunately the map element doesn't directly have a doc attribute so there is no way to get documentation on the primitive types for the value attribute
+                    # Primitive Support: Unfortunately the map element doesn't directly have a doc attribute
+                    # so there is no way to get documentation on the primitive types for the value attribute
 
                     if value_field_type is avro.schema.EnumSchema:
                         bq_map_value_field[u'description'] = avro_map_value.type.doc
