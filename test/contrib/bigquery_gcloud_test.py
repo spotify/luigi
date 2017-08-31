@@ -421,7 +421,6 @@ class BigQueryLoadAvroTest(unittest.TestCase):
         # First map
         self.assertEqual(table['schema']['fields'][0]['description'], 'doc for map')
         # key
-        # self.assertEqual(table['schema']['fields'][0]['fields'][0]['description'], '')
         self.assertFalse('description' in table['schema']['fields'][0]['fields'][0])
         # Value
         self.assertEqual(table['schema']['fields'][0]['fields'][1]['description'], 'Nested Record in a map doc')
