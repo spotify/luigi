@@ -123,9 +123,9 @@ class core(task.Config):
         default=False,
         description='Use multiprocessing to do scheduling in parallel.')
     parallel_scheduling_processes = parameter.IntParameter(
-        default=None,
+        default=0,
         description='The number of processes to use for scheduling in parallel.'
-                    ' The default is the number of available CPUs')
+                    ' By default the number of available CPUs will be used')
     assistant = parameter.BoolParameter(
         default=False,
         description='Run any task from the scheduler.')

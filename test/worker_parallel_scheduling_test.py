@@ -110,7 +110,15 @@ class ParallelSchedulingTest(unittest.TestCase):
         with mock.patch('multiprocessing.Pool') as mocked_pool:
             mocked_pool.return_value = real_pool
             self.w.add(OverlappingSelfDependenciesTask(n=1, k=1), multiprocess=True, processes=1234)
-            mocked_pool.assert_called_once_with(1234)
+            mocked_pool.assert_called_once_with(processes=1234)
+
+    def test_zero_processes(self):
+        import multiprocessing
+        real_pool = multiprocessing.Pool(1)
+        with mock.patch('multiprocessing.Pool') as mocked_pool:
+            mocked_pool.return_value = real_pool
+            self.w.add(OverlappingSelfDependenciesTask(n=1, k=1), multiprocess=True, processes=0)
+            mocked_pool.assert_called_once_with(processes=None)
 
     def test_children_terminated(self):
         before_children = running_children()

@@ -102,7 +102,7 @@ class CoreConfigTest(LuigiTestCase):
 
     @with_config({})
     def test_parallel_scheduling_processes_default(self):
-        self.assertEquals(None, core().parallel_scheduling_processes)
+        self.assertEquals(0, core().parallel_scheduling_processes)
 
     @with_config({'core': {'parallel-scheduling-processes': '1234'}})
     def test_parallel_scheduling_processes(self):
