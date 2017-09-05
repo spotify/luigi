@@ -826,6 +826,16 @@ def _recursively_freeze(value):
     return value
 
 
+class _DictParamEncoder(JSONEncoder):
+    """
+    JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~_FrozenOrderedDict` JSON serializable.
+    """
+    def default(self, obj):
+        if isinstance(obj, _FrozenOrderedDict):
+            return obj.get_wrapped()
+        return json.JSONEncoder.default(self, obj)
+
+
 class DictParameter(Parameter):
     """
     Parameter whose value is a ``dict``.
@@ -858,16 +868,6 @@ class DictParameter(Parameter):
     tags, that are dynamically constructed outside Luigi), or you have a complex parameter containing logically related
     values (like a database connection config).
     """
-
-    class _DictParamEncoder(JSONEncoder):
-        """
-        JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~_FrozenOrderedDict` JSON serializable.
-        """
-        def default(self, obj):
-            if isinstance(obj, _FrozenOrderedDict):
-                return obj.get_wrapped()
-            return json.JSONEncoder.default(self, obj)
-
     def normalize(self, value):
         """
         Ensure that dictionary parameter is converted to a _FrozenOrderedDict so it can be hashed.
@@ -888,7 +888,7 @@ class DictParameter(Parameter):
         return json.loads(s, object_pairs_hook=_FrozenOrderedDict)
 
     def serialize(self, x):
-        return json.dumps(x, cls=DictParameter._DictParamEncoder)
+        return json.dumps(x, cls=_DictParamEncoder)
 
 
 class ListParameter(Parameter):
@@ -937,7 +937,7 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the parsed value.
         """
-        return list(json.loads(x))
+        return list(json.loads(x, object_pairs_hook=_FrozenOrderedDict))
 
     def serialize(self, x):
         """
@@ -947,7 +947,7 @@ class ListParameter(Parameter):
 
         :param x: the value to serialize.
         """
-        return json.dumps(x)
+        return json.dumps(x, cls=_DictParamEncoder)
 
 
 class TupleParameter(Parameter):
