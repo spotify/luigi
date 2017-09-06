@@ -821,7 +821,7 @@ def _recursively_freeze(value):
     """
     if isinstance(value, Mapping):
         return _FrozenOrderedDict(((k, _recursively_freeze(v)) for k, v in value.items()))
-    elif isinstance(value, list):
+    elif isinstance(value, list) or isinstance(value, tuple):
         return tuple(_recursively_freeze(v) for v in value)
     return value
 
@@ -978,6 +978,14 @@ class TupleParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --book_locations '((12,3),(4,15),(52,1))'
     """
+    def normalize(self, x):
+        """
+        Ensure that tuple parameter is recursively converted to a tuples so it can be hashed.
+
+        :param str x: the value to parse.
+        :return: the normalized (hashable/immutable) value.
+        """
+        return _recursively_freeze(x)
 
     def parse(self, x):
         """
@@ -999,7 +1007,8 @@ class TupleParameter(Parameter):
         # Therefore, if json.loads(x) returns a ValueError, try ast.literal_eval(x).
         # ast.literal_eval(t_str) == t
         try:
-            return tuple(tuple(x) for x in json.loads(x))  # loop required to parse tuple of tuples
+            # loop required to parse tuple of tuples
+            return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=_FrozenOrderedDict))
         except ValueError:
             return literal_eval(x)  # if this causes an error, let that error be raised.
 
@@ -1011,7 +1020,7 @@ class TupleParameter(Parameter):
 
         :param x: the value to serialize.
         """
-        return json.dumps(x)
+        return json.dumps(x, cls=_DictParamEncoder)
 
 
 class NumericalParameter(Parameter):
