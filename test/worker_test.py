@@ -16,6 +16,7 @@
 #
 from __future__ import print_function
 
+import email.parser
 import functools
 import logging
 import os
@@ -1374,13 +1375,19 @@ class WorkerEmailTest(LuigiTestCase):
         luigi.build([A()], workers=1, local_scheduler=True)
         self.assertFalse(emails)
 
+    @staticmethod
+    def read_email(email_msg):
+        subject_obj, body_obj = email.parser.Parser().parsestr(email_msg).walk()
+        return str(subject_obj['Subject']), str(body_obj.get_payload(decode=True))
+
     @email_patch
     def test_task_process_dies_with_email(self, emails):
         a = SendSignalTask(signal.SIGKILL)
         luigi.build([a], workers=2, local_scheduler=True)
         self.assertEqual(1, len(emails))
-        self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
-        self.assertTrue(emails[0].find("died unexpectedly with exit code -9") != -1)
+        subject, body = self.read_email(emails[0])
+        self.assertIn("Luigi: {} FAILED".format(a), subject)
+        self.assertIn("died unexpectedly with exit code -9", body)
 
     @with_config({'worker': {'send_failure_email': 'False'}})
     @email_patch
@@ -1399,8 +1406,9 @@ class WorkerEmailTest(LuigiTestCase):
         a = A()
         luigi.build([a], workers=2, local_scheduler=True)
         self.assertEqual(1, len(emails))
-        self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
-        self.assertTrue(emails[0].find("timed out after 0.0001 seconds and was terminated.") != -1)
+        subject, body = self.read_email(emails[0])
+        self.assertIn("Luigi: %s FAILED" % (a,), subject)
+        self.assertIn("timed out after 0.0001 seconds and was terminated.", body)
 
     @with_config({'worker': {'send_failure_email': 'False'}})
     @email_patch
@@ -1542,6 +1550,26 @@ class MultipleWorkersTest(unittest.TestCase):
 
             self.assertTrue(is_running())
         self.assertFalse(is_running())
+
+    @mock.patch('luigi.worker.time')
+    def test_no_process_leak_from_repeatedly_running_same_task(self, worker_time):
+        with Worker(worker_processes=2) as w:
+            hung_task = HangTheWorkerTask()
+            w.add(hung_task)
+
+            w._run_task(hung_task.task_id)
+            children = set(psutil.Process().children())
+
+            # repeatedly try to run the same task id
+            for _ in range(10):
+                worker_time.sleep.reset_mock()
+                w._run_task(hung_task.task_id)
+
+                # should sleep after each attempt
+                worker_time.sleep.assert_called_once_with(mock.ANY)
+
+            # only one process should be running
+            self.assertEqual(children, set(psutil.Process().children()))
 
     def test_time_out_hung_worker(self):
         luigi.build([HangTheWorkerTask(0.1)], workers=2, local_scheduler=True)
