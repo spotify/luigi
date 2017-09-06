@@ -923,7 +923,7 @@ class ListParameter(Parameter):
     """
     def normalize(self, x):
         """
-        Ensure that list parameter is converted to a tuple so it can be hashed.
+        Ensure that struct is recursively converted to a tuple so it can be hashed.
 
         :param str x: the value to parse.
         :return: the normalized (hashable/immutable) value.
@@ -950,7 +950,7 @@ class ListParameter(Parameter):
         return json.dumps(x, cls=_DictParamEncoder)
 
 
-class TupleParameter(Parameter):
+class TupleParameter(ListParameter):
     """
     Parameter whose value is a ``tuple`` or ``tuple`` of tuples.
 
@@ -978,15 +978,6 @@ class TupleParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --book_locations '((12,3),(4,15),(52,1))'
     """
-    def normalize(self, x):
-        """
-        Ensure that tuple parameter is recursively converted to a tuples so it can be hashed.
-
-        :param str x: the value to parse.
-        :return: the normalized (hashable/immutable) value.
-        """
-        return _recursively_freeze(x)
-
     def parse(self, x):
         """
         Parse an individual value from the input.
@@ -1011,16 +1002,6 @@ class TupleParameter(Parameter):
             return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=_FrozenOrderedDict))
         except ValueError:
             return literal_eval(x)  # if this causes an error, let that error be raised.
-
-    def serialize(self, x):
-        """
-        Opposite of :py:meth:`parse`.
-
-        Converts the value ``x`` to a string.
-
-        :param x: the value to serialize.
-        """
-        return json.dumps(x, cls=_DictParamEncoder)
 
 
 class NumericalParameter(Parameter):
