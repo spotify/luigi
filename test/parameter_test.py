@@ -385,6 +385,14 @@ class TestParametersHashability(LuigiTestCase):
         self.assertEqual(hash(Foo(args=[{'foo': 'bar'}, {'doge': 'wow'}]).args),
                          hash(p.normalize(p.parse('[{"foo": "bar"}, {"doge": "wow"}]'))))
 
+    def test_list_nested(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.ListParameter()
+
+        p = luigi.parameter.ListParameter()
+        self.assertEqual(hash(Foo(args=[['foo', 'bar'], ['doge', 'wow']]).args),
+                         hash(p.normalize(p.parse('[["foo", "bar"], ["doge", "wow"]]'))))
+
     def test_tuple(self):
         class Foo(luigi.Task):
             args = luigi.parameter.TupleParameter()
@@ -399,6 +407,14 @@ class TestParametersHashability(LuigiTestCase):
         p = luigi.parameter.TupleParameter()
         self.assertEqual(hash(Foo(args=({'foo': 'bar'}, {'doge': 'wow'})).args),
                          hash(p.normalize(p.parse('({"foo": "bar"}, {"doge": "wow"})'))))
+
+    def test_tuple_nested(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.TupleParameter()
+
+        p = luigi.parameter.TupleParameter()
+        self.assertEqual(hash(Foo(args=(('foo', 'bar'), ('doge', 'wow'))).args),
+                         hash(p.normalize(p.parse('(("foo", "bar"), ("doge", "wow"))'))))
 
     def test_task(self):
         class Bar(luigi.Task):
