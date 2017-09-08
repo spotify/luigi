@@ -204,19 +204,25 @@ class PostgresTarget(luigi.Target):
         connection.autocommit = True
         cursor = connection.cursor()
         if self.use_db_timestamps:
-            sql = """ CREATE TABLE IF NOT EXISTS {marker_table} (
+            sql = """ CREATE TABLE {marker_table} (
                       update_id TEXT PRIMARY KEY,
                       target_table TEXT,
                       inserted TIMESTAMP DEFAULT NOW())
                   """.format(marker_table=self.marker_table)
         else:
-            sql = """ CREATE TABLE IF NOT EXISTS {marker_table} (
+            sql = """ CREATE TABLE {marker_table} (
                       update_id TEXT PRIMARY KEY,
                       target_table TEXT,
                       inserted TIMESTAMP);
                   """.format(marker_table=self.marker_table)
 
-        cursor.execute(sql)
+        try:
+            cursor.execute(sql)
+        except psycopg2.ProgrammingError as e:
+            if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
+                pass
+            else:
+                raise
         connection.close()
 
     def open(self, mode):
