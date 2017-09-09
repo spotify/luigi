@@ -19,7 +19,14 @@
 """
 Docker container wrapper for Luigi.
 
-Enables using any docker container as a task in luigi
+Enables running a docker container as a task in luigi.
+This wrapper uses the Docker Python SDK to communicate directly with the 
+Docker API avoiding the common pattern to invoke the docker client 
+from the command line. Using the SDK it is possible to detect and properly 
+handle errors occurring when pulling, starting or running the containers.
+On top of this, it is possible to mount a single file in the container  
+and a temporary directory is created on the host and mounted allowing
+the handling of files bigger than the container limit.
 
 Requires:
 
