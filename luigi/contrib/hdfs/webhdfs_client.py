@@ -52,6 +52,7 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
     The library is using `this api
     <https://hdfscli.readthedocs.io/en/latest/api.html>`__.
     """
+
     def __init__(self, host=None, port=None, user=None):
         self.host = host or hdfs_config.hdfs().namenode_host
         self.port = port or webhdfs().port
@@ -59,7 +60,11 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
 
     @property
     def url(self):
-        return 'http://' + self.host + ':' + str(self.port)
+        # the hdfs package allows it to specify multiple namenodes by passing a string containing
+        # multiple namenodes separated by ';'
+        hosts = self.host.split(";")
+        urls = ['http://' + host + ':' + str(self.port) for host in hosts]
+        return ";".join(urls)
 
     @property
     def client(self):
