@@ -20,11 +20,11 @@
 Docker container wrapper for Luigi.
 
 Enables running a docker container as a task in luigi.
-This wrapper uses the Docker Python SDK to communicate directly with the 
-Docker API avoiding the common pattern to invoke the docker client 
-from the command line. Using the SDK it is possible to detect and properly 
+This wrapper uses the Docker Python SDK to communicate directly with the
+Docker API avoiding the common pattern to invoke the docker client
+from the command line. Using the SDK it is possible to detect and properly
 handle errors occurring when pulling, starting or running the containers.
-On top of this, it is possible to mount a single file in the container  
+On top of this, it is possible to mount a single file in the container
 and a temporary directory is created on the host and mounted allowing
 the handling of files bigger than the container limit.
 
@@ -56,8 +56,8 @@ except ImportError:
 # class dockerconfig(luigi.Config):
 #     '''
 #     this class allows to use the luigi.cfg file to specify the path to the docker config.json.
-#     The docker client should look by default in the main directory, 
-#      but on different systems this may need to be specified. 
+#     The docker client should look by default in the main directory,
+#      but on different systems this may need to be specified.
 #     '''
 #     docker_config_path = luigi.Parameter(
 #         default="~/.docker/config.json",
@@ -130,7 +130,7 @@ class DockerTask(luigi.Task):
         '''
         super(DockerTask, self).__init__(*args, **kwargs)
         self.__logger = logger
-        
+
         '''init docker client
         using the low level API as the higher level API does not allow to mount single
         files as volumes
@@ -142,7 +142,7 @@ class DockerTask(luigi.Task):
             self._image = ':'.join([self.image, 'latest'])
         else:
             self._image = self.image
-        
+
         if self.mount_tmp:
             # create a tmp_dir, NOTE: /tmp needs to be specified for it to work on
             # macOS, despite what the python documentation says
@@ -153,7 +153,7 @@ class DockerTask(luigi.Task):
             self._binds = ['{0}:{1}'.format(self._host_tmp_dir, self.container_tmp_dir)]
         else:
             self._binds = []
-            
+
         # update environment property with the (internal) location of tmp_dir
         self.environment['LUIGI_TMP_DIR'] = self.container_tmp_dir
 
@@ -162,7 +162,7 @@ class DockerTask(luigi.Task):
             self._binds.append(self.binds)
         elif isinstance(self.binds, list):
             self._binds.extend(self.binds)
-        
+
         # derive volumes (ie. list of container destination paths) from
         # specified binds
         self._volumes = [b.split(':')[1] for b in self._binds]
@@ -194,7 +194,6 @@ class DockerTask(luigi.Task):
 
             host_config = self._client.create_host_config(binds=self._binds,
                                                           network_mode=self.network_mode)
-                                                        #   auto_remove=self.auto_remove)
 
             container = self._client.create_container(self._image,
                                                       command=self.command,
@@ -217,7 +216,7 @@ class DockerTask(luigi.Task):
                     self._client.remove_container(container['Id'])
                 except docker.errors.APIError:
                     self.__logger.warning("Container " + container['Id'] +
-                                          " could not be removed") 
+                                          " could not be removed")
             if exit_status != 0:
                 raise ContainerError(container, exit_status, self.command, self._image, error)
 
