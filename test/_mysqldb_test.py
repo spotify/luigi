@@ -17,7 +17,10 @@
 
 from helpers import unittest
 
-import mysql.connector
+try:
+    import pymysql as sql
+except ImportError:
+    import mysql.connector as sql
 from luigi.contrib.mysqldb import MySqlTarget
 
 host = 'localhost'
@@ -29,11 +32,11 @@ table_updates = 'table_updates'
 
 
 def _create_test_database():
-    con = mysql.connector.connect(user=username,
-                                  password=password,
-                                  host=host,
-                                  port=port,
-                                  autocommit=True)
+    con = sql.connect(user=username,
+                      password=password,
+                      host=host,
+                      port=port,
+                      autocommit=True)
     con.cursor().execute('CREATE DATABASE IF NOT EXISTS %s' % database)
 
 

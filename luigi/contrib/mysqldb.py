@@ -21,12 +21,25 @@ import luigi
 
 logger = logging.getLogger('luigi-interface')
 
+# Support both PyMySql and mysql-connector-python interfaces
 try:
-    import mysql.connector
-    from mysql.connector import errorcode
-except ImportError as e:
-    logger.warning("Loading MySQL module without the python package mysql-connector-python. \
-        This will crash at runtime if MySQL functionality is used.")
+    import pymysql as sql
+
+    def _errno(err):
+        """Extract error code from pymysql.Error"""
+        return err.args[0]
+    from pymysql.constants.ER import NO_SUCH_TABLE as ER_NO_SUCH_TABLE, TABLE_EXISTS_ERROR as ER_TABLE_EXISTS_ERROR
+except ImportError as e1:
+    try:
+        import mysql.connector as sql
+
+        def _errno(err):
+            """Extract error code from mysql.connector.Error"""
+            return err.errno
+        from mysql.connector.errorcode import ER_NO_SUCH_TABLE, ER_TABLE_EXISTS_ERROR
+    except ImportError as e:
+        logger.warning("Loading MySQL module without a supported package (either PyMySql or mysql-connector-python(-rf)). \
+            This will crash at runtime if MySQL functionality is used.")
 
 
 class MySqlTarget(luigi.Target):
@@ -74,8 +87,7 @@ class MySqlTarget(luigi.Target):
         self.create_marker_table()
 
         if connection is None:
-            connection = self.connect()
-            connection.autocommit = True  # if connection created here, we commit it here
+            connection = self.connect(autocommit=True)
 
         connection.cursor().execute(
             """INSERT INTO {marker_table} (update_id, target_table)
@@ -90,8 +102,7 @@ class MySqlTarget(luigi.Target):
 
     def exists(self, connection=None):
         if connection is None:
-            connection = self.connect()
-            connection.autocommit = True
+            connection = self.connect(autocommit=True)
         cursor = connection.cursor()
         try:
             cursor.execute("""SELECT 1 FROM {marker_table}
@@ -100,20 +111,20 @@ class MySqlTarget(luigi.Target):
                            (self.update_id,)
                            )
             row = cursor.fetchone()
-        except mysql.connector.Error as e:
-            if e.errno == errorcode.ER_NO_SUCH_TABLE:
+        except sql.Error as e:
+            if _errno(e) == ER_NO_SUCH_TABLE:
                 row = None
             else:
                 raise
         return row is not None
 
     def connect(self, autocommit=False):
-        connection = mysql.connector.connect(user=self.user,
-                                             password=self.password,
-                                             host=self.host,
-                                             port=self.port,
-                                             database=self.database,
-                                             autocommit=autocommit)
+        connection = sql.connect(user=self.user,
+                                 password=self.password,
+                                 host=self.host,
+                                 port=self.port,
+                                 database=self.database,
+                                 autocommit=autocommit)
         return connection
 
     def create_marker_table(self):
@@ -137,8 +148,8 @@ class MySqlTarget(luigi.Target):
                 """
                 .format(marker_table=self.marker_table)
             )
-        except mysql.connector.Error as e:
-            if e.errno == errorcode.ER_TABLE_EXISTS_ERROR:
+        except sql.Error as e:
+            if _errno(e) == ER_TABLE_EXISTS_ERROR:
                 pass
             else:
                 raise
