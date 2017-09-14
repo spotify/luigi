@@ -37,6 +37,7 @@ import sys
 import tempfile
 
 import luigi
+from ..target import FileSystemTarget
 
 logger = logging.getLogger('luigi-interface')
 
@@ -203,3 +204,55 @@ class ExternalPythonProgramTask(ExternalProgramTask):
             env.pop('PYTHONHOME', None)
 
         return env
+
+class FileSystemOutputExternalProgramTask(ExternalProgramTask):
+    '''
+
+    Alternative to :py:class:`ExternalProgramTask` but captures stdout
+    into the output of the task. Works with targets supporting
+    FileSystemOutput
+
+    '''
+
+    def getstdout(self):
+        outputTarget = self.output()
+        if outputTarget is None or not issubclass(outputTarget.__class__,FileSystemTarget):
+            raise ValueError('task output is not a FileSystemTarget')
+
+        return self.output().open('w')
+
+    def run(self):
+        args = list(map(str, self.program_args()))
+        stdout = self.getstdout()
+
+        logger.info('Running command: %s', ' '.join(args))
+        tmp_stdout, tmp_stderr = self.getstdout(), tempfile.TemporaryFile()
+        env = self.program_environment()
+        proc = subprocess.Popen(
+            args,
+            env=env,
+            stdout=tmp_stdout,
+            stderr=tmp_stderr
+        )
+
+        try:
+            with ExternalProgramRunContext(proc):
+                proc.wait()
+            success = proc.returncode == 0
+
+            stderr = self._clean_output_file(tmp_stderr)
+
+            if stderr:
+                if self.always_log_stderr or not success:
+                    logger.info('Program stderr:\n{}'.format(stderr))
+
+            if not success:
+                raise ExternalProgramRunError(
+                    'Program failed with return code={}:'.format(proc.returncode),
+                    args, env=env, stdout=stdout, stderr=stderr)
+
+        finally:
+            tmp_stderr.close()
+            tmp_stdout.close()
+
+
