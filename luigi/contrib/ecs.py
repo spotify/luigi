@@ -50,51 +50,38 @@ Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 
 """
 
-import time
+from botocore.exceptions import WaiterError
+import boto3
 import logging
 import luigi
 
 logger = logging.getLogger('luigi-interface')
-
-try:
-    import boto3
-    client = boto3.client('ecs')
-except ImportError:
-    logger.warning('boto3 is not installed. ECSTasks require boto3')
-
-POLL_TIME = 2
+client = boto3.client('ecs')
 
 
-def _get_task_statuses(task_ids):
-    """
-    Retrieve task statuses from ECS API
+def _track_tasks(cluster, task_ids, max_attempts, track_delay):
+    """Wait task until is STOPPED"""
 
-    Returns list of {RUNNING|PENDING|STOPPED} for each id in task_ids
-    """
-    response = client.describe_tasks(tasks=task_ids)
+    for state in ['running', 'stopped']:
+        waiter = client.get_waiter('tasks_{0}'.format(state))
 
-    # Error checking
-    if response['failures'] != []:
-        raise Exception('There were some failures:\n{0}'.format(
-            response['failures']))
-    status_code = response['ResponseMetadata']['HTTPStatusCode']
-    if status_code != 200:
-        msg = 'Task status request received status code {0}:\n{1}'
-        raise Exception(msg.format(status_code, response))
+        if max_attempts and state in max_attempts:
+            waiter.config.max_attempts = max_attempts[state]
+        if track_delay and state in track_delay:
+            waiter.config.delay = track_delay[state]
 
-    return [t['lastStatus'] for t in response['tasks']]
+        try:
+            logger.debug('Waiting for ECS tasks {0} to {1} on {2}'.format(','.join(task_ids), state, cluster))
+            waiter.wait(cluster=cluster, tasks=task_ids)
+        except WaiterError as e:
+            reason = str(e)
+            logger.info(reason)
+            if state == 'running' and 'Max attempts exceeded' in reason:
+                for task_id in task_ids:
+                    client.stop_task(cluster=cluster, task=task_ids, reason=reason)
+            raise e
 
-
-def _track_tasks(task_ids):
-    """Poll task status until STOPPED"""
-    while True:
-        statuses = _get_task_statuses(task_ids)
-        if all([status == 'STOPPED' for status in statuses]):
-            logger.info('ECS tasks {0} STOPPED'.format(','.join(task_ids)))
-            break
-        time.sleep(POLL_TIME)
-        logger.debug('ECS task status for tasks {0}: {1}'.format(
-            ','.join(task_ids), status))
+        logger.info('ECS tasks {0} {1}'.format(','.join(task_ids), state))
 
 
 class ECSTask(luigi.Task):
@@ -107,10 +94,9 @@ class ECSTask(luigi.Task):
     run a pre-registered ECS taskDefinition, OR register the task on the fly
     from a Python dict.
 
-    :param task_def_arn: pre-registered task definition ARN (Amazon Resource
-        Name), of the form::
+    :param task_family: pre-registered task definition family of the form::
 
-            arn:aws:ecs:<region>:<user_id>:task-definition/<family>:<tag>
+            <family>:<tag>
 
     :param task_def: dict describing task in taskDefinition JSON format, for
         example::
@@ -131,8 +117,12 @@ class ECSTask(luigi.Task):
 
     """
 
-    task_def_arn = luigi.Parameter(default=None)
     task_def = luigi.Parameter(default=None)
+    cluster = luigi.Parameter(default=None)
+    family = luigi.Parameter(default=None)
+
+    max_attempts = luigi.DictParameter(default={})
+    track_delay = luigi.DictParameter(default={})
 
     @property
     def ecs_task_ids(self):
@@ -144,31 +134,29 @@ class ECSTask(luigi.Task):
     def command(self):
         """
         Command passed to the containers
-
         Override to return list of dicts with keys 'name' and 'command',
         describing the container names and commands to pass to the container.
         Directly corresponds to the `overrides` parameter of runTask API. For
         example::
-
             [
                 {
                     'name': 'myContainer',
                     'command': ['/bin/sleep', '60']
                 }
             ]
-
         """
         pass
 
     def run(self):
-        if (not self.task_def and not self.task_def_arn) or \
-           (self.task_def and self.task_def_arn):
+        if (not self.task_def and not self.family) or \
+           (self.task_def and self.family):
             raise ValueError(('Either (but not both) a task_def (dict) or'
                               'task_def_arn (string) must be assigned'))
-        if not self.task_def_arn:
+        if not self.family:
             # Register the task and get assigned taskDefinition ID (arn)
             response = client.register_task_definition(**self.task_def)
-            self.task_def_arn = response['taskDefinition']['taskDefinitionArn']
+            self.family = response['taskDefinition']['taskDefinitionArn']
+            logger.info('ECS tasks registered')
 
         # Submit the task to AWS ECS and get assigned task ID
         # (list containing 1 string)
@@ -176,9 +164,20 @@ class ECSTask(luigi.Task):
             overrides = {'containerOverrides': self.command}
         else:
             overrides = {}
-        response = client.run_task(taskDefinition=self.task_def_arn,
+
+        response = client.run_task(cluster=self.cluster,
+                                   taskDefinition=self.family,
                                    overrides=overrides)
+        if response['failures']:
+            raise Exception(", ".join(["fail to run task {0} reason: {1}".format(failure['arn'], failure['reason'])
+                                       for failure in response['failures']]))
+
         self._task_ids = [task['taskArn'] for task in response['tasks']]
+        if all([task['lastStatus'] == 'PENDING' for task in response['tasks']]):
+            logger.info('ECS tasks {0} {1}'.format(','.join(self._task_ids), 'pending'))
 
         # Wait on task completion
-        _track_tasks(self._task_ids)
+        _track_tasks(self.cluster, self._task_ids, self.max_attempts, self.track_delay)
+
+if __name__ == '__main__':
+    luigi.run()
