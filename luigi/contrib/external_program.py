@@ -205,6 +205,7 @@ class ExternalPythonProgramTask(ExternalProgramTask):
 
         return env
 
+
 class FileSystemOutputExternalProgramTask(ExternalProgramTask):
     '''
 
@@ -216,7 +217,7 @@ class FileSystemOutputExternalProgramTask(ExternalProgramTask):
 
     def getstdout(self):
         outputTarget = self.output()
-        if outputTarget is None or not issubclass(outputTarget.__class__,FileSystemTarget):
+        if outputTarget is None or not issubclass(outputTarget.__class__, FileSystemTarget):
             raise ValueError('task output is not a FileSystemTarget')
 
         return self.output().open('w')
