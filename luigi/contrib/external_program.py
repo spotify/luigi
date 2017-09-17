@@ -255,5 +255,3 @@ class FileSystemOutputExternalProgramTask(ExternalProgramTask):
         finally:
             tmp_stderr.close()
             tmp_stdout.close()
-
-
