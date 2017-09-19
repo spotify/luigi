@@ -636,7 +636,7 @@ class Worker(object):
             )
         notifications.send_error_email(subject, error_message)
 
-    def add(self, task, multiprocess=False):
+    def add(self, task, multiprocess=False, processes=0):
         """
         Add a Task for the worker to check and possibly schedule and run.
 
@@ -647,7 +647,7 @@ class Worker(object):
         self.add_succeeded = True
         if multiprocess:
             queue = multiprocessing.Manager().Queue()
-            pool = multiprocessing.Pool()
+            pool = multiprocessing.Pool(processes=processes if processes > 0 else None)
         else:
             queue = DequeQueue()
             pool = SingleProcessPool()
