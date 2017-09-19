@@ -94,7 +94,7 @@ def _track_tasks(task_ids):
             break
         time.sleep(POLL_TIME)
         logger.debug('ECS task status for tasks {0}: {1}'.format(
-            ','.join(task_ids), status))
+            ','.join(task_ids), statuses))
 
 
 class ECSTask(luigi.Task):
