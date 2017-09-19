@@ -36,17 +36,19 @@ registered ``taskDefinition``.
 Requires:
 
 - boto3 package
-- Amazon AWS credentials discoverable by boto3 (e.g., by using ``aws configure``
-  from awscli_)
+- Amazon AWS credentials discoverable by boto3 (e.g., by using
+  ``aws configure`` from awscli_)
 - A running ECS cluster (see `ECS Get Started`_)
 
 Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 
 .. _`docker run`: https://docs.docker.com/reference/commandline/run
-.. _taskDefinition: http://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_defintions.html
+.. _taskDefinition:
+    http://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_defintions.html
 .. _`boto3-powered`: https://boto3.readthedocs.io
 .. _awscli: https://aws.amazon.com/cli
-.. _`ECS Get Started`: http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_GetStarted.html
+.. _`ECS Get Started`:
+    http://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_GetStarted.html
 
 """
 
@@ -65,36 +67,74 @@ except ImportError:
 POLL_TIME = 2
 
 
-def _get_task_statuses(task_ids):
+def _get_task_descriptions(cluster, task_ids):
     """
-    Retrieve task statuses from ECS API
+    Retrieve task descriptions from ECS API
 
     Returns list of {RUNNING|PENDING|STOPPED} for each id in task_ids
     """
-    response = client.describe_tasks(tasks=task_ids)
+    response = client.describe_tasks(cluster=cluster, tasks=task_ids)
 
     # Error checking
     if response['failures'] != []:
         raise Exception('There were some failures:\n{0}'.format(
             response['failures']))
+
     status_code = response['ResponseMetadata']['HTTPStatusCode']
     if status_code != 200:
         msg = 'Task status request received status code {0}:\n{1}'
         raise Exception(msg.format(status_code, response))
 
-    return [t['lastStatus'] for t in response['tasks']]
+    return response['tasks']
 
+def _get_task_statuses(tasks):
+    """
+    Returns list of {RUNNING|PENDING|STOPPED} for each task in tasks
 
-def _track_tasks(task_ids):
+    Args:
+        - tasks (list): list of ECS taskDescriptions
+    """
+    return [t['lastStatus'] for t in tasks]
+
+def _check_exit_codes(tasks, essential_containers):
+    """
+    Checks each essential task in tasks for a failure reason or a
+    non-zero exitCode
+
+    Args:
+        - tasks (list): list of ECS taskDescriptions
+        - essential_containers (list): list of essential container names
+
+    Raises:
+        - Exception: A failing essential task was found
+    """
+    dirty_exits = []
+    for t in tasks:
+        for container in t['containers']:
+            if container['name'] in essential_containers:
+                if container['lastStatus'] == 'STOPPED':
+                    # Check if container's command returned error
+                    # or if ECS had an error running the command
+                    if 'exitCode' in container and container['exitCode'] != 0 \
+                            or 'reason' in container:
+                        dirty_exits.append(container)
+
+    if len(dirty_exits):
+        raise Exception('Some containers had non-zero exit codes:\n{0}'.format(
+            dirty_exits))
+
+def _track_tasks(cluster, task_ids, essential_containers):
     """Poll task status until STOPPED"""
     while True:
-        statuses = _get_task_statuses(task_ids)
+        task_descriptions = _get_task_descriptions(cluster, task_ids)
+        statuses = _get_task_statuses(task_descriptions)
         if all([status == 'STOPPED' for status in statuses]):
+            _check_exit_codes(task_descriptions, essential_containers)
             logger.info('ECS tasks {0} STOPPED'.format(','.join(task_ids)))
             break
         time.sleep(POLL_TIME)
         logger.debug('ECS task status for tasks {0}: {1}'.format(
-            ','.join(task_ids), status))
+            ','.join(task_ids), statuses))
 
 
 class ECSTask(luigi.Task):
@@ -133,6 +173,7 @@ class ECSTask(luigi.Task):
 
     task_def_arn = luigi.Parameter(default=None)
     task_def = luigi.Parameter(default=None)
+    cluster = luigi.Parameter(default='default')
 
     @property
     def ecs_task_ids(self):
@@ -176,9 +217,21 @@ class ECSTask(luigi.Task):
             overrides = {'containerOverrides': self.command}
         else:
             overrides = {}
-        response = client.run_task(taskDefinition=self.task_def_arn,
-                                   overrides=overrides)
+        response = client.run_task(
+            cluster=self.cluster,
+            taskDefinition=self.task_def_arn,
+            overrides=overrides)
+
         self._task_ids = [task['taskArn'] for task in response['tasks']]
 
+        # Get essential container names to fail early on errors
+        task_definition = client.describe_task_definition(
+            taskDefinition=self.task_def_arn)
+        task_definition = task_definition['taskDefinition']
+        self._essential_containers = \
+            [cont['name']
+                for cont in task_definition['containerDefinitions']
+                if cont['essential']]
+
         # Wait on task completion
-        _track_tasks(self._task_ids)
+        _track_tasks(self.cluster, self._task_ids, self._essential_containers)
