@@ -27,7 +27,7 @@ To run the server as a daemon run:
 
 .. code-block:: console
 
-    $ luigid --background --pidfile <PATH_TO_PIDFILE> --logdir <PATH_TO_LOGDIR> --state_path <PATH_TO_STATEFILE>
+    $ luigid --background --pidfile <PATH_TO_PIDFILE> --logdir <PATH_TO_LOGDIR> --state-path <PATH_TO_STATEFILE>
 
 Note that this requires ``python-daemon``.
 By default, the server starts on AF_INET and AF_INET6 port ``8082``

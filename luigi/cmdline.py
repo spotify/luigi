@@ -19,7 +19,7 @@ def luigid(argv=sys.argv[1:]):
     parser.add_argument(u'--background', help=u'Run in background mode', action='store_true')
     parser.add_argument(u'--pidfile', help=u'Write pidfile')
     parser.add_argument(u'--logdir', help=u'log directory')
-    parser.add_argument(u'--state_path', help=u'Pickled state file')
+    parser.add_argument(u'--state-path', help=u'Pickled state file')
     parser.add_argument(u'--address', help=u'Listening interface')
     parser.add_argument(u'--unix-socket', help=u'Unix socket path')
     parser.add_argument(u'--port', default=8082, help=u'Listening port')
