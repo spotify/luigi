@@ -686,7 +686,7 @@ class BigQueryExtractTask(luigi.Task):
     Extracts (unloads) a table from BigQuery to GCS.
 
     This tasks requires the input to be exactly one BigQueryTarget while the
-    output should be one or more GCSTargets from luigi.contrib.gcs depening on
+    output should be one or more GCSTargets from luigi.contrib.gcs depending on
     the use of destinationUris property.
     """
     @property
