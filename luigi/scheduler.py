@@ -474,6 +474,12 @@ class SimpleTaskState(object):
     def get_active_tasks_by_status(self, *statuses):
         return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status]) for status in statuses)
 
+    def get_active_task_count_for_status(self, status):
+        if status:
+            return len(self._status_tasks[status])
+        else:
+            return len(self._tasks)
+
     def get_batch_running_tasks(self, batch_id):
         assert batch_id is not None
         return [
@@ -1335,7 +1341,13 @@ class Scheduler(object):
         """
         Query for a subset of tasks by status.
         """
+        if not search:
+            count_limit = max_shown_tasks or self._config.max_shown_tasks
+            pre_count = self._state.get_active_task_count_for_status(status)
+            if limit and pre_count > count_limit:
+                return {'num_tasks': -1 if upstream_status else pre_count}
         self.prune()
+
         result = {}
         upstream_status_table = {}  # used to memoize upstream status
         if search is None:
