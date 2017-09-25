@@ -117,7 +117,7 @@ class DockerTask(luigi.Task):
 
     @property
     def mount_tmp(self):
-        return False
+        return True
 
     def __init__(self, *args, **kwargs):
         '''
