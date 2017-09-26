@@ -19,7 +19,7 @@ In practice, implementing Target subclasses is rarely needed.
 Luigi comes with a toolbox of several useful Targets.
 In particular, :class:`~luigi.file.LocalTarget` and :class:`~luigi.contrib.hdfs.target.HdfsTarget`,
 but there is also support for other file systems:
-:class:`luigi.s3.S3Target`,
+:class:`luigi.contrib.s3.S3Target`,
 :class:`luigi.contrib.ssh.RemoteTarget`,
 :class:`luigi.contrib.ftp.RemoteTarget`,
 :class:`luigi.contrib.mysqldb.MySqlTarget`,

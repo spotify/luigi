@@ -111,7 +111,7 @@ class TaskProcess(multiprocessing.Process):
     Mainly for convenience since this is run in a separate process. """
 
     def __init__(self, task, worker_id, result_queue, status_reporter,
-                 use_multiprocessing=False, worker_timeout=0):
+                 use_multiprocessing=False, worker_timeout=0, check_unfulfilled_deps=True):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
@@ -121,15 +121,18 @@ class TaskProcess(multiprocessing.Process):
             worker_timeout = task.worker_timeout
         self.timeout_time = time.time() + worker_timeout if worker_timeout else None
         self.use_multiprocessing = use_multiprocessing or self.timeout_time is not None
+        self.check_unfulfilled_deps = check_unfulfilled_deps
 
     def _run_get_new_deps(self):
         self.task.set_tracking_url = self.status_reporter.update_tracking_url
         self.task.set_status_message = self.status_reporter.update_status
+        self.task.set_progress_percentage = self.status_reporter.update_progress_percentage
 
         task_gen = self.task.run()
 
         self.task.set_tracking_url = None
         self.task.set_status_message = None
+        self.task.set_progress_percentage = None
 
         if not isinstance(task_gen, types.GeneratorType):
             return None
@@ -168,7 +171,7 @@ class TaskProcess(multiprocessing.Process):
             # don't care about unfulfilled dependencies, because we are just
             # checking completeness of self.task so outputs of dependencies are
             # irrelevant.
-            if not _is_external(self.task):
+            if self.check_unfulfilled_deps and not _is_external(self.task):
                 missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
                 if missing:
                     deps = 'dependency' if len(missing) == 1 else 'dependencies'
@@ -267,6 +270,9 @@ class TaskStatusReporter(object):
 
     def update_status(self, message):
         self._scheduler.set_task_status_message(self._task_id, message)
+
+    def update_progress_percentage(self, percentage):
+        self._scheduler.set_task_progress_percentage(self._task_id, percentage)
 
 
 class SingleProcessPool(object):
@@ -367,6 +373,9 @@ class worker(Config):
     no_install_shutdown_handler = BoolParameter(default=False,
                                                 description='If true, the SIGUSR1 shutdown handler will'
                                                 'NOT be install on the worker')
+    check_unfulfilled_deps = BoolParameter(default=True,
+                                           description='If true, check for completeness of '
+                                           'dependencies before running a task')
 
 
 class KeepAliveThread(threading.Thread):
@@ -568,9 +577,9 @@ class Worker(object):
                 owners=task._owner_list(),
             )
         except Exception:
-            raise
             formatted_traceback = traceback.format_exc()
             self._email_unexpected_error(task, formatted_traceback)
+            raise
 
     def _email_complete_error(self, task, formatted_traceback):
         self._announce_scheduling_failure(task, formatted_traceback)
@@ -627,7 +636,7 @@ class Worker(object):
             )
         notifications.send_error_email(subject, error_message)
 
-    def add(self, task, multiprocess=False):
+    def add(self, task, multiprocess=False, processes=0):
         """
         Add a Task for the worker to check and possibly schedule and run.
 
@@ -638,7 +647,7 @@ class Worker(object):
         self.add_succeeded = True
         if multiprocess:
             queue = multiprocessing.Manager().Queue()
-            pool = multiprocessing.Pool()
+            pool = multiprocessing.Pool(processes=processes if processes > 0 else None)
         else:
             queue = DequeQueue()
             pool = SingleProcessPool()
@@ -892,6 +901,11 @@ class Worker(object):
         )
 
     def _run_task(self, task_id):
+        if task_id in self._running_tasks:
+            logger.debug('Got already running task id {} from scheduler, taking a break'.format(task_id))
+            next(self._sleeper())
+            return
+
         task = self._scheduled_tasks[task_id]
 
         task_process = self._create_task_process(task)
@@ -910,7 +924,8 @@ class Worker(object):
         return TaskProcess(
             task, self._id, self._task_result_queue, reporter,
             use_multiprocessing=bool(self.worker_processes > 1),
-            worker_timeout=self._config.timeout
+            worker_timeout=self._config.timeout,
+            check_unfulfilled_deps=self._config.check_unfulfilled_deps,
         )
 
     def _purge_children(self):

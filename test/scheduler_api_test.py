@@ -102,6 +102,14 @@ class SchedulerApiTest(unittest.TestCase):
         self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'C')
         self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'B')
 
+    def test_status_wont_override(self):
+        # Worker X is running A
+        # Worker Y wants to override the status to UNKNOWN (e.g. complete is throwing an exception)
+        self.sch.add_task(worker='X', task_id='A')
+        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
+        self.sch.add_task(worker='Y', task_id='A', status=UNKNOWN)
+        self.assertEqual({'A'}, set(self.sch.task_list(RUNNING, '').keys()))
+
     def test_retry(self):
         # Try to build A but fails, will retry after 100s
         self.setTime(0)
@@ -481,6 +489,12 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.set_task_status_message('A_1_2', 'test message')
         for task_id in ('A_1', 'A_2', 'A_1_2'):
             self.assertEqual('test message', self.sch.get_task_status_message(task_id)['statusMessage'])
+
+    def test_batch_update_progress(self):
+        self._start_simple_batch()
+        self.sch.set_task_progress_percentage('A_1_2', 30)
+        for task_id in ('A_1', 'A_2', 'A_1_2'):
+            self.assertEqual(30, self.sch.get_task_progress_percentage(task_id)['progressPercentage'])
 
     def test_batch_tracking_url(self):
         self._start_simple_batch()
@@ -898,6 +912,13 @@ class SchedulerApiTest(unittest.TestCase):
         }
         self.assertEqual(expected, self.sch.count_pending(WORKER))
 
+    def test_count_pending_on_disabled_worker(self):
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.add_task(worker='other', task_id='B')  # needed to trigger right get_tasks code path
+        self.assertEqual(1, self.sch.count_pending(WORKER)['n_pending_tasks'])
+        self.sch.disable_worker(WORKER)
+        self.assertEqual(0, self.sch.count_pending(WORKER)['n_pending_tasks'])
+
     def test_count_pending_do_not_count_upstream_disabled(self):
         self.sch.add_task(worker=WORKER, task_id='A', status=PENDING)
         self.sch.add_task(worker=WORKER, task_id='B', status=DISABLED)
@@ -1125,6 +1146,37 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.update_resources(R=1)
 
         self.assertEqual('C', self.sch.get_work(worker='Y')['task_id'])
+
+    def validate_resource_count(self, name, count):
+        counts = {resource['name']: resource['num_total'] for resource in self.sch.resource_list()}
+        self.assertEqual(count, counts.get(name))
+
+    def test_update_new_resource(self):
+        self.validate_resource_count('new_resource', None)  # new_resource is not in the scheduler
+        self.sch.update_resource('new_resource', 1)
+        self.validate_resource_count('new_resource', 1)
+
+    def test_update_existing_resource(self):
+        self.sch.update_resource('new_resource', 1)
+        self.sch.update_resource('new_resource', 2)
+        self.validate_resource_count('new_resource', 2)
+
+    def test_disable_existing_resource(self):
+        self.sch.update_resource('new_resource', 1)
+        self.sch.update_resource('new_resource', 0)
+        self.validate_resource_count('new_resource', 0)
+
+    def test_attempt_to_set_resource_to_negative_value(self):
+        self.sch.update_resource('new_resource', 1)
+        self.assertFalse(self.sch.update_resource('new_resource', -1))
+        self.validate_resource_count('new_resource', 1)
+
+    def test_attempt_to_set_resource_to_non_integer(self):
+        self.sch.update_resource('new_resource', 1)
+        self.assertFalse(self.sch.update_resource('new_resource', 1.3))
+        self.assertFalse(self.sch.update_resource('new_resource', '1'))
+        self.assertFalse(self.sch.update_resource('new_resource', None))
+        self.validate_resource_count('new_resource', 1)
 
     def test_priority_update_with_pruning(self):
         self.setTime(0)

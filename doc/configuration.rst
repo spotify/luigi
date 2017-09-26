@@ -155,6 +155,10 @@ parallel-scheduling
   parallel using multiprocessing. This can significantly speed up
   scheduling, but requires that all tasks can be pickled.
 
+parallel-scheduling-processes
+  The number of processes to use for parallel scheduling. If not specified
+  the default number of processes will be the total number of CPUs available.
+
 rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0
@@ -253,6 +257,17 @@ send-failure-email
   failures. If set to false, workers will only send e-mails on
   framework errors during scheduling and all other e-mail must be
   handled by the scheduler.
+  Defaults to true.
+
+check_unfulfilled_deps
+  If true, the worker checks for completeness of dependencies before running a
+  task. In case unfulfilled dependencies are detected, an exception is raised
+  and the task will not run. This mechanism is useful to detect situations
+  where tasks do not create their outputs properly, or when targets were
+  removed after the dependency tree was built. It is recommended to disable
+  this feature only when the completeness checks are known to be bottlenecks,
+  e.g. when the ``exists()`` calls of the dependencies' outputs are
+  resource-intensive.
   Defaults to true.
 
 

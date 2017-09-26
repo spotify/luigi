@@ -25,7 +25,9 @@ function visualiserApp(luigi) {
      */
     function updateVisType(newVisType) {
         $('#toggleVisButtons label').removeClass('active');
-        $('#toggleVisButtons input[value="' + newVisType + '"]').parent().addClass('active');
+        var visTypeInput = $('#toggleVisButtons input[value="' + newVisType + '"]');
+        visTypeInput.parent().addClass('active');
+        visTypeInput.prop('checked', true);
     }
 
     function loadTemplates() {
@@ -72,7 +74,8 @@ function visualiserApp(luigi) {
             graph: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DONE"),
             error: task.status == "FAILED",
             re_enable: task.status == "DISABLED" && task.re_enable_able,
-            statusMessage: task.status_message
+            statusMessage: task.status_message,
+            progressPercentage: task.progress_percentage
         };
     }
 
@@ -295,12 +298,33 @@ function visualiserApp(luigi) {
 
     function showStatusMessage(data) {
         $("#statusMessageModal").empty().append(renderTemplate("statusMessageTemplate", data));
-        $("#statusMessageModal .refresh").on('click', function() {
-            luigi.getTaskStatusMessage(data.taskId, function(data) {
-                $("#statusMessageModal pre").html(data.statusMessage);
-            });
-        }).trigger('click');
         $("#statusMessageModal").modal({});
+        var refreshInterval = setInterval(function() {
+                if ($("#statusMessageModal").is(":hidden"))
+                    clearInterval(refreshInterval)
+                else {
+                    luigi.getTaskStatusMessage(data.taskId, function(data) {
+                        if (data.statusMessage === null)
+                            $("#statusMessageModal pre").hide()
+                        else {
+                            $("#statusMessageModal pre").html(data.statusMessage).show();
+                        }
+                    });
+                    luigi.getTaskProgressPercentage(data.taskId, function(data) {
+                        if (data.progressPercentage === null)
+                            $("#statusMessageModal .progress").hide()
+                        else {
+                            $("#statusMessageModal .progress").show()
+                            $("#statusMessageModal .progress-bar")
+                                .attr('aria-valuenow', data.progressPercentage)
+                                .text(data.progressPercentage + '%')
+                                .css({'width': data.progressPercentage + '%'});
+                        }
+                    });
+                }
+            },
+            500
+        );
     }
 
     function preProcessGraph(dependencyGraph) {
@@ -461,7 +485,7 @@ function visualiserApp(luigi) {
             }
 
             if (fragmentQuery.order) {
-                dt.order = [fragmentQuery.order.split(',')];
+                dt.order([fragmentQuery.order.split(',')]);
             }
             dt.draw();
             switchTab("taskList");
@@ -897,6 +921,42 @@ function visualiserApp(luigi) {
         });
     }
 
+    /**
+     * Updates the number of units of a given resource available in the scheduler
+     * @param resource: the name of the resource
+     * @param n: the number of units to set the resource limit to
+     */
+    function updateResourceCount(resource, n) {
+        var progressBar = $('#' + resource + '-resource-box .progress-bar');
+        var used = /(\S+)\//.exec(progressBar.text())[1];
+        nVal = parseInt(n);
+        if (isNaN(nVal) || nVal < 0) {
+            return;
+        }
+        usedVal = parseInt(used);
+        width = Math.floor(100 * usedVal / nVal);
+        if (width < 0) {
+            width = 0;
+        }
+        if (width > 100) {
+            width = 100;
+        }
+        luigi.updateResource(resource, n, function() {
+            progressBar.text(usedVal + '/' + nVal);
+            progressBar.attr('style', 'width: ' + width + '%');
+        });
+    }
+
+    /**
+     * Returns the current units of a resource used
+     * @param resource: the name of the resource
+     */
+    function currentResourceCount(resource) {
+        var progressBar = $('#' + resource + '-resource-box .progress-bar');
+        var count = /\/(\S+)/.exec(progressBar.text())[1];
+        return parseInt(count);
+    }
+
     function changeState(key, value) {
         var fragmentQuery = URI.parseQuery(location.hash.replace('#', ''));
         if (value) {
@@ -1226,6 +1286,43 @@ function visualiserApp(luigi) {
             $event.preventDefault();
         });
 
+        $('#resourceList').on('click', '.btn-increment-resources', function($event) {
+            $event.preventDefault();
+            var resource = $(this).data('resource');
+            var count = currentResourceCount(resource);
+            updateResourceCount(resource, count + 1);
+        });
+
+        $('#resourceList').on('click', '.btn-decrement-resources', function($event) {
+            $event.preventDefault();
+            var resource = $(this).data('resource');
+            var count = currentResourceCount(resource);
+            updateResourceCount(resource, count - 1);
+        });
+
+        $('#resourceList').on('show.bs.modal', '#setResourcesModal', function($event) {
+            $('#setResourcesButton').data('resource', $($event.relatedTarget).data('resource'));
+            var $input = $(this).find('#setResourcesInput').on('keypress', function($event) {
+                if (event.keyCode == 13) {
+                    $('#resourceList').find('#setResourcesButton').trigger('click');
+                }
+                $event.stopPropagation();
+            });
+            setTimeout(function() {
+                $input.focus();
+            }.bind(this), 600);
+        });
+
+        $('#resourceList').on('hidden.bs.modal', '#setResourcesModal', function() {
+            $(this).find('#setResourcesInput').off('keypress').val('');
+        });
+
+        $('#resourceList').on('click', '#setResourcesButton', function($event) {
+            var resource = $(this).data('resource');
+            var n = parseInt($("#setResourcesInput").val());
+            updateResourceCount(resource, n);
+            $event.preventDefault();
+        });
         $('.js-nav-link').click(function(e) {
             // User followed tab from navigation link. Copy state from fields to hash.
             e.preventDefault();
@@ -1254,7 +1351,7 @@ function visualiserApp(luigi) {
                 }
 
                 if (currentFilter.taskCategory.length > 0) {
-                    state.statuses = currentFilter.taskCategory;
+                    state.statuses = JSON.stringify(currentFilter.taskCategory);
                 } else {
                     delete state.statuses;
                 }

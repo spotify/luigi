@@ -40,8 +40,8 @@
 from __future__ import print_function
 import luigi.interface
 from luigi.contrib.ssh import RemoteTarget
-from luigi.postgres import PostgresTarget
-from luigi.s3 import S3Target
+from luigi.contrib.postgres import PostgresTarget
+from luigi.contrib.s3 import S3Target
 from luigi.target import FileSystemTarget
 from luigi.task import flatten
 from luigi import parameter
