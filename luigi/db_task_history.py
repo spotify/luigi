@@ -256,4 +256,7 @@ def _upgrade_schema(engine):
         conn.execute('CREATE INDEX ix_task_id ON tasks (task_id)')
 
     # Upgrade 2. Alter value column to be TEXT, note that this is idempotent so no if-guard
-    conn.execute('ALTER TABLE task_parameters ALTER COLUMN value TYPE TEXT')
+    if engine.dialect == 'mysqldb':
+        conn.execute('ALTER TABLE task_parameters MODIFY COLUMN value value TEXT')
+    elif engine.dialect == 'psycopg2':
+        conn.execute('ALTER TABLE task_parameters ALTER COLUMN value TYPE TEXT')
