@@ -310,8 +310,8 @@ class TestRedshiftAutocommitQuery(unittest.TestCase):
         # The mocked connection cursor passed to
         # RedshiftUnloadTask.
         mock_connect = (mock_redshift_target.return_value
-                                           .connect
-                                           .return_value)
+                                            .connect
+                                            .return_value)
 
         # Check the Unload query.
         self.assertTrue(mock_connect.autocommit)

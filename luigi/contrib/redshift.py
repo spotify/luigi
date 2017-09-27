@@ -639,7 +639,7 @@ class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
     Template task for running UNLOAD on an Amazon Redshift database
 
     Usage:
-    Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes. 
+    Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes.
     Optionally, override the `autocommit` atribute to run the query in autocommit mode - this is necessary to run VACUUM for example.
     Override the `run` method if your use case requires some action with the query result.
     Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
