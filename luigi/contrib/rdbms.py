@@ -182,7 +182,7 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
     def query(self):
         return None
 
-    @abc.abstractproperty
+    @property
     def autocommit(self):
         return False
 
