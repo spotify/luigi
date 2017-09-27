@@ -349,6 +349,7 @@ class PostgresQuery(rdbms.Query):
 
     Usage:
     Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes.
+    Optionally one can override the `autocommit` attribute to put the connection for the query in autocommit mode.
 
     Override the `run` method if your use case requires some action with the query result.
 
@@ -359,6 +360,7 @@ class PostgresQuery(rdbms.Query):
 
     def run(self):
         connection = self.output().connect()
+        connection.autocommit = self.autocommit
         cursor = connection.cursor()
         sql = self.query
 
