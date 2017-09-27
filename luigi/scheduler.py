@@ -1007,10 +1007,12 @@ class Scheduler(object):
             # Return a list of currently running tasks to the client,
             # makes it easier to troubleshoot
             other_worker = self._state.get_worker(task.worker_running)
-            if other_worker is not None:
+            if other_worker is not None and other_worker.id is not None:
                 more_info = {'task_id': task.id, 'worker': str(other_worker)}
                 more_info.update(other_worker.info)
                 running_tasks.append(more_info)
+            else:
+                logger.debug('Scheduler.count_pending: other_workder.id is None')
 
         for task in worker.get_tasks(self._state, PENDING, FAILED):
             if self._upstream_status(task.id, upstream_status_table) == UPSTREAM_DISABLED:

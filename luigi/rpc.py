@@ -82,7 +82,7 @@ class RequestsFetcher(object):
         self.session = session
 
     def fetch(self, full_url, body, timeout):
-        resp = self.session.get(full_url, data=body, timeout=timeout)
+        resp = self.session.get(full_url, params=body, timeout=timeout)
         resp.raise_for_status()
         return resp.text
 
