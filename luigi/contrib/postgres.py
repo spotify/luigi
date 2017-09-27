@@ -348,7 +348,8 @@ class PostgresQuery(rdbms.Query):
     Template task for querying a Postgres compatible database
 
     Usage:
-    Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes. Optionally one can override the `autocommit` attribute to put the connection for the query in autocommit mode.
+    Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes. 
+    Optionally one can override the `autocommit` attribute to put the connection for the query in autocommit mode.
 
     Override the `run` method if your use case requires some action with the query result.
 
