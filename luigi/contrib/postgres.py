@@ -360,8 +360,7 @@ class PostgresQuery(rdbms.Query):
 
     def run(self):
         connection = self.output().connect()
-        if self.autocommit:
-            connection.autocommit=self.autocommit
+        connection.autocommit=self.autocommit
         cursor = connection.cursor()
         sql = self.query
 
