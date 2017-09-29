@@ -155,6 +155,10 @@ parallel-scheduling
   parallel using multiprocessing. This can significantly speed up
   scheduling, but requires that all tasks can be pickled.
 
+parallel-scheduling-processes
+  The number of processes to use for parallel scheduling. If not specified
+  the default number of processes will be the total number of CPUs available.
+
 rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0

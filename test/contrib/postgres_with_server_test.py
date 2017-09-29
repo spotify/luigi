@@ -21,7 +21,7 @@ from nose.plugins.attrib import attr
 
 import luigi
 import luigi.notifications
-from luigi import postgres
+from luigi.contrib import postgres
 
 """
 Typical use cases that should be tested:

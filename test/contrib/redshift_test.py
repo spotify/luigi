@@ -15,7 +15,9 @@
 import luigi
 import luigi.contrib.redshift
 import mock
+from helpers import with_config
 
+import os
 import unittest
 
 
@@ -73,6 +75,26 @@ class DummyS3CopyToTempTable(DummyS3CopyToTableKey):
     prune_table = 'stage_dummy_table'
 
     queries = ["insert into dummy_table select * from stage_dummy_table;"]
+
+
+class TestInternalCredentials(unittest.TestCase, DummyS3CopyToTableKey):
+    def test_from_property(self):
+        self.assertEqual(self.aws_access_key_id, AWS_ACCESS_KEY)
+        self.assertEqual(self.aws_secret_access_key, AWS_SECRET_KEY)
+
+
+class TestExternalCredentials(unittest.TestCase, DummyS3CopyToTableBase):
+    @mock.patch.dict(os.environ, {"AWS_ACCESS_KEY_ID": "env_key",
+                                  "AWS_SECRET_ACCESS_KEY": "env_secret"})
+    def test_from_env(self):
+        self.assertEqual(self.aws_access_key_id, "env_key")
+        self.assertEqual(self.aws_secret_access_key, "env_secret")
+
+    @with_config({"redshift": {"aws_access_key_id": "config_key",
+                               "aws_secret_access_key": "config_secret"}})
+    def test_from_config(self):
+        self.assertEqual(self.aws_access_key_id, "config_key")
+        self.assertEqual(self.aws_secret_access_key, "config_secret")
 
 
 class TestS3CopyToTable(unittest.TestCase):
@@ -262,3 +284,34 @@ class TestRedshiftUnloadTask(unittest.TestCase):
             "credentials 'aws_access_key_id=AWS_ACCESS_KEY;aws_secret_access_key=AWS_SECRET_KEY' "
             "DELIMITER ',' ADDQUOTES GZIP ALLOWOVERWRITE PARALLEL OFF;"
         )
+
+
+class DummyRedshiftAutocommitQuery(luigi.contrib.redshift.RedshiftQuery):
+    # Class attributes taken from `DummyPostgresImporter` in
+    # `../postgres_test.py`.
+    host = 'dummy_host'
+    database = 'dummy_database'
+    user = 'dummy_user'
+    password = 'dummy_password'
+    table = luigi.Parameter(default='dummy_table')
+    autocommit = True
+
+    def query(self):
+        return "SELECT 'a' as col_a, current_date as col_b"
+
+
+class TestRedshiftAutocommitQuery(unittest.TestCase):
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_redshift_autocommit_query(self, mock_redshift_target):
+
+        task = DummyRedshiftAutocommitQuery()
+        task.run()
+
+        # The mocked connection cursor passed to
+        # RedshiftUnloadTask.
+        mock_connect = (mock_redshift_target.return_value
+                                            .connect
+                                            .return_value)
+
+        # Check the Unload query.
+        self.assertTrue(mock_connect.autocommit)

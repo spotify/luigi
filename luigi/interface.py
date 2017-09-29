@@ -122,6 +122,10 @@ class core(task.Config):
     parallel_scheduling = parameter.BoolParameter(
         default=False,
         description='Use multiprocessing to do scheduling in parallel.')
+    parallel_scheduling_processes = parameter.IntParameter(
+        default=0,
+        description='The number of processes to use for scheduling in parallel.'
+                    ' By default the number of available CPUs will be used')
     assistant = parameter.BoolParameter(
         default=False,
         description='Run any task from the scheduler.')
@@ -198,7 +202,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     logger = logging.getLogger('luigi-interface')
     with worker:
         for t in tasks:
-            success &= worker.add(t, env_params.parallel_scheduling)
+            success &= worker.add(t, env_params.parallel_scheduling, env_params.parallel_scheduling_processes)
         logger.info('Done scheduling tasks')
         success &= worker.run()
     logger.info(execution_summary.summary(worker))

@@ -162,9 +162,6 @@ class PostgresTarget(luigi.Target):
                 (self.update_id, self.table,
                  datetime.datetime.now()))
 
-        # make sure update is properly marked
-        assert self.exists(connection)
-
     def exists(self, connection=None):
         if connection is None:
             connection = self.connect()
@@ -207,19 +204,25 @@ class PostgresTarget(luigi.Target):
         connection.autocommit = True
         cursor = connection.cursor()
         if self.use_db_timestamps:
-            sql = """ CREATE TABLE IF NOT EXISTS {marker_table} (
+            sql = """ CREATE TABLE {marker_table} (
                       update_id TEXT PRIMARY KEY,
                       target_table TEXT,
                       inserted TIMESTAMP DEFAULT NOW())
                   """.format(marker_table=self.marker_table)
         else:
-            sql = """ CREATE TABLE IF NOT EXISTS {marker_table} (
+            sql = """ CREATE TABLE {marker_table} (
                       update_id TEXT PRIMARY KEY,
                       target_table TEXT,
                       inserted TIMESTAMP);
                   """.format(marker_table=self.marker_table)
 
-        cursor.execute(sql)
+        try:
+            cursor.execute(sql)
+        except psycopg2.ProgrammingError as e:
+            if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
+                pass
+            else:
+                raise
         connection.close()
 
     def open(self, mode):
@@ -346,6 +349,7 @@ class PostgresQuery(rdbms.Query):
 
     Usage:
     Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes.
+    Optionally one can override the `autocommit` attribute to put the connection for the query in autocommit mode.
 
     Override the `run` method if your use case requires some action with the query result.
 
@@ -356,6 +360,7 @@ class PostgresQuery(rdbms.Query):
 
     def run(self):
         connection = self.output().connect()
+        connection.autocommit = self.autocommit
         cursor = connection.cursor()
         sql = self.query
 
