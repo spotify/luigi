@@ -180,16 +180,12 @@ class TaskProcess(multiprocessing.Process):
             t0 = time.time()
             status = None
 
-            if _is_external(self.task):
-                # External task
-                # TODO(erikbern): We should check for task completeness after non-external tasks too!
-                # This will resolve #814 and make things a lot more consistent
-                if self.task.complete():
-                    status = DONE
-                else:
-                    status = FAILED
-                    expl = 'Task is an external data dependency ' \
-                        'and data does not exist (yet?).'
+            if self.task.complete():
+                status = DONE
+            elif _is_external(self.task):
+                status = FAILED
+                expl = 'Task is an external data dependency ' \
+                       'and data does not exist (yet?).'
             else:
                 new_deps = self._run_get_new_deps()
                 status = DONE if not new_deps else PENDING
@@ -651,21 +647,20 @@ class Worker(object):
             queue = DequeQueue()
             pool = SingleProcessPool()
         self._validate_task(task)
-        pool.apply_async(check_complete, [task, queue])
+        queue.put(task)
 
         # we track queue size ourselves because len(queue) won't work for multiprocessing
         queue_size = 1
         try:
             seen = {task.task_id}
             while queue_size:
-                current = queue.get()
+                item = queue.get()
                 queue_size -= 1
-                item, is_complete = current
-                for next in self._add(item, is_complete):
-                    if next.task_id not in seen:
-                        self._validate_task(next)
-                        seen.add(next.task_id)
-                        pool.apply_async(check_complete, [next, queue])
+                for dep in self._add(item):
+                    if dep.task_id not in seen:
+                        self._validate_task(dep)
+                        seen.add(dep.task_id)
+                        queue.put(dep)
                         queue_size += 1
         except (KeyboardInterrupt, TaskException):
             raise
@@ -695,7 +690,7 @@ class Worker(object):
                 )
             self._batch_families_sent.add(family)
 
-    def _add(self, task, is_complete):
+    def _add(self, task, is_complete=False):
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
             logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task, self._config.task_limit)
             deps = None
