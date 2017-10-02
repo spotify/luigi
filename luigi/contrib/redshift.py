@@ -334,16 +334,30 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         If both key-based and role-based credentials are provided, role-based will be used.
         """
         logger.info("Inserting file: %s", f)
-        cursor.execute("""
-         COPY {table} from '{source}'
-         CREDENTIALS '{creds}'
-         {options}
-         ;""".format(
-            table=self.table,
-            source=f,
-            creds=self._credentials(),
-            options=self.copy_options)
-        )
+        if len(self.columns)>0:
+            colnames = ",".join([x[0] for x in self.columns])
+            cursor.execute("""
+             COPY {table} ({colnames}) from '{source}'
+             CREDENTIALS '{creds}'
+             {options}
+             ;""".format(
+                table=self.table,
+                source=f,
+                creds=self._credentials(),
+                options=self.copy_options,
+                colnames=colnames)
+            )
+        else:
+            cursor.execute("""
+             COPY {table} from '{source}'
+             CREDENTIALS '{creds}'
+             {options}
+             ;""".format(
+                table=self.table,
+                source=f,
+                creds=self._credentials(),
+                options=self.copy_options)
+            )
 
     def output(self):
         """
