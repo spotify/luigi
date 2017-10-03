@@ -25,7 +25,7 @@ from helpers import with_config, unittest
 
 from boto.exception import S3ResponseError, S3CopyError
 from boto.s3 import key
-from mock import Mock, DEFAULT
+from mock import Mock, DEFAULT, patch
 from moto import mock_s3
 from moto import mock_sts
 from luigi import configuration
@@ -266,6 +266,20 @@ class TestS3Client(unittest.TestCase):
             InvalidDeleteException,
             lambda: s3_client.remove('s3://mybucket/removemedir', recursive=False)
         )
+
+    @patch('boto.s3.bucket.Bucket.delete_key')
+    def test_remove_retries(self, delete_key):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+
+        error = S3ResponseError(500, "Failure!")
+        error.error_code = 500
+        delete_key.side_effect = [error, error, 'somekey']
+
+        file_path = 's3://mybucket/500error/file'
+        s3_client.put(self.tempFilePath, file_path)
+        # Should fail first two times and succeed on third
+        self.assertTrue(lambda: s3_client.remove(file_path, number_of_retries=3, retry_interval_seconds=0))
 
     def test_copy(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)

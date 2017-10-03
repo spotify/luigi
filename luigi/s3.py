@@ -26,13 +26,17 @@ import logging
 import os
 import os.path
 import sys
+
+from boto.exception import S3ResponseError
 from retrying import retry
 from time import sleep
+
 try:
     from urlparse import urlsplit
 except ImportError:
     from urllib.parse import urlsplit
 import warnings
+
 try:
     from ConfigParser import NoSectionError
 except ImportError:
@@ -55,7 +59,6 @@ try:
 except ImportError:
     logger.warning("Loading s3 module without boto installed. Will crash at "
                    "runtime if s3 functionality is used.")
-
 
 # two different ways of marking a directory
 # with a suffix in S3
@@ -139,50 +142,68 @@ class S3Client(FileSystem):
         logger.debug('Path %s does not exist', path)
         return False
 
-    def remove(self, path, recursive=True):
+    def remove(self, path, recursive=True, number_of_retries=1, attempt=1, retry_interval_seconds=2):
         """
         Remove a file or directory from S3.
         """
-        if not self.exists(path):
-            logger.debug('Could not delete %s; path does not exist', path)
-            return False
+        try:
+            if not self.exists(path):
+                logger.debug('Could not delete %s; path does not exist', path)
+                return False
 
-        (bucket, key) = self._path_to_bucket_and_key(path)
+            (bucket, key) = self._path_to_bucket_and_key(path)
 
-        # root
-        if self._is_root(key):
-            raise InvalidDeleteException(
-                'Cannot delete root of bucket at path %s' % path)
+            # root
+            if self._is_root(key):
+                raise InvalidDeleteException(
+                    'Cannot delete root of bucket at path %s' % path)
 
-        # grab and validate the bucket
-        s3_bucket = self.s3.get_bucket(bucket, validate=True)
+            # grab and validate the bucket
+            s3_bucket = self.s3.get_bucket(bucket, validate=True)
 
-        # file
-        s3_key = s3_bucket.get_key(key)
-        if s3_key:
-            s3_bucket.delete_key(s3_key)
-            logger.debug('Deleting %s from bucket %s', key, bucket)
-            return True
+            # file
+            s3_key = s3_bucket.get_key(key)
+            if s3_key:
+                s3_bucket.delete_key(s3_key)
+                logger.debug('Deleting %s from bucket %s', key, bucket)
+                return True
 
-        if self.is_dir(path) and not recursive:
-            raise InvalidDeleteException(
-                'Path %s is a directory. Must use recursive delete' % path)
+            if self.is_dir(path) and not recursive:
+                raise InvalidDeleteException(
+                    'Path %s is a directory. Must use recursive delete' % path)
 
-        delete_key_list = [
-            k for k in s3_bucket.list(self._add_path_delimiter(key))]
+            delete_key_list = [
+                k for k in s3_bucket.list(self._add_path_delimiter(key))]
 
-        # delete the directory marker file if it exists
-        s3_dir_with_suffix_key = s3_bucket.get_key(key + S3_DIRECTORY_MARKER_SUFFIX_0)
-        if s3_dir_with_suffix_key:
-            delete_key_list.append(s3_dir_with_suffix_key)
+            # delete the directory marker file if it exists
+            s3_dir_with_suffix_key = s3_bucket.get_key(key + S3_DIRECTORY_MARKER_SUFFIX_0)
+            if s3_dir_with_suffix_key:
+                delete_key_list.append(s3_dir_with_suffix_key)
 
-        if len(delete_key_list) > 0:
-            for k in delete_key_list:
-                logger.debug('Deleting %s from bucket %s', k, bucket)
-            s3_bucket.delete_keys(delete_key_list)
-            return True
+            if len(delete_key_list) > 0:
+                for k in delete_key_list:
+                    logger.debug('Deleting %s from bucket %s', k, bucket)
+                s3_bucket.delete_keys(delete_key_list)
+                return True
 
-        return False
+            else:
+                return False
+
+        except S3ResponseError as e:
+            if e.error_code >= 500:
+                logger.warn("Failed to delete file: %s due to exception. Attempt %d out of %d."
+                            % (path, attempt, number_of_retries), exc_info=True)
+                if attempt < number_of_retries:
+                    logger.info("Sleeping for %d seconds until next retry." % retry_interval_seconds)
+                    sleep(retry_interval_seconds)
+                    self.remove(path, recursive, number_of_retries, attempt + 1,
+                                min(attempt * retry_interval_seconds, 5 * retry_interval_seconds))
+                else:
+                    logger.error("Deletion of file %s failed after %d attempts, no longer retrying."
+                                 % (path, number_of_retries))
+                    raise e
+            else:
+                raise e
 
     def get_key(self, path):
         (bucket, key) = self._path_to_bucket_and_key(path)
