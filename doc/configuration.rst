@@ -51,7 +51,7 @@ it in the configuration:
 Configuration classes
 *********************
 
-Using the :ref:`ParamConfigIngestion` method. We derive the
+Using the :ref:`ParamConfigIngestion` method, we derive the
 conventional way to do global configuration. Imagine this configuration.
 
 .. code:: ini
