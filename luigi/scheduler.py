@@ -908,6 +908,26 @@ class Scheduler(object):
             self._state.get_worker(worker_id).tasks.add(task)
             task.runnable = runnable
 
+        # TODO: Replace the dict interface with serializable task object.
+        return {
+            'task': {
+                'task_id':           task.id,
+                'status':       task.status,
+                'runnable':     task.runnable,
+                'deps':         list(task.deps),
+                'expl':         task.expl,
+                'resources':    task.resources,
+                'priority':     task.priority,
+                'family':       task.family,
+                'module':       task.module,
+                'params':       task.params,
+                'tracking_url': task.tracking_url,
+                'workers':      list(task.workers),
+                'batchable':    task.batchable,
+                'batch_id':     task.batch_id,
+            }
+        }
+
     @rpc_method()
     def announce_scheduling_failure(self, task_name, family, params, expl, owners, **kwargs):
         if not self._config.batch_emails:

@@ -479,9 +479,10 @@ class Worker(object):
         Call ``self._scheduler.add_task``, but store the values too so we can
         implement :py:func:`luigi.execution_summary.summary`.
         """
-        task_id = kwargs['task_id']
-        status = PENDING if kwargs['status'] == NEW else kwargs['status']
-        runnable = kwargs['runnable']
+        task_info = self._scheduler.add_task(*args, **kwargs)
+        task_id = task_info['task']['task_id']
+        status = task_info['task']['status']
+        runnable = task_info['task']['runnable']
         task = self._scheduled_tasks.get(task_id)
         if task:
             self._add_task_history.append((task, status, runnable))
@@ -491,9 +492,10 @@ class Worker(object):
             for batch_task in self._batch_running_tasks.pop(task_id):
                 self._add_task_history.append((batch_task, status, True))
 
-        self._scheduler.add_task(*args, **kwargs)
-
         logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
+        logger.debug('Scheduler responded with %s', task_info)
+
+        return task_info
 
     def __enter__(self):
         """
@@ -760,8 +762,7 @@ class Worker(object):
 
                 deps = [d.task_id for d in deps]
 
-        self._scheduled_tasks[task.task_id] = task
-        self._add_task(
+        task_info = self._add_task(
             worker=self._id,
             task_id=task.task_id,
             status=status,
@@ -775,6 +776,8 @@ class Worker(object):
             batchable=task.batchable,
             retry_policy_dict=_get_retry_policy_dict(task),
         )
+        task.status = task_info['task']['status']
+        self._scheduled_tasks[task.task_id] = task
 
     def _validate_dependency(self, dependency):
         if isinstance(dependency, Target):
