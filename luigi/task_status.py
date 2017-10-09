@@ -18,6 +18,7 @@
 Possible values for a Task's status in the Scheduler
 """
 
+NEW = 'NEW'
 PENDING = 'PENDING'
 FAILED = 'FAILED'
 DONE = 'DONE'

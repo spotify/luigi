@@ -53,7 +53,7 @@ from luigi import six
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
+from luigi.scheduler import NEW, DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
 from luigi.scheduler import WORKER_STATE_ACTIVE, WORKER_STATE_DISABLED
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
@@ -480,7 +480,7 @@ class Worker(object):
         implement :py:func:`luigi.execution_summary.summary`.
         """
         task_id = kwargs['task_id']
-        status = kwargs['status']
+        status = PENDING if kwargs['status'] == NEW else kwargs['status']
         runnable = kwargs['runnable']
         task = self._scheduled_tasks.get(task_id)
         if task:
@@ -725,7 +725,7 @@ class Worker(object):
 
             elif _is_external(task):
                 deps = None
-                status = PENDING
+                status = NEW
                 runnable = self._config.retry_external_tasks
                 task.trigger_event(Event.DEPENDENCY_MISSING, task)
                 logger.warning('Data for %s does not exist (yet?). The task is an '
@@ -746,7 +746,7 @@ class Worker(object):
                     status = UNKNOWN
                     runnable = False
                 else:
-                    status = PENDING
+                    status = NEW
                     runnable = True
 
             if task.disabled:
