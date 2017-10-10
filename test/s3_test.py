@@ -281,6 +281,16 @@ class TestS3Client(unittest.TestCase):
         # Should fail first two times and succeed on third
         self.assertTrue(lambda: s3_client.remove(file_path, number_of_retries=3, retry_interval_seconds=0))
 
+    def test_remove_deletes_directory_marker_files(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+        s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/existingFile0')
+        s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/existingFile0_$folder$')
+
+        self.assertTrue(s3_client.remove('s3://mybucket/removemedir/'))
+        self.assertFalse(s3_client.exists('s3://mybucket/removemedir/existingFile0_$folder$'))
+        self.assertFalse(s3_client.exists('s3://mybucket/removemedir/existingFile0'))
+
     def test_copy(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')

@@ -176,7 +176,7 @@ class S3Client(FileSystem):
                 k for k in s3_bucket.list(self._add_path_delimiter(key))]
 
             # delete the directory marker file if it exists
-            s3_dir_with_suffix_key = s3_bucket.get_key(key + S3_DIRECTORY_MARKER_SUFFIX_0)
+            s3_dir_with_suffix_key = s3_bucket.get_key(key.rstrip('/') + S3_DIRECTORY_MARKER_SUFFIX_0)
             if s3_dir_with_suffix_key:
                 delete_key_list.append(s3_dir_with_suffix_key)
 
