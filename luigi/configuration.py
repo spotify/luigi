@@ -79,7 +79,7 @@ class LuigiConfigParser(ConfigParser):
                           "Found: {paths!r}".format(paths=deprecated_paths),
                           DeprecationWarning)
 
-        return cls.instance().read(cls._config_paths)
+        return cls.instance(os.environ).read(cls._config_paths)
 
     def _get_with_default(self, method, section, option, default, expected_type=None, **kwargs):
         """
@@ -128,4 +128,4 @@ def get_config():
     """
     Convenience method (for backwards compatibility) for accessing config singleton.
     """
-    return LuigiConfigParser.instance()
+    return LuigiConfigParser.instance(os.environ)
