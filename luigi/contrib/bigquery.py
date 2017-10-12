@@ -778,3 +778,4 @@ BigqueryLoadTask = BigQueryLoadTask
 BigqueryRunQueryTask = BigQueryRunQueryTask
 BigqueryCreateViewTask = BigQueryCreateViewTask
 ExternalBigqueryTask = ExternalBigQueryTask
+BigqueryExtractTask = BigQueryExtractTask
