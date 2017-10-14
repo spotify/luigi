@@ -334,12 +334,18 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         If both key-based and role-based credentials are provided, role-based will be used.
         """
         logger.info("Inserting file: %s", f)
+        colnames = ''
+        if len(self.columns) > 0:
+            colnames = ",".join([x[0] for x in self.columns])
+            colnames = '({})'.format(colnames)
+
         cursor.execute("""
-         COPY {table} from '{source}'
+         COPY {table} {colnames} from '{source}'
          CREDENTIALS '{creds}'
          {options}
          ;""".format(
             table=self.table,
+            colnames=colnames,
             source=f,
             creds=self._credentials(),
             options=self.copy_options)
@@ -640,6 +646,7 @@ class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
 
     Usage:
     Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes.
+    Optionally, override the `autocommit` atribute to run the query in autocommit mode - this is necessary to run VACUUM for example.
     Override the `run` method if your use case requires some action with the query result.
     Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
     To customize the query signature as recorded in the database marker table, override the `update_id` property.

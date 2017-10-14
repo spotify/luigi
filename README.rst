@@ -49,7 +49,7 @@ data processing, like `Hive <http://hive.apache.org/>`__,
 replace these. Instead it helps you stitch many tasks together, where
 each task can be a `Hive query <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hive.html>`__,
 a `Hadoop job in Java <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hadoop_jar.html>`_,
-a  `Spark job in Scala or Python <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.spark.html>`_
+a  `Spark job in Scala or Python <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.spark.html>`_,
 a Python snippet,
 `dumping a table <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.sqla.html>`_
 from a database, or anything else. It's easy to build up
@@ -144,6 +144,7 @@ or held presentations about Luigi:
 * `Groupon <https://www.groupon.com/>`_ / `OrderUp <https://orderup.com>`_ `(alternative implementation) <https://github.com/groupon/luigi-warehouse>`__
 * `Red Hat - Marketing Operations <https://www.redhat.com>`_ `(blog, 2017) <https://github.com/rh-marketingops/rh-mo-scc-luigi>`__
 * `GetNinjas <https://www.getninjas.com.br/>`_ `(blog, 2017) <https://labs.getninjas.com.br/using-luigi-to-create-and-monitor-pipelines-of-batch-jobs-eb8b3cd2a574>`__
+* `voyages-sncf.com <https://www.voyages-sncf.com/>`_ `(presentation, 2017) <https://github.com/voyages-sncf-technologies/meetup-afpy-nantes-luigi>`__
 * `Open Targets <https://www.opentargets.org/>`_ `(blog, 2017) <https://blog.opentargets.org/using-containers-with-luigi>`__
 
 Some more companies are using Luigi but haven't had a chance yet to write about it:
