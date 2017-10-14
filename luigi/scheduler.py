@@ -691,11 +691,11 @@ class Scheduler(object):
 
     @rpc_method()
     def prune(self):
-        logger.info("Starting pruning of task graph")
+        logger.debug("Starting pruning of task graph")
         self._prune_workers()
         self._prune_tasks()
         self._prune_emails()
-        logger.info("Done pruning task graph")
+        logger.debug("Done pruning task graph")
 
     def _prune_workers(self):
         remove_workers = []
