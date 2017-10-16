@@ -475,7 +475,8 @@ class S3Client(FileSystem):
                 pass
         if key:
             return config.get(key)
-        section_only = {k: v for k, v in config.items() if k not in defaults or v != defaults[k]}
+        section_only = {k: v for k, v in config.items(
+        ) if k not in defaults or v != defaults[k]}
         return section_only
 
     def _path_to_bucket_and_key(self, path):
