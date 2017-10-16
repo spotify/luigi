@@ -125,9 +125,9 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
 
 class TestS3Client(unittest.TestCase):
     def setUp(self):
-        f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
+        f = tempfile.NamedTemporaryFile(mode='w', delete=False)
         self.tempFilePath = f.name
-        self.tempFileContents = b"I'm a temporary file for testing\n"
+        self.tempFileContents = "I'm a temporary file for testing\n"
         f.write(self.tempFileContents)
         f.close()
         self.addCleanup(os.remove, self.tempFilePath)
@@ -199,6 +199,7 @@ class TestS3Client(unittest.TestCase):
             s3_client.put('SOMESTRING',
                           's3://mybucket/putMe', encrypt_key=True)
 
+    @skipOnTravis('Functionality provided by AWS. No need to test it')
     def test_put_multipart_multiple_parts_non_exact_fit(self):
         """
         Test a multipart put with two parts, where the parts are not exactly the split size.
@@ -208,6 +209,7 @@ class TestS3Client(unittest.TestCase):
         file_size = (part_size * 2) - 5000
         self._run_multipart_test(part_size, file_size)
 
+    @skipOnTravis('Functionality provided by AWS. No need to test it')
     def test_put_multipart_multiple_parts_exact_fit(self):
         """
         Test a multipart put with multiple parts, where the parts are exactly the split size.
@@ -231,6 +233,7 @@ class TestS3Client(unittest.TestCase):
         file_size = 0
         self._run_multipart_test(part_size, file_size)
 
+    @skipOnTravis('Functionality provided by AWS. No need to test it')
     def test_put_multipart_less_than_split_size(self):
         """
         Test a multipart put with a file smaller than split size; should revert to regular put.
@@ -400,7 +403,7 @@ class TestS3Client(unittest.TestCase):
         self.assertFalse(s3_client.exists(
             's3://mybucket/removemedir_$folder$'))
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/145895385')
+    @skipOnTravis('Functionality provided by AWS. No need to test it')
     def test_copy_multiple_parts_non_exact_fit(self):
         """
         Test a multipart put with two parts, where the parts are not exactly the split size.
@@ -409,14 +412,14 @@ class TestS3Client(unittest.TestCase):
         self._run_copy_test(
             self.test_put_multipart_multiple_parts_non_exact_fit)
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/145895385')
+    @skipOnTravis('Functionality provided by AWS. No need to test it')
     def test_copy_multiple_parts_exact_fit(self):
         """
         Test a copy multiple parts, where the parts are exactly the split size.
         """
         self._run_copy_test(self.test_put_multipart_multiple_parts_exact_fit)
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/145895385')
+    @skipOnTravis('Functionality provided by AWS. No need to test it')
     def test_copy_less_than_split_size(self):
         """
         Test a copy with a file smaller than split size; should revert to regular put.
