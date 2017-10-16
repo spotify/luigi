@@ -25,7 +25,9 @@ function visualiserApp(luigi) {
      */
     function updateVisType(newVisType) {
         $('#toggleVisButtons label').removeClass('active');
-        $('#toggleVisButtons input[value="' + newVisType + '"]').parent().addClass('active');
+        var visTypeInput = $('#toggleVisButtons input[value="' + newVisType + '"]');
+        visTypeInput.parent().addClass('active');
+        visTypeInput.prop('checked', true);
     }
 
     function loadTemplates() {
@@ -72,7 +74,8 @@ function visualiserApp(luigi) {
             graph: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DONE"),
             error: task.status == "FAILED",
             re_enable: task.status == "DISABLED" && task.re_enable_able,
-            statusMessage: task.status_message
+            statusMessage: task.status_message,
+            progressPercentage: task.progress_percentage
         };
     }
 
@@ -295,12 +298,33 @@ function visualiserApp(luigi) {
 
     function showStatusMessage(data) {
         $("#statusMessageModal").empty().append(renderTemplate("statusMessageTemplate", data));
-        $("#statusMessageModal .refresh").on('click', function() {
-            luigi.getTaskStatusMessage(data.taskId, function(data) {
-                $("#statusMessageModal pre").html(data.statusMessage);
-            });
-        }).trigger('click');
         $("#statusMessageModal").modal({});
+        var refreshInterval = setInterval(function() {
+                if ($("#statusMessageModal").is(":hidden"))
+                    clearInterval(refreshInterval)
+                else {
+                    luigi.getTaskStatusMessage(data.taskId, function(data) {
+                        if (data.statusMessage === null)
+                            $("#statusMessageModal pre").hide()
+                        else {
+                            $("#statusMessageModal pre").html(data.statusMessage).show();
+                        }
+                    });
+                    luigi.getTaskProgressPercentage(data.taskId, function(data) {
+                        if (data.progressPercentage === null)
+                            $("#statusMessageModal .progress").hide()
+                        else {
+                            $("#statusMessageModal .progress").show()
+                            $("#statusMessageModal .progress-bar")
+                                .attr('aria-valuenow', data.progressPercentage)
+                                .text(data.progressPercentage + '%')
+                                .css({'width': data.progressPercentage + '%'});
+                        }
+                    });
+                }
+            },
+            500
+        );
     }
 
     function preProcessGraph(dependencyGraph) {

@@ -102,6 +102,14 @@ class SchedulerApiTest(unittest.TestCase):
         self.assertEqual(self.sch.get_work(worker='Y')['task_id'], 'C')
         self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'B')
 
+    def test_status_wont_override(self):
+        # Worker X is running A
+        # Worker Y wants to override the status to UNKNOWN (e.g. complete is throwing an exception)
+        self.sch.add_task(worker='X', task_id='A')
+        self.assertEqual(self.sch.get_work(worker='X')['task_id'], 'A')
+        self.sch.add_task(worker='Y', task_id='A', status=UNKNOWN)
+        self.assertEqual({'A'}, set(self.sch.task_list(RUNNING, '').keys()))
+
     def test_retry(self):
         # Try to build A but fails, will retry after 100s
         self.setTime(0)
@@ -481,6 +489,12 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.set_task_status_message('A_1_2', 'test message')
         for task_id in ('A_1', 'A_2', 'A_1_2'):
             self.assertEqual('test message', self.sch.get_task_status_message(task_id)['statusMessage'])
+
+    def test_batch_update_progress(self):
+        self._start_simple_batch()
+        self.sch.set_task_progress_percentage('A_1_2', 30)
+        for task_id in ('A_1', 'A_2', 'A_1_2'):
+            self.assertEqual(30, self.sch.get_task_progress_percentage(task_id)['progressPercentage'])
 
     def test_batch_tracking_url(self):
         self._start_simple_batch()
@@ -897,6 +911,13 @@ class SchedulerApiTest(unittest.TestCase):
             'worker_state': 'active',
         }
         self.assertEqual(expected, self.sch.count_pending(WORKER))
+
+    def test_count_pending_on_disabled_worker(self):
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.sch.add_task(worker='other', task_id='B')  # needed to trigger right get_tasks code path
+        self.assertEqual(1, self.sch.count_pending(WORKER)['n_pending_tasks'])
+        self.sch.disable_worker(WORKER)
+        self.assertEqual(0, self.sch.count_pending(WORKER)['n_pending_tasks'])
 
     def test_count_pending_do_not_count_upstream_disabled(self):
         self.sch.add_task(worker=WORKER, task_id='A', status=PENDING)

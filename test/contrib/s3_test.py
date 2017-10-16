@@ -29,7 +29,7 @@ from moto import mock_s3
 from moto import mock_sts
 
 from luigi import configuration
-from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
+from luigi.contrib.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
 from luigi.target import MissingParentDirectory
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):

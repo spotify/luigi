@@ -22,6 +22,7 @@ These are the unit tests for the BigQuery-luigi binding.
 
 import luigi
 from luigi.contrib import bigquery
+from luigi.contrib.gcs import GCSTarget
 
 from helpers import unittest
 from mock import MagicMock
@@ -109,6 +110,16 @@ class TestCreateViewTask(bigquery.BigQueryCreateViewTask):
 
     def output(self):
         return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, 'view1', client=self.client)
+
+
+class TestExtractTask(bigquery.BigQueryExtractTask):
+    client = MagicMock()
+
+    def output(self):
+        return GCSTarget('gs://test/unload_file.csv', client=self.client)
+
+    def requires(self):
+        return TestExternalBigQueryTask()
 
 
 class BigQueryTest(unittest.TestCase):
@@ -225,3 +236,14 @@ class BigQueryTest(unittest.TestCase):
     def test_dont_flatten_results(self):
         task = TestRunQueryTaskDontFlattenResults(table='table3')
         self.assertFalse(task.flatten_results)
+
+    def test_extract_table(self):
+        task = TestExtractTask()
+        task.run()
+
+        bq_client = luigi.task.flatten(task.input())[0].client
+        (_, job), _ = bq_client.run_job.call_args
+
+        destination_uris = job['configuration']['extract']['destinationUris']
+
+        self.assertEqual(destination_uris, task.destination_uris)

@@ -89,7 +89,7 @@ class TestOpenerTarget(unittest.TestCase):
         OpenerTarget(local_file)
         lt_init_patch.assert_called_with(self.local_file, is_tmp=True)
 
-    @mock.patch('luigi.s3.S3Target.__init__')
+    @mock.patch('luigi.contrib.s3.S3Target.__init__')
     def test_s3_parse(self, s3_init_patch):
         '''Verify basic s3 target url
 
@@ -100,7 +100,7 @@ class TestOpenerTarget(unittest.TestCase):
         OpenerTarget(local_file)
         s3_init_patch.assert_called_with("s3://zefr/foo/bar.txt")
 
-    @mock.patch('luigi.s3.S3Target.__init__')
+    @mock.patch('luigi.contrib.s3.S3Target.__init__')
     def test_s3_parse_param(self, s3_init_patch):
         '''Verify s3 target url with params
 
