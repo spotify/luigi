@@ -26,8 +26,8 @@ from botocore.exceptions import ClientError
 from mock import patch
 
 from helpers import skipOnTravis, unittest, with_config
-from luigi.s3 import (DeprecatedBotoClientException, FileNotFoundException,
-                      InvalidDeleteException, S3Client, S3Target)
+from luigi.contrib.s3 import (DeprecatedBotoClientException, FileNotFoundException,
+                              InvalidDeleteException, S3Client, S3Target)
 from luigi.target import MissingParentDirectory
 from moto import mock_s3, mock_sts
 from target_test import FileSystemTargetTestMixin
