@@ -46,8 +46,8 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
     def setUp(self):
         f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
         self.tempFileContents = (
-            "I'm a temporary file for testing\nAnd this is the second line\n"
-            "This is the third.")
+            b"I'm a temporary file for testing\nAnd this is the second line\n"
+            b"This is the third.")
         self.tempFilePath = f.name
         f.write(self.tempFileContents)
         f.close()
@@ -127,7 +127,7 @@ class TestS3Client(unittest.TestCase):
     def setUp(self):
         f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
         self.tempFilePath = f.name
-        self.tempFileContents = "I'm a temporary file for testing\n"
+        self.tempFileContents = b"I'm a temporary file for testing\n"
         f.write(self.tempFileContents)
         f.close()
         self.addCleanup(os.remove, self.tempFilePath)
@@ -277,7 +277,7 @@ class TestS3Client(unittest.TestCase):
         s3_client.get('s3://mybucket/putMe', tmp_file_path)
         with open(tmp_file_path, 'r') as f:
             content = f.read()
-        self.assertEquals(content, self.tempFileContents)
+        self.assertEquals(content, self.tempFileContents.decode("utf-8"))
         tmp_file.close()
 
     def test_get_as_string(self):
@@ -287,7 +287,7 @@ class TestS3Client(unittest.TestCase):
 
         contents = s3_client.get_as_string('s3://mybucket/putMe')
 
-        self.assertEquals(contents, self.tempFileContents)
+        self.assertEquals(contents, self.tempFileContents.decode("utf-8"))
 
     def test_get_key(self):
         self.create_bucket()
