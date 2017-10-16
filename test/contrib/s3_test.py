@@ -26,8 +26,8 @@ from botocore.exceptions import ClientError
 from mock import patch
 
 from helpers import skipOnTravis, unittest, with_config
-from luigi.contrib.s3 import (DeprecatedBotoClientException, FileNotFoundException,
-                              InvalidDeleteException, S3Client, S3Target)
+from luigi.s3 import (DeprecatedBotoClientException, FileNotFoundException,
+                      InvalidDeleteException, S3Client, S3Target)
 from luigi.target import MissingParentDirectory
 from moto import mock_s3, mock_sts
 from target_test import FileSystemTargetTestMixin
@@ -46,8 +46,8 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
     def setUp(self):
         f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
         self.tempFileContents = (
-            b"I'm a temporary file for testing\nAnd this is the second line\n"
-            b"This is the third.")
+            "I'm a temporary file for testing\nAnd this is the second line\n"
+            "This is the third.")
         self.tempFilePath = f.name
         f.write(self.tempFileContents)
         f.close()
@@ -205,8 +205,8 @@ class TestS3Client(unittest.TestCase):
         Test a multipart put with two parts, where the parts are not exactly the split size.
         """
         # 5MB is minimum part size
-        part_size = 8388608
-        file_size = (part_size * 2) - 1000
+        part_size = (1024 ** 2) * 8
+        file_size = (part_size * 2) - 5000
         self._run_multipart_test(part_size, file_size)
 
     def test_put_multipart_multiple_parts_exact_fit(self):
@@ -214,7 +214,7 @@ class TestS3Client(unittest.TestCase):
         Test a multipart put with multiple parts, where the parts are exactly the split size.
         """
         # 5MB is minimum part size
-        part_size = 8388608
+        part_size = (1024 ** 2) * 8
         file_size = part_size * 2
         self._run_multipart_test(part_size, file_size)
 
@@ -237,7 +237,7 @@ class TestS3Client(unittest.TestCase):
         Test a multipart put with a file smaller than split size; should revert to regular put.
         """
         # 5MB is minimum part size
-        part_size = 8388608
+        part_size = (1024 ** 2) * 5
         file_size = 5000
         self._run_multipart_test(part_size, file_size)
 
@@ -275,7 +275,7 @@ class TestS3Client(unittest.TestCase):
         s3_client.get('s3://mybucket/putMe', tmp_file_path)
         with open(tmp_file_path, 'r') as f:
             content = f.read()
-        self.assertEquals(content, self.tempFileContents.decode("utf-8"))
+        self.assertEquals(content, self.tempFileContents)
         tmp_file.close()
 
     def test_get_as_string(self):
@@ -285,7 +285,7 @@ class TestS3Client(unittest.TestCase):
 
         contents = s3_client.get_as_string('s3://mybucket/putMe')
 
-        self.assertEquals(contents, self.tempFileContents.decode("utf-8"))
+        self.assertEquals(contents, self.tempFileContents)
 
     def test_get_key(self):
         self.create_bucket()
@@ -401,7 +401,7 @@ class TestS3Client(unittest.TestCase):
         self.assertFalse(s3_client.exists(
             's3://mybucket/removemedir_$folder$'))
 
-    @skipOnTravis("passes and fails intermitantly, suspecting it's do with moto")
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/145895385')
     def test_copy_multiple_parts_non_exact_fit(self):
         """
         Test a multipart put with two parts, where the parts are not exactly the split size.
@@ -410,12 +410,14 @@ class TestS3Client(unittest.TestCase):
         self._run_copy_test(
             self.test_put_multipart_multiple_parts_non_exact_fit)
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/145895385')
     def test_copy_multiple_parts_exact_fit(self):
         """
         Test a copy multiple parts, where the parts are exactly the split size.
         """
         self._run_copy_test(self.test_put_multipart_multiple_parts_exact_fit)
 
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/145895385')
     def test_copy_less_than_split_size(self):
         """
         Test a copy with a file smaller than split size; should revert to regular put.
