@@ -125,7 +125,7 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
 
 class TestS3Client(unittest.TestCase):
     def setUp(self):
-        f = tempfile.NamedTemporaryFile(mode='w', delete=False)
+        f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
         self.tempFilePath = f.name
         self.tempFileContents = "I'm a temporary file for testing\n"
         f.write(self.tempFileContents)
