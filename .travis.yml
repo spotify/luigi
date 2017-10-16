@@ -70,7 +70,7 @@ script:
 
 branches:
   only:
-    - s3test
+    - master
 
 notifications:
   email: false
