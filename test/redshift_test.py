@@ -25,8 +25,7 @@ import luigi.notifications
 
 from luigi.contrib import redshift
 from moto import mock_s3
-from boto.s3.key import Key
-from luigi.contrib.s3 import S3Client
+from luigi.s3 import S3Client
 
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
@@ -61,41 +60,39 @@ class TestRedshiftManifestTask(unittest.TestCase):
     @mock_s3
     def test_run(self):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        bucket = client.s3.create_bucket(BUCKET)
+        client.s3.meta.client.create_bucket(Bucket=BUCKET)
         for key in FILES:
-            k = Key(bucket)
-            k.key = '%s/%s' % (KEY, key)
-            k.set_contents_from_string('')
+            k = '%s/%s' % (KEY, key)
+            client.put_string('', 's3://%s/%s' % (BUCKET, k))
         folder_path = 's3://%s/%s' % (BUCKET, KEY)
-        k = Key(bucket)
-        k.key = 'manifest'
-        path = 's3://%s/%s/%s' % (BUCKET, k.key, 'test.manifest')
+        k = 'manifest'
+        path = 's3://%s/%s/%s' % (BUCKET, k, 'test.manifest')
         folder_paths = [folder_path]
         t = redshift.RedshiftManifestTask(path, folder_paths)
         luigi.build([t], local_scheduler=True)
 
         output = t.output().open('r').read()
-        expected_manifest_output = json.dumps(generate_manifest_json(folder_paths, FILES))
+        expected_manifest_output = json.dumps(
+            generate_manifest_json(folder_paths, FILES))
         self.assertEqual(output, expected_manifest_output)
 
     @mock_s3
     def test_run_multiple_paths(self):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        bucket = client.s3.create_bucket(BUCKET)
+        client.s3.meta.client.create_bucket(Bucket=BUCKET)
         for parent in [KEY, KEY_2]:
             for key in FILES:
-                k = Key(bucket)
-                k.key = '%s/%s' % (parent, key)
-                k.set_contents_from_string('')
+                k = '%s/%s' % (parent, key)
+                client.put_string('', 's3://%s/%s' % (BUCKET, k))
         folder_path_1 = 's3://%s/%s' % (BUCKET, KEY)
         folder_path_2 = 's3://%s/%s' % (BUCKET, KEY_2)
         folder_paths = [folder_path_1, folder_path_2]
-        k = Key(bucket)
-        k.key = 'manifest'
-        path = 's3://%s/%s/%s' % (BUCKET, k.key, 'test.manifest')
+        k = 'manifest'
+        path = 's3://%s/%s/%s' % (BUCKET, k, 'test.manifest')
         t = redshift.RedshiftManifestTask(path, folder_paths)
         luigi.build([t], local_scheduler=True)
 
         output = t.output().open('r').read()
-        expected_manifest_output = json.dumps(generate_manifest_json(folder_paths, FILES))
+        expected_manifest_output = json.dumps(
+            generate_manifest_json(folder_paths, FILES))
         self.assertEqual(output, expected_manifest_output)
