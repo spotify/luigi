@@ -101,7 +101,7 @@ class TestS3CopyToTable(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
     def test_copy_missing_creds(self, mock_redshift_target):
 
-        # Remove AWS Credetials from env vars as they are set by Travis
+        # Make sure credentials are not set as env vars
         try:
             del os.environ['AWS_ACCESS_KEY_ID']
             del os.environ['AWS_SECRET_ACCESS_KEY']
