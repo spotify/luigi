@@ -22,7 +22,7 @@ from moto import mock_s3
 import luigi
 import luigi.contrib.redshift
 import luigi.notifications
-from helpers import skipOnTravis, unittest, with_config
+from helpers import unittest, with_config
 from luigi.contrib import redshift
 from luigi.contrib.s3 import S3Client
 
