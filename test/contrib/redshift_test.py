@@ -22,7 +22,7 @@ from moto import mock_s3
 import luigi
 import luigi.contrib.redshift
 import luigi.notifications
-from helpers import unittest, with_config, skipOnTravis
+from helpers import skipOnTravis, unittest, with_config
 from luigi.contrib import redshift
 from luigi.contrib.s3 import S3Client
 
@@ -346,6 +346,7 @@ class TestRedshiftAutocommitQuery(unittest.TestCase):
 
         # Check the Unload query.
         self.assertTrue(mock_connect.autocommit)
+<<<<<<< c714016c4ef752c58c333e80211777296b705932
 
 
 class TestRedshiftManifestTask(unittest.TestCase):
@@ -393,3 +394,53 @@ class TestRedshiftManifestTask(unittest.TestCase):
                 generate_manifest_json(folder_paths, FILES))
             handle = m()
             handle.write.assert_called_with(expected_manifest_output)
+||||||| merged common ancestors
+=======
+
+
+class TestRedshiftManifestTask(unittest.TestCase):
+    def test_run(self):
+        with mock_s3():
+            client = S3Client()
+            client.s3.meta.client.create_bucket(Bucket=BUCKET)
+            for key in FILES:
+                k = '%s/%s' % (KEY, key)
+                client.put_string('', 's3://%s/%s' % (BUCKET, k))
+            folder_path = 's3://%s/%s' % (BUCKET, KEY)
+            path = 's3://%s/%s/%s' % (BUCKET, 'manifest', 'test.manifest')
+            folder_paths = [folder_path]
+
+            m = mock.mock_open()
+            with mock.patch('luigi.contrib.s3.S3Target.open', m, create=True):
+                t = redshift.RedshiftManifestTask(path, folder_paths)
+                luigi.build([t], local_scheduler=True)
+
+            expected_manifest_output = json.dumps(
+                generate_manifest_json(folder_paths, FILES))
+
+            handle = m()
+            handle.write.assert_called_with(expected_manifest_output)
+
+    def test_run_multiple_paths(self):
+        with mock_s3():
+            client = S3Client()
+            client.s3.meta.client.create_bucket(Bucket=BUCKET)
+            for parent in [KEY, KEY_2]:
+                for key in FILES:
+                    k = '%s/%s' % (parent, key)
+                    client.put_string('', 's3://%s/%s' % (BUCKET, k))
+            folder_path_1 = 's3://%s/%s' % (BUCKET, KEY)
+            folder_path_2 = 's3://%s/%s' % (BUCKET, KEY_2)
+            folder_paths = [folder_path_1, folder_path_2]
+            path = 's3://%s/%s/%s' % (BUCKET, 'manifest', 'test.manifest')
+
+            m = mock.mock_open()
+            with mock.patch('luigi.contrib.s3.S3Target.open', m, create=True):
+                t = redshift.RedshiftManifestTask(path, folder_paths)
+                luigi.build([t], local_scheduler=True)
+
+            expected_manifest_output = json.dumps(
+                generate_manifest_json(folder_paths, FILES))
+            handle = m()
+            handle.write.assert_called_with(expected_manifest_output)
+>>>>>>> moved redshift_test to contrib folder and refactored redshiftmanifest tests to mock calls to write
