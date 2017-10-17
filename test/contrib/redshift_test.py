@@ -22,7 +22,7 @@ from moto import mock_s3
 import luigi
 import luigi.contrib.redshift
 import luigi.notifications
-from helpers import unittest, with_config, skipOnTravis
+from helpers import skipOnTravis, unittest, with_config
 from luigi.contrib import redshift
 from luigi.contrib.s3 import S3Client
 
@@ -538,7 +538,7 @@ class TestRedshiftManifestTask(unittest.TestCase):
             folder_path_2 = 's3://%s/%s' % (BUCKET, KEY_2)
             folder_paths = [folder_path_1, folder_path_2]
             path = 's3://%s/%s/%s' % (BUCKET, 'manifest', 'test.manifest')
-            
+
             m = mock.mock_open()
             with mock.patch('luigi.contrib.s3.S3Target.open', m, create=True):
                 t = redshift.RedshiftManifestTask(path, folder_paths)
