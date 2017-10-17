@@ -53,51 +53,44 @@ def generate_manifest_json(path_to_folders, file_names):
     return {'entries': entries}
 
 
-@skipOnTravis('RPC tests fail on travis because of this one! Still not sure why!')
+@skipOnTravis('These pass locally but fail on Travis! Not sure why')
 class TestRedshiftManifestTask(unittest.TestCase):
 
     def test_run(self):
-        mock = mock_s3()
-        mock.start()
+        with mock_s3():
+            client = S3Client()
+            client.s3.meta.client.create_bucket(Bucket=BUCKET)
+            for key in FILES:
+                k = '%s/%s' % (KEY, key)
+                client.put_string('', 's3://%s/%s' % (BUCKET, k))
+            folder_path = 's3://%s/%s' % (BUCKET, KEY)
+            path = 's3://%s/%s/%s' % (BUCKET, 'manifest', 'test.manifest')
+            folder_paths = [folder_path]
+            t = redshift.RedshiftManifestTask(path, folder_paths)
+            luigi.build([t], local_scheduler=True)
 
-        client = S3Client()
-        client.s3.meta.client.create_bucket(Bucket=BUCKET)
-        for key in FILES:
-            k = '%s/%s' % (KEY, key)
-            client.put_string('', 's3://%s/%s' % (BUCKET, k))
-        folder_path = 's3://%s/%s' % (BUCKET, KEY)
-        path = 's3://%s/%s/%s' % (BUCKET, 'manifest', 'test.manifest')
-        folder_paths = [folder_path]
-        t = redshift.RedshiftManifestTask(path, folder_paths)
-        luigi.build([t], local_scheduler=True)
-
-        output = t.output().open('r').read()
-        expected_manifest_output = json.dumps(
-            generate_manifest_json(folder_paths, FILES))
-        self.assertEqual(output, expected_manifest_output)
-
-        mock.stop()
+            output = t.output().open('r').read()
+            expected_manifest_output = json.dumps(
+                generate_manifest_json(folder_paths, FILES))
+            self.assertEqual(output, expected_manifest_output)
 
     def test_run_multiple_paths(self):
-        mock = mock_s3()
-        mock.start()
+        with mock_s3():
+            client = S3Client()
+            client.s3.meta.client.create_bucket(Bucket=BUCKET)
+            for parent in [KEY, KEY_2]:
+                for key in FILES:
+                    k = '%s/%s' % (parent, key)
+                    client.put_string('', 's3://%s/%s' % (BUCKET, k))
+            folder_path_1 = 's3://%s/%s' % (BUCKET, KEY)
+            folder_path_2 = 's3://%s/%s' % (BUCKET, KEY_2)
+            folder_paths = [folder_path_1, folder_path_2]
+            path = 's3://%s/%s/%s' % (BUCKET, 'manifest', 'test.manifest')
+            t = redshift.RedshiftManifestTask(path, folder_paths)
+            luigi.build([t], local_scheduler=True)
 
-        client = S3Client()
-        client.s3.meta.client.create_bucket(Bucket=BUCKET)
-        for parent in [KEY, KEY_2]:
-            for key in FILES:
-                k = '%s/%s' % (parent, key)
-                client.put_string('', 's3://%s/%s' % (BUCKET, k))
-        folder_path_1 = 's3://%s/%s' % (BUCKET, KEY)
-        folder_path_2 = 's3://%s/%s' % (BUCKET, KEY_2)
-        folder_paths = [folder_path_1, folder_path_2]
-        path = 's3://%s/%s/%s' % (BUCKET, 'manifest', 'test.manifest')
-        t = redshift.RedshiftManifestTask(path, folder_paths)
-        luigi.build([t], local_scheduler=True)
+            output = t.output().open('r').read()
+            expected_manifest_output = json.dumps(
+                generate_manifest_json(folder_paths, FILES))
+            self.assertEqual(output, expected_manifest_output)
 
-        output = t.output().open('r').read()
-        expected_manifest_output = json.dumps(
-            generate_manifest_json(folder_paths, FILES))
-        self.assertEqual(output, expected_manifest_output)
-
-        mock.stop()
