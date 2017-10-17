@@ -10,7 +10,7 @@ from moto import mock_dynamodb2
 @mock_dynamodb2
 class TestDynamoClient(unittest.TestCase):
 
-    client = boto3.resource('dynamodb', region_name='eu-west-1')
+    client = boto3.resource('dynamodb')
 
     def test_exists_raises_client_error_if_table_doesnt_exist(self):
         target = DynamoDBTarget(self.client, 'some_update_id')
