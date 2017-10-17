@@ -52,6 +52,7 @@ def generate_manifest_json(path_to_folders, file_names):
             })
     return {'entries': entries}
 
+
 @skipOnTravis('RPC tests fail on travis because of this one! Still not sure why!')
 class TestRedshiftManifestTask(unittest.TestCase):
 
