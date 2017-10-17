@@ -93,4 +93,3 @@ class TestRedshiftManifestTask(unittest.TestCase):
             expected_manifest_output = json.dumps(
                 generate_manifest_json(folder_paths, FILES))
             self.assertEqual(output, expected_manifest_output)
-
