@@ -351,11 +351,11 @@ class TestRedshiftAutocommitQuery(unittest.TestCase):
 class TestRedshiftManifestTask(unittest.TestCase):
     def test_run(self):
         with mock_s3():
-            client = S3Client()
-            client.s3.meta.client.create_bucket(Bucket=BUCKET)
-            for key in FILES:
-                k = '%s/%s' % (KEY, key)
-                client.put_string('', 's3://%s/%s' % (BUCKET, k))
+            # client = S3Client()
+            # client.s3.meta.client.create_bucket(Bucket=BUCKET)
+            # for key in FILES:
+            #     k = '%s/%s' % (KEY, key)
+            #     client.put_string('', 's3://%s/%s' % (BUCKET, k))
             folder_path = 's3://%s/%s' % (BUCKET, KEY)
             path = 's3://%s/%s/%s' % (BUCKET, 'manifest', 'test.manifest')
             folder_paths = [folder_path]
@@ -373,12 +373,12 @@ class TestRedshiftManifestTask(unittest.TestCase):
 
     def test_run_multiple_paths(self):
         with mock_s3():
-            client = S3Client()
-            client.s3.meta.client.create_bucket(Bucket=BUCKET)
-            for parent in [KEY, KEY_2]:
-                for key in FILES:
-                    k = '%s/%s' % (parent, key)
-                    client.put_string('', 's3://%s/%s' % (BUCKET, k))
+            # client = S3Client()
+            # client.s3.meta.client.create_bucket(Bucket=BUCKET)
+            # for parent in [KEY, KEY_2]:
+            #     for key in FILES:
+            #         k = '%s/%s' % (parent, key)
+            #         client.put_string('', 's3://%s/%s' % (BUCKET, k))
             folder_path_1 = 's3://%s/%s' % (BUCKET, KEY)
             folder_path_2 = 's3://%s/%s' % (BUCKET, KEY_2)
             folder_paths = [folder_path_1, folder_path_2]
