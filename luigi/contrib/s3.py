@@ -285,7 +285,7 @@ class S3Client(FileSystem):
         self.s3.meta.client.upload_fileobj(
             Fileobj=open(local_path, 'rb'), Bucket=bucket, Key=key, Config=transfer_config, ExtraArgs=kwargs)
 
-    def copy(self, source_path, destination_path, threads=100, start_time=None, end_time=None, part_size=None, **kwargs):
+    def copy(self, source_path, destination_path, threads=100, start_time=None, end_time=None, part_size=8388608, **kwargs):
         """
         Copy object(s) from one S3 location to another. Works for individual keys or entire directories.
         When files are larger than `part_size`, multipart uploading will be used.
@@ -294,13 +294,10 @@ class S3Client(FileSystem):
         :param threads: Optional argument to define the number of threads to use when copying (min: 3 threads)
         :param start_time: Optional argument to copy files with modified dates after start_time
         :param end_time: Optional argument to copy files with modified dates before end_time
-        :param part_size: Part size in bytes (Deprecated)
+        :param part_size: Part size in bytes
         :param kwargs: Keyword arguments are passed to the boto function `copy` as ExtraArgs
         :returns tuple (number_of_files_copied, total_size_copied_in_bytes)
         """
-        if part_size:
-            logger.warning(
-                'part_size is now deprecated! Using it has no effect')
 
         start = datetime.datetime.now()
 
@@ -312,7 +309,7 @@ class S3Client(FileSystem):
         import boto3
 
         transfer_config = boto3.s3.transfer.TransferConfig(
-            max_concurrency=threads)
+            max_concurrency=threads, multipart_chunksize=part_size)
         total_keys = 0
 
         if self.isdir(source_path):

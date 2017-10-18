@@ -199,23 +199,22 @@ class TestS3Client(unittest.TestCase):
             s3_client.put('SOMESTRING',
                           's3://mybucket/putMe', encrypt_key=True)
 
-    @skipOnTravis('Functionality provided by AWS. No need to test it')
+    @skipOnTravis("passes and fails intermitantly, suspecting it's do with moto")
     def test_put_multipart_multiple_parts_non_exact_fit(self):
         """
         Test a multipart put with two parts, where the parts are not exactly the split size.
         """
         # 5MB is minimum part size
-        part_size = (1024 ** 2) * 8
-        file_size = (part_size * 2) - 5000
+        part_size = 8388608
+        file_size = (part_size * 2) - 1000
         self._run_multipart_test(part_size, file_size)
-
 
     def test_put_multipart_multiple_parts_exact_fit(self):
         """
         Test a multipart put with multiple parts, where the parts are exactly the split size.
         """
         # 5MB is minimum part size
-        part_size = (1024 ** 2) * 8
+        part_size = 8388608
         file_size = part_size * 2
         self._run_multipart_test(part_size, file_size)
 
@@ -229,17 +228,16 @@ class TestS3Client(unittest.TestCase):
         Test a multipart put with an empty file.
         """
         # 5MB is minimum part size
-        part_size = (1024 ** 2) * 5
+        part_size = 8388608
         file_size = 0
         self._run_multipart_test(part_size, file_size)
-
 
     def test_put_multipart_less_than_split_size(self):
         """
         Test a multipart put with a file smaller than split size; should revert to regular put.
         """
         # 5MB is minimum part size
-        part_size = (1024 ** 2) * 5
+        part_size = 8388608
         file_size = 5000
         self._run_multipart_test(part_size, file_size)
 
@@ -403,7 +401,7 @@ class TestS3Client(unittest.TestCase):
         self.assertFalse(s3_client.exists(
             's3://mybucket/removemedir_$folder$'))
 
-    @skipOnTravis('Functionality provided by AWS. No need to test it')
+    @skipOnTravis("passes and fails intermitantly, suspecting it's do with moto")
     def test_copy_multiple_parts_non_exact_fit(self):
         """
         Test a multipart put with two parts, where the parts are not exactly the split size.
@@ -412,13 +410,11 @@ class TestS3Client(unittest.TestCase):
         self._run_copy_test(
             self.test_put_multipart_multiple_parts_non_exact_fit)
 
-
     def test_copy_multiple_parts_exact_fit(self):
         """
         Test a copy multiple parts, where the parts are exactly the split size.
         """
         self._run_copy_test(self.test_put_multipart_multiple_parts_exact_fit)
-
 
     def test_copy_less_than_split_size(self):
         """
