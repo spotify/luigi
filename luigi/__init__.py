@@ -47,14 +47,11 @@ from luigi.interface import run, build
 from luigi import event
 from luigi.event import Event
 
-from .tools import range  # just makes the tool classes available from command line
-
-
 __all__ = [
     'task', 'Task', 'Config', 'ExternalTask', 'WrapperTask', 'namespace', 'auto_namespace',
     'target', 'Target', 'LocalTarget', 'rpc', 'RemoteScheduler',
     'RPCError', 'parameter', 'Parameter', 'DateParameter', 'MonthParameter',
-    'YearParameter', 'DateHourParameter', 'DateMinuteParameter', 'DateSecondParameter', 'range',
+    'YearParameter', 'DateHourParameter', 'DateMinuteParameter', 'DateSecondParameter',
     'DateIntervalParameter', 'TimeDeltaParameter', 'IntParameter',
     'FloatParameter', 'BoolParameter', 'TaskParameter',
     'ListParameter', 'TupleParameter', 'EnumParameter', 'DictParameter',
