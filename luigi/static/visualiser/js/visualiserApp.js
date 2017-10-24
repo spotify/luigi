@@ -743,7 +743,7 @@ function visualiserApp(luigi) {
         var taskCount;
         /* Check for integers in tasks.  This indicates max-shown-tasks was exceeded */
         if (tasks.length === 1 && typeof(tasks[0]) === 'number') {
-            taskCount = tasks[0];
+            taskCount = tasks[0] === -1 ? 'unknown' : tasks[0];
             missingCategories[category] = {name: category, count: taskCount};
         }
         else {
