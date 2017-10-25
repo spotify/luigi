@@ -691,7 +691,7 @@ class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
             cursor = connection.cursor()
             cursor.execute(unload_query)
             logger.info(cursor.statusmessage)
-        except:
+        except Exception:
             raise
 
         # Update marker table

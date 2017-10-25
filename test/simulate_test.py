@@ -39,7 +39,7 @@ def is_writable():
             pass
         open(fn, 'w').close()
         os.remove(fn)
-    except:
+    except Exception:
         exists = False
 
     return unittest.skipIf(not exists, 'Can\'t write to temporary directory')
