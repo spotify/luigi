@@ -105,6 +105,7 @@ class PostgresTarget(luigi.Target):
     This will rarely have to be directly instantiated by the user.
     """
     marker_table = luigi.configuration.get_config().get('postgres', 'marker-table', 'table_updates')
+    marker_space = luigi.configuration.get_config().get('postgres', 'marker-space', 'public')
 
     # Use DB side timestamps or client side timestamps in the marker_table
     use_db_timestamps = True
@@ -150,15 +151,15 @@ class PostgresTarget(luigi.Target):
 
         if self.use_db_timestamps:
             connection.cursor().execute(
-                """INSERT INTO {marker_table} (update_id, target_table)
+                """INSERT INTO {marker_space}.{marker_table} (update_id, target_table)
                    VALUES (%s, %s)
-                """.format(marker_table=self.marker_table),
+                """.format(marker_space=self.marker_space, marker_table=self.marker_table),
                 (self.update_id, self.table))
         else:
             connection.cursor().execute(
-                """INSERT INTO {marker_table} (update_id, target_table, inserted)
+                """INSERT INTO {marker_space}.{marker_table} (update_id, target_table, inserted)
                          VALUES (%s, %s, %s);
-                    """.format(marker_table=self.marker_table),
+                    """.format(marker_space=self.marker_space, marker_table=self.marker_table),
                 (self.update_id, self.table,
                  datetime.datetime.now()))
 
@@ -168,9 +169,9 @@ class PostgresTarget(luigi.Target):
             connection.autocommit = True
         cursor = connection.cursor()
         try:
-            cursor.execute("""SELECT 1 FROM {marker_table}
+            cursor.execute("""SELECT 1 FROM {marker_space}.{marker_table}
                 WHERE update_id = %s
-                LIMIT 1""".format(marker_table=self.marker_table),
+                LIMIT 1""".format(marker_space=self.marker_space, marker_table=self.marker_table),
                            (self.update_id,)
                            )
             row = cursor.fetchone()
@@ -204,17 +205,17 @@ class PostgresTarget(luigi.Target):
         connection.autocommit = True
         cursor = connection.cursor()
         if self.use_db_timestamps:
-            sql = """ CREATE TABLE {marker_table} (
+            sql = """ CREATE TABLE {marker_space}.{marker_table} (
                       update_id TEXT PRIMARY KEY,
                       target_table TEXT,
                       inserted TIMESTAMP DEFAULT NOW())
-                  """.format(marker_table=self.marker_table)
+                  """.format(marker_space=self.marker_space, marker_table=self.marker_table)
         else:
-            sql = """ CREATE TABLE {marker_table} (
+            sql = """ CREATE TABLE {marker_space}.{marker_table} (
                       update_id TEXT PRIMARY KEY,
                       target_table TEXT,
                       inserted TIMESTAMP);
-                  """.format(marker_table=self.marker_table)
+                  """.format(marker_space=self.marker_space, marker_table=self.marker_table)
 
         try:
             cursor.execute(sql)
