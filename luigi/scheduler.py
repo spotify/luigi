@@ -549,7 +549,7 @@ class SimpleTaskState(object):
                 self.re_enable(task)
 
             # don't allow workers to override a scheduler disable
-            elif task.scheduler_disable_time is not None and new_status != DISABLED:
+            elif task.scheduler_disable_time is not None:
                 return
 
         if task.status == RUNNING and task.batch_id is not None and new_status != RUNNING:
