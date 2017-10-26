@@ -762,6 +762,7 @@ class Worker(object):
 
                 deps = [d.task_id for d in deps]
 
+        self._scheduled_tasks[task.task_id] = task
         task_info = self._add_task(
             worker=self._id,
             task_id=task.task_id,
@@ -777,7 +778,6 @@ class Worker(object):
             retry_policy_dict=_get_retry_policy_dict(task),
         )
         task.status = task_info['task']['status']
-        self._scheduled_tasks[task.task_id] = task
 
     def _validate_dependency(self, dependency):
         if isinstance(dependency, Target):
