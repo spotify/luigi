@@ -404,7 +404,7 @@ class KeepAliveThread(threading.Thread):
                 response = None
                 try:
                     response = self._scheduler.ping(worker=self._worker_id)
-                except:  # httplib.BadStatusLine:
+                except BaseException:  # httplib.BadStatusLine:
                     logger.warning('Failed pinging scheduler')
 
                 # handle rpc messages

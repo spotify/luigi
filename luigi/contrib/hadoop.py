@@ -850,7 +850,7 @@ class JobTask(BaseHadoopJobTask):
                     # JSON is already serialized, so we put `self.serialize` in a else statement.
                     output = map(self.serialize, output)
                 print("\t".join(output), file=stdout)
-            except:
+            except BaseException:
                 print(output, file=stderr)
                 raise
 
