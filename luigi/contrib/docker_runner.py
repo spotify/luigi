@@ -227,7 +227,7 @@ class DockerTask(luigi.Task):
                 container_name = self.name
             try:
                 message = e.message
-            except:
+            except AttributeError:
                 message = str(e)
             self.__logger.error("Container " + container_name +
                                 " exited with non zero code: " + message)
