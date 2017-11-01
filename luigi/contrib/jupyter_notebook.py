@@ -104,7 +104,6 @@ class JupyterNotebookTask(luigi.Task):
             By default, paths associated with `self.input()` and `self.output()` 
             are included with keys `input` and `output` in `pars`, and therfore
             can be read from inside the notebook as well.
-            The `pars` dictionary is empty by default. 
     
 
     Example: accessing `pars` inside the Jupyter notebook 
