@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 """
-Template tasks for running external programs as luigi tasks.
+Template tasks for executing Jupyter notebooks as luigi tasks.
 
 This module is intended for when you need to execute a Jupyter notebook as a 
 task within a luigi pipeline.
@@ -39,15 +39,22 @@ The template task `JupyterNotebookTask` implements a run method that wraps the
 nbformat/nbconvert approach to executing Jupyter notebooks as scripts.
 See the `Executing notebooks from the command line` section of the `nbconvert`
 module documentation for more information.
+
+Requires the following modules:
+- nbconvert
+- nbformat
+
+Written by Mattia Ciollaro (@mattiaciollaro).
 """
 
-import os
 import json
+import logging
+import os
 
 import luigi
-import nbformat
+
 import nbconvert
-import logging
+import nbformat
 
 
 logger = logging.getLogger('luigi-interface')
@@ -81,10 +88,10 @@ class JupyterNotebookTask(luigi.Task):
 
     This class has the following key attributes:
 
-    - nb_path: the full path to the Jupyter notebook (required)
+    - nb_path: the full path to the Jupyter notebook (required).
 
     - kernel_name: the name of the kernel to be used in the notebook execution
-                   (required)
+                   (required).
 
     - timeout: maximum time (in seconds) allocated to run each cell. If -1 (the
                default), no timeout limit is imposed.
@@ -99,8 +106,9 @@ class JupyterNotebookTask(luigi.Task):
             can be read from inside the notebook as well.
             The `pars` dictionary is empty by default. 
     
-    Example
-    #######
+
+    Example: accessing `pars` inside the Jupyter notebook 
+    #####################################################
     You would add something like the following block inside a notebook titled 
     `my_notebook`:
     
@@ -165,10 +173,8 @@ class JupyterNotebookTask(luigi.Task):
         # run notebook
         logger.info('=== Running notebook: %s ===' % notebook_name)
 
-        # get notebook format version
         nb_version = int(nbformat.__version__.split('.')[0])
 
-        # run notebook
         try:
             with open(self.nb_path, 'r') as nb:
                 nb = nbformat.read(nb, as_version=nb_version)
@@ -190,5 +196,5 @@ class JupyterNotebookTask(luigi.Task):
             raise
 
         finally:
-            # clean up temporary JSON file
+            # clean up (remove temporary JSON file)
             os.remove(tmp_file_path)
