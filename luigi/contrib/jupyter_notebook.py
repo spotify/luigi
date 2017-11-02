@@ -27,8 +27,10 @@ in the same directory where the notebook that you want to execute is saved
 (here `notebook_title` is the title of the notebook).
 Inside the notebook, you can then retrieve the values of the parameters in 
 `pars` by reading the temporary `notebook_title.ipynbpars` JSON file.
+The temporary `notebook_title.ipynbpars` is deleted once the run method is
+exited (regardless of whether or not the notebook was executed successfully).
 
-By default, the `path` attribute of `self.input()` and `self.output()` 
+By default, the `path` attributes of `self.input()` and `self.output()` 
 are added to the temporary JSON file via the `pars` attribute with keys
 `input` and `output` respectively.
 
