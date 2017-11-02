@@ -77,7 +77,7 @@ def get_file_name_from_path(input_path):
         a string containing the name of the file without file extension
     """
 
-    base_name = path.basename(path.normpath(input_path))
+    base_name = os.path.basename(os.path.normpath(input_path))
     file_name = base_name.split('.')[0]
     return(file_name)
 
@@ -102,8 +102,8 @@ class JupyterNotebookTask(luigi.Task):
             execution of the task (where `notebook_title` is the title
             of the Jupyter notebook you want to execute).
             By default, paths associated with `self.input()` and `self.output()` 
-            are included with keys `input` and `output` in `pars`, and therfore
-            can be read from inside the notebook as well.
+            are included with keys `input` and `output` in `pars`, and therefore
+            they can be read from inside the notebook as well.
     
 
     Example: accessing `pars` inside the Jupyter notebook 
@@ -117,18 +117,19 @@ class JupyterNotebookTask(luigi.Task):
         parameters = json.load(pars)
 
     # extracting the task's self.input() paths 
-    requires_path = parameters.get('input')
+    requires_paths = parameters.get('input')
 
     # extracting the task's self.output() paths
-    output_path = parameters.get('output')
+    output_paths = parameters.get('output')
 
     # extracting a custom parameter named `my_par`
     my_own_par = parameters.get('my_par')
 
     ```
 
-    `requires_path` is itself a dictionary if the task's `requires` method 
-    returns a dictionary; otherwise, `requires_path` is a list.
+    `requires_paths` (`output_paths`) is a dictionary if the task's
+    `requires` (`output`) method returns a dictionary;
+    otherwise, `requires_paths` (`output_paths`) is a list.
     """
 
     nb_path = luigi.Parameter(
@@ -147,6 +148,24 @@ class JupyterNotebookTask(luigi.Task):
 
     def run(self):
 
+        # check arguments
+        if not self.nb_path:
+            raise TypeError(
+                'nb_path cannot be None; '
+                'nb_path must be a valid path to a Jupyter notebook'
+            )
+
+        if not os.path.exists(self.nb_path):
+            raise IOError(
+                "I can't find the Jupyter notebook %s" % self.nb_path
+            )
+
+        if not self.kernel:
+            raise TypeError(
+                'kernel cannot be None; '
+                'kernel must be the name of a valid Jupyter kernel'
+            )
+
         # get notebook name
         notebook_name = get_file_name_from_path(self.nb_path)
 
@@ -159,7 +178,11 @@ class JupyterNotebookTask(luigi.Task):
             self.pars['input'] = [req.path for req in self.input()]
 
         # set output pars
-        self.pars['output'] = self.output().path
+        if type(self.output()) is dict:
+            self.pars['output'] = {tag: req.path for tag, req in
+                                   self.output().items()}
+        else:
+            self.pars['output'] = [req.path for req in self.output()]
 
         # write pars to temporary file
         tmp_file_path = os.path.join(
