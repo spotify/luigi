@@ -73,15 +73,35 @@ class S3Client(FileSystem):
     boto-powered S3 client.
     """
 
+    _s3 = None
+
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
                  **kwargs):
+        from boto.s3.key import Key
+        options = self._get_s3_config()
+        options.update(kwargs)
+        if aws_access_key_id:
+            options['aws_access_key_id'] = aws_access_key_id
+        if aws_secret_access_key:
+            options['aws_secret_access_key'] = aws_secret_access_key
+
+        self.Key = Key
+        self._options = options
+
+    @property
+    def s3(self):
         # only import boto when needed to allow top-lvl s3 module import
         import boto
         import boto.s3.connection
-        from boto.s3.key import Key
 
-        options = self._get_s3_config()
-        options.update(kwargs)
+        options = dict(self._options)
+
+        if self._s3:
+            return self._s3
+
+        aws_access_key_id = options.get('aws_access_key_id')
+        aws_secret_access_key = options.get('aws_secret_access_key')
+
         # Removing key args would break backwards compability
         role_arn = options.get('aws_role_arn')
         role_session_name = options.get('aws_role_session_name')
@@ -97,22 +117,18 @@ class S3Client(FileSystem):
             aws_access_key_id = assumed_role.credentials.access_key
             aws_session_token = assumed_role.credentials.session_token
 
-        else:
-            if not aws_access_key_id:
-                aws_access_key_id = options.get('aws_access_key_id')
-
-            if not aws_secret_access_key:
-                aws_secret_access_key = options.get('aws_secret_access_key')
-
         for key in ['aws_access_key_id', 'aws_secret_access_key', 'aws_role_session_name', 'aws_role_arn']:
             if key in options:
                 options.pop(key)
+        self._s3 = boto.s3.connection.S3Connection(aws_access_key_id,
+                                                   aws_secret_access_key,
+                                                   security_token=aws_session_token,
+                                                   **options)
+        return self._s3
 
-        self.s3 = boto.s3.connection.S3Connection(aws_access_key_id,
-                                                  aws_secret_access_key,
-                                                  security_token=aws_session_token,
-                                                  **options)
-        self.Key = Key
+    @s3.setter
+    def s3(self, value):
+        self._s3 = value
 
     def exists(self, path):
         """
@@ -182,6 +198,13 @@ class S3Client(FileSystem):
         return False
 
     def get_key(self, path):
+        """
+        Returns just the key from the path.
+
+        An s3 path is composed of a bucket and a key.
+
+        Suppose we have a path `s3://my_bucket/some/files/my_file`. The key is `some/files/my_file`.
+        """
         (bucket, key) = self._path_to_bucket_and_key(path)
 
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
@@ -307,8 +330,6 @@ class S3Client(FileSystem):
 
         When files are larger than `part_size`, multipart uploading will be used.
 
-        When copying a directory, method will return a tuple (number_of_files_copied, total_size_copied_in_bytes).
-
         :param source_path: The `s3://` path of the directory or key to copy from
         :param destination_path: The `s3://` path of the directory or key to copy to
         :param threads: Optional argument to define the number of threads to use when copying (min: 3 threads)
@@ -316,6 +337,8 @@ class S3Client(FileSystem):
         :param end_time: Optional argument to copy files with modified dates before end_time
         :param part_size: Part size in bytes. Default: 67108864 (64MB), must be >= 5MB and <= 5 GB.
         :param kwargs: Keyword arguments are passed to the boto function `copy_key`
+
+        :returns tuple (number_of_files_copied, total_size_copied_in_bytes)
         """
         start = datetime.datetime.now()
 
@@ -389,7 +412,7 @@ class S3Client(FileSystem):
         """
         Copy a single S3 object to another S3 object, falling back to multipart copy where necessary
 
-        NOTE: This is a private method and should only be called from within the `luigi.s3.copy` method
+        NOTE: This is a private method and should only be called from within the `s3.copy` method
 
         :param pool: The threadpool to put the s3 copy processes onto
         :param src_bucket: source bucket name
@@ -465,8 +488,8 @@ class S3Client(FileSystem):
         Get an iterable with S3 folder contents.
         Iterable contains paths relative to queried path.
 
-        :param start_time: Optional argument to copy files with modified dates after start_time
-        :param end_time: Optional argument to copy files with modified dates before end_time
+        :param start_time: Optional argument to list files with modified dates after start_time
+        :param end_time: Optional argument to list files with modified dates before end_time
         :param return_key: Optional argument, when set to True will return a boto.s3.key.Key (instead of the filename)
         """
         (bucket, key) = self._path_to_bucket_and_key(path)
@@ -542,6 +565,7 @@ class S3Client(FileSystem):
         return self.put_string("", self._add_path_delimiter(path))
 
     def _get_s3_config(self, key=None):
+        defaults = dict(configuration.get_config().defaults())
         try:
             config = dict(configuration.get_config().items('s3'))
         except NoSectionError:
@@ -554,7 +578,8 @@ class S3Client(FileSystem):
                 pass
         if key:
             return config.get(key)
-        return config
+        section_only = {k: v for k, v in config.items() if k not in defaults or v != defaults[k]}
+        return section_only
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, query, fragment) = urlsplit(path)
@@ -570,7 +595,7 @@ class S3Client(FileSystem):
 
 class AtomicS3File(AtomicLocalFile):
     """
-    An S3 file that writes to a temp file and put to S3 on close.
+    An S3 file that writes to a temp file and puts to S3 on close.
 
     :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
     """
@@ -667,6 +692,7 @@ class ReadableS3File(object):
 
 class S3Target(FileSystemTarget):
     """
+    Target S3 file object
 
     :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
     """
@@ -684,8 +710,6 @@ class S3Target(FileSystemTarget):
         self.s3_options = kwargs
 
     def open(self, mode='r'):
-        """
-        """
         if mode not in ('r', 'w'):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
@@ -728,6 +752,8 @@ class S3FlagTarget(S3Target):
 
         :param path: the directory where the files are stored.
         :type path: str
+        :param format: see the luigi.format module for options
+        :type format: luigi.format.[Text|UTF8|Nop]
         :param client:
         :type client:
         :param flag:

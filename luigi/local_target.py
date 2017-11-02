@@ -71,7 +71,12 @@ class LocalFileSystem(FileSystem):
                 return
 
         if parents:
-            os.makedirs(path)
+            try:
+                os.makedirs(path)
+            except OSError as err:
+                # somebody already created the path
+                if err.errno != errno.EEXIST:
+                    raise
         else:
             if not os.path.exists(os.path.dirname(path)):
                 raise MissingParentDirectory()
@@ -99,7 +104,7 @@ class LocalFileSystem(FileSystem):
         but cannot be guaranteed.
         """
         if raise_if_exists and os.path.exists(new_path):
-            raise RuntimeError('Destination exists: %s' % new_path)
+            raise FileAlreadyExists('Destination exists: %s' % new_path)
         d = os.path.dirname(new_path)
         if d and not os.path.exists(d):
             self.mkdir(d)
@@ -113,6 +118,14 @@ class LocalFileSystem(FileSystem):
                 os.remove(old_path)
             else:
                 raise err
+
+    def rename_dont_move(self, path, dest):
+        """
+        Rename ``path`` to ``dest``, but don't move it into the ``dest``
+        folder (if it is a folder). This method is just a wrapper around the
+        ``move`` method of LocalTarget.
+        """
+        self.move(path, dest, raise_if_exists=True)
 
 
 class LocalTarget(FileSystemTarget):

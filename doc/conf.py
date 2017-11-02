@@ -108,7 +108,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Luigi'
-copyright = u"2011-{}, Erik Bernhardsson and Elias Freider".format(datetime.datetime.now().year)
+authors = u"The Luigi Authors"
+copyright = u"2011-{}, {}".format(datetime.datetime.now().year, authors)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -277,7 +278,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     ('index', 'Luigi.tex', u'Luigi Documentation',
-     u'Erik Bernhardsson and Elias Freider', 'manual'),
+     authors, 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -307,7 +308,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'luigi', u'Luigi Documentation',
-     [u'Erik Bernhardsson and Elias Freider'], 1)
+     [authors], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -321,7 +322,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     ('index', 'Luigi', u'Luigi Documentation',
-     u'Erik Bernhardsson and Elias Freider', 'Luigi', 'One line description of project.',
+     authors, 'Luigi', 'One line description of project.',
      'Miscellaneous'),
 ]
 

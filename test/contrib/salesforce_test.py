@@ -55,7 +55,7 @@ old__open = open
 
 
 def mocked_open(*args, **kwargs):
-    if re.match("job_data", args[0]):
+    if re.match("job_data", str(args[0])):
         return MockTarget(args[0]).open(args[1])
     else:
         return old__open(*args)
@@ -64,9 +64,13 @@ def mocked_open(*args, **kwargs):
 class TestSalesforceAPI(unittest.TestCase):
     # We patch 'requests.get' with our own method. The mock object is passed in to our test case method.
     @mock.patch('requests.get', side_effect=mocked_requests_get)
-    def test_deprecated_results(self, mock_get):
+    def test_deprecated_results_warning(self, mock_get):
         sf = SalesforceAPI('xx', 'xx', 'xx')
-        result_id = sf.get_batch_results('job_id', 'batch_id')
+        if PY3:
+            with self.assertWarnsRegex(UserWarning, r'get_batch_results is deprecated'):
+                result_id = sf.get_batch_results('job_id', 'batch_id')
+        else:
+            result_id = sf.get_batch_results('job_id', 'batch_id')
         self.assertEqual('1234', result_id)
 
     @mock.patch('requests.get', side_effect=mocked_requests_get)

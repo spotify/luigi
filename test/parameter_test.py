@@ -26,6 +26,7 @@ import luigi.interface
 import luigi.notifications
 from luigi.mock import MockTarget
 from luigi.parameter import ParameterException
+from luigi import six
 from worker_test import email_patch
 
 luigi.notifications.DEBUG = True
@@ -200,7 +201,7 @@ class ParameterTest(LuigiTestCase):
         self.assertTrue(WithDefaultTrue().x)
 
     def test_bool_coerce(self):
-        self.assertEquals(True, WithDefaultTrue(x='yes').x)
+        self.assertEqual(True, WithDefaultTrue(x='yes').x)
 
     def test_bool_no_coerce_none(self):
         self.assertIsNone(WithDefaultTrue(x=None).x)
@@ -376,12 +377,44 @@ class TestParametersHashability(LuigiTestCase):
         p = luigi.parameter.ListParameter()
         self.assertEqual(hash(Foo(args=[1, "hello"]).args), hash(p.normalize(p.parse('[1,"hello"]'))))
 
+    def test_list_dict(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.ListParameter()
+
+        p = luigi.parameter.ListParameter()
+        self.assertEqual(hash(Foo(args=[{'foo': 'bar'}, {'doge': 'wow'}]).args),
+                         hash(p.normalize(p.parse('[{"foo": "bar"}, {"doge": "wow"}]'))))
+
+    def test_list_nested(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.ListParameter()
+
+        p = luigi.parameter.ListParameter()
+        self.assertEqual(hash(Foo(args=[['foo', 'bar'], ['doge', 'wow']]).args),
+                         hash(p.normalize(p.parse('[["foo", "bar"], ["doge", "wow"]]'))))
+
     def test_tuple(self):
         class Foo(luigi.Task):
             args = luigi.parameter.TupleParameter()
 
         p = luigi.parameter.TupleParameter()
         self.assertEqual(hash(Foo(args=(1, "hello")).args), hash(p.parse('(1,"hello")')))
+
+    def test_tuple_dict(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.TupleParameter()
+
+        p = luigi.parameter.TupleParameter()
+        self.assertEqual(hash(Foo(args=({'foo': 'bar'}, {'doge': 'wow'})).args),
+                         hash(p.normalize(p.parse('({"foo": "bar"}, {"doge": "wow"})'))))
+
+    def test_tuple_nested(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.TupleParameter()
+
+        p = luigi.parameter.TupleParameter()
+        self.assertEqual(hash(Foo(args=(('foo', 'bar'), ('doge', 'wow'))).args),
+                         hash(p.normalize(p.parse('(("foo", "bar"), ("doge", "wow"))'))))
 
     def test_task(self):
         class Bar(luigi.Task):
@@ -504,23 +537,26 @@ class TestRemoveGlobalParameters(LuigiTestCase):
             self.assertEqual(Dogs().n_dogs, 654)
             self.assertEqual(CatsWithoutSection().n_cats, 321)
 
-    def test_global_significant_param(self):
-        """ We don't want any kind of global param to be positional """
-        class MyTask(luigi.Task):
-            # This could typically be called "--test-dry-run"
-            x_g1 = luigi.Parameter(default='y', is_global=True, significant=True)
+    if six.PY3:
+        def test_global_significant_param_warning(self):
+            """ We don't want any kind of global param to be positional """
+            with self.assertWarnsRegex(DeprecationWarning, 'is_global support is removed. Assuming positional=False'):
+                class MyTask(luigi.Task):
+                    # This could typically be called "--test-dry-run"
+                    x_g1 = luigi.Parameter(default='y', is_global=True, significant=True)
 
-        self.assertRaises(luigi.parameter.UnknownParameterException,
-                          lambda: MyTask('arg'))
+            self.assertRaises(luigi.parameter.UnknownParameterException,
+                              lambda: MyTask('arg'))
 
-    def test_global_insignificant_param(self):
-        """ We don't want any kind of global param to be positional """
-        class MyTask(luigi.Task):
-            # This could typically be "--yarn-pool=development"
-            x_g2 = luigi.Parameter(default='y', is_global=True, significant=False)
+        def test_global_insignificant_param_warning(self):
+            """ We don't want any kind of global param to be positional """
+            with self.assertWarnsRegex(DeprecationWarning, 'is_global support is removed. Assuming positional=False'):
+                class MyTask(luigi.Task):
+                    # This could typically be "--yarn-pool=development"
+                    x_g2 = luigi.Parameter(default='y', is_global=True, significant=False)
 
-        self.assertRaises(luigi.parameter.UnknownParameterException,
-                          lambda: MyTask('arg'))
+            self.assertRaises(luigi.parameter.UnknownParameterException,
+                              lambda: MyTask('arg'))
 
 
 class TestParamWithDefaultFromConfig(LuigiTestCase):
@@ -563,7 +599,11 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
     @with_config({"foo": {"bar": "2001-02-03T04H30"}})
     def testDateMinuteDeprecated(self):
         p = luigi.DateMinuteParameter(config_path=dict(section="foo", name="bar"))
-        self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), _value(p))
+        if six.PY3:
+            with self.assertWarnsRegex(DeprecationWarning, 'Using "H" between hours and minutes is deprecated, omit it instead.'):
+                self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), _value(p))
+        else:
+            self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), _value(p))
 
     @with_config({"foo": {"bar": "2001-02-03T040506"}})
     def testDateSecond(self):
@@ -628,6 +668,16 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         p = luigi.DateIntervalParameter(config_path=dict(section="foo", name="bar"))
         expected = luigi.date_interval.Custom.parse("2001-02-03-2001-02-28")
         self.assertEqual(expected, _value(p))
+
+    @with_config({"foo": {"bar": "0 seconds"}})
+    def testTimeDeltaNoSeconds(self):
+        p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(timedelta(seconds=0), _value(p))
+
+    @with_config({"foo": {"bar": "0 d"}})
+    def testTimeDeltaNoDays(self):
+        p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(timedelta(days=0), _value(p))
 
     @with_config({"foo": {"bar": "1 day"}})
     def testTimeDelta(self):
@@ -871,12 +921,20 @@ class OverrideEnvStuff(LuigiTestCase):
 
     @with_config({"core": {"default-scheduler-port": '6543'}})
     def testOverrideSchedulerPort(self):
-        env_params = luigi.interface.core()
+        if six.PY3:
+            with self.assertWarnsRegex(DeprecationWarning, r'default-scheduler-port is deprecated'):
+                env_params = luigi.interface.core()
+        else:
+            env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6543)
 
     @with_config({"core": {"scheduler-port": '6544'}})
     def testOverrideSchedulerPort2(self):
-        env_params = luigi.interface.core()
+        if six.PY3:
+            with self.assertWarnsRegex(DeprecationWarning, r'scheduler_port \(with dashes\) should be avoided'):
+                env_params = luigi.interface.core()
+        else:
+            env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6544)
 
     @with_config({"core": {"scheduler_port": '6545'}})
@@ -894,6 +952,15 @@ class TestSerializeDateParameters(LuigiTestCase):
         self.assertEqual(luigi.MonthParameter().serialize(date), '2013-02')
         dt = datetime.datetime(2013, 2, 3, 4, 5)
         self.assertEqual(luigi.DateHourParameter().serialize(dt), '2013-02-03T04')
+
+
+class TestSerializeTimeDeltaParameters(LuigiTestCase):
+
+    def testSerialize(self):
+        tdelta = timedelta(weeks=5, days=4, hours=3, minutes=2, seconds=1)
+        self.assertEqual(luigi.TimeDeltaParameter().serialize(tdelta), '5 w 4 d 3 h 2 m 1 s')
+        tdelta = timedelta(seconds=0)
+        self.assertEqual(luigi.TimeDeltaParameter().serialize(tdelta), '0 w 0 d 0 h 0 m 0 s')
 
 
 class TestTaskParameter(LuigiTestCase):

@@ -275,7 +275,7 @@ class OrderedSet(collections.MutableSet):
 
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
-                 params=None, tracking_url=None, status_message=None, retry_policy='notoptional'):
+                 params=None, tracking_url=None, status_message=None, progress_percentage=None, retry_policy='notoptional'):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = OrderedSet()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -301,6 +301,7 @@ class Task(object):
         self.failures = Failures(self.retry_policy.disable_window)
         self.tracking_url = tracking_url
         self.status_message = status_message
+        self.progress_percentage = progress_percentage
         self.scheduler_disable_time = None
         self.runnable = False
         self.batchable = False
@@ -352,6 +353,7 @@ class Worker(object):
         self.tasks = set()  # task objects
         self.info = {}
         self.disabled = False
+        self.rpc_messages = []
 
     def add_info(self, info):
         self.info.update(info)
@@ -368,17 +370,13 @@ class Worker(object):
         if self.last_active + config.worker_disconnect_delay < time.time():
             return True
 
-    def get_pending_tasks(self, state):
-        """
-        Get PENDING (and RUNNING) tasks for this worker.
-
-        You have to pass in the state for optimization reasons.
-        """
-        if len(self.tasks) < state.num_pending_tasks():
-            return six.moves.filter(lambda task: task.status in [PENDING, RUNNING],
-                                    self.tasks)
+    def get_tasks(self, state, *statuses):
+        num_self_tasks = len(self.tasks)
+        num_state_tasks = sum(len(state._status_tasks[status]) for status in statuses)
+        if num_self_tasks < num_state_tasks:
+            return six.moves.filter(lambda task: task.status in statuses, self.tasks)
         else:
-            return six.moves.filter(lambda task: self.id in task.workers, state.get_pending_tasks())
+            return six.moves.filter(lambda task: self.id in task.workers, state.get_active_tasks_by_status(*statuses))
 
     def is_trivial_worker(self, state):
         """
@@ -389,7 +387,7 @@ class Worker(object):
         """
         if self.assistant:
             return False
-        return all(not task.resources for task in self.get_pending_tasks(state))
+        return all(not task.resources for task in self.get_tasks(state, PENDING))
 
     @property
     def assistant(self):
@@ -405,6 +403,15 @@ class Worker(object):
             return WORKER_STATE_ACTIVE
         else:
             return WORKER_STATE_DISABLED
+
+    def add_rpc_message(self, name, **kwargs):
+        # the message has the format {'name': <function_name>, 'kwargs': <function_kwargs>}
+        self.rpc_messages.append({'name': name, 'kwargs': kwargs})
+
+    def fetch_rpc_messages(self):
+        messages = self.rpc_messages[:]
+        del self.rpc_messages[:]
+        return messages
 
     def __str__(self):
         return self.id
@@ -461,27 +468,24 @@ class SimpleTaskState(object):
         else:
             logger.info("No prior state file exists at %s. Starting with empty state", self._state_path)
 
-    def get_active_tasks(self, status=None):
+    def get_active_tasks(self):
+        return six.itervalues(self._tasks)
+
+    def get_active_tasks_by_status(self, *statuses):
+        return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status]) for status in statuses)
+
+    def get_active_task_count_for_status(self, status):
         if status:
-            for task in six.itervalues(self._status_tasks[status]):
-                yield task
+            return len(self._status_tasks[status])
         else:
-            for task in six.itervalues(self._tasks):
-                yield task
+            return len(self._tasks)
 
     def get_batch_running_tasks(self, batch_id):
         assert batch_id is not None
         return [
-            task for task in self.get_active_tasks(BATCH_RUNNING)
+            task for task in self.get_active_tasks_by_status(BATCH_RUNNING)
             if task.batch_id == batch_id
         ]
-
-    def get_running_tasks(self):
-        return six.itervalues(self._status_tasks[RUNNING])
-
-    def get_pending_tasks(self):
-        return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status])
-                                             for status in [PENDING, RUNNING])
 
     def set_batcher(self, worker_id, family, batcher_args, max_batch_size):
         self._task_batchers.setdefault(worker_id, {})
@@ -518,6 +522,7 @@ class SimpleTaskState(object):
         self.set_status(task, BATCH_RUNNING)
         task.batch_id = batch_id
         task.worker_running = worker_id
+        task.resources_running = task.resources
         task.time_running = time.time()
 
     def set_status(self, task, new_status, config=None):
@@ -645,7 +650,9 @@ class SimpleTaskState(object):
     def disable_workers(self, worker_ids):
         self._remove_workers_from_tasks(worker_ids, remove_stakeholders=False)
         for worker_id in worker_ids:
-            self.get_worker(worker_id).disabled = True
+            worker = self.get_worker(worker_id)
+            worker.disabled = True
+            worker.tasks.clear()
 
 
 class Scheduler(object):
@@ -675,6 +682,7 @@ class Scheduler(object):
         self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
         self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}
+        self._paused = False
 
         if self._config.batch_emails:
             self._email_batcher = BatchNotifier()
@@ -689,11 +697,11 @@ class Scheduler(object):
 
     @rpc_method()
     def prune(self):
-        logger.info("Starting pruning of task graph")
+        logger.debug("Starting pruning of task graph")
         self._prune_workers()
         self._prune_tasks()
         self._prune_emails()
-        logger.info("Done pruning task graph")
+        logger.debug("Done pruning task graph")
 
     def _prune_workers(self):
         remove_workers = []
@@ -746,6 +754,20 @@ class Scheduler(object):
         self._state.set_batcher(worker, task_family, batched_args, max_batch_size)
 
     @rpc_method()
+    def forgive_failures(self, task_id=None):
+        status = PENDING
+        task = self._state.get_task(task_id)
+        if task is None:
+            return {"task_id": task_id, "status": None}
+
+        # we forgive only failures
+        if task.status == FAILED:
+            # forgive but do not forget
+            self._update_task_history(task, status)
+            self._state.set_status(task, status, self._config)
+        return {"task_id": task_id, "status": task.status}
+
+    @rpc_method()
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
@@ -788,6 +810,9 @@ class Scheduler(object):
             task.batch_id = batch_id
         if status == RUNNING and not task.worker_running:
             task.worker_running = worker_id
+            if batch_id:
+                task.resources_running = self._state.get_batch_running_tasks(batch_id)[0].resources_running
+            task.time_running = time.time()
 
         if tracking_url is not None or task.status != RUNNING:
             task.tracking_url = tracking_url
@@ -807,8 +832,8 @@ class Scheduler(object):
                 for batch_task in self._state.get_batch_running_tasks(task.batch_id):
                     batch_task.expl = expl
 
-        if not (task.status in (RUNNING, BATCH_RUNNING) and status == PENDING) or new_deps:
-            # don't allow re-scheduling of task while it is running, it must either fail or succeed first
+        if not (task.status in (RUNNING, BATCH_RUNNING) and (status not in (DONE, FAILED, RUNNING) or task.worker_running != worker_id)) or new_deps:
+            # don't allow re-scheduling of task while it is running, it must either fail or succeed on the worker actually running it
             if status == PENDING or status != task.status:
                 # Update the DB only if there was a acctual change, to prevent noise.
                 # We also check for status == PENDING b/c that's the default value
@@ -891,10 +916,33 @@ class Scheduler(object):
         self._state.disable_workers({worker})
 
     @rpc_method()
+    def set_worker_processes(self, worker, n):
+        self._state.get_worker(worker).add_rpc_message('set_worker_processes', n=n)
+
+    @rpc_method()
+    def is_paused(self):
+        return {'paused': self._paused}
+
+    @rpc_method()
+    def pause(self):
+        self._paused = True
+
+    @rpc_method()
+    def unpause(self):
+        self._paused = False
+
+    @rpc_method()
     def update_resources(self, **resources):
         if self._resources is None:
             self._resources = {}
         self._resources.update(resources)
+
+    @rpc_method()
+    def update_resource(self, resource, amount):
+        if not isinstance(amount, int) or amount < 0:
+            return False
+        self._resources[resource] = amount
+        return True
 
     def _generate_retry_policy(self, task_retry_policy_dict):
         retry_policy_dict = self._config._get_retry_policy()._asdict()
@@ -914,9 +962,9 @@ class Scheduler(object):
     def _used_resources(self):
         used_resources = collections.defaultdict(int)
         if self._resources is not None:
-            for task in self._state.get_active_tasks(status=RUNNING):
-                if task.resources:
-                    for resource, amount in six.iteritems(task.resources):
+            for task in self._state.get_active_tasks_by_status(RUNNING):
+                if getattr(task, 'resources_running', task.resources):
+                    for resource, amount in six.iteritems(getattr(task, 'resources_running', task.resources)):
                         used_resources[resource] += amount
         return used_resources
 
@@ -941,11 +989,11 @@ class Scheduler(object):
     def _reset_orphaned_batch_running_tasks(self, worker_id):
         running_batch_ids = {
             task.batch_id
-            for task in self._state.get_running_tasks()
+            for task in self._state.get_active_tasks_by_status(RUNNING)
             if task.worker_running == worker_id
         }
         orphaned_tasks = [
-            task for task in self._state.get_active_tasks(BATCH_RUNNING)
+            task for task in self._state.get_active_tasks_by_status(BATCH_RUNNING)
             if task.worker_running == worker_id and task.batch_id not in running_batch_ids
         ]
         for task in orphaned_tasks:
@@ -959,21 +1007,24 @@ class Scheduler(object):
         running_tasks = []
 
         upstream_status_table = {}
-        for task in worker.get_pending_tasks(self._state):
+        for task in worker.get_tasks(self._state, RUNNING):
             if self._upstream_status(task.id, upstream_status_table) == UPSTREAM_DISABLED:
                 continue
-            if task.status == RUNNING:
-                # Return a list of currently running tasks to the client,
-                # makes it easier to troubleshoot
-                other_worker = self._state.get_worker(task.worker_running)
-                if other_worker is not None:
-                    more_info = {'task_id': task.id, 'worker': str(other_worker)}
-                    more_info.update(other_worker.info)
-                    running_tasks.append(more_info)
-            elif task.status == PENDING:
-                num_pending += 1
-                num_unique_pending += int(len(task.workers) == 1)
-                num_pending_last_scheduled += int(task.workers.peek(last=True) == worker_id)
+            # Return a list of currently running tasks to the client,
+            # makes it easier to troubleshoot
+            other_worker = self._state.get_worker(task.worker_running)
+            if other_worker is not None:
+                more_info = {'task_id': task.id, 'worker': str(other_worker)}
+                more_info.update(other_worker.info)
+                running_tasks.append(more_info)
+
+        for task in worker.get_tasks(self._state, PENDING, FAILED):
+            if self._upstream_status(task.id, upstream_status_table) == UPSTREAM_DISABLED:
+                continue
+            num_pending += 1
+            num_unique_pending += int(len(task.workers) == 1)
+            num_pending_last_scheduled += int(task.workers.peek(last=True) == worker_id)
+
         return {
             'n_pending_tasks': num_pending,
             'n_unique_pending': num_unique_pending,
@@ -1022,7 +1073,7 @@ class Scheduler(object):
         best_task = None
         if current_tasks is not None:
             ct_set = set(current_tasks)
-            for task in sorted(self._state.get_running_tasks(), key=self._rank):
+            for task in sorted(self._state.get_active_tasks_by_status(RUNNING), key=self._rank):
                 if task.worker_running == worker_id and task.id not in ct_set:
                     best_task = task
 
@@ -1033,12 +1084,14 @@ class Scheduler(object):
         greedy_resources = collections.defaultdict(int)
 
         worker = self._state.get_worker(worker_id)
-        if worker.is_trivial_worker(self._state):
-            relevant_tasks = worker.get_pending_tasks(self._state)
+        if self._paused:
+            relevant_tasks = []
+        elif worker.is_trivial_worker(self._state):
+            relevant_tasks = worker.get_tasks(self._state, PENDING, RUNNING)
             used_resources = collections.defaultdict(int)
             greedy_workers = dict()  # If there's no resources, then they can grab any task
         else:
-            relevant_tasks = self._state.get_pending_tasks()
+            relevant_tasks = self._state.get_active_tasks_by_status(PENDING, RUNNING)
             used_resources = self._used_resources()
             activity_limit = time.time() - self._config.worker_disconnect_delay
             active_workers = self._state.get_active_workers(last_get_work_gt=activity_limit)
@@ -1051,7 +1104,7 @@ class Scheduler(object):
             if (best_task and batched_params and task.family == best_task.family and
                     len(batched_tasks) < max_batch_size and task.is_batchable() and all(
                     task.params.get(name) == value for name, value in unbatched_params.items()) and
-                    self._schedulable(task)):
+                    task.resources == best_task.resources and self._schedulable(task)):
                 for name, params in batched_params.items():
                     params.append(task.params.get(name))
                 batched_tasks.append(task)
@@ -1060,7 +1113,7 @@ class Scheduler(object):
 
             if task.status == RUNNING and (task.worker_running in greedy_workers):
                 greedy_workers[task.worker_running] -= 1
-                for resource, amount in six.iteritems((task.resources or {})):
+                for resource, amount in six.iteritems((getattr(task, 'resources_running', task.resources) or {})):
                     greedy_resources[resource] += amount
 
             if self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
@@ -1115,6 +1168,7 @@ class Scheduler(object):
         elif best_task:
             self._state.set_status(best_task, RUNNING, self._config)
             best_task.worker_running = worker_id
+            best_task.resources_running = best_task.resources
             best_task.time_running = time.time()
             self._update_task_history(best_task, RUNNING, host=host)
 
@@ -1131,7 +1185,8 @@ class Scheduler(object):
     @rpc_method(attempts=1)
     def ping(self, **kwargs):
         worker_id = kwargs['worker']
-        self._update_worker(worker_id)
+        worker = self._update_worker(worker_id)
+        return {"rpc_messages": worker.fetch_rpc_messages()}
 
     def _upstream_status(self, task_id, upstream_status_table):
         if task_id in upstream_status_table:
@@ -1155,8 +1210,9 @@ class Scheduler(object):
                     elif upstream_status_table[dep_id] == '' and dep.deps:
                         # This is the postorder update step when we set the
                         # status based on the previously calculated child elements
-                        upstream_severities = list(upstream_status_table.get(a_task_id) for a_task_id in dep.deps if a_task_id in upstream_status_table) or ['']
-                        status = min(upstream_severities, key=UPSTREAM_SEVERITY_KEY)
+                        status = max((upstream_status_table.get(a_task_id, '')
+                                      for a_task_id in dep.deps),
+                                     key=UPSTREAM_SEVERITY_KEY)
                         upstream_status_table[dep_id] = status
             return upstream_status_table[dep_id]
 
@@ -1175,7 +1231,8 @@ class Scheduler(object):
             'priority': task.priority,
             'resources': task.resources,
             'tracking_url': getattr(task, "tracking_url", None),
-            'status_message': getattr(task, "status_message", None)
+            'status_message': getattr(task, "status_message", None),
+            'progress_percentage': getattr(task, "progress_percentage", None)
         }
         if task.status == DISABLED:
             ret['re_enable_able'] = task.scheduler_disable_time is not None
@@ -1284,7 +1341,13 @@ class Scheduler(object):
         """
         Query for a subset of tasks by status.
         """
+        if not search:
+            count_limit = max_shown_tasks or self._config.max_shown_tasks
+            pre_count = self._state.get_active_task_count_for_status(status)
+            if limit and pre_count > count_limit:
+                return {'num_tasks': -1 if upstream_status else pre_count}
         self.prune()
+
         result = {}
         upstream_status_table = {}  # used to memoize upstream status
         if search is None:
@@ -1295,7 +1358,9 @@ class Scheduler(object):
 
             def filter_func(t):
                 return all(term in t.pretty_id for term in terms)
-        for task in filter(filter_func, self._state.get_active_tasks(status)):
+
+        tasks = self._state.get_active_tasks_by_status(status) if status else self._state.get_active_tasks()
+        for task in filter(filter_func, tasks):
             if task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id, upstream_status_table):
                 serialized = self._serialize_task(task.id, include_deps=False)
                 result[task.id] = serialized
@@ -1320,21 +1385,24 @@ class Scheduler(object):
                 started=worker.started,
                 state=worker.state,
                 first_task_display_name=self._first_task_display_name(worker),
+                num_unread_rpc_messages=len(worker.rpc_messages),
                 **worker.info
             ) for worker in self._state.get_active_workers()]
         workers.sort(key=lambda worker: worker['started'], reverse=True)
         if include_running:
             running = collections.defaultdict(dict)
+            for task in self._state.get_active_tasks_by_status(RUNNING):
+                if task.worker_running:
+                    running[task.worker_running][task.id] = self._serialize_task(task.id, include_deps=False)
+
             num_pending = collections.defaultdict(int)
             num_uniques = collections.defaultdict(int)
-            for task in self._state.get_pending_tasks():
-                if task.status == RUNNING and task.worker_running:
-                    running[task.worker_running][task.id] = self._serialize_task(task.id, include_deps=False)
-                elif task.status == PENDING:
-                    for worker in task.workers:
-                        num_pending[worker] += 1
-                    if len(task.workers) == 1:
-                        num_uniques[list(task.workers)[0]] += 1
+            for task in self._state.get_active_tasks_by_status(PENDING):
+                for worker in task.workers:
+                    num_pending[worker] += 1
+                if len(task.workers) == 1:
+                    num_uniques[list(task.workers)[0]] += 1
+
             for worker in workers:
                 tasks = running[worker['name']]
                 worker['num_running'] = len(tasks)
@@ -1357,7 +1425,7 @@ class Scheduler(object):
             ) for resource, r_dict in six.iteritems(self.resources())]
         if self._resources is not None:
             consumers = collections.defaultdict(dict)
-            for task in self._state.get_running_tasks():
+            for task in self._state.get_active_tasks_by_status(RUNNING):
                 if task.status == RUNNING and task.resources:
                     for resource, amount in six.iteritems(task.resources):
                         consumers[resource][task.id] = self._serialize_task(task.id, include_deps=False)
@@ -1428,6 +1496,23 @@ class Scheduler(object):
             return {"taskId": task_id, "statusMessage": task.status_message}
         else:
             return {"taskId": task_id, "statusMessage": ""}
+
+    @rpc_method()
+    def set_task_progress_percentage(self, task_id, progress_percentage):
+        if self._state.has_task(task_id):
+            task = self._state.get_task(task_id)
+            task.progress_percentage = progress_percentage
+            if task.status == RUNNING and task.batch_id is not None:
+                for batch_task in self._state.get_batch_running_tasks(task.batch_id):
+                    batch_task.progress_percentage = progress_percentage
+
+    @rpc_method()
+    def get_task_progress_percentage(self, task_id):
+        if self._state.has_task(task_id):
+            task = self._state.get_task(task_id)
+            return {"taskId": task_id, "progressPercentage": task.progress_percentage}
+        else:
+            return {"taskId": task_id, "progressPercentage": None}
 
     def _update_task_history(self, task, status, host=None):
         try:

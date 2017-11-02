@@ -50,10 +50,10 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 
 setup(
     name='luigi',
-    version='2.3.3',
+    version='2.7.1',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
-    author='Erik Bernhardsson',
+    author='The Luigi Authors',
     url='https://github.com/spotify/luigi',
     license='Apache License 2.0',
     packages=[
@@ -71,8 +71,7 @@ setup(
             'luigid = luigi.cmdline:luigid',
             'luigi-grep = luigi.tools.luigi_grep:main',
             'luigi-deps = luigi.tools.deps:main',
-            'luigi-deps-tree = luigi.tools.deps_tree:main',
-            'luigi-migrate = luigi.tools.migrate:main'
+            'luigi-deps-tree = luigi.tools.deps_tree:main'
         ]
     },
     install_requires=install_requires,

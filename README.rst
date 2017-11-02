@@ -25,12 +25,12 @@ Getting Started
 ---------------
 
 Run ``pip install luigi`` to install the latest stable version from `PyPI
-<https://pypi.python.org/pypi/luigi>`_. Documentation for the latest release is
-hosted `here <https://luigi.readthedocs.io/en/stable/>`__.
+<https://pypi.python.org/pypi/luigi>`_. `Documentation for the latest release
+<https://luigi.readthedocs.io/en/stable/>`__ is hosted on readthedocs.
 
 For the bleeding edge code, ``pip install
-git+https://github.com/spotify/luigi.git``. Bleeding edge documentation can be
-found `here <https://luigi.readthedocs.io/en/latest/>`__.
+git+https://github.com/spotify/luigi.git``. `Bleeding edge documentation
+<https://luigi.readthedocs.io/en/latest/>`__ is also available.
 
 Background
 ----------
@@ -49,7 +49,7 @@ data processing, like `Hive <http://hive.apache.org/>`__,
 replace these. Instead it helps you stitch many tasks together, where
 each task can be a `Hive query <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hive.html>`__,
 a `Hadoop job in Java <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hadoop_jar.html>`_,
-a  `Spark job in Scala or Python <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.spark.html>`_
+a  `Spark job in Scala or Python <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.spark.html>`_,
 a Python snippet,
 `dumping a table <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.sqla.html>`_
 from a database, or anything else. It's easy to build up
@@ -65,7 +65,7 @@ in Hadoop, as well as
 `Hive <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hive.html>`__,
 and `Pig <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.pig.html>`__,
 jobs. It also comes with
-`file system abstractions for HDFS <https://luigi.readthedocs.io/en/latest/api/luigi.hdfs.html>`_,
+`file system abstractions for HDFS <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.hdfs.html>`_,
 and local files that ensures all file system operations are atomic. This
 is important because it means your data pipeline will not crash in a
 state containing partial data.
@@ -116,7 +116,7 @@ or `scp'ing files <https://luigi.readthedocs.io/en/latest/api/luigi.contrib.ssh.
 Who uses Luigi?
 ---------------
 
-We use Luigi internally at `Spotify <https://www.spotify.com/us/>`_ to run
+We use Luigi internally at `Spotify <https://www.spotify.com>`_ to run
 thousands of tasks every day, organized in complex dependency graphs.
 Most of these tasks are Hadoop jobs. Luigi provides an infrastructure
 that powers all kinds of stuff including recommendations, toplists, A/B
@@ -127,24 +127,39 @@ of Luigi users is unknown. But based on the number of unique contributors, we
 expect hundreds of enterprises to use it. Some users have written blog posts
 or held presentations about Luigi:
 
-* `Spotify (NYC Data Science) <http://www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`_
-* `Foursquare <http://www.slideshare.net/OpenAnayticsMeetup/luigi-presentation-17-23199897>`_
-* `Mortar Data <http://help.mortardata.com/technologies/luigi>`_
-* `Stripe <http://www.slideshare.net/PyData/python-as-part-of-a-production-machine-learning-stack-by-michael-manapat-pydata-sv-2014>`_
-* `Asana <https://eng.asana.com/2014/11/stable-accessible-data-infrastructure-startup/>`_
-* `Buffer <https://overflow.bufferapp.com/2014/10/31/buffers-new-data-architecture/>`_
-* `SeatGeek <http://chairnerd.seatgeek.com/building-out-the-seatgeek-data-pipeline/>`_
-* `Treasure Data <http://blog.treasuredata.com/blog/2015/02/25/managing-the-data-pipeline-with-git-luigi/>`_
-* `Growth Intelligence <http://www.slideshare.net/growthintel/a-beginners-guide-to-building-data-pipelines-with-luigi>`_
-* `AdRoll <http://tech.adroll.com/blog/data/2015/09/22/data-pipelines-docker.html>`_
+* `Spotify <https://www.spotify.com>`_ `(presentation, 2014) <http://www.slideshare.net/erikbern/luigi-presentation-nyc-data-science>`__
+* `Foursquare <https://foursquare.com/>`_ `(presentation, 2013) <http://www.slideshare.net/OpenAnayticsMeetup/luigi-presentation-17-23199897>`__
+* `Mortar Data (Datadog) <https://www.datadoghq.com/>`_ `(documentation / tutorial) <http://help.mortardata.com/technologies/luigi>`__
+* `Stripe <https://stripe.com/>`_ `(presentation, 2014) <http://www.slideshare.net/PyData/python-as-part-of-a-production-machine-learning-stack-by-michael-manapat-pydata-sv-2014>`__
+* `Asana <https://asana.com/>`_ `(blog, 2014) <https://eng.asana.com/2014/11/stable-accessible-data-infrastructure-startup/>`__
+* `Buffer <https://buffer.com/>`_ `(blog, 2014) <https://overflow.bufferapp.com/2014/10/31/buffers-new-data-architecture/>`__
+* `SeatGeek <https://seatgeek.com/>`_ `(blog, 2015) <http://chairnerd.seatgeek.com/building-out-the-seatgeek-data-pipeline/>`__
+* `Treasure Data <https://www.treasuredata.com/>`_ `(blog, 2015) <http://blog.treasuredata.com/blog/2015/02/25/managing-the-data-pipeline-with-git-luigi/>`__
+* `Growth Intelligence <http://growthintel.com/>`_ `(presentation, 2015) <http://www.slideshare.net/growthintel/a-beginners-guide-to-building-data-pipelines-with-luigi>`__
+* `AdRoll <https://www.adroll.com/>`_ `(blog, 2015) <http://tech.adroll.com/blog/data/2015/09/22/data-pipelines-docker.html>`__
+* 17zuoye `(presentation, 2015) <https://speakerdeck.com/mvj3/luiti-an-offline-task-management-framework>`__
+* `Custobar <https://www.custobar.com/>`_ `(presentation, 2016) <http://www.slideshare.net/teemukurppa/managing-data-workflows-with-luigi>`__
+* `Blendle <https://launch.blendle.com/>`_ `(presentation) <http://www.anneschuth.nl/wp-content/uploads/sea-anneschuth-streamingblendle.pdf#page=126>`__
+* `TrustYou <http://www.trustyou.com/>`_ `(presentation, 2015) <https://speakerdeck.com/mfcabrera/pydata-berlin-2015-processing-hotel-reviews-with-python>`__
+* `Groupon <https://www.groupon.com/>`_ / `OrderUp <https://orderup.com>`_ `(alternative implementation) <https://github.com/groupon/luigi-warehouse>`__
+* `Red Hat - Marketing Operations <https://www.redhat.com>`_ `(blog, 2017) <https://github.com/rh-marketingops/rh-mo-scc-luigi>`__
+* `GetNinjas <https://www.getninjas.com.br/>`_ `(blog, 2017) <https://labs.getninjas.com.br/using-luigi-to-create-and-monitor-pipelines-of-batch-jobs-eb8b3cd2a574>`__
+* `voyages-sncf.com <https://www.voyages-sncf.com/>`_ `(presentation, 2017) <https://github.com/voyages-sncf-technologies/meetup-afpy-nantes-luigi>`__
+* `Open Targets <https://www.opentargets.org/>`_ `(blog, 2017) <https://blog.opentargets.org/using-containers-with-luigi>`__
+* `Leipzig University Library <https://ub.uni-leipzig.de>`_ `(presentation, 2016) <https://de.slideshare.net/MartinCzygan/build-your-own-discovery-index-of-scholary-eresources>`__ / `(project) <https://finc.info/de/datenquellen>`__
+
+Some more companies are using Luigi but haven't had a chance yet to write about it:
+
 * `Schibsted <http://www.schibsted.com/>`_
-* `17zuoye <https://speakerdeck.com/mvj3/luiti-an-offline-task-management-framework>`_
 * `enbrite.ly <http://enbrite.ly/>`_
 * `Dow Jones / The Wall Street Journal <http://wsj.com>`_
 * `Hotels.com <https://hotels.com>`_
-* `Custobar (Metrics Monday Helsinki) <http://www.slideshare.net/teemukurppa/managing-data-workflows-with-luigi>`_
-* `Blendle <http://www.anneschuth.nl/wp-content/uploads/sea-anneschuth-streamingblendle.pdf#page=126>`_
-* `TrustYou (PyData Berlin 2015) <https://speakerdeck.com/mfcabrera/pydata-berlin-2015-processing-hotel-reviews-with-python>`_
+* `Newsela <https://newsela.com>`_
+* `Squarespace <https://www.squarespace.com/>`_
+* `OAO <https://adops.com/>`_
+* `Grovo <https://grovo.com/>`_
+* `Weebly <https://www.weebly.com/>`_
+* `Deloitte <https://www.Deloitte.co.uk/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
@@ -159,7 +174,7 @@ External links
 Authors
 -------
 
-Luigi was built at `Spotify <https://www.spotify.com/us/>`_, mainly by
+Luigi was built at `Spotify <https://www.spotify.com>`_, mainly by
 `Erik Bernhardsson <https://github.com/erikbern>`_ and
 `Elias Freider <https://github.com/freider>`_.
 `Many other people <https://github.com/spotify/luigi/graphs/contributors>`_

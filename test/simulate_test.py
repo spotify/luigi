@@ -33,7 +33,10 @@ def is_writable():
     fn = os.path.join(d, 'luigi-simulate-write-test')
     exists = True
     try:
-        os.makedirs(d, exist_ok=True)
+        try:
+            os.makedirs(d)
+        except OSError:
+            pass
         open(fn, 'w').close()
         os.remove(fn)
     except:
@@ -50,7 +53,10 @@ class TaskA(luigi.Task):
 
     def run(self):
         fn = os.path.join(temp_dir(), 'luigi-simulate-test.tmp')
-        os.makedirs(os.path.dirname(fn), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(fn))
+        except OSError:
+            pass
 
         with open(fn, 'a') as f:
             f.write('{0}={1}\n'.format(self.__class__.__name__, self.i))

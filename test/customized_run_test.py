@@ -128,7 +128,3 @@ class CustomizedWorkerTest(unittest.TestCase):
         self.assertFalse(self.worker_scheduler_factory.worker.complete())
         luigi.run(['DummyTask', '--n', '4'], worker_scheduler_factory=self.worker_scheduler_factory)
         self.assertTrue(self.worker_scheduler_factory.worker.complete())
-
-
-if __name__ == '__main__':
-    unittest.main()

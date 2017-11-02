@@ -1,0 +1,209 @@
+.nodeCircle {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+text {
+    font-size:8pt;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: .6;
+}
+
+svg {
+    border:1px solid #DDDDDD;
+    overflow: inherit;
+}
+
+.taskRow {
+  word-break:break-all;
+}
+
+
+@-webkit-keyframes flash {
+  0%, 50%, 100% {
+    opacity: 1;
+  }
+
+  25%, 75% {
+    opacity: 0.2;
+  }
+}
+
+@keyframes flash {
+  0%, 50%, 100% {
+    opacity: 1;
+  }
+
+  25%, 75% {
+    opacity: 0.2;
+  }
+}
+
+.RUNNING {
+  -webkit-animation-duration: 5s;
+  animation-duration: 5s;
+  -webkit-animation-fill-mode: both;
+  animation-fill-mode: both;
+  -webkit-animation-iteration-count: 1;
+  animation-iteration-count: 1;
+}
+
+.live.map {
+  width: 100%;
+  height: 600px;
+  background: #333;
+}
+
+.live.map text {
+  font-weight: 300;
+  font-size: 14px;
+}
+
+.live.map .node rect {
+  stroke-width: 1.5px;
+  stroke: #bbb;
+  fill: #666;
+}
+
+.live.map .status {
+  height: 100%;
+  width: 15px;
+  display: block;
+  float: left;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  margin-right: 4px;
+}
+
+.live.map .DONE .status {
+  background-color: #7f7;
+}
+
+.live.map .RUNNING .status {
+  background-color: #7f7;
+}
+
+.live.map .PENDING .status {
+  background-color: #FFFF46;
+}
+
+.live.map .ERROR .status {
+  background-color: #f77;
+}
+
+.live.map .FAILED .status {
+  background-color: #dd4b39;
+}
+
+.live.map .RUNNING .queue {
+  color: #f77;
+}
+
+.live.map .DISABLED .status {
+  background-color: #aaaaaa;
+}
+
+.RUNNING {
+  -webkit-animation-name: flash;
+  animation-name: flash;
+}
+
+.live.map .consumers {
+  margin-right: 2px;
+}
+
+.live.map .consumers,
+.live.map .name {
+  margin-top: 4px;
+}
+
+.live.map .consumers:after {
+  content: "x";
+}
+
+.live.map .queue {
+  display: block;
+  float: left;
+  width: 130px;
+  height: 20px;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.live.map .node g div {
+  width: 200px;
+  height: 40px;
+  color: #fff;
+}
+
+.live.map .node g div span.consumers {
+  display: inline-block;
+  width: 20px;
+}
+
+.live.map .edgeLabel text {
+  width: 50px;
+  fill: #fff;
+}
+
+.live.map .edgePath path {
+  stroke: #999;
+  stroke-width: 1.5px;
+  fill: #999;
+}
+
+td.details-control {
+  cursor: pointer;
+}
+
+span.status-icon {
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+  border-bottom-right-radius: 2px;
+  border-bottom-left-radius: 2px;
+  display: inline-block;
+  height: 24px;
+  width: 24px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 24px;
+
+}
+
+#serverSide {
+  float: right;
+  margin: 4px;
+}
+
+.infoBar {
+  min-height: 80px;
+}
+
+#taskTable_filter {
+  margin-top: 9px;
+}
+
+#loadTaskForm input {
+  width: 20em;
+}
+
+#workerList .box-tools > div {
+  display: inline-block;
+}
+
+#workerList .btn-set-workers > span.caret {
+  margin-left: 4px;
+}
+
+#workerList .box-tools > span.label-unread-worker-messages {
+  margin-right: 6px;
+  vertical-align: middle;
+  font-style: italic;
+  color: red;
+}
+
+#resourceList i.resources-collapse {
+  padding-left: 10px;
+}

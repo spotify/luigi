@@ -217,7 +217,6 @@ time. Brilliant!
 """
 
 import datetime
-import functools
 import logging
 
 from luigi import six
@@ -246,15 +245,6 @@ def common_params(task_instance, task_cls):
     common_kwargs = dict((key, task_instance.param_kwargs[key]) for key in common_param_names)
     vals = dict(task_instance.get_param_values(common_param_vals, [], common_kwargs))
     return vals
-
-
-def task_wraps(P):
-    # In order to make the behavior of a wrapper class nicer, we set the name of the
-    # new class to the wrapped class, and copy over the docstring and module as well.
-    # This makes it possible to pickle the wrapped class etc.
-    # Btw, this is a slight abuse of functools.wraps. It's meant to be used only for
-    # functions, but it works for classes too, if you pass updated=[]
-    return functools.wraps(P, updated=[])
 
 
 class inherits(object):
@@ -289,7 +279,7 @@ class inherits(object):
                 setattr(task_that_inherits, param_name, param_obj)
 
         # Modify task_that_inherits by subclassing it and adding methods
-        @task_wraps(task_that_inherits)
+        @task._task_wraps(task_that_inherits)
         class Wrapped(task_that_inherits):
 
             def clone_parent(_self, **args):
@@ -311,7 +301,7 @@ class requires(object):
         task_that_requires = self.inherit_decorator(task_that_requires)
 
         # Modify task_that_requres by subclassing it and adding methods
-        @task_wraps(task_that_requires)
+        @task._task_wraps(task_that_requires)
         class Wrapped(task_that_requires):
 
             def requires(_self):
@@ -342,7 +332,7 @@ class copies(object):
         task_that_copies = self.requires_decorator(task_that_copies)
 
         # Modify task_that_copies by subclassing it and adding methods
-        @task_wraps(task_that_copies)
+        @task._task_wraps(task_that_copies)
         class Wrapped(task_that_copies):
 
             def run(_self):
@@ -382,7 +372,7 @@ def delegates(task_that_delegates):
         # those tasks and run methods defined on them, etc
         raise AttributeError('%s needs to implement the method "subtasks"' % task_that_delegates)
 
-    @task_wraps(task_that_delegates)
+    @task._task_wraps(task_that_delegates)
     class Wrapped(task_that_delegates):
 
         def deps(self):

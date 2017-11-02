@@ -109,7 +109,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
     def _assert_complete(self, tasks):
         for t in tasks:
-            self.assert_(t.complete())
+            self.assertTrue(t.complete())
 
     def _build(self, tasks):
         with luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1) as w:
@@ -135,7 +135,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         remote = self._remote()
         graph = remote.graph()
         self.assertEqual(len(graph), 2)
-        self.assert_(DummyTask(task_id=1).task_id in graph)
+        self.assertTrue(DummyTask(task_id=1).task_id in graph)
         d1 = graph[DummyTask(task_id=1).task_id]
         self.assertEqual(d1[u'status'], u'DONE')
         self.assertEqual(d1[u'deps'], [])
@@ -423,7 +423,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(db['status'], 'DONE')
 
         missing_input = remote.task_list('PENDING', 'UPSTREAM_MISSING_INPUT')
-        self.assertEqual(len(missing_input), 3)
+        self.assertEqual(len(missing_input), 2)
 
         pa = missing_input.get(A().task_id)
         self.assertEqual(pa['status'], 'PENDING')
@@ -433,15 +433,14 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(pc['status'], 'PENDING')
         self.assertEqual(remote._upstream_status(C().task_id, {}), 'UPSTREAM_MISSING_INPUT')
 
-        pe = missing_input.get(E().task_id)
-        self.assertEqual(pe['status'], 'PENDING')
-        self.assertEqual(remote._upstream_status(E().task_id, {}), 'UPSTREAM_MISSING_INPUT')
-
         upstream_failed = remote.task_list('PENDING', 'UPSTREAM_FAILED')
-        self.assertEqual(len(upstream_failed), 1)
+        self.assertEqual(len(upstream_failed), 2)
+        pe = upstream_failed.get(E().task_id)
+        self.assertEqual(pe['status'], 'PENDING')
+        self.assertEqual(remote._upstream_status(E().task_id, {}), 'UPSTREAM_FAILED')
 
-        pd = upstream_failed.get(D().task_id)
-        self.assertEqual(pd['status'], 'PENDING')
+        pe = upstream_failed.get(D().task_id)
+        self.assertEqual(pe['status'], 'PENDING')
         self.assertEqual(remote._upstream_status(D().task_id, {}), 'UPSTREAM_FAILED')
 
         pending = dict(missing_input)

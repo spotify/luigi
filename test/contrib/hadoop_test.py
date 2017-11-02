@@ -24,7 +24,7 @@ import luigi
 import luigi.format
 import luigi.contrib.hadoop
 import luigi.contrib.hdfs
-import luigi.mrrunner
+import luigi.contrib.mrrunner
 import luigi.notifications
 import minicluster
 import mock
