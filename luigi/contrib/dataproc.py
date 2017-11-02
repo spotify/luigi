@@ -56,7 +56,7 @@ class DataprocBaseTask(_DataprocBaseTask):
         self._job_id = self._job['reference']['jobId']
         return self._job
 
-    def submit_spark_job(self, jars, main_class, job_args=[]):
+    def submit_spark_job(self, jars, main_class, job_args=list()):
         job_config = {"job": {
             "placement": {
                 "clusterName": self.dataproc_cluster_name
@@ -72,7 +72,7 @@ class DataprocBaseTask(_DataprocBaseTask):
         logger.info("Submitted new dataproc job:{} id:{}".format(self._job_name, self._job_id))
         return self._job
 
-    def submit_pyspark_job(self, job_file, extra_files=[], job_args=[]):
+    def submit_pyspark_job(self, job_file, extra_files=list(), job_args=list()):
         job_config = {"job": {
             "placement": {
                 "clusterName": self.dataproc_cluster_name
