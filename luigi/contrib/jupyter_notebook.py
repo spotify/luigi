@@ -16,24 +16,24 @@
 #
 """
 This module is intended for when you need to execute a Jupyter notebook as a 
-task within a luigi pipeline. This can be accomplished via the 
+task within a Luigi pipeline. This can be accomplished via the 
 :class:`JupyterNotebookTask` class.
 
 :class:`JupyterNotebookTask` allows you to pass parameters to the Jupyter 
 notebook through the ``pars`` dictionary. 
 
-When the :meth:`run` method is executed, the ``pars`` dictionary 
-is written to the `notebook_title.ipynbpars` temporary JSON file in the 
-same directory that contains the notebook (here `notebook_title` is the 
+When the task is executed, the ``pars`` dictionary is written to the 
+*notebook_title.ipynbpars* temporary JSON file in the 
+same directory that contains the notebook (here *notebook_title* is the 
 title of the notebook).
 
 Inside the notebook, you can retrieve the values of the parameters in 
-``pars`` by reading the temporary `notebook_title.ipynbpars` JSON file, which
-is then deleted once the run method is exited.
+``pars`` by reading the temporary *notebook_title.ipynbpars* JSON file, which
+is deleted once the run method is exited.
 
 For example, in order to access the contents of ``pars``, you can add a 
 block similar to the following inside the notebook that you want to execute
-(here titled `my_notebook`):
+(here titled *my_notebook*):
 
 .. code-block:: python
 
@@ -48,30 +48,32 @@ block similar to the following inside the notebook that you want to execute
     output_paths = parameters.get('output')
 
     # extract a user-defined parameter named `my_par`
-    my_own_par = parameters.get('my_par')
+    my_par = parameters.get('my_par')
 
 By default, the paths of the task's ``self.input()`` and 
-``self.output()`` are added to ``pars`` with keys `input` and `output` 
+``self.output()`` are added to ``pars`` with keys *input* and *output* 
 respectively.
 
-In the above example, `requires_paths` (resp. `output_paths`) is a dictionary 
-if the task's :class:`requires` (resp. :class:`output`) method returns a 
+In the above code block, `requires_paths` (resp. `output_paths`) is a dictionary 
+if the task's :meth:`requires` (resp. :meth:`output`) method returns a 
 dictionary; otherwise, `requires_paths` (resp. `output_paths`) is a list.
 
 :class:`JupyterNotebookTask` inherits from the standard 
 :class:`luigi.Task` class. As usual, you should override the :class:`luigi.Task` 
 default :meth:`requires` and :meth:`output` methods.
 
-The :class:`JupyterNotebookTask` :meth:`run` method wraps the 
+The :meth:`run` method if :class:`JupyterNotebookTask` wraps the 
 :mod:`nbformat`/:mod:`nbconvert` approach to executing Jupyter notebooks 
-as scripts. See the 'Executing notebooks from the command line' section of the 
-:mod:`nbconvert` module documentation for more information.
+as scripts. See the `Executing notebooks from the command line <http://nbconvert.readthedocs.io/en/latest/execute_api.html#executing-notebooks-from-the-command-line>`_ 
+section of the :mod:`nbconvert` module documentation for more information.
+
+.. Executing notebooks from the command line: 
 
 The :mod:`jupyter_notebook` module therefore depends on both the 
 :mod:`nbconvert` and the :mod:`nbformat` modules. 
 Please make sure these are installed.
 
-Written by Mattia Ciollaro (@mattiaciollaro).
+Written by `@mattiaciollaro <https://github.com/mattiaciollaro>`_.
 """
 
 import json
@@ -98,17 +100,18 @@ except ImportError:
 
 def get_file_name_from_path(input_path):
     """
-    Utility to extract the name of a file without the file extension from a 
-    given path.
+    A simple utility to extract the name of a file without the file extension 
+    from a given path.
 
     This function extracts the file name without the file extension from a given
     path.
-    For example, if path='~/some_dir/some_file.ext', then
-    get_filename_from_path(path) will return 'some_file'.
+    For example, if `path=~/some_dir/some_file.ext`, then
+    `get_filename_from_path(path)` will return `some_file`.
 
     :param input_path: a path to a file
 
-    :returns: a string containing the name of the file without file extension
+    :returns: a string containing the name of the file without the file 
+        extension
     """
 
     base_name = os.path.basename(os.path.normpath(input_path))
@@ -118,14 +121,13 @@ def get_file_name_from_path(input_path):
 
 class JupyterNotebookTask(luigi.Task):
     """
-    This is a template task to execute a Jupyter notebook as a luigi task.
-
+    This is a template task to execute a Jupyter notebook as a Luigi task.
     This task has the following key parameters:
 
-    :param nb_path: the full path to the Jupyter notebook (required).
+    :param nb_path: the full path to the Jupyter notebook (**required**).
 
     :param kernel_name: the name of the kernel to be used in the notebook 
-        execution (required).
+        execution (**required**).
 
     :param timeout: maximum time (in seconds) allocated to run each cell. 
         If -1 (the default), no timeout limit is imposed.
