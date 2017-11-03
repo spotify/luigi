@@ -55,6 +55,8 @@ import os
 
 import luigi
 
+logger = logging.getLogger('luigi-interface')
+
 try:
     import nbconvert
     import nbformat
@@ -64,9 +66,6 @@ except ImportError:
         'and/or nbformat installed. The nbconvert and nbformat modules are '
         'required to use the jupyter_notebook module. '
         'Please install nbconvert and nbformat.')
-
-
-logger = logging.getLogger('luigi-interface')
 
 
 def get_file_name_from_path(input_path):
