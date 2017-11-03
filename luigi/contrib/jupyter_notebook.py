@@ -50,9 +50,9 @@ block similar to the following inside the notebook that you want to execute
     # extract a user-defined parameter named `my_par`
     my_par = parameters.get('my_par')
 
-By default, the paths of the task's ``self.input()`` and 
-``self.output()`` are added to ``pars`` with keys *input* and *output* 
-respectively.
+The paths of the task's ``self.input()`` and 
+``self.output()`` are automatically added to ``pars`` with keys 
+*input* and *output* respectively.
 
 In the above code block, `requires_paths` (resp. `output_paths`) is a dictionary 
 if the task's :meth:`requires` (resp. :meth:`output`) method returns a 
@@ -67,11 +67,8 @@ The :meth:`run` method if :class:`JupyterNotebookTask` wraps the
 as scripts. See the `Executing notebooks from the command line <http://nbconvert.readthedocs.io/en/latest/execute_api.html#executing-notebooks-from-the-command-line>`_ 
 section of the :mod:`nbconvert` module documentation for more information.
 
-.. Executing notebooks from the command line: 
-
-The :mod:`jupyter_notebook` module therefore depends on both the 
-:mod:`nbconvert` and the :mod:`nbformat` modules. 
-Please make sure these are installed.
+**The jupyter_notebook module depends on both the nbconvert 
+and the nbformat modules. Please make sure they are installed.**
 
 Written by `@mattiaciollaro <https://github.com/mattiaciollaro>`_.
 """
@@ -121,7 +118,7 @@ def get_file_name_from_path(input_path):
 
 class JupyterNotebookTask(luigi.Task):
     """
-    This is a template task to execute a Jupyter notebook as a Luigi task.
+    This is a template task to execute Jupyter notebooks as Luigi tasks.
     This task has the following key parameters:
 
     :param nb_path: the full path to the Jupyter notebook (**required**).
