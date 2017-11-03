@@ -15,23 +15,23 @@
 # limitations under the License.
 #
 """
-This module is intended for when you need to execute a Jupyter notebook as a 
-task within a Luigi pipeline. This can be accomplished via the 
+This module is intended for when you need to execute a Jupyter notebook as a
+task within a Luigi pipeline. This can be accomplished via the
 :class:`JupyterNotebookTask` class.
 
-:class:`JupyterNotebookTask` allows you to pass parameters to the Jupyter 
-notebook through the ``pars`` dictionary. 
+:class:`JupyterNotebookTask` allows you to pass parameters to the Jupyter
+notebook through the ``pars`` dictionary.
 
-When the task is executed, the ``pars`` dictionary is written to the 
-*notebook_title.ipynbpars* temporary JSON file in the 
-same directory that contains the notebook (here *notebook_title* is the 
+When the task is executed, the ``pars`` dictionary is written to the
+*notebook_title.ipynbpars* temporary JSON file in the
+same directory that contains the notebook (here *notebook_title* is the
 title of the notebook).
 
-Inside the notebook, you can retrieve the values of the parameters in 
+Inside the notebook, you can retrieve the values of the parameters in
 ``pars`` by reading the temporary *notebook_title.ipynbpars* JSON file, which
 is deleted once the run method is exited.
 
-For example, in order to access the contents of ``pars``, you can add a 
+For example, in order to access the contents of ``pars``, you can add a
 block similar to the following inside the notebook that you want to execute
 (here titled *my_notebook*):
 
@@ -41,7 +41,7 @@ block similar to the following inside the notebook that you want to execute
     with open('./my_notebook.ipynbpars') as pars:
         parameters = json.load(pars)
 
-    # extract the task's self.input() paths 
+    # extract the task's self.input() paths
     requires_paths = parameters.get('input')
 
     # extract the task's self.output() paths
@@ -50,24 +50,26 @@ block similar to the following inside the notebook that you want to execute
     # extract a user-defined parameter named `my_par`
     my_par = parameters.get('my_par')
 
-The paths of the task's ``self.input()`` and 
-``self.output()`` are automatically added to ``pars`` with keys 
+The paths of the task's ``self.input()`` and
+``self.output()`` are automatically added to ``pars`` with keys
 *input* and *output* respectively.
 
-In the above code block, `requires_paths` (resp. `output_paths`) is a dictionary 
-if the task's :meth:`requires` (resp. :meth:`output`) method returns a 
-dictionary; otherwise, `requires_paths` (resp. `output_paths`) is a list.
+In the above code block, `requires_paths` (resp. `output_paths`) is a
+dictionary if the task's :meth:`requires` (resp. :meth:`output`) method returns
+a dictionary; otherwise, `requires_paths` (resp. `output_paths`) is a list.
 
-:class:`JupyterNotebookTask` inherits from the standard 
-:class:`luigi.Task` class. As usual, you should override the :class:`luigi.Task` 
+:class:`JupyterNotebookTask` inherits from the standard
+:class:`luigi.Task` class. As usual, you should override the :class:`luigi.Task`
 default :meth:`requires` and :meth:`output` methods.
 
-The :meth:`run` method if :class:`JupyterNotebookTask` wraps the 
-:mod:`nbformat`/:mod:`nbconvert` approach to executing Jupyter notebooks 
-as scripts. See the `Executing notebooks from the command line <http://nbconvert.readthedocs.io/en/latest/execute_api.html#executing-notebooks-from-the-command-line>`_ 
+The :meth:`run` method if :class:`JupyterNotebookTask` wraps the
+:mod:`nbformat`/:mod:`nbconvert` approach to executing Jupyter notebooks
+as scripts. See the
+`Executing notebooks using the Python API interface
+<http://nbconvert.readthedocs.io/en/latest/execute_api.html#executing-notebooks-using-the-python-api-interface>`_
 section of the :mod:`nbconvert` module documentation for more information.
 
-**The jupyter_notebook module depends on both the nbconvert 
+**The jupyter_notebook module depends on both the nbconvert
 and the nbformat modules. Please make sure they are installed.**
 
 Written by `@mattiaciollaro <https://github.com/mattiaciollaro>`_.
@@ -97,7 +99,7 @@ except ImportError:
 
 def get_file_name_from_path(input_path):
     """
-    A simple utility to extract the name of a file without the file extension 
+    A simple utility to extract the name of a file without the file extension
     from a given path.
 
     This function extracts the file name without the file extension from a given
@@ -107,7 +109,7 @@ def get_file_name_from_path(input_path):
 
     :param input_path: a path to a file
 
-    :returns: a string containing the name of the file without the file 
+    :returns: a string containing the name of the file without the file
         extension
     """
 
@@ -123,13 +125,13 @@ class JupyterNotebookTask(luigi.Task):
 
     :param nb_path: the full path to the Jupyter notebook (**required**).
 
-    :param kernel_name: the name of the kernel to be used in the notebook 
+    :param kernel_name: the name of the kernel to be used in the notebook
         execution (**required**).
 
-    :param timeout: maximum time (in seconds) allocated to run each cell. 
+    :param timeout: maximum time (in seconds) allocated to run each cell.
         If -1 (the default), no timeout limit is imposed.
 
-    :param pars: a dictionary of parameters to be passed to the Jupyter 
+    :param pars: a dictionary of parameters to be passed to the Jupyter
         notebook.
     """
 
