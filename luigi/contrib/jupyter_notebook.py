@@ -20,27 +20,30 @@ Template tasks for executing Jupyter notebooks as luigi tasks.
 This module is intended for when you need to execute a Jupyter notebook as a 
 task within a luigi pipeline.
 
-`JupyterNobebookTask` allows you to pass parameters to the Jupyter notebook 
-through a dictionary (`pars`). When the `run` method is executed, the `pars`
-dictionary is written to a `notebook_title.ipynbpars` temporary JSON file
-in the same directory where the notebook that you want to execute is saved
-(here `notebook_title` is the title of the notebook).
+:py:class:`JupyterNobebookTask` allows you to pass parameters to the Jupyter 
+notebook through a dictionary (``pars``). 
+When the :py:meth:`run` method is executed, the ``pars`` dictionary 
+is written to a notebook_title.ipynbpars temporary JSON file in the same 
+directory where the notebook that you want to execute is saved
+(here 'notebook_title' is the title of the notebook).
 Inside the notebook, you can then retrieve the values of the parameters in 
-`pars` by reading the temporary `notebook_title.ipynbpars` JSON file.
-The temporary `notebook_title.ipynbpars` is deleted once the run method is
-exited (regardless of whether or not the notebook was executed successfully).
+``pars`` by reading the temporary notebook_title.ipynbpars JSON file.
+The temporary notebook_title.ipynbpars file is deleted once the run 
+method is exited (regardless of whether or not the notebook was executed 
+successfully).
 
-By default, the `path` attributes of `self.input()` and `self.output()` 
-are added to the temporary JSON file via the `pars` attribute with keys
-`input` and `output` respectively.
+By default, path attributes of self.input() and self.output() are added to the 
+temporary JSON file via the pars attribute with keys input and output 
+respectively.
 
-`JupyterNotebookTask` inherits from the standard `luigi.Task` class.
-As usual, you should override the default `requires` and `output` methods.
+:py:class:`JupyterNotebookTask` inherits from the standard 
+:py:class:`luigi.Task` class. As usual, you should override the default 
+:py:meth:`requires` and :py:meth:`output` methods.
 
-The template task `JupyterNotebookTask` implements a run method that wraps the 
-nbformat/nbconvert approach to executing Jupyter notebooks as scripts.
-See the `Executing notebooks from the command line` section of the `nbconvert`
-module documentation for more information.
+The template task :py:class:`JupyterNotebookTask` implements a :py:meth:run 
+method that wraps the nbformat/nbconvert approach to executing Jupyter notebooks
+as scripts. See the 'Executing notebooks from the command line' section of the 
+nbconvert module documentation for more information.
 
 Requires the following modules:
 - nbconvert
@@ -58,14 +61,17 @@ import luigi
 logger = logging.getLogger('luigi-interface')
 
 try:
-    import nbconvert
     import nbformat
+    from nbconvert.preprocessors import (
+        CellExecutionError,
+        ExecutePreprocessor
+    )
 
 except ImportError:
     logger.warning('Loading jupyter_notebook module without nbconvert '
-        'and/or nbformat installed. The nbconvert and nbformat modules are '
-        'required to use the jupyter_notebook module. '
-        'Please install nbconvert and nbformat.')
+                   'and/or nbformat installed. The nbconvert and nbformat '
+                   'modules are required to use the jupyter_notebook module. '
+                   'Please install nbconvert and nbformat.')
 
 
 def get_file_name_from_path(input_path):
@@ -87,7 +93,7 @@ def get_file_name_from_path(input_path):
 
     base_name = os.path.basename(os.path.normpath(input_path))
     file_name = base_name.split('.')[0]
-    return(file_name)
+    return file_name
 
 
 class JupyterNotebookTask(luigi.Task):
@@ -106,16 +112,15 @@ class JupyterNotebookTask(luigi.Task):
 
     - pars: a dictionary of parameters to be passed to the Jupyter notebook.
             These parameters can be retrieved inside the notebook by reading
-            the `notebook_title.ipynbpars` temporary JSON file created during the
-            execution of the task (where `notebook_title` is the title
+            the `notebook_title.ipynbpars` temporary JSON file created during
+            the execution of the task (where `notebook_title` is the title
             of the Jupyter notebook you want to execute).
             By default, paths associated with `self.input()` and `self.output()` 
             are included with keys `input` and `output` in `pars`, and therefore
             they can be read from inside the notebook as well.
     
 
-    Example: accessing `pars` inside the Jupyter notebook 
-    #####################################################
+    Example: accessing `pars` inside the Jupyter notebook.
     You would add something like the following block inside a notebook titled 
     `my_notebook`:
     
@@ -209,7 +214,7 @@ class JupyterNotebookTask(luigi.Task):
             with open(self.nb_path, 'r') as nb:
                 nb = nbformat.read(nb, as_version=nb_version)
 
-            ep = nbconvert.preprocessors.ExecutePreprocessor(
+            ep = ExecutePreprocessor(
                 timeout=self.timeout,
                 kernel_name=self.kernel_name
             )
@@ -222,7 +227,7 @@ class JupyterNotebookTask(luigi.Task):
 
             logger.info('=== Done! ===')
 
-        except:
+        except CellExecutionError:
             raise
 
         finally:
