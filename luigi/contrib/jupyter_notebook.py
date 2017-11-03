@@ -54,13 +54,18 @@ The paths of the task's ``self.input()`` and
 ``self.output()`` are automatically added to ``pars`` with keys
 *input* and *output* respectively.
 
-In the above code block, `requires_paths` (resp. `output_paths`) is a
-dictionary if the task's :meth:`requires` (resp. :meth:`output`) method returns
-a dictionary; otherwise, `requires_paths` (resp. `output_paths`) is a list.
+In the above code block, `requires_paths` is a dictionary of lists if the
+task's :meth:`requires` method returns a dictionary; otherwise, `requires_paths`
+is a list of lists.
+
+Similarly, `output_paths` is a dictionary if the :meth:`output` method returns 
+a dictionary or a list otherwise.
 
 :class:`JupyterNotebookTask` inherits from the standard
 :class:`luigi.Task` class. As usual, you should override the :class:`luigi.Task`
 default :meth:`requires` and :meth:`output` methods.
+**Please make sure that your requires and output methods return 
+dictionaries or iterables.**
 
 The :meth:`run` method if :class:`JupyterNotebookTask` wraps the
 :mod:`nbformat`/:mod:`nbconvert` approach to executing Jupyter notebooks
@@ -118,6 +123,25 @@ def get_file_name_from_path(input_path):
     return file_name
 
 
+def get_values(obj):
+    """
+    A simple utility to extract the values of a dictionary, list, or other
+    iterable and recombine them into a list.
+    
+    :param obj: a dictionary, list, or other iterable
+
+    :returns: a list with the values of obj
+    """
+
+    if isinstance(obj, dict):
+        out = obj.values()
+
+    else:
+        out = [val for val in obj]
+
+    return out
+
+
 class JupyterNotebookTask(luigi.Task):
     """
     This is a template task to execute Jupyter notebooks as Luigi tasks.
@@ -173,17 +197,24 @@ class JupyterNotebookTask(luigi.Task):
         notebook_name = get_file_name_from_path(self.nb_path)
 
         # set requires pars
-        if type(self.requires()) is dict:
+        if isinstance(self.input(), dict):
             self.pars['input'] = {
-                tag: req.path for tag, req in self.input().items()
-            }
+                tag: list(
+                        map(lambda x: x.path, get_values(self.input().get(tag)))
+                    ) for tag in self.input().keys()
+        }
+
         else:
-            self.pars['input'] = [req.path for req in self.input()]
+            self.pars['input'] = [
+                map(lambda x: x.path, get_values(req)) for req in self.input()
+            ]
 
         # set output pars
-        if type(self.output()) is dict:
-            self.pars['output'] = {tag: req.path for tag, req in
-                                   self.output().items()}
+        if isinstance(self.output(), dict):
+            self.pars['output'] = {
+                tag: req.path for tag, req in self.output().items()
+            }
+
         else:
             self.pars['output'] = [req.path for req in self.output()]
 
