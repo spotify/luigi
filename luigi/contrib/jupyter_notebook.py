@@ -67,7 +67,7 @@ default :meth:`requires` and :meth:`output` methods.
 **Please make sure that your requires and output methods return 
 dictionaries or iterables.**
 
-The :meth:`run` method if :class:`JupyterNotebookTask` wraps the
+The :meth:`run` method of :class:`JupyterNotebookTask` wraps the
 :mod:`nbformat`/:mod:`nbconvert` approach to executing Jupyter notebooks
 as scripts. See the
 `Executing notebooks using the Python API interface
@@ -187,10 +187,10 @@ class JupyterNotebookTask(luigi.Task):
                 "I can't find the Jupyter notebook %s" % self.nb_path
             )
 
-        if not self.kernel:
+        if not self.kernel_name:
             raise TypeError(
-                'kernel cannot be None; '
-                'kernel must be the name of a valid Jupyter kernel'
+                'kernel_name cannot be None; '
+                'kernel_name must be the name of a valid Jupyter kernel'
             )
 
         # get notebook name
