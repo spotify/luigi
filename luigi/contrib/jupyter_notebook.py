@@ -74,8 +74,8 @@ as scripts. See the
 <http://nbconvert.readthedocs.io/en/latest/execute_api.html#executing-notebooks-using-the-python-api-interface>`_
 section of the :mod:`nbconvert` module documentation for more information.
 
-**The jupyter_notebook module depends on both the nbconvert
-and the nbformat modules. Please make sure they are installed.**
+**The jupyter_notebook module depends on both the nbconvert (>=5.3.1)
+and the nbformat (>=4.4.0) modules. Please make sure they are installed.**
 
 Written by `@mattiaciollaro <https://github.com/mattiaciollaro>`_.
 """
