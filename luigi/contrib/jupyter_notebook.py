@@ -58,13 +58,13 @@ In the above code block, `requires_paths` is a dictionary of lists if the
 task's :meth:`requires` method returns a dictionary; otherwise, `requires_paths`
 is a list of lists.
 
-Similarly, `output_paths` is a dictionary if the :meth:`output` method returns 
+Similarly, `output_paths` is a dictionary if the :meth:`output` method returns
 a dictionary or a list otherwise.
 
 :class:`JupyterNotebookTask` inherits from the standard
 :class:`luigi.Task` class. As usual, you should override the :class:`luigi.Task`
 default :meth:`requires` and :meth:`output` methods.
-**Please make sure that your requires and output methods return 
+**Please make sure that your requires and output methods return
 dictionaries or iterables.**
 
 The :meth:`run` method of :class:`JupyterNotebookTask` wraps the
@@ -102,7 +102,7 @@ except ImportError:
                    'Please install nbconvert and nbformat.')
 
 
-def get_file_name_from_path(input_path):
+def _get_file_name_from_path(input_path):
     """
     A simple utility to extract the name of a file without the file extension
     from a given path.
@@ -117,25 +117,22 @@ def get_file_name_from_path(input_path):
     :returns: a string containing the name of the file without the file
         extension
     """
-
     base_name = os.path.basename(os.path.normpath(input_path))
     file_name = base_name.split('.')[0]
     return file_name
 
 
-def get_values(obj):
+def _get_values(obj):
     """
     A simple utility to extract the values of a dictionary, list, or other
     iterable and recombine them into a list.
-    
+
     :param obj: a dictionary, list, or other iterable
 
     :returns: a list with the values of obj
     """
-
     if isinstance(obj, dict):
         out = obj.values()
-
     else:
         out = [val for val in obj]
 
@@ -158,7 +155,6 @@ class JupyterNotebookTask(luigi.Task):
     :param pars: a dictionary of parameters to be passed to the Jupyter
         notebook.
     """
-
     nb_path = luigi.Parameter(
         default=None
     )
@@ -172,6 +168,33 @@ class JupyterNotebookTask(luigi.Task):
     )
 
     pars = {}
+
+    def _form_input(self):
+
+        if isinstance(self.input(), dict):
+            out = {
+                tag: list(map(
+                    lambda x: x.path, _get_values(self.input().get(tag)))
+                ) for tag in self.input().keys()
+            }
+        else:
+            out = [
+                list(map(lambda x: x.path, _get_values(req)))
+                for req in self.input()
+            ]
+
+        return out
+
+    def _form_output(self):
+
+        if isinstance(self.output(), dict):
+            out = {
+                tag: req.path for tag, req in self.output().items()
+            }
+        else:
+            out = [req.path for req in self.output()]
+
+        return out
 
     def run(self):
 
@@ -194,30 +217,13 @@ class JupyterNotebookTask(luigi.Task):
             )
 
         # get notebook name
-        notebook_name = get_file_name_from_path(self.nb_path)
+        notebook_name = _get_file_name_from_path(self.nb_path)
 
         # set requires pars
-        if isinstance(self.input(), dict):
-            self.pars['input'] = {
-                tag: list(
-                        map(lambda x: x.path, get_values(self.input().get(tag)))
-                    ) for tag in self.input().keys()
-        }
-
-        else:
-            self.pars['input'] = [
-                list(map(lambda x: x.path, get_values(req))) 
-                    for req in self.input()
-            ]
+        self.pars['input'] = self._form_input()
 
         # set output pars
-        if isinstance(self.output(), dict):
-            self.pars['output'] = {
-                tag: req.path for tag, req in self.output().items()
-            }
-
-        else:
-            self.pars['output'] = [req.path for req in self.output()]
+        self.pars['output'] = self._form_output()
 
         # write pars to temporary file
         tmp_file_path = os.path.join(
