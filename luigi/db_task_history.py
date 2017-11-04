@@ -70,7 +70,7 @@ class DbTaskHistory(task_history.TaskHistory):
             session = self.session_factory()
             try:
                 yield session
-            except:
+            except BaseException:
                 session.rollback()
                 raise
             else:
