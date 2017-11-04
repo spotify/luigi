@@ -174,7 +174,7 @@ class BigQueryClient(object):
 
         return True
 
-    def make_dataset(self, dataset, raise_if_exists=False, body={}):
+    def make_dataset(self, dataset, raise_if_exists=False, body=dict()):
         """Creates a new dataset with the default permissions.
 
            :param dataset:
