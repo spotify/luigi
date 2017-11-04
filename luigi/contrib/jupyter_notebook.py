@@ -29,7 +29,7 @@ title of the notebook).
 
 Inside the notebook, you can retrieve the values of the parameters in
 ``pars`` by reading the temporary *notebook_title.ipynbpars* JSON file, which
-is deleted once the run method is exited.
+is deleted once the :meth:`run` method is exited.
 
 For example, in order to access the contents of ``pars``, you can add a
 block similar to the following inside the notebook that you want to execute
@@ -41,13 +41,13 @@ block similar to the following inside the notebook that you want to execute
     with open('./my_notebook.ipynbpars') as pars:
         parameters = json.load(pars)
 
-    # extract the task's self.input() paths
+    # extract the task's self.input() paths (included by default)
     requires_paths = parameters.get('input')
 
-    # extract the task's self.output() paths
+    # extract the task's self.output() paths (included by default)
     output_paths = parameters.get('output')
 
-    # extract a user-defined parameter named `my_par`
+    # extract a *user-defined* parameter named `my_par`
     my_par = parameters.get('my_par')
 
 The paths of the task's ``self.input()`` and
@@ -206,7 +206,8 @@ class JupyterNotebookTask(luigi.Task):
 
         else:
             self.pars['input'] = [
-                map(lambda x: x.path, get_values(req)) for req in self.input()
+                list(map(lambda x: x.path, get_values(req))) 
+                    for req in self.input()
             ]
 
         # set output pars
