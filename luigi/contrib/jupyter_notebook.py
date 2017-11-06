@@ -34,6 +34,7 @@ follows:
 .. code-block:: python
 
     import os
+    import json
 
     # read the temporary JSON file
     with open(os.environ['PARS']) as parameters:
