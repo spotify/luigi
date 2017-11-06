@@ -87,7 +87,7 @@ the structure of the ``input`` and ``output`` components of ``pars`` depends on
 how JSON files are read.
 
 :class:`JupyterNotebookTask` inherits from the standard
-:class:`luigi.Task` class. As usual, you should override the 
+:class:`luigi.Task` class. As usual, you should override the
 :class:`luigi.Task` default :meth:`requires` and :meth:`output` methods.
 **Please make sure that your requires and output methods return
 dictionaries or iterables.**
@@ -196,7 +196,7 @@ class JupyterNotebookTask(luigi.Task):
     )
 
     json_action = luigi.Parameter(
-        default = 'delete'
+        default='delete'
     )
 
     pars = {}
@@ -250,7 +250,7 @@ class JupyterNotebookTask(luigi.Task):
 
         self.timeout = int(self.timeout)
 
-        if not self.json_action in ['keep', 'delete']:
+        if self.json_action not in ['keep', 'delete']:
             raise ValueError(
                 "json_action must be one of 'keep' or 'delete'"
             )
