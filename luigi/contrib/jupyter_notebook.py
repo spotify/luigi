@@ -22,48 +22,72 @@ task within a Luigi pipeline. This can be accomplished via the
 :class:`JupyterNotebookTask` allows you to pass parameters to the Jupyter
 notebook through the ``pars`` dictionary.
 
-When the task is executed, the ``pars`` dictionary is written to the
-*notebook_title.ipynbpars* temporary JSON file in the
-same directory that contains the notebook (here *notebook_title* is the
-title of the notebook).
+When the task is executed, the ``pars`` dictionary is written to a
+temporary JSON file in the same directory that contains the notebook.
 
 Inside the notebook, you can retrieve the values of the parameters in
-``pars`` by reading the temporary *notebook_title.ipynbpars* JSON file, which
-is deleted once the :meth:`run` method is exited.
-
-For example, in order to access the contents of ``pars``, you can add a
-block similar to the following inside the notebook that you want to execute
-(here titled *my_notebook*):
+``pars`` by reading the temporary JSON file. The path to the temporary file is
+accessible via the environment variable ``PARS``.
+For example, in a Python notebook, you can read the ``pars`` dictionary as
+follows:
 
 .. code-block:: python
 
+    import os
+
     # read the temporary JSON file
-    with open('./my_notebook.ipynbpars') as pars:
-        parameters = json.load(pars)
+    with open(os.environ['PARS']) as parameters:
+        pars = json.load(parameters)
 
     # extract the task's self.input() paths (included by default)
-    requires_paths = parameters.get('input')
+    requires_paths = pars.get('input')
 
     # extract the task's self.output() paths (included by default)
-    output_paths = parameters.get('output')
+    output_paths = pars.get('output')
 
     # extract a *user-defined* parameter named `my_par`
-    my_par = parameters.get('my_par')
+    my_par = pars.get('my_par')
+
+Similarly, in a R notebook, you can read the ``pars`` dictionary with
+
+.. code-block:: r
+
+    library(jsonlite)
+
+    # read the temporary JSON file
+    pars <- fromJSON(Sys.getenv('PARS'))
+
+    # extract the task's self.input() paths (included by default)
+    requires_paths <- pars$input
+
+    # extract the task's self.output() paths (included by default)
+    output_paths <- pars$output
+
+    # extract a *user-defined* parameter named `my_par`
+    my_par <- pars$my_par
 
 The paths of the task's ``self.input()`` and
 ``self.output()`` are automatically added to ``pars`` with keys
-*input* and *output* respectively.
+*input* and *output* respectively. These paths are meaningful when
+``self.input()`` and ``self.output()`` return iterables or dictionaries whose
+values have a ``path`` attribute
+(e.g. as in :class:`luigi.local_target.LocalTarget`).
+Whenever this is not the case, the corresponding entries of
+``pars.get('input')`` and ``pars.get('output')`` are ``None``.
 
-In the above code block, `requires_paths` is a dictionary of lists if the
-task's :meth:`requires` method returns a dictionary; otherwise, `requires_paths`
-is a list of lists.
-
-Similarly, `output_paths` is a dictionary if the :meth:`output` method returns
+Note that in the above Python code block, ``requires_paths`` is a dictionary of
+lists if the task's :meth:`requires` method returns a dictionary; otherwise,
+``requires_paths`` is a list of lists.
+Similarly, ``output_paths`` is a dictionary if the :meth:`output` method returns
 a dictionary or a list otherwise.
 
+In R notebooks or notebooks written in other languages, the specific details of
+the structure of the ``input`` and ``output`` components of ``pars`` depends on
+how JSON files are read.
+
 :class:`JupyterNotebookTask` inherits from the standard
-:class:`luigi.Task` class. As usual, you should override the :class:`luigi.Task`
-default :meth:`requires` and :meth:`output` methods.
+:class:`luigi.Task` class. As usual, you should override the 
+:class:`luigi.Task` default :meth:`requires` and :meth:`output` methods.
 **Please make sure that your requires and output methods return
 dictionaries or iterables.**
 
@@ -135,7 +159,6 @@ def _get_values(obj):
         out = obj.values()
     else:
         out = [val for val in obj]
-
     return out
 
 
@@ -152,8 +175,12 @@ class JupyterNotebookTask(luigi.Task):
     :param timeout: maximum time (in seconds) allocated to run each cell.
         If -1 (the default), no timeout limit is imposed.
 
-    :param pars: a dictionary of parameters to be passed to the Jupyter
-        notebook.
+    :param pars: a dictionary of user-defined parameters to be passed to the
+        Jupyter notebook.
+
+    :param json_action: if `delete` (default), the temporary JSON file with
+        **pars** is deleted at the end of the task execution; if `keep`, the
+        temporary JSON file is kept (useful for debugging purposes).
     """
     nb_path = luigi.Parameter(
         default=None
@@ -165,6 +192,10 @@ class JupyterNotebookTask(luigi.Task):
 
     timeout = luigi.IntParameter(
         default=-1
+    )
+
+    json_action = luigi.Parameter(
+        default = 'delete'
     )
 
     pars = {}
@@ -216,8 +247,18 @@ class JupyterNotebookTask(luigi.Task):
                 'kernel_name must be the name of a valid Jupyter kernel'
             )
 
+        self.timeout = int(self.timeout)
+
+        if not self.json_action in ['keep', 'delete']:
+            raise ValueError(
+                "json_action must be one of 'keep' or 'delete'"
+            )
+
         # get notebook name
         notebook_name = _get_file_name_from_path(self.nb_path)
+
+        # get task id
+        task_id = self.task_id
 
         # set requires pars
         self.pars['input'] = self._form_input()
@@ -227,11 +268,15 @@ class JupyterNotebookTask(luigi.Task):
 
         # write pars to temporary file
         tmp_file_path = os.path.join(
-            os.path.dirname(self.nb_path), '%s.ipynbpars' % notebook_name
+            os.path.dirname(self.nb_path), '%s_%s.ipynbpars'
+            % (notebook_name, task_id)
         )
 
         with open(tmp_file_path, 'w') as parameters:
             json.dump(self.pars, parameters)
+
+        # set environment variable with tmp_file_path
+        os.environ['PARS'] = tmp_file_path
 
         # run notebook
         logger.info('=== Running notebook: %s ===' % notebook_name)
@@ -260,4 +305,5 @@ class JupyterNotebookTask(luigi.Task):
 
         finally:
             # clean up (remove temporary JSON file)
-            os.remove(tmp_file_path)
+            if self.json_action == 'delete':
+                os.remove(tmp_file_path)
