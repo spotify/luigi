@@ -89,8 +89,6 @@ how JSON files are read.
 :class:`JupyterNotebookTask` inherits from the standard
 :class:`luigi.Task` class. As usual, you should override the
 :class:`luigi.Task` default :meth:`requires` and :meth:`output` methods.
-**Please make sure that your requires and output methods return
-dictionaries or iterables.**
 
 The :meth:`run` method of :class:`JupyterNotebookTask` wraps the
 :mod:`nbformat`/:mod:`nbconvert` approach to executing Jupyter notebooks
@@ -110,6 +108,7 @@ import logging
 import os
 
 import luigi
+from luigi.task import flatten
 
 logger = logging.getLogger('luigi-interface')
 
@@ -149,18 +148,10 @@ def _get_file_name_from_path(input_path):
 
 def _get_values(obj):
     """
-    A simple utility to extract the values of a dictionary, list, or other
-    iterable and recombine them into a list.
-
-    :param obj: a dictionary, list, or other iterable
-
-    :returns: a list with the values of obj
+    Creates a flat list of all all items in structured output
+    (dicts, lists, items).
     """
-    if isinstance(obj, dict):
-        out = obj.values()
-    else:
-        out = [val for val in obj]
-    return out
+    return flatten(obj)
 
 
 class JupyterNotebookTask(luigi.Task):
@@ -212,7 +203,7 @@ class JupyterNotebookTask(luigi.Task):
         else:
             out = [
                 list(map(lambda x: x.path, _get_values(req)))
-                for req in self.input()
+                for req in _get_values(self.input())
             ]
 
         return out
@@ -224,7 +215,7 @@ class JupyterNotebookTask(luigi.Task):
                 tag: req.path for tag, req in self.output().items()
             }
         else:
-            out = [req.path for req in self.output()]
+            out = [req.path for req in _get_values(self.output())]
 
         return out
 
