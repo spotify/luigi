@@ -310,7 +310,6 @@ class JupyterNotebookTask(luigi.Task):
             logger.info('===== Done with errors! =====')
             raise
 
-
         finally:
             # clean up (remove temporary JSON file)
             if self.json_action == 'delete':
