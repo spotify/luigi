@@ -469,14 +469,14 @@ class Task(object):
 
         return cls(**kwargs)
 
-    def to_str_params(self, only_significant=False):
+    def to_str_params(self, only_significant=False, only_visible=False):
         """
         Convert all parameters to a str->str hash.
         """
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
-            if (not only_significant) or params[param_name].significant:
+            if ((not only_significant) or params[param_name].significant) and ((not only_visible) or params[param_name].visible):
                 params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
