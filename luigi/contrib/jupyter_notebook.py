@@ -175,8 +175,8 @@ class JupyterNotebookTask(luigi.Task):
 
     :param notebook_path: the full path to the Jupyter notebook (**required**).
 
-    :param kernel_name: the name of the kernel to be used in the notebook
-        execution (**required**).
+    :param kernel_name: the name of the Jupyter kernel to be used in the
+        notebook execution (**required**).
 
     :param timeout: maximum time (in seconds) allocated to run each cell.
         If -1 (the default), no timeout limit is imposed.
