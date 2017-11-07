@@ -154,6 +154,18 @@ def _get_values(obj):
     return flatten(obj)
 
 
+def _get_path(obj):
+    """
+    Extracts the `path` attribute from `obj` if available; otherwise, simply
+    returns None.
+    """
+    try:
+        out = obj.path
+    except AttrubuteError:
+        out = None
+    return out
+
+
 class JupyterNotebookTask(luigi.Task):
     """
     This is a template task to execute Jupyter notebooks as Luigi tasks.
@@ -197,12 +209,12 @@ class JupyterNotebookTask(luigi.Task):
         if isinstance(self.input(), dict):
             out = {
                 tag: list(map(
-                    lambda x: x.path, _get_values(self.input().get(tag)))
+                    _get_path, _get_values(self.input().get(tag)))
                 ) for tag in self.input().keys()
             }
         else:
             out = [
-                list(map(lambda x: x.path, _get_values(req)))
+                list(map(_get_path, _get_values(req)))
                 for req in _get_values(self.input())
             ]
 
@@ -212,10 +224,10 @@ class JupyterNotebookTask(luigi.Task):
 
         if isinstance(self.output(), dict):
             out = {
-                tag: req.path for tag, req in self.output().items()
+                tag: _get_path(req) for tag, req in self.output().items()
             }
         else:
-            out = [req.path for req in _get_values(self.output())]
+            out = [_get_path(req) for req in _get_values(self.output())]
 
         return out
 
