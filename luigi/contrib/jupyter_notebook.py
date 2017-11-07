@@ -186,19 +186,17 @@ class JupyterNotebookTask(luigi.Task):
         **pars** is deleted at the end of the task execution; if `keep`, the
         temporary JSON file is kept (useful for debugging purposes).
     """
-    nb_path = luigi.Parameter(
-        default=None
-    )
+    nb_path = luigi.Parameter()
 
-    kernel_name = luigi.Parameter(
-        default=None
-    )
+    kernel_name = luigi.Parameter()
 
     timeout = luigi.IntParameter(
         default=-1
     )
 
-    json_action = luigi.Parameter(
+    json_action = luigi.ChoiceParameter(
+        choices=['delete', 'keep'],
+        var_type=str,
         default='delete'
     )
 
@@ -233,30 +231,7 @@ class JupyterNotebookTask(luigi.Task):
 
     def run(self):
 
-        # check arguments
-        if not self.nb_path:
-            raise TypeError(
-                'nb_path cannot be None; '
-                'nb_path must be a valid path to a Jupyter notebook'
-            )
-
-        if not os.path.exists(self.nb_path):
-            raise IOError(
-                "I can't find the Jupyter notebook %s" % self.nb_path
-            )
-
-        if not self.kernel_name:
-            raise TypeError(
-                'kernel_name cannot be None; '
-                'kernel_name must be the name of a valid Jupyter kernel'
-            )
-
         self.timeout = int(self.timeout)
-
-        if self.json_action not in ['keep', 'delete']:
-            raise ValueError(
-                "json_action must be one of 'keep' or 'delete'"
-            )
 
         # get notebook name
         notebook_name = _get_file_name_from_path(self.nb_path)
