@@ -163,7 +163,7 @@ def _get_path(obj):
     """
     try:
         out = obj.path
-    except AttrubuteError:
+    except AttributeError:
         out = None
     return out
 
