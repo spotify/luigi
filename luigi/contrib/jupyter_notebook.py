@@ -28,8 +28,8 @@ temporary JSON file in the same directory that contains the notebook.
 Inside the notebook, you can retrieve the values of the parameters in
 ``parameters`` by reading the temporary JSON file. The path to the temporary
 file is accessible via the environment variable ``PARS``.
-For example, in a Python notebook, you can read the ``parameters`` dictionary as
-follows:
+For example, in a Python notebook, you can read the ``parameters`` dictionary
+as follows:
 
 .. code-block:: python
 
@@ -73,12 +73,13 @@ The paths of the task's ``self.input()`` and
 ``self.input()`` and ``self.output()`` return iterables or dictionaries whose
 values have a ``path`` attribute
 (e.g. as in :class:`luigi.local_target.LocalTarget`).
-Whenever this is not the case, the corresponding entries of
+Whenever this is not the case, the corresponding entries inside of
 ``pars.get('input')`` and ``pars.get('output')`` are ``None``.
 
-Note that in the above Python code block, ``requires_paths`` is a dictionary of
-lists if the task's :meth:`requires` method returns a dictionary; otherwise,
-``requires_paths`` is a list of lists.
+Note that in the above Python code block, ``requires_paths`` is a dictionary
+whose values are lists or dictionaries if the task's :meth:`requires` method
+returns a dictionary; otherwise, ``requires_paths`` is a list whose values
+are lists or dictionaries.
 Similarly, ``output_paths`` is a dictionary if the :meth:`output` method returns
 a dictionary or a list otherwise.
 
@@ -132,28 +133,26 @@ def _get_file_name_from_path(input_path):
     A simple utility to extract the name of a file without the file extension
     from a given path.
 
-    This function extracts the file name without the file extension from a given
-    path.
+    This function extracts the file name without the file extension from a
+    given path.
     For example, if `path=~/some_dir/some_file.ext`, then
     `get_filename_from_path(path)` will return `some_file`.
-
-    :param input_path: a path to a file
-
-    :returns: a string containing the name of the file without the file
-        extension
     """
     base_name = os.path.basename(os.path.normpath(input_path))
     file_name = base_name.split('.')[0]
     return file_name
 
 
-def _get_values(obj):
+def _flatten(obj):
     """
-    Creates a flat list of all all items in structured output
-    (dicts, lists, items).
-    This is just a wrapper around the `luigi.task.flatten()` utility.
+    This is essentially a wrapper around the `luigi.task.flatten()` utility,
+    but it flattens only iterables and not dictionaries.
     """
-    return flatten(obj)
+    if isinstance(obj, dict):
+        out = obj
+    else:
+        out = flatten(obj)
+    return out
 
 
 def _get_path(obj):
@@ -165,6 +164,19 @@ def _get_path(obj):
         out = obj.path
     except AttributeError:
         out = None
+    return out
+
+
+def _get_path_from_collection(coll):
+    """
+    Extracts the `path` attribute from objects organized in a collection (dict
+    or iterable) wherever the `path` attribute is available (else extracts
+    `None`).
+    """
+    if isinstance(coll, dict):
+        out = {k: _get_path(v) for k, v in coll.items()}
+    else:
+        out = [_get_path(v) for v in coll]
     return out
 
 
@@ -213,45 +225,37 @@ class JupyterNotebookTask(luigi.Task):
     def _form_input(self):
         """
         This method is used to loop through the return value of the task's
-        `requires` method and extract the paths of the returned `LocalTarget`s.
-        For any item returned by `requires` that does not have a `path`
-        attribute, the corresponding extracted value is `None`.
+        `requires` method and extract paths (where available).
         """
         # case 1 - `requires` returns a dictionary
-        # In this case, the output of `_form_input()` is a dictionary of lists.
+        # In this case, the output of `_form_input()` is a dictionary whose
+        # entries are dictionaries or lists.
         if isinstance(self.input(), dict):
             out = {
-                tag: list(map(
-                    _get_path, _get_values(self.input().get(tag)))
-                ) for tag in self.input().keys()
+                k: _get_path_from_collection(_flatten(v))
+                for k, v in self.input().items()
             }
-        # case 2 - `requires` returns a list or other iterable
-        # In this case, the output of `_form_input()` is a list of lists.
+        # case 2 - `requires` returns a list, iterable, or single object
+        # In this case, the output of `_form_input()` is a list whose entries
+        # are dictionaries or lists.
         else:
-            out = [
-                list(map(_get_path, _get_values(req)))
-                for req in _get_values(self.input())
-            ]
+            out = [_get_path_from_collection(v) for v in _flatten(self.input())]
 
         return out
 
     def _form_output(self):
         """
         This method is used to loop through the return value of the task's
-        `output` method and extract the paths of the returned `LocalTarget`s.
-        For any item returned by `output` that does not have a `path`
-        attribute, the corresponding extracted value is `None`.
+        `output` method and extract paths (where available).
         """
         # case 1 - `output` returns a dictionary
         # In this case, the output of `_form_output()` is a dictionary.
         if isinstance(self.output(), dict):
-            out = {
-                tag: _get_path(req) for tag, req in self.output().items()
-            }
-        # case 2 - `output` returns a list or other iterable
+            out = _get_path_from_collection(self.output())
+        # case 2 - `output` returns a list, iterable, or single object
         # In this case, the output of `_form_output()` is a list.
         else:
-            out = [_get_path(req) for req in _get_values(self.output())]
+            out = _get_path_from_collection(_flatten(self.output()))
 
         return out
 
