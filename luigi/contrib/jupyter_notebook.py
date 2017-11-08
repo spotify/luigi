@@ -176,7 +176,7 @@ def _get_path_from_collection(coll):
     if isinstance(coll, dict):
         out = {k: _get_path(v) for k, v in coll.items()}
     else:
-        out = [_get_path(v) for v in coll]
+        out = [_get_path(v) for v in _flatten(coll)]
     return out
 
 
