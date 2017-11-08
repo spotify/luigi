@@ -49,43 +49,14 @@ as follows:
     # extract a *user-defined* parameter named `my_par`
     my_par = pars.get('my_par')
 
-Similarly, in a R notebook, you can read the ``parameters`` dictionary with
-
-.. code-block:: r
-
-    library(jsonlite)
-
-    # read the temporary JSON file
-    pars <- fromJSON(Sys.getenv('PARS'))
-
-    # extract the task's self.input() paths (included by default)
-    requires_paths <- pars$input
-
-    # extract the task's self.output() paths (included by default)
-    output_paths <- pars$output
-
-    # extract a *user-defined* parameter named `my_par`
-    my_par <- pars$my_par
-
 The paths of the task's ``self.input()`` and
 ``self.output()`` are automatically added to ``parameters`` with keys
 *input* and *output* respectively. These paths are meaningful when
 ``self.input()`` and ``self.output()`` return iterables or dictionaries whose
-values have a ``path`` attribute
-(e.g. as in :class:`luigi.local_target.LocalTarget`).
+values are collecions of objects which have a ``path`` attribute
+(e.g. one or multiple :class:`luigi.local_target.LocalTarget`s).
 Whenever this is not the case, the corresponding entries inside of
 ``pars.get('input')`` and ``pars.get('output')`` are ``None``.
-
-Note that in the above Python code block, ``requires_paths`` is a dictionary
-whose values are lists or dictionaries if the task's :meth:`requires` method
-returns a dictionary; otherwise, ``requires_paths`` is a list whose values
-are lists or dictionaries.
-Similarly, ``output_paths`` is a dictionary if the :meth:`output` method returns
-a dictionary or a list otherwise.
-
-In R notebooks or notebooks written in other languages, the specific details of
-the structure of the ``input`` and ``output`` components of ``pars`` depends on
-how JSON files are read.
 
 :class:`JupyterNotebookTask` inherits from the standard
 :class:`luigi.Task` class. As usual, you should override the
@@ -110,7 +81,6 @@ import os
 from datetime import datetime
 
 import luigi
-from luigi.task import flatten
 
 logger = logging.getLogger('luigi-interface')
 
@@ -145,14 +115,23 @@ def _get_file_name_from_path(input_path):
 
 def _flatten(obj):
     """
-    This is essentially a wrapper around the `luigi.task.flatten()` utility,
-    but it flattens only iterables and not dictionaries.
+    A modified version of `luigi.task.flatten` that preserves dictionaries.
     """
+    if obj is None:
+        return []
     if isinstance(obj, dict):
-        out = obj
-    else:
-        out = flatten(obj)
-    return out
+        return obj
+    if isinstance(obj, luigi.six.string_types):
+        return [obj]
+    flat = []
+    try:
+        # if iterable
+        iterator = iter(obj)
+    except TypeError:
+        return [obj]
+    for result in iterator:
+        flat.append(result)
+    return flat
 
 
 def _get_path(obj):
@@ -227,19 +206,20 @@ class JupyterNotebookTask(luigi.Task):
         This method is used to loop through the return value of the task's
         `requires` method and extract paths (where available).
         """
+        task_input = _flatten(self.input())
         # case 1 - `requires` returns a dictionary
         # In this case, the output of `_form_input()` is a dictionary whose
-        # entries are dictionaries or lists.
-        if isinstance(self.input(), dict):
+        # entries are themselves dictionaries or lists.
+        if isinstance(task_input, dict):
             out = {
                 k: _get_path_from_collection(_flatten(v))
-                for k, v in self.input().items()
+                for k, v in task_input.items()
             }
         # case 2 - `requires` returns a list, iterable, or single object
         # In this case, the output of `_form_input()` is a list whose entries
-        # are dictionaries or lists.
+        # are themselves lists or dictionaries.
         else:
-            out = [_get_path_from_collection(v) for v in _flatten(self.input())]
+            out = [_get_path_from_collection(v) for v in task_input]
 
         return out
 
@@ -248,14 +228,15 @@ class JupyterNotebookTask(luigi.Task):
         This method is used to loop through the return value of the task's
         `output` method and extract paths (where available).
         """
+        task_output = _flatten(self.output())
         # case 1 - `output` returns a dictionary
         # In this case, the output of `_form_output()` is a dictionary.
-        if isinstance(self.output(), dict):
-            out = _get_path_from_collection(self.output())
+        if isinstance(task_output, dict):
+            out = _get_path_from_collection(task_output)
         # case 2 - `output` returns a list, iterable, or single object
         # In this case, the output of `_form_output()` is a list.
         else:
-            out = _get_path_from_collection(_flatten(self.output()))
+            out = _get_path_from_collection(task_output)
 
         return out
 
