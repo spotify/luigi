@@ -239,7 +239,7 @@ class JupyterNotebookTask(luigi.Task):
         # case 2 - `output` returns a list, iterable, or single object
         # In this case, the output of `_form_output()` is a list.
         out = _get_path_from_collection(task_output)
-        
+
         return out
 
     def run(self):
