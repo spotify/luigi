@@ -139,8 +139,9 @@ def _get_path(obj):
     Extracts the `path` attribute from `obj` if available; otherwise, simply
     returns None.
     """
+    obj = _flatten(obj)
     try:
-        out = obj.path
+        out = obj[0].path
     except AttributeError:
         out = None
     return out
@@ -148,14 +149,18 @@ def _get_path(obj):
 
 def _get_path_from_collection(coll):
     """
-    Extracts the `path` attribute from objects organized in a collection (dict
-    or iterable) wherever the `path` attribute is available (else extracts
-    `None`).
+    Extracts the `path` attribute from atomic objects or objects organized in a
+    collection (dict or iterable) wherever the `path` attribute is available
+    (else extracts `None`).
     """
     if isinstance(coll, dict):
         out = {k: _get_path(v) for k, v in coll.items()}
     else:
-        out = [_get_path(v) for v in _flatten(coll)]
+        coll = _flatten(coll)
+        if len(coll) == 1:
+            out = _get_path(coll)
+        else:
+            out = [_get_path(v) for v in _flatten(coll)]
     return out
 
 
@@ -212,7 +217,7 @@ class JupyterNotebookTask(luigi.Task):
         # entries are themselves dictionaries or lists.
         if isinstance(task_input, dict):
             out = {
-                k: _get_path_from_collection(_flatten(v))
+                k: _get_path_from_collection(v)
                 for k, v in task_input.items()
             }
         # case 2 - `requires` returns a list, iterable, or single object
@@ -231,13 +236,11 @@ class JupyterNotebookTask(luigi.Task):
         task_output = _flatten(self.output())
         # case 1 - `output` returns a dictionary
         # In this case, the output of `_form_output()` is a dictionary.
-        if isinstance(task_output, dict):
-            out = _get_path_from_collection(task_output)
+        #
         # case 2 - `output` returns a list, iterable, or single object
         # In this case, the output of `_form_output()` is a list.
-        else:
-            out = _get_path_from_collection(task_output)
-
+        out = _get_path_from_collection(task_output)
+        
         return out
 
     def run(self):
