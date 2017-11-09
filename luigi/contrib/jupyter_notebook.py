@@ -233,11 +233,6 @@ class JupyterNotebookTask(luigi.Task):
         `output` method and extract paths (where available).
         """
         task_output = _flatten(self.output())
-        # case 1 - `output` returns a dictionary
-        # In this case, the output of `_form_output()` is a dictionary.
-        #
-        # case 2 - `output` returns a list, iterable, or single object
-        # In this case, the output of `_form_output()` is a list.
         out = _get_path_from_collection(task_output)
 
         return out
