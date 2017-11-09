@@ -213,16 +213,12 @@ class JupyterNotebookTask(luigi.Task):
         """
         task_input = _flatten(self.input())
         # case 1 - `requires` returns a dictionary
-        # In this case, the output of `_form_input()` is a dictionary whose
-        # entries are themselves dictionaries or lists.
         if isinstance(task_input, dict):
             out = {
                 k: _get_path_from_collection(v)
                 for k, v in task_input.items()
             }
         # case 2 - `requires` returns a list, iterable, or single object
-        # In this case, the output of `_form_input()` is a list whose entries
-        # are themselves lists or dictionaries.
         else:
             out = [_get_path_from_collection(v) for v in task_input]
 
