@@ -49,14 +49,14 @@ as follows:
     # extract a *user-defined* parameter named `my_par`
     my_par = pars.get('my_par')
 
-The paths of the task's ``self.input()`` and
-``self.output()`` are automatically added to ``parameters`` with keys
-*input* and *output* respectively. These paths are meaningful when
-``self.input()`` and ``self.output()`` return iterables or dictionaries whose
-values are collections of objects which have a ``path`` attribute
-(e.g. one or more objects of class :class:`luigi.local_target.LocalTarget`).
-Whenever this is not the case, the corresponding entries inside of
-``pars.get('input')`` and ``pars.get('output')`` are simply ``None``.
+The paths of the task's ``self.input()`` and ``self.output()`` are automatically
+added to ``parameters`` with keys *input* and *output* respectively.
+These paths are meaningful when ``self.input()`` and ``self.output()`` return
+single objects with the ``path`` attribute, or iterables or dictionaries whose
+values are themselves objects or collections of objects from which the ``path``
+attribute can be extracted (e.g. :class:`luigi.local_target.LocalTarget`).
+Whenever a ``path`` attribute can't be extracted, the corresponding entry
+inside of ``parameters`` is set to ``None``.
 
 :class:`JupyterNotebookTask` inherits from the standard
 :class:`luigi.Task` class. As usual, you should override the
@@ -220,7 +220,10 @@ class JupyterNotebookTask(luigi.Task):
             }
         # case 2 - `requires` returns a list, iterable, or single object
         else:
-            out = [_get_path_from_collection(v) for v in task_input]
+            if len(task_input) == 1:
+                out = _get_path_from_collection(task_input)
+            else:
+                out = [_get_path_from_collection(v) for v in task_input]
 
         return out
 
