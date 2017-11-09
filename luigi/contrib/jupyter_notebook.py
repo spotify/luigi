@@ -53,10 +53,10 @@ The paths of the task's ``self.input()`` and
 ``self.output()`` are automatically added to ``parameters`` with keys
 *input* and *output* respectively. These paths are meaningful when
 ``self.input()`` and ``self.output()`` return iterables or dictionaries whose
-values are collecions of objects which have a ``path`` attribute
-(e.g. one or multiple :class:`luigi.local_target.LocalTarget`s).
+values are collections of objects which have a ``path`` attribute
+(e.g. one or more objects of class :class:`luigi.local_target.LocalTarget`).
 Whenever this is not the case, the corresponding entries inside of
-``pars.get('input')`` and ``pars.get('output')`` are ``None``.
+``pars.get('input')`` and ``pars.get('output')`` are simply ``None``.
 
 :class:`JupyterNotebookTask` inherits from the standard
 :class:`luigi.Task` class. As usual, you should override the
