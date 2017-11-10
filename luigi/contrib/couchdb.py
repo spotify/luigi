@@ -29,6 +29,7 @@ except ImportError as e:
     logger.warning("Loading CouchDB module without the python package CouchDB. \
         This will crash at runtime if CouchDB functionality is used.")
 
+
 class CouchTarget(luigi.Target):
     """
     Target for resources in CouchDB
@@ -72,7 +73,6 @@ class CouchExistTarget(CouchTarget):
             return self._doc_id in self._couch_client[self._database]
         except couchdb.http.ResourceNotFound:
             return False
-
 
 
 class CouchRevTarget(CouchTarget):

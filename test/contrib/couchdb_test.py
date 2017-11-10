@@ -16,19 +16,13 @@
 #
 # Author: F. Rämisch <raemisch@ub.uni-leipzig.de>
 
-import luigi
 import unittest
+
+from luigi.contrib.couchdb import CouchExistTarget, CouchRevTarget, CouchCountTarget
 
 HOST = 'localhost'
 PORT = 5984
 DATABASE = 'luigi_test'
-
-TEST_DOCS = [
-    {'_id': 'person_1', 'name': 'Martin'},
-    {'_id': 'person_2', 'name': 'Peter', 'surname': 'Klaussen'},
-    {'_id': 'person_3', 'surname': 'Oledottir'},
-    {'_id': 'person_4', 'surname': ''}
-]
 
 try:
     import couchdb
@@ -39,7 +33,12 @@ except ImportError:
 except Exception:
     raise unittest.SkipTest('Unable to connect to local CouchDB instance')
 
-from luigi.contrib.couchdb import CouchExistTarget, CouchRevTarget, CouchCountTarget
+TEST_DOCS = [
+    {'_id': 'person_1', 'name': 'Martin'},
+    {'_id': 'person_2', 'name': 'Peter', 'surname': 'Klaussen'},
+    {'_id': 'person_3', 'surname': 'Oledottir'},
+    {'_id': 'person_4', 'surname': ''}
+]
 
 
 class CouchExistTargetTest(unittest.TestCase):
@@ -188,6 +187,7 @@ class CouchCountTargetTest(unittest.TestCase):
         for (d, result), doc in zip(test_values, TEST_DOCS):
             self.assertEqual(result, target.exists())
             self.db.save(doc)
+
 
 if __name__ == '__main__':
     unittest.main()
