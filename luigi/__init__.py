@@ -48,6 +48,7 @@ from luigi.execution_summary import LuigiStatusCode
 from luigi import event
 from luigi.event import Event
 
+
 __all__ = [
     'task', 'Task', 'Config', 'ExternalTask', 'WrapperTask', 'namespace', 'auto_namespace',
     'target', 'Target', 'LocalTarget', 'rpc', 'RemoteScheduler',
@@ -59,3 +60,20 @@ __all__ = [
     'configuration', 'interface', 'local_target', 'run', 'build', 'event', 'Event',
     'NumericalParameter', 'ChoiceParameter', 'OptionalParameter', 'LuigiStatusCode'
 ]
+
+if not configuration.get_config().has_option('core', 'autoload-range'):
+    import warnings
+    warning_message = '''
+        Autoloading range tasks by default has been deprecated and will be removed in a future version.
+        To get the behavior now add an option to luigi.cfg:
+
+          [core]
+            autoload-range: false
+
+        Alternately set the option to true to continue with existing behaviour and suppress this warning.
+    '''
+    warnings.warn(warning_message, DeprecationWarning)
+
+if configuration.get_config().getboolean('core', 'autoload-range', True):
+    from .tools import range  # just makes the tool classes available from command line
+    __all__.append('range')
