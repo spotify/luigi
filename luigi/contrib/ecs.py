@@ -50,6 +50,7 @@ Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 
 """
 
+import ast
 import time
 import logging
 import luigi
@@ -61,8 +62,6 @@ try:
     client = boto3.client('ecs')
 except ImportError:
     logger.warning('boto3 is not installed. ECSTasks require boto3')
-
-POLL_TIME = 2
 
 
 def _get_task_statuses(task_ids, cluster):
@@ -85,14 +84,14 @@ def _get_task_statuses(task_ids, cluster):
     return [t['lastStatus'] for t in response['tasks']]
 
 
-def _track_tasks(task_ids, cluster):
+def _track_tasks(task_ids, cluster, poll_time):
     """Poll task status until STOPPED"""
     while True:
         statuses = _get_task_statuses(task_ids, cluster)
         if all([status == 'STOPPED' for status in statuses]):
             logger.info('ECS tasks {0} STOPPED'.format(','.join(task_ids)))
             break
-        time.sleep(POLL_TIME)
+        time.sleep(poll_time)
         logger.debug('ECS task status for tasks {0}: {1}'.format(task_ids, statuses))
 
 
@@ -131,11 +130,21 @@ class ECSTask(luigi.Task):
     :param cluster: str defining the ECS cluster to use.
         When this is not defined it will use the default one.
 
+    :param poll_time: int defining how often polling for a status
+        occurs in seconds. When this is not defined it will
+        default to 2 seconds.
+
+    :param deregister_def: bool defining if the task definition is deregistered
+        after use. When this is not defined it will default to False,
+        i.e. not deregistering after initialization
+
     """
 
-    task_def_arn = luigi.Parameter(default=None)
-    task_def = luigi.Parameter(default=None)
+    task_def_arn = luigi.Parameter(default='')
+    task_def = luigi.Parameter(default='')
     cluster = luigi.Parameter(default='default')
+    poll_time = luigi.IntParameter(default=2)
+    deregister_def = luigi.BoolParameter(default=False)
 
     @property
     def ecs_task_ids(self):
@@ -167,10 +176,12 @@ class ECSTask(luigi.Task):
         if (not self.task_def and not self.task_def_arn) or \
                 (self.task_def and self.task_def_arn):
             raise ValueError(('Either (but not both) a task_def (dict) or'
-                              'task_def_arn (string) must be assigned'))
+                              ' task_def_arn (string) must be assigned'))
         if not self.task_def_arn:
             # Register the task and get assigned taskDefinition ID (arn)
-            response = client.register_task_definition(**self.task_def)
+            response = client.register_task_definition(
+                **ast.literal_eval(self.task_def)
+                )
             self.task_def_arn = response['taskDefinition']['taskDefinitionArn']
 
         # Submit the task to AWS ECS and get assigned task ID
@@ -183,6 +194,9 @@ class ECSTask(luigi.Task):
                                    overrides=overrides,
                                    cluster=self.cluster)
         self._task_ids = [task['taskArn'] for task in response['tasks']]
-
+        if self.deregister_def:
+            response = client.deregister_task_definition(
+                taskDefinition=self.task_def_arn
+                )
         # Wait on task completion
-        _track_tasks(self._task_ids, self.cluster)
+        _track_tasks(self._task_ids, self.cluster, self.poll_time)
