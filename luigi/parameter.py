@@ -140,6 +140,10 @@ class Parameter(object):
                                                         parameter values into a single value. Used
                                                         when receiving batched parameter lists from
                                                         the scheduler. See :ref:`batch_method`
+
+        :param visible: specify ``False`` if the parameter should not be visible in central scheduler WEB-view.
+                        Default: ``True``
+
         """
         self._default = default
         self._batch_method = batch_method

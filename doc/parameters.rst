@@ -88,6 +88,11 @@ are not the same instance:
     >>> hash(c) == hash(d)
     True
 
+Invisible parameters
+
+If a parameter is created with ``visible=False``,
+it is ignored in central scheduler Web-view.
+
 Parameter types
 ^^^^^^^^^^^^^^^
 
