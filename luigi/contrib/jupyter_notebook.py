@@ -160,7 +160,7 @@ def _get_path_from_collection(coll):
         if len(coll) == 1:
             out = _get_path(coll)
         else:
-            out = [_get_path(v) for v in _flatten(coll)]
+            out = [_get_path(v) for v in coll]
     return out
 
 
