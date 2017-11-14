@@ -147,6 +147,7 @@ or held presentations about Luigi:
 * `voyages-sncf.com <https://www.voyages-sncf.com/>`_ `(presentation, 2017) <https://github.com/voyages-sncf-technologies/meetup-afpy-nantes-luigi>`__
 * `Open Targets <https://www.opentargets.org/>`_ `(blog, 2017) <https://blog.opentargets.org/using-containers-with-luigi>`__
 * `Leipzig University Library <https://ub.uni-leipzig.de>`_ `(presentation, 2016) <https://de.slideshare.net/MartinCzygan/build-your-own-discovery-index-of-scholary-eresources>`__ / `(project) <https://finc.info/de/datenquellen>`__
+* `Synetiq <https://synetiq.net/>`_ `(presentation, 2017) <https://www.youtube.com/watch?v=M4xUQXogSfo>`__
 
 Some more companies are using Luigi but haven't had a chance yet to write about it:
 
