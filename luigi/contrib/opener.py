@@ -69,7 +69,7 @@ class InvalidQuery(OpenerError):
 
 class OpenerRegistry(object):
 
-    def __init__(self, openers=[]):
+    def __init__(self, openers=list()):
         """An opener registry that  stores a number of opener objects used
         to parse Target URIs
 

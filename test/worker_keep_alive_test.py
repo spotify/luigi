@@ -107,7 +107,7 @@ class WorkerKeepAliveUpstreamTest(LuigiTestCase):
             # ... because in this case the only work remaining depends on DISABLED tasks,
             # hence it's not worth considering the wrapper task as a PENDING task to
             # keep the worker alive anymore.
-            self.assertFalse(Succeeder.did_run)  # It should never have run, it suceeded already
+            self.assertFalse(Succeeder.did_run)  # It should never have run, it succeeded already
         finally:
             self.sch.prune()  # This shouldnt be necessary in this version, but whatevs
             t.join(timeout=1)  # Wait 1 second

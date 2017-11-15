@@ -474,6 +474,12 @@ class SimpleTaskState(object):
     def get_active_tasks_by_status(self, *statuses):
         return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status]) for status in statuses)
 
+    def get_active_task_count_for_status(self, status):
+        if status:
+            return len(self._status_tasks[status])
+        else:
+            return len(self._tasks)
+
     def get_batch_running_tasks(self, batch_id):
         assert batch_id is not None
         return [
@@ -691,11 +697,11 @@ class Scheduler(object):
 
     @rpc_method()
     def prune(self):
-        logger.info("Starting pruning of task graph")
+        logger.debug("Starting pruning of task graph")
         self._prune_workers()
         self._prune_tasks()
         self._prune_emails()
-        logger.info("Done pruning task graph")
+        logger.debug("Done pruning task graph")
 
     def _prune_workers(self):
         remove_workers = []
@@ -766,7 +772,7 @@ class Scheduler(object):
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
                  assistant=False, tracking_url=None, worker=None, batchable=None,
-                 batch_id=None, retry_policy_dict={}, owners=None, **kwargs):
+                 batch_id=None, retry_policy_dict=dict(), owners=None, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -1335,7 +1341,13 @@ class Scheduler(object):
         """
         Query for a subset of tasks by status.
         """
+        if not search:
+            count_limit = max_shown_tasks or self._config.max_shown_tasks
+            pre_count = self._state.get_active_task_count_for_status(status)
+            if limit and pre_count > count_limit:
+                return {'num_tasks': -1 if upstream_status else pre_count}
         self.prune()
+
         result = {}
         upstream_status_table = {}  # used to memoize upstream status
         if search is None:

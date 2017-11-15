@@ -163,7 +163,7 @@ class SQLAlchemyTarget(luigi.Target):
     _engine_dict = {}  # dict of sqlalchemy engine instances
     Connection = collections.namedtuple("Connection", "engine pid")
 
-    def __init__(self, connection_string, target_table, update_id, echo=False, connect_args={}):
+    def __init__(self, connection_string, target_table, update_id, echo=False, connect_args=dict()):
         """
         Constructor for the SQLAlchemyTarget.
 

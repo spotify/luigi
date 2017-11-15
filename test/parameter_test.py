@@ -873,11 +873,11 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
     def testListWithNamespaceCli(self):
         class A(luigi.Task):
             task_namespace = 'mynamespace'
-            l = luigi.ListParameter(default=[1, 2, 3])
+            l_param = luigi.ListParameter(default=[1, 2, 3])
             expected = luigi.ListParameter()
 
             def complete(self):
-                if self.l != self.expected:
+                if self.l_param != self.expected:
                     raise ValueError
                 return True
 

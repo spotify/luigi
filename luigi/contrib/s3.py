@@ -467,7 +467,7 @@ class S3Client(FileSystem):
             mp.complete_upload()
             return mp.key_name
 
-        except:
+        except BaseException:
             logger.info('Error during multipart s3 copy for %s/%s to %s/%s...', src_bucket, src_key, dst_bucket, dst_key)
             # cancel the copy so we don't get charged for storage consumed by copied parts
             if mp:
