@@ -19,7 +19,7 @@ In practice, implementing Target subclasses is rarely needed.
 Luigi comes with a toolbox of several useful Targets.
 In particular, :class:`~luigi.file.LocalTarget` and :class:`~luigi.contrib.hdfs.target.HdfsTarget`,
 but there is also support for other file systems:
-:class:`luigi.s3.S3Target`,
+:class:`luigi.contrib.s3.S3Target`,
 :class:`luigi.contrib.ssh.RemoteTarget`,
 :class:`luigi.contrib.ftp.RemoteTarget`,
 :class:`luigi.contrib.mysqldb.MySqlTarget`,
@@ -64,7 +64,7 @@ Parameter
 ~~~~~~~~~
 
 The Task class corresponds to some type of job that is run, but in
-general you want to allow some form of parametrization of it.
+general you want to allow some form of parameterization of it.
 For instance, if your Task class runs a Hadoop job to create a report every night,
 you probably want to make the date a parameter of the class.
 See :doc:`/parameters` for more info.

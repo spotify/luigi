@@ -47,27 +47,72 @@ TASK_ID_INCLUDE_PARAMS = 3
 TASK_ID_TRUNCATE_PARAMS = 16
 TASK_ID_TRUNCATE_HASH = 10
 TASK_ID_INVALID_CHAR_REGEX = re.compile(r'[^A-Za-z0-9_]')
+_SAME_AS_PYTHON_MODULE = '_same_as_python_module'
 
 
-def namespace(namespace=None):
+def namespace(namespace=None, scope=''):
     """
     Call to set namespace of tasks declared after the call.
 
-    It is best practice to call this function without arguments at the end of any file it has been
-    used in. That is to ensure that subsequent tasks have the default namespace again.
+    It is often desired to call this function with the keyword argument
+    ``scope=__name__``.
+
+    The ``scope`` keyword makes it so that this call is only effective for task
+    classes with a matching [*]_ ``__module__``. The default value for
+    ``scope`` is the empty string, which means all classes. Multiple calls with
+    the same scope simply replace each other.
 
     The namespace of a :py:class:`Task` can also be changed by specifying the property
-    ``task_namespace``. This solution has the advantage that the namespace
-    doesn't have to be restored.
+    ``task_namespace``.
 
     .. code-block:: python
 
         class Task2(luigi.Task):
             task_namespace = 'namespace2'
 
+    This explicit setting takes priority over whatever is set in the
+    ``namespace()`` method, and it's also inherited through normal python
+    inheritence.
+
     There's no equivalent way to set the ``task_family``.
+
+    *New since Luigi 2.6.0:* ``scope`` keyword argument.
+
+    .. [*] When there are multiple levels of matching module scopes like
+           ``a.b`` vs ``a.b.c``, the more specific one (``a.b.c``) wins.
+    .. seealso:: The new and better scaling :py:func:`auto_namespace`
     """
-    Register._default_namespace = namespace or ''
+    Register._default_namespace_dict[scope] = namespace or ''
+
+
+def auto_namespace(scope=''):
+    """
+    Same as :py:func:`namespace`, but instead of a constant namespace, it will
+    be set to the ``__module__`` of the task class. This is desirable for these
+    reasons:
+
+     * Two tasks with the same name will not have conflicting task families
+     * It's more pythonic, as modules are Python's recommended way to
+       do namespacing.
+     * It's traceable. When you see the full name of a task, you can immediately
+       identify where it is defined.
+
+    We recommend calling this function from your package's outermost
+    ``__init__.py`` file. The file contents could look like this:
+
+    .. code-block:: python
+
+        import luigi
+
+        luigi.auto_namespace(scope=__name__)
+
+    To reset an ``auto_namespace()`` call, you can use
+    ``namespace(scope='my_scope'``).  But this will not be
+    needed (and is also discouraged) if you use the ``scope`` kwarg.
+
+    *New since Luigi 2.6.0.*
+    """
+    namespace(namespace=_SAME_AS_PYTHON_MODULE, scope=scope)
 
 
 def task_id_str(task_family, params):
@@ -95,7 +140,7 @@ class BulkCompleteNotImplementedError(NotImplementedError):
 
     pylint thinks anything raising NotImplementedError needs to be implemented
     in any subclass. bulk_complete isn't like that. This tricks pylint into
-    thinking that the default implementation is a valid implementation and no
+    thinking that the default implementation is a valid implementation and not
     an abstract method."""
     pass
 
@@ -243,6 +288,10 @@ class Task(object):
 
     __not_user_specified = '__not_user_specified'
 
+    # This is here just to help pylint, the Register metaclass will always set
+    # this value anyway.
+    _namespace_at_class_time = None
+
     task_namespace = __not_user_specified
     """
     This value can be overriden to set the namespace that will be used.
@@ -263,6 +312,8 @@ class Task(object):
         """
         if cls.task_namespace != cls.__not_user_specified:
             return cls.task_namespace
+        elif cls._namespace_at_class_time == _SAME_AS_PYTHON_MODULE:
+            return cls.__module__
         return cls._namespace_at_class_time
 
     @property
@@ -381,17 +432,24 @@ class Task(object):
         self.param_args = tuple(value for key, value in param_values)
         self.param_kwargs = dict(param_values)
 
+        self._warn_on_wrong_param_types()
         self.task_id = task_id_str(self.get_task_family(), self.to_str_params(only_significant=True))
         self.__hash = hash(self.task_id)
 
         self.set_tracking_url = None
         self.set_status_message = None
+        self.set_progress_percentage = None
 
     def initialized(self):
         """
         Returns ``True`` if the Task is initialized and ``False`` otherwise.
         """
         return hasattr(self, 'task_id')
+
+    def _warn_on_wrong_param_types(self):
+        params = dict(self.get_params())
+        for param_name, param_value in six.iteritems(self.param_kwargs):
+            params[param_name]._warn_on_wrong_param_type(param_name, param_value)
 
     @classmethod
     def from_str_params(cls, params_str):
@@ -624,7 +682,7 @@ class Task(object):
                         pickle.dumps(self)
 
         """
-        unpicklable_properties = ('set_tracking_url', 'set_status_message')
+        unpicklable_properties = ('set_tracking_url', 'set_status_message', 'set_progress_percentage')
         reserved_properties = {}
         for property_name in unpicklable_properties:
             if hasattr(self, property_name):
@@ -760,18 +818,15 @@ def getpaths(struct):
     if isinstance(struct, Task):
         return struct.output()
     elif isinstance(struct, dict):
-        r = {}
-        for k, v in six.iteritems(struct):
-            r[k] = getpaths(v)
-        return r
+        return struct.__class__((k, getpaths(v)) for k, v in six.iteritems(struct))
+    elif isinstance(struct, (list, tuple)):
+        return struct.__class__(getpaths(r) for r in struct)
     else:
-        # Remaining case: assume r is iterable...
+        # Remaining case: assume struct is iterable...
         try:
-            s = list(struct)
+            return [getpaths(r) for r in struct]
         except TypeError:
             raise Exception('Cannot map %s to Task/dict/list' % str(struct))
-
-        return [getpaths(r) for r in s]
 
 
 def flatten(struct):

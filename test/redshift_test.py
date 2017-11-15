@@ -26,7 +26,7 @@ import luigi.notifications
 from luigi.contrib import redshift
 from moto import mock_s3
 from boto.s3.key import Key
-from luigi.s3 import S3Client
+from luigi.contrib.s3 import S3Client
 
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):

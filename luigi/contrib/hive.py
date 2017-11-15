@@ -286,9 +286,18 @@ class HiveQueryTask(luigi.contrib.hadoop.BaseHadoopJobTask):
         """
         return luigi.configuration.get_config().get('hive', 'hiverc-location', default=None)
 
+    def hivevars(self):
+        """
+        Returns a dict of key=value settings to be passed along
+        to the hive command line via --hivevar.
+        This option can be used as a separated namespace for script local variables.
+        See https://cwiki.apache.org/confluence/display/Hive/LanguageManual+VariableSubstitution
+        """
+        return {}
+
     def hiveconfs(self):
         """
-        Returns an dict of key=value settings to be passed along
+        Returns a dict of key=value settings to be passed along
         to the hive command line via --hiveconf. By default, sets
         mapred.job.name to task_id and if not None, sets:
 
@@ -342,6 +351,25 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                     except FileAlreadyExists:
                         pass
 
+    def get_arglist(self, f_name, job):
+        arglist = load_hive_cmd() + ['-f', f_name]
+        hiverc = job.hiverc()
+        if hiverc:
+            if isinstance(hiverc, str):
+                hiverc = [hiverc]
+            for rcfile in hiverc:
+                arglist += ['-i', rcfile]
+        hiveconfs = job.hiveconfs()
+        if hiveconfs:
+            for k, v in six.iteritems(hiveconfs):
+                arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
+        hivevars = job.hivevars()
+        if hivevars:
+            for k, v in six.iteritems(hivevars):
+                arglist += ['--hivevar', '{0}={1}'.format(k, v)]
+        logger.info(arglist)
+        return arglist
+
     def run_job(self, job, tracking_url_callback=None):
         if tracking_url_callback is not None:
             warnings.warn("tracking_url_callback argument is deprecated, task.set_tracking_url is "
@@ -354,18 +382,7 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                 query = query.encode('utf8')
             f.write(query)
             f.flush()
-            arglist = load_hive_cmd() + ['-f', f.name]
-            hiverc = job.hiverc()
-            if hiverc:
-                if isinstance(hiverc, str):
-                    hiverc = [hiverc]
-                for rcfile in hiverc:
-                    arglist += ['-i', rcfile]
-            if job.hiveconfs():
-                for k, v in six.iteritems(job.hiveconfs()):
-                    arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
-
-            logger.info(arglist)
+            arglist = self.get_arglist(f.name, job)
             return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, job.set_tracking_url)
 
 
@@ -377,10 +394,7 @@ class HiveTableTarget(luigi.Target):
     def __init__(self, table, database='default', client=None):
         self.database = database
         self.table = table
-        self.hive_cmd = load_hive_cmd()
-        if client is None:
-            client = get_default_client()
-        self.client = client
+        self.client = client or get_default_client()
 
     def exists(self):
         logger.debug("Checking if Hive table '%s.%s' exists", self.database, self.table)
@@ -409,9 +423,7 @@ class HivePartitionTarget(luigi.Target):
         self.database = database
         self.table = table
         self.partition = partition
-        if client is None:
-            client = get_default_client()
-        self.client = client
+        self.client = client or get_default_client()
 
         self.fail_missing_table = fail_missing_table
 
@@ -451,11 +463,10 @@ class ExternalHiveTask(luigi.ExternalTask):
 
     database = luigi.Parameter(default='default')
     table = luigi.Parameter()
-    # since this is an external task and will never be initialized from the CLI, partition can be any python object, in this case a dictionary
-    partition = luigi.Parameter(default=None, description='Python dictionary specifying the target partition e.g. {"date": "2013-01-25"}')
+    partition = luigi.DictParameter(default={}, description='Python dictionary specifying the target partition e.g. {"date": "2013-01-25"}')
 
     def output(self):
-        if self.partition is not None:
+        if len(self.partition) != 0:
             assert self.partition, "partition required"
             return HivePartitionTarget(table=self.table,
                                        partition=self.partition,

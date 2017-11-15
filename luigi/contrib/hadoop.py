@@ -51,8 +51,8 @@ import luigi
 import luigi.task
 import luigi.contrib.gcs
 import luigi.contrib.hdfs
-import luigi.s3
-from luigi import mrrunner
+import luigi.contrib.s3
+from luigi.contrib import mrrunner
 
 if six.PY2:
     from itertools import imap as map
@@ -460,7 +460,7 @@ class HadoopJobRunner(JobRunner):
         # atomic output: replace output with a temporary work directory
         if self.end_job_with_atomic_move_dir:
             illegal_targets = (
-                luigi.s3.S3FlagTarget, luigi.contrib.gcs.GCSFlagTarget)
+                luigi.contrib.s3.S3FlagTarget, luigi.contrib.gcs.GCSFlagTarget)
             if isinstance(job.output(), illegal_targets):
                 raise TypeError("end_job_with_atomic_move_dir is not supported"
                                 " for {}".format(illegal_targets))
@@ -485,8 +485,17 @@ class HadoopJobRunner(JobRunner):
             arglist += ['-libjars', ','.join(libjars)]
 
         # 'archives' is also a generic option
+        archives = []
+        extra_archives = job.extra_archives()
+
         if self.archives:
-            arglist += ['-archives', ','.join(self.archives)]
+            archives = self.archives
+
+        if extra_archives:
+            archives += extra_archives
+
+        if archives:
+            arglist += ['-archives', ','.join(archives)]
 
         # Add static files and directories
         extra_files = get_extra_files(job.extra_files())
@@ -511,7 +520,15 @@ class HadoopJobRunner(JobRunner):
 
         arglist += self.streaming_args
 
+        # Add additonal non-generic  per-job streaming args
+        extra_streaming_args = job.extra_streaming_arguments()
+        for (arg, value) in extra_streaming_args:
+            if not arg.startswith('-'):  # safety first
+                arg = '-' + arg
+            arglist += [arg, value]
+
         arglist += ['-mapper', map_cmd]
+
         if job.combiner != NotImplemented:
             arglist += ['-combiner', cmb_cmd]
         if job.reducer != NotImplemented:
@@ -533,7 +550,7 @@ class HadoopJobRunner(JobRunner):
 
         allowed_input_targets = (
             luigi.contrib.hdfs.HdfsTarget,
-            luigi.s3.S3Target,
+            luigi.contrib.s3.S3Target,
             luigi.contrib.gcs.GCSTarget)
         for target in luigi.task.flatten(job.input_hadoop()):
             if not isinstance(target, allowed_input_targets):
@@ -543,7 +560,7 @@ class HadoopJobRunner(JobRunner):
 
         allowed_output_targets = (
             luigi.contrib.hdfs.HdfsTarget,
-            luigi.s3.S3FlagTarget,
+            luigi.contrib.s3.S3FlagTarget,
             luigi.contrib.gcs.GCSFlagTarget)
         if not isinstance(job.output(), allowed_output_targets):
             raise TypeError('output must be one of: {}'.format(
@@ -911,6 +928,17 @@ class JobTask(BaseHadoopJobTask):
 
         Uses Hadoop's -files option so that the same file is reused across tasks.
         """
+        return []
+
+    def extra_streaming_arguments(self):
+        """
+        Extra arguments to Hadoop command line.
+        Return here a list of (parameter, value) tuples.
+        """
+        return []
+
+    def extra_archives(self):
+        """List of paths to archives """
         return []
 
     def add_link(self, src, dst):

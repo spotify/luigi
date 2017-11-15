@@ -13,7 +13,7 @@
 # the License.
 
 import luigi
-from luigi.file import LocalTarget
+from luigi.local_target import LocalTarget
 from luigi.scheduler import Scheduler
 import luigi.server
 import luigi.worker
@@ -28,7 +28,7 @@ import shutil
 class TestExternalFileTask(luigi.ExternalTask):
     """ Mocking tasks is a pain, so touch a file instead """
     path = luigi.Parameter()
-    times_to_call = luigi.Parameter()
+    times_to_call = luigi.IntParameter()
 
     def __init__(self, *args, **kwargs):
         super(TestExternalFileTask, self).__init__(*args, **kwargs)
@@ -54,7 +54,7 @@ class TestTask(luigi.Task):
     Requires a single file dependency
     """
     tempdir = luigi.Parameter()
-    complete_after = luigi.Parameter()
+    complete_after = luigi.IntParameter()
 
     def __init__(self, *args, **kwargs):
         super(TestTask, self).__init__(*args, **kwargs)
@@ -141,6 +141,27 @@ class WorkerExternalTaskTest(unittest.TestCase):
         with patch('random.uniform', return_value=0.001):
             test_task = TestTask(tempdir=self.tempdir, complete_after=5)
             self._build([test_task])
+
+        assert os.path.exists(test_task.dep_path)
+        assert os.path.exists(test_task.output_path)
+
+        self.assertGreaterEqual(test_task.dependency.times_called, 5)
+
+    def test_external_dependency_bare(self):
+        """
+        Test ExternalTask without altering global settings.
+        """
+        assert luigi.worker.worker().retry_external_tasks is False
+
+        test_task = TestTask(tempdir=self.tempdir, complete_after=5)
+
+        scheduler = luigi.scheduler.Scheduler(retry_delay=0.01,
+                                              prune_on_get_work=True)
+        with luigi.worker.Worker(
+                retry_external_tasks=True, scheduler=scheduler,
+                keep_alive=True, wait_interval=0.00001, wait_jitter=0) as w:
+            w.add(test_task)
+            w.run()
 
         assert os.path.exists(test_task.dep_path)
         assert os.path.exists(test_task.output_path)

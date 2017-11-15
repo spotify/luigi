@@ -14,7 +14,7 @@
 
 import datetime
 import luigi
-import luigi.postgres
+import luigi.contrib.postgres
 from luigi.tools.range import RangeDaily
 from helpers import unittest
 import mock
@@ -44,7 +44,7 @@ class MockPostgresCursor(mock.Mock):
         return self.fetchone_result
 
 
-class DummyPostgresImporter(luigi.postgres.CopyToTable):
+class DummyPostgresImporter(luigi.contrib.postgres.CopyToTable):
     date = luigi.DateParameter()
 
     host = 'dummy_host'
@@ -83,7 +83,7 @@ class DailyCopyToTableTest(unittest.TestCase):
         self.assertFalse(task.complete())
 
 
-class DummyPostgresQuery(luigi.postgres.PostgresQuery):
+class DummyPostgresQuery(luigi.contrib.postgres.PostgresQuery):
     date = luigi.DateParameter()
 
     host = 'dummy_host'

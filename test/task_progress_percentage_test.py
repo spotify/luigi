@@ -15,13 +15,24 @@
 # limitations under the License.
 #
 
-"""
-The hive module has been moved to ``luigi.contrib.hive``
-"""
+from helpers import LuigiTestCase
 
-import warnings
+import luigi
+import luigi.scheduler
+import luigi.worker
 
-from luigi.contrib.hive import *  # NOQA
 
-warnings.warn("luigi.hive module has been moved to luigi.contrib.hive",
-              DeprecationWarning)
+class TaskProgressPercentageTest(LuigiTestCase):
+
+    def test_run(self):
+        sch = luigi.scheduler.Scheduler()
+        with luigi.worker.Worker(scheduler=sch) as w:
+            class MyTask(luigi.Task):
+                def run(self):
+                    self.set_progress_percentage(30)
+
+            task = MyTask()
+            w.add(task)
+            w.run()
+
+            self.assertEqual(sch.get_task_progress_percentage(task.task_id)["progressPercentage"], 30)
