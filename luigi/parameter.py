@@ -479,6 +479,12 @@ class _DatetimeParameterBase(Parameter):
             return str(dt)
         return dt.strftime(self.date_format)
 
+    @staticmethod
+    def _convert_to_dt(dt):
+        if not isinstance(dt, datetime.datetime):
+            dt = datetime.datetime.combine(dt, datetime.time.min)
+        return dt
+
     def normalize(self, dt):
         """
         Clamp dt to every Nth :py:attr:`~_DatetimeParameterBase.interval` starting at
@@ -486,6 +492,8 @@ class _DatetimeParameterBase(Parameter):
         """
         if dt is None:
             return None
+
+        dt = self._convert_to_dt(dt)
 
         dt = dt.replace(microsecond=0)  # remove microseconds, to avoid float rounding issues.
         delta = (dt - self.start).total_seconds()
