@@ -16,19 +16,18 @@
 #
 """
 This module is intended for when you need to execute a Jupyter notebook as a
-task within a Luigi pipeline. This can be accomplished via the
-:class:`JupyterNotebookTask` class.
+task within a Luigi pipeline.
+This can be accomplished via the :class:`JupyterNotebookTask` class.
 
-:class:`JupyterNotebookTask` allows you to pass parameters to the Jupyter
-notebook through the ``parameters`` dictionary.
+When the task is executed, all of the task's ``luigi.Parameter`` parameters
+are written to a temporary JSON file in the same directory that contains the
+notebook.
 
-When the task is executed, the ``parameters`` dictionary is written to a
-temporary JSON file in the same directory that contains the notebook.
-
-Inside the notebook, you can retrieve the values of the parameters in
-``parameters`` by reading the temporary JSON file. The path to the temporary
-file is accessible via the environment variable ``PARS``.
-For example, in a Python notebook, you can read the ``parameters`` dictionary
+From inside of the notebook, you can retrieve their values by reading
+the temporary JSON file. 
+The path to the temporary file is accessible via the environment variable
+``PARS``.
+For example, in a Python notebook, you can read the task's parameters
 as follows:
 
 .. code-block:: python
@@ -40,31 +39,33 @@ as follows:
     with open(os.environ['PARS']) as parameters:
         pars = json.load(parameters)
 
-    # extract the task's self.input() paths (included by default)
+    # extract the task's self.input() paths
     requires_paths = pars.get('input')
 
-    # extract the task's self.output() paths (included by default)
+    # extract the task's self.output() paths
     output_paths = pars.get('output')
 
-    # extract a *user-defined* parameter named `my_par`
+    # extract a *user-defined* `luigi.Parameter` named `my_par`
     my_par = pars.get('my_par')
 
 The paths of the task's ``self.input()`` and ``self.output()`` are automatically
-added to ``parameters`` with keys *input* and *output* respectively.
+added with keys *input* and *output* respectively.
 These paths are meaningful when ``self.input()`` and ``self.output()`` return
 single objects with the ``path`` attribute, or iterables or dictionaries whose
 values are themselves objects or collections of objects from which the ``path``
 attribute can be extracted (e.g. :class:`luigi.local_target.LocalTarget`).
 Whenever a ``path`` attribute can't be extracted, the corresponding entry
-inside of ``parameters`` is set to ``None``.
+is set to ``None``.
 
-:class:`JupyterNotebookTask` inherits from the standard
-:class:`luigi.Task` class. As usual, you should override the
-:class:`luigi.Task` default :meth:`requires` and :meth:`output` methods.
+:class:`JupyterNotebookTask` inherits from the standard :class:`luigi.Task`
+class.
+As usual, you should override the :class:`luigi.Task` default :meth:`requires`
+and :meth:`output` methods.
 
 The :meth:`run` method of :class:`JupyterNotebookTask` wraps the
 :mod:`nbformat`/:mod:`nbconvert` approach to executing Jupyter notebooks
-as scripts. See the
+as scripts.
+See the
 `Executing notebooks using the Python API interface
 <http://nbconvert.readthedocs.io/en/latest/execute_api.html#executing-notebooks-using-the-python-api-interface>`_
 section of the :mod:`nbconvert` module documentation for more information.
@@ -151,7 +152,7 @@ def _get_path_from_collection(coll):
     """
     Extracts the `path` attribute from atomic objects or objects organized in a
     collection (dict or iterable) wherever the `path` attribute is available
-    (else extracts `None`).
+    (otherwise extracts `None`).
     """
     if isinstance(coll, dict):
         out = {k: _get_path(v) for k, v in coll.items()}
@@ -162,6 +163,18 @@ def _get_path_from_collection(coll):
         else:
             out = [_get_path(v) for v in coll]
     return out
+
+
+def _check_key(key, unavailable=['input', 'output']):
+    """
+    Checks that a key is available.
+    If the key is not available, raises a `KeyError`.
+    """
+    if key in unavailable:
+        raise KeyError(
+            "%s cannot be used as a luigi.Parameter "
+            "name in a JupyterNotebookTask" % key
+        )
 
 
 class JupyterNotebookTask(luigi.Task):
@@ -177,12 +190,9 @@ class JupyterNotebookTask(luigi.Task):
     :param timeout: maximum time (in seconds) allocated to run each cell.
         If -1 (the default), no timeout limit is imposed.
 
-    :param parameters: a dictionary of user-defined parameters to be passed to
-        the Jupyter notebook.
-
-    :param json_action: if `delete` (default), the temporary JSON file with
-        **parameters** is deleted at the end of the task execution; if `keep`,
-        the temporary JSON file is kept (useful for debugging purposes).
+    :param json_action: if `delete` (default), the temporary JSON file
+        is deleted at the end of the task execution; if `keep`,
+        the temporary JSON file is kept (useful for debugging).
     """
     notebook_path = luigi.Parameter(
         description='The full path to the Jupyter notebook'
@@ -204,7 +214,17 @@ class JupyterNotebookTask(luigi.Task):
         default='delete'
     )
 
-    parameters = {}
+    def _form_luigi_pars(self):
+        """
+        This method is used to add to the `parameters` dictionary any additional
+        user-defined `luigi.Parameter`s.
+        """
+        for par in self.param_kwargs.items():
+            # check that key is available (not prohibited such as 'input'
+            # or 'output')
+            _check_key(par[0])
+            # add to `parameters`
+            self.parameters[par[0]] = par[1]
 
     def _form_input(self):
         """
@@ -224,8 +244,7 @@ class JupyterNotebookTask(luigi.Task):
                 out = _get_path_from_collection(task_input)
             else:
                 out = [_get_path_from_collection(v) for v in task_input]
-
-        return out
+        self.parameters['input'] = out
 
     def _form_output(self):
         """
@@ -234,25 +253,32 @@ class JupyterNotebookTask(luigi.Task):
         """
         task_output = _flatten(self.output())
         out = _get_path_from_collection(task_output)
+        self.parameters['output'] = out
 
-        return out
+    def __init__(self, *args, **kwargs):
+        # call parent's `__init__()`
+        super(JupyterNotebookTask, self).__init__(*args, **kwargs)
+        # initialize empty parameters dictionary
+        self.parameters = {}
+        # add user-defined parameters
+        self._form_luigi_pars()
+        # add `requires()` parameters
+        self._form_input()
+        # add `output()` parameters
+        self._form_output()
 
     def run(self):
-
         # get current date and time
         time = datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M-%S')
 
         # get notebook name
         notebook_name = _get_file_name_from_path(self.notebook_path)
 
+        # get notebook version
+        notebook_version = int(nbformat.__version__.split('.')[0])
+
         # get task id
         task_id = self.task_id
-
-        # set requires parameters
-        self.parameters['input'] = self._form_input()
-
-        # set output parameters
-        self.parameters['output'] = self._form_output()
 
         # write parameters to temporary file
         tmp_file_path = os.path.join(
@@ -268,8 +294,6 @@ class JupyterNotebookTask(luigi.Task):
 
         # run notebook
         logger.info('===== Running notebook: %s =====' % notebook_name)
-
-        notebook_version = int(nbformat.__version__.split('.')[0])
 
         try:
             with open(self.notebook_path, 'r') as nb:
