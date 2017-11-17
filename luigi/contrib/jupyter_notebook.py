@@ -24,7 +24,7 @@ are written to a temporary JSON file in the same directory that contains the
 notebook.
 
 From inside of the notebook, you can retrieve their values by reading
-the temporary JSON file. 
+the temporary JSON file.
 The path to the temporary file is accessible via the environment variable
 ``PARS``.
 For example, in a Python notebook, you can read the task's parameters
