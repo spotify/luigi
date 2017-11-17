@@ -488,8 +488,7 @@ class Worker(object):
         runnable = kwargs['runnable']
         task = self._scheduled_tasks.get(task_id)
         if task:
-            msg = (task, status, runnable)
-            self._add_task_history.append(msg)
+            self._add_task_history.append((task, status, runnable))
             kwargs['owners'] = task._owner_list()
 
         if task_id in self._batch_running_tasks:
