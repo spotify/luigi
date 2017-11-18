@@ -19,6 +19,7 @@ Implementation of the REST interface between the workers and the server.
 rpc.py implements the client side of it, server.py implements the server side.
 See :doc:`/central_scheduler` for more info.
 """
+import os
 import json
 import logging
 import socket
@@ -82,6 +83,12 @@ class RequestsFetcher(object):
         self.session = session
 
     def fetch(self, full_url, body, timeout):
+        # if the process id change changed from when the session was created
+        # a new session needs to be setup since requests isn't multiprocessing safe.
+        if os.getpid() != self.process_id:
+            self.session = requests.Session()
+            self.process_id = os.getpid()
+
         resp = self.session.get(full_url, data=body, timeout=timeout)
         resp.raise_for_status()
         return resp.text
