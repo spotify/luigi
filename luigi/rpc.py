@@ -81,6 +81,7 @@ class RequestsFetcher(object):
         from requests import exceptions as requests_exceptions
         self.raises = requests_exceptions.RequestException
         self.session = session
+        self.process_id = os.getpid()
 
     def fetch(self, full_url, body, timeout):
         # if the process id change changed from when the session was created
