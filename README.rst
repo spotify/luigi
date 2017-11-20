@@ -17,9 +17,9 @@
 .. image:: https://img.shields.io/pypi/l/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
-Luigi is a Python (2.7, 3.3, 3.4, 3.5) package that helps you build complex pipelines of batch
-jobs. It handles dependency resolution, workflow management, visualization,
-handling failures, command line integration, and much more.
+Luigi is a Python (2.7, 3.3, 3.4, 3.5, 3.6) package that helps you build complex
+pipelines of batch jobs. It handles dependency resolution, workflow management,
+visualization, handling failures, command line integration, and much more.
 
 Getting Started
 ---------------
@@ -147,6 +147,7 @@ or held presentations about Luigi:
 * `voyages-sncf.com <https://www.voyages-sncf.com/>`_ `(presentation, 2017) <https://github.com/voyages-sncf-technologies/meetup-afpy-nantes-luigi>`__
 * `Open Targets <https://www.opentargets.org/>`_ `(blog, 2017) <https://blog.opentargets.org/using-containers-with-luigi>`__
 * `Leipzig University Library <https://ub.uni-leipzig.de>`_ `(presentation, 2016) <https://de.slideshare.net/MartinCzygan/build-your-own-discovery-index-of-scholary-eresources>`__ / `(project) <https://finc.info/de/datenquellen>`__
+* `Synetiq <https://synetiq.net/>`_ `(presentation, 2017) <https://www.youtube.com/watch?v=M4xUQXogSfo>`__
 
 Some more companies are using Luigi but haven't had a chance yet to write about it:
 

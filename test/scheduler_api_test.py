@@ -1767,6 +1767,21 @@ class SchedulerApiTest(unittest.TestCase):
 
         self.search_pending('ClassA 2016-02-01 num', {expected})
 
+    def test_upstream_beyond_limit(self):
+        sch = Scheduler(max_shown_tasks=3)
+        for i in range(4):
+            sch.add_task(worker=WORKER, family='Test', params={'p': str(i)}, task_id='Test_%i' % i)
+        self.assertEqual({'num_tasks': -1}, sch.task_list('PENDING', 'FAILED'))
+        self.assertEqual({'num_tasks': 4}, sch.task_list('PENDING', ''))
+
+    def test_do_not_prune_on_beyond_limit_check(self):
+        sch = Scheduler(max_shown_tasks=3)
+        sch.prune = mock.Mock()
+        for i in range(4):
+            sch.add_task(worker=WORKER, family='Test', params={'p': str(i)}, task_id='Test_%i' % i)
+        self.assertEqual({'num_tasks': 4}, sch.task_list('PENDING', ''))
+        sch.prune.assert_not_called()
+
     def test_search_results_beyond_limit(self):
         sch = Scheduler(max_shown_tasks=3)
         for i in range(4):
