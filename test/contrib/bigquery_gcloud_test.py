@@ -38,6 +38,7 @@ import avro.schema
 from avro.datafile import DataFileWriter
 from avro.io import DatumWriter
 from luigi.contrib.gcs import GCSTarget
+import json
 
 from nose.plugins.attrib import attr
 from helpers import unittest
@@ -533,7 +534,7 @@ class BigQueryLoadAvroTest(unittest.TestCase):
                 return BigQueryLoadAvroTestInput()
 
             def output(_):
-                return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, self.table_id)
+                return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, self.table_id, location=EU_LOCATION)
 
         task = BigQueryLoadAvroTestTask()
         self.assertFalse(task.complete())
