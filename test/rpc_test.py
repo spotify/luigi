@@ -14,10 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from multiprocessing import Process, Queue
-
-import requests
-
 from helpers import unittest
 try:
     from unittest import mock
@@ -31,6 +27,9 @@ import luigi.server
 from server_test import ServerTestBase
 import time
 import socket
+from multiprocessing import Process, Queue
+import requests
+
 
 
 class RemoteSchedulerTest(unittest.TestCase):
@@ -139,4 +138,4 @@ class RequestsFetcherTest(ServerTestBase):
         p.start()
         p.join()
 
-        self.assertTrue(q.get())
+        self.assertTrue(q.get(), 'the requests.Session should have changed in the new process')
