@@ -83,13 +83,15 @@ class RequestsFetcher(object):
         self.session = session
         self.process_id = os.getpid()
 
-    def fetch(self, full_url, body, timeout):
+    def check_pid(self):
         # if the process id change changed from when the session was created
         # a new session needs to be setup since requests isn't multiprocessing safe.
         if os.getpid() != self.process_id:
             self.session = requests.Session()
             self.process_id = os.getpid()
 
+    def fetch(self, full_url, body, timeout):
+        self.check_pid()
         resp = self.session.get(full_url, data=body, timeout=timeout)
         resp.raise_for_status()
         return resp.text

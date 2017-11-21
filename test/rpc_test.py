@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from multiprocessing import Process, Queue
+
+import requests
 
 from helpers import unittest
 try:
@@ -118,3 +121,22 @@ class RPCTest(scheduler_api_test.SchedulerApiTest, ServerTestBase):
     def test_get_work_speed(self):
         """ This would be too slow to run through network """
         pass
+
+
+class RequestsFetcherTest(ServerTestBase):
+    def test_fork_changes_session(self):
+        session = requests.Session()
+        fetcher = luigi.rpc.RequestsFetcher(session)
+
+        q = Queue()
+
+        def check_session(q):
+            fetcher.check_pid()
+            # make sure that check_pid has changed out the session
+            q.put(fetcher.session != session)
+
+        p = Process(target=check_session, args=(q,))
+        p.start()
+        p.join()
+
+        self.assertTrue(q.get())
