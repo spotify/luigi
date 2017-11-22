@@ -4,19 +4,20 @@ import os
 import time
 import logging
 import luigi
+from luigi.contrib import gcp
 
 logger = logging.getLogger('luigi-interface')
 
 _dataproc_client = None
 
 try:
-    import httplib2
     import oauth2client.client
     from googleapiclient import discovery
     from googleapiclient.errors import HttpError
 
     DEFAULT_CREDENTIALS = oauth2client.client.GoogleCredentials.get_application_default()
-    _dataproc_client = discovery.build('dataproc', 'v1', credentials=DEFAULT_CREDENTIALS, http=httplib2.Http())
+    authenticate_kwargs = gcp.get_authenticate_kwargs(DEFAULT_CREDENTIALS)
+    _dataproc_client = discovery.build('dataproc', 'v1', **authenticate_kwargs)
 except ImportError:
     logger.warning("Loading Dataproc module without the python packages googleapiclient & oauth2client. \
         This will crash at runtime if Dataproc functionality is used.")
@@ -55,7 +56,7 @@ class DataprocBaseTask(_DataprocBaseTask):
         self._job_id = self._job['reference']['jobId']
         return self._job
 
-    def submit_spark_job(self, jars, main_class, job_args=[]):
+    def submit_spark_job(self, jars, main_class, job_args=list()):
         job_config = {"job": {
             "placement": {
                 "clusterName": self.dataproc_cluster_name
@@ -71,7 +72,7 @@ class DataprocBaseTask(_DataprocBaseTask):
         logger.info("Submitted new dataproc job:{} id:{}".format(self._job_name, self._job_id))
         return self._job
 
-    def submit_pyspark_job(self, job_file, extra_files=[], job_args=[]):
+    def submit_pyspark_job(self, job_file, extra_files=list(), job_args=list()):
         job_config = {"job": {
             "placement": {
                 "clusterName": self.dataproc_cluster_name

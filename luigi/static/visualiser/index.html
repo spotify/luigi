@@ -2,6 +2,7 @@
 <html lang="en">
     <head>
         <title>Luigi Task Visualiser</title>
+        <link href="css/luigi.css" rel="stylesheet">
         <script src="lib/jquery-1.10.0.min.js"></script>
         <link href="lib/bootstrap3/css/bootstrap.min.css" rel="stylesheet">
         <link href="lib/bootstrap3/css/bootstrap-theme.min.css" rel="stylesheet">
@@ -11,6 +12,7 @@
         <link href="css/font-awesome.min.css" rel="stylesheet"/>
         <link href="lib/AdminLTE/css/skin-green-light.min.css" rel="stylesheet"/>
         <link href="lib/datatables/css/jquery.dataTables.min.css" rel="stylesheet"/>
+        <link href="lib/bootstrap-toggle/css/bootstrap-toggle.min.css" rel="stylesheet">
         <script src="lib/d3/d3.min.js" charset="utf-8"></script>
         <script src="lib/d3/dagre-d3.min.js"></script>
         <script src="lib/mustache.js"></script>
@@ -22,229 +24,22 @@
         <script src="lib/AdminLTE/js/app.min.js"></script>
         <script src="lib/datatables/js/jquery.dataTables.min.js"></script>
         <script src="lib/URI/1.18.2/URI.js"></script>
+        <script src="lib/bootstrap-toggle/js/bootstrap-toggle.min.js"></script>
 
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <style>
-        .nodeCircle {
-          stroke: #fff;
-          stroke-width: 1.5px;
-        }
-        text {
-            font-size:8pt;
-        }
-
-        .link {
-          stroke: #999;
-          stroke-opacity: .6;
-        }
-
-        svg {
-            border:1px solid #DDDDDD;
-            overflow: inherit;
-        }
-
-        .taskRow {
-          word-break:break-all;
-        }
-        </style>
-
-        <style>
-
-
-          @-webkit-keyframes flash {
-            0%, 50%, 100% {
-              opacity: 1;
-            }
-
-            25%, 75% {
-              opacity: 0.2;
-            }
-          }
-
-          @keyframes flash {
-            0%, 50%, 100% {
-              opacity: 1;
-            }
-
-            25%, 75% {
-              opacity: 0.2;
-            }
-          }
-
-          .RUNNING {
-            -webkit-animation-duration: 5s;
-            animation-duration: 5s;
-            -webkit-animation-fill-mode: both;
-            animation-fill-mode: both;
-            -webkit-animation-iteration-count: 1;
-            animation-iteration-count: 1;
-          }
-
-          .live.map {
-            width: 100%;
-            height: 600px;
-            background: #333;
-          }
-
-          .live.map text {
-            font-weight: 300;
-            font-size: 14px;
-          }
-
-          .live.map .node rect {
-            stroke-width: 1.5px;
-            stroke: #bbb;
-            fill: #666;
-          }
-
-          .live.map .status {
-            height: 100%;
-            width: 15px;
-            display: block;
-            float: left;
-            border-top-left-radius: 5px;
-            border-bottom-left-radius: 5px;
-            margin-right: 4px;
-          }
-
-          .live.map .DONE .status {
-            background-color: #7f7;
-          }
-
-          .live.map .RUNNING .status {
-            background-color: #7f7;
-          }
-
-          .live.map .PENDING .status {
-            background-color: #FFFF46;
-          }
-
-          .live.map .ERROR .status {
-            background-color: #f77;
-          }
-
-          .live.map .FAILED .status {
-            background-color: #dd4b39;
-          }
-
-          .live.map .RUNNING .queue {
-            color: #f77;
-          }
-
-          .live.map .DISABLED .status {
-            background-color: #aaaaaa;
-          }
-
-          .RUNNING {
-            -webkit-animation-name: flash;
-            animation-name: flash;
-          }
-
-          .live.map .consumers {
-            margin-right: 2px;
-          }
-
-          .live.map .consumers,
-          .live.map .name {
-            margin-top: 4px;
-          }
-
-          .live.map .consumers:after {
-            content: "x";
-          }
-
-          .live.map .queue {
-            display: block;
-            float: left;
-            width: 130px;
-            height: 20px;
-            font-size: 12px;
-            margin-top: 2px;
-          }
-
-          .live.map .node g div {
-            width: 200px;
-            height: 40px;
-            color: #fff;
-          }
-
-          .live.map .node g div span.consumers {
-            display: inline-block;
-            width: 20px;
-          }
-
-          .live.map .edgeLabel text {
-            width: 50px;
-            fill: #fff;
-          }
-
-          .live.map .edgePath path {
-            stroke: #999;
-            stroke-width: 1.5px;
-            fill: #999;
-          }
-
-          td.details-control {
-            cursor: pointer;
-          }
-
-          span.status-icon {
-            border-top-left-radius: 2px;
-            border-top-right-radius: 2px;
-            border-bottom-right-radius: 2px;
-            border-bottom-left-radius: 2px;
-            display: inline-block;
-            height: 24px;
-            width: 24px;
-            text-align: center;
-            font-size: 12px;
-            line-height: 24px;
-
-          }
-
-          #serverSide {
-            float: right;
-            margin: 4px;
-          }
-
-          .infoBar {
-            min-height: 80px;
-          }
-
-          #taskTable_filter {
-            margin-top: 9px;
-          }
-
-          #loadTaskForm input {
-            width: 20em;
-          }
-
-          #workerList .box-tools > div {
-            display: inline-block;
-          }
-
-          #workerList .btn-set-workers > span.caret {
-            margin-left: 4px;
-          }
-
-          #workerList .box-tools > span.label-unread-worker-messages {
-            margin-right: 6px;
-            vertical-align: middle;
-            font-style: italic;
-            color: red;
-          }
-
-        </style>
-
         <script type="text/template" name="actionsTemplate">
             <div class="span2">
-                <a href="#tab=graph&taskId={{encodedTaskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip"><i class="fa fa-sitemap"></i></a>
+                <a href="#tab=graph&taskId={{encodedTaskId}}&hideDone=1" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip"><i class="fa fa-sitemap"></i></a>
                 {{#error}}<button class="btn btn-danger btn-xs showError" title="Show error" data-toggle="tooltip"><i class="fa fa-bug"></i></button>{{/error}}
                 {{#error}}<button class="btn btn-warning btn-xs forgiveFailures" title="Forgive failures" data-toggle="tooltip"><i class="fa fa-ambulance"></i></button>{{/error}}
                 {{#re_enable}}<a class="btn btn-warning btn-xs re-enable-button" title="Re-enable" data-toggle="tooltip" data-task-id="{{taskId}}">Re-enable</a>{{/re_enable}}
                 {{#trackingUrl}}<a target="_blank" href="{{trackingUrl}}" class="btn btn-primary btn-xs" title="Track Progress" data-toggle="tooltip"><i class="fa fa-eye"></i></a>{{/trackingUrl}}
                 {{#statusMessage}}<button class="btn btn-primary btn-xs statusMessage" title="Status message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name={{displayName}}><i class="fa fa-comment"></i></button>{{/statusMessage}}
+                {{^statusMessage}}
+                  {{#progressPercentage}}<button class="btn btn-primary btn-xs statusMessage" title="Status message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name={{displayName}}><i class="fa fa-comment"></i></button>
+                  {{/progressPercentage}}
+                {{/statusMessage}}
             </div>
         </script>
         <script type="text/template" name="errorTemplate">
@@ -272,9 +67,13 @@
               </div>
               <div class="modal-body">
                 <pre class="pre-scrollable">{{statusMessage}}</pre>
+                <div class="progress">
+                  <div class="progress-bar" role="progressbar" aria-valuenow="{{progressPercentage}}" aria-valuemin="0" aria-valuemax="100" style="min-width: 2em;">
+                  {{progressPercentage}}%
+                  </div>
+                </div>
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-info refresh"><i class="fa fa-refresh"></i> Refresh</button>
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
               </div>
             </div>
@@ -366,7 +165,7 @@
                 <div class="box-body">
                     Started: {{start_time}}<br>
                     Last Checkin: {{active}}<br>
-                    Root Task: <a href="#tab=graph&taskId={{{encoded_first_task}}}">{{first_task_display_name}}</a><br>
+                    Root Task: <a href="#tab=graph&taskId={{{encoded_first_task}}}&hideDone=1">{{first_task_display_name}}</a><br>
                     Running: {{num_running}}<br>
                     Pending: {{num_pending}}<br>
                     Unique Pending: {{num_uniques}}<br>
@@ -406,17 +205,55 @@
         </script>
 
         <script type="text/template" name="resourceTemplate">
+        <div class="modal fade" id="setResourcesModal" tabindex="-1" role="dialog" aria-labelledby="setResourcesLabel">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="setResourcesLabel">Set resources</h4>
+              </div>
+              <div class="modal-body">
+                <form>
+                  <div class="form-group">
+                    <label for="setResourcesInput">New number of resources:</label>
+                    <input type="text" class="form-control" id="setResourcesInput" placeholder="non-negative integer">
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" id="setResourcesButton" data-dismiss="modal" class="btn btn-primary">Set</button>
+              </div>
+            </div>
+          </div>
+        </div>
         {{#resources}}
         <div class="box">
             <div class="box-header with-border">
                 <h3 class="box-title">{{name}}</h3>
-                {{#num_consumer}}
                 <div class="box-tools pull-right">
-                    <i class="fa fa-navicon" data-toggle="collapse" data-target="#collapse-{{name}}" aria-expanded="false" aria-controls="collapse-{{name}}"></i>
+                    <div class="btn-group">
+                      <button type="button" class="btn btn-sm btn-default dropdown-toggle btn-set-resources" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Change resources
+                      </button>
+                      <ul class="dropdown-menu">
+                        <li><a href="#" class="btn-increment-resources" data-resource="{{name}}">
+                          <i class="glyphicon glyphicon-plus"></i> Add 1 resource
+                        </a></li>
+                        <li><a href="#" class="btn-decrement-resources" data-resource="{{name}}">
+                          <i class="glyphicon glyphicon-minus"></i> Remove 1 resource
+                        </a></li>
+                        <li><a href="#" class="btn-set-resources" data-toggle="modal" data-target="#setResourcesModal" data-resource="{{name}}">
+                          <i class="glyphicon glyphicon-pencil"></i> Set resources ...
+                        </a></li>
+                      </ul>
+                    </div>
+                    {{#num_consumer}}
+                    <i class="fa fa-navicon resources-collapse" data-target="#collapse-{{name}}"></i>
+                    {{/num_consumer}}
                 </div><!-- /.box-tools -->
-                {{/num_consumer}}
             </div><!-- /.box-header -->
-            <div class="box-body">
+            <div class="box-body" id="{{name}}-resource-box">
                 <div class="progress">
                     <div class="progress-bar progress-bar-{{bar_type}}" style="width: {{percent_used}}%">
                         <b>{{num_used}}/{{num_total}}</b>
@@ -424,7 +261,7 @@
                 </div>
 
                 {{#num_consumer}}
-                <div class="collapse" id="collapse-{{name}}">
+                <div class="collapse resource-box" id="collapse-{{name}}" data-resource="{{name}}">
                     <table class="table table-striped worker-table">
                         <thead>
                             <th>Name</th>
@@ -438,7 +275,7 @@
                                 <td>{{displayName}}</td>
                                 <td>{{priority}}</td>
                                 <td>{{displayTime}}</td>
-                                <td><a href="#{{taskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a></td>
+                                <td><a href="#tab=graph&taskId={{taskId}}&hideDone=1" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a></td>
                             </tr>
                             {{/tasks}}
                         </tbody>
@@ -508,12 +345,14 @@
                                 <li><a class="js-nav-link" href="#tab=workers" data-tab="workerList">Workers</a></li>
                                 <li><a class="js-nav-link" href="#tab=resource" data-tab="resourceList">Resources</a></li>
                             </ul>
+                            <form class="navbar-form navbar-right" id="pause-form">
+                            </form>
                         </div>
                     </div>
                 </nav>
             </div>
             <div class="main-sidebar">
-                <div class="sidebar">
+                <div class="sidebar" id="familySidebar">
                 </div>
             </div>
 
@@ -646,7 +485,7 @@
                       <div class="form-group col-md-3">
                         <label>Visualisation Type</label>
                         <div id="toggleVisButtons" class="btn-group" data-toggle="buttons">
-                            <label class="btn btn-default active">
+                            <label class="btn btn-default">
                                 <input type="radio" name="vis-type" value="d3"/> D3
                             </label>
                             <label class="btn btn-default">

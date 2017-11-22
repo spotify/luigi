@@ -197,7 +197,7 @@ class ExternalPythonProgramTaskTest(unittest.TestCase):
         self.assertTrue(proc_env['PATH'].startswith('/path/to/venv/bin'))
         self.assertTrue(proc_env['PATH'].endswith('/base/path'))
         self.assertIn('VIRTUAL_ENV', proc_env)
-        self.assertEquals(proc_env['VIRTUAL_ENV'], '/path/to/venv')
+        self.assertEqual(proc_env['VIRTUAL_ENV'], '/path/to/venv')
 
     @patch.dict('os.environ', {}, clear=True)
     @patch('luigi.contrib.external_program.subprocess.Popen')

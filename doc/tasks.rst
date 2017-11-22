@@ -184,8 +184,8 @@ Task status tracking
 
 For long-running or remote tasks it is convenient to see extended status information not only on
 the command line or in your logs but also in the GUI of the central scheduler. Luigi implements
-dynamic status messages and tracking urls which may point to an external monitoring system. You
-can set this information using callbacks within Task.run_:
+dynamic status messages, progress bar and tracking urls which may point to an external monitoring system.
+You can set this information using callbacks within Task.run_:
 
 .. code:: python
 
@@ -199,6 +199,8 @@ can set this information using callbacks within Task.run_:
                 # do some hard work here
                 if i % 10 == 0:
                     self.set_status_message("Progress: %d / 100" % i)
+                    # displays a progress bar in the scheduler UI
+                    self.set_progress_percentage(i)
 
 
 .. _Events:

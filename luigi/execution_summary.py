@@ -382,7 +382,7 @@ def _summary_format(set_tasks, worker):
     if set_tasks["ever_failed"]:
         if not set_tasks["failed"]:
             smiley = ":)"
-            reason = "there were failed tasks but they all suceeded in a retry"
+            reason = "there were failed tasks but they all succeeded in a retry"
         else:
             smiley = ":("
             reason = "there were failed tasks"

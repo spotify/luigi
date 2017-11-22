@@ -479,6 +479,12 @@ class _DatetimeParameterBase(Parameter):
             return str(dt)
         return dt.strftime(self.date_format)
 
+    @staticmethod
+    def _convert_to_dt(dt):
+        if not isinstance(dt, datetime.datetime):
+            dt = datetime.datetime.combine(dt, datetime.time.min)
+        return dt
+
     def normalize(self, dt):
         """
         Clamp dt to every Nth :py:attr:`~_DatetimeParameterBase.interval` starting at
@@ -486,6 +492,8 @@ class _DatetimeParameterBase(Parameter):
         """
         if dt is None:
             return None
+
+        dt = self._convert_to_dt(dt)
 
         dt = dt.replace(microsecond=0)  # remove microseconds, to avoid float rounding issues.
         delta = (dt - self.start).total_seconds()
@@ -782,7 +790,7 @@ class EnumParameter(Parameter):
         return e.name
 
 
-class FrozenOrderedDict(Mapping):
+class _FrozenOrderedDict(Mapping):
     """
     It is an immutable wrapper around ordered dictionaries that implements the complete :py:class:`collections.Mapping`
     interface. It can be used as a drop-in replacement for dictionaries where immutability and ordering are desired.
@@ -813,6 +821,27 @@ class FrozenOrderedDict(Mapping):
 
     def get_wrapped(self):
         return self.__dict
+
+
+def _recursively_freeze(value):
+    """
+    Recursively walks ``Mapping``s and ``list``s and converts them to ``_FrozenOrderedDict`` and ``tuples``, respectively.
+    """
+    if isinstance(value, Mapping):
+        return _FrozenOrderedDict(((k, _recursively_freeze(v)) for k, v in value.items()))
+    elif isinstance(value, list) or isinstance(value, tuple):
+        return tuple(_recursively_freeze(v) for v in value)
+    return value
+
+
+class _DictParamEncoder(JSONEncoder):
+    """
+    JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~_FrozenOrderedDict` JSON serializable.
+    """
+    def default(self, obj):
+        if isinstance(obj, _FrozenOrderedDict):
+            return obj.get_wrapped()
+        return json.JSONEncoder.default(self, obj)
 
 
 class DictParameter(Parameter):
@@ -847,21 +876,11 @@ class DictParameter(Parameter):
     tags, that are dynamically constructed outside Luigi), or you have a complex parameter containing logically related
     values (like a database connection config).
     """
-
-    class DictParamEncoder(JSONEncoder):
-        """
-        JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~FrozenOrderedDict` JSON serializable.
-        """
-        def default(self, obj):
-            if isinstance(obj, FrozenOrderedDict):
-                return obj.get_wrapped()
-            return json.JSONEncoder.default(self, obj)
-
     def normalize(self, value):
         """
-        Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be hashed.
+        Ensure that dictionary parameter is converted to a _FrozenOrderedDict so it can be hashed.
         """
-        return FrozenOrderedDict(value)
+        return _recursively_freeze(value)
 
     def parse(self, s):
         """
@@ -874,10 +893,10 @@ class DictParameter(Parameter):
 
         :param s: String to be parse
         """
-        return json.loads(s, object_pairs_hook=FrozenOrderedDict)
+        return json.loads(s, object_pairs_hook=_FrozenOrderedDict)
 
     def serialize(self, x):
-        return json.dumps(x, cls=DictParameter.DictParamEncoder)
+        return json.dumps(x, cls=_DictParamEncoder)
 
 
 class ListParameter(Parameter):
@@ -912,12 +931,12 @@ class ListParameter(Parameter):
     """
     def normalize(self, x):
         """
-        Ensure that list parameter is converted to a tuple so it can be hashed.
+        Ensure that struct is recursively converted to a tuple so it can be hashed.
 
         :param str x: the value to parse.
         :return: the normalized (hashable/immutable) value.
         """
-        return tuple(x)
+        return _recursively_freeze(x)
 
     def parse(self, x):
         """
@@ -926,7 +945,7 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the parsed value.
         """
-        return list(json.loads(x))
+        return list(json.loads(x, object_pairs_hook=_FrozenOrderedDict))
 
     def serialize(self, x):
         """
@@ -936,10 +955,10 @@ class ListParameter(Parameter):
 
         :param x: the value to serialize.
         """
-        return json.dumps(x)
+        return json.dumps(x, cls=_DictParamEncoder)
 
 
-class TupleParameter(Parameter):
+class TupleParameter(ListParameter):
     """
     Parameter whose value is a ``tuple`` or ``tuple`` of tuples.
 
@@ -967,7 +986,6 @@ class TupleParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --book_locations '((12,3),(4,15),(52,1))'
     """
-
     def parse(self, x):
         """
         Parse an individual value from the input.
@@ -988,19 +1006,10 @@ class TupleParameter(Parameter):
         # Therefore, if json.loads(x) returns a ValueError, try ast.literal_eval(x).
         # ast.literal_eval(t_str) == t
         try:
-            return tuple(tuple(x) for x in json.loads(x))  # loop required to parse tuple of tuples
+            # loop required to parse tuple of tuples
+            return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=_FrozenOrderedDict))
         except ValueError:
             return literal_eval(x)  # if this causes an error, let that error be raised.
-
-    def serialize(self, x):
-        """
-        Opposite of :py:meth:`parse`.
-
-        Converts the value ``x`` to a string.
-
-        :param x: the value to serialize.
-        """
-        return json.dumps(x)
 
 
 class NumericalParameter(Parameter):

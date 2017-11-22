@@ -286,7 +286,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
 
-    @with_config({'execution_summary': {'summary-length': '1'}})
+    @with_config({'execution_summary': {'summary_length': '1'}})
     def test_config_summary_limit(self):
         class Bar(luigi.Task):
             num = luigi.IntParameter()
@@ -1116,4 +1116,4 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertIn('Scheduled 1 task', s)
         self.assertIn('Luigi Execution Summary', s)
         self.assertNotIn('ever failed', s)
-        self.assertIn('\n\nThis progress looks :) because there were failed tasks but they all suceeded in a retry', s)
+        self.assertIn('\n\nThis progress looks :) because there were failed tasks but they all succeeded in a retry', s)
