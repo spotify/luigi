@@ -199,7 +199,7 @@ class TestS3Client(unittest.TestCase):
             s3_client.put('SOMESTRING',
                           's3://mybucket/putMe', encrypt_key=True)
 
-    @skipOnTravis("passes and fails intermitantly, suspecting it's do with moto")
+    @skipOnTravis("passes and fails intermitantly, suspecting it's a race condition not handled by moto")
     def test_put_multipart_multiple_parts_non_exact_fit(self):
         """
         Test a multipart put with two parts, where the parts are not exactly the split size.
@@ -401,7 +401,7 @@ class TestS3Client(unittest.TestCase):
         self.assertFalse(s3_client.exists(
             's3://mybucket/removemedir_$folder$'))
 
-    @skipOnTravis("passes and fails intermitantly, suspecting it's do with moto")
+    @skipOnTravis("passes and fails intermitantly, suspecting it's a race condition not handled by moto")
     def test_copy_multiple_parts_non_exact_fit(self):
         """
         Test a multipart put with two parts, where the parts are not exactly the split size.
