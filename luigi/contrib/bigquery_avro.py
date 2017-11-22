@@ -18,7 +18,7 @@ except ImportError:
 
 class BigQueryLoadAvro(BigQueryLoadTask):
     """A helper for loading specifically Avro data into BigQuery from GCS.
-    
+
     Copies table level description from Avro schema doc, BigQuery internally will copy field-level descriptions
     to the table.
 

@@ -38,7 +38,6 @@ import avro.schema
 from avro.datafile import DataFileWriter
 from avro.io import DatumWriter
 from luigi.contrib.gcs import GCSTarget
-import json
 
 from nose.plugins.attrib import attr
 from helpers import unittest
