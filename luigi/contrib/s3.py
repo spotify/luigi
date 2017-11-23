@@ -115,23 +115,23 @@ class S3Client(FileSystem):
         if self._s3:
             return self._s3
 
-        # aws_access_key_id = options.get('aws_access_key_id')
-        # aws_secret_access_key = options.get('aws_secret_access_key')
+        aws_access_key_id = options.get('aws_access_key_id')
+        aws_secret_access_key = options.get('aws_secret_access_key')
 
-        # # Removing key args would break backwards compability
-        # role_arn = options.get('aws_role_arn')
-        # role_session_name = options.get('aws_role_session_name')
+        # Removing key args would break backwards compability
+        role_arn = options.get('aws_role_arn')
+        role_session_name = options.get('aws_role_session_name')
 
-        # aws_session_token = None
+        aws_session_token = None
 
-        # if role_arn and role_session_name:
-        #     sts_client = boto3.client('sts')
-        #     assumed_role = sts_client.assume_role(RoleArn=role_arn,
-        #                                           RoleSessionName=role_session_name)
-        #     aws_secret_access_key = assumed_role['Credentials'].get(
-        #         'SecretAccessKey')
-        #     aws_access_key_id = assumed_role['Credentials'].get('AccessKeyId')
-        #     aws_session_token = assumed_role['Credentials'].get('SessionToken')
+        if role_arn and role_session_name:
+            sts_client = boto3.client('sts')
+            assumed_role = sts_client.assume_role(RoleArn=role_arn,
+                                                  RoleSessionName=role_session_name)
+            aws_secret_access_key = assumed_role['Credentials'].get(
+                'SecretAccessKey')
+            aws_access_key_id = assumed_role['Credentials'].get('AccessKeyId')
+            aws_session_token = assumed_role['Credentials'].get('SessionToken')
 
         for key in ['aws_access_key_id', 'aws_secret_access_key',
                     'aws_role_session_name', 'aws_role_arn']:
@@ -140,9 +140,14 @@ class S3Client(FileSystem):
 
         # At this stage, if no credentials provided, boto3 would handle their resolution for us
         # For finding out about the order in which it tries to find these credentials
-        # please see here details http://boto3.readthedocs.io/en/latest/guide/configuration.html#configuring-credentials
-
-        self._s3 = boto3.resource('s3', **options)
+        # please see here details
+        # http://boto3.readthedocs.io/en/latest/guide/configuration.html#configuring-credentials
+        logger.debug('calling boto3 resource with access_key={}'.format(aws_access_key_id))
+        self._s3 = boto3.resource('s3',
+                                  aws_access_key_id=aws_access_key_id,
+                                  aws_secret_access_key=aws_secret_access_key,
+                                  aws_session_token=aws_session_token,
+                                  **options)
         return self._s3
 
     @s3.setter
@@ -270,7 +275,8 @@ class S3Client(FileSystem):
                 'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
 
         import boto3
-        # default part size for boto3 is 8Mb, changing it to fit part_size provided as a parameter
+        # default part size for boto3 is 8Mb, changing it to fit part_size
+        # provided as a parameter
         transfer_config = boto3.s3.transfer.TransferConfig(
             multipart_chunksize=part_size)
 
