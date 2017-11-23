@@ -308,6 +308,23 @@ class ParameterTest(LuigiTestCase):
         param = luigi.IntParameter(batch_method=tuple)
         self.assertEqual((7, 17, 5), param._parse_list(['7', '17', '5']))
 
+    def test_default_callable_param(self):
+        default_value = 'xyz'
+
+        class CallableDefaultParameterTask(luigi.Task):
+            x = luigi.Parameter(default_callable=lambda: default_value)
+
+        task = CallableDefaultParameterTask()
+        self.assertEqual(task.x, 'xyz')
+
+        default_value = 'abc'
+        self.assertEqual(task.x, 'xyz')
+        self.assertEqual(CallableDefaultParameterTask().x, 'abc')
+
+    def test_both_default_and_default_callable_param(self):
+        with self.assertRaises(ParameterException):
+            luigi.parameter.Parameter(default='abc', default_callable=lambda: 'xyz')
+
 
 class TestParametersHashability(LuigiTestCase):
     def test_date(self):
