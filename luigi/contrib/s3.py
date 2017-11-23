@@ -141,12 +141,8 @@ class S3Client(FileSystem):
         # At this stage, if no credentials provided, boto3 would handle their resolution for us
         # For finding out about the order in which it tries to find these credentials
         # please see here details http://boto3.readthedocs.io/en/latest/guide/configuration.html#configuring-credentials
-        logger.debug('aws_access_key_id={} ... aws_secret_access_key={}'.format(aws_access_key_id, aws_secret_access_key))
-        self._s3 = boto3.resource('s3',
-                                  aws_access_key_id=aws_access_key_id,
-                                  aws_secret_access_key=aws_secret_access_key,
-                                  aws_session_token=aws_session_token,
-                                  **options)
+
+        self._s3 = boto3.resource('s3', **options)
         return self._s3
 
     @s3.setter
