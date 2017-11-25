@@ -19,7 +19,6 @@ import os
 import subprocess
 import tempfile
 import mock
-import os
 from helpers import unittest
 
 import luigi
