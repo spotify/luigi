@@ -40,8 +40,7 @@ class SchedulerIoTest(unittest.TestCase):
                 state_path=fn.name)
             state.load()
 
-            self.assertEqual(set(state.get_worker_ids()),
-                             set(['Worker1', 'Worker2']))
+            self.assertEqual(set(state.get_worker_ids()), {'Worker1', 'Worker2'})
 
     def test_load_broken_state(self):
         with tempfile.NamedTemporaryFile(delete=True) as fn:

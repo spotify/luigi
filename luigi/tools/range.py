@@ -514,7 +514,7 @@ def _constrain_glob(glob, paths, limit=5):
             return list(current.keys())
         char_sets = {}
         for g, p in six.iteritems(current):
-            char_sets[g] = sorted(set(path[pos] for path in p))
+            char_sets[g] = sorted({path[pos] for path in p})
         if sum(len(s) for s in char_sets.values()) > limit:
             return [g.replace('[0-9]', digit_set_wildcard(char_sets[g]), 1) for g in current]
         for g, s in six.iteritems(char_sets):

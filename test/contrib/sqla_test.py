@@ -140,7 +140,7 @@ class TestSQLA(unittest.TestCase):
         with engine.begin() as conn:
             meta = sqlalchemy.MetaData()
             meta.reflect(bind=engine)
-            self.assertEqual(set([u'table_updates', u'item_property']), set(meta.tables.keys()))
+            self.assertEqual({'table_updates', 'item_property'}, set(meta.tables.keys()))
             table = meta.tables[self.SQLATask.table]
             s = sqlalchemy.select([sqlalchemy.func.count(table.c.item)])
             result = conn.execute(s).fetchone()
