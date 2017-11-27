@@ -16,28 +16,24 @@
 #
 """
 This module is intended for when you need to execute a Jupyter notebook as a
-task within a Luigi pipeline.
-This can be accomplished via the :class:`JupyterNotebookTask` class.
+task in a Luigi pipeline.
+This can be accomplished by using the :class:`JupyterNotebookTask` class.
 
-When the task is executed, all of the task's ``luigi.Parameter`` parameters
-are written to a temporary JSON file in the same directory that contains the
-notebook.
+When a :class:`JupyterNotebookTask` is executed, all of its
+``luigi.Parameter`` s are written to a temporary JSON file in the same
+directory that contains the notebook. From inside of the notebook, you can
+then retrieve the values of these parameters by reading the temporary JSON file.
 
-From inside of the notebook, you can retrieve their values by reading
-the temporary JSON file.
-The path to the temporary file is accessible via the environment variable
-``PARS``.
-For example, in a Python notebook, you can read the task's parameters
-as follows:
+In a Python notebook, you can read the task's parameters by using the
+``load_parameters`` utility as follows:
 
 .. code-block:: python
 
     import os
     import json
 
-    # read the temporary JSON file
-    with open(os.environ['PARS']) as parameters:
-        pars = json.load(parameters)
+    # read the parameters from the temporary JSON file
+    pars = load_parameters()
 
     # extract the task's self.input() paths
     requires_paths = pars.get('input')
@@ -48,8 +44,27 @@ as follows:
     # extract a *user-defined* `luigi.Parameter` named `my_par`
     my_par = pars.get('my_par')
 
+Note that ``load_parameters`` is a simple utility function:
+``pars = load_parameters()`` is exactly equivalent to
+
+.. code-block:: python
+
+    with open(os.environ['PARS']) as parameters:
+        pars = json.load(parameters)
+
+By default, the path to the temporary JSON file is exposed through the
+environment variable ``PARS`` (which is also the default argument of
+``load_parameters``).
+In the very unlikely event that you need to change the name of the environment
+variable containing the path to the temporary JSON file, you can do so by
+changing the value of the task's ``environment_variable`` parameter.
+For example, if you set ``environment_variable = 'FOO'`` in the task, you will
+then write ``pars = load_parameters('FOO')`` in the notebook.
+
 The paths of the task's ``self.input()`` and ``self.output()`` are automatically
-added with keys *input* and *output* respectively.
+added to the parameters dictionary that is written to the temporary JSON file
+with keys *input* and *output* respectively.
+
 These paths are meaningful when ``self.input()`` and ``self.output()`` return
 single objects with the ``path`` attribute, or iterables or dictionaries whose
 values are themselves objects or collections of objects from which the ``path``
@@ -64,16 +79,16 @@ and :meth:`output` methods.
 
 The :meth:`run` method of :class:`JupyterNotebookTask` wraps the
 :mod:`nbformat`/:mod:`nbconvert` approach to executing Jupyter notebooks
-as scripts.
+as scripts and should *not* be altered.
 See the
 `Executing notebooks using the Python API interface
 <http://nbconvert.readthedocs.io/en/latest/execute_api.html#executing-notebooks-using-the-python-api-interface>`_
 section of the :mod:`nbconvert` module documentation for more information.
 
-**The jupyter_notebook module depends on both the nbconvert (>=5.3.1)
-and the nbformat (>=4.4.0) modules. Please make sure they are installed.**
+**This module depends on both the nbconvert (>=5.3.1) and the nbformat (>=4.4.0)
+modules. Please make sure they are installed.**
 
-Written by `@mattiaciollaro <https://github.com/mattiaciollaro>`_.
+Written by `Mattia Ciollaro <https://github.com/mattiaciollaro>`_.
 """
 
 import json
@@ -97,6 +112,23 @@ except ImportError:
                    'and/or nbformat installed. The nbconvert and nbformat '
                    'modules are required to use the jupyter_notebook module. '
                    'Please install nbconvert and nbformat.')
+
+
+def load_parameters(environment_variable='PARS'):
+    """
+    A utility function to read the task's parameters into the Jupyter notebook
+    from the temporary JSON file.
+
+    :param environment_variable: the name of the environment variable
+        whose value is the path to the temporary JSON file with the task's
+        parameters. This must match the value of the task's
+        ``environment_variable`` Luigi parameter (which is also
+        *PARS* by default).
+
+    :returns: a dictionary with the task's parameters.
+    """
+    with open(os.environ[environment_variable]) as json_file:
+        return json.load(json_file)
 
 
 def _get_file_name_from_path(input_path):
@@ -193,6 +225,10 @@ class JupyterNotebookTask(luigi.Task):
     :param json_action: if `delete` (default), the temporary JSON file
         is deleted at the end of the task execution; if `keep`,
         the temporary JSON file is kept (useful for debugging).
+
+    :param environment_variable: the name of the environment variable whose
+        value is the path to the temporary JSON file with the task parameters
+        (default is `PARS`).
     """
     notebook_path = luigi.Parameter(
         description='The full path to the Jupyter notebook'
@@ -212,6 +248,12 @@ class JupyterNotebookTask(luigi.Task):
         choices=['delete', 'keep'],
         var_type=str,
         default='delete'
+    )
+
+    environment_variable = luigi.Parameter(
+        description='The name of the environment variable whose value is the '
+        'path to the JSON file with the task parameters',
+        default='PARS'
     )
 
     def _form_luigi_pars(self):
@@ -290,7 +332,7 @@ class JupyterNotebookTask(luigi.Task):
             json.dump(self.parameters, params)
 
         # set environment variable with tmp_file_path
-        os.environ['PARS'] = tmp_file_path
+        os.environ[self.parameters.get('environment_variable')] = tmp_file_path
 
         # run notebook
         logger.info('===== Running notebook: %s =====' % notebook_name)
