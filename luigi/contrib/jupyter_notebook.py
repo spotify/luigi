@@ -332,7 +332,7 @@ class JupyterNotebookTask(luigi.Task):
             json.dump(self.parameters, params)
 
         # set environment variable with tmp_file_path
-        os.environ[self.parameters.get('environment_variable')] = tmp_file_path
+        os.environ[self.parameters['environment_variable']] = tmp_file_path
 
         # run notebook
         logger.info('===== Running notebook: %s =====' % notebook_name)
