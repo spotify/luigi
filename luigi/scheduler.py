@@ -832,9 +832,12 @@ class Scheduler(object):
                 for batch_task in self._state.get_batch_running_tasks(task.batch_id):
                     batch_task.expl = expl
 
-        if not (task.status in (RUNNING, BATCH_RUNNING) and (status not in (DONE, FAILED, RUNNING) or task.worker_running != worker_id)) or new_deps:
+        task_is_not_running = task.status not in (RUNNING, BATCH_RUNNING)
+        task_started_a_run = status in (DONE, FAILED, RUNNING)
+        running_on_this_worker = task.worker_running == worker_id
+        if task_is_not_running or (task_started_a_run and running_on_this_worker) or new_deps:
             # don't allow re-scheduling of task while it is running, it must either fail or succeed on the worker actually running it
-            if status == PENDING or status != task.status:
+            if status != task.status or status == PENDING:
                 # Update the DB only if there was a acctual change, to prevent noise.
                 # We also check for status == PENDING b/c that's the default value
                 # (so checking for status != task.status woule lie)

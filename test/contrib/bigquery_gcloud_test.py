@@ -533,7 +533,7 @@ class BigQueryLoadAvroTest(unittest.TestCase):
                 return BigQueryLoadAvroTestInput()
 
             def output(_):
-                return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, self.table_id)
+                return bigquery.BigQueryTarget(PROJECT_ID, DATASET_ID, self.table_id, location=EU_LOCATION)
 
         task = BigQueryLoadAvroTestTask()
         self.assertFalse(task.complete())
