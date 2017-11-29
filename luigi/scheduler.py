@@ -1218,6 +1218,13 @@ class Scheduler(object):
 
     def _serialize_task(self, task_id, include_deps=True, deps=None):
         task = self._state.get_task(task_id)
+
+        public_params = {}
+
+        for param_name in task.params:
+            if task.params[param_name][1] == 1:
+                public_params[param_name] = task.params[param_name][0]
+
         ret = {
             'display_name': task.pretty_id,
             'status': task.status,
@@ -1226,7 +1233,7 @@ class Scheduler(object):
             'time_running': getattr(task, "time_running", None),
             'start_time': task.time,
             'last_updated': getattr(task, "updated", task.time),
-            'params': task.params,
+            'params': public_params,
             'name': task.family,
             'priority': task.priority,
             'resources': task.resources,

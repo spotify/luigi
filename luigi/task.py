@@ -129,7 +129,7 @@ def task_id_str(task_family, params):
     param_hash = hashlib.md5(param_str.encode('utf-8')).hexdigest()
 
     param_summary = '_'.join(p[:TASK_ID_TRUNCATE_PARAMS]
-                             for p in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))
+                             for p, visible in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))
     param_summary = TASK_ID_INVALID_CHAR_REGEX.sub('_', param_summary)
 
     return '{}_{}_{}'.format(task_family, param_summary, param_hash[:TASK_ID_TRUNCATE_HASH])
@@ -469,14 +469,15 @@ class Task(object):
 
         return cls(**kwargs)
 
-    def to_str_params(self, only_significant=False, only_visible=False):
+    # def to_str_params(self, only_significant=False, only_visible=False):
+    def to_str_params(self, only_significant=False):
         """
         Convert all parameters to a str->str hash.
         """
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
-            if ((not only_significant) or params[param_name].significant) and ((not only_visible) or params[param_name].visible):
+            if ((not only_significant) or params[param_name].significant) and params[param_name].visible != 2:
                 params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
@@ -521,7 +522,7 @@ class Task(object):
         param_objs = dict(params)
         for param_name, param_value in param_values:
             if param_objs[param_name].significant:
-                repr_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
+                repr_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)[0]))
 
         task_str = '{}({})'.format(self.get_task_family(), ', '.join(repr_parts))
 
