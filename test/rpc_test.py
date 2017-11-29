@@ -31,7 +31,6 @@ from multiprocessing import Process, Queue
 import requests
 
 
-
 class RemoteSchedulerTest(unittest.TestCase):
     def testUrlArgumentVariations(self):
         for url in ['http://zorg.com', 'http://zorg.com/']:
