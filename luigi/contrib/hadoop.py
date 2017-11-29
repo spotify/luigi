@@ -72,10 +72,13 @@ TRACKING_RE = re.compile(r'(tracking url|the url to track the job):\s+(?P<url>.+
 
 
 class hadoop(luigi.task.Config):
-    pool = luigi.Parameter(default=None,
-                           description='Hadoop pool so use for Hadoop tasks. '
-                           'To specify pools per tasks, see '
-                           'BaseHadoopJobTask.pool')
+    pool = luigi.OptionalParameter(
+        default=None,
+        description=(
+            'Hadoop pool so use for Hadoop tasks. To specify pools per tasks, '
+            'see BaseHadoopJobTask.pool'
+        ),
+    )
 
 
 def attach(*packages):
@@ -668,7 +671,7 @@ class LocalJobRunner(JobRunner):
 
 
 class BaseHadoopJobTask(luigi.Task):
-    pool = luigi.Parameter(default=None, significant=False, positional=False)
+    pool = luigi.OptionalParameter(default=None, significant=False, positional=False)
     # This value can be set to change the default batching increment. Default is 1 for backwards compatibility.
     batch_counter_default = 1
 
