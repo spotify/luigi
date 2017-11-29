@@ -29,7 +29,7 @@ from mock import Mock, DEFAULT, patch
 from moto import mock_s3
 from moto import mock_sts
 from luigi import configuration
-from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
+from luigi.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target, S3FlagTarget
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
     # spulec/moto#308
@@ -284,12 +284,28 @@ class TestS3Client(unittest.TestCase):
     def test_remove_deletes_directory_marker_files(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
-        s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/existingFile0')
-        s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/existingFile0_$folder$')
+        s3_client.put(self.tempFilePath, 's3://mybucket/removemedir')
+        s3_client.put(self.tempFilePath, 's3://mybucket/removemedir_$folder$')
+        s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/file')
 
         self.assertTrue(s3_client.remove('s3://mybucket/removemedir/'))
-        self.assertFalse(s3_client.exists('s3://mybucket/removemedir/existingFile0_$folder$'))
-        self.assertFalse(s3_client.exists('s3://mybucket/removemedir/existingFile0'))
+        self.assertFalse(s3_client.exists('s3://mybucket/removemedir/'))
+        self.assertFalse(s3_client.exists('s3://mybucket/removemedir/file'))
+        self.assertFalse(s3_client.exists('s3://mybucket/removemedir_$folder$'))
+
+    def test_s3flagtarget_remove_deletes_everything(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.s3.create_bucket('mybucket')
+
+        # When Hadoop/Spark writes out files, they create `/` key which should be removed as well
+        s3_client.put(self.tempFilePath, 's3://mybucket/flagtarget_$folder$')
+        s3_client.put(self.tempFilePath, 's3://mybucket/flagtarget/')
+        s3_client.put(self.tempFilePath, 's3://mybucket/flagtarget/file')
+
+        S3FlagTarget('s3://mybucket/flagtarget/').remove()
+        self.assertFalse(s3_client.exists('s3://mybucket/flagtarget_$folder$'))
+        self.assertFalse(s3_client.exists('s3://mybucket/flagtarget/'))
+        self.assertFalse(s3_client.exists('s3://mybucket/flagtarget/file'))
 
     def test_copy(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)

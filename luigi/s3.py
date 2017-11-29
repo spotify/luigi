@@ -163,7 +163,7 @@ class S3Client(FileSystem):
 
             # file
             s3_key = s3_bucket.get_key(key)
-            if s3_key:
+            if s3_key and not self.is_dir(path):
                 s3_bucket.delete_key(s3_key)
                 logger.debug('Deleting %s from bucket %s', key, bucket)
                 return True
