@@ -126,11 +126,13 @@ class TaskProcess(multiprocessing.Process):
     def _run_get_new_deps(self):
         self.task.set_tracking_url = self.status_reporter.update_tracking_url
         self.task.set_status_message = self.status_reporter.update_status
+        self.task.set_progress_percentage = self.status_reporter.update_progress_percentage
 
         task_gen = self.task.run()
 
         self.task.set_tracking_url = None
         self.task.set_status_message = None
+        self.task.set_progress_percentage = None
 
         if not isinstance(task_gen, types.GeneratorType):
             return None
@@ -269,6 +271,9 @@ class TaskStatusReporter(object):
     def update_status(self, message):
         self._scheduler.set_task_status_message(self._task_id, message)
 
+    def update_progress_percentage(self, percentage):
+        self._scheduler.set_task_progress_percentage(self._task_id, percentage)
+
 
 class SingleProcessPool(object):
     """
@@ -399,7 +404,7 @@ class KeepAliveThread(threading.Thread):
                 response = None
                 try:
                     response = self._scheduler.ping(worker=self._worker_id)
-                except:  # httplib.BadStatusLine:
+                except BaseException:  # httplib.BadStatusLine:
                     logger.warning('Failed pinging scheduler')
 
                 # handle rpc messages
@@ -483,8 +488,7 @@ class Worker(object):
         runnable = kwargs['runnable']
         task = self._scheduled_tasks.get(task_id)
         if task:
-            msg = (task, status, runnable)
-            self._add_task_history.append(msg)
+            self._add_task_history.append((task, status, runnable))
             kwargs['owners'] = task._owner_list()
 
         if task_id in self._batch_running_tasks:
@@ -631,7 +635,7 @@ class Worker(object):
             )
         notifications.send_error_email(subject, error_message)
 
-    def add(self, task, multiprocess=False):
+    def add(self, task, multiprocess=False, processes=0):
         """
         Add a Task for the worker to check and possibly schedule and run.
 
@@ -642,7 +646,7 @@ class Worker(object):
         self.add_succeeded = True
         if multiprocess:
             queue = multiprocessing.Manager().Queue()
-            pool = multiprocessing.Pool()
+            pool = multiprocessing.Pool(processes=processes if processes > 0 else None)
         else:
             queue = DequeQueue()
             pool = SingleProcessPool()
@@ -896,6 +900,11 @@ class Worker(object):
         )
 
     def _run_task(self, task_id):
+        if task_id in self._running_tasks:
+            logger.debug('Got already running task id {} from scheduler, taking a break'.format(task_id))
+            next(self._sleeper())
+            return
+
         task = self._scheduled_tasks[task_id]
 
         task_process = self._create_task_process(task)

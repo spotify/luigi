@@ -188,7 +188,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
 class PySparkTaskTest(unittest.TestCase):
     ss = 'ss-stub'
 
-    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077"}})
+    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077", 'deploy-mode': 'client'}})
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_run(self, proc):
         setup_run_process(proc)
@@ -199,7 +199,7 @@ class PySparkTaskTest(unittest.TestCase):
         self.assertTrue(os.path.exists(proc_arg_list[7]))
         self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
 
-    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077"}})
+    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077", 'deploy-mode': 'client'}})
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_run_with_pickle_dump(self, proc):
         setup_run_process(proc)
@@ -210,6 +210,18 @@ class PySparkTaskTest(unittest.TestCase):
         self.assertEqual(proc_arg_list[0:7], ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'client', '--name', 'TestPySparkTask'])
         self.assertTrue(os.path.exists(proc_arg_list[7]))
         self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
+
+    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077", 'deploy-mode': 'cluster'}})
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_run_with_cluster(self, proc):
+        setup_run_process(proc)
+        job = TestPySparkTask()
+        job.run()
+        proc_arg_list = proc.call_args[0][0]
+        self.assertEqual(proc_arg_list[0:8], ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'cluster', '--name', 'TestPySparkTask', '--files'])
+        self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
+        self.assertTrue(os.path.exists(proc_arg_list[9]))
+        self.assertEqual('TestPySparkTask.pickle', proc_arg_list[10])
 
     @patch.dict('sys.modules', {'pyspark': MagicMock()})
     @patch('pyspark.SparkContext')

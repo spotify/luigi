@@ -36,6 +36,9 @@ import logging
 import sys
 import os
 
+# this prevents the modules in the directory of this script from shadowing global packages
+sys.path.append(sys.path.pop(0))
+
 
 class PySparkRunner(object):
 

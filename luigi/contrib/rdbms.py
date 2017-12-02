@@ -149,6 +149,10 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         * `table`,
         * `query`
 
+        Optionally override:
+
+        * `autocommit`
+
         Subclass and override the following methods:
 
         * `output`
@@ -177,6 +181,10 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
     @abc.abstractproperty
     def query(self):
         return None
+
+    @property
+    def autocommit(self):
+        return False
 
     @abc.abstractmethod
     def run(self):

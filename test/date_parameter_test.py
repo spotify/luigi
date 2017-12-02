@@ -70,6 +70,10 @@ class DateHourParameterTest(unittest.TestCase):
         dh = luigi.DateHourParameter().parse('2013-02-01T18')
         self.assertEqual(dh, datetime.datetime(2013, 2, 1, 18, 0, 0))
 
+    def test_date_to_dh(self):
+        date = luigi.DateHourParameter().normalize(datetime.date(2000, 1, 1))
+        self.assertEqual(date, datetime.datetime(2000, 1, 1, 0))
+
     def test_serialize(self):
         dh = luigi.DateHourParameter().serialize(datetime.datetime(2013, 2, 1, 18, 0, 0))
         self.assertEqual(dh, '2013-02-01T18')

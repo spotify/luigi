@@ -145,7 +145,7 @@ class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
         try:
             if self.fs.exists(testpath):
                 self.fs.remove(testpath, skip_trash=True)
-        except:
+        except BaseException:
             if self.fs.exists(self._test_dir()):
                 self.fs.remove(self._test_dir(), skip_trash=True)
 
@@ -159,7 +159,7 @@ class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
         try:
             if self.fs.exists(testpath):
                 self.fs.remove(testpath, skip_trash=True)
-        except:
+        except BaseException:
             if self.fs.exists(self._test_dir()):
                 self.fs.remove(self._test_dir(), skip_trash=True)
 
@@ -175,7 +175,7 @@ class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
         try:
             if self.fs.exists(testpath):
                 self.fs.remove(testpath, skip_trash=True)
-        except:
+        except BaseException:
             if self.fs.exists(self._test_dir()):
                 self.fs.remove(self._test_dir(), skip_trash=True)
 
@@ -195,7 +195,7 @@ class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
         try:
             if self.fs.exists(testpath):
                 self.fs.remove(testpath, skip_trash=True)
-        except:
+        except BaseException:
             if self.fs.exists(self._test_dir()):
                 self.fs.remove(self._test_dir(), skip_trash=True)
 
@@ -214,7 +214,7 @@ class AtomicHdfsOutputPipeTests(MiniClusterTestCase):
         try:
             if self.fs.exists(testpath):
                 self.fs.remove(testpath, skip_trash=True)
-        except:
+        except BaseException:
             if self.fs.exists(self._test_dir()):
                 self.fs.remove(self._test_dir(), skip_trash=True)
 
@@ -390,7 +390,7 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         target = hdfs.HdfsTarget(self._test_file())
         try:
             target.remove(skip_trash=True)
-        except:
+        except BaseException:
             pass
 
         self.assertFalse(self.fs.exists(target.path))

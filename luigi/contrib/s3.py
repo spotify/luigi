@@ -412,7 +412,7 @@ class S3Client(FileSystem):
         """
         Copy a single S3 object to another S3 object, falling back to multipart copy where necessary
 
-        NOTE: This is a private method and should only be called from within the `luigi.s3.copy` method
+        NOTE: This is a private method and should only be called from within the `s3.copy` method
 
         :param pool: The threadpool to put the s3 copy processes onto
         :param src_bucket: source bucket name
@@ -467,7 +467,7 @@ class S3Client(FileSystem):
             mp.complete_upload()
             return mp.key_name
 
-        except:
+        except BaseException:
             logger.info('Error during multipart s3 copy for %s/%s to %s/%s...', src_bucket, src_key, dst_bucket, dst_key)
             # cancel the copy so we don't get charged for storage consumed by copied parts
             if mp:
@@ -752,6 +752,8 @@ class S3FlagTarget(S3Target):
 
         :param path: the directory where the files are stored.
         :type path: str
+        :param format: see the luigi.format module for options
+        :type format: luigi.format.[Text|UTF8|Nop]
         :param client:
         :type client:
         :param flag:
