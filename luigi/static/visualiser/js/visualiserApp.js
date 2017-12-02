@@ -25,7 +25,9 @@ function visualiserApp(luigi) {
      */
     function updateVisType(newVisType) {
         $('#toggleVisButtons label').removeClass('active');
-        $('#toggleVisButtons input[value="' + newVisType + '"]').parent().addClass('active');
+        var visTypeInput = $('#toggleVisButtons input[value="' + newVisType + '"]');
+        visTypeInput.parent().addClass('active');
+        visTypeInput.prop('checked', true);
     }
 
     function loadTemplates() {
@@ -72,7 +74,8 @@ function visualiserApp(luigi) {
             graph: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DONE"),
             error: task.status == "FAILED",
             re_enable: task.status == "DISABLED" && task.re_enable_able,
-            statusMessage: task.status_message
+            statusMessage: task.status_message,
+            progressPercentage: task.progress_percentage
         };
     }
 
@@ -295,12 +298,33 @@ function visualiserApp(luigi) {
 
     function showStatusMessage(data) {
         $("#statusMessageModal").empty().append(renderTemplate("statusMessageTemplate", data));
-        $("#statusMessageModal .refresh").on('click', function() {
-            luigi.getTaskStatusMessage(data.taskId, function(data) {
-                $("#statusMessageModal pre").html(data.statusMessage);
-            });
-        }).trigger('click');
         $("#statusMessageModal").modal({});
+        var refreshInterval = setInterval(function() {
+                if ($("#statusMessageModal").is(":hidden"))
+                    clearInterval(refreshInterval)
+                else {
+                    luigi.getTaskStatusMessage(data.taskId, function(data) {
+                        if (data.statusMessage === null)
+                            $("#statusMessageModal pre").hide()
+                        else {
+                            $("#statusMessageModal pre").html(data.statusMessage).show();
+                        }
+                    });
+                    luigi.getTaskProgressPercentage(data.taskId, function(data) {
+                        if (data.progressPercentage === null)
+                            $("#statusMessageModal .progress").hide()
+                        else {
+                            $("#statusMessageModal .progress").show()
+                            $("#statusMessageModal .progress-bar")
+                                .attr('aria-valuenow', data.progressPercentage)
+                                .text(data.progressPercentage + '%')
+                                .css({'width': data.progressPercentage + '%'});
+                        }
+                    });
+                }
+            },
+            500
+        );
     }
 
     function preProcessGraph(dependencyGraph) {
@@ -719,7 +743,7 @@ function visualiserApp(luigi) {
         var taskCount;
         /* Check for integers in tasks.  This indicates max-shown-tasks was exceeded */
         if (tasks.length === 1 && typeof(tasks[0]) === 'number') {
-            taskCount = tasks[0];
+            taskCount = tasks[0] === -1 ? 'unknown' : tasks[0];
             missingCategories[category] = {name: category, count: taskCount};
         }
         else {
@@ -1158,6 +1182,7 @@ function visualiserApp(luigi) {
             }
         });
 
+        processHashChange();
         updateTasks();
         bindListEvents();
 
@@ -1171,20 +1196,29 @@ function visualiserApp(luigi) {
         } );
 
         $('#taskTable tbody').on('click', 'td.details-control .forgiveFailures', function (ev) {
-            var tr = $(this).closest('tr');
+            var that = $(this);
+            var tr = that.closest('tr');
             var row = dt.row( tr );
             var data = row.data();
             luigi.forgiveFailures(data.taskId, function(data) {
-                if (ev.altKey){
+                if (ev.altKey) {
                     updateTasks(); // update may not be cheap
+                } else {
+                    that.tooltip('hide');
+                    that.remove();
                 }
             });
         } );
 
-        $('#taskTable tbody').on('click', 'td.details-control .re-enable-button', function () {
+        $('#taskTable tbody').on('click', 'td.details-control .re-enable-button', function (ev) {
             var that = $(this);
-            luigi.reEnable($(this).attr("data-task-id"), function(data) {
-                updateTasks();
+            luigi.reEnable(that.attr("data-task-id"), function(data) {
+                if (ev.altKey) {
+                    updateTasks(); // update may not be cheap
+                } else {
+                    that.tooltip('hide');
+                    that.remove();
+                }
             });
         });
 

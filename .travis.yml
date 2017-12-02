@@ -3,6 +3,7 @@ language: python
 services:
   - elasticsearch
   - mysql
+  - docker
 
 env:
   global:

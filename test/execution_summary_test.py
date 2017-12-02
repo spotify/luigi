@@ -1116,4 +1116,4 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertIn('Scheduled 1 task', s)
         self.assertIn('Luigi Execution Summary', s)
         self.assertNotIn('ever failed', s)
-        self.assertIn('\n\nThis progress looks :) because there were failed tasks but they all suceeded in a retry', s)
+        self.assertIn('\n\nThis progress looks :) because there were failed tasks but they all succeeded in a retry', s)

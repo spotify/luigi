@@ -117,7 +117,7 @@ class ElasticsearchTarget(luigi.Target):
 
     def __init__(self, host, port, index, doc_type, update_id,
                  marker_index_hist_size=0, http_auth=None, timeout=10,
-                 extra_elasticsearch_args={}):
+                 extra_elasticsearch_args=dict()):
         """
         :param host: Elasticsearch server host
         :type host: str
