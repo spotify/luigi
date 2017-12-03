@@ -43,7 +43,8 @@ class _DatabricksBaseTask(luigi.Task):
     node_type_id = luigi.Parameter(default='dev-tier-node')
     spark_version = luigi.Parameter(default='3.4.x-scala2.10')
     num_workers = luigi.IntParameter(default=0)
-    autoscale = luigi.DictParameter(default={})
+    min_workers = luigi.IntParameter(default=0)
+    max_workers = luigi.IntParameter(default=0)
     cluster_params = luigi.DictParameter(default={})
 
     def _cluster_conf(self):
@@ -55,10 +56,13 @@ class _DatabricksBaseTask(luigi.Task):
             'spark_version': self.spark_version
         }
 
-        if not bool(self.autoscale):
-            cluster_conf['autoscale'] = self.autoscale
-        else:
+        if self.num_workers > 0:
             cluster_conf['num_workers'] = self.num_workers
+        else:
+            cluster_conf['autoscale'] = {
+                'min_workers': self.min_workers,
+                'max_workers': self.max_workers
+            }
 
         cluster_conf.update(self.cluster_params)
 
@@ -398,7 +402,7 @@ class DeleteDatabricksClusterTask(_DatabricksClusterBaseTask):
             'cluster_id': self._get_cluster_id()
         }
 
-        req = self.db_request(
+        self.db_request(
             method='post',
             uri='/clusters/delete',
             json=cluster
