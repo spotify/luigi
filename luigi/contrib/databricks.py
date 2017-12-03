@@ -41,6 +41,7 @@ class _DatabricksBaseTask(luigi.Task):
     # or ad-hoc creation from _DatabricksJobBaseTask
     cluster_name = luigi.Parameter(default='')
     node_type_id = luigi.Parameter(default='dev-tier-node')
+    spark_version = luigi.Parameter(default='3.4.x-scala2.10')
     num_workers = luigi.IntParameter(default=0)
     autoscale = luigi.DictParameter(default={})
     cluster_params = luigi.DictParameter(default={})
@@ -50,7 +51,8 @@ class _DatabricksBaseTask(luigi.Task):
 
         cluster_conf = {
             'cluster_name': self.cluster_name,
-            'node_type_id': self.node_type_id
+            'node_type_id': self.node_type_id,
+            'spark_version': self.spark_version
         }
 
         if self.autoscale != {}:
