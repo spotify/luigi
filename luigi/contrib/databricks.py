@@ -100,6 +100,11 @@ class _DatabricksBaseTask(luigi.Task):
                           auth=(databricks().username, databricks().password)
                           )
 
+        if req.status_code == 400:
+            raise Exception(req.json())
+
+        req.raise_for_status()
+
         return req
 
     def signal_complete(self, out_data=None):
@@ -161,8 +166,6 @@ class _DatabricksJobBaseTask(_DatabricksBaseTask):
             json=run
         )
 
-        req.raise_for_status()
-
         self._run_id = req.json()['run_id']
         return self._run_id
 
@@ -179,8 +182,6 @@ class _DatabricksJobBaseTask(_DatabricksBaseTask):
                 'run_id': self._run_id
             }
         )
-
-        req.raise_for_status()
 
         return req.json()
 
@@ -322,8 +323,6 @@ class _DatabricksClusterBaseTask(_DatabricksBaseTask):
             }
         )
 
-        req.raise_for_status()
-
         return req.json()
 
 
@@ -345,8 +344,6 @@ class CreateDatabricksClusterTask(_DatabricksClusterBaseTask):
             uri='clusters/create',
             json=cluster
         )
-
-        req.raise_for_status()
 
         while True:
             time.sleep(10)
@@ -406,7 +403,5 @@ class DeleteDatabricksClusterTask(_DatabricksClusterBaseTask):
             uri='/clusters/delete',
             json=cluster
         )
-
-        req.raise_for_status()
 
         self.signal_complete()
