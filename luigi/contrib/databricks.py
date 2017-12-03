@@ -55,7 +55,7 @@ class _DatabricksBaseTask(luigi.Task):
             'spark_version': self.spark_version
         }
 
-        if self.autoscale != {}:
+        if not bool(self.autoscale):
             cluster_conf['autoscale'] = self.autoscale
         else:
             cluster_conf['num_workers'] = self.num_workers
