@@ -2,7 +2,7 @@
 
 import time
 import logging
-from json import load
+from json import load, dumps
 
 import luigi
 
@@ -77,7 +77,7 @@ class _DatabricksBaseTask(luigi.Task):
             uri=uri
         )
 
-    def db_request(self, method, uri, params=None, json=None):
+    def db_request(self, method, uri, params=None, data=None):
         """ Generic request method """
 
         headers = {}
@@ -99,7 +99,7 @@ class _DatabricksBaseTask(luigi.Task):
             req = request(method,
                           url=self._url_format(uri),
                           params=params,
-                          json=json,
+                          data=dumps(data),
                           headers=headers,
                           auth=(databricks().username, databricks().password)
                           )
@@ -157,7 +157,7 @@ class _DatabricksJobBaseTask(_DatabricksBaseTask):
         if self.cluster_id != '':
             runs_submit['existing_cluster_id'] = self.cluster_id
         else:
-            runs_submit['new_cluster'] = self._cluster_conf
+            runs_submit['new_cluster'] = self._cluster_conf()
 
         return runs_submit
 
@@ -167,7 +167,7 @@ class _DatabricksJobBaseTask(_DatabricksBaseTask):
         req = self.db_request(
             method='post',
             uri='jobs/runs/submit',
-            json=run
+            data=run
         )
 
         self._run_id = req.json()['run_id']
@@ -346,7 +346,7 @@ class CreateDatabricksClusterTask(_DatabricksClusterBaseTask):
         req = self.db_request(
             method='post',
             uri='clusters/create',
-            json=cluster
+            data=cluster
         )
 
         while True:
@@ -405,7 +405,7 @@ class DeleteDatabricksClusterTask(_DatabricksClusterBaseTask):
         self.db_request(
             method='post',
             uri='/clusters/delete',
-            json=cluster
+            data=cluster
         )
 
         self.signal_complete()
