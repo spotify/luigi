@@ -391,8 +391,7 @@ class DeleteDatabricksClusterTask(_DatabricksClusterBaseTask):
         if self.cluster_id != '':
             return self.cluster_id
 
-        with self.input()['ClusterCreate'].open('r') as fopen:
-            cluster = load(fopen)
+        cluster = load(self.input()['ClusterCreate'].open('r'))
 
         return cluster['cluster_id']
 
@@ -405,7 +404,7 @@ class DeleteDatabricksClusterTask(_DatabricksClusterBaseTask):
 
         self.db_request(
             method='post',
-            uri='/clusters/delete',
+            uri='clusters/delete',
             json=cluster
         )
 
