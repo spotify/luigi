@@ -2,7 +2,7 @@
 
 import time
 import logging
-from json import load, dumps
+from json import load
 
 import luigi
 
@@ -77,7 +77,7 @@ class _DatabricksBaseTask(luigi.Task):
             uri=uri
         )
 
-    def db_request(self, method, uri, params=None, data=None):
+    def db_request(self, method, uri, params=None, json=None):
         """ Generic request method """
 
         headers = {}
@@ -93,13 +93,14 @@ class _DatabricksBaseTask(luigi.Task):
             req = request(method,
                           url=self._url_format(uri),
                           params=params,
+                          json=json,
                           headers=headers
                           )
         else:
             req = request(method,
                           url=self._url_format(uri),
                           params=params,
-                          data=dumps(data),
+                          json=json,
                           headers=headers,
                           auth=(databricks().username, databricks().password)
                           )
@@ -167,7 +168,7 @@ class _DatabricksJobBaseTask(_DatabricksBaseTask):
         req = self.db_request(
             method='post',
             uri='jobs/runs/submit',
-            data=run
+            json=run
         )
 
         self._run_id = req.json()['run_id']
@@ -346,7 +347,7 @@ class CreateDatabricksClusterTask(_DatabricksClusterBaseTask):
         req = self.db_request(
             method='post',
             uri='clusters/create',
-            data=cluster
+            json=cluster
         )
 
         while True:
@@ -405,7 +406,7 @@ class DeleteDatabricksClusterTask(_DatabricksClusterBaseTask):
         self.db_request(
             method='post',
             uri='/clusters/delete',
-            data=cluster
+            json=cluster
         )
 
         self.signal_complete()
