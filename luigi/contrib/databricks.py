@@ -195,7 +195,7 @@ class _DatabricksJobBaseTask(_DatabricksBaseTask):
 
         run = self.get_run()
 
-        run_state = run['state']['lifecycle_state']
+        run_state = run['state']['life_cycle_state']
         run_state_msg = run['state']['state_message']
 
         if run_state in ['PENDING', 'RUNNING', 'TERMINATING']:
@@ -227,18 +227,14 @@ class _DatabricksJobBaseTask(_DatabricksBaseTask):
 class DatabricksNotebookTask(_DatabricksJobBaseTask):
     """ Databricks Notebook job task """
 
-    notebook_path = luigi.Parameter()
-    base_parameters = luigi.DictParameter(default={})
+    notebook_task = luigi.DictParameter()
 
     def run(self):
         """ Run a new Databricks Notebook job task """
 
         new_rsub = self.create_runsubmit()
 
-        new_rsub['notebook_task'] = {
-            'notebook_path': self.notebook_path,
-            'base_parameters': self.base_parameters
-        }
+        new_rsub['notebook_task'] = self.notebook_task
 
         self.runssubmit(new_rsub)
 
@@ -250,18 +246,14 @@ class DatabricksNotebookTask(_DatabricksJobBaseTask):
 class DatabricksSparkPythonTask(_DatabricksJobBaseTask):
     """ Databricks PySpark job task """
 
-    python_path = luigi.Parameter()
-    python_params = luigi.ListParameter(default=[])
+    spark_python_task = luigi.DictParameter()
 
     def run(self):
         """ Run a new Databricks PySpark job task """
 
         new_rsub = self.create_runsubmit()
 
-        new_rsub['spark_python_task'] = {
-            'python_path': self.python_path,
-            'parameters': self.python_params
-        }
+        new_rsub['spark_python_task'] = self.spark_python_task
 
         self.runssubmit(new_rsub)
 
@@ -273,18 +265,14 @@ class DatabricksSparkPythonTask(_DatabricksJobBaseTask):
 class DatabricksSparkJarTask(_DatabricksJobBaseTask):
     """ Databricks Spark jar job task """
 
-    main_class_name = luigi.Parameter()
-    jar_params = luigi.ListParameter(default=[])
+    spark_jar_task = luigi.DictParameter()
 
     def run(self):
         """ Run a new Databricks PySpark job task """
 
         new_rsub = self.create_runsubmit()
 
-        new_rsub['spark_jar_task'] = {
-            'main_class_name': self.main_class_name,
-            'parameters': self.jar_params
-        }
+        new_rsub['spark_jar_task'] = self.spark_jar_task
 
         self.runssubmit(new_rsub)
 
@@ -296,16 +284,14 @@ class DatabricksSparkJarTask(_DatabricksJobBaseTask):
 class DatabricksSparkSubmitTask(_DatabricksJobBaseTask):
     """ Databricks Spark Submit job task """
 
-    submit_params = luigi.ListParameter(default=[])
+    spark_submit_task = luigi.DictParameter()
 
     def run(self):
         """ Run a new Databricks PySpark job task """
 
         new_rsub = self.create_runsubmit()
 
-        new_rsub['spark_submit_task'] = {
-            'parameters': self.submit_params
-        }
+        new_rsub['spark_submit_task'] = self.spark_submit_task
 
         self.runssubmit(new_rsub)
 
