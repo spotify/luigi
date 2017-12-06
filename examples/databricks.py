@@ -13,7 +13,7 @@ specified notebook as a job within a new cluster.
 
 """
 
-from json import dump, dumps
+from json import dump
 
 import luigi
 import luigi.contrib.databricks as lcd
