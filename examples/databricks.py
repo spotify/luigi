@@ -28,10 +28,10 @@ class CreateTestCluster(lcd.CreateDatabricksClusterTask):
     num_workers = 2
     cluster_params = {
         'aws_attributes': {
-  	         'ebs_volume_size': 100,
-  	         'ebs_volume_count': 1,
-  	         'ebs_volume_type': 'GENERAL_PURPOSE_SSD'
-           },
+            'ebs_volume_size': 100,
+            'ebs_volume_count': 1,
+            'ebs_volume_type': 'GENERAL_PURPOSE_SSD'
+        },
         'spark_conf': {}
     }
 
@@ -53,7 +53,7 @@ class DeleteTestCluster(lcd.DeleteDatabricksClusterTask):
     def requires(self):
         return {
             'ClusterCreate': CreateTestCluster()
-            }
+        }
 
     def signal_complete(self):
         """ write out cluster config """
@@ -80,10 +80,10 @@ class SubmitTestNotebookJob(lcd.DatabricksNotebookTask):
     num_workers = 2
     cluster_params = {
         'aws_attributes': {
-  	         'ebs_volume_size': 100,
-  	         'ebs_volume_count': 1,
-  	         'ebs_volume_type': 'GENERAL_PURPOSE_SSD'
-           },
+            'ebs_volume_size': 100,
+            'ebs_volume_count': 1,
+            'ebs_volume_type': 'GENERAL_PURPOSE_SSD'
+        },
         'spark_conf': {}
     }
 
@@ -97,7 +97,6 @@ class SubmitTestNotebookJob(lcd.DatabricksNotebookTask):
         """ output target """
 
         return luigi.LocalTarget('/tmp/dbnotebookjobex1.json')
-
 
 
 class DatabricksExample(luigi.WrapperTask):

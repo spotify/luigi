@@ -6,11 +6,13 @@ import unittest
 import mock
 import luigi.contrib.databricks as lcd
 
+
 class ClusterAutoscale(lcd.CreateDatabricksClusterTask):
     """ Check cluster config for autoscaling """
 
     min_workers = 1
     max_workers = 2
+
 
 class ClusterSpecifyWorkers(lcd.CreateDatabricksClusterTask):
     """ Check cluster config for static worker count """
@@ -20,6 +22,7 @@ class ClusterSpecifyWorkers(lcd.CreateDatabricksClusterTask):
         'aws_attributes': {},
         'spark_conf': {}
     }
+
 
 class RunNewCluster(lcd._DatabricksJobBaseTask):
     """ Check config for new cluster job """
