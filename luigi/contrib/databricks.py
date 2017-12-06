@@ -30,7 +30,12 @@ class _DatabricksBaseTask(luigi.Task):
     A generic
     """
 
-    if databricks().token != '':
+    username = databricks().username
+    password = databricks().password
+    token = databricks().token
+    instance = databricks().instance
+
+    if token != '':
         auth_method = 'token'
     else:
         auth_method = 'basic'
@@ -68,12 +73,11 @@ class _DatabricksBaseTask(luigi.Task):
 
         return cluster_conf
 
-    @staticmethod
-    def _url_format(uri):
+    def _url_format(self, uri):
         """ return url """
 
         return 'https://{instance}/api/2.0/{uri}'.format(
-            instance=databricks().instance,
+            instance=self.instance,
             uri=uri
         )
 
@@ -87,7 +91,7 @@ class _DatabricksBaseTask(luigi.Task):
 
         if self.auth_method == 'token':
             headers['Authorization'] = 'Bearer {token}'.format(
-                token=databricks().token
+                token=self.token
             )
 
             req = request(method,
@@ -102,7 +106,7 @@ class _DatabricksBaseTask(luigi.Task):
                           params=params,
                           json=json,
                           headers=headers,
-                          auth=(databricks().username, databricks().password)
+                          auth=(self.username, self.password)
                           )
 
         if req.status_code == 400:
