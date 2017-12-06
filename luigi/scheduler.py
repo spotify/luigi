@@ -772,7 +772,7 @@ class Scheduler(object):
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
                  assistant=False, tracking_url=None, worker=None, batchable=None,
-                 batch_id=None, retry_policy_dict=dict(), owners=None, **kwargs):
+                 batch_id=None, retry_policy_dict=None, owners=None, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -783,6 +783,10 @@ class Scheduler(object):
         assert worker is not None
         worker_id = worker
         worker = self._update_worker(worker_id)
+
+        if retry_policy_dict is None:
+            retry_policy_dict = {}
+
         retry_policy = self._generate_retry_policy(retry_policy_dict)
 
         if worker.enabled:
