@@ -17,6 +17,9 @@
 
 import functools
 import itertools
+import tempfile
+import re
+from contextlib import contextmanager
 
 import luigi
 import luigi.task_register
@@ -138,14 +141,18 @@ class RunOnceTask(luigi.Task):
 class LuigiTestCase(unittest.TestCase):
     """
     Tasks registred within a test case will get unregistered in a finalizer
+
+    Instance caches are cleared before and after all runs
     """
     def setUp(self):
         super(LuigiTestCase, self).setUp()
         self._stashed_reg = luigi.task_register.Register._get_reg()
+        luigi.task_register.Register.clear_instance_cache()
 
     def tearDown(self):
         luigi.task_register.Register._set_reg(self._stashed_reg)
         super(LuigiTestCase, self).tearDown()
+        luigi.task_register.Register.clear_instance_cache()
 
     def run_locally(self, args):
         """ Helper for running tests testing more of the stack, the command
@@ -184,3 +191,21 @@ class parsing(object):
 def in_parse(cmds, deferred_computation):
     with CmdlineParser.global_instance(cmds) as cp:
         deferred_computation(cp.get_task_obj())
+
+
+@contextmanager
+def temporary_unloaded_module(python_file_contents):
+    """ Create an importable module
+
+    Return the name of importable module name given its file contents (source
+    code) """
+    with tempfile.NamedTemporaryFile(
+            dir='test/',
+            prefix="_test_time_generated_module",
+            suffix='.py') as temp_module_file:
+        temp_module_file.file.write(python_file_contents)
+        temp_module_file.file.flush()
+        temp_module_path = temp_module_file.name
+        temp_module_name = re.search(r'/(_test_time_generated_module.*).py',
+                                     temp_module_path).group(1)
+        yield temp_module_name

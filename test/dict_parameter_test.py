@@ -55,3 +55,9 @@ class DictParameterTest(unittest.TestCase):
 
     def test_parse_invalid_input(self):
         self.assertRaises(ValueError, lambda: luigi.DictParameter().parse('{"invalid"}'))
+
+    def test_hash_normalize(self):
+        self.assertRaises(TypeError, lambda: hash(luigi.DictParameter().parse('{"a": {"b": []}}')))
+        a = luigi.DictParameter().normalize({"a": [{"b": []}]})
+        b = luigi.DictParameter().normalize({"a": [{"b": []}]})
+        self.assertEqual(hash(a), hash(b))

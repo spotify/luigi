@@ -15,16 +15,17 @@
 # limitations under the License.
 #
 
-from helpers import unittest
+import sys
 
 import luigi
 import luigi.date_interval
 import luigi.notifications
-import sys
 from luigi.interface import _WorkerSchedulerFactory
 from luigi.worker import Worker
+from luigi.interface import core
+
 from mock import Mock, patch, MagicMock
-from helpers import LuigiTestCase
+from helpers import LuigiTestCase, with_config
 
 luigi.notifications.DEBUG = True
 
@@ -97,5 +98,13 @@ class InterfaceTest(LuigiTestCase):
         return luigi.interface.build([self.task_a, self.task_b], worker_scheduler_factory=self.worker_scheduler_factory)
 
 
-if __name__ == '__main__':
-    unittest.main()
+class CoreConfigTest(LuigiTestCase):
+
+    @with_config({})
+    def test_parallel_scheduling_processes_default(self):
+        self.assertEquals(0, core().parallel_scheduling_processes)
+
+    @with_config({'core': {'parallel-scheduling-processes': '1234'}})
+    def test_parallel_scheduling_processes(self):
+        from luigi.interface import core
+        self.assertEquals(1234, core().parallel_scheduling_processes)

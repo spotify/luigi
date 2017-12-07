@@ -24,7 +24,7 @@ from luigi import six
 import luigi
 import luigi.contrib.hadoop
 import luigi.contrib.hdfs
-import luigi.postgres
+import luigi.contrib.postgres
 
 
 class ExternalStreams(luigi.ExternalTask):
@@ -244,14 +244,15 @@ class Top10Artists(luigi.Task):
                 yield int(streams), artist
 
 
-class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
+class ArtistToplistToDatabase(luigi.contrib.postgres.CopyToTable):
     """
-    This task runs a :py:class:`luigi.postgres.CopyToTable` task
+    This task runs a :py:class:`luigi.contrib.postgres.CopyToTable` task
     over the target data returned by :py:meth:`~/.Top10Artists.output` and
     writes the result into its :py:meth:`~.ArtistToplistToDatabase.output` target which,
-    by default, is :py:class:`luigi.postgres.PostgresTarget` (a table in PostgreSQL).
+    by default, is :py:class:`luigi.contrib.postgres.PostgresTarget` (a table in PostgreSQL).
 
-    This class uses :py:meth:`luigi.postgres.CopyToTable.run` and :py:meth:`luigi.postgres.CopyToTable.output`.
+    This class uses :py:meth:`luigi.contrib.postgres.CopyToTable.run`
+    and :py:meth:`luigi.contrib.postgres.CopyToTable.output`.
     """
 
     date_interval = luigi.DateIntervalParameter()
@@ -277,6 +278,7 @@ class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
         :return: list of object (:py:class:`luigi.task.Task`)
         """
         return Top10Artists(self.date_interval, self.use_hadoop)
+
 
 if __name__ == "__main__":
     luigi.run()

@@ -133,9 +133,11 @@ class CmdlineTest(unittest.TestCase):
     @mock.patch("luigi.interface.setup_interface_logging")
     def test_cmdline_logger(self, setup_mock, warn):
         with mock.patch("luigi.interface.core") as env_params:
-            env_params.return_value.logging_conf_file = None
+            env_params.return_value.logging_conf_file = ''
+            env_params.return_value.log_level = 'DEBUG'
+            env_params.return_value.parallel_scheduling_processes = 1
             luigi.run(['SomeTask', '--n', '7', '--local-scheduler', '--no-lock'])
-            self.assertEqual([mock.call(None)], setup_mock.call_args_list)
+            self.assertEqual([mock.call('', 'DEBUG')], setup_mock.call_args_list)
 
         with mock.patch("luigi.configuration.get_config") as getconf:
             getconf.return_value.get.side_effect = ConfigParser.NoOptionError(section='foo', option='bar')
@@ -301,6 +303,16 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         self.assertEqual(0, returncode)
         self.assertTrue(stdout.find(b'[FileSystem] data/streams_2015_03_04_faked.tsv') != -1)
         self.assertTrue(stdout.find(b'[DB] localhost') != -1)
+
+    def test_deps_tree_py_script(self):
+        """
+        Test the deps_tree.py script.
+        """
+        args = 'python luigi/tools/deps_tree.py --module examples.top_artists AggregateArtists --date-interval 2012-06'.split()
+        returncode, stdout, stderr = self._run_cmdline(args)
+        self.assertEqual(0, returncode)
+        for i in range(1, 30):
+            self.assertTrue(stdout.find(("-[Streams-{{'date': '2012-06-{0}'}}".format(str(i).zfill(2))).encode('utf-8')) != -1)
 
     def test_bin_mentions_misspelled_task(self):
         """

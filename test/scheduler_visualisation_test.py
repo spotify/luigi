@@ -76,6 +76,7 @@ class BadReqTask(luigi.Task):
 
 
 class FailingTask(luigi.Task):
+    task_namespace = __name__
     task_id = luigi.Parameter()
 
     def run(self):
@@ -101,14 +102,14 @@ class OddFibTask(luigi.Task):
 class SchedulerVisualisationTest(unittest.TestCase):
 
     def setUp(self):
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler()
+        self.scheduler = luigi.scheduler.Scheduler()
 
     def tearDown(self):
         pass
 
     def _assert_complete(self, tasks):
         for t in tasks:
-            self.assert_(t.complete())
+            self.assertTrue(t.complete())
 
     def _build(self, tasks):
         with luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1) as w:
@@ -134,7 +135,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         remote = self._remote()
         graph = remote.graph()
         self.assertEqual(len(graph), 2)
-        self.assert_(DummyTask(task_id=1).task_id in graph)
+        self.assertTrue(DummyTask(task_id=1).task_id in graph)
         d1 = graph[DummyTask(task_id=1).task_id]
         self.assertEqual(d1[u'status'], u'DONE')
         self.assertEqual(d1[u'deps'], [])
@@ -159,7 +160,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = LinearTask(100)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.dep_graph(root_task.task_id)
@@ -180,7 +181,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = LinearTask(100)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.inverse_dep_graph(LinearTask(0).task_id)
@@ -198,7 +199,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = BinaryTreeTask(1)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.dep_graph(root_task.task_id)
@@ -220,7 +221,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         root_task = LinearTask(100)
 
-        self.scheduler = luigi.scheduler.CentralPlannerScheduler(max_graph_nodes=10)
+        self.scheduler = luigi.scheduler.Scheduler(max_graph_nodes=10)
         self._build([root_task])
 
         graph = self.scheduler.dep_graph(root_task.task_id)
@@ -292,7 +293,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         fail = dep_graph[BadReqTask(succeed=False).task_id]
         self.assertEqual(fail[u'name'], 'BadReqTask')
-        self.assertEqual(fail[u'params'], {'task_id': BadReqTask(succeed=False).task_id})
+        self.assertEqual(fail[u'params'], {'succeed': 'False'})
         self.assertEqual(fail[u'status'], 'UNKNOWN')
 
     def test_dep_graph_diamond(self):
@@ -530,6 +531,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(0, worker['num_pending'])
         self.assertEqual(0, worker['num_uniques'])
         self.assertEqual(0, worker['num_running'])
+        self.assertEqual('active', worker['state'])
         self.assertEqual(1, worker['workers'])
 
     def test_worker_list_pending_uniques(self):
@@ -581,6 +583,17 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(1, worker['num_pending'])
         self.assertEqual(1, worker['num_uniques'])
 
+    def test_worker_list_disabled_worker(self):
+        class X(luigi.Task):
+            pass
 
-if __name__ == '__main__':
-    unittest.main()
+        with luigi.worker.Worker(worker_id='w', scheduler=self.scheduler) as w:
+            w.add(X())  #
+            workers = self._remote().worker_list()
+            self.assertEqual(1, len(workers))
+            self.assertEqual('active', workers[0]['state'])
+            self.scheduler.disable_worker('w')
+            workers = self._remote().worker_list()
+            self.assertEqual(1, len(workers))
+            self.assertEqual(1, len(workers))
+            self.assertEqual('disabled', workers[0]['state'])

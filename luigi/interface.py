@@ -40,17 +40,20 @@ from luigi import execution_summary
 from luigi.cmdline_parser import CmdlineParser
 
 
-def setup_interface_logging(conf_file=None):
+def setup_interface_logging(conf_file='', level_name='DEBUG'):
     # use a variable in the function object to determine if it has run before
     if getattr(setup_interface_logging, "has_run", False):
         return
 
-    if conf_file is None:
+    if conf_file == '':
+        # no log config given, setup default logging
+        level = getattr(logging, level_name, logging.DEBUG)
+
         logger = logging.getLogger('luigi-interface')
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(level)
 
         stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setLevel(level)
 
         formatter = logging.Formatter('%(levelname)s: %(message)s')
         stream_handler.setFormatter(formatter)
@@ -86,7 +89,7 @@ class core(task.Config):
         description='Port of remote scheduler api process',
         config_path=dict(section='core', name='default-scheduler-port'))
     scheduler_url = parameter.Parameter(
-        default=None,
+        default='',
         description='Full path to remote scheduler',
         config_path=dict(section='core', name='default-scheduler-url'),
     )
@@ -106,15 +109,23 @@ class core(task.Config):
         default=1,
         description='Maximum number of parallel tasks to run')
     logging_conf_file = parameter.Parameter(
-        default=None,
+        default='',
         description='Configuration file for logging')
+    log_level = parameter.ChoiceParameter(
+        default='DEBUG',
+        choices=['NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        description="Default log level to use when logging_conf_file is not set")
     module = parameter.Parameter(
-        default=None,
+        default='',
         description='Used for dynamic loading of modules',
         always_in_help=True)
     parallel_scheduling = parameter.BoolParameter(
         default=False,
         description='Use multiprocessing to do scheduling in parallel.')
+    parallel_scheduling_processes = parameter.IntParameter(
+        default=0,
+        description='The number of processes to use for scheduling in parallel.'
+                    ' By default the number of available CPUs will be used')
     assistant = parameter.BoolParameter(
         default=False,
         description='Run any task from the scheduler.')
@@ -131,7 +142,7 @@ class core(task.Config):
 class _WorkerSchedulerFactory(object):
 
     def create_local_scheduler(self):
-        return scheduler.CentralPlannerScheduler(prune_on_get_work=True, record_task_history=False)
+        return scheduler.Scheduler(prune_on_get_work=True, record_task_history=False)
 
     def create_remote_scheduler(self, url):
         return rpc.RemoteScheduler(url)
@@ -158,14 +169,14 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     # search for logging configuration path first on the command line, then
     # in the application config file
     logging_conf = env_params.logging_conf_file
-    if logging_conf is not None and not os.path.exists(logging_conf):
+    if logging_conf != '' and not os.path.exists(logging_conf):
         raise Exception(
             "Error: Unable to locate specified logging configuration file!"
         )
 
     if not configuration.get_config().getboolean(
             'core', 'no_configure_logging', False):
-        setup_interface_logging(logging_conf)
+        setup_interface_logging(logging_conf, env_params.log_level)
 
     kill_signal = signal.SIGUSR1 if env_params.take_lock else None
     if (not env_params.no_lock and
@@ -175,7 +186,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     if env_params.local_scheduler:
         sch = worker_scheduler_factory.create_local_scheduler()
     else:
-        if env_params.scheduler_url is not None:
+        if env_params.scheduler_url != '':
             url = env_params.scheduler_url
         else:
             url = 'http://{host}:{port:d}/'.format(
@@ -191,10 +202,9 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     logger = logging.getLogger('luigi-interface')
     with worker:
         for t in tasks:
-            success &= worker.add(t, env_params.parallel_scheduling)
+            success &= worker.add(t, env_params.parallel_scheduling, env_params.parallel_scheduling_processes)
         logger.info('Done scheduling tasks')
-        if env_params.workers != 0:
-            success &= worker.run()
+        success &= worker.run()
     logger.info(execution_summary.summary(worker))
     return dict(success=success, worker=worker)
 

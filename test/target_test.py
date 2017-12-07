@@ -17,6 +17,9 @@
 from __future__ import print_function
 
 from helpers import unittest, skipOnTravis
+from mock import Mock
+import re
+import random
 
 import luigi.target
 import luigi.format
@@ -249,20 +252,105 @@ class FileSystemTargetTestMixin(object):
         # We're cheating and retrieving the fs from target.
         # TODO: maybe move to "filesystem_test.py" or something
         t = self.create_target()
+        other_path = t.path + '-' + str(random.randint(0, 999999999))
         t._touchz()
         fs = t.fs
         self.assertTrue(t.exists())
-        fs.move(t.path, t.path+"-yay")
+        fs.move(t.path, other_path)
         self.assertFalse(t.exists())
 
     def test_rename_dont_move_on_fs(self):
         # We're cheating and retrieving the fs from target.
         # TODO: maybe move to "filesystem_test.py" or something
         t = self.create_target()
+        other_path = t.path + '-' + str(random.randint(0, 999999999))
         t._touchz()
         fs = t.fs
         self.assertTrue(t.exists())
-        fs.rename_dont_move(t.path, t.path+"-yay")
+        fs.rename_dont_move(t.path, other_path)
         self.assertFalse(t.exists())
         self.assertRaises(luigi.target.FileAlreadyExists,
-                          lambda: fs.rename_dont_move(t.path, t.path+"-yay"))
+                          lambda: fs.rename_dont_move(t.path, other_path))
+
+
+class TemporaryPathTest(unittest.TestCase):
+    def setUp(self):
+        super(TemporaryPathTest, self).setUp()
+        self.fs = Mock()
+
+        class MyFileSystemTarget(luigi.target.FileSystemTarget):
+            open = None  # Must be implemented due to abc stuff
+            fs = self.fs
+
+        self.target_cls = MyFileSystemTarget
+
+    def test_temporary_path_files(self):
+        target_outer = self.target_cls('/tmp/notreal.xls')
+        target_inner = self.target_cls('/tmp/blah.txt')
+
+        class MyException(Exception):
+            pass
+
+        orig_ex = MyException()
+        try:
+            with target_outer.temporary_path() as tmp_path_outer:
+                assert 'notreal' in tmp_path_outer
+                with target_inner.temporary_path() as tmp_path_inner:
+                    assert 'blah' in tmp_path_inner
+                    with target_inner.temporary_path() as tmp_path_inner_2:
+                        assert tmp_path_inner != tmp_path_inner_2
+                    self.fs.rename_dont_move.assert_called_once_with(tmp_path_inner_2, target_inner.path)
+                self.fs.rename_dont_move.assert_called_with(tmp_path_inner, target_inner.path)
+                self.fs.rename_dont_move.call_count == 2
+                raise orig_ex
+        except MyException as ex:
+            self.fs.rename_dont_move.call_count == 2
+            assert ex is orig_ex
+        else:
+            assert False
+
+    def test_temporary_path_directory(self):
+        target_slash = self.target_cls('/tmp/dir/')
+        target_noslash = self.target_cls('/tmp/dir')
+
+        with target_slash.temporary_path() as tmp_path:
+            assert re.match(r'/tmp/dir-luigi-tmp-\d{10}/', tmp_path)
+        self.fs.rename_dont_move.assert_called_once_with(tmp_path, target_slash.path)
+
+        with target_noslash.temporary_path() as tmp_path:
+            assert re.match(r'/tmp/dir-luigi-tmp-\d{10}', tmp_path)
+        self.fs.rename_dont_move.assert_called_with(tmp_path, target_noslash.path)
+
+    def test_windowsish_dir(self):
+        target = self.target_cls(r'''C:\my\folder''' + "\\")
+        pattern = r'''C:\\my\\folder-luigi-tmp-\d{10}''' + r"\\"
+
+        with target.temporary_path() as tmp_path:
+            assert re.match(pattern, tmp_path)
+        self.fs.rename_dont_move.assert_called_once_with(tmp_path, target.path)
+
+    def test_hadoopish_dir(self):
+        target = self.target_cls(r'''hdfs:///user/arash/myfile.uids''')
+
+        with target.temporary_path() as tmp_path:
+            assert re.match(r'''hdfs:///user/arash/myfile.uids-luigi-tmp-\d{10}''', tmp_path)
+        self.fs.rename_dont_move.assert_called_once_with(tmp_path, target.path)
+
+    def test_creates_dir_for_file(self):
+        target = self.target_cls('/my/file/is/awesome.txt')
+
+        with target.temporary_path():
+            self.fs.mkdir.assert_called_once_with('/my/file/is', parents=True, raise_if_exists=False)
+
+    def test_creates_dir_for_dir(self):
+        target = self.target_cls('/my/dir/is/awesome/')
+
+        with target.temporary_path():
+            self.fs.mkdir.assert_called_once_with('/my/dir/is', parents=True, raise_if_exists=False)
+
+    def test_file_in_current_dir(self):
+        target = self.target_cls('foo.txt')
+
+        with target.temporary_path() as tmp_path:
+            self.fs.mkdir.assert_not_called()  # there is no dir to create
+        self.fs.rename_dont_move.assert_called_once_with(tmp_path, target.path)

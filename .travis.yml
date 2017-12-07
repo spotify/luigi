@@ -3,6 +3,7 @@ language: python
 services:
   - elasticsearch
   - mysql
+  - docker
 
 env:
   global:
@@ -11,21 +12,20 @@ env:
     - DATAPROC_TEST_PROJECT_ID=luigi-travistestenvironment
     - GCS_TEST_PROJECT_ID=luigi-travistestenvironment
     - GCS_TEST_BUCKET=luigi-travistestenvironment
+    - BQ_TEST_PROJECT_ID=luigi-travistestenvironment
+    - BQ_TEST_INPUT_BUCKET=luigi-bigquery-test
     - GOOGLE_APPLICATION_CREDENTIALS=test/gcloud-credentials.json
   matrix:
     - TOXENV=flake8
     - TOXENV=docs
     - TOXENV=py27-nonhdfs
-    - TOXENV=py33-nonhdfs
     - TOXENV=py34-nonhdfs
     - TOXENV=py27-unixsocket
-    - TOXENV=py33-unixsocket
-    - TOXENV=py34-unixsocket
-    - TOXENV=py27-cdh
-    - TOXENV=py33-cdh
-    - TOXENV=py34-cdh
-    - TOXENV=pypy-scheduler
-    - TOXENV=py27-gcloud
+      # - TOXENV=py27-cdh
+      # minicluster (cdh) tests disabled as lack of love, #2140.
+      # Sometimes it runs too slow for Travis. And sometimes it crashes on downloading cdh
+    # - TOXENV=pypy-scheduler # Disabled to unbreak https://github.com/spotify/luigi/pull/2190
+    # - TOXENV=py27-gcloud # At least broken as of  https://github.com/spotify/luigi/pull/1917
     - TOXENV=py27-postgres
       # - TOXENV=visualiser
       # Disabling this test because of intermittent failures :-/
@@ -36,10 +36,10 @@ matrix:
   include:
     - python: 3.5
       env: TOXENV=py35-nonhdfs
-    - python: 3.5
-      env: TOXENV=py35-unixsocket
-    - python: 3.5
-      env: TOXENV=py35-cdh
+    - python: 3.6
+      env: TOXENV=py36-nonhdfs
+    - python: 3.6
+      env: TOXENV=py36-unixsocket
 
 sudo: false
 
@@ -58,11 +58,6 @@ before_script:
   # TODO, only do this step for the postgres environment
   - psql -c 'create database spotify;' -U postgres
 
-  # allow ssh loopback
-  - ssh-keygen -t rsa -N '' -C '' -f ~/.ssh/id_rsa
-  - cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-  - ssh -o StrictHostKeyChecking=no localhost true
-
   # Create mysql database if possible but fail silently if not available.
   - mysql -e 'create database IF NOT EXISTS luigi_test;' -uroot || true
 
@@ -73,3 +68,6 @@ script:
 branches:
   only:
     - master
+
+notifications:
+  email: false

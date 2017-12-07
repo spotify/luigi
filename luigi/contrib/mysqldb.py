@@ -36,7 +36,7 @@ class MySqlTarget(luigi.Target):
 
     marker_table = luigi.configuration.get_config().get('mysql', 'marker-table', 'table_updates')
 
-    def __init__(self, host, database, user, password, table, update_id):
+    def __init__(self, host, database, user, password, table, update_id, **cnx_kwargs):
         """
         Initializes a MySqlTarget instance.
 
@@ -50,6 +50,8 @@ class MySqlTarget(luigi.Target):
         :type password: str
         :param update_id: an identifier for this data set.
         :type update_id: str
+        :param cnx_kwargs: optional params for mysql connector constructor.
+            See https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html.
         """
         if ':' in host:
             self.host, self.port = host.split(':')
@@ -62,6 +64,7 @@ class MySqlTarget(luigi.Target):
         self.password = password
         self.table = table
         self.update_id = update_id
+        self.cnx_kwargs = cnx_kwargs
 
     def touch(self, connection=None):
         """
@@ -113,7 +116,8 @@ class MySqlTarget(luigi.Target):
                                              host=self.host,
                                              port=self.port,
                                              database=self.database,
-                                             autocommit=autocommit)
+                                             autocommit=autocommit,
+                                             **self.cnx_kwargs)
         return connection
 
     def create_marker_table(self):

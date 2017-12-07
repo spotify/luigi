@@ -19,6 +19,7 @@ from __future__ import print_function
 from helpers import unittest
 
 from luigi.mock import MockTarget, MockFileSystem
+from luigi import six
 
 
 class MockFileTest(unittest.TestCase):
@@ -64,8 +65,14 @@ class MockFileSystemTest(unittest.TestCase):
         self.fs.clear()
         self.path = "/tmp/foo"
         self.path2 = "/tmp/bar"
+        self.path3 = "/tmp/foobar"
         self._touch(self.path)
         self._touch(self.path2)
+
+    def test_copy(self):
+        self.fs.copy(self.path, self.path3)
+        self.assertTrue(self.fs.exists(self.path))
+        self.assertTrue(self.fs.exists(self.path3))
 
     def test_exists(self):
         self.assertTrue(self.fs.exists(self.path))
@@ -79,6 +86,11 @@ class MockFileSystemTest(unittest.TestCase):
         self.assertFalse(self.fs.exists(self.path))
         self.assertFalse(self.fs.exists(self.path2))
 
+    def test_rename(self):
+        self.fs.rename(self.path, self.path3)
+        self.assertFalse(self.fs.exists(self.path))
+        self.assertTrue(self.fs.exists(self.path3))
+
     def test_listdir(self):
         self.assertEqual(sorted([self.path, self.path2]), sorted(self.fs.listdir("/tmp")))
 
@@ -87,4 +99,8 @@ class TestImportMockFile(unittest.TestCase):
 
     def test_mockfile(self):
         from luigi.mock import MockFile
-        self.assertTrue(isinstance(MockFile('foo'), MockTarget))
+        if six.PY3:
+            with self.assertWarnsRegex(DeprecationWarning, r'MockFile has been renamed MockTarget'):
+                self.assertTrue(isinstance(MockFile('foo'), MockTarget))
+        else:
+            self.assertTrue(isinstance(MockFile('foo'), MockTarget))

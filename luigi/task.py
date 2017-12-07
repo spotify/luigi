@@ -24,12 +24,15 @@ try:
     from itertools import imap as map
 except ImportError:
     pass
+from contextlib import contextmanager
 import logging
 import traceback
 import warnings
 import json
 import hashlib
 import re
+import copy
+import functools
 
 from luigi import six
 
@@ -44,27 +47,72 @@ TASK_ID_INCLUDE_PARAMS = 3
 TASK_ID_TRUNCATE_PARAMS = 16
 TASK_ID_TRUNCATE_HASH = 10
 TASK_ID_INVALID_CHAR_REGEX = re.compile(r'[^A-Za-z0-9_]')
+_SAME_AS_PYTHON_MODULE = '_same_as_python_module'
 
 
-def namespace(namespace=None):
+def namespace(namespace=None, scope=''):
     """
     Call to set namespace of tasks declared after the call.
 
-    If called without arguments or with ``None`` as the namespace, the namespace
-    is reset, which is recommended to do at the end of any file where the
-    namespace is set to avoid unintentionally setting namespace on tasks outside
-    of the scope of the current file.
+    It is often desired to call this function with the keyword argument
+    ``scope=__name__``.
 
-    The namespace of a Task can also be changed by specifying the property
-    ``task_namespace``. This solution has the advantage that the namespace
-    doesn't have to be restored.
+    The ``scope`` keyword makes it so that this call is only effective for task
+    classes with a matching [*]_ ``__module__``. The default value for
+    ``scope`` is the empty string, which means all classes. Multiple calls with
+    the same scope simply replace each other.
+
+    The namespace of a :py:class:`Task` can also be changed by specifying the property
+    ``task_namespace``.
 
     .. code-block:: python
 
         class Task2(luigi.Task):
             task_namespace = 'namespace2'
+
+    This explicit setting takes priority over whatever is set in the
+    ``namespace()`` method, and it's also inherited through normal python
+    inheritence.
+
+    There's no equivalent way to set the ``task_family``.
+
+    *New since Luigi 2.6.0:* ``scope`` keyword argument.
+
+    .. [*] When there are multiple levels of matching module scopes like
+           ``a.b`` vs ``a.b.c``, the more specific one (``a.b.c``) wins.
+    .. seealso:: The new and better scaling :py:func:`auto_namespace`
     """
-    Register._default_namespace = namespace
+    Register._default_namespace_dict[scope] = namespace or ''
+
+
+def auto_namespace(scope=''):
+    """
+    Same as :py:func:`namespace`, but instead of a constant namespace, it will
+    be set to the ``__module__`` of the task class. This is desirable for these
+    reasons:
+
+     * Two tasks with the same name will not have conflicting task families
+     * It's more pythonic, as modules are Python's recommended way to
+       do namespacing.
+     * It's traceable. When you see the full name of a task, you can immediately
+       identify where it is defined.
+
+    We recommend calling this function from your package's outermost
+    ``__init__.py`` file. The file contents could look like this:
+
+    .. code-block:: python
+
+        import luigi
+
+        luigi.auto_namespace(scope=__name__)
+
+    To reset an ``auto_namespace()`` call, you can use
+    ``namespace(scope='my_scope'``).  But this will not be
+    needed (and is also discouraged) if you use the ``scope`` kwarg.
+
+    *New since Luigi 2.6.0.*
+    """
+    namespace(namespace=_SAME_AS_PYTHON_MODULE, scope=scope)
 
 
 def task_id_str(task_family, params):
@@ -92,7 +140,7 @@ class BulkCompleteNotImplementedError(NotImplementedError):
 
     pylint thinks anything raising NotImplementedError needs to be implemented
     in any subclass. bulk_complete isn't like that. This tricks pylint into
-    thinking that the default implementation is a valid implementation and no
+    thinking that the default implementation is a valid implementation and not
     an abstract method."""
     pass
 
@@ -122,10 +170,6 @@ class Task(object):
     non-declared properties, which are created by the :py:class:`Register`
     metaclass:
 
-    ``Task.task_namespace``
-      optional string which is prepended to the task name for the sake of
-      scheduling. If it isn't overridden in a Task, whatever was last declared
-      using `luigi.namespace` will be used.
     """
 
     _event_callbacks = {}
@@ -146,14 +190,61 @@ class Task(object):
     #: Only works when using multiple workers.
     worker_timeout = None
 
+    #: Maximum number of tasks to run together as a batch. Infinite by default
+    max_batch_size = float('inf')
+
+    @property
+    def batchable(self):
+        """
+        True if this instance can be run as part of a batch. By default, True
+        if it has any batched parameters
+        """
+        return bool(self.batch_param_names())
+
+    @property
+    def retry_count(self):
+        """
+        Override this positive integer to have different ``retry_count`` at task level
+        Check :ref:`scheduler-config`
+        """
+        return None
+
+    @property
+    def disable_hard_timeout(self):
+        """
+        Override this positive integer to have different ``disable_hard_timeout`` at task level.
+        Check :ref:`scheduler-config`
+        """
+        return None
+
+    @property
+    def disable_window_seconds(self):
+        """
+        Override this positive integer to have different ``disable_window_seconds`` at task level.
+        Check :ref:`scheduler-config`
+        """
+        return None
+
     @property
     def owner_email(self):
         '''
         Override this to send out additional error emails to task owner, in addition to the one
-        defined in `core`.`error-email`. This should return a string or a list of strings. e.g.
+        defined in the global configuration. This should return a string or a list of strings. e.g.
         'test@exmaple.com' or ['test1@example.com', 'test2@example.com']
         '''
         return None
+
+    def _owner_list(self):
+        """
+        Turns the owner_email property into a list. This should not be overridden.
+        """
+        owner_email = self.owner_email
+        if owner_email is None:
+            return []
+        elif isinstance(owner_email, six.string_types):
+            return owner_email.split(',')
+        else:
+            return owner_email
 
     @property
     def use_cmdline_section(self):
@@ -193,12 +284,63 @@ class Task(object):
         # TODO(erikbern): we should think about a language-agnostic mechanism
         return self.__class__.__module__
 
+    _visible_in_registry = True  # TODO: Consider using in luigi.util as well
+
+    __not_user_specified = '__not_user_specified'
+
+    # This is here just to help pylint, the Register metaclass will always set
+    # this value anyway.
+    _namespace_at_class_time = None
+
+    task_namespace = __not_user_specified
+    """
+    This value can be overriden to set the namespace that will be used.
+    (See :ref:`Task.namespaces_famlies_and_ids`)
+    If it's not specified and you try to read this value anyway, it will return
+    garbage. Please use :py:meth:`get_task_namespace` to read the namespace.
+
+    Note that setting this value with ``@property`` will not work, because this
+    is a class level value.
+    """
+
+    @classmethod
+    def get_task_namespace(cls):
+        """
+        The task family for the given class.
+
+        Note: You normally don't want to override this.
+        """
+        if cls.task_namespace != cls.__not_user_specified:
+            return cls.task_namespace
+        elif cls._namespace_at_class_time == _SAME_AS_PYTHON_MODULE:
+            return cls.__module__
+        return cls._namespace_at_class_time
+
     @property
     def task_family(self):
         """
-        Convenience method since a property on the metaclass isn't directly accessible through the class instances.
+        DEPRECATED since after 2.4.0. See :py:meth:`get_task_family` instead.
+        Hopefully there will be less meta magic in Luigi.
+
+        Convenience method since a property on the metaclass isn't directly
+        accessible through the class instances.
         """
         return self.__class__.task_family
+
+    @classmethod
+    def get_task_family(cls):
+        """
+        The task family for the given class.
+
+        If ``task_namespace`` is not set, then it's simply the name of the
+        class.  Otherwise, ``<task_namespace>.`` is prefixed to the class name.
+
+        Note: You normally don't want to override this.
+        """
+        if not cls.get_task_namespace():
+            return cls.__name__
+        else:
+            return "{}.{}".format(cls.get_task_namespace(), cls.__name__)
 
     @classmethod
     def get_params(cls):
@@ -219,6 +361,10 @@ class Task(object):
         return params
 
     @classmethod
+    def batch_param_names(cls):
+        return [name for name, p in cls.get_params() if p._is_batchable()]
+
+    @classmethod
     def get_param_names(cls, include_significant=False):
         return [name for name, p in cls.get_params() if include_significant or p.significant]
 
@@ -236,11 +382,11 @@ class Task(object):
 
         params_dict = dict(params)
 
-        task_name = cls.task_family
+        task_family = cls.get_task_family()
 
         # In case any exceptions are thrown, create a helpful description of how the Task was invoked
         # TODO: should we detect non-reprable arguments? These will lead to mysterious errors
-        exc_desc = '%s[args=%s, kwargs=%s]' % (task_name, args, kwargs)
+        exc_desc = '%s[args=%s, kwargs=%s]' % (task_family, args, kwargs)
 
         # Fill in the positional arguments
         positional_params = [(n, p) for n, p in params if p.positional]
@@ -261,9 +407,9 @@ class Task(object):
         # Then use the defaults for anything not filled in
         for param_name, param_obj in params:
             if param_name not in result:
-                if not param_obj.has_task_value(task_name, param_name):
+                if not param_obj.has_task_value(task_family, param_name):
                     raise parameter.MissingParameterException("%s: requires the '%s' parameter to be set" % (exc_desc, param_name))
-                result[param_name] = param_obj.task_value(task_name, param_name)
+                result[param_name] = param_obj.task_value(task_family, param_name)
 
         def list_to_tuple(x):
             """ Make tuples out of lists and sets to allow hashing """
@@ -286,17 +432,24 @@ class Task(object):
         self.param_args = tuple(value for key, value in param_values)
         self.param_kwargs = dict(param_values)
 
-        self.task_id = task_id_str(self.task_family, self.to_str_params(only_significant=True))
+        self._warn_on_wrong_param_types()
+        self.task_id = task_id_str(self.get_task_family(), self.to_str_params(only_significant=True))
         self.__hash = hash(self.task_id)
 
         self.set_tracking_url = None
         self.set_status_message = None
+        self.set_progress_percentage = None
 
     def initialized(self):
         """
         Returns ``True`` if the Task is initialized and ``False`` otherwise.
         """
         return hasattr(self, 'task_id')
+
+    def _warn_on_wrong_param_types(self):
+        params = dict(self.get_params())
+        for param_name, param_value in six.iteritems(self.param_kwargs):
+            params[param_name]._warn_on_wrong_param_type(param_name, param_value)
 
     @classmethod
     def from_str_params(cls, params_str):
@@ -308,7 +461,11 @@ class Task(object):
         kwargs = {}
         for param_name, param in cls.get_params():
             if param_name in params_str:
-                kwargs[param_name] = param.parse(params_str[param_name])
+                param_str = params_str[param_name]
+                if isinstance(param_str, list):
+                    kwargs[param_name] = param._parse_list(param_str)
+                else:
+                    kwargs[param_name] = param.parse(param_str)
 
         return cls(**kwargs)
 
@@ -337,16 +494,15 @@ class Task(object):
         :param kwargs:
         :return:
         """
-        k = self.param_kwargs.copy()
-        k.update(six.iteritems(kwargs))
-
         if cls is None:
             cls = self.__class__
 
         new_k = {}
         for param_name, param_class in cls.get_params():
-            if param_name in k:
-                new_k[param_name] = k[param_name]
+            if param_name in kwargs:
+                new_k[param_name] = kwargs[param_name]
+            elif hasattr(self, param_name):
+                new_k[param_name] = getattr(self, param_name)
 
         return cls(**new_k)
 
@@ -367,7 +523,7 @@ class Task(object):
             if param_objs[param_name].significant:
                 repr_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
 
-        task_str = '{}({})'.format(self.task_family, ', '.join(repr_parts))
+        task_str = '{}({})'.format(self.get_task_family(), ', '.join(repr_parts))
 
         return task_str
 
@@ -507,6 +663,37 @@ class Task(object):
         Default behavior is to send an None value"""
         pass
 
+    @contextmanager
+    def no_unpicklable_properties(self):
+        """
+        Remove unpicklable properties before dump task and resume them after.
+
+        This method could be called in subtask's dump method, to ensure unpicklable
+        properties won't break dump.
+
+        This method is a context-manager which can be called as below:
+
+        .. code-block: python
+
+            class DummyTask(luigi):
+
+                def _dump(self):
+                    with self.no_unpicklable_properties():
+                        pickle.dumps(self)
+
+        """
+        unpicklable_properties = ('set_tracking_url', 'set_status_message', 'set_progress_percentage')
+        reserved_properties = {}
+        for property_name in unpicklable_properties:
+            if hasattr(self, property_name):
+                reserved_properties[property_name] = getattr(self, property_name)
+                setattr(self, property_name, 'placeholder_during_pickling')
+
+        yield
+
+        for property_name, value in six.iteritems(reserved_properties):
+            setattr(self, property_name, value)
+
 
 class MixinNaiveBulkComplete(object):
     """
@@ -532,16 +719,6 @@ class MixinNaiveBulkComplete(object):
         return generated_tuples
 
 
-def externalize(task):
-    """
-    Returns an externalized version of the Task.
-
-    See :py:class:`ExternalTask`.
-    """
-    task.run = None
-    return task
-
-
 class ExternalTask(Task):
     """
     Subclass for references to external dependencies.
@@ -551,6 +728,69 @@ class ExternalTask(Task):
     Luigi.
     """
     run = None
+
+
+def externalize(taskclass_or_taskobject):
+    """
+    Returns an externalized version of a Task. You may both pass an
+    instantiated task object or a task class. Some examples:
+
+    .. code-block:: python
+
+        class RequiringTask(luigi.Task):
+            def requires(self):
+                task_object = self.clone(MyTask)
+                return externalize(task_object)
+
+            ...
+
+    Here's mostly equivalent code, but ``externalize`` is applied to a task
+    class instead.
+
+    .. code-block:: python
+
+        @luigi.util.requires(externalize(MyTask))
+        class RequiringTask(luigi.Task):
+            pass
+            ...
+
+    Of course, it may also be used directly on classes and objects (for example
+    for reexporting or other usage).
+
+    .. code-block:: python
+
+        MyTask = externalize(MyTask)
+        my_task_2 = externalize(MyTask2(param='foo'))
+
+    If you however want a task class to be external from the beginning, you're
+    better off inheriting :py:class:`ExternalTask` rather than :py:class:`Task`.
+
+    This function tries to be side-effect free by creating a copy of the class
+    or the object passed in and then modify that object. In particular this
+    code shouldn't do anything.
+
+    .. code-block:: python
+
+        externalize(MyTask)  # BAD: This does nothing (as after luigi 2.4.0)
+    """
+    # Seems like with python < 3.3 copy.copy can't copy classes
+    # and objects with specified metaclass http://bugs.python.org/issue11480
+    compatible_copy = copy.copy if six.PY3 else copy.deepcopy
+    copied_value = compatible_copy(taskclass_or_taskobject)
+    if copied_value is taskclass_or_taskobject:
+        # Assume it's a class
+        clazz = taskclass_or_taskobject
+
+        @_task_wraps(clazz)
+        class _CopyOfClass(clazz):
+            # How to copy a class: http://stackoverflow.com/a/9541120/621449
+            _visible_in_registry = False
+        _CopyOfClass.run = None
+        return _CopyOfClass
+    else:
+        # We assume it's an object
+        copied_value.run = None
+        return copied_value
 
 
 class WrapperTask(Task):
@@ -578,18 +818,15 @@ def getpaths(struct):
     if isinstance(struct, Task):
         return struct.output()
     elif isinstance(struct, dict):
-        r = {}
-        for k, v in six.iteritems(struct):
-            r[k] = getpaths(v)
-        return r
+        return struct.__class__((k, getpaths(v)) for k, v in six.iteritems(struct))
+    elif isinstance(struct, (list, tuple)):
+        return struct.__class__(getpaths(r) for r in struct)
     else:
-        # Remaining case: assume r is iterable...
+        # Remaining case: assume struct is iterable...
         try:
-            s = list(struct)
+            return [getpaths(r) for r in struct]
         except TypeError:
             raise Exception('Cannot map %s to Task/dict/list' % str(struct))
-
-        return [getpaths(r) for r in s]
 
 
 def flatten(struct):
@@ -639,3 +876,13 @@ def flatten_output(task):
         for dep in flatten(task.requires()):
             r += flatten_output(dep)
     return r
+
+
+def _task_wraps(task_class):
+    # In order to make the behavior of a wrapper class nicer, we set the name of the
+    # new class to the wrapped class, and copy over the docstring and module as well.
+    # This makes it possible to pickle the wrapped class etc.
+    # Btw, this is a slight abuse of functools.wraps. It's meant to be used only for
+    # functions, but it works for classes too, if you pass updated=[]
+    assigned = functools.WRAPPER_ASSIGNMENTS + ('_namespace_at_class_time',)
+    return functools.wraps(task_class, assigned=assigned, updated=[])

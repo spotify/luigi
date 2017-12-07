@@ -20,6 +20,7 @@ from helpers import unittest, in_parse
 
 import luigi
 import luigi.interface
+from luigi import six
 
 
 class DateTask(luigi.Task):
@@ -32,6 +33,10 @@ class DateHourTask(luigi.Task):
 
 class DateMinuteTask(luigi.Task):
     dm = luigi.DateMinuteParameter()
+
+
+class DateSecondTask(luigi.Task):
+    ds = luigi.DateSecondParameter()
 
 
 class MonthTask(luigi.Task):
@@ -65,6 +70,10 @@ class DateHourParameterTest(unittest.TestCase):
         dh = luigi.DateHourParameter().parse('2013-02-01T18')
         self.assertEqual(dh, datetime.datetime(2013, 2, 1, 18, 0, 0))
 
+    def test_date_to_dh(self):
+        date = luigi.DateHourParameter().normalize(datetime.date(2000, 1, 1))
+        self.assertEqual(date, datetime.datetime(2000, 1, 1, 0))
+
     def test_serialize(self):
         dh = luigi.DateHourParameter().serialize(datetime.datetime(2013, 2, 1, 18, 0, 0))
         self.assertEqual(dh, '2013-02-01T18')
@@ -88,7 +97,11 @@ class DateMinuteParameterTest(unittest.TestCase):
         self.assertEqual(dm, datetime.datetime(2013, 2, 1, 18, 7, 0))
 
     def test_parse_deprecated(self):
-        dm = luigi.DateMinuteParameter().parse('2013-02-01T18H42')
+        if six.PY3:
+            with self.assertWarnsRegex(DeprecationWarning, 'Using "H" between hours and minutes is deprecated, omit it instead.'):
+                dm = luigi.DateMinuteParameter().parse('2013-02-01T18H42')
+        else:
+            dm = luigi.DateMinuteParameter().parse('2013-02-01T18H42')
         self.assertEqual(dm, datetime.datetime(2013, 2, 1, 18, 42, 0))
 
     def test_serialize(self):
@@ -106,6 +119,24 @@ class DateMinuteParameterTest(unittest.TestCase):
     def test_serialize_task(self):
         t = DateMinuteTask(datetime.datetime(2013, 2, 1, 18, 42, 0))
         self.assertEqual(str(t), 'DateMinuteTask(dm=2013-02-01T1842)')
+
+
+class DateSecondParameterTest(unittest.TestCase):
+    def test_parse(self):
+        ds = luigi.DateSecondParameter().parse('2013-02-01T184227')
+        self.assertEqual(ds, datetime.datetime(2013, 2, 1, 18, 42, 27))
+
+    def test_serialize(self):
+        ds = luigi.DateSecondParameter().serialize(datetime.datetime(2013, 2, 1, 18, 42, 27))
+        self.assertEqual(ds, '2013-02-01T184227')
+
+    def test_parse_interface(self):
+        in_parse(["DateSecondTask", "--ds", "2013-02-01T184227"],
+                 lambda task: self.assertEqual(task.ds, datetime.datetime(2013, 2, 1, 18, 42, 27)))
+
+    def test_serialize_task(self):
+        t = DateSecondTask(datetime.datetime(2013, 2, 1, 18, 42, 27))
+        self.assertEqual(str(t), 'DateSecondTask(ds=2013-02-01T184227)')
 
 
 class MonthParameterTest(unittest.TestCase):

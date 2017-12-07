@@ -19,39 +19,49 @@
 The implementations of the hdfs clients. The hadoop cli client and the
 snakebite client.
 """
-
+import logging
+import threading
 
 from luigi.contrib.hdfs import config as hdfs_config
 from luigi.contrib.hdfs import snakebite_client as hdfs_snakebite_client
 from luigi.contrib.hdfs import webhdfs_client as hdfs_webhdfs_client
 from luigi.contrib.hdfs import hadoopcli_clients as hdfs_hadoopcli_clients
 import luigi.contrib.target
-import logging
 
 logger = logging.getLogger('luigi-interface')
 
+_AUTOCONFIG_CLIENT = threading.local()
 
-def get_autoconfig_client():
+
+def get_autoconfig_client(client_cache=_AUTOCONFIG_CLIENT):
     """
     Creates the client as specified in the `luigi.cfg` configuration.
     """
-    configured_client = hdfs_config.get_configured_hdfs_client()
-    if configured_client == "webhdfs":
-        return hdfs_webhdfs_client.WebHdfsClient()
-    if configured_client == "snakebite":
-        return hdfs_snakebite_client.SnakebiteHdfsClient()
-    if configured_client == "snakebite_with_hadoopcli_fallback":
-        return luigi.contrib.target.CascadingClient([hdfs_snakebite_client.SnakebiteHdfsClient(),
-                                                     hdfs_hadoopcli_clients.create_hadoopcli_client()])
-    if configured_client == "hadoopcli":
-        return hdfs_hadoopcli_clients.create_hadoopcli_client()
-    raise Exception("Unknown hdfs client " + configured_client)
+    try:
+        return client_cache.client
+    except AttributeError:
+        configured_client = hdfs_config.get_configured_hdfs_client()
+        if configured_client == "webhdfs":
+            client_cache.client = hdfs_webhdfs_client.WebHdfsClient()
+        elif configured_client == "snakebite":
+            client_cache.client = hdfs_snakebite_client.SnakebiteHdfsClient()
+        elif configured_client == "snakebite_with_hadoopcli_fallback":
+            client_cache.client = luigi.contrib.target.CascadingClient([
+                hdfs_snakebite_client.SnakebiteHdfsClient(),
+                hdfs_hadoopcli_clients.create_hadoopcli_client(),
+            ])
+        elif configured_client == "hadoopcli":
+            client_cache.client = hdfs_hadoopcli_clients.create_hadoopcli_client()
+        else:
+            raise Exception("Unknown hdfs client " + configured_client)
+        return client_cache.client
 
 
 def _with_ac(method_name):
     def result(*args, **kwargs):
         return getattr(get_autoconfig_client(), method_name)(*args, **kwargs)
     return result
+
 
 exists = _with_ac('exists')
 rename = _with_ac('rename')

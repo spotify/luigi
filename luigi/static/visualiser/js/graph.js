@@ -2,6 +2,7 @@ Graph = (function() {
     var statusColors = {
         "FAILED":"#DD0000",
         "RUNNING":"#0044DD",
+        "BATCH_RUNNING":"#BB00BB",
         "PENDING":"#EEBB00",
         "DONE":"#00DD00",
         "DISABLED":"#808080",
@@ -23,6 +24,8 @@ Graph = (function() {
         return Object.keys(statusColors).length * legendLineHeight + ( legendLineHeight / 2 )
     })();
 
+    var legendWidth = 110;
+
     function nodeFromTask(task) {
         var deps = task.deps;
         deps.sort();
@@ -30,7 +33,7 @@ Graph = (function() {
             name: task.name,
             taskId: task.taskId,
             status: task.status,
-            trackingUrl: "#"+task.taskId,
+            trackingUrl: this.hashBase + task.taskId,
             deps: deps,
             params: task.params,
             priority: task.priority,
@@ -122,9 +125,10 @@ Graph = (function() {
     }
 
     /* Parses a list of tasks to a graph format */
-    function createGraph(tasks) {
+    function createGraph(tasks, hashBase) {
         if (tasks.length === 0) return {nodes: [], links: []};
 
+        this.hashBase = hashBase;
         var nodes = $.map(tasks, nodeFromTask);
         var nodeIndex = uniqueIndexByProperty(nodes, "taskId");
 
@@ -230,7 +234,7 @@ Graph = (function() {
         $(svgElement("rect"))
             .attr("x", -1)
             .attr("y", -1)
-            .attr("width", "100px")
+            .attr("width", legendWidth + "px")
             .attr("height", legendMaxY + "px")
             .attr("fill", "#FFF")
             .attr("stroke", "#DDD")
@@ -247,7 +251,7 @@ Graph = (function() {
                 .appendTo(legend)
 
             $(svgElement("text"))
-                .text(key.charAt(0).toUpperCase() + key.substring(1).toLowerCase())
+                .text(key.charAt(0).toUpperCase() + key.substring(1).toLowerCase().replace(/_./gi, function (x) { return " " + x[1].toUpperCase(); }))
                 .attr("x", legendLineHeight + 14)
                 .attr("y", legendLineHeight+(x*legendLineHeight))
                 .appendTo(legend);
@@ -256,9 +260,9 @@ Graph = (function() {
         });
     };
 
-    DependencyGraph.prototype.updateData = function(taskList) {
+    DependencyGraph.prototype.updateData = function(taskList, hashBase) {
         $('.popover').popover('destroy');
-        this.graph = createGraph(taskList);
+        this.graph = createGraph(taskList, hashBase);
         bounds = findBounds(this.graph.nodes);
         this.renderGraph();
         this.svg.attr("height", bounds.y+10);

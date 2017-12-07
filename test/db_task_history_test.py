@@ -93,7 +93,7 @@ class DbTaskHistoryTest(unittest.TestCase):
 
     def run_task(self, task):
         task2 = luigi.scheduler.Task(task.task_id, PENDING, [], family=task.task_family,
-                                     params=task.param_kwargs)
+                                     params=task.param_kwargs, retry_policy=luigi.scheduler._get_empty_retry_policy())
 
         self.history.task_scheduled(task2)
         self.history.task_started(task2, 'hostname')
@@ -133,7 +133,8 @@ class MySQLDbTaskHistoryTest(unittest.TestCase):
 
     def run_task(self, task):
         task2 = luigi.scheduler.Task(task.task_id, PENDING, [],
-                                     family=task.task_family, params=task.param_kwargs)
+                                     family=task.task_family, params=task.param_kwargs,
+                                     retry_policy=luigi.scheduler._get_empty_retry_policy())
 
         self.history.task_scheduled(task2)
         self.history.task_started(task2, 'hostname')

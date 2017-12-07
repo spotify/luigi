@@ -28,6 +28,7 @@ try:
 except ImportError:
     from urllib.parse import urlsplit
 
+from luigi.contrib import gcp
 import luigi.target
 from luigi import six
 from luigi.six.moves import xrange
@@ -36,7 +37,6 @@ logger = logging.getLogger('luigi-interface')
 
 try:
     import httplib2
-    import oauth2client.client
 
     from googleapiclient import errors
     from googleapiclient import discovery
@@ -110,15 +110,12 @@ class GCSClient(luigi.target.FileSystem):
     def __init__(self, oauth_credentials=None, descriptor='', http_=None,
                  chunksize=CHUNKSIZE):
         self.chunksize = chunksize
-        http_ = http_ or httplib2.Http()
-
-        if not oauth_credentials:
-            oauth_credentials = oauth2client.client.GoogleCredentials.get_application_default()
+        authenticate_kwargs = gcp.get_authenticate_kwargs(oauth_credentials, http_)
 
         if descriptor:
-            self.client = discovery.build_from_document(descriptor, credentials=oauth_credentials, http=http_)
+            self.client = discovery.build_from_document(descriptor, **authenticate_kwargs)
         else:
-            self.client = discovery.build('storage', 'v1', credentials=oauth_credentials, http=http_)
+            self.client = discovery.build('storage', 'v1', **authenticate_kwargs)
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, _, _) = urlsplit(path)
@@ -332,7 +329,29 @@ class GCSClient(luigi.target.FileSystem):
         for it in self._list_iter(bucket, obj_prefix):
             yield self._add_path_delimiter(path) + it['name'][obj_prefix_len:]
 
-    def download(self, path, chunksize=None):
+    def list_wildcard(self, wildcard_path):
+        """Yields full object URIs matching the given wildcard.
+
+        Currently only the '*' wildcard after the last path delimiter is supported.
+
+        (If we need "full" wildcard functionality we should bring in gsutil dependency with its
+        https://github.com/GoogleCloudPlatform/gsutil/blob/master/gslib/wildcard_iterator.py...)
+        """
+        path, wildcard_obj = wildcard_path.rsplit('/', 1)
+        assert '*' not in path, "The '*' wildcard character is only supported after the last '/'"
+        wildcard_parts = wildcard_obj.split('*')
+        assert len(wildcard_parts) == 2, "Only one '*' wildcard is supported"
+
+        for it in self.listdir(path):
+            if it.startswith(path + '/' + wildcard_parts[0]) and it.endswith(wildcard_parts[1]) and \
+                   len(it) >= len(path + '/' + wildcard_parts[0]) + len(wildcard_parts[1]):
+                yield it
+
+    def download(self, path, chunksize=None, chunk_callback=lambda _: False):
+        """Downloads the object contents to local file system.
+
+        Optionally stops after the first chunk for which chunk_callback returns True.
+        """
         chunksize = chunksize or self.chunksize
         bucket, obj = self._path_to_bucket_and_key(path)
 
@@ -354,6 +373,8 @@ class GCSClient(luigi.target.FileSystem):
                 error = None
                 try:
                     _, done = downloader.next_chunk()
+                    if chunk_callback(fp):
+                        done = True
                 except errors.HttpError as err:
                     error = err
                     if err.resp.status < 500:
@@ -465,7 +486,7 @@ class GCSFlagTarget(GCSTarget):
         if path[-1] != "/":
             raise ValueError("GCSFlagTarget requires the path to be to a "
                              "directory.  It must end with a slash ( / ).")
-        super(GCSFlagTarget, self).__init__(path)
+        super(GCSFlagTarget, self).__init__(path, format=format, client=client)
         self.format = format
         self.fs = client or GCSClient()
         self.flag = flag

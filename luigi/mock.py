@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 """
-This moduel provides a class :class:`MockTarget`, an implementation of :py:class:`~luigi.target.Target`.
+This module provides a class :class:`MockTarget`, an implementation of :py:class:`~luigi.target.Target`.
 :class:`MockTarget` contains all data in-memory.
 The main purpose is unit testing workflows without writing to disk.
 """
@@ -36,6 +36,15 @@ class MockFileSystem(target.FileSystem):
     MockFileSystem inspects/modifies _data to simulate file system operations.
     """
     _data = None
+
+    def copy(self, path, dest, raise_if_exists=False):
+        """
+        Copies the contents of a single file path to dest
+        """
+        if raise_if_exists and dest in self.get_all_data():
+            raise RuntimeError('Destination exists: %s' % path)
+        contents = self.get_all_data()[path]
+        self.get_all_data()[dest] = contents
 
     def get_all_data(self):
         # This starts a server in the background, so we don't want to do it in the global scope
@@ -63,6 +72,15 @@ class MockFileSystem(target.FileSystem):
         else:
             self.get_all_data().pop(path)
 
+    def move(self, path, dest, raise_if_exists=False):
+        """
+        Moves a single file from path to dest
+        """
+        if raise_if_exists and dest in self.get_all_data():
+            raise RuntimeError('Destination exists: %s' % path)
+        contents = self.get_all_data().pop(path)
+        self.get_all_data()[dest] = contents
+
     def listdir(self, path):
         """
         listdir does a prefix match of self.get_all_data(), but doesn't yet support globs.
@@ -88,7 +106,7 @@ class MockTarget(target.FileSystemTarget):
 
     def __init__(self, fn, is_tmp=None, mirror_on_stderr=False, format=None):
         self._mirror_on_stderr = mirror_on_stderr
-        self._fn = fn
+        self.path = fn
         if format is None:
             format = get_default_format()
 
@@ -99,20 +117,22 @@ class MockTarget(target.FileSystemTarget):
         self.format = format
 
     def exists(self,):
-        return self._fn in self.fs.get_all_data()
+        return self.path in self.fs.get_all_data()
 
-    def rename(self, path, raise_if_exists=False):
-        if raise_if_exists and path in self.fs.get_all_data():
-            raise RuntimeError('Destination exists: %s' % path)
-        contents = self.fs.get_all_data().pop(self._fn)
-        self.fs.get_all_data()[path] = contents
+    def move(self, path, raise_if_exists=False):
+        """
+        Call MockFileSystem's move command
+        """
+        self.fs.move(self.path, path, raise_if_exists)
 
-    @property
-    def path(self):
-        return self._fn
+    def rename(self, *args, **kwargs):
+        """
+        Call move to rename self
+        """
+        self.move(*args, **kwargs)
 
     def open(self, mode):
-        fn = self._fn
+        fn = self.path
         mock_target = self
 
         class Buffer(BytesIO):
@@ -124,15 +144,13 @@ class MockTarget(target.FileSystemTarget):
                 self.wrapper = wrapper
 
             def write(self, data):
-                if six.PY3:
-                    stderrbytes = sys.stderr.buffer
-                else:
-                    stderrbytes = sys.stderr
-
                 if mock_target._mirror_on_stderr:
                     if self._write_line:
                         sys.stderr.write(fn + ": ")
-                    stderrbytes.write(data)
+                    if six.binary_type:
+                        sys.stderr.write(data.decode('utf8'))
+                    else:
+                        sys.stderr.write(data)
                     if (data[-1]) == '\n':
                         self._write_line = True
                     else:

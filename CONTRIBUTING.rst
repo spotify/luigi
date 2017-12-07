@@ -8,7 +8,7 @@ participating, you are expected to honor this code.
 Running the tests
 -----------------
 
-We are always happy to recieve Pull Requests. When you open a PR, it will
+We are always happy to receive Pull Requests. When you open a PR, it will
 automatically build on Travis. So you're not strictly required to test the
 patch locally before submitting it.
 
@@ -49,13 +49,19 @@ For more details, check out the ``.travis.yml`` and ``tox.ini`` files.
 Writing documentation
 =====================
 
-All documentation for luigi is written in `reStructuredText/Sphinx markup
+All documentation for Luigi is written in `reStructuredText/Sphinx markup
 <http://sphinx-doc.org/domains.html#the-python-domain>`_ and are both in the
 code as docstrings and in `.rst`. Pull requests should come with documentation
 when appropriate.
 
-You can check the syntax for your documentation by running
+You verify that your documentation code compiles by running
 
 .. code:: bash
 
     tox -e docs
+
+After that, you can check how it renders locally with your browser
+
+.. code:: bash
+
+    firefox doc/_build/html/index.html

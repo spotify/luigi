@@ -345,7 +345,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
             else:
                 return file_reader
         else:
-            raise Exception("mode must be r/w")
+            raise Exception("mode must be 'r' or 'w' (got: %s)" % mode)
 
     def put(self, local_path):
         self.fs.put(local_path, self.path)

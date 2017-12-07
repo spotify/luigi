@@ -133,7 +133,7 @@ class H_null(luigi.Task):
 
 
 @inherits(G)
-class I(luigi.Task):
+class I_task(luigi.Task):
 
     def requires(self):
         return F(**common_params(self, F))
@@ -183,7 +183,7 @@ class RequiresTest(unittest.TestCase):
         self.g_changed = G(param1="changing the default")
         self.h = H()
         self.h_null = H_null()
-        self.i = I()
+        self.i = I_task()
         self.k_shouldfail = K_shouldfail()
         self.k_shouldsucceed = K_shouldsucceed()
         self.k_wrongparamsorder = K_wrongparamsorder()
@@ -242,14 +242,6 @@ class Y2(luigi.Task):
     pass
 
 
-@inherits(X)
-class Z(luigi.Task):
-    n = None
-
-    def requires(self):
-        return self.clone_parent()
-
-
 @requires(X)
 class Y3(luigi.Task):
     n = luigi.IntParameter(default=43)
@@ -262,9 +254,6 @@ class CloneParentTest(unittest.TestCase):
         x = X()
         self.assertEqual(y.requires(), x)
         self.assertEqual(y.n, 42)
-
-        z = Z()
-        self.assertEqual(z.requires(), x)
 
     def test_requires(self):
         y2 = Y2()
@@ -365,7 +354,3 @@ class SubtaskTest(unittest.TestCase):
         # the same name
         from luigi.task import Register
         self.assertEqual(Register.get_task_cls('SubtaskDelegator'), SubtaskDelegator)
-
-
-if __name__ == '__main__':
-    unittest.main()

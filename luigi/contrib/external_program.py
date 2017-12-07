@@ -26,7 +26,7 @@ from one command to the next, you're probably better off using something like
 `plumbum`_, and wrapping plumbum commands in normal luigi
 :py:class:`~luigi.task.Task` s.
 
-.. _plumbum: https://plumbum.readthedocs.org/
+.. _plumbum: https://plumbum.readthedocs.io/
 """
 
 import logging
@@ -160,6 +160,8 @@ class ExternalProgramRunError(RuntimeError):
         if self.env:
             env_string = ' '.join(['='.join([k, '\'{}\''.format(v)]) for k, v in self.env.items()])
         info += '\nENVIRONMENT: {}'.format(env_string or '[empty]')
+        # reset terminal color in case the ENVIRONMENT changes colors
+        info += '\033[m'
         return info
 
 

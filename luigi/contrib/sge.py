@@ -38,6 +38,7 @@ The following is an example usage (and can also be found in ``sge_tests.py``)
 
     import logging
     import luigi
+    import os
     from luigi.contrib.sge import SGEJobTask
 
     logger = logging.getLogger('luigi-interface')
@@ -94,14 +95,13 @@ import time
 import sys
 import logging
 import random
-import shutil
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 
 import luigi
-import luigi.hadoop
+from luigi.contrib.hadoop import create_packages_archive
 from luigi.contrib import sge_runner
 
 logger = logging.getLogger('luigi-interface')
@@ -169,12 +169,52 @@ class SGEJobTask(luigi.Task):
           Task classes and dependencies are pickled to a temporary folder on
           this drive. The default is ``/home``, the NFS share location setup
           by StarCluster
+    - job_name_format: String that can be passed in to customize the job name
+        string passed to qsub; e.g. "Task123_{task_family}_{n_cpu}...".
+    - job_name: Exact job name to pass to qsub.
+    - run_locally: Run locally instead of on the cluster.
+    - poll_time: the length of time to wait in order to poll qstat
+    - dont_remove_tmp_dir: Instead of deleting the temporary directory, keep it.
+    - no_tarball: Don't create a tarball of the luigi project directory.  Can be
+        useful to reduce I/O requirements when the luigi directory is accessible
+        from cluster nodes already.
 
     """
 
     n_cpu = luigi.IntParameter(default=2, significant=False)
     shared_tmp_dir = luigi.Parameter(default='/home', significant=False)
     parallel_env = luigi.Parameter(default='orte', significant=False)
+    job_name_format = luigi.Parameter(
+        significant=False, default=None, description="A string that can be "
+        "formatted with class variables to name the job with qsub.")
+    job_name = luigi.Parameter(
+        significant=False, default=None,
+        description="Explicit job name given via qsub.")
+    run_locally = luigi.BoolParameter(
+        significant=False,
+        description="run locally instead of on the cluster")
+    poll_time = luigi.IntParameter(
+        significant=False, default=POLL_TIME,
+        description="specify the wait time to poll qstat for the job status")
+    dont_remove_tmp_dir = luigi.BoolParameter(
+        significant=False,
+        description="don't delete the temporary directory used (for debugging)")
+    no_tarball = luigi.BoolParameter(
+        significant=False,
+        description="don't tarball (and extract) the luigi project files")
+
+    def __init__(self, *args, **kwargs):
+        super(SGEJobTask, self).__init__(*args, **kwargs)
+        if self.job_name:
+            # use explicitly provided job name
+            pass
+        elif self.job_name_format:
+            # define the job name with the provided format
+            self.job_name = self.job_name_format.format(
+                task_family=self.task_family, **self.__dict__)
+        else:
+            # default to the task family
+            self.job_name = self.task_family
 
     def _fetch_task_failures(self):
         if not os.path.exists(self.errfile):
@@ -204,22 +244,27 @@ class SGEJobTask(luigi.Task):
         logging.debug("Dumping pickled class")
         self._dump(self.tmp_dir)
 
-        # Make sure that all the class's dependencies are tarred and available
-        logging.debug("Tarballing dependencies")
-        # Grab luigi and the module containing the code to be run
-        packages = [luigi] + [__import__(self.__module__, None, None, 'dummy')]
-        luigi.hadoop.create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
+        if not self.no_tarball:
+            # Make sure that all the class's dependencies are tarred and available
+            # This is not necessary if luigi is importable from the cluster node
+            logging.debug("Tarballing dependencies")
+            # Grab luigi and the module containing the code to be run
+            packages = [luigi] + [__import__(self.__module__, None, None, 'dummy')]
+            create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
 
     def run(self):
-        self._init_local()
-        self._run_job()
-        # The procedure:
-        # - Pickle the class
-        # - Tarball the dependencies
-        # - Construct a qsub argument that runs a generic runner function with the path to the pickled class
-        # - Runner function loads the class from pickle
-        # - Runner class untars the dependencies
-        # - Runner function hits the button on the class's work() method
+        if self.run_locally:
+            self.work()
+        else:
+            self._init_local()
+            self._run_job()
+            # The procedure:
+            # - Pickle the class
+            # - Tarball the dependencies
+            # - Construct a qsub argument that runs a generic runner function with the path to the pickled class
+            # - Runner function loads the class from pickle
+            # - Runner class untars the dependencies
+            # - Runner function hits the button on the class's work() method
 
     def work(self):
         """Override this method, rather than ``run()``,  for your actual work."""
@@ -227,15 +272,15 @@ class SGEJobTask(luigi.Task):
 
     def _dump(self, out_dir=''):
         """Dump instance to file."""
-        self.job_file = os.path.join(out_dir, 'job-instance.pickle')
-        if self.__module__ == '__main__':
-            d = pickle.dumps(self)
-            module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-            d = d.replace('(c__main__', "(c" + module_name)
-            open(self.job_file, "w").write(d)
-
-        else:
-            pickle.dump(self, open(self.job_file, "w"))
+        with self.no_unpicklable_properties():
+            self.job_file = os.path.join(out_dir, 'job-instance.pickle')
+            if self.__module__ == '__main__':
+                d = pickle.dumps(self)
+                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
+                d = d.replace('(c__main__', "(c" + module_name)
+                open(self.job_file, "w").write(d)
+            else:
+                pickle.dump(self, open(self.job_file, "w"))
 
     def _run_job(self):
 
@@ -243,7 +288,10 @@ class SGEJobTask(luigi.Task):
         runner_path = sge_runner.__file__
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
-        job_str = 'python {0} "{1}"'.format(runner_path, self.tmp_dir)  # enclose tmp_dir in quotes to protect from special escape chars
+        job_str = 'python {0} "{1}" "{2}"'.format(
+            runner_path, self.tmp_dir, os.getcwd())  # enclose tmp_dir in quotes to protect from special escape chars
+        if self.no_tarball:
+            job_str += ' "--no-tarball"'
 
         # Build qsub submit command
         self.outfile = os.path.join(self.tmp_dir, 'job.out')
@@ -260,14 +308,14 @@ class SGEJobTask(luigi.Task):
         self._track_job()
 
         # Now delete the temporaries, if they're there.
-        if self.tmp_dir and os.path.exists(self.tmp_dir):
+        if (self.tmp_dir and os.path.exists(self.tmp_dir) and not self.dont_remove_tmp_dir):
             logger.info('Removing temporary directory %s' % self.tmp_dir)
-            shutil.rmtree(self.tmp_dir)
+            subprocess.call(["rm", "-rf", self.tmp_dir])
 
     def _track_job(self):
         while True:
             # Sleep for a little bit
-            time.sleep(POLL_TIME)
+            time.sleep(self.poll_time)
 
             # See what the job's up to
             # ASSUMPTION

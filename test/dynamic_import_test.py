@@ -15,21 +15,12 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase
+from helpers import LuigiTestCase, temporary_unloaded_module
 
 import luigi
 import luigi.interface
-import tempfile
-import re
 
-_testing_glob_var = None
-
-
-class CmdlineTest(LuigiTestCase):
-
-    def test_dynamic_loading(self):
-        with tempfile.NamedTemporaryFile(dir='test/', prefix="_foo_module", suffix='.py') as temp_module_file:
-            temp_module_file.file.write(b'''
+CONTENTS = b'''
 import luigi
 
 class FooTask(luigi.Task):
@@ -37,10 +28,12 @@ class FooTask(luigi.Task):
 
     def run(self):
         luigi._testing_glob_var = self.x
-''')
-            temp_module_file.file.flush()
-            temp_module_path = temp_module_file.name
-            temp_module_name = re.search(r'/(_foo_module.*).py', temp_module_path).group(1)
-            luigi.interface.run(['--module', temp_module_name, 'FooTask', '--x', '123', '--local-scheduler', '--no-lock'])
+'''
 
+
+class CmdlineTest(LuigiTestCase):
+
+    def test_dynamic_loading(self):
+        with temporary_unloaded_module(CONTENTS) as temp_module_name:
+            luigi.interface.run(['--module', temp_module_name, 'FooTask', '--x', '123', '--local-scheduler', '--no-lock'])
             self.assertEqual(luigi._testing_glob_var, 123)

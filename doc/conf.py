@@ -53,7 +53,7 @@ except ImportError:
     pass
 
 
-def _warn_node(self, msg, node):
+def _warn_node(self, msg, node, *args, **kwargs):
     """
     Mute warnings that are like ``WARNING: nonlocal image URI found: https://img. ...``
 
@@ -62,7 +62,8 @@ def _warn_node(self, msg, node):
     http://stackoverflow.com/questions/12772927/specifying-an-online-image-in-sphinx-restructuredtext-format
     """
     if not msg.startswith('nonlocal image URI found:'):
-        self._warnfunc(msg, '%s:%s' % get_source_line(node))
+        self._warnfunc(msg, '%s:%s' % get_source_line(node), *args, **kwargs)
+
 
 sphinx.environment.BuildEnvironment.warn_node = _warn_node
 
@@ -82,7 +83,7 @@ autoclass_content = 'both'
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
+needs_sphinx = '1.4.4'  # Value mirrored in doc/conf.py
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -107,7 +108,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Luigi'
-copyright = u"2011-{}, Erik Bernhardsson and Elias Freider".format(datetime.datetime.now().year)
+authors = u"The Luigi Authors"
+copyright = u"2011-{}, {}".format(datetime.datetime.now().year, authors)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -276,7 +278,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     ('index', 'Luigi.tex', u'Luigi Documentation',
-     u'Erik Bernhardsson and Elias Freider', 'manual'),
+     authors, 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -306,7 +308,7 @@ latex_documents = [
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'luigi', u'Luigi Documentation',
-     [u'Erik Bernhardsson and Elias Freider'], 1)
+     [authors], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -320,7 +322,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     ('index', 'Luigi', u'Luigi Documentation',
-     u'Erik Bernhardsson and Elias Freider', 'Luigi', 'One line description of project.',
+     authors, 'Luigi', 'One line description of project.',
      'Miscellaneous'),
 ]
 

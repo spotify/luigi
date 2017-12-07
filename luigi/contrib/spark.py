@@ -22,6 +22,7 @@ import tempfile
 import shutil
 import importlib
 import tarfile
+import inspect
 try:
     import cPickle as pickle
 except ImportError:
@@ -61,92 +62,99 @@ class SparkSubmitTask(ExternalProgramTask):
         return []
 
     @property
+    def spark_version(self):
+        return "spark"
+
+    @property
     def spark_submit(self):
-        return configuration.get_config().get('spark', 'spark-submit', 'spark-submit')
+        return configuration.get_config().get(self.spark_version, 'spark-submit', 'spark-submit')
 
     @property
     def master(self):
-        return configuration.get_config().get("spark", "master", None)
+        return configuration.get_config().get(self.spark_version, "master", None)
 
     @property
     def deploy_mode(self):
-        return configuration.get_config().get("spark", "deploy-mode", None)
+        return configuration.get_config().get(self.spark_version, "deploy-mode", None)
 
     @property
     def jars(self):
-        return self._list_config(configuration.get_config().get("spark", "jars", None))
+        return self._list_config(configuration.get_config().get(self.spark_version, "jars", None))
 
     @property
     def packages(self):
-        return self._list_config(configuration.get_config().get("spark", "packages", None))
+        return self._list_config(configuration.get_config().get(
+            self.spark_version, "packages", None))
 
     @property
     def py_files(self):
-        return self._list_config(configuration.get_config().get("spark", "py-files", None))
+        return self._list_config(configuration.get_config().get(
+            self.spark_version, "py-files", None))
 
     @property
     def files(self):
-        return self._list_config(configuration.get_config().get("spark", "files", None))
+        return self._list_config(configuration.get_config().get(self.spark_version, "files", None))
 
     @property
     def conf(self):
-        return self._dict_config(configuration.get_config().get("spark", "conf", None))
+        return self._dict_config(configuration.get_config().get(self.spark_version, "conf", None))
 
     @property
     def properties_file(self):
-        return configuration.get_config().get("spark", "properties-file", None)
+        return configuration.get_config().get(self.spark_version, "properties-file", None)
 
     @property
     def driver_memory(self):
-        return configuration.get_config().get("spark", "driver-memory", None)
+        return configuration.get_config().get(self.spark_version, "driver-memory", None)
 
     @property
     def driver_java_options(self):
-        return configuration.get_config().get("spark", "driver-java-options", None)
+        return configuration.get_config().get(self.spark_version, "driver-java-options", None)
 
     @property
     def driver_library_path(self):
-        return configuration.get_config().get("spark", "driver-library-path", None)
+        return configuration.get_config().get(self.spark_version, "driver-library-path", None)
 
     @property
     def driver_class_path(self):
-        return configuration.get_config().get("spark", "driver-class-path", None)
+        return configuration.get_config().get(self.spark_version, "driver-class-path", None)
 
     @property
     def executor_memory(self):
-        return configuration.get_config().get("spark", "executor-memory", None)
+        return configuration.get_config().get(self.spark_version, "executor-memory", None)
 
     @property
     def driver_cores(self):
-        return configuration.get_config().get("spark", "driver-cores", None)
+        return configuration.get_config().get(self.spark_version, "driver-cores", None)
 
     @property
     def supervise(self):
-        return bool(configuration.get_config().get("spark", "supervise", False))
+        return bool(configuration.get_config().get(self.spark_version, "supervise", False))
 
     @property
     def total_executor_cores(self):
-        return configuration.get_config().get("spark", "total-executor-cores", None)
+        return configuration.get_config().get(self.spark_version, "total-executor-cores", None)
 
     @property
     def executor_cores(self):
-        return configuration.get_config().get("spark", "executor-cores", None)
+        return configuration.get_config().get(self.spark_version, "executor-cores", None)
 
     @property
     def queue(self):
-        return configuration.get_config().get("spark", "queue", None)
+        return configuration.get_config().get(self.spark_version, "queue", None)
 
     @property
     def num_executors(self):
-        return configuration.get_config().get("spark", "num-executors", None)
+        return configuration.get_config().get(self.spark_version, "num-executors", None)
 
     @property
     def archives(self):
-        return self._list_config(configuration.get_config().get("spark", "archives", None))
+        return self._list_config(configuration.get_config().get(
+            self.spark_version, "archives", None))
 
     @property
     def hadoop_conf_dir(self):
-        return configuration.get_config().get("spark", "hadoop-conf-dir", None)
+        return configuration.get_config().get(self.spark_version, "hadoop-conf-dir", None)
 
     def get_environment(self):
         env = os.environ.copy()
@@ -236,8 +244,6 @@ class PySparkTask(SparkSubmitTask):
 
     # Path to the pyspark program passed to spark-submit
     app = os.path.join(os.path.dirname(__file__), 'pyspark_runner.py')
-    # Python only supports the client deploy mode, force it
-    deploy_mode = "client"
 
     @property
     def name(self):
@@ -248,6 +254,11 @@ class PySparkTask(SparkSubmitTask):
         packages = configuration.get_config().get('spark', 'py-packages', None)
         if packages:
             return map(lambda s: s.strip(), packages.split(','))
+
+    @property
+    def files(self):
+        if self.deploy_mode == "cluster":
+            return [self.run_pickle]
 
     def setup(self, conf):
         """
@@ -268,16 +279,20 @@ class PySparkTask(SparkSubmitTask):
         """
         raise NotImplementedError("subclass should define a main method")
 
-    def program_args(self):
-        return self.spark_command() + self.app_command()
-
     def app_command(self):
-        return [self.app, self.run_pickle] + self.app_options()
+        if self.deploy_mode == "cluster":
+            pickle_loc = os.path.basename(self.run_pickle)
+        else:
+            pickle_loc = self.run_pickle
+        return [self.app, pickle_loc] + self.app_options()
 
     def run(self):
         self.run_path = tempfile.mkdtemp(prefix=self.name)
         self.run_pickle = os.path.join(self.run_path, '.'.join([self.name.replace(' ', '_'), 'pickle']))
         with open(self.run_pickle, 'wb') as fd:
+            # Copy module file to run path.
+            module_path = os.path.abspath(inspect.getfile(self.__class__))
+            shutil.copy(module_path, os.path.join(self.run_path, '.'))
             self._dump(fd)
         try:
             super(PySparkTask, self).run()
@@ -285,13 +300,14 @@ class PySparkTask(SparkSubmitTask):
             shutil.rmtree(self.run_path)
 
     def _dump(self, fd):
-        if self.__module__ == '__main__':
-            d = pickle.dumps(self)
-            module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-            d = d.replace(b'(c__main__', "(c" + module_name)
-            fd.write(d)
-        else:
-            pickle.dump(self, fd)
+        with self.no_unpicklable_properties():
+            if self.__module__ == '__main__':
+                d = pickle.dumps(self)
+                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
+                d = d.replace(b'c__main__', b'c' + module_name.encode('ascii'))
+                fd.write(d)
+            else:
+                pickle.dump(self, fd)
 
     def _setup_packages(self, sc):
         """

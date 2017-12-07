@@ -7,12 +7,11 @@ import unittest
 
 try:
     import oauth2client
-    import httplib2
     from luigi.contrib import dataproc
     from googleapiclient import discovery
 
     default_credentials = oauth2client.client.GoogleCredentials.get_application_default()
-    default_client = discovery.build('dataproc', 'v1', credentials=default_credentials, http=httplib2.Http())
+    default_client = discovery.build('dataproc', 'v1', credentials=default_credentials)
     dataproc.set_dataproc_client(default_client)
 except ImportError:
     raise unittest.SkipTest('Unable to load google cloud dependencies')
@@ -27,6 +26,7 @@ from nose.plugins.attrib import attr
 PROJECT_ID = os.environ.get('DATAPROC_TEST_PROJECT_ID', 'your_project_id_here')
 CLUSTER_NAME = os.environ.get('DATAPROC_TEST_CLUSTER', 'unit-test-cluster')
 REGION = os.environ.get('DATAPROC_REGION', 'global')
+IMAGE_VERSION = '1-0'
 
 
 class _DataprocBaseTestCase(unittest.TestCase):
@@ -75,7 +75,7 @@ class DataprocTaskTest(_DataprocBaseTestCase):
             .list(projectId=PROJECT_ID, region=REGION, clusterName=CLUSTER_NAME).execute()
         lastJob = response['jobs'][0]['sparkJob']
 
-        self.assertEquals(lastJob['mainClass'], "my.MinimalMainClass")
+        self.assertEqual(lastJob['mainClass'], "my.MinimalMainClass")
 
     def test_4_submit_spark_job(self):
         # The job itself will fail because the job files don't exist
@@ -95,9 +95,9 @@ class DataprocTaskTest(_DataprocBaseTestCase):
             .list(projectId=PROJECT_ID, region=REGION, clusterName=CLUSTER_NAME).execute()
         lastJob = response['jobs'][0]['sparkJob']
 
-        self.assertEquals(lastJob['mainClass'], "my.MainClass")
-        self.assertEquals(lastJob['jarFileUris'], ["one.jar", "two.jar"])
-        self.assertEquals(lastJob['args'], ["foo", "bar"])
+        self.assertEqual(lastJob['mainClass'], "my.MainClass")
+        self.assertEqual(lastJob['jarFileUris'], ["one.jar", "two.jar"])
+        self.assertEqual(lastJob['args'], ["foo", "bar"])
 
     def test_5_submit_pyspark_job(self):
         # The job itself will fail because the job files don't exist
@@ -117,9 +117,9 @@ class DataprocTaskTest(_DataprocBaseTestCase):
             .list(projectId=PROJECT_ID, region=REGION, clusterName=CLUSTER_NAME).execute()
         lastJob = response['jobs'][0]['pysparkJob']
 
-        self.assertEquals(lastJob['mainPythonFileUri'], "main_job.py")
-        self.assertEquals(lastJob['pythonFileUris'], ["extra1.py", "extra2.py"])
-        self.assertEquals(lastJob['args'], ["foo", "bar"])
+        self.assertEqual(lastJob['mainPythonFileUri'], "main_job.py")
+        self.assertEqual(lastJob['pythonFileUris'], ["extra1.py", "extra2.py"])
+        self.assertEqual(lastJob['args'], ["foo", "bar"])
 
     def test_6_delete_cluster(self):
         success = luigi.run(['--local-scheduler',
@@ -138,3 +138,20 @@ class DataprocTaskTest(_DataprocBaseTestCase):
                              '--dataproc-cluster-name=' + CLUSTER_NAME])
         self.assertTrue(success)
         self.assertLess(time.time() - job_start, 3)
+
+    def test_8_create_cluster_image_version(self):
+        success = luigi.run(['--local-scheduler',
+                             '--no-lock',
+                             'CreateDataprocClusterTask',
+                             '--gcloud-project-id=' + PROJECT_ID,
+                             '--dataproc-cluster-name=' + CLUSTER_NAME + '-' + IMAGE_VERSION,
+                             '--image-version=1.0'])
+        self.assertTrue(success)
+
+    def test_9_delete_cluster_image_version(self):
+        success = luigi.run(['--local-scheduler',
+                             '--no-lock',
+                             'DeleteDataprocClusterTask',
+                             '--gcloud-project-id=' + PROJECT_ID,
+                             '--dataproc-cluster-name=' + CLUSTER_NAME + '-' + IMAGE_VERSION])
+        self.assertTrue(success)

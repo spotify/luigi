@@ -77,6 +77,12 @@ Try running this using eg.
     $ cd examples
     $ luigi --module top_artists AggregateArtists --local-scheduler --date-interval 2012-06
 
+Note that  *top_artists* needs to be in your PYTHONPATH, or else this can produce an error (*ImportError: No module named top_artists*). Add the current working directory to the command PYTHONPATH with:
+
+.. code-block:: console
+
+    $ PYTHONPATH='.' luigi --module top_artists AggregateArtists --local-scheduler --date-interval 2012-06
+
 You can also try to view the manual using `--help` which will give you an
 overview of the options.
 
@@ -182,7 +188,7 @@ you can reuse for a lot of different tasks.
 
 .. code:: python
 
-    class ArtistToplistToDatabase(luigi.postgres.CopyToTable):
+    class ArtistToplistToDatabase(luigi.contrib.postgres.CopyToTable):
         date_interval = luigi.DateIntervalParameter()
         use_hadoop = luigi.BoolParameter()
 

@@ -28,7 +28,7 @@ class TaskStatusMessageTest(LuigiTestCase):
 
     def test_run(self):
         message = "test message"
-        sch = luigi.scheduler.CentralPlannerScheduler()
+        sch = luigi.scheduler.Scheduler()
         with luigi.worker.Worker(scheduler=sch) as w:
             class MyTask(luigi.Task):
                 def run(self):

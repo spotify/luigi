@@ -30,18 +30,31 @@ class retcode(luigi.Config):
     """
     See the :ref:`return codes configuration section <retcode-config>`.
     """
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     unhandled_exception = IntParameter(default=4,
-                                       description='For scheduling errors or internal luigi errors.',
+                                       description='For internal luigi errors.',
                                        )
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     missing_data = IntParameter(default=0,
                                 description="For when there are incomplete ExternalTask dependencies.",
                                 )
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     task_failed = IntParameter(default=0,
                                description='''For when a task's run() method fails.''',
                                )
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
     already_running = IntParameter(default=0,
                                    description='For both local --lock and luigid "lock"',
                                    )
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
+    scheduling_error = IntParameter(default=0,
+                                    description='''For when a task's complete() or requires() fails,
+                                                   or task-limit reached'''
+                                    )
+    # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
+    not_run = IntParameter(default=0,
+                           description="For when a task is not granted run permission by the scheduler."
+                           )
 
 
 def run_with_retcodes(argv):
@@ -68,6 +81,7 @@ def run_with_retcodes(argv):
         sys.exit(retcodes.unhandled_exception)
 
     task_sets = luigi.execution_summary._summary_dict(worker)
+    root_task = luigi.execution_summary._root_task(worker)
     non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
 
     def has(status):
@@ -78,5 +92,14 @@ def run_with_retcodes(argv):
         (retcodes.missing_data, has('still_pending_ext')),
         (retcodes.task_failed, has('failed')),
         (retcodes.already_running, has('run_by_other_worker')),
+        (retcodes.scheduling_error, has('scheduling_error')),
+        (retcodes.not_run, has('not_run')),
     )
-    sys.exit(max(code * (1 if cond else 0) for code, cond in codes_and_conds))
+    expected_ret_code = max(code * (1 if cond else 0) for code, cond in codes_and_conds)
+
+    if expected_ret_code == 0 and \
+       root_task not in task_sets["completed"] and \
+       root_task not in task_sets["already_done"]:
+        sys.exit(retcodes.not_run)
+    else:
+        sys.exit(expected_ret_code)

@@ -20,6 +20,7 @@ import os
 import tempfile
 from helpers import unittest
 
+from luigi import six
 import luigi.contrib.hive
 import mock
 from luigi import LocalTarget
@@ -279,13 +280,6 @@ class HiveCommandClientTest(unittest.TestCase):
         self.assertEqual("", returned)
 
 
-class TestHiveMisc(unittest.TestCase):
-
-    def test_import_old(self):
-        import luigi.hive
-        self.assertEqual(luigi.hive.HiveQueryTask, luigi.contrib.hive.HiveQueryTask)
-
-
 class MyHiveTask(luigi.contrib.hive.HiveQueryTask):
     param = luigi.Parameter()
 
@@ -294,12 +288,45 @@ class MyHiveTask(luigi.contrib.hive.HiveQueryTask):
 
 
 class TestHiveTask(unittest.TestCase):
+    task_class = MyHiveTask
 
     @mock.patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
     def test_run(self, run_and_track_hadoop_job):
-        success = luigi.run(['MyHiveTask', '--param', 'foo', '--local-scheduler', '--no-lock'])
+        success = luigi.run([self.task_class.__name__, '--param', 'foo', '--local-scheduler', '--no-lock'])
         self.assertTrue(success)
         self.assertEqual('hive', run_and_track_hadoop_job.call_args[0][0][0])
+
+
+class MyHiveTaskArgs(MyHiveTask):
+
+    def hivevars(self):
+        return {'my_variable1': 'value1', 'my_variable2': 'value2'}
+
+    def hiveconfs(self):
+        return {'hive.additional.conf': 'conf_value'}
+
+
+class TestHiveTaskArgs(TestHiveTask):
+    task_class = MyHiveTaskArgs
+
+    def test_arglist(self):
+        task = self.task_class(param='foo')
+        f_name = 'my_file'
+        runner = luigi.contrib.hive.HiveQueryRunner()
+        arglist = runner.get_arglist(f_name, task)
+
+        f_idx = arglist.index('-f')
+        self.assertEqual(arglist[f_idx + 1], f_name)
+
+        hivevars = ['{}={}'.format(k, v) for k, v in six.iteritems(task.hivevars())]
+        for var in hivevars:
+            idx = arglist.index(var)
+            self.assertEqual(arglist[idx - 1], '--hivevar')
+
+        hiveconfs = ['{}={}'.format(k, v) for k, v in six.iteritems(task.hiveconfs())]
+        for conf in hiveconfs:
+            idx = arglist.index(conf)
+            self.assertEqual(arglist[idx - 1], '--hiveconf')
 
 
 class TestHiveTarget(unittest.TestCase):
@@ -315,7 +342,3 @@ class TestHiveTarget(unittest.TestCase):
         target = luigi.contrib.hive.HivePartitionTarget(database='db', table='foo', partition='bar', client=client)
         target.exists()
         client.table_exists.assert_called_with('foo', 'db', 'bar')
-
-
-if __name__ == '__main__':
-    unittest.main()

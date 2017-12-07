@@ -57,6 +57,12 @@ var LuigiAPI = (function() {
         });
     }
 
+    LuigiAPI.prototype.forgiveFailures = function (taskId, callback) {
+        return jsonRPC(this.urlRoot + "/forgive_failures", {task_id: taskId}, function(response) {
+            callback(flatten(response.response));
+        });
+    }
+
     LuigiAPI.prototype.getFailedTaskList = function(callback) {
         return jsonRPC(this.urlRoot + "/task_list", {status: "FAILED", upstream_status: "", search: searchTerm()}, function(response) {
             callback(flatten(response.response));
@@ -93,8 +99,20 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.getTaskProgressPercentage = function(taskId, callback) {
+        return jsonRPC(this.urlRoot + "/get_task_progress_percentage", {task_id: taskId}, function(response) {
+            callback(response.response);
+        });
+    };
+
     LuigiAPI.prototype.getRunningTaskList = function(callback) {
         return jsonRPC(this.urlRoot + "/task_list", {status: "RUNNING", upstream_status: "", search: searchTerm()}, function(response) {
+            callback(flatten(response.response));
+        });
+    };
+
+    LuigiAPI.prototype.getBatchRunningTaskList = function(callback) {
+        return jsonRPC(this.urlRoot + "/task_list", {status: "BATCH_RUNNING", upstream_status: "", search: searchTerm()}, function(response) {
             callback(flatten(response.response));
         });
     };
@@ -132,6 +150,34 @@ var LuigiAPI = (function() {
     LuigiAPI.prototype.disableWorker = function(workerId) {
         jsonRPC(this.urlRoot + "/disable_worker", {'worker': workerId});
     }
+
+    LuigiAPI.prototype.setWorkerProcesses = function(workerId, n, callback) {
+        var data = {worker: workerId, n: n};
+        jsonRPC(this.urlRoot + "/set_worker_processes", data, function(response) {
+            callback();
+        });
+    }
+
+    LuigiAPI.prototype.pause = function() {
+        jsonRPC(this.urlRoot + '/pause');
+    }
+
+    LuigiAPI.prototype.unpause = function() {
+        jsonRPC(this.urlRoot + '/unpause');
+    }
+
+    LuigiAPI.prototype.isPaused = function(callback) {
+        jsonRPC(this.urlRoot + "/is_paused", {}, function(response) {
+            callback(!response.response.paused);
+        });
+    }
+
+    LuigiAPI.prototype.updateResource = function(resource, n, callback) {
+        var data = {'resource': resource, 'amount': n};
+        jsonRPC(this.urlRoot + "/update_resource", data, function(response) {
+            callback();
+        });
+    }    
 
     return LuigiAPI;
 })();

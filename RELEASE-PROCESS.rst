@@ -1,12 +1,12 @@
-For maintainers of luigi, who have push access to pypi. Here's how you upload
-luigi to pypi.
+For maintainers of Luigi, who have push access to pypi. Here's how you upload
+Luigi to pypi.
 
-     1. Update version number in setup.py, if needed. Commit and push.
-     2. pypi (Executing ``python setup.py sdist upload``)
-     3. Add tag on github (https://github.com/spotify/luigi/releases), including changelog
+#. Update version number in ``setup.py``.
+#. Commit, perhaps simply with a commit message like ``Version x.y.z``.
+#. Push to GitHub at [spotify/luigi](https://github.com/spotify/luigi).
+#. Upload to pypi by executing ``python setup.py sdist upload``
+#. Add a tag on github (https://github.com/spotify/luigi/releases),
+   including a handwritten changelog, possibly inspired from previous notes.
 
-If you know a better way, please say so! I'm (arash) not used to releasing code
-to pypi!
-
-Currently, luigi is not released on any particular schedule and it is not
+Currently, Luigi is not released on any particular schedule and it is not
 strictly abiding semantic versioning.
