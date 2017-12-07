@@ -29,6 +29,7 @@ import datetime
 import ftplib
 import os
 import random
+import socket
 import tempfile
 import io
 
@@ -46,7 +47,8 @@ logger = logging.getLogger('luigi-interface')
 class RemoteFileSystem(luigi.target.FileSystem):
 
     def __init__(self, host, username=None, password=None, port=None,
-                 tls=False, timeout=60, sftp=False, pysftp_conn_kwargs=None):
+                 tls=False, timeout=60, sftp=False, pysftp_conn_kwargs=None,
+                 af=socket.AF_INET):
         self.host = host
         self.username = username
         self.password = password
@@ -54,6 +56,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.timeout = timeout
         self.sftp = sftp
         self.pysftp_conn_kwargs = pysftp_conn_kwargs or {}
+        self.af = af
 
         if port is None:
             if self.sftp:
@@ -86,8 +89,10 @@ class RemoteFileSystem(luigi.target.FileSystem):
             self.conn = ftplib.FTP_TLS()
         else:
             self.conn = ftplib.FTP()
+            self.conn.af = self.af
         self.conn.connect(self.host, self.port, timeout=self.timeout)
         self.conn.login(self.username, self.password)
+
         if self.tls:
             self.conn.prot_p()
 
@@ -374,7 +379,8 @@ class RemoteTarget(luigi.target.FileSystemTarget):
     def __init__(
         self, path, host, format=None, username=None,
         password=None, port=None, mtime=None, tls=False,
-            timeout=60, sftp=False, pysftp_conn_kwargs=None
+        timeout=60, sftp=False, pysftp_conn_kwargs=None,
+        af=socket.AF_INET
     ):
         if format is None:
             format = luigi.format.get_default_format()
@@ -385,7 +391,9 @@ class RemoteTarget(luigi.target.FileSystemTarget):
         self.tls = tls
         self.timeout = timeout
         self.sftp = sftp
-        self._fs = RemoteFileSystem(host, username, password, port, tls, timeout, sftp, pysftp_conn_kwargs)
+        self.af = af
+        self._fs = RemoteFileSystem(host, username, password, port, tls,
+                                    timeout, sftp, pysftp_conn_kwargs, af)
 
     @property
     def fs(self):
