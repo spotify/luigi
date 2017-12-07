@@ -335,7 +335,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         logger.info("Inserting file: %s", f)
         colnames = ''
-        if len(self.columns) > 0:
+        if self.columns and len(self.columns) > 0:
             colnames = ",".join([x[0] for x in self.columns])
             colnames = '({})'.format(colnames)
 
