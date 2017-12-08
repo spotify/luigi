@@ -218,10 +218,7 @@ class TestS3CopyToTable(unittest.TestCase):
 
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
     def test_s3_copy_with_valid_columns(self, mock_redshift_target):
-        task = DummyS3CopyToTableKey(columns=(
-            ('some_text', 'varchar(255)'),
-            ('some_int', 'int'),
-        ))
+        task = DummyS3CopyToTableKey()
         task.run()
 
         # The mocked connection cursor passed to
