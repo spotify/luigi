@@ -281,14 +281,12 @@ class inherits(object):
                 # If not, add it to the inheriting task
                 setattr(task_that_inherits, param_name, param_obj)
 
-        # Modify task_that_inherits by subclassing it and adding methods
-        @task._task_wraps(task_that_inherits)
-        class Wrapped(task_that_inherits):
+        # Modify task_that_inherits by adding methods
+        def clone_parent(_self, **args):
+            return _self.clone(cls=self.task_to_inherit, **args)
+        task_that_inherits.clone_parent = clone_parent
 
-            def clone_parent(_self, **args):
-                return _self.clone(cls=self.task_to_inherit, **args)
-
-        return Wrapped
+        return task_that_inherits
 
 
 class requires(object):
@@ -303,14 +301,12 @@ class requires(object):
     def __call__(self, task_that_requires):
         task_that_requires = self.inherit_decorator(task_that_requires)
 
-        # Modify task_that_requres by subclassing it and adding methods
-        @task._task_wraps(task_that_requires)
-        class Wrapped(task_that_requires):
+        # Modify task_that_requres by adding methods
+        def requires(_self):
+            return _self.clone_parent()
+        task_that_requires.requires = requires
 
-            def requires(_self):
-                return _self.clone_parent()
-
-        return Wrapped
+        return task_that_requires
 
 
 class copies(object):
