@@ -274,8 +274,11 @@ class inherits(object):
         self.task_to_inherit = task_to_inherit
 
     def __call__(self, task_that_inherits):
+        # Get all parameter objects from the underlying task
         for param_name, param_obj in self.task_to_inherit.get_params():
+            # Check if the parameter exists in the inheriting task
             if not hasattr(task_that_inherits, param_name):
+                # If not, add it to the inheriting task
                 setattr(task_that_inherits, param_name, param_obj)
 
         # Modify task_that_inherits by subclassing it and adding methods
