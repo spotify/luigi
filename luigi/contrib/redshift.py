@@ -66,6 +66,7 @@ class S3CopyToTable(rdbms.CopyToTable):
       * `columns`,
       * `aws_access_key_id`,
       * `aws_secret_access_key`,
+      * `aws_iam_role`,
       * `s3_load_path`.
     """
 
@@ -76,17 +77,24 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         return None
 
-    @abc.abstractproperty
+    @property
     def aws_access_key_id(self):
         """
         Override to return the key id.
         """
         return None
 
-    @abc.abstractproperty
+    @property
     def aws_secret_access_key(self):
         """
         Override to return the secret access key.
+        """
+        return None
+
+    @property
+    def aws_iam_role(self):
+        """
+        Override to return the IAM role.
         """
         return None
 
@@ -226,14 +234,17 @@ class S3CopyToTable(rdbms.CopyToTable):
         """
         columns = [name for (name, type) in self.columns if name.strip() != 'PRIMARY KEY']
 
+        if self.aws_iam_role:
+            credentials = "aws_iam_role=%s" % (self.aws_iam_role)
+        else:
+            credentials = "aws_access_key_id=%s;aws_secret_access_key=%s" % (self.aws_access_key_id, self.aws_secret_access_key)
         cursor.execute("""
          COPY %s (%s) from '%s'
-         CREDENTIALS 'aws_access_key_id=%s;aws_secret_access_key=%s'
+         CREDENTIALS '%s'
          delimiter '%s'
          %s
-         ;""" % (self.table, ', '.join(columns), f, self.aws_access_key_id,
-                 self.aws_secret_access_key, self.column_separator,
-                 self.copy_options))
+         ;""" % (self.table, ', '.join(columns), f, credentials,
+                 self.column_separator, self.copy_options))
 
     def create_table(self, connection):
         """ Override to provide code for creating the target table.
@@ -336,13 +347,16 @@ class S3CopyJSONToTable(S3CopyToTable):
         Defines copying JSON from s3 into redshift.
         """
 
+        if self.aws_iam_role:
+            credentials = "aws_iam_role=%s" % (self.aws_iam_role)
+        else:
+            credentials = "aws_access_key_id=%s;aws_secret_access_key=%s" % (self.aws_access_key_id, self.aws_secret_access_key)
         cursor.execute("""
          COPY %s from '%s'
-         CREDENTIALS 'aws_access_key_id=%s;aws_secret_access_key=%s'
+         CREDENTIALS '%s'
          JSON AS '%s' %s
          %s
-         ;""" % (self.table, f, self.aws_access_key_id,
-                 self.aws_secret_access_key, self.jsonpath,
+         ;""" % (self.table, f, credentials, self.jsonpath,
                  self.copy_json_options, self.copy_options))
 
 
