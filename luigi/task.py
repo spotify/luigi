@@ -600,6 +600,18 @@ class Task(object):
         """
         return []  # default impl
 
+    def process_requires(self, requires):
+        """
+        Override in "template" tasks which themselves are supposed to be
+        subclassed and thus have their requires() overridden (name preserved to
+        provide consistent end-user experience), yet need to introduce
+        custom behaviour into dependencies.
+
+        This defers from _requires in that this will not directly call task.requires
+        and this is being used by dependencies yielded by run
+        """
+        return requires
+
     def requires(self):
         """
         The Tasks that this Task depends on.
@@ -652,7 +664,7 @@ class Task(object):
         Returns the flattened list of requires.
         """
         # used by scheduler
-        return flatten(self._requires())
+        return flatten(self.process_requires(self._requires()))
 
     def run(self):
         """
