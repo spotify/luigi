@@ -39,7 +39,7 @@
 		for (var i = 0; i < running_data.length; i++) {
 			var id = running_data[i].id;
 			//millisecond converion of time for x-axis
-			running_data[i].x = running_data[i].x * 1000
+			running_data[i].x = running_data[i].x * 1000;
 			dateSet.add(running_data[i].x);
 			for (var j = 0; j < task_data.length; j++) {
 				var latter_id = parseInt(id) + 1;
