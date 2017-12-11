@@ -302,6 +302,26 @@ class Parameter(object):
         return "store"
 
 
+class OptionalParameter(Parameter):
+    """ A Parameter that treats empty string as None """
+
+    def serialize(self, x):
+        if x is None:
+            return ''
+        else:
+            return str(x)
+
+    def parse(self, x):
+        return x or None
+
+    def _warn_on_wrong_param_type(self, param_name, param_value):
+        if self.__class__ != OptionalParameter:
+            return
+        if not isinstance(param_value, six.string_types) and param_value is not None:
+            warnings.warn('OptionalParameter "{}" with value "{}" is not of type string or None.'.format(
+                param_name, param_value))
+
+
 _UNIX_EPOCH = datetime.datetime.utcfromtimestamp(0)
 
 
