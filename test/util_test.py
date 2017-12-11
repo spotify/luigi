@@ -78,3 +78,21 @@ class BasicsTest(LuigiTestCase):
         ParentTask = self._setup_parent_and_child()
         self.assertTrue(self.run_locally_split('ParentTask --my-parameter actuallyset'))
         self.assertEqual(ParentTask.class_variable, 'actuallyset')
+
+    def _setup_requires_inheritence(self):
+        class RequiredTask(luigi.Task):
+            pass
+
+        class ParentTask(luigi.Task):
+            pass
+
+        @requires(RequiredTask)
+        class ChildTask(ParentTask):
+            pass
+
+        return ChildTask
+
+    def test_requires_has_effect_MRO(self):
+        ChildTask = self._setup_requires_inheritence()
+        self.assertNotEqual(str(ChildTask.__mro__[0]),
+                            str(ChildTask.__mro__[1]))
