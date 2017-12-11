@@ -573,6 +573,7 @@ class Worker(object):
                 task_name=str(task),
                 family=task.task_family,
                 params=task.to_str_params(only_significant=True),
+                visibility=task.params_visibilities(only_significant=True),
                 expl=expl,
                 owners=task._owner_list(),
             )
@@ -776,6 +777,7 @@ class Worker(object):
             priority=task.priority,
             resources=task.process_resources(),
             params=task.to_str_params(),
+            visibility=task.params_visibilities(),
             family=task.task_family,
             module=task.task_module,
             batchable=task.batchable,
@@ -838,6 +840,7 @@ class Worker(object):
                 module=get_work_response.get('task_module'),
                 family=get_work_response['task_family'],
                 params=task.to_str_params(),
+                visibility=task.params_visibilities(),
                 status=RUNNING,
                 batch_id=get_work_response['batch_id'],
             )
@@ -993,6 +996,7 @@ class Worker(object):
                            resources=task.process_resources(),
                            runnable=None,
                            params=task.to_str_params(),
+                           visibility=task.params_visibilities(),
                            family=task.task_family,
                            module=task.task_module,
                            new_deps=new_deps,

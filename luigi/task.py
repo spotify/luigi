@@ -129,7 +129,7 @@ def task_id_str(task_family, params):
     param_hash = hashlib.md5(param_str.encode('utf-8')).hexdigest()
 
     param_summary = '_'.join(p[:TASK_ID_TRUNCATE_PARAMS]
-                             for p, visible in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))
+                             for p in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))
     param_summary = TASK_ID_INVALID_CHAR_REGEX.sub('_', param_summary)
 
     return '{}_{}_{}'.format(task_family, param_summary, param_hash[:TASK_ID_TRUNCATE_HASH])
@@ -452,7 +452,7 @@ class Task(object):
             params[param_name]._warn_on_wrong_param_type(param_name, param_value)
 
     @classmethod
-    def from_str_params(cls, params_str):
+    def from_str_params(cls, params_str, visibility):
         """
         Creates an instance from a str->str hash.
 
@@ -460,7 +460,7 @@ class Task(object):
         """
         kwargs = {}
         for param_name, param in cls.get_params():
-            if param_name in params_str:
+            if param_name in params_str and visibility[param_name] != 2:
                 param_str = params_str[param_name]
                 if isinstance(param_str, list):
                     kwargs[param_name] = param._parse_list(param_str)
@@ -469,7 +469,6 @@ class Task(object):
 
         return cls(**kwargs)
 
-    # def to_str_params(self, only_significant=False, only_visible=False):
     def to_str_params(self, only_significant=False):
         """
         Convert all parameters to a str->str hash.
@@ -481,6 +480,15 @@ class Task(object):
                 params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
+
+    def params_visibilities(self, only_significant=False):
+        visibility = {}
+        params = dict(self.get_params())
+        for param_name, param_value in six.iteritems(self.param_kwargs):
+            if ((not only_significant) or params[param_name].significant) and params[param_name].visible != 2:
+                visibility[param_name] = params[param_name].visible
+
+        return visibility
 
     def clone(self, cls=None, **kwargs):
         """
@@ -522,7 +530,7 @@ class Task(object):
         param_objs = dict(params)
         for param_name, param_value in param_values:
             if param_objs[param_name].significant:
-                repr_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)[0]))
+                repr_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
 
         task_str = '{}({})'.format(self.get_task_family(), ', '.join(repr_parts))
 

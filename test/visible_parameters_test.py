@@ -3,27 +3,27 @@ from helpers import unittest
 
 
 class TestTask1(luigi.Task):
-    param_one = luigi.Parameter(default='one', visible=False)
+    param_one = luigi.Parameter(default='one', visible=2)
     param_two = luigi.Parameter(default='two')
-    param_three = luigi.Parameter(default='three', visible=False)
-    param_four = luigi.Parameter(default='four', significant=False)
-    param_five = luigi.Parameter(default='five', visible=False, significant=False)
+    param_three = luigi.Parameter(default='three', visible=2)
+    param_four = luigi.Parameter(default='four', significant=False, visible=1)
+    param_five = luigi.Parameter(default='five', visible=2, significant=False)
 
 
 class TestTask2(luigi.Task):
-    param_one = luigi.Parameter(default='1', visible=False)
-    param_two = luigi.Parameter(default='2', visible=False)
-    param_three = luigi.Parameter(default='3', visible=False)
-    param_four = luigi.Parameter(default='4', visible=False)
-    param_five = luigi.Parameter(default='5', visible=False)
+    param_one = luigi.Parameter(default='1', visible=2)
+    param_two = luigi.Parameter(default='2', visible=2)
+    param_three = luigi.Parameter(default='3', visible=2)
+    param_four = luigi.Parameter(default='4', visible=2)
+    param_five = luigi.Parameter(default='5', visible=2)
 
 
 class TestTask3(luigi.Task):
-    param_one = luigi.Parameter(default='one')
+    param_one = luigi.Parameter(default='one', visible=2)
     param_two = luigi.Parameter(default='two')
-    param_three = luigi.Parameter(default='three')
-    param_four = luigi.Parameter(default='four', significant=False)
-    param_five = luigi.Parameter(default='five', significant=False)
+    param_three = luigi.Parameter(default='three', visible=2)
+    param_four = luigi.Parameter(default='four', significant=False, visible=1)
+    param_five = luigi.Parameter(default='five', significant=False, visible=2)
 
 
 class Test(unittest.TestCase):
@@ -53,14 +53,14 @@ class Test(unittest.TestCase):
     def test_only_visible(self):
         task = TestTask1()
 
-        self.assertEqual(task.to_str_params(only_visible=True), {'param_two': 'two', 'param_four': 'four'})
+        self.assertEqual(task.to_str_params(), {'param_two': 'two', 'param_four': 'four'})
 
     def test_to_str(self):
         task = TestTask2()
 
-        self.assertEqual(task.to_str_params(), {'param_one': '1', 'param_two': '2', 'param_three': '3', 'param_four': '4', 'param_five': '5'})
+        self.assertEqual(task.to_str_params(), {})
 
     def test_to_str_all_params_invisible(self):
         task = TestTask2()
 
-        self.assertEqual(task.to_str_params(only_visible=True), {})
+        self.assertEqual(task.to_str_params(), {})

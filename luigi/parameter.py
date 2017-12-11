@@ -114,7 +114,7 @@ class Parameter(object):
 
     def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
                  # config_path=None, positional=True, always_in_help=False, batch_method=None, visible=True):
-                 config_path=None, positional=True, always_in_help=False, batch_method=None, visible=1):
+                 config_path=None, positional=True, always_in_help=False, batch_method=None, visible=0):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -155,7 +155,7 @@ class Parameter(object):
             positional = False
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
         self.positional = positional
-        self.visible = visible  # 1 - public 0 - hidden 2 - private
+        self.visible = visible  # 0 - public 1 - hidden 2 - private
 
         self.description = description
         self.always_in_help = always_in_help
@@ -258,7 +258,7 @@ class Parameter(object):
 
         :param x: the value to serialize.
         """
-        return str(x), self.visible
+        return str(x)
 
     def _warn_on_wrong_param_type(self, param_name, param_value):
         if self.__class__ != Parameter:
