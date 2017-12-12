@@ -204,9 +204,9 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
             bt=['', 'b', 't'],
             plus=['', '+']):
         p = itertools.product(rwax, plus, bt)
-        return set([''.join(c) for c in list(
+        return {''.join(c) for c in list(
             itertools.chain.from_iterable(
-                [itertools.permutations(m) for m in p]))])
+                [itertools.permutations(m) for m in p]))}
 
     def valid_io_modes(self, *a, **kw):
         modes = set()

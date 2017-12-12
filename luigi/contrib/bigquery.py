@@ -427,7 +427,7 @@ class MixinBigQueryBulkComplete(object):
         tasks_with_params = [(cls(p), p) for p in parameter_tuples]
 
         # Grab the set of BigQuery datasets we are interested in
-        datasets = set([t.output().table.dataset for t, p in tasks_with_params])
+        datasets = {t.output().table.dataset for t, p in tasks_with_params}
         logger.info('Checking datasets %s for available tables', datasets)
 
         # Query the available tables for all datasets

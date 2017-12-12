@@ -713,7 +713,7 @@ class Scheduler(object):
         self._state.inactivate_workers(remove_workers)
 
     def _prune_tasks(self):
-        assistant_ids = set(w.id for w in self._state.get_assistants())
+        assistant_ids = {w.id for w in self._state.get_assistants()}
         remove_tasks = []
 
         for task in self._state.get_active_tasks():

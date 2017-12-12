@@ -275,7 +275,7 @@ _ORDERED_STATUSES = (
     "not_run",
 )
 _PENDING_SUB_STATUSES = set(_ORDERED_STATUSES[_ORDERED_STATUSES.index("still_pending_ext"):])
-_COMMENTS = set((
+_COMMENTS = {
     ("already_done", 'present dependencies were encountered'),
     ("completed", 'ran successfully'),
     ("failed", 'failed'),
@@ -288,7 +288,7 @@ _COMMENTS = set((
     ("upstream_run_by_other_worker", 'had dependencies that were being run by other worker'),
     ("upstream_scheduling_error", 'had dependencies whose scheduling failed'),
     ("not_run", 'was not granted run permission by the scheduler'),
-))
+}
 
 
 def _get_run_by_other_worker(worker):

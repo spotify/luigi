@@ -656,7 +656,7 @@ class Worker(object):
         # we track queue size ourselves because len(queue) won't work for multiprocessing
         queue_size = 1
         try:
-            seen = set([task.task_id])
+            seen = {task.task_id}
             while queue_size:
                 current = queue.get()
                 queue_size -= 1
