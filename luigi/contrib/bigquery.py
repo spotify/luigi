@@ -174,7 +174,7 @@ class BigQueryClient(object):
 
         return True
 
-    def make_dataset(self, dataset, raise_if_exists=False, body=dict()):
+    def make_dataset(self, dataset, raise_if_exists=False, body=None):
         """Creates a new dataset with the default permissions.
 
            :param dataset:
@@ -182,6 +182,9 @@ class BigQueryClient(object):
            :param raise_if_exists: whether to raise an exception if the dataset already exists.
            :raises luigi.target.FileAlreadyExists: if raise_if_exists=True and the dataset exists
         """
+
+        if body is None:
+            body = {}
 
         try:
             body['id'] = '{}:{}'.format(dataset.project_id, dataset.dataset_id)
