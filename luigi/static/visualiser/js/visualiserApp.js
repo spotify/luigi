@@ -301,20 +301,20 @@ function visualiserApp(luigi) {
         $("#statusMessageModal").modal({});
         var refreshInterval = setInterval(function() {
                 if ($("#statusMessageModal").is(":hidden"))
-                    clearInterval(refreshInterval)
+                    clearInterval(refreshInterval);
                 else {
                     luigi.getTaskStatusMessage(data.taskId, function(data) {
                         if (data.statusMessage === null)
-                            $("#statusMessageModal pre").hide()
+                            $("#statusMessageModal pre").hide();
                         else {
                             $("#statusMessageModal pre").html(data.statusMessage).show();
                         }
                     });
                     luigi.getTaskProgressPercentage(data.taskId, function(data) {
                         if (data.progressPercentage === null)
-                            $("#statusMessageModal .progress").hide()
+                            $("#statusMessageModal .progress").hide();
                         else {
-                            $("#statusMessageModal .progress").show()
+                            $("#statusMessageModal .progress").show();
                             $("#statusMessageModal .progress-bar")
                                 .attr('aria-valuenow', data.progressPercentage)
                                 .text(data.progressPercentage + '%')
@@ -462,7 +462,7 @@ function visualiserApp(luigi) {
 
             // Populate fields with values from hash.
             if (fragmentQuery.length) {
-                $('select[name=taskTable_length').val(fragmentQuery.length);
+                $('select[name=taskTable_length]').val(fragmentQuery.length);
             }
             $("#serverSideCheckbox").prop('checked', fragmentQuery.filterOnServer === '1' ? true : false);
             dt.search(fragmentQuery.search__search);
@@ -516,7 +516,7 @@ function visualiserApp(luigi) {
             $(".graph-node-a").click(function(event) {
                 var taskId = $(this).attr("data-task-id");
                 var status = $(this).attr("data-task-status");
-                if (status=="FAILED") {
+                if (status == "FAILED") {
                     event.preventDefault();
                     luigi.getErrorTrace(taskId, function(error) {
                        showErrorTrace(error);
@@ -581,7 +581,7 @@ function visualiserApp(luigi) {
         var times = {};
         for (var i = 0; i < listId.length; i++) {
             for (var j = 0; j < tasks.length; j++) {
-                if (listId[i]===tasks[j].taskId) {
+                if (listId[i] === tasks[j].taskId) {
                     var finishTime = new Date(tasks[j].time_running*1000);
                     var startTime = new Date(tasks[j].start_time*1000);
                     var durationTime = new Date((finishTime - startTime)*1000).getSeconds();
