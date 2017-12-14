@@ -164,12 +164,7 @@ class ADLClient(luigi.target.FileSystem):
         :param blocksize:
         :param show_progress_bar: Show a progress bar with Azure cli's controller
         """
-        if show_progress_bar:
-            try:
-                import azure.cli
-            except:
-                raise ImportError('Please install the azure cli pip package to show upload progress')
-
+        if show_progress_bar:            
             from azure.cli.core.application import APPLICATION
 
             def _update_progress(current, total):
@@ -195,12 +190,12 @@ class ADLClient(luigi.target.FileSystem):
         :param path: path to delte
         :param recursive whether to remove subdirectories/files
         :param skip_trash skips ADL trash and removes completely
-        """   
+        """
         return self.adl.rm(path, recursive=recursive)
 
     def _get_adl_config(self, key=None):
         """
-        Get configuration from luigi cfg file.        
+        Get configuration from luigi cfg file.
         :param key if provided, get only this key from config
         """
         defaults = dict(configuration.get_config().defaults())
