@@ -15,9 +15,9 @@
 # limitations under the License.
 #
 """
-Implementation of Azure Data Lake Store support. 
-ADLTarget subclasses the base Target class to support storing files on 
-Microsoft Azure's distributed file store Azure Data Lake. 
+Implementation of Azure Data Lake Store support.
+ADLTarget subclasses the base Target class to support storing files on
+Microsoft Azure's distributed file store Azure Data Lake.
 The azure python sdk library is required to support this functionality.
 
 Requires an Azure Service Principal for authentication.
@@ -56,7 +56,7 @@ class ADLClient(luigi.target.FileSystem):
 
     _adl = None
 
-    def __init__(self, 
+    def __init__(self,
                  az_tenant_id=None,
                  az_sp_client_id=None,
                  az_sp_client_secret=None,
@@ -104,9 +104,9 @@ class ADLClient(luigi.target.FileSystem):
                 options.pop(key)
 
         token = lib.auth(tenant_id=az_tenant_id,
-                 client_id=az_sp_client_id,
-                 client_secret=az_sp_client_secret,
-                 **options)
+                         client_id=az_sp_client_id,
+                         client_secret=az_sp_client_secret,
+                         **options)
         self._adl = core.AzureDLFileSystem(token, store_name=adl_store_name)
         return self._adl
 
@@ -166,7 +166,7 @@ class ADLClient(luigi.target.FileSystem):
         """
         if show_progress_bar:
             try:
-                import cli
+                import azure.cli
             except:
                 raise ImportError('Please install the azure cli pip package to show upload progress')
 
@@ -179,16 +179,15 @@ class ADLClient(luigi.target.FileSystem):
                     hook.end()
         else:
             def _update_progress(current, total):
-                print('{}% complete'.format(round(current / total, 2)))
+                print('{}% complete'.format(round(current/total, 2)))
 
         from azure.datalake.store.multithread import ADLUploader
 
         ADLUploader(self.adl, destination_path, source_path, thread_count, overwrite=overwrite,
                     chunksize=chunksize,
-                    buffersize = buffersize,
-                    blocksize = blocksize,
-                    progress_callback = _update_progress
-        )
+                    buffersize=buffersize,
+                    blocksize=blocksize,
+                    progress_callback=_update_progress)
 
     def remove(self, path, recursive=True, skip_trash=True):
         """
@@ -209,7 +208,7 @@ class ADLClient(luigi.target.FileSystem):
             config = dict(configuration.get_config().items('adl'))
         except NoSectionError:
             return {}
-        # So what ports etc can be read without us having to specify all dtypes
+        
         for k, v in six.iteritems(config):
             try:
                 config[k] = int(v)
