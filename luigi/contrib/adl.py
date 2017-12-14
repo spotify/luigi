@@ -22,6 +22,14 @@ The azure python sdk library is required to support this functionality.
 
 Requires an Azure Service Principal for authentication.
 See: https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli?view=azure-cli-latest
+
+Provide the following in your luigi config file
+
+[adl]
+az_tenant_id={YOUR_TENANT_ID}
+az_sp_client_id={YOUR_SERVICE_PRINCIPAL_ID}
+az_sp_client_secret={YOUR_SERVICE_PRINCIPAL_SECRET}
+adl_store_name={YOUR_AZURE_DATA_LAKE_STORE_NAME}
 """
 
 import logging
@@ -48,7 +56,12 @@ class ADLClient(luigi.target.FileSystem):
 
     _adl = None
 
-    def __init__(self, az_tenant_id=None, az_sp_client_id=None, az_sp_client_secret=None, **kwargs):
+    def __init__(self, 
+                 az_tenant_id=None,
+                 az_sp_client_id=None,
+                 az_sp_client_secret=None,
+                 adl_store_name=None,
+                 **kwargs):
         """
         Initialize configuration for Azure Data Lake Client
         :param az_tenant_id: Active Directory TenantID
@@ -64,6 +77,8 @@ class ADLClient(luigi.target.FileSystem):
             options['az_sp_client_id'] = az_sp_client_id
         if az_sp_client_secret:
             options['az_sp_client_secret'] = az_sp_client_secret
+        if adl_store_name:
+            options['adl_store_name'] = adl_store_name
 
         self._options = options
 
@@ -82,9 +97,9 @@ class ADLClient(luigi.target.FileSystem):
         az_tenant_id = options.get('az_tenant_id')
         az_sp_client_id = options.get('az_sp_client_id')
         az_sp_client_secret = options.get('az_sp_client_secret')
-        store_name = options.get('store_name')
+        adl_store_name = options.get('adl_store_name')
 
-        for key in ['az_tenant_id', 'az_sp_client_id', 'az_sp_client_secret']:
+        for key in ['az_tenant_id', 'az_sp_client_id', 'az_sp_client_secret', 'adl_store_name']:
             if key in options:
                 options.pop(key)
 
@@ -92,7 +107,7 @@ class ADLClient(luigi.target.FileSystem):
                  client_id=az_sp_client_id,
                  client_secret=az_sp_client_secret,
                  **options)
-        self._adl = core.AzureDLFileSystem(token, store_name=store_name)
+        self._adl = core.AzureDLFileSystem(token, store_name=adl_store_name)
         return self._adl
 
     @adl.setter
@@ -149,7 +164,6 @@ class ADLClient(luigi.target.FileSystem):
         :param blocksize:
         :param show_progress_bar: Show a progress bar with Azure cli's controller
         """
-
         if show_progress_bar:
             try:
                 import cli
@@ -177,10 +191,19 @@ class ADLClient(luigi.target.FileSystem):
         )
 
     def remove(self, path, recursive=True, skip_trash=True):
-        
+        """
+        Removes the provided file/directory path from ADL store
+        :param path: path to delte
+        :param recursive whether to remove subdirectories/files
+        :param skip_trash skips ADL trash and removes completely
+        """   
         return self.adl.rm(path, recursive=recursive)
 
     def _get_adl_config(self, key=None):
+        """
+        Get configuration from luigi cfg file.        
+        :param key if provided, get only this key from config
+        """
         defaults = dict(configuration.get_config().defaults())
         try:
             config = dict(configuration.get_config().items('adl'))
@@ -203,7 +226,7 @@ class AtomicADLFile(luigi.target.AtomicLocalFile):
     """
     Writes to tmp file and puts to ADL on close
     **kwargs are any arguments you want to pass through to:
-        azure.datalake.store.multithread.ADLUploader
+    azure.datalake.store.multithread.ADLUploader
     """
     def __init__(self, path, client, **kwargs):
         self.client = client
@@ -218,7 +241,6 @@ class ADLTarget(luigi.target.FileSystemTarget):
     """
     Target Azure Data Lake file object
     """
-
     fs = None
 
     def __init__(self, path, format=None, client=None, **kwargs):
@@ -235,7 +257,7 @@ class ADLTarget(luigi.target.FileSystemTarget):
         """
         This will use the Azure Data Lake store implementation
         for opening/reading files which only return byte streams - rb|wb -
-        not actual files but for consistency with luigi API, the mode 
+        not actual files but for consistency with luigi API, the mode
         is denoted as r|w
         """
         if mode not in ('r', 'w'):
