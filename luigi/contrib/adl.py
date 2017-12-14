@@ -224,7 +224,7 @@ class ADLClient(luigi.target.FileSystem):
 class AtomicADLFile(luigi.target.AtomicLocalFile):
     """
     Writes to tmp file and puts to ADL on close
-    **kwargs are any arguments you want to pass through to:
+    kwargs are any arguments you want to pass through to
     azure.datalake.store.multithread.ADLUploader
     """
     def __init__(self, path, client, **kwargs):
