@@ -164,7 +164,7 @@ class ADLClient(luigi.target.FileSystem):
         :param blocksize:
         :param show_progress_bar: Show a progress bar with Azure cli's controller
         """
-        if show_progress_bar:            
+        if show_progress_bar:
             from azure.cli.core.application import APPLICATION
 
             def _update_progress(current, total):
@@ -203,7 +203,7 @@ class ADLClient(luigi.target.FileSystem):
             config = dict(configuration.get_config().items('adl'))
         except NoSectionError:
             return {}
-        
+
         for k, v in six.iteritems(config):
             try:
                 config[k] = int(v)
