@@ -113,7 +113,6 @@ class Parameter(object):
     _counter = 0  # non-atomically increasing counter used for ordering parameters.
 
     def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
-                 # config_path=None, positional=True, always_in_help=False, batch_method=None, visible=True):
                  config_path=None, positional=True, always_in_help=False, batch_method=None, visible=0):
         """
         :param default: the default value for this parameter. This should match the type of the
