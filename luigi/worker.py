@@ -775,7 +775,6 @@ class Worker(object):
             runnable=runnable,
             priority=task.priority,
             resources=task.process_resources(),
-            # params=task.to_str_params(),
             params=task.to_str_params_with_visibility(),
             family=task.task_family,
             module=task.task_module,
