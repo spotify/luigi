@@ -90,8 +90,10 @@ are not the same instance:
 
 Invisible parameters
 
-If a parameter is created with ``visible=False``,
-it is ignored in central scheduler Web-view.
+``visible=0`` (default) - visible everywhere
+``visible=1`` - ignored only in WEB-view
+``visible=2`` - ignored in WEB-view, central scheduler and task_parameters history in databse
+
 
 Parameter types
 ^^^^^^^^^^^^^^^
