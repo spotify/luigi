@@ -275,7 +275,8 @@ class OrderedSet(collections.MutableSet):
 
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
-                 params=None, visibility=None, tracking_url=None, status_message=None, progress_percentage=None, retry_policy='notoptional'):
+                 params=None, tracking_url=None, status_message=None, progress_percentage=None, retry_policy='notoptional',
+                 public_params=None, hidden_params=None):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = OrderedSet()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -296,10 +297,9 @@ class Task(object):
         self.family = family
         self.module = module
         self.params = _get_default(params, {})
-        self.visibility = visibility
-        self.public_params = _get_default({key: self.params[key] for key in self.params if self.visibility[key] == 0}, {})
 
-        print("inside task", self.params, self.visibility)
+        self.public_params = _get_default(public_params, {})
+        self.hidden_params = _get_default(hidden_params, {})
 
         self.retry_policy = retry_policy
         self.failures = Failures(self.retry_policy.disable_window)
@@ -339,7 +339,7 @@ class Task(object):
 
     @property
     def pretty_id(self):
-        param_str = ', '.join('{}={}'.format(key, value) for key, value in sorted(self.params.items()) if self.visibility[key] == 0)
+        param_str = ', '.join('{}={}'.format(key, value) for key, value in sorted(self.params.items()))
         return '{}({})'.format(self.family, param_str)
 
 
@@ -774,7 +774,7 @@ class Scheduler(object):
     @rpc_method()
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
-                 priority=0, family='', module=None, params=None, visibility=None,
+                 priority=0, family='', module=None, params=None,
                  assistant=False, tracking_url=None, worker=None, batchable=None,
                  batch_id=None, retry_policy_dict={}, owners=None, **kwargs):
         """
@@ -789,10 +789,15 @@ class Scheduler(object):
         worker = self._update_worker(worker_id)
         retry_policy = self._generate_retry_policy(retry_policy_dict)
 
+        all_params = {key: params[key][0] for key in params}
+        public_params = {key: params[key][0] for key in params if params[key][1] == 0}
+        hidden_params = {key: params[key][0] for key in params if params[key][1] == 1}
+
         if worker.enabled:
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
-                priority=priority, family=family, module=module, params=params, visibility=visibility
+                priority=priority, family=family, module=module,
+                params=all_params, public_params=public_params, hidden_params=hidden_params
             )
         else:
             _default_task = None
@@ -808,11 +813,11 @@ class Scheduler(object):
         if not getattr(task, 'module', None):
             task.module = module
         if not task.params:
-            task.params = _get_default(params, {})
-        if not task.visibility:
-            task.visibility = _get_default(visibility, {})
-
-        print("inside scheduler", params, visibility)
+            task.params = _get_default(all_params, {})
+        if not task.public_params:
+            task.public_params = _get_default(public_params, {})
+        if not task.hidden_params:
+            task.hidden_params = _get_default(hidden_params, {})
 
         if batch_id is not None:
             task.batch_id = batch_id
@@ -1236,7 +1241,6 @@ class Scheduler(object):
             'start_time': task.time,
             'last_updated': getattr(task, "updated", task.time),
             'params': task.public_params,
-            'visibility': task.visibility,
             'name': task.family,
             'priority': task.priority,
             'resources': task.resources,

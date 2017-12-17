@@ -452,7 +452,7 @@ class Task(object):
             params[param_name]._warn_on_wrong_param_type(param_name, param_value)
 
     @classmethod
-    def from_str_params(cls, params_str, visibility):
+    def from_str_params(cls, params_str):
         """
         Creates an instance from a str->str hash.
 
@@ -460,7 +460,7 @@ class Task(object):
         """
         kwargs = {}
         for param_name, param in cls.get_params():
-            if param_name in params_str and visibility[param_name] != 2:
+            if param_name in params_str:
                 param_str = params_str[param_name]
                 if isinstance(param_str, list):
                     kwargs[param_name] = param._parse_list(param_str)
@@ -481,14 +481,14 @@ class Task(object):
 
         return params_str
 
-    def params_visibilities(self, only_significant=False):
-        visibility = {}
+    def to_str_params_with_visibility(self, only_significant=False):
+        params_str_with_visibility = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
             if ((not only_significant) or params[param_name].significant) and params[param_name].visible != 2:
-                visibility[param_name] = params[param_name].visible
+                params_str_with_visibility[param_name] = (params[param_name].serialize(param_value), params[param_name].visible)
 
-        return visibility
+        return params_str_with_visibility
 
     def clone(self, cls=None, **kwargs):
         """
