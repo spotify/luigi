@@ -777,6 +777,7 @@ class Worker(object):
             params=task.to_str_params(),
             family=task.task_family,
             module=task.task_module,
+            tracking_url=getattr(task, 'tracking_url', None),
             batchable=task.batchable,
             retry_policy_dict=_get_retry_policy_dict(task),
         )
@@ -994,6 +995,7 @@ class Worker(object):
                            params=task.to_str_params(),
                            family=task.task_family,
                            module=task.task_module,
+                           tracking_url=getattr(task, 'tracking_url', None),
                            new_deps=new_deps,
                            assistant=self._assistant,
                            retry_policy_dict=_get_retry_policy_dict(task))
