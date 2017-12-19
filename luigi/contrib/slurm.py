@@ -54,7 +54,7 @@ The following is an example usage (and can also be found in ``slurm_tests.py``)
         def work(self):
             logger.info('Running test job...')
             with open(self.output().path, 'w') as f:
-                f.write('this is a test')
+                f.write('this is a test\n')
 
         def output(self):
             return luigi.LocalTarget(os.path.join('/home', 'testfile_' + str(self.i)))
@@ -99,6 +99,7 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+import itertools
 
 import luigi
 from luigi.contrib.hadoop import create_packages_archive
@@ -109,13 +110,39 @@ logger.propagate = 0
 
 POLL_TIME = 5  # decided to hard-code rather than configure here
 
-def _parse_job_state(job_out):
+
+# see http://code.activestate.com/recipes/580745-retry-decorator-in-python/
+def retry(delays=(0, 1, 5, 30, 180, 600, 3600),
+          exception=Exception,
+          report=lambda *args: None):
+    def wrapper(function):
+        def wrapped(*args, **kwargs):
+            problems = []
+            for delay in itertools.chain(delays, [ None ]):
+                try:
+                    return function(*args, **kwargs)
+                except exception as problem:
+                    problems.append(problem)
+                    if delay is None:
+                        report("retryable failed definitely:", problems)
+                        raise
+                    else:
+                        report("retryable failed:", problem,
+                            "-- delaying for %ds" % delay)
+                        time.sleep(delay)
+        return wrapped
+    return wrapper
+
+
+@retry()
+def _parse_job_state(job_id):
     """Parse "state" from 'scontrol show jobid=ID -o' output
 
     Returns state for the scontrol output, Returns 'u' if
     `scontrol` output is empty or job_id is not found.
 
     """
+    job_out = subprocess.check_output(['scontrol', '-o', 'show', "jobid={}".format(job_id)]).decode()
     job_line = job_out.split()
     job_map = {}
     for job in job_line:
@@ -123,8 +150,7 @@ def _parse_job_state(job_out):
         try:
             job_map[job_s[0]] = job_s[1]
         except:
-            print("No value found for " + job_s[0])
-
+            logger.error("No value found for " + job_s[0])
     return job_map.get('JobState', 'u')
 
 
@@ -155,6 +181,13 @@ def _build_submit_command(cmd, job_name, outfile, errfile, ntasks, mem, gres, pa
         sbatch_template=sbatch_template, job_name=job_name, outfile=outfile, errfile=errfile,
         ntasks=ntasks, mem=mem, sbatchfile=sbatchfile, gres=gres, partition=partition, time=time)
 
+
+@retry()
+def _sbatch(submit_cmd):
+    """Do the sbatch but make this retyable"""
+    return subprocess.check_output(submit_cmd, shell=True)
+
+
 class SlurmJobTask(luigi.Task):
 
     """
@@ -164,7 +197,7 @@ class SlurmJobTask(luigi.Task):
 
     Parameters:
 
-    - ntasks: Number of CPUs (or "slots") to allocate for the Task.
+    - ntasks: Number of CPUs to allocate for the Task.
     - mem: The amount of memory to allocate for the Task.
     - gres: The gres resources to allocate for the Task.
     - time: The time to allocate for the Task.
@@ -172,7 +205,7 @@ class SlurmJobTask(luigi.Task):
     - shared_tmp_dir: Shared drive accessible from all nodes in the cluster.
           Task classes and dependencies are pickled to a temporary folder on
           this drive. The default is ``/home``, the NFS share location setup
-          by StarCluster
+          by StarCluster.
     - job_name_format: String that can be passed in to customize the job name
         string passed to sbatch; e.g. "Task123_{task_family}_{ntasks}...".
     - job_name: Exact job name to pass to sbatch.
@@ -238,12 +271,12 @@ class SlurmJobTask(luigi.Task):
     def _init_local(self):
         # Set up temp folder in shared directory (trim to max filename length)
         base_tmp_dir = self.shared_tmp_dir
-        random_id = '%016x' % random.getrandbits(64)
-        folder_name = self.task_id + '-' + random_id
+        random_id = '{0:x}'.format(random.getrandbits(64))
+        folder_name = "{}-{}".format(self.task_id, random_id)
         self.tmp_dir = os.path.join(base_tmp_dir, folder_name)
         max_filename_length = os.fstatvfs(0).f_namemax
         self.tmp_dir = self.tmp_dir[:max_filename_length]
-        logger.info("Tmp dir: %s", self.tmp_dir)
+        logger.info("Tmp dir:{} ".format(self.tmp_dir))
         os.makedirs(self.tmp_dir)
 
         # Dump the code to be run into a pickle file
@@ -310,7 +343,7 @@ class SlurmJobTask(luigi.Task):
         # Submit the job and grab job ID
         cwd = os.getcwd()
         os.chdir(self.tmp_dir)
-        output = subprocess.check_output(submit_cmd, shell=True)
+        output = _sbatch(submit_cmd)
         os.chdir(cwd)
         self.job_id = output.decode().strip()
         logger.debug("Submitted job to slurm with job id: {}".format(self.job_id))
@@ -331,14 +364,16 @@ class SlurmJobTask(luigi.Task):
 
             # See what the job's up to
             # ASSUMPTION
-            job_stat_out = subprocess.check_output(['scontrol', '-o', 'show', "jobid={}".format(self.job_id)]).decode()
-            job_status = _parse_job_state(job_stat_out)
+            job_status = _parse_job_state(self.job_id)
             if job_status == 'RUNNING':
                 logger.info('Job is running ({:0.1f} seconds elapsed)...'.format(float(time.time() - start)))
             elif job_status == 'PENDING':
                 logger.info('Job is pending ({:0.1f} seconds elapsed)...'.format(float(time.time() - start)))
             elif 'FAILED' in job_status:
                 logger.error('Job has FAILED:\n' + '\n'.join(self._fetch_task_failures()))
+                break
+            elif 'CANCELLED' in job_status:
+                logger.error('Job has been CANCELLED:\n' + '\n'.join(self._fetch_task_failures()))
                 break
             elif job_status == 'COMPLETED' or job_status == 'u':
                 # Then the job could either be failed or done.
@@ -350,9 +385,11 @@ class SlurmJobTask(luigi.Task):
                         logger.error(error)
                 break
             else:
-                logger.info('Job status is UNKNOWN!')
+                job_status = 'UNKNOWN'
                 logger.info('Status is : {}'.format(job_status))
-                raise Exception("job status isn't one of ['RUNNING', 'PENDING', 'COMPLETED', 'FAILED', 'u']: %s" % job_status)
+                raise Exception(
+                    "job status isn't one of ['RUNNING', 'PENDING', 'COMPLETED', 'FAILED', 'CANCELLED', 'u']: {}"\
+                    .format(job_status))
 
 
 class LocalSlurmJobTask(SlurmJobTask):
