@@ -428,8 +428,7 @@ class Task(object):
         for key, value in param_values:
             setattr(self, key, value)
 
-        # Register args and kwargs as an attribute on the class. Might be useful
-        self.param_args = tuple(value for key, value in param_values)
+        # Register kwargs as an attribute on the class. Might be useful
         self.param_kwargs = dict(param_values)
 
         self._warn_on_wrong_param_types()
@@ -439,6 +438,11 @@ class Task(object):
         self.set_tracking_url = None
         self.set_status_message = None
         self.set_progress_percentage = None
+
+    @property
+    def param_args(self):
+        warnings.warn("Use of param_args has been deprecated.", DeprecationWarning)
+        return tuple(self.param_kwargs[k] for k, v in self.get_params())
 
     def initialized(self):
         """
