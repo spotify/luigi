@@ -532,7 +532,7 @@ class Task(object):
         return task_str
 
     def __eq__(self, other):
-        return self.__class__ == other.__class__ and self.param_args == other.param_args
+        return self.__class__ == other.__class__ and self.param_kwargs == other.param_kwargs
 
     def complete(self):
         """
