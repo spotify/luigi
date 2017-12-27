@@ -147,10 +147,6 @@ class S3Client(FileSystem):
         Remove a file or directory from S3.
         """
         try:
-            if not self.exists(path):
-                logger.debug('Could not delete %s; path does not exist', path)
-                return False
-
             (bucket, key) = self._path_to_bucket_and_key(path)
 
             # root
