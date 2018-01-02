@@ -582,8 +582,30 @@ class Task(object):
         provide consistent end-user experience), yet need to introduce
         custom behaviour into dependencies.
 
-        This defers from _requires in that this will not directly call task.requires
-        and this is being used by dependencies yielded by run
+        Differences with :py:meth:`_requires`:
+          * method signature: :py:meth:`_requires` doesn't take params and calls
+            :py:meth:`requires` directly where as this method is expected to work only on
+            requirements passed via parameters.
+          * Code paths: :py:meth:`_requires` is run only during the statically defined
+            requirements where as this method works with dynamic dependencies yielded from
+            :py:meth:`run` also.
+
+        ex:
+            class ParentTask(luigi.Task):
+                foo = `bar`
+
+                def process_requires(self, requirements):
+                    for(req in flatten(requirements)):
+                        req.foo = self.foo
+
+                    return requirements
+
+            class B(ParentTask):
+                def requires(self):
+                    return luigi.LocalPathTask('my/local/path')
+
+            B().deps()[0].foo # => 'bar'
+
         """
         return requires
 
