@@ -108,13 +108,8 @@ class BatchClientTest(unittest.TestCase):
         self.assertEqual(self.bc.get_job_status('abcd'), 'SUCCEEDED')
 
     def test_get_logs(self):
-        self.assertEqual(self.bc.get_logs('test_job_abcd_log_stream'), 
-            (
-                'log line 1\n'
-                'log line 2\n'
-                'log line 3'
-            )
-        )
+        log_str = 'log line 1\nlog line 2\nlog line 3'
+        self.assertEqual(self.bc.get_logs('test_job_abcd_log_stream'), log_str)
 
     def test_submit_job(self):
         job_id = self.bc.submit_job(
