@@ -19,6 +19,12 @@ from helpers import unittest
 
 import luigi.contrib.batch as batch
 
+try:
+    import boto3
+    client = boto3.client('batch')
+except ImportError:
+    raise unittest.SkipTest('boto3 is not installed. BatchTasks require boto3')
+
 
 class MockBotoBatchClient(object):
 
