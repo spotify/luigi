@@ -87,7 +87,8 @@ def _random_id():
 
 class BatchClient(object):
 
-    def __init__(self):
+    def __init__(self, poll_time=POLL_TIME):
+        self.poll_time = poll_time
         self._client = boto3.client('batch')
         self._log_client = boto3.client('logs')
         self._queue = self.get_active_queue()
@@ -169,7 +170,7 @@ class BatchClient(object):
                 raise BatchJobException('Job {} failed: {}'.format(
                     job_id, logs))
 
-            time.sleep(POLL_TIME)
+            time.sleep(self.poll_time)
             logger.debug('Batch job status for job {0}: {1}'.format(
                 job_id, status))
 
@@ -200,9 +201,10 @@ class BatchTask(luigi.Task):
     """
     job_definition = luigi.Parameter()
     job_name = luigi.Parameter(default=None)
+    poll_time = luigi.Parameter(default=POLL_TIME)
 
     def run(self):
-        bc = BatchClient()
+        bc = BatchClient(self.poll_time)
         job_id = bc.submit_job(
             self.job_definition,
             self.parameters,
