@@ -297,7 +297,8 @@ class TestS3Client(unittest.TestCase):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.s3.create_bucket('mybucket')
 
-        # When Hadoop/Spark writes out files, they create `/` key which should be removed as well
+        # When Hadoop/Spark writes out files, they create `/` key which should be removed as well.
+        # Data should be removed even though the flag file (_SUCCESS) doesn't exist.
         s3_client.put(self.tempFilePath, 's3://mybucket/flagtarget_$folder$')
         s3_client.put(self.tempFilePath, 's3://mybucket/flagtarget/')
         s3_client.put(self.tempFilePath, 's3://mybucket/flagtarget/file')
@@ -306,6 +307,12 @@ class TestS3Client(unittest.TestCase):
         self.assertFalse(s3_client.exists('s3://mybucket/flagtarget_$folder$'))
         self.assertFalse(s3_client.exists('s3://mybucket/flagtarget/'))
         self.assertFalse(s3_client.exists('s3://mybucket/flagtarget/file'))
+
+        # If a directory was partially written, we should still delete the partial data
+        # Ex: only the directory marker was written, it should still be deleted.
+        s3_client.put(self.tempFilePath, 's3://mybucket/flagtarget_$folder$')
+        S3FlagTarget('s3://mybucket/flagtarget/').remove()
+        self.assertFalse(s3_client.exists('s3://mybucket/flagtarget_$folder$'))
 
     def test_copy(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
