@@ -20,21 +20,21 @@ AWS Batch wrapper for Luigi
 
 From the AWS website:
 
-    AWS Batch enables you to run batch computing workloads on the AWS Cloud. 
+    AWS Batch enables you to run batch computing workloads on the AWS Cloud.
 
-    Batch computing is a common way for developers, scientists, and engineers 
-    to access large amounts of compute resources, and AWS Batch removes the 
-    undifferentiated heavy lifting of configuring and managing the required 
-    infrastructure. AWS Batch is similar to traditional batch computing 
-    software. This service can efficiently provision resources in response to 
-    jobs submitted in order to eliminate capacity constraints, reduce compute 
+    Batch computing is a common way for developers, scientists, and engineers
+    to access large amounts of compute resources, and AWS Batch removes the
+    undifferentiated heavy lifting of configuring and managing the required
+    infrastructure. AWS Batch is similar to traditional batch computing
+    software. This service can efficiently provision resources in response to
+    jobs submitted in order to eliminate capacity constraints, reduce compute
     costs, and deliver results quickly.
 
 See `AWS Batch User Guide`_ for more details.
 
 To use AWS Batch, you create a jobDefinition JSON that defines a `docker run`_
 command, and then submit this JSON to the API to queue up the task. Behind the
-scenes, AWS Batch auto-scales a fleet of EC2 Container Service instances, 
+scenes, AWS Batch auto-scales a fleet of EC2 Container Service instances,
 monitors the load on these instances, and schedules the jobs.
 
 This `boto3-powered`_ wrapper allows you to create Luigi Tasks to submit Batch
@@ -91,12 +91,12 @@ class BatchClient(object):
         self._client = boto3.client('batch')
         self._log_client = boto3.client('logs')
         self._queue = self.get_active_queue()
-    
+
     def get_active_queue(self):
         """Get name of first active job queue"""
-        
+
         # Get dict of active queues keyed by name
-        queues = {q['jobQueueName']:q for q in self._client.describe_job_queues()['jobQueues']
+        queues = {q['jobQueueName']: q for q in self._client.describe_job_queues()['jobQueues']
                   if q['state'] == 'ENABLED' and q['status'] == 'VALID'}
         if not queues:
             raise Exception('No job queues with state=ENABLED and status=VALID')
@@ -132,7 +132,7 @@ class BatchClient(object):
     def get_logs(self, log_stream_name, get_last=50):
         """Retrieve log stream from CloudWatch"""
         response = self._log_client.get_log_events(
-            logGroupName='/aws/batch/job', 
+            logGroupName='/aws/batch/job',
             logStreamName=log_stream_name,
             startFromHead=False)
         events = response['events']
@@ -143,16 +143,16 @@ class BatchClient(object):
         if job_name is None:
             job_name = _random_id()
         response = self._client.submit_job(
-            jobName = job_name,
-            jobQueue = queue or self.get_active_queue(),
-            jobDefinition = job_definition,
-            parameters = parameters
+            jobName=job_name,
+            jobQueue=queue or self.get_active_queue(),
+            jobDefinition=job_definition,
+            parameters=parameters
         )
         return response['jobId']
 
     def wait_on_job(self, job_id):
         """Poll task status until STOPPED"""
-        
+
         while True:
             status = self.get_job_status(job_id)
             if status == 'SUCCEEDED':
@@ -163,7 +163,7 @@ class BatchClient(object):
                 jobs = self._client.describe_jobs(jobs=[job_id])['jobs']
                 job_str = json.dumps(jobs, indent=4)
                 logger.debug('Job details:\n' + job_str)
-                
+
                 log_stream_name = jobs[0]['attempts'][0]['container']['logStreamName']
                 logs = self.get_logs(log_stream_name)
                 raise BatchJobException('Job {} failed: {}'.format(
@@ -190,8 +190,8 @@ class BatchTask(luigi.Task):
     """
     Base class for an Amazon Batch job
 
-    Amazon Batch requires you to register "job definitions", which are JSON 
-    descriptions for how to issue the ``docker run`` command. This Luigi Task 
+    Amazon Batch requires you to register "job definitions", which are JSON
+    descriptions for how to issue the ``docker run`` command. This Luigi Task
     requires a pre-registered Batch jobDefinition name passed as a Parameter
 
     :param job_definition: name of pre-registered jobDefinition
@@ -203,7 +203,9 @@ class BatchTask(luigi.Task):
 
     def run(self):
         bc = BatchClient()
-        job_id = bc.submit_job(self.job_definition, self.parameters,
+        job_id = bc.submit_job(
+            self.job_definition,
+            self.parameters,
             job_name=self.job_name)
         bc.wait_on_job(job_id)
 
