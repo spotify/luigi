@@ -199,8 +199,8 @@ class BatchTask(luigi.Task):
 
     """
     job_definition = luigi.Parameter()
-    job_name = luigi.OptionalParameter()
-    poll_time = luigi.Parameter(default=POLL_TIME)
+    job_name = luigi.OptionalParameter(default=None)
+    poll_time = luigi.IntParameter(default=POLL_TIME)
 
     def run(self):
         bc = BatchClient(self.poll_time)
@@ -211,6 +211,6 @@ class BatchTask(luigi.Task):
         bc.wait_on_job(job_id)
 
     @property
-    def parameters():
+    def parameters(self):
         """Override to return a dict of parameters for the Batch Task"""
         return {}
