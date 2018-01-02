@@ -200,7 +200,7 @@ class BatchTask(luigi.Task):
 
     """
     job_definition = luigi.Parameter()
-    job_name = luigi.Parameter(default=None)
+    job_name = luigi.OptionalParameter()
     poll_time = luigi.Parameter(default=POLL_TIME)
 
     def run(self):
