@@ -115,10 +115,9 @@ class BatchClient(object):
     def get_job_status(self, job_id):
         """Retrieve task statuses from ECS API
 
-        Args:
-            job_id (str): AWS Batch job uuid
+        :param job_id (str): AWS Batch job uuid
 
-        Returns list of {SUBMITTED|PENDING|RUNNABLE|STARTING|RUNNING|SUCCEEDED|FAILED} for each id in job_ids
+        Returns one of {SUBMITTED|PENDING|RUNNABLE|STARTING|RUNNING|SUCCEEDED|FAILED}
         """
         response = self._client.describe_jobs(jobs=[job_id])
 
@@ -195,7 +194,7 @@ class BatchTask(luigi.Task):
     descriptions for how to issue the ``docker run`` command. This Luigi Task
     requires a pre-registered Batch jobDefinition name passed as a Parameter
 
-    :param job_definition: name of pre-registered jobDefinition
+    :param job_definition (str): name of pre-registered jobDefinition
     :param job_name: name of specific job, for tracking in the queue and logs.
 
     """
