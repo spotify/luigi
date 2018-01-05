@@ -32,14 +32,6 @@ import warnings
 
 import botocore
 
-from luigi import configuration, six
-from luigi.format import get_default_format
-from luigi.parameter import Parameter
-from luigi.target import (AtomicLocalFile, FileAlreadyExists, FileSystem,
-                          FileSystemException, FileSystemTarget,
-                          MissingParentDirectory)
-from luigi.task import ExternalTask
-
 try:
     from urlparse import urlsplit
 except ImportError:
@@ -49,6 +41,14 @@ try:
     from ConfigParser import NoSectionError
 except ImportError:
     from configparser import NoSectionError
+
+from luigi import six
+
+from luigi import configuration
+from luigi.format import get_default_format
+from luigi.parameter import OptionalParameter, Parameter
+from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
+from luigi.task import ExternalTask
 
 
 logger = logging.getLogger('luigi-interface')
