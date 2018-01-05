@@ -54,7 +54,7 @@ The following is an example usage (and can also be found in ``slurm_tests.py``)
         def work(self):
             logger.info('Running test job...')
             with open(self.output().path, 'w') as f:
-                f.write('this is a test\n')
+                f.write('this is a test')
 
         def output(self):
             return luigi.LocalTarget(os.path.join('/home', 'testfile_' + str(self.i)))
@@ -99,18 +99,13 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-import itertools
 
 import luigi
 from luigi.contrib.hadoop import create_packages_archive
-from luigi.contrib import sge_runner  # just re-use what's there
 
-logger = logging.getLogger('luigi-interface')
-logger.propagate = 0
+import slurm_runner  # just re-use what's there
 
-POLL_TIME = 5  # decided to hard-code rather than configure here
-
-
+import itertools
 # see http://code.activestate.com/recipes/580745-retry-decorator-in-python/
 def retry(delays=(0, 1, 5, 30, 180, 600, 3600),
           exception=Exception,
@@ -133,6 +128,10 @@ def retry(delays=(0, 1, 5, 30, 180, 600, 3600),
         return wrapped
     return wrapper
 
+logger = logging.getLogger('luigi-interface')
+logger.propagate = 0
+
+POLL_TIME = 15  # decided to hard-code rather than configure here
 
 @retry()
 def _parse_job_state(job_id):
@@ -150,7 +149,8 @@ def _parse_job_state(job_id):
         try:
             job_map[job_s[0]] = job_s[1]
         except:
-            logger.error("No value found for " + job_s[0])
+            print("No value found for " + job_s[0])
+
     return job_map.get('JobState', 'u')
 
 
@@ -165,11 +165,11 @@ def _build_submit_command(cmd, job_name, outfile, errfile, ntasks, mem, gres, pa
                   '--mem', '{mem}',
                   '-J', '{job_name}',
                   ]
-    if gres:
+    if gres != '':
         submit_cmd.extend(['--gres',  '{gres}'])
-    if partition:
+    if partition != '':
         submit_cmd.extend(['--partition',  '{partition}'])
-    if time:
+    if time != '':
         submit_cmd.extend(['--time', '{time}'])
     submit_cmd.append('{sbatchfile}')
     submit_template = ' '.join(submit_cmd)
@@ -181,11 +181,10 @@ def _build_submit_command(cmd, job_name, outfile, errfile, ntasks, mem, gres, pa
         sbatch_template=sbatch_template, job_name=job_name, outfile=outfile, errfile=errfile,
         ntasks=ntasks, mem=mem, sbatchfile=sbatchfile, gres=gres, partition=partition, time=time)
 
-
 @retry()
 def _sbatch(submit_cmd):
-    """Do the sbatch but make this retyable"""
-    return subprocess.check_output(submit_cmd, shell=True)
+    output = subprocess.check_output(submit_cmd, shell=True)
+    return output
 
 
 class SlurmJobTask(luigi.Task):
@@ -197,7 +196,7 @@ class SlurmJobTask(luigi.Task):
 
     Parameters:
 
-    - ntasks: Number of CPUs to allocate for the Task.
+    - ntasks: Number of CPUs (or "slots") to allocate for the Task.
     - mem: The amount of memory to allocate for the Task.
     - gres: The gres resources to allocate for the Task.
     - time: The time to allocate for the Task.
@@ -205,7 +204,7 @@ class SlurmJobTask(luigi.Task):
     - shared_tmp_dir: Shared drive accessible from all nodes in the cluster.
           Task classes and dependencies are pickled to a temporary folder on
           this drive. The default is ``/home``, the NFS share location setup
-          by StarCluster.
+          by StarCluster
     - job_name_format: String that can be passed in to customize the job name
         string passed to sbatch; e.g. "Task123_{task_family}_{ntasks}...".
     - job_name: Exact job name to pass to sbatch.
@@ -220,15 +219,16 @@ class SlurmJobTask(luigi.Task):
 
     ntasks = luigi.IntParameter(default=2, significant=False)
     mem = luigi.IntParameter(default=100, significant=False)
-    gres = luigi.Parameter(default=None, significant=False)
-    partition = luigi.Parameter(default=None, significant=False)
-    time = luigi.Parameter(default=None, significant=False)
+    mem_per_cpu = luigi.IntParameter(default=2000, significant=False)
+    gres = luigi.Parameter(default='', significant=False)
+    partition = luigi.Parameter(default='', significant=False)
+    time = luigi.Parameter(default='', significant=False)
     shared_tmp_dir = luigi.Parameter(default='/home', significant=False)
     job_name_format = luigi.Parameter(
-        significant=False, default=None, description="A string that can be "
+        significant=False, default='', description="A string that can be "
         "formatted with class variables to name the job with sbatch.")
     job_name = luigi.Parameter(
-        significant=False, default=None,
+        significant=False, default='',
         description="Explicit job name given via sbatch.")
     run_locally = luigi.BoolParameter(
         significant=False,
@@ -245,10 +245,10 @@ class SlurmJobTask(luigi.Task):
 
     def __init__(self, *args, **kwargs):
         super(SlurmJobTask, self).__init__(*args, **kwargs)
-        if self.job_name:
+        if self.job_name != '':
             # use explicitly provided job name
             pass
-        elif self.job_name_format:
+        elif self.job_name_format != '':
             # define the job name with the provided format
             self.job_name = self.job_name_format.format(
                 task_family=self.task_family, **self.__dict__)
@@ -268,15 +268,23 @@ class SlurmJobTask(luigi.Task):
             errors.pop(0)
         return errors
 
+    def _fetch_task_out(self):
+        if not os.path.exists(self.outfile):
+            logger.info('No output file')
+            return []
+        with open(self.outfile, "r") as f:
+            output = f.readlines()
+        return output
+
     def _init_local(self):
         # Set up temp folder in shared directory (trim to max filename length)
         base_tmp_dir = self.shared_tmp_dir
-        random_id = '{0:x}'.format(random.getrandbits(64))
-        folder_name = "{}-{}".format(self.task_id, random_id)
+        random_id = '%016x' % random.getrandbits(64)
+        folder_name = self.task_id + '-' + random_id
         self.tmp_dir = os.path.join(base_tmp_dir, folder_name)
         max_filename_length = os.fstatvfs(0).f_namemax
         self.tmp_dir = self.tmp_dir[:max_filename_length]
-        logger.info("Tmp dir:{} ".format(self.tmp_dir))
+        logger.info("Tmp dir: %s", self.tmp_dir)
         os.makedirs(self.tmp_dir)
 
         # Dump the code to be run into a pickle file
@@ -292,6 +300,7 @@ class SlurmJobTask(luigi.Task):
             create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
 
     def run(self):
+        self.init_vars()
         if self.run_locally:
             self.work()
         else:
@@ -304,6 +313,14 @@ class SlurmJobTask(luigi.Task):
             # - Runner function loads the class from pickle
             # - Runner class untars the dependencies
             # - Runner function hits the button on the class's work() method
+
+    def init_vars(self):
+        """
+        Initialise vars here that won't be available in the slurm environment,
+        e.g. information from other luigi tasks.
+        Save them in object variables so that they are serialised before work() is called.
+        """
+        pass
 
     def work(self):
         """Override this method, rather than ``run()``,  for your actual work."""
@@ -319,11 +336,11 @@ class SlurmJobTask(luigi.Task):
                 d = d.replace('(c__main__', "(c" + module_name)
                 open(self.job_file, "w").write(d)
             else:
-                pickle.dump(self, open(self.job_file, "w"))
+                pickle.dump(self, open(self.job_file, "wb"))
 
     def _run_job(self):
         # Build a sbatch argument that will run sge_runner.py on the directory we've specified
-        runner_path = sge_runner.__file__
+        runner_path = slurm_runner.__file__
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
         job_str = 'python {0} "{1}" "{2}"'.format(
@@ -348,15 +365,20 @@ class SlurmJobTask(luigi.Task):
         self.job_id = output.decode().strip()
         logger.debug("Submitted job to slurm with job id: {}".format(self.job_id))
 
-        self._track_job()
+        successful = self._track_job()
 
         # Now delete the temporaries, if they're there.
         if not self.dont_remove_tmp_dir:
             logger.info('Removing temporary directory {}'.format(self.tmp_dir))
             if (os.path.exists(self.tmp_dir)):
-                shutil.rmtree(self.tmp_dir)
+                shutil.rmtree(self.tmp_dir, ignore_errors=True)
+
+        # stop here if the job was not successful
+        if not successful:
+            raise RuntimeError('Slurm job did not complete')
 
     def _track_job(self):
+        successful = False
         start = time.time()
         while True:
             # Sleep for a little bit
@@ -365,18 +387,19 @@ class SlurmJobTask(luigi.Task):
             # See what the job's up to
             # ASSUMPTION
             job_status = _parse_job_state(self.job_id)
-            if job_status == 'RUNNING':
+            if job_status == 'RUNNING' or job_status == 'COMPLETING':
                 logger.info('Job is running ({:0.1f} seconds elapsed)...'.format(float(time.time() - start)))
             elif job_status == 'PENDING':
                 logger.info('Job is pending ({:0.1f} seconds elapsed)...'.format(float(time.time() - start)))
             elif 'FAILED' in job_status:
-                logger.error('Job has FAILED:\n' + '\n'.join(self._fetch_task_failures()))
+                logger.error('Job has FAILED:\n' + '\n'.join(self._fetch_task_failures()) + '\n'.join(self._fetch_task_out()))
                 break
             elif 'CANCELLED' in job_status:
-                logger.error('Job has been CANCELLED:\n' + '\n'.join(self._fetch_task_failures()))
+                logger.error('Job has been CANCELLED:\n' + '\n'.join(self._fetch_task_failures()) + '\n'.join(self._fetch_task_out()))
                 break
             elif job_status == 'COMPLETED' or job_status == 'u':
                 # Then the job could either be failed or done.
+                successful = True  # fail properly if you want to stop, don't just write to stderr!
                 errors = self._fetch_task_failures()
                 if not errors:
                     logger.info('Job is done')
@@ -385,11 +408,10 @@ class SlurmJobTask(luigi.Task):
                         logger.error(error)
                 break
             else:
-                job_status = 'UNKNOWN'
+                logger.info('Job status is UNKNOWN!')
                 logger.info('Status is : {}'.format(job_status))
-                raise Exception(
-                    "job status isn't one of ['RUNNING', 'PENDING', 'COMPLETED', 'FAILED', 'CANCELLED', 'u']: {}"\
-                    .format(job_status))
+                raise Exception("job status isn't one of ['RUNNING', 'PENDING', 'COMPLETED', 'FAILED', 'CANCELLED', 'u']: %s" % job_status)
+        return successful
 
 
 class LocalSlurmJobTask(SlurmJobTask):
