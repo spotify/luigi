@@ -103,7 +103,7 @@ except ImportError:
 import luigi
 from luigi.contrib.hadoop import create_packages_archive
 
-import slurm_runner  # just re-use what's there
+from luigi.contrib import slurm_runner # just re-use what's there
 
 import itertools
 
