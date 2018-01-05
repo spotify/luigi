@@ -106,6 +106,8 @@ from luigi.contrib.hadoop import create_packages_archive
 import slurm_runner  # just re-use what's there
 
 import itertools
+
+
 # see http://code.activestate.com/recipes/580745-retry-decorator-in-python/
 def retry(delays=(0, 1, 5, 30, 180, 600, 3600),
           exception=Exception,
@@ -113,7 +115,7 @@ def retry(delays=(0, 1, 5, 30, 180, 600, 3600),
     def wrapper(function):
         def wrapped(*args, **kwargs):
             problems = []
-            for delay in itertools.chain(delays, [ None ]):
+            for delay in itertools.chain(delays, [None]):
                 try:
                     return function(*args, **kwargs)
                 except exception as problem:
@@ -123,15 +125,17 @@ def retry(delays=(0, 1, 5, 30, 180, 600, 3600),
                         raise
                     else:
                         report("retryable failed:", problem,
-                            "-- delaying for %ds" % delay)
+                               "-- delaying for %ds" % delay)
                         time.sleep(delay)
         return wrapped
     return wrapper
+
 
 logger = logging.getLogger('luigi-interface')
 logger.propagate = 0
 
 POLL_TIME = 15  # decided to hard-code rather than configure here
+
 
 @retry()
 def _parse_job_state(job_id):
@@ -148,8 +152,9 @@ def _parse_job_state(job_id):
         job_s = job.split("=")
         try:
             job_map[job_s[0]] = job_s[1]
-        except:
+        except Exception as e:
             print("No value found for " + job_s[0])
+            print(e)
 
     return job_map.get('JobState', 'u')
 
@@ -180,6 +185,7 @@ def _build_submit_command(cmd, job_name, outfile, errfile, ntasks, mem, gres, pa
     return submit_template.format(
         sbatch_template=sbatch_template, job_name=job_name, outfile=outfile, errfile=errfile,
         ntasks=ntasks, mem=mem, sbatchfile=sbatchfile, gres=gres, partition=partition, time=time)
+
 
 @retry()
 def _sbatch(submit_cmd):
@@ -353,8 +359,8 @@ class SlurmJobTask(luigi.Task):
         self.errfile = os.path.join(self.tmp_dir, 'job.err')
         sbatchfile = os.path.join(self.tmp_dir, '{}.sbatch'.format(self.task_family))
         submit_cmd = _build_submit_command(job_str, self.task_family, self.outfile,
-                                         self.errfile, self.ntasks, self.mem,
-                                         self.gres, self.partition, self.time, sbatchfile)
+                                           self.errfile, self.ntasks, self.mem,
+                                           self.gres, self.partition, self.time, sbatchfile)
         logger.debug('sbatch command: {}'.format(submit_cmd))
 
         # Submit the job and grab job ID
