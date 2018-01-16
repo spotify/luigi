@@ -37,13 +37,15 @@ class DictParameterTest(unittest.TestCase):
 
     def test_serialize(self):
         d = luigi.DictParameter().serialize(DictParameterTest._dict)
-        self.assertEqual(d, '{"username": "me", "password": "secret"}')
+        self.assertEqual(d, '{"password": "secret", "username": "me"}')
 
     def test_parse_and_serialize(self):
-        inputs = ['{"username": "me", "password": "secret"}', '{"password": "secret", "username": "me"}']
+        sorted_input = '{"password": "secret", "username": "me"}'
+        unsorted_input = '{"username": "me", "password": "secret"}'
+        inputs = [sorted_input, unsorted_input]
         for json_input in inputs:
             _dict = luigi.DictParameter().parse(json_input)
-            self.assertEqual(json_input, luigi.DictParameter().serialize(_dict))
+            self.assertEqual(sorted_input, luigi.DictParameter().serialize(_dict))
 
     def test_parse_interface(self):
         in_parse(["DictParameterTask", "--param", '{"username": "me", "password": "secret"}'],
@@ -51,7 +53,7 @@ class DictParameterTest(unittest.TestCase):
 
     def test_serialize_task(self):
         t = DictParameterTask(DictParameterTest._dict)
-        self.assertEqual(str(t), 'DictParameterTask(param={"username": "me", "password": "secret"})')
+        self.assertEqual(str(t), 'DictParameterTask(param={"password": "secret", "username": "me"})')
 
     def test_parse_invalid_input(self):
         self.assertRaises(ValueError, lambda: luigi.DictParameter().parse('{"invalid"}'))
