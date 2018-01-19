@@ -43,7 +43,7 @@ logger = logging.getLogger('luigi-interface')
 try:
     from pykube.config import KubeConfig
     from pykube.http import HTTPClient
-    from pykube.objects import Job
+    from pykube.objects import Job, Pod
 except ImportError:
     logger.warning('pykube is not installed. KubernetesJobTask requires pykube.')
 
@@ -159,6 +159,7 @@ class KubernetesJobTask(luigi.Task):
 
     def __track_job(self):
         """Poll job status while active"""
+        self.__verify_job_has_started()
         while (self.__get_job_status() == "running"):
             self.__logger.debug("Kubernetes job " + self.uu_name
                                 + " is still running")
@@ -181,16 +182,33 @@ class KubernetesJobTask(luigi.Task):
         """
         pass
 
+    def __verify_job_has_started(self):
+        """Asserts that the job has successfully started"""
+        # Verify that the job started
+        jobs = Job.objects(self.__kube_api) \
+            .filter(selector="luigi_task_id="+ self.job_uuid) \
+            .response['items']
+
+        assert len(jobs) > 0, "Kubernetes job " + self.uu_name + " not found"
+        self.__job = jobs[0]
+
+        # Verify that the pod started
+        pods = Pod.objects(self.__kube_api) \
+            .filter(selector="job-name=" + self.uu_name) \
+            .response['items']
+
+        assert len(pods) > 0, "No pod scheduled by " + self.uu_name
+
+        for pod in pods:
+            for cond in pod['status']['conditions']:
+                if 'message' in cond:
+                    assert cond['status'] != 'False', \
+                        "[ERROR] %s - %s" % (cond['reason'], cond['message'])
+
     def __get_job_status(self):
         """Return the Kubernetes job status"""
-        # Look for the required job
-        jobs = Job.objects(self.__kube_api).filter(selector="luigi_task_id="
-                                                            + self.job_uuid)
-        # Raise an exception if no such job found
-        if len(jobs.response["items"]) == 0:
-            raise RuntimeError("Kubernetes job " + self.uu_name + " not found")
         # Figure out status and return it
-        job = Job(self.__kube_api, jobs.response["items"][0])
+        job = Job(self.__kube_api, self.__job)
         if ("succeeded" in job.obj["status"] and job.obj["status"]["succeeded"] > 0):
             job.scale(replicas=0)  # Downscale the job, but keep it for logging
             return "succeeded"
