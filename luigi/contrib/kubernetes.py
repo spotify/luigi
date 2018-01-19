@@ -168,6 +168,13 @@ class KubernetesJobTask(luigi.Task):
         """
         return True
 
+    @property
+    def print_pod_logs_on_exit(self):
+        """
+        Fetch and print the pod logs once the job is completed.
+        """
+        return True
+
     def __track_job(self):
         """Poll job status while active"""
         while not self.__verify_job_has_started():
@@ -183,7 +190,6 @@ class KubernetesJobTask(luigi.Task):
                 raise RuntimeError("Kubernetes job " + self.uu_name + " failed")
             self.__logger.debug("Kubernetes job " + self.uu_name + " is still running")
             time.sleep(self.__POLL_TIME)
-
 
     def signal_complete(self):
         """Signal job completion for scheduler and dependent tasks.
@@ -202,15 +208,25 @@ class KubernetesJobTask(luigi.Task):
             .response['items']
         return [Pod(self.__kube_api, p) for p in pod_objs]
 
-    def __verify_job_has_started(self):
-        """Asserts that the job has successfully started"""
-        # Verify that the job started
+    def __get_job(self):
         jobs = Job.objects(self.__kube_api) \
             .filter(selector="luigi_task_id="+ self.job_uuid) \
             .response['items']
-
         assert len(jobs) == 1, "Kubernetes job " + self.uu_name + " not found"
-        self.__job = jobs[0]
+        return Job(self.__kube_api, jobs[0])
+
+    def __print_pod_logs(self):
+        for pod in self.__get_pods():
+            logs = pod.logs(timestamps=True).strip()
+            self.__logger.info("Fetching logs from " + pod.name)
+            if len(logs) > 0:
+                for l in logs.split('\n'):
+                    self.__logger.info(l)
+
+    def __verify_job_has_started(self):
+        """Asserts that the job has successfully started"""
+        # Verify that the job started
+        self.__get_job()
 
         # Verify that the pod started
         pods = self.__get_pods()
@@ -229,10 +245,12 @@ class KubernetesJobTask(luigi.Task):
     def __get_job_status(self):
         """Return the Kubernetes job status"""
         # Figure out status and return it
-        job = Job(self.__kube_api, self.__job)
+        job = self.__get_job()
 
         if "succeeded" in job.obj["status"] and job.obj["status"]["succeeded"] > 0:
             job.scale(replicas=0)
+            if self.print_pod_logs_on_exit:
+                self.__print_pod_logs()
             if self.delete_on_success:
                 for pod in self.__get_pods():
                     self.__logger.info("Deleting Pod " + pod.name)
@@ -245,6 +263,8 @@ class KubernetesJobTask(luigi.Task):
             failed_cnt = job.obj["status"]["failed"]
             self.__logger.debug("Kubernetes job " + self.uu_name
                                 + " status.failed: " + str(failed_cnt))
+            if self.print_pod_logs_on_exit:
+                self.__print_pod_logs()
             if failed_cnt > self.max_retrials:
                 job.scale(replicas=0)  # avoid more retrials
                 return self.__JobStatus.FAILED
