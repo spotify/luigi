@@ -116,10 +116,13 @@ def _infer_format(path):
     if ext in FORMATS:
         return ext
 
-    raise ValueError(f'Failed to infer format from {path}, supposed to be one of {formats}')
+    error_text = 'Failed to infer format from {0},' \
+                 'supposed to be one of {1}'.format(path, formats)
+    raise ValueError(error_text)
 
 
-def generate_graph(task, filepath=None, format_=None, style=None, view=False, **kwargs):
+def generate_graph(task, filepath=None, format_=None,
+                   style=None, view=False, **kwargs):
     '''central method of statviz, generates a graph
     and renders it to the file
 
@@ -152,7 +155,7 @@ def generate_graph(task, filepath=None, format_=None, style=None, view=False, **
         frmt = format_
     else:
         frmt = frmt[1:]  # drop dot
-    assert frmt in FORMATS, f'Format is not supported: {frmt_}'
+    assert frmt in FORMATS, 'Format is not supported: {}'.format(frmt)
 
     if frmt != 'svg':
         graph.engine = frmt
@@ -160,4 +163,3 @@ def generate_graph(task, filepath=None, format_=None, style=None, view=False, **
     directory = p.dirname(filepath)
     graph.render(filename=filename, directory=directory,
                  view=view, cleanup=True)
-
