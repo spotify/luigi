@@ -169,23 +169,27 @@ class KubernetesJobTask(luigi.Task):
         """
         Fetch and print the pod logs once the job is completed.
         """
-        return True
+        return False
 
     def __track_job(self):
         """Poll job status while active"""
         while not self.__verify_job_has_started():
-            time.sleep(1)
-        self.__print_kubectl_hints()
-        while True:
-            status = self.__get_job_status()
-            if status == "SUCCEEDED":
-                self.__logger.info("Kubernetes job " + self.uu_name + " succeeded")
-                self.signal_complete()
-                return
-            if status == "FAILED":
-                raise RuntimeError("Kubernetes job " + self.uu_name + " failed")
-            self.__logger.debug("Kubernetes job " + self.uu_name + " is still running")
             time.sleep(self.__POLL_TIME)
+            self.__logger.debug("Waiting for Kubernetes job " + self.uu_name + " to start")
+        self.__print_kubectl_hints()
+
+        status = self.__get_job_status()
+        while status == "RUNNING":
+            self.__logger.debug("Kubernetes job " + self.uu_name + " is running")
+            time.sleep(self.__POLL_TIME)
+            status = self.__get_job_status()
+
+        if status == "FAILED":
+            raise RuntimeError("Kubernetes job " + self.uu_name + " failed")
+
+        # status == "SUCCEEDED"
+        self.__logger.info("Kubernetes job " + self.uu_name + " succeeded")
+        self.signal_complete()
 
     def signal_complete(self):
         """Signal job completion for scheduler and dependent tasks.
