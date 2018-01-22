@@ -32,6 +32,7 @@ Requires:
 
 Written and maintained by Marco Capuccini (@mcapuccini).
 """
+from datetime import datetime
 
 import luigi
 import logging
@@ -48,7 +49,7 @@ except ImportError:
     logger.warning('pykube is not installed. KubernetesJobTask requires pykube.')
 
 
-class kubernetes(luigi.Config):
+class Kubernetes(luigi.Config):
     auth_method = luigi.Parameter(
         default="kubeconfig",
         description="Authorization method to access the cluster")
@@ -63,19 +64,20 @@ class kubernetes(luigi.Config):
 class KubernetesJobTask(luigi.Task):
 
     __POLL_TIME = 5  # see __track_job
-    kubernetes_config = kubernetes()
+    kubernetes_config = Kubernetes()
 
     def _init_kubernetes(self):
         self.__logger = logger
         self.__logger.debug("Kubernetes auth method: " + self.auth_method)
-        if(self.auth_method == "kubeconfig"):
+        if self.auth_method == "kubeconfig":
             self.__kube_api = HTTPClient(KubeConfig.from_file(self.kubeconfig_path))
-        elif(self.auth_method == "service-account"):
+        elif self.auth_method == "service-account":
             self.__kube_api = HTTPClient(KubeConfig.from_service_account())
         else:
             raise ValueError("Illegal auth_method")
         self.job_uuid = str(uuid.uuid4().hex)
-        self.uu_name = self.name + "-luigi-" + self.job_uuid
+        now = datetime.utcnow()
+        self.uu_name = "%s-%s-%s" % (self.name, now.strftime('%Y%m%d%H%M%S'), self.job_uuid[:16])
 
     @property
     def auth_method(self):
@@ -184,8 +186,7 @@ class KubernetesJobTask(luigi.Task):
             time.sleep(self.__POLL_TIME)
             status = self.__get_job_status()
 
-        if status == "FAILED":
-            raise RuntimeError("Kubernetes job " + self.uu_name + " failed")
+        assert status != "FAILED", "Kubernetes job " + self.uu_name + " failed"
 
         # status == "SUCCEEDED"
         self.__logger.info("Kubernetes job " + self.uu_name + " succeeded")
@@ -239,7 +240,15 @@ class KubernetesJobTask(luigi.Task):
         assert len(pods) > 0, "No pod scheduled by " + self.uu_name
 
         for pod in pods:
-            for cond in pod.obj['status']['conditions']:
+            status = pod.obj['status']
+            for cont_stats in status['containerStatuses']:
+                if 'terminated' in cont_stats['state']:
+                    t = cont_stats['state']['terminated']
+                    err_msg = "Pod %s %s (exit code %d). Logs: `kubectl logs pod/%s`" % (
+                        pod.name, t['reason'], t['exitCode'], pod.name)
+                    assert t['exitCode'] == 0, err_msg
+
+            for cond in status['conditions']:
                 if 'message' in cond:
                     if cond['reason'] == 'ContainersNotReady':
                         return False
@@ -300,7 +309,7 @@ class KubernetesJobTask(luigi.Task):
         # Update user labels
         job_json['metadata']['labels'].update(self.labels)
         # Add default restartPolicy if not specified
-        if ("restartPolicy" not in self.spec_schema):
+        if "restartPolicy" not in self.spec_schema:
             job_json["spec"]["template"]["spec"]["restartPolicy"] = "Never"
         # Submit job
         self.__logger.info("Submitting Kubernetes Job: " + self.uu_name)
