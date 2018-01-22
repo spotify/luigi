@@ -238,15 +238,19 @@ class KubernetesJobTask(luigi.Task):
         pods = self.__get_pods()
 
         assert len(pods) > 0, "No pod scheduled by " + self.uu_name
-
         for pod in pods:
             status = pod.obj['status']
-            for cont_stats in status['containerStatuses']:
+            for cont_stats in status.get('containerStatuses', []):
                 if 'terminated' in cont_stats['state']:
                     t = cont_stats['state']['terminated']
                     err_msg = "Pod %s %s (exit code %d). Logs: `kubectl logs pod/%s`" % (
                         pod.name, t['reason'], t['exitCode'], pod.name)
                     assert t['exitCode'] == 0, err_msg
+
+                assert 'waiting' not in cont_stats['state'],\
+                    "Pod %s %s. Logs: `kubectl logs pod/%s`" % (pod.name,
+                                                                cont_stats['state']['waiting']['reason'],
+                                                                pod.name)
 
             for cond in status['conditions']:
                 if 'message' in cond:
@@ -298,6 +302,7 @@ class KubernetesJobTask(luigi.Task):
                 }
             },
             "spec": {
+                "activeDeadlineSeconds": 100,
                 "template": {
                     "metadata": {
                         "name": self.uu_name
