@@ -247,10 +247,10 @@ class KubernetesJobTask(luigi.Task):
                         pod.name, t['reason'], t['exitCode'], pod.name)
                     assert t['exitCode'] == 0, err_msg
 
-                assert 'waiting' not in cont_stats['state'],\
-                    "Pod %s %s. Logs: `kubectl logs pod/%s`" % (pod.name,
-                                                                cont_stats['state']['waiting']['reason'],
-                                                                pod.name)
+                if 'waiting' in cont_stats['state']:
+                    wr = cont_stats['state']['waiting']['reason']
+                    assert wr == 'ContainerCreating', "Pod %s %s. Logs: `kubectl logs pod/%s`" % (
+                        pod.name, wr, pod.name)
 
             for cond in status['conditions']:
                 if 'message' in cond:
