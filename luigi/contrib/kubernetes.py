@@ -173,6 +173,14 @@ class KubernetesJobTask(luigi.Task):
         """
         return False
 
+    @property
+    def active_deadline_seconds(self):
+        """
+        Time allowed to successfully schedule pods.
+        See: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/#job-termination-and-cleanup
+        """
+        return 100
+
     def __track_job(self):
         """Poll job status while active"""
         while not self.__verify_job_has_started():
@@ -302,7 +310,7 @@ class KubernetesJobTask(luigi.Task):
                 }
             },
             "spec": {
-                "activeDeadlineSeconds": 100,
+                "activeDeadlineSeconds": self.active_deadline_seconds,
                 "template": {
                     "metadata": {
                         "name": self.uu_name
