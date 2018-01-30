@@ -27,6 +27,12 @@ from helpers import with_config
 
 class SchedulerIoTest(unittest.TestCase):
 
+    def test_pretty_id_unicode(self):
+        scheduler = luigi.scheduler.Scheduler()
+        scheduler.add_task(worker='A', task_id='1', params={u'foo': u'\u2192bar'})
+        [task] = list(scheduler._state.get_active_tasks())
+        task.pretty_id
+
     def test_load_old_state(self):
         tasks = {}
         active_workers = {'Worker1': 1e9, 'Worker2': time.time()}
