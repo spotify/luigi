@@ -58,6 +58,7 @@ class DummyS3CopyToTableKey(DummyS3CopyToTableBase):
     aws_access_key_id = AWS_ACCESS_KEY
     aws_secret_access_key = AWS_SECRET_KEY
 
+
 class DummyS3CopyToTableWithCompressionEncodings(DummyS3CopyToTableKey):
     columns = (
         ('some_text', 'varchar(255)', 'LZO'),
@@ -185,8 +186,8 @@ class TestS3CopyToTable(unittest.TestCase):
                 return_value=False)
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
     def test_s3_copy_to_missing_table_with_compression_encodings(self,
-                                      mock_redshift_target,
-                                      mock_does_exist):
+                                                                 mock_redshift_target,
+                                                                 mock_does_exist):
         """
         Test missing table creation with compression encodings
         """
