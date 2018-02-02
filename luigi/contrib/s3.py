@@ -50,6 +50,26 @@ try:
 except ImportError:
     from configparser import NoSectionError
 
+<<<<<<< HEAD
+||||||| merged common ancestors
+from luigi import six
+from luigi.six.moves import range
+
+from luigi import configuration
+from luigi.format import get_default_format
+from luigi.parameter import Parameter
+from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
+from luigi.task import ExternalTask
+=======
+from luigi import six
+from luigi.six.moves import range
+
+from luigi import configuration
+from luigi.format import get_default_format
+from luigi.parameter import OptionalParameter, Parameter
+from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
+from luigi.task import ExternalTask
+>>>>>>> 7cbf2d3a9c8d3cd751d53c06cc56d30b77eadd95
 
 logger = logging.getLogger('luigi-interface')
 
@@ -724,7 +744,7 @@ class S3FlagTask(ExternalTask):
     An external task that requires the existence of EMR output in S3.
     """
     path = Parameter()
-    flag = Parameter(default=None)
+    flag = OptionalParameter(default=None)
 
     def output(self):
         return S3FlagTarget(self.path, flag=self.flag)

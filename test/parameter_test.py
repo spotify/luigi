@@ -16,9 +16,11 @@
 #
 
 import datetime
+
 from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
 import enum
+import mock
 
 import luigi
 import luigi.date_interval
@@ -307,6 +309,58 @@ class ParameterTest(LuigiTestCase):
     def test_parse_list_as_tuple(self):
         param = luigi.IntParameter(batch_method=tuple)
         self.assertEqual((7, 17, 5), param._parse_list(['7', '17', '5']))
+
+    @mock.patch('luigi.parameter.warnings')
+    def test_warn_on_default_none(self, warnings):
+        class TestConfig(luigi.Config):
+            param = luigi.Parameter(default=None)
+
+        TestConfig()
+        warnings.warn.assert_called_once_with('Parameter "param" with value "None" is not of type string.')
+
+    @mock.patch('luigi.parameter.warnings')
+    def test_no_warn_on_string(self, warnings):
+        class TestConfig(luigi.Config):
+            param = luigi.Parameter(default=None)
+
+        TestConfig(param="str")
+        warnings.warn.assert_not_called()
+
+    @mock.patch('luigi.parameter.warnings')
+    def test_no_warn_on_none_in_optional(self, warnings):
+        class TestConfig(luigi.Config):
+            param = luigi.OptionalParameter(default=None)
+
+        TestConfig()
+        warnings.warn.assert_not_called()
+
+    @mock.patch('luigi.parameter.warnings')
+    def test_no_warn_on_string_in_optional(self, warnings):
+        class TestConfig(luigi.Config):
+            param = luigi.OptionalParameter(default=None)
+
+        TestConfig(param='value')
+        warnings.warn.assert_not_called()
+
+    @mock.patch('luigi.parameter.warnings')
+    def test_warn_on_bad_type_in_optional(self, warnings):
+        class TestConfig(luigi.Config):
+            param = luigi.OptionalParameter()
+
+        TestConfig(param=1)
+        warnings.warn.assert_called_once_with('OptionalParameter "param" with value "1" is not of type string or None.')
+
+    def test_optional_parameter_parse_none(self):
+        self.assertIsNone(luigi.OptionalParameter().parse(''))
+
+    def test_optional_parameter_parse_string(self):
+        self.assertEqual('test', luigi.OptionalParameter().parse('test'))
+
+    def test_optional_parameter_serialize_none(self):
+        self.assertEqual('', luigi.OptionalParameter().serialize(None))
+
+    def test_optional_parameter_serialize_string(self):
+        self.assertEqual('test', luigi.OptionalParameter().serialize('test'))
 
 
 class TestParametersHashability(LuigiTestCase):

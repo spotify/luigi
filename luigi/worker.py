@@ -125,7 +125,7 @@ class TaskProcess(multiprocessing.Process):
 
     def _run_get_new_deps(self):
         self.task.set_tracking_url = self.status_reporter.update_tracking_url
-        self.task.set_status_message = self.status_reporter.update_status
+        self.task.set_status_message = self.status_reporter.update_status_message
         self.task.set_progress_percentage = self.status_reporter.update_progress_percentage
 
         task_gen = self.task.run()
@@ -268,7 +268,7 @@ class TaskStatusReporter(object):
             tracking_url=tracking_url
         )
 
-    def update_status(self, message):
+    def update_status_message(self, message):
         self._scheduler.set_task_status_message(self._task_id, message)
 
     def update_progress_percentage(self, percentage):
@@ -656,7 +656,7 @@ class Worker(object):
         # we track queue size ourselves because len(queue) won't work for multiprocessing
         queue_size = 1
         try:
-            seen = set([task.task_id])
+            seen = {task.task_id}
             while queue_size:
                 current = queue.get()
                 queue_size -= 1

@@ -69,7 +69,7 @@ class upstream(luigi.task.Config):
     '''
     Used to provide the parameter upstream-family
     '''
-    family = parameter.Parameter(default=None)
+    family = parameter.OptionalParameter(default=None)
 
 
 def find_deps(task, upstream_task_family):
@@ -79,7 +79,7 @@ def find_deps(task, upstream_task_family):
 
     Returns all deps on all paths between task and upstream
     '''
-    return set([t for t in dfs_paths(task, upstream_task_family)])
+    return {t for t in dfs_paths(task, upstream_task_family)}
 
 
 def find_deps_cli():

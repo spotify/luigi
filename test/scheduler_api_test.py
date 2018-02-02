@@ -863,7 +863,7 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='E', status=DISABLED)
 
         # scheduler prunes the worker disabled task
-        self.assertEqual(set(['D', 'E']), set(self.sch.task_list(DISABLED, '')))
+        self.assertEqual({'D', 'E'}, set(self.sch.task_list(DISABLED, '')))
         self._test_prune_done_tasks([])
 
     def test_keep_failed_tasks_for_assistant(self):

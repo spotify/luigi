@@ -8,7 +8,7 @@ Graph = (function() {
         "DISABLED":"#808080",
         "UNKNOWN":"#000000",
         "TRUNCATED":"#FF00FF"
-    }
+    };
 
     /* Line height for items in task status legend */
     var legendLineHeight = 20;
@@ -108,7 +108,7 @@ Graph = (function() {
        is at least nodeWidth to ensure readability. The height of each level is
        determined by number of nodes divided by number of columns, rounded up. */
     function layoutNodes(nodes, rowSizes) {
-        var numCols = Math.max(2, Math.floor(graphWidth / nodeWidth))
+        var numCols = Math.max(2, Math.floor(graphWidth / nodeWidth));
         function rowStartPosition(depth) {
             if (depth === 0) return 20;
             var rowHeight = Math.ceil(rowSizes[depth-1] / numCols);
@@ -229,7 +229,7 @@ Graph = (function() {
         // Legend for Task status
         var legend = $(svgElement("g"))
                 .addClass("legend")
-                .appendTo(self.svg)
+                .appendTo(self.svg);
 
         $(svgElement("rect"))
             .attr("x", -1)
@@ -248,7 +248,7 @@ Graph = (function() {
                 .attr("cx", legendLineHeight)
                 .attr("cy", (legendLineHeight-4)+(x*legendLineHeight))
                 .attr("fill", color)
-                .appendTo(legend)
+                .appendTo(legend);
 
             $(svgElement("text"))
                 .text(key.charAt(0).toUpperCase() + key.substring(1).toLowerCase().replace(/_./gi, function (x) { return " " + x[1].toUpperCase(); }))

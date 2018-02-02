@@ -335,8 +335,8 @@ class Task(object):
 
     @property
     def pretty_id(self):
-        param_str = ', '.join('{}={}'.format(key, value) for key, value in sorted(self.params.items()))
-        return '{}({})'.format(self.family, param_str)
+        param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(self.params.items()))
+        return u'{}({})'.format(self.family, param_str)
 
 
 class Worker(object):
@@ -713,7 +713,7 @@ class Scheduler(object):
         self._state.inactivate_workers(remove_workers)
 
     def _prune_tasks(self):
-        assistant_ids = set(w.id for w in self._state.get_assistants())
+        assistant_ids = {w.id for w in self._state.get_assistants()}
         remove_tasks = []
 
         for task in self._state.get_active_tasks():
@@ -772,7 +772,7 @@ class Scheduler(object):
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None,
                  assistant=False, tracking_url=None, worker=None, batchable=None,
-                 batch_id=None, retry_policy_dict=dict(), owners=None, **kwargs):
+                 batch_id=None, retry_policy_dict=None, owners=None, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -783,6 +783,10 @@ class Scheduler(object):
         assert worker is not None
         worker_id = worker
         worker = self._update_worker(worker_id)
+
+        if retry_policy_dict is None:
+            retry_policy_dict = {}
+
         retry_policy = self._generate_retry_policy(retry_policy_dict)
 
         if worker.enabled:

@@ -81,7 +81,7 @@ class DateIntervalTest(LuigiTestCase):
         d = DI().parse('2012')
         self.assertTrue(d == c)
         self.assertEqual(d, min(c, b))
-        self.assertEqual(3, len(set([a, b, c, d])))
+        self.assertEqual(3, len({a, b, c, d}))
 
     def test_comparison_different_types(self):
         x = DI().parse('2012')

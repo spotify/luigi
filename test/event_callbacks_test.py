@@ -241,7 +241,7 @@ class TestDependencyEvents(unittest.TestCase):
         for param in range(1, 3):
             D(param).produce_output()
         self._run_test(A(), {
-            'event.core.dependency.discovered': set([
+            'event.core.dependency.discovered': {
                 (A(param=1).task_id, B(param=1).task_id),
                 (A(param=1).task_id, B(param=2).task_id),
                 (B(param=1).task_id, C(param=1).task_id),
@@ -250,14 +250,14 @@ class TestDependencyEvents(unittest.TestCase):
                 (C(param=1).task_id, D(param=2).task_id),
                 (C(param=2).task_id, D(param=2).task_id),
                 (C(param=2).task_id, D(param=3).task_id),
-            ]),
-            'event.core.dependency.missing': set([
+            },
+            'event.core.dependency.missing': {
                 (D(param=3).task_id,),
-            ]),
-            'event.core.dependency.present': set([
+            },
+            'event.core.dependency.present': {
                 (D(param=1).task_id,),
                 (D(param=2).task_id,),
-            ]),
+            },
         })
         self.assertFalse(A().output().exists())
 
@@ -265,7 +265,7 @@ class TestDependencyEvents(unittest.TestCase):
         for param in range(1, 4):
             D(param).produce_output()
         self._run_test(A(), {
-            'event.core.dependency.discovered': set([
+            'event.core.dependency.discovered': {
                 (A(param=1).task_id, B(param=1).task_id),
                 (A(param=1).task_id, B(param=2).task_id),
                 (B(param=1).task_id, C(param=1).task_id),
@@ -274,12 +274,12 @@ class TestDependencyEvents(unittest.TestCase):
                 (C(param=1).task_id, D(param=2).task_id),
                 (C(param=2).task_id, D(param=2).task_id),
                 (C(param=2).task_id, D(param=3).task_id),
-            ]),
-            'event.core.dependency.present': set([
+            },
+            'event.core.dependency.present': {
                 (D(param=1).task_id,),
                 (D(param=2).task_id,),
                 (D(param=3).task_id,),
-            ]),
+            },
         })
         self.assertEqual(eval_contents(A().output()),
                          [A(param=1).task_id,
