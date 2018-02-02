@@ -860,6 +860,10 @@ Parameters controlling storage of task history in a database
 db_connection
   Connection string for connecting to the task history db using
   sqlalchemy.
+retention
+  Number of seconds to cache task information in memory to
+  avoid duplicating tasks in the database. Set to 0 for unlimited
+  cache.
 
 
 [execution_summary]

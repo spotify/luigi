@@ -58,6 +58,10 @@ The ``db_connection`` string is used to configure the `SQLAlchemy engine
 When starting up,
 ``luigid`` will create all the necessary tables using `create_all
 <http://docs.sqlalchemy.org/en/rel_0_9/core/metadata.html#sqlalchemy.schema.MetaData.create_all>`_.
+In addition, enabling task history will keep an in-memory cache of all tasks. 
+Tasks are removed from this cache after ``retention`` seconds. If a task receives
+events after ``retention`` seconds, it may be duplicated in the database. Setting 
+``retention`` to 0 lets tasks stay in cache indefinitely
 
 Example configuration
 

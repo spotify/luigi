@@ -80,11 +80,11 @@ class DbTaskHistory(task_history.TaskHistory):
     def __init__(self):
         config = configuration.get_config()
         connection_string = config.get('task_history', 'db_connection')
-        self.retention = config.getint('task_history', 'retention_seconds',default=14400)
+        self.retention = config.getint('task_history', 'retention_seconds', default=86400)
         self.engine = sqlalchemy.create_engine(connection_string)
         self.session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
-        self.tasks = pqdict({},key=lambda (ts,task): ts)  # task_id -> TaskRecord
+        self.tasks = pqdict({}, key=lambda (ts, task): ts)  # task_id -> TaskRecord
 
         _upgrade_schema(self.engine)
 
@@ -109,8 +109,8 @@ class DbTaskHistory(task_history.TaskHistory):
                 htask.host = host
         else:
             now = datetime.datetime.now()
-            task_ts, htask = self.tasks[task.id] = now,task_history.StoredTask(task, status, host)
-            while (now - self.tasks.topitem()[1][0] ).total_seconds() > self.retention:
+            task_ts, htask = self.tasks[task.id] = now, task_history.StoredTask(task, status, host)
+            while self.retention > 0 and (now - self.tasks.topitem()[1][0]).total_seconds() > self.retention:
                 self.tasks.pop()
         return htask
 
