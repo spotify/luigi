@@ -27,7 +27,7 @@ import luigi.rpc
 import server_test
 
 
-luigi.notifications.DEBUG = False
+luigi.notifications.DEBUG = True
 
 
 class ResourceTestTask(RunOnceTask):
