@@ -1521,6 +1521,24 @@ class Scheduler(object):
         else:
             return {"taskId": task_id, "progressPercentage": None}
 
+    @rpc_method()
+    def set_running_task_resources(self, task_id, resources):
+        if self._state.has_task(task_id):
+            task = self._state.get_task(task_id)
+            if task.status == RUNNING:
+                task.resources_running = resources
+                if task.batch_id is not None:
+                    for batch_task in self._state.get_batch_running_tasks(task.batch_id):
+                        batch_task.resources_running = resources
+
+    @rpc_method()
+    def get_running_task_resources(self, task_id):
+        if self._state.has_task(task_id):
+            task = self._state.get_task(task_id)
+            return {"taskId": task_id, "resources": getattr(task, "resources_running", None)}
+        else:
+            return {"taskId": task_id, "resources": None}
+
     def _update_task_history(self, task, status, host=None):
         try:
             if status == DONE or status == FAILED:
