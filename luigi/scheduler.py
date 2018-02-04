@@ -970,8 +970,9 @@ class Scheduler(object):
         used_resources = collections.defaultdict(int)
         if self._resources is not None:
             for task in self._state.get_active_tasks_by_status(RUNNING):
-                if getattr(task, 'resources_running', task.resources):
-                    for resource, amount in six.iteritems(getattr(task, 'resources_running', task.resources)):
+                resources_running = getattr(task, "resources_running", task.resources)
+                if resources_running:
+                    for resource, amount in six.iteritems(resources_running):
                         used_resources[resource] += amount
         return used_resources
 
@@ -1237,6 +1238,7 @@ class Scheduler(object):
             'name': task.family,
             'priority': task.priority,
             'resources': task.resources,
+            'resources_running': getattr(task, "resources_running", None),
             'tracking_url': getattr(task, "tracking_url", None),
             'status_message': getattr(task, "status_message", None),
             'progress_percentage': getattr(task, "progress_percentage", None)
