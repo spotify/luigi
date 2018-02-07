@@ -21,6 +21,7 @@ from contextlib import contextmanager
 from helpers import RunOnceTask
 
 import luigi
+import luigi.server
 import luigi.scheduler
 import luigi.worker
 import luigi.rpc
@@ -40,7 +41,7 @@ class ResourceTestTask(RunOnceTask):
 
     def run(self):
         if self.reduce_foo:
-            self.set_running_resources({"foo": 1})
+            self.decrease_running_resources({"foo": 1})
 
         time.sleep(2)
 

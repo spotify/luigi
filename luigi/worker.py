@@ -127,14 +127,14 @@ class TaskProcess(multiprocessing.Process):
         self.task.set_tracking_url = self.status_reporter.update_tracking_url
         self.task.set_status_message = self.status_reporter.update_status_message
         self.task.set_progress_percentage = self.status_reporter.update_progress_percentage
-        self.task.set_running_resources = self.status_reporter.update_running_resources
+        self.task.decrease_running_resources = self.status_reporter.decrease_running_resources
 
         task_gen = self.task.run()
 
         self.task.set_tracking_url = None
         self.task.set_status_message = None
         self.task.set_progress_percentage = None
-        self.task.set_running_resources = None
+        self.task.decrease_running_resources = None
 
         if not isinstance(task_gen, types.GeneratorType):
             return None
@@ -276,8 +276,8 @@ class TaskStatusReporter(object):
     def update_progress_percentage(self, percentage):
         self._scheduler.set_task_progress_percentage(self._task_id, percentage)
 
-    def update_running_resources(self, resources):
-        self._scheduler.set_running_task_resources(self._task_id, resources)
+    def decrease_running_resources(self, decrease_resources):
+        self._scheduler.decrease_running_task_resources(self._task_id, decrease_resources)
 
 
 class SingleProcessPool(object):

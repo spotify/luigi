@@ -1524,14 +1524,21 @@ class Scheduler(object):
             return {"taskId": task_id, "progressPercentage": None}
 
     @rpc_method()
-    def set_running_task_resources(self, task_id, resources):
+    def decrease_running_task_resources(self, task_id, decrease_resources):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)
-            if task.status == RUNNING:
-                task.resources_running = resources
-                if task.batch_id is not None:
-                    for batch_task in self._state.get_batch_running_tasks(task.batch_id):
-                        batch_task.resources_running = resources
+            if task.status != RUNNING:
+                return
+
+            def decrease(resources, decrease_resources):
+                for resource, decrease_amount in six.iteritems(decrease_resources):
+                    if decrease_amount > 0 and resource in resources:
+                        resources[resource] = max(0, resources[resource] - decrease_amount)
+
+            decrease(task.resources_running, decrease_resources)
+            if task.batch_id is not None:
+                for batch_task in self._state.get_batch_running_tasks(task.batch_id):
+                    decrease(batch_task.resources_running, decrease_resources)
 
     @rpc_method()
     def get_running_task_resources(self, task_id):

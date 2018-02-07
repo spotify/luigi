@@ -226,14 +226,15 @@ the task parameters or other dynamic attributes:
 Since, by default, resources have a usage limit of 1, no two instances of Task A 
 will now run if they have the same `important_file_name` property.
 
-Releasing resources of running tasks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Decreasing resources of running tasks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 At scheduling time, the luigi scheduler needs to be aware of the maximum
 resource consumption a task might have once it runs. For some tasks, however,
-it can be beneficial to release or reduce a resource between two steps within
-their run method (e.g. after some heavy computation). In this case, a different
-task waiting for that particular resource can already be scheduled.
+it can be beneficial to decrease the amount of consumed resources between two
+steps within their run method (e.g. after some heavy computation). In this
+case, a different task waiting for that particular resource can already be
+scheduled.
 
 .. code-block:: python
 
@@ -246,14 +247,11 @@ task waiting for that particular resource can already be scheduled.
             # do something
             ...
 
-            # free one "some_resource" resource
-            self.set_running_resources({"some_resource": 2})
+            # decrease consumption of "some_resource" by one
+            self.decrease_running_resources({"some_resource": 1})
 
             # continue with reduced resources
             ...
-
-**Note**: You should not increase resources this way. Luigi ensures at
-scheduling time that no resource exceeds its maximum capacity.
 
 Monitoring task pipelines
 ~~~~~~~~~~~~~~~~~~~~~~~~~
