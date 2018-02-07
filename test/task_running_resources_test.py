@@ -18,10 +18,9 @@
 import time
 from contextlib import contextmanager
 
-from helpers import RunOnceTask
+from helpers import RunOnceTask, skipOnTravis
 
 import luigi
-import luigi.server
 import luigi.scheduler
 import luigi.worker
 import luigi.rpc
@@ -78,6 +77,7 @@ class TaskRunningResourcesTest(server_test.ServerTestBase):
             if max_duration > 0:
                 self.assertLess(duration, max_duration)
 
+    @skipOnTravis("https://travis-ci.org/spotify/luigi/jobs/338398994")
     def test_remote_scheduler_serial(self):
         # serial test
         # run two tasks that do not reduce the "foo" resource
@@ -90,6 +90,7 @@ class TaskRunningResourcesTest(server_test.ServerTestBase):
             luigi.build([task_a, task_b], self.factory, workers=2,
                         scheduler_port=self.get_http_port())
 
+    @skipOnTravis("https://travis-ci.org/spotify/luigi/jobs/338398994")
     def test_remote_scheduler_parallel(self):
         # parallel test
         # run two tasks and the first one lowers its requirement on the "foo" resource, so that
