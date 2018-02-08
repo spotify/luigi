@@ -84,7 +84,7 @@ class DbTaskHistory(task_history.TaskHistory):
         self.engine = sqlalchemy.create_engine(connection_string)
         self.session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
-        self.tasks = pqdict({}, key=lambda (ts, task): ts)  # task_id -> TaskRecord
+        self.tasks = pqdict({}, key=lambda t: t[0])  # task_id -> TaskRecord
 
         _upgrade_schema(self.engine)
 
