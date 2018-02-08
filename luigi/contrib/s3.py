@@ -132,6 +132,8 @@ class S3Client(FileSystem):
                 'SecretAccessKey')
             aws_access_key_id = assumed_role['Credentials'].get('AccessKeyId')
             aws_session_token = assumed_role['Credentials'].get('SessionToken')
+            logger.debug('using aws credentials via assumed role {} as defined in luigi config'
+                         .format(role_session_name))
 
         for key in ['aws_access_key_id', 'aws_secret_access_key',
                     'aws_role_session_name', 'aws_role_arn']:
@@ -142,12 +144,20 @@ class S3Client(FileSystem):
         # For finding out about the order in which it tries to find these credentials
         # please see here details
         # http://boto3.readthedocs.io/en/latest/guide/configuration.html#configuring-credentials
-        logger.debug('calling boto3 resource with access_key={}'.format(aws_access_key_id))
-        self._s3 = boto3.resource('s3',
+        if not (aws_access_key_id and aws_secret_access_key):
+            logger.debug('no credentials provided, delegating credentials resolution to boto3')
+        try:
+            self._s3 = boto3.resource('s3',
                                   aws_access_key_id=aws_access_key_id,
                                   aws_secret_access_key=aws_secret_access_key,
                                   aws_session_token=aws_session_token,
                                   **options)
+        except TypeError as e:
+            logger.error(e.message)
+            if 'got an unexpected keyword argument' in e.message:
+                raise DeprecatedBotoClientException("Now using boto3. Check that you're passing the correct arguments")
+            raise
+
         return self._s3
 
     @s3.setter
