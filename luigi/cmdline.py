@@ -8,7 +8,7 @@ from luigi.retcodes import run_with_retcodes
 
 
 def luigi_run(argv=sys.argv[1:]):
-    run_with_retcodes(argv)
+    return run_with_retcodes(argv)
 
 
 def luigid(argv=sys.argv[1:]):
