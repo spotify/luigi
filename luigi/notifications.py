@@ -28,6 +28,7 @@ In particular using the config `receiver` should set up Luigi so that it will se
 '''
 
 import logging
+import os
 import socket
 import sys
 import textwrap
@@ -134,7 +135,7 @@ class sendgrid(luigi.Config):
         description='Username for sendgrid login')
 
 
-def generate_email(sender, subject, message, recipients, image_png):
+def generate_email(sender, subject, message, recipients, image_png, attachments):
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     from email.mime.image import MIMEImage
@@ -149,11 +150,31 @@ def generate_email(sender, subject, message, recipients, image_png):
             msg_image = MIMEImage(fp.read(), 'png')
         msg_root.attach(msg_image)
 
+    if attachments:
+        try:
+            for f in attachments:
+                msg_root.attach(_prepare_file_part(f))
+        except TypeError:
+            msg_root.attach(_prepare_file_part(attachments))
+
     msg_root['Subject'] = subject
     msg_root['From'] = sender
     msg_root['To'] = ','.join(recipients)
 
     return msg_root
+
+
+def _prepare_file_part(attachment):
+    from email.mime.application import MIMEApplication
+
+    with open(attachment, "rb") as in_file:
+        part = MIMEApplication(
+            in_file.read(),
+            Name=os.path.basename(attachment)
+        )
+
+    part['Content-Disposition'] = 'attachment; filename="{}"'.format(os.path.basename(attachment))
+    return part
 
 
 def wrap_traceback(traceback):
@@ -180,7 +201,7 @@ def wrap_traceback(traceback):
     return wrapped
 
 
-def send_email_smtp(sender, subject, message, recipients, image_png):
+def send_email_smtp(sender, subject, message, recipients, image_png, attachments):
     import smtplib
 
     smtp_config = smtp()
@@ -200,14 +221,14 @@ def send_email_smtp(sender, subject, message, recipients, image_png):
         if smtp_config.username and smtp_config.password:
             smtp_conn.login(smtp_config.username, smtp_config.password)
 
-        msg_root = generate_email(sender, subject, message, recipients, image_png)
+        msg_root = generate_email(sender, subject, message, recipients, image_png, attachments)
 
         smtp_conn.sendmail(sender, recipients, msg_root.as_string())
     except socket.error as exception:
         logger.error("Not able to connect to smtp server: %s", exception)
 
 
-def send_email_ses(sender, subject, message, recipients, image_png):
+def send_email_ses(sender, subject, message, recipients, image_png, attachments):
     """
     Sends notification through AWS SES.
 
@@ -221,7 +242,7 @@ def send_email_ses(sender, subject, message, recipients, image_png):
 
     client = boto3_client('ses')
 
-    msg_root = generate_email(sender, subject, message, recipients, image_png)
+    msg_root = generate_email(sender, subject, message, recipients, image_png, attachments)
     response = client.send_raw_email(Source=sender,
                                      Destinations=recipients,
                                      RawMessage={'Data': msg_root.as_string()})
@@ -232,7 +253,7 @@ def send_email_ses(sender, subject, message, recipients, image_png):
                                                response['ResponseMetadata']['HTTPStatusCode']))
 
 
-def send_email_sendgrid(sender, subject, message, recipients, image_png):
+def send_email_sendgrid(sender, subject, message, recipients, image_png, attachments):
     import sendgrid as sendgrid_lib
     client = sendgrid_lib.SendGridClient(
         sendgrid().username, sendgrid().password, raise_errors=True)
@@ -246,6 +267,8 @@ def send_email_sendgrid(sender, subject, message, recipients, image_png):
         to_send.set_text(message)
     if image_png:
         to_send.add_attachment(image_png)
+    if attachments:
+        to_send.add_attachment(attachments)
 
     client.send(to_send)
 
@@ -261,7 +284,7 @@ def _email_disabled_reason():
         return None
 
 
-def send_email_sns(sender, subject, message, topic_ARN, image_png):
+def send_email_sns(sender, subject, message, topic_ARN, image_png, attachments):
     """
     Sends notification through AWS SNS. Takes Topic ARN from recipients.
 
@@ -288,7 +311,7 @@ def send_email_sns(sender, subject, message, topic_ARN, image_png):
                                                response['ResponseMetadata']['HTTPStatusCode']))
 
 
-def send_email(subject, message, sender, recipients, image_png=None):
+def send_email(subject, message, sender, recipients, image_png=None, attachments=None):
     """
     Decides whether to send notification. Notification is cancelled if there are
     no recipients or if stdout is onto tty or if in debug mode.
@@ -324,7 +347,7 @@ def send_email(subject, message, sender, recipients, image_png=None):
 
     # Get appropriate sender and call it to send the notification
     email_sender = notifiers[email().method]
-    email_sender(sender, subject, message, recipients, image_png)
+    email_sender(sender, subject, message, recipients, image_png, attachments)
 
 
 def _email_recipients(additional_recipients=None):
