@@ -170,8 +170,9 @@ class NotificationFixture(object):
                  message."""
     recipients = ['noone@nowhere.no', 'phantom@opera.fr']
     image_png = None
+    attachments = None
 
-    notification_args = [sender, subject, message, recipients, image_png]
+    notification_args = [sender, subject, message, recipients, image_png, attachments]
     mocked_email_msg = '''Content-Type: multipart/related; boundary="===============0998157881=="
 MIME-Version: 1.0
 Subject: Oops!
