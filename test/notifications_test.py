@@ -155,6 +155,7 @@ class ExceptionFormatTest(unittest.TestCase):
             message=six.u("你好"),
             recipients=['receiver@example.com'],
             image_png=None,
+            attachments=None,
         )
 
 
@@ -400,7 +401,7 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
 
         with mock.patch('boto3.resource') as res:
             notifications.send_email_sns(self.sender, long_subject, self.message,
-                                         self.recipients, self.image_png)
+                                         self.recipients, self.image_png, self.attachments)
 
             SNS = res.return_value
             SNS.Topic.assert_called_once_with(self.recipients[0])
@@ -424,7 +425,8 @@ class TestNotificationDispatcher(unittest.TestCase, NotificationFixture):
 
         with mock.patch('luigi.notifications.{}'.format(target)) as sender:
             notifications.send_email(self.subject, self.message, self.sender,
-                                     self.recipients, image_png=self.image_png)
+                                     self.recipients, image_png=self.image_png,
+                                     attachments=self.attachments)
 
             self.assertTrue(sender.called)
 
