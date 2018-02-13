@@ -785,7 +785,7 @@ class Worker(object):
         if isinstance(dependency, Target):
             raise Exception('requires() can not return Target objects. Wrap it in an ExternalTask class')
         elif not isinstance(dependency, Task):
-            raise Exception('requires() must return Task objects')
+            raise Exception('requires() must return Task objects but {} is a {}'.format(dependency, type(dependency)))
 
     def _check_complete_value(self, is_complete):
         if is_complete not in (True, False):
