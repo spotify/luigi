@@ -30,7 +30,7 @@ shared cluster. Jobs are submitted using the ``sbatch`` command and monitored
 using ``scontrol``. To get started, install luigi on all nodes.
 
 To run luigi workflows on an Slurm cluster, subclass
-:class:`luigi.contrib.slurm.SlurmJobTask` as you would any :class:`luigi.Task`,
+:class:`luigi.contrib.slurm.SlurmTask` as you would any :class:`luigi.Task`,
 but override the ``work()`` method, instead of ``run()``, to define the job
 code. Then, run your Luigi workflow from the master node, assigning > 1
 ``workers`` in order to distribute the tasks in parallel across the cluster.
@@ -42,12 +42,12 @@ The following is an example usage (and can also be found in ``slurm_tests.py``)
     import logging
     import luigi
     import os
-    from luigi.contrib.slurm import SlurmJobTask
+    from luigi.contrib.slurm import SlurmTask
 
     logger = logging.getLogger('luigi-interface')
 
 
-    class TestJobTask(SlurmJobTask):
+    class TestJobTask(SlurmTask):
 
         i = luigi.Parameter()
 
@@ -69,11 +69,11 @@ The ``ntasks`` parameter allows you to define different compute
 resource requirements for each task. In this example, the third Task
 asks for 3 CPU slots. If your cluster only contains nodes with 2
 CPUs, this task will hang indefinitely in the queue. See the docs for
-:class:`luigi.contrib.slurm.SlurmJobTask` for other Slurm parameters. As
+:class:`luigi.contrib.slurm.SlurmTask` for other Slurm parameters. As
 for any task, you can also set these in your luigi configuration file
 as shown below.
 
-    [SlurmJobTask]
+    [SlurmTask]
     shared-tmp-dir = /home
     ntasks = 2
 
@@ -107,6 +107,32 @@ from luigi.contrib import slurm_runner
 
 import itertools
 
+POLL_TIME = 15  # decided to hard-code rather than configure here
+
+class slurm(luigi.Config):
+    ntasks = luigi.IntParameter(default=2, significant=False)
+    mem = luigi.IntParameter(default=100, significant=False)
+    mem_per_cpu = luigi.IntParameter(default=2000, significant=False)
+    gres = luigi.Parameter(default='', significant=False)
+    partition = luigi.Parameter(default='', significant=False)
+    time = luigi.Parameter(default='', significant=False)
+    shared_tmp_dir = luigi.Parameter(default='/home', significant=False)
+    job_name_format = luigi.Parameter(
+        significant=False, default='', description="A string that can be "
+        "formatted with class variables to name the job with sbatch.")
+    run_locally = luigi.BoolParameter(
+        significant=False,
+        description="run locally instead of on the cluster")
+    poll_time = luigi.IntParameter(
+        significant=False, default=POLL_TIME,
+        description="specify the wait time to poll scontrol for the job status")
+    dont_remove_tmp_dir = luigi.BoolParameter(
+        significant=False,
+        description="don't delete the temporary directory used (for debugging)")
+    no_tarball = luigi.BoolParameter(
+        significant=False,
+        description="don't tarball (and extract) the luigi project files")
+
 
 # see http://code.activestate.com/recipes/580745-retry-decorator-in-python/
 def retry(delays=(0, 1, 5, 30, 180, 600, 3600),
@@ -133,8 +159,6 @@ def retry(delays=(0, 1, 5, 30, 180, 600, 3600),
 
 logger = logging.getLogger('luigi-interface')
 logger.propagate = 0
-
-POLL_TIME = 15  # decided to hard-code rather than configure here
 
 
 @retry()
@@ -193,7 +217,7 @@ def _sbatch(submit_cmd):
     return output
 
 
-class SlurmJobTask(luigi.Task):
+class SlurmTask(luigi.Task):
 
     """
     Base class for executing a job on Slurm
@@ -204,6 +228,7 @@ class SlurmJobTask(luigi.Task):
 
     - ntasks: Number of CPUs (or "slots") to allocate for the Task.
     - mem: The amount of memory to allocate for the Task.
+    - mem_per_cpu:
     - gres: The gres resources to allocate for the Task.
     - time: The time to allocate for the Task.
     - partition: The partition allocate for the Task.
@@ -223,34 +248,14 @@ class SlurmJobTask(luigi.Task):
 
     """
 
-    ntasks = luigi.IntParameter(default=2, significant=False)
-    mem = luigi.IntParameter(default=100, significant=False)
-    mem_per_cpu = luigi.IntParameter(default=2000, significant=False)
-    gres = luigi.Parameter(default='', significant=False)
-    partition = luigi.Parameter(default='', significant=False)
-    time = luigi.Parameter(default='', significant=False)
-    shared_tmp_dir = luigi.Parameter(default='/home', significant=False)
-    job_name_format = luigi.Parameter(
-        significant=False, default='', description="A string that can be "
-        "formatted with class variables to name the job with sbatch.")
+    slurm_config = slurm()
+
     job_name = luigi.Parameter(
         significant=False, default='',
         description="Explicit job name given via sbatch.")
-    run_locally = luigi.BoolParameter(
-        significant=False,
-        description="run locally instead of on the cluster")
-    poll_time = luigi.IntParameter(
-        significant=False, default=POLL_TIME,
-        description="specify the wait time to poll scontrol for the job status")
-    dont_remove_tmp_dir = luigi.BoolParameter(
-        significant=False,
-        description="don't delete the temporary directory used (for debugging)")
-    no_tarball = luigi.BoolParameter(
-        significant=False,
-        description="don't tarball (and extract) the luigi project files")
 
     def __init__(self, *args, **kwargs):
-        super(SlurmJobTask, self).__init__(*args, **kwargs)
+        super(SlurmTask, self).__init__(*args, **kwargs)
         if self.job_name != '':
             # use explicitly provided job name
             pass
@@ -261,6 +266,54 @@ class SlurmJobTask(luigi.Task):
         else:
             # default to the task family
             self.job_name = self.task_family
+
+    @property
+    def ntasks(self):
+        return self.slurm_config.ntasks
+
+    @property
+    def mem(self):
+        return self.slurm_config.mem
+
+    @property
+    def mem_per_cpu(self):
+        return self.slurm_config.mem_per_cpu
+
+    @property
+    def gres(self):
+        return self.slurm_config.gres
+
+    @property
+    def partition(self):
+        return self.slurm_config.partition
+
+    @property
+    def time(self):
+        return self.slurm_config.time
+
+    @property
+    def shared_tmp_dir(self):
+        return self.slurm_config.shared_tmp_dir
+
+    @property
+    def job_name_format(self):
+        return self.slurm_config.job_name_format
+
+    @property
+    def run_locally(self):
+        return self.slurm_config.run_locally
+
+    @property
+    def poll_time(self):
+        return self.slurm_config.poll_time
+
+    @property
+    def dont_remove_tmp_dir(self):
+        return self.slurm_config.dont_remove_tmp_dir
+
+    @property
+    def no_tarball(self):
+        return self.slurm_config.no_tarball
 
     def _fetch_task_failures(self):
         if not os.path.exists(self.errfile):
@@ -420,8 +473,8 @@ class SlurmJobTask(luigi.Task):
         return successful
 
 
-class LocalSlurmJobTask(SlurmJobTask):
-    """A local version of SlurmJobTask, for easier debugging.
+class LocalSlurmTask(SlurmTask):
+    """A local version of SlurmTask, for easier debugging.
 
     This version skips the ``sbatch`` steps and simply runs ``work()``
     on the local node, so you don't need to be on a Slurm cluster to
