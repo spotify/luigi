@@ -83,7 +83,7 @@ as shown below.
 #
 # Implementation notes
 # The procedure:
-# - Pickle the class
+# - Pickle the current task
 # - Construct a sbatch argument that runs a generic runner function with the path to the pickled class
 # - Runner function loads the class from pickle
 # - Runner function hits the work button on it
@@ -101,7 +101,6 @@ except ImportError:
     import pickle
 
 import luigi
-from luigi.contrib.hadoop import create_packages_archive
 
 from luigi.contrib import slurm_runner
 
@@ -117,6 +116,9 @@ class slurm(luigi.Config):
     partition = luigi.Parameter(default='', significant=False)
     time = luigi.Parameter(default='', significant=False)
     shared_tmp_dir = luigi.Parameter(default='/home', significant=False)
+    work_dir = luigi.Parameter(default='', significant=False,
+        description="Location of our environment, must be a directory "
+        "shared across all executors.")
     job_name_format = luigi.Parameter(
         significant=False, default='', description="A string that can be "
         "formatted with class variables to name the job with sbatch.")
@@ -129,10 +131,6 @@ class slurm(luigi.Config):
     dont_remove_tmp_dir = luigi.BoolParameter(
         significant=False,
         description="don't delete the temporary directory used (for debugging)")
-    no_tarball = luigi.BoolParameter(
-        significant=False,
-        description="don't tarball (and extract) the luigi project files")
-
 
 # see http://code.activestate.com/recipes/580745-retry-decorator-in-python/
 def retry(delays=(0, 1, 5, 30, 180, 600, 3600),
@@ -233,18 +231,13 @@ class SlurmTask(luigi.Task):
     - time: The time to allocate for the Task.
     - partition: The partition allocate for the Task.
     - shared_tmp_dir: Shared drive accessible from all nodes in the cluster.
-          Task classes and dependencies are pickled to a temporary folder on
-          this drive. The default is ``/home``, the NFS share location setup
-          by StarCluster
+          Run method is pickled to a temporary folder in this path.
     - job_name_format: String that can be passed in to customize the job name
         string passed to sbatch; e.g. "Task123_{task_family}_{ntasks}...".
     - job_name: Exact job name to pass to sbatch.
     - run_locally: Run locally instead of on the cluster.
     - poll_time: the length of time to wait in order to poll the job
     - dont_remove_tmp_dir: Instead of deleting the temporary directory, keep it.
-    - no_tarball: Don't create a tarball of the luigi project directory.  Can be
-        useful to reduce I/O requirements when the luigi directory is accessible
-        from cluster nodes already.
 
     """
 
@@ -296,6 +289,10 @@ class SlurmTask(luigi.Task):
         return self.slurm_config.shared_tmp_dir
 
     @property
+    def work_dir(self):
+        return self.slurm_config.work_dir
+
+    @property
     def job_name_format(self):
         return self.slurm_config.job_name_format
 
@@ -310,10 +307,6 @@ class SlurmTask(luigi.Task):
     @property
     def dont_remove_tmp_dir(self):
         return self.slurm_config.dont_remove_tmp_dir
-
-    @property
-    def no_tarball(self):
-        return self.slurm_config.no_tarball
 
     def _fetch_task_failures(self):
         if not os.path.exists(self.errfile):
@@ -347,16 +340,19 @@ class SlurmTask(luigi.Task):
         os.makedirs(self.tmp_dir)
 
         # Dump the code to be run into a pickle file
-        logging.debug("Dumping pickled class")
         self._dump(self.tmp_dir)
 
-        if not self.no_tarball:
-            # Make sure that all the class's dependencies are tarred and available
-            # This is not necessary if luigi is importable from the cluster node
-            logging.debug("Tarballing dependencies")
-            # Grab luigi and the module containing the code to be run
-            packages = [luigi] + [__import__(self.__module__, None, None, 'dummy')]
-            create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
+    def _dump(self, out_dir=''):
+        """Dump instance to file."""
+        with self.no_unpicklable_properties():
+            self.job_file = os.path.join(out_dir, 'job.pickle')
+            if self.__module__ == '__main__':
+                d = pickle.dumps(self, 0).decode()
+                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
+                d = d.replace('(c__main__', "(c" + module_name)
+                open(self.job_file, "w").write(d)
+            else:
+                pickle.dump(self, open(self.job_file, "wb"))
 
     def run(self):
         self.init_vars()
@@ -366,10 +362,9 @@ class SlurmTask(luigi.Task):
             self._init_local()
             self._run_job()
             # The procedure:
-            # - Pickle the class
-            # - Tarball the dependencies
-            # - Construct a sbatch argument that runs a generic runner function with the path to the pickled class
-            # - Runner function loads the class from pickle
+            # - Pickle the run method
+            # - Construct a sbatch argument that runs a generic runner function with the path to the run method
+            # - Runner function loads the run method
             # - Runner class untars the dependencies
             # - Runner function hits the button on the class's work() method
 
@@ -385,27 +380,14 @@ class SlurmTask(luigi.Task):
         """Override this method, rather than ``run()``,  for your actual work."""
         pass
 
-    def _dump(self, out_dir=''):
-        """Dump instance to file."""
-        with self.no_unpicklable_properties():
-            self.job_file = os.path.join(out_dir, 'job-instance.pickle')
-            if self.__module__ == '__main__':
-                d = pickle.dumps(self, 0).decode()
-                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-                d = d.replace('(c__main__', "(c" + module_name)
-                open(self.job_file, "w").write(d)
-            else:
-                pickle.dump(self, open(self.job_file, "wb"))
-
     def _run_job(self):
         # Build a sbatch argument that will run sge_runner.py on the directory we've specified
         runner_path = slurm_runner.__file__
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
-        job_str = 'python {0} "{1}" "{2}"'.format(
-            runner_path, self.tmp_dir, os.getcwd())  # enclose tmp_dir in quotes to protect from special escape chars
-        if self.no_tarball:
-            job_str += ' "--no-tarball"'
+        job_str = 'cd "{}"; python {} --tmp-dir "{}"'.format(
+            (self.work_dir if len(self.work_dir) else os.getcwd()), runner_path, self.tmp_dir
+        )
 
         # Build sbatch file and submit command
         self.outfile = os.path.join(self.tmp_dir, 'job.out')
