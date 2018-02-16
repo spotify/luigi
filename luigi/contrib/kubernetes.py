@@ -32,12 +32,12 @@ Requires:
 
 Written and maintained by Marco Capuccini (@mcapuccini).
 """
+import logging
+import time
+import uuid
 from datetime import datetime
 
 import luigi
-import logging
-import uuid
-import time
 
 logger = logging.getLogger('luigi-interface')
 
@@ -49,7 +49,7 @@ except ImportError:
     logger.warning('pykube is not installed. KubernetesJobTask requires pykube.')
 
 
-class Kubernetes(luigi.Config):
+class kubernetes(luigi.Config):
     auth_method = luigi.Parameter(
         default="kubeconfig",
         description="Authorization method to access the cluster")
@@ -62,9 +62,8 @@ class Kubernetes(luigi.Config):
 
 
 class KubernetesJobTask(luigi.Task):
-
     __POLL_TIME = 5  # see __track_job
-    kubernetes_config = Kubernetes()
+    _kubernetes_config = None  # Needs to be loaded at runtime
 
     def _init_kubernetes(self):
         self.__logger = logger
@@ -181,6 +180,12 @@ class KubernetesJobTask(luigi.Task):
         """
         return 100
 
+    @property
+    def kubernetes_config(self):
+        if not self._kubernetes_config:
+            self._kubernetes_config = kubernetes()
+        return self._kubernetes_config
+
     def __track_job(self):
         """Poll job status while active"""
         while not self.__verify_job_has_started():
@@ -278,11 +283,7 @@ class KubernetesJobTask(luigi.Task):
             if self.print_pod_logs_on_exit:
                 self.__print_pod_logs()
             if self.delete_on_success:
-                for pod in self.__get_pods():
-                    self.__logger.info("Deleting Pod " + pod.name)
-                    pod.delete()
-                self.__logger.info("Deleting Job " + job.name)
-                job.delete()
+                self.__delete_job_cascade(job)
             return "SUCCEEDED"
 
         if "failed" in job.obj["status"]:
@@ -295,6 +296,16 @@ class KubernetesJobTask(luigi.Task):
                 job.scale(replicas=0)  # avoid more retrials
                 return "FAILED"
         return "RUNNING"
+
+    def __delete_job_cascade(self, job):
+        delete_options_cascade = {
+            "kind": "DeleteOptions",
+            "apiVersion": "v1",
+            "propagationPolicy": "Background"
+        }
+        r = self.__kube_api.delete(json=delete_options_cascade, **job.api_kwargs())
+        if r.status_code != 200:
+            self.__kube_api.raise_for_status(r)
 
     def run(self):
         self._init_kubernetes()
