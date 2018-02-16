@@ -716,7 +716,10 @@ class Worker(object):
                 if reschedule:
                     self.add(task)
 
-            self.run_succeeded &= status in (DONE, SUSPENDED)
+            is_external_task = task.run == NotImplemented
+            external_tasks_are_retried = configuration.get_config().getboolean('core', 'retry-external-tasks', False)
+            self.run_succeeded &= (status in (DONE, SUSPENDED) or \
+                                   (status == FAILED and is_external_task and external_tasks_are_retried))
             return
 
     def _sleeper(self):

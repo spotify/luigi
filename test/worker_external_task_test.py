@@ -90,8 +90,9 @@ class WorkerExternalTaskTest(unittest.TestCase):
         w = luigi.worker.Worker(scheduler=self.scheduler, worker_processes=1)
         for t in tasks:
             w.add(t)
-        w.run()
+        success = w.run()
         w.stop()
+        return success
 
     def test_external_dependency_already_complete(self):
         """
@@ -100,7 +101,7 @@ class WorkerExternalTaskTest(unittest.TestCase):
         """
         tempdir = tempfile.mkdtemp(prefix='luigi-test-')
         test_task = TestTask(tempdir=tempdir, complete_after=1)
-        luigi.build([test_task], local_scheduler=True)
+        self.assertTrue(self._build([test_task]))
 
         assert os.path.exists(test_task.dep_path)
         assert os.path.exists(test_task.output_path)
@@ -140,7 +141,7 @@ class WorkerExternalTaskTest(unittest.TestCase):
 
         with patch('random.randint', return_value=0.1):
             test_task = TestTask(tempdir=tempdir, complete_after=3)
-            self._build([test_task])
+            self.assertTrue(self._build([test_task]))
 
         assert os.path.exists(test_task.dep_path)
         assert os.path.exists(test_task.output_path)
