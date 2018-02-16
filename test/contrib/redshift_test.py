@@ -59,6 +59,13 @@ class DummyS3CopyToTableKey(DummyS3CopyToTableBase):
     aws_secret_access_key = AWS_SECRET_KEY
 
 
+class DummyS3CopyToTableWithCompressionEncodings(DummyS3CopyToTableKey):
+    columns = (
+        ('some_text', 'varchar(255)', 'LZO'),
+        ('some_int', 'int', 'DELTA'),
+    )
+
+
 class DummyS3CopyToTableRole(DummyS3CopyToTableBase):
     aws_account_id = AWS_ACCESS_KEY
     aws_arn_role_name = AWS_SECRET_KEY
@@ -172,6 +179,38 @@ class TestS3CopyToTable(unittest.TestCase):
                                            .return_value)
         assert mock_cursor.execute.call_args_list[0][0][0].startswith(
             "CREATE  TABLE %s" % task.table)
+
+        return
+
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.does_table_exist",
+                return_value=False)
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_s3_copy_to_missing_table_with_compression_encodings(self,
+                                                                 mock_redshift_target,
+                                                                 mock_does_exist):
+        """
+        Test missing table creation with compression encodings
+        """
+        # Ensure `S3CopyToTable.create_table` does not throw an error.
+        task = DummyS3CopyToTableWithCompressionEncodings()
+        task.run()
+
+        # Make sure the cursor was successfully used to create the table in
+        # `create_table` as expected.
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+        encode_string = ','.join(
+                '{name} {type} ENCODE {encoding}'.format(
+                    name=name,
+                    type=type,
+                    encoding=encoding) for name, type, encoding in task.columns
+            )
+
+        assert mock_cursor.execute.call_args_list[0][0][0].startswith(
+            "CREATE  TABLE %s (%s)" % (task.table, encode_string))
 
         return
 

@@ -299,6 +299,24 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
                 table_attributes=self.table_attributes)
 
             connection.cursor().execute(query)
+        elif len(self.columns[0]) == 3:
+            # if columns is specified as (name, type, encoding) tuples
+            # possible column encodings: https://docs.aws.amazon.com/redshift/latest/dg/c_Compression_encodings.html
+            coldefs = ','.join(
+                '{name} {type} ENCODE {encoding}'.format(
+                    name=name,
+                    type=type,
+                    encoding=encoding) for name, type, encoding in self.columns
+            )
+            query = ("CREATE {type} TABLE "
+                     "{table} ({coldefs}) "
+                     "{table_attributes}").format(
+                type=self.table_type,
+                table=self.table,
+                coldefs=coldefs,
+                table_attributes=self.table_attributes)
+
+            connection.cursor().execute(query)
         else:
             raise ValueError("create_table() found no columns for %r"
                              % self.table)
