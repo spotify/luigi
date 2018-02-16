@@ -154,7 +154,6 @@ class ExceptionFormatTest(unittest.TestCase):
             subject=six.u('sübjéct'),
             message=six.u("你好"),
             recipients=['receiver@example.com'],
-            image_png=None,
             attachments=None,
         )
 
@@ -170,10 +169,9 @@ class NotificationFixture(object):
     message = """A multiline
                  message."""
     recipients = ['noone@nowhere.no', 'phantom@opera.fr']
-    image_png = None
     attachments = None
 
-    notification_args = [sender, subject, message, recipients, image_png, attachments]
+    notification_args = [sender, subject, message, recipients, attachments]
     mocked_email_msg = '''Content-Type: multipart/related; boundary="===============0998157881=="
 MIME-Version: 1.0
 Subject: Oops!
@@ -401,7 +399,7 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
 
         with mock.patch('boto3.resource') as res:
             notifications.send_email_sns(self.sender, long_subject, self.message,
-                                         self.recipients, self.image_png, self.attachments)
+                                         self.recipients, self.attachments)
 
             SNS = res.return_value
             SNS.Topic.assert_called_once_with(self.recipients[0])
@@ -425,8 +423,7 @@ class TestNotificationDispatcher(unittest.TestCase, NotificationFixture):
 
         with mock.patch('luigi.notifications.{}'.format(target)) as sender:
             notifications.send_email(self.subject, self.message, self.sender,
-                                     self.recipients, image_png=self.image_png,
-                                     attachments=self.attachments)
+                                     self.recipients, attachments=self.attachments)
 
             self.assertTrue(sender.called)
 
