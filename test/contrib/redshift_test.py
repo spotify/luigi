@@ -40,9 +40,11 @@ class DummyS3CopyToTableBase(luigi.contrib.redshift.S3CopyToTable):
     user = 'dummy_user'
     password = 'dummy_password'
     table = luigi.Parameter(default='dummy_table')
-    columns = (
-        ('some_text', 'varchar(255)'),
-        ('some_int', 'int'),
+    columns = luigi.TupleParameter(
+        default=(
+            ('some_text', 'varchar(255)'),
+            ('some_int', 'int'),
+        )
     )
 
     copy_options = ''
@@ -251,6 +253,120 @@ class TestS3CopyToTable(unittest.TestCase):
             "from pg_table_def "
             "where tablename = lower(%s) limit 1",
             (task.table,),
+        )
+
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_s3_copy_with_valid_columns(self, mock_redshift_target):
+        task = DummyS3CopyToTableKey()
+        task.run()
+
+        # The mocked connection cursor passed to
+        # S3CopyToTable.copy(self, cursor, f).
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+
+        # `mock_redshift_target` is the mocked `RedshiftTarget` object
+        # returned by S3CopyToTable.output(self).
+        mock_redshift_target.assert_called_once_with(
+            database=task.database,
+            host=task.host,
+            update_id=task.task_id,
+            user=task.user,
+            table=task.table,
+            password=task.password,
+        )
+
+        # To get the proper intendation in the multiline `COPY` statement the
+        # SQL string was copied from redshift.py.
+        mock_cursor.execute.assert_called_with("""
+         COPY {table} {colnames} from '{source}'
+         CREDENTIALS '{creds}'
+         {options}
+         ;""".format(
+            table='dummy_table',
+            colnames='(some_text,some_int)',
+            source='s3://bucket/key',
+            creds='aws_access_key_id=key;aws_secret_access_key=secret',
+            options='')
+        )
+
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_s3_copy_with_default_columns(self, mock_redshift_target):
+        task = DummyS3CopyToTableKey(columns=[])
+        task.run()
+
+        # The mocked connection cursor passed to
+        # S3CopyToTable.copy(self, cursor, f).
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+
+        # `mock_redshift_target` is the mocked `RedshiftTarget` object
+        # returned by S3CopyToTable.output(self).
+        mock_redshift_target.assert_called_once_with(
+            database=task.database,
+            host=task.host,
+            update_id=task.task_id,
+            user=task.user,
+            table=task.table,
+            password=task.password,
+        )
+
+        # To get the proper intendation in the multiline `COPY` statement the
+        # SQL string was copied from redshift.py.
+        mock_cursor.execute.assert_called_with("""
+         COPY {table} {colnames} from '{source}'
+         CREDENTIALS '{creds}'
+         {options}
+         ;""".format(
+            table='dummy_table',
+            colnames='',
+            source='s3://bucket/key',
+            creds='aws_access_key_id=key;aws_secret_access_key=secret',
+            options='')
+        )
+
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_s3_copy_with_nonetype_columns(self, mock_redshift_target):
+        task = DummyS3CopyToTableKey(columns=None)
+        task.run()
+
+        # The mocked connection cursor passed to
+        # S3CopyToTable.copy(self, cursor, f).
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+
+        # `mock_redshift_target` is the mocked `RedshiftTarget` object
+        # returned by S3CopyToTable.output(self).
+        mock_redshift_target.assert_called_once_with(
+            database=task.database,
+            host=task.host,
+            update_id=task.task_id,
+            user=task.user,
+            table=task.table,
+            password=task.password,
+        )
+
+        # To get the proper intendation in the multiline `COPY` statement the
+        # SQL string was copied from redshift.py.
+        mock_cursor.execute.assert_called_with("""
+         COPY {table} {colnames} from '{source}'
+         CREDENTIALS '{creds}'
+         {options}
+         ;""".format(
+            table='dummy_table',
+            colnames='',
+            source='s3://bucket/key',
+            creds='aws_access_key_id=key;aws_secret_access_key=secret',
+            options='')
         )
 
 
