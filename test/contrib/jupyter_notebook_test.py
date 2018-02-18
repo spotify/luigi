@@ -16,6 +16,9 @@
 #
 """
 Tests for `JupyterNotebookTask`.
+
+Requires the following modules: `nbformat`, `nbconvert`, `jupyter`.
+If these modules are not available, some of the tests are skipped.
 """
 import json
 import logging
@@ -23,13 +26,6 @@ import os
 import tempfile
 import unittest
 
-import nbformat as nbf
-from nbformat.v4 import (
-    new_notebook,
-    new_code_cell
-)
-
-# import luigi
 from luigi import Parameter
 from luigi.local_target import LocalTarget
 
@@ -37,47 +33,64 @@ from luigi.contrib.jupyter_notebook import JupyterNotebookTask
 
 logger = logging.getLogger('luigi-interface')
 
+try:
+    import jupyter
+    from jupyter_client import KernelManager
+    import nbformat as nbf
+    from nbformat.v4 import (
+        new_notebook,
+        new_code_cell
+    )
+    execute_run_tests = True
+except ImportError:
+    execute_run_tests = False
+
 # set tempdir
 # tempfile.tempdir = '/tmp'
 tmp = tempfile.gettempdir()
 
-# create an empty notebook that
-# - reads the parameters from the task
-# - writes the parameter to file
-notebook_output_file = tempfile.NamedTemporaryFile()
-notebook = new_notebook()
-notebook['cells'] = [
-    new_code_cell(
-        'import json'
-    ),
-    new_code_cell(
-        'import os'
-    ),
-    new_code_cell(
-        'from luigi.contrib.jupyter_notebook import load_parameters'
-    ),
-    new_code_cell(
-        "pars = load_parameters('LUIGI_JUPYTER_TASK_ENV')"
-    ),
-    new_code_cell(
-        "file = open('%s', 'w')" % notebook_output_file.name
-    ),
-    new_code_cell(
-        'json.dump(pars, file)'
-    ),
-    new_code_cell(
-        'file.close()'
-    )
-]
+# if the nbformat and nbconvert modules are available, create an empty
+# notebook that simply
+# 1. reads the parameters from the task
+# 2. writes the parameters to file.
+if execute_run_tests:
+    notebook_output_file = tempfile.NamedTemporaryFile()
+    notebook = new_notebook()
+    notebook['cells'] = [
+        new_code_cell(
+            'import json'
+        ),
+        new_code_cell(
+            'import os'
+        ),
+        new_code_cell(
+            'from luigi.contrib.jupyter_notebook import load_parameters'
+        ),
+        new_code_cell(
+            "pars = load_parameters('LUIGI_JUPYTER_TASK_ENV')"
+        ),
+        new_code_cell(
+            "file = open('%s', 'w')" % notebook_output_file.name
+        ),
+        new_code_cell(
+            'json.dump(pars, file)'
+        ),
+        new_code_cell(
+            'file.close()'
+        )
+    ]
 
-notebook_file = tempfile.NamedTemporaryFile()
-with open(notebook_file.name, 'w') as file:
-    nbf.write(notebook, file)
+    notebook_file = tempfile.NamedTemporaryFile()
+    with open(notebook_file.name, 'w') as file:
+        nbf.write(notebook, file)
+
+    # get kernel on host
+    host_kernel = KernelManager().kernel_name
 
 # test parameters
 test_parameters = {
-    'notebook_path': notebook_file.name,
-    'kernel_name': 'custom_python_kernel',
+    'notebook_path': './my_notebook.ipynb',
+    'kernel_name': 'python3',
     'timeout': 60,
     'json_action': 'keep',
     'environment_variable': 'LUIGI_JUPYTER_TASK_ENV'
@@ -206,7 +219,6 @@ class TestDictRequire(BaseTestTask):
 
 
 class TestRun(JupyterNotebookTask):
-
     def output(self):
         return LocalTarget(notebook_output_file.name)
 
@@ -215,7 +227,6 @@ class TestRun(JupyterNotebookTask):
 # Testing
 #
 class TestJupyterNotebookTask(unittest.TestCase):
-
     # test ability to detect invalid keys
     def test_invalid_key(self):
         pass
@@ -377,21 +388,21 @@ class TestJupyterNotebookTask(unittest.TestCase):
     def test_json_action_delete(self):
         pass
 
-    # test ability to run a basic notebook
+    # test ability to run a noteboob
+    @unittest.skipIf(not execute_run_tests, 'missing requirements')
     def test_run(self):
         test_task = TestRun(
             notebook_path=notebook_file.name,
-            kernel_name='python',
+            kernel_name=host_kernel,
             environment_variable='LUIGI_JUPYTER_TASK_ENV'
         )
-        # luigi.build([test_task], local_scheduler=True)
         test_task.run()
         with open(notebook_output_file.name) as pars:
             nb_pars = json.load(pars)
         expected = {}
         expected['notebook_path'] = notebook_file.name
         expected['environment_variable'] = 'LUIGI_JUPYTER_TASK_ENV'
-        expected['kernel_name'] = 'python'
+        expected['kernel_name'] = host_kernel
         expected['json_action'] = 'delete'
         expected['timeout'] = -1
         expected['input'] = []
