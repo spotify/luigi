@@ -209,14 +209,8 @@ class TestDictRequire(BaseTestTask):
 
 class TestRun(JupyterNotebookTask):
 
-    dummy = luigi.Parameter(
-        default='foo'
-    )
-
     def output(self):
-        notebook_output_file = tempfile.NamedTemporaryFile(
-            delete=False
-        )
+        notebook_output_file = tempfile.NamedTemporaryFile()
         return LocalTarget(notebook_output_file.name)
 
 
@@ -391,7 +385,6 @@ class TestJupyterNotebookTask(unittest.TestCase):
         expected['kernel_name'] = host_kernel
         expected['json_action'] = 'delete'
         expected['timeout'] = -1
-        expected['dummy'] = 'foo'
         expected['input'] = []
         expected['output'] = test_task.parameters.get('output')
         self.assertEqual(nb_pars, expected)
