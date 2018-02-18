@@ -26,6 +26,7 @@ import os
 import tempfile
 import unittest
 
+import luigi
 from luigi import Parameter
 from luigi.local_target import LocalTarget
 
@@ -207,8 +208,15 @@ class TestDictRequire(BaseTestTask):
 
 
 class TestRun(JupyterNotebookTask):
+
+    dummy = luigi.Parameter(
+        default='foo'
+    )
+
     def output(self):
-        notebook_output_file = tempfile.NamedTemporaryFile()
+        notebook_output_file = tempfile.NamedTemporaryFile(
+            delete=False
+        )
         return LocalTarget(notebook_output_file.name)
 
 
@@ -216,10 +224,6 @@ class TestRun(JupyterNotebookTask):
 # Testing
 #
 class TestJupyterNotebookTask(unittest.TestCase):
-    # test ability to detect invalid keys
-    def test_invalid_key(self):
-        pass
-
     # test ability to catch Luigi parameters along with the base parameters of
     # `JupyterNotebookTask`
     def test_form_luigi_pars(self):
@@ -387,6 +391,7 @@ class TestJupyterNotebookTask(unittest.TestCase):
         expected['kernel_name'] = host_kernel
         expected['json_action'] = 'delete'
         expected['timeout'] = -1
+        expected['dummy'] = 'foo'
         expected['input'] = []
         expected['output'] = test_task.parameters.get('output')
         self.assertEqual(nb_pars, expected)
@@ -398,6 +403,9 @@ class TestJupyterNotebookTask(unittest.TestCase):
     #     pass
 
     # def test_json_action_delete(self):
+    #     pass
+
+    # def test_invalid_key(self):
     #     pass
 
 
