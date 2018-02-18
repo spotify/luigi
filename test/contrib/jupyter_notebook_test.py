@@ -54,7 +54,6 @@ tmp = tempfile.gettempdir()
 # 1. reads the parameters from the task
 # 2. writes the parameters to file.
 if execute_run_tests:
-    notebook_output_file = tempfile.NamedTemporaryFile()
     notebook = new_notebook()
     notebook['cells'] = [
         new_code_cell(
@@ -70,7 +69,7 @@ if execute_run_tests:
             "pars = load_parameters('LUIGI_JUPYTER_TASK_ENV')"
         ),
         new_code_cell(
-            "file = open('%s', 'w')" % notebook_output_file.name
+            "file = open(pars.get('output'), 'w')"
         ),
         new_code_cell(
             'json.dump(pars, file)'
@@ -106,11 +105,6 @@ class BaseTestTask(JupyterNotebookTask):
         pass
 
 
-class OutputNone(BaseTestTask):
-    def output(self):
-        return None
-
-
 class OutputNoPath(BaseTestTask):
     def output(self):
         return 'foo'
@@ -121,28 +115,20 @@ class OutputSingle(BaseTestTask):
         return LocalTarget(os.path.join(tmp, 'single_local_target'))
 
 
+class OutputSingleListNoPath(BaseTestTask):
+    def output(self):
+        return ['foo']
+
+
 class OutputSingleList(BaseTestTask):
     def output(self):
         return [LocalTarget(os.path.join(tmp, 'single_local_target'))]
 
 
-# class OutputSingleListNone(BaseTestTask):
-#     def output(self):
-#         return [None]
+class OutputSingleDictNoPath(BaseTestTask):
+    def output(self):
+        return {'out': 'foo'}
 
-
-# class OutputSingleListNoPath(BaseTestTask):
-#     def output(self):
-#         return ['foo']
-
-# class OutputSingleDictNone(BaseTestTask):
-#     def output(self):
-#         return {'out': None}
-
-
-# class OutputSingleDictNoPath(BaseTestTask):
-#     def output(self):
-#         return {'out': 'foo'}
 
 class OutputSingleDict(BaseTestTask):
     def output(self):
@@ -171,11 +157,6 @@ class OutputDict(BaseTestTask):
         }
 
 
-class TestNoneRequire(BaseTestTask):
-    def requires(self):
-        return OutputNone(**test_parameters)
-
-
 class TestNoPathRequire(BaseTestTask):
     def requires(self):
         return OutputNoPath(**test_parameters)
@@ -186,9 +167,19 @@ class TestSingleRequire(BaseTestTask):
         return OutputSingle(**test_parameters)
 
 
+class TestSingleListNoPathRequire(BaseTestTask):
+    def requires(self):
+        return OutputSingleListNoPath(**test_parameters)
+
+
 class TestSingleListRequire(BaseTestTask):
     def requires(self):
         return OutputSingleList(**test_parameters)
+
+
+class TestSingleDictNoPathRequire(BaseTestTask):
+    def requires(self):
+        return OutputSingleDictNoPath(**test_parameters)
 
 
 class TestSingleDictRequire(BaseTestTask):
@@ -199,7 +190,6 @@ class TestSingleDictRequire(BaseTestTask):
 class TestListRequire(BaseTestTask):
     def requires(self):
         return [
-            OutputNone(**test_parameters),
             OutputNoPath(**test_parameters),
             OutputSingle(**test_parameters),
             OutputList(**test_parameters),
@@ -210,16 +200,16 @@ class TestListRequire(BaseTestTask):
 class TestDictRequire(BaseTestTask):
     def requires(self):
         return {
-            'input_one': OutputNone(**test_parameters),
-            'input_two': OutputNoPath(**test_parameters),
-            'input_three': OutputSingle(**test_parameters),
-            'input_four': OutputList(**test_parameters),
-            'input_five': OutputDict(**test_parameters)
+            'input_one': OutputNoPath(**test_parameters),
+            'input_two': OutputSingle(**test_parameters),
+            'input_three': OutputList(**test_parameters),
+            'input_four': OutputDict(**test_parameters)
         }
 
 
 class TestRun(JupyterNotebookTask):
     def output(self):
+        notebook_output_file = tempfile.NamedTemporaryFile()
         return LocalTarget(notebook_output_file.name)
 
 
@@ -245,14 +235,6 @@ class TestJupyterNotebookTask(unittest.TestCase):
         )
 
     # test ability to form `self.parameters['input']`
-    def test_form_input_none(self):
-        test_task = TestNoneRequire(**test_parameters)
-        expected = []
-        self.assertEqual(
-            test_task.parameters.get('input'),
-            expected
-        )
-
     def test_form_input_no_path(self):
         test_task = TestNoPathRequire(**test_parameters)
         expected = None
@@ -269,9 +251,28 @@ class TestJupyterNotebookTask(unittest.TestCase):
             expected
         )
 
+    def test_form_input_single_list_no_path(self):
+        test_task = TestSingleListNoPathRequire(**test_parameters)
+        expected = None
+        self.assertEqual(
+            test_task.parameters.get('input'),
+            expected
+        )
+
     def test_form_input_single_list(self):
         test_task = TestSingleListRequire(**test_parameters)
         expected = OutputSingleList(**test_parameters).output()[0].path
+        self.assertEqual(
+            test_task.parameters.get('input'),
+            expected
+        )
+
+    def test_form_input_single_dict_no_path(self):
+        test_task = TestSingleDictNoPathRequire(**test_parameters)
+        expected = {
+            k: None for k in
+            OutputSingleDict(**test_parameters).output().keys()
+        }
         self.assertEqual(
             test_task.parameters.get('input'),
             expected
@@ -291,7 +292,6 @@ class TestJupyterNotebookTask(unittest.TestCase):
     def test_form_input_list(self):
         test_task = TestListRequire(**test_parameters)
         expected = [
-            [],
             None,
             OutputSingle(**test_parameters).output().path,
             [item.path for item in OutputList(**test_parameters).output()],
@@ -305,13 +305,12 @@ class TestJupyterNotebookTask(unittest.TestCase):
     def test_form_input_dict(self):
         test_task = TestDictRequire(**test_parameters)
         expected = {
-            'input_one': [],
-            'input_two': None,
-            'input_three': OutputSingle(**test_parameters).output().path,
-            'input_four': [
+            'input_one': None,
+            'input_two': OutputSingle(**test_parameters).output().path,
+            'input_three': [
                 item.path for item in OutputList(**test_parameters).output()
             ],
-            'input_five': {
+            'input_four': {
                 k: v.path for k, v in
                 OutputDict(**test_parameters).output().items()
             }
@@ -319,11 +318,6 @@ class TestJupyterNotebookTask(unittest.TestCase):
         self.assertEqual(test_task.parameters.get('input'), expected)
 
     # test ability to form `self.parameters('output')`
-    def test_form_output_none(self):
-        test_task = OutputNone(**test_parameters)
-        expected = []
-        self.assertEqual(test_task.parameters.get('output'), expected)
-
     def test_form_output_no_path(self):
         test_task = OutputNoPath(**test_parameters)
         expected = None
@@ -377,18 +371,7 @@ class TestJupyterNotebookTask(unittest.TestCase):
             expected
         )
 
-    # test ability to set the environment variable name
-    def test_environment_variable(self):
-        pass
-
-    # test ability to keep or delete the temporary json file
-    def test_json_action_keep(self):
-        pass
-
-    def test_json_action_delete(self):
-        pass
-
-    # test ability to run a noteboob
+    # test ability to run a notebook
     @unittest.skipIf(not execute_run_tests, 'missing requirements')
     def test_run(self):
         test_task = TestRun(
@@ -397,7 +380,7 @@ class TestJupyterNotebookTask(unittest.TestCase):
             environment_variable='LUIGI_JUPYTER_TASK_ENV'
         )
         test_task.run()
-        with open(notebook_output_file.name) as pars:
+        with open(test_task.parameters.get('output')) as pars:
             nb_pars = json.load(pars)
         expected = {}
         expected['notebook_path'] = notebook_file.name
@@ -406,8 +389,17 @@ class TestJupyterNotebookTask(unittest.TestCase):
         expected['json_action'] = 'delete'
         expected['timeout'] = -1
         expected['input'] = []
-        expected['output'] = notebook_output_file.name
+        expected['output'] = test_task.parameters.get('output')
         self.assertEqual(nb_pars, expected)
+
+    def test_environment_variable(self):
+        pass
+
+    def test_json_action_keep(self):
+        pass
+
+    def test_json_action_delete(self):
+        pass
 
 
 if __name__ == '__main__':
