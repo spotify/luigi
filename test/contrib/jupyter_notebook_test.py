@@ -26,7 +26,6 @@ import os
 import tempfile
 import unittest
 
-import luigi
 from luigi import Parameter
 from luigi.local_target import LocalTarget
 
