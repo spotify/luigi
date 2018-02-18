@@ -34,7 +34,6 @@ from luigi.contrib.jupyter_notebook import JupyterNotebookTask
 logger = logging.getLogger('luigi-interface')
 
 try:
-    import jupyter
     from jupyter_client import KernelManager
     import nbformat as nbf
     from nbformat.v4 import (
