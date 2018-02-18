@@ -22,7 +22,8 @@ This can be accomplished by using the :class:`JupyterNotebookTask` class.
 When a :class:`JupyterNotebookTask` is executed, all of its
 ``luigi.Parameter`` s are written to a temporary JSON file in the same
 directory that contains the notebook. From inside of the notebook, you can
-then retrieve the values of these parameters by reading the temporary JSON file.
+then retrieve the values of these parameters by reading the temporary JSON
+file.
 
 In a Python notebook, you can read the task's parameters by using the
 ``load_parameters`` utility as follows:
@@ -61,9 +62,9 @@ changing the value of the task's ``environment_variable`` parameter.
 For example, if you set ``environment_variable = 'FOO'`` in the task, you will
 then write ``pars = load_parameters('FOO')`` in the notebook.
 
-The paths of the task's ``self.input()`` and ``self.output()`` are automatically
-added to the parameters dictionary that is written to the temporary JSON file
-with keys *input* and *output* respectively.
+The paths of the task's ``self.input()`` and ``self.output()`` are
+automatically added to the parameters dictionary that is written to the
+temporary JSON file with keys *input* and *output* respectively.
 
 These paths are meaningful when ``self.input()`` and ``self.output()`` return
 single objects with the ``path`` attribute, or iterables or dictionaries whose
@@ -85,8 +86,8 @@ See the
 <http://nbconvert.readthedocs.io/en/latest/execute_api.html#executing-notebooks-using-the-python-api-interface>`_
 section of the :mod:`nbconvert` module documentation for more information.
 
-**This module depends on both the nbconvert (>=5.3.1) and the nbformat (>=4.4.0)
-modules. Please make sure they are installed.**
+**This module depends on both the nbconvert (>=5.3.1) and the nbformat
+(>=4.4.0) modules. Please make sure they are installed.**
 
 Written by `Mattia Ciollaro <https://github.com/mattiaciollaro>`_.
 """
@@ -258,8 +259,8 @@ class JupyterNotebookTask(luigi.Task):
 
     def _form_luigi_pars(self):
         """
-        This method is used to add to the `parameters` dictionary any additional
-        user-defined `luigi.Parameter`s.
+        This method is used to add to the `parameters` dictionary any
+        additional user-defined `luigi.Parameter`s.
         """
         for par in self.param_kwargs.items():
             # check that key is available (not prohibited such as 'input'
