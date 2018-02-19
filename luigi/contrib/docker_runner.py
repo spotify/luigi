@@ -205,6 +205,10 @@ class DockerTask(luigi.Task):
             self._client.start(container['Id'])
 
             exit_status = self._client.wait(container['Id'])
+            # docker-py>=3.0.0 returns a dict instead of the status code directly
+            if type(exit_status) is dict:
+                exit_status = exit_status['StatusCode']
+
             if exit_status != 0:
                 stdout = False
                 stderr = True
