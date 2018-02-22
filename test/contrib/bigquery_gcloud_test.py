@@ -30,7 +30,7 @@ import unittest
 
 try:
     import googleapiclient.errors
-    import oauth2client
+    import google.auth
 except ImportError:
     raise unittest.SkipTest('Unable to load googleapiclient module')
 from luigi.contrib import bigquery, bigquery_avro, gcs
@@ -52,7 +52,7 @@ EU_DATASET_ID = os.environ.get('BQ_TEST_EU_DATASET_ID', 'luigi_tests_eu')
 EU_LOCATION = 'EU'
 US_LOCATION = 'US'
 
-CREDENTIALS = oauth2client.client.GoogleCredentials.get_application_default()
+CREDENTIALS, _ = google.auth.default()
 
 
 def bucket_url(suffix):

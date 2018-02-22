@@ -6,11 +6,11 @@ Follow the directions in the gcloud tools to set up local credentials.
 import unittest
 
 try:
-    import oauth2client
+    import google.auth
     from luigi.contrib import dataproc
     from googleapiclient import discovery
 
-    default_credentials = oauth2client.client.GoogleCredentials.get_application_default()
+    default_credentials, _ = google.auth.default()
     default_client = discovery.build('dataproc', 'v1', credentials=default_credentials)
     dataproc.set_dataproc_client(default_client)
 except ImportError:

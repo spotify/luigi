@@ -8,7 +8,7 @@ try:
     import httplib2
     import google.auth
 except ImportError:
-    logger.warning("Loading GCP module without the python packages httplib2, oauth2client. \
+    logger.warning("Loading GCP module without the python packages httplib2, google-auth. \
         This *could* crash at runtime if no other credentials are provided.")
 
 
