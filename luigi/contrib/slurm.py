@@ -19,6 +19,7 @@
 Slurm batch system Tasks.
 
 Adapted by Jimmy Tang <jtang@voysis.com> from the sge.py by Jake Feala (@jfeala)
+Further adapted by Nathan Tsoi <nathan@vertile.com>
 
 Adapted by Jake Feala (@jfeala) from
 `LSF extension <https://github.com/dattalab/luigi/blob/lsf/luigi/lsf.py>`_
@@ -110,8 +111,7 @@ POLL_TIME = 15  # decided to hard-code rather than configure here
 
 class slurm(luigi.Config):
     ntasks = luigi.IntParameter(default=2, significant=False)
-    mem = luigi.IntParameter(default=100, significant=False)
-    mem_per_cpu = luigi.IntParameter(default=2000, significant=False)
+    mem = luigi.IntParameter(default=4000, significant=False)
     gres = luigi.Parameter(default='', significant=False)
     partition = luigi.Parameter(default='', significant=False)
     time = luigi.Parameter(default='', significant=False)
@@ -226,7 +226,6 @@ class SlurmTask(luigi.Task):
 
     - ntasks: Number of CPUs (or "slots") to allocate for the Task.
     - mem: The amount of memory to allocate for the Task.
-    - mem_per_cpu:
     - gres: The gres resources to allocate for the Task.
     - time: The time to allocate for the Task.
     - partition: The partition allocate for the Task.
@@ -267,10 +266,6 @@ class SlurmTask(luigi.Task):
     @property
     def mem(self):
         return self.slurm_config.mem
-
-    @property
-    def mem_per_cpu(self):
-        return self.slurm_config.mem_per_cpu
 
     @property
     def gres(self):
@@ -407,6 +402,7 @@ class SlurmTask(luigi.Task):
         logger.debug("Submitted job to slurm with job id: {}".format(self.job_id))
 
         successful = self._track_job()
+        job_output = '\n'.join(self._fetch_task_failures()) + '\n'.join(self._fetch_task_out())
 
         # Now delete the temporaries, if they're there.
         if not self.dont_remove_tmp_dir:
@@ -416,7 +412,7 @@ class SlurmTask(luigi.Task):
 
         # stop here if the job was not successful
         if not successful:
-            raise RuntimeError('Slurm job did not complete')
+            raise RuntimeError('Slurm job has FAILED:\n' + job_output)
 
     def _track_job(self):
         successful = False
