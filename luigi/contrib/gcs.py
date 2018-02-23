@@ -115,7 +115,7 @@ class GCSClient(luigi.target.FileSystem):
         if descriptor:
             self.client = discovery.build_from_document(descriptor, **authenticate_kwargs)
         else:
-            self.client = discovery.build('storage', 'v1', **authenticate_kwargs)
+            self.client = discovery.build('storage', 'v1', cache_discovery=False, **authenticate_kwargs)
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, _, _) = urlsplit(path)

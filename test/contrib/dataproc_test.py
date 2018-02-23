@@ -11,7 +11,7 @@ try:
     from googleapiclient import discovery
 
     default_credentials, _ = google.auth.default()
-    default_client = discovery.build('dataproc', 'v1', credentials=default_credentials)
+    default_client = discovery.build('dataproc', 'v1', cache_discovery=False, credentials=default_credentials)
     dataproc.set_dataproc_client(default_client)
 except ImportError:
     raise unittest.SkipTest('Unable to load google cloud dependencies')
