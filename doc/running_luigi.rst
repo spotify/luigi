@@ -1,4 +1,4 @@
-.. _CommandLine:
+.. _RunningLuigi:
 
 Running from the Command Line
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
