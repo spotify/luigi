@@ -110,7 +110,7 @@ import itertools
 POLL_TIME = 15  # decided to hard-code rather than configure here
 
 class slurm(luigi.Config):
-    ntasks = luigi.IntParameter(default=2, significant=False)
+    ntasks = luigi.IntParameter(default=1, significant=False)
     mem = luigi.IntParameter(default=4000, significant=False)
     gres = luigi.Parameter(default='', significant=False)
     partition = luigi.Parameter(default='', significant=False)
