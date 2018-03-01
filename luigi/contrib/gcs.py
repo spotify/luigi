@@ -245,7 +245,7 @@ class GCSClient(luigi.target.FileSystem):
         resumable = os.path.getsize(filename) > 0
 
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE
-        media = http.MediaFileUpload(filename, mimetype, chunksize=chunksize, resumable=resumable)
+        media = http.MediaFileUpload(filename, mimetype=mimetype, chunksize=chunksize, resumable=resumable)
 
         self._do_put(media, dest_path)
 
