@@ -784,6 +784,8 @@ class Scheduler(object):
         worker_id = worker
         worker = self._update_worker(worker_id)
 
+        resources = {} if resources is None else resources.copy()
+
         if retry_policy_dict is None:
             retry_policy_dict = {}
 
@@ -815,7 +817,9 @@ class Scheduler(object):
         if status == RUNNING and not task.worker_running:
             task.worker_running = worker_id
             if batch_id:
-                task.resources_running = self._state.get_batch_running_tasks(batch_id)[0].resources_running
+                # copy resources_running of the first batch task
+                batch_tasks = self._state.get_batch_running_tasks(batch_id)
+                task.resources_running = batch_tasks[0].resources_running.copy()
             task.time_running = time.time()
 
         if tracking_url is not None or task.status != RUNNING:
@@ -1176,7 +1180,7 @@ class Scheduler(object):
         elif best_task:
             self._state.set_status(best_task, RUNNING, self._config)
             best_task.worker_running = worker_id
-            best_task.resources_running = best_task.resources
+            best_task.resources_running = best_task.resources.copy()
             best_task.time_running = time.time()
             self._update_task_history(best_task, RUNNING, host=host)
 
