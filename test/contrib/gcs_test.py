@@ -24,7 +24,7 @@ Follow the directions in the gcloud tools to set up local credentials.
 from helpers import unittest
 try:
     import googleapiclient.errors
-    import oauth2client
+    import google.auth
 except ImportError:
     raise unittest.SkipTest('Unable to load googleapiclient module')
 import os
@@ -41,7 +41,7 @@ PROJECT_ID = os.environ.get('GCS_TEST_PROJECT_ID', 'your_project_id_here')
 BUCKET_NAME = os.environ.get('GCS_TEST_BUCKET', 'your_test_bucket_here')
 TEST_FOLDER = os.environ.get('TRAVIS_BUILD_ID', 'gcs_test_folder')
 
-CREDENTIALS = oauth2client.client.GoogleCredentials.get_application_default()
+CREDENTIALS, _ = google.auth.default()
 ATTEMPTED_BUCKET_CREATE = False
 
 
