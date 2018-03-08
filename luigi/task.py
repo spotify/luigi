@@ -276,7 +276,7 @@ class Task(object):
                 except KeyboardInterrupt:
                     return
                 except BaseException:
-                    logger.exception("Error in event callback for %r", event)
+                    logger.exception("Error in event callback (%s) for %r", callback, event)
 
     @property
     def task_module(self):
