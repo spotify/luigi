@@ -343,6 +343,7 @@ class BigQueryClient(object):
             status = self.client.jobs().get(projectId=project_id, jobId=job_id).execute(num_retries=10)
             if status['status']['state'] == 'DONE':
                 if status['status'].get('errorResult'):
+                    logger.error('BQ ERR: %s', status['status']['errors'])
                     raise Exception('BigQuery job failed: {}'.format(status['status']['errorResult']))
                 return
 
