@@ -230,9 +230,14 @@ class GCSClient(luigi.target.FileSystem):
                 raise InvalidDeleteException(
                     'Path {} is a directory. Must use recursive delete'.format(path))
 
+            i = 1
             req = http.BatchHttpRequest()
             for it in self._list_iter(bucket, self._add_path_delimiter(obj)):
+                if i % 1000 == 0:
+                    req.execute()
+                    req = http.BatchHttpRequest()
                 req.add(self.client.objects().delete(bucket=bucket, object=it['name']))
+                i += 1
             req.execute()
 
             _wait_for_consistency(lambda: not self.isdir(path))
