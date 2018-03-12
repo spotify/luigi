@@ -1,13 +1,36 @@
+# -*- coding: utf-8 -*-
+"""
+.. Copyright 2012-2015 Spotify AB
+   Copyright 2018
+   Copyright 2018 EMBL-European Bioinformatics Institute
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+"""
+
+from __future__ import print_function
+
 import os
 import sys
-import cPickle as pickle
+try:
+    import dill as pickle
+except ImportError:
+    import pickle
 import logging
 import tarfile
-import cPickle as pickle
 
 def do_work_on_compute_node(work_dir):
-    print "HOLY CRAP LOAD THE DATA AND DO THE THING"
-    
+    print("LSF RUNNER: LOAD THE DATA AND DO THE THING")
+
     # Extract the necessary dependencies
     extract_packages_archive(work_dir)
 
@@ -15,6 +38,8 @@ def do_work_on_compute_node(work_dir):
     os.chdir(work_dir)
     with open("job-instance.pickle", "r") as f:
         job = pickle.load(f)
+
+    # job = pickle.loads("job-instance.pickle")
 
     # Do the work contained
     job.work()
@@ -44,6 +69,7 @@ def main(args=sys.argv):
         # Set up logging.
         logging.basicConfig(level=logging.WARN)
         work_dir = args[1]
+        print("PATHS:" + " | ".join(args))
         assert os.path.exists(work_dir), "First argument to lsf_runner.py must be a directory that exists"
         do_work_on_compute_node(work_dir)
     except Exception, exc:
