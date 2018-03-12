@@ -1,25 +1,29 @@
-# Copyright (c) 2013 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+import logging
+import time
+from helpers import unittest
 
 import luigi
-import luigi.scheduler
+import luigi.contrib.hadoop
 import luigi.rpc
+import luigi.scheduler
 import luigi.worker
-import luigi.hadoop
-import unittest
-import time
-import logging
 
 
 class DummyTask(luigi.Task):
@@ -33,39 +37,42 @@ class DummyTask(luigi.Task):
         return self.has_run
 
     def run(self):
-        logging.debug("%s - setting has_run" % self.task_id)
+        logging.debug("%s - setting has_run", self)
         self.has_run = True
 
 
-class CustomizedLocalScheduler(luigi.scheduler.CentralPlannerScheduler):
+class CustomizedLocalScheduler(luigi.scheduler.Scheduler):
+
     def __init__(self, *args, **kwargs):
         super(CustomizedLocalScheduler, self).__init__(*args, **kwargs)
         self.has_run = False
 
-    def get_work(self, worker, host=None):
-        locally_pending_tasks, best_task = super(CustomizedLocalScheduler, self).get_work(worker, host)
+    def get_work(self, worker, host=None, **kwargs):
+        r = super(CustomizedLocalScheduler, self).get_work(worker=worker, host=host)
         self.has_run = True
-        return locally_pending_tasks, best_task
+        return r
 
     def complete(self):
         return self.has_run
 
 
 class CustomizedRemoteScheduler(luigi.rpc.RemoteScheduler):
+
     def __init__(self, *args, **kwargs):
         super(CustomizedRemoteScheduler, self).__init__(*args, **kwargs)
         self.has_run = False
 
     def get_work(self, worker, host=None):
-        locally_pending_tasks, best_task = super(CustomizedRemoteScheduler, self).get_work(worker, host)
+        r = super(CustomizedRemoteScheduler, self).get_work(worker=worker, host=host)
         self.has_run = True
-        return locally_pending_tasks, best_task
+        return r
 
     def complete(self):
         return self.has_run
 
 
 class CustomizedWorker(luigi.worker.Worker):
+
     def __init__(self, *args, **kwargs):
         super(CustomizedWorker, self).__init__(*args, **kwargs)
         self.has_run = False
@@ -79,6 +86,7 @@ class CustomizedWorker(luigi.worker.Worker):
 
 
 class CustomizedWorkerSchedulerFactory(object):
+
     def __init__(self, *args, **kwargs):
         self.scheduler = CustomizedLocalScheduler()
         self.worker = CustomizedWorker(self.scheduler)
@@ -86,15 +94,17 @@ class CustomizedWorkerSchedulerFactory(object):
     def create_local_scheduler(self):
         return self.scheduler
 
-    def create_remote_scheduler(self, host, port):
-        return CustomizedRemoteScheduler(host=host, port=port)
+    def create_remote_scheduler(self, url):
+        return CustomizedRemoteScheduler(url)
 
-    def create_worker(self, scheduler, worker_processes=None):
+    def create_worker(self, scheduler, worker_processes=None, assistant=False):
         return self.worker
 
 
 class CustomizedWorkerTest(unittest.TestCase):
+
     ''' Test that luigi's build method (and ultimately the run method) can accept a customized worker and scheduler '''
+
     def setUp(self):
         self.worker_scheduler_factory = CustomizedWorkerSchedulerFactory()
         self.time = time.time
@@ -118,6 +128,3 @@ class CustomizedWorkerTest(unittest.TestCase):
         self.assertFalse(self.worker_scheduler_factory.worker.complete())
         luigi.run(['DummyTask', '--n', '4'], worker_scheduler_factory=self.worker_scheduler_factory)
         self.assertTrue(self.worker_scheduler_factory.worker.complete())
-
-if __name__ == '__main__':
-    unittest.main()

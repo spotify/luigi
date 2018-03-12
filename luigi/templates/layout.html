@@ -1,0 +1,107 @@
+<!--
+@Copyright 2015 Naver Corp.
+@Author Yeseul Park (yeseul.park@navercorp.com)
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="content-type" content="text/html" charset="utf-8">
+	<title> Luigi History Viewer </title>
+    <!-- Derived from example at http://twitter.github.com/bootstrap/examples/sticky-footer.html -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="view luigi task history">
+    <meta name="author" content="ypark">
+    <!-- CSS -->
+    <style type="text/css">
+
+      /* Sticky footer styles
+      -------------------------------------------------- */
+
+      html,
+      body {
+        height: 100%;
+        /* The html and body elements cannot have any padding or margin. */
+      }
+
+      /* Wrapper for page content to push down footer */
+      #wrap {
+        min-height: 90%;
+        /*height: auto !important;*/
+        height: 730px;
+        /* Negative indent footer by it's height */
+        margin: 0 auto -60px;
+		overflow: scroll;
+      }
+
+      /* Set the fixed height of the footer here */
+      #push,
+      #footer {
+        height: 60px;
+      }
+      #footer {
+        background-color: #f5f5f5;
+      }
+
+      /* Lastly, apply responsive CSS fixes as necessary */
+      @media (max-width: 767px) {
+        #footer {
+          margin-left: -20px;
+          margin-right: -20px;
+          padding-left: 20px;
+          padding-right: 20px;
+        }
+      }
+
+      /* Custom page CSS
+      -------------------------------------------------- */
+      /* Not required for template or sticky footer method. */
+
+      .container {
+        width: auto;
+        max-width: 1200px;
+        margin-bottom: 20px;
+      }
+      .container .credit {
+        margin: 20px 0;
+      }
+      
+      .container[role="main"] {
+          padding-bottom: 60px;
+      }
+      
+      #footer {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+      }
+      #proper-content {
+		  overflow: auto;
+	  }
+      .lead { margin-top: -17px; margin-bottom: 13px; }
+
+    </style>
+    <link href="{{ static_url("visualiser/lib/bootstrap3/css/bootstrap.min.css") }}" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.7.0/nv.d3.min.css" rel="stylesheet">
+    <script src="{{ static_url("visualiser/lib/jquery-1.10.0.min.js") }}"></script>
+    <script src="{{ static_url("visualiser/lib/bootstrap3/js/bootstrap.min.js") }}"></script>
+  </head>
+  <body>
+
+	<!-- Wrap all page content here -->
+	<div id="wrap">
+    	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+    	<script src="https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.7.0/nv.d3.min.js"></script>
+ 
+		<div class="container">
+			<div class="wrapper">
+				<div class="proper-content">
+        			{% block content %}{% end %}
+				</div><!-- /.proper-content -->
+				<div class="push"></div>
+			</div><!-- /.wrapper -->
+	  	</div> <!-- /container -->
+	</div> <!-- /wrap -->
+  </body>
+</html>

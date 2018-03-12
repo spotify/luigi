@@ -1,57 +1,60 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
-import luigi, luigi.scheduler, luigi.task_history, luigi.worker
-import unittest
+from helpers import LuigiTestCase
+
+import luigi
+import luigi.scheduler
+import luigi.task_history
+import luigi.worker
+
 luigi.notifications.DEBUG = True
 
+
 class SimpleTaskHistory(luigi.task_history.TaskHistory):
+
     def __init__(self):
         self.actions = []
 
-    def task_scheduled(self, task_id):
-        self.actions.append(('scheduled', task_id))
+    def task_scheduled(self, task):
+        self.actions.append(('scheduled', task.id))
 
-    def task_finished(self, task_id, successful):
-        self.actions.append(('finished', task_id))
+    def task_finished(self, task, successful):
+        self.actions.append(('finished', task.id))
 
-    def task_started(self, task_id, worker_host):
-        self.actions.append(('started', task_id))
+    def task_started(self, task, worker_host):
+        self.actions.append(('started', task.id))
 
 
-class TaskHistoryTest(unittest.TestCase):
-    def setUp(self):
-        self.th = SimpleTaskHistory()
-        self.sch = luigi.scheduler.CentralPlannerScheduler(task_history=self.th)
-        self.w = luigi.worker.Worker(scheduler=self.sch)
-
-    def tearDown(self):
-        self.w.stop()
+class TaskHistoryTest(LuigiTestCase):
 
     def test_run(self):
-        class MyTask(luigi.Task):
-            pass
+        th = SimpleTaskHistory()
+        sch = luigi.scheduler.Scheduler(task_history_impl=th)
+        with luigi.worker.Worker(scheduler=sch) as w:
+            class MyTask(luigi.Task):
+                pass
 
-        self.w.add(MyTask())
-        self.w.run()
+            task = MyTask()
+            w.add(task)
+            w.run()
 
-        self.assertEquals(self.th.actions, [
-            ('scheduled', 'MyTask()'),
-            ('started', 'MyTask()'),
-            ('finished', 'MyTask()')
-        ])
-
-
-if __name__ == '__main__':
-    unittest.main()
+            self.assertEqual(th.actions, [
+                ('scheduled', task.task_id),
+                ('started', task.task_id),
+                ('finished', task.task_id)
+            ])

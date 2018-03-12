@@ -1,10 +1,73 @@
 language: python
-python:
-  - "2.7"
-  - "2.6"
-install: 
-  - pip install tornado --use-mirrors
-  - pip install argparse --use-mirrors
-  - pip install sqlalchemy --use-mirrors
-  - pip install mock --use-mirrors
-script: nosetests
+
+services:
+  - elasticsearch
+  - mysql
+  - docker
+
+env:
+  global:
+    - PIP_DOWNLOAD_CACHE=$HOME/.pip-cache
+    - POSTGRES_USER=postgres
+    - DATAPROC_TEST_PROJECT_ID=luigi-travistestenvironment
+    - GCS_TEST_PROJECT_ID=luigi-travistestenvironment
+    - GCS_TEST_BUCKET=luigi-travistestenvironment
+    - BQ_TEST_PROJECT_ID=luigi-travistestenvironment
+    - BQ_TEST_INPUT_BUCKET=luigi-bigquery-test
+    - GOOGLE_APPLICATION_CREDENTIALS=test/gcloud-credentials.json
+  matrix:
+    - TOXENV=flake8
+    - TOXENV=docs
+    - TOXENV=py27-nonhdfs
+    - TOXENV=py34-nonhdfs
+    - TOXENV=py27-unixsocket
+      # - TOXENV=py27-cdh
+      # minicluster (cdh) tests disabled as lack of love, #2140.
+      # Sometimes it runs too slow for Travis. And sometimes it crashes on downloading cdh
+    # - TOXENV=pypy-scheduler # Disabled to unbreak https://github.com/spotify/luigi/pull/2190
+    # - TOXENV=py27-gcloud # At least broken as of  https://github.com/spotify/luigi/pull/1917
+    - TOXENV=py27-postgres
+      # - TOXENV=visualiser
+      # Disabling this test because of intermittent failures :-/
+
+# Python 3.5 has to go here until Travis adds it to the default build images.
+# https://github.com/travis-ci/travis-ci/issues/4794#issuecomment-143758799
+matrix:
+  include:
+    - python: 3.5
+      env: TOXENV=py35-nonhdfs
+    - python: 3.6
+      env: TOXENV=py36-nonhdfs
+    - python: 3.6
+      env: TOXENV=py36-unixsocket
+
+sudo: false
+
+cache:
+  directories:
+    - $HOME/.pip-cache
+
+install:
+  - pip install 'tox<3.0'
+
+before_install:
+  - openssl aes-256-cbc -K $encrypted_e05f6ccc270e_key -iv $encrypted_e05f6ccc270e_iv -in test/gcloud-credentials.json.enc -out test/gcloud-credentials.json -d
+    || export DIDNT_CREATE_GCP_CREDS=1
+
+before_script:
+  # TODO, only do this step for the postgres environment
+  - psql -c 'create database spotify;' -U postgres
+
+  # Create mysql database if possible but fail silently if not available.
+  - mysql -e 'create database IF NOT EXISTS luigi_test;' -uroot || true
+
+script:
+  - tox --version
+  - ./scripts/ci/conditional_tox.sh
+
+branches:
+  only:
+    - master
+
+notifications:
+  email: false

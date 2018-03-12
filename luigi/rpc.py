@@ -1,157 +1,166 @@
-# Copyright (c) 2012 Spotify AB
+# -*- coding: utf-8 -*-
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not
-# use this file except in compliance with the License. You may obtain a copy of
-# the License at
+# Copyright 2012-2015 Spotify AB
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
-
-import urllib
-import urllib2
-import logging
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+"""
+Implementation of the REST interface between the workers and the server.
+rpc.py implements the client side of it, server.py implements the server side.
+See :doc:`/central_scheduler` for more info.
+"""
+import os
 import json
+import logging
+import socket
 import time
-import warnings
-from scheduler import Scheduler, PENDING
+
+from luigi.six.moves.urllib.parse import urljoin, urlencode, urlparse
+from luigi.six.moves.urllib.request import urlopen
+from luigi.six.moves.urllib.error import URLError
+
+from luigi import configuration
+from luigi.scheduler import RPC_METHODS
+
+HAS_UNIX_SOCKET = True
+HAS_REQUESTS = True
+
+
+try:
+    import requests_unixsocket as requests
+except ImportError:
+    HAS_UNIX_SOCKET = False
+    try:
+        import requests
+    except ImportError:
+        HAS_REQUESTS = False
+
 
 logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
 
 
+def _urljoin(base, url):
+    """
+    Join relative URLs to base URLs like urllib.parse.urljoin but support
+    arbitrary URIs (esp. 'http+unix://').
+    """
+    parsed = urlparse(base)
+    scheme = parsed.scheme
+    return urlparse(
+        urljoin(parsed._replace(scheme='http').geturl(), url)
+    )._replace(scheme=scheme).geturl()
+
+
 class RPCError(Exception):
+
     def __init__(self, message, sub_exception=None):
         super(RPCError, self).__init__(message)
         self.sub_exception = sub_exception
 
 
-class RemoteScheduler(Scheduler):
-    ''' Scheduler proxy object. Talks to a RemoteSchedulerResponder '''
+class URLLibFetcher(object):
+    raises = (URLError, socket.timeout)
 
-    def __init__(self, host='localhost', port=8082):
-        self._host = host
-        self._port = port
+    def fetch(self, full_url, body, timeout):
+        body = urlencode(body).encode('utf-8')
+        return urlopen(full_url, body, timeout).read().decode('utf-8')
+
+
+class RequestsFetcher(object):
+    def __init__(self, session):
+        from requests import exceptions as requests_exceptions
+        self.raises = requests_exceptions.RequestException
+        self.session = session
+        self.process_id = os.getpid()
+
+    def check_pid(self):
+        # if the process id change changed from when the session was created
+        # a new session needs to be setup since requests isn't multiprocessing safe.
+        if os.getpid() != self.process_id:
+            self.session = requests.Session()
+            self.process_id = os.getpid()
+
+    def fetch(self, full_url, body, timeout):
+        self.check_pid()
+        resp = self.session.get(full_url, data=body, timeout=timeout)
+        resp.raise_for_status()
+        return resp.text
+
+
+class RemoteScheduler(object):
+    """
+    Scheduler proxy object. Talks to a RemoteSchedulerResponder.
+    """
+
+    def __init__(self, url='http://localhost:8082/', connect_timeout=None):
+        assert not url.startswith('http+unix://') or HAS_UNIX_SOCKET, (
+            'You need to install requests-unixsocket for Unix socket support.'
+        )
+
+        self._url = url.rstrip('/')
+        config = configuration.get_config()
+
+        if connect_timeout is None:
+            connect_timeout = config.getfloat('core', 'rpc-connect-timeout', 10.0)
+        self._connect_timeout = connect_timeout
+
+        self._rpc_retry_attempts = config.getint('core', 'rpc-retry-attempts', 3)
+        self._rpc_retry_wait = config.getint('core', 'rpc-retry-wait', 30)
+
+        if HAS_REQUESTS:
+            self._fetcher = RequestsFetcher(requests.Session())
+        else:
+            self._fetcher = URLLibFetcher()
 
     def _wait(self):
-        time.sleep(30)
+        logger.info("Wait for %d seconds" % self._rpc_retry_wait)
+        time.sleep(self._rpc_retry_wait)
 
-    def _request(self, url, data, log_exceptions=True, attempts=3):
-        # TODO(erikbern): do POST requests instead
-        data = {'data': json.dumps(data)}
-        url = 'http://%s:%d%s?%s' % \
-            (self._host, self._port, url, urllib.urlencode(data))
-
-        req = urllib2.Request(url)
+    def _fetch(self, url_suffix, body, log_exceptions=True):
+        full_url = _urljoin(self._url, url_suffix)
         last_exception = None
-        for attempt in xrange(attempts):
+        attempt = 0
+        while attempt < self._rpc_retry_attempts:
+            attempt += 1
             if last_exception:
-                logger.info("Retrying...")
+                logger.info("Retrying attempt %r of %r (max)" % (attempt, self._rpc_retry_attempts))
                 self._wait()  # wait for a bit and retry
             try:
-                response = urllib2.urlopen(req)
+                response = self._fetcher.fetch(full_url, body, self._connect_timeout)
                 break
-            except urllib2.URLError, last_exception:
+            except self._fetcher.raises as e:
+                last_exception = e
                 if log_exceptions:
-                    logger.exception("Failed connecting to remote scheduler %r" % (self._host,))
+                    logger.exception("Failed connecting to remote scheduler %r", self._url)
                 continue
         else:
             raise RPCError(
                 "Errors (%d attempts) when connecting to remote scheduler %r" %
-                (attempts, self._host),
+                (self._rpc_retry_attempts, self._url),
                 last_exception
             )
-        page = response.read()
-        result = json.loads(page)
-        return result["response"]
+        return response
 
-    def ping(self, worker):
-        # just one attemtps, keep-alive thread will keep trying anyway
-        self._request('/api/ping', {'worker': worker}, attempts=1)
+    def _request(self, url, data, log_exceptions=True, attempts=3, allow_null=True):
+        body = {'data': json.dumps(data)}
 
-    def add_task(self, worker, task_id, status=PENDING, runnable=False, deps=None, expl=None):
-        self._request('/api/add_task', {
-            'task_id': task_id,
-            'worker': worker,
-            'status': status,
-            'runnable': runnable,
-            'deps': deps,
-            'expl': expl,
-        })
-
-    def get_work(self, worker, host=None):
-        ''' Ugly work around for an older scheduler version, where get_work doesn't have a host argument. Try once passing
-            host to it, falling back to the old version. Should be removed once people have had time to update everything
-        '''
-        try:
-            return self._request(
-                '/api/get_work',
-                {'worker': worker, 'host': host},
-                log_exceptions=False,
-                attempts=1
-            )
-        except:
-            warnings.warn("Failed call to scheduler.get_work(worker, host), are you running an old scheduler version?")
-            return self._request(
-                '/api/get_work',
-                {'worker': worker},
-                log_exceptions=True,
-                attempts=2
-            )
-
-    def graph(self):
-        return self._request('/api/graph', {})
-
-    def dep_graph(self, task_id):
-        return self._request('/api/dep_graph', {'task_id': task_id})
-
-    def task_list(self, status, upstream_status):
-        return self._request('/api/task_list', {'status': status, 'upstream_status': upstream_status})
-
-    def fetch_error(self, task_id):
-        return self._request('/api/fetch_error', {'task_id': task_id})
+        for _ in range(attempts):
+            page = self._fetch(url, body, log_exceptions)
+            response = json.loads(page)["response"]
+            if allow_null or response is not None:
+                return response
+        raise RPCError("Received null response from remote scheduler %r" % self._url)
 
 
-class RemoteSchedulerResponder(object):
-    """ Use on the server side for responding to requests
-    
-    The kwargs are there for forwards compatibility in case workers add
-    new (optional) arguments. That way there's no dependency on the server
-    component when upgrading Luigi on the worker side.
-
-    TODO(erikbern): what is this class actually used for? Other than an
-    unnecessary layer of indirection around central scheduler
-    """
-
-    def __init__(self, scheduler):
-        self._scheduler = scheduler
-
-    def add_task(self, worker, task_id, status, runnable, deps, expl, **kwargs):
-        return self._scheduler.add_task(worker, task_id, status, runnable, deps, expl)
-
-    def get_work(self, worker, host=None, **kwargs):
-        return self._scheduler.get_work(worker, host)
-
-    def ping(self, worker, **kwargs):
-        return self._scheduler.ping(worker)
-
-    def graph(self, **kwargs):
-        return self._scheduler.graph()
-
-    index = graph
-
-    def dep_graph(self, task_id, **kwargs):
-        return self._scheduler.dep_graph(task_id)
-
-    def task_list(self, status, upstream_status, **kwargs):
-        return self._scheduler.task_list(status, upstream_status)
-
-    def fetch_error(self, task_id, **kwargs):
-        return self._scheduler.fetch_error(task_id)
-
-    @property
-    def task_history(self):
-        return self._scheduler.task_history
+for method_name, method in RPC_METHODS.items():
+    setattr(RemoteScheduler, method_name, method)

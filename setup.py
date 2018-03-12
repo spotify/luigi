@@ -14,50 +14,78 @@
 
 import os
 
-try:
-    from setuptools import setup
-except:
-    from distutils.core import setup
+from setuptools import setup
 
-try:
-    # Convert the Markdown Readme into raw text so that it looks good in PyPi.
-    # Simple workaround because PyPi does't support Markdown.
-    # https://pypi.python.org/pypi/luigi
-    import textwrap
 
-    long_description = ['NOTE: For the latest code and documentation, please go to https://github.com/spotify/luigi', '']
+def get_static_files(path):
+    return [os.path.join(dirpath.replace("luigi/", ""), ext)
+            for (dirpath, dirnames, filenames) in os.walk(path)
+            for ext in ["*.html", "*.js", "*.css", "*.png",
+                        "*.eot", "*.svg", "*.ttf", "*.woff", "*.woff2"]]
 
-    for line in open('README.md'):
-        # Strip all images from the pypi description
-        if not line.startswith('!') and not line.startswith('```'):
-            for line in textwrap.wrap(line, 120, drop_whitespace=False):
-                long_description.append(line)
 
-    long_description = '\n'.join(long_description)
+luigi_package_data = sum(map(get_static_files, ["luigi/static", "luigi/templates"]), [])
 
-except Exception, e:
-    import traceback
-    traceback.print_exc()
-    long_description = ''
+readme_note = """\
+.. note::
 
-luigi_package_data = [os.path.join(dirpath.replace("luigi/", ""), ext)
-                      for (dirpath, dirnames, filenames) in os.walk("luigi/static")
-                      for ext in ["*.html", "*.js", "*.css", "*.png"]]
+   For the latest source, discussion, etc, please visit the
+   `GitHub repository <https://github.com/spotify/luigi>`_\n\n
+"""
 
-setup(name='luigi',
-      version='1.0.8',
-      description='Workflow mgmgt + task scheduling + dependency resolution',
-      long_description=long_description,
-      author='Erik Bernhardsson',
-      author_email='erikbern@spotify.com',
-      url='https://github.com/spotify/luigi',
-      packages=[
-        'luigi'
-        ],
-      package_data={
+with open('README.rst') as fobj:
+    long_description = readme_note + fobj.read()
+
+install_requires = [
+    'tornado>=4.0,<5',
+    'python-daemon<3.0',
+]
+
+if os.environ.get('READTHEDOCS', None) == 'True':
+    # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
+    install_requires.append('sqlalchemy')
+    # readthedocs don't like python-daemon, see #1342
+    install_requires.remove('python-daemon<3.0')
+    install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
+
+setup(
+    name='luigi',
+    version='2.7.2',
+    description='Workflow mgmgt + task scheduling + dependency resolution',
+    long_description=long_description,
+    author='The Luigi Authors',
+    url='https://github.com/spotify/luigi',
+    license='Apache License 2.0',
+    packages=[
+        'luigi',
+        'luigi.contrib',
+        'luigi.contrib.hdfs',
+        'luigi.tools'
+    ],
+    package_data={
         'luigi': luigi_package_data
-        },
-      scripts=[
-        'bin/luigid'
+    },
+    entry_points={
+        'console_scripts': [
+            'luigi = luigi.cmdline:luigi_run',
+            'luigid = luigi.cmdline:luigid',
+            'luigi-grep = luigi.tools.luigi_grep:main',
+            'luigi-deps = luigi.tools.deps:main',
+            'luigi-deps-tree = luigi.tools.deps_tree:main'
         ]
-      )
+    },
+    install_requires=install_requires,
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
+        'Environment :: Console',
+        'Environment :: Web Environment',
+        'Intended Audience :: Developers',
+        'Intended Audience :: System Administrators',
+        'License :: OSI Approved :: Apache Software License',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Topic :: System :: Monitoring',
+    ],
+)

@@ -1,4 +1,5 @@
-{% include "header.html" %}
+{% extends "layout.html" %}
+{% block content %}
 <div class="row">
   <div class="span6">
     <h3>Info</h3>
@@ -33,7 +34,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for (k, param) in task.parameters.iteritems() %}
+    {% for (k, param) in task.parameters.items() %}
       <tr>
         <td>{{k}}</td>
         <td>{{param.value}}</td>
@@ -59,3 +60,4 @@
 
   </tbody>
 </table>
+{% end %}
