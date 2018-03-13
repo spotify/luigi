@@ -14,6 +14,17 @@ coverage:
         if_no_uploads: error
 
     changes: true  # Just copied from default
+  
+  ignore:
+    - "examples/"
+    - "luigi/tools"  # These are tested as actual run commands without coverage
+    # And the list of all Task types that are tested on cluster
+    - "luigi/contrib/gcs.py"
+    - "luigi/contrib/bigquery.py"
+    - "luigi/contrib/bigquery_avro.py"
+    - "luigi/contrib/hdfs/"
+    - "luigi/contrib/hadoop.py"
+    - "luigi/contrib/mrrunner.py"
 
 # For luigi we do not want any comments
 comment: false
