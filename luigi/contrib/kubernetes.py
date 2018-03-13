@@ -162,6 +162,7 @@ class KubernetesJobTask(luigi.Task):
     def backoff_limit(self):
         """
         Maximum number of retries before considering the job as failed.
+        See: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/#pod-backoff-failure-policy
         """
         return 6
 
