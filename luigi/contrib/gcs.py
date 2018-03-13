@@ -249,6 +249,28 @@ class GCSClient(luigi.target.FileSystem):
 
         self._do_put(media, dest_path)
 
+    def _put_star(self, kwargs):
+        return self.put(**kwargs)
+
+    def put_multiple(self, filenames, directory_path, mimetype=None, chunksize=None, num_process=1):
+        args = [
+            {
+                'filename': filename,
+                'dest_path': os.path.join(directory_path, os.path.basename(filename)),
+                'mimetype': mimetype,
+                'chunksize': chunksize,
+            }
+            for filename in filenames
+        ]
+
+        if num_process > 1:
+            from multiprocessing import Pool
+            p = Pool(num_process)
+            return p.map(self._put_star, args)
+        else:
+            for arg in args:
+                self._put_star(arg)
+
     def put_string(self, contents, dest_path, mimetype=None):
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE
         assert isinstance(mimetype, six.string_types)

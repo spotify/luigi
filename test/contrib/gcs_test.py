@@ -153,6 +153,26 @@ class GCSClientTest(_GCSBaseTestCase):
             self.assertTrue(self.client.exists(bucket_url('test_put_file')))
             self.assertEqual(big, self.client.download(bucket_url('test_put_file')).read())
 
+    def test_put_file_multiproc(self):
+        temporary_fps = []
+        for _ in range(2):
+            fp = tempfile.NamedTemporaryFile(mode='wb')
+
+            lorem = b'Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt\n'
+            # Larger file than chunk size, fails with incorrect progress set up
+            big = lorem * 41943
+            fp.write(big)
+            fp.flush()
+            temporary_fps.append(fp)
+        
+        filepaths = [fp.name for fp in temporary_fps]
+        self.client.put_multiple(filepaths, bucket_url(''), num_process=2)
+
+        for fp in temporary_fps:
+            basename = os.path.basename(fp.name)
+            self.assertTrue(self.client.exists(bucket_url(basename)))
+            self.assertEqual(big, self.client.download(bucket_url(basename)).read())
+            fp.close()
 
 @attr('gcloud')
 class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
