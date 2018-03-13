@@ -18,6 +18,21 @@
    limitations under the License.
 """
 
+import os
+import subprocess
+import time
+import sys
+import logging
+import random
+import shutil
+import dill as pickle
+
+import luigi
+import luigi.configuration
+from luigi.contrib.hadoop import create_packages_archive
+from luigi.contrib import lsf_runner
+from luigi.task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
+
 """
 LSF batch system Tasks.
 =======================
@@ -46,20 +61,6 @@ The procedure:
 - Runner function hits the work button on it
 """
 
-import os
-import subprocess
-import time
-import sys
-import logging
-import random
-import shutil
-import dill as pickle
-
-import luigi
-import luigi.configuration
-from luigi.contrib.hadoop import create_packages_archive
-from luigi.contrib import lsf_runner
-from luigi.task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
 LOGGER = logging.getLogger('luigi-interface')
 
 
@@ -71,6 +72,7 @@ def attach(*packages):
         Attaching packages does nothing in LSF batch submission. All packages
         are expected to exist on the compute node.
     """)
+
 
 def track_job(job_id):
     """
@@ -87,6 +89,7 @@ def track_job(job_id):
         cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
     status = track_job_proc.communicate()[0].strip('\n')
     return status
+
 
 def kill_job(job_id):
     """
@@ -145,7 +148,6 @@ class LSFJobTask(luigi.Task):
         # replace the separators on *nix, it'll create a weird nested directory
         task_name = task_name.replace("/", "::")
 
-
         self.tmp_dir = os.path.join(base_tmp_dir, task_name)
         # Max filename length
         max_filename_length = os.fstatvfs(0).f_namemax
@@ -162,8 +164,7 @@ class LSFJobTask(luigi.Task):
         logging.debug("Tarballing dependencies")
         # Grab luigi and the module containing the code to be run
         packages = [luigi] + [__import__(self.__module__, None, None, 'dummy')]
-        luigi.contrib.hadoop.create_packages_archive(
-            packages, os.path.join(self.tmp_dir, "packages.tar"))
+        create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
 
         # Now, pass onto the class's specified init_local() method.
         self.init_local()
@@ -214,7 +215,6 @@ class LSFJobTask(luigi.Task):
 
         else:
             pickle.dump(self, open(self.job_file, "w"))
-
 
     def _run_job(self):
         """
@@ -293,18 +293,18 @@ class LSFJobTask(luigi.Task):
             # ASSUMPTION
             lsf_status = track_job(self.job_id)
             if lsf_status == "RUN":
-                job_status = RUNNING
+                # job_status = RUNNING
                 LOGGER.info("Job is running...")
                 if time0 == 0:
                     time0 = int(round(time.time()))
             elif lsf_status == "PEND":
-                job_status = PENDING
+                # job_status = PENDING
                 LOGGER.info("Job is pending...")
             elif lsf_status == "DONE" or lsf_status == "EXIT":
                 # Then the job could either be failed or done.
                 errors = self.fetch_task_failures()
                 if errors == '':
-                    job_status = DONE
+                    # job_status = DONE
                     LOGGER.info("Job is done")
                     time1 = int(round(time.time()))
 
@@ -317,23 +317,22 @@ class LSFJobTask(luigi.Task):
                         str(time1-time0)
                     )
                 else:
-                    job_status = FAILED
+                    # job_status = FAILED
                     LOGGER.error("Job has FAILED")
                     LOGGER.error("\n\n")
                     LOGGER.error("Traceback: ")
                     for error in errors:
                         LOGGER.error(error)
                 break
-            elif lsf_status == "SSUSP": # I think that's what it is...
-                job_status = PENDING
+            elif lsf_status == "SSUSP":
+                # job_status = PENDING
                 LOGGER.info("Job is suspended (basically, pending)...")
 
             else:
-                job_status = UNKNOWN
+                # job_status = UNKNOWN
                 LOGGER.info("Job status is UNKNOWN!")
                 LOGGER.info("Status is : %s", lsf_status)
                 break
-
 
     def _finish(self):
         LOGGER.info("Cleaning up temporary bits")
