@@ -25,7 +25,10 @@ import sys
 import logging
 import random
 import shutil
-import dill as pickle
+try:
+    import dill as pickle
+except ImportError:
+    import pickle
 
 import luigi
 import luigi.configuration
@@ -116,6 +119,8 @@ class LSFJobTask(luigi.Task):
     save_job_info = luigi.BoolParameter(default=False)
     output = luigi.Parameter(default="")
     extra_bsub_args = luigi.Parameter("")
+
+    job_status = None
 
     def fetch_task_failures(self):
         """
@@ -293,18 +298,18 @@ class LSFJobTask(luigi.Task):
             # ASSUMPTION
             lsf_status = track_job(self.job_id)
             if lsf_status == "RUN":
-                # job_status = RUNNING
+                self.job_status = RUNNING
                 LOGGER.info("Job is running...")
                 if time0 == 0:
                     time0 = int(round(time.time()))
             elif lsf_status == "PEND":
-                # job_status = PENDING
+                self.job_status = PENDING
                 LOGGER.info("Job is pending...")
             elif lsf_status == "DONE" or lsf_status == "EXIT":
                 # Then the job could either be failed or done.
                 errors = self.fetch_task_failures()
                 if errors == '':
-                    # job_status = DONE
+                    self.job_status = DONE
                     LOGGER.info("Job is done")
                     time1 = int(round(time.time()))
 
@@ -317,7 +322,7 @@ class LSFJobTask(luigi.Task):
                         str(time1-time0)
                     )
                 else:
-                    # job_status = FAILED
+                    self.job_status = FAILED
                     LOGGER.error("Job has FAILED")
                     LOGGER.error("\n\n")
                     LOGGER.error("Traceback: ")
@@ -325,11 +330,11 @@ class LSFJobTask(luigi.Task):
                         LOGGER.error(error)
                 break
             elif lsf_status == "SSUSP":
-                # job_status = PENDING
+                self.job_status = PENDING
                 LOGGER.info("Job is suspended (basically, pending)...")
 
             else:
-                # job_status = UNKNOWN
+                self.job_status = UNKNOWN
                 LOGGER.info("Job status is UNKNOWN!")
                 LOGGER.info("Status is : %s", lsf_status)
                 break
