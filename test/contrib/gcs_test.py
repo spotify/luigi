@@ -164,8 +164,8 @@ class GCSClientTest(_GCSBaseTestCase):
             fp.write(big)
             fp.flush()
             temporary_fps.append(fp)
-        
-        filepaths = [fp.name for fp in temporary_fps]
+
+        filepaths = [f.name for f in temporary_fps]
         self.client.put_multiple(filepaths, bucket_url(''), num_process=2)
 
         for fp in temporary_fps:
@@ -173,6 +173,7 @@ class GCSClientTest(_GCSBaseTestCase):
             self.assertTrue(self.client.exists(bucket_url(basename)))
             self.assertEqual(big, self.client.download(bucket_url(basename)).read())
             fp.close()
+
 
 @attr('gcloud')
 class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
