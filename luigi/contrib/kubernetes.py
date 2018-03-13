@@ -159,6 +159,13 @@ class KubernetesJobTask(luigi.Task):
         return self.kubernetes_config.max_retrials
 
     @property
+    def backoff_limit(self):
+        """
+        Maximum number of retries before considering the job as failed.
+        """
+        return 6
+
+    @property
     def delete_on_success(self):
         """
         Delete the Kubernetes workload if the job has ended successfully.
@@ -322,6 +329,7 @@ class KubernetesJobTask(luigi.Task):
             },
             "spec": {
                 "activeDeadlineSeconds": self.active_deadline_seconds,
+                "backoffLimit": self.backoff_limit,
                 "template": {
                     "metadata": {
                         "name": self.uu_name
