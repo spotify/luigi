@@ -23,9 +23,14 @@ Test runner for the LSF wrapper. The test is based on the one used for teh SGE
 wrappers
 """
 
+import subprocess
 import os
 import os.path
 from glob import glob
+try:
+    import dill as pickle
+except ImportError:
+    import pickle
 import unittest
 import logging
 from mock import patch
@@ -44,6 +49,13 @@ LOGGER = logging.getLogger('luigi-interface')
 # 1000003 mcdowal EXIT  production sub-node-002            /bin/bash  Mar 14 10:10
 # """
 
+def on_lsf_master():
+    try:
+        subprocess.check_call('bjobs', shell=True)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
 class TestJobTask(LSFJobTask):
 
     '''Simple SGE job: write a test file to NSF shared drive and waits a minute'''
@@ -52,7 +64,6 @@ class TestJobTask(LSFJobTask):
 
     def work(self):
         LOGGER.info('Running test job...')
-        print("### FILE", self.output().path)
         with open(self.output().path, 'w') as f:
             f.write('this is a test\n')
 
@@ -67,9 +78,11 @@ class TestSGEJob(unittest.TestCase):
     @patch('subprocess.Popen')
     @patch('subprocess.Popen.communicate')
     def test_run_job(self, mock_open, mock_communicate):
-        tasks = [TestJobTask(i=str(i), n_cpu_flag=1) for i in range(3)]
-        luigi.build(tasks, local_scheduler=True, workers=3)
-        # self.assertTrue(os.path.exists(outfile))
+        if on_lsf_master():
+            outfile = os.path.join(DEFAULT_HOME, 'testfile_1')
+            tasks = [TestJobTask(i=str(i), n_cpu_flag=1) for i in range(3)]
+            luigi.build(tasks, local_scheduler=True, workers=3)
+            self.assertTrue(os.path.exists(outfile))
 
     @patch('subprocess.Popen')
     @patch('subprocess.Popen.communicate')
@@ -88,3 +101,7 @@ class TestSGEJob(unittest.TestCase):
                 os.remove(fpath)
             except OSError:
                 pass
+
+
+if __name__ == '__main__':
+    unittest.main()
