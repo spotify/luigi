@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 .. Copyright 2012-2015 Spotify AB
    Copyright 2018
@@ -74,7 +75,7 @@ def main(args=sys.argv):
         print("PATHS:" + " | ".join(args))
         assert os.path.exists(work_dir), "First argument to lsf_runner.py must be a directory that exists"
         do_work_on_compute_node(work_dir)
-    except Exception, exc:
+    except Exception as exc:
         # Dump encoded data that we will try to fetch using mechanize
         print(exc)
         raise

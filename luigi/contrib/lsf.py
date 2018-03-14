@@ -48,6 +48,7 @@ See: https://github.com/spotify/luigi/issues/1936
 This extension is modeled after the hadoop.py approach.
 I'll be making a few assumptions, and will try to note them.
 Going into it, the assumptions are:
+
 - You schedule your jobs on an LSF submission node.
 - the 'bjobs' command on an LSF batch submission system returns a standardized format.
 - All nodes have access to the code you're running.
@@ -58,10 +59,12 @@ Implementation notes:
 
 
 The procedure:
+
 - Pickle the class
 - Construct a bsub argument that runs a generic runner function with the path to the pickled class
 - Runner function loads the class from pickle
 - Runner function hits the work button on it
+
 """
 
 LOGGER = logging.getLogger('luigi-interface')
@@ -187,8 +190,7 @@ class LSFJobTask(luigi.Task):
         The procedure:
         - Pickle the class
         - Tarball the dependencies
-        - Construct a bsub argument that runs a generic runner function with the
-          path to the pickled class
+        - Construct a bsub argument that runs a generic runner function with the path to the pickled class
         - Runner function loads the class from pickle
         - Runner class untars the dependencies
         - Runner function hits the button on the class's work() method
