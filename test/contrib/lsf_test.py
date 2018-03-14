@@ -19,7 +19,7 @@
 LSF Unit Test
 =============
 
-Test runner for the LSF wrapper. The test is based on the one used for teh SGE
+Test runner for the LSF wrapper. The test is based on the one used for the SGE
 wrappers
 """
 
