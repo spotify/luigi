@@ -27,10 +27,6 @@ import subprocess
 import os
 import os.path
 from glob import glob
-try:
-    import dill as pickle
-except ImportError:
-    import pickle
 import unittest
 import logging
 from mock import patch
@@ -55,6 +51,7 @@ def on_lsf_master():
         return True
     except subprocess.CalledProcessError:
         return False
+
 
 class TestJobTask(LSFJobTask):
 
