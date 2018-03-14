@@ -253,6 +253,12 @@ class GCSClient(luigi.target.FileSystem):
         return self.put(**kwargs)
 
     def put_multiple(self, filepaths, remote_directory, mimetype=None, chunksize=None, num_process=1):
+        if isinstance(filepaths, str):
+            raise ValueError(
+                'filenames must be a list of strings. If you want to put a single file, '
+                'use the `put(self, filename, ...)` method'
+            )
+
         put_kwargs_list = [
             {
                 'filename': filepath,
