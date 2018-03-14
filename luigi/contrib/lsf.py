@@ -82,7 +82,7 @@ def attach(*packages):
 
 def track_job(job_id):
     """
-    Tracking is don by requesting each job and then searching for whether the job
+    Tracking is done by requesting each job and then searching for whether the job
     has one of the following states:
     - "RUN",
     - "PEND",
