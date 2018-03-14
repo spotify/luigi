@@ -23,17 +23,15 @@ Test runner for the LSF wrapper. The test is based on the one used for teh SGE
 wrappers
 """
 
-import subprocess
 import os
 import os.path
 from glob import glob
-import dill
 import unittest
 import logging
 from mock import patch
 
 import luigi
-from luigi.contrib.lsf import LocalLSFJobTask
+from luigi.contrib.lsf import LSFJobTask
 
 DEFAULT_HOME = ''
 
@@ -46,7 +44,7 @@ LOGGER = logging.getLogger('luigi-interface')
 # 1000003 mcdowal EXIT  production sub-node-002            /bin/bash  Mar 14 10:10
 # """
 
-class TestJobTask(LocalLSFJobTask):
+class TestJobTask(LSFJobTask):
 
     '''Simple SGE job: write a test file to NSF shared drive and waits a minute'''
 
@@ -54,6 +52,7 @@ class TestJobTask(LocalLSFJobTask):
 
     def work(self):
         LOGGER.info('Running test job...')
+        print("### FILE", self.output().path)
         with open(self.output().path, 'w') as f:
             f.write('this is a test\n')
 
@@ -65,11 +64,23 @@ class TestSGEJob(unittest.TestCase):
 
     '''Test from SGE master node'''
 
-    def test_run_job(self):
-        outfile = os.path.join(DEFAULT_HOME, 'test_lsf_file_1')
+    @patch('subprocess.Popen')
+    @patch('subprocess.Popen.communicate')
+    def test_run_job(self, mock_open, mock_communicate):
         tasks = [TestJobTask(i=str(i), n_cpu_flag=1) for i in range(3)]
         luigi.build(tasks, local_scheduler=True, workers=3)
-        self.assertTrue(os.path.exists(outfile))
+        # self.assertTrue(os.path.exists(outfile))
+
+    @patch('subprocess.Popen')
+    @patch('subprocess.Popen.communicate')
+    def test_run_job_with_dump(self, mock_open, mock_communicate):
+        mock_open.side_effect = [
+            'Job <1000001> is submitted to queue <queue-name>.',
+            ''
+        ]
+        task = TestJobTask(i=str(1), n_cpu_flag=1, shared_tmp_dir='/tmp')
+        luigi.build([task], local_scheduler=True)
+        self.assertEqual(mock_open.call_count, 0)
 
     def tearDown(self):
         for fpath in glob(os.path.join(DEFAULT_HOME, 'test_lsf_file_*')):
@@ -77,7 +88,3 @@ class TestSGEJob(unittest.TestCase):
                 os.remove(fpath)
             except OSError:
                 pass
-
-
-if __name__ == '__main__':
-    unittest.main()
