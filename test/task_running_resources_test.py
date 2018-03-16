@@ -15,19 +15,16 @@
 # limitations under the License.
 #
 
+import os
 import time
+import signal
+import multiprocessing
 from contextlib import contextmanager
 
-from helpers import RunOnceTask
+from helpers import unittest, RunOnceTask
 
 import luigi
-import luigi.scheduler
-import luigi.worker
-import luigi.rpc
-import server_test
-
-
-luigi.notifications.DEBUG = True
+import luigi.server
 
 
 class ResourceTestTask(RunOnceTask):
@@ -47,24 +44,65 @@ class ResourceTestTask(RunOnceTask):
         super(ResourceTestTask, self).run()
 
 
-class WorkerSchedulerFactory(luigi.interface._WorkerSchedulerFactory):
+class ResourceWrapperTask(RunOnceTask):
 
-    def create_remote_scheduler(self, *args, **kwargs):
-        # patch to set the foo resource
-        sch = super(WorkerSchedulerFactory, self).create_remote_scheduler(*args, **kwargs)
-        sch.update_resource("foo", 3)
-        return sch
+    reduce_foo = ResourceTestTask.reduce_foo
 
-    def create_worker(self, *args, **kwargs):
-        # patch to overwrite the wait interval
-        w = super(WorkerSchedulerFactory, self).create_worker(*args, **kwargs)
-        w._config.wait_interval = 0.2
-        return w
+    def requires(self):
+        return [
+            ResourceTestTask(param="a", reduce_foo=self.reduce_foo),
+            ResourceTestTask(param="b"),
+        ]
 
 
-class TaskRunningResourcesTest(server_test.ServerTestBase):
+class LocalRunningResourcesTest(unittest.TestCase):
 
-    factory = WorkerSchedulerFactory()
+    def test_resource_reduction(self):
+        # trivial resource reduction on local scheduler
+        # test the running_task_resources setter and getter
+        sch = luigi.scheduler.Scheduler(resources={"foo": 2})
+
+        with luigi.worker.Worker(scheduler=sch) as w:
+            task = ResourceTestTask(param="a", reduce_foo=True)
+
+            w.add(task)
+            w.run()
+
+            self.assertEqual(sch.get_running_task_resources(task.task_id)["resources"]["foo"], 1)
+
+
+class ConcurrentRunningResourcesTest(unittest.TestCase):
+
+    def get_app(self):
+        return luigi.server.app(luigi.scheduler.Scheduler())
+
+    def setUp(self):
+        super(ConcurrentRunningResourcesTest, self).setUp()
+
+        # run the luigi server in a new process and wait for its startup
+        self._process = multiprocessing.Process(target=luigi.server.run)
+        self._process.start()
+        time.sleep(0.5)
+
+        # configure the rpc scheduler, update the foo resource
+        self.sch = luigi.rpc.RemoteScheduler()
+        self.sch.update_resource("foo", 3)
+
+    def tearDown(self):
+        super(ConcurrentRunningResourcesTest, self).tearDown()
+
+        # graceful server shutdown
+        self._process.terminate()
+        self._process.join(timeout=1)
+        if self._process.is_alive():
+            os.kill(self._process.pid, signal.SIGKILL)
+
+    @contextmanager
+    def worker(self, scheduler=None, processes=2):
+        with luigi.worker.Worker(scheduler=scheduler or self.sch, worker_processes=processes) as w:
+            w._config.wait_interval = 0.2
+            w._config.check_unfulfilled_deps = False
+            yield w
 
     @contextmanager
     def assert_duration(self, min_duration=0, max_duration=-1):
@@ -77,42 +115,24 @@ class TaskRunningResourcesTest(server_test.ServerTestBase):
             if max_duration > 0:
                 self.assertLess(duration, max_duration)
 
-    def test_remote_scheduler_serial(self):
+    def test_tasks_serial(self):
         # serial test
         # run two tasks that do not reduce the "foo" resource
         # as the total foo resource (3) is smaller than the requirement of two tasks (4),
         # the scheduler is forced to run them serially which takes longer than 4 seconds
-        task_a = ResourceTestTask(param="a")
-        task_b = ResourceTestTask(param="b")
+        with self.worker() as w:
+            w.add(ResourceWrapperTask(reduce_foo=False))
 
-        with self.assert_duration(min_duration=4):
-            luigi.build([task_a, task_b], self.factory, workers=2,
-                        scheduler_port=self.get_http_port())
+            with self.assert_duration(min_duration=4):
+                w.run()
 
-    def test_remote_scheduler_parallel(self):
+    def test_tasks_parallel(self):
         # parallel test
         # run two tasks and the first one lowers its requirement on the "foo" resource, so that
         # the total "foo" resource (3) is sufficient to run both tasks in parallel shortly after
         # the first task started, so the entire process should not exceed 4 seconds
-        task_c = ResourceTestTask(param="c", reduce_foo=True)
-        task_d = ResourceTestTask(param="d")
+        with self.worker() as w:
+            w.add(ResourceWrapperTask(reduce_foo=True))
 
-        with self.assert_duration(max_duration=4):
-            luigi.build([task_c, task_d], self.factory, workers=2,
-                        scheduler_port=self.get_http_port())
-
-    def test_local_scheduler(self):
-        # trivial local scheduler test
-        # as each worker process would communicate with its own scheduler, concurrency tests with
-        # multiple processes like the ones above don't make sense here, but one can at least test
-        # the running_task_resources setter and getter
-        sch = luigi.scheduler.Scheduler(resources={"foo": 2})
-
-        with luigi.worker.Worker(scheduler=sch) as w:
-
-            task = ResourceTestTask(param="x", reduce_foo=True)
-
-            w.add(task)
-            w.run()
-
-            self.assertEqual(sch.get_running_task_resources(task.task_id)["resources"]["foo"], 1)
+            with self.assert_duration(max_duration=4):
+                w.run()
