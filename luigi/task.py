@@ -549,7 +549,8 @@ class Task(object):
             )
             return False
 
-        return all(map(lambda output: output.exists(), outputs))
+        target_generator = (output.exists() for output in outputs)
+        return all(target_generator)
 
     @classmethod
     def bulk_complete(cls, parameter_tuples):
