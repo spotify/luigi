@@ -42,7 +42,7 @@ try:
     from googleapiclient import discovery
     from googleapiclient import http
 except ImportError:
-    logger.warning("Loading GCS module without the python packages googleapiclient & oauth2client. \
+    logger.warning("Loading GCS module without the python packages googleapiclient & google-auth. \
         This will crash at runtime if GCS functionality is used.")
 else:
     # Retry transport and file IO errors.
@@ -89,9 +89,9 @@ class GCSClient(luigi.target.FileSystem):
 
        There are several ways to use this class. By default it will use the app
        default credentials, as described at https://developers.google.com/identity/protocols/application-default-credentials .
-       Alternatively, you may pass an oauth2client credentials object. e.g. to use a service account::
+       Alternatively, you may pass an google-auth credentials object. e.g. to use a service account::
 
-         credentials = oauth2client.client.SignedJwtAssertionCredentials(
+         credentials = google.auth.jwt.Credentials.from_service_account_info(
              '012345678912-ThisIsARandomServiceAccountEmail@developer.gserviceaccount.com',
              'These are the contents of the p12 file that came with the service account',
              scope='https://www.googleapis.com/auth/devstorage.read_write')
@@ -108,14 +108,18 @@ class GCSClient(luigi.target.FileSystem):
       as the ``descriptor`` argument.
     """
     def __init__(self, oauth_credentials=None, descriptor='', http_=None,
-                 chunksize=CHUNKSIZE):
+                 chunksize=CHUNKSIZE, **discovery_build_kwargs):
         self.chunksize = chunksize
         authenticate_kwargs = gcp.get_authenticate_kwargs(oauth_credentials, http_)
 
+        build_kwargs = authenticate_kwargs.copy()
+        build_kwargs.update(discovery_build_kwargs)
+
         if descriptor:
-            self.client = discovery.build_from_document(descriptor, **authenticate_kwargs)
+            self.client = discovery.build_from_document(descriptor, **build_kwargs)
         else:
-            self.client = discovery.build('storage', 'v1', **authenticate_kwargs)
+            build_kwargs.setdefault('cache_discovery', False)
+            self.client = discovery.build('storage', 'v1', **build_kwargs)
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, _, _) = urlsplit(path)

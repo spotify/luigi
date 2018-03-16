@@ -126,7 +126,7 @@ class BigQueryClient(object):
         if descriptor:
             self.client = discovery.build_from_document(descriptor, **authenticate_kwargs)
         else:
-            self.client = discovery.build('bigquery', 'v2', **authenticate_kwargs)
+            self.client = discovery.build('bigquery', 'v2', cache_discovery=False, **authenticate_kwargs)
 
     def dataset_exists(self, dataset):
         """Returns whether the given dataset exists.
