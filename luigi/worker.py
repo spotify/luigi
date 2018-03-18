@@ -911,7 +911,7 @@ class Worker(object):
 
         self._running_tasks[task_id] = task_process
 
-        if task_process.use_multiprocessing:
+        if task_process.use_multiprocessing and not task.run_on_main_process:
             with fork_lock:
                 task_process.start()
         else:
