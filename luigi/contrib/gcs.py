@@ -108,14 +108,18 @@ class GCSClient(luigi.target.FileSystem):
       as the ``descriptor`` argument.
     """
     def __init__(self, oauth_credentials=None, descriptor='', http_=None,
-                 chunksize=CHUNKSIZE):
+                 chunksize=CHUNKSIZE, **discovery_build_kwargs):
         self.chunksize = chunksize
         authenticate_kwargs = gcp.get_authenticate_kwargs(oauth_credentials, http_)
 
+        build_kwargs = authenticate_kwargs.copy()
+        build_kwargs.update(discovery_build_kwargs)
+
         if descriptor:
-            self.client = discovery.build_from_document(descriptor, **authenticate_kwargs)
+            self.client = discovery.build_from_document(descriptor, **build_kwargs)
         else:
-            self.client = discovery.build('storage', 'v1', cache_discovery=False, **authenticate_kwargs)
+            build_kwargs.setdefault('cache_discovery', False)
+            self.client = discovery.build('storage', 'v1', **build_kwargs)
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, _, _) = urlsplit(path)
