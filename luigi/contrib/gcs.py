@@ -275,8 +275,9 @@ class GCSClient(luigi.target.FileSystem):
 
         if num_process > 1:
             from multiprocessing import Pool
-            with Pool(num_process) as p:
-                return p.map(self._forward_args_to_put, put_kwargs_list)
+            from contextlib import closing
+            with closing(Pool(num_process)) as p:
+                return p.imap_unordered(self._forward_args_to_put, put_kwargs_list)
         else:
             for put_kwargs in put_kwargs_list:
                 self._forward_args_to_put(put_kwargs)
