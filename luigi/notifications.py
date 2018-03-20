@@ -217,19 +217,24 @@ def send_email_ses(sender, subject, message, recipients, image_png):
 
     See also https://boto3.readthedocs.io/en/latest/guide/configuration.html.
     """
-    from boto3 import client as boto3_client
+    import botocore.exceptions
 
-    client = boto3_client('ses')
+    try:
+        from boto3 import client as boto3_client
 
-    msg_root = generate_email(sender, subject, message, recipients, image_png)
-    response = client.send_raw_email(Source=sender,
-                                     Destinations=recipients,
-                                     RawMessage={'Data': msg_root.as_string()})
+        client = boto3_client('ses')
 
-    logger.debug(("Message sent to SES.\nMessageId: {},\nRequestId: {},\n"
-                 "HTTPSStatusCode: {}").format(response['MessageId'],
-                                               response['ResponseMetadata']['RequestId'],
-                                               response['ResponseMetadata']['HTTPStatusCode']))
+        msg_root = generate_email(sender, subject, message, recipients, image_png)
+        response = client.send_raw_email(Source=sender,
+                                         Destinations=recipients,
+                                         RawMessage={'Data': msg_root.as_string()})
+
+        logger.debug(("Message sent to SES.\nMessageId: {},\nRequestId: {},\n"
+                     "HTTPSStatusCode: {}").format(response['MessageId'],
+                                                   response['ResponseMetadata']['RequestId'],
+                                                   response['ResponseMetadata']['HTTPStatusCode']))
+    except botocore.exceptions.BotoCoreError as exception:
+        logger.error("Failed to send AWS SES email using boto3: %s", exception)
 
 
 def send_email_sendgrid(sender, subject, message, recipients, image_png):

@@ -20,6 +20,8 @@ import mock
 import sys
 import socket
 
+import botocore.exceptions
+
 from helpers import with_config
 from luigi import notifications
 from luigi.notifications import generate_email
@@ -358,6 +360,29 @@ class TestSESEmail(unittest.TestCase, NotificationFixture):
                     Source=self.sender,
                     Destinations=self.recipients,
                     RawMessage={'Data': self.mocked_email_msg})
+
+    @with_config({})
+    def test_sends_ses_email_exceptions(self):
+        """
+        Call notificaions.send_email_ses and check that any boto3 exceptions are caught and logged
+        """
+        with mock.patch('boto3.client') as boto_client:
+            with mock.patch('luigi.notifications.generate_email') as generate_email:
+                generate_email.return_value \
+                    .as_string.return_value = self.mocked_email_msg
+                boto_client.side_effect = botocore.exceptions.NoCredentialsError
+
+                try:
+                    notifications.send_email_ses(*self.notification_args)
+                except botocore.exceptions.BotoCoreError as exception:
+                    self.fail("send_email_ses() raised botocore.exceptions.BotoCoreError unexpectedly: {}"
+                              .format(exception))
+
+                boto_client.assert_called_once_with('ses')
+
+                SES = boto_client.return_value
+                generate_email.assert_not_called()
+                SES.send_raw_email.assert_not_called()
 
 
 class TestSNSNotification(unittest.TestCase, NotificationFixture):
