@@ -17,6 +17,9 @@ import warnings
 
 import pyparsing as pp
 
+import logging
+logger = logging.getLogger("luigi.server")
+
 
 def id_to_name_and_params(task_id):
     """
@@ -55,6 +58,7 @@ def id_to_name_and_params(task_id):
         pp.ZeroOrMore(parameter) +
         pp.Literal(')').suppress())
 
+    logger.info("Parsing task_id: " + task_id)
     parsed = parser.parseString(task_id).asDict()
     task_name = parsed['task']
 
