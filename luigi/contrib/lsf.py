@@ -112,7 +112,7 @@ class LSFJobTask(luigi.Task):
         description="specify the wait time to poll bjobs for the job status")
     save_job_info = luigi.BoolParameter(default=False)
     output = luigi.Parameter(default='')
-    extra_bsub_args = luigi.OptionalParameter()
+    extra_bsub_args = luigi.Parameter(default='')
 
     job_status = None
 
