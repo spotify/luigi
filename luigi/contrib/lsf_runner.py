@@ -23,6 +23,9 @@ from __future__ import print_function
 import os
 import sys
 try:
+    # Dill is used for handling pickling and unpickling if there is a deference
+    # in server setups between the LSF submission node and the nodes in the
+    # cluster
     import dill as pickle
 except ImportError:
     import pickle
@@ -38,10 +41,8 @@ def do_work_on_compute_node(work_dir):
 
     # Open up the pickle file with the work to be done
     os.chdir(work_dir)
-    with open("job-instance.pickle", "r") as f:
-        job = pickle.load(f)
-
-    # job = pickle.loads("job-instance.pickle")
+    with open("job-instance.pickle", "r") as pickle_file_handle:
+        job = pickle.load(pickle_file_handle)
 
     # Do the work contained
     job.work()
@@ -72,7 +73,6 @@ def main(args=sys.argv):
         # Set up logging.
         logging.basicConfig(level=logging.WARN)
         work_dir = args[1]
-        print("PATHS:" + " | ".join(args))
         assert os.path.exists(work_dir), "First argument to lsf_runner.py must be a directory that exists"
         do_work_on_compute_node(work_dir)
     except Exception as exc:

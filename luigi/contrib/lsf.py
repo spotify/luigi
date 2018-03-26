@@ -26,6 +26,9 @@ import logging
 import random
 import shutil
 try:
+    # Dill is used for handling pickling and unpickling if there is a deference
+    # in server setups between the LSF submission node and the nodes in the
+    # cluster
     import dill as pickle
 except ImportError:
     import pickle
@@ -47,16 +50,14 @@ See: https://github.com/spotify/luigi/issues/1936
 
 This extension is modeled after the hadoop.py approach.
 I'll be making a few assumptions, and will try to note them.
+
 Going into it, the assumptions are:
 
 - You schedule your jobs on an LSF submission node.
-- the 'bjobs' command on an LSF batch submission system returns a standardized format.
+- The 'bjobs' command on an LSF batch submission system returns a standardized format.
 - All nodes have access to the code you're running.
 - The sysadmin won't get pissed if we run a 'bjobs' check every thirty
   seconds or so per job (there are ways of coalescing the bjobs calls if that's not cool).
-
-Implementation notes:
-
 
 The procedure:
 
@@ -68,16 +69,6 @@ The procedure:
 """
 
 LOGGER = logging.getLogger('luigi-interface')
-
-
-def attach(*packages):
-    """
-    Attach method
-    """
-    LOGGER.info("""
-        Attaching packages does nothing in LSF batch submission. All packages
-        are expected to exist on the compute node.
-    """)
 
 
 def track_job(job_id):
@@ -115,13 +106,13 @@ class LSFJobTask(luigi.Task):
     memory_flag = luigi.Parameter(default='8192', significant=False)
     queue_flag = luigi.Parameter(default='queue_name', significant=False)
     runtime_flag = luigi.IntParameter(default=60)
-    job_name_flag = luigi.Parameter(default='')
+    job_name_flag = luigi.OptionalParameter()
     poll_time = luigi.FloatParameter(
         significant=False, default=5,
         description="specify the wait time to poll bjobs for the job status")
     save_job_info = luigi.BoolParameter(default=False)
-    output = luigi.Parameter(default="")
-    extra_bsub_args = luigi.Parameter("")
+    output = luigi.Parameter(default='')
+    extra_bsub_args = luigi.OptionalParameter()
 
     job_status = None
 
@@ -165,13 +156,13 @@ class LSFJobTask(luigi.Task):
         os.makedirs(self.tmp_dir)
 
         # Dump the code to be run into a pickle file
-        logging.debug("Dumping pickled class")
+        LOGGER.debug("Dumping pickled class")
         self._dump(self.tmp_dir)
 
         # Make sure that all the class's dependencies are tarred and available
-        logging.debug("Tarballing dependencies")
+        LOGGER.debug("Tarballing dependencies")
         # Grab luigi and the module containing the code to be run
-        packages = [luigi] + [__import__(self.__module__, None, None, 'dummy')]
+        packages = [luigi, __import__(self.__module__, None, None, 'dummy')]
         create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
 
         # Now, pass onto the class's specified init_local() method.
@@ -244,19 +235,18 @@ class LSFJobTask(luigi.Task):
             args += ["-J", str(self.job_name_flag)]
         args += ["-o", "/".join(log_output[0:-1]) + "/job.out"]
         args += ["-e", "/".join(log_output[0:-1]) + "/job.err"]
-        args += self.extra_bsub_args.split()
+        if self.extra_bsub_args:
+            args += self.extra_bsub_args.split()
 
-        # Find where our file is
+        # Find where the runner file is
         runner_path = lsf_runner.__file__
-        # assume source is next to compiled
-        if runner_path.endswith("pyc"):
-            runner_path = runner_path[:-3] + "py"
 
         args += [runner_path]
         args += [self.tmp_dir]
 
         # That should do it. Let the world know what we're doing.
-        LOGGER.info(" ".join([str(a) for a in args]))
+        LOGGER.info("### LSF SUBMISSION ARGS: %s",
+                    " ".join([str(a) for a in args]))
 
         # Submit the job
         run_job_proc = subprocess.Popen(
@@ -269,12 +259,12 @@ class LSFJobTask(luigi.Task):
         # Job <123> is submitted ot queue <myqueue>
         # So get the number in those first brackets.
         # I cannot think of a better workaround that leaves logic on the Task side of things.
-        LOGGER.info("### JOB SUBMISSION OUTPUT:" + str(output))
+        LOGGER.info("### JOB SUBMISSION OUTPUT: %s", str(output))
         self.job_id = int(output.split("<")[1].split(">")[0])
         LOGGER.info(
             "Job %ssubmitted as job %s",
             self.job_name_flag + ' ',
-            self.job_id
+            str(self.job_id)
         )
 
         self._track_job()
@@ -317,10 +307,12 @@ class LSFJobTask(luigi.Task):
 
                     # Return a near estimate of the run time to with +/- the
                     # self.poll_time
+                    job_name = str(self.job_id)
+                    if self.job_name_flag:
+                        job_name = "%s %s" % (self.job_name_flag, job_name)
                     LOGGER.info(
-                        "### JOB COMPLETED: %s%s in %s seconds",
-                        self.job_name_flag + ' ',
-                        self.job_id,
+                        "### JOB COMPLETED: %s in %s seconds",
+                        job_name,
                         str(time1-time0)
                     )
                 else:
