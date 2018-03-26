@@ -106,7 +106,7 @@ class LSFJobTask(luigi.Task):
     memory_flag = luigi.Parameter(default='8192', significant=False)
     queue_flag = luigi.Parameter(default='queue_name', significant=False)
     runtime_flag = luigi.IntParameter(default=60)
-    job_name_flag = luigi.OptionalParameter()
+    job_name_flag = luigi.Parameter(default='')
     poll_time = luigi.FloatParameter(
         significant=False, default=5,
         description="specify the wait time to poll bjobs for the job status")
