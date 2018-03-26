@@ -82,9 +82,9 @@ def track_job(job_id):
     - "EXIT"
     based on the LSF documentation
     """
-    cmd = "bjobs %d | awk 'FNR==2 {print $3}'" % job_id
+    cmd = "bjobs -noheader -o stat %d" % job_id
     track_job_proc = subprocess.Popen(
-        cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+        cmd, stdout=subprocess.PIPE, shell=True)
     status = track_job_proc.communicate()[0].strip('\n')
     return status
 
