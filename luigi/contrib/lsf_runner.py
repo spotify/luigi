@@ -34,8 +34,6 @@ import tarfile
 
 
 def do_work_on_compute_node(work_dir):
-    print("LSF RUNNER: LOAD THE DATA AND DO THE THING")
-
     # Extract the necessary dependencies
     extract_packages_archive(work_dir)
 
