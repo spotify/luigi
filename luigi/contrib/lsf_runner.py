@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 .. Copyright 2012-2015 Spotify AB
    Copyright 2018
@@ -28,6 +29,7 @@ except ImportError:
 import logging
 import tarfile
 
+
 def do_work_on_compute_node(work_dir):
     print("LSF RUNNER: LOAD THE DATA AND DO THE THING")
 
@@ -43,6 +45,7 @@ def do_work_on_compute_node(work_dir):
 
     # Do the work contained
     job.work()
+
 
 def extract_packages_archive(work_dir):
     package_file = os.path.join(work_dir, "packages.tar")
@@ -72,10 +75,11 @@ def main(args=sys.argv):
         print("PATHS:" + " | ".join(args))
         assert os.path.exists(work_dir), "First argument to lsf_runner.py must be a directory that exists"
         do_work_on_compute_node(work_dir)
-    except Exception, exc:
+    except Exception as exc:
         # Dump encoded data that we will try to fetch using mechanize
         print(exc)
         raise
+
 
 if __name__ == '__main__':
     main()
