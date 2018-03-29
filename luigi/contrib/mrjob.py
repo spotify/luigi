@@ -66,7 +66,7 @@ import sys
 
 import luigi
 from luigi import Task
-from luigi.hdfs import HdfsTarget
+from luigi.contrib.hdfs import HdfsTarget
 from luigi.s3 import S3Target
 
 
