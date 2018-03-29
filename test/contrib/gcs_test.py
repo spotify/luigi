@@ -41,7 +41,11 @@ PROJECT_ID = os.environ.get('GCS_TEST_PROJECT_ID', 'your_project_id_here')
 BUCKET_NAME = os.environ.get('GCS_TEST_BUCKET', 'your_test_bucket_here')
 TEST_FOLDER = os.environ.get('TRAVIS_BUILD_ID', 'gcs_test_folder')
 
-CREDENTIALS, _ = google.auth.default()
+try:
+    CREDENTIALS, _ = google.auth.default()
+except google.auth.DefaultCredentialsError:
+    raise unittest.SkipTest('No default credentials to run GCS tests')
+
 ATTEMPTED_BUCKET_CREATE = False
 
 
