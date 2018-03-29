@@ -261,7 +261,7 @@ class MRJobTask(Task):
             return opts_list + file_options + input_files
 
 
-class LocalMRJobTarget(luigi.file.LocalTarget):
+class LocalMRJobTarget(luigi.local_target.LocalTarget):
     """ The local analogue of :py:class:`~luigi.s3.S3FlagTarget` in case you want to
     run or test jobs locally. Unlike Hadoop, MRJob local runners don't create
     a _SUCCESS file but they do copy the files to their target more or less
