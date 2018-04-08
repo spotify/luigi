@@ -65,7 +65,7 @@ function visualiserApp(luigi) {
             taskParams: taskParams,
             displayName: task.display_name,
             priority: task.priority,
-            resources: JSON.stringify(task.resources).replace(/,"/g, ', "'),
+            resources: JSON.stringify(task.resources_running || task.resources).replace(/,"/g, ', "'),
             displayTime: displayTime,
             displayTimestamp: task.last_updated,
             timeRunning: time_running,

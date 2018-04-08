@@ -110,6 +110,15 @@ class TaskProcess(multiprocessing.Process):
 
     Mainly for convenience since this is run in a separate process. """
 
+    # mapping of status_reporter methods to task callbacks that are added to the task
+    # before they actually run, and removed afterwards
+    forward_reporter_callbacks = {
+        "update_tracking_url": "set_tracking_url",
+        "update_status_message": "set_status_message",
+        "update_progress_percentage": "set_progress_percentage",
+        "decrease_running_resources": "decrease_running_resources",
+    }
+
     def __init__(self, task, worker_id, result_queue, status_reporter,
                  use_multiprocessing=False, worker_timeout=0, check_unfulfilled_deps=True):
         super(TaskProcess, self).__init__()
@@ -124,15 +133,15 @@ class TaskProcess(multiprocessing.Process):
         self.check_unfulfilled_deps = check_unfulfilled_deps
 
     def _run_get_new_deps(self):
-        self.task.set_tracking_url = self.status_reporter.update_tracking_url
-        self.task.set_status_message = self.status_reporter.update_status_message
-        self.task.set_progress_percentage = self.status_reporter.update_progress_percentage
+        # set task callbacks before running
+        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_callbacks):
+            setattr(self.task, task_attr, getattr(self.status_reporter, reporter_attr))
 
         task_gen = self.task.run()
 
-        self.task.set_tracking_url = None
-        self.task.set_status_message = None
-        self.task.set_progress_percentage = None
+        # reset task callbacks
+        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_callbacks):
+            setattr(self.task, task_attr, None)
 
         if not isinstance(task_gen, types.GeneratorType):
             return None
@@ -273,6 +282,9 @@ class TaskStatusReporter(object):
 
     def update_progress_percentage(self, percentage):
         self._scheduler.set_task_progress_percentage(self._task_id, percentage)
+
+    def decrease_running_resources(self, decrease_resources):
+        self._scheduler.decrease_running_task_resources(self._task_id, decrease_resources)
 
 
 class SingleProcessPool(object):
