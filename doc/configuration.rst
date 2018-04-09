@@ -270,6 +270,23 @@ check_unfulfilled_deps
   resource-intensive.
   Defaults to true.
 
+[databricks]
+------------
+
+These parameters control authentication against the Databricks API.
+
+token
+  Bearer token for authentication; recommended in shared environments
+
+username
+  Databricks username; for local testing only
+
+password
+  Databricks user password; for local testing only
+
+instance
+  Databricks instance url; i.e. `<mycompany>.cloud.databricks.com` (do not include https://)
+
 
 [elasticsearch]
 ---------------
