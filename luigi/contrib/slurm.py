@@ -19,6 +19,7 @@
 Slurm batch system Tasks.
 
 Adapted by Jimmy Tang <jtang@voysis.com> from the sge.py by Jake Feala (@jfeala)
+Further adapted by Nathan Tsoi <nathan@vertile.com>
 
 Adapted by Jake Feala (@jfeala) from
 `LSF extension <https://github.com/dattalab/luigi/blob/lsf/luigi/lsf.py>`_
@@ -30,7 +31,7 @@ shared cluster. Jobs are submitted using the ``sbatch`` command and monitored
 using ``scontrol``. To get started, install luigi on all nodes.
 
 To run luigi workflows on an Slurm cluster, subclass
-:class:`luigi.contrib.slurm.SlurmJobTask` as you would any :class:`luigi.Task`,
+:class:`luigi.contrib.slurm.SlurmTask` as you would any :class:`luigi.Task`,
 but override the ``work()`` method, instead of ``run()``, to define the job
 code. Then, run your Luigi workflow from the master node, assigning > 1
 ``workers`` in order to distribute the tasks in parallel across the cluster.
@@ -42,12 +43,12 @@ The following is an example usage (and can also be found in ``slurm_tests.py``)
     import logging
     import luigi
     import os
-    from luigi.contrib.slurm import SlurmJobTask
+    from luigi.contrib.slurm import SlurmTask
 
     logger = logging.getLogger('luigi-interface')
 
 
-    class TestJobTask(SlurmJobTask):
+    class TestJobTask(SlurmTask):
 
         i = luigi.Parameter()
 
@@ -69,11 +70,11 @@ The ``ntasks`` parameter allows you to define different compute
 resource requirements for each task. In this example, the third Task
 asks for 3 CPU slots. If your cluster only contains nodes with 2
 CPUs, this task will hang indefinitely in the queue. See the docs for
-:class:`luigi.contrib.slurm.SlurmJobTask` for other Slurm parameters. As
+:class:`luigi.contrib.slurm.SlurmTask` for other Slurm parameters. As
 for any task, you can also set these in your luigi configuration file
 as shown below.
 
-    [SlurmJobTask]
+    [SlurmTask]
     shared-tmp-dir = /home
     ntasks = 2
 
@@ -83,30 +84,58 @@ as shown below.
 #
 # Implementation notes
 # The procedure:
-# - Pickle the class
+# - Pickle the current task
 # - Construct a sbatch argument that runs a generic runner function with the path to the pickled class
 # - Runner function loads the class from pickle
 # - Runner function hits the work button on it
 
+import itertools
+import luigi
 import os
-import subprocess
-import time
-import sys
+import pprint
 import logging
-import random
 import shutil
+import subprocess
+import sys
+import time
+import random
+
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 
-import luigi
-from luigi.contrib.hadoop import create_packages_archive
-
 from luigi.contrib import slurm_runner
 
-import itertools
+POLL_TIME = 15  # decided to hard-code rather than configure here
+MEM_RETRY_MAX_RETRIES = 10 # some hard limit to the maximum number of memory-related error retries
+MEM_RETRY_MAX_MEM = 128000 # hard memory limit per task on retry
 
+class slurm(luigi.Config):
+    ntasks = luigi.IntParameter(default=1, significant=False)
+    mem = luigi.IntParameter(default=4000, significant=False)
+    mem_retries = luigi.IntParameter(default=3, significant=False,
+        description="retries n times, doubling the memory each run if a task "
+        "fails on an out of memory error")
+    gres = luigi.Parameter(default='', significant=False)
+    partition = luigi.Parameter(default='', significant=False)
+    time = luigi.Parameter(default='', significant=False)
+    shared_tmp_dir = luigi.Parameter(default='/home', significant=False)
+    work_dir = luigi.Parameter(default='', significant=False,
+        description="Location of our environment, must be a directory "
+        "shared across all executors.")
+    job_name_format = luigi.Parameter(
+        significant=False, default='', description="A string that can be "
+        "formatted with class variables to name the job with sbatch.")
+    run_locally = luigi.BoolParameter(
+        significant=False,
+        description="run locally instead of on the cluster")
+    poll_time = luigi.IntParameter(
+        significant=False, default=POLL_TIME,
+        description="specify the wait time to poll scontrol for the job status")
+    dont_remove_tmp_dir = luigi.BoolParameter(
+        significant=False,
+        description="don't delete the temporary directory used (for debugging)")
 
 # see http://code.activestate.com/recipes/580745-retry-decorator-in-python/
 def retry(delays=(0, 1, 5, 30, 180, 600, 3600),
@@ -133,8 +162,6 @@ def retry(delays=(0, 1, 5, 30, 180, 600, 3600),
 
 logger = logging.getLogger('luigi-interface')
 logger.propagate = 0
-
-POLL_TIME = 15  # decided to hard-code rather than configure here
 
 
 @retry()
@@ -193,7 +220,7 @@ def _sbatch(submit_cmd):
     return output
 
 
-class SlurmJobTask(luigi.Task):
+class SlurmTask(luigi.Task):
 
     """
     Base class for executing a job on Slurm
@@ -208,49 +235,24 @@ class SlurmJobTask(luigi.Task):
     - time: The time to allocate for the Task.
     - partition: The partition allocate for the Task.
     - shared_tmp_dir: Shared drive accessible from all nodes in the cluster.
-          Task classes and dependencies are pickled to a temporary folder on
-          this drive. The default is ``/home``, the NFS share location setup
-          by StarCluster
+          Run method is pickled to a temporary folder in this path.
     - job_name_format: String that can be passed in to customize the job name
         string passed to sbatch; e.g. "Task123_{task_family}_{ntasks}...".
     - job_name: Exact job name to pass to sbatch.
     - run_locally: Run locally instead of on the cluster.
     - poll_time: the length of time to wait in order to poll the job
     - dont_remove_tmp_dir: Instead of deleting the temporary directory, keep it.
-    - no_tarball: Don't create a tarball of the luigi project directory.  Can be
-        useful to reduce I/O requirements when the luigi directory is accessible
-        from cluster nodes already.
 
     """
 
-    ntasks = luigi.IntParameter(default=2, significant=False)
-    mem = luigi.IntParameter(default=100, significant=False)
-    mem_per_cpu = luigi.IntParameter(default=2000, significant=False)
-    gres = luigi.Parameter(default='', significant=False)
-    partition = luigi.Parameter(default='', significant=False)
-    time = luigi.Parameter(default='', significant=False)
-    shared_tmp_dir = luigi.Parameter(default='/home', significant=False)
-    job_name_format = luigi.Parameter(
-        significant=False, default='', description="A string that can be "
-        "formatted with class variables to name the job with sbatch.")
+    slurm_config = slurm()
+
     job_name = luigi.Parameter(
         significant=False, default='',
         description="Explicit job name given via sbatch.")
-    run_locally = luigi.BoolParameter(
-        significant=False,
-        description="run locally instead of on the cluster")
-    poll_time = luigi.IntParameter(
-        significant=False, default=POLL_TIME,
-        description="specify the wait time to poll scontrol for the job status")
-    dont_remove_tmp_dir = luigi.BoolParameter(
-        significant=False,
-        description="don't delete the temporary directory used (for debugging)")
-    no_tarball = luigi.BoolParameter(
-        significant=False,
-        description="don't tarball (and extract) the luigi project files")
 
     def __init__(self, *args, **kwargs):
-        super(SlurmJobTask, self).__init__(*args, **kwargs)
+        super(SlurmTask, self).__init__(*args, **kwargs)
         if self.job_name != '':
             # use explicitly provided job name
             pass
@@ -261,6 +263,62 @@ class SlurmJobTask(luigi.Task):
         else:
             # default to the task family
             self.job_name = self.task_family
+
+        if not hasattr(self, 'mem') or self.mem is None:
+            self.mem = self.slurm_config.mem
+
+        if not hasattr(self, 'mem_retries') or self.mem_retries is None:
+            self.mem_retries = self.slurm_config.mem_retries
+
+        if not hasattr(self, '_mem_retry') or self._mem_retry is None:
+            self._mem_retry = 0
+
+
+    def __str__(self):
+        return '\n'.join([
+            pprint.pformat(vars(self.slurm_config), indent=2),
+            pprint.pformat(vars(self), indent=2)
+        ])
+
+    @property
+    def ntasks(self):
+        return self.slurm_config.ntasks
+
+    @property
+    def gres(self):
+        return self.slurm_config.gres
+
+    @property
+    def partition(self):
+        return self.slurm_config.partition
+
+    @property
+    def time(self):
+        return self.slurm_config.time
+
+    @property
+    def shared_tmp_dir(self):
+        return self.slurm_config.shared_tmp_dir
+
+    @property
+    def work_dir(self):
+        return self.slurm_config.work_dir
+
+    @property
+    def job_name_format(self):
+        return self.slurm_config.job_name_format
+
+    @property
+    def run_locally(self):
+        return self.slurm_config.run_locally
+
+    @property
+    def poll_time(self):
+        return self.slurm_config.poll_time
+
+    @property
+    def dont_remove_tmp_dir(self):
+        return self.slurm_config.dont_remove_tmp_dir
 
     def _fetch_task_failures(self):
         if not os.path.exists(self.errfile):
@@ -294,16 +352,19 @@ class SlurmJobTask(luigi.Task):
         os.makedirs(self.tmp_dir)
 
         # Dump the code to be run into a pickle file
-        logging.debug("Dumping pickled class")
         self._dump(self.tmp_dir)
 
-        if not self.no_tarball:
-            # Make sure that all the class's dependencies are tarred and available
-            # This is not necessary if luigi is importable from the cluster node
-            logging.debug("Tarballing dependencies")
-            # Grab luigi and the module containing the code to be run
-            packages = [luigi] + [__import__(self.__module__, None, None, 'dummy')]
-            create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
+    def _dump(self, out_dir=''):
+        """Dump instance to file."""
+        with self.no_unpicklable_properties():
+            self.job_file = os.path.join(out_dir, 'job.pickle')
+            if self.__module__ == '__main__':
+                d = pickle.dumps(self, 0).decode()
+                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
+                d = d.replace('(c__main__', "(c" + module_name)
+                open(self.job_file, "w").write(d)
+            else:
+                pickle.dump(self, open(self.job_file, "wb"))
 
     def run(self):
         self.init_vars()
@@ -311,12 +372,26 @@ class SlurmJobTask(luigi.Task):
             self.work()
         else:
             self._init_local()
-            self._run_job()
+            # retry on memory errors only, avoiding a while(1){} loop in favor of a hard limit
+            for i in range(0, MEM_RETRY_MAX_RETRIES):
+                try:
+                    self._run_job()
+                except OutOfMemoryError as e:
+                    # give up after configured number of retries
+                    if self._mem_retry > self.mem_retries:
+                        raise e
+                    # double memory allocation, up to some hard limit
+                    self.mem = self.mem * 2
+                    if self.mem > MEM_RETRY_MAX_MEM:
+                        raise e
+                    # bump the retry count
+                    self._mem_retry += 1
+                # done running the job
+                break
             # The procedure:
-            # - Pickle the class
-            # - Tarball the dependencies
-            # - Construct a sbatch argument that runs a generic runner function with the path to the pickled class
-            # - Runner function loads the class from pickle
+            # - Pickle the run method
+            # - Construct a sbatch argument that runs a generic runner function with the path to the run method
+            # - Runner function loads the run method
             # - Runner class untars the dependencies
             # - Runner function hits the button on the class's work() method
 
@@ -332,27 +407,14 @@ class SlurmJobTask(luigi.Task):
         """Override this method, rather than ``run()``,  for your actual work."""
         pass
 
-    def _dump(self, out_dir=''):
-        """Dump instance to file."""
-        with self.no_unpicklable_properties():
-            self.job_file = os.path.join(out_dir, 'job-instance.pickle')
-            if self.__module__ == '__main__':
-                d = pickle.dumps(self, 0).decode()
-                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-                d = d.replace('(c__main__', "(c" + module_name)
-                open(self.job_file, "w").write(d)
-            else:
-                pickle.dump(self, open(self.job_file, "wb"))
-
     def _run_job(self):
         # Build a sbatch argument that will run sge_runner.py on the directory we've specified
         runner_path = slurm_runner.__file__
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
-        job_str = 'python {0} "{1}" "{2}"'.format(
-            runner_path, self.tmp_dir, os.getcwd())  # enclose tmp_dir in quotes to protect from special escape chars
-        if self.no_tarball:
-            job_str += ' "--no-tarball"'
+        job_str = 'cd "{}"; python {} --tmp-dir "{}"'.format(
+            (self.work_dir if len(self.work_dir) else os.getcwd()), runner_path, self.tmp_dir
+        )
 
         # Build sbatch file and submit command
         self.outfile = os.path.join(self.tmp_dir, 'job.out')
@@ -371,7 +433,7 @@ class SlurmJobTask(luigi.Task):
         self.job_id = output.decode().strip()
         logger.debug("Submitted job to slurm with job id: {}".format(self.job_id))
 
-        successful = self._track_job()
+        successful, stderr, stdout, elapsed = self._track_job()
 
         # Now delete the temporaries, if they're there.
         if not self.dont_remove_tmp_dir:
@@ -381,7 +443,7 @@ class SlurmJobTask(luigi.Task):
 
         # stop here if the job was not successful
         if not successful:
-            raise RuntimeError('Slurm job did not complete')
+            raise SlurmError('Slurm job has FAILED:', stdout, stderr, elapsed)
 
     def _track_job(self):
         successful = False
@@ -393,15 +455,16 @@ class SlurmJobTask(luigi.Task):
             # See what the job's up to
             # ASSUMPTION
             job_status = _parse_job_state(self.job_id)
+            elapsed = float(time.time() - start)
             if job_status == 'RUNNING' or job_status == 'COMPLETING':
-                logger.info('Job is running ({:0.1f} seconds elapsed)...'.format(float(time.time() - start)))
+                logger.info('Job is running ({:0.1f} seconds elapsed)...'.format(elapsed))
             elif job_status == 'PENDING':
-                logger.info('Job is pending ({:0.1f} seconds elapsed)...'.format(float(time.time() - start)))
+                logger.info('Job is pending ({:0.1f} seconds elapsed)...'.format(elapsed))
             elif 'FAILED' in job_status:
-                logger.error('Job has FAILED:\n' + '\n'.join(self._fetch_task_failures()) + '\n'.join(self._fetch_task_out()))
+                logger.error('Job has FAILED')
                 break
             elif 'CANCELLED' in job_status:
-                logger.error('Job has been CANCELLED:\n' + '\n'.join(self._fetch_task_failures()) + '\n'.join(self._fetch_task_out()))
+                logger.error('Job has been CANCELLED')
                 break
             elif job_status == 'COMPLETED' or job_status == 'u':
                 # Then the job could either be failed or done.
@@ -413,15 +476,29 @@ class SlurmJobTask(luigi.Task):
                     for error in errors:
                         logger.error(error)
                 break
+            elif job_status == 'OUT_OF_MEMORY':
+                logger.error('Job ran OUT_OF_MEMORY')
+                raise OutOfMemoryError(
+                    "job status isn't one of ['RUNNING', 'PENDING', 'COMPLETED', 'FAILED', 'CANCELLED', 'u']: {}".format(job_status),
+                    '\n'.join(self._fetch_task_out()),
+                    '\n'.join(self._fetch_task_failures())
+                )
+                break
             else:
                 logger.info('Job status is UNKNOWN!')
                 logger.info('Status is : {}'.format(job_status))
-                raise Exception("job status isn't one of ['RUNNING', 'PENDING', 'COMPLETED', 'FAILED', 'CANCELLED', 'u']: %s" % job_status)
-        return successful
+                raise SlurmError(
+                    "job status isn't one of ['RUNNING', 'PENDING', 'COMPLETED', 'FAILED', 'CANCELLED', 'u']: {}".format(job_status),
+                    '\n'.join(self._fetch_task_out()),
+                    '\n'.join(self._fetch_task_failures())
+                )
+        stdout = '\n'.join(self._fetch_task_out())
+        stderr = '\n'.join(self._fetch_task_failures())
+        return (successful, stderr, stdout, elapsed)
 
 
-class LocalSlurmJobTask(SlurmJobTask):
-    """A local version of SlurmJobTask, for easier debugging.
+class LocalSlurmTask(SlurmTask):
+    """A local version of SlurmTask, for easier debugging.
 
     This version skips the ``sbatch`` steps and simply runs ``work()``
     on the local node, so you don't need to be on a Slurm cluster to
@@ -430,3 +507,22 @@ class LocalSlurmJobTask(SlurmJobTask):
 
     def run(self):
         self.work()
+
+
+class SlurmError(RuntimeError):
+    def __init__(self, message, out=None, err=None, elapsed=None):
+        super(SlurmError, self).__init__(message, out, err)
+        self.message = message
+        self.out = out
+        self.err = err
+        self.elapsed = elapsed
+
+    def __str__(self):
+        info = "Task Time Elapsed {}:\n{}".format(self.elapsed, self.message)
+        if self.out:
+            info += "\nSTDOUT: " + str(self.out)
+        if self.err:
+            info += "\nSTDERR: " + str(self.err)
+        return info
+
+class OutOfMemoryError(SlurmError): pass
