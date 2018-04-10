@@ -81,7 +81,7 @@ Also, it is possible to pass additional parameters to ``build`` such as host, po
          luigi.build([MyTask1(x=1)], worker=5)
 
 To achieve some special requirements you can pass to ``build`` your  ``worker_scheduler_factory``
-which will return your worker and\or scheduler implementations:
+which will return your worker and/or scheduler implementations:
 
 .. code-block:: python
 
