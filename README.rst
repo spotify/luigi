@@ -163,6 +163,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Deloitte <https://www.Deloitte.co.uk/>`_
 * `Stacktome <https://stacktome.com/>`_
 * `LINX+Neemu+Chaordic <https://www.chaordic.com.br/>`_
+* `Foxberry <https://www.foxberry.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
