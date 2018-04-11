@@ -3,7 +3,8 @@ Luigi to pypi.
 
 #. Update version number in ``setup.py``.
 #. Commit, perhaps simply with a commit message like ``Version x.y.z``.
-#. Push to GitHub at [spotify/luigi](https://github.com/spotify/luigi).
+#. Push to GitHub at [spotify/luigi](https://github.com/spotify/luigi) followed by opening a PR (for tracking purpose).
+#. Get someone to approve and merge to master.
 #. Upload to pypi by executing ``python setup.py sdist upload``
 #. Add a tag on github (https://github.com/spotify/luigi/releases),
    including a handwritten changelog, possibly inspired from previous notes.
