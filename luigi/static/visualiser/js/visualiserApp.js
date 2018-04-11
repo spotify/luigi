@@ -382,7 +382,7 @@ function visualiserApp(luigi) {
                 }
             } else {
                 $("#searchError").addClass("alert alert-error");
-                $("#searchError").append("Couldn't find task " + taskId);
+                $("#searchError").text("Couldn't find task " + taskId);
             }
             drawGraphETL(dependencyGraph, paint);
             bindGraphEvents();
@@ -402,7 +402,7 @@ function visualiserApp(luigi) {
                 bindGraphEvents();
             } else {
                 $("#searchError").addClass("alert alert-error");
-                $("#searchError").append("Couldn't find task " + taskId);
+                $("#searchError").text("Couldn't find task " + taskId);
             }
         }
 
