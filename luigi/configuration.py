@@ -87,8 +87,12 @@ class LuigiConfigParser(ConfigParser):
             warnings.warn("Luigi configuration files named 'client.cfg' are deprecated if favor of 'luigi.cfg'. " +
                           "Found: {paths!r}".format(paths=deprecated_paths),
                           DeprecationWarning)
-
-        return cls.instance().read(filenames=cls._config_paths, encoding=cls._config_encoding)
+        try:
+            return cls.instance().read(filenames=cls._config_paths, encoding=cls._config_encoding)
+        except TypeError:
+            warnings.warn('Setting the encoding is not supported with python 2. ' +
+                          'Encoding: {encoding}'.format(encoding=cls._config_encoding))
+            return cls.instance().read(filenames=cls._config_paths)
 
     def _get_with_default(self, method, section, option, default, expected_type=None, **kwargs):
         """
