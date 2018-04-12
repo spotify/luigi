@@ -31,6 +31,7 @@ See :doc:`/configuration` for more info.
 
 import logging
 import os
+import codecs
 import warnings
 
 try:
@@ -54,6 +55,14 @@ class LuigiConfigParser(ConfigParser):
             warnings.warn("LUIGI_CONFIG_PATH points to a file which does not exist. Invalid file: {path}".format(path=config_file))
         else:
             _config_paths.append(config_file)
+    _config_encoding = None
+    if 'LUIGI_CONFIG_ENCODING' in os.environ:
+        config_encoding = os.environ['LUIGI_CONFIG_ENCODING']
+        try:
+            if codecs.lookup(config_encoding):
+                _config_encoding = config_encoding
+        except LookupError:
+            warnings.warn("LUIGI_CONFIG_ENCODING specifies an unknown encoding. Unknown encoding: {encoding}".format(encoding=config_encoding))
 
     @classmethod
     def add_config_path(cls, path):
@@ -79,7 +88,7 @@ class LuigiConfigParser(ConfigParser):
                           "Found: {paths!r}".format(paths=deprecated_paths),
                           DeprecationWarning)
 
-        return cls.instance().read(cls._config_paths)
+        return cls.instance().read(filenames=cls._config_paths, encoding=cls._config_encoding)
 
     def _get_with_default(self, method, section, option, default, expected_type=None, **kwargs):
         """

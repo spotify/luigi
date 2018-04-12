@@ -84,7 +84,7 @@ section and the parameters available within it.
 
 
 [core]
-------
+******
 
 These parameters control core Luigi behavior, such as error e-mails and
 interactions between the worker and scheduler.
@@ -176,7 +176,7 @@ rpc-retry-wait
 .. _worker-config:
 
 [worker]
---------
+********
 
 These parameters control Luigi worker behavior.
 
@@ -272,7 +272,7 @@ check_unfulfilled_deps
 
 
 [elasticsearch]
----------------
+***************
 
 These parameters control use of elasticsearch
 
@@ -284,7 +284,7 @@ marker-doc-type
 
 
 [email]
--------
+*******
 
 General parameters
 
@@ -335,7 +335,7 @@ sender
 
 
 [batch_notifier]
-----------------
+****************
 
 Parameters controlling the contents of batch notifications sent from the
 scheduler
@@ -409,7 +409,7 @@ group_by_error_messages
 
 
 [hadoop]
---------
+********
 
 Parameters controlling basic hadoop tasks
 
@@ -434,7 +434,7 @@ version
 
 
 [hdfs]
-------
+******
 
 Parameters controlling the use of snakebite to speed up hdfs queries.
 
@@ -469,7 +469,7 @@ tmp_dir
 
 
 [hive]
-------
+******
 
 Parameters controlling hive tasks
 
@@ -493,7 +493,7 @@ release
 
 
 [kubernetes]
-------------
+************
 
 Parameters controlling Kubernetes Job Tasks
 
@@ -516,7 +516,7 @@ max_retrials
 
 
 [mysql]
--------
+*******
 
 Parameters controlling use of MySQL targets
 
@@ -526,7 +526,7 @@ marker-table
 
 
 [postgres]
-----------
+**********
 
 Parameters controlling the use of Postgres targets
 
@@ -540,7 +540,7 @@ marker-table
 
 
 [redshift]
-----------
+**********
 
 Parameters controlling the use of Redshift targets
 
@@ -551,7 +551,7 @@ marker-table
 .. _resources-config:
 
 [resources]
------------
+***********
 
 This section can contain arbitrary keys. Each of these specifies the
 amount of a global resource that the scheduler can allow workers to use.
@@ -572,7 +572,7 @@ is good practice to do so when you have a fixed set of resources.
 .. _retcode-config:
 
 [retcode]
-----------
+*********
 
 Configure return codes for the Luigi binary. In the case of multiple return
 codes that could apply, for example a failing task and missing data, the
@@ -624,7 +624,7 @@ conflicts. Return codes in range 0 to 127 are reserved for possible future use
 by Luigi contributors.
 
 [scalding]
-----------
+**********
 
 Parameters controlling running of scalding jobs
 
@@ -648,7 +648,7 @@ scalding-libjars
 .. _scheduler-config:
 
 [scheduler]
------------
+***********
 
 Parameters controlling scheduler behavior
 
@@ -718,7 +718,7 @@ worker_disconnect_delay
 
 
 [sendgrid]
-----------
+**********
 
 These parameters control sending error e-mails through SendGrid.
 
@@ -730,7 +730,7 @@ username
 
 
 [smtp]
-------
+******
 
 These parameters control the smtp server setup.
 
@@ -763,7 +763,7 @@ username
 
 
 [spark]
--------
+*******
 
 Parameters controlling the default execution of :py:class:`~luigi.contrib.spark.SparkSubmitTask` and :py:class:`~luigi.contrib.spark.PySparkTask`:
 
@@ -853,7 +853,7 @@ py-packages
 
 
 [task_history]
---------------
+**************
 
 Parameters controlling storage of task history in a database
 
@@ -863,7 +863,7 @@ db_connection
 
 
 [execution_summary]
--------------------
+*******************
 
 Parameters controlling execution summary of a worker
 
@@ -873,7 +873,7 @@ summary-length
 
 
 [webhdfs]
----------
+*********
 
 port
   The port to use for webhdfs. The normal namenode port is probably on a
@@ -925,3 +925,9 @@ The fields below are in retry-policy and they can be defined per task.
 * retry_count
 * disable_hard_timeout
 * disable_window_seconds
+
+Configuration encoding
+----------------------
+
+The encoding to use to open the configuration file can be specified using the ``LUIGI_CONFIG_ENCODING``.
+You can use it to open UTF8 configuration files on Windows for instance.
