@@ -158,6 +158,12 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.isPauseEnabled = function(callback) {
+        jsonRPC(this.urlRoot + '/is_pause_enabled', {}, function(response) {
+            callback(response.response.enabled);
+        });
+    };
+
     LuigiAPI.prototype.pause = function() {
         jsonRPC(this.urlRoot + '/pause');
     };
