@@ -388,6 +388,9 @@ class worker(Config):
     check_unfulfilled_deps = BoolParameter(default=True,
                                            description='If true, check for completeness of '
                                            'dependencies before running a task')
+    force_multiprocessing = BoolParameter(default=False,
+                                          description='If true, use multiprocessing also when '
+                                          'running with 1 worker')
 
 
 class KeepAliveThread(threading.Thread):
@@ -932,9 +935,10 @@ class Worker(object):
 
     def _create_task_process(self, task):
         reporter = TaskStatusReporter(self._scheduler, task.task_id, self._id)
+        use_multiprocessing = self._config.force_multiprocessing or bool(self.worker_processes > 1)
         return TaskProcess(
             task, self._id, self._task_result_queue, reporter,
-            use_multiprocessing=bool(self.worker_processes > 1),
+            use_multiprocessing=use_multiprocessing,
             worker_timeout=self._config.timeout,
             check_unfulfilled_deps=self._config.check_unfulfilled_deps,
         )

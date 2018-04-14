@@ -106,3 +106,18 @@ class MultiprocessWorkerTest(unittest.TestCase):
                                                     self.gw_res(0, None)])
 
         self.assertFalse(self.worker.run())
+
+
+class SingleWorkerMultiprocessTest(unittest.TestCase):
+
+    def test_default_multiprocessing_behavior(self):
+        with Worker(worker_processes=1) as worker:
+            task = DummyTask("a")
+            task_process = worker._create_task_process(task)
+            self.assertFalse(task_process.use_multiprocessing)
+
+    def test_force_multiprocessing(self):
+        with Worker(worker_processes=1, force_multiprocessing=True) as worker:
+            task = DummyTask("a")
+            task_process = worker._create_task_process(task)
+            self.assertTrue(task_process.use_multiprocessing)

@@ -270,6 +270,12 @@ check_unfulfilled_deps
   resource-intensive.
   Defaults to true.
 
+force_multiprocessing
+  By default, luigi uses multiprocessing when *more than one* worker process is
+  requested. Whet set to true, multiprocessing is used independent of the
+  the number of workers.
+  Defaults to false.
+
 
 [elasticsearch]
 ---------------
