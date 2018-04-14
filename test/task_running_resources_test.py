@@ -73,9 +73,6 @@ class LocalRunningResourcesTest(unittest.TestCase):
 
 class ConcurrentRunningResourcesTest(unittest.TestCase):
 
-    def get_app(self):
-        return luigi.server.app(luigi.scheduler.Scheduler())
-
     def setUp(self):
         super(ConcurrentRunningResourcesTest, self).setUp()
 
