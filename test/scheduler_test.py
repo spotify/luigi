@@ -229,6 +229,14 @@ class SchedulerIoTest(unittest.TestCase):
         task_9.add_failure()
         self.assertTrue(task_9.has_excessive_failures())
 
+    @with_config({'scheduler': {'pause_enabled': 'false'}})
+    def test_pause_disabled(self):
+        s = luigi.scheduler.Scheduler()
+        self.assertFalse(s.is_pause_enabled()['enabled'])
+        self.assertFalse(s.is_paused()['paused'])
+        s.pause()
+        self.assertFalse(s.is_paused()['paused'])
+
 
 class SchedulerWorkerTest(unittest.TestCase):
     def get_pending_ids(self, worker, state):
