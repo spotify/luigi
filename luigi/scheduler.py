@@ -147,6 +147,8 @@ class scheduler(Config):
 
     prune_on_get_work = parameter.BoolParameter(default=False)
 
+    pause_enabled = parameter.BoolParameter(default=True)
+
     def _get_retry_policy(self):
         return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
 
@@ -931,16 +933,22 @@ class Scheduler(object):
         self._state.get_worker(worker).add_rpc_message('set_worker_processes', n=n)
 
     @rpc_method()
+    def is_pause_enabled(self):
+        return {'enabled': self._config.pause_enabled}
+
+    @rpc_method()
     def is_paused(self):
         return {'paused': self._paused}
 
     @rpc_method()
     def pause(self):
-        self._paused = True
+        if self._config.pause_enabled:
+            self._paused = True
 
     @rpc_method()
     def unpause(self):
-        self._paused = False
+        if self._config.pause_enabled:
+            self._paused = False
 
     @rpc_method()
     def update_resources(self, **resources):
