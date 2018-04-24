@@ -196,7 +196,7 @@ class TaskParameter(Base):
     __tablename__ = 'task_parameters'
     task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'), primary_key=True)
     name = sqlalchemy.Column(sqlalchemy.String(128), primary_key=True)
-    value = sqlalchemy.Column(sqlalchemy.String(256))
+    value = sqlalchemy.Column(sqlalchemy.Text())
 
     def __repr__(self):
         return "TaskParameter(task_id=%d, name=%s, value=%s)" % (self.task_id, self.name, self.value)
@@ -254,3 +254,9 @@ def _upgrade_schema(engine):
         logger.warn('Upgrading DbTaskHistory schema: Adding tasks.task_id')
         conn.execute('ALTER TABLE tasks ADD COLUMN task_id VARCHAR(200)')
         conn.execute('CREATE INDEX ix_task_id ON tasks (task_id)')
+
+    # Upgrade 2. Alter value column to be TEXT, note that this is idempotent so no if-guard
+    if engine.dialect == 'mysqldb':
+        conn.execute('ALTER TABLE task_parameters MODIFY COLUMN value value TEXT')
+    elif engine.dialect == 'psycopg2':
+        conn.execute('ALTER TABLE task_parameters ALTER COLUMN value TYPE TEXT')
