@@ -70,7 +70,7 @@ script:
 
 branches:
   only:
-    - travis
+    - s3test
 
 notifications:
   email: false

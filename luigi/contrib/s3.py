@@ -17,7 +17,7 @@
 """
 Implementation of Simple Storage Service support.
 :py:class:`S3Target` is a subclass of the Target class to support S3 file
-system operations. The `boto` library is required to use S3 targets.
+system operations. The `boto3` library is required to use S3 targets.
 """
 
 from __future__ import division
@@ -46,10 +46,9 @@ from luigi import six
 
 from luigi import configuration
 from luigi.format import get_default_format
-from luigi.parameter import Parameter
+from luigi.parameter import OptionalParameter, Parameter
 from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
 from luigi.task import ExternalTask
-
 
 logger = logging.getLogger('luigi-interface')
 
@@ -144,9 +143,10 @@ class S3Client(FileSystem):
         # For finding out about the order in which it tries to find these credentials
         # please see here details
         # http://boto3.readthedocs.io/en/latest/guide/configuration.html#configuring-credentials
+
         if not (aws_access_key_id and aws_secret_access_key):
-            logger.debug(
-                'no credentials provided, delegating credentials resolution to boto3')
+            logger.debug('no credentials provided, delegating credentials resolution to boto3')
+
         try:
             self._s3 = boto3.resource('s3',
                                       aws_access_key_id=aws_access_key_id,
@@ -161,7 +161,6 @@ class S3Client(FileSystem):
             raise
 
         return self._s3
-
 
     @s3.setter
     def s3(self, value):
