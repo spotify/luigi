@@ -432,8 +432,8 @@ class S3Client(FileSystem):
         """
         Get an iterable with S3 folder contents.
         Iterable contains paths relative to queried path.
-        :param start_time: Optional argument to list files with modified datetime after start_time
-        :param end_time: Optional argument to list files with modified datetime before end_time
+        :param start_time: Optional argument to list files with modified (offset aware) datetime after start_time
+        :param end_time: Optional argument to list files with modified (offset aware) datetime before end_time
         :param return_key: Optional argument, when set to True will return boto3's ObjectSummary (instead of the filename)
         """
         (bucket, key) = self._path_to_bucket_and_key(path)
