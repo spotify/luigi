@@ -97,6 +97,7 @@ class MockBotoLogsClient(object):
             ]
         }
 
+
 @skipOnTravis("boto3 now importable. These tests need mocked")
 class BatchClientTest(unittest.TestCase):
 
