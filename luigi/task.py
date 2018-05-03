@@ -30,6 +30,7 @@ import warnings
 
 from luigi import six
 
+from event import Event
 from luigi import parameter
 from luigi.task_register import Register, TaskClassException
 
@@ -354,6 +355,7 @@ class Task(object):
         However, you may freely override this method with custom logic.
         """
         outputs = flatten(self.output())
+        self.trigger_event(Event.OUTPUT_DISCOVERED, self, outputs)
         if len(outputs) == 0:
             warnings.warn(
                 "Task %r without outputs has no custom complete() method" % self,

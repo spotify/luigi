@@ -23,6 +23,7 @@ class Event(object):
     DEPENDENCY_DISCOVERED = "event.core.dependency.discovered"  # triggered for every (task, upstream task) pair discovered in a jobflow
     DEPENDENCY_MISSING = "event.core.dependency.missing"
     DEPENDENCY_PRESENT = "event.core.dependency.present"
+    OUTPUT_DISCOVERED = "event.core.output.discovered"
     BROKEN_TASK = "event.core.task.broken"
     START = "event.core.start"
     FAILURE = "event.core.failure"
