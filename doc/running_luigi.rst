@@ -78,7 +78,7 @@ Also, it is possible to pass additional parameters to ``build`` such as host, po
 .. code-block:: python
 
     if __name__ == '__main__':
-         luigi.build([MyTask1(x=1)], worker=5)
+         luigi.build([MyTask1(x=1)], workers=5, local_scheduler=True)
 
 To achieve some special requirements you can pass to ``build`` your  ``worker_scheduler_factory``
 which will return your worker and/or scheduler implementations:
@@ -90,20 +90,19 @@ which will return your worker and/or scheduler implementations:
 
 
     class MyFactory(object):
+      def create_local_scheduler(self):
+          return scheduler.Scheduler(prune_on_get_work=True, record_task_history=False)
 
-    def create_local_scheduler(self):
-        return scheduler.Scheduler(prune_on_get_work=True, record_task_history=False)
+      def create_remote_scheduler(self, url):
+          return rpc.RemoteScheduler(url)
 
-    def create_remote_scheduler(self, url):
-        return rpc.RemoteScheduler(url)
-
-    def create_worker(self, scheduler, worker_processes, assistant=False):
-        # return your worker instance
-        return MyWorker(
-            scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
+      def create_worker(self, scheduler, worker_processes, assistant=False):
+          # return your worker instance
+          return MyWorker(
+              scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
 
 
     if __name__ == '__main__':
-        luigi.build([MyTask1(x=1), worker_scheduler_factory=MyFactory())
+        luigi.build([MyTask1(x=1)], worker_scheduler_factory=MyFactory())
 
 In some cases (like task queue) it may be useful.
