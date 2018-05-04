@@ -355,7 +355,8 @@ class Task(object):
         However, you may freely override this method with custom logic.
         """
         outputs = flatten(self.output())
-        self.trigger_event(Event.OUTPUT_DISCOVERED, self, outputs)
+        for output in outputs:
+            self.trigger_event(Event.OUTPUT_DISCOVERED, self, output)
         if len(outputs) == 0:
             warnings.warn(
                 "Task %r without outputs has no custom complete() method" % self,
