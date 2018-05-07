@@ -361,7 +361,10 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         """
         Test that config parameters specified on the command line are available while generating the execution summary.
         """
-        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--module', 'cmdline_test', 'TaskThatRequiresConfig', '--RequiredConfig-required-test-param', 'A', '--local-scheduler', '--no-lock'])
+        returncode, stdout, stderr = self._run_cmdline([
+            './bin/luigi', '--module', 'cmdline_test', 'TaskThatRequiresConfig', '--local-scheduler', '--no-lock'
+            '--RequiredConfig-required-test-param', 'A',
+        ])
         print(stdout)
         print(stderr)
 
