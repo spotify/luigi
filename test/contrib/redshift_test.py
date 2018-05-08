@@ -12,13 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+import os
+import sys
+
+import mock
+from moto import mock_s3
+
 import luigi
 import luigi.contrib.redshift
-import mock
-from helpers import with_config
+import luigi.notifications
+from helpers import unittest, with_config
+from luigi.contrib import redshift
+from luigi.contrib.s3 import S3Client
 
-import os
-import unittest
+if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
+    # spulec/moto#308
+    mock_s3 = unittest.skip('moto mock doesn\'t work with python3.4')  # NOQA
 
 
 # Fake AWS and S3 credentials taken from `../redshift_test.py`.
@@ -30,6 +40,19 @@ AWS_ROLE_NAME = 'MyRedshiftRole'
 
 BUCKET = 'bucket'
 KEY = 'key'
+KEY_2 = 'key2'
+FILES = ['file1', 'file2', 'file3']
+
+
+def generate_manifest_json(path_to_folders, file_names):
+    entries = []
+    for path_to_folder in path_to_folders:
+        for file_name in file_names:
+            entries.append({
+                'url': '%s/%s' % (path_to_folder, file_name),
+                'mandatory': True
+            })
+    return {'entries': entries}
 
 
 class DummyS3CopyToTableBase(luigi.contrib.redshift.S3CopyToTable):
@@ -109,6 +132,14 @@ class TestExternalCredentials(unittest.TestCase, DummyS3CopyToTableBase):
 class TestS3CopyToTable(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
     def test_copy_missing_creds(self, mock_redshift_target):
+
+        # Make sure credentials are not set as env vars
+        try:
+            del os.environ['AWS_ACCESS_KEY_ID']
+            del os.environ['AWS_SECRET_ACCESS_KEY']
+        except KeyError:
+            pass
+
         task = DummyS3CopyToTableBase()
 
         # The mocked connection cursor passed to
@@ -470,3 +501,50 @@ class TestRedshiftAutocommitQuery(unittest.TestCase):
 
         # Check the Unload query.
         self.assertTrue(mock_connect.autocommit)
+
+
+class TestRedshiftManifestTask(unittest.TestCase):
+    def test_run(self):
+        with mock_s3():
+            client = S3Client()
+            client.s3.meta.client.create_bucket(Bucket=BUCKET)
+            for key in FILES:
+                k = '%s/%s' % (KEY, key)
+                client.put_string('', 's3://%s/%s' % (BUCKET, k))
+            folder_path = 's3://%s/%s' % (BUCKET, KEY)
+            path = 's3://%s/%s/%s' % (BUCKET, 'manifest', 'test.manifest')
+            folder_paths = [folder_path]
+
+            m = mock.mock_open()
+            with mock.patch('luigi.contrib.s3.S3Target.open', m, create=True):
+                t = redshift.RedshiftManifestTask(path, folder_paths)
+                luigi.build([t], local_scheduler=True)
+
+            expected_manifest_output = json.dumps(
+                generate_manifest_json(folder_paths, FILES))
+
+            handle = m()
+            handle.write.assert_called_with(expected_manifest_output)
+
+    def test_run_multiple_paths(self):
+        with mock_s3():
+            client = S3Client()
+            client.s3.meta.client.create_bucket(Bucket=BUCKET)
+            for parent in [KEY, KEY_2]:
+                for key in FILES:
+                    k = '%s/%s' % (parent, key)
+                    client.put_string('', 's3://%s/%s' % (BUCKET, k))
+            folder_path_1 = 's3://%s/%s' % (BUCKET, KEY)
+            folder_path_2 = 's3://%s/%s' % (BUCKET, KEY_2)
+            folder_paths = [folder_path_1, folder_path_2]
+            path = 's3://%s/%s/%s' % (BUCKET, 'manifest', 'test.manifest')
+
+            m = mock.mock_open()
+            with mock.patch('luigi.contrib.s3.S3Target.open', m, create=True):
+                t = redshift.RedshiftManifestTask(path, folder_paths)
+                luigi.build([t], local_scheduler=True)
+
+            expected_manifest_output = json.dumps(
+                generate_manifest_json(folder_paths, FILES))
+            handle = m()
+            handle.write.assert_called_with(expected_manifest_output)

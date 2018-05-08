@@ -18,6 +18,7 @@
 from helpers import unittest
 
 import luigi.contrib.batch as batch
+from helpers import skipOnTravis
 
 try:
     import boto3
@@ -97,6 +98,7 @@ class MockBotoLogsClient(object):
         }
 
 
+@skipOnTravis("boto3 now importable. These tests need mocked")
 class BatchClientTest(unittest.TestCase):
 
     def setUp(self):
@@ -142,6 +144,7 @@ class BatchClientTest(unittest.TestCase):
             self.assertTrue('log line 1' in context.exception)
 
 
+@skipOnTravis("boto3 now importable. These tests need mocked")
 class BatchTaskTest(unittest.TestCase):
 
     def setUp(self):

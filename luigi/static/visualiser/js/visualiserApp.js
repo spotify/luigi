@@ -65,7 +65,7 @@ function visualiserApp(luigi) {
             taskParams: taskParams,
             displayName: task.display_name,
             priority: task.priority,
-            resources: JSON.stringify(task.resources).replace(/,"/g, ', "'),
+            resources: JSON.stringify(task.resources_running || task.resources).replace(/,"/g, ', "'),
             displayTime: displayTime,
             displayTimestamp: task.last_updated,
             timeRunning: time_running,
@@ -382,7 +382,7 @@ function visualiserApp(luigi) {
                 }
             } else {
                 $("#searchError").addClass("alert alert-error");
-                $("#searchError").append("Couldn't find task " + taskId);
+                $("#searchError").text("Couldn't find task " + taskId);
             }
             drawGraphETL(dependencyGraph, paint);
             bindGraphEvents();
@@ -402,7 +402,7 @@ function visualiserApp(luigi) {
                 bindGraphEvents();
             } else {
                 $("#searchError").addClass("alert alert-error");
-                $("#searchError").append("Couldn't find task " + taskId);
+                $("#searchError").text("Couldn't find task " + taskId);
             }
         }
 
@@ -1011,7 +1011,11 @@ function visualiserApp(luigi) {
     $(document).ready(function() {
         loadTemplates();
 
-        luigi.isPaused(createPauseToggle);
+        luigi.isPauseEnabled(function(enabled) {
+            if (enabled) {
+                luigi.isPaused(createPauseToggle);
+            }
+        });
 
         luigi.getWorkerList(function(workers) {
             $("#workerList").append(renderWorkers(workers));

@@ -37,7 +37,7 @@ def getpcmd(pid):
     """
     if os.name == "nt":
         # Use wmic command instead of ps on Windows.
-        cmd = 'wmic path win32_process where ProcessID=%s get Commandline' % (pid, )
+        cmd = 'wmic path win32_process where ProcessID=%s get Commandline 2> nul' % (pid, )
         with os.popen(cmd, 'r') as p:
             lines = [line for line in p.readlines() if line.strip("\r\n ") != ""]
             if lines:

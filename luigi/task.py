@@ -34,6 +34,7 @@ import re
 import copy
 import functools
 
+import luigi
 from luigi import six
 
 from luigi import parameter
@@ -686,7 +687,7 @@ class Task(object):
                         pickle.dumps(self)
 
         """
-        unpicklable_properties = ('set_tracking_url', 'set_status_message', 'set_progress_percentage')
+        unpicklable_properties = tuple(luigi.worker.TaskProcess.forward_reporter_callbacks.values())
         reserved_properties = {}
         for property_name in unpicklable_properties:
             if hasattr(self, property_name):

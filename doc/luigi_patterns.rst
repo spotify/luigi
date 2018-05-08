@@ -226,6 +226,33 @@ the task parameters or other dynamic attributes:
 Since, by default, resources have a usage limit of 1, no two instances of Task A 
 will now run if they have the same `important_file_name` property.
 
+Decreasing resources of running tasks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+At scheduling time, the luigi scheduler needs to be aware of the maximum
+resource consumption a task might have once it runs. For some tasks, however,
+it can be beneficial to decrease the amount of consumed resources between two
+steps within their run method (e.g. after some heavy computation). In this
+case, a different task waiting for that particular resource can already be
+scheduled.
+
+.. code-block:: python
+
+    class A(luigi.Task):
+
+        # set maximum resources a priori
+        resources = {"some_resource": 3}
+
+        def run(self):
+            # do something
+            ...
+
+            # decrease consumption of "some_resource" by one
+            self.decrease_running_resources({"some_resource": 1})
+
+            # continue with reduced resources
+            ...
+
 Monitoring task pipelines
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
