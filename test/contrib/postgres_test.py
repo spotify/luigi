@@ -87,6 +87,7 @@ class DummyPostgresQuery(luigi.contrib.postgres.PostgresQuery):
     date = luigi.DateParameter()
 
     host = 'dummy_host'
+    port = 'dummy_port'
     database = 'dummy_database'
     user = 'dummy_user'
     password = 'dummy_password'
