@@ -253,6 +253,35 @@ class GCSClient(luigi.target.FileSystem):
 
         self._do_put(media, dest_path)
 
+    def _forward_args_to_put(self, kwargs):
+        return self.put(**kwargs)
+
+    def put_multiple(self, filepaths, remote_directory, mimetype=None, chunksize=None, num_process=1):
+        if isinstance(filepaths, str):
+            raise ValueError(
+                'filenames must be a list of strings. If you want to put a single file, '
+                'use the `put(self, filename, ...)` method'
+            )
+
+        put_kwargs_list = [
+            {
+                'filename': filepath,
+                'dest_path': os.path.join(remote_directory, os.path.basename(filepath)),
+                'mimetype': mimetype,
+                'chunksize': chunksize,
+            }
+            for filepath in filepaths
+        ]
+
+        if num_process > 1:
+            from multiprocessing import Pool
+            from contextlib import closing
+            with closing(Pool(num_process)) as p:
+                return p.map(self._forward_args_to_put, put_kwargs_list)
+        else:
+            for put_kwargs in put_kwargs_list:
+                self._forward_args_to_put(put_kwargs)
+
     def put_string(self, contents, dest_path, mimetype=None):
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE
         assert isinstance(mimetype, six.string_types)
