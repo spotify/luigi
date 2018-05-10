@@ -218,8 +218,8 @@ class PostgresTarget(luigi.Target):
 
         try:
             cursor.execute(sql)
-        except psycopg2.ProgrammingError as e:
-            if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
+        except (psycopg2.ProgrammingError, psycopg2.IntegrityError) as e:
+            if e.pgcode in [psycopg2.errorcodes.DUPLICATE_TABLE, psycopg2.errorcodes.UNIQUE_VIOLATION]:
                 pass
             else:
                 raise
