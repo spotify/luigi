@@ -285,6 +285,10 @@ class Task(object):
         # TODO(erikbern): we should think about a language-agnostic mechanism
         return self.__class__.__module__
 
+    @property
+    def run_on_main_process(self):
+        return False
+
     _visible_in_registry = True  # TODO: Consider using in luigi.util as well
 
     __not_user_specified = '__not_user_specified'
