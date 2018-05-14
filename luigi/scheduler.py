@@ -146,6 +146,8 @@ class scheduler(Config):
 
     send_messages = parameter.BoolParameter(default=True)
 
+    metrics_collection = parameter.Parameter(default='')
+
     def _get_retry_policy(self):
         return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
 
@@ -444,6 +446,7 @@ class SimpleTaskState(object):
         self._status_tasks = collections.defaultdict(dict)
         self._active_workers = {}  # map from id to a Worker object
         self._task_batchers = {}
+        self._metrics_collector = None
 
     def get_state(self):
         return self._tasks, self._active_workers, self._task_batchers
@@ -563,8 +566,10 @@ class SimpleTaskState(object):
         if new_status == FAILED and task.status != DISABLED:
             task.add_failure()
             if task.has_excessive_failures():
+                self.update_metrics_task_failed(task)
                 task.scheduler_disable_time = time.time()
                 new_status = DISABLED
+                self.update_metrics_task_disabled(task, config)
                 if not config.batch_emails:
                     notifications.send_error_email(
                         'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
@@ -583,6 +588,9 @@ class SimpleTaskState(object):
             self._status_tasks[new_status][task.id] = task
             task.status = new_status
             task.updated = time.time()
+
+            if new_status == DONE:
+                self.update_metrics_task_done(task)
 
         if new_status == FAILED:
             task.retry = time.time() + config.retry_delay
@@ -666,6 +674,18 @@ class SimpleTaskState(object):
             worker.disabled = True
             worker.tasks.clear()
 
+    def update_metrics_task_started(self, task):
+        self._metrics_collector.handle_task_started(task)
+
+    def update_metrics_task_disabled(self, task, config):
+        self._metrics_collector.handle_task_disabled(task, config)
+
+    def update_metrics_task_failed(self, task):
+        self._metrics_collector.handle_task_failed(task)
+
+    def update_metrics_task_done(self, task):
+        self._metrics_collector.handle_task_done(task)
+
 
 class Scheduler(object):
     """
@@ -698,6 +718,13 @@ class Scheduler(object):
 
         if self._config.batch_emails:
             self._email_batcher = BatchNotifier()
+
+        if self._config.metrics_collection == 'datadog':
+            import luigi.contrib.datadog as datadog
+            self._state._metrics_collector = datadog.DataDogMetricsCollector()
+        else:
+            from luigi.metrics import MetricsCollector
+            self._state._metrics_collector = MetricsCollector()
 
     def load(self):
         self._state.load()
@@ -1226,6 +1253,7 @@ class Scheduler(object):
             reply['batch_task_ids'] = [task.id for task in batched_tasks]
 
         elif best_task:
+            self.update_metrics_task_started(best_task)
             self._state.set_status(best_task, RUNNING, self._config)
             best_task.worker_running = worker_id
             best_task.resources_running = best_task.resources.copy()
@@ -1619,3 +1647,19 @@ class Scheduler(object):
     def task_history(self):
         # Used by server.py to expose the calls
         return self._task_history
+
+    @rpc_method()
+    def update_metrics_task_started(self, task):
+        self._state.update_metrics_task_started(task)
+
+    @rpc_method()
+    def update_metrics_task_disabled(self, task):
+        self._state.update_metrics_task_disabled(task)
+
+    @rpc_method()
+    def update_metrics_task_failed(self, task):
+        self._state.update_metrics_task_failed(task)
+
+    @rpc_method()
+    def update_metrics_task_done(self, task):
+        self._state.update_metrics_task_done(task)
