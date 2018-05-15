@@ -267,6 +267,16 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         finally:
             cursor.close()
 
+    def create_schema(self, connection):
+        """
+        Will create the schema in the database
+        """
+        if '.' not in self.table:
+            return
+
+        query = 'CREATE SCHEMA IF NOT EXISTS {schema_name};'.format(schema_name=self.table.split('.')[0])
+        connection.cursor().execute(query)
+
     def create_table(self, connection):
         """
         Override to provide code for creating the target table.
@@ -383,6 +393,27 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
             table=self.table,
             update_id=self.update_id)
 
+    def does_schema_exist(self, connection):
+        """
+        Determine whether the schema already exists.
+        """
+
+        if '.' in self.table:
+            query = ("select 1 as schema_exists "
+                     "from pg_namespace "
+                     "where nspname = lower(%s) limit 1")
+        else:
+            return True
+
+        cursor = connection.cursor()
+        try:
+            schema = self.table.split('.')[0]
+            cursor.execute(query, [schema])
+            result = cursor.fetchone()
+            return bool(result)
+        finally:
+            cursor.close()
+
     def does_table_exist(self, connection):
         """
         Determine whether the table already exists.
@@ -408,9 +439,12 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         Perform pre-copy sql - such as creating table, truncating, or removing data older than x.
         """
+        if not self.does_schema_exist(connection):
+            logger.info("Creating schema for %s", self.table)
+            self.create_schema(connection)
+
         if not self.does_table_exist(connection):
             logger.info("Creating table %s", self.table)
-            connection.reset()
             self.create_table(connection)
 
         if self.do_truncate_table:
