@@ -35,7 +35,7 @@ You can run this example like this:
             * 22 were left pending, among these:
                 * 1 were missing external dependencies:
                     - 1 MyExternal()
-                * 21 had missing external dependencies:
+                * 21 had missing dependencies:
                     - 1 examples.EntryPoint()
                     - examples.Foo(num=100, num2=16) and 9 other examples.Foo
                     - 10 examples.DateTask(date=1998-03-23...1998-04-01, num=5)
