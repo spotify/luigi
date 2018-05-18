@@ -41,6 +41,7 @@
                   {{#progressPercentage}}<button class="btn btn-primary btn-xs statusMessage" title="Status message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name="{{displayName}}"><i class="fa fa-comment"></i></button>
                   {{/progressPercentage}}
                 {{/statusMessage}}
+                {{#enabledSchedulerMessages}}<button class="btn btn-success btn-xs schedulerMessage" title="Send message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name="{{displayName}}" data-worker="{{workerIdRunning}}"><i class="fa fa-paper-plane"></i></button>{{/enabledSchedulerMessages}}
             </div>
         </script>
         <script type="text/template" name="errorTemplate">
@@ -77,6 +78,28 @@
               <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
               </div>
+            </div>
+          </div>
+        </script>
+        <script type="text/template" name="schedulerMessageTemplate">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel">Send message to {{displayName}}</h4>
+              </div>
+              <div class="modal-body">
+                  <form>
+                    <div class="form-group">
+                      <label for="schedulerMessageInput">Message:</label>
+                      <input type="text" class="form-control" id="schedulerMessageInput" placeholder="">
+                    </div>
+                  </form>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                  <button type="button" id="schedulerMessageButton" data-dismiss="modal" class="btn btn-primary">Send</button>
+                </div>
             </div>
           </div>
         </script>
@@ -198,6 +221,8 @@
                             {{#progressPercentage}}<button class="btn btn-primary btn-xs statusMessage" title="Status message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name="{{displayName}}"><i class="fa fa-comment"></i></button>
                             {{/progressPercentage}}
                           {{/statusMessage}}
+                          {{#enabledSchedulerMessages}}<button class="btn btn-success btn-xs schedulerMessage" title="Send message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name="{{displayName}}" data-worker="{{workerIdRunning}}"><i class="fa fa-paper-plane"></i></button>
+                          {{/enabledSchedulerMessages}}
                         </td>
                       </tr>
                       {{/tasks}}
@@ -325,6 +350,8 @@
         <div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         </div>
         <div class="modal fade" id="statusMessageModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        </div>
+        <div class="modal fade" id="schedulerMessageModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         </div>
 
         <div class="wrapper">

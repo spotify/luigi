@@ -158,6 +158,11 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.sendSchedulerMessage = function(workerId, taskId, message) {
+        var data = {worker: workerId, task: taskId, message: message};
+        jsonRPC(this.urlRoot + "/send_scheduler_message", data);
+    };
+
     LuigiAPI.prototype.isPauseEnabled = function(callback) {
         jsonRPC(this.urlRoot + '/is_pause_enabled', {}, function(response) {
             callback(response.response.enabled);
