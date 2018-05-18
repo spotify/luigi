@@ -76,7 +76,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                     '===== Luigi Execution Summary =====',
                     '',
                     'Scheduled 6 tasks of which:',
-                    '* 1 present dependencies were encountered:',
+                    '* 1 complete ones were encountered:',
                     '    - 1 Bar(num=1)',
                     '* 3 ran successfully:',
                     '    - 3 Bar(num=2,3,4)',
@@ -227,7 +227,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                     '===== Luigi Execution Summary =====',
                     '',
                     'Scheduled 2 tasks of which:',
-                    '* 1 present dependencies were encountered:',
+                    '* 1 complete ones were encountered:',
                     '    - 1 Bar()',
                     '* 1 were left pending, among these:',
                     "    * 1 was not granted run permission by the scheduler:",
@@ -331,7 +331,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                     '===== Luigi Execution Summary =====',
                     '',
                     'Scheduled 8 tasks of which:',
-                    '* 7 present dependencies were encountered:',
+                    '* 7 complete ones were encountered:',
                     '    - 4 Bar(num=0...3)',
                     '    ...',
                     '* 1 ran successfully:',
@@ -378,7 +378,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertFalse(d['run_by_other_worker'])
         self.assertEqual({ExternalBar(num=0), ExternalBar(num=2), ExternalBar(num=3), ExternalBar(num=4)}, d['still_pending_ext'])
         s = self.summary()
-        self.assertIn('\n* 1 present dependencies were encountered:\n    - 1 ExternalBar(num=1)\n', s)
+        self.assertIn('\n* 1 complete ones were encountered:\n    - 1 ExternalBar(num=1)\n', s)
         self.assertIn('\n* 4 ran successfully:\n    - 4 Bar(num=1...4)\n', s)
         self.assertIn('\n* 1 failed:\n    - 1 Bar(num=0)\n', s)
         self.assertIn('\n* 5 were left pending, among these:\n    * 4 were missing external dependencies:\n        - 4 ExternalBar(num=', s)
@@ -917,7 +917,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                     '===== Luigi Execution Summary =====',
                     '',
                     'Scheduled 218 tasks of which:',
-                    '* 195 present dependencies were encountered:',
+                    '* 195 complete ones were encountered:',
                     '    - 195 Bar(num=5...199)',
                     '* 1 ran successfully:',
                     '    - 1 Boom(...)',

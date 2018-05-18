@@ -276,7 +276,7 @@ _ORDERED_STATUSES = (
 )
 _PENDING_SUB_STATUSES = set(_ORDERED_STATUSES[_ORDERED_STATUSES.index("still_pending_ext"):])
 _COMMENTS = {
-    ("already_done", 'present dependencies were encountered'),
+    ("already_done", 'complete ones were encountered'),
     ("completed", 'ran successfully'),
     ("failed", 'failed'),
     ("scheduling_error", 'failed scheduling'),

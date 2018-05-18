@@ -28,7 +28,7 @@ You can run this example like this:
             ===== Luigi Execution Summary =====
 
             Scheduled 218 tasks of which:
-            * 195 present dependencies were encountered:
+            * 195 complete ones were encountered:
                 - 195 examples.Bar(num=5...199)
             * 1 ran successfully:
                 - 1 examples.Boom(...)
