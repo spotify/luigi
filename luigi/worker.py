@@ -110,13 +110,14 @@ class TaskProcess(multiprocessing.Process):
 
     Mainly for convenience since this is run in a separate process. """
 
-    # mapping of status_reporter methods to task callbacks that are added to the task
+    # mapping of status_reporter attributes to task attributes that are added to tasks
     # before they actually run, and removed afterwards
-    forward_reporter_callbacks = {
+    forward_reporter_attributes = {
         "update_tracking_url": "set_tracking_url",
         "update_status_message": "set_status_message",
         "update_progress_percentage": "set_progress_percentage",
         "decrease_running_resources": "decrease_running_resources",
+        "scheduler_messages": "scheduler_messages",
     }
 
     def __init__(self, task, worker_id, result_queue, status_reporter,
@@ -133,14 +134,14 @@ class TaskProcess(multiprocessing.Process):
         self.check_unfulfilled_deps = check_unfulfilled_deps
 
     def _run_get_new_deps(self):
-        # set task callbacks before running
-        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_callbacks):
+        # forward some attributes before running
+        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
             setattr(self.task, task_attr, getattr(self.status_reporter, reporter_attr))
 
         task_gen = self.task.run()
 
-        # reset task callbacks
-        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_callbacks):
+        # reset attributes again
+        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
             setattr(self.task, task_attr, None)
 
         if not isinstance(task_gen, types.GeneratorType):
@@ -264,10 +265,11 @@ class TaskStatusReporter(object):
     This object must be pickle-able for passing to `TaskProcess` on systems
     where fork method needs to pickle the process object (e.g.  Windows).
     """
-    def __init__(self, scheduler, task_id, worker_id):
+    def __init__(self, scheduler, task_id, worker_id, scheduler_messages):
         self._task_id = task_id
         self._worker_id = worker_id
         self._scheduler = scheduler
+        self.scheduler_messages = scheduler_messages
 
     def update_tracking_url(self, tracking_url):
         self._scheduler.add_task(
@@ -391,6 +393,10 @@ class worker(Config):
     force_multiprocessing = BoolParameter(default=False,
                                           description='If true, use multiprocessing also when '
                                           'running with 1 worker')
+
+    receive_messages = BoolParameter(default=True,
+                                     description='If true, the worker can receive messages from '
+                                     'the scheduler and dispatch them to tasks')
 
 
 class KeepAliveThread(threading.Thread):
@@ -934,7 +940,8 @@ class Worker(object):
             task_process.run()
 
     def _create_task_process(self, task):
-        reporter = TaskStatusReporter(self._scheduler, task.task_id, self._id)
+        message_queue = multiprocessing.Queue() if self._config.receive_messages else None
+        reporter = TaskStatusReporter(self._scheduler, task.task_id, self._id, message_queue)
         use_multiprocessing = self._config.force_multiprocessing or bool(self.worker_processes > 1)
         return TaskProcess(
             task, self._id, self._task_result_queue, reporter,
@@ -1148,3 +1155,14 @@ class Worker(object):
 
         # tell the scheduler
         self._scheduler.add_worker(self._id, {'workers': self.worker_processes})
+
+    @rpc_message_callback
+    def dispatch_scheduler_message(self, task_id, message):
+        if not self._config.receive_messages:
+            return
+
+        task_id = str(task_id)
+        if task_id in self._running_tasks:
+            task_process = self._running_tasks[task_id]
+            if task_process.status_reporter.scheduler_messages:
+                task_process.status_reporter.scheduler_messages.put(str(message))

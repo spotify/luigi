@@ -687,7 +687,7 @@ class Task(object):
                         pickle.dumps(self)
 
         """
-        unpicklable_properties = tuple(luigi.worker.TaskProcess.forward_reporter_callbacks.values())
+        unpicklable_properties = tuple(luigi.worker.TaskProcess.forward_reporter_attributes.values())
         reserved_properties = {}
         for property_name in unpicklable_properties:
             if hasattr(self, property_name):

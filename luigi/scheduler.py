@@ -149,6 +149,8 @@ class scheduler(Config):
 
     pause_enabled = parameter.BoolParameter(default=True)
 
+    send_messages = parameter.BoolParameter(default=True)
+
     def _get_retry_policy(self):
         return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
 
@@ -933,6 +935,14 @@ class Scheduler(object):
         self._state.get_worker(worker).add_rpc_message('set_worker_processes', n=n)
 
     @rpc_method()
+    def send_scheduler_message(self, worker, task, message):
+        if not self._config.send_messages:
+            return
+
+        kwargs = dict(task_id=task, message=message)
+        self._state.get_worker(worker).add_rpc_message('dispatch_scheduler_message', **kwargs)
+
+    @rpc_method()
     def is_pause_enabled(self):
         return {'enabled': self._config.pause_enabled}
 
@@ -1253,7 +1263,8 @@ class Scheduler(object):
             'resources_running': getattr(task, "resources_running", None),
             'tracking_url': getattr(task, "tracking_url", None),
             'status_message': getattr(task, "status_message", None),
-            'progress_percentage': getattr(task, "progress_percentage", None)
+            'progress_percentage': getattr(task, "progress_percentage", None),
+            'enabled_scheduler_messages': self._config.send_messages,
         }
         if task.status == DISABLED:
             ret['re_enable_able'] = task.scheduler_disable_time is not None
