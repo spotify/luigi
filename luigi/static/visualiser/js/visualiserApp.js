@@ -76,7 +76,7 @@ function visualiserApp(luigi) {
             re_enable: task.status == "DISABLED" && task.re_enable_able,
             statusMessage: task.status_message,
             progressPercentage: task.progress_percentage,
-            enabledSchedulerMessages: task.status == "RUNNING" && task.enabled_scheduler_messages,
+            enabledSchedulerMessages: task.enabled_scheduler_messages,
             workerIdRunning: task.worker_running,
         };
     }

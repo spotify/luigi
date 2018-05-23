@@ -1264,12 +1264,15 @@ class Scheduler(object):
             'tracking_url': getattr(task, "tracking_url", None),
             'status_message': getattr(task, "status_message", None),
             'progress_percentage': getattr(task, "progress_percentage", None),
-            'enabled_scheduler_messages': self._config.send_messages,
+            'enabled_scheduler_messages': False,
         }
         if task.status == DISABLED:
             ret['re_enable_able'] = task.scheduler_disable_time is not None
         if include_deps:
             ret['deps'] = list(task.deps if deps is None else deps)
+        if self._config.send_messages and task.status == RUNNING and task.worker_running:
+            worker = self._state.get_worker(task.worker_running)
+            ret['enabled_scheduler_messages'] = worker.info.get('receive_messages', False)
         return ret
 
     @rpc_method()

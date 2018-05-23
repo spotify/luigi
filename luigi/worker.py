@@ -453,16 +453,16 @@ class Worker(object):
         if scheduler is None:
             scheduler = Scheduler()
 
+        self._config = worker(**kwargs)
+
+        assert self._config.wait_interval >= _WAIT_INTERVAL_EPS, "[worker] wait_interval must be positive"
+        assert self._config.wait_jitter >= 0.0, "[worker] wait_jitter must be equal or greater than zero"
+
         self.worker_processes = int(worker_processes)
         self._worker_info = self._generate_worker_info()
 
         if not worker_id:
             worker_id = 'Worker(%s)' % ', '.join(['%s=%s' % (k, v) for k, v in self._worker_info])
-
-        self._config = worker(**kwargs)
-
-        assert self._config.wait_interval >= _WAIT_INTERVAL_EPS, "[worker] wait_interval must be positive"
-        assert self._config.wait_jitter >= 0.0, "[worker] wait_jitter must be equal or greater than zero"
 
         self._id = worker_id
         self._scheduler = scheduler
@@ -546,7 +546,8 @@ class Worker(object):
         # Generate as much info as possible about the worker
         # Some of these calls might not be available on all OS's
         args = [('salt', '%09d' % random.randrange(0, 999999999)),
-                ('workers', self.worker_processes)]
+                ('workers', self.worker_processes),
+                ('receive_messages', self._config.receive_messages)]
         try:
             args += [('host', socket.gethostname())]
         except BaseException:
