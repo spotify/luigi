@@ -158,9 +158,20 @@ var LuigiAPI = (function() {
         });
     };
 
-    LuigiAPI.prototype.sendSchedulerMessage = function(workerId, taskId, message) {
+    LuigiAPI.prototype.sendSchedulerMessage = function(workerId, taskId, message, callback) {
         var data = {worker: workerId, task: taskId, message: message};
-        jsonRPC(this.urlRoot + "/send_scheduler_message", data);
+        jsonRPC(this.urlRoot + "/send_scheduler_message", data, function(response) {
+            if (callback) {
+                callback(response.response.messageId);
+            }
+        });
+    };
+
+    LuigiAPI.prototype.getSchedulerMessageResponse = function(taskId, messageId, callback) {
+        var data = {task_id: taskId, message_id: messageId};
+        jsonRPC(this.urlRoot + "/get_scheduler_message_response", data, function(response) {
+            callback(response.response.response);
+        });
     };
 
     LuigiAPI.prototype.isPauseEnabled = function(callback) {

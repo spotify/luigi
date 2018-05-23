@@ -289,6 +289,32 @@ class TaskStatusReporter(object):
         self._scheduler.decrease_running_task_resources(self._task_id, decrease_resources)
 
 
+class SchedulerMessage(object):
+    """
+    Message object that is build by the the :py:class:`Worker` when a message from the scheduler is
+    received and passed to the message queue of a :py:class:`Task`.
+    """
+
+    def __init__(self, scheduler, task_id, message_id, content, **payload):
+        super(SchedulerMessage, self).__init__()
+
+        self._scheduler = scheduler
+        self._task_id = task_id
+        self._message_id = message_id
+
+        self.content = content
+        self.payload = payload
+
+    def __str__(self):
+        return str(self.content)
+
+    def __eq__(self, other):
+        return self.content == other
+
+    def respond(self, response):
+        self._scheduler.add_scheduler_message_response(self._task_id, self._message_id, response)
+
+
 class SingleProcessPool(object):
     """
     Dummy process pool for using a single processor.
@@ -1158,7 +1184,7 @@ class Worker(object):
         self._scheduler.add_worker(self._id, {'workers': self.worker_processes})
 
     @rpc_message_callback
-    def dispatch_scheduler_message(self, task_id, message):
+    def dispatch_scheduler_message(self, task_id, message_id, message, **kwargs):
         if not self._config.receive_messages:
             return
 
@@ -1166,4 +1192,5 @@ class Worker(object):
         if task_id in self._running_tasks:
             task_process = self._running_tasks[task_id]
             if task_process.status_reporter.scheduler_messages:
-                task_process.status_reporter.scheduler_messages.put(str(message))
+                message = SchedulerMessage(self._scheduler, task_id, message_id, message, **kwargs)
+                task_process.status_reporter.scheduler_messages.put(message)

@@ -335,18 +335,42 @@ function visualiserApp(luigi) {
         $modal.empty().append(renderTemplate("schedulerMessageTemplate", data));
         var $input = $modal.find("#schedulerMessageInput");
         var $send = $modal.find("#schedulerMessageButton");
+        var $awaitResponse = $modal.find("#schedulerMessageAwaitResponse");
+        var $responseContainer = $modal.find("#schedulerMessageResponse");
+        var $responseSpinner = $responseContainer.find("pre > i");
+        var $responseContent = $responseContainer.find("pre > div");
 
         $input.on("keypress", function($event) {
             if (event.keyCode == 13) {
                 $send.trigger("click");
-                $event.stopPropagation();
+                $event.preventDefault();
             }
         });
 
-        $send.on("click", function() {
+        $send.on("click", function($event) {
             var message = $input.val();
+            var awaitResponse = $awaitResponse.prop("checked");
             if (message && data.worker) {
-                luigi.sendSchedulerMessage(data.worker, data.taskId, message);
+                if (awaitResponse) {
+                    $responseContainer.show();
+                    $responseSpinner.show();
+                    $responseContent.empty();
+                    luigi.sendSchedulerMessage(data.worker, data.taskId, message, function(messageId) {
+                        var interval = window.setInterval(function() {
+                            luigi.getSchedulerMessageResponse(data.taskId, messageId, function(response) {
+                                if (response != null) {
+                                    clearInterval(interval);
+                                    $responseSpinner.hide();
+                                    $responseContent.html(response);
+                                }
+                            });
+                        }, 1000);
+                    });
+                    $event.stopPropagation();
+                } else {
+                    $responseContainer.hide();
+                    luigi.sendSchedulerMessage(data.worker, data.taskId, message);
+                }
             }
         });
 

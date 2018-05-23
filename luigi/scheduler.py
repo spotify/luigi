@@ -38,6 +38,7 @@ import logging
 import os
 import re
 import time
+import uuid
 
 from luigi import six
 
@@ -306,6 +307,7 @@ class Task(object):
         self.tracking_url = tracking_url
         self.status_message = status_message
         self.progress_percentage = progress_percentage
+        self.scheduler_message_responses = {}
         self.scheduler_disable_time = None
         self.runnable = False
         self.batchable = False
@@ -937,10 +939,28 @@ class Scheduler(object):
     @rpc_method()
     def send_scheduler_message(self, worker, task, message):
         if not self._config.send_messages:
-            return
+            return {"messageId": None}
 
-        kwargs = dict(task_id=task, message=message)
-        self._state.get_worker(worker).add_rpc_message('dispatch_scheduler_message', **kwargs)
+        message_id = str(uuid.uuid4())
+        self._state.get_worker(worker).add_rpc_message('dispatch_scheduler_message', task_id=task,
+                                                       message_id=message_id, message=message)
+
+        return {"messageId": message_id}
+
+    @rpc_method()
+    def add_scheduler_message_response(self, task_id, message_id, response):
+        if self._state.has_task(task_id):
+            task = self._state.get_task(task_id)
+            task.scheduler_message_responses[message_id] = response
+        print task.scheduler_message_responses
+
+    @rpc_method()
+    def get_scheduler_message_response(self, task_id, message_id):
+        response = None
+        if self._state.has_task(task_id):
+            task = self._state.get_task(task_id)
+            response = task.scheduler_message_responses.pop(message_id, None)
+        return {"taskId": task_id, "response": response}
 
     @rpc_method()
     def is_pause_enabled(self):

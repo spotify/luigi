@@ -94,7 +94,16 @@
                       <label for="schedulerMessageInput">Message:</label>
                       <input type="text" class="form-control" id="schedulerMessageInput" placeholder="">
                     </div>
+                    <div class="form-group">
+                      <input type="checkbox" class="form-check-input" id="schedulerMessageAwaitResponse">
+                      <label class="form-check-label" for="schedulerMessageAwaitResponse">Await response</label>
+                    </div>
                   </form>
+                  <div class="form-group" id="schedulerMessageResponse" style="display: none;">
+                    <hr />
+                    <label>Response:</label>
+                    <pre class="pre-scrollable"><i class="fa fa-spinner fa-pulse" id="schedulerMessageSpinner"></i><div></div></pre>
+                  </div>
                 </div>
                 <div class="modal-footer">
                   <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
