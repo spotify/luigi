@@ -42,9 +42,9 @@ class WriteMessageToFile(luigi.Task):
     def run(self):
         msg = ""
 
-        time.sleep(0.5)
+        time.sleep(1)
         if not self.scheduler_messages.empty():
-            msg = self.scheduler_messages.get()
+            msg = self.scheduler_messages.get().content
 
         with self.output().open("w") as f:
             f.write(msg + "\n")
