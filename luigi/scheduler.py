@@ -952,7 +952,6 @@ class Scheduler(object):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)
             task.scheduler_message_responses[message_id] = response
-        print task.scheduler_message_responses
 
     @rpc_method()
     def get_scheduler_message_response(self, task_id, message_id):
