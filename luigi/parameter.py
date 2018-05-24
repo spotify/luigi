@@ -297,9 +297,12 @@ class Parameter(object):
     def _parser_global_dest(param_name, task_name):
         return task_name + '_' + param_name
 
-    @staticmethod
-    def _parser_action():
-        return "store"
+    @classmethod
+    def _parser_kwargs(cls, param_name, task_name=None):
+        return {
+            "action": "store",
+            "dest": cls._parser_global_dest(param_name, task_name) if task_name else param_name,
+        }
 
 
 class OptionalParameter(Parameter):
@@ -618,19 +621,32 @@ class BoolParameter(Parameter):
         if self._default == _no_value:
             self._default = False
 
-    def parse(self, s):
+    def parse(self, val):
         """
         Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case.
         """
-        return {'true': True, 'false': False}[str(s).lower()]
+        s = str(val).lower()
+        if s == "true":
+            return True
+        elif s == "false":
+            return False
+        else:
+            raise ValueError("cannot interpret '{}' as boolean".format(val))
 
     def normalize(self, value):
-        # coerce anything truthy to True
-        return bool(value) if value is not None else None
+        try:
+            return self.parse(value)
+        except ValueError:
+            return None
 
-    @staticmethod
-    def _parser_action():
-        return 'store_true'
+    @classmethod
+    def _parser_kwargs(cls, *args, **kwargs):
+        parser_kwargs = super(BoolParameter, cls)._parser_kwargs(*args, **kwargs)
+        parser_kwargs.update({
+            "nargs": "?",
+            "const": True,
+        })
+        return parser_kwargs
 
 
 class DateIntervalParameter(Parameter):
