@@ -169,10 +169,9 @@ class PostgresTarget(luigi.Target):
         cursor = connection.cursor()
         try:
             cursor.execute("""SELECT 1 FROM {marker_table}
-                WHERE update_id = %s
+                WHERE (update_id, target_table) = (%s, %s)
                 LIMIT 1""".format(marker_table=self.marker_table),
-                           (self.update_id,)
-                           )
+                           (self.update_id, self.table))
             row = cursor.fetchone()
         except psycopg2.ProgrammingError as e:
             if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
