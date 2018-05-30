@@ -57,7 +57,7 @@ def get_task_requires(task):
 def dfs_paths(start_task, goal_task_family, path=None):
     if path is None:
         path = [start_task]
-    if start_task.task_family == goal_task_family or goal_task_family is None:
+    if start_task.task_family == goal_task_family.task_family or goal_task_family is None:
         for item in path:
             yield item
     for next in get_task_requires(start_task) - set(path):
