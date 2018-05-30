@@ -273,7 +273,7 @@ class KubernetesJobTask(luigi.Task):
                     assert wr == 'ContainerCreating', "Pod %s %s. Logs: `kubectl logs pod/%s`" % (
                         pod.name, wr, pod.name)
 
-            for cond in status['conditions']:
+            for cond in status.get('conditions', []):
                 if 'message' in cond:
                     if cond['reason'] == 'ContainersNotReady':
                         return False
