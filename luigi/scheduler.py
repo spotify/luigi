@@ -50,6 +50,8 @@ from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDE
 from luigi.task import Config
 from luigi.parameter import ParameterVisibility
 
+from luigi.metrics import MetricsCollectors
+
 logger = logging.getLogger(__name__)
 
 UPSTREAM_RUNNING = 'UPSTREAM_RUNNING'
@@ -146,7 +148,7 @@ class scheduler(Config):
 
     send_messages = parameter.BoolParameter(default=True)
 
-    metrics_collection = parameter.Parameter(default='')
+    metrics_collector = parameter.EnumParameter(enum=MetricsCollectors, default=MetricsCollectors.default)
 
     def _get_retry_policy(self):
         return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
@@ -719,12 +721,7 @@ class Scheduler(object):
         if self._config.batch_emails:
             self._email_batcher = BatchNotifier()
 
-        if self._config.metrics_collection == 'datadog':
-            import luigi.contrib.datadog as datadog
-            self._state._metrics_collector = datadog.DataDogMetricsCollector()
-        else:
-            from luigi.metrics import MetricsCollector
-            self._state._metrics_collector = MetricsCollector()
+        self._state._metrics_collector = MetricsCollectors.get(self._config.metrics_collector)
 
     def load(self):
         self._state.load()
