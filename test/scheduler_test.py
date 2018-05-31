@@ -247,7 +247,7 @@ class SchedulerIoTest(unittest.TestCase):
 
     @with_config({'scheduler': {'metrics_collector': 'datadog'}})
     def test_datadog_metrics_collector(self):
-        from luigi.contrib.datadog import DatadogMetricsCollector
+        from luigi.contrib.datadog_metric import DatadogMetricsCollector
 
         s = luigi.scheduler.Scheduler()
         scheduler_state = s._state

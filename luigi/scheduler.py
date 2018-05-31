@@ -567,8 +567,8 @@ class SimpleTaskState(object):
 
         if new_status == FAILED and task.status != DISABLED:
             task.add_failure()
+            self.update_metrics_task_failed(task)
             if task.has_excessive_failures():
-                self.update_metrics_task_failed(task)
                 task.scheduler_disable_time = time.time()
                 new_status = DISABLED
                 self.update_metrics_task_disabled(task, config)
@@ -1647,16 +1647,4 @@ class Scheduler(object):
 
     @rpc_method()
     def update_metrics_task_started(self, task):
-        self._state.update_metrics_task_started(task)
-
-    @rpc_method()
-    def update_metrics_task_disabled(self, task):
-        self._state.update_metrics_task_disabled(task)
-
-    @rpc_method()
-    def update_metrics_task_failed(self, task):
-        self._state.update_metrics_task_failed(task)
-
-    @rpc_method()
-    def update_metrics_task_done(self, task):
-        self._state.update_metrics_task_done(task)
+        self._state._metrics_collector.handle_task_started(task)
