@@ -16,7 +16,7 @@ that will be installed with the pip package.
         y = luigi.IntParameter(default=45)
 
         def run(self):
-            print self.x + self.y
+            print(self.x + self.y)
 
 Should be run like this
 
@@ -57,7 +57,7 @@ If you want to change this behaviour, just pass ``no_lock=False``.
         y = luigi.IntParameter(default=0)
 
         def run(self):
-            print self.x + self.y
+            print(self.x + self.y)
 
 
     class MyTask2(luigi.Task):
@@ -66,7 +66,7 @@ If you want to change this behaviour, just pass ``no_lock=False``.
         z = luigi.IntParameter(default=2)
 
         def run(self):
-            print self.x * self.y * self.z
+            print(self.x * self.y * self.z)
 
 
     if __name__ == '__main__':
