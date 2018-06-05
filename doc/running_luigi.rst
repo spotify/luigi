@@ -37,9 +37,12 @@ For example, if MyTask had a parameter called 'my_parameter':
 
         $ luigi --module my_module MyTask --my-parameter 100 --local-scheduler
 
+.. note:: Please make sure to always place task parameters behind the task family!
+
 
 Running from Python code
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
+
 Another way to start tasks from Python code is using ``luigi.build(tasks, worker_scheduler_factory=None, **env_params)``
 from ``luigi.interface`` module.
 

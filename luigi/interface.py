@@ -239,10 +239,10 @@ def _run(cmdline_args=None, main_task_cls=None,
     if cmdline_args is None:
         cmdline_args = sys.argv[1:]
 
-    if main_task_cls:
-        cmdline_args.insert(0, main_task_cls.task_family)
     if local_scheduler:
         cmdline_args.insert(0, '--local-scheduler')
+    if main_task_cls:
+        cmdline_args.insert(0, main_task_cls.task_family)
 
     with CmdlineParser.global_instance(cmdline_args) as cp:
         return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory)
