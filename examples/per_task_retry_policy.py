@@ -40,7 +40,7 @@ You can run this example like this:
                     - 1 DynamicErrorTaskSubmitter()
                 * 1 had failed dependencies:
                     - 1 examples.PerTaskRetryPolicy()
-                * 1 had missing external dependencies:
+                * 1 had missing dependencies:
                     - 1 examples.PerTaskRetryPolicy()
                 * 1 was not granted run permission by the scheduler:
                     - 1 DynamicErrorTaskSubmitter()

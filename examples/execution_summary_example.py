@@ -28,14 +28,14 @@ You can run this example like this:
             ===== Luigi Execution Summary =====
 
             Scheduled 218 tasks of which:
-            * 195 present dependencies were encountered:
+            * 195 complete ones were encountered:
                 - 195 examples.Bar(num=5...199)
             * 1 ran successfully:
                 - 1 examples.Boom(...)
             * 22 were left pending, among these:
                 * 1 were missing external dependencies:
                     - 1 MyExternal()
-                * 21 had missing external dependencies:
+                * 21 had missing dependencies:
                     - 1 examples.EntryPoint()
                     - examples.Foo(num=100, num2=16) and 9 other examples.Foo
                     - 10 examples.DateTask(date=1998-03-23...1998-04-01, num=5)
