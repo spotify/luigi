@@ -420,6 +420,7 @@ class worker(Config):
                                           description='If true, use multiprocessing also when '
                                           'running with 1 worker')
 
+
 class KeepAliveThread(threading.Thread):
     """
     Periodically tell the scheduler that the worker still lives.

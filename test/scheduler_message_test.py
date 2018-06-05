@@ -35,7 +35,7 @@ def fast_worker(scheduler, **kwargs):
 class WriteMessageToFile(luigi.Task):
 
     path = luigi.Parameter()
-    
+
     accepted_messages = True
 
     def output(self):
