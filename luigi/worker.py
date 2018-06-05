@@ -420,11 +420,6 @@ class worker(Config):
                                           description='If true, use multiprocessing also when '
                                           'running with 1 worker')
 
-    receive_messages = BoolParameter(default=True,
-                                     description='If true, the worker can receive messages from '
-                                     'the scheduler and dispatch them to tasks')
-
-
 class KeepAliveThread(threading.Thread):
     """
     Periodically tell the scheduler that the worker still lives.
@@ -479,16 +474,16 @@ class Worker(object):
         if scheduler is None:
             scheduler = Scheduler()
 
-        self._config = worker(**kwargs)
-
-        assert self._config.wait_interval >= _WAIT_INTERVAL_EPS, "[worker] wait_interval must be positive"
-        assert self._config.wait_jitter >= 0.0, "[worker] wait_jitter must be equal or greater than zero"
-
         self.worker_processes = int(worker_processes)
         self._worker_info = self._generate_worker_info()
 
         if not worker_id:
             worker_id = 'Worker(%s)' % ', '.join(['%s=%s' % (k, v) for k, v in self._worker_info])
+
+        self._config = worker(**kwargs)
+
+        assert self._config.wait_interval >= _WAIT_INTERVAL_EPS, "[worker] wait_interval must be positive"
+        assert self._config.wait_jitter >= 0.0, "[worker] wait_jitter must be equal or greater than zero"
 
         self._id = worker_id
         self._scheduler = scheduler
@@ -572,8 +567,7 @@ class Worker(object):
         # Generate as much info as possible about the worker
         # Some of these calls might not be available on all OS's
         args = [('salt', '%09d' % random.randrange(0, 999999999)),
-                ('workers', self.worker_processes),
-                ('receive_messages', self._config.receive_messages)]
+                ('workers', self.worker_processes)]
         try:
             args += [('host', socket.gethostname())]
         except BaseException:
@@ -827,6 +821,7 @@ class Worker(object):
             module=task.task_module,
             batchable=task.batchable,
             retry_policy_dict=_get_retry_policy_dict(task),
+            accepted_messages=task.accepted_messages,
         )
 
     def _validate_dependency(self, dependency):
@@ -967,7 +962,7 @@ class Worker(object):
             task_process.run()
 
     def _create_task_process(self, task):
-        message_queue = multiprocessing.Queue() if self._config.receive_messages else None
+        message_queue = multiprocessing.Queue() if task.accepted_messages else None
         reporter = TaskStatusReporter(self._scheduler, task.task_id, self._id, message_queue)
         use_multiprocessing = self._config.force_multiprocessing or bool(self.worker_processes > 1)
         return TaskProcess(
@@ -1184,13 +1179,10 @@ class Worker(object):
         self._scheduler.add_worker(self._id, {'workers': self.worker_processes})
 
     @rpc_message_callback
-    def dispatch_scheduler_message(self, task_id, message_id, message, **kwargs):
-        if not self._config.receive_messages:
-            return
-
+    def dispatch_scheduler_message(self, task_id, message_id, content, **kwargs):
         task_id = str(task_id)
         if task_id in self._running_tasks:
             task_process = self._running_tasks[task_id]
             if task_process.status_reporter.scheduler_messages:
-                message = SchedulerMessage(self._scheduler, task_id, message_id, message, **kwargs)
+                message = SchedulerMessage(self._scheduler, task_id, message_id, content, **kwargs)
                 task_process.status_reporter.scheduler_messages.put(message)

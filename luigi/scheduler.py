@@ -280,7 +280,8 @@ class OrderedSet(collections.MutableSet):
 
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
-                 params=None, tracking_url=None, status_message=None, progress_percentage=None, retry_policy='notoptional'):
+                 params=None, accepted_messages=False, tracking_url=None, status_message=None,
+                 progress_percentage=None, retry_policy='notoptional'):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = OrderedSet()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -302,6 +303,7 @@ class Task(object):
         self.module = module
         self.params = _get_default(params, {})
 
+        self.accepted_messages = accepted_messages
         self.retry_policy = retry_policy
         self.failures = Failures(self.retry_policy.disable_window)
         self.tracking_url = tracking_url
@@ -776,7 +778,7 @@ class Scheduler(object):
     @rpc_method()
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
-                 priority=0, family='', module=None, params=None,
+                 priority=0, family='', module=None, params=None, accepted_messages=False,
                  assistant=False, tracking_url=None, worker=None, batchable=None,
                  batch_id=None, retry_policy_dict=None, owners=None, **kwargs):
         """
@@ -801,6 +803,7 @@ class Scheduler(object):
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
                 priority=priority, family=family, module=module, params=params,
+                accepted_messages=accepted_messages,
             )
         else:
             _default_task = None
@@ -937,15 +940,15 @@ class Scheduler(object):
         self._state.get_worker(worker).add_rpc_message('set_worker_processes', n=n)
 
     @rpc_method()
-    def send_scheduler_message(self, worker, task, message):
+    def send_scheduler_message(self, worker, task, content):
         if not self._config.send_messages:
-            return {"messageId": None}
+            return {"message_id": None}
 
         message_id = str(uuid.uuid4())
         self._state.get_worker(worker).add_rpc_message('dispatch_scheduler_message', task_id=task,
-                                                       message_id=message_id, message=message)
+                                                       message_id=message_id, content=content)
 
-        return {"messageId": message_id}
+        return {"message_id": message_id}
 
     @rpc_method()
     def add_scheduler_message_response(self, task_id, message_id, response):
@@ -1283,15 +1286,13 @@ class Scheduler(object):
             'tracking_url': getattr(task, "tracking_url", None),
             'status_message': getattr(task, "status_message", None),
             'progress_percentage': getattr(task, "progress_percentage", None),
-            'enabled_scheduler_messages': False,
         }
         if task.status == DISABLED:
             ret['re_enable_able'] = task.scheduler_disable_time is not None
         if include_deps:
             ret['deps'] = list(task.deps if deps is None else deps)
-        if self._config.send_messages and task.status == RUNNING and task.worker_running:
-            worker = self._state.get_worker(task.worker_running)
-            ret['enabled_scheduler_messages'] = worker.info.get('receive_messages', False)
+        if self._config.send_messages and task.status == RUNNING:
+            ret['accepted_messages'] = task.accepted_messages
         return ret
 
     @rpc_method()

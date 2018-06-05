@@ -76,7 +76,7 @@ function visualiserApp(luigi) {
             re_enable: task.status == "DISABLED" && task.re_enable_able,
             statusMessage: task.status_message,
             progressPercentage: task.progress_percentage,
-            enabledSchedulerMessages: task.enabled_scheduler_messages,
+            acceptedMessages: task.accepted_messages,
             workerIdRunning: task.worker_running,
         };
     }
@@ -348,14 +348,14 @@ function visualiserApp(luigi) {
         });
 
         $send.on("click", function($event) {
-            var message = $input.val();
+            var content = $input.val();
             var awaitResponse = $awaitResponse.prop("checked");
-            if (message && data.worker) {
+            if (content && data.worker) {
                 if (awaitResponse) {
                     $responseContainer.show();
                     $responseSpinner.show();
                     $responseContent.empty();
-                    luigi.sendSchedulerMessage(data.worker, data.taskId, message, function(messageId) {
+                    luigi.sendSchedulerMessage(data.worker, data.taskId, content, function(messageId) {
                         var interval = window.setInterval(function() {
                             luigi.getSchedulerMessageResponse(data.taskId, messageId, function(response) {
                                 if (response != null) {
@@ -369,7 +369,7 @@ function visualiserApp(luigi) {
                     $event.stopPropagation();
                 } else {
                     $responseContainer.hide();
-                    luigi.sendSchedulerMessage(data.worker, data.taskId, message);
+                    luigi.sendSchedulerMessage(data.worker, data.taskId, content);
                 }
             }
         });

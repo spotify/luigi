@@ -276,11 +276,6 @@ force_multiprocessing
   the number of workers.
   Defaults to false.
 
-receive_messages
-  If true, workers can receive messages sent by the scheduler and dispatch them
-  to running tasks.
-  Defaults to true.
-
 
 [elasticsearch]
 ---------------

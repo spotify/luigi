@@ -317,3 +317,39 @@ built-in solutions. In the case of you're dealing with a file system
 :meth:`~luigi.target.FileSystemTarget.temporary_path`. For other targets, you
 should ensure that the way you're writing your final output directory is
 atomic.
+
+Sending messages to tasks
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The central scheduler is able to send messages to particular tasks. When a running task accepts 
+messages, it can access a `multiprocessing.Queue <https://docs.python.org/3/library/multiprocessing.html#pipes-and-queues>`__
+object storing incoming messages. You can implement custom behavior to react and respond to
+messages:
+
+.. code-block:: python
+
+    class Example(luigi.Task):
+
+        # common task setup
+        ...
+
+        # configure the task to accept all incoming messages
+        accepted_messages = True
+
+        def run(self):
+            # this example runs some loop and listens for the
+            # "terminate" message, and responds to all other messages
+            for _ in some_loop():
+                # check incomming messages
+                if not self.scheduler_messages.empty():
+                    msg = self.scheduler_messages.get()
+                    if msg.content == "terminate":
+                        break
+                    else:
+                        msg.respond("unknown message")
+
+            # finalize
+            ...
+
+Messages can be sent right from the scheduler UI which also displays responses (if any). Note that
+this feature is only available when the scheduler is configured to send messages (see the :ref:`scheduler-config` config), and the task is configured to accept them.

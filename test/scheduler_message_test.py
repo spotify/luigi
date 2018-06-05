@@ -35,6 +35,8 @@ def fast_worker(scheduler, **kwargs):
 class WriteMessageToFile(luigi.Task):
 
     path = luigi.Parameter()
+    
+    accepted_messages = True
 
     def output(self):
         return luigi.LocalTarget(self.path)
@@ -54,7 +56,7 @@ class SchedulerMessageTest(LuigiTestCase):
 
     def test_receive_messsage(self):
         sch = luigi.scheduler.Scheduler(send_messages=True)
-        with fast_worker(sch, receive_messages=True) as w:
+        with fast_worker(sch) as w:
             with tempfile.NamedTemporaryFile() as tmp:
                 if os.path.exists(tmp.name):
                     os.remove(tmp.name)
@@ -71,7 +73,7 @@ class SchedulerMessageTest(LuigiTestCase):
 
     def test_receive_messages_disabled(self):
         sch = luigi.scheduler.Scheduler(send_messages=True)
-        with fast_worker(sch, receive_messages=False, force_multiprocessing=False) as w:
+        with fast_worker(sch, force_multiprocessing=False) as w:
                 class MyTask(RunOnceTask):
                     def run(self):
                         self.had_queue = self.scheduler_messages is not None
@@ -87,7 +89,7 @@ class SchedulerMessageTest(LuigiTestCase):
 
     def test_send_messages_disabled(self):
         sch = luigi.scheduler.Scheduler(send_messages=False)
-        with fast_worker(sch, receive_messages=True) as w:
+        with fast_worker(sch) as w:
             with tempfile.NamedTemporaryFile() as tmp:
                 if os.path.exists(tmp.name):
                     os.remove(tmp.name)
