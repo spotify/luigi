@@ -962,7 +962,7 @@ class Scheduler(object):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)
             response = task.scheduler_message_responses.pop(message_id, None)
-        return {"taskId": task_id, "response": response}
+        return {"response": response}
 
     @rpc_method()
     def is_pause_enabled(self):

@@ -54,6 +54,20 @@ class WriteMessageToFile(luigi.Task):
 
 class SchedulerMessageTest(LuigiTestCase):
 
+    def test_scheduler_methods(self):
+        sch = luigi.scheduler.Scheduler(send_messages=True)
+        sch.add_task(task_id="foo-task", worker="foo-worker")
+
+        res = sch.send_scheduler_message("foo-worker", "foo-task", "message content")
+        message_id = res["message_id"]
+        self.assertTrue(len(message_id) > 0)
+        self.assertIn("-", message_id)
+
+        sch.add_scheduler_message_response("foo-task", message_id, "message response")
+        res = sch.get_scheduler_message_response("foo-task", message_id)
+        response = res["response"]
+        self.assertEqual(response, "message response")
+
     def test_receive_messsage(self):
         sch = luigi.scheduler.Scheduler(send_messages=True)
         with fast_worker(sch) as w:
@@ -74,18 +88,18 @@ class SchedulerMessageTest(LuigiTestCase):
     def test_receive_messages_disabled(self):
         sch = luigi.scheduler.Scheduler(send_messages=True)
         with fast_worker(sch, force_multiprocessing=False) as w:
-                class MyTask(RunOnceTask):
-                    def run(self):
-                        self.had_queue = self.scheduler_messages is not None
-                        super(MyTask, self).run()
+            class MyTask(RunOnceTask):
+                def run(self):
+                    self.had_queue = self.scheduler_messages is not None
+                    super(MyTask, self).run()
 
-                task = MyTask()
-                w.add(task)
+            task = MyTask()
+            w.add(task)
 
-                sch.send_scheduler_message(w._id, task.task_id, "test")
-                w.run()
+            sch.send_scheduler_message(w._id, task.task_id, "test")
+            w.run()
 
-                self.assertFalse(task.had_queue)
+            self.assertFalse(task.had_queue)
 
     def test_send_messages_disabled(self):
         sch = luigi.scheduler.Scheduler(send_messages=False)
