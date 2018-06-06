@@ -616,7 +616,10 @@ class BoolParameter(Parameter):
     default value of ``False``.
     """
 
+    improved_parsing = False
+
     def __init__(self, *args, **kwargs):
+        self.improved_parsing = kwargs.pop("improved_parsing", self.__class__.improved_parsing)
         super(BoolParameter, self).__init__(*args, **kwargs)
         if self._default == _no_value:
             self._default = False
@@ -639,13 +642,13 @@ class BoolParameter(Parameter):
         except ValueError:
             return None
 
-    @classmethod
-    def _parser_kwargs(cls, *args, **kwargs):
-        parser_kwargs = super(BoolParameter, cls)._parser_kwargs(*args, **kwargs)
-        parser_kwargs.update({
-            "nargs": "?",
-            "const": True,
-        })
+    def _parser_kwargs(self, *args, **kwargs):
+        parser_kwargs = super(BoolParameter, self)._parser_kwargs(*args, **kwargs)
+        if self.improved_parsing:
+            parser_kwargs["nargs"] = "?"
+            parser_kwargs["const"] = True
+        else:
+            parser_kwargs["action"] = "store_true"
         return parser_kwargs
 
 

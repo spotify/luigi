@@ -58,11 +58,13 @@ class Foo(luigi.Task):
 
 class Baz(luigi.Task):
     bool = luigi.BoolParameter()
-    bool2 = luigi.BoolParameter(default=True)
+    bool_true = luigi.BoolParameter(default=True)
+    bool_improved = luigi.BoolParameter(improved_parsing=True)
 
     def run(self):
         Baz._val = self.bool
-        Baz._val2 = self.bool2
+        Baz._val_true = self.bool_true
+        Baz._val_improved = self.bool_improved
 
 
 class ListFoo(luigi.Task):
@@ -200,25 +202,18 @@ class ParameterTest(LuigiTestCase):
     def test_bool_parsing(self):
         self.run_locally(['Baz'])
         self.assertFalse(Baz._val)
-        self.assertTrue(Baz._val2)
+        self.assertTrue(Baz._val_true)
+        self.assertFalse(Baz._val_improved)
 
-        self.run_locally(['Baz', '--bool'])
+        self.run_locally(['Baz', '--bool', '--bool-true'])
         self.assertTrue(Baz._val)
+        self.assertTrue(Baz._val_true)
 
-        self.run_locally(['Baz', '--bool', 'true'])
-        self.assertTrue(Baz._val)
+        self.run_locally(['Baz', '--bool-improved', 'true'])
+        self.assertTrue(Baz._val_improved)
 
-        self.run_locally(['Baz', '--bool', 'false'])
-        self.assertFalse(Baz._val)
-
-        self.run_locally(['Baz', '--bool2'])
-        self.assertTrue(Baz._val2)
-
-        self.run_locally(['Baz', '--bool2', 'true'])
-        self.assertTrue(Baz._val2)
-
-        self.run_locally(['Baz', '--bool2', 'false'])
-        self.assertFalse(Baz._val2)
+        self.run_locally(['Baz', '--bool-improved', 'false'])
+        self.assertFalse(Baz._val_improved)
 
     def test_bool_default(self):
         self.assertTrue(WithDefaultTrue().x)
