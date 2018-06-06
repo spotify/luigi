@@ -334,7 +334,7 @@ messages:
         ...
 
         # configure the task to accept all incoming messages
-        accepted_messages = True
+        accepts_messages = True
 
         def run(self):
             # this example runs some loop and listens for the

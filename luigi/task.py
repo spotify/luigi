@@ -280,10 +280,10 @@ class Task(object):
                     logger.exception("Error in event callback for %r", event)
 
     @property
-    def accepted_messages(self):
+    def accepts_messages(self):
         """
-        Configures which scheduler messages can be received and returns them. When falsy, this tasks
-        does not accept any message. When True, all messages are accepted.
+        For configuring which scheduler messages can be received. When falsy, this tasks does not
+        accept any message. When True, all messages are accepted.
         """
         return False
 

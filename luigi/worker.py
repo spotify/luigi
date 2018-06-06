@@ -822,7 +822,7 @@ class Worker(object):
             module=task.task_module,
             batchable=task.batchable,
             retry_policy_dict=_get_retry_policy_dict(task),
-            accepted_messages=task.accepted_messages,
+            accepts_messages=task.accepts_messages,
         )
 
     def _validate_dependency(self, dependency):
@@ -963,7 +963,7 @@ class Worker(object):
             task_process.run()
 
     def _create_task_process(self, task):
-        message_queue = multiprocessing.Queue() if task.accepted_messages else None
+        message_queue = multiprocessing.Queue() if task.accepts_messages else None
         reporter = TaskStatusReporter(self._scheduler, task.task_id, self._id, message_queue)
         use_multiprocessing = self._config.force_multiprocessing or bool(self.worker_processes > 1)
         return TaskProcess(

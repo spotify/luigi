@@ -36,7 +36,7 @@ class WriteMessageToFile(luigi.Task):
 
     path = luigi.Parameter()
 
-    accepted_messages = True
+    accepts_messages = True
 
     def output(self):
         return luigi.LocalTarget(self.path)

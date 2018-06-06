@@ -280,7 +280,7 @@ class OrderedSet(collections.MutableSet):
 
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
-                 params=None, accepted_messages=False, tracking_url=None, status_message=None,
+                 params=None, accepts_messages=False, tracking_url=None, status_message=None,
                  progress_percentage=None, retry_policy='notoptional'):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
@@ -303,7 +303,7 @@ class Task(object):
         self.module = module
         self.params = _get_default(params, {})
 
-        self.accepted_messages = accepted_messages
+        self.accepts_messages = accepts_messages
         self.retry_policy = retry_policy
         self.failures = Failures(self.retry_policy.disable_window)
         self.tracking_url = tracking_url
@@ -778,7 +778,7 @@ class Scheduler(object):
     @rpc_method()
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
-                 priority=0, family='', module=None, params=None, accepted_messages=False,
+                 priority=0, family='', module=None, params=None, accepts_messages=False,
                  assistant=False, tracking_url=None, worker=None, batchable=None,
                  batch_id=None, retry_policy_dict=None, owners=None, **kwargs):
         """
@@ -803,7 +803,7 @@ class Scheduler(object):
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
                 priority=priority, family=family, module=module, params=params,
-                accepted_messages=accepted_messages,
+                accepts_messages=accepts_messages,
             )
         else:
             _default_task = None
@@ -1292,7 +1292,7 @@ class Scheduler(object):
         if include_deps:
             ret['deps'] = list(task.deps if deps is None else deps)
         if self._config.send_messages and task.status == RUNNING:
-            ret['accepted_messages'] = task.accepted_messages
+            ret['accepts_messages'] = task.accepts_messages
         return ret
 
     @rpc_method()
