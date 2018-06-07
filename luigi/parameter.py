@@ -616,10 +616,13 @@ class BoolParameter(Parameter):
     default value of ``False``.
     """
 
-    improved_parsing = False
+    IMPLICIT_PARSING = "implicit"
+    EXPLICIT_PARSING = "explicit"
+
+    parsing = IMPLICIT_PARSING
 
     def __init__(self, *args, **kwargs):
-        self.improved_parsing = kwargs.pop("improved_parsing", self.__class__.improved_parsing)
+        self.parsing = kwargs.pop("parsing", self.__class__.parsing)
         super(BoolParameter, self).__init__(*args, **kwargs)
         if self._default == _no_value:
             self._default = False
@@ -644,11 +647,13 @@ class BoolParameter(Parameter):
 
     def _parser_kwargs(self, *args, **kwargs):
         parser_kwargs = super(BoolParameter, self)._parser_kwargs(*args, **kwargs)
-        if self.improved_parsing:
+        if self.parsing == self.IMPLICIT_PARSING:
+            parser_kwargs["action"] = "store_true"
+        elif self.parsing == self.EXPLICIT_PARSING:
             parser_kwargs["nargs"] = "?"
             parser_kwargs["const"] = True
         else:
-            parser_kwargs["action"] = "store_true"
+            raise ValueError("unknown parsing value '{}'".format(self.parsing))
         return parser_kwargs
 
 
