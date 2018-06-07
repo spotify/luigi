@@ -215,6 +215,48 @@ class TestS3CopyToTable(unittest.TestCase):
 
         return
 
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.does_schema_exist", return_value=False)
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_s3_copy_to_missing_schema(self, mock_redshift_target, mock_does_exist):
+        task = DummyS3CopyToTableKey(table='schema.table_with_schema')
+        task.run()
+
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+        executed_query = mock_cursor.execute.call_args_list[0][0][0]
+        assert executed_query.startswith("CREATE SCHEMA IF NOT EXISTS schema")
+
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.does_schema_exist", return_value=False)
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_s3_copy_to_missing_schema_with_no_schema(self, mock_redshift_target, mock_does_exist):
+        task = DummyS3CopyToTableKey(table='table_with_no_schema')
+        task.run()
+
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+        executed_query = mock_cursor.execute.call_args_list[0][0][0]
+        assert not executed_query.startswith("CREATE SCHEMA IF NOT EXISTS")
+
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.does_schema_exist", return_value=True)
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_s3_copy_to_existing_schema_with_schema(self, mock_redshift_target, mock_does_exist):
+        task = DummyS3CopyToTableKey(table='schema.table_with_schema')
+        task.run()
+
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+        executed_query = mock_cursor.execute.call_args_list[0][0][0]
+        assert not executed_query.startswith("CREATE SCHEMA IF NOT EXISTS")
+
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.does_table_exist",
                 return_value=False)
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
