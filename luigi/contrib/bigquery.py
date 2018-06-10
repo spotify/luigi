@@ -420,11 +420,10 @@ class MixinBigQueryBulkComplete(object):
 
     @classmethod
     def bulk_complete(cls, parameter_tuples):
-        if len(parameter_tuples) < 1:
-            return
-
         # Instantiate the tasks to inspect them
         tasks_with_params = [(cls(p), p) for p in parameter_tuples]
+        if not tasks_with_params:
+            return
 
         # Grab the set of BigQuery datasets we are interested in
         datasets = {t.output().table.dataset for t, p in tasks_with_params}
