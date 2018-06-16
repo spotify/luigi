@@ -726,6 +726,11 @@ pause_enabled
   If false, disables pause/unpause operations and hides the pause toggle from
   the visualiser.
 
+send_messages
+  When true, the scheduler is allowed to send messages to running tasks and
+  the central scheduler provides a simple prompt per task to send messages.
+  Defaults to true.
+
 
 [sendgrid]
 ----------

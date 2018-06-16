@@ -280,6 +280,14 @@ class Task(object):
                     logger.exception("Error in event callback for %r", event)
 
     @property
+    def accepts_messages(self):
+        """
+        For configuring which scheduler messages can be received. When falsy, this tasks does not
+        accept any message. When True, all messages are accepted.
+        """
+        return False
+
+    @property
     def task_module(self):
         ''' Returns what Python module to import to get access to this class. '''
         # TODO(erikbern): we should think about a language-agnostic mechanism
@@ -687,7 +695,7 @@ class Task(object):
                         pickle.dumps(self)
 
         """
-        unpicklable_properties = tuple(luigi.worker.TaskProcess.forward_reporter_callbacks.values())
+        unpicklable_properties = tuple(luigi.worker.TaskProcess.forward_reporter_attributes.values())
         reserved_properties = {}
         for property_name in unpicklable_properties:
             if hasattr(self, property_name):

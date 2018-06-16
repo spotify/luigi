@@ -75,7 +75,9 @@ function visualiserApp(luigi) {
             error: task.status == "FAILED",
             re_enable: task.status == "DISABLED" && task.re_enable_able,
             statusMessage: task.status_message,
-            progressPercentage: task.progress_percentage
+            progressPercentage: task.progress_percentage,
+            acceptsMessages: task.accepts_messages,
+            workerIdRunning: task.worker_running,
         };
     }
 
@@ -325,6 +327,58 @@ function visualiserApp(luigi) {
             },
             500
         );
+    }
+
+    function showSchedulerMessageModal(data) {
+        var $modal = $("#schedulerMessageModal");
+
+        $modal.empty().append(renderTemplate("schedulerMessageTemplate", data));
+        var $input = $modal.find("#schedulerMessageInput");
+        var $send = $modal.find("#schedulerMessageButton");
+        var $awaitResponse = $modal.find("#schedulerMessageAwaitResponse");
+        var $responseContainer = $modal.find("#schedulerMessageResponse");
+        var $responseSpinner = $responseContainer.find("pre > i");
+        var $responseContent = $responseContainer.find("pre > div");
+
+        $input.on("keypress", function($event) {
+            if (event.keyCode == 13) {
+                $send.trigger("click");
+                $event.preventDefault();
+            }
+        });
+
+        $send.on("click", function($event) {
+            var content = $input.val();
+            var awaitResponse = $awaitResponse.prop("checked");
+            if (content && data.worker) {
+                if (awaitResponse) {
+                    $responseContainer.show();
+                    $responseSpinner.show();
+                    $responseContent.empty();
+                    luigi.sendSchedulerMessage(data.worker, data.taskId, content, function(messageId) {
+                        var interval = window.setInterval(function() {
+                            luigi.getSchedulerMessageResponse(data.taskId, messageId, function(response) {
+                                if (response != null) {
+                                    clearInterval(interval);
+                                    $responseSpinner.hide();
+                                    $responseContent.html(response);
+                                }
+                            });
+                        }, 1000);
+                    });
+                    $event.stopPropagation();
+                } else {
+                    $responseContainer.hide();
+                    luigi.sendSchedulerMessage(data.worker, data.taskId, content);
+                }
+            }
+        });
+
+        $modal.on("shown.bs.modal", function() {
+            $input.focus();
+        });
+
+        $modal.modal({});
     }
 
     function preProcessGraph(dependencyGraph) {
@@ -1024,6 +1078,11 @@ function visualiserApp(luigi) {
                 var data = $(this).data();
                 showStatusMessage(data);
             });
+
+            $('.worker-table tbody').on('click', 'td .schedulerMessage', function() {
+                var data = $(this).data();
+                showSchedulerMessageModal(data);
+            });
         });
 
         luigi.getResourceList(function(resources) {
@@ -1229,6 +1288,11 @@ function visualiserApp(luigi) {
         $('#taskTable tbody').on('click', 'td.details-control .statusMessage', function () {
             var data = $(this).data();
             showStatusMessage(data);
+        });
+
+        $('#taskTable tbody').on('click', 'td.details-control .schedulerMessage', function () {
+            var data = $(this).data();
+            showSchedulerMessageModal(data);
         });
 
         $('.navbar-nav').on('click', 'a', function () {
