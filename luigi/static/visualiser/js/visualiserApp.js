@@ -65,7 +65,7 @@ function visualiserApp(luigi) {
             taskParams: taskParams,
             displayName: task.display_name,
             priority: task.priority,
-            resources: JSON.stringify(task.resources).replace(/,"/g, ', "'),
+            resources: JSON.stringify(task.resources_running || task.resources).replace(/,"/g, ', "'),
             displayTime: displayTime,
             displayTimestamp: task.last_updated,
             timeRunning: time_running,
@@ -75,7 +75,9 @@ function visualiserApp(luigi) {
             error: task.status == "FAILED",
             re_enable: task.status == "DISABLED" && task.re_enable_able,
             statusMessage: task.status_message,
-            progressPercentage: task.progress_percentage
+            progressPercentage: task.progress_percentage,
+            acceptsMessages: task.accepts_messages,
+            workerIdRunning: task.worker_running,
         };
     }
 
@@ -301,20 +303,20 @@ function visualiserApp(luigi) {
         $("#statusMessageModal").modal({});
         var refreshInterval = setInterval(function() {
                 if ($("#statusMessageModal").is(":hidden"))
-                    clearInterval(refreshInterval)
+                    clearInterval(refreshInterval);
                 else {
                     luigi.getTaskStatusMessage(data.taskId, function(data) {
                         if (data.statusMessage === null)
-                            $("#statusMessageModal pre").hide()
+                            $("#statusMessageModal pre").hide();
                         else {
                             $("#statusMessageModal pre").html(data.statusMessage).show();
                         }
                     });
                     luigi.getTaskProgressPercentage(data.taskId, function(data) {
                         if (data.progressPercentage === null)
-                            $("#statusMessageModal .progress").hide()
+                            $("#statusMessageModal .progress").hide();
                         else {
-                            $("#statusMessageModal .progress").show()
+                            $("#statusMessageModal .progress").show();
                             $("#statusMessageModal .progress-bar")
                                 .attr('aria-valuenow', data.progressPercentage)
                                 .text(data.progressPercentage + '%')
@@ -325,6 +327,58 @@ function visualiserApp(luigi) {
             },
             500
         );
+    }
+
+    function showSchedulerMessageModal(data) {
+        var $modal = $("#schedulerMessageModal");
+
+        $modal.empty().append(renderTemplate("schedulerMessageTemplate", data));
+        var $input = $modal.find("#schedulerMessageInput");
+        var $send = $modal.find("#schedulerMessageButton");
+        var $awaitResponse = $modal.find("#schedulerMessageAwaitResponse");
+        var $responseContainer = $modal.find("#schedulerMessageResponse");
+        var $responseSpinner = $responseContainer.find("pre > i");
+        var $responseContent = $responseContainer.find("pre > div");
+
+        $input.on("keypress", function($event) {
+            if (event.keyCode == 13) {
+                $send.trigger("click");
+                $event.preventDefault();
+            }
+        });
+
+        $send.on("click", function($event) {
+            var content = $input.val();
+            var awaitResponse = $awaitResponse.prop("checked");
+            if (content && data.worker) {
+                if (awaitResponse) {
+                    $responseContainer.show();
+                    $responseSpinner.show();
+                    $responseContent.empty();
+                    luigi.sendSchedulerMessage(data.worker, data.taskId, content, function(messageId) {
+                        var interval = window.setInterval(function() {
+                            luigi.getSchedulerMessageResponse(data.taskId, messageId, function(response) {
+                                if (response != null) {
+                                    clearInterval(interval);
+                                    $responseSpinner.hide();
+                                    $responseContent.html(response);
+                                }
+                            });
+                        }, 1000);
+                    });
+                    $event.stopPropagation();
+                } else {
+                    $responseContainer.hide();
+                    luigi.sendSchedulerMessage(data.worker, data.taskId, content);
+                }
+            }
+        });
+
+        $modal.on("shown.bs.modal", function() {
+            $input.focus();
+        });
+
+        $modal.modal({});
     }
 
     function preProcessGraph(dependencyGraph) {
@@ -382,7 +436,7 @@ function visualiserApp(luigi) {
                 }
             } else {
                 $("#searchError").addClass("alert alert-error");
-                $("#searchError").append("Couldn't find task " + taskId);
+                $("#searchError").text("Couldn't find task " + taskId);
             }
             drawGraphETL(dependencyGraph, paint);
             bindGraphEvents();
@@ -402,7 +456,7 @@ function visualiserApp(luigi) {
                 bindGraphEvents();
             } else {
                 $("#searchError").addClass("alert alert-error");
-                $("#searchError").append("Couldn't find task " + taskId);
+                $("#searchError").text("Couldn't find task " + taskId);
             }
         }
 
@@ -462,7 +516,7 @@ function visualiserApp(luigi) {
 
             // Populate fields with values from hash.
             if (fragmentQuery.length) {
-                $('select[name=taskTable_length').val(fragmentQuery.length);
+                $('select[name=taskTable_length]').val(fragmentQuery.length);
             }
             $("#serverSideCheckbox").prop('checked', fragmentQuery.filterOnServer === '1' ? true : false);
             dt.search(fragmentQuery.search__search);
@@ -516,7 +570,7 @@ function visualiserApp(luigi) {
             $(".graph-node-a").click(function(event) {
                 var taskId = $(this).attr("data-task-id");
                 var status = $(this).attr("data-task-status");
-                if (status=="FAILED") {
+                if (status == "FAILED") {
                     event.preventDefault();
                     luigi.getErrorTrace(taskId, function(error) {
                        showErrorTrace(error);
@@ -581,7 +635,7 @@ function visualiserApp(luigi) {
         var times = {};
         for (var i = 0; i < listId.length; i++) {
             for (var j = 0; j < tasks.length; j++) {
-                if (listId[i]===tasks[j].taskId) {
+                if (listId[i] === tasks[j].taskId) {
                     var finishTime = new Date(tasks[j].time_running*1000);
                     var startTime = new Date(tasks[j].start_time*1000);
                     var durationTime = new Date((finishTime - startTime)*1000).getSeconds();
@@ -1011,7 +1065,11 @@ function visualiserApp(luigi) {
     $(document).ready(function() {
         loadTemplates();
 
-        luigi.isPaused(createPauseToggle);
+        luigi.isPauseEnabled(function(enabled) {
+            if (enabled) {
+                luigi.isPaused(createPauseToggle);
+            }
+        });
 
         luigi.getWorkerList(function(workers) {
             $("#workerList").append(renderWorkers(workers));
@@ -1019,6 +1077,11 @@ function visualiserApp(luigi) {
             $('.worker-table tbody').on('click', 'td .statusMessage', function() {
                 var data = $(this).data();
                 showStatusMessage(data);
+            });
+
+            $('.worker-table tbody').on('click', 'td .schedulerMessage', function() {
+                var data = $(this).data();
+                showSchedulerMessageModal(data);
             });
         });
 
@@ -1182,6 +1245,7 @@ function visualiserApp(luigi) {
             }
         });
 
+        processHashChange();
         updateTasks();
         bindListEvents();
 
@@ -1195,26 +1259,40 @@ function visualiserApp(luigi) {
         } );
 
         $('#taskTable tbody').on('click', 'td.details-control .forgiveFailures', function (ev) {
-            var tr = $(this).closest('tr');
+            var that = $(this);
+            var tr = that.closest('tr');
             var row = dt.row( tr );
             var data = row.data();
             luigi.forgiveFailures(data.taskId, function(data) {
-                if (ev.altKey){
+                if (ev.altKey) {
                     updateTasks(); // update may not be cheap
+                } else {
+                    that.tooltip('hide');
+                    that.remove();
                 }
             });
         } );
 
-        $('#taskTable tbody').on('click', 'td.details-control .re-enable-button', function () {
+        $('#taskTable tbody').on('click', 'td.details-control .re-enable-button', function (ev) {
             var that = $(this);
-            luigi.reEnable($(this).attr("data-task-id"), function(data) {
-                updateTasks();
+            luigi.reEnable(that.attr("data-task-id"), function(data) {
+                if (ev.altKey) {
+                    updateTasks(); // update may not be cheap
+                } else {
+                    that.tooltip('hide');
+                    that.remove();
+                }
             });
         });
 
         $('#taskTable tbody').on('click', 'td.details-control .statusMessage', function () {
             var data = $(this).data();
             showStatusMessage(data);
+        });
+
+        $('#taskTable tbody').on('click', 'td.details-control .schedulerMessage', function () {
+            var data = $(this).data();
+            showSchedulerMessageModal(data);
         });
 
         $('.navbar-nav').on('click', 'a', function () {

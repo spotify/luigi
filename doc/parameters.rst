@@ -25,7 +25,7 @@ i.e.
 .. code:: python
 
     d = DailyReport(datetime.date(2012, 5, 10))
-    print d.date
+    print(d.date)
 
 will return the same date that the object was constructed with.
 Same goes if you invoke Luigi on the command line.

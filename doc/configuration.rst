@@ -270,6 +270,12 @@ check_unfulfilled_deps
   resource-intensive.
   Defaults to true.
 
+force_multiprocessing
+  By default, luigi uses multiprocessing when *more than one* worker process is
+  requested. Whet set to true, multiprocessing is used independent of the
+  the number of workers.
+  Defaults to false.
+
 
 [elasticsearch]
 ---------------
@@ -715,6 +721,15 @@ worker_disconnect_delay
   Number of seconds to wait after a worker has stopped pinging the
   scheduler before removing it and marking all of its running tasks as
   failed. Defaults to 60.
+
+pause_enabled
+  If false, disables pause/unpause operations and hides the pause toggle from
+  the visualiser.
+
+send_messages
+  When true, the scheduler is allowed to send messages to running tasks and
+  the central scheduler provides a simple prompt per task to send messages.
+  Defaults to true.
 
 
 [sendgrid]

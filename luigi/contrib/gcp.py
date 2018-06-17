@@ -6,9 +6,9 @@ logger = logging.getLogger('luigi-interface')
 
 try:
     import httplib2
-    import oauth2client
+    import google.auth
 except ImportError:
-    logger.warning("Loading GCP module without the python packages httplib2, oauth2client. \
+    logger.warning("Loading GCP module without the python packages httplib2, google-auth. \
         This *could* crash at runtime if no other credentials are provided.")
 
 
@@ -33,11 +33,11 @@ def get_authenticate_kwargs(oauth_credentials=None, http_=None):
         # neither http_ or credentials provided
         try:
             # try default credentials
-            oauth_credentials = oauth2client.client.GoogleCredentials.get_application_default()
+            credentials, _ = google.auth.default()
             authenticate_kwargs = {
-                "credentials": oauth_credentials
+                "credentials": credentials
             }
-        except oauth2client.client.GoogleCredentials.ApplicationDefaultCredentialsError:
+        except google.auth.exceptions.DefaultCredentialsError:
             # try http using httplib2
             authenticate_kwargs = {
                 "http": httplib2.Http()

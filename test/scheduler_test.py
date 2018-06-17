@@ -27,6 +27,12 @@ from helpers import with_config
 
 class SchedulerIoTest(unittest.TestCase):
 
+    def test_pretty_id_unicode(self):
+        scheduler = luigi.scheduler.Scheduler()
+        scheduler.add_task(worker='A', task_id='1', params={u'foo': u'\u2192bar'})
+        [task] = list(scheduler._state.get_active_tasks())
+        task.pretty_id
+
     def test_load_old_state(self):
         tasks = {}
         active_workers = {'Worker1': 1e9, 'Worker2': time.time()}
@@ -40,8 +46,7 @@ class SchedulerIoTest(unittest.TestCase):
                 state_path=fn.name)
             state.load()
 
-            self.assertEqual(set(state.get_worker_ids()),
-                             set(['Worker1', 'Worker2']))
+            self.assertEqual(set(state.get_worker_ids()), {'Worker1', 'Worker2'})
 
     def test_load_broken_state(self):
         with tempfile.NamedTemporaryFile(delete=True) as fn:
@@ -223,6 +228,14 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertFalse(task_9.has_excessive_failures())
         task_9.add_failure()
         self.assertTrue(task_9.has_excessive_failures())
+
+    @with_config({'scheduler': {'pause_enabled': 'false'}})
+    def test_pause_disabled(self):
+        s = luigi.scheduler.Scheduler()
+        self.assertFalse(s.is_pause_enabled()['enabled'])
+        self.assertFalse(s.is_paused()['paused'])
+        s.pause()
+        self.assertFalse(s.is_paused()['paused'])
 
 
 class SchedulerWorkerTest(unittest.TestCase):

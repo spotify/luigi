@@ -267,6 +267,16 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         finally:
             cursor.close()
 
+    def create_schema(self, connection):
+        """
+        Will create the schema in the database
+        """
+        if '.' not in self.table:
+            return
+
+        query = 'CREATE SCHEMA IF NOT EXISTS {schema_name};'.format(schema_name=self.table.split('.')[0])
+        connection.cursor().execute(query)
+
     def create_table(self, connection):
         """
         Override to provide code for creating the target table.
@@ -289,6 +299,24 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
                 '{name} {type}'.format(
                     name=name,
                     type=type) for name, type in self.columns
+            )
+            query = ("CREATE {type} TABLE "
+                     "{table} ({coldefs}) "
+                     "{table_attributes}").format(
+                type=self.table_type,
+                table=self.table,
+                coldefs=coldefs,
+                table_attributes=self.table_attributes)
+
+            connection.cursor().execute(query)
+        elif len(self.columns[0]) == 3:
+            # if columns is specified as (name, type, encoding) tuples
+            # possible column encodings: https://docs.aws.amazon.com/redshift/latest/dg/c_Compression_encodings.html
+            coldefs = ','.join(
+                '{name} {type} ENCODE {encoding}'.format(
+                    name=name,
+                    type=type,
+                    encoding=encoding) for name, type, encoding in self.columns
             )
             query = ("CREATE {type} TABLE "
                      "{table} ({coldefs}) "
@@ -335,7 +363,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         logger.info("Inserting file: %s", f)
         colnames = ''
-        if len(self.columns) > 0:
+        if self.columns and len(self.columns) > 0:
             colnames = ",".join([x[0] for x in self.columns])
             colnames = '({})'.format(colnames)
 
@@ -365,6 +393,27 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
             table=self.table,
             update_id=self.update_id)
 
+    def does_schema_exist(self, connection):
+        """
+        Determine whether the schema already exists.
+        """
+
+        if '.' in self.table:
+            query = ("select 1 as schema_exists "
+                     "from pg_namespace "
+                     "where nspname = lower(%s) limit 1")
+        else:
+            return True
+
+        cursor = connection.cursor()
+        try:
+            schema = self.table.split('.')[0]
+            cursor.execute(query, [schema])
+            result = cursor.fetchone()
+            return bool(result)
+        finally:
+            cursor.close()
+
     def does_table_exist(self, connection):
         """
         Determine whether the table already exists.
@@ -390,9 +439,12 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         Perform pre-copy sql - such as creating table, truncating, or removing data older than x.
         """
+        if not self.does_schema_exist(connection):
+            logger.info("Creating schema for %s", self.table)
+            self.create_schema(connection)
+
         if not self.does_table_exist(connection):
             logger.info("Creating table %s", self.table)
-            connection.reset()
             self.create_table(connection)
 
         if self.do_truncate_table:
@@ -687,12 +739,10 @@ class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
             credentials=self._credentials())
 
         logger.info('Executing unload query from task: {name}'.format(name=self.__class__))
-        try:
-            cursor = connection.cursor()
-            cursor.execute(unload_query)
-            logger.info(cursor.statusmessage)
-        except:
-            raise
+
+        cursor = connection.cursor()
+        cursor.execute(unload_query)
+        logger.info(cursor.statusmessage)
 
         # Update marker table
         self.output().touch(connection)

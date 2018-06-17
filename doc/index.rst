@@ -15,7 +15,7 @@ Table of Contents
    workflows.rst
    tasks.rst
    parameters.rst
-   command_line.rst
+   running_luigi.rst
    central_scheduler.rst
    execution_model.rst
    luigi_patterns.rst
