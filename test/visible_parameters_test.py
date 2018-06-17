@@ -3,27 +3,27 @@ from helpers import unittest
 
 
 class TestTask1(luigi.Task):
-    param_one = luigi.Parameter(default='one', visible=2)
+    param_one = luigi.Parameter(default='one', visibility=2)
     param_two = luigi.Parameter(default='two')
-    param_three = luigi.Parameter(default='three', visible=2)
-    param_four = luigi.Parameter(default='four', significant=False, visible=1)
-    param_five = luigi.Parameter(default='five', visible=2, significant=False)
+    param_three = luigi.Parameter(default='three', visibility=2)
+    param_four = luigi.Parameter(default='four', significant=False, visibility=1)
+    param_five = luigi.Parameter(default='five', visibility=2, significant=False)
 
 
 class TestTask2(luigi.Task):
-    param_one = luigi.Parameter(default='1', visible=2)
-    param_two = luigi.Parameter(default='2', visible=2)
-    param_three = luigi.Parameter(default='3', visible=2)
-    param_four = luigi.Parameter(default='4', visible=2)
-    param_five = luigi.Parameter(default='5', visible=2)
+    param_one = luigi.Parameter(default='1', visibility=2)
+    param_two = luigi.Parameter(default='2', visibility=2)
+    param_three = luigi.Parameter(default='3', visibility=2)
+    param_four = luigi.Parameter(default='4', visibility=2)
+    param_five = luigi.Parameter(default='5', visibility=2)
 
 
 class TestTask3(luigi.Task):
-    param_one = luigi.Parameter(default='one', visible=2)
+    param_one = luigi.Parameter(default='one', visibility=2)
     param_two = luigi.Parameter(default='two')
-    param_three = luigi.Parameter(default='three', visible=2)
-    param_four = luigi.Parameter(default='four', significant=False, visible=1)
-    param_five = luigi.Parameter(default='five', significant=False, visible=2)
+    param_three = luigi.Parameter(default='three', visibility=2)
+    param_four = luigi.Parameter(default='four', significant=False, visibility=1)
+    param_five = luigi.Parameter(default='five', significant=False, visibility=2)
 
 
 class Test(unittest.TestCase):

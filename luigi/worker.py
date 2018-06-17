@@ -538,6 +538,9 @@ class Worker(object):
             for batch_task in self._batch_running_tasks.pop(task_id):
                 self._add_task_history.append((batch_task, status, True))
 
+        if task and kwargs.get('params'):
+            kwargs['params_visibility'] = task._get_params_visibility()
+
         self._scheduler.add_task(*args, **kwargs)
 
         logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
@@ -817,7 +820,7 @@ class Worker(object):
             runnable=runnable,
             priority=task.priority,
             resources=task.process_resources(),
-            params=task.to_str_params_with_visibility(),
+            params=task.to_str_params(),
             family=task.task_family,
             module=task.task_module,
             batchable=task.batchable,

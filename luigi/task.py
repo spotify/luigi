@@ -39,6 +39,7 @@ from luigi import six
 
 from luigi import parameter
 from luigi.task_register import Register
+from luigi.parameter import ParameterVisibility
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -489,19 +490,20 @@ class Task(object):
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
-            if ((not only_significant) or params[param_name].significant) and params[param_name].visible != 2:
+            if ((not only_significant) or params[param_name].significant) \
+                    and params[param_name].visibility != ParameterVisibility.PRIVATE:
                 params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
 
-    def to_str_params_with_visibility(self, only_significant=False):
-        params_str_with_visibility = {}
+    def _get_params_visibility(self):
+        params_visibility = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
-            if ((not only_significant) or params[param_name].significant) and params[param_name].visible != 2:
-                params_str_with_visibility[param_name] = (params[param_name].serialize(param_value), params[param_name].visible)
+            if params[param_name].visibility != ParameterVisibility.PRIVATE:
+                params_visibility[param_name] = params[param_name].visibility
 
-        return params_str_with_visibility
+        return params_visibility
 
     def clone(self, cls=None, **kwargs):
         """

@@ -44,6 +44,12 @@ from luigi.cmdline_parser import CmdlineParser
 _no_value = object()
 
 
+class ParameterVisibility(object):
+    PUBLIC = 0
+    HIDDEN = 1
+    PRIVATE = 2
+
+
 class ParameterException(Exception):
     """
     Base exception.
@@ -113,7 +119,8 @@ class Parameter(object):
     _counter = 0  # non-atomically increasing counter used for ordering parameters.
 
     def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
-                 config_path=None, positional=True, always_in_help=False, batch_method=None, visible=0):
+                 config_path=None, positional=True, always_in_help=False, batch_method=None,
+                 visibility=ParameterVisibility.PUBLIC):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -154,7 +161,7 @@ class Parameter(object):
             positional = False
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
         self.positional = positional
-        self.visible = visible  # 0 - public 1 - hidden 2 - private
+        self.visibility = visibility if visibility in (ParameterVisibility.PRIVATE, ParameterVisibility.PUBLIC, ParameterVisibility.HIDDEN) else ParameterVisibility.PUBLIC
 
         self.description = description
         self.always_in_help = always_in_help
