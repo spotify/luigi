@@ -408,12 +408,12 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='A_2', status=DONE)
         self.assertEqual({'A_1', 'A_2'}, set(self.sch.task_list(DONE, '').keys()))
 
-    def _start_simple_batch(self, use_max=False, mark_running=True, resources=None):
+    def _start_simple_batch(self, use_max=False, mark_running=True):
         self.sch.add_task_batcher(worker=WORKER, task_family='A', batched_args=['a'])
         self.sch.add_task(worker=WORKER, task_id='A_1', family='A', params={'a': '1'},
-                          batchable=True, resources=resources)
+                          batchable=True)
         self.sch.add_task(worker=WORKER, task_id='A_2', family='A', params={'a': '2'},
-                          batchable=True, resources=resources)
+                          batchable=True)
         response = self.sch.get_work(worker=WORKER)
         if mark_running:
             batch_id = response['batch_id']
@@ -495,13 +495,6 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.set_task_progress_percentage('A_1_2', 30)
         for task_id in ('A_1', 'A_2', 'A_1_2'):
             self.assertEqual(30, self.sch.get_task_progress_percentage(task_id)['progressPercentage'])
-
-    def test_batch_decrease_resources(self):
-        self.sch.update_resources(x=3)
-        self._start_simple_batch(resources={'x': 3})
-        self.sch.decrease_running_task_resources('A_1_2', {'x': 1})
-        for task_id in ('A_1', 'A_2', 'A_1_2'):
-            self.assertEqual(2, self.sch.get_running_task_resources(task_id)['resources']['x'])
 
     def test_batch_tracking_url(self):
         self._start_simple_batch()
@@ -870,7 +863,7 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id='E', status=DISABLED)
 
         # scheduler prunes the worker disabled task
-        self.assertEqual({'D', 'E'}, set(self.sch.task_list(DISABLED, '')))
+        self.assertEqual(set(['D', 'E']), set(self.sch.task_list(DISABLED, '')))
         self._test_prune_done_tasks([])
 
     def test_keep_failed_tasks_for_assistant(self):

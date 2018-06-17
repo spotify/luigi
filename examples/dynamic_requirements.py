@@ -21,7 +21,7 @@ import time
 import luigi
 
 
-class Configuration(luigi.Task):
+class Config(luigi.Task):
     seed = luigi.IntParameter()
 
     def output(self):
@@ -78,7 +78,7 @@ class Dynamic(luigi.Task):
 
     def run(self):
         # This could be done using regular requires method
-        config = self.clone(Configuration)
+        config = self.clone(Config)
         yield config
 
         with config.output().open() as f:

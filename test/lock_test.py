@@ -31,18 +31,11 @@ luigi.notifications.DEBUG = True
 class TestCmd(unittest.TestCase):
 
     def test_getpcmd(self):
-        if os.name == 'nt':
-            command = ["ping", "1.1.1.1", "-w", "1000"]
-        else:
-            command = ["sleep", "1"]
-
-        external_process = subprocess.Popen(command)
-        result = luigi.lock.getpcmd(external_process.pid)
-
+        p = subprocess.Popen(["sleep", "1"])
         self.assertTrue(
-            result.strip() in ["sleep 1", '[sleep]', 'ping 1.1.1.1 -w 1000']
+            luigi.lock.getpcmd(p.pid) in ["sleep 1", '[sleep]']
         )
-        external_process.kill()
+        p.kill()
 
 
 class LockTest(unittest.TestCase):

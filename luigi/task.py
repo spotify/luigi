@@ -34,7 +34,6 @@ import re
 import copy
 import functools
 
-import luigi
 from luigi import six
 
 from luigi import parameter
@@ -281,14 +280,6 @@ class Task(object):
                     logger.exception("Error in event callback for %r", event)
 
     @property
-    def accepts_messages(self):
-        """
-        For configuring which scheduler messages can be received. When falsy, this tasks does not
-        accept any message. When True, all messages are accepted.
-        """
-        return False
-
-    @property
     def task_module(self):
         ''' Returns what Python module to import to get access to this class. '''
         # TODO(erikbern): we should think about a language-agnostic mechanism
@@ -438,7 +429,8 @@ class Task(object):
         for key, value in param_values:
             setattr(self, key, value)
 
-        # Register kwargs as an attribute on the class. Might be useful
+        # Register args and kwargs as an attribute on the class. Might be useful
+        self.param_args = tuple(value for key, value in param_values)
         self.param_kwargs = dict(param_values)
 
         self._warn_on_wrong_param_types()
@@ -448,11 +440,6 @@ class Task(object):
         self.set_tracking_url = None
         self.set_status_message = None
         self.set_progress_percentage = None
-
-    @property
-    def param_args(self):
-        warnings.warn("Use of param_args has been deprecated.", DeprecationWarning)
-        return tuple(self.param_kwargs[k] for k, v in self.get_params())
 
     def initialized(self):
         """
@@ -552,7 +539,7 @@ class Task(object):
         return task_str
 
     def __eq__(self, other):
-        return self.__class__ == other.__class__ and self.param_kwargs == other.param_kwargs
+        return self.__class__ == other.__class__ and self.param_args == other.param_args
 
     def complete(self):
         """
@@ -706,7 +693,7 @@ class Task(object):
                         pickle.dumps(self)
 
         """
-        unpicklable_properties = tuple(luigi.worker.TaskProcess.forward_reporter_attributes.values())
+        unpicklable_properties = ('set_tracking_url', 'set_status_message', 'set_progress_percentage')
         reserved_properties = {}
         for property_name in unpicklable_properties:
             if hasattr(self, property_name):

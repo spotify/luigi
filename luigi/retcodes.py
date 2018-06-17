@@ -80,10 +80,9 @@ def run_with_retcodes(argv):
         logger.exception("Uncaught exception in luigi")
         sys.exit(retcodes.unhandled_exception)
 
-    with luigi.cmdline_parser.CmdlineParser.global_instance(argv):
-        task_sets = luigi.execution_summary._summary_dict(worker)
-        root_task = luigi.execution_summary._root_task(worker)
-        non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
+    task_sets = luigi.execution_summary._summary_dict(worker)
+    root_task = luigi.execution_summary._root_task(worker)
+    non_empty_categories = {k: v for k, v in task_sets.items() if v}.keys()
 
     def has(status):
         assert status in luigi.execution_summary._ORDERED_STATUSES

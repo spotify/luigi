@@ -42,7 +42,7 @@ try:
     from googleapiclient import discovery
     from googleapiclient import http
 except ImportError:
-    logger.warning("Loading GCS module without the python packages googleapiclient & google-auth. \
+    logger.warning("Loading GCS module without the python packages googleapiclient & oauth2client. \
         This will crash at runtime if GCS functionality is used.")
 else:
     # Retry transport and file IO errors.
@@ -89,9 +89,9 @@ class GCSClient(luigi.target.FileSystem):
 
        There are several ways to use this class. By default it will use the app
        default credentials, as described at https://developers.google.com/identity/protocols/application-default-credentials .
-       Alternatively, you may pass an google-auth credentials object. e.g. to use a service account::
+       Alternatively, you may pass an oauth2client credentials object. e.g. to use a service account::
 
-         credentials = google.auth.jwt.Credentials.from_service_account_info(
+         credentials = oauth2client.client.SignedJwtAssertionCredentials(
              '012345678912-ThisIsARandomServiceAccountEmail@developer.gserviceaccount.com',
              'These are the contents of the p12 file that came with the service account',
              scope='https://www.googleapis.com/auth/devstorage.read_write')
@@ -108,18 +108,14 @@ class GCSClient(luigi.target.FileSystem):
       as the ``descriptor`` argument.
     """
     def __init__(self, oauth_credentials=None, descriptor='', http_=None,
-                 chunksize=CHUNKSIZE, **discovery_build_kwargs):
+                 chunksize=CHUNKSIZE):
         self.chunksize = chunksize
         authenticate_kwargs = gcp.get_authenticate_kwargs(oauth_credentials, http_)
 
-        build_kwargs = authenticate_kwargs.copy()
-        build_kwargs.update(discovery_build_kwargs)
-
         if descriptor:
-            self.client = discovery.build_from_document(descriptor, **build_kwargs)
+            self.client = discovery.build_from_document(descriptor, **authenticate_kwargs)
         else:
-            build_kwargs.setdefault('cache_discovery', False)
-            self.client = discovery.build('storage', 'v1', **build_kwargs)
+            self.client = discovery.build('storage', 'v1', **authenticate_kwargs)
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, _, _) = urlsplit(path)
@@ -249,38 +245,9 @@ class GCSClient(luigi.target.FileSystem):
         resumable = os.path.getsize(filename) > 0
 
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE
-        media = http.MediaFileUpload(filename, mimetype=mimetype, chunksize=chunksize, resumable=resumable)
+        media = http.MediaFileUpload(filename, mimetype, chunksize=chunksize, resumable=resumable)
 
         self._do_put(media, dest_path)
-
-    def _forward_args_to_put(self, kwargs):
-        return self.put(**kwargs)
-
-    def put_multiple(self, filepaths, remote_directory, mimetype=None, chunksize=None, num_process=1):
-        if isinstance(filepaths, str):
-            raise ValueError(
-                'filenames must be a list of strings. If you want to put a single file, '
-                'use the `put(self, filename, ...)` method'
-            )
-
-        put_kwargs_list = [
-            {
-                'filename': filepath,
-                'dest_path': os.path.join(remote_directory, os.path.basename(filepath)),
-                'mimetype': mimetype,
-                'chunksize': chunksize,
-            }
-            for filepath in filepaths
-        ]
-
-        if num_process > 1:
-            from multiprocessing import Pool
-            from contextlib import closing
-            with closing(Pool(num_process)) as p:
-                return p.map(self._forward_args_to_put, put_kwargs_list)
-        else:
-            for put_kwargs in put_kwargs_list:
-                self._forward_args_to_put(put_kwargs)
 
     def put_string(self, contents, dest_path, mimetype=None):
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE

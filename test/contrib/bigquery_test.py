@@ -135,14 +135,6 @@ class BigQueryTest(unittest.TestCase):
         complete = list(TestRunQueryTask.bulk_complete(parameters))
         self.assertEqual(complete, ['table2'])
 
-        # Test that bulk_complete accepts lazy sequences in addition to lists
-        def parameters_gen():
-            yield 'table1'
-            yield 'table2'
-
-        complete = list(TestRunQueryTask.bulk_complete(parameters_gen()))
-        self.assertEqual(complete, ['table2'])
-
     def test_dataset_doesnt_exist(self):
         client = MagicMock()
         client.dataset_exists.return_value = False
