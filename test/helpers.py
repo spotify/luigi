@@ -160,7 +160,7 @@ class LuigiTestCase(unittest.TestCase):
         temp = CmdlineParser._instance
         try:
             CmdlineParser._instance = None
-            run_exit_status = luigi.run(args + ['--local-scheduler', '--no-lock'])
+            run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
         finally:
             CmdlineParser._instance = temp
         return run_exit_status

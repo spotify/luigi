@@ -125,12 +125,12 @@ class CmdlineTest(unittest.TestCase):
 
     @mock.patch("logging.getLogger")
     def test_cmdline_other_task(self, logger):
-        luigi.run(['SomeTask', '--local-scheduler', '--no-lock', '--n', '1000'])
+        luigi.run(['--local-scheduler', '--no-lock', 'SomeTask', '--n', '1000'])
         self.assertEqual(dict(MockTarget.fs.get_all_data()), {'/tmp/test_1000': b'done'})
 
     @mock.patch("logging.getLogger")
     def test_cmdline_ambiguous_class(self, logger):
-        self.assertRaises(Exception, luigi.run, ['AmbiguousClass', '--local-scheduler', '--no-lock'])
+        self.assertRaises(Exception, luigi.run, ['--local-scheduler', '--no-lock', 'AmbiguousClass'])
 
     @mock.patch("logging.getLogger")
     @mock.patch("logging.StreamHandler")
@@ -168,7 +168,7 @@ class CmdlineTest(unittest.TestCase):
     @mock.patch('argparse.ArgumentParser.print_usage')
     def test_non_existent_class(self, print_usage):
         self.assertRaises(luigi.task_register.TaskClassNotFoundException,
-                          luigi.run, ['XYZ', '--local-scheduler', '--no-lock'])
+                          luigi.run, ['--local-scheduler', '--no-lock', 'XYZ'])
 
     @mock.patch('argparse.ArgumentParser.print_usage')
     def test_no_task(self, print_usage):
@@ -304,12 +304,12 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         self.assertTrue(stdout.find(b'--x') != -1)
 
     def test_bin_luigi_options_before_task(self):
-        args = ['./bin/luigi', '--module', 'cmdline_test', 'FooBaseClass', '--no-lock', '--local-scheduler', '--FooBaseClass-x', 'hello']
+        args = ['./bin/luigi', '--module', 'cmdline_test', '--no-lock', '--local-scheduler', '--FooBaseClass-x', 'hello', 'FooBaseClass']
         returncode, stdout, stderr = self._run_cmdline(args)
         self.assertEqual(0, returncode)
 
     def test_bin_fail_on_unrecognized_args(self):
-        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', 'Task', '--no-lock', '--local-scheduler', '--unknown-param', 'hiiii'])
+        returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', '--no-lock', '--local-scheduler', 'Task', '--unknown-param', 'hiiii'])
         self.assertNotEqual(0, returncode)
 
     def test_deps_py_script(self):

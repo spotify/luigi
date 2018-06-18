@@ -41,4 +41,4 @@ class SetTaskNameTest(unittest.TestCase):
     to resolve the issue. '''
 
     def test_set_task_name(self):
-        luigi.run(['MyNewTask', '--local-scheduler', '--no-lock'])
+        luigi.run(['--local-scheduler', '--no-lock', 'MyNewTask'])
