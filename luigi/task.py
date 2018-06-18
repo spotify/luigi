@@ -448,7 +448,8 @@ class Task(object):
     @property
     def param_args(self):
         warnings.warn("Use of param_args has been deprecated.", DeprecationWarning)
-        return tuple(self.param_kwargs.values())
+        param_kwargs = self.param_kwargs
+        return tuple(param_kwargs[k] for k, v in self.get_params())
 
     @property
     def param_kwargs(self):
