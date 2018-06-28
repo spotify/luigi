@@ -30,6 +30,7 @@ ways between versions. The exception is the exception types and the
 
 import collections
 import getpass
+import importlib
 import logging
 import multiprocessing
 import os
@@ -59,7 +60,7 @@ from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
-from luigi.parameter import FloatParameter, IntParameter, BoolParameter
+from luigi.parameter import BoolParameter, FloatParameter, IntParameter, Parameter
 
 try:
     import simplejson as json
@@ -258,6 +259,27 @@ class TaskProcess(multiprocessing.Process):
             return super(TaskProcess, self).terminate()
 
 
+# TODO be composable with arbitrarily many custom context managers?
+# Introduce a convention shared for extension points other than TaskProcess?
+# Use https://docs.openstack.org/stevedore?
+class ContextManagedTaskProcess(TaskProcess):
+    def __init__(self, context, *args, **kwargs):
+        super(ContextManagedTaskProcess, self).__init__(*args, **kwargs)
+        self.context = context
+
+    def run(self):
+        if self.context:
+            logger.debug('Instantiating ' + self.context)
+            module_path, class_name = self.context.rsplit('.', 1)
+            module = importlib.import_module(module_path)
+            cls = getattr(module, class_name)
+
+            with cls(self):
+                super(ContextManagedTaskProcess, self).run()
+        else:
+            super(ContextManagedTaskProcess, self).run()
+
+
 class TaskStatusReporter(object):
     """
     Reports task status information to the scheduler.
@@ -419,6 +441,12 @@ class worker(Config):
     force_multiprocessing = BoolParameter(default=False,
                                           description='If true, use multiprocessing also when '
                                           'running with 1 worker')
+    task_process_context = Parameter(default=None,
+                                     description='If set to a fully qualified class name, the class will '
+                                     'be instantiated with a TaskProcess as its constructor parameter and '
+                                     'applied as a context manager around its run() call, so this can be '
+                                     'used for obtaining high level customizable monitoring or logging of '
+                                     'each individual Task run.')
 
 
 class KeepAliveThread(threading.Thread):
@@ -966,7 +994,8 @@ class Worker(object):
         message_queue = multiprocessing.Queue() if task.accepts_messages else None
         reporter = TaskStatusReporter(self._scheduler, task.task_id, self._id, message_queue)
         use_multiprocessing = self._config.force_multiprocessing or bool(self.worker_processes > 1)
-        return TaskProcess(
+        return ContextManagedTaskProcess(
+            self._config.task_process_context,
             task, self._id, self._task_result_queue, reporter,
             use_multiprocessing=use_multiprocessing,
             worker_timeout=self._config.timeout,
