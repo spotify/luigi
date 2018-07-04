@@ -724,6 +724,7 @@ class WorkerTest(LuigiTestCase):
             value = luigi.IntParameter(batch_method=max)
             has_run = False
 
+
             def run(self):
                 completed.add(self.value)
                 self.has_run = True
@@ -736,10 +737,55 @@ class WorkerTest(LuigiTestCase):
             self.assertTrue(self.w.add(task))
         self.assertTrue(self.w.run())
 
+        
         for task in tasks:
             self.assertTrue(task.complete())
             # only task number 9 should run
             self.assertFalse(task.has_run and task.value < 9)
+            # only task number 9 should have batched_params
+            self.assertFalse(task.batched_params and task.value < 9)
+        #Task number 9 should have batched_params of all tasks values
+        self.assertEquals(tasks[-1].batched_params, {'value' : list(range(10))})
+    
+    def test_run_batch_jobs_which_overlap(self):
+        completed = set()
+
+        class MaxBatchJob(luigi.Task):
+            value = luigi.IntParameter(batch_method=max)
+            has_run = False
+
+
+            def run(self):
+                completed.add(self.value)
+                self.has_run = True
+
+            def complete(self):
+                return any(self.value <= ran for ran in completed)
+
+        tasks = [MaxBatchJob(i) for i in range(5)]
+        tasks_batch_2 = [MaxBatchJob(i) for i in range(5, 10)]
+        tasks_which_overlap = tasks + tasks_batch_2
+        for task in tasks:
+            self.assertTrue(self.w.add(task))
+        # "Duplilcate" tasks added w2
+        for task in tasks_which_overlap:
+            self.assertTrue(self.w2.add(task))
+
+        #Run tasks on w "scheduled" first
+        self.assertTrue(self.w.run())
+        
+        #Run tasks on w2
+        self.assertTrue(self.w2.run())
+        
+        for task in tasks_which_overlap:
+            #Only 4 and 9 run
+            self.assertFalse(task.has_run and task.value not in (4,9))
+        
+        #Task number 4 should have batched_params of the first batch
+        self.assertEquals(tasks[-1].batched_params, {'value' : list(range(5))})
+
+        #Task number 9 should have batched_params of all remaining tasks
+        self.assertEquals(tasks_batch_2[-1].batched_params, {'value' : list(range(5, 10))})
 
     def test_run_batch_job_unbatched(self):
         completed = set()
