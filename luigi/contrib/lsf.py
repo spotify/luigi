@@ -303,7 +303,7 @@ class LSFJobTask(luigi.Task):
             elif lsf_status == "DONE" or lsf_status == "EXIT":
                 # Then the job could either be failed or done.
                 errors = self.fetch_task_failures()
-                if errors == '':
+                if not errors:
                     self.job_status = DONE
                     LOGGER.info("Job is done")
                     time1 = int(round(time.time()))
