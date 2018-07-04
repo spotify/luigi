@@ -81,7 +81,7 @@ def track_job(job_id):
     - "EXIT"
     based on the LSF documentation
     """
-    cmd = "bjobs -noheader -o stat %d" % job_id
+    cmd = "bjobs -noheader -o stat {}".format(job_id)
     track_job_proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, shell=True)
     status = track_job_proc.communicate()[0].strip('\n')
@@ -133,8 +133,11 @@ class LSFJobTask(luigi.Task):
         Read in the output file
         """
         # Read in the output file
-        with open(os.path.join(self.tmp_dir, "job.out"), "r") as f_out:
-            outputs = f_out.readlines()
+        if os.path.isfile(os.path.join(self.tmp_dir, "job.out")):
+            with open(os.path.join(self.tmp_dir, "job.out"), "r") as f_out:
+                outputs = f_out.readlines()
+        else:
+            outputs = ''
         return outputs
 
     def _init_local(self):
@@ -233,13 +236,13 @@ class LSFJobTask(luigi.Task):
         args += ["-W", str(self.runtime_flag)]
         if self.job_name_flag:
             args += ["-J", str(self.job_name_flag)]
-        args += ["-o", "/".join(log_output[0:-1]) + "/job.out"]
-        args += ["-e", "/".join(log_output[0:-1]) + "/job.err"]
+        args += ["-o", os.path.join(log_output[0:-1], "job.out")]
+        args += ["-e", os.path.join(log_output[0:-1], "job.err")]
         if self.extra_bsub_args:
             args += self.extra_bsub_args.split()
 
         # Find where the runner file is
-        runner_path = lsf_runner.__file__
+        runner_path = os.path.abspath(lsf_runner.__file__)
 
         args += [runner_path]
         args += [self.tmp_dir]
