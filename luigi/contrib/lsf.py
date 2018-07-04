@@ -150,10 +150,9 @@ class LSFJobTask(luigi.Task):
         # replace the separators on *nix, it'll create a weird nested directory
         task_name = task_name.replace("/", "::")
 
-        self.tmp_dir = os.path.join(base_tmp_dir, task_name)
         # Max filename length
         max_filename_length = os.fstatvfs(0).f_namemax
-        self.tmp_dir = self.tmp_dir[:max_filename_length]
+        self.tmp_dir = os.path.join(base_tmp_dir, task_name[:max_filename_length])
 
         LOGGER.info("Tmp dir: %s", self.tmp_dir)
         os.makedirs(self.tmp_dir)
@@ -236,8 +235,8 @@ class LSFJobTask(luigi.Task):
         args += ["-W", str(self.runtime_flag)]
         if self.job_name_flag:
             args += ["-J", str(self.job_name_flag)]
-        args += ["-o", os.path.join(log_output[0:-1], "job.out")]
-        args += ["-e", os.path.join(log_output[0:-1], "job.err")]
+        args += ["-o", os.path.join("/".join(log_output[0:-1]), "job.out")]
+        args += ["-e", os.path.join("/".join(log_output[0:-1]), "job.err")]
         if self.extra_bsub_args:
             args += self.extra_bsub_args.split()
 
