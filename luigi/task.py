@@ -49,6 +49,7 @@ TASK_ID_TRUNCATE_PARAMS = 16
 TASK_ID_TRUNCATE_HASH = 10
 TASK_ID_INVALID_CHAR_REGEX = re.compile(r'[^A-Za-z0-9_]')
 _SAME_AS_PYTHON_MODULE = '_same_as_python_module'
+TASK_BATCHED_PARAMS_VAR = '_batched_params'
 
 
 def namespace(namespace=None, scope=''):
@@ -364,6 +365,15 @@ class Task(object):
     @classmethod
     def batch_param_names(cls):
         return [name for name, p in cls.get_params() if p._is_batchable()]
+    
+    @property
+    def batched_params(self):
+        """
+        Get the batched over values for the parameters with a defined batching_method
+
+        :returns a dict of (name, value) where name is the original param_name and the value is the batched over list
+        """
+        return getattr(self, TASK_BATCHED_PARAMS_VAR, {})
 
     @classmethod
     def get_param_names(cls, include_significant=False):
@@ -464,15 +474,22 @@ class Task(object):
         :param params_str: dict of param name -> value as string.
         """
         kwargs = {}
+        batched_params = {}
         for param_name, param in cls.get_params():
             if param_name in params_str:
                 param_str = params_str[param_name]
                 if isinstance(param_str, list):
                     kwargs[param_name] = param._parse_list(param_str)
+                    if param._is_batchable():
+                        batched_params[param_name] = [param.parse(x) for x in param_str]
                 else:
                     kwargs[param_name] = param.parse(param_str)
 
-        return cls(**kwargs)
+        # Append the attribute after initialization so as to reuse the registries instance_cache
+        ret = cls(**kwargs)
+        # TODO evaluate if doing an .update is better?
+        setattr(ret, TASK_BATCHED_PARAMS_VAR, batched_params)
+        return ret
 
     def to_str_params(self, only_significant=False):
         """
