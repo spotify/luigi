@@ -92,14 +92,18 @@ Parameter visibility
 ^^^^^^^^^^^^^^^^^^^^
 
 By default all parameters are `public`, but there is two more visibility levels.
+
 .. code:: python
 
-    >>>> import luigi
-    >>>> from luigi.parameter import ParameterVisibility
-    >>>> luigi.Parameter(visibility=ParameterVisibility.PRIVATE)
+    import luigi
+    from luigi.parameter import ParameterVisibility
+    
+    luigi.Parameter(visibility=ParameterVisibility.PRIVATE)
 
 ``ParameterVisibility.PUBLIC`` (default) - visible everywhere
+
 ``ParameterVisibility.HIDDEN`` - ignored in WEB-view, but saved into database if save db_history is true
+
 ``ParameterVisibility.PRIVATE`` - visible only inside task.
 
 Parameter types
