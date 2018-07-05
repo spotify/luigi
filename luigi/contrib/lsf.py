@@ -224,9 +224,9 @@ class LSFJobTask(luigi.Task):
         args = []
 
         if isinstance(self.output(), list):
-            log_output = self.output()[0].path.split("/")
+            log_output = os.path.split(self.output()[0].path)
         else:
-            log_output = self.output().path.split("/")
+            log_output = os.path.split(self.output().path)
 
         args += ["bsub", "-q", self.queue_flag]
         args += ["-n", str(self.n_cpu_flag)]
@@ -235,8 +235,8 @@ class LSFJobTask(luigi.Task):
         args += ["-W", str(self.runtime_flag)]
         if self.job_name_flag:
             args += ["-J", str(self.job_name_flag)]
-        args += ["-o", os.path.join("/".join(log_output[0:-1]), "job.out")]
-        args += ["-e", os.path.join("/".join(log_output[0:-1]), "job.err")]
+        args += ["-o", os.path.join(log_output[0], "job.out")]
+        args += ["-e", os.path.join(log_output[0], "job.err")]
         if self.extra_bsub_args:
             args += self.extra_bsub_args.split()
 
