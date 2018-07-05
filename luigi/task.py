@@ -484,8 +484,8 @@ class Task(object):
                         batched_params[param_name] = [param.parse(x) for x in param_str]
                 else:
                     kwargs[param_name] = param.parse(param_str)
-
-        # Append the attribute after initialization so as to reuse the registries instance_cache
+        
+        # Append the attribute after initialization so as to reuse the registry's instance_cache
         ret = cls(**kwargs)
         # TODO evaluate if doing an .update is better?
         setattr(ret, TASK_BATCHED_PARAMS_VAR, batched_params)
