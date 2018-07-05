@@ -15,6 +15,9 @@ env:
     - BQ_TEST_PROJECT_ID=luigi-travistestenvironment
     - BQ_TEST_INPUT_BUCKET=luigi-bigquery-test
     - GOOGLE_APPLICATION_CREDENTIALS=test/gcloud-credentials.json
+    - AWS_DEFAULT_REGION=us-east-1
+    - AWS_ACCESS_KEY_ID=accesskey
+    - AWS_SECRET_ACCESS_KEY=secretkey
   matrix:
     - TOXENV=flake8
     - TOXENV=docs

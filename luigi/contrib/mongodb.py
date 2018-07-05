@@ -166,7 +166,7 @@ class MongoRangeTarget(MongoTarget):
             {'_id': True}
         )
 
-        return set(self._document_ids) - set([doc['_id'] for doc in cursor])
+        return set(self._document_ids) - {doc['_id'] for doc in cursor}
 
 
 class MongoCollectionTarget(MongoTarget):

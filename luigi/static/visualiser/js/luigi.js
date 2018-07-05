@@ -55,13 +55,13 @@ var LuigiAPI = (function() {
         return jsonRPC(this.urlRoot + "/inverse_dep_graph", {task_id: taskId, include_done: include_done}, function(response) {
             callback(flatten(response.response, taskId));
         });
-    }
+    };
 
     LuigiAPI.prototype.forgiveFailures = function (taskId, callback) {
         return jsonRPC(this.urlRoot + "/forgive_failures", {task_id: taskId}, function(response) {
             callback(flatten(response.response));
         });
-    }
+    };
 
     LuigiAPI.prototype.getFailedTaskList = function(callback) {
         return jsonRPC(this.urlRoot + "/task_list", {status: "FAILED", upstream_status: "", search: searchTerm()}, function(response) {
@@ -149,35 +149,57 @@ var LuigiAPI = (function() {
 
     LuigiAPI.prototype.disableWorker = function(workerId) {
         jsonRPC(this.urlRoot + "/disable_worker", {'worker': workerId});
-    }
+    };
 
     LuigiAPI.prototype.setWorkerProcesses = function(workerId, n, callback) {
         var data = {worker: workerId, n: n};
         jsonRPC(this.urlRoot + "/set_worker_processes", data, function(response) {
             callback();
         });
-    }
+    };
+
+    LuigiAPI.prototype.sendSchedulerMessage = function(workerId, taskId, content, callback) {
+        var data = {worker: workerId, task: taskId, content: content};
+        jsonRPC(this.urlRoot + "/send_scheduler_message", data, function(response) {
+            if (callback) {
+                callback(response.response.message_id);
+            }
+        });
+    };
+
+    LuigiAPI.prototype.getSchedulerMessageResponse = function(taskId, messageId, callback) {
+        var data = {task_id: taskId, message_id: messageId};
+        jsonRPC(this.urlRoot + "/get_scheduler_message_response", data, function(response) {
+            callback(response.response.response);
+        });
+    };
+
+    LuigiAPI.prototype.isPauseEnabled = function(callback) {
+        jsonRPC(this.urlRoot + '/is_pause_enabled', {}, function(response) {
+            callback(response.response.enabled);
+        });
+    };
 
     LuigiAPI.prototype.pause = function() {
         jsonRPC(this.urlRoot + '/pause');
-    }
+    };
 
     LuigiAPI.prototype.unpause = function() {
         jsonRPC(this.urlRoot + '/unpause');
-    }
+    };
 
     LuigiAPI.prototype.isPaused = function(callback) {
         jsonRPC(this.urlRoot + "/is_paused", {}, function(response) {
             callback(!response.response.paused);
         });
-    }
+    };
 
     LuigiAPI.prototype.updateResource = function(resource, n, callback) {
         var data = {'resource': resource, 'amount': n};
         jsonRPC(this.urlRoot + "/update_resource", data, function(response) {
             callback();
         });
-    }    
+    };
 
     return LuigiAPI;
 })();

@@ -226,6 +226,33 @@ the task parameters or other dynamic attributes:
 Since, by default, resources have a usage limit of 1, no two instances of Task A 
 will now run if they have the same `important_file_name` property.
 
+Decreasing resources of running tasks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+At scheduling time, the luigi scheduler needs to be aware of the maximum
+resource consumption a task might have once it runs. For some tasks, however,
+it can be beneficial to decrease the amount of consumed resources between two
+steps within their run method (e.g. after some heavy computation). In this
+case, a different task waiting for that particular resource can already be
+scheduled.
+
+.. code-block:: python
+
+    class A(luigi.Task):
+
+        # set maximum resources a priori
+        resources = {"some_resource": 3}
+
+        def run(self):
+            # do something
+            ...
+
+            # decrease consumption of "some_resource" by one
+            self.decrease_running_resources({"some_resource": 1})
+
+            # continue with reduced resources
+            ...
+
 Monitoring task pipelines
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -290,3 +317,39 @@ built-in solutions. In the case of you're dealing with a file system
 :meth:`~luigi.target.FileSystemTarget.temporary_path`. For other targets, you
 should ensure that the way you're writing your final output directory is
 atomic.
+
+Sending messages to tasks
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The central scheduler is able to send messages to particular tasks. When a running task accepts 
+messages, it can access a `multiprocessing.Queue <https://docs.python.org/3/library/multiprocessing.html#pipes-and-queues>`__
+object storing incoming messages. You can implement custom behavior to react and respond to
+messages:
+
+.. code-block:: python
+
+    class Example(luigi.Task):
+
+        # common task setup
+        ...
+
+        # configure the task to accept all incoming messages
+        accepts_messages = True
+
+        def run(self):
+            # this example runs some loop and listens for the
+            # "terminate" message, and responds to all other messages
+            for _ in some_loop():
+                # check incomming messages
+                if not self.scheduler_messages.empty():
+                    msg = self.scheduler_messages.get()
+                    if msg.content == "terminate":
+                        break
+                    else:
+                        msg.respond("unknown message")
+
+            # finalize
+            ...
+
+Messages can be sent right from the scheduler UI which also displays responses (if any). Note that
+this feature is only available when the scheduler is configured to send messages (see the :ref:`scheduler-config` config), and the task is configured to accept them.

@@ -315,6 +315,26 @@ class Parameter(object):
         return "store"
 
 
+class OptionalParameter(Parameter):
+    """ A Parameter that treats empty string as None """
+
+    def serialize(self, x):
+        if x is None:
+            return ''
+        else:
+            return str(x)
+
+    def parse(self, x):
+        return x or None
+
+    def _warn_on_wrong_param_type(self, param_name, param_value):
+        if self.__class__ != OptionalParameter:
+            return
+        if not isinstance(param_value, six.string_types) and param_value is not None:
+            warnings.warn('OptionalParameter "{}" with value "{}" is not of type string or None.'.format(
+                param_name, param_value))
+
+
 _UNIX_EPOCH = datetime.datetime.utcfromtimestamp(0)
 
 
@@ -492,6 +512,12 @@ class _DatetimeParameterBase(Parameter):
             return str(dt)
         return dt.strftime(self.date_format)
 
+    @staticmethod
+    def _convert_to_dt(dt):
+        if not isinstance(dt, datetime.datetime):
+            dt = datetime.datetime.combine(dt, datetime.time.min)
+        return dt
+
     def normalize(self, dt):
         """
         Clamp dt to every Nth :py:attr:`~_DatetimeParameterBase.interval` starting at
@@ -499,6 +525,8 @@ class _DatetimeParameterBase(Parameter):
         """
         if dt is None:
             return None
+
+        dt = self._convert_to_dt(dt)
 
         dt = dt.replace(microsecond=0)  # remove microseconds, to avoid float rounding issues.
         delta = (dt - self.start).total_seconds()
