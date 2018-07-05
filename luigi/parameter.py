@@ -161,7 +161,8 @@ class Parameter(object):
             positional = False
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
         self.positional = positional
-        self.visibility = visibility if visibility in (ParameterVisibility.PRIVATE, ParameterVisibility.PUBLIC, ParameterVisibility.HIDDEN) else ParameterVisibility.PUBLIC
+        self.visibility = visibility if visibility in (ParameterVisibility.PRIVATE, ParameterVisibility.PUBLIC,
+                                                       ParameterVisibility.HIDDEN) else ParameterVisibility.PUBLIC
 
         self.description = description
         self.always_in_help = always_in_help

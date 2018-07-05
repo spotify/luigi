@@ -88,12 +88,19 @@ are not the same instance:
     >>> hash(c) == hash(d)
     True
 
-Invisible parameters
+Parameter visibility
+^^^^^^^^^^^^^^^^^^^^
 
-``visible=0`` (default) - visible everywhere
-``visible=1`` - ignored only in WEB-view
-``visible=2`` - ignored in WEB-view, central scheduler and task_parameters history in databse
+By default all parameters are `public`, but there is two more visibility levels.
+.. code:: python
 
+    >>>> import luigi
+    >>>> from luigi.parameter import ParameterVisibility
+    >>>> luigi.Parameter(visibility=ParameterVisibility.PRIVATE)
+
+``ParameterVisibility.PUBLIC`` (default) - visible everywhere
+``ParameterVisibility.HIDDEN`` - ignored in WEB-view, but saved into database if save db_history is true
+``ParameterVisibility.PRIVATE`` - visible only inside task.
 
 Parameter types
 ^^^^^^^^^^^^^^^
