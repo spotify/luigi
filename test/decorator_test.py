@@ -133,7 +133,7 @@ class H_null(luigi.Task):
 
 
 @inherits(G)
-class I(luigi.Task):
+class I_task(luigi.Task):
 
     def requires(self):
         return F(**common_params(self, F))
@@ -183,7 +183,7 @@ class RequiresTest(unittest.TestCase):
         self.g_changed = G(param1="changing the default")
         self.h = H()
         self.h_null = H_null()
-        self.i = I()
+        self.i = I_task()
         self.k_shouldfail = K_shouldfail()
         self.k_shouldsucceed = K_shouldsucceed()
         self.k_wrongparamsorder = K_wrongparamsorder()

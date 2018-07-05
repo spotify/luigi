@@ -15,14 +15,16 @@ pig_property_file
 
 packages.tar
 
+# Ignore the data files
+data
 test/data
+examples/data
 
 Vagrantfile
 
 *.pickle
 *.rej
 *.orig
-
 
 # Created by https://www.gitignore.io
 

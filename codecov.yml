@@ -1,21 +1,32 @@
-# First just blindly copy paste what is default values from the docs page
-# https://github.com/codecov/support/wiki/codecov.yml
 coverage:
-  precision: 2
-  round: down
-  range: "70...100"
+  precision: 2  # Just copied from default
+  round: down  # Just copied from default
+  range: "70...100"  # Just copied from default
 
   status:
     project:
+      default: false  # disable the default status that measures entire project
+      core:
+        target: 92%
+        paths: "luigi/*.py" 
+    patch:  # Just copied from default
       default:
-        target: auto
         if_no_uploads: error
 
-    patch:
-      default:
-        if_no_uploads: error
+    changes: true  # Just copied from default
+  
+  ignore:
+    - "examples/"
+    - "luigi/tools"  # These are tested as actual run commands without coverage
+    # List modules who's tests are not run by Travis or
+    # are run in a subprocesses (like on cluster).
+    - "luigi/contrib/gcs.py"
+    - "luigi/contrib/bigquery.py"
+    - "luigi/contrib/bigquery_avro.py"
+    - "luigi/contrib/hdfs/"
+    - "luigi/contrib/hadoop.py"
+    - "luigi/contrib/mrrunner.py"
+    - "luigi/contrib/kubernetes.py"
 
-    changes: true
-
-# But for luigi we do not want any comments
+# For luigi we do not want any comments
 comment: false

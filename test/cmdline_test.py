@@ -90,6 +90,24 @@ class ATaskThatFails(luigi.Task):
         raise ValueError()
 
 
+class RequiredConfig(luigi.Config):
+    required_test_param = luigi.Parameter()
+
+
+class TaskThatRequiresConfig(luigi.WrapperTask):
+    def requires(self):
+        if RequiredConfig().required_test_param == 'A':
+            return SubTaskThatFails()
+
+
+class SubTaskThatFails(luigi.Task):
+    def complete(self):
+        return False
+
+    def run(self):
+        raise Exception()
+
+
 class CmdlineTest(unittest.TestCase):
 
     def setUp(self):
@@ -338,6 +356,20 @@ class InvokeOverCmdlineTest(unittest.TestCase):
 
         self.assertFalse(stdout.find(b"run() got an unexpected keyword argument 'tracking_url_callback'") != -1)
         self.assertFalse(stdout.find(b'During handling of the above exception, another exception occurred') != -1)
+
+    def test_cmd_line_params_are_available_for_execution_summary(self):
+        """
+        Test that config parameters specified on the command line are available while generating the execution summary.
+        """
+        returncode, stdout, stderr = self._run_cmdline([
+            './bin/luigi', '--module', 'cmdline_test', 'TaskThatRequiresConfig', '--local-scheduler', '--no-lock'
+            '--RequiredConfig-required-test-param', 'A',
+        ])
+        print(stdout)
+        print(stderr)
+
+        self.assertNotEquals(returncode, 1)
+        self.assertFalse(b'required_test_param' in stderr)
 
 
 if __name__ == '__main__':

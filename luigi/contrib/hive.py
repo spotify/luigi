@@ -68,7 +68,7 @@ def run_hive(args, check_return_code=True):
     if check_return_code and p.returncode != 0:
         raise HiveCommandError("Hive command: {0} failed with error code: {1}".format(" ".join(cmd), p.returncode),
                                stdout, stderr)
-    return stdout
+    return stdout.decode('utf-8')
 
 
 def run_hive_cmd(hivecmd, check_return_code=True):

@@ -205,6 +205,10 @@ class DockerTask(luigi.Task):
             self._client.start(container['Id'])
 
             exit_status = self._client.wait(container['Id'])
+            # docker-py>=3.0.0 returns a dict instead of the status code directly
+            if type(exit_status) is dict:
+                exit_status = exit_status['StatusCode']
+
             if exit_status != 0:
                 stdout = False
                 stderr = True
@@ -227,7 +231,7 @@ class DockerTask(luigi.Task):
                 container_name = self.name
             try:
                 message = e.message
-            except:
+            except AttributeError:
                 message = str(e)
             self.__logger.error("Container " + container_name +
                                 " exited with non zero code: " + message)
