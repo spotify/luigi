@@ -186,7 +186,7 @@ class KubernetesJobTask(luigi.Task):
         Time allowed to successfully schedule pods.
         See: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion/#job-termination-and-cleanup
         """
-        return 100
+        return None
 
     @property
     def kubernetes_config(self):
@@ -329,7 +329,6 @@ class KubernetesJobTask(luigi.Task):
                 }
             },
             "spec": {
-                "activeDeadlineSeconds": self.active_deadline_seconds,
                 "backoffLimit": self.backoff_limit,
                 "template": {
                     "metadata": {
@@ -339,6 +338,9 @@ class KubernetesJobTask(luigi.Task):
                 }
             }
         }
+        if self.active_deadline_seconds is not None:
+            job_json['spec']['activeDeadlineSeconds'] = \
+                self.active_deadline_seconds
         # Update user labels
         job_json['metadata']['labels'].update(self.labels)
         # Add default restartPolicy if not specified
