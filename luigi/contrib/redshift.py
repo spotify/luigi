@@ -476,7 +476,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
             self.create_table(connection)
 
         if self.enable_metadata_columns:
-            self._add_metadata_columns(connection.cursor())
+            self._add_metadata_columns(connection)
 
         if self.do_truncate_table:
             logger.info("Truncating table %s", self.table)

@@ -28,7 +28,8 @@ logger = logging.getLogger('luigi-interface')
 
 
 class _MetadataColumnsMixin(object):
-    """
+    """Provice an additinal behavior that adds columns and values to tables
+
     This mixin is used to provide an additional behavior that allow a task to
     add generic metadata columns to every table created for both PSQL and
     Redshift.
@@ -49,7 +50,9 @@ class _MetadataColumnsMixin(object):
     def enable_metadata_columns(self):
         return False
 
-    def _add_metadata_columns(self, cursor):
+    def _add_metadata_columns(self, connection):
+        cursor = connection.cursor()
+
         for column in self.metadata_columns:
             if len(column) == 0:
                 logger.info('Unable to infer column information from column {column} for {table}'.format(column=column, table=self.table))
@@ -65,11 +68,11 @@ class _MetadataColumnsMixin(object):
             schema, table = self.table.split('.')
             query = "SELECT 1 AS column_exists " \
                     "FROM information_schema.columns " \
-                    "WHERE table_schema = LOWER('{0}') AND table_name = LOWER('{1}') AND column_name = LOWER('{2}') LIMIT 1".format(schema, table, column_name)
+                    "WHERE table_schema = LOWER('{0}') AND table_name = LOWER('{1}') AND column_name = LOWER('{2}') LIMIT 1;".format(schema, table, column_name)
         else:
             query = "SELECT 1 AS column_exists " \
                     "FROM information_schema.columns " \
-                    "WHERE table_name = LOWER('{0}') AND column_name = LOWER('{1}') LIMIT 1".format(table, column_name)
+                    "WHERE table_name = LOWER('{0}') AND column_name = LOWER('{1}') LIMIT 1;".format(self.table, column_name)
 
         cursor.execute(query)
         result = cursor.fetchone()
@@ -79,13 +82,18 @@ class _MetadataColumnsMixin(object):
         if len(column) == 1:
             raise ValueError("_add_column_to_table() column type not specified for {column}".format(column=column[0]))
         elif len(column) == 2:
-            query = "ALTER TABLE {table} ADD COLUMN {column}".format(table=self.table, column=' '.join(column))
+            query = "ALTER TABLE {table} ADD COLUMN {column};".format(table=self.table, column=' '.join(column))
         elif len(column) == 3:
-            query = "ALTER TABLE {table} ADD COLUMN {column} ENCODE {encoding}".format(table=self.table, column=' '.join(column[0:2]), encoding=column[3])
+            query = "ALTER TABLE {table} ADD COLUMN {column} ENCODE {encoding};".format(table=self.table, column=' '.join(column[0:2]), encoding=column[2])
         else:
             raise ValueError("_add_column_to_table() found no matching behavior for {column}".format(column=column))
 
         cursor.execute(query)
+
+    def post_copy_metacolumns(self, cursor):
+        logger.info('Executing post copy metadata queries')
+        for query in self.metadata_queries:
+            cursor.execute(query)
 
 
 class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luigi.Task):
