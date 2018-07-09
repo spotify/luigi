@@ -27,7 +27,68 @@ import luigi.task
 logger = logging.getLogger('luigi-interface')
 
 
-class CopyToTable(luigi.task.MixinNaiveBulkComplete, luigi.Task):
+class _MetadataColumnsMixin(object):
+    """
+    This mixin is used to provide an additional behavior that allow a task to
+    add generic metadata columns to every table created for both PSQL and
+    Redshift.
+    """
+    @property
+    def metadata_columns(self):
+        """Returns the default metadata columns.
+
+        Those columns are columns that we want each tables to have by default.
+        """
+        return []
+
+    @property
+    def metadata_queries(self):
+        return []
+
+    @property
+    def enable_metadata_columns(self):
+        return False
+
+    def _add_metadata_columns(self, cursor):
+        for column in self.metadata_columns:
+            if len(column) == 0:
+                logger.info('Unable to infer column information from column {column} for {table}'.format(column=column, table=self.table))
+                break
+
+            column_name = column[0]
+            if not self._column_exists(cursor, column_name):
+                logger.info('Adding missing metadata column {column} to {table}'.format(column=column, table=self.table))
+                self._add_column_to_table(cursor, column)
+
+    def _column_exists(self, cursor, column_name):
+        if '.' in self.table:
+            schema, table = self.table.split('.')
+            query = "SELECT 1 AS column_exists " \
+                    "FROM information_schema.columns " \
+                    "WHERE table_schema = LOWER('{0}') AND table_name = LOWER('{1}') AND column_name = LOWER('{2}') LIMIT 1".format(schema, table, column_name)
+        else:
+            query = "SELECT 1 AS column_exists " \
+                    "FROM information_schema.columns " \
+                    "WHERE table_name = LOWER('{0}') AND column_name = LOWER('{1}') LIMIT 1".format(table, column_name)
+
+        cursor.execute(query)
+        result = cursor.fetchone()
+        return bool(result)
+
+    def _add_column_to_table(self, cursor, column):
+        if len(column) == 1:
+            raise ValueError("_add_column_to_table() column type not specified for {column}".format(column=column[0]))
+        elif len(column) == 2:
+            query = "ALTER TABLE {table} ADD COLUMN {column}".format(table=self.table, column=' '.join(column))
+        elif len(column) == 3:
+            query = "ALTER TABLE {table} ADD COLUMN {column} ENCODE {encoding}".format(table=self.table, column=' '.join(column[0:2]), encoding=column[3])
+        else:
+            raise ValueError("_add_column_to_table() found no matching behavior for {column}".format(column=column))
+
+        cursor.execute(query)
+
+
+class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luigi.Task):
     """
     An abstract task for inserting a data set into RDBMS.
 
@@ -119,6 +180,9 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         # clear_table attribtue will have noticed it doesn't work anymore
         if hasattr(self, "clear_table"):
             raise Exception("The clear_table attribute has been removed. Override init_copy instead!")
+
+        if self.enable_metadata_columns:
+            self._add_metadata_columns(connection.cursor())
 
     def post_copy(self, connection):
         """
