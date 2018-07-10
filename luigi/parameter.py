@@ -1201,8 +1201,11 @@ class ChoiceParameter(Parameter):
 
     def parse(self, s):
         var = self._var_type(s)
+        return self.normalize(var)
+
+    def normalize(self, var):
         if var in self._choices:
             return var
         else:
-            raise ValueError("{s} is not a valid choice from {choices}".format(
-                s=s, choices=self._choices))
+            raise ValueError("{var} is not a valid choice from {choices}".format(
+                var=var, choices=self._choices))
