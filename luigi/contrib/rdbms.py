@@ -28,11 +28,60 @@ logger = logging.getLogger('luigi-interface')
 
 
 class _MetadataColumnsMixin(object):
-    """Provice an additinal behavior that adds columns and values to tables
+    """Provide an additional behavior that adds columns and values to tables
 
     This mixin is used to provide an additional behavior that allow a task to
     add generic metadata columns to every table created for both PSQL and
     Redshift.
+
+    Example:
+
+        This is a use-case example of how this mixin could come handy and how
+        to use it.
+
+        .. code:: python
+
+            class CommonMetaColumnsBehavior(object):
+                def update_report_execution_date_query(self):
+                    query = "UPDATE {0} " \
+                            "SET date_param = DATE '{1}' " \
+                            "WHERE date_param IS NULL".format(self.table, self.date)
+
+                    return query
+
+                @property
+                def metadata_columns(self):
+                    if self.date:
+                        cols.append(('date_param', 'VARCHAR'))
+
+                    return cols
+
+                @property
+                def metadata_queries(self):
+                    queries = [self.update_created_tz_query()]
+                    if self.date:
+                        queries.append(self.update_report_execution_date_query())
+
+                    return queries
+
+
+            class RedshiftCopyCSVToTableFromS3(CommonMetaColumnsBehavior, redshift.S3CopyToTable):
+                "We have some business override here that would only add noise to the
+                example, so let's assume that this is only a shell."
+                pass
+
+
+            class UpdateTableA(RedshiftCopyCSVToTableFromS3):
+                date = luigi.Parameter()
+                table = 'tableA'
+
+                def queries():
+                    return [query_content_for('/queries/deduplicate_dupes.sql')]
+
+
+            class UpdateTableB(RedshiftCopyCSVToTableFromS3):
+                date = luigi.Parameter()
+                table = 'tableB'
     """
     @property
     def metadata_columns(self):
