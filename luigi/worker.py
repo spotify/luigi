@@ -259,9 +259,8 @@ class TaskProcess(multiprocessing.Process):
             return super(TaskProcess, self).terminate()
 
 
-# TODO be composable with arbitrarily many custom context managers?
-# Introduce a convention shared for extension points other than TaskProcess?
-# Use https://docs.openstack.org/stevedore?
+# This code and the task_process_context config key currently feels a bit ad-hoc.
+# Discussion on generalizing it into a plugin system: https://github.com/spotify/luigi/issues/1897
 class ContextManagedTaskProcess(TaskProcess):
     def __init__(self, context, *args, **kwargs):
         super(ContextManagedTaskProcess, self).__init__(*args, **kwargs)
@@ -269,7 +268,7 @@ class ContextManagedTaskProcess(TaskProcess):
 
     def run(self):
         if self.context:
-            logger.debug('Instantiating ' + self.context)
+            logger.debug('Importing module and instantiating ' + self.context)
             module_path, class_name = self.context.rsplit('.', 1)
             module = importlib.import_module(module_path)
             cls = getattr(module, class_name)
