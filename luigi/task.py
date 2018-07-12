@@ -437,9 +437,6 @@ class Task(object):
         for key, value in param_values:
             setattr(self, key, value)
 
-        # Register kwargs as an attribute on the class. Might be useful
-        self.param_kwargs = dict(param_values)
-
         self._warn_on_wrong_param_types()
         self.task_id = task_id_str(self.get_task_family(), self.to_str_params(only_significant=True))
         self.__hash = hash(self.task_id)
@@ -451,7 +448,12 @@ class Task(object):
     @property
     def param_args(self):
         warnings.warn("Use of param_args has been deprecated.", DeprecationWarning)
-        return tuple(self.param_kwargs[k] for k, v in self.get_params())
+        param_kwargs = self.param_kwargs
+        return tuple(param_kwargs[k] for k, v in self.get_params())
+
+    @property
+    def param_kwargs(self):
+        return {param: getattr(self, param) for param, _ in self.get_params()}
 
     def initialized(self):
         """
@@ -526,13 +528,10 @@ class Task(object):
         """
         Build a task representation like `MyTask(param1=1.5, param2='5')`
         """
-        params = self.get_params()
-        param_values = self.get_param_values(params, [], self.param_kwargs)
-
         # Build up task id
         repr_parts = []
-        param_objs = dict(params)
-        for param_name, param_value in param_values:
+        param_objs = dict(self.get_params())
+        for param_name, param_value in self.param_kwargs.items():
             if param_objs[param_name].significant:
                 repr_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
 
@@ -541,7 +540,7 @@ class Task(object):
         return task_str
 
     def __eq__(self, other):
-        return self.__class__ == other.__class__ and self.param_kwargs == other.param_kwargs
+        return self.__class__ == other.__class__ and self.task_id == other.task_id
 
     def complete(self):
         """
