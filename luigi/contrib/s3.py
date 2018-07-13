@@ -283,11 +283,10 @@ class S3Client(FileSystem):
             raise DeprecatedBotoClientException(
                 'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
 
-        import boto3
+        from boto3.s3.transfer import TransferConfig
         # default part size for boto3 is 8Mb, changing it to fit part_size
         # provided as a parameter
-        transfer_config = boto3.s3.transfer.TransferConfig(
-            multipart_chunksize=part_size)
+        transfer_config = TransferConfig(multipart_chunksize=part_size)
 
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
@@ -318,10 +317,9 @@ class S3Client(FileSystem):
 
         # don't allow threads to be less than 3
         threads = 3 if threads < 3 else threads
-        import boto3
+        from boto3.s3.transfer import TransferConfig
 
-        transfer_config = boto3.s3.transfer.TransferConfig(
-            max_concurrency=threads, multipart_chunksize=part_size)
+        transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
         total_keys = 0
 
         if self.isdir(source_path):
