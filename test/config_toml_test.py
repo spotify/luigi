@@ -24,6 +24,7 @@ class TomlConfigParserTest(LuigiTestCase):
     @classmethod
     def setUpClass(cls):
         LuigiTomlParser.add_config_path('test/testconfig/luigi.toml')
+        LuigiTomlParser.add_config_path('test/testconfig/luigi_local.toml')
 
     def setUp(self):
         LuigiTomlParser._instance = None
@@ -39,11 +40,20 @@ class TomlConfigParserTest(LuigiTestCase):
 
     def test_get(self):
         config = get_config('toml')
+
+        # test getting
         self.assertEqual(config.get('hdfs', 'client'), 'hadoopcli')
         self.assertEqual(config.get('hdfs', 'client', 'test'), 'hadoopcli')
+
+        # test default
         self.assertEqual(config.get('hdfs', 'test', 'check'), 'check')
         with self.assertRaises(KeyError):
             config.get('hdfs', 'test')
+
+        # test override
+        self.assertEqual(config.get('hdfs', 'namenode_host'), 'localhost')
+        # test non-string values
+        self.assertEqual(config.get('hdfs', 'namenode_port'), 50030)
 
     def test_set(self):
         config = get_config('toml')

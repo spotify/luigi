@@ -31,11 +31,23 @@ class LuigiTomlParser(BaseParser):
         'luigi/local.toml',
     ]
 
+    @staticmethod
+    def _update_data(data, new_data):
+        if not new_data:
+            return data
+        if not data:
+            return new_data
+        for section, content in new_data.items():
+            if section not in data:
+                data[section] = dict()
+            data[section].update(content)
+        return data
+
     def read(self, config_paths):
         self.data = dict()
         for path in config_paths:
             if os.path.isfile(path):
-                self.data.update(toml.load(path))
+                self.data = self._update_data(self.data, toml.load(path))
         return self.data
 
     def get(self, section, option, default=NO_DEFAULT, **kwargs):
