@@ -29,7 +29,6 @@ with the rest of Luigi.
 See :doc:`/configuration` for more info.
 """
 
-import logging
 import os
 import warnings
 
@@ -38,10 +37,11 @@ try:
 except ImportError:
     from configparser import ConfigParser, NoOptionError, NoSectionError
 
+from .base_parser import BaseParser
 
-class LuigiConfigParser(ConfigParser):
+
+class LuigiConfigParser(BaseParser, ConfigParser):
     NO_DEFAULT = object()
-    _instance = None
     _config_paths = [
         '/etc/luigi/client.cfg',  # Deprecated old-style global luigi config
         '/etc/luigi/luigi.cfg',
@@ -54,21 +54,6 @@ class LuigiConfigParser(ConfigParser):
             warnings.warn("LUIGI_CONFIG_PATH points to a file which does not exist. Invalid file: {path}".format(path=config_file))
         else:
             _config_paths.append(config_file)
-
-    @classmethod
-    def add_config_path(cls, path):
-        cls._config_paths.append(path)
-        cls.reload()
-
-    @classmethod
-    def instance(cls, *args, **kwargs):
-        """ Singleton getter """
-        if cls._instance is None:
-            cls._instance = cls(*args, **kwargs)
-            loaded = cls._instance.reload()
-            logging.getLogger('luigi-interface').info('Loaded %r', loaded)
-
-        return cls._instance
 
     @classmethod
     def reload(cls):
@@ -124,10 +109,3 @@ class LuigiConfigParser(ConfigParser):
             ConfigParser.add_section(self, section)
 
         return ConfigParser.set(self, section, option, value)
-
-
-def get_config():
-    """
-    Convenience method (for backwards compatibility) for accessing config singleton.
-    """
-    return LuigiConfigParser.instance()
