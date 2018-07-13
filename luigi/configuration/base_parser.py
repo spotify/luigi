@@ -17,9 +17,9 @@
 import logging
 
 
-class BaseParser(object):
+class BaseParser:
     _instance = None
-    _config_paths = ()
+    _config_paths = []
 
     @classmethod
     def instance(cls, *args, **kwargs):

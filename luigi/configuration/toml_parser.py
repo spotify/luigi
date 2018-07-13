@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2012-2015 Spotify AB
+# Copyright 2018 Cindicator Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,12 +24,12 @@ from .base_parser import BaseParser
 class LuigiTomlParser(BaseParser):
     NO_DEFAULT = object()
     data = dict()
-    _config_paths = (
+    _config_paths = [
         '/etc/luigi/luigi.toml',
         'luigi.toml',
         'luigi/base.toml',
         'luigi/local.toml',
-        )
+    ]
 
     def read(self, config_paths):
         self.data = dict()
