@@ -43,7 +43,7 @@ Example cfg config:
 
 Example toml config:
 
-.. code:: toml
+.. code:: python
 
     [hadoop]
     version = "cdh4"
