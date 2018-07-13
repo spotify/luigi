@@ -29,7 +29,6 @@ with the rest of Luigi.
 See :doc:`/configuration` for more info.
 """
 
-import logging
 import os
 import warnings
 

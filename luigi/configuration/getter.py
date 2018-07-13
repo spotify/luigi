@@ -1,8 +1,18 @@
+import os
+
 from .cfg_parser import LuigiConfigParser
+from .toml_parser import LuigiTomlParser
 
 
-def get_config():
+PARSERS = {
+    'cfg': LuigiConfigParser,
+    'ini': LuigiConfigParser,
+    'toml': LuigiTomlParser,
+}
+
+
+def get_config(parser=os.environ.get('LUIGI_CONFIG_PARSER', 'cfg')):
     """
-    Convenience method (for backwards compatibility) for accessing config singleton.
+    Convenience method for accessing config singleton.
     """
-    return LuigiConfigParser.instance()
+    return PARSERS[parser].instance()
