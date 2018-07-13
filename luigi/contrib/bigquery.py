@@ -126,7 +126,7 @@ class BigQueryClient(object):
         if descriptor:
             self.client = discovery.build_from_document(descriptor, **authenticate_kwargs)
         else:
-            self.client = discovery.build('bigquery', 'v2', **authenticate_kwargs)
+            self.client = discovery.build('bigquery', 'v2', cache_discovery=False, **authenticate_kwargs)
 
     def dataset_exists(self, dataset):
         """Returns whether the given dataset exists.
@@ -420,11 +420,10 @@ class MixinBigQueryBulkComplete(object):
 
     @classmethod
     def bulk_complete(cls, parameter_tuples):
-        if len(parameter_tuples) < 1:
-            return
-
         # Instantiate the tasks to inspect them
         tasks_with_params = [(cls(p), p) for p in parameter_tuples]
+        if not tasks_with_params:
+            return
 
         # Grab the set of BigQuery datasets we are interested in
         datasets = {t.output().table.dataset for t, p in tasks_with_params}

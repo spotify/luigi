@@ -17,7 +17,7 @@
 """
 Implementation of Simple Storage Service support.
 :py:class:`S3Target` is a subclass of the Target class to support S3 file
-system operations. The `boto` library is required to use S3 targets.
+system operations. The `boto3` library is required to use S3 targets.
 """
 
 from __future__ import division
@@ -30,15 +30,9 @@ import os
 import os.path
 import warnings
 
-import botocore
+from multiprocessing.pool import ThreadPool
 
-from luigi import configuration, six
-from luigi.format import get_default_format
-from luigi.parameter import Parameter
-from luigi.target import (AtomicLocalFile, FileAlreadyExists, FileSystem,
-                          FileSystemException, FileSystemTarget,
-                          MissingParentDirectory)
-from luigi.task import ExternalTask
+import botocore
 
 try:
     from urlparse import urlsplit
@@ -50,26 +44,13 @@ try:
 except ImportError:
     from configparser import NoSectionError
 
-<<<<<<< HEAD
-||||||| merged common ancestors
 from luigi import six
-from luigi.six.moves import range
-
-from luigi import configuration
-from luigi.format import get_default_format
-from luigi.parameter import Parameter
-from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
-from luigi.task import ExternalTask
-=======
-from luigi import six
-from luigi.six.moves import range
 
 from luigi import configuration
 from luigi.format import get_default_format
 from luigi.parameter import OptionalParameter, Parameter
 from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
 from luigi.task import ExternalTask
->>>>>>> 7cbf2d3a9c8d3cd751d53c06cc56d30b77eadd95
 
 logger = logging.getLogger('luigi-interface')
 
@@ -152,6 +133,8 @@ class S3Client(FileSystem):
                 'SecretAccessKey')
             aws_access_key_id = assumed_role['Credentials'].get('AccessKeyId')
             aws_session_token = assumed_role['Credentials'].get('SessionToken')
+            logger.debug('using aws credentials via assumed role {} as defined in luigi config'
+                         .format(role_session_name))
 
         for key in ['aws_access_key_id', 'aws_secret_access_key',
                     'aws_role_session_name', 'aws_role_arn']:
@@ -162,12 +145,23 @@ class S3Client(FileSystem):
         # For finding out about the order in which it tries to find these credentials
         # please see here details
         # http://boto3.readthedocs.io/en/latest/guide/configuration.html#configuring-credentials
-        logger.debug('calling boto3 resource with access_key={}'.format(aws_access_key_id))
-        self._s3 = boto3.resource('s3',
-                                  aws_access_key_id=aws_access_key_id,
-                                  aws_secret_access_key=aws_secret_access_key,
-                                  aws_session_token=aws_session_token,
-                                  **options)
+
+        if not (aws_access_key_id and aws_secret_access_key):
+            logger.debug('no credentials provided, delegating credentials resolution to boto3')
+
+        try:
+            self._s3 = boto3.resource('s3',
+                                      aws_access_key_id=aws_access_key_id,
+                                      aws_secret_access_key=aws_secret_access_key,
+                                      aws_session_token=aws_session_token,
+                                      **options)
+        except TypeError as e:
+            logger.error(e.message)
+            if 'got an unexpected keyword argument' in e.message:
+                raise DeprecatedBotoClientException(
+                    "Now using boto3. Check that you're passing the correct arguments")
+            raise
+
         return self._s3
 
     @s3.setter
@@ -206,8 +200,7 @@ class S3Client(FileSystem):
         s3_bucket = self.s3.Bucket(bucket)
         # root
         if self._is_root(key):
-            raise InvalidDeleteException(
-                'Cannot delete root of bucket at path %s' % path)
+            raise InvalidDeleteException('Cannot delete root of bucket at path %s' % path)
 
         # file
         if self._exists(bucket, key):
@@ -216,20 +209,16 @@ class S3Client(FileSystem):
             return True
 
         if self.isdir(path) and not recursive:
-            raise InvalidDeleteException(
-                'Path %s is a directory. Must use recursive delete' % path)
+            raise InvalidDeleteException('Path %s is a directory. Must use recursive delete' % path)
 
-        delete_key_list = []
-        for obj in s3_bucket.objects.filter(Prefix=self._add_path_delimiter(key)):
-            delete_key_list.append({'Key': obj.key})
+        delete_key_list = [{'Key': obj.key} for obj in s3_bucket.objects.filter(Prefix=self._add_path_delimiter(key))]
 
         # delete the directory marker file if it exists
-        if self._exists(bucket, key + S3_DIRECTORY_MARKER_SUFFIX_0):
-            delete_key_list.append({'Key': key + S3_DIRECTORY_MARKER_SUFFIX_0})
+        if self._exists(bucket, '{}{}'.format(key, S3_DIRECTORY_MARKER_SUFFIX_0)):
+            delete_key_list.append({'Key': '{}{}'.format(key, S3_DIRECTORY_MARKER_SUFFIX_0)})
 
         if len(delete_key_list) > 0:
-            self.s3.meta.client.delete_objects(
-                Bucket=bucket, Delete={'Objects': delete_key_list})
+            self.s3.meta.client.delete_objects(Bucket=bucket, Delete={'Objects': delete_key_list})
             return True
 
         return False
@@ -336,6 +325,9 @@ class S3Client(FileSystem):
         total_keys = 0
 
         if self.isdir(source_path):
+            copy_jobs = []
+            management_pool = ThreadPool(processes=threads)
+
             (bucket, key) = self._path_to_bucket_and_key(source_path)
             key_path = self._add_path_delimiter(key)
             key_path_len = len(key_path)
@@ -353,8 +345,19 @@ class S3Client(FileSystem):
                         'Key': src_prefix + path
                     }
 
-                    self.s3.meta.client.copy(
-                        copy_source, dst_bucket, dst_prefix + path, Config=transfer_config, ExtraArgs=kwargs)
+                    the_kwargs = {'Config': transfer_config, 'ExtraArgs': kwargs}
+                    job = management_pool.apply_async(self.s3.meta.client.copy,
+                                                      args=(copy_source, dst_bucket, dst_prefix + path),
+                                                      kwds=the_kwargs)
+                    copy_jobs.append(job)
+
+            # Wait for the pools to finish scheduling all the copies
+            management_pool.close()
+            management_pool.join()
+
+            # Raise any errors encountered in any of the copy processes
+            for result in copy_jobs:
+                result.get()
 
             end = datetime.datetime.now()
             duration = end - start
@@ -445,8 +448,8 @@ class S3Client(FileSystem):
         """
         Get an iterable with S3 folder contents.
         Iterable contains paths relative to queried path.
-        :param start_time: Optional argument to list files with modified datetime after start_time
-        :param end_time: Optional argument to list files with modified datetime before end_time
+        :param start_time: Optional argument to list files with modified (offset aware) datetime after start_time
+        :param end_time: Optional argument to list files with modified (offset aware) datetime before end_time
         :param return_key: Optional argument, when set to True will return boto3's ObjectSummary (instead of the filename)
         """
         (bucket, key) = self._path_to_bucket_and_key(path)
@@ -495,8 +498,8 @@ class S3Client(FileSystem):
                 pass
         if key:
             return config.get(key)
-        section_only = {k: v for k, v in config.items(
-        ) if k not in defaults or v != defaults[k]}
+        section_only = {k: v for k, v in config.items() if k not in defaults or v != defaults[k]}
+
         return section_only
 
     def _path_to_bucket_and_key(self, path):

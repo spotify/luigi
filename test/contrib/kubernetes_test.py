@@ -60,6 +60,7 @@ class SuccessJob(KubernetesJobTask):
 class FailJob(KubernetesJobTask):
     name = "fail"
     max_retrials = 3
+    backoff_limit = 3
     spec_schema = {
         "containers": [{
             "name": "fail",

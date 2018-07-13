@@ -34,6 +34,7 @@ import re
 import copy
 import functools
 
+import luigi
 from luigi import six
 
 from luigi import parameter
@@ -107,7 +108,7 @@ def auto_namespace(scope=''):
         luigi.auto_namespace(scope=__name__)
 
     To reset an ``auto_namespace()`` call, you can use
-    ``namespace(scope='my_scope'``).  But this will not be
+    ``namespace(scope='my_scope')``.  But this will not be
     needed (and is also discouraged) if you use the ``scope`` kwarg.
 
     *New since Luigi 2.6.0.*
@@ -277,6 +278,14 @@ class Task(object):
                     return
                 except BaseException:
                     logger.exception("Error in event callback for %r", event)
+
+    @property
+    def accepts_messages(self):
+        """
+        For configuring which scheduler messages can be received. When falsy, this tasks does not
+        accept any message. When True, all messages are accepted.
+        """
+        return False
 
     @property
     def task_module(self):
@@ -686,7 +695,7 @@ class Task(object):
                         pickle.dumps(self)
 
         """
-        unpicklable_properties = ('set_tracking_url', 'set_status_message', 'set_progress_percentage')
+        unpicklable_properties = tuple(luigi.worker.TaskProcess.forward_reporter_attributes.values())
         reserved_properties = {}
         for property_name in unpicklable_properties:
             if hasattr(self, property_name):

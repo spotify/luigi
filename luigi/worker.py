@@ -30,6 +30,7 @@ ways between versions. The exception is the exception types and the
 
 import collections
 import getpass
+import importlib
 import logging
 import multiprocessing
 import os
@@ -59,7 +60,7 @@ from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
-from luigi.parameter import FloatParameter, IntParameter, BoolParameter
+from luigi.parameter import BoolParameter, FloatParameter, IntParameter, Parameter
 
 try:
     import simplejson as json
@@ -110,6 +111,16 @@ class TaskProcess(multiprocessing.Process):
 
     Mainly for convenience since this is run in a separate process. """
 
+    # mapping of status_reporter attributes to task attributes that are added to tasks
+    # before they actually run, and removed afterwards
+    forward_reporter_attributes = {
+        "update_tracking_url": "set_tracking_url",
+        "update_status_message": "set_status_message",
+        "update_progress_percentage": "set_progress_percentage",
+        "decrease_running_resources": "decrease_running_resources",
+        "scheduler_messages": "scheduler_messages",
+    }
+
     def __init__(self, task, worker_id, result_queue, status_reporter,
                  use_multiprocessing=False, worker_timeout=0, check_unfulfilled_deps=True):
         super(TaskProcess, self).__init__()
@@ -124,15 +135,15 @@ class TaskProcess(multiprocessing.Process):
         self.check_unfulfilled_deps = check_unfulfilled_deps
 
     def _run_get_new_deps(self):
-        self.task.set_tracking_url = self.status_reporter.update_tracking_url
-        self.task.set_status_message = self.status_reporter.update_status_message
-        self.task.set_progress_percentage = self.status_reporter.update_progress_percentage
+        # forward some attributes before running
+        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
+            setattr(self.task, task_attr, getattr(self.status_reporter, reporter_attr))
 
         task_gen = self.task.run()
 
-        self.task.set_tracking_url = None
-        self.task.set_status_message = None
-        self.task.set_progress_percentage = None
+        # reset attributes again
+        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
+            setattr(self.task, task_attr, None)
 
         if not isinstance(task_gen, types.GeneratorType):
             return None
@@ -248,6 +259,26 @@ class TaskProcess(multiprocessing.Process):
             return super(TaskProcess, self).terminate()
 
 
+# This code and the task_process_context config key currently feels a bit ad-hoc.
+# Discussion on generalizing it into a plugin system: https://github.com/spotify/luigi/issues/1897
+class ContextManagedTaskProcess(TaskProcess):
+    def __init__(self, context, *args, **kwargs):
+        super(ContextManagedTaskProcess, self).__init__(*args, **kwargs)
+        self.context = context
+
+    def run(self):
+        if self.context:
+            logger.debug('Importing module and instantiating ' + self.context)
+            module_path, class_name = self.context.rsplit('.', 1)
+            module = importlib.import_module(module_path)
+            cls = getattr(module, class_name)
+
+            with cls(self):
+                super(ContextManagedTaskProcess, self).run()
+        else:
+            super(ContextManagedTaskProcess, self).run()
+
+
 class TaskStatusReporter(object):
     """
     Reports task status information to the scheduler.
@@ -255,10 +286,11 @@ class TaskStatusReporter(object):
     This object must be pickle-able for passing to `TaskProcess` on systems
     where fork method needs to pickle the process object (e.g.  Windows).
     """
-    def __init__(self, scheduler, task_id, worker_id):
+    def __init__(self, scheduler, task_id, worker_id, scheduler_messages):
         self._task_id = task_id
         self._worker_id = worker_id
         self._scheduler = scheduler
+        self.scheduler_messages = scheduler_messages
 
     def update_tracking_url(self, tracking_url):
         self._scheduler.add_task(
@@ -273,6 +305,35 @@ class TaskStatusReporter(object):
 
     def update_progress_percentage(self, percentage):
         self._scheduler.set_task_progress_percentage(self._task_id, percentage)
+
+    def decrease_running_resources(self, decrease_resources):
+        self._scheduler.decrease_running_task_resources(self._task_id, decrease_resources)
+
+
+class SchedulerMessage(object):
+    """
+    Message object that is build by the the :py:class:`Worker` when a message from the scheduler is
+    received and passed to the message queue of a :py:class:`Task`.
+    """
+
+    def __init__(self, scheduler, task_id, message_id, content, **payload):
+        super(SchedulerMessage, self).__init__()
+
+        self._scheduler = scheduler
+        self._task_id = task_id
+        self._message_id = message_id
+
+        self.content = content
+        self.payload = payload
+
+    def __str__(self):
+        return str(self.content)
+
+    def __eq__(self, other):
+        return self.content == other
+
+    def respond(self, response):
+        self._scheduler.add_scheduler_message_response(self._task_id, self._message_id, response)
 
 
 class SingleProcessPool(object):
@@ -376,6 +437,15 @@ class worker(Config):
     check_unfulfilled_deps = BoolParameter(default=True,
                                            description='If true, check for completeness of '
                                            'dependencies before running a task')
+    force_multiprocessing = BoolParameter(default=False,
+                                          description='If true, use multiprocessing also when '
+                                          'running with 1 worker')
+    task_process_context = Parameter(default=None,
+                                     description='If set to a fully qualified class name, the class will '
+                                     'be instantiated with a TaskProcess as its constructor parameter and '
+                                     'applied as a context manager around its run() call, so this can be '
+                                     'used for obtaining high level customizable monitoring or logging of '
+                                     'each individual Task run.')
 
 
 class KeepAliveThread(threading.Thread):
@@ -779,13 +849,14 @@ class Worker(object):
             module=task.task_module,
             batchable=task.batchable,
             retry_policy_dict=_get_retry_policy_dict(task),
+            accepts_messages=task.accepts_messages,
         )
 
     def _validate_dependency(self, dependency):
         if isinstance(dependency, Target):
             raise Exception('requires() can not return Target objects. Wrap it in an ExternalTask class')
         elif not isinstance(dependency, Task):
-            raise Exception('requires() must return Task objects')
+            raise Exception('requires() must return Task objects but {} is a {}'.format(dependency, type(dependency)))
 
     def _check_complete_value(self, is_complete):
         if is_complete not in (True, False):
@@ -919,10 +990,13 @@ class Worker(object):
             task_process.run()
 
     def _create_task_process(self, task):
-        reporter = TaskStatusReporter(self._scheduler, task.task_id, self._id)
-        return TaskProcess(
+        message_queue = multiprocessing.Queue() if task.accepts_messages else None
+        reporter = TaskStatusReporter(self._scheduler, task.task_id, self._id, message_queue)
+        use_multiprocessing = self._config.force_multiprocessing or bool(self.worker_processes > 1)
+        return ContextManagedTaskProcess(
+            self._config.task_process_context,
             task, self._id, self._task_result_queue, reporter,
-            use_multiprocessing=bool(self.worker_processes > 1),
+            use_multiprocessing=use_multiprocessing,
             worker_timeout=self._config.timeout,
             check_unfulfilled_deps=self._config.check_unfulfilled_deps,
         )
@@ -1132,3 +1206,12 @@ class Worker(object):
 
         # tell the scheduler
         self._scheduler.add_worker(self._id, {'workers': self.worker_processes})
+
+    @rpc_message_callback
+    def dispatch_scheduler_message(self, task_id, message_id, content, **kwargs):
+        task_id = str(task_id)
+        if task_id in self._running_tasks:
+            task_process = self._running_tasks[task_id]
+            if task_process.status_reporter.scheduler_messages:
+                message = SchedulerMessage(self._scheduler, task_id, message_id, content, **kwargs)
+                task_process.status_reporter.scheduler_messages.put(message)
