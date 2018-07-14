@@ -659,8 +659,7 @@ class RangeDaily(RangeDailyBase):
 
     def missing_datetimes(self, finite_datetimes):
         try:
-            cls_with_params = functools.partial(self.of, **self.of_params)
-            complete_parameters = self.of.bulk_complete.__func__(cls_with_params, map(self.datetime_to_parameter, finite_datetimes))
+            complete_parameters = self.of.bulk_complete.__func__(self._instantiate_task_cls, map(self.datetime_to_parameter, finite_datetimes))
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(
@@ -688,8 +687,7 @@ class RangeHourly(RangeHourlyBase):
     def missing_datetimes(self, finite_datetimes):
         try:
             # TODO: Why is there a list() here but not for the RangeDaily??
-            cls_with_params = functools.partial(self.of, **self.of_params)
-            complete_parameters = self.of.bulk_complete.__func__(cls_with_params, list(map(self.datetime_to_parameter, finite_datetimes)))
+            complete_parameters = self.of.bulk_complete.__func__(self._instantiate_task_cls, list(map(self.datetime_to_parameter, finite_datetimes)))
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(
@@ -716,8 +714,7 @@ class RangeByMinutes(RangeByMinutesBase):
 
     def missing_datetimes(self, finite_datetimes):
         try:
-            cls_with_params = functools.partial(self.of, **self.of_params)
-            complete_parameters = self.of.bulk_complete.__func__(cls_with_params, map(self.datetime_to_parameter, finite_datetimes))
+            complete_parameters = self.of.bulk_complete.__func__(self._instantiate_task_cls, map(self.datetime_to_parameter, finite_datetimes))
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(
