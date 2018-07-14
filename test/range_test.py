@@ -22,6 +22,7 @@ from helpers import unittest, LuigiTestCase
 import luigi
 import mock
 from luigi.mock import MockTarget, MockFileSystem
+from luigi.task import MixinNaiveBulkComplete
 from luigi.tools.range import (RangeDaily, RangeDailyBase, RangeEvent,
                                RangeHourly, RangeHourlyBase,
                                RangeByMinutes, RangeByMinutesBase,
@@ -1178,6 +1179,23 @@ class RangeInstantiationTest(LuigiTestCase):
                 return False
 
         range_task = RangeDailyBase(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                    of=MyTask,
+                                    start=datetime.date(2015, 12, 1),
+                                    stop=datetime.date(2015, 12, 2),
+                                    param_name='date_param')
+        expected_task = MyTask('woo', datetime.date(2015, 12, 1))
+        self.assertEqual(expected_task, list(range_task._requires())[0])
+
+
+    def test_param_name_with_mixinnaivebulkcomplete(self):
+        class MyTask(MixinNaiveBulkComplete, luigi.Task):
+            some_non_range_param = luigi.Parameter(default='woo')
+            date_param = luigi.DateParameter()
+
+            def complete(self):
+                return False
+
+        range_task = RangeDaily(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
                                     of=MyTask,
                                     start=datetime.date(2015, 12, 1),
                                     stop=datetime.date(2015, 12, 2),
