@@ -736,12 +736,12 @@ class WorkerTest(LuigiTestCase):
             self.assertTrue(self.w.add(task))
         self.assertTrue(self.w.run())
         
-        for task in tasks:
+        for i, task in enumerate(tasks):
             self.assertTrue(task.complete())
             # only task number 9 should run
             self.assertFalse(task.has_run and task.value < 9)
-            # only task number 9 should have batched_params
-            self.assertFalse(task.batched_params and task.value < 9)
+            # only task number 9 should have more than default batched_params
+            self.assertFalse(task.batched_params != {'value': [i]} and task.value < 9)
         #Task number 9 should have batched_params of all tasks values
         self.assertEquals(tasks[-1].batched_params, {'value' : list(range(10))})
     
@@ -774,11 +774,11 @@ class WorkerTest(LuigiTestCase):
         #Run tasks on w2
         self.assertTrue(self.w2.run())
         
-        for task in tasks_which_overlap:
+        for i, task in enumerate(tasks_which_overlap):
             #Only 4 and 9 run
             self.assertFalse(task.has_run and task.value not in (4,9))
-            #Only 4 and 9 have batched_params (content tested below)
-            self.assertFalse(task.batched_params and task.value not in (4,9))
+            #Only 4 and 9 have more than default batched_params (content tested below)
+            self.assertFalse(task.batched_params != {'value': [i]} and task.value not in (4,9))
         
         #Task number 4 should have batched_params of the first batch
         self.assertEquals(tasks[-1].batched_params, {'value' : list(range(5))})
@@ -815,11 +815,11 @@ class WorkerTest(LuigiTestCase):
         #Run tasks on w (should be a no op)
         self.assertTrue(self.w.run())
         
-        for task in tasks_which_overlap:
+        for i, task in enumerate(tasks_which_overlap):
             #Only 9 ran
             self.assertFalse(task.has_run and task.value != 9)
             #Only 4 and 9 have batched_params (content tested below)
-            self.assertFalse(task.batched_params and task.value != 9)
+            self.assertFalse(task.batched_params != {'value': [i]} and task.value != 9)
 
         #Task number 9 should have batched_params of all tasks
         self.assertEquals(tasks_batch_2[-1].batched_params, {'value' : list(range(10))})
