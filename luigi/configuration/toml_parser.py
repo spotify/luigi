@@ -24,6 +24,7 @@ from .base_parser import BaseParser
 class LuigiTomlParser(BaseParser):
     NO_DEFAULT = object()
     data = dict()
+    _instance = None
     _config_paths = [
         '/etc/luigi/luigi.toml',
         'luigi.toml',
