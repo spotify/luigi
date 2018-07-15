@@ -15,9 +15,7 @@
 # limitations under the License.
 #
 
-import time
-
-from helpers import LuigiTestCase, RunOnceTask
+from helpers import LuigiTestCase
 import server_test
 
 import luigi
@@ -128,4 +126,3 @@ class RemoteSchedulerParameterVisibilitiesTest(server_test.ServerTestBase):
         data = json.loads(decoded)
 
         self.assertEqual({'a': 'a', 'd': 'd'}, data['response'][task.task_id]['params'])
-
