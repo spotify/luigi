@@ -33,7 +33,7 @@ tempdir = tempfile.mkdtemp()
 
 
 class DummyTask(luigi.Task):
-    task_id = luigi.Parameter()
+    task_id = luigi.IntParameter()
 
     def run(self):
         f = self.output().open('w')
@@ -44,7 +44,7 @@ class DummyTask(luigi.Task):
 
 
 class FactorTask(luigi.Task):
-    product = luigi.Parameter()
+    product = luigi.IntParameter()
 
     def requires(self):
         for factor in range(2, self.product):
@@ -77,7 +77,10 @@ class BadReqTask(luigi.Task):
 
 class FailingTask(luigi.Task):
     task_namespace = __name__
-    task_id = luigi.Parameter()
+    task_id = luigi.IntParameter()
+
+    def complete(self):
+        return False
 
     def run(self):
         raise Exception("Error Message")
@@ -192,6 +195,12 @@ class SchedulerVisualisationTest(unittest.TestCase):
     def test_truncate_graph_with_full_levels(self):
         class BinaryTreeTask(luigi.Task):
             idx = luigi.IntParameter()
+
+            def run(self):
+                self.complete = lambda: True
+
+            def complete(self):
+                return False
 
             def requires(self):
                 if self.idx < 100:
@@ -387,7 +396,8 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
     def test_task_list_upstream_status(self):
         class A(luigi.ExternalTask):
-            pass
+            def complete(self):
+                return False
 
         class B(luigi.ExternalTask):
 
@@ -395,21 +405,38 @@ class SchedulerVisualisationTest(unittest.TestCase):
                 return True
 
         class C(luigi.Task):
+            def run(self):
+                self.complete = lambda: True
+
+            def complete(self):
+                return False
 
             def requires(self):
                 return [A(), B()]
 
         class F(luigi.Task):
+            def complete(self):
+                return False
 
             def run(self):
                 raise Exception()
 
         class D(luigi.Task):
+            def run(self):
+                self.complete = lambda: True
+
+            def complete(self):
+                return False
 
             def requires(self):
                 return [F()]
 
         class E(luigi.Task):
+            def run(self):
+                self.complete = lambda: True
+
+            def complete(self):
+                return False
 
             def requires(self):
                 return [C(), D()]
@@ -479,20 +506,40 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
     def test_inverse_deps(self):
         class X(luigi.Task):
-            pass
+            def run(self):
+                self.complete = lambda: True
+
+            def complete(self):
+                return False
 
         class Y(luigi.Task):
+            def run(self):
+                self.complete = lambda: True
+
+            def complete(self):
+                return False
 
             def requires(self):
                 return [X()]
 
         class Z(luigi.Task):
-            id = luigi.Parameter()
+            id = luigi.IntParameter()
+
+            def run(self):
+                self.complete = lambda: True
+
+            def complete(self):
+                return False
 
             def requires(self):
                 return [Y()]
 
         class ZZ(luigi.Task):
+            def run(self):
+                self.complete = lambda: True
+
+            def complete(self):
+                return False
 
             def requires(self):
                 return [Z(1), Z(2)]
@@ -565,6 +612,12 @@ class SchedulerVisualisationTest(unittest.TestCase):
         class X(luigi.Task):
             n = luigi.IntParameter()
 
+            def run(self):
+                self.complete = lambda: True
+
+            def complete(self):
+                return False
+
         w = luigi.worker.Worker(worker_id='w', scheduler=self.scheduler, worker_processes=3)
         w.add(X(0))
         w.add(X(1))
@@ -585,7 +638,11 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
     def test_worker_list_disabled_worker(self):
         class X(luigi.Task):
-            pass
+            def run(self):
+                self.complete = lambda: True
+
+            def complete(self):
+                return False
 
         with luigi.worker.Worker(worker_id='w', scheduler=self.scheduler) as w:
             w.add(X())  #
