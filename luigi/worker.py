@@ -539,7 +539,7 @@ class Worker(object):
                 self._add_task_history.append((batch_task, status, True))
 
         if task and kwargs.get('params'):
-            kwargs['params_visibility'] = task._get_params_visibility()
+            kwargs['param_visibilities'] = task._get_param_visibilities()
 
         self._scheduler.add_task(*args, **kwargs)
 

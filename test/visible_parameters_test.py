@@ -61,4 +61,17 @@ class Test(unittest.TestCase):
     def test_param_visibilities(self):
         task = TestTask1()
 
-        self.assertEqual(task._get_params_visibility(), {'param_one': 1, 'param_two': 0})
+        self.assertEqual(task._get_param_visibilities(), {'param_one': 1, 'param_two': 0})
+
+    def test_incorrect_visibility_value(self):
+        class Task(luigi.Task):
+            a = luigi.Parameter(default='val', visibility=5)
+
+        task = Task()
+
+        self.assertEqual(task._get_param_visibilities(), {'a': 0})
+
+    def test_task_id_exclude_hidden_and_private_params(self):
+        task = TestTask1()
+
+        self.assertEqual({'param_two': '2'}, task.to_str_params(only_public=True))

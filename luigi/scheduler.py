@@ -281,7 +281,7 @@ class OrderedSet(collections.MutableSet):
 
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
-                 params=None, params_visibility=None, accepts_messages=False, tracking_url=None, status_message=None,
+                 params=None, param_visibilities=None, accepts_messages=False, tracking_url=None, status_message=None,
                  progress_percentage=None, retry_policy='notoptional'):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
@@ -302,12 +302,11 @@ class Task(object):
         self.resources = _get_default(resources, {})
         self.family = family
         self.module = module
-        self.params_visibility = _get_default(params_visibility, {})
-        self.params = _get_default(params, {})
-        self.public_params = {key: value for key, value in self.params.items() if
-                              self.params_visibility.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.PUBLIC}
-        self.hidden_params = {key: value for key, value in self.params.items() if
-                              self.params_visibility.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.HIDDEN}
+        self.param_visibilities = _get_default(param_visibilities, {})
+        self.params = {}
+        self.public_params = {}
+        self.hidden_params = {}
+        self.set_params(params=params)
         self.accepts_messages = accepts_messages
         self.retry_policy = retry_policy
         self.failures = Failures(self.retry_policy.disable_window)
@@ -323,17 +322,12 @@ class Task(object):
     def __repr__(self):
         return "Task(%r)" % vars(self)
 
-    @property
-    def params(self):
-        return self.__params
-
-    @params.setter
-    def params(self, params):
-        self.__params = _get_default(params, {})
+    def set_params(self, params):
+        self.params = _get_default(params, {})
         self.public_params = {key: value for key, value in self.params.items() if
-                              self.params_visibility.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.PUBLIC}
+                              self.param_visibilities.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.PUBLIC}
         self.hidden_params = {key: value for key, value in self.params.items() if
-                              self.params_visibility.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.HIDDEN}
+                              self.param_visibilities.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.HIDDEN}
 
     # TODO(2017-08-10) replace this function with direct calls to batchable
     # this only exists for backward compatibility
@@ -360,7 +354,7 @@ class Task(object):
 
     @property
     def pretty_id(self):
-        param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(self.params.items()))
+        param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(self.public_params.items()))
         return u'{}({})'.format(self.family, param_str)
 
 
@@ -795,7 +789,7 @@ class Scheduler(object):
     @rpc_method()
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
-                 priority=0, family='', module=None, params=None, params_visibility=None, accepts_messages=False,
+                 priority=0, family='', module=None, params=None, param_visibilities=None, accepts_messages=False,
                  assistant=False, tracking_url=None, worker=None, batchable=None,
                  batch_id=None, retry_policy_dict=None, owners=None, **kwargs):
         """
@@ -819,7 +813,7 @@ class Scheduler(object):
         if worker.enabled:
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
-                priority=priority, family=family, module=module, params=params, params_visibility=params_visibility,
+                priority=priority, family=family, module=module, params=params, param_visibilities=param_visibilities,
                 accepts_messages=accepts_messages,
             )
         else:
@@ -835,10 +829,11 @@ class Scheduler(object):
             task.family = family
         if not getattr(task, 'module', None):
             task.module = module
-        if not task.params_visibility:
-            task.params_visibility = _get_default(params_visibility, {})
+        if not task.param_visibilities:
+            task.param_visibilities = _get_default(param_visibilities, {})
         if not task.params:
-            task.params = _get_default(params, {})
+            task.set_params(params=params)
+            # task.params = _get_default(params, {})
 
         if batch_id is not None:
             task.batch_id = batch_id

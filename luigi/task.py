@@ -442,7 +442,7 @@ class Task(object):
         self.param_kwargs = dict(param_values)
 
         self._warn_on_wrong_param_types()
-        self.task_id = task_id_str(self.get_task_family(), self.to_str_params(only_significant=True))
+        self.task_id = task_id_str(self.get_task_family(), self.to_str_params(only_significant=True, only_public=True))
         self.__hash = hash(self.task_id)
 
         self.set_tracking_url = None
@@ -483,27 +483,28 @@ class Task(object):
 
         return cls(**kwargs)
 
-    def to_str_params(self, only_significant=False):
+    def to_str_params(self, only_significant=False, only_public=False):
         """
         Convert all parameters to a str->str hash.
         """
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
-            if ((not only_significant) or params[param_name].significant) \
-                    and params[param_name].visibility != ParameterVisibility.PRIVATE:
+            if (((not only_significant) or params[param_name].significant)
+                    and ((not only_public) or params[param_name].visibility == ParameterVisibility.PUBLIC)
+                    and params[param_name].visibility != ParameterVisibility.PRIVATE):
                 params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
 
-    def _get_params_visibility(self):
-        params_visibility = {}
+    def _get_param_visibilities(self):
+        param_visibilities = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
             if params[param_name].visibility != ParameterVisibility.PRIVATE:
-                params_visibility[param_name] = params[param_name].visibility
+                param_visibilities[param_name] = params[param_name].visibility
 
-        return params_visibility
+        return param_visibilities
 
     def clone(self, cls=None, **kwargs):
         """
