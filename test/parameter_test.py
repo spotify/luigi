@@ -46,6 +46,10 @@ class WithDefaultTrue(RunOnceTask):
     x = luigi.BoolParameter(default=True)
 
 
+class WithDefaultFalse(RunOnceTask):
+    x = luigi.BoolParameter(default=False)
+
+
 class Foo(RunOnceTask):
     bar = luigi.Parameter()
     p2 = luigi.IntParameter()
@@ -54,9 +58,13 @@ class Foo(RunOnceTask):
 
 class Baz(RunOnceTask):
     bool = luigi.BoolParameter()
+    bool_true = luigi.BoolParameter(default=True)
+    bool_explicit = luigi.BoolParameter(parsing=luigi.BoolParameter.EXPLICIT_PARSING)
 
     def run(self):
         Baz._val = self.bool
+        Baz._val_true = self.bool_true
+        Baz._val_explicit = self.bool_explicit
 
 
 class ListFoo(RunOnceTask):
@@ -191,19 +199,29 @@ class ParameterTest(LuigiTestCase):
         self.assertEqual(f.p2, 5)
         self.assertEqual(f.not_a_param, "lol")
 
-    def test_bool_false(self):
+    def test_bool_parsing(self):
         self.run_locally(['Baz'])
-        self.assertEqual(Baz._val, False)
+        self.assertFalse(Baz._val)
+        self.assertTrue(Baz._val_true)
+        self.assertFalse(Baz._val_explicit)
 
-    def test_bool_true(self):
-        self.run_locally(['Baz', '--bool'])
-        self.assertEqual(Baz._val, True)
+        self.run_locally(['Baz', '--bool', '--bool-true'])
+        self.assertTrue(Baz._val)
+        self.assertTrue(Baz._val_true)
 
-    def test_bool_default_true(self):
+        self.run_locally(['Baz', '--bool-explicit', 'true'])
+        self.assertTrue(Baz._val_explicit)
+
+        self.run_locally(['Baz', '--bool-explicit', 'false'])
+        self.assertFalse(Baz._val_explicit)
+
+    def test_bool_default(self):
         self.assertTrue(WithDefaultTrue().x)
+        self.assertFalse(WithDefaultFalse().x)
 
     def test_bool_coerce(self):
-        self.assertEqual(True, WithDefaultTrue(x='yes').x)
+        self.assertTrue(WithDefaultTrue(x='true').x)
+        self.assertFalse(WithDefaultTrue(x='false').x)
 
     def test_bool_no_coerce_none(self):
         self.assertIsNone(WithDefaultTrue(x=None).x)
@@ -394,7 +412,9 @@ class TestParametersHashability(LuigiTestCase):
             args = luigi.parameter.BoolParameter()
 
         p = luigi.parameter.BoolParameter()
+
         self.assertEqual(hash(Foo(args=True).args), hash(p.parse('true')))
+        self.assertEqual(hash(Foo(args=False).args), hash(p.parse('false')))
 
     def test_int(self):
         class Foo(luigi.Task):

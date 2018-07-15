@@ -53,3 +53,8 @@ class ChoiceParameterTest(unittest.TestCase):
         a = luigi.ChoiceParameter(var_type=str, choices=["1", "2", "3"])
         b = "3"
         self.assertEqual(b, a.parse(a.serialize(b)))
+
+    def test_invalid_choice_task(self):
+        class Foo(luigi.Task):
+            args = luigi.ChoiceParameter(var_type=str, choices=["1", "2", "3"])
+        self.assertRaises(ValueError, lambda: Foo(args="4"))

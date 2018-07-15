@@ -297,9 +297,12 @@ class Parameter(object):
     def _parser_global_dest(param_name, task_name):
         return task_name + '_' + param_name
 
-    @staticmethod
-    def _parser_action():
-        return "store"
+    @classmethod
+    def _parser_kwargs(cls, param_name, task_name=None):
+        return {
+            "action": "store",
+            "dest": cls._parser_global_dest(param_name, task_name) if task_name else param_name,
+        }
 
 
 class OptionalParameter(Parameter):
@@ -609,28 +612,72 @@ class FloatParameter(Parameter):
 
 class BoolParameter(Parameter):
     """
-    A Parameter whose value is a ``bool``. This parameter have an implicit
-    default value of ``False``.
+    A Parameter whose value is a ``bool``. This parameter has an implicit default value of
+    ``False``. For the command line interface this means that the value is ``False`` unless you
+    add ``"--the-bool-parameter"`` to your command without giving a parameter value. This is
+    considered *implicit* parsing (the default). However, in some situations one might want to give
+    the explicit bool value (``"--the-bool-parameter true|false"``), e.g. when you configure the
+    default value to be ``True``. This is called *explicit* parsing. When omitting the parameter
+    value, it is still considered ``True`` but to avoid ambiguities during argument parsing, make
+    sure to always place bool parameters behind the task family on the command line when using
+    explicit parsing.
+
+    You can toggle between the two parsing modes on a per-parameter base via
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+            implicit_bool = luigi.BoolParameter(parsing=luigi.BoolParameter.IMPLICIT_PARSING)
+            explicit_bool = luigi.BoolParameter(parsing=luigi.BoolParameter.EXPLICIT_PARSING)
+
+    or globally by
+
+    .. code-block:: python
+
+        luigi.BoolParameter.parsing = luigi.BoolParameter.EXPLICIT_PARSING
+
+    for all bool parameters instantiated after this line.
     """
 
+    IMPLICIT_PARSING = "implicit"
+    EXPLICIT_PARSING = "explicit"
+
+    parsing = IMPLICIT_PARSING
+
     def __init__(self, *args, **kwargs):
+        self.parsing = kwargs.pop("parsing", self.__class__.parsing)
         super(BoolParameter, self).__init__(*args, **kwargs)
         if self._default == _no_value:
             self._default = False
 
-    def parse(self, s):
+    def parse(self, val):
         """
         Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case.
         """
-        return {'true': True, 'false': False}[str(s).lower()]
+        s = str(val).lower()
+        if s == "true":
+            return True
+        elif s == "false":
+            return False
+        else:
+            raise ValueError("cannot interpret '{}' as boolean".format(val))
 
     def normalize(self, value):
-        # coerce anything truthy to True
-        return bool(value) if value is not None else None
+        try:
+            return self.parse(value)
+        except ValueError:
+            return None
 
-    @staticmethod
-    def _parser_action():
-        return 'store_true'
+    def _parser_kwargs(self, *args, **kwargs):
+        parser_kwargs = super(BoolParameter, self)._parser_kwargs(*args, **kwargs)
+        if self.parsing == self.IMPLICIT_PARSING:
+            parser_kwargs["action"] = "store_true"
+        elif self.parsing == self.EXPLICIT_PARSING:
+            parser_kwargs["nargs"] = "?"
+            parser_kwargs["const"] = True
+        else:
+            raise ValueError("unknown parsing value '{}'".format(self.parsing))
+        return parser_kwargs
 
 
 class DateIntervalParameter(Parameter):
@@ -1154,8 +1201,11 @@ class ChoiceParameter(Parameter):
 
     def parse(self, s):
         var = self._var_type(s)
+        return self.normalize(var)
+
+    def normalize(self, var):
         if var in self._choices:
             return var
         else:
-            raise ValueError("{s} is not a valid choice from {choices}".format(
-                s=s, choices=self._choices))
+            raise ValueError("{var} is not a valid choice from {choices}".format(
+                var=var, choices=self._choices))
