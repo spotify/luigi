@@ -109,7 +109,7 @@ class SchedulerParameterVisibilitiesTest(LuigiTestCase):
 
 
 class RemoteSchedulerParameterVisibilitiesTest(server_test.ServerTestBase):
-    def test_single_worker(self):
+    def test_public_params(self):
         class Task(luigi.Task):
             a = luigi.Parameter(default="a")
             b = luigi.Parameter(default="b", visibility=ParameterVisibility.HIDDEN)
