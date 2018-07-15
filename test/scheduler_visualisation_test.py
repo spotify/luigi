@@ -19,7 +19,7 @@ from __future__ import division
 import os
 import tempfile
 import time
-from helpers import unittest
+from helpers import unittest, RunOnceTask
 
 import luigi
 import luigi.notifications
@@ -61,26 +61,17 @@ class FactorTask(luigi.Task):
         return luigi.LocalTarget(os.path.join(tempdir, 'luigi_test_factor_%d' % self.product))
 
 
-class BadReqTask(luigi.Task):
+class BadReqTask(RunOnceTask):
     succeed = luigi.BoolParameter()
 
     def requires(self):
         assert self.succeed
         yield BadReqTask(False)
 
-    def run(self):
-        pass
 
-    def complete(self):
-        return False
-
-
-class FailingTask(luigi.Task):
+class FailingTask(RunOnceTask):
     task_namespace = __name__
     task_id = luigi.IntParameter()
-
-    def complete(self):
-        return False
 
     def run(self):
         raise Exception("Error Message")
@@ -193,14 +184,8 @@ class SchedulerVisualisationTest(unittest.TestCase):
         six.assertCountEqual(self, expected_nodes, graph)
 
     def test_truncate_graph_with_full_levels(self):
-        class BinaryTreeTask(luigi.Task):
+        class BinaryTreeTask(RunOnceTask):
             idx = luigi.IntParameter()
-
-            def run(self):
-                self.complete = lambda: True
-
-            def complete(self):
-                return False
 
             def requires(self):
                 if self.idx < 100:
@@ -217,16 +202,13 @@ class SchedulerVisualisationTest(unittest.TestCase):
         six.assertCountEqual(self, expected_nodes, graph)
 
     def test_truncate_graph_with_multiple_depths(self):
-        class LinearTask(luigi.Task):
+        class LinearTask(RunOnceTask):
             idx = luigi.IntParameter()
 
             def requires(self):
                 if self.idx > 0:
                     yield LinearTask(self.idx - 1)
                 yield LinearTask(0)
-
-            def complete(self):
-                return False
 
         root_task = LinearTask(100)
 
@@ -404,40 +386,19 @@ class SchedulerVisualisationTest(unittest.TestCase):
             def complete(self):
                 return True
 
-        class C(luigi.Task):
-            def run(self):
-                self.complete = lambda: True
-
-            def complete(self):
-                return False
-
+        class C(RunOnceTask):
             def requires(self):
                 return [A(), B()]
 
-        class F(luigi.Task):
-            def complete(self):
-                return False
-
+        class F(RunOnceTask):
             def run(self):
                 raise Exception()
 
-        class D(luigi.Task):
-            def run(self):
-                self.complete = lambda: True
-
-            def complete(self):
-                return False
-
+        class D(RunOnceTask):
             def requires(self):
                 return [F()]
 
-        class E(luigi.Task):
-            def run(self):
-                self.complete = lambda: True
-
-            def complete(self):
-                return False
-
+        class E(RunOnceTask):
             def requires(self):
                 return [C(), D()]
 
@@ -505,42 +466,20 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertTrue("Traceback" in error["error"])
 
     def test_inverse_deps(self):
-        class X(luigi.Task):
-            def run(self):
-                self.complete = lambda: True
+        class X(RunOnceTask):
+            pass
 
-            def complete(self):
-                return False
-
-        class Y(luigi.Task):
-            def run(self):
-                self.complete = lambda: True
-
-            def complete(self):
-                return False
-
+        class Y(RunOnceTask):
             def requires(self):
                 return [X()]
 
-        class Z(luigi.Task):
+        class Z(RunOnceTask):
             id = luigi.IntParameter()
-
-            def run(self):
-                self.complete = lambda: True
-
-            def complete(self):
-                return False
 
             def requires(self):
                 return [Y()]
 
-        class ZZ(luigi.Task):
-            def run(self):
-                self.complete = lambda: True
-
-            def complete(self):
-                return False
-
+        class ZZ(RunOnceTask):
             def requires(self):
                 return [Z(1), Z(2)]
 
@@ -582,13 +521,10 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(1, worker['workers'])
 
     def test_worker_list_pending_uniques(self):
-        class X(luigi.Task):
-
-            def complete(self):
-                return False
+        class X(RunOnceTask):
+            pass
 
         class Y(X):
-
             def requires(self):
                 return X()
 
@@ -609,14 +545,8 @@ class SchedulerVisualisationTest(unittest.TestCase):
             self.assertEqual(0, worker['num_running'])
 
     def test_worker_list_running(self):
-        class X(luigi.Task):
+        class X(RunOnceTask):
             n = luigi.IntParameter()
-
-            def run(self):
-                self.complete = lambda: True
-
-            def complete(self):
-                return False
 
         w = luigi.worker.Worker(worker_id='w', scheduler=self.scheduler, worker_processes=3)
         w.add(X(0))
@@ -637,12 +567,8 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(1, worker['num_uniques'])
 
     def test_worker_list_disabled_worker(self):
-        class X(luigi.Task):
-            def run(self):
-                self.complete = lambda: True
-
-            def complete(self):
-                return False
+        class X(RunOnceTask):
+            pass
 
         with luigi.worker.Worker(worker_id='w', scheduler=self.scheduler) as w:
             w.add(X())  #
