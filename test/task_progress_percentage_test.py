@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase
+from helpers import LuigiTestCase, RunOnceTask
 
 import luigi
 import luigi.scheduler
@@ -27,7 +27,7 @@ class TaskProgressPercentageTest(LuigiTestCase):
     def test_run(self):
         sch = luigi.scheduler.Scheduler()
         with luigi.worker.Worker(scheduler=sch) as w:
-            class MyTask(luigi.Task):
+            class MyTask(RunOnceTask):
                 def run(self):
                     self.set_progress_percentage(30)
 

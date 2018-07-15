@@ -56,7 +56,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                     return True
                 return False
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(5):
                     yield Bar(i)
@@ -157,7 +157,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                 raise Exception
                 return True
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 yield Bar()
 
@@ -200,7 +200,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             def complete(self):
                 return True
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 yield Bar()
 
@@ -251,7 +251,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             def complete(self):
                 return True
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 raise Exception
                 yield Bar()
@@ -355,14 +355,14 @@ class ExecutionSummaryTest(LuigiTestCase):
                     return True
                 return False
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             num = luigi.IntParameter()
 
             def run(self):
                 if self.num == 0:
                     raise ValueError()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(5):
                     yield ExternalBar(i)
@@ -432,9 +432,8 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertNotIn('\n\n\n', s)
 
     def test_already_running_2(self):
-        class AlreadyRunningTask(luigi.Task):
-            def run(self):
-                pass
+        class AlreadyRunningTask(RunOnceTask):
+            pass
 
         other_worker = luigi.worker.Worker(scheduler=self.scheduler, worker_id="other_worker")
         other_worker.add(AlreadyRunningTask())  # This also registers this worker
@@ -456,9 +455,8 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.assertEqual({AlreadyRunningTask()}, d['run_by_other_worker'])
 
     def test_not_run(self):
-        class AlreadyRunningTask(luigi.Task):
-            def run(self):
-                pass
+        class AlreadyRunningTask(RunOnceTask):
+            pass
 
         other_worker = luigi.worker.Worker(scheduler=self.scheduler, worker_id="other_worker")
         other_worker.add(AlreadyRunningTask())  # This also registers this worker
@@ -560,7 +558,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                 if self.num == 2:
                     yield Dog()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(3):
                     yield Bar(i)
@@ -591,7 +589,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         class Bar(RunOnceTask):
             date = luigi.DateParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(10):
                     new_date = start + datetime.timedelta(days=i)
@@ -616,7 +614,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         class Bar(RunOnceTask):
             time = luigi.DateMinuteParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(300):
                     new_time = start + datetime.timedelta(minutes=i)
@@ -636,7 +634,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         class Bar(RunOnceTask):
             num = luigi.IntParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(11):
                     yield Bar(i)
@@ -657,7 +655,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             num2 = luigi.IntParameter()
             num3 = luigi.IntParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(5):
                     yield Bar(5, i, 25)
@@ -677,7 +675,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             num = luigi.IntParameter()
             num2 = luigi.IntParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(2):
                     yield Bar(i, 2 * i)
@@ -710,7 +708,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         class Bar(RunOnceTask):
             This_is_a_really_long_parameter_that_we_should_not_print_out_because_people_will_get_annoyed = luigi.IntParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 yield Bar(0)
 
@@ -726,7 +724,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             num = luigi.IntParameter()
             num2 = luigi.IntParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(4):
                     yield Bar(i, 2 * i)
@@ -758,7 +756,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             num = luigi.IntParameter()
             num2 = luigi.IntParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(4):
                     yield Bar(i, 2 * i)
@@ -806,14 +804,14 @@ class ExecutionSummaryTest(LuigiTestCase):
             def complete(self):
                 return False
 
-        class Bar(luigi.Task):
+        class Bar(RunOnceTask):
             num = luigi.IntParameter()
 
             def run(self):
                 if self.num == 0:
                     raise ValueError()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(5):
                     yield Bar(i)
@@ -832,7 +830,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             def complete(self):
                 return False
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 yield ExternalBar()
 
@@ -851,7 +849,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                     return True
                 return False
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
 
             def requires(self):
                 for i in range(10):
@@ -873,14 +871,14 @@ class ExecutionSummaryTest(LuigiTestCase):
             def complete(self):
                 return False
 
-        class Boom(luigi.Task):
+        class Boom(RunOnceTask):
             this_is_a_really_long_I_mean_way_too_long_and_annoying_parameter = luigi.IntParameter()
 
             def requires(self):
                 for i in range(5, 200):
                     yield Bar(i)
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             num = luigi.IntParameter()
             num2 = luigi.IntParameter()
 
@@ -894,7 +892,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             def complete(self):
                 return True
 
-        class DateTask(luigi.Task):
+        class DateTask(RunOnceTask):
             date = luigi.DateParameter()
             num = luigi.IntParameter()
 
@@ -902,7 +900,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                 yield MyExternal()
                 yield Boom(0)
 
-        class EntryPoint(luigi.Task):
+        class EntryPoint(RunOnceTask):
 
             def requires(self):
                 for i in range(10):
@@ -947,7 +945,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         class Bar(RunOnceTask):
             datehour = luigi.DateHourParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(10):
                     new_date = start + datetime.timedelta(hours=i)
@@ -973,7 +971,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         class Bar(RunOnceTask):
             month = luigi.MonthParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(3):
                     new_date = start + datetime.timedelta(days=30*i)
@@ -1023,7 +1021,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             eparam = luigi.EnumParameter(enum=Color)
             another_param = luigi.IntParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 yield Bar(Color.red)
                 yield Bar(Color.yellow)
@@ -1042,7 +1040,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         class Bar(RunOnceTask):
             args = luigi.DictParameter()
 
-        class Foo(luigi.Task):
+        class Foo(RunOnceTask):
             def requires(self):
                 for i in range(10):
                     new_dict = args.copy()

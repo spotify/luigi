@@ -18,7 +18,7 @@ from __future__ import print_function
 
 import datetime
 import pickle
-from helpers import unittest
+from helpers import unittest, RunOnceTask
 
 import luigi
 import luigi.notifications
@@ -323,7 +323,7 @@ class Subtask(luigi.Task):
 
 
 @delegates
-class SubtaskDelegator(luigi.Task):
+class SubtaskDelegator(RunOnceTask):
 
     def subtasks(self):
         return [Subtask(1), Subtask(2)]
