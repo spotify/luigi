@@ -17,6 +17,8 @@
 import logging
 
 
+# IMPORTANT: don't inherit from `object`!
+# ConfigParser have some troubles in this case.
 class BaseParser:
     @classmethod
     def instance(cls, *args, **kwargs):

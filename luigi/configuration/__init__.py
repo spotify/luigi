@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 from .cfg_parser import LuigiConfigParser
-from .getter import get_config, add_config_path
+from .core import get_config, add_config_path
 from .toml_parser import LuigiTomlParser
 
 
