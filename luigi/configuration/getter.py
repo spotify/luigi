@@ -15,6 +15,8 @@
 # limitations under the License.
 #
 import os
+import os.path
+import warnings
 
 from .cfg_parser import LuigiConfigParser
 from .toml_parser import LuigiTomlParser
@@ -22,13 +24,38 @@ from .toml_parser import LuigiTomlParser
 
 PARSERS = {
     'cfg': LuigiConfigParser,
+    'conf': LuigiConfigParser,
     'ini': LuigiConfigParser,
     'toml': LuigiTomlParser,
 }
+DEFAULT_PARSER = 'cfg'
 
 
-def get_config(parser=os.environ.get('LUIGI_CONFIG_PARSER', 'cfg')):
+def get_config(parser=os.environ.get('LUIGI_CONFIG_PARSER', DEFAULT_PARSER)):
     """
     Convenience method for accessing config singleton.
     """
     return PARSERS[parser].instance()
+
+
+def add_config_path(path):
+    """Select config parser by file extension and add path into parser.
+    """
+    if not os.path.isfile(path):
+        warnings.warn("Config file does not exist: {path}".format(path=path))
+        return False
+
+    # select parser by file extension
+    _base, ext = os.path.splitext(path)
+    if ext and ext[1:] in PARSERS:
+        parser = PARSERS[ext[1:]]
+    else:
+        parser = PARSERS[DEFAULT_PARSER]
+
+    # add config path to parser
+    parser.add_config_path(path)
+    return True
+
+
+if 'LUIGI_CONFIG_PATH' in os.environ:
+    add_config_path(os.environ['LUIGI_CONFIG_PATH'])
