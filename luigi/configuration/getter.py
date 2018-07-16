@@ -15,7 +15,6 @@
 # limitations under the License.
 #
 import os
-import os.path
 import warnings
 
 from .cfg_parser import LuigiConfigParser
