@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from luigi.configuration import LuigiTomlParser, get_config
+from luigi.configuration import LuigiTomlParser, get_config, add_config_path
 
 
 from helpers import LuigiTestCase
@@ -23,8 +23,8 @@ from helpers import LuigiTestCase
 class TomlConfigParserTest(LuigiTestCase):
     @classmethod
     def setUpClass(cls):
-        LuigiTomlParser.add_config_path('test/testconfig/luigi.toml')
-        LuigiTomlParser.add_config_path('test/testconfig/luigi_local.toml')
+        add_config_path('test/testconfig/luigi.toml')
+        add_config_path('test/testconfig/luigi_local.toml')
 
     def setUp(self):
         LuigiTomlParser._instance = None

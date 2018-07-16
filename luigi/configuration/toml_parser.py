@@ -15,20 +15,23 @@
 # limitations under the License.
 #
 import os.path
-import toml
+
+try:
+    import toml
+except ImportError:
+    toml = False
 
 from .base_parser import BaseParser
 
 
 class LuigiTomlParser(BaseParser):
     NO_DEFAULT = object()
+    enabled = bool(toml)
     data = dict()
     _instance = None
     _config_paths = [
         '/etc/luigi/luigi.toml',
         'luigi.toml',
-        'luigi/base.toml',
-        'luigi/local.toml',
     ]
 
     @staticmethod
@@ -74,3 +77,6 @@ class LuigiTomlParser(BaseParser):
         if section not in self.data:
             self.data[section] = {}
         self.data[section][option] = value
+
+    def __getitem__(self, name):
+        return self.data[name]

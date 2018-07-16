@@ -39,7 +39,6 @@ with open('README.rst') as fobj:
 install_requires = [
     'tornado>=4.0,<5',
     'python-daemon<3.0',
-    'toml',
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
@@ -59,6 +58,7 @@ setup(
     license='Apache License 2.0',
     packages=[
         'luigi',
+        'luigi.configuration',
         'luigi.contrib',
         'luigi.contrib.hdfs',
         'luigi.tools'
@@ -76,6 +76,9 @@ setup(
         ]
     },
     install_requires=install_requires,
+    extras_require={
+        'toml': ['toml'],
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',

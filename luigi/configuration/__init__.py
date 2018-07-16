@@ -14,9 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from .getter import get_config
 from .cfg_parser import LuigiConfigParser
+from .getter import get_config, add_config_path
 from .toml_parser import LuigiTomlParser
 
 
-__all__ = ['get_config', 'LuigiConfigParser', 'LuigiTomlParser']
+__all__ = [
+    'add_config_path',
+    'get_config',
+    'LuigiConfigParser',
+    'LuigiTomlParser',
+]
