@@ -27,8 +27,6 @@ class LuigiTomlParser(BaseParser):
     _config_paths = [
         '/etc/luigi/luigi.toml',
         'luigi.toml',
-        'luigi/base.toml',
-        'luigi/local.toml',
     ]
 
     @staticmethod
