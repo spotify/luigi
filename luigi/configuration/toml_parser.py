@@ -15,13 +15,18 @@
 # limitations under the License.
 #
 import os.path
-import toml
+
+try:
+    import toml
+except ImportError:
+    toml = False
 
 from .base_parser import BaseParser
 
 
 class LuigiTomlParser(BaseParser):
     NO_DEFAULT = object()
+    enabled = bool(toml)
     data = dict()
     _instance = None
     _config_paths = [

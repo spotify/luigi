@@ -42,6 +42,7 @@ from .base_parser import BaseParser
 
 class LuigiConfigParser(BaseParser, ConfigParser):
     NO_DEFAULT = object()
+    enabled = True
     _instance = None
     _config_paths = [
         '/etc/luigi/client.cfg',  # Deprecated old-style global luigi config

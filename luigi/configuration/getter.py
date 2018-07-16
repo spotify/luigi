@@ -14,11 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import logging
 import os
 import warnings
 
 from .cfg_parser import LuigiConfigParser
 from .toml_parser import LuigiTomlParser
+
+
+logger = logging.getLogger('luigi-interface')
 
 
 PARSERS = {
@@ -34,7 +38,20 @@ def get_config(parser=os.environ.get('LUIGI_CONFIG_PARSER', DEFAULT_PARSER)):
     """
     Convenience method for accessing config singleton.
     """
-    return PARSERS[parser].instance()
+    if parser not in PARSERS:
+        warnings.warn("Invalid parser: {parser}".format(parser))
+        parser = DEFAULT_PARSER
+
+    parser_class = PARSERS[parser]
+    if not parser_class.enabled:
+        logger.error((
+                "Parser not installed yet. "
+                "Please, install luigi with required parser:\n"
+                "pip install luigi[{parser}]"
+            ).format(parser)
+        )
+
+    return parser_class.instance()
 
 
 def add_config_path(path):
