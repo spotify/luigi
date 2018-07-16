@@ -74,3 +74,6 @@ class LuigiTomlParser(BaseParser):
         if section not in self.data:
             self.data[section] = {}
         self.data[section][option] = value
+
+    def __getitem__(self, name):
+        return self.data[name]
