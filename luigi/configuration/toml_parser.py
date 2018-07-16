@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import os
 import os.path
 import toml
 
@@ -24,6 +23,7 @@ from .base_parser import BaseParser
 class LuigiTomlParser(BaseParser):
     NO_DEFAULT = object()
     data = dict()
+    _instance = None
     _config_paths = [
         '/etc/luigi/luigi.toml',
         'luigi.toml',

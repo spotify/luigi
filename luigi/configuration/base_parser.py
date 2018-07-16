@@ -18,9 +18,6 @@ import logging
 
 
 class BaseParser:
-    _instance = None
-    _config_paths = []
-
     @classmethod
     def instance(cls, *args, **kwargs):
         """ Singleton getter """
