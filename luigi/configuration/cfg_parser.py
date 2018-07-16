@@ -42,6 +42,7 @@ from .base_parser import BaseParser
 
 class LuigiConfigParser(BaseParser, ConfigParser):
     NO_DEFAULT = object()
+    enabled = True
     _instance = None
     _config_paths = [
         '/etc/luigi/client.cfg',  # Deprecated old-style global luigi config
@@ -49,12 +50,6 @@ class LuigiConfigParser(BaseParser, ConfigParser):
         'client.cfg',  # Deprecated old-style local luigi config
         'luigi.cfg',
     ]
-    if 'LUIGI_CONFIG_PATH' in os.environ:
-        config_file = os.environ['LUIGI_CONFIG_PATH']
-        if not os.path.isfile(config_file):
-            warnings.warn("LUIGI_CONFIG_PATH points to a file which does not exist. Invalid file: {path}".format(path=config_file))
-        else:
-            _config_paths.append(config_file)
 
     @classmethod
     def reload(cls):

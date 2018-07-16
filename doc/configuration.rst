@@ -14,14 +14,13 @@ Default (cfg) parser are looked for in:
 * ``/etc/luigi/client.cfg`` (deprecated)
 * ``/etc/luigi/luigi.cfg``
 * ``client.cfg`` (deprecated)
+* ``luigi.cfg``
 * ``LUIGI_CONFIG_PATH`` environment variable
 
 TOML parser are looked for in:
 
 * ``/etc/luigi/luigi.toml``
 * ``luigi.toml``
-* ``luigi/base.toml``
-* ``luigi/local.toml``
 * ``LUIGI_CONFIG_PATH`` environment variable
 
 Both config lists reversordered by priotity (from low to high). The order only matters in case of key conflicts (see docs for ConfigParser.read_). These files are meant for both the client and ``luigid``. If you decide to specify your own configuration you should make sure that both the client and ``luigid`` load it properly.
