@@ -168,7 +168,7 @@ class Parameter(object):
 
         try:
             value = conf.get(section, name)
-        except (NoSectionError, NoOptionError):
+        except (NoSectionError, NoOptionError, KeyError):
             return _no_value
 
         return self.parse(value)
