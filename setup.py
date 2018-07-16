@@ -58,6 +58,7 @@ setup(
     license='Apache License 2.0',
     packages=[
         'luigi',
+        'luigi.configuration',
         'luigi.contrib',
         'luigi.contrib.hdfs',
         'luigi.tools'
