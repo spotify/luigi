@@ -31,16 +31,18 @@ PARSERS = {
     'ini': LuigiConfigParser,
     'toml': LuigiTomlParser,
 }
+
+# select parser via env var
 DEFAULT_PARSER = 'cfg'
+PARSER = os.environ.get('LUIGI_CONFIG_PARSER', DEFAULT_PARSER)
+if PARSER not in PARSERS:
+    warnings.warn("Invalid parser: {parser}".format(parser=PARSER))
+    PARSER = DEFAULT_PARSER
 
 
-def get_config(parser=os.environ.get('LUIGI_CONFIG_PARSER', DEFAULT_PARSER)):
+def get_config(parser=PARSER):
+    """Get configs singleton for parser
     """
-    Convenience method for accessing config singleton.
-    """
-    if parser not in PARSERS:
-        warnings.warn("Invalid parser: {parser}".format(parser))
-        parser = DEFAULT_PARSER
 
     parser_class = PARSERS[parser]
     if not parser_class.enabled:
@@ -64,12 +66,12 @@ def add_config_path(path):
     # select parser by file extension
     _base, ext = os.path.splitext(path)
     if ext and ext[1:] in PARSERS:
-        parser = PARSERS[ext[1:]]
+        parser_class = PARSERS[ext[1:]]
     else:
-        parser = PARSERS[DEFAULT_PARSER]
+        parser_class = PARSERS[PARSER]
 
     # add config path to parser
-    parser.add_config_path(path)
+    parser_class.add_config_path(path)
     return True
 
 
