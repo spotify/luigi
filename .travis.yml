@@ -43,6 +43,10 @@ matrix:
       env: TOXENV=py36-nonhdfs
     - python: 3.6
       env: TOXENV=py36-unixsocket
+    - python: 3.7-dev
+      env: TOXENV=py37-nonhdfs
+    - python: 3.7-dev
+      env: TOXENV=py37-unixsocket
 
 sudo: false
 
