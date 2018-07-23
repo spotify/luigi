@@ -803,7 +803,6 @@ class Scheduler(object):
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
                 priority=priority, family=family, module=module, params=params,
-                accepts_messages=accepts_messages,
             )
         else:
             _default_task = None
@@ -830,6 +829,9 @@ class Scheduler(object):
                 batch_tasks = self._state.get_batch_running_tasks(batch_id)
                 task.resources_running = batch_tasks[0].resources_running.copy()
             task.time_running = time.time()
+
+        if accepts_messages is not None:
+            task.accepts_messages = accepts_messages
 
         if tracking_url is not None or task.status != RUNNING:
             task.tracking_url = tracking_url
