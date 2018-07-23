@@ -257,6 +257,8 @@ class Parameter(object):
     def _warn_on_wrong_param_type(self, param_name, param_value):
         if self.__class__ != Parameter:
             return
+        if param_value == self._default:
+            return
         if not isinstance(param_value, six.string_types):
             warnings.warn('Parameter "{}" with value "{}" is not of type string.'.format(param_name, param_value))
 
