@@ -45,6 +45,7 @@ from luigi import configuration
 from luigi import task_history
 from luigi.task_status import DONE, FAILED, PENDING, RUNNING
 
+from pqdict import pqdict
 import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
@@ -79,10 +80,11 @@ class DbTaskHistory(task_history.TaskHistory):
     def __init__(self):
         config = configuration.get_config()
         connection_string = config.get('task_history', 'db_connection')
+        self.retention = config.getint('task_history', 'retention_seconds', default=86400)
         self.engine = sqlalchemy.create_engine(connection_string)
         self.session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
-        self.tasks = {}  # task_id -> TaskRecord
+        self.tasks = pqdict({}, key=lambda t: t[0])  # task_id -> TaskRecord
 
         _upgrade_schema(self.engine)
 
@@ -101,12 +103,15 @@ class DbTaskHistory(task_history.TaskHistory):
 
     def _get_task(self, task, status, host=None):
         if task.id in self.tasks:
-            htask = self.tasks[task.id]
+            task_ts, htask = self.tasks[task.id]
             htask.status = status
             if host:
                 htask.host = host
         else:
-            htask = self.tasks[task.id] = task_history.StoredTask(task, status, host)
+            now = datetime.datetime.now()
+            task_ts, htask = self.tasks[task.id] = now, task_history.StoredTask(task, status, host)
+            while self.retention > 0 and (now - self.tasks.topitem()[1][0]).total_seconds() > self.retention:
+                self.tasks.pop()
         return htask
 
     def _add_task_event(self, task, event):

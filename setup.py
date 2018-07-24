@@ -44,6 +44,7 @@ install_requires = [
 if os.environ.get('READTHEDOCS', None) == 'True':
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
     install_requires.append('sqlalchemy')
+    install_requires.append('pqdict=1.0.0')
     # readthedocs don't like python-daemon, see #1342
     install_requires.remove('python-daemon<3.0')
     install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
