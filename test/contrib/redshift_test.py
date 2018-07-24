@@ -69,6 +69,7 @@ class DummyS3CopyToTableBase(luigi.contrib.redshift.S3CopyToTable):
             ('some_int', 'int'),
         )
     )
+    table_constraints = luigi.Parameter(default='')
 
     copy_options = ''
     prune_table = ''
@@ -285,9 +286,34 @@ class TestS3CopyToTable(unittest.TestCase):
             )
 
         assert mock_cursor.execute.call_args_list[0][0][0].startswith(
-            "CREATE  TABLE %s (%s)" % (task.table, encode_string))
+            "CREATE  TABLE %s (%s )" % (task.table, encode_string))
 
         return
+
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.does_table_exist", return_value=False)
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_s3_copy_to_missing_table_with_table_constraints(self, mock_redshift_target, mock_does_exist):
+        table_constraints = 'PRIMARY KEY (COL1, COL2)'
+
+        task = DummyS3CopyToTableKey(table_constraints=table_constraints)
+
+        task.run()
+
+        mock_cursor = (mock_redshift_target.return_value
+                                           .connect
+                                           .return_value
+                                           .cursor
+                                           .return_value)
+        columns_string = ','.join(
+                '{name} {type}'.format(
+                    name=name,
+                    type=type) for name, type in task.columns
+            )
+
+        executed_query = mock_cursor.execute.call_args_list[0][0][0]
+        expectation = "CREATE  TABLE %s (%s , PRIMARY KEY (COL1, COL2))" % (task.table, columns_string)
+
+        assert executed_query.startswith(expectation)
 
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")

@@ -113,7 +113,9 @@ class LuigiConfigParser(ConfigParser):
 
     def getintdict(self, section):
         try:
-            return dict((key, int(value)) for key, value in self.items(section))
+            # Exclude keys from [DEFAULT] section because in general they do not hold int values
+            return dict((key, int(value)) for key, value in self.items(section)
+                        if key not in {k for k, _ in self.items('DEFAULT')})
         except NoSectionError:
             return {}
 

@@ -30,6 +30,8 @@ import os
 import os.path
 import warnings
 
+from multiprocessing.pool import ThreadPool
+
 import botocore
 
 try:
@@ -281,11 +283,10 @@ class S3Client(FileSystem):
             raise DeprecatedBotoClientException(
                 'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
 
-        import boto3
+        from boto3.s3.transfer import TransferConfig
         # default part size for boto3 is 8Mb, changing it to fit part_size
         # provided as a parameter
-        transfer_config = boto3.s3.transfer.TransferConfig(
-            multipart_chunksize=part_size)
+        transfer_config = TransferConfig(multipart_chunksize=part_size)
 
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
@@ -316,13 +317,15 @@ class S3Client(FileSystem):
 
         # don't allow threads to be less than 3
         threads = 3 if threads < 3 else threads
-        import boto3
+        from boto3.s3.transfer import TransferConfig
 
-        transfer_config = boto3.s3.transfer.TransferConfig(
-            max_concurrency=threads, multipart_chunksize=part_size)
+        transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
         total_keys = 0
 
         if self.isdir(source_path):
+            copy_jobs = []
+            management_pool = ThreadPool(processes=threads)
+
             (bucket, key) = self._path_to_bucket_and_key(source_path)
             key_path = self._add_path_delimiter(key)
             key_path_len = len(key_path)
@@ -340,8 +343,19 @@ class S3Client(FileSystem):
                         'Key': src_prefix + path
                     }
 
-                    self.s3.meta.client.copy(
-                        copy_source, dst_bucket, dst_prefix + path, Config=transfer_config, ExtraArgs=kwargs)
+                    the_kwargs = {'Config': transfer_config, 'ExtraArgs': kwargs}
+                    job = management_pool.apply_async(self.s3.meta.client.copy,
+                                                      args=(copy_source, dst_bucket, dst_prefix + path),
+                                                      kwds=the_kwargs)
+                    copy_jobs.append(job)
+
+            # Wait for the pools to finish scheduling all the copies
+            management_pool.close()
+            management_pool.join()
+
+            # Raise any errors encountered in any of the copy processes
+            for result in copy_jobs:
+                result.get()
 
             end = datetime.datetime.now()
             duration = end - start
