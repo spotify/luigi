@@ -23,6 +23,7 @@ See :ref:`Parameter` for more info on how to define parameters.
 import abc
 import datetime
 import warnings
+from enum import IntEnum
 import json
 from json import JSONEncoder
 from collections import OrderedDict, Mapping
@@ -39,7 +40,6 @@ from luigi import task_register
 from luigi import six
 from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
-from enum import IntEnum
 
 _no_value = object()
 
@@ -157,7 +157,7 @@ class Parameter(object):
                                                         the scheduler. See :ref:`batch_method`
 
         :param visibility: A Parameter whose value is a :py:class:`~luigi.parameter.ParameterVisibility`.
-                            Default value  is ParameterVisibility.PUBLIC
+                            Default value is ParameterVisibility.PUBLIC
 
         """
         self._default = default

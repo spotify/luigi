@@ -97,14 +97,15 @@ class SchedulerParameterVisibilitiesTest(LuigiTestCase):
             self.assertEqual({'a': 0, 'b': 1, 'd': 0}, t.param_visibilities)
 
 
+class Task(RunOnceTask):
+    a = luigi.Parameter(default="a")
+    b = luigi.Parameter(default="b", visibility=ParameterVisibility.HIDDEN)
+    c = luigi.Parameter(default="c", visibility=ParameterVisibility.PRIVATE)
+    d = luigi.Parameter(default="d", visibility=ParameterVisibility.PUBLIC)
+
+
 class RemoteSchedulerParameterVisibilitiesTest(server_test.ServerTestBase):
     def test_public_params(self):
-        class Task(RunOnceTask):
-            a = luigi.Parameter(default="a")
-            b = luigi.Parameter(default="b", visibility=ParameterVisibility.HIDDEN)
-            c = luigi.Parameter(default="c", visibility=ParameterVisibility.PRIVATE)
-            d = luigi.Parameter(default="d", visibility=ParameterVisibility.PUBLIC)
-
         task = Task()
         luigi.build(tasks=[task], workers=2, scheduler_port=self.get_http_port())
 
