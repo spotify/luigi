@@ -135,9 +135,9 @@ class RedshiftTarget(postgres.PostgresTarget):
         'marker-table',
         'table_updates')
 
-    #if not supplied, fall back to default Redshift port 
+    # if not supplied, fall back to default Redshift port
     DEFAULT_DB_PORT = 5439
-    
+
     use_db_timestamps = False
 
 

@@ -106,7 +106,7 @@ class PostgresTarget(luigi.Target):
     """
     marker_table = luigi.configuration.get_config().get('postgres', 'marker-table', 'table_updates')
 
-    #if not supplied, fall back to default Postgres port 
+    # if not supplied, fall back to default Postgres port
     DEFAULT_DB_PORT = 5432
 
     # Use DB side timestamps or client side timestamps in the marker_table
