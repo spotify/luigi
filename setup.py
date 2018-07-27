@@ -77,7 +77,7 @@ setup(
     },
     install_requires=install_requires,
     extras_require={
-        'toml': ['toml'],
+        'toml': ['toml<2.0.0'],
     },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
