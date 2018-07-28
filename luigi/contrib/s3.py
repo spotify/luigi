@@ -486,7 +486,7 @@ class S3Client(FileSystem):
         defaults = dict(configuration.get_config().defaults())
         try:
             config = dict(configuration.get_config().items('s3'))
-        except NoSectionError:
+        except (NoSectionError, KeyError):
             return {}
         # So what ports etc can be read without us having to specify all dtypes
         for k, v in six.iteritems(config):

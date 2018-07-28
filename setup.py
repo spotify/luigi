@@ -58,6 +58,7 @@ setup(
     license='Apache License 2.0',
     packages=[
         'luigi',
+        'luigi.configuration',
         'luigi.contrib',
         'luigi.contrib.hdfs',
         'luigi.tools'
@@ -75,6 +76,9 @@ setup(
         ]
     },
     install_requires=install_requires,
+    extras_require={
+        'toml': ['toml<2.0.0'],
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
