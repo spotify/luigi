@@ -96,13 +96,15 @@ class CmdlineParser(object):
             global_flag_name = '--' + flag_name_underscores.replace('_', '-')
             parser.add_argument(global_flag_name,
                                 help=help,
-                                **param_obj._parser_kwargs(param_name, task_name)
+                                action=param_obj._parser_action(),
+                                dest=param_obj._parser_global_dest(param_name, task_name)
                                 )
             if is_the_root_task:
                 local_flag_name = '--' + param_name.replace('_', '-')
                 parser.add_argument(local_flag_name,
                                     help=help,
-                                    **param_obj._parser_kwargs(param_name)
+                                    action=param_obj._parser_action(),
+                                    dest=param_name
                                     )
 
         return parser

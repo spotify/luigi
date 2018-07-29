@@ -154,7 +154,6 @@ parallel_scheduling
   If true, the scheduler will compute complete functions of tasks in
   parallel using multiprocessing. This can significantly speed up
   scheduling, but requires that all tasks can be pickled.
-  Defaults to false.
 
 parallel-scheduling-processes
   The number of processes to use for parallel scheduling. If not specified

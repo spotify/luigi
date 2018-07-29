@@ -1823,7 +1823,7 @@ class KeyboardInterruptBehaviorTest(LuigiTestCase):
 
 class WorkerPurgeEventHandlerTest(unittest.TestCase):
 
-    @mock.patch('luigi.worker.ContextManagedTaskProcess')
+    @mock.patch('luigi.worker.TaskProcess')
     def test_process_killed_handler(self, task_proc):
         result = []
 

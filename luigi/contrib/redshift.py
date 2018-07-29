@@ -218,16 +218,6 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         return ''
 
     @property
-    def table_constraints(self):
-        """
-        Add extra table constraints, for example:
-
-        PRIMARY KEY (MY_FIELD, MY_FIELD_2)
-        UNIQUE KEY (MY_FIELD_3)
-        """
-        return ''
-
-    @property
     def do_truncate_table(self):
         """
         Return True if table should be truncated before copying new data in.
@@ -310,18 +300,12 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
                     name=name,
                     type=type) for name, type in self.columns
             )
-
-            table_constraints = ''
-            if self.table_constraints != '':
-                table_constraints = ', ' + self.table_constraints
-
             query = ("CREATE {type} TABLE "
-                     "{table} ({coldefs} {table_constraints}) "
+                     "{table} ({coldefs}) "
                      "{table_attributes}").format(
                 type=self.table_type,
                 table=self.table,
                 coldefs=coldefs,
-                table_constraints=table_constraints,
                 table_attributes=self.table_attributes)
 
             connection.cursor().execute(query)
@@ -334,18 +318,12 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
                     type=type,
                     encoding=encoding) for name, type, encoding in self.columns
             )
-
-            table_constraints = ''
-            if self.table_constraints != '':
-                table_constraints = ',' + self.table_constraints
-
             query = ("CREATE {type} TABLE "
-                     "{table} ({coldefs} {table_constraints}) "
+                     "{table} ({coldefs}) "
                      "{table_attributes}").format(
                 type=self.table_type,
                 table=self.table,
                 coldefs=coldefs,
-                table_constraints=table_constraints,
                 table_attributes=self.table_attributes)
 
             connection.cursor().execute(query)

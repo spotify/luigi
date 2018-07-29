@@ -108,7 +108,7 @@ def auto_namespace(scope=''):
         luigi.auto_namespace(scope=__name__)
 
     To reset an ``auto_namespace()`` call, you can use
-    ``namespace(scope='my_scope')``.  But this will not be
+    ``namespace(scope='my_scope'``).  But this will not be
     needed (and is also discouraged) if you use the ``scope`` kwarg.
 
     *New since Luigi 2.6.0.*
