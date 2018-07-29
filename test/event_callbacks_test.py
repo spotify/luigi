@@ -15,10 +15,10 @@
 # limitations under the License.
 #
 
-from helpers import unittest, RunOnceTask
+from helpers import unittest
 
 import luigi
-from luigi import Event, build
+from luigi import Event, Task, build
 from luigi.mock import MockTarget, MockFileSystem
 from luigi.task import flatten
 from mock import patch
@@ -28,7 +28,7 @@ class DummyException(Exception):
     pass
 
 
-class EmptyTask(RunOnceTask):
+class EmptyTask(Task):
     fail = luigi.BoolParameter()
 
     def run(self):
@@ -36,7 +36,7 @@ class EmptyTask(RunOnceTask):
             raise DummyException()
 
 
-class TaskWithBrokenDependency(RunOnceTask):
+class TaskWithBrokenDependency(Task):
 
     def requires(self):
         raise DummyException()
@@ -45,7 +45,7 @@ class TaskWithBrokenDependency(RunOnceTask):
         pass
 
 
-class TaskWithCallback(RunOnceTask):
+class TaskWithCallback(Task):
 
     def run(self):
         print("Triggering event")

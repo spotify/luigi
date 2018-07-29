@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from helpers import LuigiTestCase, with_config, RunOnceTask
+from helpers import LuigiTestCase, with_config
 import mock
 import luigi
 import luigi.scheduler
@@ -32,7 +32,7 @@ class RetcodesTest(LuigiTestCase):
         with_config(dict(retcode=retcode_config))(self.run_and_expect)(*args, **kwargs)
 
     def test_task_failed(self):
-        class FailingTask(RunOnceTask):
+        class FailingTask(luigi.Task):
             def run(self):
                 raise ValueError()
 
@@ -50,8 +50,9 @@ class RetcodesTest(LuigiTestCase):
         self.run_with_config(dict(missing_data='3'), 'MissingDataTask', 3)
 
     def test_already_running(self):
-        class AlreadyRunningTask(RunOnceTask):
-            pass
+        class AlreadyRunningTask(luigi.Task):
+            def run(self):
+                pass
 
         old_func = luigi.scheduler.Scheduler.get_work
 
@@ -81,14 +82,14 @@ class RetcodesTest(LuigiTestCase):
             def complete(self):
                 raise Exception
 
-        class RequiringTask(RunOnceTask):
+        class RequiringTask(luigi.Task):
             def requires(self):
                 yield FailingComplete()
 
         self.run_and_expect('RequiringTask', 0)
 
     def test_failure_in_requires(self):
-        class FailingRequires(RunOnceTask):
+        class FailingRequires(luigi.Task):
             def requires(self):
                 raise Exception
 
@@ -99,7 +100,7 @@ class RetcodesTest(LuigiTestCase):
         class DependencyTask(object):
             pass
 
-        class RequiringTask(RunOnceTask):
+        class RequiringTask(luigi.Task):
             def requires(self):
                 yield DependencyTask()
 
@@ -110,11 +111,11 @@ class RetcodesTest(LuigiTestCase):
             def complete(self):
                 return False
 
-        class TaskA(RunOnceTask):
+        class TaskA(luigi.Task):
             def requires(sefl):
                 yield TaskB()
 
-        class TaskLimitTest(RunOnceTask):
+        class TaskLimitTest(luigi.Task):
             def requires(self):
                 yield TaskA()
 
@@ -129,7 +130,7 @@ class RetcodesTest(LuigiTestCase):
             self.run_and_expect('Task', 4)
             self.run_and_expect('Task --retcode-unhandled-exception 2', 2)
 
-        class TaskWithRequiredParam(RunOnceTask):
+        class TaskWithRequiredParam(luigi.Task):
             param = luigi.Parameter()
 
         self.run_and_expect('TaskWithRequiredParam --param hello', 0)
@@ -137,7 +138,7 @@ class RetcodesTest(LuigiTestCase):
 
     def test_when_mixed_errors(self):
 
-        class FailingTask(RunOnceTask):
+        class FailingTask(luigi.Task):
             def run(self):
                 raise ValueError()
 
@@ -145,7 +146,7 @@ class RetcodesTest(LuigiTestCase):
             def complete(self):
                 return False
 
-        class RequiringTask(RunOnceTask):
+        class RequiringTask(luigi.Task):
             def requires(self):
                 yield FailingTask()
                 yield MissingDataTask()
@@ -159,7 +160,7 @@ class RetcodesTest(LuigiTestCase):
             def complete(self):
                 return True
 
-        class RequiringTask(RunOnceTask):
+        class RequiringTask(luigi.Task):
             def requires(self):
                 yield TaskA()
 

@@ -20,7 +20,7 @@ import pickle
 import six
 import warnings
 
-from helpers import unittest, LuigiTestCase, RunOnceTask
+from helpers import unittest, LuigiTestCase
 from datetime import datetime, timedelta
 
 import luigi
@@ -189,8 +189,9 @@ class ExternalizeTaskTest(LuigiTestCase):
         self.assertIn("MyTask", task_class.__name__)
 
     def test_externalize_taskclass_instance_cache(self):
-        class MyTask(RunOnceTask):
-            pass
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
 
         task_class = luigi.task.externalize(MyTask)
         self.assertIsNot(task_class, MyTask)
@@ -198,8 +199,9 @@ class ExternalizeTaskTest(LuigiTestCase):
         self.assertIsNot(task_class(), MyTask())  # Now, they should not be the same of course
 
     def test_externalize_same_id(self):
-        class MyTask(RunOnceTask):
-            pass
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
 
         task_normal = MyTask()
         task_ext_1 = luigi.task.externalize(MyTask)()
@@ -209,8 +211,11 @@ class ExternalizeTaskTest(LuigiTestCase):
 
     def test_externalize_same_id_with_task_namespace(self):
         # Dependent on the new behavior from spotify/luigi#1953
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             task_namespace = "something.domething"
+
+            def run(self):
+                pass
 
         task_normal = MyTask()
         task_ext_1 = luigi.task.externalize(MyTask())
@@ -224,9 +229,9 @@ class ExternalizeTaskTest(LuigiTestCase):
         # Dependent on the new behavior from spotify/luigi#1953
         luigi.namespace('lets.externalize')
 
-        class MyTask(RunOnceTask):
-            pass
-
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
         luigi.namespace()
 
         task_normal = MyTask()
@@ -238,18 +243,20 @@ class ExternalizeTaskTest(LuigiTestCase):
         self.assertEqual(str(task_normal), str(task_ext_2))
 
     def test_externalize_with_requires(self):
-        class MyTask(RunOnceTask):
-            pass
+        class MyTask(luigi.Task):
+            def run(self):
+                pass
 
         @luigi.util.requires(luigi.task.externalize(MyTask))
-        class Requirer(RunOnceTask):
-            pass
+        class Requirer(luigi.Task):
+            def run(self):
+                pass
 
         self.assertIsNotNone(MyTask.run)  # Check immutability
         self.assertIsNotNone(MyTask().run)  # Check immutability
 
     def test_externalize_doesnt_affect_the_registry(self):
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             pass
         reg_orig = luigi.task_register.Register._get_reg()
         luigi.task.externalize(MyTask)
@@ -257,7 +264,7 @@ class ExternalizeTaskTest(LuigiTestCase):
         self.assertEqual(reg_orig, reg_afterwards)
 
     def test_can_uniquely_command_line_parse(self):
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             pass
         # This first check is just an assumption rather than assertion
         self.assertTrue(self.run_locally(['MyTask']))
@@ -272,7 +279,7 @@ class ExternalizeTaskTest(LuigiTestCase):
 class TaskNamespaceTest(LuigiTestCase):
 
     def setup_tasks(self):
-        class Foo(RunOnceTask):
+        class Foo(luigi.Task):
             pass
 
         class FooSubclass(Foo):
@@ -282,7 +289,7 @@ class TaskNamespaceTest(LuigiTestCase):
     def go_mynamespace(self):
         luigi.namespace("mynamespace")
 
-        class Foo(RunOnceTask):
+        class Foo(luigi.Task):
             p = luigi.IntParameter()
 
         class Bar(Foo):
@@ -317,7 +324,7 @@ class TaskNamespaceTest(LuigiTestCase):
     def test_uses_latest_namespace(self):
         luigi.namespace('a')
 
-        class _BaseTask(RunOnceTask):
+        class _BaseTask(luigi.Task):
             pass
         luigi.namespace('b')
 
@@ -332,7 +339,7 @@ class TaskNamespaceTest(LuigiTestCase):
         luigi.namespace('wohoo', scope='task_test')
         luigi.namespace('bleh', scope='')
 
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             pass
         luigi.namespace(scope='task_test')
         luigi.namespace(scope='')
@@ -342,7 +349,7 @@ class TaskNamespaceTest(LuigiTestCase):
         luigi.namespace('wohoo', scope='incorrect_namespace')
         luigi.namespace('bleh', scope='')
 
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             pass
         luigi.namespace(scope='incorrect_namespace')
         luigi.namespace(scope='')
@@ -355,7 +362,7 @@ class AutoNamespaceTest(LuigiTestCase):
     def test_auto_namespace_global(self):
         luigi.auto_namespace()
 
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             pass
 
         luigi.namespace()
@@ -365,7 +372,7 @@ class AutoNamespaceTest(LuigiTestCase):
         luigi.auto_namespace(scope='task_test')
         luigi.namespace('bleh', scope='')
 
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             pass
         luigi.namespace(scope='task_test')
         luigi.namespace(scope='')
@@ -375,7 +382,7 @@ class AutoNamespaceTest(LuigiTestCase):
         luigi.auto_namespace(scope='incorrect_namespace')
         luigi.namespace('bleh', scope='')
 
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             pass
         luigi.namespace(scope='incorrect_namespace')
         luigi.namespace(scope='')
@@ -384,7 +391,7 @@ class AutoNamespaceTest(LuigiTestCase):
     def test_auto_namespace_not_matching_2(self):
         luigi.auto_namespace(scope='incorrect_namespace')
 
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             pass
         luigi.namespace(scope='incorrect_namespace')
         self.assertEqual(MyTask.get_task_namespace(), '')

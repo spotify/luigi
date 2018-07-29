@@ -34,53 +34,53 @@ from worker_test import email_patch
 luigi.notifications.DEBUG = True
 
 
-class A(RunOnceTask):
+class A(luigi.Task):
     p = luigi.IntParameter()
 
 
-class WithDefault(RunOnceTask):
+class WithDefault(luigi.Task):
     x = luigi.Parameter(default='xyz')
 
 
-class WithDefaultTrue(RunOnceTask):
+class WithDefaultTrue(luigi.Task):
     x = luigi.BoolParameter(default=True)
 
 
-class Foo(RunOnceTask):
+class Foo(luigi.Task):
     bar = luigi.Parameter()
     p2 = luigi.IntParameter()
     not_a_param = "lol"
 
 
-class Baz(RunOnceTask):
+class Baz(luigi.Task):
     bool = luigi.BoolParameter()
 
     def run(self):
         Baz._val = self.bool
 
 
-class ListFoo(RunOnceTask):
+class ListFoo(luigi.Task):
     my_list = luigi.ListParameter()
 
     def run(self):
         ListFoo._val = self.my_list
 
 
-class TupleFoo(RunOnceTask):
+class TupleFoo(luigi.Task):
     my_tuple = luigi.TupleParameter()
 
     def run(self):
         TupleFoo._val = self.my_tuple
 
 
-class ForgotParam(RunOnceTask):
+class ForgotParam(luigi.Task):
     param = luigi.Parameter()
 
     def run(self):
         pass
 
 
-class ForgotParamDep(RunOnceTask):
+class ForgotParamDep(luigi.Task):
 
     def requires(self):
         return ForgotParam()
@@ -135,7 +135,7 @@ class MyConfigWithoutSection(luigi.Config):
     mc_s = luigi.IntParameter(default=99)
 
 
-class NoopTask(RunOnceTask):
+class NoopTask(luigi.Task):
     pass
 
 
@@ -239,7 +239,7 @@ class ParameterTest(LuigiTestCase):
     def test_local_significant_param(self):
         """ Obviously, if anything should be positional, so should local
         significant parameters """
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             # This could typically be "--label-company=disney"
             x = luigi.Parameter(significant=True)
 
@@ -249,7 +249,7 @@ class ParameterTest(LuigiTestCase):
 
     def test_local_insignificant_param(self):
         """ Ensure we have the same behavior as in before a78338c  """
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             # This could typically be "--num-threads=True"
             x = luigi.Parameter(significant=False)
 
@@ -259,7 +259,7 @@ class ParameterTest(LuigiTestCase):
 
     def test_nonpositional_param(self):
         """ Ensure we have the same behavior as in before a78338c  """
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             # This could typically be "--num-threads=10"
             x = luigi.Parameter(significant=False, positional=False)
 
@@ -595,7 +595,7 @@ class TestRemoveGlobalParameters(LuigiTestCase):
         def test_global_significant_param_warning(self):
             """ We don't want any kind of global param to be positional """
             with self.assertWarnsRegex(DeprecationWarning, 'is_global support is removed. Assuming positional=False'):
-                class MyTask(RunOnceTask):
+                class MyTask(luigi.Task):
                     # This could typically be called "--test-dry-run"
                     x_g1 = luigi.Parameter(default='y', is_global=True, significant=True)
 
@@ -605,7 +605,7 @@ class TestRemoveGlobalParameters(LuigiTestCase):
         def test_global_insignificant_param_warning(self):
             """ We don't want any kind of global param to be positional """
             with self.assertWarnsRegex(DeprecationWarning, 'is_global support is removed. Assuming positional=False'):
-                class MyTask(RunOnceTask):
+                class MyTask(luigi.Task):
                     # This could typically be "--yarn-pool=development"
                     x_g2 = luigi.Parameter(default='y', is_global=True, significant=False)
 
@@ -1021,7 +1021,7 @@ class TestTaskParameter(LuigiTestCase):
 
     def testUsage(self):
 
-        class MetaTask(RunOnceTask):
+        class MetaTask(luigi.Task):
             task_namespace = "mynamespace"
             a = luigi.TaskParameter()
 
@@ -1070,7 +1070,7 @@ class TestTaskParameter(LuigiTestCase):
             def run(self):
                 self.__class__.ran = True
 
-        class MainTask(RunOnceTask):
+        class MainTask(luigi.Task):
 
             def run(self):
                 yield DepTask(dep=OtherTask)
@@ -1175,7 +1175,7 @@ class LocalParameters1304Test(LuigiTestCase):
 class TaskAsParameterName1335Test(LuigiTestCase):
     def test_parameter_can_be_named_task(self):
 
-        class MyTask(RunOnceTask):
+        class MyTask(luigi.Task):
             # Indeed, this is not the most realistic example, but still ...
             task = luigi.IntParameter()
 
