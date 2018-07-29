@@ -61,17 +61,26 @@ class FactorTask(luigi.Task):
         return luigi.LocalTarget(os.path.join(tempdir, 'luigi_test_factor_%d' % self.product))
 
 
-class BadReqTask(RunOnceTask):
+class BadReqTask(luigi.Task):
     succeed = luigi.BoolParameter()
 
     def requires(self):
         assert self.succeed
         yield BadReqTask(False)
 
+    def run(self):
+        pass
 
-class FailingTask(RunOnceTask):
+    def complete(self):
+        return False
+
+
+class FailingTask(luigi.Task):
     task_namespace = __name__
     task_id = luigi.IntParameter()
+
+    def complete(self):
+        return False
 
     def run(self):
         raise Exception("Error Message")
@@ -94,7 +103,6 @@ class OddFibTask(luigi.Task):
 
 
 class SchedulerVisualisationTest(unittest.TestCase):
-
     def setUp(self):
         self.scheduler = luigi.scheduler.Scheduler()
 
@@ -202,13 +210,16 @@ class SchedulerVisualisationTest(unittest.TestCase):
         six.assertCountEqual(self, expected_nodes, graph)
 
     def test_truncate_graph_with_multiple_depths(self):
-        class LinearTask(RunOnceTask):
+        class LinearTask(luigi.Task):
             idx = luigi.IntParameter()
 
             def requires(self):
                 if self.idx > 0:
                     yield LinearTask(self.idx - 1)
                 yield LinearTask(0)
+
+            def complete(self):
+                return False
 
         root_task = LinearTask(100)
 
@@ -217,7 +228,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         graph = self.scheduler.dep_graph(root_task.task_id)
         self.assertEqual(10, len(graph))
-        expected_nodes = [LinearTask(i).task_id for i in range(100, 91, -1)] +\
+        expected_nodes = [LinearTask(i).task_id for i in range(100, 91, -1)] + \
                          [LinearTask(0).task_id]
         self.maxDiff = None
         six.assertCountEqual(self, expected_nodes, graph)
@@ -382,7 +393,6 @@ class SchedulerVisualisationTest(unittest.TestCase):
                 return False
 
         class B(luigi.ExternalTask):
-
             def complete(self):
                 return True
 
@@ -390,7 +400,10 @@ class SchedulerVisualisationTest(unittest.TestCase):
             def requires(self):
                 return [A(), B()]
 
-        class F(RunOnceTask):
+        class F(luigi.Task):
+            def complete(self):
+                return False
+
             def run(self):
                 raise Exception()
 
@@ -499,7 +512,6 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
     def test_simple_worker_list(self):
         class X(luigi.Task):
-
             def run(self):
                 self._complete = True
 
@@ -521,8 +533,9 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(1, worker['workers'])
 
     def test_worker_list_pending_uniques(self):
-        class X(RunOnceTask):
-            pass
+        class X(luigi.Task):
+            def complete(self):
+                return False
 
         class Y(X):
             def requires(self):
