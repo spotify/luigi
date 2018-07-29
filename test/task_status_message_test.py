@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase
+from helpers import LuigiTestCase, RunOnceTask
 
 import luigi
 import luigi.scheduler
@@ -30,7 +30,7 @@ class TaskStatusMessageTest(LuigiTestCase):
         message = "test message"
         sch = luigi.scheduler.Scheduler()
         with luigi.worker.Worker(scheduler=sch) as w:
-            class MyTask(luigi.Task):
+            class MyTask(RunOnceTask):
                 def run(self):
                     self.set_status_message(message)
 

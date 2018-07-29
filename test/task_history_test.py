@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase
+from helpers import LuigiTestCase, RunOnceTask
 
 import luigi
 import luigi.scheduler
@@ -46,7 +46,7 @@ class TaskHistoryTest(LuigiTestCase):
         th = SimpleTaskHistory()
         sch = luigi.scheduler.Scheduler(task_history_impl=th)
         with luigi.worker.Worker(scheduler=sch) as w:
-            class MyTask(luigi.Task):
+            class MyTask(RunOnceTask):
                 pass
 
             task = MyTask()
