@@ -47,7 +47,6 @@ _no_value = object()
 class ParameterVisibility(IntEnum):
     """
     Possible values for the parameter visibility option. Public is the default
-    See :doc:`/parameters` for more info.
     """
     PUBLIC = 0
     HIDDEN = 1

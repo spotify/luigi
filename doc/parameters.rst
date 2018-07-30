@@ -91,14 +91,15 @@ are not the same instance:
 Parameter visibility
 ^^^^^^^^^^^^^^^^^^^^
 
-By default all parameters are `public`, but there is two more visibility levels.
+Using :class:`~luigi.parameter.ParameterVisibility` you can configure parameter visibility. By default, all
+parameters are public, but you can also set them hidden or private.
 
 .. code:: python
 
-    import luigi
-    from luigi.parameter import ParameterVisibility
+    >>> import luigi
+    >>> from luigi.parameter import ParameterVisibility
     
-    luigi.Parameter(visibility=ParameterVisibility.PRIVATE)
+    >>> luigi.Parameter(visibility=ParameterVisibility.PRIVATE)
 
 ``ParameterVisibility.PUBLIC`` (default) - visible everywhere
 
