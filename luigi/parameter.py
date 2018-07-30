@@ -57,6 +57,9 @@ class ParameterVisibility(IntEnum):
     def has_value(cls, value):
         return any(value == item.value for item in cls)
 
+    def serialize(self):
+        return self.value
+
 
 class ParameterException(Exception):
     """

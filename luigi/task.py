@@ -502,7 +502,7 @@ class Task(object):
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
             if params[param_name].visibility != ParameterVisibility.PRIVATE:
-                param_visibilities[param_name] = params[param_name].visibility
+                param_visibilities[param_name] = params[param_name].visibility.serialize()
 
         return param_visibilities
 

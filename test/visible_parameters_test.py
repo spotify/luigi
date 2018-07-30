@@ -1,6 +1,7 @@
 import luigi
 from luigi.parameter import ParameterVisibility
 from helpers import unittest
+import json
 
 
 class TestTask1(luigi.Task):
@@ -75,3 +76,20 @@ class Test(unittest.TestCase):
         task = TestTask1()
 
         self.assertEqual({'param_two': '2'}, task.to_str_params(only_public=True))
+
+    def test_json_dumps(self):
+        public = json.dumps(ParameterVisibility.PUBLIC.serialize())
+        hidden = json.dumps(ParameterVisibility.HIDDEN.serialize())
+        private = json.dumps(ParameterVisibility.PRIVATE.serialize())
+
+        self.assertEqual('0', public)
+        self.assertEqual('1', hidden)
+        self.assertEqual('2', private)
+
+        public = json.loads(public)
+        hidden = json.loads(hidden)
+        private = json.loads(private)
+
+        self.assertEqual(0, public)
+        self.assertEqual(1, hidden)
+        self.assertEqual(2, private)
