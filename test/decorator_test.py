@@ -108,12 +108,10 @@ class InheritTest(unittest.TestCase):
         self.assertEqual(self.e_stacked.param2, self.b.param2)
 
     def test_empty_inheritance(self):
-        def create_task_with_empty_inheritance():
+        with self.assertRaises(TypeError):
             @inherits()
             class shouldfail(luigi.Task):
                 pass
-
-        self.assertRaises(TypeError, create_task_with_empty_inheritance)
 
     def test_removing_parameter(self):
         self.assertFalse("param1" in dict(self.d_null.get_params()).keys())
@@ -304,12 +302,10 @@ class CloneParentTest(unittest.TestCase):
         self.assertEqual(y.requires()[1], x)
 
     def test_empty_requires(self):
-        def create_task_with_empty_requires():
+        with self.assertRaises(TypeError):
             @requires()
             class shouldfail(luigi.Task):
                 pass
-
-        self.assertRaises(TypeError, create_task_with_empty_requires)
 
     def test_names(self):
         # Just make sure the decorators retain the original class names
