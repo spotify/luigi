@@ -43,7 +43,10 @@ import signal
 import sys
 import datetime
 import time
+import calendar
+import types
 
+import luigi
 import pkg_resources
 import tornado.httpserver
 import tornado.ioloop
@@ -51,6 +54,7 @@ import tornado.netutil
 import tornado.web
 
 from luigi.scheduler import Scheduler, RPC_METHODS
+from luigi.db_task_history import TaskRecord, TaskEvent, TaskParameter
 
 logger = logging.getLogger("luigi.server")
 
@@ -83,11 +87,36 @@ class RPCHandler(tornado.web.RequestHandler):
 
 
 class BaseTaskHistoryHandler(tornado.web.RequestHandler):
+    """
+    Added the possibility to request JSON reply from the task history
+    by specifying the accept header in the request.
+    """
     def initialize(self, scheduler):
         self._scheduler = scheduler
 
     def get_template_path(self):
         return pkg_resources.resource_filename(__name__, 'templates')
+
+    def render(self, template_name, **kwargs):
+        if self.request.headers.get("Accept") == "application/json":
+            class TaskHistoryEncoder(json.JSONEncoder):
+                def default(self, o):
+                    if isinstance(o, types.GeneratorType):
+                        return list(o)
+                    elif isinstance(o, datetime.datetime):
+                        return calendar.timegm(o.timetuple()) + (o.microsecond/1e6)
+                    elif isinstance(o, TaskRecord):
+                        d = {k: getattr(o, k) for k in ['id', 'name', 'task_id', 'host']}
+                        d['parameters'] = {k: p.value for k, p in o.parameters.items()}
+                        d['events'] = [self.default(e) for e in o.events]
+                        return d
+                    elif isinstance(o, TaskEvent):
+                         return dict(event_name=o.event_name, ts=self.default(o.ts))
+                    return o
+            self.set_header("Content-Type", "application/json")
+            self.write(json.dumps(kwargs, indent=2, sort_keys=True, cls=TaskHistoryEncoder))
+        else:
+            super(BaseTaskHistoryHandler, self).render(template_name, **kwargs)
 
 
 class AllRunHandler(BaseTaskHistoryHandler):
