@@ -302,14 +302,20 @@ class RemoteFileSystem(luigi.target.FileSystem):
         # download file
         self._connect()
 
-        if self.sftp:
-            self._sftp_get(path, tmp_local_path)
+        try:
+            if self.sftp:
+                not_found_error = OSError
+                self._sftp_get(path, tmp_local_path)
+            else:
+                not_found_error = ftplib.error_perm
+                self._ftp_get(path, tmp_local_path)
+        except not_found_error as e:
+            self._close()
+            os.remove(tmp_local_path)
+            raise e
         else:
-            self._ftp_get(path, tmp_local_path)
-
-        self._close()
-
-        os.rename(tmp_local_path, local_path)
+            self._close()
+            os.rename(tmp_local_path, local_path)
 
     def _sftp_get(self, path, tmp_local_path):
         self.conn.get(path, tmp_local_path)

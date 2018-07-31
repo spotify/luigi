@@ -26,18 +26,22 @@ import datetime
 import ftplib
 import os
 import shutil
+import glob
 from helpers import unittest
 try:
-    from cStringIO import StringIO
+    from cStringIO import StringIO as StrOrByteIO
+    FILE1 = """this is file1"""
+    FILE2 = """this is file2"""
+    FILE3 = """this is file3"""
 except ImportError:
-    from io import StringIO
+    # Py3 require BytesIO instead.
+    from io import BytesIO as StrOrByteIO
+    FILE1 = b"""this is file1"""
+    FILE2 = b"""this is file2"""
+    FILE3 = b"""this is file3"""
 
 from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
 
-# dumb files
-FILE1 = """this is file1"""
-FILE2 = """this is file2"""
-FILE3 = """this is file3"""
 
 HOST = "localhost"
 USER = "luigi"
@@ -63,12 +67,12 @@ class TestFTPFilesystem(unittest.TestCase):
         ftp.cwd('test')
         ftp.mkd('hola')
         ftp.cwd('hola')
-        f2 = StringIO(FILE2)
+        f2 = StrOrByteIO(FILE2)
         ftp.storbinary('STOR file2', f2)     # send the file
-        f3 = StringIO(FILE3)
+        f3 = StrOrByteIO(FILE3)
         ftp.storbinary('STOR file3', f3)     # send the file
         ftp.cwd('..')
-        f1 = StringIO(FILE1)
+        f1 = StrOrByteIO(FILE1)
         ftp.storbinary('STOR file1', f1)     # send the file
         ftp.close()
 
@@ -102,7 +106,7 @@ class TestFTPFilesystemUpload(unittest.TestCase):
     def test_single(self):
         """ Test upload file with creation of intermediate folders """
         ftp_path = "/test/nest/luigi-test"
-        local_filepath = "/tmp/luigi-test-ftp"
+        local_filepath = "/tmp/luigi-test-ftp/temp_file"
 
         # create local temp file
         with open(local_filepath, 'w') as outfile:
@@ -128,6 +132,13 @@ class TestFTPFilesystemUpload(unittest.TestCase):
 
 
 class TestRemoteTarget(unittest.TestCase):
+
+    def tearDown(self):
+        """Remove all tmpfiles in case of failure."""
+        tmp_files = glob.glob('/tmp/*luigi-tmp*')
+
+        for file in tmp_files:
+            os.remove(file)
 
     def test_put(self):
         """ Test RemoteTarget put method with uploading to an FTP """
@@ -200,6 +211,22 @@ class TestRemoteTarget(unittest.TestCase):
         ftp.cwd("/")
         ftp.rmd("test")
         ftp.close()
+
+    def test_get_failure_cleanup(self):
+        """Test to make sure a failed get-command does not leave an empty temp-file."""
+        local_filepath = "/tmp/luigi-remotetarget-read-test"
+        remote_file = "/test/non-existing-file"
+        remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD)
+
+        try:
+            remotetarget.get(local_filepath)
+        except ftplib.error_perm:
+            pass
+
+        # Look for and make sure the tempfile has been removed.
+        tmp_files = glob.glob('/tmp/luigi-remotetarget-read-test-luigi-tmp-*')
+
+        self.assertTrue(len(tmp_files) == 0)
 
 
 def _run_ftp_server():
