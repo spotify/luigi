@@ -250,7 +250,9 @@ def common_params(task_instance, task_cls):
 
 class inherits(object):
     """
-    Task inheritance. Supports multiple tasks inheritance.
+    Task inheritance.
+
+    *New after Luigi 2.7.6:* multiple arguments support.
 
     Usage:
 
@@ -315,6 +317,9 @@ class inherits(object):
 class requires(object):
     """
     Same as :class:`~luigi.util.inherits`, but also auto-defines the requires method.
+
+    *New after Luigi 2.7.6:* multiple arguments support.
+
     """
 
     def __init__(self, *tasks_to_require):
@@ -331,10 +336,7 @@ class requires(object):
         # If only one task is required, this single task is returned.
         # Otherwise, list of tasks is returned
         def requires(_self):
-            if len(self.tasks_to_require) == 1:
-                return _self.clone_parent()
-
-            return _self.clone_parents()
+            return _self.clone_parent() if len(self.tasks_to_require) == 1 else _self.clone_parents()
         task_that_requires.requires = requires
 
         return task_that_requires
