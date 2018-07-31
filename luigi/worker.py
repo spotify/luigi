@@ -257,10 +257,8 @@ class TaskProcess(multiprocessing.Process):
         # forward configured attributes to the task
         for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
             setattr(self.task, task_attr, getattr(self.status_reporter, reporter_attr))
-
         try:
             yield self
-
         finally:
             # reset attributes again
             for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):

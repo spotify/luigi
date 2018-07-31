@@ -22,7 +22,7 @@ import luigi.scheduler
 import luigi.worker
 
 
-forwarded_attributes = set(luigi.worker.TaskProcess.forward_reporter_attributes.values())
+FORWARDED_ATTRIBUTES = set(luigi.worker.TaskProcess.forward_reporter_attributes.values())
 
 
 class NonYieldingTask(RunOnceTask):
@@ -31,27 +31,36 @@ class NonYieldingTask(RunOnceTask):
     accepts_messages = True
 
     def gather_forwarded_attributes(self):
+        """
+        Returns a set of names of attributes that are forwarded by the TaskProcess and that are not
+        *None*. The tests in this file check if and which attributes are present at different times,
+        e.g. while running, or before and after a dynamic dependency was yielded.
+        """
         attrs = set()
-        for attr in forwarded_attributes:
+        for attr in FORWARDED_ATTRIBUTES:
             if getattr(self, attr, None) is not None:
                 attrs.add(attr)
         return attrs
 
     def run(self):
+        # store names of forwarded attributes which are only available within the run method
         self.attributes_while_running = self.gather_forwarded_attributes()
 
+        # invoke the run method of the RunOnceTask which marks this task as complete
         RunOnceTask.run(self)
 
 
 class YieldingTask(NonYieldingTask):
 
     def run(self):
+        # as TaskProcess._run_get_new_deps handles generators in a specific way, store names of
+        # forwarded attributes before and after yielding a dynamic dependency, so we can explicitely
+        # validate the attribute forwarding implementation
         self.attributes_before_yield = self.gather_forwarded_attributes()
-
         yield RunOnceTask()
-
         self.attributes_after_yield = self.gather_forwarded_attributes()
 
+        # invoke the run method of the RunOnceTask which marks this task as complete
         RunOnceTask.run(self)
 
 
@@ -67,10 +76,10 @@ class TaskForwardedAttributesTest(LuigiTestCase):
     def test_non_yielding_task(self):
         task = self.run_task(NonYieldingTask())
 
-        self.assertEqual(task.attributes_while_running, forwarded_attributes)
+        self.assertEqual(task.attributes_while_running, FORWARDED_ATTRIBUTES)
 
     def test_yielding_task(self):
         task = self.run_task(YieldingTask())
 
-        self.assertEqual(task.attributes_before_yield, forwarded_attributes)
-        self.assertEqual(task.attributes_after_yield, forwarded_attributes)
+        self.assertEqual(task.attributes_before_yield, FORWARDED_ATTRIBUTES)
+        self.assertEqual(task.attributes_after_yield, FORWARDED_ATTRIBUTES)
