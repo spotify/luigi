@@ -306,7 +306,7 @@ class Task(object):
         self.params = {}
         self.public_params = {}
         self.hidden_params = {}
-        self.set_params(params=params)
+        self.set_params(params)
         self.accepts_messages = accepts_messages
         self.retry_policy = retry_policy
         self.failures = Failures(self.retry_policy.disable_window)
@@ -831,8 +831,7 @@ class Scheduler(object):
         if not task.param_visibilities:
             task.param_visibilities = _get_default(param_visibilities, {})
         if not task.params:
-            task.set_params(params=params)
-            # task.params = _get_default(params, {})
+            task.set_params(params)
 
         if batch_id is not None:
             task.batch_id = batch_id
