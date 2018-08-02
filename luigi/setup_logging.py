@@ -82,6 +82,7 @@ class DaemonLogging(BaseLogging):
         logging.basicConfig(level=logging.INFO, format=cls.log_format)
 
 
+# setup_interface_logging
 class InterfaceLogging(BaseLogging):
     @classmethod
     def _cli(cls, opts):
