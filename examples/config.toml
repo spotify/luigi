@@ -1,0 +1,32 @@
+
+[hdfs]
+client = "hadoopcli"
+namenode_host = "localhost"
+namenode_port = 50030
+
+
+[logging]
+version = 1
+disable_existing_loggers = true
+
+[logging.formatters.simple]
+format = "{levelname:8} {asctime} {module}:{lineno} {message}"
+style = "{"
+datefmt = "%Y-%m-%d %H:%M:%S"
+
+[logging.handlers.console]
+level = "DEBUG"
+class = "logging.StreamHandler"
+formatter = "simple"
+
+[logging.loggers.project]
+handlers = ["console"]
+level = "DEBUG"
+disabled = false
+propagate = false
+
+[logging.loggers.luigi-interface]
+handlers = ["console"]
+level = "INFO"
+disabled = false
+propagate = false
