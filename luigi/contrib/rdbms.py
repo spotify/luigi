@@ -104,8 +104,8 @@ class _MetadataColumnsMixin(object):
 
         for column in self.metadata_columns:
             if len(column) == 0:
-                logger.info('Unable to infer column information from column {column} for {table}'.format(column=column, table=self.table))
-                break
+                raise ValueError("_add_metadata_columns is unable to infer column information from column {column} for {table}".format(column=column,
+                                                                                                                                       table=self.table))
 
             column_name = column[0]
             if not self._column_exists(cursor, column_name):
