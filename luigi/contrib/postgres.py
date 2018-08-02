@@ -326,6 +326,8 @@ class CopyToTable(rdbms.CopyToTable):
                 self.init_copy(connection)
                 self.copy(cursor, tmp_file)
                 self.post_copy(connection)
+                if self.enable_metadata_columns:
+                    self.post_copy_metacolumns(cursor)
             except psycopg2.ProgrammingError as e:
                 if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
                     # if first attempt fails with "relation not found", try creating table
