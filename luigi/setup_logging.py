@@ -19,7 +19,7 @@ class BaseLogging(object):
             logging_config = cls.config['logging']
         except (TypeError, KeyError, NoSectionError):
             return False
-        logging.dictConfig(logging_config)
+        logging.config.dictConfig(logging_config)
         return True
 
     @classmethod
@@ -79,7 +79,10 @@ class DaemonLogging(BaseLogging):
             return False
 
         if not os.path.exists(logging_conf):
-            raise Exception("Error: Unable to locate specified logging configuration file!")
+            # FileNotFoundError added only in Python 3
+            # https://docs.python.org/2/library/exceptions.html#exception-hierarchy
+            # https://docs.python.org/3/library/exceptions.html#exception-hierarchy
+            raise OSError("Error: Unable to locate specified logging configuration file!")
 
         logging.config.fileConfig(logging_conf)
         return True
