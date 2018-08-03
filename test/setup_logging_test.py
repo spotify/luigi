@@ -56,3 +56,7 @@ class TestDaemonLogging(unittest.TestCase):
         }}
         result = self.cls._conf(None)
         self.assertTrue(result)
+
+    def test_default(self):
+        result = self.cls._default(None)
+        self.assertTrue(result)

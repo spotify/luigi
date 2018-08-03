@@ -10,7 +10,6 @@ except ImportError:
 
 
 class BaseLogging(object):
-    configured = False
     config = get_config()
 
     @classmethod
@@ -24,37 +23,39 @@ class BaseLogging(object):
 
     @classmethod
     def setup(cls, opts):
+        print(opts)
         logger = logging.getLogger('luigi')
 
         if cls.configured:
-            logger.info('logging already configured')
+            print('logging already configured')
             return False
         cls.configured = True
 
         if cls.config.getboolean('core', 'no_configure_logging', False):
-            logger.info('logging disabled in settings')
+            print('logging disabled in settings')
             return False
 
         configured = cls._cli(opts)
         if configured:
-            logger.info('logging configured via CLI settings')
+            print('logging configured via special settings')
             return True
 
         configured = cls._conf(opts)
         if configured:
-            logger.info('logging configured via *.conf file')
+            print('logging configured via *.conf file')
             return True
 
         configured = cls._toml(opts)
         if configured:
-            logger.info('logging configured via TOML config')
+            print('logging configured via TOML config')
             return True
 
-        logger.info('logging configured by default settings')
+        print('logging configured by default settings')
         return cls._default(opts)
 
 
 class DaemonLogging(BaseLogging):
+    configured = False
     log_format = "%(asctime)s %(name)s[%(process)s] %(levelname)s: %(message)s"
 
     @classmethod
@@ -90,10 +91,13 @@ class DaemonLogging(BaseLogging):
     @classmethod
     def _default(cls, opts):
         logging.basicConfig(level=logging.INFO, format=cls.log_format)
+        return True
 
 
 # setup_interface_logging
 class InterfaceLogging(BaseLogging):
+    configured = False
+
     @classmethod
     def _cli(cls, opts):
         return False
@@ -104,7 +108,10 @@ class InterfaceLogging(BaseLogging):
             return False
 
         if not os.path.exists(opts.logging_conf_file):
-            raise Exception("Error: Unable to locate specified logging configuration file!")
+            # FileNotFoundError added only in Python 3
+            # https://docs.python.org/2/library/exceptions.html#exception-hierarchy
+            # https://docs.python.org/3/library/exceptions.html#exception-hierarchy
+            raise OSError("Error: Unable to locate specified logging configuration file!")
 
         logging.config.fileConfig(opts.logging_conf_file, disable_existing_loggers=False)
         return True

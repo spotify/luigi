@@ -29,7 +29,8 @@ from luigi import six
 
 import luigi
 import luigi.cmdline
-from luigi.setup_logging import DaemonLogging
+from luigi.setup_logging import DaemonLogging, InterfaceLogging
+from luigi.configuration import LuigiTomlParser
 from luigi.mock import MockTarget
 
 
@@ -118,6 +119,13 @@ class CmdlineTest(unittest.TestCase):
     def tearDown(self):
         DaemonLogging.configured = False
 
+    def _clean_config(self):
+        DaemonLogging.config = LuigiTomlParser()
+        DaemonLogging.config.data = {}
+
+    def _restore_config(self):
+        DaemonLogging.config = LuigiTomlParser.instance()
+
     @mock.patch("logging.getLogger")
     def test_cmdline_main_task_cls(self, logger):
         luigi.run(['--local-scheduler', '--no-lock', '--n', '100'], main_task_cls=SomeTask)
@@ -140,25 +148,26 @@ class CmdlineTest(unittest.TestCase):
     @mock.patch("logging.getLogger")
     @mock.patch("logging.StreamHandler")
     def test_setup_interface_logging(self, handler, logger):
-        opts = mock.Mock()
-        opts.background.return_value = False
-        opts.logdir.return_value = False
+        opts = type('opts', (), {})
+        opts.background = False
+        opts.logdir = False
+        opts.logging_conf_file = None
+        opts.log_level = 'INFO'
 
         handler.return_value = mock.Mock(name="stream_handler")
-        DaemonLogging.configured = False
-        DaemonLogging().setup(opts)
 
-        opts.logging_conf_file.return_value = '/blah'
+        InterfaceLogging.configured = False
+        InterfaceLogging.config = LuigiTomlParser()
+        InterfaceLogging.config.data = {}
+        InterfaceLogging.setup(opts)
+
         self.assertEqual([mock.call(handler.return_value)], logger.return_value.addHandler.call_args_list)
 
-        DaemonLogging.configured = False
-        if six.PY2:
-            error = ConfigParser.NoSectionError
-        else:
-            error = KeyError
-        opts.logging_conf_file.return_value = '/blah'
-        self.assertRaises(error, DaemonLogging().setup, opts)
-        DaemonLogging.configured = False
+        InterfaceLogging.configured = False
+        opts.logging_conf_file = '/blah'
+        with self.assertRaises(OSError):
+            InterfaceLogging.setup(opts)
+        InterfaceLogging.configured = False
 
     @mock.patch("warnings.warn")
     @mock.patch("luigi.setup_logging.DaemonLogging.setup")
@@ -168,7 +177,7 @@ class CmdlineTest(unittest.TestCase):
             env_params.return_value.log_level = 'DEBUG'
             env_params.return_value.parallel_scheduling_processes = 1
             luigi.run(['SomeTask', '--n', '7', '--local-scheduler', '--no-lock'])
-            self.assertEqual([mock.call('', 'DEBUG')], setup_mock.call_args_list)
+            self.assertEqual([mock.call(env_params)], setup_mock.call_args_list)
 
         with mock.patch("luigi.configuration.get_config") as getconf:
             getconf.return_value.get.side_effect = ConfigParser.NoOptionError(section='foo', option='bar')
@@ -195,31 +204,27 @@ class CmdlineTest(unittest.TestCase):
             # the default test configuration specifies a logging conf file
             fileConfig.assert_called_with("test/testconfig/logging.cfg")
 
-    def test_luigid_no_configure_logging(self):
-        with mock.patch('luigi.server.run') as server_run, \
-                mock.patch('logging.basicConfig') as basicConfig, \
-                mock.patch('luigi.configuration.get_config') as get_config:
-            get_config.return_value.getboolean.return_value = True  # no_configure_logging=True
-            luigi.cmdline.luigid([])
-            self.assertTrue(server_run.called)
-            self.assertTrue(basicConfig.called)
-
     def test_luigid_no_logging_conf(self):
         with mock.patch('luigi.server.run') as server_run, \
                 mock.patch('logging.basicConfig') as basicConfig, \
                 mock.patch('luigi.configuration.get_config') as get_config:
-            get_config.return_value.getboolean.return_value = False  # no_configure_logging=False
-            get_config.return_value.get.return_value = None  # logging_conf_file=None
+            self._clean_config()
+            DaemonLogging.config.data = {'core': {
+                'no_configure_logging': False,
+                'logging_conf_file': None,
+            }}
             luigi.cmdline.luigid([])
             self.assertTrue(server_run.called)
             self.assertTrue(basicConfig.called)
 
     def test_luigid_missing_logging_conf(self):
         with mock.patch('luigi.server.run') as server_run, \
-                mock.patch('logging.basicConfig') as basicConfig, \
-                mock.patch('luigi.configuration.get_config') as get_config:
-            get_config.return_value.getboolean.return_value = False  # no_configure_logging=False
-            get_config.return_value.get.return_value = "nonexistent.cfg"  # logging_conf_file=None
+                mock.patch('logging.basicConfig') as basicConfig:
+            self._restore_config()
+            DaemonLogging.config.data = {'core': {
+                'no_configure_logging': False,
+                'logging_conf_file': "nonexistent.cfg",
+            }}
             self.assertRaises(Exception, luigi.cmdline.luigid, [])
             self.assertFalse(server_run.called)
             self.assertFalse(basicConfig.called)
