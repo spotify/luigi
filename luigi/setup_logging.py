@@ -1,5 +1,6 @@
 import os.path
 import logging
+import logging.config
 from luigi.configuration import get_config
 
 try:
@@ -8,42 +9,48 @@ except ImportError:
     from configparser import NoSectionError
 
 
-config = get_config()
-
-
 class BaseLogging(object):
     configured = False
+    config = get_config()
 
     @classmethod
     def _toml(cls, opts):
         try:
-            config = get_config()['logging']
+            logging_config = cls.config['logging']
         except (TypeError, KeyError, NoSectionError):
             return False
-        logging.dictConfig(config)
+        logging.dictConfig(logging_config)
         return True
 
     @classmethod
     def setup(cls, opts):
-        if not cls.configured:
+        logger = logging.getLogger('luigi')
+
+        if cls.configured:
+            logger.info('logging already configured')
             return False
         cls.configured = True
 
-        if config.getboolean('core', 'no_configure_logging', False):
+        if cls.config.getboolean('core', 'no_configure_logging', False):
+            logger.info('logging disabled in settings')
             return False
 
         configured = cls._cli(opts)
         if configured:
+            logger.info('logging configured via CLI settings')
             return True
 
         configured = cls._conf(opts)
         if configured:
+            logger.info('logging configured via *.conf file')
             return True
 
         configured = cls._toml(opts)
         if configured:
+            logger.info('logging configured via TOML config')
             return True
 
+        logger.info('logging configured by default settings')
         return cls._default(opts)
 
 
@@ -67,7 +74,7 @@ class DaemonLogging(BaseLogging):
 
     @classmethod
     def _conf(cls, opts):
-        logging_conf = config.get('core', 'logging_conf_file', None)
+        logging_conf = cls.config.get('core', 'logging_conf_file', None)
         if logging_conf is None:
             return False
 

@@ -29,6 +29,7 @@ from luigi import six
 
 import luigi
 import luigi.cmdline
+from luigi.setup_logging import DaemonLogging
 from luigi.mock import MockTarget
 
 
@@ -112,6 +113,10 @@ class CmdlineTest(unittest.TestCase):
 
     def setUp(self):
         MockTarget.fs.clear()
+        DaemonLogging.configured = False
+
+    def tearDown(self):
+        DaemonLogging.configured = False
 
     @mock.patch("logging.getLogger")
     def test_cmdline_main_task_cls(self, logger):
@@ -135,20 +140,28 @@ class CmdlineTest(unittest.TestCase):
     @mock.patch("logging.getLogger")
     @mock.patch("logging.StreamHandler")
     def test_setup_interface_logging(self, handler, logger):
-        handler.return_value = mock.Mock(name="stream_handler")
-        with mock.patch("luigi.interface.setup_interface_logging.has_run", new=False):
-            luigi.interface.setup_interface_logging()
-            self.assertEqual([mock.call(handler.return_value)], logger.return_value.addHandler.call_args_list)
+        opts = mock.Mock()
+        opts.background.return_value = False
+        opts.logdir.return_value = False
 
-        with mock.patch("luigi.interface.setup_interface_logging.has_run", new=False):
-            if six.PY2:
-                error = ConfigParser.NoSectionError
-            else:
-                error = KeyError
-            self.assertRaises(error, luigi.interface.setup_interface_logging, '/blah')
+        handler.return_value = mock.Mock(name="stream_handler")
+        DaemonLogging.configured = False
+        DaemonLogging().setup(opts)
+
+        opts.logging_conf_file.return_value = '/blah'
+        self.assertEqual([mock.call(handler.return_value)], logger.return_value.addHandler.call_args_list)
+
+        DaemonLogging.configured = False
+        if six.PY2:
+            error = ConfigParser.NoSectionError
+        else:
+            error = KeyError
+        opts.logging_conf_file.return_value = '/blah'
+        self.assertRaises(error, DaemonLogging().setup, opts)
+        DaemonLogging.configured = False
 
     @mock.patch("warnings.warn")
-    @mock.patch("luigi.interface.setup_interface_logging")
+    @mock.patch("luigi.setup_logging.DaemonLogging.setup")
     def test_cmdline_logger(self, setup_mock, warn):
         with mock.patch("luigi.interface.core") as env_params:
             env_params.return_value.logging_conf_file = ''
@@ -161,7 +174,7 @@ class CmdlineTest(unittest.TestCase):
             getconf.return_value.get.side_effect = ConfigParser.NoOptionError(section='foo', option='bar')
             getconf.return_value.getint.return_value = 0
 
-            luigi.interface.setup_interface_logging.call_args_list = []
+            DaemonLogging.setup.call_args_list = []
             luigi.run(['SomeTask', '--n', '42', '--local-scheduler', '--no-lock'])
             self.assertEqual([], setup_mock.call_args_list)
 

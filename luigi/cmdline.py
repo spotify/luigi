@@ -28,7 +28,7 @@ def luigid(argv=sys.argv[1:]):
         config = luigi.configuration.get_config()
         config.set('scheduler', 'state_path', opts.state_path)
 
-    DaemonLogging.setup()
+    DaemonLogging.setup(opts)
     if opts.background:
         luigi.process.daemonize(luigi.server.run, api_port=opts.port,
                                 address=opts.address, pidfile=opts.pidfile,
