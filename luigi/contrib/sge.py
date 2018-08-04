@@ -117,17 +117,17 @@ def _parse_qstat_state(qstat_out, job_id):
     `qstat` output is empty or job_id is not found.
 
     """
-    if qstat_out.strip() == '':
+    if qstat_out.strip() == b'':
         return 'u'
-    lines = qstat_out.split('\n')
+    lines = qstat_out.split(b'\n')
     # skip past header
-    while not lines.pop(0).startswith('---'):
+    while not lines.pop(0).startswith(b'---'):
         pass
     for line in lines:
         if line:
             job, prior, name, user, state = line.strip().split()[0:5]
             if int(job) == int(job_id):
-                return state
+                return state.decode()
     return 'u'
 
 
@@ -305,7 +305,7 @@ class SGEJobTask(luigi.Task):
         # Submit the job and grab job ID
         output = subprocess.check_output(submit_cmd, shell=True)
         self.job_id = _parse_qsub_job_id(output)
-        logger.debug("Submitted job to qsub with response:\n" + output)
+        logger.debug("Submitted job to qsub with response:\n%s", output.decode())
 
         self._track_job()
 

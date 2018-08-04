@@ -52,7 +52,7 @@ def _do_work_on_compute_node(work_dir, tarball=True):
 
     # Open up the pickle file with the work to be done
     os.chdir(work_dir)
-    with open("job-instance.pickle", "r") as f:
+    with open("job-instance.pickle", "rb") as f:
         job = pickle.load(f)
 
     # Do the work contained
