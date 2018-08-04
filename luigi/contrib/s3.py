@@ -482,7 +482,8 @@ class S3Client(FileSystem):
             else:
                 yield item[key_path_len:]
 
-    def _get_s3_config(self, key=None):
+    @staticmethod
+    def _get_s3_config(key=None):
         defaults = dict(configuration.get_config().defaults())
         try:
             config = dict(configuration.get_config().items('s3'))
@@ -500,15 +501,18 @@ class S3Client(FileSystem):
 
         return section_only
 
-    def _path_to_bucket_and_key(self, path):
+    @staticmethod
+    def _path_to_bucket_and_key(path):
         (scheme, netloc, path, query, fragment) = urlsplit(path)
         path_without_initial_slash = path[1:]
         return netloc, path_without_initial_slash
 
-    def _is_root(self, key):
+    @staticmethod
+    def _is_root(key):
         return (len(key) == 0) or (key == '/')
 
-    def _add_path_delimiter(self, key):
+    @staticmethod
+    def _add_path_delimiter(key):
         return key if key[-1:] == '/' or key == '' else key + '/'
 
     def _validate_bucket(self, bucket_name):
