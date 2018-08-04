@@ -525,18 +525,15 @@ class S3Client(FileSystem):
         return exists
 
     def _exists(self, bucket, key):
-        s3_key = False
         try:
             self.s3.Object(bucket, key).load()
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] in ['NoSuchKey', '404']:
-                s3_key = False
+                return False
             else:
                 raise
-        else:
-            s3_key = True
-        if s3_key:
-            return True
+
+        return True
 
 
 class AtomicS3File(AtomicLocalFile):
