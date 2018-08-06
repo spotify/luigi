@@ -80,6 +80,36 @@ class DummyS3CopyToTableBase(luigi.contrib.redshift.S3CopyToTable):
         return 's3://%s/%s' % (BUCKET, KEY)
 
 
+class DummyS3CopyJSONToTableBase(luigi.contrib.redshift.S3CopyJSONToTable):
+    # Class attributes taken from `DummyPostgresImporter` in
+    # `../postgres_test.py`.
+    aws_access_key_id = AWS_ACCESS_KEY
+    aws_secret_access_key = AWS_SECRET_KEY
+
+    host = 'dummy_host'
+    database = 'dummy_database'
+    user = 'dummy_user'
+    password = 'dummy_password'
+    table = luigi.Parameter(default='dummy_table')
+    columns = luigi.TupleParameter(
+        default=(
+            ('some_text', 'varchar(255)'),
+            ('some_int', 'int'),
+        )
+    )
+
+    copy_options = ''
+    prune_table = ''
+    prune_column = ''
+    prune_date = ''
+
+    jsonpath = ''
+    copy_json_options = ''
+
+    def s3_load_path(self):
+        return 's3://%s/%s' % (BUCKET, KEY)
+
+
 class DummyS3CopyToTableKey(DummyS3CopyToTableBase):
     aws_access_key_id = AWS_ACCESS_KEY
     aws_secret_access_key = AWS_SECRET_KEY
@@ -128,6 +158,68 @@ class TestExternalCredentials(unittest.TestCase, DummyS3CopyToTableBase):
     def test_from_config(self):
         self.assertEqual(self.aws_access_key_id, "config_key")
         self.assertEqual(self.aws_secret_access_key, "config_secret")
+
+
+class TestS3CopyToTableWithMetaColumns(unittest.TestCase):
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.enable_metadata_columns", new_callable=mock.PropertyMock, return_value=True)
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable._add_metadata_columns")
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.post_copy_metacolumns")
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_copy_with_metadata_columns_enabled(self,
+                                                mock_redshift_target,
+                                                mock_add_columns,
+                                                mock_update_columns,
+                                                mock_metadata_columns_enabled):
+        task = DummyS3CopyToTableKey()
+        task.run()
+
+        self.assertTrue(mock_add_columns.called)
+        self.assertTrue(mock_update_columns.called)
+
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.enable_metadata_columns", new_callable=mock.PropertyMock, return_value=False)
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable._add_metadata_columns")
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.post_copy_metacolumns")
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_copy_with_metadata_columns_disabled(self,
+                                                 mock_redshift_target,
+                                                 mock_add_columns,
+                                                 mock_update_columns,
+                                                 mock_metadata_columns_enabled):
+        task = DummyS3CopyToTableKey()
+        task.run()
+
+        self.assertFalse(mock_add_columns.called)
+        self.assertFalse(mock_update_columns.called)
+
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.enable_metadata_columns", new_callable=mock.PropertyMock, return_value=True)
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable._add_metadata_columns")
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.post_copy_metacolumns")
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_json_copy_with_metadata_columns_enabled(self,
+                                                     mock_redshift_target,
+                                                     mock_add_columns,
+                                                     mock_update_columns,
+                                                     mock_metadata_columns_enabled):
+        task = DummyS3CopyJSONToTableBase()
+        task.run()
+
+        self.assertTrue(mock_add_columns.called)
+        self.assertTrue(mock_update_columns.called)
+
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.enable_metadata_columns", new_callable=mock.PropertyMock, return_value=False)
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable._add_metadata_columns")
+    @mock.patch("luigi.contrib.redshift.S3CopyToTable.post_copy_metacolumns")
+    @mock.patch("luigi.contrib.redshift.RedshiftTarget")
+    def test_json_copy_with_metadata_columns_disabled(self,
+                                                      mock_redshift_target,
+                                                      mock_add_columns,
+                                                      mock_update_columns,
+                                                      mock_metadata_columns_enabled):
+        task = DummyS3CopyJSONToTableBase()
+        task.run()
+
+        self.assertFalse(mock_add_columns.called)
+        self.assertFalse(mock_update_columns.called)
 
 
 class TestS3CopyToTable(unittest.TestCase):
