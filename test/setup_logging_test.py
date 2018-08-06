@@ -29,16 +29,16 @@ class TestDaemonLogging(unittest.TestCase):
         result = self.cls._cli(opts)
         self.assertFalse(result)
 
-    def test_toml(self):
+    def test_section(self):
         self.cls.config = {'logging': {
             'version': 1,
             'disable_existing_loggers': False,
         }}
-        result = self.cls._toml(None)
+        result = self.cls._section(None)
         self.assertTrue(result)
 
         self.cls.config = {}
-        result = self.cls._toml(None)
+        result = self.cls._section(None)
         self.assertFalse(result)
 
     def test_cfg(self):
@@ -70,7 +70,7 @@ class TestInterfaceLogging(TestDaemonLogging):
         result = self.cls._cli(opts)
         self.assertFalse(result)
 
-    # test_toml inherited from TestDaemonLogging
+    # test_section inherited from TestDaemonLogging
 
     def test_cfg(self):
         self.cls.config = LuigiTomlParser()
@@ -109,9 +109,9 @@ class PatchedLogging(InterfaceLogging):
         return '_conf' not in cls.patched
 
     @classmethod
-    def _toml(cls, *args):
-        cls.calls.append('_toml')
-        return '_toml' not in cls.patched
+    def _section(cls, *args):
+        cls.calls.append('_section')
+        return '_section' not in cls.patched
 
     @classmethod
     def _default(cls, *args):
@@ -126,7 +126,7 @@ class TestSetup(unittest.TestCase):
         self.cls.calls = []
         self.cls.config = LuigiTomlParser()
         self.cls.configured = False
-        self.cls.patched = '_cli', '_conf', '_toml', '_default'
+        self.cls.patched = '_cli', '_conf', '_section', '_default'
 
     def test_configured(self):
         self.cls.configured = True
@@ -142,7 +142,7 @@ class TestSetup(unittest.TestCase):
 
     def test_order(self):
         self.cls.setup(self.opts)
-        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_toml', '_default'])
+        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_section', '_default'])
 
     def test_cli(self):
         self.cls.patched = ()
@@ -156,14 +156,14 @@ class TestSetup(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(self.cls.calls, ['_cli', '_conf'])
 
-    def test_toml(self):
+    def test_section(self):
         self.cls.patched = ('_cli', '_conf')
         result = self.cls.setup(self.opts)
         self.assertTrue(result)
-        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_toml'])
+        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_section'])
 
     def test_default(self):
-        self.cls.patched = ('_cli', '_conf', '_toml')
+        self.cls.patched = ('_cli', '_conf', '_section')
         result = self.cls.setup(self.opts)
         self.assertTrue(result)
-        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_toml', '_default'])
+        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_section', '_default'])

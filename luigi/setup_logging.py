@@ -29,7 +29,7 @@ class BaseLogging(object):
     config = get_config()
 
     @classmethod
-    def _toml(cls, opts):
+    def _section(cls, opts):
         try:
             logging_config = cls.config['logging']
         except (TypeError, KeyError, NoSectionError):
@@ -62,10 +62,10 @@ class BaseLogging(object):
             logger.info('logging configured via *.conf file')
             return True
 
-        configured = cls._toml(opts)
+        configured = cls._section(opts)
         if configured:
             logger = logging.getLogger('luigi')
-            logger.info('logging configured via TOML config')
+            logger.info('logging configured via config section')
             return True
 
         configured = cls._default(opts)
