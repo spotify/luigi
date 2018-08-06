@@ -39,35 +39,40 @@ class BaseLogging(object):
 
     @classmethod
     def setup(cls, opts):
-        print(opts)
         logger = logging.getLogger('luigi')
 
         if cls.configured:
-            print('logging already configured')
+            logger.info('logging already configured')
             return False
         cls.configured = True
 
         if cls.config.getboolean('core', 'no_configure_logging', False):
-            print('logging disabled in settings')
+            logger.info('logging disabled in settings')
             return False
 
         configured = cls._cli(opts)
         if configured:
-            print('logging configured via special settings')
+            logger = logging.getLogger('luigi')
+            logger.info('logging configured via special settings')
             return True
 
         configured = cls._conf(opts)
         if configured:
-            print('logging configured via *.conf file')
+            logger = logging.getLogger('luigi')
+            logger.info('logging configured via *.conf file')
             return True
 
         configured = cls._toml(opts)
         if configured:
-            print('logging configured via TOML config')
+            logger = logging.getLogger('luigi')
+            logger.info('logging configured via TOML config')
             return True
 
-        print('logging configured by default settings')
-        return cls._default(opts)
+        configured = cls._default(opts)
+        if configured:
+            logger = logging.getLogger('luigi')
+            logger.info('logging configured by default settings')
+        return configured
 
 
 class DaemonLogging(BaseLogging):
