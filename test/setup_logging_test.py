@@ -94,3 +94,76 @@ class TestInterfaceLogging(TestDaemonLogging):
         opts.log_level = 'INFO'
         result = self.cls._default(opts)
         self.assertTrue(result)
+
+
+class PatchedLogging(InterfaceLogging):
+
+    @classmethod
+    def _cli(cls, *args):
+        cls.calls.append('_cli')
+        return '_cli' not in cls.patched
+
+    @classmethod
+    def _conf(cls, *args):
+        cls.calls.append('_conf')
+        return '_conf' not in cls.patched
+
+    @classmethod
+    def _toml(cls, *args):
+        cls.calls.append('_toml')
+        return '_toml' not in cls.patched
+
+    @classmethod
+    def _default(cls, *args):
+        cls.calls.append('_default')
+        return '_default' not in cls.patched
+
+
+class TestSetup(unittest.TestCase):
+    def setUp(self):
+        self.opts = type('opts', (), {})
+        self.cls = PatchedLogging
+        self.cls.calls = []
+        self.cls.config = LuigiTomlParser()
+        self.cls.configured = False
+        self.cls.patched = '_cli', '_conf', '_toml', '_default'
+
+    def test_configured(self):
+        self.cls.configured = True
+        result = self.cls.setup(self.opts)
+        self.assertEqual(self.cls.calls, [])
+        self.assertFalse(result)
+
+    def test_disabled(self):
+        self.cls.config.data = {'core': {'no_configure_logging': True}}
+        result = self.cls.setup(self.opts)
+        self.assertEqual(self.cls.calls, [])
+        self.assertFalse(result)
+
+    def test_order(self):
+        self.cls.setup(self.opts)
+        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_toml', '_default'])
+
+    def test_cli(self):
+        self.cls.patched = ()
+        result = self.cls.setup(self.opts)
+        self.assertTrue(result)
+        self.assertEqual(self.cls.calls, ['_cli'])
+
+    def test_conf(self):
+        self.cls.patched = ('_cli', )
+        result = self.cls.setup(self.opts)
+        self.assertTrue(result)
+        self.assertEqual(self.cls.calls, ['_cli', '_conf'])
+
+    def test_toml(self):
+        self.cls.patched = ('_cli', '_conf')
+        result = self.cls.setup(self.opts)
+        self.assertTrue(result)
+        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_toml'])
+
+    def test_default(self):
+        self.cls.patched = ('_cli', '_conf', '_toml')
+        result = self.cls.setup(self.opts)
+        self.assertTrue(result)
+        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_toml', '_default'])
