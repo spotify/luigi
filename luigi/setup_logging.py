@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import os.path
 import logging
 import logging.config
+import os.path
 from luigi.configuration import get_config
 
 try:
@@ -30,6 +30,8 @@ class BaseLogging(object):
 
     @classmethod
     def _section(cls, opts):
+        """Get logging settings from config file section "logging".
+        """
         try:
             logging_config = cls.config['logging']
         except (TypeError, KeyError, NoSectionError):
@@ -39,6 +41,8 @@ class BaseLogging(object):
 
     @classmethod
     def setup(cls, opts):
+        """Setup logging via CLI params and config.
+        """
         logger = logging.getLogger('luigi')
 
         if cls.configured:
@@ -81,6 +85,14 @@ class DaemonLogging(BaseLogging):
 
     @classmethod
     def _cli(cls, opts):
+        """Setup logging via CLI options
+
+        If `--background` -- set INFO level for root logger.
+        If `--logdir` -- set logging with next params:
+            default Luigi's formatter,
+            INFO level,
+            output in logdir in `luigi-server.log` file
+        """
         if opts.background:
             logging.getLogger().setLevel(logging.INFO)
             return True
@@ -96,6 +108,8 @@ class DaemonLogging(BaseLogging):
 
     @classmethod
     def _conf(cls, opts):
+        """Setup logging via ini-file from logging_conf_file option.
+        """
         logging_conf = cls.config.get('core', 'logging_conf_file', None)
         if logging_conf is None:
             return False
@@ -111,6 +125,8 @@ class DaemonLogging(BaseLogging):
 
     @classmethod
     def _default(cls, opts):
+        """Setup default logger
+        """
         logging.basicConfig(level=logging.INFO, format=cls.log_format)
         return True
 
@@ -125,6 +141,8 @@ class InterfaceLogging(BaseLogging):
 
     @classmethod
     def _conf(cls, opts):
+        """Setup logging via ini-file from logging_conf_file option.
+        """
         if not opts.logging_conf_file:
             return False
 
@@ -139,6 +157,8 @@ class InterfaceLogging(BaseLogging):
 
     @classmethod
     def _default(cls, opts):
+        """Setup default logger
+        """
         level = getattr(logging, opts.log_level, logging.DEBUG)
 
         logger = logging.getLogger('luigi-interface')
