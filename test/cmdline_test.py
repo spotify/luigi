@@ -169,24 +169,6 @@ class CmdlineTest(unittest.TestCase):
             InterfaceLogging.setup(opts)
         InterfaceLogging.configured = False
 
-    @mock.patch("warnings.warn")
-    @mock.patch("luigi.setup_logging.DaemonLogging.setup")
-    def test_cmdline_logger(self, setup_mock, warn):
-        with mock.patch("luigi.interface.core") as env_params:
-            env_params.return_value.logging_conf_file = ''
-            env_params.return_value.log_level = 'DEBUG'
-            env_params.return_value.parallel_scheduling_processes = 1
-            luigi.run(['SomeTask', '--n', '7', '--local-scheduler', '--no-lock'])
-            self.assertEqual([mock.call(env_params)], setup_mock.call_args_list)
-
-        with mock.patch("luigi.configuration.get_config") as getconf:
-            getconf.return_value.get.side_effect = ConfigParser.NoOptionError(section='foo', option='bar')
-            getconf.return_value.getint.return_value = 0
-
-            DaemonLogging.setup.call_args_list = []
-            luigi.run(['SomeTask', '--n', '42', '--local-scheduler', '--no-lock'])
-            self.assertEqual([], setup_mock.call_args_list)
-
     @mock.patch('argparse.ArgumentParser.print_usage')
     def test_non_existent_class(self, print_usage):
         self.assertRaises(luigi.task_register.TaskClassNotFoundException,
