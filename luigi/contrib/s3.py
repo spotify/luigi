@@ -246,9 +246,7 @@ class S3Client(FileSystem):
 
         :param kwargs: Keyword arguments are passed to the boto function `put_object`
         """
-        if 'encrypt_key' in kwargs:
-            raise DeprecatedBotoClientException(
-                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        self._check_deprecated_argument(kwargs)
 
         # put the file
         self.put_multipart(local_path, destination_s3_path, **kwargs)
@@ -258,9 +256,7 @@ class S3Client(FileSystem):
         Put a string to an S3 path.
         :param kwargs: Keyword arguments are passed to the boto3 function `put_object`
         """
-        if 'encrypt_key' in kwargs:
-            raise DeprecatedBotoClientException(
-                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        self._check_deprecated_argument(kwargs)
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
         # validate the bucket
@@ -279,9 +275,7 @@ class S3Client(FileSystem):
         :param part_size: Part size in bytes. Default: 8388608 (8MB)
         :param kwargs: Keyword arguments are passed to the boto function `upload_fileobj` as ExtraArgs
         """
-        if 'encrypt_key' in kwargs:
-            raise DeprecatedBotoClientException(
-                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        self._check_deprecated_argument(kwargs)
 
         from boto3.s3.transfer import TransferConfig
         # default part size for boto3 is 8Mb, changing it to fit part_size
@@ -514,6 +508,17 @@ class S3Client(FileSystem):
     @staticmethod
     def _add_path_delimiter(key):
         return key if key[-1:] == '/' or key == '' else key + '/'
+
+    @staticmethod
+    def _check_deprecated_argument(arguments):
+        """
+        If `encrypt_key` is part of the arguments raise an exception
+        :param arguments: Arguments dictionary
+        :return: None
+        """
+        if 'encrypt_key' in arguments:
+            raise DeprecatedBotoClientException(
+                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
 
     def _validate_bucket(self, bucket_name):
         exists = True
