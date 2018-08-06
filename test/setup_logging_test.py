@@ -60,3 +60,37 @@ class TestDaemonLogging(unittest.TestCase):
     def test_default(self):
         result = self.cls._default(None)
         self.assertTrue(result)
+
+
+class TestInterfaceLogging(TestDaemonLogging):
+    cls = InterfaceLogging
+
+    def test_cli(self):
+        opts = type('opts', (), {})
+        result = self.cls._cli(opts)
+        self.assertFalse(result)
+
+    # test_toml inherited from TestDaemonLogging
+
+    def test_cfg(self):
+        self.cls.config = LuigiTomlParser()
+        self.cls.config.data = {}
+
+        opts = type('opts', (), {})
+        opts.logging_conf_file = ''
+        result = self.cls._conf(opts)
+        self.assertFalse(result)
+
+        opts.logging_conf_file = './blah'
+        with self.assertRaises(OSError):
+            self.cls._conf(opts)
+
+        opts.logging_conf_file = './test/testconfig/logging.cfg'
+        result = self.cls._conf(opts)
+        self.assertTrue(result)
+
+    def test_default(self):
+        opts = type('opts', (), {})
+        opts.log_level = 'INFO'
+        result = self.cls._default(opts)
+        self.assertTrue(result)
