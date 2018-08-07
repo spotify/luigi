@@ -249,7 +249,7 @@ class S3Client(FileSystem):
         :param destination_s3_path: URL for target S3 location
         :param kwargs: Keyword arguments are passed to the boto function `put_object`
         """
-        self._check_deprecated_argument(kwargs)
+        self._check_deprecated_argument(**kwargs)
 
         # put the file
         self.put_multipart(local_path, destination_s3_path, **kwargs)
@@ -257,11 +257,11 @@ class S3Client(FileSystem):
     def put_string(self, content, destination_s3_path, **kwargs):
         """
         Put a string to an S3 path.
-        :param content: Object data
+        :param content: Data str
         :param destination_s3_path: URL for target S3 location
         :param kwargs: Keyword arguments are passed to the boto3 function `put_object`
         """
-        self._check_deprecated_argument(kwargs)
+        self._check_deprecated_argument(**kwargs)
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
         # validate the bucket
@@ -280,7 +280,7 @@ class S3Client(FileSystem):
         :param part_size: Part size in bytes. Default: 8388608 (8MB)
         :param kwargs: Keyword arguments are passed to the boto function `upload_fileobj` as ExtraArgs
         """
-        self._check_deprecated_argument(kwargs)
+        self._check_deprecated_argument(**kwargs)
 
         from boto3.s3.transfer import TransferConfig
         # default part size for boto3 is 8Mb, changing it to fit part_size
@@ -516,13 +516,12 @@ class S3Client(FileSystem):
         return key if key[-1:] == '/' or key == '' else key + '/'
 
     @staticmethod
-    def _check_deprecated_argument(arguments):
+    def _check_deprecated_argument(**kwargs):
         """
         If `encrypt_key` is part of the arguments raise an exception
-        :param arguments: Arguments dictionary
         :return: None
         """
-        if 'encrypt_key' in arguments:
+        if 'encrypt_key' in kwargs:
             raise DeprecatedBotoClientException(
                 'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
 
