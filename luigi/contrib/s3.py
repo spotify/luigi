@@ -188,7 +188,7 @@ class S3Client(FileSystem):
         logger.debug('Path %s does not exist', path)
         return False
 
-    def remove(self, path, recursive=True, skip_trash=True):
+    def remove(self, path, recursive=True):
         """
         Remove a file or directory from S3.
         """
