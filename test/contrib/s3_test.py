@@ -160,10 +160,9 @@ class TestS3Client(unittest.TestCase):
             aws_secret_access_key='bar',
             aws_session_token=None)
 
-    @patch('boto3.resource')
     @patch('boto3.client')
     @with_config({'s3': {'aws_role_arn': 'role', 'aws_role_session_name': 'name'}})
-    def test_init_with_config_and_roles(self, sts_mock, s3_mock):
+    def test_init_with_config_and_roles(self, sts_mock):
         S3Client().s3
         sts_mock.client.assume_role.called_with(
             RoleArn='role', RoleSessionName='name')
