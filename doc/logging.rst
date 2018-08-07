@@ -49,7 +49,7 @@ Worker CLI options:
     For information about levels difference.
 
 
-Logging configuration options priority:
+Configuration options resolution order:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. no_configure_logging option
