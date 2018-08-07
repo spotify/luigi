@@ -1,5 +1,5 @@
 from luigi.setup_logging import DaemonLogging, InterfaceLogging
-from luigi.configuration import LuigiTomlParser
+from luigi.configuration import LuigiTomlParser, get_config
 from helpers import unittest
 
 
@@ -11,6 +11,7 @@ class TestDaemonLogging(unittest.TestCase):
 
     def tearDown(self):
         self.cls.configured = False
+        self.cls.config = get_config()
 
     def test_cli(self):
         opts = type('opts', (), {})
@@ -127,6 +128,9 @@ class TestSetup(unittest.TestCase):
         self.cls.config = LuigiTomlParser()
         self.cls.configured = False
         self.cls.patched = '_cli', '_conf', '_section', '_default'
+
+    def tearDown(self):
+        self.cls.config = get_config()
 
     def test_configured(self):
         self.cls.configured = True

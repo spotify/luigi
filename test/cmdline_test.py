@@ -24,7 +24,7 @@ from helpers import unittest
 import luigi
 import luigi.cmdline
 from luigi.setup_logging import DaemonLogging, InterfaceLogging
-from luigi.configuration import LuigiTomlParser
+from luigi.configuration import LuigiTomlParser, get_config
 from luigi.mock import MockTarget
 
 
@@ -112,6 +112,8 @@ class CmdlineTest(unittest.TestCase):
 
     def tearDown(self):
         DaemonLogging.configured = False
+        DaemonLogging.config = get_config()
+        InterfaceLogging.config = get_config()
 
     def _clean_config(self):
         DaemonLogging.config = LuigiTomlParser()
