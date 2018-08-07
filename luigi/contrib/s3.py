@@ -226,6 +226,8 @@ class S3Client(FileSystem):
     def move(self, source_path, destination_path, **kwargs):
         """
         Rename/move an object from one S3 location to another.
+        :param source_path: The `s3://` path of the directory or key to copy from
+        :param destination_path: The `s3://` path of the directory or key to copy to
         :param kwargs: Keyword arguments are passed to the boto3 function `copy`
         """
         self.copy(source_path, destination_path, **kwargs)
@@ -243,7 +245,8 @@ class S3Client(FileSystem):
     def put(self, local_path, destination_s3_path, **kwargs):
         """
         Put an object stored locally to an S3 path.
-
+        :param local_path: Path to source local file
+        :param destination_s3_path: URL for target S3 location
         :param kwargs: Keyword arguments are passed to the boto function `put_object`
         """
         self._check_deprecated_argument(kwargs)
@@ -254,6 +257,8 @@ class S3Client(FileSystem):
     def put_string(self, content, destination_s3_path, **kwargs):
         """
         Put a string to an S3 path.
+        :param content: Object data
+        :param destination_s3_path: URL for target S3 location
         :param kwargs: Keyword arguments are passed to the boto3 function `put_object`
         """
         self._check_deprecated_argument(kwargs)
@@ -440,6 +445,7 @@ class S3Client(FileSystem):
         """
         Get an iterable with S3 folder contents.
         Iterable contains paths relative to queried path.
+        :param path: URL for target S3 location
         :param start_time: Optional argument to list files with modified (offset aware) datetime after start_time
         :param end_time: Optional argument to list files with modified (offset aware) datetime before end_time
         :param return_key: Optional argument, when set to True will return boto3's ObjectSummary (instead of the filename)
