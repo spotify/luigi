@@ -16,16 +16,10 @@
 #
 from __future__ import print_function
 
-try:
-    import ConfigParser
-except ImportError:
-    import configparser as ConfigParser
 import mock
 import os
 import subprocess
 from helpers import unittest
-
-from luigi import six
 
 import luigi
 import luigi.cmdline
@@ -188,8 +182,7 @@ class CmdlineTest(unittest.TestCase):
 
     def test_luigid_no_logging_conf(self):
         with mock.patch('luigi.server.run') as server_run, \
-                mock.patch('logging.basicConfig') as basicConfig, \
-                mock.patch('luigi.configuration.get_config') as get_config:
+                mock.patch('logging.basicConfig') as basicConfig:
             self._clean_config()
             DaemonLogging.config.data = {'core': {
                 'no_configure_logging': False,
