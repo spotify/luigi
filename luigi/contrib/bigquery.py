@@ -526,7 +526,7 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
 
         bq_client = output.client
 
-        source_uris = self.source_uris()
+        source_uris = self.source_uris
         assert all(x.startswith('gs://') for x in source_uris)
 
         job = {
