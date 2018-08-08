@@ -142,7 +142,11 @@ def _get_str(task_dict, extra_indent):
                 param_str = '{0}...{1}'.format(param_class.serialize(first), param_class.serialize(last))
             else:
                 param_str = '{0}'.format(_get_str_one_parameter(tasks))
-            line = prefix + '- {0} {1}({2}={3})'.format(len(tasks), task_family, tasks[0].get_params()[0][0], param_str)
+
+            if tasks[0].get_params()[0][1].significant:
+                line = prefix + '- {0} {1}({2}={3})'.format(len(tasks), task_family, tasks[0].get_params()[0][0], param_str)
+            else:
+                line = prefix + '- {0} {1}()'.format(len(tasks), task_family)
         else:
             ranging = False
             params = _get_set_of_params(tasks)
@@ -220,10 +224,11 @@ def _get_str_one_parameter(tasks):
             row += '...'
             break
         param = task.get_params()[0]
-        row += '{0}'.format(param[1].serialize(getattr(task, param[0])))
-        if count < len(tasks) - 1:
-            row += ','
-        count += 1
+        if param[1].significant:
+            row += '{0}'.format(param[1].serialize(getattr(task, param[0])))
+            if count < len(tasks) - 1:
+                row += ','
+            count += 1
     return row
 
 
