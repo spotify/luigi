@@ -1059,10 +1059,18 @@ class Worker(object):
                     self.add(t)
                 new_deps = [t.task_id for t in new_req]
 
+            try:
+                expl_json = json.dumps(expl)
+            except UnicodeDecodeError:
+                logger.info('Unicode decode error occur during %s task metadata serialisation, '
+                            'falling back to latin1 encoding.', task_id)
+
+                expl_json = json.dumps(expl, encoding='latin1')
+
             self._add_task(worker=self._id,
                            task_id=task_id,
                            status=status,
-                           expl=json.dumps(expl),
+                           expl=expl_json,
                            resources=task.process_resources(),
                            runnable=None,
                            params=task.to_str_params(),
