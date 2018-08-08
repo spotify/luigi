@@ -21,7 +21,6 @@ given task, and if not why.
 """
 
 import luigi
-import sys
 import logging
 from luigi import IntParameter
 
@@ -73,12 +72,12 @@ def run_with_retcodes(argv):
     try:
         worker = luigi.interface._run(argv)['worker']
     except luigi.interface.PidLockAlreadyTakenExit:
-        sys.exit(retcodes.already_running)
+        return retcodes.already_running
     except Exception:
         # Some errors occur before logging is set up, we set it up now
         luigi.interface.setup_interface_logging()
         logger.exception("Uncaught exception in luigi")
-        sys.exit(retcodes.unhandled_exception)
+        return retcodes.unhandled_exception
 
     with luigi.cmdline_parser.CmdlineParser.global_instance(argv):
         task_sets = luigi.execution_summary._summary_dict(worker)
@@ -101,6 +100,6 @@ def run_with_retcodes(argv):
     if expected_ret_code == 0 and \
        root_task not in task_sets["completed"] and \
        root_task not in task_sets["already_done"]:
-        sys.exit(retcodes.not_run)
+        return retcodes.not_run
     else:
-        sys.exit(expected_ret_code)
+        return expected_ret_code
