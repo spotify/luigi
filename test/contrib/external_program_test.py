@@ -22,7 +22,7 @@ from helpers import unittest
 import luigi
 import luigi.contrib.hdfs
 from luigi import six
-from luigi.contrib.external_program import ExternalProgramTask, ExternalPythonProgramTask
+from luigi.contrib.external_program import ExternalProgramTask, ExternalPythonProgramTask, FileSystemOutputExternalProgramTask
 from luigi.contrib.external_program import ExternalProgramRunError
 from mock import patch, call
 
@@ -223,3 +223,30 @@ class ExternalPythonProgramTaskTest(unittest.TestCase):
         self.assertIn('PYTHONPATH', proc_env)
         self.assertTrue(proc_env['PYTHONPATH'].startswith('/extra/pythonpath'))
         self.assertTrue(proc_env['PYTHONPATH'].endswith('/base/pythonpath'))
+
+
+class FileSystemOutputExternalProgramTaskTest(unittest.TestCase):
+
+    class SimpleOutputTask(FileSystemOutputExternalProgramTask):
+
+        def program_args(self):
+            return ["echo", "sample text"]
+
+        def output(self):
+            return luigi.LocalTarget('output')
+
+    def test_external_task_generates_output(self):
+
+        job = self.SimpleOutputTask()
+        job.run()
+
+        self.assertTrue(job.output().exists())
+
+    def test_external_task_match_cmd_output(self):
+
+        job = self.SimpleOutputTask()
+        job.run()
+
+        with job.output().open('r') as target_file:
+            task_output = target_file.read()
+            self.assertEquals(task_output.strip('\n'), "sample text")
