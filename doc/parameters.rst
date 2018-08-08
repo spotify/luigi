@@ -88,6 +88,25 @@ are not the same instance:
     >>> hash(c) == hash(d)
     True
 
+Parameter visibility
+^^^^^^^^^^^^^^^^^^^^
+
+Using :class:`~luigi.parameter.ParameterVisibility` you can configure parameter visibility. By default, all
+parameters are public, but you can also set them hidden or private.
+
+.. code:: python
+
+    >>> import luigi
+    >>> from luigi.parameter import ParameterVisibility
+    
+    >>> luigi.Parameter(visibility=ParameterVisibility.PRIVATE)
+
+``ParameterVisibility.PUBLIC`` (default) - visible everywhere
+
+``ParameterVisibility.HIDDEN`` - ignored in WEB-view, but saved into database if save db_history is true
+
+``ParameterVisibility.PRIVATE`` - visible only inside task.
+
 Parameter types
 ^^^^^^^^^^^^^^^
 
