@@ -3,16 +3,18 @@ from enum import Enum
 
 class MetricsCollectors(Enum):
     default = 1
+    none = 1
     datadog = 2
 
-    def get(which):
-        if which == MetricsCollectors.default:
+    @classmethod
+    def get(cls, which):
+        if which == MetricsCollectors.none:
             return MetricsCollector()
         elif which == MetricsCollectors.datadog:
             from luigi.contrib.datadog_metric import DatadogMetricsCollector
             return DatadogMetricsCollector()
         else:
-            return MetricsCollectors()
+            raise ValueError("MetricsCollectors value ' {0} ' isn't supported", which)
 
 
 class MetricsCollector(object):
