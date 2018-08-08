@@ -77,6 +77,23 @@ class ExternalProgramTaskTest(unittest.TestCase):
     @patch('luigi.contrib.external_program.logger')
     @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
     @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_handle_nonascii_charaters(self, proc, file, logger):
+        proc.return_value.returncode = 1
+        file.return_value = BytesIO(u'测试(test)'.encode('utf-8'))
+        try:
+            job = TestExternalProgramTask()
+            job.run()
+        except ExternalProgramRunError as e:
+            self.assertEqual(e.out, u'测试(test)')
+            self.assertEqual(e.err, u'测试(test)')
+            self.assertIn(call.info(u'Program stdout:\n测试(test)'), logger.mock_calls)
+            self.assertIn(call.info(u'Program stderr:\n测试(test)'), logger.mock_calls)
+        else:
+            self.fail('Should have thrown ExternalProgramRunError')
+
+    @patch('luigi.contrib.external_program.logger')
+    @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_handle_failed_job(self, proc, file, logger):
         proc.return_value.returncode = 1
         file.return_value = BytesIO(b'stderr')
