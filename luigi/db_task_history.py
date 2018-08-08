@@ -34,7 +34,6 @@ See :ref:`TaskHistory` for information about how to turn out the task history fe
 # Copyright 2015 Naver Corp.
 # Author Yeseul Park (yeseul.park@navercorp.com)
 #
-
 import datetime
 import logging
 from contextlib import contextmanager
@@ -79,12 +78,29 @@ class DbTaskHistory(task_history.TaskHistory):
     def __init__(self):
         config = configuration.get_config()
         connection_string = config.get('task_history', 'db_connection')
-        self.engine = sqlalchemy.create_engine(connection_string)
+        connection_options = self._prepare_connection_options(config)
+
+        self.engine = sqlalchemy.create_engine(connection_string, **connection_options)
         self.session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
         self.tasks = {}  # task_id -> TaskRecord
 
         _upgrade_schema(self.engine)
+
+    CONNECTION_OPTIONS_MAPPING = {
+            'db_pool_size': 'pool_size',
+            'db_max_overflow': 'max_overflow',
+            'db_pool_timeout': 'pool_timeout',
+            'db_pool_recycle': 'pool_recycle',
+            }
+
+    def _prepare_connection_options(self, config):
+        options = {}
+        for (config_key, column_name) in six.iteritems(self.CONNECTION_OPTIONS_MAPPING):
+            column_value = config.getint('task_history', config_key, default=None)
+            if column_value:
+                options[column_name] = column_value
+        return options
 
     def task_scheduled(self, task):
         htask = self._get_task(task, status=PENDING)
