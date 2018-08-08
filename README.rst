@@ -32,6 +32,7 @@ For the bleeding edge code, ``pip install
 git+https://github.com/spotify/luigi.git``. `Bleeding edge documentation
 <https://luigi.readthedocs.io/en/latest/>`__ is also available.
 
+For those using conda package management system you can install the latest community supported luigi version by running the following ``conda install -c conda-forge luigi``
 Background
 ----------
 
