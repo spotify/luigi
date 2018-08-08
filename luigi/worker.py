@@ -54,7 +54,7 @@ from luigi import six
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
+from luigi.scheduler import NEW, DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
 from luigi.scheduler import WORKER_STATE_ACTIVE, WORKER_STATE_DISABLED
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
@@ -191,16 +191,12 @@ class TaskProcess(multiprocessing.Process):
             t0 = time.time()
             status = None
 
-            if _is_external(self.task):
-                # External task
-                # TODO(erikbern): We should check for task completeness after non-external tasks too!
-                # This will resolve #814 and make things a lot more consistent
-                if self.task.complete():
-                    status = DONE
-                else:
-                    status = FAILED
-                    expl = 'Task is an external data dependency ' \
-                        'and data does not exist (yet?).'
+            if self.task.complete():
+                status = DONE
+            elif _is_external(self.task):
+                status = FAILED
+                expl = 'Task is an external data dependency ' \
+                       'and data does not exist (yet?).'
             else:
                 new_deps = self._run_get_new_deps()
                 status = DONE if not new_deps else PENDING
@@ -553,9 +549,10 @@ class Worker(object):
         Call ``self._scheduler.add_task``, but store the values too so we can
         implement :py:func:`luigi.execution_summary.summary`.
         """
-        task_id = kwargs['task_id']
-        status = kwargs['status']
-        runnable = kwargs['runnable']
+        task_info = self._scheduler.add_task(*args, **kwargs)
+        task_id = task_info['task']['task_id']
+        status = task_info['task']['status']
+        runnable = task_info['task']['runnable']
         task = self._scheduled_tasks.get(task_id)
         if task:
             self._add_task_history.append((task, status, runnable))
@@ -565,9 +562,10 @@ class Worker(object):
             for batch_task in self._batch_running_tasks.pop(task_id):
                 self._add_task_history.append((batch_task, status, True))
 
-        self._scheduler.add_task(*args, **kwargs)
-
         logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
+        logger.debug('Scheduler responded with %s', task_info)
+
+        return task_info
 
     def __enter__(self):
         """
@@ -721,21 +719,20 @@ class Worker(object):
             queue = DequeQueue()
             pool = SingleProcessPool()
         self._validate_task(task)
-        pool.apply_async(check_complete, [task, queue])
+        queue.put(task)
 
         # we track queue size ourselves because len(queue) won't work for multiprocessing
         queue_size = 1
         try:
             seen = {task.task_id}
             while queue_size:
-                current = queue.get()
+                item = queue.get()
                 queue_size -= 1
-                item, is_complete = current
-                for next in self._add(item, is_complete):
-                    if next.task_id not in seen:
-                        self._validate_task(next)
-                        seen.add(next.task_id)
-                        pool.apply_async(check_complete, [next, queue])
+                for dep in self._add(item):
+                    if dep.task_id not in seen:
+                        self._validate_task(dep)
+                        seen.add(dep.task_id)
+                        queue.put(dep)
                         queue_size += 1
         except (KeyboardInterrupt, TaskException):
             raise
@@ -765,7 +762,7 @@ class Worker(object):
                 )
             self._batch_families_sent.add(family)
 
-    def _add(self, task, is_complete):
+    def _add(self, task, is_complete=False):
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
             logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task, self._config.task_limit)
             deps = None
@@ -800,7 +797,7 @@ class Worker(object):
 
             elif _is_external(task):
                 deps = None
-                status = PENDING
+                status = NEW
                 runnable = self._config.retry_external_tasks
                 task.trigger_event(Event.DEPENDENCY_MISSING, task)
                 logger.warning('Data for %s does not exist (yet?). The task is an '
@@ -821,7 +818,7 @@ class Worker(object):
                     status = UNKNOWN
                     runnable = False
                 else:
-                    status = PENDING
+                    status = NEW
                     runnable = True
 
             if task.disabled:
@@ -836,7 +833,7 @@ class Worker(object):
                 deps = [d.task_id for d in deps]
 
         self._scheduled_tasks[task.task_id] = task
-        self._add_task(
+        task_info = self._add_task(
             worker=self._id,
             task_id=task.task_id,
             status=status,
@@ -851,6 +848,7 @@ class Worker(object):
             retry_policy_dict=_get_retry_policy_dict(task),
             accepts_messages=task.accepts_messages,
         )
+        task.status = task_info['task']['status']
 
     def _validate_dependency(self, dependency):
         if isinstance(dependency, Target):
