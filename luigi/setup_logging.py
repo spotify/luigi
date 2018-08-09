@@ -30,8 +30,7 @@ class BaseLogging(object):
 
     @classmethod
     def _section(cls, opts):
-        """Get logging settings from config file section "logging".
-        """
+        """Get logging settings from config file section "logging"."""
         try:
             logging_config = cls.config['logging']
         except (TypeError, KeyError, NoSectionError):
@@ -41,8 +40,7 @@ class BaseLogging(object):
 
     @classmethod
     def setup(cls, opts):
-        """Setup logging via CLI params and config.
-        """
+        """Setup logging via CLI params and config."""
         logger = logging.getLogger('luigi')
 
         if cls.configured:
@@ -108,8 +106,7 @@ class DaemonLogging(BaseLogging):
 
     @classmethod
     def _conf(cls, opts):
-        """Setup logging via ini-file from logging_conf_file option.
-        """
+        """Setup logging via ini-file from logging_conf_file option."""
         logging_conf = cls.config.get('core', 'logging_conf_file', None)
         if logging_conf is None:
             return False
@@ -141,8 +138,7 @@ class InterfaceLogging(BaseLogging):
 
     @classmethod
     def _conf(cls, opts):
-        """Setup logging via ini-file from logging_conf_file option.
-        """
+        """Setup logging via ini-file from logging_conf_file option."""
         if not opts.logging_conf_file:
             return False
 
@@ -157,8 +153,7 @@ class InterfaceLogging(BaseLogging):
 
     @classmethod
     def _default(cls, opts):
-        """Setup default logger
-        """
+        """Setup default logger"""
         level = getattr(logging, opts.log_level, logging.DEBUG)
 
         logger = logging.getLogger('luigi-interface')
