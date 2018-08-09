@@ -87,6 +87,44 @@ class TaskProcessTest(LuigiTestCase):
             task_process.run()
             mock_put.assert_called_once_with((task.task_id, FAILED, "test failure expl", [], []))
 
+    def test_update_result_queue_on_external_failure_with_override(self):
+        """
+        Failed external tasks with an overridden :py:meth:`luigi.task.Task.overriddenon_external_failure`
+        method should provide the overridden expl to the result queue
+        """
+        class FailExternalTask(luigi.ExternalTask):
+            def on_external_failure(self):
+                return "test failure expl"
+
+            def complete(self):
+                return False
+
+        task = FailExternalTask()
+        result_queue = multiprocessing.Queue()
+        task_process = TaskProcess(task, 1, result_queue, lambda: None, lambda: None)
+
+        with mock.patch.object(result_queue, 'put') as mock_put:
+            task_process.run()
+            mock_put.assert_called_once_with((task.task_id, FAILED, "test failure expl", [], []))
+
+    def test_update_result_queue_on_external_failure_no_override(self):
+        """
+        Failed external tasks without an overridden :py:meth:`luigi.task.Task.overriddenon_external_failure`
+        method should provide the default expl to the result queue
+        """
+        class FailExternalTask(luigi.ExternalTask):
+            def complete(self):
+                return False
+
+        task = FailExternalTask()
+        result_queue = multiprocessing.Queue()
+        task_process = TaskProcess(task, 1, result_queue, lambda: None, lambda: None)
+
+        with mock.patch.object(result_queue, 'put') as mock_put:
+            task_process.run()
+            mock_put.assert_called_once_with((task.task_id, FAILED, 'Task is an external data dependency ' +
+                                              'and data does not exist (yet?).', [], []))
+
     def test_cleanup_children_on_terminate(self):
         """
         Subprocesses spawned by tasks should be terminated on terminate

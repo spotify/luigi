@@ -688,6 +688,17 @@ class Task(object):
         Default behavior is to send an None value"""
         pass
 
+    def on_external_failure(self):
+        """
+        Override for custom error handling for failed external tasks.
+
+        This method gets called if a task is an :py:class:`luigi.task.ExternalTask`, or if a
+        :py:class:`luigi.task.Task`'s :py:meth:`run` method is not implemented.
+
+        The returned value is json encoded and sent to the scheduler as the `expl` argument.
+        """
+        return 'Task is an external data dependency and data does not exist (yet?).'
+
     @contextmanager
     def no_unpicklable_properties(self):
         """
