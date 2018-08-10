@@ -45,6 +45,7 @@ class webhdfs(luigi.Config):
                            config_path=dict(section='hdfs', name='user'))
     client_type = luigi.Parameter(default='insecure',
                                   description='Type of client to use. One of insecure, kerberos or token')
+    token = luigi.Parameter(default=None, description='Hadoop delegation token, only used when client_type="token"')
 
 
 class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
@@ -55,11 +56,12 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
     <https://hdfscli.readthedocs.io/en/latest/api.html>`__.
     """
 
-    def __init__(self, host=None, port=None, user=None, client_type=None):
+    def __init__(self, host=None, port=None, user=None, client_type=None, token=None):
         self.host = host or hdfs_config.hdfs().namenode_host
         self.port = port or webhdfs().port
         self.user = user or webhdfs().user or os.environ['USER']
         self.client_type = client_type or webhdfs().client_type
+        self.token = token or webhdfs().token
 
     @property
     def url(self):
