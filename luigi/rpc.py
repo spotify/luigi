@@ -116,7 +116,7 @@ class RemoteScheduler(object):
 
         self._rpc_retry_attempts = config.getint('core', 'rpc-retry-attempts', 3)
         self._rpc_retry_wait = config.getint('core', 'rpc-retry-wait', 30)
-        self._log_exceptions = config.getboolean('core', 'log-exceptions', True)
+        self._rpc_log_retries = config.getboolean('core', 'rpc-log-retries', True)
 
         if HAS_REQUESTS:
             self._fetcher = RequestsFetcher(requests.Session())
@@ -124,7 +124,8 @@ class RemoteScheduler(object):
             self._fetcher = URLLibFetcher()
 
     def _wait(self):
-        logger.info("Wait for %d seconds" % self._rpc_retry_wait)
+        if self._rpc_log_retries:
+            logger.info("Wait for %d seconds" % self._rpc_retry_wait)
         time.sleep(self._rpc_retry_wait)
 
     def _fetch(self, url_suffix, body):
@@ -134,14 +135,15 @@ class RemoteScheduler(object):
         while attempt < self._rpc_retry_attempts:
             attempt += 1
             if last_exception:
-                logger.info("Retrying attempt %r of %r (max)" % (attempt, self._rpc_retry_attempts))
+                if self._rpc_log_retries:
+                    logger.info("Retrying attempt %r of %r (max)" % (attempt, self._rpc_retry_attempts))
                 self._wait()  # wait for a bit and retry
             try:
                 response = self._fetcher.fetch(full_url, body, self._connect_timeout)
                 break
             except self._fetcher.raises as e:
                 last_exception = e
-                if self._log_exceptions:
+                if self._rpc_log_retries:
                     logger.warning("Failed connecting to remote scheduler %r", self._url,
                                    exc_info=True)
                 continue
