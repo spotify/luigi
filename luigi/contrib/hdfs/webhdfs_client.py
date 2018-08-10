@@ -43,6 +43,8 @@ class webhdfs(luigi.Config):
                               description='Port for webhdfs')
     user = luigi.Parameter(default='', description='Defaults to $USER envvar',
                            config_path=dict(section='hdfs', name='user'))
+    client_type = luigi.Parameter(default='insecure',
+                                  description='Type of client to use. One of insecure, kerberos or token')
 
 
 class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
@@ -53,10 +55,11 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
     <https://hdfscli.readthedocs.io/en/latest/api.html>`__.
     """
 
-    def __init__(self, host=None, port=None, user=None):
+    def __init__(self, host=None, port=None, user=None, client_type=None):
         self.host = host or hdfs_config.hdfs().namenode_host
         self.port = port or webhdfs().port
         self.user = user or webhdfs().user or os.environ['USER']
+        self.client_type = client_type or webhdfs().client_type
 
     @property
     def url(self):
@@ -73,8 +76,18 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         # not urgent to memoize it. Note that it *might* be issues with process
         # forking and whatnot (as the one in the snakebite client) if we
         # memoize it too trivially.
-        import hdfs
-        return hdfs.InsecureClient(url=self.url, user=self.user)
+        if self.client_type == 'insecure':
+            import hdfs
+            return hdfs.InsecureClient(url=self.url, user=self.user)
+        elif self.client_type == 'kerberos':
+            from hdfs.ext.kerberos import KerberosClient
+            return KerberosClient(url=self.url)
+        elif self.client_type == 'token':
+            import hdfs
+            return hdfs.TokenClient(url=self.url, token=self.token)
+        else:
+            raise ValueError("Error: Unknown client type specified in webhdfs client_type"
+                             "configuration parameter")
 
     def walk(self, path, depth=1):
         return self.client.walk(path, depth=depth)
