@@ -45,7 +45,7 @@ class webhdfs(luigi.Config):
                            config_path=dict(section='hdfs', name='user'))
     client_type = luigi.Parameter(default='insecure',
                                   description='Type of client to use. One of insecure, kerberos or token')
-    token = luigi.Parameter(default=None, description='Hadoop delegation token, only used when client_type="token"')
+    token = luigi.Parameter(default='', description='Hadoop delegation token, only used when client_type="token"')
 
 
 class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
