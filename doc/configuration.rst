@@ -922,10 +922,18 @@ summary-length
 port
   The port to use for webhdfs. The normal namenode port is probably on a
   different port from this one.
+
 user
   Perform file system operations as the specified user instead of $USER.  Since
   this parameter is not honored by any of the other hdfs clients, you should
   think twice before setting this parameter.
+
+client_type
+  The type of client to use. Default is the InsecureClient that requires no
+  authentication. Other hdfs clients are KerberosClient and TokenClient.
+
+token
+  The Hadoop delagation token. Only used when client_type is TokenClient.
 
 
 Per Task Retry-Policy
