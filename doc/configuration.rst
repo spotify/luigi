@@ -930,10 +930,8 @@ user
 
 client_type
   The type of client to use. Default is the InsecureClient that requires no
-  authentication. Other hdfs clients are KerberosClient and TokenClient.
-
-token
-  The Hadoop delagation token. Only used when client_type is TokenClient.
+  authentication. The other option is to use kerberos authentication with the
+  KerberosClient.
 
 
 Per Task Retry-Policy
