@@ -43,7 +43,8 @@ class webhdfs(luigi.Config):
                               description='Port for webhdfs')
     user = luigi.Parameter(default='', description='Defaults to $USER envvar',
                            config_path=dict(section='hdfs', name='user'))
-    client_type = luigi.Parameter(default='insecure', description='Type of client to use. Can be insecure or kerberos')
+    client_type = luigi.ChoiceParameter(var_type=str, choices=['InsecureClient', 'KerberosClient'],
+                                        default='InsecureClient', description='Type of hdfs client to use.')
 
 
 class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
@@ -75,15 +76,12 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         # not urgent to memoize it. Note that it *might* be issues with process
         # forking and whatnot (as the one in the snakebite client) if we
         # memoize it too trivially.
-        if self.client_type == 'insecure':
-            import hdfs
-            return hdfs.InsecureClient(url=self.url, user=self.user)
-        elif self.client_type == 'kerberos':
+        if self.client_type == 'KerberosClient':
             from hdfs.ext.kerberos import KerberosClient
             return KerberosClient(url=self.url)
         else:
-            raise ValueError("Error: Unknown client type specified in webhdfs client_type"
-                             "configuration parameter")
+            import hdfs
+            return hdfs.InsecureClient(url=self.url, user=self.user)
 
     def walk(self, path, depth=1):
         return self.client.walk(path, depth=depth)

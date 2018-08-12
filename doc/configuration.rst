@@ -930,8 +930,8 @@ user
 
 client_type
   The type of client to use. Default is the InsecureClient that requires no
-  authentication. The other option is to use kerberos authentication with the
-  KerberosClient.
+  authentication. The other option is the KerberosClient that uses kerberos
+  authentication.
 
 
 Per Task Retry-Policy
