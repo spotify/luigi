@@ -929,8 +929,8 @@ user
   think twice before setting this parameter.
 
 client_type
-  The type of client to use. Default is the InsecureClient that requires no
-  authentication. The other option is the KerberosClient that uses kerberos
+  The type of client to use. Default is the "insecure" client that requires no
+  authentication. The other option is the "kerberos" client that uses kerberos
   authentication.
 
 

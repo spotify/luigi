@@ -51,12 +51,12 @@ class WebHdfsTargetTest(WebHdfsMiniClusterTestCase, HdfsTargetTestMixin):
 
 class TestWebHdfsClient(unittest.TestCase):
 
-    @with_config({'webhdfs': {'client_type': 'InsecureClient'}})
+    @with_config({'webhdfs': {'client_type': 'insecure'}})
     def test_insecure_client_type(self):
         client = WebHdfsClient(host='localhost').client
         self.assertIsInstance(client, InsecureClient)
 
-    @with_config({'webhdfs': {'client_type': 'KerberosClient'}})
+    @with_config({'webhdfs': {'client_type': 'kerberos'}})
     def test_kerberos_client_type(self):
         client = WebHdfsClient(host='localhost').client
         self.assertIsInstance(client, KerberosClient)
