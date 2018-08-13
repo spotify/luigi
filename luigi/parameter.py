@@ -991,7 +991,7 @@ class DictParameter(Parameter):
         return json.loads(s, object_pairs_hook=_FrozenOrderedDict)
 
     def serialize(self, x):
-        return json.dumps(x, cls=_DictParamEncoder)
+        return json.dumps(x, cls=_DictParamEncoder, sort_keys=True)
 
 
 class ListParameter(Parameter):
