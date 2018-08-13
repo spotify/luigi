@@ -151,7 +151,7 @@ class TaskProcess(multiprocessing.Process):
             except StopIteration:
                 return None
 
-            new_req = flatten(requires)
+            new_req = flatten(self.task.process_requires(requires))
             if all(t.complete() for t in new_req):
                 next_send = getpaths(requires)
             else:

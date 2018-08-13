@@ -600,6 +600,40 @@ class Task(object):
         """
         return []  # default impl
 
+    def process_requires(self, requires):
+        """
+        Override in "template" tasks which themselves are supposed to be
+        subclassed and thus have their requires() overridden (name preserved to
+        provide consistent end-user experience), yet need to introduce
+        custom behaviour into dependencies.
+
+        Differences with :py:meth:`_requires`:
+          * method signature: :py:meth:`_requires` doesn't take params and calls
+            :py:meth:`requires` directly where as this method is expected to work only on
+            requirements passed via parameters.
+          * Code paths: :py:meth:`_requires` is run only during the statically defined
+            requirements where as this method works with dynamic dependencies yielded from
+            :py:meth:`run` also.
+
+        ex:
+            class ParentTask(luigi.Task):
+                foo = `bar`
+
+                def process_requires(self, requirements):
+                    for(req in flatten(requirements)):
+                        req.foo = self.foo
+
+                    return requirements
+
+            class B(ParentTask):
+                def requires(self):
+                    return luigi.LocalPathTask('my/local/path')
+
+            B().deps()[0].foo # => 'bar'
+
+        """
+        return requires
+
     def requires(self):
         """
         The Tasks that this Task depends on.
@@ -652,7 +686,7 @@ class Task(object):
         Returns the flattened list of requires.
         """
         # used by scheduler
-        return flatten(self._requires())
+        return flatten(self.process_requires(self._requires()))
 
     def run(self):
         """
