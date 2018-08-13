@@ -226,6 +226,8 @@ class S3Client(FileSystem):
     def move(self, source_path, destination_path, **kwargs):
         """
         Rename/move an object from one S3 location to another.
+        :param source_path: The `s3://` path of the directory or key to copy from
+        :param destination_path: The `s3://` path of the directory or key to copy to
         :param kwargs: Keyword arguments are passed to the boto3 function `copy`
         """
         self.copy(source_path, destination_path, **kwargs)
@@ -243,12 +245,11 @@ class S3Client(FileSystem):
     def put(self, local_path, destination_s3_path, **kwargs):
         """
         Put an object stored locally to an S3 path.
-
+        :param local_path: Path to source local file
+        :param destination_s3_path: URL for target S3 location
         :param kwargs: Keyword arguments are passed to the boto function `put_object`
         """
-        if 'encrypt_key' in kwargs:
-            raise DeprecatedBotoClientException(
-                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        self._check_deprecated_argument(**kwargs)
 
         # put the file
         self.put_multipart(local_path, destination_s3_path, **kwargs)
@@ -256,11 +257,11 @@ class S3Client(FileSystem):
     def put_string(self, content, destination_s3_path, **kwargs):
         """
         Put a string to an S3 path.
+        :param content: Data str
+        :param destination_s3_path: URL for target S3 location
         :param kwargs: Keyword arguments are passed to the boto3 function `put_object`
         """
-        if 'encrypt_key' in kwargs:
-            raise DeprecatedBotoClientException(
-                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        self._check_deprecated_argument(**kwargs)
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
         # validate the bucket
@@ -279,9 +280,7 @@ class S3Client(FileSystem):
         :param part_size: Part size in bytes. Default: 8388608 (8MB)
         :param kwargs: Keyword arguments are passed to the boto function `upload_fileobj` as ExtraArgs
         """
-        if 'encrypt_key' in kwargs:
-            raise DeprecatedBotoClientException(
-                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        self._check_deprecated_argument(**kwargs)
 
         from boto3.s3.transfer import TransferConfig
         # default part size for boto3 is 8Mb, changing it to fit part_size
@@ -446,6 +445,7 @@ class S3Client(FileSystem):
         """
         Get an iterable with S3 folder contents.
         Iterable contains paths relative to queried path.
+        :param path: URL for target S3 location
         :param start_time: Optional argument to list files with modified (offset aware) datetime after start_time
         :param end_time: Optional argument to list files with modified (offset aware) datetime before end_time
         :param return_key: Optional argument, when set to True will return boto3's ObjectSummary (instead of the filename)
@@ -482,7 +482,8 @@ class S3Client(FileSystem):
             else:
                 yield item[key_path_len:]
 
-    def _get_s3_config(self, key=None):
+    @staticmethod
+    def _get_s3_config(key=None):
         defaults = dict(configuration.get_config().defaults())
         try:
             config = dict(configuration.get_config().items('s3'))
@@ -500,16 +501,29 @@ class S3Client(FileSystem):
 
         return section_only
 
-    def _path_to_bucket_and_key(self, path):
+    @staticmethod
+    def _path_to_bucket_and_key(path):
         (scheme, netloc, path, query, fragment) = urlsplit(path)
         path_without_initial_slash = path[1:]
         return netloc, path_without_initial_slash
 
-    def _is_root(self, key):
+    @staticmethod
+    def _is_root(key):
         return (len(key) == 0) or (key == '/')
 
-    def _add_path_delimiter(self, key):
+    @staticmethod
+    def _add_path_delimiter(key):
         return key if key[-1:] == '/' or key == '' else key + '/'
+
+    @staticmethod
+    def _check_deprecated_argument(**kwargs):
+        """
+        If `encrypt_key` is part of the arguments raise an exception
+        :return: None
+        """
+        if 'encrypt_key' in kwargs:
+            raise DeprecatedBotoClientException(
+                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
 
     def _validate_bucket(self, bucket_name):
         exists = True
@@ -525,18 +539,15 @@ class S3Client(FileSystem):
         return exists
 
     def _exists(self, bucket, key):
-        s3_key = False
         try:
             self.s3.Object(bucket, key).load()
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] in ['NoSuchKey', '404']:
-                s3_key = False
+                return False
             else:
                 raise
-        else:
-            s3_key = True
-        if s3_key:
-            return True
+
+        return True
 
 
 class AtomicS3File(AtomicLocalFile):
