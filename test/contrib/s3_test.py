@@ -461,32 +461,7 @@ class TestS3Client(unittest.TestCase):
             self.assertEqual(original_size, copy_size)
 
     @mock_s3
-    def _run_multipart_copy_test(self, put_method):
-        create_bucket()
-        # Run the method to put the file into s3 into the first place
-        put_method()
-
-        # As all the multipart put methods use `self._run_multipart_test`
-        # we can just use this key
-        original = 's3://mybucket/putMe'
-        copy = 's3://mybucket/putMe_copy'
-
-        # 5MB is minimum part size, use it here so we don't have to generate huge files to test
-        # the multipart upload in moto
-        part_size = (1024 ** 2) * 5
-
-        # Copy the file from old location to new
-        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        s3_client.copy(original, copy, part_size=part_size, threads=4)
-
-        # We can't use etags to compare between multipart and normal keys,
-        # so we fall back to using the size instead
-        original_size = s3_client.get_key(original).size
-        copy_size = s3_client.get_key(copy).size
-        self.assertEqual(original_size, copy_size)
-
-    @mock_s3
-    def _run_copy_test(self, put_method):
+    def _run_copy_test(self, put_method, is_multipart=False):
         create_bucket()
         # Run the method to put the file into s3 into the first place
         put_method()
@@ -498,7 +473,13 @@ class TestS3Client(unittest.TestCase):
 
         # Copy the file from old location to new
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-        s3_client.copy(original, copy, threads=4)
+        if is_multipart:
+            # 5MB is minimum part size, use it here so we don't have to generate huge files to test
+            # the multipart upload in moto
+            part_size = (1024 ** 2) * 5
+            s3_client.copy(original, copy, part_size=part_size, threads=4)
+        else:
+            s3_client.copy(original, copy, threads=4)
 
         # We can't use etags to compare between multipart and normal keys,
         # so we fall back to using the file size
