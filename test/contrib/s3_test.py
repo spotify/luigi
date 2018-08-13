@@ -403,8 +403,7 @@ class TestS3Client(unittest.TestCase):
         Test a multipart put with two parts, where the parts are not exactly the split size.
         """
         # First, put a file into S3
-        self._run_copy_test(
-            self.test_put_multipart_multiple_parts_non_exact_fit)
+        self._run_copy_test(self.test_put_multipart_multiple_parts_non_exact_fit)
 
     @skipOnTravis("passes and fails intermitantly, suspecting it's a race condition not handled by moto")
     def test_copy_multiple_parts_exact_fit(self):
