@@ -453,7 +453,9 @@ class TestS3Client(unittest.TestCase):
             self.assertTrue(s3_client.exists(file_path))
 
         s3_dest = 's3://mybucket/copydir_new/'
-        s3_client.copy(s3_dir, s3_dest, threads=10, part_size=copy_part_size)
+        response = s3_client.copy(s3_dir, s3_dest, threads=10, part_size=copy_part_size)
+
+        self._run_copy_response_test(response)
 
         for i in range(n):
             original_size = s3_client.get_key(s3_dir + str(i)).size
@@ -477,9 +479,11 @@ class TestS3Client(unittest.TestCase):
             # 5MB is minimum part size, use it here so we don't have to generate huge files to test
             # the multipart upload in moto
             part_size = (1024 ** 2) * 5
-            s3_client.copy(original, copy, part_size=part_size, threads=4)
+            response = s3_client.copy(original, copy, part_size=part_size, threads=4)
         else:
-            s3_client.copy(original, copy, threads=4)
+            response = s3_client.copy(original, copy, threads=4)
+
+        self._run_copy_response_test(response)
 
         # We can't use etags to compare between multipart and normal keys,
         # so we fall back to using the file size
@@ -507,3 +511,11 @@ class TestS3Client(unittest.TestCase):
         key_size = s3_client.get_key(s3_path).size
         self.assertEqual(file_size, key_size)
         tmp_file.close()
+
+    def _run_copy_response_test(self, response):
+        num, size = response
+        self.assertIsInstance(response, tuple)
+
+        # only check >= minimum possible values
+        self.assertGreaterEqual(num, 1)
+        self.assertGreaterEqual(size, 0)
