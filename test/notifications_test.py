@@ -162,7 +162,7 @@ class NotificationFixture(object):
     """
     Defines API and message fixture.
 
-    config, sender, subject, message, recipients, image_png
+    config, sender, subject, message, recipients, attachments
     """
     sender = 'luigi@unittest'
     subject = 'Oops!'
