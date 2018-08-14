@@ -101,8 +101,9 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
 
             client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
             create_bucket()
-            client.put(temppath, 's3://mybucket/largetempfile')
-            t = S3Target('s3://mybucket/largetempfile', client=client)
+            remote_path = 's3://mybucket/largetempfile'
+            client.put(temppath, remote_path)
+            t = S3Target(remote_path, client=client)
             with t.open() as read_file:
                 lines = [line for line in read_file]
         finally:
