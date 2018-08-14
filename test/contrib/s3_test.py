@@ -425,7 +425,6 @@ class TestS3Client(unittest.TestCase):
         self._run_copy_test(self.test_put_multipart_empty_file)
 
     @mock_s3
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/145895385')
     def test_copy_empty_dir(self):
         """
         Test copying an empty dir
