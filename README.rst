@@ -148,6 +148,8 @@ or held presentations about Luigi:
 * `Open Targets <https://www.opentargets.org/>`_ `(blog, 2017) <https://blog.opentargets.org/using-containers-with-luigi>`__
 * `Leipzig University Library <https://ub.uni-leipzig.de>`_ `(presentation, 2016) <https://de.slideshare.net/MartinCzygan/build-your-own-discovery-index-of-scholary-eresources>`__ / `(project) <https://finc.info/de/datenquellen>`__
 * `Synetiq <https://synetiq.net/>`_ `(presentation, 2017) <https://www.youtube.com/watch?v=M4xUQXogSfo>`__
+* `Glossier <https://www.glossier.com/>`_ `(blog, 2018) <https://medium.com/glossier/how-to-build-a-data-warehouse-what-weve-learned-so-far-at-glossier-6ff1e1783e31>`__
+* `Data Revenue <https://www.datarevenue.com/>`_ `(blog, 2018) <https://www.datarevenue.com/en/blog/how-to-scale-your-machine-learning-pipeline>`_
 
 Some more companies are using Luigi but haven't had a chance yet to write about it:
 
@@ -163,6 +165,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Deloitte <https://www.Deloitte.co.uk/>`_
 * `Stacktome <https://stacktome.com/>`_
 * `LINX+Neemu+Chaordic <https://www.chaordic.com.br/>`_
+* `Foxberry <https://www.foxberry.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 

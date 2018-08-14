@@ -34,10 +34,12 @@ import re
 import copy
 import functools
 
+import luigi
 from luigi import six
 
 from luigi import parameter
 from luigi.task_register import Register
+from luigi.parameter import ParameterVisibility
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -107,7 +109,7 @@ def auto_namespace(scope=''):
         luigi.auto_namespace(scope=__name__)
 
     To reset an ``auto_namespace()`` call, you can use
-    ``namespace(scope='my_scope'``).  But this will not be
+    ``namespace(scope='my_scope')``.  But this will not be
     needed (and is also discouraged) if you use the ``scope`` kwarg.
 
     *New since Luigi 2.6.0.*
@@ -279,6 +281,14 @@ class Task(object):
                     logger.exception("Error in event callback for %r", event)
 
     @property
+    def accepts_messages(self):
+        """
+        For configuring which scheduler messages can be received. When falsy, this tasks does not
+        accept any message. When True, all messages are accepted.
+        """
+        return False
+
+    @property
     def task_module(self):
         ''' Returns what Python module to import to get access to this class. '''
         # TODO(erikbern): we should think about a language-agnostic mechanism
@@ -432,7 +442,7 @@ class Task(object):
         self.param_kwargs = dict(param_values)
 
         self._warn_on_wrong_param_types()
-        self.task_id = task_id_str(self.get_task_family(), self.to_str_params(only_significant=True))
+        self.task_id = task_id_str(self.get_task_family(), self.to_str_params(only_significant=True, only_public=True))
         self.__hash = hash(self.task_id)
 
         self.set_tracking_url = None
@@ -473,17 +483,28 @@ class Task(object):
 
         return cls(**kwargs)
 
-    def to_str_params(self, only_significant=False):
+    def to_str_params(self, only_significant=False, only_public=False):
         """
         Convert all parameters to a str->str hash.
         """
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
-            if (not only_significant) or params[param_name].significant:
+            if (((not only_significant) or params[param_name].significant)
+                    and ((not only_public) or params[param_name].visibility == ParameterVisibility.PUBLIC)
+                    and params[param_name].visibility != ParameterVisibility.PRIVATE):
                 params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
+
+    def _get_param_visibilities(self):
+        param_visibilities = {}
+        params = dict(self.get_params())
+        for param_name, param_value in six.iteritems(self.param_kwargs):
+            if params[param_name].visibility != ParameterVisibility.PRIVATE:
+                param_visibilities[param_name] = params[param_name].visibility.serialize()
+
+        return param_visibilities
 
     def clone(self, cls=None, **kwargs):
         """
@@ -532,7 +553,7 @@ class Task(object):
         return task_str
 
     def __eq__(self, other):
-        return self.__class__ == other.__class__ and self.param_kwargs == other.param_kwargs
+        return self.__class__ == other.__class__ and self.task_id == other.task_id
 
     def complete(self):
         """
@@ -686,7 +707,7 @@ class Task(object):
                         pickle.dumps(self)
 
         """
-        unpicklable_properties = ('set_tracking_url', 'set_status_message', 'set_progress_percentage')
+        unpicklable_properties = tuple(luigi.worker.TaskProcess.forward_reporter_attributes.values())
         reserved_properties = {}
         for property_name in unpicklable_properties:
             if hasattr(self, property_name):

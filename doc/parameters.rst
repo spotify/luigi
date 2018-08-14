@@ -25,7 +25,7 @@ i.e.
 .. code:: python
 
     d = DailyReport(datetime.date(2012, 5, 10))
-    print d.date
+    print(d.date)
 
 will return the same date that the object was constructed with.
 Same goes if you invoke Luigi on the command line.
@@ -87,6 +87,25 @@ are not the same instance:
     False
     >>> hash(c) == hash(d)
     True
+
+Parameter visibility
+^^^^^^^^^^^^^^^^^^^^
+
+Using :class:`~luigi.parameter.ParameterVisibility` you can configure parameter visibility. By default, all
+parameters are public, but you can also set them hidden or private.
+
+.. code:: python
+
+    >>> import luigi
+    >>> from luigi.parameter import ParameterVisibility
+    
+    >>> luigi.Parameter(visibility=ParameterVisibility.PRIVATE)
+
+``ParameterVisibility.PUBLIC`` (default) - visible everywhere
+
+``ParameterVisibility.HIDDEN`` - ignored in WEB-view, but saved into database if save db_history is true
+
+``ParameterVisibility.PRIVATE`` - visible only inside task.
 
 Parameter types
 ^^^^^^^^^^^^^^^

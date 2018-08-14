@@ -11,15 +11,15 @@ logger = logging.getLogger('luigi-interface')
 _dataproc_client = None
 
 try:
-    import oauth2client.client
+    import google.auth
     from googleapiclient import discovery
     from googleapiclient.errors import HttpError
 
-    DEFAULT_CREDENTIALS = oauth2client.client.GoogleCredentials.get_application_default()
+    DEFAULT_CREDENTIALS, _ = google.auth.default()
     authenticate_kwargs = gcp.get_authenticate_kwargs(DEFAULT_CREDENTIALS)
-    _dataproc_client = discovery.build('dataproc', 'v1', **authenticate_kwargs)
+    _dataproc_client = discovery.build('dataproc', 'v1', cache_discovery=False, **authenticate_kwargs)
 except ImportError:
-    logger.warning("Loading Dataproc module without the python packages googleapiclient & oauth2client. \
+    logger.warning("Loading Dataproc module without the python packages googleapiclient & google-auth. \
         This will crash at runtime if Dataproc functionality is used.")
 
 

@@ -222,6 +222,15 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         return list(self.get_bite().copyToLocal(self.list_path(path),
                                                 local_destination))
 
+    def get_merge(self, path, local_destination):
+        """
+        Using snakebite getmerge to implement this.
+        :param path: HDFS directory
+        :param local_destination: path on the system running Luigi
+        :return: merge of the directory
+        """
+        return list(self.get_bite().getmerge(path=path, dst=local_destination))
+
     def mkdir(self, path, parents=True, mode=0o755, raise_if_exists=False):
         """
         Use snakebite.mkdir, if available.

@@ -1,18 +1,35 @@
 Configuration
 =============
 
-All configuration can be done by adding configuration files. They are looked for in:
+All configuration can be done by adding configuration files.
 
- * ``/etc/luigi/client.cfg``
- * ``luigi.cfg`` (or its legacy name ``client.cfg``) in your current working directory
- * ``LUIGI_CONFIG_PATH`` environment variable
+Supported config parsers:
+* ``cfg`` (default)
+* ``toml``
 
-in increasing order of preference. The order only matters in case of key conflicts (see docs for ConfigParser.read_). These files are meant for both the client and ``luigid``. If you decide to specify your own configuration you should make sure that both the client and ``luigid`` load it properly.
+You can choose right parser via ``LUIGI_CONFIG_PARSER`` environment variable. For example, ``LUIGI_CONFIG_PARSER=toml``.
+
+Default (cfg) parser are looked for in:
+
+* ``/etc/luigi/client.cfg`` (deprecated)
+* ``/etc/luigi/luigi.cfg``
+* ``client.cfg`` (deprecated)
+* ``luigi.cfg``
+* ``LUIGI_CONFIG_PATH`` environment variable
+
+`TOML <https://github.com/toml-lang/toml>`_ parser are looked for in:
+
+* ``/etc/luigi/luigi.toml``
+* ``luigi.toml``
+* ``LUIGI_CONFIG_PATH`` environment variable
+
+Both config lists increase in priority (from low to high). The order only matters in case of key conflicts (see docs for ConfigParser.read_). These files are meant for both the client and ``luigid``. If you decide to specify your own configuration you should make sure that both the client and ``luigid`` load it properly.
 
 .. _ConfigParser.read: https://docs.python.org/3.6/library/configparser.html#configparser.ConfigParser.read
 
-The config file is broken into sections, each controlling a different part of the config. Example configuration file:
+The config file is broken into sections, each controlling a different part of the config.
 
+Example cfg config:
 
 .. code:: ini
 
@@ -22,6 +39,17 @@ The config file is broken into sections, each controlling a different part of th
 
     [core]
     scheduler_host=luigi-host.mycompany.foo
+
+Example toml config:
+
+.. code:: python
+
+    [hadoop]
+    version = "cdh4"
+    streaming-jar = "/usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar"
+
+    [core]
+    scheduler_host = "luigi-host.mycompany.foo"
 
 
 .. _ParamConfigIngestion:
@@ -154,6 +182,7 @@ parallel_scheduling
   If true, the scheduler will compute complete functions of tasks in
   parallel using multiprocessing. This can significantly speed up
   scheduling, but requires that all tasks can be pickled.
+  Defaults to false.
 
 parallel-scheduling-processes
   The number of processes to use for parallel scheduling. If not specified
@@ -269,6 +298,12 @@ check_unfulfilled_deps
   e.g. when the ``exists()`` calls of the dependencies' outputs are
   resource-intensive.
   Defaults to true.
+
+force_multiprocessing
+  By default, luigi uses multiprocessing when *more than one* worker process is
+  requested. Whet set to true, multiprocessing is used independent of the
+  the number of workers.
+  Defaults to false.
 
 
 [elasticsearch]
@@ -715,6 +750,15 @@ worker_disconnect_delay
   Number of seconds to wait after a worker has stopped pinging the
   scheduler before removing it and marking all of its running tasks as
   failed. Defaults to 60.
+
+pause_enabled
+  If false, disables pause/unpause operations and hides the pause toggle from
+  the visualiser.
+
+send_messages
+  When true, the scheduler is allowed to send messages to running tasks and
+  the central scheduler provides a simple prompt per task to send messages.
+  Defaults to true.
 
 
 [sendgrid]
