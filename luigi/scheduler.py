@@ -123,8 +123,6 @@ def rpc_method(**request_args):
 
 
 class scheduler(Config):
-    # TODO(erikbern): the config_path is needed for backwards compatilibity. We
-    # should drop the compatibility at some point
     retry_delay = parameter.FloatParameter(default=900.0)
     remove_delay = parameter.FloatParameter(default=600.0)
     worker_disconnect_delay = parameter.FloatParameter(default=60.0)
@@ -134,14 +132,10 @@ class scheduler(Config):
 
     # Jobs are disabled if we see more than retry_count failures in disable_window seconds.
     # These disables last for disable_persist seconds.
-    disable_window = parameter.IntParameter(default=3600,
-                                            config_path=dict(section='scheduler', name='disable-window-seconds'))
-    retry_count = parameter.IntParameter(default=999999999,
-                                         config_path=dict(section='scheduler', name='disable_failures'))
-    disable_hard_timeout = parameter.IntParameter(default=999999999,
-                                                  config_path=dict(section='scheduler', name='disable-hard-timeout'))
-    disable_persist = parameter.IntParameter(default=86400,
-                                             config_path=dict(section='scheduler', name='disable-persist-seconds'))
+    disable_window = parameter.IntParameter(default=3600)
+    retry_count = parameter.IntParameter(default=999999999)
+    disable_hard_timeout = parameter.IntParameter(default=999999999)
+    disable_persist = parameter.IntParameter(default=86400)
     max_shown_tasks = parameter.IntParameter(default=100000)
     max_graph_nodes = parameter.IntParameter(default=100000)
 
