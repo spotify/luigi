@@ -13,6 +13,7 @@
 # the License.
 
 import os
+import sys
 
 from setuptools import setup
 
@@ -48,6 +49,9 @@ if os.environ.get('READTHEDOCS', None) == 'True':
     install_requires.remove('python-daemon<3.0')
     install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
 
+if sys.version_info < (3, 4):
+    install_requires.append('enum34>1.1.0')
+
 setup(
     name='luigi',
     version='2.7.6',
@@ -58,6 +62,7 @@ setup(
     license='Apache License 2.0',
     packages=[
         'luigi',
+        'luigi.configuration',
         'luigi.contrib',
         'luigi.contrib.hdfs',
         'luigi.tools'
@@ -75,6 +80,9 @@ setup(
         ]
     },
     install_requires=install_requires,
+    extras_require={
+        'toml': ['toml<2.0.0'],
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',

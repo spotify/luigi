@@ -37,6 +37,7 @@ import os
 import signal
 import subprocess
 import sys
+import contextlib
 
 try:
     import Queue
@@ -135,15 +136,7 @@ class TaskProcess(multiprocessing.Process):
         self.check_unfulfilled_deps = check_unfulfilled_deps
 
     def _run_get_new_deps(self):
-        # forward some attributes before running
-        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
-            setattr(self.task, task_attr, getattr(self.status_reporter, reporter_attr))
-
         task_gen = self.task.run()
-
-        # reset attributes again
-        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
-            setattr(self.task, task_attr, None)
 
         if not isinstance(task_gen, types.GeneratorType):
             return None
@@ -202,7 +195,8 @@ class TaskProcess(multiprocessing.Process):
                     expl = 'Task is an external data dependency ' \
                         'and data does not exist (yet?).'
             else:
-                new_deps = self._run_get_new_deps()
+                with self._forward_attributes():
+                    new_deps = self._run_get_new_deps()
                 status = DONE if not new_deps else PENDING
 
             if new_deps:
@@ -257,6 +251,18 @@ class TaskProcess(multiprocessing.Process):
             return self._recursive_terminate()
         except ImportError:
             return super(TaskProcess, self).terminate()
+
+    @contextlib.contextmanager
+    def _forward_attributes(self):
+        # forward configured attributes to the task
+        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
+            setattr(self.task, task_attr, getattr(self.status_reporter, reporter_attr))
+        try:
+            yield self
+        finally:
+            # reset attributes again
+            for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
+                setattr(self.task, task_attr, None)
 
 
 # This code and the task_process_context config key currently feels a bit ad-hoc.
@@ -564,6 +570,9 @@ class Worker(object):
         if task_id in self._batch_running_tasks:
             for batch_task in self._batch_running_tasks.pop(task_id):
                 self._add_task_history.append((batch_task, status, True))
+
+        if task and kwargs.get('params'):
+            kwargs['param_visibilities'] = task._get_param_visibilities()
 
         self._scheduler.add_task(*args, **kwargs)
 
