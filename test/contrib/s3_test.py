@@ -202,7 +202,7 @@ class TestS3Client(unittest.TestCase):
         # 5MB is minimum part size
         part_size = 8388608
         file_size = (part_size * 2) - 1000
-        self._run_multipart_test(part_size, file_size)
+        return self._run_multipart_test(part_size, file_size)
 
     @skipOnTravis("passes and fails intermitantly, suspecting it's a race condition not handled by moto")
     def test_put_multipart_multiple_parts_exact_fit(self):
@@ -212,7 +212,7 @@ class TestS3Client(unittest.TestCase):
         # 5MB is minimum part size
         part_size = 8388608
         file_size = part_size * 2
-        self._run_multipart_test(part_size, file_size)
+        return self._run_multipart_test(part_size, file_size)
 
     def test_put_multipart_multiple_parts_with_sse_deprecated(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
@@ -226,7 +226,7 @@ class TestS3Client(unittest.TestCase):
         # 5MB is minimum part size
         part_size = 8388608
         file_size = 0
-        self._run_multipart_test(part_size, file_size)
+        return self._run_multipart_test(part_size, file_size)
 
     def test_put_multipart_less_than_split_size(self):
         """
@@ -235,7 +235,7 @@ class TestS3Client(unittest.TestCase):
         # 5MB is minimum part size
         part_size = 8388608
         file_size = 5000
-        self._run_multipart_test(part_size, file_size)
+        return self._run_multipart_test(part_size, file_size)
 
     def test_exists(self):
         create_bucket()
@@ -455,7 +455,7 @@ class TestS3Client(unittest.TestCase):
         s3_dest = 's3://mybucket/copydir_new/'
         response = s3_client.copy(s3_dir, s3_dest, threads=10, part_size=copy_part_size)
 
-        self._run_copy_response_test(response)
+        self._run_copy_response_test(response, expected_num=n, expected_size=(n * file_size))
 
         for i in range(n):
             original_size = s3_client.get_key(s3_dir + str(i)).size
@@ -466,7 +466,7 @@ class TestS3Client(unittest.TestCase):
     def _run_copy_test(self, put_method, is_multipart=False):
         create_bucket()
         # Run the method to put the file into s3 into the first place
-        put_method()
+        expected_num, expected_size = put_method()
 
         # As all the multipart put methods use `self._run_multipart_test`
         # we can just use this key
@@ -483,7 +483,7 @@ class TestS3Client(unittest.TestCase):
         else:
             response = s3_client.copy(original, copy, threads=4)
 
-        self._run_copy_response_test(response)
+        self._run_copy_response_test(response, expected_num=expected_num, expected_size=expected_size)
 
         # We can't use etags to compare between multipart and normal keys,
         # so we fall back to using the file size
@@ -512,10 +512,12 @@ class TestS3Client(unittest.TestCase):
         self.assertEqual(file_size, key_size)
         tmp_file.close()
 
-    def _run_copy_response_test(self, response):
+        return 1, key_size
+
+    def _run_copy_response_test(self, response, expected_num=None, expected_size=None):
         num, size = response
         self.assertIsInstance(response, tuple)
 
-        # only check >= minimum possible values
-        self.assertGreaterEqual(num, 1)
-        self.assertGreaterEqual(size, 0)
+        # only check >= minimum possible value if not provided expected value
+        self.assertEqual(num, expected_num) if expected_num is not None else self.assertGreaterEqual(num, 1)
+        self.assertEqual(size, expected_size) if expected_size is not None else self.assertGreaterEqual(size, 0)
