@@ -1042,7 +1042,7 @@ class Scheduler(object):
         :return:
         """
 
-        return task.priority, -task.time
+        return task.priority, -task.updated
 
     def _schedulable(self, task):
         if task.status != PENDING:
