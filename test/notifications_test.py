@@ -31,11 +31,11 @@ import luigi
 
 class TestEmail(unittest.TestCase):
 
-    def testEmailNoPrefix(self):
+    def test_email_no_prefix(self):
         self.assertEqual("subject", notifications._prefix('subject'))
 
     @with_config({"email": {"prefix": "[prefix]"}})
-    def testEmailPrefix(self):
+    def test_email_prefix(self):
         self.assertEqual("[prefix] subject", notifications._prefix('subject'))
 
 
@@ -135,14 +135,14 @@ class ExceptionFormatTest(unittest.TestCase):
                 self.assertIn('{}: {}\n'.format(param, value), body)
 
     @with_config({"email": {"receiver": "a@a.a"}})
-    def testEmailRecipients(self):
+    def test_email_recipients(self):
         six.assertCountEqual(self, notifications._email_recipients(), ["a@a.a"])
         six.assertCountEqual(self, notifications._email_recipients("b@b.b"), ["a@a.a", "b@b.b"])
         six.assertCountEqual(self, notifications._email_recipients(["b@b.b", "c@c.c"]),
                              ["a@a.a", "b@b.b", "c@c.c"])
 
     @with_config({"email": {}}, replace_sections=True)
-    def testEmailRecipientsNoConfig(self):
+    def test_email_recipients_no_config(self):
         six.assertCountEqual(self, notifications._email_recipients(), [])
         six.assertCountEqual(self, notifications._email_recipients("a@a.a"), ["a@a.a"])
         six.assertCountEqual(self, notifications._email_recipients(["a@a.a", "b@b.b"]),
