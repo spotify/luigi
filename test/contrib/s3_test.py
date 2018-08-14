@@ -95,7 +95,9 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
             tempf = tempfile.NamedTemporaryFile(mode='wb', delete=False)
             temppath = tempf.name
             firstline = ''.zfill(key.Key.BufferSize * 5) + os.linesep
-            contents = firstline + 'line two' + os.linesep + 'line three'
+            secondline = 'line two' + os.linesep
+            thirdline = 'line three' + os.linesep
+            contents = firstline + secondline + thirdline
             tempf.write(contents.encode('utf-8'))
             tempf.close()
 
@@ -111,8 +113,8 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
 
         self.assertEqual(3, len(lines))
         self.assertEqual(firstline, lines[0])
-        self.assertEqual("line two" + os.linesep, lines[1])
-        self.assertEqual("line three", lines[2])
+        self.assertEqual(secondline, lines[1])
+        self.assertEqual(thirdline, lines[2])
 
     def test_get_path(self):
         t = self.create_target()
