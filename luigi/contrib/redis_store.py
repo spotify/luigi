@@ -68,6 +68,7 @@ class RedisTarget(Target):
         self.redis_client = redis.StrictRedis(
             host=self.host,
             port=self.port,
+            password=self.password,
             db=self.db,
             socket_timeout=self.socket_timeout,
         )
