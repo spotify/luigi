@@ -426,6 +426,26 @@ class TestS3Client(unittest.TestCase):
 
     @mock_s3
     @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/145895385')
+    def test_copy_empty_dir(self):
+        """
+        Test copying an empty dir
+        """
+        create_bucket()
+
+        s3_dir = 's3://mybucket/copydir/'
+
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+
+        s3_client.mkdir(s3_dir)
+        self.assertTrue(s3_client.exists(s3_dir))
+
+        s3_dest = 's3://mybucket/copydir_new/'
+        response = s3_client.copy(s3_dir, s3_dest)
+
+        self._run_copy_response_test(response, expected_num=0, expected_size=0)
+
+    @mock_s3
+    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/145895385')
     def test_copy_dir(self):
         """
         Test copying 20 files from one folder to another
