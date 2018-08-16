@@ -170,7 +170,7 @@ class TestS3Client(unittest.TestCase):
 
     def test_client_host_deprecated(self):
         with self.assertRaises(DeprecatedBotoClientException):
-            S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY, host='us-east-1')
+            S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY).s3
 
     def test_put(self):
         create_bucket()
@@ -185,6 +185,13 @@ class TestS3Client(unittest.TestCase):
             s3_client.put(self.tempFilePath,
                           's3://mybucket/putMe', encrypt_key=True)
 
+    def test_put_host_deprecated(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        with self.assertRaises(DeprecatedBotoClientException):
+            s3_client.put(self.tempFilePath,
+                          's3://mybucket/putMe', host='us-east-1')
+
     def test_put_string(self):
         create_bucket()
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
@@ -197,6 +204,13 @@ class TestS3Client(unittest.TestCase):
         with self.assertRaises(DeprecatedBotoClientException):
             s3_client.put('SOMESTRING',
                           's3://mybucket/putMe', encrypt_key=True)
+  
+    def test_put_string_host_deprecated(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        with self.assertRaises(DeprecatedBotoClientException):
+            s3_client.put('SOMESTRING',
+                          's3://mybucket/putMe', host='us-east-1')
 
     @skipOnTravis("passes and fails intermitantly, suspecting it's a race condition not handled by moto")
     def test_put_multipart_multiple_parts_non_exact_fit(self):
@@ -222,6 +236,11 @@ class TestS3Client(unittest.TestCase):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         with self.assertRaises(DeprecatedBotoClientException):
             s3_client.put_multipart('path', 'path', encrypt_key=True)
+
+    def test_put_multipart_multiple_parts_with_host_deprecated(self):
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        with self.assertRaises(DeprecatedBotoClientException):
+            s3_client.put_multipart('path', 'path', host='us-east-1')
 
     def test_put_multipart_empty_file(self):
         """
