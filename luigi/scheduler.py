@@ -49,6 +49,7 @@ from luigi import task_history as history
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN, \
     BATCH_RUNNING
 from luigi.task import Config
+from luigi.parameter import ParameterVisibility
 
 logger = logging.getLogger(__name__)
 
@@ -122,8 +123,6 @@ def rpc_method(**request_args):
 
 
 class scheduler(Config):
-    # TODO(erikbern): the config_path is needed for backwards compatilibity. We
-    # should drop the compatibility at some point
     retry_delay = parameter.FloatParameter(default=900.0)
     remove_delay = parameter.FloatParameter(default=600.0)
     worker_disconnect_delay = parameter.FloatParameter(default=60.0)
@@ -133,14 +132,10 @@ class scheduler(Config):
 
     # Jobs are disabled if we see more than retry_count failures in disable_window seconds.
     # These disables last for disable_persist seconds.
-    disable_window = parameter.IntParameter(default=3600,
-                                            config_path=dict(section='scheduler', name='disable-window-seconds'))
-    retry_count = parameter.IntParameter(default=999999999,
-                                         config_path=dict(section='scheduler', name='disable_failures'))
-    disable_hard_timeout = parameter.IntParameter(default=999999999,
-                                                  config_path=dict(section='scheduler', name='disable-hard-timeout'))
-    disable_persist = parameter.IntParameter(default=86400,
-                                             config_path=dict(section='scheduler', name='disable-persist-seconds'))
+    disable_window = parameter.IntParameter(default=3600)
+    retry_count = parameter.IntParameter(default=999999999)
+    disable_hard_timeout = parameter.IntParameter(default=999999999)
+    disable_persist = parameter.IntParameter(default=86400)
     max_shown_tasks = parameter.IntParameter(default=100000)
     max_graph_nodes = parameter.IntParameter(default=100000)
 
@@ -280,7 +275,7 @@ class OrderedSet(collections.MutableSet):
 
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
-                 params=None, accepts_messages=False, tracking_url=None, status_message=None,
+                 params=None, param_visibilities=None, accepts_messages=False, tracking_url=None, status_message=None,
                  progress_percentage=None, retry_policy='notoptional'):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
@@ -301,8 +296,11 @@ class Task(object):
         self.resources = _get_default(resources, {})
         self.family = family
         self.module = module
-        self.params = _get_default(params, {})
-
+        self.param_visibilities = _get_default(param_visibilities, {})
+        self.params = {}
+        self.public_params = {}
+        self.hidden_params = {}
+        self.set_params(params)
         self.accepts_messages = accepts_messages
         self.retry_policy = retry_policy
         self.failures = Failures(self.retry_policy.disable_window)
@@ -317,6 +315,13 @@ class Task(object):
 
     def __repr__(self):
         return "Task(%r)" % vars(self)
+
+    def set_params(self, params):
+        self.params = _get_default(params, {})
+        self.public_params = {key: value for key, value in self.params.items() if
+                              self.param_visibilities.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.PUBLIC}
+        self.hidden_params = {key: value for key, value in self.params.items() if
+                              self.param_visibilities.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.HIDDEN}
 
     # TODO(2017-08-10) replace this function with direct calls to batchable
     # this only exists for backward compatibility
@@ -343,7 +348,7 @@ class Task(object):
 
     @property
     def pretty_id(self):
-        param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(self.params.items()))
+        param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(self.public_params.items()))
         return u'{}({})'.format(self.family, param_str)
 
 
@@ -778,7 +783,7 @@ class Scheduler(object):
     @rpc_method()
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
-                 priority=0, family='', module=None, params=None, accepts_messages=False,
+                 priority=0, family='', module=None, params=None, param_visibilities=None, accepts_messages=False,
                  assistant=False, tracking_url=None, worker=None, batchable=None,
                  batch_id=None, retry_policy_dict=None, owners=None, **kwargs):
         """
@@ -802,8 +807,7 @@ class Scheduler(object):
         if worker.enabled:
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
-                priority=priority, family=family, module=module, params=params,
-                accepts_messages=accepts_messages,
+                priority=priority, family=family, module=module, params=params, param_visibilities=param_visibilities,
             )
         else:
             _default_task = None
@@ -818,8 +822,10 @@ class Scheduler(object):
             task.family = family
         if not getattr(task, 'module', None):
             task.module = module
+        if not task.param_visibilities:
+            task.param_visibilities = _get_default(param_visibilities, {})
         if not task.params:
-            task.params = _get_default(params, {})
+            task.set_params(params)
 
         if batch_id is not None:
             task.batch_id = batch_id
@@ -830,6 +836,9 @@ class Scheduler(object):
                 batch_tasks = self._state.get_batch_running_tasks(batch_id)
                 task.resources_running = batch_tasks[0].resources_running.copy()
             task.time_running = time.time()
+
+        if accepts_messages is not None:
+            task.accepts_messages = accepts_messages
 
         if tracking_url is not None or task.status != RUNNING:
             task.tracking_url = tracking_url
@@ -1270,6 +1279,7 @@ class Scheduler(object):
 
     def _serialize_task(self, task_id, include_deps=True, deps=None):
         task = self._state.get_task(task_id)
+
         ret = {
             'display_name': task.pretty_id,
             'status': task.status,
@@ -1278,7 +1288,7 @@ class Scheduler(object):
             'time_running': getattr(task, "time_running", None),
             'start_time': task.time,
             'last_updated': getattr(task, "updated", task.time),
-            'params': task.params,
+            'params': task.public_params,
             'name': task.family,
             'priority': task.priority,
             'resources': task.resources,

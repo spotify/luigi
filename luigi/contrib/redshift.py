@@ -135,6 +135,9 @@ class RedshiftTarget(postgres.PostgresTarget):
         'marker-table',
         'table_updates')
 
+    # if not supplied, fall back to default Redshift port
+    DEFAULT_DB_PORT = 5439
+
     use_db_timestamps = False
 
 
@@ -370,6 +373,9 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         self.copy(cursor, path)
         self.post_copy(cursor)
 
+        if self.enable_metadata_columns:
+            self.post_copy_metacolumns(cursor)
+
         # update marker table
         output.touch(connection)
         connection.commit()
@@ -469,6 +475,9 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
             logger.info("Creating table %s", self.table)
             self.create_table(connection)
 
+        if self.enable_metadata_columns:
+            self._add_metadata_columns(connection)
+
         if self.do_truncate_table:
             logger.info("Truncating table %s", self.table)
             self.truncate_table(connection)
@@ -483,6 +492,14 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         logger.info('Executing post copy queries')
         for query in self.queries:
+            cursor.execute(query)
+
+    def post_copy_metacolums(self, cursor):
+        """
+        Performs post-copy to fill metadata columns.
+        """
+        logger.info('Executing post copy metadata queries')
+        for query in self.metadata_queries:
             cursor.execute(query)
 
 

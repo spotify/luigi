@@ -121,3 +121,55 @@ class PostgresQueryTest(unittest.TestCase):
             'DummyPostgresQuery_2015_01_06_f91a47ec40',
         ])
         self.assertFalse(task.complete())
+
+
+@attr('postgres')
+class TestCopyToTableWithMetaColumns(unittest.TestCase):
+    @mock.patch("luigi.contrib.postgres.CopyToTable.enable_metadata_columns", new_callable=mock.PropertyMock, return_value=True)
+    @mock.patch("luigi.contrib.postgres.CopyToTable._add_metadata_columns")
+    @mock.patch("luigi.contrib.postgres.CopyToTable.post_copy_metacolumns")
+    @mock.patch("luigi.contrib.postgres.CopyToTable.rows", return_value=['row1', 'row2'])
+    @mock.patch("luigi.contrib.postgres.PostgresTarget")
+    @mock.patch('psycopg2.connect')
+    def test_copy_with_metadata_columns_enabled(self,
+                                                mock_connect,
+                                                mock_redshift_target,
+                                                mock_rows,
+                                                mock_add_columns,
+                                                mock_update_columns,
+                                                mock_metadata_columns_enabled):
+
+        task = DummyPostgresImporter(date=datetime.datetime(1991, 3, 24))
+
+        mock_cursor = MockPostgresCursor([task.task_id])
+        mock_connect.return_value.cursor.return_value = mock_cursor
+
+        task = DummyPostgresImporter(date=datetime.datetime(1991, 3, 24))
+        task.run()
+
+        self.assertTrue(mock_add_columns.called)
+        self.assertTrue(mock_update_columns.called)
+
+    @mock.patch("luigi.contrib.postgres.CopyToTable.enable_metadata_columns", new_callable=mock.PropertyMock, return_value=False)
+    @mock.patch("luigi.contrib.postgres.CopyToTable._add_metadata_columns")
+    @mock.patch("luigi.contrib.postgres.CopyToTable.post_copy_metacolumns")
+    @mock.patch("luigi.contrib.postgres.CopyToTable.rows", return_value=['row1', 'row2'])
+    @mock.patch("luigi.contrib.postgres.PostgresTarget")
+    @mock.patch('psycopg2.connect')
+    def test_copy_with_metadata_columns_disabled(self,
+                                                 mock_connect,
+                                                 mock_redshift_target,
+                                                 mock_rows,
+                                                 mock_add_columns,
+                                                 mock_update_columns,
+                                                 mock_metadata_columns_enabled):
+
+        task = DummyPostgresImporter(date=datetime.datetime(1991, 3, 24))
+
+        mock_cursor = MockPostgresCursor([task.task_id])
+        mock_connect.return_value.cursor.return_value = mock_cursor
+
+        task.run()
+
+        self.assertFalse(mock_add_columns.called)
+        self.assertFalse(mock_update_columns.called)
