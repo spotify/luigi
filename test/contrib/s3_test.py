@@ -168,6 +168,10 @@ class TestS3Client(unittest.TestCase):
         sts_mock.client.assume_role.called_with(
             RoleArn='role', RoleSessionName='name')
 
+    def test_client_host_deprecated(self):
+        with self.assertRaises(DeprecatedBotoClientException):
+            S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY, host='us-east-1')
+
     def test_put(self):
         create_bucket()
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
