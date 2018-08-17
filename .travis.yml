@@ -6,6 +6,7 @@ services:
   - elasticsearch
   - mysql
   - docker
+  - postgresql
 
 env:
   global:
