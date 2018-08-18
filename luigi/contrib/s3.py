@@ -49,7 +49,7 @@ from luigi import six
 from luigi import configuration
 from luigi.format import get_default_format
 from luigi.parameter import OptionalParameter, Parameter
-from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
+from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory, LazyFormatMixin
 from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
@@ -639,7 +639,7 @@ class ReadableS3File(object):
         self.close()
 
 
-class S3Target(FileSystemTarget):
+class S3Target(FileSystemTarget, LazyFormatMixin):
     """
     Target S3 file object
 
@@ -650,19 +650,20 @@ class S3Target(FileSystemTarget):
 
     def __init__(self, path, format=None, client=None, **kwargs):
         super(S3Target, self).__init__(path)
-        if format is None:
-            format = get_default_format()
 
         self.path = path
-        self.format = format
+        self._format = format
         self.fs = client or S3Client()
         self.s3_options = kwargs
 
     def open(self, mode='r'):
-        if mode not in ('r', 'w'):
+        self._set_default_format(mode)
+        rwmode = mode.replace('b', '').replace('t', '')
+
+        if rwmode not in ('r', 'w'):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
-        if mode == 'r':
+        if rwmode == 'r':
             s3_key = self.fs.get_key(self.path)
             if not s3_key:
                 raise FileNotFoundException(

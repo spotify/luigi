@@ -197,6 +197,34 @@ class FileSystemTargetTestMixin(object):
 
         self.assertEqual(c, b'a\xf2\xf3\r\nfd')
 
+    def test_lazy_format_binary(self):
+        t = self.create_target()
+        with t.open('wb') as f:
+            f.write(b'a\xf2\xf3\r\nfd')
+
+        with t.open('r') as f:
+            c = f.read()
+
+        self.assertEqual(c, b'a\xf2\xf3\r\nfd')
+
+    def test_lazy_format_binary_pickle(self):
+        import pickle
+
+        obj = {
+            'bob': 123,
+            'mario': ['luigi']
+        }
+
+        t = self.create_target()
+        with t.open('wb') as f:
+            f.write(pickle.dumps(obj))
+
+        with t.open('rb') as f:
+            c = f.read()
+            test_obj = pickle.loads(c)
+
+        self.assertEqual(obj, test_obj)
+
     def test_writelines(self):
         t = self.create_target()
         with t.open('w') as f:

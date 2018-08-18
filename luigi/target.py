@@ -27,6 +27,7 @@ import tempfile
 import logging
 import warnings
 from luigi import six
+from luigi.format import get_default_format
 
 logger = logging.getLogger('luigi-interface')
 
@@ -348,3 +349,20 @@ class AtomicLocalFile(io.BufferedWriter):
         if exc_type:
             return
         return super(AtomicLocalFile, self).__exit__(exc_type, exc, traceback)
+
+
+class LazyFormatMixin:
+    @property
+    def format(self):
+        if self._format is None:
+            self._set_default_format()
+        return self._format
+
+    def _set_default_format(self, mode=None):
+        if self._format is None:
+            self._format = get_default_format(mode)
+
+    def set_format(self, format):
+        if self._format is not None:
+            raise Exception("Cannot change format once set")
+        self._format = format

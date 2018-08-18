@@ -27,8 +27,8 @@ import io
 import warnings
 import errno
 
-from luigi.format import FileWrapper, get_default_format
-from luigi.target import FileAlreadyExists, MissingParentDirectory, NotADirectory, FileSystem, FileSystemTarget, AtomicLocalFile
+from luigi.format import FileWrapper
+from luigi.target import FileAlreadyExists, MissingParentDirectory, NotADirectory, FileSystem, FileSystemTarget, AtomicLocalFile, LazyFormatMixin
 
 
 class atomic_file(AtomicLocalFile):
@@ -128,19 +128,16 @@ class LocalFileSystem(FileSystem):
         self.move(path, dest, raise_if_exists=True)
 
 
-class LocalTarget(FileSystemTarget):
+class LocalTarget(FileSystemTarget, LazyFormatMixin):
     fs = LocalFileSystem()
 
     def __init__(self, path=None, format=None, is_tmp=False):
-        if format is None:
-            format = get_default_format()
-
         if not path:
             if not is_tmp:
                 raise Exception('path or is_tmp must be set')
             path = os.path.join(tempfile.gettempdir(), 'luigi-tmp-%09d' % random.randint(0, 999999999))
         super(LocalTarget, self).__init__(path)
-        self.format = format
+        self._format = format
         self.is_tmp = is_tmp
 
     def makedirs(self):
@@ -156,6 +153,7 @@ class LocalTarget(FileSystemTarget):
                 pass
 
     def open(self, mode='r'):
+        self._set_default_format(mode)
         rwmode = mode.replace('b', '').replace('t', '')
         if rwmode == 'w':
             self.makedirs()

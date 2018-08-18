@@ -513,8 +513,10 @@ Bzip2 = Bzip2Format()
 MixedUnicodeBytes = MixedUnicodeBytesFormat()
 
 
-def get_default_format():
+def get_default_format(mode=None):
     if six.PY3:
+        if mode and 'b' in mode:
+            return Nop
         return Text
     elif os.linesep == '\n':
         return Nop
