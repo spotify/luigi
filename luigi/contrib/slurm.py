@@ -69,7 +69,7 @@ except ImportError:
 import luigi
 from luigi.contrib.hadoop import create_packages_archive
 
-from cloacina.luigi.framework import sge_runner
+from cloacina.luigi.framework import remote_runner
 
 logger = logging.getLogger('luigi-interface')
 
@@ -321,8 +321,8 @@ class SlurmTask(luigi.Task):
                 pickle.dump(self, open(self.job_file, "wb"))
 
     def _run_job(self):
-        # Build a sbatch argument that will run sge_runner.py on the directory we've specified
-        runner_path = sge_runner.__file__
+        # Build a sbatch argument that will run remote_runner.py on the directory we've specified
+        runner_path = remote_runner.__file__
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-1]
 
