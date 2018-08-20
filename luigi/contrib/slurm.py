@@ -326,9 +326,9 @@ class SlurmTask(luigi.Task):
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-1]
 
-        job_cmd = 'python {0} "{1}" "{2}"'.format(
-            runner_path, self.tmp_dir, os.getcwd()
-        )  # enclose tmp_dir in quotes to protect from special escape chars
+        job_cmd = 'python {0} "{1}" "{2}" "{3}"'.format(
+            runner_path, self.tmp_dir, os.getcwd(), os.path.join(self.tmp_dir, "runner.log")
+        )  
         if not self.tarball:
             job_cmd += ' "--no-tarball"'
 

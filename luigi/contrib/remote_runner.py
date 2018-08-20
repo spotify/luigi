@@ -85,11 +85,17 @@ def main(args=sys.argv):
     try:
         tarball = "--no-tarball" not in args
         work_dir = args[1]
-        logging.basicConfig(
-            filename=os.path.join(work_dir, "runner.log"),
-            level=logging.INFO,
-            format="%(asctime)s %(levelname)-8s %(message)s",
-        )
+
+        try:
+            logger_file = args[3]
+            logging.basicConfig(
+                filename=logger_file,
+                level=logging.INFO,
+                format="%(asctime)s %(levelname)-8s %(message)s",
+            )
+        except:
+            logging.basicConfig(level=logging.WARN)
+
         assert os.path.exists(
             work_dir
         ), "First argument to slurm_runner.py must be a directory that exists"
