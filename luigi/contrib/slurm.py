@@ -116,7 +116,7 @@ def _parse_job_state(job_id):
         job_s = job.split("=")
         try:
             job_map[job_s[0]] = job_s[1]
-        except:
+        except Exception as e:
             logger.error("No value found for {}".format(job_s[0]))
 
     return job_map.get('JobState', 'u')
@@ -201,7 +201,7 @@ class SlurmTask(luigi.Task):
         # Call input() here so upstream Task objects are pickled (exposed via input() method below).
         try:
             upstream = luigi.Task.input(self)
-        except:
+        except Exception as e:
             upstream = None
 
         self.my_upstream = upstream
@@ -327,8 +327,10 @@ class SlurmTask(luigi.Task):
             runner_path = runner_path[:-1]
 
         job_cmd = 'python {0} "{1}" "{2}" "{3}"'.format(
-            runner_path, self.tmp_dir, os.getcwd(), os.path.join(self.tmp_dir, "runner.log")
-        )  
+                runner_path, 
+                self.tmp_dir, 
+                os.getcwd(), 
+                os.path.join(self.tmp_dir, "runner.log"))  
         if not self.tarball:
             job_cmd += ' "--no-tarball"'
 

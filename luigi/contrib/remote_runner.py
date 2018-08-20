@@ -93,7 +93,7 @@ def main(args=sys.argv):
                 level=logging.INFO,
                 format="%(asctime)s %(levelname)-8s %(message)s",
             )
-        except:
+        except IndexError:
             logging.basicConfig(level=logging.WARN)
 
         assert os.path.exists(
