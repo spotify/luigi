@@ -60,7 +60,6 @@ import shutil
 import subprocess
 import sys
 import time
-
 try:
     import cPickle as pickle
 except ImportError:
@@ -68,7 +67,6 @@ except ImportError:
 
 import luigi
 from luigi.contrib.hadoop import create_packages_archive
-
 from cloacina.luigi.framework import remote_runner
 
 logger = logging.getLogger('luigi-interface')
@@ -107,9 +105,7 @@ def _parse_job_state(job_id):
     Returns state for the scontrol output, Returns 'u' if `scontrol`
     output is empty or job_id is not found.
     """
-    job_out = subprocess.check_output(
-        ['scontrol', '-o', 'show', "jobid={}".format(job_id)]
-    ).decode()
+    job_out = subprocess.check_output(['scontrol', '-o', 'show', "jobid={}".format(job_id)]).decode()
     job_line = job_out.split()
     job_map = {}
     for job in job_line:
@@ -128,6 +124,7 @@ def _build_submit_command(sbatch_params, cmd, outfile, errfile, sbatchfile):
     """
     sbatch_template = """#!/bin/bash
     {cmd}"""
+
     submit_cmd = ['sbatch', '--parsable', '-o', '{outfile}', '-e', '{errfile}']
 
     for param in sbatch_params:
@@ -213,6 +210,11 @@ class SlurmTask(luigi.Task):
         """
         return self.my_upstream
 
+    def __str__(self):
+        return '\n'.join([
+            pprint.pformat(vars(self), indent=2)
+        ])
+
     def _fetch_task_failures(self):
         """
         Read the file containing the task stderr.
@@ -257,8 +259,6 @@ class SlurmTask(luigi.Task):
         with open(logger_file, 'r') as f:
             output = f.readlines()
 
-        return output
-
     def _init_local(self):
         """
         Set up a temporary directory with the code to be run.
@@ -283,7 +283,6 @@ class SlurmTask(luigi.Task):
             create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
 
     def run(self):
-        logger.info("Running {} as a Slurm job".format(self.task_family))
         self.init_vars()
         if self.run_locally:
             self.work()
@@ -298,7 +297,6 @@ class SlurmTask(luigi.Task):
         serialised before work() is called.
         """
         pass
-
     def work(self):
         """
         Override this method, rather than ``run()``,  for your actual work.
@@ -387,6 +385,30 @@ class SlurmTask(luigi.Task):
                     + '\n'.join(self._fetch_task_out())
                 )
                 self._print_logger_output("\n".join(self._fetch_logger_output()))
+
+    def _track_job(self):
+        """
+        Track the job state in the Slurm scheduler and log the output when it terminates.
+        """
+        successful = False
+        start = time.time()
+        while True:
+            job_status = _parse_job_state(self.job_id)
+            if job_status == 'RUNNING' or job_status == 'COMPLETING':
+                logger.info(
+                    'Job is running ({:0.1f} seconds elapsed)...'.format(float(time.time() - start))
+                )
+            elif job_status == 'PENDING':
+                logger.info(
+                    'Job is pending ({:0.1f} seconds elapsed)...'.format(float(time.time() - start))
+                )
+            elif 'FAILED' in job_status:
+                logger.error(
+                    'Job has FAILED:\n'
+                    + '\n'.join(self._fetch_task_failures())
+                    + '\n'.join(self._fetch_task_out())
+                )
+                self._print_logger_output("\n".join(self._fetch_logger_output()))
                 break
             elif 'CANCELLED' in job_status:
                 logger.error(
@@ -419,9 +441,9 @@ class SlurmTask(luigi.Task):
         return successful
 
 
-class LocalSlurmTask(SlurmTask):
+class LocalSlurmJobTask(SlurmJobTask):
     """
-    A local version of SlurmTask, for easier debugging.
+    A local version of SlurmJobTask, for easier debugging.
 
     This version skips the ``sbatch`` steps and simply runs ``work()``
     on the local node, so you don't need to be on a Slurm cluster to
