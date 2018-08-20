@@ -55,6 +55,7 @@ machine. If you need code that is not in Luigi or the standard library, however,
 import itertools
 import logging
 import os
+import pprint
 import random
 import shutil
 import subprocess
@@ -259,6 +260,8 @@ class SlurmTask(luigi.Task):
         with open(logger_file, 'r') as f:
             output = f.readlines()
 
+        return output
+
     def _init_local(self):
         """
         Set up a temporary directory with the code to be run.
@@ -325,10 +328,10 @@ class SlurmTask(luigi.Task):
             runner_path = runner_path[:-1]
 
         job_cmd = 'python {0} "{1}" "{2}" "{3}"'.format(
-                runner_path, 
-                self.tmp_dir, 
-                os.getcwd(), 
-                os.path.join(self.tmp_dir, "runner.log"))  
+                runner_path,
+                self.tmp_dir,
+                os.getcwd(),
+                os.path.join(self.tmp_dir, "runner.log"))
         if not self.tarball:
             job_cmd += ' "--no-tarball"'
 
@@ -385,30 +388,6 @@ class SlurmTask(luigi.Task):
                     + '\n'.join(self._fetch_task_out())
                 )
                 self._print_logger_output("\n".join(self._fetch_logger_output()))
-
-    def _track_job(self):
-        """
-        Track the job state in the Slurm scheduler and log the output when it terminates.
-        """
-        successful = False
-        start = time.time()
-        while True:
-            job_status = _parse_job_state(self.job_id)
-            if job_status == 'RUNNING' or job_status == 'COMPLETING':
-                logger.info(
-                    'Job is running ({:0.1f} seconds elapsed)...'.format(float(time.time() - start))
-                )
-            elif job_status == 'PENDING':
-                logger.info(
-                    'Job is pending ({:0.1f} seconds elapsed)...'.format(float(time.time() - start))
-                )
-            elif 'FAILED' in job_status:
-                logger.error(
-                    'Job has FAILED:\n'
-                    + '\n'.join(self._fetch_task_failures())
-                    + '\n'.join(self._fetch_task_out())
-                )
-                self._print_logger_output("\n".join(self._fetch_logger_output()))
                 break
             elif 'CANCELLED' in job_status:
                 logger.error(
@@ -441,9 +420,9 @@ class SlurmTask(luigi.Task):
         return successful
 
 
-class LocalSlurmJobTask(SlurmJobTask):
+class LocalSlurmTask(SlurmTask):
     """
-    A local version of SlurmJobTask, for easier debugging.
+    A local version of SlurmTask, for easier debugging.
 
     This version skips the ``sbatch`` steps and simply runs ``work()``
     on the local node, so you don't need to be on a Slurm cluster to
