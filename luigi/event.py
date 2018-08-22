@@ -25,6 +25,7 @@ class Event(object):
     DEPENDENCY_PRESENT = "event.core.dependency.present"
     BROKEN_TASK = "event.core.task.broken"
     START = "event.core.start"
+    PROGRESS = "event.core.progress"
     FAILURE = "event.core.failure"
     SUCCESS = "event.core.success"
     PROCESSING_TIME = "event.core.processing_time"
