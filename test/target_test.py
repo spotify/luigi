@@ -252,9 +252,12 @@ class FileSystemTargetTestMixin(object):
         if six.PY3:
             self.assertIs(t.format, luigi.format.Text)
 
-        fake_string = "luigi"
         # since the previous .format access set format to Text
         # strings will still work
+        if not six.PY3:  # assertWarnsRegex was introduced in Python 3.2
+            return
+
+        fake_string = "luigi"
         with self.assertWarnsRegex(UserWarning, "does not support 'b'"):
             with t.open('wb') as f:
                 f.write(fake_string)
