@@ -137,7 +137,7 @@ class LocalTarget(FileSystemTarget, LazyFormatMixin):
                 raise Exception('path or is_tmp must be set')
             path = os.path.join(tempfile.gettempdir(), 'luigi-tmp-%09d' % random.randint(0, 999999999))
         super(LocalTarget, self).__init__(path)
-        self._format = format
+        self.format = format
         self.is_tmp = is_tmp
 
     def makedirs(self):

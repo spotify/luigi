@@ -188,41 +188,54 @@ class FileSystemTargetTestMixin(object):
 
     @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/73693470')
     def test_binary_write(self):
+        byte_string = b'a\xf2\xf3\r\nfd'
         t = self.create_target(luigi.format.Nop)
         with t.open('w') as f:
-            f.write(b'a\xf2\xf3\r\nfd')
+            f.write(byte_string)
 
         with t.open('r') as f:
             c = f.read()
 
-        self.assertEqual(c, b'a\xf2\xf3\r\nfd')
+        self.assertEqual(c, byte_string)
 
     def test_lazy_format_binary(self):
+        byte_string = b'a\xf2\xf3\r\nfd'
         t = self.create_target()
         with t.open('wb') as f:
-            f.write(b'a\xf2\xf3\r\nfd')
+            f.write(byte_string)
 
         with t.open('r') as f:
             c = f.read()
 
-        self.assertEqual(c, b'a\xf2\xf3\r\nfd')
+        self.assertEqual(c, byte_string)
 
     def test_lazy_format_binary_pickle(self):
         import pickle
+
+        def target_write_read(t, byte_string, wmode, rmode='rb'):
+            # util to write string then read it back
+            with t.open(wmode) as f:
+                f.write(byte_string)
+
+            with t.open(rmode) as f:
+                c = f.read()
+            return c
 
         obj = {
             'bob': 123,
             'mario': ['luigi']
         }
+        byte_string = pickle.dumps(obj)
 
+        # first test original broken condition
         t = self.create_target()
-        with t.open('wb') as f:
-            f.write(pickle.dumps(obj))
+        self.assertRaises(TypeError,
+                          lambda: target_write_read(t, byte_string, 'w'))
 
-        with t.open('rb') as f:
-            c = f.read()
-            test_obj = pickle.loads(c)
-
+        # test that we're respecting open(mode='wb')
+        t = self.create_target()
+        read_string = target_write_read(t, byte_string, 'wb')
+        test_obj = pickle.loads(read_string)
         self.assertEqual(obj, test_obj)
 
     def test_writelines(self):

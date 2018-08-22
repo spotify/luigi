@@ -652,7 +652,7 @@ class S3Target(FileSystemTarget, LazyFormatMixin):
         super(S3Target, self).__init__(path)
 
         self.path = path
-        self._format = format
+        self.format = format
         self.fs = client or S3Client()
         self.s3_options = kwargs
 

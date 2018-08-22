@@ -352,17 +352,20 @@ class AtomicLocalFile(io.BufferedWriter):
 
 
 class LazyFormatMixin:
+    _format = None
+
     @property
     def format(self):
         if self._format is None:
             self._set_default_format()
         return self._format
 
-    def _set_default_format(self, mode=None):
-        if self._format is None:
-            self._format = get_default_format(mode)
-
-    def set_format(self, format):
+    @format.setter
+    def format(self, format):
         if self._format is not None:
             raise Exception("Cannot change format once set")
         self._format = format
+
+    def _set_default_format(self, mode=None):
+        if self._format is None:
+            self._format = get_default_format(mode)
