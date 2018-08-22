@@ -20,6 +20,8 @@ from helpers import unittest, skipOnTravis
 from mock import Mock
 import re
 import random
+import pickle
+import six
 
 import luigi.target
 import luigi.format
@@ -210,7 +212,6 @@ class FileSystemTargetTestMixin(object):
         self.assertEqual(c, byte_string)
 
     def test_lazy_format_binary_pickle(self):
-        import pickle
 
         def target_write_read(t, byte_string, wmode, rmode='rb'):
             # util to write string then read it back
@@ -228,9 +229,13 @@ class FileSystemTargetTestMixin(object):
         byte_string = pickle.dumps(obj)
 
         # first test original broken condition
+        # only happens on python 3
         t = self.create_target()
-        self.assertRaises(TypeError,
-                          lambda: target_write_read(t, byte_string, 'w'))
+        if six.PY3:
+            self.assertRaises(TypeError,
+                              lambda: target_write_read(t, byte_string, 'w'))
+        else:
+            target_write_read(t, byte_string, 'w')  # should not error
 
         # test that we're respecting open(mode='wb')
         t = self.create_target()
