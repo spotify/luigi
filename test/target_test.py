@@ -243,6 +243,22 @@ class FileSystemTargetTestMixin(object):
         test_obj = pickle.loads(read_string)
         self.assertEqual(obj, test_obj)
 
+    def test_lazy_format_backwards_compat(self):
+        # in case someone accessed the format before calling open
+        # it should remain the same
+        t = self.create_target()
+        modeless_default = luigi.format.get_default_format()  # no mode
+        self.assertIs(t.format, modeless_default)
+        if six.PY3:
+            self.assertIs(t.format, luigi.format.Text)
+
+        fake_string = "luigi"
+        # since the previous .format access set format to Text
+        # strings will still work
+        with self.assertWarnsRegex(UserWarning, "does not support 'b'"):
+            with t.open('wb') as f:
+                f.write(fake_string)
+
     def test_writelines(self):
         t = self.create_target()
         with t.open('w') as f:

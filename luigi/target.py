@@ -27,7 +27,7 @@ import tempfile
 import logging
 import warnings
 from luigi import six
-from luigi.format import get_default_format
+from luigi.format import get_default_format, Text
 
 logger = logging.getLogger('luigi-interface')
 
@@ -366,6 +366,24 @@ class LazyFormatMixin:
             raise Exception("Cannot change format once set")
         self._format = format
 
+    def _warn_if_mode_mismatch(self, mode):
+        """
+        Warn if we attempt we request a binary open mode but are using a
+        Format that doesn't support bytes.
+        """
+        if mode is None:
+            return
+
+        if self._format is None:
+            return
+
+        # Text does not support bytes
+        if 'b' in mode and self._format is Text:
+            format_name = self._format.__class__.__name__
+            msg = "Format {} does not support 'b' mode".format(format_name)
+            warnings.warn(msg)
+
     def _set_default_format(self, mode=None):
         if self._format is None:
             self._format = get_default_format(mode)
+        self._warn_if_mode_mismatch(mode)
