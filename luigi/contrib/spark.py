@@ -292,6 +292,9 @@ class PySparkTask(SparkSubmitTask):
         with open(self.run_pickle, 'wb') as fd:
             # Copy module file to run path.
             module_path = os.path.abspath(inspect.getfile(self.__class__))
+            module_folder = os.path.dirname(module_path)
+            module_name = os.path.basename(module_folder)
+            shutil.copytree(module_folder, os.path.join(self.run_path, module_name))
             shutil.copy(module_path, os.path.join(self.run_path, '.'))
             self._dump(fd)
         try:
