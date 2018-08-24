@@ -68,7 +68,7 @@ except ImportError:
 
 import luigi
 from luigi.contrib.hadoop import create_packages_archive
-from cloacina.luigi.framework import remote_runner
+from luigi.contrib import remote_runner
 
 logger = logging.getLogger('luigi-interface')
 
