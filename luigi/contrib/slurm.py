@@ -114,7 +114,7 @@ def _parse_job_state(job_id):
         try:
             job_map[job_s[0]] = job_s[1]
         except Exception as e:
-            logger.error("No value found for {}".format(job_s[0]))
+            logger.error("Exception: {}, No value found for {}".format(e, job_s[0]))
 
     return job_map.get('JobState', 'u')
 
@@ -201,6 +201,7 @@ class SlurmTask(luigi.Task):
             upstream = luigi.Task.input(self)
         except Exception as e:
             upstream = None
+            logger.error("Exception: {}".format(e))
 
         self.my_upstream = upstream
 
@@ -300,6 +301,7 @@ class SlurmTask(luigi.Task):
         serialised before work() is called.
         """
         pass
+
     def work(self):
         """
         Override this method, rather than ``run()``,  for your actual work.
