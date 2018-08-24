@@ -14,6 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+This module contains helper classes for configuring logging for luigid and
+workers via command line arguments and options from config files.
+"""
+
 import logging
 import logging.config
 import os.path
@@ -80,6 +85,8 @@ class BaseLogging(object):
 
 
 class DaemonLogging(BaseLogging):
+    """Configure logging for luigid
+    """
     _configured = False
     _log_format = "%(asctime)s %(name)s[%(process)s] %(levelname)s: %(message)s"
 
@@ -114,9 +121,8 @@ class DaemonLogging(BaseLogging):
             return False
 
         if not os.path.exists(logging_conf):
-            # FileNotFoundError added only in Python 3
-            # https://docs.python.org/2/library/exceptions.html#exception-hierarchy
-            # https://docs.python.org/3/library/exceptions.html#exception-hierarchy
+            # FileNotFoundError added only in Python 3.3
+            # https://docs.python.org/3/whatsnew/3.3.html#pep-3151-reworking-the-os-and-io-exception-hierarchy
             raise OSError("Error: Unable to locate specified logging configuration file!")
 
         logging.config.fileConfig(logging_conf)
@@ -124,14 +130,14 @@ class DaemonLogging(BaseLogging):
 
     @classmethod
     def _default(cls, opts):
-        """Setup default logger
-        """
+        """Setup default logger"""
         logging.basicConfig(level=logging.INFO, format=cls._log_format)
         return True
 
 
-# setup_interface_logging
+# Part of this logic taken for dropped function "setup_interface_logging"
 class InterfaceLogging(BaseLogging):
+    """Configure logging for worker"""
     _configured = False
 
     @classmethod
@@ -145,9 +151,8 @@ class InterfaceLogging(BaseLogging):
             return False
 
         if not os.path.exists(opts.logging_conf_file):
-            # FileNotFoundError added only in Python 3
-            # https://docs.python.org/2/library/exceptions.html#exception-hierarchy
-            # https://docs.python.org/3/library/exceptions.html#exception-hierarchy
+            # FileNotFoundError added only in Python 3.3
+            # https://docs.python.org/3/whatsnew/3.3.html#pep-3151-reworking-the-os-and-io-exception-hierarchy
             raise OSError("Error: Unable to locate specified logging configuration file!")
 
         logging.config.fileConfig(opts.logging_conf_file, disable_existing_loggers=False)
