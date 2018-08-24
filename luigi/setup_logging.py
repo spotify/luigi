@@ -19,6 +19,8 @@ import logging.config
 import os.path
 from luigi.configuration import get_config
 
+# In python3 ConfigParser was renamed
+# https://stackoverflow.com/a/41202010
 try:
     from ConfigParser import NoSectionError
 except ImportError:
@@ -43,10 +45,10 @@ class BaseLogging(object):
         """Setup logging via CLI params and config."""
         logger = logging.getLogger('luigi')
 
-        if cls.configured:
+        if cls._configured:
             logger.info('logging already configured')
             return False
-        cls.configured = True
+        cls._configured = True
 
         if cls.config.getboolean('core', 'no_configure_logging', False):
             logger.info('logging disabled in settings')
@@ -78,7 +80,7 @@ class BaseLogging(object):
 
 
 class DaemonLogging(BaseLogging):
-    configured = False
+    _configured = False
     log_format = "%(asctime)s %(name)s[%(process)s] %(levelname)s: %(message)s"
 
     @classmethod
@@ -130,7 +132,7 @@ class DaemonLogging(BaseLogging):
 
 # setup_interface_logging
 class InterfaceLogging(BaseLogging):
-    configured = False
+    _configured = False
 
     @classmethod
     def _cli(cls, opts):

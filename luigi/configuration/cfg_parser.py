@@ -32,6 +32,8 @@ See :doc:`/configuration` for more info.
 import os
 import warnings
 
+# In python3 ConfigParser was renamed
+# https://stackoverflow.com/a/41202010
 try:
     from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 except ImportError:
