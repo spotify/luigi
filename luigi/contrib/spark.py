@@ -291,11 +291,11 @@ class PySparkTask(SparkSubmitTask):
         self.run_pickle = os.path.join(self.run_path, '.'.join([self.name.replace(' ', '_'), 'pickle']))
         with open(self.run_pickle, 'wb') as fd:
             # Copy module file to run path.
-            module_path = os.path.abspath(inspect.getfile(self.__class__))
-            module_folder = os.path.dirname(module_path)
-            module_name = os.path.basename(module_folder)
-            shutil.copytree(module_folder, os.path.join(self.run_path, module_name))
-            shutil.copy(module_path, os.path.join(self.run_path, '.'))
+            module_file_path = os.path.abspath(inspect.getfile(self.__class__))
+            base_module = self.__class__.__module__.split('.')[0]
+            module_folder_path = module_file_path[:module_file_path.find(base_module) + len(base_module)]
+            shutil.copytree(module_folder_path, os.path.join(self.run_path, base_module))
+            shutil.copy(module_file_path, os.path.join(self.run_path, '.'))
             self._dump(fd)
         try:
             super(PySparkTask, self).run()
