@@ -18,38 +18,49 @@
 """
 Slurm batch system Tasks.
 
-Adapted by Jimmy Tang <jtang@voysis.com> from the luigi/contrib/sge.py by Jake Feala (@jfeala)
+Adapted by Jimmy Tang <jtang@voysis.com> from the luigi/contrib/sge.py
+by Jake Feala (@jfeala)
 
-Slurm is a job scheduler used to allocate compute resources on a shared cluster. Jobs are submitted using
-the ``sbatch`` command and monitored using ``scontrol``. To get started, install Luigi on all nodes.
+Slurm is a job scheduler used to allocate compute resources on a shared
+cluster. Jobs are submitted using the ``sbatch`` command and monitored
+using ``scontrol``. To get started, install Luigi on all nodes.
 
-To run Luigi workflows on an Slurm cluster, subclass :class:`luigi.contrib.slurm.SlurmTask` as you
-would any :class:`luigi.Task`, but override the ``work()`` method (instead of ``run()``) to define the
-job code. Then, run your Luigi workflow from the master node, assigning > 1 Luigi ``workers`` in order to
-distribute the tasks in parallel across the cluster.
+To run Luigi workflows on an Slurm cluster, subclass
+:class:`luigi.contrib.slurm.SlurmTask` as you would any
+:class:`luigi.Task`, but override the ``work()`` method (instead of
+``run()``) to define the job code. Then, run your Luigi workflow from
+the master node, assigning > 1 Luigi ``workers`` in order to distribute
+the tasks in parallel across the cluster.
 
 This extension is modeled after the hadoop.py approach.
 
 The procedure:
 - Pickle the class
 - Optionally tarball the Luigi module and current working directory.
-- Construct a sbatch argument that runs a generic runner function with the path to the pickled class.
-- Runner function loads the class from pickle (and extracts the tarball, if using) and runs the work() method.
+- Construct a sbatch argument that runs a generic runner function with
+  the path to the pickled class.
+- Runner function loads the class from pickle (and extracts the tarball,
+  if using) and runs the work() method.
 
-To request resources from Slurm, set a list of sbatch parameters in the ``sbatch_params`` argument.
-It is the user's responsibility to ensure that these parameters will constitute a valid sbatch command.
+To request resources from Slurm, set a list of sbatch parameters in the
+``sbatch_params`` argument.  It is the user's responsibility to ensure
+that these parameters will constitute a valid sbatch command.
+
 Example:
-sbatch_params: [
-    "--job-name=ExampleJob",
-    "--time=1:00:00",
-    "--ntasks=1",
-    "--mem-per-cpu=500",
-    "--cpus-per-task=4"
-            ]
 
-NB: for the most part, this plugin assumes that all machines in the cluster are using a shared file system.
-The ``tarball`` parameter can be used to send the current working directory and Luigi module to the remote
-machine. If you need code that is not in Luigi or the standard library, however, this will not help.
+    sbatch_params: [
+        "--job-name=ExampleJob",
+        "--time=1:00:00",
+        "--ntasks=1",
+        "--mem-per-cpu=500",
+        "--cpus-per-task=4"
+                ]
+
+NB: for the most part, this plugin assumes that all machines in the
+cluster are using a shared file system.  The ``tarball`` parameter can
+be used to send the current working directory and Luigi module to the
+remote machine. If you need code that is not in Luigi or the standard
+library, however, this will not help.
 """
 
 import itertools
