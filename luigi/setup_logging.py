@@ -81,7 +81,7 @@ class BaseLogging(object):
 
 class DaemonLogging(BaseLogging):
     _configured = False
-    log_format = "%(asctime)s %(name)s[%(process)s] %(levelname)s: %(message)s"
+    _log_format = "%(asctime)s %(name)s[%(process)s] %(levelname)s: %(message)s"
 
     @classmethod
     def _cli(cls, opts):
@@ -100,7 +100,7 @@ class DaemonLogging(BaseLogging):
         if opts.logdir:
             logging.basicConfig(
                 level=logging.INFO,
-                format=cls.log_format,
+                format=cls._log_format,
                 filename=os.path.join(opts.logdir, "luigi-server.log"))
             return True
 
@@ -126,7 +126,7 @@ class DaemonLogging(BaseLogging):
     def _default(cls, opts):
         """Setup default logger
         """
-        logging.basicConfig(level=logging.INFO, format=cls.log_format)
+        logging.basicConfig(level=logging.INFO, format=cls._log_format)
         return True
 
 
