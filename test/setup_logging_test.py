@@ -7,10 +7,10 @@ class TestDaemonLogging(unittest.TestCase):
     cls = DaemonLogging
 
     def setUp(self):
-        self.cls.configured = False
+        self.cls._configured = False
 
     def tearDown(self):
-        self.cls.configured = False
+        self.cls._configured = False
         self.cls.config = get_config()
 
     def test_cli(self):
@@ -126,14 +126,14 @@ class TestSetup(unittest.TestCase):
         self.cls = PatchedLogging
         self.cls.calls = []
         self.cls.config = LuigiTomlParser()
-        self.cls.configured = False
+        self.cls._configured = False
         self.cls.patched = '_cli', '_conf', '_section', '_default'
 
     def tearDown(self):
         self.cls.config = get_config()
 
     def test_configured(self):
-        self.cls.configured = True
+        self.cls._configured = True
         result = self.cls.setup(self.opts)
         self.assertEqual(self.cls.calls, [])
         self.assertFalse(result)

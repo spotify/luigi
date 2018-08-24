@@ -108,10 +108,10 @@ class CmdlineTest(unittest.TestCase):
 
     def setUp(self):
         MockTarget.fs.clear()
-        DaemonLogging.configured = False
+        DaemonLogging._configured = False
 
     def tearDown(self):
-        DaemonLogging.configured = False
+        DaemonLogging._configured = False
         DaemonLogging.config = get_config()
         InterfaceLogging.config = get_config()
 
@@ -152,18 +152,18 @@ class CmdlineTest(unittest.TestCase):
 
         handler.return_value = mock.Mock(name="stream_handler")
 
-        InterfaceLogging.configured = False
+        InterfaceLogging._configured = False
         InterfaceLogging.config = LuigiTomlParser()
         InterfaceLogging.config.data = {}
         InterfaceLogging.setup(opts)
 
         self.assertEqual([mock.call(handler.return_value)], logger.return_value.addHandler.call_args_list)
 
-        InterfaceLogging.configured = False
+        InterfaceLogging._configured = False
         opts.logging_conf_file = '/blah'
         with self.assertRaises(OSError):
             InterfaceLogging.setup(opts)
-        InterfaceLogging.configured = False
+        InterfaceLogging._configured = False
 
     @mock.patch('argparse.ArgumentParser.print_usage')
     def test_non_existent_class(self, print_usage):
