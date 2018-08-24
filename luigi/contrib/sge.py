@@ -102,7 +102,7 @@ except ImportError:
 
 import luigi
 from luigi.contrib.hadoop import create_packages_archive
-from luigi.contrib import sge_runner
+from luigi.contrib import remote_runner
 
 logger = logging.getLogger('luigi-interface')
 logger.propagate = 0
@@ -284,8 +284,8 @@ class SGEJobTask(luigi.Task):
 
     def _run_job(self):
 
-        # Build a qsub argument that will run sge_runner.py on the directory we've specified
-        runner_path = sge_runner.__file__
+        # Build a qsub argument that will run remote_runner.py on the directory we've specified
+        runner_path = remote_runner.__file__
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
         job_str = 'python {0} "{1}" "{2}"'.format(
