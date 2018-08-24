@@ -54,7 +54,7 @@ if sys.version_info < (3, 4):
 
 setup(
     name='luigi',
-    version='2.7.6',
+    version='2.7.7',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='The Luigi Authors',
