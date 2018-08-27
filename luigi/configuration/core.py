@@ -51,7 +51,7 @@ def get_config(parser=PARSER):
             "Please, install luigi with required parser:\n"
             "pip install luigi[{parser}]"
         )
-        raise ImportError(msg.format(parser))
+        raise ImportError(msg.format(parser=parser))
 
     return parser_class.instance()
 
@@ -77,7 +77,7 @@ def add_config_path(path):
                 "Please, install luigi with required parser:\n"
                 "pip install luigi[{parser}]"
             )
-        raise ImportError(msg.format(parser))
+        raise ImportError(msg.format(parser=parser))
 
     if parser != PARSER:
         msg = (
