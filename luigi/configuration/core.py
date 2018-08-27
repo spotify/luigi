@@ -66,9 +66,18 @@ def add_config_path(path):
     # select parser by file extension
     _base, ext = os.path.splitext(path)
     if ext and ext[1:] in PARSERS:
-        parser_class = PARSERS[ext[1:]]
+        parser = ext[1:]
     else:
-        parser_class = PARSERS[PARSER]
+        parser = PARSER
+    parser_class = PARSERS[parser]
+
+    if not parser_class.enabled:
+        logger.error((
+                "Parser not installed yet. "
+                "Please, install luigi with required parser:\n"
+                "pip install luigi[{parser}]"
+            ).format(parser)
+        )
 
     # add config path to parser
     parser_class.add_config_path(path)
