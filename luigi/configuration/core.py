@@ -46,12 +46,12 @@ def get_config(parser=PARSER):
 
     parser_class = PARSERS[parser]
     if not parser_class.enabled:
-        logger.error((
-                "Parser not installed yet. "
-                "Please, install luigi with required parser:\n"
-                "pip install luigi[{parser}]"
-            ).format(parser)
+        msg = (
+            "Parser not installed yet. "
+            "Please, install luigi with required parser:\n"
+            "pip install luigi[{parser}]"
         )
+        raise ImportError(msg.format(parser))
 
     return parser_class.instance()
 
@@ -72,12 +72,20 @@ def add_config_path(path):
     parser_class = PARSERS[parser]
 
     if not parser_class.enabled:
-        logger.error((
+        msg = (
                 "Parser not installed yet. "
                 "Please, install luigi with required parser:\n"
                 "pip install luigi[{parser}]"
-            ).format(parser)
+            )
+        raise ImportError(msg.format(parser))
+
+    if parser != PARSER:
+        msg = (
+            "Config for {added} parser added, but used {used} parser. "
+            "Set up right parser via env var: "
+            "export LUIGI_CONFIG_PARSER={added}"
         )
+        warnings.warn(msg.format(added=parser, used=PARSER))
 
     # add config path to parser
     parser_class.add_config_path(path)
