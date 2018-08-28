@@ -295,7 +295,8 @@ class S3Client(FileSystem):
         self.s3.meta.client.upload_fileobj(
             Fileobj=open(local_path, 'rb'), Bucket=bucket, Key=key, Config=transfer_config, ExtraArgs=kwargs)
 
-    def copy(self, source_path, destination_path, threads=100, start_time=None, end_time=None, part_size=8388608, **kwargs):
+    def copy(self, source_path, destination_path, threads=100, start_time=None, end_time=None, part_size=8388608,
+             **kwargs):
         """
         Copy object(s) from one S3 location to another. Works for individual keys or entire directories.
         When files are larger than `part_size`, multipart uploading will be used.
@@ -320,61 +321,60 @@ class S3Client(FileSystem):
 
         transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
         total_keys = 0
-        total_size_bytes = 0
 
         if self.isdir(source_path):
-            copy_jobs = []
-            management_pool = ThreadPool(processes=threads)
-
-            (bucket, key) = self._path_to_bucket_and_key(source_path)
-            key_path = self._add_path_delimiter(key)
-            key_path_len = len(key_path)
-            src_prefix = self._add_path_delimiter(src_key)
-            dst_prefix = self._add_path_delimiter(dst_key)
-
-            for item in self.list(source_path, start_time=start_time, end_time=end_time, return_key=True):
-                path = item.key[key_path_len:]
-                # prevents copy attempt of empty key in folder
-                if path != '' and path != '/':
-                    total_keys += 1
-                    total_size_bytes += item.size
-                    copy_source = {
-                        'Bucket': src_bucket,
-                        'Key': src_prefix + path
-                    }
-
-                    the_kwargs = {'Config': transfer_config, 'ExtraArgs': kwargs}
-                    job = management_pool.apply_async(self.s3.meta.client.copy,
-                                                      args=(copy_source, dst_bucket, dst_prefix + path),
-                                                      kwds=the_kwargs)
-                    copy_jobs.append(job)
-
-            # Wait for the pools to finish scheduling all the copies
-            management_pool.close()
-            management_pool.join()
-
-            # Raise any errors encountered in any of the copy processes
-            for result in copy_jobs:
-                result.get()
-
-            end = datetime.datetime.now()
-            duration = end - start
-            logger.info('%s : Complete : %s total keys copied in %s' %
-                        (datetime.datetime.now(), total_keys, duration))
+            return self._copy_dir(src_bucket, src_key, dst_bucket, dst_key, end_time, source_path, start,
+                                  start_time, threads, total_keys, transfer_config, **kwargs)
 
         # If the file isn't a directory just perform a simple copy
         else:
-            total_keys += 1
-            copy_source = {
-                'Bucket': src_bucket,
-                'Key': src_key
-            }
-            item = self.get_key(source_path)
-            total_size_bytes += item.size
-            self.s3.meta.client.copy(
-                copy_source, dst_bucket, dst_key, Config=transfer_config, ExtraArgs=kwargs)
+            self._copy_file(src_bucket, src_key, dst_bucket, dst_key, transfer_config, **kwargs)
 
+    def _copy_file(self, src_bucket, src_key, dst_bucket, dst_key, transfer_config, **kwargs):
+        copy_source = {
+            'Bucket': src_bucket,
+            'Key': src_key
+        }
+        self.s3.meta.client.copy(copy_source, dst_bucket, dst_key, Config=transfer_config, ExtraArgs=kwargs)
+
+    def _copy_dir(self, dst_bucket, dst_key, end_time, source_path, src_bucket, src_key, start, start_time,
+                  threads, total_keys, transfer_config, **kwargs):
+        copy_jobs = []
+        management_pool = ThreadPool(processes=threads)
+        (bucket, key) = self._path_to_bucket_and_key(source_path)
+        key_path = self._add_path_delimiter(key)
+        key_path_len = len(key_path)
+        src_prefix = self._add_path_delimiter(src_key)
+        dst_prefix = self._add_path_delimiter(dst_key)
+        total_size_bytes = 0
+        for item in self.list(source_path, start_time=start_time, end_time=end_time, return_key=True):
+            path = item.key[key_path_len:]
+            # prevents copy attempt of empty key in folder
+            if path != '' and path != '/':
+                total_keys += 1
+                total_size_bytes += item.size
+                copy_source = {
+                    'Bucket': src_bucket,
+                    'Key': src_prefix + path
+                }
+
+                the_kwargs = {'Config': transfer_config, 'ExtraArgs': kwargs}
+                job = management_pool.apply_async(self.s3.meta.client.copy,
+                                                  args=(copy_source, dst_bucket, dst_prefix + path),
+                                                  kwds=the_kwargs)
+                copy_jobs.append(job)
+        # Wait for the pools to finish scheduling all the copies
+        management_pool.close()
+        management_pool.join()
+        # Raise any errors encountered in any of the copy processes
+        for result in copy_jobs:
+            result.get()
+        end = datetime.datetime.now()
+        duration = end - start
+        logger.info('%s : Complete : %s total keys copied in %s' %
+                    (datetime.datetime.now(), total_keys, duration))
         return total_keys, total_size_bytes
+
 
     def get(self, s3_path, destination_local_path):
         """
