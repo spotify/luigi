@@ -68,9 +68,9 @@ script:
   - tox --version
   - ./scripts/ci/conditional_tox.sh
 
-#branches:
-#  only:
-#    - master
+branches:
+  only:
+    - master
 
 notifications:
   email: false
