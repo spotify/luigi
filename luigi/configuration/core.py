@@ -40,11 +40,7 @@ if PARSER not in PARSERS:
     PARSER = DEFAULT_PARSER
 
 
-def get_config(parser=PARSER):
-    """Get configs singleton for parser
-    """
-
-    parser_class = PARSERS[parser]
+def _check_parser(parser_class, parser):
     if not parser_class.enabled:
         msg = (
             "Parser not installed yet. "
@@ -53,6 +49,12 @@ def get_config(parser=PARSER):
         )
         raise ImportError(msg.format(parser=parser))
 
+
+def get_config(parser=PARSER):
+    """Get configs singleton for parser
+    """
+    parser_class = PARSERS[parser]
+    _check_parser(parser_class, parser)
     return parser_class.instance()
 
 
@@ -71,14 +73,7 @@ def add_config_path(path):
         parser = PARSER
     parser_class = PARSERS[parser]
 
-    if not parser_class.enabled:
-        msg = (
-                "Parser not installed yet. "
-                "Please, install luigi with required parser:\n"
-                "pip install luigi[{parser}]"
-            )
-        raise ImportError(msg.format(parser=parser))
-
+    _check_parser(parser_class, parser)
     if parser != PARSER:
         msg = (
             "Config for {added} parser added, but used {used} parser. "
