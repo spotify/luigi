@@ -295,8 +295,7 @@ class S3Client(FileSystem):
         self.s3.meta.client.upload_fileobj(
             Fileobj=open(local_path, 'rb'), Bucket=bucket, Key=key, Config=transfer_config, ExtraArgs=kwargs)
 
-    def copy(self, source_path, destination_path, threads=100, start_time=None, end_time=None, part_size=8388608,
-             **kwargs):
+    def copy(self, source_path, destination_path, threads=100, start_time=None, end_time=None, part_size=8388608, **kwargs):
         """
         Copy object(s) from one S3 location to another. Works for individual keys or entire directories.
         When files are larger than `part_size`, multipart uploading will be used.
@@ -353,14 +352,9 @@ class S3Client(FileSystem):
             if path != '' and path != '/':
                 total_keys += 1
                 total_size_bytes += item.size
-                copy_source = {
-                    'Bucket': src_bucket,
-                    'Key': src_prefix + path
-                }
-
                 the_kwargs = {'Config': transfer_config, 'ExtraArgs': kwargs}
-                job = management_pool.apply_async(self.s3.meta.client.copy,
-                                                  args=(copy_source, dst_bucket, dst_prefix + path),
+                job = management_pool.apply_async(self._copy_file,
+                                                  args=(src_bucket,  src_prefix + path, dst_bucket, dst_prefix + path),
                                                   kwds=the_kwargs)
                 copy_jobs.append(job)
         # Wait for the pools to finish scheduling all the copies
