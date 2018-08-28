@@ -822,7 +822,7 @@ class Scheduler(object):
             task.family = family
         if not getattr(task, 'module', None):
             task.module = module
-        if not task.param_visibilities:
+        if not getattr(task, 'param_visibilities', None):
             task.param_visibilities = _get_default(param_visibilities, {})
         if not task.params:
             task.set_params(params)
