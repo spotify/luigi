@@ -28,6 +28,9 @@ Run ``pip install luigi`` to install the latest stable version from `PyPI
 <https://pypi.python.org/pypi/luigi>`_. `Documentation for the latest release
 <https://luigi.readthedocs.io/en/stable/>`__ is hosted on readthedocs.
 
+Run ``pip install luigi[toml]`` to install Luigi with `TOML-based configs
+<https://luigi.readthedocs.io/en/stable/configuration.html>`__ support.
+
 For the bleeding edge code, ``pip install
 git+https://github.com/spotify/luigi.git``. `Bleeding edge documentation
 <https://luigi.readthedocs.io/en/latest/>`__ is also available.
@@ -150,6 +153,7 @@ or held presentations about Luigi:
 * `Synetiq <https://synetiq.net/>`_ `(presentation, 2017) <https://www.youtube.com/watch?v=M4xUQXogSfo>`__
 * `Glossier <https://www.glossier.com/>`_ `(blog, 2018) <https://medium.com/glossier/how-to-build-a-data-warehouse-what-weve-learned-so-far-at-glossier-6ff1e1783e31>`__
 * `Data Revenue <https://www.datarevenue.com/>`_ `(blog, 2018) <https://www.datarevenue.com/en/blog/how-to-scale-your-machine-learning-pipeline>`_
+* `Uppsala University <http://pharmb.io>`_ `(tutorial) <http://uppnex.se/twiki/do/view/Courses/EinfraMPS2015/Luigi.html>`_   / `(presentation, 2015) <https://www.youtube.com/watch?v=f26PqSXZdWM>`_ / `(slides, 2015) <https://www.slideshare.net/SamuelLampa/building-workflows-with-spotifys-luigi>`_ / `(poster, 2015) <https://pharmb.io/poster/2015-sciluigi/>`_ / `(paper, 2016) <https://doi.org/10.1186/s13321-016-0179-6>`_ / `(project) <https://github.com/pharmbio/sciluigi>`_
 
 Some more companies are using Luigi but haven't had a chance yet to write about it:
 
@@ -166,6 +170,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Stacktome <https://stacktome.com/>`_
 * `LINX+Neemu+Chaordic <https://www.chaordic.com.br/>`_
 * `Foxberry <https://www.foxberry.com/>`_
+* `Okko <https://okko.tv/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 

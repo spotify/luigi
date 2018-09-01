@@ -320,6 +320,7 @@ class S3Client(FileSystem):
 
         transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
         total_keys = 0
+        total_size_bytes = 0
 
         if self.isdir(source_path):
             copy_jobs = []
@@ -330,7 +331,7 @@ class S3Client(FileSystem):
             key_path_len = len(key_path)
             src_prefix = self._add_path_delimiter(src_key)
             dst_prefix = self._add_path_delimiter(dst_key)
-            total_size_bytes = 0
+
             for item in self.list(source_path, start_time=start_time, end_time=end_time, return_key=True):
                 path = item.key[key_path_len:]
                 # prevents copy attempt of empty key in folder
@@ -361,16 +362,19 @@ class S3Client(FileSystem):
             logger.info('%s : Complete : %s total keys copied in %s' %
                         (datetime.datetime.now(), total_keys, duration))
 
-            return total_keys, total_size_bytes
-
         # If the file isn't a directory just perform a simple copy
         else:
+            total_keys += 1
             copy_source = {
                 'Bucket': src_bucket,
                 'Key': src_key
             }
+            item = self.get_key(source_path)
+            total_size_bytes += item.size
             self.s3.meta.client.copy(
                 copy_source, dst_bucket, dst_key, Config=transfer_config, ExtraArgs=kwargs)
+
+        return total_keys, total_size_bytes
 
     def get(self, s3_path, destination_local_path):
         """
@@ -518,12 +522,18 @@ class S3Client(FileSystem):
     @staticmethod
     def _check_deprecated_argument(**kwargs):
         """
-        If `encrypt_key` is part of the arguments raise an exception
+        If `encrypt_key` or `host` is part of the arguments raise an exception
         :return: None
         """
         if 'encrypt_key' in kwargs:
             raise DeprecatedBotoClientException(
                 'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        if 'host' in kwargs:
+            raise DeprecatedBotoClientException(
+                'host keyword deprecated and is replaced by region_name in boto3.\n'
+                'example: region_name=us-west-1\n'
+                'For region names, refer to the amazon S3 region documentation\n'
+                'https://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region')
 
     def _validate_bucket(self, bucket_name):
         exists = True
