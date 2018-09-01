@@ -25,7 +25,6 @@ env:
     - TOXENV=flake8
     - TOXENV=docs
     - TOXENV=py27-nonhdfs
-    - TOXENV=py34-nonhdfs
     - TOXENV=py27-unixsocket
       # - TOXENV=py27-cdh
       # minicluster (cdh) tests disabled as lack of love, #2140.
@@ -46,6 +45,8 @@ sudo: false
 # https://github.com/travis-ci/travis-ci/issues/9815
 matrix:
   include:
+    - python: 3.4
+      env: TOXENV=py34-nonhdfs
     - python: 3.5
       env: TOXENV=py35-nonhdfs
     - python: 3.6
