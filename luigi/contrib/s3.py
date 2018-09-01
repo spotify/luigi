@@ -518,12 +518,18 @@ class S3Client(FileSystem):
     @staticmethod
     def _check_deprecated_argument(**kwargs):
         """
-        If `encrypt_key` is part of the arguments raise an exception
+        If `encrypt_key` or `host` is part of the arguments raise an exception
         :return: None
         """
         if 'encrypt_key' in kwargs:
             raise DeprecatedBotoClientException(
                 'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        if 'host' in kwargs:
+            raise DeprecatedBotoClientException(
+                'host keyword deprecated and is replaced by region_name in boto3.\n'
+                'example: region_name=us-west-1\n'
+                'For region names, refer to the amazon S3 region documentation\n'
+                'https://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region')
 
     def _validate_bucket(self, bucket_name):
         exists = True
