@@ -319,11 +319,11 @@ class S3Client(FileSystem):
         from boto3.s3.transfer import TransferConfig
 
         transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
-        total_keys = 0
 
         if self.isdir(source_path):
-            return self._copy_dir(src_bucket, src_key, dst_bucket, dst_key, end_time, source_path, start,
-                                  start_time, threads, total_keys, transfer_config, **kwargs)
+            return self._copy_dir(src_bucket, src_key, dst_bucket, dst_key, source_path,
+                                  transfer_config, threads=100, start_time=start_time, end_time=end_time,
+                                  start=start, **kwargs)
 
         # If the file isn't a directory just perform a simple copy
         else:
@@ -336,8 +336,10 @@ class S3Client(FileSystem):
         }
         self.s3.meta.client.copy(copy_source, dst_bucket, dst_key, Config=transfer_config, ExtraArgs=kwargs)
 
-    def _copy_dir(self, dst_bucket, dst_key, end_time, source_path, src_bucket, src_key, start, start_time,
-                  threads, total_keys, transfer_config, **kwargs):
+    def _copy_dir(self, src_bucket, src_key, dst_bucket, dst_key, source_path, transfer_config,
+                  threads=100, start_time=None, end_time=None, start=None, **kwargs):
+        if not start:
+            start = datetime.datetime.now()
         copy_jobs = []
         management_pool = ThreadPool(processes=threads)
         (bucket, key) = self._path_to_bucket_and_key(source_path)
@@ -346,16 +348,18 @@ class S3Client(FileSystem):
         src_prefix = self._add_path_delimiter(src_key)
         dst_prefix = self._add_path_delimiter(dst_key)
         total_size_bytes = 0
+        total_keys = 0
         for item in self.list(source_path, start_time=start_time, end_time=end_time, return_key=True):
             path = item.key[key_path_len:]
             # prevents copy attempt of empty key in folder
             if path != '' and path != '/':
                 total_keys += 1
                 total_size_bytes += item.size
-                the_kwargs = {'Config': transfer_config, 'ExtraArgs': kwargs}
+                extra_args = {'ExtraArgs': kwargs} if kwargs else {}
                 job = management_pool.apply_async(self._copy_file,
-                                                  args=(src_bucket,  src_prefix + path, dst_bucket, dst_prefix + path),
-                                                  kwds=the_kwargs)
+                                                  args=(src_bucket, src_prefix + path, dst_bucket, dst_prefix + path,
+                                                        transfer_config),
+                                                  kwds=extra_args)
                 copy_jobs.append(job)
         # Wait for the pools to finish scheduling all the copies
         management_pool.close()
