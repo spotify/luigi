@@ -28,6 +28,9 @@ Run ``pip install luigi`` to install the latest stable version from `PyPI
 <https://pypi.python.org/pypi/luigi>`_. `Documentation for the latest release
 <https://luigi.readthedocs.io/en/stable/>`__ is hosted on readthedocs.
 
+Run ``pip install luigi[toml]`` to install Luigi with `TOML-based configs
+<https://luigi.readthedocs.io/en/stable/configuration.html>`__ support.
+
 For the bleeding edge code, ``pip install
 git+https://github.com/spotify/luigi.git``. `Bleeding edge documentation
 <https://luigi.readthedocs.io/en/latest/>`__ is also available.
