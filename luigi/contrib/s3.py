@@ -327,13 +327,16 @@ class S3Client(FileSystem):
 
         # If the file isn't a directory just perform a simple copy
         else:
+            item = self.get_key(source_path)
             self._copy_file(src_bucket, src_key, dst_bucket, dst_key, transfer_config, **kwargs)
+            return 1, item.size
 
     def _copy_file(self, src_bucket, src_key, dst_bucket, dst_key, transfer_config, **kwargs):
         copy_source = {
             'Bucket': src_bucket,
             'Key': src_key
         }
+
         self.s3.meta.client.copy(copy_source, dst_bucket, dst_key, Config=transfer_config, ExtraArgs=kwargs)
 
     def _copy_dir(self, src_bucket, src_key, dst_bucket, dst_key, source_path, transfer_config,
@@ -372,7 +375,6 @@ class S3Client(FileSystem):
         logger.info('%s : Complete : %s total keys copied in %s' %
                     (datetime.datetime.now(), total_keys, duration))
         return total_keys, total_size_bytes
-
 
     def get(self, s3_path, destination_local_path):
         """
