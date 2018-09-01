@@ -309,8 +309,6 @@ class S3Client(FileSystem):
         :returns tuple (number_of_files_copied, total_size_copied_in_bytes)
         """
 
-        start = datetime.datetime.now()
-
         (src_bucket, src_key) = self._path_to_bucket_and_key(source_path)
         (dst_bucket, dst_key) = self._path_to_bucket_and_key(destination_path)
 
@@ -322,8 +320,7 @@ class S3Client(FileSystem):
 
         if self.isdir(source_path):
             return self._copy_dir(src_bucket, src_key, dst_bucket, dst_key, source_path,
-                                  transfer_config, threads=100, start_time=start_time, end_time=end_time,
-                                  start=start, **kwargs)
+                                  transfer_config, threads=100, start_time=start_time, end_time=end_time, **kwargs)
 
         # If the file isn't a directory just perform a simple copy
         else:
@@ -340,9 +337,8 @@ class S3Client(FileSystem):
         self.s3.meta.client.copy(copy_source, dst_bucket, dst_key, Config=transfer_config, ExtraArgs=kwargs)
 
     def _copy_dir(self, src_bucket, src_key, dst_bucket, dst_key, source_path, transfer_config,
-                  threads=100, start_time=None, end_time=None, start=None, **kwargs):
-        if not start:
-            start = datetime.datetime.now()
+                  threads=100, start_time=None, end_time=None, **kwargs):
+        start = datetime.datetime.now()
         copy_jobs = []
         management_pool = ThreadPool(processes=threads)
         (bucket, key) = self._path_to_bucket_and_key(source_path)
