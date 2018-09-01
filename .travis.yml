@@ -47,6 +47,7 @@ matrix:
   include:
     - python: 3.4
       env: TOXENV=py34-nonhdfs
+      dist: trusty
     - python: 3.5
       env: TOXENV=py35-nonhdfs
     - python: 3.6
