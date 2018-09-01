@@ -354,11 +354,14 @@ class S3Client(FileSystem):
             if path != '' and path != '/':
                 total_keys += 1
                 total_size_bytes += item.size
-                extra_args = {'ExtraArgs': kwargs} if kwargs else {}
-                job = management_pool.apply_async(self._copy_file,
-                                                  args=(src_bucket, src_prefix + path, dst_bucket, dst_prefix + path,
-                                                        transfer_config),
-                                                  kwds=extra_args)
+                copy_source = {
+                    'Bucket': src_bucket,
+                    'Key': src_prefix + path
+                }
+                the_kwargs = {'Config': transfer_config, 'ExtraArgs': kwargs}
+                job = management_pool.apply_async(self.s3.meta.client.copy,
+                                                  args=(copy_source, dst_bucket, dst_prefix + path),
+                                                  kwds=the_kwargs)
                 copy_jobs.append(job)
         # Wait for the pools to finish scheduling all the copies
         management_pool.close()
