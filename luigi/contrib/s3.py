@@ -309,7 +309,6 @@ class S3Client(FileSystem):
         :returns tuple (number_of_files_copied, total_size_copied_in_bytes)
         """
 
-        (src_bucket, src_key) = self._path_to_bucket_and_key(source_path)
         (dst_bucket, dst_key) = self._path_to_bucket_and_key(destination_path)
 
         # don't allow threads to be less than 3
@@ -319,7 +318,7 @@ class S3Client(FileSystem):
         transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
 
         if self.isdir(source_path):
-            return self._copy_dir(src_bucket, src_key, dst_bucket, dst_key, source_path,
+            return self._copy_dir(source_path, dst_bucket, dst_key,
                                   transfer_config, threads=100, start_time=start_time, end_time=end_time, **kwargs)
 
         # If the file isn't a directory just perform a simple copy
@@ -338,16 +337,15 @@ class S3Client(FileSystem):
 
         return 1, item.size
 
-    def _copy_dir(self, src_bucket, src_key, dst_bucket, dst_key, source_path, transfer_config,
+    def _copy_dir(self, source_path, dst_bucket, dst_key, transfer_config,
                   threads=100, start_time=None, end_time=None, **kwargs):
         start = datetime.datetime.now()
         copy_jobs = []
         management_pool = ThreadPool(processes=threads)
-        (bucket, key) = self._path_to_bucket_and_key(source_path)
-        key_path = self._add_path_delimiter(key)
-        key_path_len = len(key_path)
+        src_bucket, src_key = self._path_to_bucket_and_key(source_path)
         src_prefix = self._add_path_delimiter(src_key)
         dst_prefix = self._add_path_delimiter(dst_key)
+        key_path_len = len(src_prefix)
         total_size_bytes = 0
         total_keys = 0
         for item in self.list(source_path, start_time=start_time, end_time=end_time, return_key=True):
