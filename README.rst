@@ -171,6 +171,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `LINX+Neemu+Chaordic <https://www.chaordic.com.br/>`_
 * `Foxberry <https://www.foxberry.com/>`_
 * `Okko <https://okko.tv/>`_
+* `ISVWorld <http://isvworld.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
