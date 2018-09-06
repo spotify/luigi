@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from .cfg_parser import LuigiConfigParser
+from .cfg_parser import LuigiConfigParser, NoSectionError
 from .core import get_config, add_config_path
 from .toml_parser import LuigiTomlParser
 
@@ -24,4 +24,5 @@ __all__ = [
     'get_config',
     'LuigiConfigParser',
     'LuigiTomlParser',
+    'NoSectionError'
 ]
