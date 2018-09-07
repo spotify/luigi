@@ -397,10 +397,16 @@ def check_complete(task, out_queue):
     Checks if task is complete, puts the result to out_queue.
     """
     logger.debug("Checking if %s is complete", task)
+    if _is_external(task):
+        Target._local.output = False
+    else:
+        Target._local.output = True
     try:
         is_complete = task.complete()
     except Exception:
         is_complete = TracebackWrapper(traceback.format_exc())
+    finally:
+        del Target._local.output
     out_queue.put((task, is_complete))
 
 
