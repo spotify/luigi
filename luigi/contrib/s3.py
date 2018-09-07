@@ -94,6 +94,8 @@ class S3Client(FileSystem):
     """
 
     _s3 = None
+    DEFAULT_PART_SIZE = 8388608
+    DEFAULT_THREADS = 100
 
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
                  **kwargs):
@@ -271,7 +273,7 @@ class S3Client(FileSystem):
         self.s3.meta.client.put_object(
             Key=key, Bucket=bucket, Body=content, **kwargs)
 
-    def put_multipart(self, local_path, destination_s3_path, part_size=8388608, **kwargs):
+    def put_multipart(self, local_path, destination_s3_path, part_size=DEFAULT_PART_SIZE, **kwargs):
         """
         Put an object stored locally to an S3 path
         using S3 multi-part upload (for files > 8Mb).
@@ -295,7 +297,8 @@ class S3Client(FileSystem):
         self.s3.meta.client.upload_fileobj(
             Fileobj=open(local_path, 'rb'), Bucket=bucket, Key=key, Config=transfer_config, ExtraArgs=kwargs)
 
-    def copy(self, source_path, destination_path, threads=100, start_time=None, end_time=None, part_size=8388608, **kwargs):
+    def copy(self, source_path, destination_path, threads=DEFAULT_THREADS, start_time=None, end_time=None,
+             part_size=DEFAULT_PART_SIZE, **kwargs):
         """
         Copy object(s) from one S3 location to another. Works for individual keys or entire directories.
         When files are larger than `part_size`, multipart uploading will be used.
@@ -320,7 +323,7 @@ class S3Client(FileSystem):
         else:
             return self._copy_file(source_path, destination_path, threads=threads, part_size=part_size, **kwargs)
 
-    def _copy_file(self, source_path, destination_path, threads=100, part_size=8388608, **kwargs):
+    def _copy_file(self, source_path, destination_path, threads=DEFAULT_THREADS, part_size=DEFAULT_PART_SIZE, **kwargs):
         src_bucket, src_key = self._path_to_bucket_and_key(source_path)
         dst_bucket, dst_key = self._path_to_bucket_and_key(destination_path)
         transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
@@ -334,8 +337,8 @@ class S3Client(FileSystem):
 
         return 1, item.size
 
-    def _copy_dir(self, source_path, destination_path, threads=100,
-                  start_time=None, end_time=None, part_size=8388608, **kwargs):
+    def _copy_dir(self, source_path, destination_path, threads=DEFAULT_THREADS,
+                  start_time=None, end_time=None, part_size=DEFAULT_PART_SIZE, **kwargs):
         start = datetime.datetime.now()
         copy_jobs = []
         management_pool = ThreadPool(processes=threads)
