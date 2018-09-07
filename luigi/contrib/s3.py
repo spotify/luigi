@@ -309,8 +309,6 @@ class S3Client(FileSystem):
         :returns tuple (number_of_files_copied, total_size_copied_in_bytes)
         """
 
-        (dst_bucket, dst_key) = self._path_to_bucket_and_key(destination_path)
-
         # don't allow threads to be less than 3
         threads = 3 if threads < 3 else threads
         from boto3.s3.transfer import TransferConfig
@@ -318,15 +316,16 @@ class S3Client(FileSystem):
         transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
 
         if self.isdir(source_path):
-            return self._copy_dir(source_path, dst_bucket, dst_key,
-                                  transfer_config, threads=100, start_time=start_time, end_time=end_time, **kwargs)
+            return self._copy_dir(source_path, destination_path, transfer_config,
+                                  threads=100, start_time=start_time, end_time=end_time, **kwargs)
 
         # If the file isn't a directory just perform a simple copy
         else:
-            return self._copy_file(source_path, dst_bucket, dst_key, transfer_config, **kwargs)
+            return self._copy_file(source_path, destination_path, transfer_config, **kwargs)
 
-    def _copy_file(self, source_path, dst_bucket, dst_key, transfer_config, **kwargs):
+    def _copy_file(self, source_path, destination_path, transfer_config, **kwargs):
         src_bucket, src_key = self._path_to_bucket_and_key(source_path)
+        dst_bucket, dst_key = self._path_to_bucket_and_key(destination_path)
         item = self.get_key(source_path)
         copy_source = {
             'Bucket': src_bucket,
@@ -337,12 +336,13 @@ class S3Client(FileSystem):
 
         return 1, item.size
 
-    def _copy_dir(self, source_path, dst_bucket, dst_key, transfer_config,
+    def _copy_dir(self, source_path, destination_path, transfer_config,
                   threads=100, start_time=None, end_time=None, **kwargs):
         start = datetime.datetime.now()
         copy_jobs = []
         management_pool = ThreadPool(processes=threads)
         src_bucket, src_key = self._path_to_bucket_and_key(source_path)
+        dst_bucket, dst_key = self._path_to_bucket_and_key(destination_path)
         src_prefix = self._add_path_delimiter(src_key)
         dst_prefix = self._add_path_delimiter(dst_key)
         key_path_len = len(src_prefix)
