@@ -29,10 +29,10 @@ import logging
 import os
 import os.path
 import warnings
-
 from multiprocessing.pool import ThreadPool
 
 import botocore
+from boto3.s3.transfer import TransferConfig
 
 try:
     from urlparse import urlsplit
@@ -311,21 +311,19 @@ class S3Client(FileSystem):
 
         # don't allow threads to be less than 3
         threads = 3 if threads < 3 else threads
-        from boto3.s3.transfer import TransferConfig
-
-        transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
 
         if self.isdir(source_path):
-            return self._copy_dir(source_path, destination_path, transfer_config,
-                                  threads=100, start_time=start_time, end_time=end_time, **kwargs)
+            return self._copy_dir(source_path, destination_path, threads=threads,
+                                  start_time=start_time, end_time=end_time, part_size=part_size, **kwargs)
 
         # If the file isn't a directory just perform a simple copy
         else:
-            return self._copy_file(source_path, destination_path, transfer_config, **kwargs)
+            return self._copy_file(source_path, destination_path, threads=threads, part_size=part_size, **kwargs)
 
-    def _copy_file(self, source_path, destination_path, transfer_config, **kwargs):
+    def _copy_file(self, source_path, destination_path, threads=100, part_size=8388608, **kwargs):
         src_bucket, src_key = self._path_to_bucket_and_key(source_path)
         dst_bucket, dst_key = self._path_to_bucket_and_key(destination_path)
+        transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
         item = self.get_key(source_path)
         copy_source = {
             'Bucket': src_bucket,
@@ -336,11 +334,12 @@ class S3Client(FileSystem):
 
         return 1, item.size
 
-    def _copy_dir(self, source_path, destination_path, transfer_config,
-                  threads=100, start_time=None, end_time=None, **kwargs):
+    def _copy_dir(self, source_path, destination_path, threads=100,
+                  start_time=None, end_time=None, part_size=8388608, **kwargs):
         start = datetime.datetime.now()
         copy_jobs = []
         management_pool = ThreadPool(processes=threads)
+        transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
         src_bucket, src_key = self._path_to_bucket_and_key(source_path)
         dst_bucket, dst_key = self._path_to_bucket_and_key(destination_path)
         src_prefix = self._add_path_delimiter(src_key)
