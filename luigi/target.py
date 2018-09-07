@@ -25,6 +25,7 @@ import os
 import random
 import tempfile
 import logging
+import threading
 import warnings
 from luigi import six
 
@@ -44,12 +45,17 @@ class Target(object):
     is considered complete if and only if each of its output Targets exist.
     """
 
+    _local = threading.local()
+
     @abc.abstractmethod
     def exists(self):
         """
         Returns ``True`` if the :py:class:`Target` exists and ``False`` otherwise.
         """
         pass
+
+    def output(self):
+        return Target._local.output or False
 
 
 class FileSystemException(Exception):
