@@ -131,11 +131,17 @@ class ECSTask(luigi.Task):
     :param cluster: str defining the ECS cluster to use.
         When this is not defined it will use the default one.
 
+    :param launch_type: str defining the launch type on which to run your task.
+
+    :param network_conf: dict describing the network configuration for the task.
+
     """
 
     task_def_arn = luigi.OptionalParameter(default=None)
     task_def = luigi.OptionalParameter(default=None)
     cluster = luigi.Parameter(default='default')
+    launch_type = luigi.OptionalParameter(default=None)
+    network_conf = luigi.OptionalParameter(default=None)
 
     @property
     def ecs_task_ids(self):
@@ -179,9 +185,17 @@ class ECSTask(luigi.Task):
             overrides = {'containerOverrides': self.command}
         else:
             overrides = {}
-        response = client.run_task(taskDefinition=self.task_def_arn,
-                                   overrides=overrides,
-                                   cluster=self.cluster)
+
+        # Populate arguments to launch tasks
+        run_task_kwargs = {'taskDefinition': self.task_def_arn,
+                           'overrides': overrides,
+                           'cluster': self.cluster}
+        if self.launch_type:
+            run_task_kwargs['launchType'] = self.launch_type
+        if self.network_conf:
+            run_task_kwargs['networkConfiguration'] = self.network_conf
+
+        response = client.run_task(**run_task_kwargs)
         self._task_ids = [task['taskArn'] for task in response['tasks']]
 
         # Wait on task completion
