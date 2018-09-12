@@ -1,0 +1,7 @@
+[core]
+logging_conf_file = "test/testconfig/logging.cfg"
+
+[hdfs]
+client = "hadoopcli"
+snakebite_autoconfig = false
+namenode_host = "must be overridden in local config"

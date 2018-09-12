@@ -101,7 +101,7 @@ except ImportError:
     import pickle
 
 import luigi
-import luigi.hadoop
+from luigi.contrib.hadoop import create_packages_archive
 from luigi.contrib import sge_runner
 
 logger = logging.getLogger('luigi-interface')
@@ -250,7 +250,7 @@ class SGEJobTask(luigi.Task):
             logging.debug("Tarballing dependencies")
             # Grab luigi and the module containing the code to be run
             packages = [luigi] + [__import__(self.__module__, None, None, 'dummy')]
-            luigi.hadoop.create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
+            create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
 
     def run(self):
         if self.run_locally:

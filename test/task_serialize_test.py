@@ -63,7 +63,7 @@ parameters_def = _mk_param_strategy(luigi.Parameter, text, True)
 int_parameters_def = _mk_param_strategy(luigi.IntParameter, hyp.strategies.integers(), True)
 float_parameters_def = _mk_param_strategy(luigi.FloatParameter,
                                           hyp.strategies.floats(min_value=-1e100, max_value=+1e100), True)
-bool_parameters_def = _mk_param_strategy(luigi.BooleanParameter, hyp.strategies.booleans(), True)
+bool_parameters_def = _mk_param_strategy(luigi.BoolParameter, hyp.strategies.booleans(), True)
 date_parameters_def = _mk_param_strategy(luigi.DateParameter, hyp_datetimes(min_year=1900, timezones=[]), True)
 
 any_default_parameters = hyp.strategies.one_of(

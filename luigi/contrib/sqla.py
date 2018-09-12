@@ -40,7 +40,7 @@ below:
         table = "item_property"  # name of the table to store data
 
         def rows(self):
-            for row in [("item1" "property1"), ("item2", "property2")]:
+            for row in [("item1", "property1"), ("item2", "property2")]:
                 yield row
 
     if __name__ == '__main__':
@@ -66,7 +66,7 @@ can be set as True. Here is a modified version of the above example:
         table = "item_property"  # name of the table to store data
 
         def rows(self):
-            for row in [("item1" "property1"), ("item2", "property2")]:
+            for row in [("item1", "property1"), ("item2", "property2")]:
                 yield row
 
     if __name__ == '__main__':
@@ -83,11 +83,11 @@ modified example would look as shown below:
     from sqlalchemy import String
     import luigi
     from luigi.contrib import sqla
-    from luigi.mock import MockFile
+    from luigi.mock import MockTarget
 
     class BaseTask(luigi.Task):
         def output(self):
-            return MockFile("BaseTask")
+            return MockTarget("BaseTask")
 
         def run(self):
             out = self.output().open("w")
@@ -163,7 +163,7 @@ class SQLAlchemyTarget(luigi.Target):
     _engine_dict = {}  # dict of sqlalchemy engine instances
     Connection = collections.namedtuple("Connection", "engine pid")
 
-    def __init__(self, connection_string, target_table, update_id, echo=False, connect_args={}):
+    def __init__(self, connection_string, target_table, update_id, echo=False, connect_args=None):
         """
         Constructor for the SQLAlchemyTarget.
 
@@ -179,6 +179,9 @@ class SQLAlchemyTarget(luigi.Target):
         :type connect_args: dict
         :return:
         """
+        if connect_args is None:
+            connect_args = {}
+
         self.target_table = target_table
         self.update_id = update_id
         self.connection_string = connection_string
@@ -259,7 +262,7 @@ class SQLAlchemyTarget(luigi.Target):
                     sqlalchemy.Column("inserted", sqlalchemy.DateTime, default=datetime.datetime.now()))
                 metadata.create_all(engine)
             else:
-                metadata.reflect(bind=engine)
+                metadata.reflect(only=[self.marker_table], bind=engine)
                 self.marker_table_bound = metadata.tables[self.marker_table]
 
     def open(self, mode):
@@ -273,6 +276,8 @@ class CopyToTable(luigi.Task):
     Usage:
 
     * subclass and override the required `connection_string`, `table` and `columns` attributes.
+    * optionally override the `schema` attribute to use a different schema for
+      the target table.
     """
     _logger = logging.getLogger('luigi-interface')
 
@@ -299,6 +304,11 @@ class CopyToTable(luigi.Task):
     # If the tables have already been setup by another process, then you can
     # completely ignore the columns. Instead set the reflect value to True below
     columns = []
+
+    # Specify the database schema of the target table, if supported by the
+    # RDBMS. Note that this doesn't change the schema of the marker table.
+    # The schema MUST already exist in the database, or this will task fail.
+    schema = ''
 
     # options
     column_separator = "\t"  # how columns are separated in the file copied into postgres
@@ -328,15 +338,21 @@ class CopyToTable(luigi.Task):
         else:
             # if columns is specified as (name, type) tuples
             with engine.begin() as con:
-                metadata = sqlalchemy.MetaData()
+
+                if self.schema:
+                    metadata = sqlalchemy.MetaData(schema=self.schema)
+                else:
+                    metadata = sqlalchemy.MetaData()
+
                 try:
-                    if not con.dialect.has_table(con, self.table):
+                    if not con.dialect.has_table(con, self.table, self.schema or None):
                         sqla_columns = construct_sqla_columns(self.columns)
                         self.table_bound = sqlalchemy.Table(self.table, metadata, *sqla_columns)
                         metadata.create_all(engine)
                     else:
-                        metadata.reflect(bind=engine)
-                        self.table_bound = metadata.tables[self.table]
+                        full_table = '.'.join([self.schema, self.table]) if self.schema else self.table
+                        metadata.reflect(only=[full_table], bind=engine)
+                        self.table_bound = metadata.tables[full_table]
                 except Exception as e:
                     self._logger.exception(self.table + str(e))
 

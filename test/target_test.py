@@ -19,6 +19,7 @@ from __future__ import print_function
 from helpers import unittest, skipOnTravis
 from mock import Mock
 import re
+import random
 
 import luigi.target
 import luigi.format
@@ -251,23 +252,25 @@ class FileSystemTargetTestMixin(object):
         # We're cheating and retrieving the fs from target.
         # TODO: maybe move to "filesystem_test.py" or something
         t = self.create_target()
+        other_path = t.path + '-' + str(random.randint(0, 999999999))
         t._touchz()
         fs = t.fs
         self.assertTrue(t.exists())
-        fs.move(t.path, t.path+"-yay")
+        fs.move(t.path, other_path)
         self.assertFalse(t.exists())
 
     def test_rename_dont_move_on_fs(self):
         # We're cheating and retrieving the fs from target.
         # TODO: maybe move to "filesystem_test.py" or something
         t = self.create_target()
+        other_path = t.path + '-' + str(random.randint(0, 999999999))
         t._touchz()
         fs = t.fs
         self.assertTrue(t.exists())
-        fs.rename_dont_move(t.path, t.path+"-yay")
+        fs.rename_dont_move(t.path, other_path)
         self.assertFalse(t.exists())
         self.assertRaises(luigi.target.FileAlreadyExists,
-                          lambda: fs.rename_dont_move(t.path, t.path+"-yay"))
+                          lambda: fs.rename_dont_move(t.path, other_path))
 
 
 class TemporaryPathTest(unittest.TestCase):
@@ -344,3 +347,10 @@ class TemporaryPathTest(unittest.TestCase):
 
         with target.temporary_path():
             self.fs.mkdir.assert_called_once_with('/my/dir/is', parents=True, raise_if_exists=False)
+
+    def test_file_in_current_dir(self):
+        target = self.target_cls('foo.txt')
+
+        with target.temporary_path() as tmp_path:
+            self.fs.mkdir.assert_not_called()  # there is no dir to create
+        self.fs.rename_dont_move.assert_called_once_with(tmp_path, target.path)

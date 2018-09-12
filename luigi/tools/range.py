@@ -16,12 +16,12 @@
 """
 Produces contiguous completed ranges of recurring tasks.
 
-See RangeDaily and RangeHourly for basic usage.
+See ``RangeDaily`` and ``RangeHourly`` for basic usage.
 
 Caveat - if gaps accumulate, their causes (e.g. missing dependencies) going
 unmonitored/unmitigated, then this will eventually keep retrying the same gaps
-over and over and make no progress to more recent times. (See 'task_limit' and
-'reverse' parameters.)
+over and over and make no progress to more recent times. (See ``task_limit``
+and ``reverse`` parameters.)
 TODO foolproof against that kind of misuse?
 """
 
@@ -48,16 +48,16 @@ class RangeEvent(luigi.Event):  # Not sure if subclassing currently serves a pur
     """
     Events communicating useful metrics.
 
-    COMPLETE_COUNT would normally be nondecreasing, and its derivative would
-    describe performance (how many instances complete
+    ``COMPLETE_COUNT`` would normally be nondecreasing, and its derivative
+    would describe performance (how many instances complete
     invocation-over-invocation).
 
-    COMPLETE_FRACTION reaching 1 would be a telling event in case of a backfill
-    with defined start and stop. Would not be strikingly useful for a typical
-    recurring task without stop defined, fluctuating close to 1.
+    ``COMPLETE_FRACTION`` reaching 1 would be a telling event in case of a
+    backfill with defined start and stop. Would not be strikingly useful for a
+    typical recurring task without stop defined, fluctuating close to 1.
 
-    DELAY is measured from the first found missing datehour till (current time
-    + hours_forward), or till stop if it is defined. In hours for Hourly.
+    ``DELAY`` is measured from the first found missing datehour till (current
+    time + hours_forward), or till stop if it is defined. In hours for Hourly.
     TBD different units for other frequencies?
     TODO any different for reverse mode? From first missing till last missing?
     From last gap till stop?
@@ -72,17 +72,18 @@ class RangeBase(luigi.WrapperTask):
     Produces a contiguous completed range of a recurring task.
 
     Made for the common use case where a task is parameterized by e.g.
-    DateParameter, and assurance is needed that any gaps arising from downtime
-    are eventually filled.
+    ``DateParameter``, and assurance is needed that any gaps arising from
+    downtime are eventually filled.
 
     Emits events that one can use to monitor gaps and delays.
 
     At least one of start and stop needs to be specified.
 
     (This is quite an abstract base class for subclasses with different
-    datetime parameter class, e.g. DateParameter, DateHourParameter, ..., and
-    different parameter naming, e.g. days_back/forward, hours_back/forward,
-    ..., as well as different documentation wording, for good user experience.)
+    datetime parameter classes, e.g. ``DateParameter``, ``DateHourParameter``,
+    ..., and different parameter naming, e.g. days_back/forward,
+    hours_back/forward, ..., as well as different documentation wording,
+    to improve user experience.)
 
     Subclasses will need to use the ``of`` parameter when overriding methods.
     """
@@ -514,7 +515,7 @@ def _constrain_glob(glob, paths, limit=5):
             return list(current.keys())
         char_sets = {}
         for g, p in six.iteritems(current):
-            char_sets[g] = sorted(set(path[pos] for path in p))
+            char_sets[g] = sorted({path[pos] for path in p})
         if sum(len(s) for s in char_sets.values()) > limit:
             return [g.replace('[0-9]', digit_set_wildcard(char_sets[g]), 1) for g in current]
         for g, s in six.iteritems(char_sets):
@@ -621,8 +622,9 @@ def infer_bulk_complete_from_fs(datetimes, datetime_to_task, datetime_to_re):
     Efficiently determines missing datetimes by filesystem listing.
 
     The current implementation works for the common case of a task writing
-    output to a FileSystemTarget whose path is built using strftime with format
-    like '...%Y...%m...%d...%H...', without custom complete() or exists().
+    output to a ``FileSystemTarget`` whose path is built using strftime with
+    format like '...%Y...%m...%d...%H...', without custom ``complete()`` or
+    ``exists()``.
 
     (Eventually Luigi could have ranges of completion as first-class citizens.
     Then this listing business could be factored away/be provided for
@@ -645,7 +647,7 @@ def infer_bulk_complete_from_fs(datetimes, datetime_to_task, datetime_to_re):
 
 class RangeDaily(RangeDailyBase):
     """Efficiently produces a contiguous completed range of a daily recurring
-    task that takes a single DateParameter.
+    task that takes a single ``DateParameter``.
 
     Falls back to infer it from output filesystem listing to facilitate the
     common case usage.
@@ -671,9 +673,9 @@ class RangeDaily(RangeDailyBase):
 
 class RangeHourly(RangeHourlyBase):
     """Efficiently produces a contiguous completed range of an hourly recurring
-    task that takes a single DateHourParameter.
+    task that takes a single ``DateHourParameter``.
 
-    Benefits from bulk_complete information to efficiently cover gaps.
+    Benefits from ``bulk_complete`` information to efficiently cover gaps.
 
     Falls back to infer it from output filesystem listing to facilitate the
     common case usage.
@@ -700,9 +702,9 @@ class RangeHourly(RangeHourlyBase):
 
 class RangeByMinutes(RangeByMinutesBase):
     """Efficiently produces a contiguous completed range of an recurring
-    task every interval minutes that takes a single DateMinuteParameter.
+    task every interval minutes that takes a single ``DateMinuteParameter``.
 
-    Benefits from bulk_complete information to efficiently cover gaps.
+    Benefits from ``bulk_complete`` information to efficiently cover gaps.
 
     Falls back to infer it from output filesystem listing to facilitate the
     common case usage.

@@ -23,7 +23,6 @@ Originally written by Alan Brenner <alan@magnetic.com> github.com/alanbbr
 
 
 from luigi.contrib.hdfs import config as hdfs_config
-from luigi.contrib.hdfs import error as hdfs_error
 from luigi.contrib.hdfs import abstract_client as hdfs_abstract_client
 from luigi import six
 import luigi.contrib.target
@@ -89,10 +88,7 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         :type path: string
         :return: boolean, True if path exists in HDFS
         """
-        try:
-            return self.get_bite().test(path, exists=True)
-        except Exception as err:    # IGNORE:broad-except
-            raise hdfs_error.HDFSCliError("snakebite.test", -1, str(err), repr(err))
+        return self.get_bite().test(path, exists=True)
 
     def move(self, path, dest):
         """
@@ -225,6 +221,15 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         """
         return list(self.get_bite().copyToLocal(self.list_path(path),
                                                 local_destination))
+
+    def get_merge(self, path, local_destination):
+        """
+        Using snakebite getmerge to implement this.
+        :param path: HDFS directory
+        :param local_destination: path on the system running Luigi
+        :return: merge of the directory
+        """
+        return list(self.get_bite().getmerge(path=path, dst=local_destination))
 
     def mkdir(self, path, parents=True, mode=0o755, raise_if_exists=False):
         """

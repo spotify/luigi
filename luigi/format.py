@@ -376,11 +376,11 @@ class ChainFormat(Format):
                 if args[x].output != args[x + 1].input:
                     raise TypeError(
                         'The format chaining is not valid, %s expect %s'
-                        'but %s provide %s' % (
-                            args[x].__class__.__name__,
-                            args[x].input,
+                        ' but %s provide %s' % (
                             args[x + 1].__class__.__name__,
-                            args[x + 1].output,
+                            args[x + 1].input,
+                            args[x].__class__.__name__,
+                            args[x].output,
                         )
                     )
             except AttributeError:

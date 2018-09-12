@@ -17,6 +17,8 @@
 
 import unittest
 import os
+import sys
+import pickle
 import luigi
 import luigi.contrib.hdfs
 from luigi import six
@@ -186,7 +188,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
 class PySparkTaskTest(unittest.TestCase):
     ss = 'ss-stub'
 
-    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077"}})
+    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077", 'deploy-mode': 'client'}})
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_run(self, proc):
         setup_run_process(proc)
@@ -197,7 +199,7 @@ class PySparkTaskTest(unittest.TestCase):
         self.assertTrue(os.path.exists(proc_arg_list[7]))
         self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
 
-    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077"}})
+    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077", 'deploy-mode': 'client'}})
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_run_with_pickle_dump(self, proc):
         setup_run_process(proc)
@@ -209,6 +211,18 @@ class PySparkTaskTest(unittest.TestCase):
         self.assertTrue(os.path.exists(proc_arg_list[7]))
         self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
 
+    @with_config({'spark': {'spark-submit': ss, 'master': "spark://host:7077", 'deploy-mode': 'cluster'}})
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_run_with_cluster(self, proc):
+        setup_run_process(proc)
+        job = TestPySparkTask()
+        job.run()
+        proc_arg_list = proc.call_args[0][0]
+        self.assertEqual(proc_arg_list[0:8], ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'cluster', '--name', 'TestPySparkTask', '--files'])
+        self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
+        self.assertTrue(os.path.exists(proc_arg_list[9]))
+        self.assertEqual('TestPySparkTask.pickle', proc_arg_list[10])
+
     @patch.dict('sys.modules', {'pyspark': MagicMock()})
     @patch('pyspark.SparkContext')
     def test_pyspark_runner(self, spark_context):
@@ -219,6 +233,14 @@ class PySparkTaskTest(unittest.TestCase):
             PySparkRunner(*task.app_command()[1:]).run()
             # Check py-package exists
             self.assertTrue(os.path.exists(sc.addPyFile.call_args[0][0]))
+            # Check that main module containing the task exists.
+            run_path = os.path.dirname(task.app_command()[1])
+            self.assertTrue(os.path.exists(os.path.join(run_path, os.path.basename(__file__))))
+            # Check that the python path contains the run_path
+            self.assertTrue(run_path in sys.path)
+            # Check if find_class finds the class for the correct module name.
+            with open(task.app_command()[1], 'rb') as fp:
+                self.assertTrue(pickle.Unpickler(fp).find_class('spark_test', 'TestPySparkTask'))
 
         with patch.object(SparkSubmitTask, 'run', mock_spark_submit):
             job = TestPySparkTask()

@@ -1,18 +1,35 @@
 Configuration
 =============
 
-All configuration can be done by adding configuration files. They are looked for in:
+All configuration can be done by adding configuration files.
 
- * ``/etc/luigi/client.cfg``
- * ``luigi.cfg`` (or its legacy name ``client.cfg``) in your current working directory
- * ``LUIGI_CONFIG_PATH`` environment variable
+Supported config parsers:
+* ``cfg`` (default)
+* ``toml``
 
-in increasing order of preference. The order only matters in case of key conflicts (see docs for ConfigParser_). These files are meant for both the client and ``luigid``. If you decide to specify your own configuration you should make sure that both the client and ``luigid`` load it properly.
+You can choose right parser via ``LUIGI_CONFIG_PARSER`` environment variable. For example, ``LUIGI_CONFIG_PARSER=toml``.
 
-.. _ConfigParser: https://docs.python.org/2/library/configparser.html
+Default (cfg) parser are looked for in:
 
-The config file is broken into sections, each controlling a different part of the config. Example configuration file:
+* ``/etc/luigi/client.cfg`` (deprecated)
+* ``/etc/luigi/luigi.cfg``
+* ``client.cfg`` (deprecated)
+* ``luigi.cfg``
+* ``LUIGI_CONFIG_PATH`` environment variable
 
+`TOML <https://github.com/toml-lang/toml>`_ parser are looked for in:
+
+* ``/etc/luigi/luigi.toml``
+* ``luigi.toml``
+* ``LUIGI_CONFIG_PATH`` environment variable
+
+Both config lists increase in priority (from low to high). The order only matters in case of key conflicts (see docs for ConfigParser.read_). These files are meant for both the client and ``luigid``. If you decide to specify your own configuration you should make sure that both the client and ``luigid`` load it properly.
+
+.. _ConfigParser.read: https://docs.python.org/3.6/library/configparser.html#configparser.ConfigParser.read
+
+The config file is broken into sections, each controlling a different part of the config.
+
+Example cfg config:
 
 .. code:: ini
 
@@ -22,6 +39,17 @@ The config file is broken into sections, each controlling a different part of th
 
     [core]
     scheduler_host=luigi-host.mycompany.foo
+
+Example toml config:
+
+.. code:: python
+
+    [hadoop]
+    version = "cdh4"
+    streaming-jar = "/usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar"
+
+    [core]
+    scheduler_host = "luigi-host.mycompany.foo"
 
 
 .. _ParamConfigIngestion:
@@ -51,7 +79,7 @@ it in the configuration:
 Configuration classes
 *********************
 
-Using the :ref:`ParamConfigIngestion` method. We derive the
+Using the :ref:`ParamConfigIngestion` method, we derive the
 conventional way to do global configuration. Imagine this configuration.
 
 .. code:: ini
@@ -114,16 +142,22 @@ history-filename
   configuration where no history is stored in the output directory by
   Hadoop.
 
+log_level
+  The default log level to use when no logging_conf_file is set. Must be
+  a valid name of a `Python log level
+  <https://docs.python.org/2/library/logging.html#logging-levels>`_.
+  Default is ``DEBUG``.
+
 logging_conf_file
   Location of the logging configuration file.
 
-max-reschedules
+max_reschedules
   The maximum number of times that a job can be automatically
   rescheduled by a worker before it will stop trying. Workers will
   reschedule a job if it is found to not be done when attempting to run
   a dependent job. This defaults to 1.
 
-max-shown-tasks
+max_shown_tasks
   .. versionadded:: 1.0.20
 
   The maximum number of tasks returned in a task_list api call. This
@@ -131,7 +165,7 @@ max-shown-tasks
   visualiser. Small values can alleviate frozen browsers when there are
   too many done tasks. This defaults to 100000 (one hundred thousand).
 
-max-graph-nodes
+max_graph_nodes
   .. versionadded:: 2.0.0
 
   The maximum number of nodes returned by a dep_graph or
@@ -144,14 +178,28 @@ max-graph-nodes
 no_configure_logging
   If true, logging is not configured. Defaults to false.
 
-parallel-scheduling
+parallel_scheduling
   If true, the scheduler will compute complete functions of tasks in
   parallel using multiprocessing. This can significantly speed up
   scheduling, but requires that all tasks can be pickled.
+  Defaults to false.
+
+parallel-scheduling-processes
+  The number of processes to use for parallel scheduling. If not specified
+  the default number of processes will be the total number of CPUs available.
 
 rpc-connect-timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0
+
+rpc-retry-attempts
+  The maximum number of retries to connect the central scheduler before giving up.
+  Defaults to 3
+
+rpc-retry-wait
+  Number of seconds to wait before the next attempt will be started to
+  connect to the central scheduler between two retry attempts.
+  Defaults to 30
 
 
 .. _worker-config:
@@ -215,7 +263,7 @@ retry_external_tasks
   This means that if external dependencies are satisfied after a workflow has
   started, any tasks dependent on that resource will be eligible for running.
   Note: Every time the task remains incomplete, it will count as FAILED, so
-  normal retry logic applies (see: `retry_count` and `retry-delay`).
+  normal retry logic applies (see: `retry_count` and `retry_delay`).
   This setting works best with `worker-keep-alive: true`.
   If false, external tasks will only be evaluated when Luigi is first invoked.
   In this case, Luigi will not check whether external dependencies are
@@ -233,12 +281,29 @@ no_install_shutdown_handler
   thread.
   Defaults to false.
 
-send-failure-email
+send_failure_email
   Controls whether the worker will send e-mails on task and scheduling
   failures. If set to false, workers will only send e-mails on
   framework errors during scheduling and all other e-mail must be
   handled by the scheduler.
   Defaults to true.
+
+check_unfulfilled_deps
+  If true, the worker checks for completeness of dependencies before running a
+  task. In case unfulfilled dependencies are detected, an exception is raised
+  and the task will not run. This mechanism is useful to detect situations
+  where tasks do not create their outputs properly, or when targets were
+  removed after the dependency tree was built. It is recommended to disable
+  this feature only when the completeness checks are known to be bottlenecks,
+  e.g. when the ``exists()`` calls of the dependencies' outputs are
+  resource-intensive.
+  Defaults to true.
+
+force_multiprocessing
+  By default, luigi uses multiprocessing when *more than one* worker process is
+  requested. Whet set to true, multiprocessing is used independent of the
+  the number of workers.
+  Defaults to false.
 
 
 [elasticsearch]
@@ -310,12 +375,12 @@ sender
 Parameters controlling the contents of batch notifications sent from the
 scheduler
 
-email-interval
+email_interval
   Number of minutes between e-mail sends. Making this larger results in
   fewer, bigger e-mails.
   Defaults to 60.
 
-batch-mode
+batch_mode
   Controls how tasks are grouped together in the e-mail. Suppose we have
   the following sequence of failures:
 
@@ -325,9 +390,9 @@ batch-mode
   4. TaskA(a=1, b=2)
   5. TaskB(a=1, b=1)
 
-  For any setting of batch-mode, the batch e-mail will record 5 failures
+  For any setting of batch_mode, the batch e-mail will record 5 failures
   and mention them in the subject. The difference is in how they will
-  be displayed in the body. Here are example bodies with error-messages
+  be displayed in the body. Here are example bodies with error_messages
   set to 0.
 
   "all" only groups together failures for the exact same task:
@@ -353,15 +418,15 @@ batch-mode
   Defaults to "unbatched_params", which is identical to "all" if you are
   not using batched parameters.
 
-error-lines
+error_lines
   Number of lines to include from each error message in the batch
   e-mail. This can be used to keep e-mails shorter while preserving the
   more useful information usually found near the bottom of stack traces.
   This can be set to 0 to include all lines. If you don't wish to see
-  error messages, instead set `error-messages` to 0.
+  error messages, instead set `error_messages` to 0.
   Defaults to 20.
 
-error-messages
+error_messages
   Number of messages to preserve for each task group. As most tasks that
   fail repeatedly do so for similar reasons each time, it's not usually
   necessary to keep every message. This controls how many messages are
@@ -369,12 +434,12 @@ error-messages
   kept. Set to 0 to not include error messages in the e-mails.
   Defaults to 1.
 
-group-by-error-messages
+group_by_error_messages
   Quite often, a system or cluster failure will cause many disparate
   task types to fail for the same reason. This can cause a lot of noise
   in the batch e-mails. This cuts down on the noise by listing items
   with identical error messages together. Error messages are compared
-  after limiting by `error-lines`.
+  after limiting by `error_lines`.
   Defaults to true.
 
 
@@ -460,6 +525,29 @@ release
   If set to "apache", uses a hive client that better handles apache
   hive output. All other values use the standard client Defaults to
   "cdh4".
+
+
+[kubernetes]
+------------
+
+Parameters controlling Kubernetes Job Tasks
+
+auth_method
+  Authorization method to access the cluster.
+  Options are "kubeconfig_" or "service-account_"
+
+kubeconfig_path
+  Path to kubeconfig file, for cluster authentication.
+  It defaults to ``~/.kube/config``, which is the default location when
+  using minikube_.
+  When auth_method is "service-account" this property is ignored.
+
+max_retrials
+  Maximum number of retrials in case of job failure.
+
+.. _service-account: http://kubernetes.io/docs/user-guide/kubeconfig-file
+.. _kubeconfig: http://kubernetes.io/docs/user-guide/service-accounts
+.. _minikube: http://kubernetes.io/docs/getting-started-guides/minikube
 
 
 [mysql]
@@ -599,7 +687,7 @@ scalding-libjars
 
 Parameters controlling scheduler behavior
 
-batch-emails
+batch_emails
   Whether to send batch e-mails for failures and disables rather than
   sending immediate disable e-mails and just relying on workers to send
   immediate batch e-mails.
@@ -632,15 +720,15 @@ disable-window-seconds
 record_task_history
   If true, stores task history in a database. Defaults to false.
 
-remove-delay
+remove_delay
   Number of seconds to wait before removing a task that has no
   stakeholders. Defaults to 600 (10 minutes).
 
-retry-delay
+retry_delay
   Number of seconds to wait after a task failure to mark it pending
   again. Defaults to 900 (15 minutes).
 
-state-path
+state_path
   Path in which to store the Luigi scheduler's state. When the scheduler
   is shut down, its state is stored in this path. The scheduler must be
   shut down cleanly for this to work, usually with a kill command. If
@@ -658,10 +746,19 @@ state-path
 
   This defaults to /var/lib/luigi-server/state.pickle
 
-worker-disconnect-delay
+worker_disconnect_delay
   Number of seconds to wait after a worker has stopped pinging the
   scheduler before removing it and marking all of its running tasks as
   failed. Defaults to 60.
+
+pause_enabled
+  If false, disables pause/unpause operations and hides the pause toggle from
+  the visualiser.
+
+send_messages
+  When true, the scheduler is allowed to send messages to running tasks and
+  the central scheduler provides a simple prompt per task to send messages.
+  Defaults to true.
 
 
 [sendgrid]
@@ -797,14 +894,6 @@ py-packages
     Comma-separated list of local packages (in your python path) to be distributed to the cluster.
 
 *Parameters controlling the execution of SparkJob jobs (deprecated):*
-
-spark-jar
-  Location of the spark jar. Sets SPARK_JAR environment variable when
-  running spark. Example:
-  /usr/share/spark/jars/spark-assembly-0.8.1-incubating-hadoop2.2.0.jar
-
-spark-class
-  Location of script to invoke. Example: /usr/share/spark/spark-class
 
 
 [task_history]

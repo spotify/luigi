@@ -17,7 +17,7 @@
 """
 luigi.file has moved to :py:mod:`luigi.local_target`
 """
-# Delete this file any time after 7 Feb 2016
+# Delete this file any time after 7 Feb 2017
 
 import warnings
 

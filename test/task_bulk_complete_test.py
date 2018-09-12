@@ -41,9 +41,7 @@ class MixinNaiveBulkCompleteTest(unittest.TestCase):
     """
     def test_single_arg_list(self):
         single_arg_list = ["A", "B", "x"]
-        expected_single_arg_list = set(
-            [p for p in single_arg_list if p in COMPLETE_TASKS]
-        )
+        expected_single_arg_list = {p for p in single_arg_list if p in COMPLETE_TASKS}
         self.assertEqual(
             expected_single_arg_list,
             set(MockTask.bulk_complete(single_arg_list))
@@ -51,9 +49,7 @@ class MixinNaiveBulkCompleteTest(unittest.TestCase):
 
     def test_multiple_arg_tuple(self):
         multiple_arg_tuple = (("A", "1"), ("B", "2"), ("X", "3"), ("C", "2"))
-        expected_multiple_arg_tuple = set(
-            [p for p in multiple_arg_tuple if p[0] in COMPLETE_TASKS]
-        )
+        expected_multiple_arg_tuple = {p for p in multiple_arg_tuple if p[0] in COMPLETE_TASKS}
         self.assertEqual(
             expected_multiple_arg_tuple,
             set(MockTask.bulk_complete(multiple_arg_tuple))

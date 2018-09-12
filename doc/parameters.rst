@@ -17,7 +17,7 @@ Internally, the DailyReport object can now be constructed by running
 ``DailyReport(datetime.date(2012, 5, 10))`` or just ``DailyReport()``.
 Luigi also creates a command line parser that automatically handles the
 conversion from strings to Python types.
-This way you can invoke the job on the command line eg. by passing ``--date 2012-15-10``.
+This way you can invoke the job on the command line eg. by passing ``--date 2012-05-10``.
 
 The parameters are all set to their values on the Task object instance,
 i.e.
@@ -25,7 +25,7 @@ i.e.
 .. code:: python
 
     d = DailyReport(datetime.date(2012, 5, 10))
-    print d.date
+    print(d.date)
 
 will return the same date that the object was constructed with.
 Same goes if you invoke Luigi on the command line.
@@ -87,6 +87,25 @@ are not the same instance:
     False
     >>> hash(c) == hash(d)
     True
+
+Parameter visibility
+^^^^^^^^^^^^^^^^^^^^
+
+Using :class:`~luigi.parameter.ParameterVisibility` you can configure parameter visibility. By default, all
+parameters are public, but you can also set them hidden or private.
+
+.. code:: python
+
+    >>> import luigi
+    >>> from luigi.parameter import ParameterVisibility
+    
+    >>> luigi.Parameter(visibility=ParameterVisibility.PRIVATE)
+
+``ParameterVisibility.PUBLIC`` (default) - visible everywhere
+
+``ParameterVisibility.HIDDEN`` - ignored in WEB-view, but saved into database if save db_history is true
+
+``ParameterVisibility.PRIVATE`` - visible only inside task.
 
 Parameter types
 ^^^^^^^^^^^^^^^

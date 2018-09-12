@@ -65,13 +65,13 @@ except ImportError:
 POLL_TIME = 2
 
 
-def _get_task_statuses(task_ids):
+def _get_task_statuses(task_ids, cluster):
     """
     Retrieve task statuses from ECS API
 
     Returns list of {RUNNING|PENDING|STOPPED} for each id in task_ids
     """
-    response = client.describe_tasks(tasks=task_ids)
+    response = client.describe_tasks(tasks=task_ids, cluster=cluster)
 
     # Error checking
     if response['failures'] != []:
@@ -85,16 +85,15 @@ def _get_task_statuses(task_ids):
     return [t['lastStatus'] for t in response['tasks']]
 
 
-def _track_tasks(task_ids):
+def _track_tasks(task_ids, cluster):
     """Poll task status until STOPPED"""
     while True:
-        statuses = _get_task_statuses(task_ids)
+        statuses = _get_task_statuses(task_ids, cluster)
         if all([status == 'STOPPED' for status in statuses]):
             logger.info('ECS tasks {0} STOPPED'.format(','.join(task_ids)))
             break
         time.sleep(POLL_TIME)
-        logger.debug('ECS task status for tasks {0}: {1}'.format(
-            ','.join(task_ids), status))
+        logger.debug('ECS task status for tasks {0}: {1}'.format(task_ids, statuses))
 
 
 class ECSTask(luigi.Task):
@@ -129,10 +128,14 @@ class ECSTask(luigi.Task):
                 ]
             }
 
+    :param cluster: str defining the ECS cluster to use.
+        When this is not defined it will use the default one.
+
     """
 
-    task_def_arn = luigi.Parameter(default=None)
-    task_def = luigi.Parameter(default=None)
+    task_def_arn = luigi.OptionalParameter(default=None)
+    task_def = luigi.OptionalParameter(default=None)
+    cluster = luigi.Parameter(default='default')
 
     @property
     def ecs_task_ids(self):
@@ -162,7 +165,7 @@ class ECSTask(luigi.Task):
 
     def run(self):
         if (not self.task_def and not self.task_def_arn) or \
-           (self.task_def and self.task_def_arn):
+                (self.task_def and self.task_def_arn):
             raise ValueError(('Either (but not both) a task_def (dict) or'
                               'task_def_arn (string) must be assigned'))
         if not self.task_def_arn:
@@ -177,8 +180,9 @@ class ECSTask(luigi.Task):
         else:
             overrides = {}
         response = client.run_task(taskDefinition=self.task_def_arn,
-                                   overrides=overrides)
+                                   overrides=overrides,
+                                   cluster=self.cluster)
         self._task_ids = [task['taskArn'] for task in response['tasks']]
 
         # Wait on task completion
-        _track_tasks(self._task_ids)
+        _track_tasks(self._task_ids, self.cluster)
