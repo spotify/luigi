@@ -64,9 +64,8 @@ class MockFileTest(unittest.TestCase):
         try:
             with t.open(None) as b:
                 b.write("bar")
-        except TypeError as error:
-            self.assertIsNotNone(error)
-            self.assertIn("'NoneType' object", str(error))
+        except TypeError:
+            self.assertRaises(TypeError)
 
     # That should work in python2 because of the autocast
     # That should work in python3 because the default format is Text
