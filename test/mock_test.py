@@ -61,11 +61,9 @@ class MockFileTest(unittest.TestCase):
 
     def test_mode_none_error(self):
         t = MockTarget("foo")
-        try:
+        with self.assertRaises(TypeError):
             with t.open(None) as b:
                 b.write("bar")
-        except TypeError:
-            self.assertRaises(TypeError)
 
     # That should work in python2 because of the autocast
     # That should work in python3 because the default format is Text
