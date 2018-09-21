@@ -247,6 +247,7 @@ class S3Client(FileSystem):
         Put an object stored locally to an S3 path.
         :param local_path: Path to source local file
         :param destination_s3_path: URL for target S3 location
+        :param validate_bucket: bool indicator of validating existence of target s3 bucket root (default: True)
         :param kwargs: Keyword arguments are passed to the boto function `put_object`
         """
         self._check_deprecated_argument(**kwargs)
@@ -259,6 +260,7 @@ class S3Client(FileSystem):
         Put a string to an S3 path.
         :param content: Data str
         :param destination_s3_path: URL for target S3 location
+        :param validate_bucket: bool indicator of validating existence of target s3 bucket root (default: True)
         :param kwargs: Keyword arguments are passed to the boto3 function `put_object`
         """
         self._check_deprecated_argument(**kwargs)
@@ -279,6 +281,7 @@ class S3Client(FileSystem):
         :param local_path: Path to source local file
         :param destination_s3_path: URL for target S3 location
         :param part_size: Part size in bytes. Default: 8388608 (8MB)
+        :param validate_bucket: bool indicator of validating existence of target s3 bucket root (default: True)
         :param kwargs: Keyword arguments are passed to the boto function `upload_fileobj` as ExtraArgs
         """
         self._check_deprecated_argument(**kwargs)
