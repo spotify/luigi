@@ -242,42 +242,46 @@ class S3Client(FileSystem):
         if self._exists(bucket, key):
             return self.s3.ObjectSummary(bucket, key)
 
-    def put(self, local_path, destination_s3_path, **kwargs):
+    def put(self, local_path, destination_s3_path, validate_bucket=True, **kwargs):
         """
         Put an object stored locally to an S3 path.
         :param local_path: Path to source local file
         :param destination_s3_path: URL for target S3 location
+        :param validate_bucket: bool indicator of validating existence of target s3 bucket root (default: True)
         :param kwargs: Keyword arguments are passed to the boto function `put_object`
         """
         self._check_deprecated_argument(**kwargs)
 
         # put the file
-        self.put_multipart(local_path, destination_s3_path, **kwargs)
+        self.put_multipart(local_path, destination_s3_path, validate_bucket=validate_bucket, **kwargs)
 
-    def put_string(self, content, destination_s3_path, **kwargs):
+    def put_string(self, content, destination_s3_path, validate_bucket=True, **kwargs):
         """
         Put a string to an S3 path.
         :param content: Data str
         :param destination_s3_path: URL for target S3 location
+        :param validate_bucket: bool indicator of validating existence of target s3 bucket root (default: True)
         :param kwargs: Keyword arguments are passed to the boto3 function `put_object`
         """
         self._check_deprecated_argument(**kwargs)
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
         # validate the bucket
-        self._validate_bucket(bucket)
+        if validate_bucket:
+            self._validate_bucket(bucket)
 
         # put the file
         self.s3.meta.client.put_object(
             Key=key, Bucket=bucket, Body=content, **kwargs)
 
-    def put_multipart(self, local_path, destination_s3_path, part_size=8388608, **kwargs):
+    def put_multipart(self, local_path, destination_s3_path, part_size=8388608, validate_bucket=True, **kwargs):
         """
         Put an object stored locally to an S3 path
         using S3 multi-part upload (for files > 8Mb).
         :param local_path: Path to source local file
         :param destination_s3_path: URL for target S3 location
         :param part_size: Part size in bytes. Default: 8388608 (8MB)
+        :param validate_bucket: bool indicator of validating existence of target s3 bucket root (default: True)
         :param kwargs: Keyword arguments are passed to the boto function `upload_fileobj` as ExtraArgs
         """
         self._check_deprecated_argument(**kwargs)
@@ -290,7 +294,8 @@ class S3Client(FileSystem):
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
         # validate the bucket
-        self._validate_bucket(bucket)
+        if validate_bucket:
+            self._validate_bucket(bucket)
 
         self.s3.meta.client.upload_fileobj(
             Fileobj=open(local_path, 'rb'), Bucket=bucket, Key=key, Config=transfer_config, ExtraArgs=kwargs)

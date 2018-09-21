@@ -177,6 +177,18 @@ class TestS3Client(unittest.TestCase):
         s3_client.put(self.tempFilePath, 's3://mybucket/putMe')
         self.assertTrue(s3_client.exists('s3://mybucket/putMe'))
 
+    def test_put_validate_bucket_false(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.put(self.tempFilePath, 's3://mybucket/putMe', validate_bucket=False)
+        self.assertTrue(s3_client.exists('s3://mybucket/putMe'))
+
+    def test_put_validate_bucket_false_no_exist(self):
+        # intentionally don't create bucket
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        with self.assertRaises(s3_client.s3.meta.client.exceptions.NoSuchBucket):
+            s3_client.put(self.tempFilePath, 's3://mybucket/putMe', validate_bucket=False)
+
     def test_put_sse_deprecated(self):
         create_bucket()
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
