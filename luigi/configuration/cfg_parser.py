@@ -30,17 +30,67 @@ See :doc:`/configuration` for more info.
 """
 
 import os
+import re
 import warnings
 
-try:
-    from ConfigParser import ConfigParser, NoOptionError, NoSectionError
-except ImportError:
-    from configparser import ConfigParser, NoOptionError, NoSectionError
+from configparser import ConfigParser, NoOptionError, NoSectionError
+from configparser import BasicInterpolation, InterpolationError
 
 from .base_parser import BaseParser
 
 
+class InterpolationMissingEnvvarError(InterpolationError):
+    """
+    Raised when option value refers to a nonexisting environment variable.
+    """
+
+    def __init__(self, option, section, value, envvar):
+        msg = (
+            "Config refers to a nonexisting environment variable {}. "
+            "Section [{}], option {}={}"
+        ).format(envvar, section, option, value)
+        InterpolationError.__init__(self, option, section, msg)
+
+
+class EnvironmentInterpolation(BasicInterpolation):
+    """
+    Custom interpolation which allows values to refer to environment variables.
+
+    Reference to environment variables is made using the `${ENVVAR}` syntax.
+    Interpolation of environment variables is applied after the default
+    interpolation of format strings.
+    """
+    _ENVRE = re.compile(r"\$\{([^}]+)\}")  # matches "${envvar}"
+
+    def before_get(self, parser, section, option, value, defaults):
+        value = super(EnvironmentInterpolation, self).before_get(
+            parser, section, option, value, defaults)
+        value = self._interpolate_env(option, section, value)
+        return value
+
+    def _interpolate_env(self, option, section, value):
+        rawval = value
+        parts = []
+        while value:
+            match = self._ENVRE.search(value)
+            if match is None:
+                parts.append(value)
+                break
+            envvar = match.groups()[0]
+            try:
+                envval = os.environ[envvar]
+            except KeyError:
+                raise InterpolationMissingEnvvarError(
+                    option, section, rawval, envvar)
+            start, end = match.span()
+            parts.append(value[:start])
+            parts.append(envval)
+            value = value[end:]
+        return "".join(parts)
+
+
 class LuigiConfigParser(BaseParser, ConfigParser):
+    _DEFAULT_INTERPOLATION = EnvironmentInterpolation()
     NO_DEFAULT = object()
     enabled = True
     _instance = None

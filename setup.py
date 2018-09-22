@@ -41,6 +41,8 @@ install_requires = [
     'tornado>=4.0,<5',
     'python-daemon<3.0',
 ]
+if sys.version_info.major == 2:
+    install_requires.append('configparser>=3.5.0')
 
 if os.environ.get('READTHEDOCS', None) == 'True':
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
