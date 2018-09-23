@@ -33,8 +33,12 @@ import os
 import re
 import warnings
 
-from configparser import ConfigParser, NoOptionError, NoSectionError
-from configparser import BasicInterpolation, InterpolationError
+try:
+    from ConfigParser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
+    Interpolation = object
+except ImportError:
+    from configparser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
+    from configparser import Interpolation, BasicInterpolation
 
 from .base_parser import BaseParser
 
@@ -52,21 +56,15 @@ class InterpolationMissingEnvvarError(InterpolationError):
         InterpolationError.__init__(self, option, section, msg)
 
 
-class EnvironmentInterpolation(BasicInterpolation):
+class EnvironmentInterpolation(Interpolation):
     """
-    Custom interpolation which allows values to refer to environment variables.
-
-    Reference to environment variables is made using the `${ENVVAR}` syntax.
-    Interpolation of environment variables is applied after the default
-    interpolation of format strings.
+    Custom interpolation which allows values to refer to environment variables
+    using the ``${ENVVAR}`` syntax.
     """
     _ENVRE = re.compile(r"\$\{([^}]+)\}")  # matches "${envvar}"
 
     def before_get(self, parser, section, option, value, defaults):
-        value = super(EnvironmentInterpolation, self).before_get(
-            parser, section, option, value, defaults)
-        value = self._interpolate_env(option, section, value)
-        return value
+        return self._interpolate_env(option, section, value)
 
     def _interpolate_env(self, option, section, value):
         rawval = value
@@ -89,8 +87,38 @@ class EnvironmentInterpolation(BasicInterpolation):
         return "".join(parts)
 
 
+class CombinedInterpolation(Interpolation):
+    """
+    Custom interpolation which applies multiple interpolations in series.
+
+    :param interpolations: a sequence of configparser.Interpolation objects.
+    """
+
+    def __init__(self, interpolations):
+        self._interpolations = interpolations
+
+    def before_get(self, parser, section, option, value, defaults):
+        for interp in self._interpolations:
+            value = interp.before_get(parser, section, option, value, defaults)
+        return value
+
+    def before_read(self, parser, section, option, value):
+        for interp in self._interpolations:
+            value = interp.before_read(parser, section, option, value)
+        return value
+
+    def before_set(self, parser, section, option, value):
+        for interp in self._interpolations:
+            value = interp.before_set(parser, section, option, value)
+        return value
+
+    def before_write(self, parser, section, option, value):
+        for interp in self._interpolations:
+            value = interp.before_write(parser, section, option, value)
+        return value
+
+
 class LuigiConfigParser(BaseParser, ConfigParser):
-    _DEFAULT_INTERPOLATION = EnvironmentInterpolation()
     NO_DEFAULT = object()
     enabled = True
     _instance = None
@@ -100,6 +128,17 @@ class LuigiConfigParser(BaseParser, ConfigParser):
         'client.cfg',  # Deprecated old-style local luigi config
         'luigi.cfg',
     ]
+    if hasattr(ConfigParser, "_interpolate"):
+        # Override ConfigParser._interpolate (Python 2)
+        def _interpolate(self, section, option, rawval, vars):
+            value = ConfigParser._interpolate(self, section, option, rawval, vars)
+            return EnvironmentInterpolation().before_get(
+                parser=self, section=section, option=option,
+                value=value, defaults=None,
+            )
+    else:
+        # Override ConfigParser._DEFAULT_INTERPOLATION (Python 3)
+        _DEFAULT_INTERPOLATION = CombinedInterpolation([BasicInterpolation(), EnvironmentInterpolation()])
 
     @classmethod
     def reload(cls):
