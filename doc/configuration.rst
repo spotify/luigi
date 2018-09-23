@@ -8,7 +8,7 @@ Supported config parsers:
 * ``cfg`` (default), based on Python's standard ConfigParser_. Option values may refer to environment variables using ``${ENVVAR}`` syntax.
 * ``toml``
 
-.. _ConfigParser: https://docs.python.org/3.6/library/configparser.html
+.. _ConfigParser: https://docs.python.org/3/library/configparser.html
 
 You can choose right parser via ``LUIGI_CONFIG_PARSER`` environment variable. For example, ``LUIGI_CONFIG_PARSER=toml``.
 
