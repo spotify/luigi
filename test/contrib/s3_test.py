@@ -441,6 +441,15 @@ class TestS3Client(unittest.TestCase):
         self.assertTrue(s3_client.remove('s3://mybucket/removemedir'))
         self.assertFalse(s3_client.exists('s3://mybucket/removemedir_$folder$'))
 
+    def test_remove_dir_batch(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+
+        for i in range(0, 2000):
+            s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/file{i}'.format(i=i))
+        self.assertTrue(s3_client.remove('s3://mybucket/removemedir/'))
+        self.assertFalse(s3_client.exists('s3://mybucket/removedir/'))
+
     @skipOnTravis("passes and fails intermitantly, suspecting it's a race condition not handled by moto")
     def test_copy_multiple_parts_non_exact_fit(self):
         """
