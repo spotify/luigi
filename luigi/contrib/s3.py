@@ -218,7 +218,9 @@ class S3Client(FileSystem):
             delete_key_list.append({'Key': '{}{}'.format(key, S3_DIRECTORY_MARKER_SUFFIX_0)})
 
         if len(delete_key_list) > 0:
-            self.s3.meta.client.delete_objects(Bucket=bucket, Delete={'Objects': delete_key_list})
+            n = 1000
+            for i in range(0, len(delete_key_list), n):
+                self.s3.meta.client.delete_objects(Bucket=bucket, Delete={'Objects': delete_key_list[i: i + n]})
             return True
 
         return False
