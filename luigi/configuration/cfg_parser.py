@@ -81,15 +81,19 @@ class LuigiConfigParser(BaseParser, ConfigParser):
             return default
 
     def get(self, section, option, default=NO_DEFAULT, **kwargs):
+        """ Override ConfigParser.get """
         return self._get_with_default(ConfigParser.get, section, option, default, **kwargs)
 
     def getboolean(self, section, option, default=NO_DEFAULT):
+        """ Override ConfigParser.getboolean """
         return self._get_with_default(ConfigParser.getboolean, section, option, default, bool)
 
     def getint(self, section, option, default=NO_DEFAULT):
+        """ Override ConfigParser.getint """
         return self._get_with_default(ConfigParser.getint, section, option, default, int)
 
     def getfloat(self, section, option, default=NO_DEFAULT):
+        """ Override ConfigParser.getfloat """
         return self._get_with_default(ConfigParser.getfloat, section, option, default, float)
 
     def getintdict(self, section):
@@ -101,6 +105,7 @@ class LuigiConfigParser(BaseParser, ConfigParser):
             return {}
 
     def set(self, section, option, value=None):
+        """ Override ConfigParser.set """
         if not ConfigParser.has_section(self, section):
             ConfigParser.add_section(self, section)
 
