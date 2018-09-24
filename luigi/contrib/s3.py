@@ -191,6 +191,9 @@ class S3Client(FileSystem):
     def remove(self, path, recursive=True):
         """
         Remove a file or directory from S3.
+        :param path: File or directory to remove
+        :param recursive: Boolean indicator to remove object and children
+        :return: Boolean indicator denoting success of the removal of 1 or more files
         """
         if not self.exists(path):
             logger.debug('Could not delete %s; path does not exist', path)
