@@ -380,7 +380,7 @@ class TestS3Client(unittest.TestCase):
         self.assertEqual([True, True],
                          [s3_client.exists('s3://' + x.bucket_name + '/' + x.key) for x in s3_client.listdir('s3://mybucket/hello', return_key=True)])
 
-    def test_remove(self):
+    def test_remove_bucket_dne(self):
         create_bucket()
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
 
@@ -389,35 +389,57 @@ class TestS3Client(unittest.TestCase):
             lambda: s3_client.remove('s3://bucketdoesnotexist/file')
         )
 
+    def test_remove_file_dne(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+
         self.assertFalse(s3_client.remove('s3://mybucket/doesNotExist'))
+
+    def test_remove_file(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
 
         s3_client.put(self.tempFilePath, 's3://mybucket/existingFile0')
         self.assertTrue(s3_client.remove('s3://mybucket/existingFile0'))
         self.assertFalse(s3_client.exists('s3://mybucket/existingFile0'))
+
+    def test_remove_invalid(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
 
         self.assertRaises(
             InvalidDeleteException,
             lambda: s3_client.remove('s3://mybucket/')
         )
 
+    def test_remove_invalid_no_slash(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+
         self.assertRaises(
             InvalidDeleteException,
             lambda: s3_client.remove('s3://mybucket')
         )
 
+    def test_remove_dir_not_recursive(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+
         s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/file')
         self.assertRaises(
             InvalidDeleteException,
-            lambda: s3_client.remove(
-                's3://mybucket/removemedir', recursive=False)
+            lambda: s3_client.remove('s3://mybucket/removemedir', recursive=False)
         )
+
+    def test_remove_dir(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
 
         # test that the marker file created by Hadoop S3 Native FileSystem is removed
         s3_client.put(self.tempFilePath, 's3://mybucket/removemedir/file')
         s3_client.put_string("", 's3://mybucket/removemedir_$folder$')
         self.assertTrue(s3_client.remove('s3://mybucket/removemedir'))
-        self.assertFalse(s3_client.exists(
-            's3://mybucket/removemedir_$folder$'))
+        self.assertFalse(s3_client.exists('s3://mybucket/removemedir_$folder$'))
 
     @skipOnTravis("passes and fails intermitantly, suspecting it's a race condition not handled by moto")
     def test_copy_multiple_parts_non_exact_fit(self):
