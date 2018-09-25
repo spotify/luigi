@@ -17,18 +17,18 @@
 
 
 """
-Tests for Docker container wrapper for Luigi.
+Tests for OpenPAI wrapper for Luigi.
 
 
 Requires:
 
-- docker: ``pip install docker``
+- requests: ``pip install requests``
 
-Written and maintained by Andrea Pierleoni (@apierleoni).
-Contributions by Eliseo Papa (@elipapa)
+Written and maintained by Liu, Dongqing (@liudongqing).
 """
 from helpers import unittest
 
+import time
 import luigi
 import logging
 from luigi.contrib.pai import PaiTask
@@ -36,19 +36,29 @@ from luigi.contrib.pai import TaskRole
 
 logging.basicConfig(level=logging.DEBUG)
 
+"""
+The following configurations are required to run the test
+[OpenPai]
+pai_url:http://host:port/
+username:admin
+password:admin-password
+expiration:3600
+
+"""
+# luigi.configuration.add_config_path('luigi_pai.cfg')
 
 
-class SuccessJob(PaiTask):
-    image = "busybox:latest"
-    name = "test_job1"
-    command = 'echo hello world'
+class SklearnJob(PaiTask):
+    image = "openpai/pai.example.sklearn"
+    name = "test_job_sk_{0}".format(time.time())
+    command = 'cd scikit-learn/benchmarks && python bench_mnist.py'
     virtual_cluster = 'spark'
-    tasks = [TaskRole('test', 'echo hello')]
+    tasks = [TaskRole('test', 'cd scikit-learn/benchmarks && python bench_mnist.py', memoryMB=4096)]
 
 
 class TestPaiTask(unittest.TestCase):
-    def test_run(self):
 
-        success = SuccessJob()
-        luigi.build([success], local_scheduler=True)
-        self.assertTrue(success)
+    def test_run(self):
+        sk_task = SklearnJob()
+        luigi.build([sk_task], local_scheduler=True)
+        self.assertTrue(sk_task)
