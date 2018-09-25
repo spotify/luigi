@@ -21,7 +21,7 @@ MicroSoft OpenPAI Job wrapper for Luigi.
   "OpenPAI is an open source platform that provides complete AI model training and resource management capabilities,
   it is easy to extend and supports on-premise, cloud and hybrid environments in various scale."
 
-For more information about OpenPAI : http://kubernetes.io/docs/user-guide/jobs/
+For more information about OpenPAI : https://github.com/Microsoft/pai/
 
 Requires:
 
