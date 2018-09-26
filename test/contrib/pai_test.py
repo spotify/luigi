@@ -27,6 +27,7 @@ Requires:
 Written and maintained by Liu, Dongqing (@liudongqing).
 """
 from helpers import unittest
+import responses
 
 import time
 import luigi
@@ -58,7 +59,20 @@ class SklearnJob(PaiTask):
 
 class TestPaiTask(unittest.TestCase):
 
+    @responses.activate
     def test_run(self):
+        responses.add(responses.POST, 'http://127.0.0.1:9186/api/v1/token',
+                      json={"token": "test","user": "admin","admin": True}, status=200)
         sk_task = SklearnJob()
+
+        responses.add(responses.POST, 'http://127.0.0.1:9186/api/v1/jobs',
+                      json={"message": "update job {0} successfully".format(sk_task.name)}, status=202)
+
+        responses.add(responses.GET, 'http://127.0.0.1:9186/api/v1/jobs/{0}'.format(sk_task.name),
+                      json={}, status=404)
+
+        responses.add(responses.GET, 'http://127.0.0.1:9186/api/v1/jobs/{0}'.format(sk_task.name),
+                      body='{"jobStatus": {"state":"SUCCEED"}}', status=200)
+
         luigi.build([sk_task], local_scheduler=True)
         self.assertTrue(sk_task)

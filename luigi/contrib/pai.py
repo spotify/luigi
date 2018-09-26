@@ -21,7 +21,7 @@ MicroSoft OpenPAI Job wrapper for Luigi.
   "OpenPAI is an open source platform that provides complete AI model training and resource management capabilities,
   it is easy to extend and supports on-premise, cloud and hybrid environments in various scale."
 
-For more information about OpenPAI : https://github.com/Microsoft/pai/
+For more information about OpenPAI : https://github.com/Microsoft/pai/, this task is tested against OpenPAI 0.7.1
 
 Requires:
 
@@ -32,6 +32,7 @@ Written and maintained by Liu, Dongqing (@liudongqing).
 import time
 import logging
 import luigi
+import abc
 
 try:
     from urlparse import urljoin
@@ -154,7 +155,7 @@ class TaskRole(object):
 
 class OpenPai(luigi.Config):
     pai_url = luigi.Parameter(
-        default='pai_url',
+        default='http://127.0.0.1:9186',
         description='rest server url, default is http://127.0.0.1:9186')
     username = luigi.Parameter(
         default='admin',
@@ -172,18 +173,19 @@ class PaiTask(luigi.Task):
     __slots__ = ('__openpai', '__token', 'name', 'image', 'command', 'tasks', 'auth_file_path', 'data_dir', 'code_dir', 'output_dir',
                   'virtual_cluster', 'gpu_type', 'retry_count')
 
-    @property
+    @abc.abstractproperty
     def name(self):
         """Name for the job, need to be unique, required"""
         return 'SklearnExample'
 
-    @property
+    @abc.abstractproperty
     def image(self):
         """URL pointing to the Docker image for all tasks in the job, required"""
         return 'openpai/pai.example.sklearn'
 
-    @property
+    @abc.abstractproperty
     def tasks(self):
+        """List of taskRole, one task role at least, required"""
         return []
 
     @property
@@ -230,7 +232,12 @@ class PaiTask(luigi.Task):
         response = rs.post(urljoin(self.__openpai.pai_url, '/api/v1/token'),
                            headers={'Content-Type': 'application/json'}, data=request_json)
         logger.debug('Get token response {0}'.format(response.text))
-        self.__token = response.json()['token']
+        if response.status_code != 200:
+            msg = 'Get token request failed, response is {}'.format(response.text)
+            self.__logger.error(msg)
+            raise Exception(msg)
+        else:
+            self.__token = response.json()['token']
 
     def __init__(self, *args, **kwargs):
         """
