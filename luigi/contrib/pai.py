@@ -64,42 +64,44 @@ class PaiJob(object):
     """
     The Open PAI job definition.
     Refer to here https://github.com/Microsoft/pai/blob/master/docs/job_tutorial.md
+    ::
 
-    {
-      "jobName":   String,
-      "image":     String,
-      "authFile":  String,
-      "dataDir":   String,
-      "outputDir": String,
-      "codeDir":   String,
-      "virtualCluster": String,
-      "taskRoles": [
         {
-          "name":       String,
-          "taskNumber": Integer,
-          "cpuNumber":  Integer,
-          "memoryMB":   Integer,
-          "shmMB":      Integer,
-          "gpuNumber":  Integer,
-          "portList": [
+          "jobName":   String,
+          "image":     String,
+          "authFile":  String,
+          "dataDir":   String,
+          "outputDir": String,
+          "codeDir":   String,
+          "virtualCluster": String,
+          "taskRoles": [
             {
-              "label": String,
-              "beginAt": Integer,
-              "portNumber": Integer
+              "name":       String,
+              "taskNumber": Integer,
+              "cpuNumber":  Integer,
+              "memoryMB":   Integer,
+              "shmMB":      Integer,
+              "gpuNumber":  Integer,
+              "portList": [
+                {
+                  "label": String,
+                  "beginAt": Integer,
+                  "portNumber": Integer
+                }
+              ],
+              "command":    String,
+              "minFailedTaskCount": Integer,
+              "minSucceededTaskCount": Integer
             }
           ],
-          "command":    String,
-          "minFailedTaskCount": Integer,
-          "minSucceededTaskCount": Integer
+          "gpuType": String,
+          "retryCount": Integer
         }
-      ],
-      "gpuType": String,
-      "retryCount": Integer
-    }
-
+        
     """
-    __slots__ = ('jobName', 'image', 'authFile', 'dataDir', 'outputDir', 'codeDir', 'virtualCluster', 'taskRoles',
-                  'gpuType', 'retryCount')
+    __slots__ = (
+        'jobName', 'image', 'authFile', 'dataDir', 'outputDir', 'codeDir', 'virtualCluster', 'taskRoles', 'gpuType',
+        'retryCount')
 
     def __init__(self, jobName, image, tasks):
         self.jobName = jobName
@@ -111,7 +113,6 @@ class PaiJob(object):
 
 
 class Port(object):
-    __slots__ = ('label', 'beginAt', 'portNumber')
 
     def __init__(self, label, begin_at=0, port_number=1):
         """
@@ -127,8 +128,6 @@ class Port(object):
 
 
 class TaskRole(object):
-    __slots__ = ('name', 'taskNumber', 'cpuNumber', 'memoryMB', 'shmMB', 'gpuNumber', 'portList', 'command',
-                  'minFailedTaskCount', 'minSucceededTaskCount')
 
     def __init__(self, name, command, taskNumber=1, cpuNumber=1, memoryMB=2048, shmMB=64, gpuNumber=0, portList=[]):
         """
@@ -170,8 +169,6 @@ class OpenPai(luigi.Config):
 
 class PaiTask(luigi.Task):
     __POLL_TIME = 5
-    __slots__ = ('__openpai', '__token', 'name', 'image', 'command', 'tasks', 'auth_file_path', 'data_dir', 'code_dir', 'output_dir',
-                  'virtual_cluster', 'gpu_type', 'retry_count')
 
     @abc.abstractproperty
     def name(self):
