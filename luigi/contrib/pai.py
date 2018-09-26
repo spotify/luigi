@@ -97,11 +97,12 @@ class PaiJob(object):
           "gpuType": String,
           "retryCount": Integer
         }
-        
+
     """
     __slots__ = (
-        'jobName', 'image', 'authFile', 'dataDir', 'outputDir', 'codeDir', 'virtualCluster', 'taskRoles', 'gpuType',
-        'retryCount')
+        'jobName', 'image', 'authFile', 'dataDir', 'outputDir', 'codeDir', 'virtualCluster',
+        'taskRoles', 'gpuType', 'retryCount'
+    )
 
     def __init__(self, jobName, image, tasks):
         self.jobName = jobName
@@ -113,6 +114,7 @@ class PaiJob(object):
 
 
 class Port(object):
+    __slots__ = ('label', 'beginAt', 'portNumber')
 
     def __init__(self, label, begin_at=0, port_number=1):
         """
@@ -128,6 +130,10 @@ class Port(object):
 
 
 class TaskRole(object):
+    __slots__ = (
+        'name', 'taskNumber', 'cpuNumber', 'memoryMB', 'shmMB', 'gpuNumber', 'portList', 'command',
+        'minFailedTaskCount', 'minSucceededTaskCount'
+    )
 
     def __init__(self, name, command, taskNumber=1, cpuNumber=1, memoryMB=2048, shmMB=64, gpuNumber=0, portList=[]):
         """
