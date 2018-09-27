@@ -39,7 +39,8 @@ with open('README.rst') as fobj:
 
 install_requires = [
     'tornado>=4.0,<5',
-    'python-daemon<3.0',
+    # https://pagure.io/python-daemon/issue/18
+    'python-daemon<2.2.0',
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
