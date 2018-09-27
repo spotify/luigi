@@ -348,7 +348,8 @@ class Task(object):
 
     @property
     def pretty_id(self):
-        param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(self.public_params.items()))
+        params = self.public_params if hasattr(self, 'public_params') else self.params
+        param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(params.items()))
         return u'{}({})'.format(self.family, param_str)
 
 
@@ -825,7 +826,11 @@ class Scheduler(object):
         if not task.param_visibilities:
             task.param_visibilities = _get_default(param_visibilities, {})
         if not task.params:
-            task.set_params(params)
+            set_params = getattr(task, 'set_params', None)
+            if callable(set_params):
+                task.set_params(params)
+            else:
+                task.params = _get_default(params, {})
 
         if batch_id is not None:
             task.batch_id = batch_id
@@ -1279,6 +1284,7 @@ class Scheduler(object):
 
     def _serialize_task(self, task_id, include_deps=True, deps=None):
         task = self._state.get_task(task_id)
+        params = task.public_params if hasattr(task, 'public_params') else task.params
 
         ret = {
             'display_name': task.pretty_id,
@@ -1288,7 +1294,7 @@ class Scheduler(object):
             'time_running': getattr(task, "time_running", None),
             'start_time': task.time,
             'last_updated': getattr(task, "updated", task.time),
-            'params': task.public_params,
+            'params': params,
             'name': task.family,
             'priority': task.priority,
             'resources': task.resources,

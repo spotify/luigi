@@ -20,10 +20,12 @@ import server_test
 
 import luigi
 import luigi.scheduler
+from luigi.scheduler import OrderedSet, _get_default, Failures
 import luigi.worker
 from luigi.parameter import ParameterVisibility
 import json
 import time
+import os
 
 
 class SchedulerParameterVisibilitiesTest(LuigiTestCase):
@@ -118,3 +120,174 @@ class RemoteSchedulerParameterVisibilitiesTest(server_test.ServerTestBase):
         data = json.loads(decoded)
 
         self.assertEqual({'a': 'a', 'd': 'd'}, data['response'][task.task_id]['params'])
+
+
+class OldVersionedTask():
+    def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
+                 params=None, accepts_messages=False, tracking_url=None, status_message=None,
+                 progress_percentage=None, retry_policy='notoptional'):
+        self.id = task_id
+        self.stakeholders = set()
+        self.workers = OrderedSet()
+        if deps is None:
+            self.deps = set()
+        else:
+            self.deps = set(deps)
+        self.status = status
+        self.time = time.time()
+        self.updated = self.time
+        self.retry = None
+        self.remove = None
+        self.worker_running = None
+        self.time_running = None
+        self.expl = None
+        self.priority = priority
+        self.resources = _get_default(resources, {})
+        self.family = family
+        self.module = module
+        self.params = _get_default(params, {})
+        self.accepts_messages = accepts_messages
+        self.retry_policy = retry_policy
+        self.tracking_url = tracking_url
+        self.status_message = status_message
+        self.progress_percentage = progress_percentage
+        self.scheduler_message_responses = {}
+        self.scheduler_disable_time = None
+        self.runnable = False
+        self.batchable = False
+        self.batch_id = None
+
+    def __repr__(self):
+        return "Task(%r)" % vars(self)
+
+    def is_batchable(self):
+        try:
+            return self.batchable
+        except AttributeError:
+            return False
+
+    def add_failure(self):
+        self.failures.add_failure()
+
+    def has_excessive_failures(self):
+        if self.failures.first_failure_time is not None:
+            if (time.time() >= self.failures.first_failure_time + self.retry_policy.disable_hard_timeout):
+                return True
+
+        if self.failures.num_failures() >= self.retry_policy.retry_count:
+            return True
+
+        return False
+
+    @property
+    def pretty_id(self):
+        param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(self.params.items()))
+        return u'{}({})'.format(self.family, param_str)
+
+
+class OldVersionedTaskTest(LuigiTestCase):
+    def test_pickled_old_versioned_task_pretty_id(self):
+        s = luigi.scheduler.Scheduler(send_messages=True)
+        s._state._tasks['1'] = OldVersionedTask('1', 'PENDING', None, params={'a': 'a', 'b': 'b', 'c': 'c'})
+        path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
+        s._state._state_path = path
+        s.dump()
+
+        def failed_pretty_id(that):
+            params = that.public_params
+            param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(params.items()))
+            return u'{}({})'.format(that.family, param_str)
+
+        OldVersionedTask.pretty_id = lambda x: failed_pretty_id(x)
+
+        d = luigi.scheduler.Scheduler(send_messages=True)
+        d._state._state_path = path
+        d.load()
+
+        self.assertRaises(Exception, lambda: d._state._tasks['1'].pretty_id())
+
+        def fixed_pretty_id(that):
+            params = that.public_params if hasattr(that, 'public_params') else that.params
+            param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(params.items()))
+            return u'{}({})'.format(that.family, param_str)
+
+        OldVersionedTask.pretty_id = lambda x: fixed_pretty_id(x)
+
+        self.assertEqual(d._state._tasks['1'].pretty_id(), '(a=a, b=b, c=c)')
+
+    def test_pickled_old_versioned_task_serialize(self):
+        s = luigi.scheduler.Scheduler(send_messages=True)
+        s._state._tasks['1'] = OldVersionedTask('1', 'PENDING', None, params={'a': 'a', 'b': 'b', 'c': 'c'})
+        path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
+        s._state._state_path = path
+        s.dump()
+
+        d = luigi.scheduler.Scheduler(send_messages=True)
+        d._state._state_path = path
+        d.load()
+
+        from functools import partial
+        def old_serialize(self, task_id, include_deps=True, deps=None):
+            task = self._state.get_task(task_id)
+
+            ret = {
+                'display_name': task.pretty_id,
+                'status': task.status,
+                'workers': list(task.workers),
+                'worker_running': task.worker_running,
+                'time_running': getattr(task, "time_running", None),
+                'start_time': task.time,
+                'last_updated': getattr(task, "updated", task.time),
+                'params': task.public_params,
+                'name': task.family,
+                'priority': task.priority,
+                'resources': task.resources,
+                'resources_running': getattr(task, "resources_running", None),
+                'tracking_url': getattr(task, "tracking_url", None),
+                'status_message': getattr(task, "status_message", None),
+                'progress_percentage': getattr(task, "progress_percentage", None),
+            }
+            if task.status == "DISABLED":
+                ret['re_enable_able'] = task.scheduler_disable_time is not None
+            if include_deps:
+                ret['deps'] = list(task.deps if deps is None else deps)
+            if self._config.send_messages and task.status == "RUNNING":
+                ret['accepts_messages'] = task.accepts_messages
+            return ret
+
+        d._serialize_task = (lambda x: partial(old_serialize, x))(d)
+
+        self.assertRaises(Exception, lambda: d._serialize_task(task_id='1'))
+
+        def fixed_serialize(self, task_id, include_deps=True, deps=None):
+            task = self._state.get_task(task_id)
+            params = task.public_params if hasattr(task, 'public_params') else task.params
+
+            ret = {
+                'display_name': task.pretty_id,
+                'status': task.status,
+                'workers': list(task.workers),
+                'worker_running': task.worker_running,
+                'time_running': getattr(task, "time_running", None),
+                'start_time': task.time,
+                'last_updated': getattr(task, "updated", task.time),
+                'params': params,
+                'name': task.family,
+                'priority': task.priority,
+                'resources': task.resources,
+                'resources_running': getattr(task, "resources_running", None),
+                'tracking_url': getattr(task, "tracking_url", None),
+                'status_message': getattr(task, "status_message", None),
+                'progress_percentage': getattr(task, "progress_percentage", None),
+            }
+            if task.status == "DISABLED":
+                ret['re_enable_able'] = task.scheduler_disable_time is not None
+            if include_deps:
+                ret['deps'] = list(task.deps if deps is None else deps)
+            if self._config.send_messages and task.status == "RUNNING":
+                ret['accepts_messages'] = task.accepts_messages
+            return ret
+
+        d._serialize_task = (lambda x: partial(fixed_serialize, x))(d)
+
+        self.assertTrue(d._serialize_task(task_id='1'))
