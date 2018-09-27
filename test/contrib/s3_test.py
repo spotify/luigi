@@ -503,6 +503,11 @@ class TestS3Client(unittest.TestCase):
             copy_size = s3_client.get_key(s3_dest + str(i)).size
             self.assertEqual(original_size, copy_size)
 
+    def test__path_to_bucket_and_key(self):
+        self.assertEqual([('bucket', 'noquestionmarkhere'), ('bucket', 'questionmark?here')],
+                         [S3Client._path_to_bucket_and_key('s3://bucket/noquestionmarkhere'),
+                          S3Client._path_to_bucket_and_key('s3://bucket/questionmark?here')])
+
     @mock_s3
     def _run_copy_test(self, put_method, is_multipart=False):
         create_bucket()
