@@ -291,3 +291,4 @@ class OldVersionedTaskTest(LuigiTestCase):
         d._serialize_task = (lambda x: partial(fixed_serialize, x))(d)
 
         self.assertTrue(d._serialize_task(task_id='1'))
+
