@@ -24,7 +24,7 @@ env:
   matrix:
     - TOXENV=flake8
     - TOXENV=docs
-    - TOXENV=py27-nonhdfs
+    - TOXENV=py27-core
     - TOXENV=py27-unixsocket
       # - TOXENV=py27-cdh
       # minicluster (cdh) tests disabled as lack of love, #2140.
@@ -43,13 +43,13 @@ sudo: false
 matrix:
   include:
     - python: 3.6
-      env: TOXENV=py36-nonhdfs
+      env: TOXENV=py36-core
     - python: 3.6
       env: TOXENV=py36-unixsocket
     - python: 3.7
       dist: xenial
       sudo: true
-      env: TOXENV=py37-nonhdfs
+      env: TOXENV=py37-core
     - python: 3.7
       dist: xenial
       sudo: true
