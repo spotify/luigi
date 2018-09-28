@@ -264,9 +264,6 @@ class S3Client(FileSystem):
         self._check_deprecated_argument(**kwargs)
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
-        # validate the bucket
-        self._validate_bucket(bucket)
-
         # put the file
         self.s3.meta.client.put_object(
             Key=key, Bucket=bucket, Body=content, **kwargs)
@@ -288,9 +285,6 @@ class S3Client(FileSystem):
         transfer_config = TransferConfig(multipart_chunksize=part_size)
 
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
-
-        # validate the bucket
-        self._validate_bucket(bucket)
 
         self.s3.meta.client.upload_fileobj(
             Fileobj=open(local_path, 'rb'), Bucket=bucket, Key=key, Config=transfer_config, ExtraArgs=kwargs)
@@ -534,19 +528,6 @@ class S3Client(FileSystem):
                 'example: region_name=us-west-1\n'
                 'For region names, refer to the amazon S3 region documentation\n'
                 'https://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region')
-
-    def _validate_bucket(self, bucket_name):
-        exists = True
-
-        try:
-            self.s3.meta.client.head_bucket(Bucket=bucket_name)
-        except botocore.exceptions.ClientError as e:
-            error_code = e.response['Error']['Code']
-            if error_code in ('404', 'NoSuchBucket'):
-                exists = False
-            else:
-                raise
-        return exists
 
     def _exists(self, bucket, key):
         try:
