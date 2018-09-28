@@ -52,7 +52,13 @@ class LuigiTomlParser(BaseParser):
         for path in config_paths:
             if os.path.isfile(path):
                 self.data = self._update_data(self.data, toml.load(path))
-        self.data = recursively_freeze(self.data)
+
+        # freeze dict params
+        for section, content in self.data.items():
+            for key, value in content.items():
+                if isinstance(value, dict):
+                    self.data[section][key] = recursively_freeze(value)
+
         return self.data
 
     def get(self, section, option, default=NO_DEFAULT, **kwargs):
