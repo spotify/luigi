@@ -504,9 +504,10 @@ class TestS3Client(unittest.TestCase):
             self.assertEqual(original_size, copy_size)
 
     def test__path_to_bucket_and_key(self):
-        self.assertEqual([('bucket', 'noquestionmarkhere'), ('bucket', 'questionmark?here')],
-                         [S3Client._path_to_bucket_and_key('s3://bucket/noquestionmarkhere'),
-                          S3Client._path_to_bucket_and_key('s3://bucket/questionmark?here')])
+        self.assertEqual(('bucket', 'key'), S3Client._path_to_bucket_and_key('s3://bucket/key'))
+
+    def test__path_to_bucket_and_key_with_question_mark(self):
+        self.assertEqual(('bucket', 'key?blade'), S3Client._path_to_bucket_and_key('s3://bucket/key?blade'))
 
     @mock_s3
     def _run_copy_test(self, put_method, is_multipart=False):
