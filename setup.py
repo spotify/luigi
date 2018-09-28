@@ -39,7 +39,8 @@ with open('README.rst') as fobj:
 
 install_requires = [
     'tornado>=4.0,<5',
-    'python-daemon<3.0',
+    # https://pagure.io/python-daemon/issue/18
+    'python-daemon<2.2.0',
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
@@ -54,7 +55,7 @@ if sys.version_info < (3, 4):
 
 setup(
     name='luigi',
-    version='2.7.8',
+    version='2.7.9',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='The Luigi Authors',
@@ -94,6 +95,8 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: System :: Monitoring',
     ],
 )

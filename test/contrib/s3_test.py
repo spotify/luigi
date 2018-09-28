@@ -177,6 +177,12 @@ class TestS3Client(unittest.TestCase):
         s3_client.put(self.tempFilePath, 's3://mybucket/putMe')
         self.assertTrue(s3_client.exists('s3://mybucket/putMe'))
 
+    def test_put_no_such_bucket(self):
+        # intentionally don't create bucket
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        with self.assertRaises(s3_client.s3.meta.client.exceptions.NoSuchBucket):
+            s3_client.put(self.tempFilePath, 's3://mybucket/putMe')
+
     def test_put_sse_deprecated(self):
         create_bucket()
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
@@ -196,6 +202,12 @@ class TestS3Client(unittest.TestCase):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.put_string("SOMESTRING", 's3://mybucket/putString')
         self.assertTrue(s3_client.exists('s3://mybucket/putString'))
+
+    def test_put_string_no_such_bucket(self):
+        # intentionally don't create bucket
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        with self.assertRaises(s3_client.s3.meta.client.exceptions.NoSuchBucket):
+            s3_client.put_string("SOMESTRING", 's3://mybucket/putString')
 
     def test_put_string_sse_deprecated(self):
         create_bucket()
@@ -258,6 +270,12 @@ class TestS3Client(unittest.TestCase):
         part_size = 8388608
         file_size = 5000
         return self._run_multipart_test(part_size, file_size)
+
+    def test_put_multipart_no_such_bucket(self):
+        # intentionally don't create bucket
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        with self.assertRaises(s3_client.s3.meta.client.exceptions.NoSuchBucket):
+            s3_client.put_multipart(self.tempFilePath, 's3://mybucket/putMe')
 
     def test_exists(self):
         create_bucket()
