@@ -502,8 +502,10 @@ class S3Client(FileSystem):
 
     @staticmethod
     def _path_to_bucket_and_key(path):
-        (scheme, netloc, path, query, fragment) = urlsplit(path)
-        path_without_initial_slash = path[1:]
+        (scheme, netloc, path, query, fragment) = urlsplit(path,
+                                                           allow_fragments=False)
+        question_mark_plus_query = '?' + query if query else ''
+        path_without_initial_slash = path[1:] + question_mark_plus_query
         return netloc, path_without_initial_slash
 
     @staticmethod
