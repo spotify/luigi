@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2018 Cindicator Ltd.
+# Copyright 2018 Vote Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ except ImportError:
     toml = False
 
 from .base_parser import BaseParser
+from ..freezing import recursively_freeze
 
 
 class LuigiTomlParser(BaseParser):
@@ -51,6 +52,7 @@ class LuigiTomlParser(BaseParser):
         for path in config_paths:
             if os.path.isfile(path):
                 self.data = self._update_data(self.data, toml.load(path))
+        self.data = recursively_freeze(self.data)
         return self.data
 
     def get(self, section, option, default=NO_DEFAULT, **kwargs):
