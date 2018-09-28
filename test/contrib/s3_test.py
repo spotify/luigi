@@ -32,6 +32,8 @@ from luigi.target import MissingParentDirectory
 from moto import mock_s3, mock_sts
 from target_test import FileSystemTargetTestMixin
 
+from nose.plugins.attrib import attr
+
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
     # spulec/moto#308
     raise unittest.SkipTest('moto mock doesn\'t work with python3.4')
@@ -48,6 +50,7 @@ def create_bucket():
     return conn
 
 
+@attr('contrib')
 class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
 
     def setUp(self):
@@ -127,6 +130,7 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual('s3://mybucket/test_file', path)
 
 
+@attr('contrib')
 class TestS3Client(unittest.TestCase):
     def setUp(self):
         f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
