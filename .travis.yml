@@ -25,9 +25,9 @@ env:
     - TOXENV=flake8
     - TOXENV=docs
     - TOXENV=py27-core
+    - TOXENV=py27-unixsocket
     - TOXENV=py27-apache
     - TOXENV=py27-aws
-    - TOXENV=py27-unixsocket
       # - TOXENV=py27-cdh
       # minicluster (cdh) tests disabled as lack of love, #2140.
       # Sometimes it runs too slow for Travis. And sometimes it crashes on downloading cdh
