@@ -1064,7 +1064,7 @@ class TupleParameter(ListParameter):
         # ast.literal_eval(t_str) == t
         try:
             # loop required to parse tuple of tuples
-            return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=_FrozenOrderedDict))
+            return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=FrozenOrderedDict))
         except ValueError:
             return literal_eval(x)  # if this causes an error, let that error be raised.
 
