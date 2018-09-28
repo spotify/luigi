@@ -50,7 +50,7 @@ def create_bucket():
     return conn
 
 
-@attr('contrib')
+@attr('aws')
 class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
 
     def setUp(self):
@@ -130,7 +130,7 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual('s3://mybucket/test_file', path)
 
 
-@attr('contrib')
+@attr('aws')
 class TestS3Client(unittest.TestCase):
     def setUp(self):
         f = tempfile.NamedTemporaryFile(mode='wb', delete=False)

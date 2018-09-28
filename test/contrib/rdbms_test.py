@@ -67,7 +67,7 @@ class DummyS3CopyToTableKey(DummyS3CopyToTableBase):
     aws_secret_access_key = AWS_SECRET_KEY
 
 
-@attr('contrib')
+@attr('aws')
 class TestS3CopyToTableWithMetaColumns(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.enable_metadata_columns", new_callable=mock.PropertyMock, return_value=True)
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.metadata_columns", new_callable=mock.PropertyMock, return_value=[('created_tz', 'TIMESTAMP')])

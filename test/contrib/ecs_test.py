@@ -74,7 +74,7 @@ class ECSTaskOverrideCommand(ECSTaskNoOutput):
         return [{'name': 'hello-world', 'command': ['/bin/sleep', '10']}]
 
 
-@attr('contrib')
+@attr('aws')
 class TestECSTask(unittest.TestCase):
 
     @mock_ecs

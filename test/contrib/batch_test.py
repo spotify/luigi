@@ -100,7 +100,7 @@ class MockBotoLogsClient(object):
         }
 
 
-@attr('contrib')
+@attr('aws')
 @skipOnTravis("boto3 now importable. These tests need mocked")
 class BatchClientTest(unittest.TestCase):
 
@@ -147,7 +147,7 @@ class BatchClientTest(unittest.TestCase):
             self.assertTrue('log line 1' in context.exception)
 
 
-@attr('contrib')
+@attr('aws')
 @skipOnTravis("boto3 now importable. These tests need mocked")
 class BatchTaskTest(unittest.TestCase):
 

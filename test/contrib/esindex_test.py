@@ -65,7 +65,7 @@ except Exception:
     raise unittest.SkipTest('Unable to connect to ElasticSearch')
 
 
-@attr('contrib')
+@attr('aws')
 class ElasticsearchTargetTest(unittest.TestCase):
 
     """ Test touch and exists. """
@@ -160,7 +160,7 @@ def _cleanup():
         es.indices.delete(INDEX)
 
 
-@attr('contrib')
+@attr('aws')
 class CopyToIndexTest(unittest.TestCase):
 
     """ Test indexing tasks. """
@@ -230,7 +230,7 @@ class CopyToIndexTest(unittest.TestCase):
                                             doc_type=task3.doc_type, id=234))
 
 
-@attr('contrib')
+@attr('aws')
 class MarkerIndexTest(unittest.TestCase):
 
     @classmethod
@@ -308,7 +308,7 @@ class IndexingTask4(CopyToTestIndex):
                  'name': 'another', 'date': 'today'}]
 
 
-@attr('contrib')
+@attr('aws')
 class IndexHistSizeTest(unittest.TestCase):
 
     @classmethod
