@@ -131,7 +131,7 @@ class MockTarget(target.FileSystemTarget):
         """
         self.move(*args, **kwargs)
 
-    def open(self, mode):
+    def open(self, mode='r'):
         fn = self.path
         mock_target = self
 
@@ -158,7 +158,7 @@ class MockTarget(target.FileSystemTarget):
                 super(Buffer, self).write(data)
 
             def close(self):
-                if mode == 'w':
+                if mode[0] == 'w':
                     try:
                         mock_target.wrapper.flush()
                     except AttributeError:
@@ -174,15 +174,15 @@ class MockTarget(target.FileSystemTarget):
                 return self
 
             def readable(self):
-                return mode == 'r'
+                return mode[0] == 'r'
 
             def writeable(self):
-                return mode == 'w'
+                return mode[0] == 'w'
 
             def seekable(self):
                 return False
 
-        if mode == 'w':
+        if mode[0] == 'w':
             wrapper = self.format.pipe_writer(Buffer())
             wrapper.set_wrapper(wrapper)
             return wrapper

@@ -929,10 +929,16 @@ summary-length
 port
   The port to use for webhdfs. The normal namenode port is probably on a
   different port from this one.
+
 user
   Perform file system operations as the specified user instead of $USER.  Since
   this parameter is not honored by any of the other hdfs clients, you should
   think twice before setting this parameter.
+
+client_type
+  The type of client to use. Default is the "insecure" client that requires no
+  authentication. The other option is the "kerberos" client that uses kerberos
+  authentication.
 
 
 Per Task Retry-Policy
