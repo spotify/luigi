@@ -95,7 +95,7 @@ class TestPySparkTask(PySparkTask):
         sc.textFile(self.input().path).saveAsTextFile(self.output().path)
 
 
-@attr('contrib')
+@attr('apache')
 class SparkSubmitTaskTest(unittest.TestCase):
     ss = 'ss-stub'
 
@@ -188,7 +188,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
         proc.return_value.kill.check_called()
 
 
-@attr('contrib')
+@attr('apache')
 class PySparkTaskTest(unittest.TestCase):
     ss = 'ss-stub'
 

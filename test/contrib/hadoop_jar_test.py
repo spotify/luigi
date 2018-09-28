@@ -49,7 +49,7 @@ class TestRemoteHadoopJarTwoParamJob(TestRemoteHadoopJarJob):
     param2 = luigi.Parameter()
 
 
-@attr('contrib')
+@attr('apache')
 class FixPathsTest(unittest.TestCase):
     def test_fix_paths_non_hdfs_target_path(self):
         mock_job = Mock()

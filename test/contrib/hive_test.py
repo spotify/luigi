@@ -28,7 +28,7 @@ from luigi import LocalTarget
 from nose.plugins.attrib import attr
 
 
-@attr('contrib')
+@attr('apache')
 class HiveTest(unittest.TestCase):
     count = 0
 
@@ -75,7 +75,7 @@ class HiveTest(unittest.TestCase):
         self.assertTrue(os.path.exists(dirname))
 
 
-@attr('contrib')
+@attr('apache')
 class HiveCommandClientTest(unittest.TestCase):
 
     """Note that some of these tests are really for the CDH releases of Hive, to which I do not currently have access.
@@ -291,7 +291,7 @@ class MyHiveTask(luigi.contrib.hive.HiveQueryTask):
         return 'banana banana %s' % self.param
 
 
-@attr('contrib')
+@attr('apache')
 class TestHiveTask(unittest.TestCase):
     task_class = MyHiveTask
 
@@ -334,7 +334,7 @@ class TestHiveTaskArgs(TestHiveTask):
             self.assertEqual(arglist[idx - 1], '--hiveconf')
 
 
-@attr('contrib')
+@attr('apache')
 class TestHiveTarget(unittest.TestCase):
 
     def test_hive_table_target(self):

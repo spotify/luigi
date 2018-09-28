@@ -36,7 +36,7 @@ class MockStreamingJobWithExtraArguments(JobTask):
         return rv
 
 
-@attr('contrib')
+@attr('apache')
 class StreamingRunTest(unittest.TestCase):
 
     @mock.patch('luigi.contrib.hadoop.shutil')

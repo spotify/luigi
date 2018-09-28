@@ -54,7 +54,7 @@ class ComplexTestJob(PigJobTask):
         return ['-x', 'local']
 
 
-@attr('contrib')
+@attr('apache')
 class SimplePigTest(unittest.TestCase):
     def setUp(self):
         pass
@@ -92,7 +92,7 @@ class SimplePigTest(unittest.TestCase):
             subprocess.Popen = p
 
 
-@attr('contrib')
+@attr('apache')
 class ComplexPigTest(unittest.TestCase):
     def setUp(self):
         pass
