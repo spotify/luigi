@@ -1,9 +1,12 @@
 language: python
 
+dist: xenial
+
 services:
   - elasticsearch
   - mysql
   - docker
+  - postgresql
 
 env:
   global:
@@ -22,7 +25,6 @@ env:
     - TOXENV=flake8
     - TOXENV=docs
     - TOXENV=py27-nonhdfs
-    - TOXENV=py34-nonhdfs
     - TOXENV=py27-unixsocket
       # - TOXENV=py27-cdh
       # minicluster (cdh) tests disabled as lack of love, #2140.
@@ -33,18 +35,25 @@ env:
       # - TOXENV=visualiser
       # Disabling this test because of intermittent failures :-/
 
-# Python 3.5 has to go here until Travis adds it to the default build images.
-# https://github.com/travis-ci/travis-ci/issues/4794#issuecomment-143758799
+sudo: false
+
+# Python 3.7 needs to have its dist/sudo flags set in matrix so they don't
+# break the other python builds.
+# https://github.com/travis-ci/travis-ci/issues/9815
 matrix:
   include:
-    - python: 3.5
-      env: TOXENV=py35-nonhdfs
     - python: 3.6
       env: TOXENV=py36-nonhdfs
     - python: 3.6
       env: TOXENV=py36-unixsocket
-
-sudo: false
+    - python: 3.7
+      dist: xenial
+      sudo: true
+      env: TOXENV=py37-nonhdfs
+    - python: 3.7
+      dist: xenial
+      sudo: true
+      env: TOXENV=py37-unixsocket
 
 cache:
   directories:
