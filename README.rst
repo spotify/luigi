@@ -17,7 +17,7 @@
 .. image:: https://img.shields.io/pypi/l/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
-Luigi is a Python (2.7, 3.3, 3.4, 3.5, 3.6) package that helps you build complex
+Luigi is a Python (2.7, 3.6, 3.7 tested) package that helps you build complex
 pipelines of batch jobs. It handles dependency resolution, workflow management,
 visualization, handling failures, command line integration, and much more.
 
@@ -27,6 +27,9 @@ Getting Started
 Run ``pip install luigi`` to install the latest stable version from `PyPI
 <https://pypi.python.org/pypi/luigi>`_. `Documentation for the latest release
 <https://luigi.readthedocs.io/en/stable/>`__ is hosted on readthedocs.
+
+Run ``pip install luigi[toml]`` to install Luigi with `TOML-based configs
+<https://luigi.readthedocs.io/en/stable/configuration.html>`__ support.
 
 For the bleeding edge code, ``pip install
 git+https://github.com/spotify/luigi.git``. `Bleeding edge documentation
@@ -167,6 +170,8 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Stacktome <https://stacktome.com/>`_
 * `LINX+Neemu+Chaordic <https://www.chaordic.com.br/>`_
 * `Foxberry <https://www.foxberry.com/>`_
+* `Okko <https://okko.tv/>`_
+* `ISVWorld <http://isvworld.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
