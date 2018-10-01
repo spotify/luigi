@@ -172,6 +172,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Foxberry <https://www.foxberry.com/>`_
 * `Okko <https://okko.tv/>`_
 * `ISVWorld <http://isvworld.com/>`_
+* `Big Data <https://bigdata.com.br/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
