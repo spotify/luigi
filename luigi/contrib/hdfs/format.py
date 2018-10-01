@@ -3,9 +3,14 @@ import logging
 import os
 from luigi.contrib.hdfs.config import load_hadoop_cmd
 from luigi.contrib.hdfs import config as hdfs_config
-from luigi.contrib.hdfs.clients import remove, rename, mkdir
+from luigi.contrib.hdfs.clients import remove, rename, mkdir, listdir
+from luigi.contrib.hdfs.error import HDFSCliError
 
 logger = logging.getLogger('luigi-interface')
+
+
+class HdfsAtomicWriteError(IOError):
+    pass
 
 
 class HdfsReadPipe(luigi.format.InputPipeProcessWrapper):
@@ -38,11 +43,16 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         logger.info("Aborting %s('%s'). Removing temporary file '%s'",
                     self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWritePipe, self).abort()
-        remove(self.tmppath)
+        remove(self.tmppath, skip_trash=True)
 
     def close(self):
         super(HdfsAtomicWritePipe, self).close()
-        rename(self.tmppath, self.path)
+        try:
+            remove(self.path)
+        except HDFSCliError:
+            pass
+        if not all(result['result'] for result in rename(self.tmppath, self.path) or []):
+            raise HdfsAtomicWriteError('Atomic write to {} failed'.format(self.path))
 
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
@@ -60,11 +70,22 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
         logger.info("Aborting %s('%s'). Removing temporary dir '%s'",
                     self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWriteDirPipe, self).abort()
-        remove(self.tmppath)
+        remove(self.tmppath, skip_trash=True)
 
     def close(self):
         super(HdfsAtomicWriteDirPipe, self).close()
-        rename(self.tmppath, self.path)
+        try:
+            remove(self.path)
+        except HDFSCliError:
+            pass
+
+        # it's unlikely to fail in this way but better safe than sorry
+        if not all(result['result'] for result in rename(self.tmppath, self.path) or []):
+            raise HdfsAtomicWriteError('Atomic write to {} failed'.format(self.path))
+
+        if os.path.basename(self.tmppath) in map(os.path.basename, listdir(self.path)):
+            remove(self.path)
+            raise HdfsAtomicWriteError('Atomic write to {} failed'.format(self.path))
 
 
 class PlainFormat(luigi.format.Format):
@@ -130,3 +151,28 @@ class CompatibleHdfsFormat(luigi.format.Format):
 
     def hdfs_reader(self, input):
         return self.reader(input)
+
+    # __getstate__/__setstate__ needed for pickling, because self.reader and
+    # self.writer may be unpickleable instance methods of another format class.
+    # This was mainly to support pickling of standard HdfsTarget instances.
+
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        for attr in ('reader', 'writer'):
+            method = getattr(self, attr)
+            try:
+                # if instance method, pickle instance and method name
+                d[attr] = method.__self__, method.__func__.__name__
+            except AttributeError:
+                pass  # not an instance method
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__ = d
+        for attr in ('reader', 'writer'):
+            try:
+                method_self, method_name = d[attr]
+            except ValueError:
+                continue
+            method = getattr(method_self, method_name)
+            setattr(self, attr, method)

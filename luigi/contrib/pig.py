@@ -99,17 +99,21 @@ class PigJobTask(luigi.Task):
     def _build_pig_cmd(self):
         opts = self.pig_options()
 
-        line = lambda k, v: ('%s=%s%s' % (k, v, os.linesep)).encode('utf-8')
+        def line(k, v):
+            return ('%s=%s%s' % (k, v, os.linesep)).encode('utf-8')
+
         with tempfile.NamedTemporaryFile() as param_file, tempfile.NamedTemporaryFile() as prop_file:
             if self.pig_parameters():
                 items = six.iteritems(self.pig_parameters())
                 param_file.writelines(line(k, v) for (k, v) in items)
+                param_file.flush()
                 opts.append('-param_file')
                 opts.append(param_file.name)
 
             if self.pig_properties():
                 items = six.iteritems(self.pig_properties())
                 prop_file.writelines(line(k, v) for (k, v) in items)
+                prop_file.flush()
                 opts.append('-propertyFile')
                 opts.append(prop_file.name)
 
@@ -123,7 +127,7 @@ class PigJobTask(luigi.Task):
             self.track_and_progress(cmd)
 
     def track_and_progress(self, cmd):
-        temp_stdout = tempfile.TemporaryFile()
+        temp_stdout = tempfile.TemporaryFile('wb')
         env = os.environ.copy()
         env['PIG_HOME'] = self.pig_home()
         for k, v in six.iteritems(self.pig_env_vars()):
@@ -141,8 +145,9 @@ class PigJobTask(luigi.Task):
                         line = proc.stderr.readline().decode('utf8')
                         err_lines.append(line)
                     if fd == proc.stdout.fileno():
-                        line = proc.stdout.readline().decode('utf8')
-                        temp_stdout.write(line)
+                        line_bytes = proc.stdout.readline()
+                        temp_stdout.write(line_bytes)
+                        line = line_bytes.decode('utf8')
 
                 err_line = line.lower()
                 if err_line.find('More information at:') != -1:

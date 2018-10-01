@@ -17,9 +17,14 @@
 
 import functools
 import itertools
+import tempfile
+import re
+from contextlib import contextmanager
 
 import luigi
 import luigi.task_register
+import luigi.cmdline_parser
+from luigi.cmdline_parser import CmdlineParser
 from luigi import six
 import os
 
@@ -136,22 +141,71 @@ class RunOnceTask(luigi.Task):
 class LuigiTestCase(unittest.TestCase):
     """
     Tasks registred within a test case will get unregistered in a finalizer
+
+    Instance caches are cleared before and after all runs
     """
     def setUp(self):
         super(LuigiTestCase, self).setUp()
         self._stashed_reg = luigi.task_register.Register._get_reg()
+        luigi.task_register.Register.clear_instance_cache()
 
     def tearDown(self):
         luigi.task_register.Register._set_reg(self._stashed_reg)
         super(LuigiTestCase, self).tearDown()
+        luigi.task_register.Register.clear_instance_cache()
 
     def run_locally(self, args):
         """ Helper for running tests testing more of the stack, the command
         line parsing and task from name intstantiation parts in particular. """
-        run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
+        temp = CmdlineParser._instance
+        try:
+            CmdlineParser._instance = None
+            run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
+        finally:
+            CmdlineParser._instance = temp
         return run_exit_status
 
     def run_locally_split(self, space_seperated_args):
         """ Helper for running tests testing more of the stack, the command
         line parsing and task from name intstantiation parts in particular. """
         return self.run_locally(space_seperated_args.split(' '))
+
+
+class parsing(object):
+    """
+    Convenient decorator for test cases to set the parsing environment.
+    """
+
+    def __init__(self, cmds):
+        self.cmds = cmds
+
+    def __call__(self, fun):
+        @functools.wraps(fun)
+        def wrapper(*args, **kwargs):
+            with CmdlineParser.global_instance(self.cmds, allow_override=True):
+                return fun(*args, **kwargs)
+
+        return wrapper
+
+
+def in_parse(cmds, deferred_computation):
+    with CmdlineParser.global_instance(cmds) as cp:
+        deferred_computation(cp.get_task_obj())
+
+
+@contextmanager
+def temporary_unloaded_module(python_file_contents):
+    """ Create an importable module
+
+    Return the name of importable module name given its file contents (source
+    code) """
+    with tempfile.NamedTemporaryFile(
+            dir='test/',
+            prefix="_test_time_generated_module",
+            suffix='.py') as temp_module_file:
+        temp_module_file.file.write(python_file_contents)
+        temp_module_file.file.flush()
+        temp_module_path = temp_module_file.name
+        temp_module_name = re.search(r'/(_test_time_generated_module.*).py',
+                                     temp_module_path).group(1)
+        yield temp_module_name

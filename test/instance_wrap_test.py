@@ -95,9 +95,6 @@ class InstanceWrapperTest(unittest.TestCase):
         r = ReportReader(d)
         ex = CurrencyExchanger(r, 'USD')
 
-        w = luigi.worker.Worker()
-        w.add(ex)
-        w.run()
-        w.stop()
+        luigi.build([ex], local_scheduler=True)
         self.assertEqual(ex.get_line(0), (decimal.Decimal('10.0'), 'USD'))
         self.assertEqual(ex.get_line(1), (decimal.Decimal('5.0'), 'USD'))

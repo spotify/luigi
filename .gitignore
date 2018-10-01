@@ -1,6 +1,7 @@
 .coverage.*
 doc/api/*.rst
 test/gcloud-credentials.json
+.hypothesis/
 
 .nicesetup
 
@@ -14,14 +15,16 @@ pig_property_file
 
 packages.tar
 
+# Ignore the data files
+data
 test/data
+examples/data
 
 Vagrantfile
 
 *.pickle
 *.rej
 *.orig
-
 
 # Created by https://www.gitignore.io
 
@@ -41,7 +44,8 @@ develop-eggs/
 dist/
 downloads/
 eggs/
-lib/
+# NOTE : lib/ prevents inclusion of static/visualiser/lib
+#lib/
 lib64/
 parts/
 sdist/

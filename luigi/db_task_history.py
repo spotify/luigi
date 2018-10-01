@@ -49,6 +49,7 @@ import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
+from sqlalchemy.engine import reflection
 Base = sqlalchemy.ext.declarative.declarative_base()
 
 logger = logging.getLogger('luigi-interface')
@@ -59,6 +60,8 @@ class DbTaskHistory(task_history.TaskHistory):
     Task History that writes to a database using sqlalchemy.
     Also has methods for useful db queries.
     """
+    CURRENT_SOURCE_VERSION = 1
+
     @contextmanager
     def _session(self, session=None):
         if session:
@@ -67,7 +70,7 @@ class DbTaskHistory(task_history.TaskHistory):
             session = self.session_factory()
             try:
                 yield session
-            except:
+            except BaseException:
                 session.rollback()
                 raise
             else:
@@ -81,28 +84,30 @@ class DbTaskHistory(task_history.TaskHistory):
         Base.metadata.create_all(self.engine)
         self.tasks = {}  # task_id -> TaskRecord
 
-    def task_scheduled(self, task_id):
-        task = self._get_task(task_id, status=PENDING)
-        self._add_task_event(task, TaskEvent(event_name=PENDING, ts=datetime.datetime.now()))
+        _upgrade_schema(self.engine)
 
-    def task_finished(self, task_id, successful):
+    def task_scheduled(self, task):
+        htask = self._get_task(task, status=PENDING)
+        self._add_task_event(htask, TaskEvent(event_name=PENDING, ts=datetime.datetime.now()))
+
+    def task_finished(self, task, successful):
         event_name = DONE if successful else FAILED
-        task = self._get_task(task_id, status=event_name)
-        self._add_task_event(task, TaskEvent(event_name=event_name, ts=datetime.datetime.now()))
+        htask = self._get_task(task, status=event_name)
+        self._add_task_event(htask, TaskEvent(event_name=event_name, ts=datetime.datetime.now()))
 
-    def task_started(self, task_id, worker_host):
-        task = self._get_task(task_id, status=RUNNING, host=worker_host)
-        self._add_task_event(task, TaskEvent(event_name=RUNNING, ts=datetime.datetime.now()))
+    def task_started(self, task, worker_host):
+        htask = self._get_task(task, status=RUNNING, host=worker_host)
+        self._add_task_event(htask, TaskEvent(event_name=RUNNING, ts=datetime.datetime.now()))
 
-    def _get_task(self, task_id, status, host=None):
-        if task_id in self.tasks:
-            task = self.tasks[task_id]
-            task.status = status
+    def _get_task(self, task, status, host=None):
+        if task.id in self.tasks:
+            htask = self.tasks[task.id]
+            htask.status = status
             if host:
-                task.host = host
+                htask.host = host
         else:
-            task = self.tasks[task_id] = task_history.Task(task_id, status, host)
-        return task
+            htask = self.tasks[task.id] = task_history.StoredTask(task, status, host)
+        return htask
 
     def _add_task_event(self, task, event):
         for (task_record, session) in self._find_or_create_task(task):
@@ -117,7 +122,7 @@ class DbTaskHistory(task_history.TaskHistory):
                     raise Exception("Task with record_id, but no matching Task record!")
                 yield (task_record, session)
             else:
-                task_record = TaskRecord(name=task.task_family, host=task.host)
+                task_record = TaskRecord(task_id=task._task.id, name=task.task_family, host=task.host)
                 for (k, v) in six.iteritems(task.parameters):
                     task_record.parameters[k] = TaskParameter(name=k, value=v)
                 session.add(task_record)
@@ -131,10 +136,17 @@ class DbTaskHistory(task_history.TaskHistory):
         Find tasks with the given task_name and the same parameters as the kwargs.
         """
         with self._session(session) as session:
-            tasks = session.query(TaskRecord).join(TaskEvent).filter(TaskRecord.name == task_name).order_by(TaskEvent.ts).all()
+            query = session.query(TaskRecord).join(TaskEvent).filter(TaskRecord.name == task_name)
+            for (k, v) in six.iteritems(task_params):
+                alias = sqlalchemy.orm.aliased(TaskParameter)
+                query = query.join(alias).filter(alias.name == k, alias.value == v)
+
+            tasks = query.order_by(TaskEvent.ts)
             for task in tasks:
-                if all(k in task.parameters and v == str(task.parameters[k].value) for (k, v) in six.iteritems(task_params)):
-                    yield task
+                # Sanity check
+                assert all(k in task.parameters and v == str(task.parameters[k].value) for (k, v) in six.iteritems(task_params))
+
+                yield task
 
     def find_all_by_name(self, task_name, session=None):
         """
@@ -184,7 +196,7 @@ class TaskParameter(Base):
     __tablename__ = 'task_parameters'
     task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'), primary_key=True)
     name = sqlalchemy.Column(sqlalchemy.String(128), primary_key=True)
-    value = sqlalchemy.Column(sqlalchemy.String(256))
+    value = sqlalchemy.Column(sqlalchemy.Text())
 
     def __repr__(self):
         return "TaskParameter(task_id=%d, name=%s, value=%s)" % (self.task_id, self.name, self.value)
@@ -196,7 +208,7 @@ class TaskEvent(Base):
     """
     __tablename__ = 'task_events'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
-    task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'))
+    task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'), index=True)
     event_name = sqlalchemy.Column(sqlalchemy.String(20))
     ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP, index=True, nullable=False)
 
@@ -212,6 +224,7 @@ class TaskRecord(Base):
     """
     __tablename__ = 'tasks'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
+    task_id = sqlalchemy.Column(sqlalchemy.String(200), index=True)
     name = sqlalchemy.Column(sqlalchemy.String(128), index=True)
     host = sqlalchemy.Column(sqlalchemy.String(128))
     parameters = sqlalchemy.orm.relationship(
@@ -225,3 +238,44 @@ class TaskRecord(Base):
 
     def __repr__(self):
         return "TaskRecord(name=%s, host=%s)" % (self.name, self.host)
+
+
+def _upgrade_schema(engine):
+    """
+    Ensure the database schema is up to date with the codebase.
+
+    :param engine: SQLAlchemy engine of the underlying database.
+    """
+    inspector = reflection.Inspector.from_engine(engine)
+    with engine.connect() as conn:
+
+        # Upgrade 1.  Add task_id column and index to tasks
+        if 'task_id' not in [x['name'] for x in inspector.get_columns('tasks')]:
+            logger.warning('Upgrading DbTaskHistory schema: Adding tasks.task_id')
+            conn.execute('ALTER TABLE tasks ADD COLUMN task_id VARCHAR(200)')
+            conn.execute('CREATE INDEX ix_task_id ON tasks (task_id)')
+
+        # Upgrade 2. Alter value column to be TEXT, note that this is idempotent so no if-guard
+        if 'mysql' in engine.dialect.name:
+            conn.execute('ALTER TABLE task_parameters MODIFY COLUMN value TEXT')
+        elif 'oracle' in engine.dialect.name:
+            conn.execute('ALTER TABLE task_parameters MODIFY value TEXT')
+        elif 'mssql' in engine.dialect.name:
+            conn.execute('ALTER TABLE task_parameters ALTER COLUMN value TEXT')
+        elif 'postgresql' in engine.dialect.name:
+            conn.execute('ALTER TABLE task_parameters ALTER COLUMN value TYPE TEXT')
+        elif 'sqlite' in engine.dialect.name:
+            # SQLite does not support changing column types. A database file will need
+            # to be used to pickup this migration change.
+            for i in conn.execute('PRAGMA table_info(task_parameters);').fetchall():
+                if i['name'] == 'value' and i['type'] != 'TEXT':
+                    logger.warning(
+                        'SQLite can not change column types. Please use a new database '
+                        'to pickup column type changes.'
+                    )
+        else:
+            logger.warning(
+                'SQLAlcheny dialect {} could not be migrated to the TEXT type'.format(
+                    engine.dialect
+                )
+            )

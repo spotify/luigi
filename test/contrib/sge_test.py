@@ -21,9 +21,10 @@ import os.path
 from glob import glob
 import unittest
 import logging
+from mock import patch
 
 import luigi
-from luigi.contrib.sge import SGEJobTask, _parse_qstat_state, _clean_task_id
+from luigi.contrib.sge import SGEJobTask, _parse_qstat_state
 
 DEFAULT_HOME = '/home'
 
@@ -56,11 +57,6 @@ class TestSGEWrappers(unittest.TestCase):
         self.assertEqual(_parse_qstat_state('', 1), 'u')
         self.assertEqual(_parse_qstat_state('', 4), 'u')
 
-    def test_clean_task_id(self):
-        task_id = 'SomeTask(param_1=0, param_2=/path/to/file)'
-        cleaned_id = 'SomeTask-param_1-0--param_2--path-to-file-'
-        self.assertEqual(_clean_task_id(task_id), cleaned_id)
-
 
 class TestJobTask(SGEJobTask):
 
@@ -88,13 +84,19 @@ class TestSGEJob(unittest.TestCase):
             luigi.build(tasks, local_scheduler=True, workers=3)
             self.assertTrue(os.path.exists(outfile))
 
+    @patch('subprocess.check_output')
+    def test_run_job_with_dump(self, mock_check_output):
+        mock_check_output.side_effect = [
+            'Your job 12345 ("test_job") has been submitted',
+            ''
+        ]
+        task = TestJobTask(i=1, n_cpu=1, shared_tmp_dir='/tmp')
+        luigi.build([task], local_scheduler=True)
+        self.assertEqual(mock_check_output.call_count, 2)
+
     def tearDown(self):
         for fpath in glob(os.path.join(DEFAULT_HOME, 'test_file_*')):
             try:
                 os.remove(fpath)
             except OSError:
                 pass
-
-
-if __name__ == '__main__':
-    unittest.main()

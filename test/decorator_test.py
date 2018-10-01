@@ -53,9 +53,14 @@ class D_null(luigi.Task):
     param1 = None
 
 
+@inherits(A, B)
+class E(luigi.Task):
+    param4 = luigi.Parameter("class E-specific default")
+
+
 @inherits(A)
 @inherits(B)
-class E(luigi.Task):
+class E_stacked(luigi.Task):
     param4 = luigi.Parameter("class E-specific default")
 
 
@@ -69,6 +74,7 @@ class InheritTest(unittest.TestCase):
         self.d = D()
         self.d_null = D_null()
         self.e = E()
+        self.e_stacked = E_stacked()
 
     def test_has_param(self):
         b_params = dict(self.b.get_params()).keys()
@@ -91,10 +97,21 @@ class InheritTest(unittest.TestCase):
         self.assertNotEqual(self.d.param1, self.a.param1)
         self.assertEqual(self.d.param1, "class D overwriting class A's default")
 
-    def test_stacked_inheritance(self):
+    def test_multiple_inheritance(self):
         self.assertEqual(self.e.param1, self.a.param1)
         self.assertEqual(self.e.param1, self.b.param1)
         self.assertEqual(self.e.param2, self.b.param2)
+
+    def test_stacked_inheritance(self):
+        self.assertEqual(self.e_stacked.param1, self.a.param1)
+        self.assertEqual(self.e_stacked.param1, self.b.param1)
+        self.assertEqual(self.e_stacked.param2, self.b.param2)
+
+    def test_empty_inheritance(self):
+        with self.assertRaises(TypeError):
+            @inherits()
+            class shouldfail(luigi.Task):
+                pass
 
     def test_removing_parameter(self):
         self.assertFalse("param1" in dict(self.d_null.get_params()).keys())
@@ -133,7 +150,7 @@ class H_null(luigi.Task):
 
 
 @inherits(G)
-class I(luigi.Task):
+class I_task(luigi.Task):
 
     def requires(self):
         return F(**common_params(self, F))
@@ -183,7 +200,7 @@ class RequiresTest(unittest.TestCase):
         self.g_changed = G(param1="changing the default")
         self.h = H()
         self.h_null = H_null()
-        self.i = I()
+        self.i = I_task()
         self.k_shouldfail = K_shouldfail()
         self.k_shouldsucceed = K_shouldsucceed()
         self.k_wrongparamsorder = K_wrongparamsorder()
@@ -226,64 +243,75 @@ class RequiresTest(unittest.TestCase):
         self.assertRaises(TypeError, self.k_wrongparamsorder.requires)
 
 
-class X(luigi.Task):
+class V(luigi.Task):
     n = luigi.IntParameter(default=42)
 
 
-@inherits(X)
-class Y(luigi.Task):
+@inherits(V)
+class W(luigi.Task):
 
     def requires(self):
         return self.clone_parent()
 
 
-@requires(X)
-class Y2(luigi.Task):
+@requires(V)
+class W2(luigi.Task):
     pass
 
 
-@inherits(X)
-class Z(luigi.Task):
-    n = None
-
-    def requires(self):
-        return self.clone_parent()
-
-
-@requires(X)
-class Y3(luigi.Task):
+@requires(V)
+class W3(luigi.Task):
     n = luigi.IntParameter(default=43)
+
+
+class X(luigi.Task):
+    m = luigi.IntParameter(default=56)
+
+
+@requires(V, X)
+class Y(luigi.Task):
+    pass
 
 
 class CloneParentTest(unittest.TestCase):
 
     def test_clone_parent(self):
-        y = Y()
-        x = X()
-        self.assertEqual(y.requires(), x)
-        self.assertEqual(y.n, 42)
-
-        z = Z()
-        self.assertEqual(z.requires(), x)
+        w = W()
+        v = V()
+        self.assertEqual(w.requires(), v)
+        self.assertEqual(w.n, 42)
 
     def test_requires(self):
-        y2 = Y2()
-        x = X()
-        self.assertEqual(y2.requires(), x)
-        self.assertEqual(y2.n, 42)
+        w2 = W2()
+        v = V()
+        self.assertEqual(w2.requires(), v)
+        self.assertEqual(w2.n, 42)
 
     def test_requires_override_default(self):
-        y3 = Y3()
+        w3 = W3()
+        v = V()
+        self.assertNotEqual(w3.requires(), v)
+        self.assertEqual(w3.n, 43)
+        self.assertEqual(w3.requires().n, 43)
+
+    def test_multiple_requires(self):
+        y = Y()
+        v = V()
         x = X()
-        self.assertNotEqual(y3.requires(), x)
-        self.assertEqual(y3.n, 43)
-        self.assertEqual(y3.requires().n, 43)
+        self.assertEqual(y.requires()[0], v)
+        self.assertEqual(y.requires()[1], x)
+
+    def test_empty_requires(self):
+        with self.assertRaises(TypeError):
+            @requires()
+            class shouldfail(luigi.Task):
+                pass
 
     def test_names(self):
         # Just make sure the decorators retain the original class names
-        x = X()
-        self.assertEqual(str(x), 'X(n=42)')
-        self.assertEqual(x.__class__.__name__, 'X')
+        v = V()
+        self.assertEqual(str(v), 'V(n=42)')
+        self.assertEqual(v.__class__.__name__, 'V')
 
 
 class P(luigi.Task):
@@ -365,7 +393,3 @@ class SubtaskTest(unittest.TestCase):
         # the same name
         from luigi.task import Register
         self.assertEqual(Register.get_task_cls('SubtaskDelegator'), SubtaskDelegator)
-
-
-if __name__ == '__main__':
-    unittest.main()

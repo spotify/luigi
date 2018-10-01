@@ -13,17 +13,16 @@
 # the License.
 
 import os
+import sys
 
-try:
-    from setuptools import setup
-except:
-    from distutils.core import setup
+from setuptools import setup
 
 
 def get_static_files(path):
     return [os.path.join(dirpath.replace("luigi/", ""), ext)
             for (dirpath, dirnames, filenames) in os.walk(path)
-            for ext in ["*.html", "*.js", "*.css", "*.png"]]
+            for ext in ["*.html", "*.js", "*.css", "*.png",
+                        "*.eot", "*.svg", "*.ttf", "*.woff", "*.woff2"]]
 
 
 luigi_package_data = sum(map(get_static_files, ["luigi/static", "luigi/templates"]), [])
@@ -39,27 +38,32 @@ with open('README.rst') as fobj:
     long_description = readme_note + fobj.read()
 
 install_requires = [
-    'cached_property<2.0',
-    'pyparsing<3.0',
-    'tornado<5.0',
-    'python-daemon<3.0',
+    'tornado>=4.0,<5',
+    # https://pagure.io/python-daemon/issue/18
+    'python-daemon<2.2.0',
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
-    install_requires.append('sqlalchemy')
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
+    install_requires.append('sqlalchemy')
+    # readthedocs don't like python-daemon, see #1342
+    install_requires.remove('python-daemon<3.0')
+    install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
+
+if sys.version_info < (3, 4):
+    install_requires.append('enum34>1.1.0')
 
 setup(
     name='luigi',
-    version='1.3.0',
+    version='2.7.9',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
-    author='Erik Bernhardsson',
-    author_email='erikbern@spotify.com',
+    author='The Luigi Authors',
     url='https://github.com/spotify/luigi',
     license='Apache License 2.0',
     packages=[
         'luigi',
+        'luigi.configuration',
         'luigi.contrib',
         'luigi.contrib.hdfs',
         'luigi.tools'
@@ -73,9 +77,13 @@ setup(
             'luigid = luigi.cmdline:luigid',
             'luigi-grep = luigi.tools.luigi_grep:main',
             'luigi-deps = luigi.tools.deps:main',
+            'luigi-deps-tree = luigi.tools.deps_tree:main'
         ]
     },
     install_requires=install_requires,
+    extras_require={
+        'toml': ['toml<2.0.0'],
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
@@ -86,6 +94,9 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: System :: Monitoring',
     ],
 )

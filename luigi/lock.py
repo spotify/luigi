@@ -21,8 +21,11 @@ This prevents multiple identical workflows to be launched simultaneously.
 """
 from __future__ import print_function
 
+import errno
 import hashlib
 import os
+import sys
+from subprocess import Popen, PIPE
 
 from luigi import six
 
@@ -33,9 +36,47 @@ def getpcmd(pid):
 
     :param pid:
     """
-    cmd = 'ps -p %s -o command=' % (pid,)
-    with os.popen(cmd, 'r') as p:
-        return p.readline().strip()
+    if os.name == "nt":
+        # Use wmic command instead of ps on Windows.
+        cmd = 'wmic path win32_process where ProcessID=%s get Commandline 2> nul' % (pid, )
+        with os.popen(cmd, 'r') as p:
+            lines = [line for line in p.readlines() if line.strip("\r\n ") != ""]
+            if lines:
+                _, val = lines
+                return val
+    elif sys.platform == "darwin":
+        # Use pgrep instead of /proc on macOS.
+        pidfile = ".%d.pid" % (pid, )
+        with open(pidfile, 'w') as f:
+            f.write(str(pid))
+        try:
+            p = Popen(['pgrep', '-lf', '-F', pidfile], stdout=PIPE)
+            stdout, _ = p.communicate()
+            line = stdout.decode('utf8').strip()
+            if line:
+                _, scmd = line.split(' ', 1)
+                return scmd
+        finally:
+            os.unlink(pidfile)
+    else:
+        # Use the /proc filesystem
+        # At least on android there have been some issues with not all
+        # process infos being readable. In these cases using the `ps` command
+        # worked. See the pull request at
+        # https://github.com/spotify/luigi/pull/1876
+        try:
+            with open('/proc/{0}/cmdline'.format(pid), 'r') as fh:
+                if six.PY3:
+                    return fh.read().replace('\0', ' ').rstrip()
+                else:
+                    return fh.read().replace('\0', ' ').decode('utf8').rstrip()
+        except IOError:
+            # the system may not allow reading the command line
+            # of a process owned by another user
+            pass
+
+    # Fallback instead of None, for e.g. Cygwin where -o is an "unknown option" for the ps command:
+    return '[PROCESS_WITH_PID={}]'.format(pid)
 
 
 def get_info(pid_dir, my_pid=None):
@@ -44,12 +85,7 @@ def get_info(pid_dir, my_pid=None):
         my_pid = os.getpid()
 
     my_cmd = getpcmd(my_pid)
-
-    if six.PY3:
-        cmd_hash = my_cmd.encode('utf8')
-    else:
-        cmd_hash = my_cmd
-
+    cmd_hash = my_cmd.encode('utf8')
     pid_file = os.path.join(pid_dir, hashlib.md5(cmd_hash).hexdigest()) + '.pid'
 
     return my_pid, my_cmd, pid_file
@@ -67,42 +103,64 @@ def acquire_for(pid_dir, num_available=1, kill_signal=None):
 
     my_pid, my_cmd, pid_file = get_info(pid_dir)
 
-    # Check if there is a pid file corresponding to this name
-    if not os.path.exists(pid_dir):
+    # Create a pid file if it does not exist
+    try:
         os.mkdir(pid_dir)
         os.chmod(pid_dir, 0o777)
-
-    pids = set()
-    pid_cmds = {}
-    if os.path.exists(pid_file):
-        # There is such a file - read the pid and look up its process name
-        pids.update(filter(None, map(str.strip, open(pid_file))))
-        pid_cmds = dict((pid, getpcmd(pid)) for pid in pids)
-        matching_pids = list(filter(lambda pid: pid_cmds[pid] == my_cmd, pids))
-
-        if kill_signal is not None:
-            for pid in map(int, matching_pids):
-                os.kill(pid, kill_signal)
-        elif len(matching_pids) >= num_available:
-            # We are already running under a different pid
-            print('Pid(s)', ', '.join(matching_pids), 'already running')
-            return False
-        else:
-            # The pid belongs to something else, we could
-            pass
-    pid_cmds[str(my_pid)] = my_cmd
-
-    # Write pids
-    pids.add(str(my_pid))
-    with open(pid_file, 'w') as f:
-        f.writelines('%s\n' % (pid, ) for pid in filter(pid_cmds.__getitem__, pids))
-
-    # Make the file writable by all
-    if os.name == 'nt':
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
         pass
-    else:
+
+    # Let variable "pids" be all pids who exist in the .pid-file who are still
+    # about running the same command.
+    pids = {pid for pid in _read_pids_file(pid_file) if getpcmd(pid) == my_cmd}
+
+    if kill_signal is not None:
+        for pid in pids:
+            os.kill(pid, kill_signal)
+        print('Sent kill signal to Pids: {}'.format(pids))
+        # We allow for the killer to progress, yet we don't want these to stack
+        # up! So we only allow it once.
+        num_available += 1
+
+    if len(pids) >= num_available:
+        # We are already running under a different pid
+        print('Pid(s) {} already running'.format(pids))
+        if kill_signal is not None:
+            print('Note: There have (probably) been 1 other "--take-lock"'
+                  ' process which continued to run! Probably no need to run'
+                  ' this one as well.')
+        return False
+
+    _write_pids_file(pid_file, pids | {my_pid})
+
+    return True
+
+
+def _read_pids_file(pid_file):
+    # First setup a python 2 vs 3 compatibility
+    # http://stackoverflow.com/a/21368622/621449
+    try:
+        FileNotFoundError
+    except NameError:
+        # Should only happen on python 2
+        FileNotFoundError = IOError
+    # If the file happen to not exist, simply return
+    # an empty set()
+    try:
+        with open(pid_file, 'r') as f:
+            return {int(pid_str.strip()) for pid_str in f if pid_str.strip()}
+    except FileNotFoundError:
+        return set()
+
+
+def _write_pids_file(pid_file, pids_set):
+    with open(pid_file, 'w') as f:
+        f.writelines('{}\n'.format(pid) for pid in pids_set)
+
+    # Make the .pid-file writable by all (when the os allows for it)
+    if os.name != 'nt':
         s = os.stat(pid_file)
         if os.getuid() == s.st_uid:
             os.chmod(pid_file, s.st_mode | 0o777)
-
-    return True

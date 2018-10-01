@@ -125,7 +125,8 @@ class DateInterval(object):
         if not isinstance(self, type(other)):
             # doing this because it's not well defined if eg. 2012-01-01-2013-01-01 == 2012
             raise TypeError('Date interval type mismatch')
-        return cmp((self.date_a, self.date_b), (other.date_a, other.date_b))
+
+        return (self > other) - (self < other)
 
     def __lt__(self, other):
         if not isinstance(self, type(other)):

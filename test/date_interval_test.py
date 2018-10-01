@@ -16,13 +16,13 @@
 #
 
 import datetime
-from helpers import unittest
+from helpers import LuigiTestCase, in_parse
 
 import luigi
 from luigi.parameter import DateIntervalParameter as DI
 
 
-class DateIntervalTest(unittest.TestCase):
+class DateIntervalTest(LuigiTestCase):
 
     def test_date(self):
         di = DI().parse('2012-01-01')
@@ -66,7 +66,7 @@ class DateIntervalTest(unittest.TestCase):
         self.assertEqual(di.dates(), [datetime.date(2012, 1, 1) + datetime.timedelta(i) for i in range(31)])
         self.assertRaises(NotImplementedError, di.next)
         self.assertRaises(NotImplementedError, di.prev)
-        self.assertEquals(di.to_string(), '2012-01-01-2012-02-01')
+        self.assertEqual(di.to_string(), '2012-01-01-2012-02-01')
 
     def test_exception(self):
         self.assertRaises(ValueError, DI().parse, 'xyz')
@@ -81,7 +81,7 @@ class DateIntervalTest(unittest.TestCase):
         d = DI().parse('2012')
         self.assertTrue(d == c)
         self.assertEqual(d, min(c, b))
-        self.assertEqual(3, len(set([a, b, c, d])))
+        self.assertEqual(3, len({a, b, c, d}))
 
     def test_comparison_different_types(self):
         x = DI().parse('2012')
@@ -98,27 +98,26 @@ class DateIntervalTest(unittest.TestCase):
         class MyTaskNoDefault(luigi.Task):
             di = DI()
 
-        task = luigi.interface._ArgParseInterface().parse(["MyTask"])[0]
-        self.assertEqual(task.di, month)
-        task = luigi.interface._ArgParseInterface().parse(["MyTask", "--di", "2012-10"])[0]
-        self.assertEqual(task.di, other)
+        self.assertEqual(MyTask().di, month)
+        in_parse(["MyTask", "--di", "2012-10"],
+                 lambda task: self.assertEqual(task.di, other))
         task = MyTask(month)
         self.assertEqual(task.di, month)
         task = MyTask(di=month)
         self.assertEqual(task.di, month)
         task = MyTask(other)
-        self.assertNotEquals(task.di, month)
+        self.assertNotEqual(task.di, month)
 
         def fail1():
-            luigi.interface._ArgParseInterface().parse(["MyTaskNoDefault"])[0]
+            return MyTaskNoDefault()
         self.assertRaises(luigi.parameter.MissingParameterException, fail1)
 
-        task = luigi.interface._ArgParseInterface().parse(["MyTaskNoDefault", "--di", "2012-10"])[0]
-        self.assertEqual(task.di, other)
+        in_parse(["MyTaskNoDefault", "--di", "2012-10"],
+                 lambda task: self.assertEqual(task.di, other))
 
     def test_hours(self):
         d = DI().parse('2015')
-        self.assertEquals(len(list(d.hours())), 24 * 365)
+        self.assertEqual(len(list(d.hours())), 24 * 365)
 
     def test_cmp(self):
         operators = [lambda x, y: x == y,
@@ -136,6 +135,6 @@ class DateIntervalTest(unittest.TestCase):
         for from_a, to_a, di_a in dates:
             for from_b, to_b, di_b in dates:
                 for op in operators:
-                    self.assertEquals(
+                    self.assertEqual(
                         op((from_a, to_a), (from_b, to_b)),
                         op(di_a, di_b))

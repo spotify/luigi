@@ -16,11 +16,13 @@
 #
 
 import datetime
+import getpass
 import os
 import posixpath
 import time
 import unittest
 
+import luigi.target
 from luigi import six
 from nose.plugins.attrib import attr
 
@@ -44,6 +46,13 @@ class TestSnakebiteClient(MiniClusterTestCase):
     def get_client(self):
         return SnakebiteHdfsClient()
 
+    """
+    This hdfs client is used for writing file to hdfs and
+    then getting merge of it using snakebite
+    """
+    def get_hdfs_client(self):
+        return luigi.contrib.hdfs.create_hadoopcli_client()
+
     def setUp(self):
         """ We override setUp because we want to also use snakebite for
         creating the testing directory.  """
@@ -57,6 +66,24 @@ class TestSnakebiteClient(MiniClusterTestCase):
     def tearDown(self):
         if self.snakebite.exists(self.testDir):
             self.snakebite.remove(self.testDir, True)
+
+    def test_get_merge(self):
+        hdfs_client = self.get_hdfs_client()
+        local_filename = "file2.dat"
+
+        target_dir = '/tmp/luigi_tmp_testdir_%s' % getpass.getuser()
+        local_target1 = luigi.LocalTarget(local_filename)
+        target1 = hdfs_client.put_file(local_target1, local_filename, target_dir)
+        self.assertTrue(target1.exists())
+
+        local_dir = "test/data"
+        local_copy_path = "%s/file.dat.cp" % (local_dir)
+        local_copy = luigi.LocalTarget(local_copy_path)
+        if local_copy.exists():
+            local_copy.remove()
+        self.snakebite.get_merge(target_dir, local_copy_path)
+        self.assertTrue(local_copy.exists())
+        local_copy.remove()
 
     def test_exists(self):
         self.assertTrue(self.snakebite.exists(self.testDir))
@@ -94,10 +121,11 @@ class TestSnakebiteClient(MiniClusterTestCase):
         self.assertTrue(self.snakebite.exists(foo))  # For sanity
         self.assertTrue(self.snakebite.exists(bar))  # For sanity
 
-        self.assertFalse(self.snakebite.rename_dont_move(foo, bar))
+        self.assertRaises(luigi.target.FileAlreadyExists,
+                          lambda: self.snakebite.rename_dont_move(foo, bar))
         self.assertTrue(self.snakebite.exists(foo))
         self.assertTrue(self.snakebite.exists(bar))
 
-        self.assertTrue(self.snakebite.rename_dont_move(foo, foo + '2'))
+        self.snakebite.rename_dont_move(foo, foo + '2')
         self.assertFalse(self.snakebite.exists(foo))
         self.assertTrue(self.snakebite.exists(foo + '2'))

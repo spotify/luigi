@@ -28,6 +28,7 @@ try:
 except ImportError:
     from urllib.parse import urlsplit
 
+from luigi.contrib import gcp
 import luigi.target
 from luigi import six
 from luigi.six.moves import xrange
@@ -36,13 +37,12 @@ logger = logging.getLogger('luigi-interface')
 
 try:
     import httplib2
-    import oauth2client.client
 
     from googleapiclient import errors
     from googleapiclient import discovery
     from googleapiclient import http
 except ImportError:
-    logger.warning("Loading GCS module without the python packages googleapiclient & oauth2client. \
+    logger.warning("Loading GCS module without the python packages googleapiclient & google-auth. \
         This will crash at runtime if GCS functionality is used.")
 else:
     # Retry transport and file IO errors.
@@ -52,7 +52,7 @@ else:
 NUM_RETRIES = 5
 
 # Number of bytes to send/receive in each request.
-CHUNKSIZE = 2 * 1024 * 1024
+CHUNKSIZE = 10 * 1024 * 1024
 
 # Mimetype to use if one can't be guessed from the file extension.
 DEFAULT_MIMETYPE = 'application/octet-stream'
@@ -89,13 +89,16 @@ class GCSClient(luigi.target.FileSystem):
 
        There are several ways to use this class. By default it will use the app
        default credentials, as described at https://developers.google.com/identity/protocols/application-default-credentials .
-       Alternatively, you may pass an oauth2client credentials object. e.g. to use a service account::
+       Alternatively, you may pass an google-auth credentials object. e.g. to use a service account::
 
-         credentials = oauth2client.client.SignedJwtAssertionCredentials(
+         credentials = google.auth.jwt.Credentials.from_service_account_info(
              '012345678912-ThisIsARandomServiceAccountEmail@developer.gserviceaccount.com',
              'These are the contents of the p12 file that came with the service account',
              scope='https://www.googleapis.com/auth/devstorage.read_write')
          client = GCSClient(oauth_credentials=credentails)
+
+        The chunksize parameter specifies how much data to transfer when downloading
+        or uploading files.
 
     .. warning::
       By default this class will use "automated service discovery" which will require
@@ -104,16 +107,19 @@ class GCSClient(luigi.target.FileSystem):
       contents of this file (currently found at https://www.googleapis.com/discovery/v1/apis/storage/v1/rest )
       as the ``descriptor`` argument.
     """
-    def __init__(self, oauth_credentials=None, descriptor='', http_=None):
-        http_ = http_ or httplib2.Http()
+    def __init__(self, oauth_credentials=None, descriptor='', http_=None,
+                 chunksize=CHUNKSIZE, **discovery_build_kwargs):
+        self.chunksize = chunksize
+        authenticate_kwargs = gcp.get_authenticate_kwargs(oauth_credentials, http_)
 
-        if not oauth_credentials:
-            oauth_credentials = oauth2client.client.GoogleCredentials.get_application_default()
+        build_kwargs = authenticate_kwargs.copy()
+        build_kwargs.update(discovery_build_kwargs)
 
         if descriptor:
-            self.client = discovery.build_from_document(descriptor, credentials=oauth_credentials, http=http_)
+            self.client = discovery.build_from_document(descriptor, **build_kwargs)
         else:
-            self.client = discovery.build('storage', 'v1', credentials=oauth_credentials, http=http_)
+            build_kwargs.setdefault('cache_discovery', False)
+            self.client = discovery.build('storage', 'v1', **build_kwargs)
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, _, _) = urlsplit(path)
@@ -238,13 +244,43 @@ class GCSClient(luigi.target.FileSystem):
 
         return False
 
-    def put(self, filename, dest_path, mimetype=None):
+    def put(self, filename, dest_path, mimetype=None, chunksize=None):
+        chunksize = chunksize or self.chunksize
         resumable = os.path.getsize(filename) > 0
 
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE
-        media = http.MediaFileUpload(filename, mimetype, chunksize=CHUNKSIZE, resumable=resumable)
+        media = http.MediaFileUpload(filename, mimetype=mimetype, chunksize=chunksize, resumable=resumable)
 
         self._do_put(media, dest_path)
+
+    def _forward_args_to_put(self, kwargs):
+        return self.put(**kwargs)
+
+    def put_multiple(self, filepaths, remote_directory, mimetype=None, chunksize=None, num_process=1):
+        if isinstance(filepaths, str):
+            raise ValueError(
+                'filenames must be a list of strings. If you want to put a single file, '
+                'use the `put(self, filename, ...)` method'
+            )
+
+        put_kwargs_list = [
+            {
+                'filename': filepath,
+                'dest_path': os.path.join(remote_directory, os.path.basename(filepath)),
+                'mimetype': mimetype,
+                'chunksize': chunksize,
+            }
+            for filepath in filepaths
+        ]
+
+        if num_process > 1:
+            from multiprocessing import Pool
+            from contextlib import closing
+            with closing(Pool(num_process)) as p:
+                return p.map(self._forward_args_to_put, put_kwargs_list)
+        else:
+            for put_kwargs in put_kwargs_list:
+                self._forward_args_to_put(put_kwargs)
 
     def put_string(self, contents, dest_path, mimetype=None):
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE
@@ -298,16 +334,22 @@ class GCSClient(luigi.target.FileSystem):
                 body={}).execute()
             _wait_for_consistency(lambda: self._obj_exists(dest_bucket, dest_obj))
 
-    def rename(self, source_path, destination_path):
+    def rename(self, *args, **kwargs):
         """
-        Rename/move an object from one S3 location to another.
+        Alias for ``move()``
+        """
+        self.move(*args, **kwargs)
+
+    def move(self, source_path, destination_path):
+        """
+        Rename/move an object from one GCS location to another.
         """
         self.copy(source_path, destination_path)
         self.remove(source_path)
 
     def listdir(self, path):
         """
-        Get an iterable with S3 folder contents.
+        Get an iterable with GCS folder contents.
         Iterable contains paths relative to queried path.
         """
         bucket, obj = self._path_to_bucket_and_key(path)
@@ -320,7 +362,30 @@ class GCSClient(luigi.target.FileSystem):
         for it in self._list_iter(bucket, obj_prefix):
             yield self._add_path_delimiter(path) + it['name'][obj_prefix_len:]
 
-    def download(self, path):
+    def list_wildcard(self, wildcard_path):
+        """Yields full object URIs matching the given wildcard.
+
+        Currently only the '*' wildcard after the last path delimiter is supported.
+
+        (If we need "full" wildcard functionality we should bring in gsutil dependency with its
+        https://github.com/GoogleCloudPlatform/gsutil/blob/master/gslib/wildcard_iterator.py...)
+        """
+        path, wildcard_obj = wildcard_path.rsplit('/', 1)
+        assert '*' not in path, "The '*' wildcard character is only supported after the last '/'"
+        wildcard_parts = wildcard_obj.split('*')
+        assert len(wildcard_parts) == 2, "Only one '*' wildcard is supported"
+
+        for it in self.listdir(path):
+            if it.startswith(path + '/' + wildcard_parts[0]) and it.endswith(wildcard_parts[1]) and \
+                   len(it) >= len(path + '/' + wildcard_parts[0]) + len(wildcard_parts[1]):
+                yield it
+
+    def download(self, path, chunksize=None, chunk_callback=lambda _: False):
+        """Downloads the object contents to local file system.
+
+        Optionally stops after the first chunk for which chunk_callback returns True.
+        """
+        chunksize = chunksize or self.chunksize
         bucket, obj = self._path_to_bucket_and_key(path)
 
         with tempfile.NamedTemporaryFile(delete=False) as fp:
@@ -333,7 +398,7 @@ class GCSClient(luigi.target.FileSystem):
                 return return_fp
 
             request = self.client.objects().get_media(bucket=bucket, object=obj)
-            downloader = http.MediaIoBaseDownload(fp, request, chunksize=1024 * 1024)
+            downloader = http.MediaIoBaseDownload(fp, request, chunksize=chunksize)
 
             attempts = 0
             done = False
@@ -341,6 +406,8 @@ class GCSClient(luigi.target.FileSystem):
                 error = None
                 try:
                     _, done = downloader.next_chunk()
+                    if chunk_callback(fp):
+                        done = True
                 except errors.HttpError as err:
                     error = err
                     if err.resp.status < 500:
@@ -363,7 +430,12 @@ class GCSClient(luigi.target.FileSystem):
 class _DeleteOnCloseFile(io.FileIO):
     def close(self):
         super(_DeleteOnCloseFile, self).close()
-        os.remove(self.name)
+        try:
+            os.remove(self.name)
+        except OSError:
+            # Catch a potential threading race condition and also allow this
+            # method to be called multiple times.
+            pass
 
     def readable(self):
         return True
@@ -432,7 +504,7 @@ class GCSFlagTarget(GCSTarget):
 
     def __init__(self, path, format=None, client=None, flag='_SUCCESS'):
         """
-        Initializes a S3FlagTarget.
+        Initializes a GCSFlagTarget.
 
         :param path: the directory where the files are stored.
         :type path: str
@@ -445,9 +517,9 @@ class GCSFlagTarget(GCSTarget):
             format = luigi.format.get_default_format()
 
         if path[-1] != "/":
-            raise ValueError("S3FlagTarget requires the path to be to a "
+            raise ValueError("GCSFlagTarget requires the path to be to a "
                              "directory.  It must end with a slash ( / ).")
-        super(GCSFlagTarget, self).__init__(path)
+        super(GCSFlagTarget, self).__init__(path, format=format, client=client)
         self.format = format
         self.fs = client or GCSClient()
         self.flag = flag

@@ -24,7 +24,7 @@ Follow the directions in the gcloud tools to set up local credentials.
 from helpers import unittest
 try:
     import googleapiclient.errors
-    import oauth2client
+    import google.auth
 except ImportError:
     raise unittest.SkipTest('Unable to load googleapiclient module')
 import os
@@ -41,7 +41,7 @@ PROJECT_ID = os.environ.get('GCS_TEST_PROJECT_ID', 'your_project_id_here')
 BUCKET_NAME = os.environ.get('GCS_TEST_BUCKET', 'your_test_bucket_here')
 TEST_FOLDER = os.environ.get('TRAVIS_BUILD_ID', 'gcs_test_folder')
 
-CREDENTIALS = oauth2client.client.GoogleCredentials.get_application_default()
+CREDENTIALS, _ = google.auth.default()
 ATTEMPTED_BUCKET_CREATE = False
 
 
@@ -99,7 +99,7 @@ class GCSClientTest(_GCSBaseTestCase):
     def test_download(self):
         self.client.put_string('hello', bucket_url('test_download'))
         fp = self.client.download(bucket_url('test_download'))
-        self.assertEquals(b'hello', fp.read())
+        self.assertEqual(b'hello', fp.read())
 
     def test_rename(self):
         self.client.put_string('hello', bucket_url('test_rename_1'))
@@ -151,7 +151,28 @@ class GCSClientTest(_GCSBaseTestCase):
 
             self.client.put(fp.name, bucket_url('test_put_file'))
             self.assertTrue(self.client.exists(bucket_url('test_put_file')))
-            self.assertEquals(big, self.client.download(bucket_url('test_put_file')).read())
+            self.assertEqual(big, self.client.download(bucket_url('test_put_file')).read())
+
+    def test_put_file_multiproc(self):
+        temporary_fps = []
+        for _ in range(2):
+            fp = tempfile.NamedTemporaryFile(mode='wb')
+
+            lorem = b'Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt\n'
+            # Larger file than chunk size, fails with incorrect progress set up
+            big = lorem * 41943
+            fp.write(big)
+            fp.flush()
+            temporary_fps.append(fp)
+
+        filepaths = [f.name for f in temporary_fps]
+        self.client.put_multiple(filepaths, bucket_url(''), num_process=2)
+
+        for fp in temporary_fps:
+            basename = os.path.basename(fp.name)
+            self.assertTrue(self.client.exists(bucket_url(basename)))
+            self.assertEqual(big, self.client.download(bucket_url(basename)).read())
+            fp.close()
 
 
 @attr('gcloud')
@@ -159,3 +180,19 @@ class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
 
     def create_target(self, format=None):
         return gcs.GCSTarget(bucket_url(self.id()), format=format, client=self.client)
+
+    def test_close_twice(self):
+        # Ensure gcs._DeleteOnCloseFile().close() can be called multiple times
+        tgt = self.create_target()
+
+        with tgt.open('w') as dst:
+            dst.write('data')
+        assert dst.closed
+        dst.close()
+        assert dst.closed
+
+        with tgt.open() as src:
+            assert src.read().strip() == 'data'
+        assert src.closed
+        src.close()
+        assert src.closed

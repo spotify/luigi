@@ -22,6 +22,7 @@ import logging
 import os
 import pipes
 import random
+import warnings
 
 import luigi.contrib.hadoop
 import luigi.contrib.hdfs
@@ -51,7 +52,12 @@ def fix_paths(job):
                 logger.info('Using temp path: %s for path %s', y.path, x.path)
                 args.append(y.path)
         else:
-            args.append(str(x))
+            try:
+                # hopefully the target has a path to use
+                args.append(x.path)
+            except AttributeError:
+                # if there's no path then hope converting it to a string will work
+                args.append(str(x))
 
     return (tmp_files, args)
 
@@ -68,7 +74,11 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
     def __init__(self):
         pass
 
-    def run_job(self, job):
+    def run_job(self, job, tracking_url_callback=None):
+        if tracking_url_callback is not None:
+            warnings.warn("tracking_url_callback argument is deprecated, task.set_tracking_url is "
+                          "used instead.", DeprecationWarning)
+
         # TODO(jcrobak): libjars, files, etc. Can refactor out of
         # hadoop.HadoopJobRunner
         if not job.jar():
@@ -109,7 +119,7 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
                 raise HadoopJarJobError("job jar does not exist")
             arglist = hadoop_arglist
 
-        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist)
+        luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, job.set_tracking_url)
 
         for a, b in tmp_files:
             a.move(b)

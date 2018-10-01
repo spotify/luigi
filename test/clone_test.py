@@ -38,7 +38,8 @@ class LinearSum(luigi.Task):
             self.s = 0
         self.complete = lambda: True  # workaround since we don't write any output
 
-    complete = lambda self: False
+    def complete(self):
+        return False
 
     def f(self, x):
         return x
@@ -67,3 +68,20 @@ class CloneTest(unittest.TestCase):
         t = PowerSum(lo=42, hi=45, p=2)
         luigi.build([t], local_scheduler=True)
         self.assertEqual(t.s, 42 ** 2 + 43 ** 2 + 44 ** 2)
+
+    def test_inheritance_from_non_parameter(self):
+        """
+        Cloning can pull non-source-parameters from source to target parameter.
+        """
+
+        class SubTask(luigi.Task):
+            lo = 1
+
+            @property
+            def hi(self):
+                return 2
+
+        t1 = SubTask()
+        t2 = t1.clone(cls=LinearSum)
+        self.assertEqual(t2.lo, 1)
+        self.assertEqual(t2.hi, 2)

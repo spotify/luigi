@@ -27,7 +27,7 @@ import subprocess
 from helpers import unittest
 import target_test
 
-from luigi.contrib.ssh import RemoteContext, RemoteFileSystem, RemoteTarget
+from luigi.contrib.ssh import RemoteContext, RemoteFileSystem, RemoteTarget, RemoteCalledProcessError
 from luigi.target import MissingParentDirectory, FileAlreadyExists
 
 working_ssh_host = os.environ.get('SSH_TEST_HOST', 'localhost')
@@ -189,7 +189,15 @@ class TestRemoteFilesystem(unittest.TestCase):
         with self.target.open('w'):
             pass
 
-        self.assertEquals([self.target.path], list(self.fs.listdir(self.directory)))
+        self.assertEqual([self.target.path], list(self.fs.listdir(self.directory)))
+
+
+class TestGetAttrRecursion(unittest.TestCase):
+    def test_recursion_on_delete(self):
+        target = RemoteTarget("/etc/this/does/not/exist", working_ssh_host)
+        with self.assertRaises(RemoteCalledProcessError):
+            with target.open('w') as fh:
+                fh.write("test")
 
 
 class TestRemoteTargetAtomicity(unittest.TestCase, target_test.FileSystemTargetTestMixin):
@@ -238,6 +246,9 @@ class TestRemoteTargetAtomicity(unittest.TestCase, target_test.FileSystemTargetT
         f = open(self.local_file, 'r')
         file_content = f.read()
         self.assertEqual(file_content, 'hello')
+
+    test_move_on_fs = None  # ssh don't have move (yet?)
+    test_rename_dont_move_on_fs = None  # ssh don't have move (yet?)
 
 
 class TestRemoteTargetCreateDirectories(TestRemoteTargetAtomicity):

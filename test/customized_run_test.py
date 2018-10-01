@@ -37,11 +37,11 @@ class DummyTask(luigi.Task):
         return self.has_run
 
     def run(self):
-        logging.debug("%s - setting has_run", self.task_id)
+        logging.debug("%s - setting has_run", self)
         self.has_run = True
 
 
-class CustomizedLocalScheduler(luigi.scheduler.CentralPlannerScheduler):
+class CustomizedLocalScheduler(luigi.scheduler.Scheduler):
 
     def __init__(self, *args, **kwargs):
         super(CustomizedLocalScheduler, self).__init__(*args, **kwargs)
@@ -128,6 +128,3 @@ class CustomizedWorkerTest(unittest.TestCase):
         self.assertFalse(self.worker_scheduler_factory.worker.complete())
         luigi.run(['DummyTask', '--n', '4'], worker_scheduler_factory=self.worker_scheduler_factory)
         self.assertTrue(self.worker_scheduler_factory.worker.complete())
-
-if __name__ == '__main__':
-    unittest.main()

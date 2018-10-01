@@ -16,7 +16,7 @@
 # You fixed the bug and now you want to rerun it, including all it's upstream deps.
 #
 # To do that you run:
-#      bin/deps.py --module daily_module Aggregate --daily-param1 xxx --upstream Daily
+#      bin/deps.py --module daily_module Aggregate --daily-param1 xxx --upstream-family Daily
 #
 # This will output all the tasks on the dependency path between Daily and Aggregate. In
 # effect, this is how you find all upstream tasks for Aggregate. Now you can delete its
@@ -33,17 +33,21 @@
 # PYTHONPATH=$PYTHONPATH:/path/to/your/luigi/tasks bin/deps.py \
 # --module my.tasks  MyDownstreamTask
 # --downstream_task_param1 123456
-# [--upstream-task-family MyUpstreamTask]
+# [--upstream-family MyUpstreamTask]
 #
 
 
+from __future__ import print_function
 import luigi.interface
 from luigi.contrib.ssh import RemoteTarget
-from luigi.postgres import PostgresTarget
-from luigi.s3 import S3Target
+from luigi.contrib.postgres import PostgresTarget
+from luigi.contrib.s3 import S3Target
 from luigi.target import FileSystemTarget
 from luigi.task import flatten
 from luigi import parameter
+import sys
+from luigi.cmdline_parser import CmdlineParser
+import collections
 
 
 def get_task_requires(task):
@@ -63,9 +67,9 @@ def dfs_paths(start_task, goal_task_family, path=None):
 
 class upstream(luigi.task.Config):
     '''
-    Used to provide the parameter upstream-task-family
+    Used to provide the parameter upstream-family
     '''
-    family = parameter.Parameter(default=None)
+    family = parameter.OptionalParameter(default=None)
 
 
 def find_deps(task, upstream_task_family):
@@ -75,37 +79,53 @@ def find_deps(task, upstream_task_family):
 
     Returns all deps on all paths between task and upstream
     '''
-    return set([t for t in dfs_paths(task, upstream_task_family)])
+    return {t for t in dfs_paths(task, upstream_task_family)}
 
 
 def find_deps_cli():
     '''
     Finds all tasks on all paths from provided CLI task
     '''
-    interface = luigi.interface._DynamicArgParseInterface()
-    tasks = interface.parse()
-    task, = tasks
-    upstream_task_family = upstream().family
-    return find_deps(task, upstream_task_family)
+    cmdline_args = sys.argv[1:]
+    with CmdlineParser.global_instance(cmdline_args) as cp:
+        return find_deps(cp.get_task_obj(), upstream().family)
+
+
+def get_task_output_description(task_output):
+    '''
+    Returns a task's output as a string
+    '''
+    output_description = "n/a"
+
+    if isinstance(task_output, RemoteTarget):
+        output_description = "[SSH] {0}:{1}".format(task_output._fs.remote_context.host, task_output.path)
+    elif isinstance(task_output, S3Target):
+        output_description = "[S3] {0}".format(task_output.path)
+    elif isinstance(task_output, FileSystemTarget):
+        output_description = "[FileSystem] {0}".format(task_output.path)
+    elif isinstance(task_output, PostgresTarget):
+        output_description = "[DB] {0}:{1}".format(task_output.host, task_output.table)
+    else:
+        output_description = "to be determined"
+
+    return output_description
 
 
 def main():
     deps = find_deps_cli()
-    for d in deps:
-        task_name = d
-        task_output = u"n/a"
-        if isinstance(d.output(), RemoteTarget):
-            task_output = u"[SSH] {0}:{1}".format(d.output()._fs.remote_context.host, d.output().path)
-        elif isinstance(d.output(), S3Target):
-            task_output = u"[S3] {0}".format(d.output().path)
-        elif isinstance(d.output(), FileSystemTarget):
-            task_output = u"[FileSystem] {0}".format(d.output().path)
-        elif isinstance(d.output(), PostgresTarget):
-            task_output = u"[DB] {0}:{1}".format(d.output().host, d.output().table)
+    for task in deps:
+        task_output = task.output()
+
+        if isinstance(task_output, dict):
+            output_descriptions = [get_task_output_description(output) for label, output in task_output.items()]
+        elif isinstance(task_output, collections.Iterable):
+            output_descriptions = [get_task_output_description(output) for output in task_output]
         else:
-            task_output = "to be determined"
-        print(u"""   TASK: {0}
-                       : {1}""".format(task_name, task_output))
+            output_descriptions = [get_task_output_description(task_output)]
+
+        print("   TASK: {0}".format(task))
+        for desc in output_descriptions:
+            print("                       : {0}".format(desc))
 
 
 if __name__ == '__main__':

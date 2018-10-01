@@ -27,7 +27,7 @@ import unittest
 try:
     from snakebite.minicluster import MiniCluster
 except ImportError:
-    raise unittest.SkipTest('Snakebite not installed')
+    raise unittest.SkipTest('To use minicluster, snakebite must be installed.')
 
 
 @attr('minicluster')
@@ -41,9 +41,13 @@ class MiniClusterTestCase(unittest.TestCase):
     cluster = None
 
     @classmethod
+    def instantiate_cluster(cls):
+        return MiniCluster(None, nnport=50030)
+
+    @classmethod
     def setupClass(cls):
         if not cls.cluster:
-            cls.cluster = MiniCluster(None, nnport=50030)
+            cls.cluster = cls.instantiate_cluster()
         cls.cluster.mkdir("/tmp")
 
     @classmethod

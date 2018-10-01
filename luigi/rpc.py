@@ -19,7 +19,7 @@ Implementation of the REST interface between the workers and the server.
 rpc.py implements the client side of it, server.py implements the server side.
 See :doc:`/central_scheduler` for more info.
 """
-
+import os
 import json
 import logging
 import socket
@@ -30,8 +30,7 @@ from luigi.six.moves.urllib.request import urlopen
 from luigi.six.moves.urllib.error import URLError
 
 from luigi import configuration
-from luigi.scheduler import PENDING, Scheduler
-
+from luigi.scheduler import RPC_METHODS
 
 HAS_UNIX_SOCKET = True
 HAS_REQUESTS = True
@@ -82,14 +81,23 @@ class RequestsFetcher(object):
         from requests import exceptions as requests_exceptions
         self.raises = requests_exceptions.RequestException
         self.session = session
+        self.process_id = os.getpid()
+
+    def check_pid(self):
+        # if the process id change changed from when the session was created
+        # a new session needs to be setup since requests isn't multiprocessing safe.
+        if os.getpid() != self.process_id:
+            self.session = requests.Session()
+            self.process_id = os.getpid()
 
     def fetch(self, full_url, body, timeout):
+        self.check_pid()
         resp = self.session.get(full_url, data=body, timeout=timeout)
         resp.raise_for_status()
         return resp.text
 
 
-class RemoteScheduler(Scheduler):
+class RemoteScheduler(object):
     """
     Scheduler proxy object. Talks to a RemoteSchedulerResponder.
     """
@@ -106,109 +114,57 @@ class RemoteScheduler(Scheduler):
             connect_timeout = config.getfloat('core', 'rpc-connect-timeout', 10.0)
         self._connect_timeout = connect_timeout
 
+        self._rpc_retry_attempts = config.getint('core', 'rpc-retry-attempts', 3)
+        self._rpc_retry_wait = config.getint('core', 'rpc-retry-wait', 30)
+        self._rpc_log_retries = config.getboolean('core', 'rpc-log-retries', True)
+
         if HAS_REQUESTS:
             self._fetcher = RequestsFetcher(requests.Session())
         else:
             self._fetcher = URLLibFetcher()
 
     def _wait(self):
-        time.sleep(30)
+        if self._rpc_log_retries:
+            logger.info("Wait for %d seconds" % self._rpc_retry_wait)
+        time.sleep(self._rpc_retry_wait)
 
-    def _fetch(self, url_suffix, body, log_exceptions=True, attempts=3):
+    def _fetch(self, url_suffix, body):
         full_url = _urljoin(self._url, url_suffix)
         last_exception = None
         attempt = 0
-        while attempt < attempts:
+        while attempt < self._rpc_retry_attempts:
             attempt += 1
             if last_exception:
-                logger.info("Retrying...")
+                if self._rpc_log_retries:
+                    logger.info("Retrying attempt %r of %r (max)" % (attempt, self._rpc_retry_attempts))
                 self._wait()  # wait for a bit and retry
             try:
                 response = self._fetcher.fetch(full_url, body, self._connect_timeout)
                 break
             except self._fetcher.raises as e:
                 last_exception = e
-                if log_exceptions:
-                    logger.exception("Failed connecting to remote scheduler %r", self._url)
+                if self._rpc_log_retries:
+                    logger.warning("Failed connecting to remote scheduler %r", self._url,
+                                   exc_info=True)
                 continue
         else:
             raise RPCError(
                 "Errors (%d attempts) when connecting to remote scheduler %r" %
-                (attempts, self._url),
+                (self._rpc_retry_attempts, self._url),
                 last_exception
             )
         return response
 
-    def _request(self, url, data, log_exceptions=True, attempts=3):
+    def _request(self, url, data, attempts=3, allow_null=True):
         body = {'data': json.dumps(data)}
 
-        page = self._fetch(url, body, log_exceptions, attempts)
-        result = json.loads(page)
-        return result["response"]
+        for _ in range(attempts):
+            page = self._fetch(url, body)
+            response = json.loads(page)["response"]
+            if allow_null or response is not None:
+                return response
+        raise RPCError("Received null response from remote scheduler %r" % self._url)
 
-    def ping(self, worker):
-        # just one attemtps, keep-alive thread will keep trying anyway
-        self._request('/api/ping', {'worker': worker}, attempts=1)
 
-    def add_task(self, worker, task_id, status=PENDING, runnable=True,
-                 deps=None, new_deps=None, expl=None, resources=None, priority=0,
-                 family='', module=None, params=None, assistant=False):
-        self._request('/api/add_task', {
-            'task_id': task_id,
-            'worker': worker,
-            'status': status,
-            'runnable': runnable,
-            'deps': deps,
-            'new_deps': new_deps,
-            'expl': expl,
-            'resources': resources,
-            'priority': priority,
-            'family': family,
-            'module': module,
-            'params': params,
-            'assistant': assistant,
-        })
-
-    def get_work(self, worker, host=None, assistant=False):
-        return self._request(
-            '/api/get_work',
-            {'worker': worker, 'host': host, 'assistant': assistant},
-            log_exceptions=False,
-            attempts=1)
-
-    def graph(self):
-        return self._request('/api/graph', {})
-
-    def dep_graph(self, task_id):
-        return self._request('/api/dep_graph', {'task_id': task_id})
-
-    def inverse_dep_graph(self, task_id):
-        return self._request('/api/inverse_dep_graph', {'task_id': task_id})
-
-    def task_list(self, status, upstream_status, search=None):
-        return self._request('/api/task_list', {
-            'search': search,
-            'status': status,
-            'upstream_status': upstream_status,
-        })
-
-    def worker_list(self):
-        return self._request('/api/worker_list', {})
-
-    def task_search(self, task_str):
-        return self._request('/api/task_search', {'task_str': task_str})
-
-    def fetch_error(self, task_id):
-        return self._request('/api/fetch_error', {'task_id': task_id})
-
-    def add_worker(self, worker, info):
-        return self._request('/api/add_worker', {'worker': worker, 'info': info})
-
-    def update_resources(self, **resources):
-        return self._request('/api/update_resources', resources)
-
-    def prune(self):
-        return self._request('/api/prune', {})
-
-    def re_enable_task(self, task_id):
-        return self._request('/api/re_enable_task', {'task_id': task_id})
+for method_name, method in RPC_METHODS.items():
+    setattr(RemoteScheduler, method_name, method)

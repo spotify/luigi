@@ -2,7 +2,7 @@ Parameters
 ----------
 
 Parameters is the Luigi equivalent of creating a constructor for each Task.
-Luigi requires you to declare these parameters instantiating
+Luigi requires you to declare these parameters by instantiating
 :class:`~luigi.parameter.Parameter` objects on the class scope:
 
 .. code:: python
@@ -11,13 +11,13 @@ Luigi requires you to declare these parameters instantiating
         date = luigi.DateParameter(default=datetime.date.today())
         # ...
 
-By doing this, Luigi can do take care of all the boilerplate code that
+By doing this, Luigi can take care of all the boilerplate code that
 would normally be needed in the constructor.
 Internally, the DailyReport object can now be constructed by running
 ``DailyReport(datetime.date(2012, 5, 10))`` or just ``DailyReport()``.
 Luigi also creates a command line parser that automatically handles the
 conversion from strings to Python types.
-This way you can invoke the job on the command line eg. by passing ``--date 2012-15-10``.
+This way you can invoke the job on the command line eg. by passing ``--date 2012-05-10``.
 
 The parameters are all set to their values on the Task object instance,
 i.e.
@@ -25,7 +25,7 @@ i.e.
 .. code:: python
 
     d = DailyReport(datetime.date(2012, 5, 10))
-    print d.date
+    print(d.date)
 
 will return the same date that the object was constructed with.
 Same goes if you invoke Luigi on the command line.
@@ -46,7 +46,7 @@ parameters of the same values are not just equal, but the same instance:
     >>> import datetime
     >>> class DateTask(luigi.Task):
     ...   date = luigi.DateParameter()
-    ... 
+    ...
     >>> a = datetime.date(2014, 1, 21)
     >>> b = datetime.date(2014, 1, 21)
     >>> a is b
@@ -72,7 +72,7 @@ are not the same instance:
 
     >>> class DateTask2(DateTask):
     ...   other = luigi.Parameter(significant=False)
-    ... 
+    ...
     >>> c = DateTask2(date=a, other="foo")
     >>> d = DateTask2(date=b, other="bar")
     >>> c
@@ -88,6 +88,25 @@ are not the same instance:
     >>> hash(c) == hash(d)
     True
 
+Parameter visibility
+^^^^^^^^^^^^^^^^^^^^
+
+Using :class:`~luigi.parameter.ParameterVisibility` you can configure parameter visibility. By default, all
+parameters are public, but you can also set them hidden or private.
+
+.. code:: python
+
+    >>> import luigi
+    >>> from luigi.parameter import ParameterVisibility
+    
+    >>> luigi.Parameter(visibility=ParameterVisibility.PRIVATE)
+
+``ParameterVisibility.PUBLIC`` (default) - visible everywhere
+
+``ParameterVisibility.HIDDEN`` - ignored in WEB-view, but saved into database if save db_history is true
+
+``ParameterVisibility.PRIVATE`` - visible only inside task.
+
 Parameter types
 ^^^^^^^^^^^^^^^
 
@@ -98,14 +117,16 @@ subclasses of :class:`~luigi.parameter.Parameter`. There are a few of them, like
 :class:`~luigi.parameter.IntParameter`,
 :class:`~luigi.parameter.FloatParameter`, etc.
 
-Python is not a strongly typed language and you don't have to specify the types
+Python is not a statically typed language and you don't have to specify the types
 of any of your parameters.
 You can simply use the base class :class:`~luigi.parameter.Parameter` if you don't care.
 
-The reason you would use a subclass like :class:`~luigi.parameter.DateParameter` 
+The reason you would use a subclass like :class:`~luigi.parameter.DateParameter`
 is that Luigi needs to know its type for the command line interaction.
 That's how it knows how to convert a string provided on the command line to
 the corresponding type (i.e. datetime.date instead of a string).
+
+.. _Parameter-class-level-parameters:
 
 Setting parameter value for other classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -122,16 +143,16 @@ For instance, say you have classes TaskA and TaskB:
         y = luigi.Parameter()
 
 
-You can run ``TaskB`` on the command line: ``python script.py TaskB --y 42``.
+You can run ``TaskB`` on the command line: ``luigi TaskB --y 42``.
 But you can also set the class value of ``TaskA`` by running
-``python script.py TaskB --y 42 --TaskA-x 43``.
+``luigi TaskB --y 42 --TaskA-x 43``.
 This sets the value of ``TaskA.x`` to 43 on a *class* level.
 It is still possible to override it inside Python if you instantiate ``TaskA(x=44)``.
 
 All parameters can also be set from the configuration file.
 For instance, you can put this in the config:
 
-.. code:: console
+.. code:: ini
 
     [TaskA]
     x: 45
@@ -151,4 +172,3 @@ Parameters are resolved in the following order of decreasing priority:
 4. Any default value provided to the parameter (applies on a class level)
 
 See the :class:`~luigi.parameter.Parameter` class for more information.
-

@@ -24,21 +24,30 @@ import logging
 
 from luigi import six
 
-from luigi import task
-
 logger = logging.getLogger('luigi-interface')
 
 
-class Task(object):
+class StoredTask(object):
     """
     Interface for methods on TaskHistory
     """
 
-    def __init__(self, task_id, status, host=None):
-        self.task_family, self.parameters = task.id_to_name_and_params(task_id)
+    # TODO : do we need this task as distinct from luigi.scheduler.Task?
+    #        this only records host and record_id in addition to task parameters.
+
+    def __init__(self, task, status, host=None):
+        self._task = task
         self.status = status
         self.record_id = None
         self.host = host
+
+    @property
+    def task_family(self):
+        return self._task.family
+
+    @property
+    def parameters(self):
+        return self._task.params
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -48,15 +57,15 @@ class TaskHistory(object):
     """
 
     @abc.abstractmethod
-    def task_scheduled(self, task_id):
+    def task_scheduled(self, task):
         pass
 
     @abc.abstractmethod
-    def task_finished(self, task_id, successful):
+    def task_finished(self, task, successful):
         pass
 
     @abc.abstractmethod
-    def task_started(self, task_id, worker_host):
+    def task_started(self, task, worker_host):
         pass
 
     # TODO(erikbern): should web method (find_latest_runs etc) be abstract?
@@ -64,11 +73,11 @@ class TaskHistory(object):
 
 class NopHistory(TaskHistory):
 
-    def task_scheduled(self, task_id):
+    def task_scheduled(self, task):
         pass
 
-    def task_finished(self, task_id, successful):
+    def task_finished(self, task, successful):
         pass
 
-    def task_started(self, task_id, worker_host):
+    def task_started(self, task, worker_host):
         pass

@@ -16,9 +16,11 @@
 #
 """
 This module contains the bindings for command line integration and dynamic loading of tasks
+
+If you don't want to run luigi from the command line. You may use the methods
+defined in this module to programatically run luigi.
 """
 
-import argparse
 import logging
 import logging.config
 import os
@@ -35,20 +37,23 @@ from luigi import scheduler
 from luigi import task
 from luigi import worker
 from luigi import execution_summary
-from luigi.task_register import Register
+from luigi.cmdline_parser import CmdlineParser
 
 
-def setup_interface_logging(conf_file=None):
+def setup_interface_logging(conf_file='', level_name='DEBUG'):
     # use a variable in the function object to determine if it has run before
     if getattr(setup_interface_logging, "has_run", False):
         return
 
-    if conf_file is None:
+    if conf_file == '':
+        # no log config given, setup default logging
+        level = getattr(logging, level_name, logging.DEBUG)
+
         logger = logging.getLogger('luigi-interface')
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(level)
 
         stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setLevel(level)
 
         formatter = logging.Formatter('%(levelname)s: %(message)s')
         stream_handler.setFormatter(formatter)
@@ -73,7 +78,8 @@ class core(task.Config):
 
     local_scheduler = parameter.BoolParameter(
         default=False,
-        description='Use local scheduling')
+        description='Use an in-memory central scheduler. Useful for testing.',
+        always_in_help=True)
     scheduler_host = parameter.Parameter(
         default='localhost',
         description='Hostname of machine running remote scheduler',
@@ -83,7 +89,7 @@ class core(task.Config):
         description='Port of remote scheduler api process',
         config_path=dict(section='core', name='default-scheduler-port'))
     scheduler_url = parameter.Parameter(
-        default=None,
+        default='',
         description='Full path to remote scheduler',
         config_path=dict(section='core', name='default-scheduler-url'),
     )
@@ -103,23 +109,40 @@ class core(task.Config):
         default=1,
         description='Maximum number of parallel tasks to run')
     logging_conf_file = parameter.Parameter(
-        default=None,
+        default='',
         description='Configuration file for logging')
+    log_level = parameter.ChoiceParameter(
+        default='DEBUG',
+        choices=['NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        description="Default log level to use when logging_conf_file is not set")
     module = parameter.Parameter(
-        default=None,
-        description='Used for dynamic loading of modules')  # see _DynamicArgParseInterface
+        default='',
+        description='Used for dynamic loading of modules',
+        always_in_help=True)
     parallel_scheduling = parameter.BoolParameter(
         default=False,
         description='Use multiprocessing to do scheduling in parallel.')
+    parallel_scheduling_processes = parameter.IntParameter(
+        default=0,
+        description='The number of processes to use for scheduling in parallel.'
+                    ' By default the number of available CPUs will be used')
     assistant = parameter.BoolParameter(
         default=False,
         description='Run any task from the scheduler.')
+    help = parameter.BoolParameter(
+        default=False,
+        description='Show most common flags and all task-specific flags',
+        always_in_help=True)
+    help_all = parameter.BoolParameter(
+        default=False,
+        description='Show all command line flags',
+        always_in_help=True)
 
 
 class _WorkerSchedulerFactory(object):
 
     def create_local_scheduler(self):
-        return scheduler.CentralPlannerScheduler(prune_on_get_work=True)
+        return scheduler.Scheduler(prune_on_get_work=True, record_task_history=False)
 
     def create_remote_scheduler(self, url):
         return rpc.RemoteScheduler(url)
@@ -146,24 +169,24 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     # search for logging configuration path first on the command line, then
     # in the application config file
     logging_conf = env_params.logging_conf_file
-    if logging_conf is not None and not os.path.exists(logging_conf):
+    if logging_conf != '' and not os.path.exists(logging_conf):
         raise Exception(
             "Error: Unable to locate specified logging configuration file!"
         )
 
     if not configuration.get_config().getboolean(
             'core', 'no_configure_logging', False):
-        setup_interface_logging(logging_conf)
+        setup_interface_logging(logging_conf, env_params.log_level)
 
     kill_signal = signal.SIGUSR1 if env_params.take_lock else None
     if (not env_params.no_lock and
             not(lock.acquire_for(env_params.lock_pid_dir, env_params.lock_size, kill_signal))):
-        sys.exit(1)
+        raise PidLockAlreadyTakenExit()
 
     if env_params.local_scheduler:
         sch = worker_scheduler_factory.create_local_scheduler()
     else:
-        if env_params.scheduler_url is not None:
+        if env_params.scheduler_url != '':
             url = env_params.scheduler_url
         else:
             url = 'http://{host}:{port:d}/'.format(
@@ -172,138 +195,33 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
             )
         sch = worker_scheduler_factory.create_remote_scheduler(url=url)
 
-    w = worker_scheduler_factory.create_worker(
+    worker = worker_scheduler_factory.create_worker(
         scheduler=sch, worker_processes=env_params.workers, assistant=env_params.assistant)
 
     success = True
-    for t in tasks:
-        success &= w.add(t, env_params.parallel_scheduling)
     logger = logging.getLogger('luigi-interface')
-    logger.info('Done scheduling tasks')
-    if env_params.workers != 0:
-        success &= w.run()
-    w.stop()
-    logger.info(execution_summary.summary(w))
-    return success
+    with worker:
+        for t in tasks:
+            success &= worker.add(t, env_params.parallel_scheduling, env_params.parallel_scheduling_processes)
+        logger.info('Done scheduling tasks')
+        success &= worker.run()
+    logger.info(execution_summary.summary(worker))
+    return dict(success=success, worker=worker)
 
 
-def _add_task_parameters(parser, task_cls):
-    for param_name, param in task_cls.get_params():
-        param.add_to_cmdline_parser(parser, param_name, task_cls.task_family, glob=False)
-
-
-def _get_global_parameters():
-    seen_params = set()
-    for task_name, is_without_section, param_name, param in Register.get_all_params():
-        if param in seen_params:
-            continue
-        seen_params.add(param)
-        yield task_name, is_without_section, param_name, param
-
-
-def _add_global_parameters(parser):
-    for task_name, is_without_section, param_name, param in _get_global_parameters():
-        param.add_to_cmdline_parser(parser, param_name, task_name, glob=True, is_without_section=is_without_section)
-
-
-def _get_task_parameters(task_cls, args):
-    # Parse a str->str dict to the correct types
-    params = {}
-    for param_name, param in task_cls.get_params():
-        param.parse_from_args(param_name, task_cls.task_family, args, params)
-    return params
-
-
-def _set_global_parameters(args):
-    # Note that this is not side effect free
-    for task_name, is_without_section, param_name, param in _get_global_parameters():
-        param.set_global_from_args(param_name, task_name, args, is_without_section=is_without_section)
-
-
-class _ArgParseInterface(object):
+class PidLockAlreadyTakenExit(SystemExit):
     """
-    Takes the task as the command, with parameters specific to it.
+    The exception thrown by :py:func:`luigi.run`, when the lock file is inaccessible
     """
-
-    def parse_task(self, cmdline_args=None):
-        if cmdline_args is None:
-            cmdline_args = sys.argv[1:]
-
-        parser = argparse.ArgumentParser()
-
-        _add_global_parameters(parser)
-
-        # Parse global arguments and pull out the task name.
-        # We used to do this using subparsers+command, but some issues with
-        # argparse across different versions of Python (2.7.9) made it hard.
-        args, unknown = parser.parse_known_args(args=[a for a in cmdline_args if a != '--help'])
-        if len(unknown) == 0:
-            # In case it included a --help argument, run again
-            parser.parse_known_args(args=cmdline_args)
-            raise SystemExit('No task specified')
-
-        task_name = unknown[0]
-        task_cls = Register.get_task_cls(task_name)
-
-        # Add a subparser to parse task-specific arguments
-        subparsers = parser.add_subparsers(dest='command')
-        subparser = subparsers.add_parser(task_name)
-
-        # Add both task and global params here so that we can support both:
-        # test.py --global-param xyz Test --n 42
-        # test.py Test --n 42 --global-param xyz
-        _add_global_parameters(subparser)
-        _add_task_parameters(subparser, task_cls)
-
-        # Workaround for bug in argparse for Python 2.7.9
-        # See https://mail.python.org/pipermail/python-dev/2015-January/137699.html
-        subargs = parser.parse_args(args=cmdline_args)
-        for key, value in vars(subargs).items():
-            if value:  # Either True (for boolean args) or non-None (everything else)
-                setattr(args, key, value)
-
-        # Notice that this is not side effect free because it might set global params
-        _set_global_parameters(args)
-        task_params = _get_task_parameters(task_cls, args)
-
-        return [task_cls(**task_params)]
-
-    def parse(self, cmdline_args=None):
-        return self.parse_task(cmdline_args)
+    pass
 
 
-class _DynamicArgParseInterface(_ArgParseInterface):
-    """
-    Uses --module as a way to load modules dynamically
-
-    Usage:
-
-    .. code-block:: console
-
-        python whatever.py --module foo_module FooTask --blah xyz --x 123
-
-    This will dynamically import foo_module and then try to create FooTask from this.
-    """
-
-    def parse(self, cmdline_args=None):
-        if cmdline_args is None:
-            cmdline_args = sys.argv[1:]
-
-        parser = argparse.ArgumentParser()
-
-        _add_global_parameters(parser)
-
-        args, unknown = parser.parse_known_args(args=[a for a in cmdline_args if a != '--help'])
-        module = args.module
-
-        if module:
-            __import__(module)
-
-        return self.parse_task(cmdline_args)
+def run(*args, **kwargs):
+    return _run(*args, **kwargs)['success']
 
 
-def run(cmdline_args=None, main_task_cls=None,
-        worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
+def _run(cmdline_args=None, main_task_cls=None,
+         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
     """
     Please dont use. Instead use `luigi` binary.
 
@@ -321,14 +239,13 @@ def run(cmdline_args=None, main_task_cls=None,
     if cmdline_args is None:
         cmdline_args = sys.argv[1:]
 
-    interface = _DynamicArgParseInterface()
-
     if main_task_cls:
         cmdline_args.insert(0, main_task_cls.task_family)
     if local_scheduler:
-        cmdline_args.insert(0, '--local-scheduler')
-    tasks = interface.parse(cmdline_args)
-    return _schedule_and_run(tasks, worker_scheduler_factory)
+        cmdline_args.append('--local-scheduler')
+
+    with CmdlineParser.global_instance(cmdline_args) as cp:
+        return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory)
 
 
 def build(tasks, worker_scheduler_factory=None, **env_params):
@@ -354,4 +271,4 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
 
-    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)
+    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)['success']

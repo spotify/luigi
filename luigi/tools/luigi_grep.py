@@ -36,7 +36,7 @@ class LuigiGrep(object):
         return {"name": job, "status": job_info['status'], "deps_by_status": deps_status}
 
     def prefix_search(self, job_name_prefix):
-        """searches for jobs matching the given job_name_prefix."""
+        """Searches for jobs matching the given ``job_name_prefix``."""
         json = self._fetch_json()
         jobs = json['response']
         for job in jobs:
@@ -44,7 +44,7 @@ class LuigiGrep(object):
                 yield self._build_results(jobs, job)
 
     def status_search(self, status):
-        """searches for jobs matching the given status"""
+        """Searches for jobs matching the given ``status``."""
         json = self._fetch_json()
         jobs = json['response']
         for job in jobs:
@@ -78,6 +78,7 @@ def main():
             print("  status={status}".format(status=status))
             for job in jobs:
                 print("    {job}".format(job=job))
+
 
 if __name__ == '__main__':
     main()

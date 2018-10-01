@@ -76,7 +76,11 @@ class InputPipeProcessWrapper(object):
                 self._original_input = False
                 f = tempfile.NamedTemporaryFile('wb', prefix='luigi-process_tmp', delete=False)
                 self._tmp_file = f.name
-                f.write(input_pipe.read())
+                while True:
+                    chunk = input_pipe.read(io.DEFAULT_BUFFER_SIZE)
+                    if not chunk:
+                        break
+                    f.write(chunk)
                 input_pipe.close()
                 f.close()
                 self._input_pipe = FileWrapper(io.BufferedReader(io.FileIO(self._tmp_file, 'r')))
@@ -144,7 +148,7 @@ class InputPipeProcessWrapper(object):
             self._finish()
 
     def __getattr__(self, name):
-        if name == '_process':
+        if name in ['_process', '_input_pipe']:
             raise AttributeError(name)
         try:
             return getattr(self._process.stdout, name)
@@ -225,7 +229,7 @@ class OutputPipeProcessWrapper(object):
         self._finish()
 
     def __getattr__(self, name):
-        if name == '_process':
+        if name in ['_process', '_output_pipe']:
             raise AttributeError(name)
         try:
             return getattr(self._process.stdin, name)
@@ -372,11 +376,11 @@ class ChainFormat(Format):
                 if args[x].output != args[x + 1].input:
                     raise TypeError(
                         'The format chaining is not valid, %s expect %s'
-                        'but %s provide %s' % (
-                            args[x].__class__.__name__,
-                            args[x].input,
+                        ' but %s provide %s' % (
                             args[x + 1].__class__.__name__,
-                            args[x + 1].output,
+                            args[x + 1].input,
+                            args[x].__class__.__name__,
+                            args[x].output,
                         )
                     )
             except AttributeError:
@@ -498,6 +502,7 @@ class Bzip2Format(Format):
 
     def pipe_writer(self, output_pipe):
         return OutputPipeProcessWrapper(['bzip2'], output_pipe)
+
 
 Text = TextFormat()
 UTF8 = TextFormat(encoding='utf8')

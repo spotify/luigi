@@ -15,41 +15,25 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase
+from helpers import LuigiTestCase, temporary_unloaded_module
 
 import luigi
 import luigi.interface
-import tempfile
-import re
 
+CONTENTS = b'''
+import luigi
 
-class ExtraArgs(luigi.Task):
-    blah = luigi.Parameter(default=444)
+class FooTask(luigi.Task):
+    x = luigi.IntParameter()
+
+    def run(self):
+        luigi._testing_glob_var = self.x
+'''
 
 
 class CmdlineTest(LuigiTestCase):
 
     def test_dynamic_loading(self):
-        interface = luigi.interface._DynamicArgParseInterface()
-        with tempfile.NamedTemporaryFile(dir='test/', prefix="_foo_module", suffix='.py') as temp_module_file:
-            temp_module_file.file.write(b'''
-import luigi
-
-class FooTask(luigi.Task):
-    x = luigi.IntParameter()
-''')
-            temp_module_file.file.flush()
-            temp_module_path = temp_module_file.name
-            temp_module_name = re.search(r'/(_foo_module.*).py', temp_module_path).group(1)
-            tasks = interface.parse(['--module', temp_module_name, 'FooTask', '--ExtraArgs-blah', 'xyz', '--x', '123'])
-
-            self.assertEqual(ExtraArgs().blah, 'xyz')
-
-            self.assertEqual(len(tasks), 1)
-
-            task, = tasks
-            self.assertEqual(task.x, 123)
-
-            temp_module = __import__(temp_module_name)
-            self.assertEqual(task.__class__, temp_module.FooTask)
-            self.assertEqual(task, temp_module.FooTask(x=123))
+        with temporary_unloaded_module(CONTENTS) as temp_module_name:
+            luigi.interface.run(['--module', temp_module_name, 'FooTask', '--x', '123', '--local-scheduler', '--no-lock'])
+            self.assertEqual(luigi._testing_glob_var, 123)

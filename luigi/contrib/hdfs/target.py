@@ -25,11 +25,8 @@ from luigi.target import FileSystemTarget
 from luigi.contrib.hdfs.config import tmppath
 from luigi.contrib.hdfs import format as hdfs_format
 from luigi.contrib.hdfs import clients as hdfs_clients
-
-try:
-    from urlparse import urlsplit
-except ImportError:
-    from urllib.parse import urlsplit
+from luigi.six.moves.urllib import parse as urlparse
+from luigi.six.moves import range
 
 
 class HdfsTarget(FileSystemTarget):
@@ -89,7 +86,7 @@ class HdfsTarget(FileSystemTarget):
         self.format = format
 
         self.is_tmp = is_tmp
-        (scheme, netloc, path, query, fragment) = urlsplit(path)
+        (scheme, netloc, path, query, fragment) = urlparse.urlsplit(path)
         if ":" in path:
             raise ValueError('colon is not allowed in hdfs filenames')
         self._fs = fs or hdfs_clients.get_autoconfig_client()
@@ -97,7 +94,7 @@ class HdfsTarget(FileSystemTarget):
     def __del__(self):
         # TODO: not sure is_tmp belongs in Targets construction arguments
         if self.is_tmp and self.exists():
-            self.remove()
+            self.remove(skip_trash=True)
 
     @property
     def fs(self):
@@ -123,9 +120,10 @@ class HdfsTarget(FileSystemTarget):
 
     def rename(self, path, raise_if_exists=False):
         """
-        Rename does not change self.path, so be careful with assumptions.
+        Does not change self.path.
 
-        Not recommendeed for directories. Use move_dir.  spotify/luigi#522
+        Unlike ``move_dir()``, ``rename()`` might cause nested directories.
+        See spotify/luigi#522
         """
         if isinstance(path, HdfsTarget):
             path = path.path
@@ -135,28 +133,27 @@ class HdfsTarget(FileSystemTarget):
 
     def move(self, path, raise_if_exists=False):
         """
-        Move does not change self.path, so be careful with assumptions.
-
-        Not recommendeed for directories. Use move_dir.  spotify/luigi#522
+        Alias for ``rename()``
         """
         self.rename(path, raise_if_exists=raise_if_exists)
 
     def move_dir(self, path):
         """
-        Rename a directory.
+        Move using :py:class:`~luigi.contrib.hdfs.abstract_client.HdfsFileSystem.rename_dont_move`
 
-        The implementation uses `rename_dont_move`,
-        which on some clients is just a normal `mv` operation, which can cause
-        nested directories.
+        New since after luigi v2.1: Does not change self.path
 
         One could argue that the implementation should use the
         mkdir+raise_if_exists approach, but we at Spotify have had more trouble
         with that over just using plain mv.  See spotify/luigi#557
         """
-        move_succeeded = self.fs.rename_dont_move(self.path, path)
-        if move_succeeded:
-            self.path = path
-        return move_succeeded
+        self.fs.rename_dont_move(self.path, path)
+
+    def copy(self, dst_dir):
+        """
+        Copy to destination directory.
+        """
+        self.fs.copy(self.path, dst_dir)
 
     def is_writable(self):
         """
@@ -167,7 +164,7 @@ class HdfsTarget(FileSystemTarget):
             parts = self.path.split("/")
             # start with the full path and then up the tree until we can check
             length = len(parts)
-            for part in xrange(length):
+            for part in range(length):
                 path = "/".join(parts[0:length - part]) + "/"
                 if self.fs.exists(path):
                     # if the path exists and we can write there, great!

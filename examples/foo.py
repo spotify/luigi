@@ -14,10 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+"""
+You can run this example like this:
+
+    .. code:: console
+
+            $ rm -rf '/tmp/bar'
+            $ luigi --module examples.foo examples.Foo --workers 2 --local-scheduler
+
+"""
 
 from __future__ import print_function
-import os
-import shutil
 import time
 
 import luigi
@@ -51,10 +58,3 @@ class Bar(luigi.Task):
         """
         time.sleep(1)
         return luigi.LocalTarget('/tmp/bar/%d' % self.num)
-
-
-if __name__ == "__main__":
-    if os.path.exists('/tmp/bar'):
-        shutil.rmtree('/tmp/bar')
-
-    luigi.run(['examples.Foo', '--workers', '2', '--local-scheduler'])
