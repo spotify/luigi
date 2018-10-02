@@ -283,21 +283,24 @@ class inherits(object):
                # ...
     """
 
-    def __init__(self, *tasks_to_inherit):
+    def __init__(self, *tasks_to_inherit, ignore_collisions=[]):
         super(inherits, self).__init__()
         if not tasks_to_inherit:
             raise TypeError("tasks_to_inherit cannot be empty")
 
         self.tasks_to_inherit = tasks_to_inherit
+        self.ignore_collisions = ignore_collisions
 
     def __call__(self, task_that_inherits):
-        # Get all parameter objects from each of the underlying tasks
+
+        # Check for parameter collisions and raise an exception if found.
+        self.check_for_parameter_collisions(task_that_inherits)
+
+        # Get all parameter objects from each of the underlying tasks and
+        # them to the inheriting task.
         for task_to_inherit in self.tasks_to_inherit:
             for param_name, param_obj in task_to_inherit.get_params():
-                # Check if the parameter exists in the inheriting task
-                if not hasattr(task_that_inherits, param_name):
-                    # If not, add it to the inheriting task
-                    setattr(task_that_inherits, param_name, param_obj)
+                setattr(task_that_inherits, param_name, param_obj)
 
         # Modify task_that_inherits by adding methods
         def clone_parent(_self, **kwargs):
@@ -313,6 +316,41 @@ class inherits(object):
 
         return task_that_inherits
 
+    def check_for_parameter_collisions(self, task_that_inherits):
+        error_msg = (
+            "Parameter name collision detected in tasks_to_inherit. "
+            "Parameter '{param}' in '{task}' duplicates "
+            "parameter '{param}' in {another_task}. "
+            "Either rename one of the parameters or "
+            "include the '{param}' in the `ignore_collisions` list."
+        )
+
+        # Check that the parameters from the inheriting task don't mask any
+        # parameters from the inherited tasks.
+        for task_to_inherit in self.tasks_to_inherit:
+            for param_name, param_obj in task_to_inherit.get_params():
+                if (
+                    hasattr(task_that_inherits, param_name) and
+                    param_name not in self.ignore_collisions
+                ):
+                    raise AttributeError(error_msg.format(param=param_name,
+                                                          task=task_that_inherits,
+                                                          another_task=task_to_inherit))
+
+        # Check that the parameters from an inherited task don't mask the
+        # parameters from another inherited task.
+        for task_to_inherit in self.tasks_to_inherit:
+            for another_task_to_inherit in self.tasks_to_inherit:
+                for param_name, param_obj in task_to_inherit.get_params():
+                    if (
+                        hasattr(another_task_to_inherit, param_name) and
+                        another_task_to_inherit is not task_to_inherit and
+                        param_name not in self.ignore_collisions
+                    ):
+                        raise AttributeError(error_msg.format(param=param_name,
+                                                              task=task_to_inherit,
+                                                              another_task=another_task_to_inherit))
+
 
 class requires(object):
     """
@@ -322,15 +360,16 @@ class requires(object):
 
     """
 
-    def __init__(self, *tasks_to_require):
+    def __init__(self, *tasks_to_require, ignore_collisions=[]):
         super(requires, self).__init__()
         if not tasks_to_require:
             raise TypeError("tasks_to_require cannot be empty")
 
         self.tasks_to_require = tasks_to_require
+        self.ignore_collisions = ignore_collisions
 
     def __call__(self, task_that_requires):
-        task_that_requires = inherits(*self.tasks_to_require)(task_that_requires)
+        task_that_requires = inherits(*self.tasks_to_require, ignore_collisions=self.ignore_collisions)(task_that_requires)
 
         # Modify task_that_requires by adding requires method.
         # If only one task is required, this single task is returned.
