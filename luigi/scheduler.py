@@ -349,7 +349,7 @@ class Task(object):
 
     @property
     def pretty_id(self):
-        param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(self.public_params.items()))
+        param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(getattr(self, 'public_params', self.params).items()))
         return u'{}({})'.format(self.family, param_str)
 
 
@@ -825,7 +825,7 @@ class Scheduler(object):
             task.family = family
         if not getattr(task, 'module', None):
             task.module = module
-        if not task.param_visibilities:
+        if not getattr(task, 'param_visibilities', None):
             task.param_visibilities = _get_default(param_visibilities, {})
         if not task.params:
             task.set_params(params)
@@ -1294,7 +1294,7 @@ class Scheduler(object):
             'time_running': getattr(task, "time_running", None),
             'start_time': task.time,
             'last_updated': getattr(task, "updated", task.time),
-            'params': task.public_params,
+            'params': getattr(task, 'public_params', task.params),
             'name': task.family,
             'priority': task.priority,
             'resources': task.resources,
@@ -1308,7 +1308,7 @@ class Scheduler(object):
         if include_deps:
             ret['deps'] = list(task.deps if deps is None else deps)
         if self._config.send_messages and task.status == RUNNING:
-            ret['accepts_messages'] = task.accepts_messages
+            ret['accepts_messages'] = getattr(task, 'accepts_messages', False)
         return ret
 
     @rpc_method()
