@@ -31,15 +31,6 @@ import os.path
 import warnings
 from multiprocessing.pool import ThreadPool
 
-logger = logging.getLogger("luigi-interface")
-
-try:
-    from boto3.s3.transfer import TransferConfig
-    import botocore
-except ImportError:
-    logger.warning("Loading S3 module without the python package boto3. "
-                   "Will crash at runtime if S3 functionality is used.")
-
 try:
     from urlparse import urlsplit
 except ImportError:
@@ -59,6 +50,13 @@ from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, Fil
 from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
+
+try:
+    from boto3.s3.transfer import TransferConfig
+    import botocore
+except ImportError:
+    logger.warning("Loading S3 module without the python package boto3. "
+                   "Will crash at runtime if S3 functionality is used.")
 
 
 # two different ways of marking a directory
