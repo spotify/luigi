@@ -31,8 +31,14 @@ import os.path
 import warnings
 from multiprocessing.pool import ThreadPool
 
-import botocore
-from boto3.s3.transfer import TransferConfig
+logger = logging.getLogger("luigi-interface")
+
+try:
+    from boto3.s3.transfer import TransferConfig
+    import botocore
+except ImportError:
+    logger.warning("Loading S3 module without the python package boto3. "
+                   "Will crash at runtime if S3 functionality is used.")
 
 try:
     from urlparse import urlsplit
