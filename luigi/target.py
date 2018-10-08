@@ -207,7 +207,8 @@ class FileSystemTarget(Target):
 
         :param str path: the path associated with this FileSystemTarget.
         """
-        self.path = path
+        # cast to str path objects like pathlib.PosixPath and py._path.local.LocalPath
+        self.path = str(path)
 
     @abc.abstractproperty
     def fs(self):

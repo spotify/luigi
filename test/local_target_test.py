@@ -65,6 +65,21 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         p.close()
         self.assertEqual(t.exists(), os.path.exists(self.path))
 
+    def test_pathlib(self):
+        """Test work with pathlib.Path"""
+        try:
+            import pathlib
+        except ImportError:
+            # skip test for environment without pathlib
+            return
+        path = pathlib.Path(self.path)
+        self.assertFalse(path.exists())
+        target = LocalTarget(path)
+        self.assertFalse(target.exists())
+        with path.open('w') as stream:
+            stream.write('test me')
+        self.assertTrue(target.exists())
+
     def test_gzip_with_module(self):
         t = LocalTarget(self.path, luigi.format.Gzip)
         p = t.open('w')
