@@ -21,6 +21,7 @@ import gzip
 import os
 import random
 import shutil
+import sys
 from helpers import unittest
 import mock
 
@@ -65,13 +66,10 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         p.close()
         self.assertEqual(t.exists(), os.path.exists(self.path))
 
+    @unittest.skipIf(tuple(sys.version_info) < (3, 4), 'only for Python>=3.4')
     def test_pathlib(self):
         """Test work with pathlib.Path"""
-        try:
-            import pathlib
-        except ImportError:
-            # skip test for environment without pathlib
-            return
+        import pathlib
         path = pathlib.Path(self.path)
         self.assertFalse(path.exists())
         target = LocalTarget(path)
