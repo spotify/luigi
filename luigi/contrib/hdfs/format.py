@@ -1,6 +1,8 @@
-import luigi.format
+
 import logging
 import os
+
+import luigi.format
 from luigi.contrib.hdfs.config import load_hadoop_cmd
 from luigi.contrib.hdfs import config as hdfs_config
 from luigi.contrib.hdfs.clients import remove, rename, mkdir, listdir
@@ -76,8 +78,11 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
         super(HdfsAtomicWriteDirPipe, self).close()
         try:
             remove(self.path)
-        except HDFSCliError:
-            pass
+        except Exception, ex:
+            if isinstance(ex, HDFSCliError) or ex.args[0].contains("FileNotFoundException"):
+                pass
+            else:
+                raise ex
 
         # it's unlikely to fail in this way but better safe than sorry
         if not all(result['result'] for result in rename(self.tmppath, self.path) or []):
