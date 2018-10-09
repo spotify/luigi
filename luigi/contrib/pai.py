@@ -45,6 +45,7 @@ logger = logging.getLogger('luigi-interface')
 
 try:
     import requests as rs
+    from requests.exceptions import HTTPError
 
 except ImportError:
     logger.warning('requests is not installed. PaiTask requires requests.')
@@ -105,6 +106,13 @@ class PaiJob(object):
     )
 
     def __init__(self, jobName, image, tasks):
+        """
+        Initialize a Job with required fields.
+
+        :param jobName: Name for the job, need to be unique
+        :param image: URL pointing to the Docker image for all tasks in the job
+        :param tasks: List of taskRole, one task role at least
+        """
         self.jobName = jobName
         self.image = image
         if isinstance(tasks, list) and len(tasks) != 0:
@@ -168,8 +176,8 @@ class OpenPai(luigi.Config):
     password = luigi.Parameter(
         default=None,
         description='your password')
-    expiration = luigi.Parameter(
-        default='3600',
+    expiration = luigi.IntParameter(
+        default=3600,
         description='expiration time in seconds')
 
 
@@ -208,7 +216,7 @@ class PaiTask(luigi.Task):
 
     @property
     def output_dir(self):
-        """Output directory on HDFS, $PAI_DEFAULT_FS_URI/Output/$jobName will be used if not specified, optional"""
+        """Output directory on HDFS, $PAI_DEFAULT_FS_URI/$jobName/output will be used if not specified, optional"""
         return '$PAI_DEFAULT_FS_URI/{0}/output'.format(self.name)
 
     @property
@@ -237,7 +245,7 @@ class PaiTask(luigi.Task):
         logger.debug('Get token response {0}'.format(response.text))
         if response.status_code != 200:
             msg = 'Get token request failed, response is {}'.format(response.text)
-            self.__logger.error(msg)
+            logger.error(msg)
             raise Exception(msg)
         else:
             self.__token = response.json()['token']
@@ -249,25 +257,25 @@ class PaiTask(luigi.Task):
 
         """
         super(PaiTask, self).__init__(*args, **kwargs)
-        self.__logger = logger
         self.__init_token()
 
     def __check_job_status(self):
         response = rs.get(urljoin(self.__openpai.pai_url, '/api/v1/jobs/{0}'.format(self.name)))
-        self.__logger.debug('Check job response {0}'.format(response.text))
+        logger.debug('Check job response {0}'.format(response.text))
         if response.status_code == 404:
-            self.__logger.debug('Job {0} is not found'.format(self.name))
-            return False
+            msg = 'Job {0} is not found'.format(self.name)
+            logger.debug(msg)
+            raise HTTPError(msg, response=response)
         elif response.status_code != 200:
             msg = 'Get job request failed, response is {}'.format(response.text)
-            self.__logger.error(msg)
-            raise Exception(msg)
+            logger.error(msg)
+            raise HTTPError(msg, response=response)
         job_state = response.json()['jobStatus']['state']
         if job_state in ['UNKNOWN', 'WAITING', 'RUNNING']:
-            self.__logger.debug('Job {0} is running in state {1}'.format(self.name, job_state))
+            logger.debug('Job {0} is running in state {1}'.format(self.name, job_state))
             return False
         else:
-            self.__logger.info('Job {0} finished in state {1}'.format(self.name, job_state))
+            logger.info('Job {0} finished in state {1}'.format(self.name, job_state))
             return True
 
     def run(self):
@@ -280,16 +288,16 @@ class PaiTask(luigi.Task):
         job.retryCount = self.retry_count
         job.gpuType = self.gpu_type
         request_json = json.dumps(job,  default=slot_to_dict)
-        self.__logger.debug('Submit job request {0}'.format(request_json))
+        logger.debug('Submit job request {0}'.format(request_json))
         response = rs.post(urljoin(self.__openpai.pai_url, '/api/v1/jobs'),
                            headers={'Content-Type': 'application/json',
                                     'Authorization': 'Bearer {}'.format(self.__token)}, data=request_json)
-        self.__logger.debug('Submit job response {0}'.format(response.text))
+        logger.debug('Submit job response {0}'.format(response.text))
         # 202 is success for job submission, see https://github.com/Microsoft/pai/blob/master/docs/rest-server/API.md
         if response.status_code != 202:
             msg = 'Submit job failed, response code is {0}, body is {1}'.format(response.status_code, response.text)
-            self.__logger.error(msg)
-            raise Exception(msg)
+            logger.error(msg)
+            raise HTTPError(msg, response=response)
         while not self.__check_job_status():
             time.sleep(self.__POLL_TIME)
 
@@ -297,4 +305,7 @@ class PaiTask(luigi.Task):
         return luigi.contrib.hdfs.HdfsTarget(self.output())
 
     def complete(self):
-        return self.__check_job_status()
+        try:
+            return self.__check_job_status()
+        except HTTPError:
+            return False

@@ -61,6 +61,9 @@ class TestPaiTask(unittest.TestCase):
 
     @responses.activate
     def test_run(self):
+        """
+        Here using the responses lib to mock the PAI rest api call, the following specify the response of the call.
+        """
         responses.add(responses.POST, 'http://127.0.0.1:9186/api/v1/token',
                       json={"token": "test", "user": "admin", "admin": True}, status=200)
         sk_task = SklearnJob()
