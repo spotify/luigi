@@ -128,6 +128,8 @@ class scheduler(Config):
     worker_disconnect_delay = parameter.FloatParameter(default=60.0)
     state_path = parameter.Parameter(default='/var/lib/luigi-server/state.pickle')
 
+    redis_state_key = parameter.Parameter(default='luigi_workflow_state')
+
     batch_emails = parameter.BoolParameter(default=False, description="Send e-mails in batches rather than immediately")
 
     # Jobs are disabled if we see more than retry_count failures in disable_window seconds.
@@ -475,11 +477,14 @@ class SimpleTaskState(object):
                 return
 
             self.set_state(state)
-            self._status_tasks = collections.defaultdict(dict)
-            for task in six.itervalues(self._tasks):
-                self._status_tasks[task.status][task.id] = task
+            self._assign_status_tasks()
         else:
             logger.info("No prior state file exists at %s. Starting with empty state", self._state_path)
+
+    def _assign_status_tasks(self):
+        self._status_tasks = collections.defaultdict(dict)
+        for task in six.itervalues(self._tasks):
+            self._status_tasks[task.status][task.id] = task
 
     def get_active_tasks(self):
         return six.itervalues(self._tasks)
@@ -668,6 +673,49 @@ class SimpleTaskState(object):
             worker.tasks.clear()
 
 
+class SimpleTaskRedisState(SimpleTaskState):
+
+    def __init__(self, state_path, state_key):
+        import redis
+        super(SimpleTaskRedisState, self).__init__(state_path)
+        self._redis_url = state_path
+        self._redis_key = state_key
+        self._conn = redis.StrictRedis.from_url(self._redis_url)
+
+    def load(self):
+        try:
+            state_obj = self._conn.get(self._redis_key)
+        except redis.exceptions.RedisError:
+            state_obj = None
+
+        if state_obj:
+            logger.info('Previous state was loaded from Redis')
+            state = pickle.loads(state_obj)
+            self.set_state(state)
+            self._assign_status_tasks()
+        else:
+            logger.warning('Error when loading state. Starting from empty state.')
+
+    def dump(self):
+        try:
+            self._conn.set(self._redis_key, pickle.dumps(self.get_state()))
+        except redis.exceptions.RedisError:
+            logger.warning('Failed saving scheduler state', exc_info=1)
+        else:
+            logger.info("Saved state in Redis")
+
+
+def get_state_manager(config):
+    """
+    Basic state manager which currently supports local file and redis server
+    """
+    state_path = config.state_path
+    if state_path.lower().startswith('redis://'):
+        return SimpleTaskRedisState(state_path, config.redis_state_key)
+
+    return SimpleTaskState(state_path)
+
+
 class Scheduler(object):
     """
     Async scheduler that can handle multiple workers, etc.
@@ -683,7 +731,7 @@ class Scheduler(object):
         :param task_history_impl: ignore config and use this object as the task history
         """
         self._config = config or scheduler(**kwargs)
-        self._state = SimpleTaskState(self._config.state_path)
+        self._state = get_state_manager(self._config)
 
         if task_history_impl:
             self._task_history = task_history_impl
