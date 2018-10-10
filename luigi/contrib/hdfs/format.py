@@ -5,7 +5,7 @@ import os
 import luigi.format
 from luigi.contrib.hdfs.config import load_hadoop_cmd
 from luigi.contrib.hdfs import config as hdfs_config
-from luigi.contrib.hdfs.clients import remove, rename, mkdir, listdir
+from luigi.contrib.hdfs.clients import remove, rename, mkdir, listdir, exists
 from luigi.contrib.hdfs.error import HDFSCliError
 
 logger = logging.getLogger('luigi-interface')
@@ -77,7 +77,8 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
     def close(self):
         super(HdfsAtomicWriteDirPipe, self).close()
         try:
-            remove(self.path)
+            if exists(self.path):
+                remove(self.path)
         except Exception, ex:
             if isinstance(ex, HDFSCliError) or ex.args[0].contains("FileNotFoundException"):
                 pass
