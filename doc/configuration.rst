@@ -749,6 +749,9 @@ state_path
 
   This defaults to /var/lib/luigi-server/state.pickle
 
+  It is possible to provide Redis url to store state inside redis server.
+  For example: redis://localhost:6379/0
+
 worker_disconnect_delay
   Number of seconds to wait after a worker has stopped pinging the
   scheduler before removing it and marking all of its running tasks as
@@ -763,6 +766,11 @@ send_messages
   the central scheduler provides a simple prompt per task to send messages.
   Defaults to true.
 
+redis_state_key
+  In case of using redis as a state store, if this parameter is set, Luigi
+  will save its store using this key.
+
+  This defaults to luigi_workflow_state
 
 [sendgrid]
 ----------
