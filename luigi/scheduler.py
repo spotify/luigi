@@ -680,12 +680,13 @@ class SimpleTaskRedisState(SimpleTaskState):
         super(SimpleTaskRedisState, self).__init__(state_path)
         self._redis_url = state_path
         self._redis_key = state_key
-        self._conn = redis.StrictRedis.from_url(self._redis_url)
+        self.redis = redis
+        self._conn = self.redis.StrictRedis.from_url(self._redis_url)
 
     def load(self):
         try:
             state_obj = self._conn.get(self._redis_key)
-        except redis.exceptions.RedisError:
+        except self.redis.exceptions.RedisError:
             state_obj = None
 
         if state_obj:
@@ -699,7 +700,7 @@ class SimpleTaskRedisState(SimpleTaskState):
     def dump(self):
         try:
             self._conn.set(self._redis_key, pickle.dumps(self.get_state()))
-        except redis.exceptions.RedisError:
+        except self.redis.exceptions.RedisError:
             logger.warning('Failed saving scheduler state', exc_info=1)
         else:
             logger.info("Saved state in Redis")
