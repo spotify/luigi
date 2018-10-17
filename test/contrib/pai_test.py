@@ -20,10 +20,6 @@
 Tests for OpenPAI wrapper for Luigi.
 
 
-Requires:
-
-- requests: ``pip install requests``
-
 Written and maintained by Liu, Dongqing (@liudongqing).
 """
 from helpers import unittest
@@ -46,7 +42,6 @@ password:admin-password
 expiration:3600
 
 """
-# luigi.configuration.add_config_path('luigi_pai.cfg')
 
 
 class SklearnJob(PaiTask):
@@ -57,10 +52,18 @@ class SklearnJob(PaiTask):
     tasks = [TaskRole('test', 'cd scikit-learn/benchmarks && python bench_mnist.py', memoryMB=4096)]
 
 
+class FailJob(PaiTask):
+    image = "openpai/pai.example.sklearn"
+    name = "test_job_fail_{0}".format(time.time())
+    command = 'cd scikit-learn/benchmarks && python bench_mnist.py'
+    virtual_cluster = 'spark'
+    tasks = [TaskRole('test', 'cd scikit-learn/benchmarks && python bench_mnist.py', memoryMB=4096)]
+
+
 class TestPaiTask(unittest.TestCase):
 
     @responses.activate
-    def test_run(self):
+    def test_success(self):
         """
         Here using the responses lib to mock the PAI rest api call, the following specify the response of the call.
         """
@@ -77,5 +80,28 @@ class TestPaiTask(unittest.TestCase):
         responses.add(responses.GET, 'http://127.0.0.1:9186/api/v1/jobs/{0}'.format(sk_task.name),
                       body='{"jobStatus": {"state":"SUCCEED"}}', status=200)
 
-        luigi.build([sk_task], local_scheduler=True)
-        self.assertTrue(sk_task)
+        success = luigi.build([sk_task], local_scheduler=True)
+        self.assertTrue(success)
+        self.assertTrue(sk_task.complete())
+
+    @responses.activate
+    def test_fail(self):
+        """
+        Here using the responses lib to mock the PAI rest api call, the following specify the response of the call.
+        """
+        responses.add(responses.POST, 'http://127.0.0.1:9186/api/v1/token',
+                      json={"token": "test", "user": "admin", "admin": True}, status=200)
+        fail_task = FailJob()
+
+        responses.add(responses.POST, 'http://127.0.0.1:9186/api/v1/jobs',
+                      json={"message": "update job {0} successfully".format(fail_task.name)}, status=202)
+
+        responses.add(responses.GET, 'http://127.0.0.1:9186/api/v1/jobs/{0}'.format(fail_task.name),
+                      json={}, status=404)
+
+        responses.add(responses.GET, 'http://127.0.0.1:9186/api/v1/jobs/{0}'.format(fail_task.name),
+                      body='{"jobStatus": {"state":"FAILED"}}', status=200)
+
+        success = luigi.build([fail_task], local_scheduler=True)
+        self.assertFalse(success)
+        self.assertFalse(fail_task.complete())

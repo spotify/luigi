@@ -254,7 +254,6 @@ class PaiTask(luigi.Task):
         """
         :param pai_url: The rest server url of PAI clusters, default is 'http://127.0.0.1:9186'.
         :param token: The toke used to auth the rest server of PAI.
-
         """
         super(PaiTask, self).__init__(*args, **kwargs)
         self.__init_token()
@@ -275,8 +274,12 @@ class PaiTask(luigi.Task):
             logger.debug('Job {0} is running in state {1}'.format(self.name, job_state))
             return False
         else:
-            logger.info('Job {0} finished in state {1}'.format(self.name, job_state))
-            return True
+            msg = 'Job {0} finished in state {1}'.format(self.name, job_state)
+            logger.info(msg)
+            if job_state == 'SUCCEED':
+                return True
+            else:
+                raise RuntimeError(msg)
 
     def run(self):
         job = PaiJob(self.name, self.image, self.tasks)
@@ -308,4 +311,6 @@ class PaiTask(luigi.Task):
         try:
             return self.__check_job_status()
         except HTTPError:
+            return False
+        except RuntimeError:
             return False
