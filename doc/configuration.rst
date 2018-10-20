@@ -4,8 +4,11 @@ Configuration
 All configuration can be done by adding configuration files.
 
 Supported config parsers:
-* ``cfg`` (default)
+
+* ``cfg`` (default), based on Python's standard ConfigParser_. Values may refer to environment variables using ``${ENVVAR}`` syntax.
 * ``toml``
+
+.. _ConfigParser: https://docs.python.org/3/library/configparser.html
 
 You can choose right parser via ``LUIGI_CONFIG_PARSER`` environment variable. For example, ``LUIGI_CONFIG_PARSER=toml``.
 
