@@ -52,14 +52,6 @@ class SklearnJob(PaiTask):
     tasks = [TaskRole('test', 'cd scikit-learn/benchmarks && python bench_mnist.py', memoryMB=4096)]
 
 
-class FailJob(PaiTask):
-    image = "openpai/pai.example.sklearn"
-    name = "test_job_fail_{0}".format(time.time())
-    command = 'cd scikit-learn/benchmarks && python bench_mnist.py'
-    virtual_cluster = 'spark'
-    tasks = [TaskRole('test', 'cd scikit-learn/benchmarks && python bench_mnist.py', memoryMB=4096)]
-
-
 class TestPaiTask(unittest.TestCase):
 
     @responses.activate
@@ -91,7 +83,7 @@ class TestPaiTask(unittest.TestCase):
         """
         responses.add(responses.POST, 'http://127.0.0.1:9186/api/v1/token',
                       json={"token": "test", "user": "admin", "admin": True}, status=200)
-        fail_task = FailJob()
+        fail_task = SklearnJob()
 
         responses.add(responses.POST, 'http://127.0.0.1:9186/api/v1/jobs',
                       json={"message": "update job {0} successfully".format(fail_task.name)}, status=202)
