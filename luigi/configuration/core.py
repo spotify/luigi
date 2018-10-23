@@ -17,13 +17,12 @@
 import logging
 import os
 import warnings
+import codecs
 
 from .cfg_parser import LuigiConfigParser
 from .toml_parser import LuigiTomlParser
 
-
 logger = logging.getLogger('luigi-interface')
-
 
 PARSERS = {
     'cfg': LuigiConfigParser,
@@ -86,6 +85,17 @@ def add_config_path(path):
     parser_class.add_config_path(path)
     return True
 
+
+# Check encoding before opening files
+if 'LUIGI_CONFIG_ENCODING' in os.environ:
+    config_encoding = os.environ['LUIGI_CONFIG_ENCODING']
+    try:
+        if codecs.lookup(config_encoding):
+            for ext, parser_class in PARSERS.items():
+                parser_class.set_config_encoding(config_encoding)
+    except LookupError:
+        warnings.warn("LUIGI_CONFIG_ENCODING specifies an unknown encoding. "
+                      "Unknown encoding: {encoding}".format(encoding=config_encoding))
 
 if 'LUIGI_CONFIG_PATH' in os.environ:
     add_config_path(os.environ['LUIGI_CONFIG_PATH'])

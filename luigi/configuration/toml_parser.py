@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 import os.path
+import io
 
 try:
     import toml
@@ -33,6 +34,7 @@ class LuigiTomlParser(BaseParser):
         '/etc/luigi/luigi.toml',
         'luigi.toml',
     ]
+    _config_encoding = None  # If None, default system encoding is used
 
     @staticmethod
     def _update_data(data, new_data):
@@ -46,11 +48,15 @@ class LuigiTomlParser(BaseParser):
             data[section].update(content)
         return data
 
-    def read(self, config_paths):
+    def read(self, config_paths, encoding):
         self.data = dict()
         for path in config_paths:
             if os.path.isfile(path):
-                self.data = self._update_data(self.data, toml.load(path))
+                if encoding is None:
+                    self.data = self._update_data(self.data, toml.load(path))
+                else:
+                    with io.open(path, encoding=encoding) as f:
+                        self.data = self._update_data(self.data, toml.load(f))
         return self.data
 
     def get(self, section, option, default=NO_DEFAULT, **kwargs):

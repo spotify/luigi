@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 import logging
+import warnings
 
 
 # IMPORTANT: don't inherit from `object`!
@@ -38,4 +39,19 @@ class BaseParser:
 
     @classmethod
     def reload(cls):
-        return cls.instance().read(cls._config_paths)
+        return cls.reload_with_encoding()
+
+    @classmethod
+    def reload_with_encoding(cls):
+        try:
+            # Open files with set encoding
+            return cls.instance().read(cls._config_paths, encoding=cls._config_encoding)
+        except TypeError:
+            # Operation not supported in python 2, warn the user and open with default system encoding
+            warnings.warn('Setting the encoding is not supported with python 2. ' +
+                          'Encoding: {encoding}'.format(encoding=cls._config_encoding))
+            return cls.instance().read(filenames=cls._config_paths)
+
+    @classmethod
+    def set_config_encoding(cls, encoding):
+        cls._config_encoding = encoding

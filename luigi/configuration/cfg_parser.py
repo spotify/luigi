@@ -128,6 +128,7 @@ class LuigiConfigParser(BaseParser, ConfigParser):
         'client.cfg',  # Deprecated old-style local luigi config
         'luigi.cfg',
     ]
+    _config_encoding = None  # If None, default system encoding is used
     if hasattr(ConfigParser, "_interpolate"):
         # Override ConfigParser._interpolate (Python 2)
         def _interpolate(self, section, option, rawval, vars):
@@ -149,7 +150,8 @@ class LuigiConfigParser(BaseParser, ConfigParser):
                           "Found: {paths!r}".format(paths=deprecated_paths),
                           DeprecationWarning)
 
-        return cls.instance().read(cls._config_paths)
+        # Use base_parser class function to share code
+        cls.reload_with_encoding()
 
     def _get_with_default(self, method, section, option, default, expected_type=None, **kwargs):
         """
