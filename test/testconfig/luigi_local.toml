@@ -1,0 +1,3 @@
+[hdfs]
+namenode_host = "localhost"
+namenode_port = 50030

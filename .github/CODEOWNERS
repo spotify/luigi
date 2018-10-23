@@ -1,0 +1,12 @@
+# The following patterns are used to auto-assign review requests
+# to specific individuals. Order is important; the last matching
+# pattern takes the most precedence.
+
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+* @dlstadther @Tarrasch @ulzha
+
+# Specific files, directories, paths, or file types can be
+# assigned more specificially.
+contrib/redshift*.py @dlstadther
+

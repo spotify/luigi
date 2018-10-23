@@ -25,6 +25,7 @@ from luigi import six
 from luigi.contrib.external_program import ExternalProgramTask, ExternalPythonProgramTask
 from luigi.contrib.external_program import ExternalProgramRunError
 from mock import patch, call
+import mock
 
 BytesIO = six.BytesIO
 
@@ -62,6 +63,13 @@ class TestTouchTask(ExternalProgramTask):
 
     def output(self):
         return luigi.LocalTarget(self.file_path)
+
+
+class TestEchoTask(ExternalProgramTask):
+    MESSAGE = "Hello, world!"
+
+    def program_args(self):
+        return ['echo', self.MESSAGE]
 
 
 class ExternalProgramTaskTest(unittest.TestCase):
@@ -112,6 +120,21 @@ class ExternalProgramTaskTest(unittest.TestCase):
         job.run()
 
         self.assertIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
+
+    def test_capture_output_set_to_false_writes_output_to_stdout(self):
+        from subprocess import Popen
+
+        out = tempfile.TemporaryFile()
+
+        def Popen_wrap(args, **kwargs):
+            kwargs.pop('stdout', None)
+            return Popen(args, stdout=out, **kwargs)
+
+        with mock.patch('luigi.contrib.external_program.subprocess.Popen', wraps=Popen_wrap):
+            task = TestEchoTask(capture_output=False)
+            task.run()
+            stdout = task._clean_output_file(out).strip()
+            self.assertEqual(stdout, task.MESSAGE)
 
     @patch('luigi.contrib.external_program.logger')
     @patch('luigi.contrib.external_program.tempfile.TemporaryFile')

@@ -276,7 +276,7 @@ _ORDERED_STATUSES = (
 )
 _PENDING_SUB_STATUSES = set(_ORDERED_STATUSES[_ORDERED_STATUSES.index("still_pending_ext"):])
 _COMMENTS = {
-    ("already_done", 'present dependencies were encountered'),
+    ("already_done", 'complete ones were encountered'),
     ("completed", 'ran successfully'),
     ("failed", 'failed'),
     ("scheduling_error", 'failed scheduling'),
@@ -284,7 +284,7 @@ _COMMENTS = {
     ("still_pending_ext", 'were missing external dependencies'),
     ("run_by_other_worker", 'were being run by another worker'),
     ("upstream_failure", 'had failed dependencies'),
-    ("upstream_missing_dependency", 'had missing external dependencies'),
+    ("upstream_missing_dependency", 'had missing dependencies'),
     ("upstream_run_by_other_worker", 'had dependencies that were being run by other worker'),
     ("upstream_scheduling_error", 'had dependencies whose scheduling failed'),
     ("not_run", 'was not granted run permission by the scheduler'),
@@ -399,7 +399,7 @@ def _summary_format(set_tasks, worker):
         reason = "there were missing external dependencies"
     else:
         smiley = ":)"
-        reason = "there were no failed tasks or missing external dependencies"
+        reason = "there were no failed tasks or missing dependencies"
     str_output += "\nThis progress looks {0} because {1}".format(smiley, reason)
     if num_all_tasks == 0:
         str_output = 'Did not schedule any tasks'
