@@ -5,8 +5,8 @@ All configuration can be done by adding configuration files.
 
 Supported config parsers:
 
-* ``cfg`` (default), based on Python's standard ConfigParser_. Values may refer to environment variables using ``${ENVVAR}`` syntax.
-* ``toml``
+- ``cfg`` (default), based on Python's standard ConfigParser_. Values may refer to environment variables using ``${ENVVAR}`` syntax.
+- ``toml``
 
 .. _ConfigParser: https://docs.python.org/3/library/configparser.html
 
@@ -14,17 +14,17 @@ You can choose right parser via ``LUIGI_CONFIG_PARSER`` environment variable. Fo
 
 Default (cfg) parser are looked for in:
 
-* ``/etc/luigi/client.cfg`` (deprecated)
-* ``/etc/luigi/luigi.cfg``
-* ``client.cfg`` (deprecated)
-* ``luigi.cfg``
-* ``LUIGI_CONFIG_PATH`` environment variable
+- ``/etc/luigi/client.cfg`` (deprecated)
+- ``/etc/luigi/luigi.cfg``
+- ``client.cfg`` (deprecated)
+- ``luigi.cfg``
+- ``LUIGI_CONFIG_PATH`` environment variable
 
 `TOML <https://github.com/toml-lang/toml>`_ parser are looked for in:
 
-* ``/etc/luigi/luigi.toml``
-* ``luigi.toml``
-* ``LUIGI_CONFIG_PATH`` environment variable
+- ``/etc/luigi/luigi.toml``
+- ``luigi.toml``
+- ``LUIGI_CONFIG_PATH`` environment variable
 
 Both config lists increase in priority (from low to high). The order only matters in case of key conflicts (see docs for ConfigParser.read_). These files are meant for both the client and ``luigid``. If you decide to specify your own configuration you should make sure that both the client and ``luigid`` load it properly.
 
@@ -975,9 +975,9 @@ Retry-Policy Fields
 
 The fields below are in retry-policy and they can be defined per task.
 
-* retry_count
-* disable_hard_timeout
-* disable_window_seconds
+- retry_count
+- disable_hard_timeout
+- disable_window_seconds
 
 Configuration encoding
 ----------------------
