@@ -1,5 +1,5 @@
 Configuration
-=============
+-------------
 
 All configuration can be done by adding configuration files.
 
@@ -58,7 +58,7 @@ Example toml config:
 .. _ParamConfigIngestion:
 
 Parameters from config Ingestion
---------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 All parameters can be overridden from configuration files. For instance if you
 have a Task definition:
@@ -80,7 +80,7 @@ it in the configuration:
 .. _ConfigClasses:
 
 Configuration classes
-*********************
+~~~~~~~~~~~~~~~~~~~~~
 
 Using the :ref:`ParamConfigIngestion` method, we derive the
 conventional way to do global configuration. Imagine this configuration.
@@ -108,7 +108,7 @@ We can create a :py:class:`~luigi.Config` class:
 
 
 Configurable options
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
 Luigi comes with a lot of configurable options. Below, we describe each
 section and the parameters available within it.
@@ -938,7 +938,7 @@ client_type
 
 
 Per Task Retry-Policy
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 Luigi also supports defining retry-policy per task.
 
@@ -971,7 +971,7 @@ If none of retry-policy fields is defined per task, the field value will be **de
 To make luigi sticks to the given retry-policy, be sure you run luigi worker with `keep_alive` config. Please check ``keep_alive`` config in :ref:`worker-config` section.
 
 Retry-Policy Fields
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 The fields below are in retry-policy and they can be defined per task.
 
@@ -980,7 +980,7 @@ The fields below are in retry-policy and they can be defined per task.
 - disable_window_seconds
 
 Configuration encoding
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 The encoding to use to open the configuration file can be specified using the ``LUIGI_CONFIG_ENCODING``.
 You can use it to open UTF8 configuration files on Windows for instance.
