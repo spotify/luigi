@@ -198,73 +198,91 @@ class BatchTask(luigi.Task):
     descriptions for how to issue the ``docker run`` command. This Luigi Task
     requires a pre-registered Batch jobDefinition name passed as a Parameter
 
-    :param job_definition (str): name (arn) of pre-registered jobDefinition
-        :: example
+    :param str job_definition: name (arn) of pre-registered jobDefinition.
+
+        .. code:: python
 
             job_definition = 'arn:aws:batch:<region>:<user_id>:job-definition/<job_definition_name>:<revision>'
 
-    :param job_name: name of specific job, for tracking in the queue and logs.
+    :param str job_name: name of specific job, for tracking in the queue and logs.
 
-    :param poll_time: interval in seconds to check a status of jobs.
+    :param int poll_time: interval in seconds to check a status of jobs.
 
-    :param queue: name (arn) of the job queue.
-        :: example
+    :param str queue: name (arn) of the job queue.
+
+        .. code:: python
 
             queue = 'arn:aws:batch:<region>:<user_id>:job-queue/<job_queue_name>'
 
-    :param array_properties (string in json format): array properties for the job.
-        :: example
+    :param str array_properties: array properties for the job in JSON format.
 
-            array_properties = json.dumps({
-                'size': 123
-            })
+        .. code:: python
 
-    :param depends_on (string in json format): dependencies for the job.
-        :: example
-
-            depends_on = json.dumps([
+            array_properties = json.dumps(
                 {
-                    'jobId': 'string',
-                    'type': 'N_TO_N'
-                },
-                {
-                    'jobId': 'string',
-                    'type': 'SEQUENTIAL'
-                },
-            ])
+                    'size': 123
+                }
+            )
 
-    :param container_overrides (string in json format): container overrides for the job.
-        :: example
+    :param str depends_on: dependencies for the job in JSON format.
 
-            container_overrides = json.dumps({
-                'vcpus': 123,
-                'memory': 123,
-                'command': [
-                    'string',
-                ],
-                'environment': [
+        .. code:: python
+
+            depends_on = json.dumps(
+                [
                     {
-                        'name': 'string',
-                        'value': 'string'
+                        'jobId': 'string',
+                        'type': 'N_TO_N'
                     },
+                    {
+                        'jobId': 'string',
+                        'type': 'SEQUENTIAL'
+                    }
                 ]
-            })
+            )
 
-    :param retry_strategy (string in json format): retry strategy for the job.
-        :: example
+    :param str container_overrides: container overrides for the job in JSON format.
 
-            retry_strategy = json.dumps({
-                'attempts': 123
-            })
+        .. code:: python
 
-    :param timeout (string in json format): timeout configuration for the job.
-        :: example
+            container_overrides = json.dumps(
+                {
+                    'vcpus': 123,
+                    'memory': 123,
+                    'command': [
+                        'string'
+                    ],
+                    'environment': [
+                        {
+                            'name': 'string',
+                            'value': 'string'
+                        }
+                    ]
+                }
+            )
 
-            timeout = json.dumps({
-                'attemptDurationSeconds': 123
-            })
+    :param str retry_strategy: retry strategy for the job in JSON format.
+
+        .. code:: python
+
+            retry_strategy = json.dumps(
+                {
+                    'attempts': 123
+                }
+            )
+
+    :param str timeout: timeout configuration for the job in JSON format.
+
+        .. code:: python
+
+            timeout = json.dumps(
+                {
+                    'attemptDurationSeconds': 123
+                }
+            )
 
     """
+
     job_definition = luigi.Parameter()
     job_name = luigi.OptionalParameter(default=None)
     poll_time = luigi.IntParameter(default=POLL_TIME)
