@@ -66,6 +66,7 @@ import string
 import time
 
 import luigi
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -138,15 +139,19 @@ class BatchClient(object):
         events = response['events']
         return '\n'.join(e['message'] for e in events[-get_last:])
 
-    def submit_job(self, job_definition, parameters, job_name=None, queue=None):
+    def submit_job(self, job_definition, parameters, job_name=None, queue=None, array_properties=None,
+                   depends_on=None, container_overrides=None, retry_strategy=None, timeout=None):
         """Wrap submit_job with useful defaults"""
-        if job_name is None:
-            job_name = _random_id()
         response = self._client.submit_job(
-            jobName=job_name,
+            jobName=job_name or _random_id(),
             jobQueue=queue or self.get_active_queue(),
+            arrayProperties=array_properties or {},
+            dependsOn=depends_on or [],
             jobDefinition=job_definition,
-            parameters=parameters
+            parameters=parameters,
+            containerOverrides=container_overrides or {},
+            retryStrategy=retry_strategy or {},
+            timeout=timeout or {},
         )
         return response['jobId']
 
@@ -186,7 +191,6 @@ class BatchClient(object):
 
 
 class BatchTask(luigi.Task):
-
     """
     Base class for an Amazon Batch job
 
@@ -194,20 +198,96 @@ class BatchTask(luigi.Task):
     descriptions for how to issue the ``docker run`` command. This Luigi Task
     requires a pre-registered Batch jobDefinition name passed as a Parameter
 
-    :param job_definition (str): name of pre-registered jobDefinition
+    :param job_definition (str): name (arn) of pre-registered jobDefinition
+        :: example
+
+            job_definition = 'arn:aws:batch:<region>:<user_id>:job-definition/<job_definition_name>:<revision>'
+
     :param job_name: name of specific job, for tracking in the queue and logs.
+
+    :param poll_time: interval in seconds to check a status of jobs.
+
+    :param queue: name (arn) of the job queue.
+        :: example
+
+            queue = 'arn:aws:batch:<region>:<user_id>:job-queue/<job_queue_name>'
+
+    :param array_properties (string in json format): array properties for the job.
+        :: example
+
+            array_properties = json.dumps({
+                'size': 123
+            })
+
+    :param depends_on (string in json format): dependencies for the job.
+        :: example
+
+            depends_on = json.dumps([
+                {
+                    'jobId': 'string',
+                    'type': 'N_TO_N'
+                },
+                {
+                    'jobId': 'string',
+                    'type': 'SEQUENTIAL'
+                },
+            ])
+
+    :param container_overrides (string in json format): container overrides for the job.
+        :: example
+
+            container_overrides = json.dumps({
+                'vcpus': 123,
+                'memory': 123,
+                'command': [
+                    'string',
+                ],
+                'environment': [
+                    {
+                        'name': 'string',
+                        'value': 'string'
+                    },
+                ]
+            })
+
+    :param retry_strategy (string in json format): retry strategy for the job.
+        :: example
+
+            retry_strategy = json.dumps({
+                'attempts': 123
+            })
+
+    :param timeout (string in json format): timeout configuration for the job.
+        :: example
+
+            timeout = json.dumps({
+                'attemptDurationSeconds': 123
+            })
 
     """
     job_definition = luigi.Parameter()
     job_name = luigi.OptionalParameter(default=None)
     poll_time = luigi.IntParameter(default=POLL_TIME)
+    queue = luigi.OptionalParameter(default=None)
+    array_properties = luigi.OptionalParameter(default='{}')
+    depends_on = luigi.OptionalParameter(default='[]')
+    container_overrides = luigi.OptionalParameter(default='{}')
+    retry_strategy = luigi.OptionalParameter(default='{}')
+    timeout = luigi.OptionalParameter(default='{}')
 
     def run(self):
         bc = BatchClient(self.poll_time)
         job_id = bc.submit_job(
             self.job_definition,
             self.parameters,
-            job_name=self.job_name)
+            job_name=self.job_name,
+            queue=self.queue,
+            array_properties=json.loads(self.array_properties),
+            depends_on=json.loads(self.depends_on),
+            container_overrides=json.loads(self.container_overrides),
+            retry_strategy=json.loads(self.retry_strategy),
+            timeout=json.loads(self.timeout),
+        )
         bc.wait_on_job(job_id)
 
     @property
