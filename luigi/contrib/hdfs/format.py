@@ -1,4 +1,3 @@
-
 import logging
 import os
 
@@ -79,7 +78,7 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
         try:
             if exists(self.path):
                 remove(self.path)
-        except Exception, ex:
+        except Exception as ex:
             if isinstance(ex, HDFSCliError) or ex.args[0].contains("FileNotFoundException"):
                 pass
             else:
