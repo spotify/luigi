@@ -66,7 +66,7 @@ class WebHdfsMiniCluster(MiniCluster):
                 line = f.readline()
                 print(line.rstrip())
 
-                m = re.match(".*Jetty bound to port (\d+).*", line)
+                m = re.match(".*Jetty bound to port (\\d+).*", line)
                 if just_seen_webhdfs and m:
                     return int(m.group(1))
                 just_seen_webhdfs = re.match(".*namenode.*webhdfs.*", line)
