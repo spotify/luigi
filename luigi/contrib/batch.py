@@ -288,6 +288,10 @@ class BatchTask(luigi.Task):
     poll_time = luigi.IntParameter(default=POLL_TIME)
     queue = luigi.OptionalParameter(default=None)
     array_properties = luigi.OptionalParameter(default='{}')
+    # We selected OptionalParameter instead of DictParameter,
+    # since boto3(botocore) accepts only dict type
+    # and DictParameter (_FrozenOrderdDict) causes ParamValidationError.
+    # For the same reason, OptionalParameter is used for depends_on, container_overrides, and retry_strategy.
     depends_on = luigi.OptionalParameter(default='[]')
     container_overrides = luigi.OptionalParameter(default='{}')
     retry_strategy = luigi.OptionalParameter(default='{}')
