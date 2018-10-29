@@ -181,6 +181,10 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luig
     def table(self):
         return None
 
+    @abc.abstractproperty
+    def port(self):
+        return None
+
     # specify the columns that are to be inserted (same as are returned by columns)
     # overload this in subclasses with the either column names of columns to import:
     # e.g. ['id', 'username', 'inserted']
