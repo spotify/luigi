@@ -159,6 +159,7 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luig
         * `password`,
         * `table`
         * `columns`
+        * `port`
     """
 
     @abc.abstractproperty
