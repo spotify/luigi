@@ -386,12 +386,6 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
             target.remove(skip_trash=True)
         return target
 
-    def create_flag_target(self, format=None):
-        target = hdfs.HdfsFlagTarget(self._test_file(suffix="/"), format=format)
-        if target.exists():
-            target.remove(skip_trash=True)
-        return target
-
     def test_slow_exists(self):
         target = hdfs.HdfsTarget(self._test_file())
         try:
@@ -560,16 +554,17 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         pickle.dumps(t)
 
     def test_flag_target(self):
-        target = self.create_flag_target()
-        self.assertFalse(flag_target.exists())
+        target = hdfs.HdfsFlagTarget(self._test_file(suffix="/"), format=format)
+        if target.exists():
+            target.remove(skip_trash=True)
+        self.assertFalse(target.exists())
 
         t1 = hdfs.HdfsTarget(target.path + "part-00000", format=format)
         with t1.open('w'):
             pass
         t2 = hdfs.HdfsTarget(target.path + "_SUCCESS", format=format)
-        with t1.open('w'):
+        with t2.open('w'):
             pass
-
         self.assertTrue(target.exists())
 
     def test_flag_target_fails_if_not_directory(self):
