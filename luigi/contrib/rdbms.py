@@ -182,7 +182,7 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luig
     def table(self):
         return None
 
-    @abc.abstractproperty
+    @property
     def port(self):
         return None
 
