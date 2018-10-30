@@ -553,6 +553,24 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         t = hdfs.HdfsTarget("/tmp/dir")
         pickle.dumps(t)
 
+    def test_flag_target(self):
+        target = hdfs.HdfsFlagTarget("/some/dir/", format=format)
+        if target.exists():
+            target.remove(skip_trash=True)
+        self.assertFalse(target.exists())
+
+        t1 = hdfs.HdfsTarget(target.path + "part-00000", format=format)
+        with t1.open('w'):
+            pass
+        t2 = hdfs.HdfsTarget(target.path + "_SUCCESS", format=format)
+        with t2.open('w'):
+            pass
+        self.assertTrue(target.exists())
+
+    def test_flag_target_fails_if_not_directory(self):
+        with self.assertRaises(ValueError):
+            hdfs.HdfsFlagTarget("/home/file.txt")
+
 
 @attr('minicluster')
 class HdfsTargetTest(MiniClusterTestCase, HdfsTargetTestMixin):
