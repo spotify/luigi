@@ -283,7 +283,7 @@ class inherits(object):
                # ...
     """
 
-    def __init__(self, *tasks_to_inherit, ignore_collisions=[]):
+    def __init__(self, *tasks_to_inherit, ignore_collisions=()):
         super(inherits, self).__init__()
         if not tasks_to_inherit:
             raise TypeError("tasks_to_inherit cannot be empty")
@@ -294,10 +294,10 @@ class inherits(object):
     def __call__(self, task_that_inherits):
 
         # Check for parameter collisions and raise an exception if found.
-        self.check_for_parameter_collisions(task_that_inherits)
+        self._check_for_parameter_collisions(task_that_inherits)
 
         # Get all parameter objects from each of the underlying tasks and
-        # them to the inheriting task.
+        # add them to the inheriting task.
         for task_to_inherit in self.tasks_to_inherit:
             for param_name, param_obj in task_to_inherit.get_params():
                 setattr(task_that_inherits, param_name, param_obj)
@@ -316,7 +316,14 @@ class inherits(object):
 
         return task_that_inherits
 
-    def check_for_parameter_collisions(self, task_that_inherits):
+    def _check_for_parameter_collisions(self, task_that_inherits):
+        """
+        Check that the parameters from the tasks_to_inherit don't
+        silently mask each other.
+
+        An exception will be raised immediately the first parameter
+        collision is encountered.
+        """
         error_msg = (
             "Parameter name collision detected in tasks_to_inherit. "
             "Parameter '{param}' in '{task}' duplicates "
@@ -333,9 +340,9 @@ class inherits(object):
                     hasattr(task_that_inherits, param_name) and
                     param_name not in self.ignore_collisions
                 ):
-                    raise AttributeError(error_msg.format(param=param_name,
-                                                          task=task_that_inherits,
-                                                          another_task=task_to_inherit))
+                    raise ValueError(error_msg.format(param=param_name,
+                                                      task=task_that_inherits,
+                                                      another_task=task_to_inherit))
 
         # Check that the parameters from an inherited task don't mask the
         # parameters from another inherited task.
@@ -347,9 +354,9 @@ class inherits(object):
                         another_task_to_inherit is not task_to_inherit and
                         param_name not in self.ignore_collisions
                     ):
-                        raise AttributeError(error_msg.format(param=param_name,
-                                                              task=task_to_inherit,
-                                                              another_task=another_task_to_inherit))
+                        raise ValueError(error_msg.format(param=param_name,
+                                                          task=task_to_inherit,
+                                                          another_task=another_task_to_inherit))
 
 
 class requires(object):
@@ -360,7 +367,7 @@ class requires(object):
 
     """
 
-    def __init__(self, *tasks_to_require, ignore_collisions=[]):
+    def __init__(self, *tasks_to_require, ignore_collisions=()):
         super(requires, self).__init__()
         if not tasks_to_require:
             raise TypeError("tasks_to_require cannot be empty")
