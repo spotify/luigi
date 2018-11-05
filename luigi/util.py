@@ -289,22 +289,17 @@ class inherits(object):
         return task_that_inherits
 
 
-class requires(object):
+class requires(inherits):
     """
     Same as @inherits, but also auto-defines the requires method.
     """
-
-    def __init__(self, task_to_require):
-        super(requires, self).__init__()
-        self.inherit_decorator = inherits(task_to_require)
-
     def __call__(self, task_that_requires):
-        task_that_requires = self.inherit_decorator(task_that_requires)
+        task_that_requires = super(requires, self).__call__(task_that_requires)
 
-        # Modify task_that_requres by adding methods
-        def requires(_self):
+        # Modify task_that_requires by adding methods
+        def modified_requires(_self):
             return _self.clone_parent()
-        task_that_requires.requires = requires
+        task_that_requires.requires = modified_requires
 
         return task_that_requires
 
