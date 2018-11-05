@@ -30,14 +30,92 @@ See :doc:`/configuration` for more info.
 """
 
 import os
+import re
 import warnings
 
 try:
-    from ConfigParser import ConfigParser, NoOptionError, NoSectionError
+    from ConfigParser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
+    Interpolation = object
 except ImportError:
-    from configparser import ConfigParser, NoOptionError, NoSectionError
+    from configparser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
+    from configparser import Interpolation, BasicInterpolation
 
 from .base_parser import BaseParser
+
+
+class InterpolationMissingEnvvarError(InterpolationError):
+    """
+    Raised when option value refers to a nonexisting environment variable.
+    """
+
+    def __init__(self, option, section, value, envvar):
+        msg = (
+            "Config refers to a nonexisting environment variable {}. "
+            "Section [{}], option {}={}"
+        ).format(envvar, section, option, value)
+        InterpolationError.__init__(self, option, section, msg)
+
+
+class EnvironmentInterpolation(Interpolation):
+    """
+    Custom interpolation which allows values to refer to environment variables
+    using the ``${ENVVAR}`` syntax.
+    """
+    _ENVRE = re.compile(r"\$\{([^}]+)\}")  # matches "${envvar}"
+
+    def before_get(self, parser, section, option, value, defaults):
+        return self._interpolate_env(option, section, value)
+
+    def _interpolate_env(self, option, section, value):
+        rawval = value
+        parts = []
+        while value:
+            match = self._ENVRE.search(value)
+            if match is None:
+                parts.append(value)
+                break
+            envvar = match.groups()[0]
+            try:
+                envval = os.environ[envvar]
+            except KeyError:
+                raise InterpolationMissingEnvvarError(
+                    option, section, rawval, envvar)
+            start, end = match.span()
+            parts.append(value[:start])
+            parts.append(envval)
+            value = value[end:]
+        return "".join(parts)
+
+
+class CombinedInterpolation(Interpolation):
+    """
+    Custom interpolation which applies multiple interpolations in series.
+
+    :param interpolations: a sequence of configparser.Interpolation objects.
+    """
+
+    def __init__(self, interpolations):
+        self._interpolations = interpolations
+
+    def before_get(self, parser, section, option, value, defaults):
+        for interp in self._interpolations:
+            value = interp.before_get(parser, section, option, value, defaults)
+        return value
+
+    def before_read(self, parser, section, option, value):
+        for interp in self._interpolations:
+            value = interp.before_read(parser, section, option, value)
+        return value
+
+    def before_set(self, parser, section, option, value):
+        for interp in self._interpolations:
+            value = interp.before_set(parser, section, option, value)
+        return value
+
+    def before_write(self, parser, section, option, value):
+        for interp in self._interpolations:
+            value = interp.before_write(parser, section, option, value)
+        return value
 
 
 class LuigiConfigParser(BaseParser, ConfigParser):
@@ -50,6 +128,17 @@ class LuigiConfigParser(BaseParser, ConfigParser):
         'client.cfg',  # Deprecated old-style local luigi config
         'luigi.cfg',
     ]
+    if hasattr(ConfigParser, "_interpolate"):
+        # Override ConfigParser._interpolate (Python 2)
+        def _interpolate(self, section, option, rawval, vars):
+            value = ConfigParser._interpolate(self, section, option, rawval, vars)
+            return EnvironmentInterpolation().before_get(
+                parser=self, section=section, option=option,
+                value=value, defaults=None,
+            )
+    else:
+        # Override ConfigParser._DEFAULT_INTERPOLATION (Python 3)
+        _DEFAULT_INTERPOLATION = CombinedInterpolation([BasicInterpolation(), EnvironmentInterpolation()])
 
     @classmethod
     def reload(cls):
