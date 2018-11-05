@@ -267,22 +267,47 @@ class inherits(object):
             def run(self):
                print self.n # this will be defined
                # ...
+
+    If you want to override specific parameters of the base class,
+    you can add them in your call to the context manager:
+
+    .. code-block:: python
+
+        class TaskA(luigi.Task):
+            param_a1 = luigi.IntParameter()
+            param_a2 = luigi.IntParameter()
+
+
+        @inherits(TaskA, param_a1=3)
+        class TaskB(luigi.Task):
+            param_b = luigi.IntParameter()
+
+            # TaskB will not have param_a1 defined
+
+            def requires(self):
+                return self.clone_parent()
+                # but TaskA will have param_a2 already set.
+
     """
 
-    def __init__(self, task_to_inherit):
+    def __init__(self, task_to_inherit, **non_copy_defaults):
         super(inherits, self).__init__()
         self.task_to_inherit = task_to_inherit
+
+        # If specified by the user, override these parameters by default in the base class
+        self._non_copy_defaults = non_copy_defaults
 
     def __call__(self, task_that_inherits):
         # Get all parameter objects from the underlying task
         for param_name, param_obj in self.task_to_inherit.get_params():
             # Check if the parameter exists in the inheriting task
-            if not hasattr(task_that_inherits, param_name):
+            if not hasattr(task_that_inherits, param_name) and param_name not in self._non_copy_defaults.keys():
                 # If not, add it to the inheriting task
                 setattr(task_that_inherits, param_name, param_obj)
 
         # Modify task_that_inherits by adding methods
         def clone_parent(_self, **args):
+            args.update(**self._non_copy_defaults)
             return _self.clone(cls=self.task_to_inherit, **args)
         task_that_inherits.clone_parent = clone_parent
 

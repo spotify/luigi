@@ -100,6 +100,29 @@ class BasicsTest(LuigiTestCase):
         self.assertNotEqual(str(ChildTask.__mro__[0]),
                             str(ChildTask.__mro__[1]))
 
+    def test_inherits_with_default_args(self):
+        class ParentTask(luigi.Task):
+            my_param = luigi.Parameter()
+            already_run = False
+            temporary_storage = None
+
+            def run(self):
+                self.__class__.temporary_storage = self.my_param
+                self.__class__.already_run = True
+
+            def complete(self):
+                return self.__class__.already_run
+
+        @inherits(ParentTask, my_param="set as default")
+        class ChildTask(luigi.Task):
+            def requires(self):
+                return self.clone_parent()
+
+        self.assertTrue(self.run_locally_split('ChildTask'))
+        self.assertEqual(ParentTask.temporary_storage, "set as default")
+
+        self.assertRaises(SystemExit, self.run_locally_split, 'ChildTask --my-param should-fail')
+
     # following tests using requires decorator
     def test_task_ids_using_requries(self):
         class ParentTask(luigi.Task):

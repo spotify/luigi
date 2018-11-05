@@ -48,6 +48,11 @@ class D(luigi.Task):
     param1 = luigi.Parameter("class D overwriting class A's default")
 
 
+@inherits(B, param1="other way of overriding")
+class D_other(luigi.Task):
+    pass
+
+
 @inherits(B)
 class D_null(luigi.Task):
     param1 = None
@@ -68,6 +73,7 @@ class InheritTest(unittest.TestCase):
         self.c = C()
         self.d = D()
         self.d_null = D_null()
+        self.d_other = D_other()
         self.e = E()
 
     def test_has_param(self):
@@ -101,6 +107,9 @@ class InheritTest(unittest.TestCase):
 
     def test_wrapper_preserve_attributes(self):
         self.assertEqual(B.__name__, 'B')
+
+    def test_override_parameters_in_context_manager(self):
+        self.assertFalse("param1" in dict(self.d_other.get_params()).keys())
 
 
 class F(luigi.Task):
