@@ -31,7 +31,7 @@ class UserItemMatrix(luigi.Task):
     def run(self):
         """
         Generates :py:attr:`~.UserItemMatrix.data_size` elements.
-        Writes this data in \ separated value format into the target :py:func:`~/.UserItemMatrix.output`.
+        Writes this data in \\ separated value format into the target :py:func:`~/.UserItemMatrix.output`.
 
         The data has the following elements:
 
@@ -43,7 +43,7 @@ class UserItemMatrix(luigi.Task):
         w = self.output().open('w')
         for user in range(self.data_size):
             track = int(random.random() * self.data_size)
-            w.write('%d\%d\%f' % (user, track, 1.0))
+            w.write('%d\\%d\\%f' % (user, track, 1.0))
         w.close()
 
     def output(self):
