@@ -13,7 +13,6 @@
 # the License.
 
 import os
-import sys
 
 from setuptools import setup
 
@@ -41,21 +40,19 @@ install_requires = [
     'tornado>=4.0,<5',
     # https://pagure.io/python-daemon/issue/18
     'python-daemon<2.2.0',
+    'enum34>1.1.0;python_version<"3.4"',
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
     install_requires.append('sqlalchemy')
     # readthedocs don't like python-daemon, see #1342
-    install_requires.remove('python-daemon<3.0')
+    install_requires.remove('python-daemon<2.2.0')
     install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
-
-if sys.version_info < (3, 4):
-    install_requires.append('enum34>1.1.0')
 
 setup(
     name='luigi',
-    version='2.7.9',
+    version='2.8.0',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='The Luigi Authors',
