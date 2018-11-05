@@ -8,7 +8,7 @@ namenode_port = 50030
 
 [logging]
 version = 1
-disable_existing_loggers = true
+disable_existing_loggers = false
 
 # logs format
 [logging.formatters.simple]
@@ -30,14 +30,14 @@ disabled = false
 propagate = false
 
 # luigid logging
-[logging.loggers."luigi.server"]
+[logging.loggers.luigi]
 handlers = ["console"]
 level = "INFO"
 disabled = false
 propagate = false
 
 # luigid builded on tornado
-[logging.loggers."tornado.access"]
+[logging.loggers.tornado]
 handlers = ["console"]
 level = "INFO"
 disabled = false
