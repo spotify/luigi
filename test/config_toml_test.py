@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2018 Cindicator Ltd.
+# Copyright 2018 Vote inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,3 +63,19 @@ class TomlConfigParserTest(LuigiTestCase):
         self.assertEqual(config.get('hdfs', 'client'), 'test')
         config.set('hdfs', 'check', 'test me')
         self.assertEqual(config.get('hdfs', 'check'), 'test me')
+
+
+class HelpersTest(LuigiTestCase):
+    def test_add_without_install(self):
+        enabled = LuigiTomlParser.enabled
+        LuigiTomlParser.enabled = False
+        with self.assertRaises(ImportError):
+            add_config_path('test/testconfig/luigi.toml')
+        LuigiTomlParser.enabled = enabled
+
+    def test_get_without_install(self):
+        enabled = LuigiTomlParser.enabled
+        LuigiTomlParser.enabled = False
+        with self.assertRaises(ImportError):
+            get_config('toml')
+        LuigiTomlParser.enabled = enabled

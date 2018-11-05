@@ -29,10 +29,7 @@ import logging
 import os
 import os.path
 import warnings
-
 from multiprocessing.pool import ThreadPool
-
-import botocore
 
 try:
     from urlparse import urlsplit
@@ -53,6 +50,13 @@ from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, Fil
 from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
+
+try:
+    from boto3.s3.transfer import TransferConfig
+    import botocore
+except ImportError:
+    logger.warning("Loading S3 module without the python package boto3. "
+                   "Will crash at runtime if S3 functionality is used.")
 
 
 # two different ways of marking a directory
@@ -94,6 +98,8 @@ class S3Client(FileSystem):
     """
 
     _s3 = None
+    DEFAULT_PART_SIZE = 8388608
+    DEFAULT_THREADS = 100
 
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
                  **kwargs):
@@ -191,6 +197,9 @@ class S3Client(FileSystem):
     def remove(self, path, recursive=True):
         """
         Remove a file or directory from S3.
+        :param path: File or directory to remove
+        :param recursive: Boolean indicator to remove object and children
+        :return: Boolean indicator denoting success of the removal of 1 or more files
         """
         if not self.exists(path):
             logger.debug('Could not delete %s; path does not exist', path)
@@ -218,7 +227,9 @@ class S3Client(FileSystem):
             delete_key_list.append({'Key': '{}{}'.format(key, S3_DIRECTORY_MARKER_SUFFIX_0)})
 
         if len(delete_key_list) > 0:
-            self.s3.meta.client.delete_objects(Bucket=bucket, Delete={'Objects': delete_key_list})
+            n = 1000
+            for i in range(0, len(delete_key_list), n):
+                self.s3.meta.client.delete_objects(Bucket=bucket, Delete={'Objects': delete_key_list[i: i + n]})
             return True
 
         return False
@@ -226,6 +237,8 @@ class S3Client(FileSystem):
     def move(self, source_path, destination_path, **kwargs):
         """
         Rename/move an object from one S3 location to another.
+        :param source_path: The `s3://` path of the directory or key to copy from
+        :param destination_path: The `s3://` path of the directory or key to copy to
         :param kwargs: Keyword arguments are passed to the boto3 function `copy`
         """
         self.copy(source_path, destination_path, **kwargs)
@@ -243,12 +256,11 @@ class S3Client(FileSystem):
     def put(self, local_path, destination_s3_path, **kwargs):
         """
         Put an object stored locally to an S3 path.
-
+        :param local_path: Path to source local file
+        :param destination_s3_path: URL for target S3 location
         :param kwargs: Keyword arguments are passed to the boto function `put_object`
         """
-        if 'encrypt_key' in kwargs:
-            raise DeprecatedBotoClientException(
-                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        self._check_deprecated_argument(**kwargs)
 
         # put the file
         self.put_multipart(local_path, destination_s3_path, **kwargs)
@@ -256,21 +268,18 @@ class S3Client(FileSystem):
     def put_string(self, content, destination_s3_path, **kwargs):
         """
         Put a string to an S3 path.
+        :param content: Data str
+        :param destination_s3_path: URL for target S3 location
         :param kwargs: Keyword arguments are passed to the boto3 function `put_object`
         """
-        if 'encrypt_key' in kwargs:
-            raise DeprecatedBotoClientException(
-                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        self._check_deprecated_argument(**kwargs)
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
-
-        # validate the bucket
-        self._validate_bucket(bucket)
 
         # put the file
         self.s3.meta.client.put_object(
             Key=key, Bucket=bucket, Body=content, **kwargs)
 
-    def put_multipart(self, local_path, destination_s3_path, part_size=8388608, **kwargs):
+    def put_multipart(self, local_path, destination_s3_path, part_size=DEFAULT_PART_SIZE, **kwargs):
         """
         Put an object stored locally to an S3 path
         using S3 multi-part upload (for files > 8Mb).
@@ -279,9 +288,7 @@ class S3Client(FileSystem):
         :param part_size: Part size in bytes. Default: 8388608 (8MB)
         :param kwargs: Keyword arguments are passed to the boto function `upload_fileobj` as ExtraArgs
         """
-        if 'encrypt_key' in kwargs:
-            raise DeprecatedBotoClientException(
-                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        self._check_deprecated_argument(**kwargs)
 
         from boto3.s3.transfer import TransferConfig
         # default part size for boto3 is 8Mb, changing it to fit part_size
@@ -290,13 +297,11 @@ class S3Client(FileSystem):
 
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
-        # validate the bucket
-        self._validate_bucket(bucket)
-
         self.s3.meta.client.upload_fileobj(
             Fileobj=open(local_path, 'rb'), Bucket=bucket, Key=key, Config=transfer_config, ExtraArgs=kwargs)
 
-    def copy(self, source_path, destination_path, threads=100, start_time=None, end_time=None, part_size=8388608, **kwargs):
+    def copy(self, source_path, destination_path, threads=DEFAULT_THREADS, start_time=None, end_time=None,
+             part_size=DEFAULT_PART_SIZE, **kwargs):
         """
         Copy object(s) from one S3 location to another. Works for individual keys or entire directories.
         When files are larger than `part_size`, multipart uploading will be used.
@@ -310,68 +315,70 @@ class S3Client(FileSystem):
         :returns tuple (number_of_files_copied, total_size_copied_in_bytes)
         """
 
-        start = datetime.datetime.now()
-
-        (src_bucket, src_key) = self._path_to_bucket_and_key(source_path)
-        (dst_bucket, dst_key) = self._path_to_bucket_and_key(destination_path)
-
         # don't allow threads to be less than 3
         threads = 3 if threads < 3 else threads
-        from boto3.s3.transfer import TransferConfig
-
-        transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
-        total_keys = 0
 
         if self.isdir(source_path):
-            copy_jobs = []
-            management_pool = ThreadPool(processes=threads)
-
-            (bucket, key) = self._path_to_bucket_and_key(source_path)
-            key_path = self._add_path_delimiter(key)
-            key_path_len = len(key_path)
-            src_prefix = self._add_path_delimiter(src_key)
-            dst_prefix = self._add_path_delimiter(dst_key)
-            total_size_bytes = 0
-            for item in self.list(source_path, start_time=start_time, end_time=end_time, return_key=True):
-                path = item.key[key_path_len:]
-                # prevents copy attempt of empty key in folder
-                if path != '' and path != '/':
-                    total_keys += 1
-                    total_size_bytes += item.size
-                    copy_source = {
-                        'Bucket': src_bucket,
-                        'Key': src_prefix + path
-                    }
-
-                    the_kwargs = {'Config': transfer_config, 'ExtraArgs': kwargs}
-                    job = management_pool.apply_async(self.s3.meta.client.copy,
-                                                      args=(copy_source, dst_bucket, dst_prefix + path),
-                                                      kwds=the_kwargs)
-                    copy_jobs.append(job)
-
-            # Wait for the pools to finish scheduling all the copies
-            management_pool.close()
-            management_pool.join()
-
-            # Raise any errors encountered in any of the copy processes
-            for result in copy_jobs:
-                result.get()
-
-            end = datetime.datetime.now()
-            duration = end - start
-            logger.info('%s : Complete : %s total keys copied in %s' %
-                        (datetime.datetime.now(), total_keys, duration))
-
-            return total_keys, total_size_bytes
+            return self._copy_dir(source_path, destination_path, threads=threads,
+                                  start_time=start_time, end_time=end_time, part_size=part_size, **kwargs)
 
         # If the file isn't a directory just perform a simple copy
         else:
-            copy_source = {
-                'Bucket': src_bucket,
-                'Key': src_key
-            }
-            self.s3.meta.client.copy(
-                copy_source, dst_bucket, dst_key, Config=transfer_config, ExtraArgs=kwargs)
+            return self._copy_file(source_path, destination_path, threads=threads, part_size=part_size, **kwargs)
+
+    def _copy_file(self, source_path, destination_path, threads=DEFAULT_THREADS, part_size=DEFAULT_PART_SIZE, **kwargs):
+        src_bucket, src_key = self._path_to_bucket_and_key(source_path)
+        dst_bucket, dst_key = self._path_to_bucket_and_key(destination_path)
+        transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
+        item = self.get_key(source_path)
+        copy_source = {
+            'Bucket': src_bucket,
+            'Key': src_key
+        }
+
+        self.s3.meta.client.copy(copy_source, dst_bucket, dst_key, Config=transfer_config, ExtraArgs=kwargs)
+
+        return 1, item.size
+
+    def _copy_dir(self, source_path, destination_path, threads=DEFAULT_THREADS,
+                  start_time=None, end_time=None, part_size=DEFAULT_PART_SIZE, **kwargs):
+        start = datetime.datetime.now()
+        copy_jobs = []
+        management_pool = ThreadPool(processes=threads)
+        transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
+        src_bucket, src_key = self._path_to_bucket_and_key(source_path)
+        dst_bucket, dst_key = self._path_to_bucket_and_key(destination_path)
+        src_prefix = self._add_path_delimiter(src_key)
+        dst_prefix = self._add_path_delimiter(dst_key)
+        key_path_len = len(src_prefix)
+        total_size_bytes = 0
+        total_keys = 0
+        for item in self.list(source_path, start_time=start_time, end_time=end_time, return_key=True):
+            path = item.key[key_path_len:]
+            # prevents copy attempt of empty key in folder
+            if path != '' and path != '/':
+                total_keys += 1
+                total_size_bytes += item.size
+                copy_source = {
+                    'Bucket': src_bucket,
+                    'Key': src_prefix + path
+                }
+                the_kwargs = {'Config': transfer_config, 'ExtraArgs': kwargs}
+                job = management_pool.apply_async(self.s3.meta.client.copy,
+                                                  args=(copy_source, dst_bucket, dst_prefix + path),
+                                                  kwds=the_kwargs)
+                copy_jobs.append(job)
+        # Wait for the pools to finish scheduling all the copies
+        management_pool.close()
+        management_pool.join()
+        # Raise any errors encountered in any of the copy processes
+        for result in copy_jobs:
+            result.get()
+        end = datetime.datetime.now()
+        duration = end - start
+        logger.info('%s : Complete : %s total keys copied in %s' %
+                    (datetime.datetime.now(), total_keys, duration))
+        return total_keys, total_size_bytes
 
     def get(self, s3_path, destination_local_path):
         """
@@ -446,6 +453,7 @@ class S3Client(FileSystem):
         """
         Get an iterable with S3 folder contents.
         Iterable contains paths relative to queried path.
+        :param path: URL for target S3 location
         :param start_time: Optional argument to list files with modified (offset aware) datetime after start_time
         :param end_time: Optional argument to list files with modified (offset aware) datetime before end_time
         :param return_key: Optional argument, when set to True will return boto3's ObjectSummary (instead of the filename)
@@ -482,7 +490,8 @@ class S3Client(FileSystem):
             else:
                 yield item[key_path_len:]
 
-    def _get_s3_config(self, key=None):
+    @staticmethod
+    def _get_s3_config(key=None):
         defaults = dict(configuration.get_config().defaults())
         try:
             config = dict(configuration.get_config().items('s3'))
@@ -500,43 +509,48 @@ class S3Client(FileSystem):
 
         return section_only
 
-    def _path_to_bucket_and_key(self, path):
-        (scheme, netloc, path, query, fragment) = urlsplit(path)
-        path_without_initial_slash = path[1:]
+    @staticmethod
+    def _path_to_bucket_and_key(path):
+        (scheme, netloc, path, query, fragment) = urlsplit(path,
+                                                           allow_fragments=False)
+        question_mark_plus_query = '?' + query if query else ''
+        path_without_initial_slash = path[1:] + question_mark_plus_query
         return netloc, path_without_initial_slash
 
-    def _is_root(self, key):
+    @staticmethod
+    def _is_root(key):
         return (len(key) == 0) or (key == '/')
 
-    def _add_path_delimiter(self, key):
+    @staticmethod
+    def _add_path_delimiter(key):
         return key if key[-1:] == '/' or key == '' else key + '/'
 
-    def _validate_bucket(self, bucket_name):
-        exists = True
-
-        try:
-            self.s3.meta.client.head_bucket(Bucket=bucket_name)
-        except botocore.exceptions.ClientError as e:
-            error_code = e.response['Error']['Code']
-            if error_code in ('404', 'NoSuchBucket'):
-                exists = False
-            else:
-                raise
-        return exists
+    @staticmethod
+    def _check_deprecated_argument(**kwargs):
+        """
+        If `encrypt_key` or `host` is part of the arguments raise an exception
+        :return: None
+        """
+        if 'encrypt_key' in kwargs:
+            raise DeprecatedBotoClientException(
+                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
+        if 'host' in kwargs:
+            raise DeprecatedBotoClientException(
+                'host keyword deprecated and is replaced by region_name in boto3.\n'
+                'example: region_name=us-west-1\n'
+                'For region names, refer to the amazon S3 region documentation\n'
+                'https://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region')
 
     def _exists(self, bucket, key):
-        s3_key = False
         try:
             self.s3.Object(bucket, key).load()
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] in ['NoSuchKey', '404']:
-                s3_key = False
+                return False
             else:
                 raise
-        else:
-            s3_key = True
-        if s3_key:
-            return True
+
+        return True
 
 
 class AtomicS3File(AtomicLocalFile):

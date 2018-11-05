@@ -23,6 +23,7 @@ See :ref:`Parameter` for more info on how to define parameters.
 import abc
 import datetime
 import warnings
+from enum import IntEnum
 import json
 from json import JSONEncoder
 from collections import OrderedDict, Mapping
@@ -40,8 +41,24 @@ from luigi import six
 from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
 
-
 _no_value = object()
+
+
+class ParameterVisibility(IntEnum):
+    """
+    Possible values for the parameter visibility option. Public is the default.
+    See :doc:`/parameters` for more info.
+    """
+    PUBLIC = 0
+    HIDDEN = 1
+    PRIVATE = 2
+
+    @classmethod
+    def has_value(cls, value):
+        return any(value == item.value for item in cls)
+
+    def serialize(self):
+        return self.value
 
 
 class ParameterException(Exception):
@@ -113,7 +130,8 @@ class Parameter(object):
     _counter = 0  # non-atomically increasing counter used for ordering parameters.
 
     def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
-                 config_path=None, positional=True, always_in_help=False, batch_method=None):
+                 config_path=None, positional=True, always_in_help=False, batch_method=None,
+                 visibility=ParameterVisibility.PUBLIC):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -140,6 +158,10 @@ class Parameter(object):
                                                         parameter values into a single value. Used
                                                         when receiving batched parameter lists from
                                                         the scheduler. See :ref:`batch_method`
+
+        :param visibility: A Parameter whose value is a :py:class:`~luigi.parameter.ParameterVisibility`.
+                            Default value is ParameterVisibility.PUBLIC
+
         """
         self._default = default
         self._batch_method = batch_method
@@ -150,6 +172,7 @@ class Parameter(object):
             positional = False
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
         self.positional = positional
+        self.visibility = visibility if ParameterVisibility.has_value(visibility) else ParameterVisibility.PUBLIC
 
         self.description = description
         self.always_in_help = always_in_help
@@ -195,11 +218,11 @@ class Parameter(object):
         yield (self._get_value_from_config(task_name, param_name), None)
         yield (self._get_value_from_config(task_name, param_name.replace('_', '-')),
                'Configuration [{}] {} (with dashes) should be avoided. Please use underscores.'.format(
-               task_name, param_name))
+                   task_name, param_name))
         if self._config_path:
             yield (self._get_value_from_config(self._config_path['section'], self._config_path['name']),
                    'The use of the configuration [{}] {} is deprecated. Please use [{}] {}'.format(
-                   self._config_path['section'], self._config_path['name'], task_name, param_name))
+                       self._config_path['section'], self._config_path['name'], task_name, param_name))
         yield (self._default, None)
 
     def has_task_value(self, task_name, param_name):
@@ -689,6 +712,7 @@ class DateIntervalParameter(Parameter):
     (eg. "2015-W35"). In addition, it also supports arbitrary date intervals
     provided as two dates separated with a dash (eg. "2015-11-04-2015-12-04").
     """
+
     def parse(self, s):
         """
         Parses a :py:class:`~luigi.date_interval.DateInterval` from the input.
@@ -740,8 +764,10 @@ class TimeDeltaParameter(Parameter):
 
         def optional_field(key):
             return "(%s)?" % field(key)
+
         # A little loose: ISO 8601 does not allow weeks in combination with other fields, but this regex does (as does python timedelta)
-        regex = "P(%s|%s(T%s)?)" % (field("weeks"), optional_field("days"), "".join([optional_field(key) for key in ["hours", "minutes", "seconds"]]))
+        regex = "P(%s|%s(T%s)?)" % (field("weeks"), optional_field("days"),
+                                    "".join([optional_field(key) for key in ["hours", "minutes", "seconds"]]))
         return self._apply_regex(regex, input)
 
     def _parseSimple(self, input):
@@ -905,6 +931,7 @@ class _DictParamEncoder(JSONEncoder):
     """
     JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~_FrozenOrderedDict` JSON serializable.
     """
+
     def default(self, obj):
         if isinstance(obj, _FrozenOrderedDict):
             return obj.get_wrapped()
@@ -943,6 +970,7 @@ class DictParameter(Parameter):
     tags, that are dynamically constructed outside Luigi), or you have a complex parameter containing logically related
     values (like a database connection config).
     """
+
     def normalize(self, value):
         """
         Ensure that dictionary parameter is converted to a _FrozenOrderedDict so it can be hashed.
@@ -996,6 +1024,7 @@ class ListParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --grades '[100,70]'
     """
+
     def normalize(self, x):
         """
         Ensure that struct is recursively converted to a tuple so it can be hashed.
@@ -1053,6 +1082,7 @@ class TupleParameter(ListParameter):
 
         $ luigi --module my_tasks MyTask --book_locations '((12,3),(4,15),(52,1))'
     """
+
     def parse(self, x):
         """
         Parse an individual value from the input.
@@ -1100,6 +1130,7 @@ class NumericalParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --my-param-1 -3 --my-param-2 -2
     """
+
     def __init__(self, left_op=operator.le, right_op=operator.lt, *args, **kwargs):
         """
         :param function var_type: The type of the input variable, e.g. int or float.
@@ -1178,6 +1209,7 @@ class ChoiceParameter(Parameter):
     same type and transparency of parameter value on the command line is
     desired.
     """
+
     def __init__(self, var_type=str, *args, **kwargs):
         """
         :param function var_type: The type of the input variable, e.g. str, int,

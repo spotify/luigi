@@ -4,8 +4,11 @@ Configuration
 All configuration can be done by adding configuration files.
 
 Supported config parsers:
-* ``cfg`` (default)
+
+* ``cfg`` (default), based on Python's standard ConfigParser_. Values may refer to environment variables using ``${ENVVAR}`` syntax.
 * ``toml``
+
+.. _ConfigParser: https://docs.python.org/3/library/configparser.html
 
 You can choose right parser via ``LUIGI_CONFIG_PARSER`` environment variable. For example, ``LUIGI_CONFIG_PARSER=toml``.
 
@@ -201,6 +204,51 @@ rpc-retry-wait
   connect to the central scheduler between two retry attempts.
   Defaults to 30
 
+
+[cors]
+------
+
+.. versionadded:: 2.8.0
+
+These parameters control ``/api/<method>`` ``CORS`` behaviour (see: `W3C Cross-Origin Resource Sharing
+<http://www.w3.org/TR/cors/>`_).
+
+enabled
+  Enables CORS support.
+  Defaults to false.
+
+allowed_origins
+  A list of allowed origins. Used only if ``allow_any_origin`` is false.
+  Configure in JSON array format, e.g. ["foo", "bar"].
+  Defaults to empty.
+
+allow_any_origin
+  Accepts requests from any origin.
+  Defaults to false.
+
+allow_null_origin
+  Allows the request to set ``null`` value of the ``Origin`` header.
+  Defaults to false.
+
+max_age
+  Content of ``Access-Control-Max-Age``.
+  Defaults to 86400 (24 hours).
+
+allowed_methods
+  Content of ``Access-Control-Allow-Methods``.
+  Defaults to ``GET, OPTIONS``.
+
+allowed_headers
+  Content of ``Access-Control-Allow-Headers``.
+  Defaults to ``Accept, Content-Type, Origin``.
+
+exposed_headers
+  Content of ``Access-Control-Expose-Headers``.
+  Defaults to empty string (will NOT be sent as a response header).
+
+allow_credentials
+  Indicates that the actual request can include user credentials.
+  Defaults to false.
 
 .. _worker-config:
 
@@ -607,7 +655,7 @@ is good practice to do so when you have a fixed set of resources.
 .. _retcode-config:
 
 [retcode]
-----------
+---------
 
 Configure return codes for the Luigi binary. In the case of multiple return
 codes that could apply, for example a failing task and missing data, the
@@ -922,10 +970,16 @@ summary-length
 port
   The port to use for webhdfs. The normal namenode port is probably on a
   different port from this one.
+
 user
   Perform file system operations as the specified user instead of $USER.  Since
   this parameter is not honored by any of the other hdfs clients, you should
   think twice before setting this parameter.
+
+client_type
+  The type of client to use. Default is the "insecure" client that requires no
+  authentication. The other option is the "kerberos" client that uses kerberos
+  authentication.
 
 
 Per Task Retry-Policy

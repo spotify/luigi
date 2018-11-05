@@ -53,7 +53,13 @@ class ExternalProgramTask(luigi.Task):
     and you can optionally override :py:meth:`program_environment` if you want to
     control the environment variables (see :py:class:`ExternalPythonProgramTask`
     for an example).
+
+    By default, the output (stdout and stderr) of the run external program
+    is being captured and displayed after the execution has ended. This
+    behaviour can be overriden by passing ``--capture-output False``
     """
+
+    capture_output = luigi.BoolParameter(default=True, significant=False, positional=False)
 
     def program_args(self):
         """
@@ -89,13 +95,14 @@ class ExternalProgramTask(luigi.Task):
         args = list(map(str, self.program_args()))
 
         logger.info('Running command: %s', ' '.join(args))
-        tmp_stdout, tmp_stderr = tempfile.TemporaryFile(), tempfile.TemporaryFile()
         env = self.program_environment()
+        kwargs = {'env': env}
+        if self.capture_output:
+            tmp_stdout, tmp_stderr = tempfile.TemporaryFile(), tempfile.TemporaryFile()
+            kwargs.update({'stdout': tmp_stdout, 'stderr': tmp_stderr})
         proc = subprocess.Popen(
             args,
-            env=env,
-            stdout=tmp_stdout,
-            stderr=tmp_stderr
+            **kwargs
         )
 
         try:
@@ -103,22 +110,26 @@ class ExternalProgramTask(luigi.Task):
                 proc.wait()
             success = proc.returncode == 0
 
-            stdout = self._clean_output_file(tmp_stdout)
-            stderr = self._clean_output_file(tmp_stderr)
+            if self.capture_output:
+                stdout = self._clean_output_file(tmp_stdout)
+                stderr = self._clean_output_file(tmp_stderr)
 
-            if stdout:
-                logger.info('Program stdout:\n{}'.format(stdout))
-            if stderr:
-                if self.always_log_stderr or not success:
-                    logger.info('Program stderr:\n{}'.format(stderr))
+                if stdout:
+                    logger.info('Program stdout:\n{}'.format(stdout))
+                if stderr:
+                    if self.always_log_stderr or not success:
+                        logger.info('Program stderr:\n{}'.format(stderr))
+            else:
+                stdout, stderr = None, None
 
             if not success:
                 raise ExternalProgramRunError(
                     'Program failed with return code={}:'.format(proc.returncode),
                     args, env=env, stdout=stdout, stderr=stderr)
         finally:
-            tmp_stderr.close()
-            tmp_stdout.close()
+            if self.capture_output:
+                tmp_stderr.close()
+                tmp_stdout.close()
 
 
 class ExternalProgramRunContext(object):
