@@ -302,6 +302,9 @@ class inherits(object):
                 return self.clone_parent()
                 # but TaskA will have param_a2 already set.
 
+    If more than one task is given in the :class:`~luigi.util.inherits` call, the default
+    arguments are used for all of them.
+
     """
 
     def __init__(self, *tasks_to_inherit, **non_copy_defaults):
