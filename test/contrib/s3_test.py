@@ -330,7 +330,16 @@ class TestS3Client(unittest.TestCase):
 
         contents = s3_client.get_as_string('s3://mybucket/putMe')
 
-        self.assertEquals(contents, self.tempFileContents.decode("utf-8"))
+        self.assertEquals(contents, self.tempFileContents.decode('utf-8'))
+
+    def test_get_as_string_latin1(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.put(self.tempFilePath, 's3://mybucket/putMe')
+
+        contents = s3_client.get_as_string('s3://mybucket/putMe', encoding='ISO-8859-1')
+
+        self.assertEquals(contents, self.tempFileContents.decode('ISO-8859-1'))
 
     def test_get_key(self):
         create_bucket()

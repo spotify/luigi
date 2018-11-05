@@ -398,6 +398,9 @@ class S3Client(FileSystem):
         return contents
 
     def get_as_string(self, s3_path, encoding='utf-8'):
+        """
+        Get the contents of an object stored in S3 as string.
+        """
         content = self.get_as_bytes(s3_path)
         return content.decode(encoding)
 
