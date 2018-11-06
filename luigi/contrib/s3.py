@@ -391,6 +391,9 @@ class S3Client(FileSystem):
     def get_as_bytes(self, s3_path):
         """
         Get the contents of an object stored in S3 as bytes
+
+        :param s3_path: URL for target S3 location
+        :return: File contents as pure bytes
         """
         (bucket, key) = self._path_to_bucket_and_key(s3_path)
         obj = self.s3.Object(bucket, key)
@@ -400,6 +403,10 @@ class S3Client(FileSystem):
     def get_as_string(self, s3_path, encoding='utf-8'):
         """
         Get the contents of an object stored in S3 as string.
+
+        :param s3_path: URL for target S3 location
+        :param encoding: Encoding to decode bytes to string
+        :return: File contents as a string
         """
         content = self.get_as_bytes(s3_path)
         return content.decode(encoding)
