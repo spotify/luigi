@@ -32,6 +32,7 @@ class EmptyTask(Task):
     fail = luigi.BoolParameter()
 
     def run(self):
+        self.trigger_event(Event.PROGRESS, self, {"foo": "bar"})
         if self.fail:
             raise DummyException()
 
@@ -67,6 +68,8 @@ class TestEventCallbacks(unittest.TestCase):
         self.assertEqual(saved_tasks, [t])
 
     def _run_empty_task(self, fail):
+        progresses = []
+        progresses_data = []
         successes = []
         failures = []
         exceptions = []
@@ -80,18 +83,27 @@ class TestEventCallbacks(unittest.TestCase):
             failures.append(task)
             exceptions.append(exception)
 
+        @EmptyTask.event_handler(Event.PROGRESS)
+        def progress(task, data):
+            progresses.append(task)
+            progresses_data.append(data)
+
         t = EmptyTask(fail)
         build([t], local_scheduler=True)
-        return t, successes, failures, exceptions
+        return t, progresses, progresses_data, successes, failures, exceptions
 
     def test_success(self):
-        t, successes, failures, exceptions = self._run_empty_task(False)
+        t, progresses, progresses_data, successes, failures, exceptions = self._run_empty_task(False)
+        self.assertEqual(progresses, [t])
+        self.assertEqual(progresses_data, [{"foo": "bar"}])
         self.assertEqual(successes, [t])
         self.assertEqual(failures, [])
         self.assertEqual(exceptions, [])
 
     def test_failure(self):
-        t, successes, failures, exceptions = self._run_empty_task(True)
+        t, progresses, progresses_data, successes, failures, exceptions = self._run_empty_task(True)
+        self.assertEqual(progresses, [t])
+        self.assertEqual(progresses_data, [{"foo": "bar"}])
         self.assertEqual(successes, [])
         self.assertEqual(failures, [t])
         self.assertEqual(len(exceptions), 1)
@@ -241,7 +253,7 @@ class TestDependencyEvents(unittest.TestCase):
         for param in range(1, 3):
             D(param).produce_output()
         self._run_test(A(), {
-            'event.core.dependency.discovered': set([
+            'event.core.dependency.discovered': {
                 (A(param=1).task_id, B(param=1).task_id),
                 (A(param=1).task_id, B(param=2).task_id),
                 (B(param=1).task_id, C(param=1).task_id),
@@ -250,14 +262,14 @@ class TestDependencyEvents(unittest.TestCase):
                 (C(param=1).task_id, D(param=2).task_id),
                 (C(param=2).task_id, D(param=2).task_id),
                 (C(param=2).task_id, D(param=3).task_id),
-            ]),
-            'event.core.dependency.missing': set([
+            },
+            'event.core.dependency.missing': {
                 (D(param=3).task_id,),
-            ]),
-            'event.core.dependency.present': set([
+            },
+            'event.core.dependency.present': {
                 (D(param=1).task_id,),
                 (D(param=2).task_id,),
-            ]),
+            },
         })
         self.assertFalse(A().output().exists())
 
@@ -265,7 +277,7 @@ class TestDependencyEvents(unittest.TestCase):
         for param in range(1, 4):
             D(param).produce_output()
         self._run_test(A(), {
-            'event.core.dependency.discovered': set([
+            'event.core.dependency.discovered': {
                 (A(param=1).task_id, B(param=1).task_id),
                 (A(param=1).task_id, B(param=2).task_id),
                 (B(param=1).task_id, C(param=1).task_id),
@@ -274,12 +286,12 @@ class TestDependencyEvents(unittest.TestCase):
                 (C(param=1).task_id, D(param=2).task_id),
                 (C(param=2).task_id, D(param=2).task_id),
                 (C(param=2).task_id, D(param=3).task_id),
-            ]),
-            'event.core.dependency.present': set([
+            },
+            'event.core.dependency.present': {
                 (D(param=1).task_id,),
                 (D(param=2).task_id,),
                 (D(param=3).task_id,),
-            ]),
+            },
         })
         self.assertEqual(eval_contents(A().output()),
                          [A(param=1).task_id,

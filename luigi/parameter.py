@@ -23,6 +23,7 @@ See :ref:`Parameter` for more info on how to define parameters.
 import abc
 import datetime
 import warnings
+from enum import IntEnum
 import json
 from json import JSONEncoder
 from collections import OrderedDict, Mapping
@@ -40,8 +41,24 @@ from luigi import six
 from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
 
-
 _no_value = object()
+
+
+class ParameterVisibility(IntEnum):
+    """
+    Possible values for the parameter visibility option. Public is the default.
+    See :doc:`/parameters` for more info.
+    """
+    PUBLIC = 0
+    HIDDEN = 1
+    PRIVATE = 2
+
+    @classmethod
+    def has_value(cls, value):
+        return any(value == item.value for item in cls)
+
+    def serialize(self):
+        return self.value
 
 
 class ParameterException(Exception):
@@ -74,7 +91,7 @@ class DuplicateParameterException(ParameterException):
 
 class Parameter(object):
     """
-    An untyped Parameter
+    Parameter whose value is a ``str``, and a base class for other parameter types.
 
     Parameters are objects set on the Task class level to make it possible to parameterize tasks.
     For instance:
@@ -108,15 +125,13 @@ class Parameter(object):
 
         * Any default value set using the ``default`` flag.
 
-    There are subclasses of ``Parameter`` that define what type the parameter has. This is not
-    enforced within Python, but are used for command line interaction.
-
     Parameter objects may be reused, but you must then set the ``positional=False`` flag.
     """
     _counter = 0  # non-atomically increasing counter used for ordering parameters.
 
     def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
-                 config_path=None, positional=True, always_in_help=False, batch_method=None):
+                 config_path=None, positional=True, always_in_help=False, batch_method=None,
+                 visibility=ParameterVisibility.PUBLIC):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -143,6 +158,10 @@ class Parameter(object):
                                                         parameter values into a single value. Used
                                                         when receiving batched parameter lists from
                                                         the scheduler. See :ref:`batch_method`
+
+        :param visibility: A Parameter whose value is a :py:class:`~luigi.parameter.ParameterVisibility`.
+                            Default value is ParameterVisibility.PUBLIC
+
         """
         self._default = default
         self._batch_method = batch_method
@@ -153,6 +172,7 @@ class Parameter(object):
             positional = False
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
         self.positional = positional
+        self.visibility = visibility if ParameterVisibility.has_value(visibility) else ParameterVisibility.PUBLIC
 
         self.description = description
         self.always_in_help = always_in_help
@@ -171,7 +191,7 @@ class Parameter(object):
 
         try:
             value = conf.get(section, name)
-        except (NoSectionError, NoOptionError):
+        except (NoSectionError, NoOptionError, KeyError):
             return _no_value
 
         return self.parse(value)
@@ -198,11 +218,11 @@ class Parameter(object):
         yield (self._get_value_from_config(task_name, param_name), None)
         yield (self._get_value_from_config(task_name, param_name.replace('_', '-')),
                'Configuration [{}] {} (with dashes) should be avoided. Please use underscores.'.format(
-               task_name, param_name))
+                   task_name, param_name))
         if self._config_path:
             yield (self._get_value_from_config(self._config_path['section'], self._config_path['name']),
                    'The use of the configuration [{}] {} is deprecated. Please use [{}] {}'.format(
-                   self._config_path['section'], self._config_path['name'], task_name, param_name))
+                       self._config_path['section'], self._config_path['name'], task_name, param_name))
         yield (self._default, None)
 
     def has_task_value(self, task_name, param_name):
@@ -255,9 +275,13 @@ class Parameter(object):
 
         :param x: the value to serialize.
         """
-        if not isinstance(x, six.string_types) and self.__class__ == Parameter:
-            warnings.warn("Parameter {0} is not of type string.".format(str(x)))
         return str(x)
+
+    def _warn_on_wrong_param_type(self, param_name, param_value):
+        if self.__class__ != Parameter:
+            return
+        if not isinstance(param_value, six.string_types):
+            warnings.warn('Parameter "{}" with value "{}" is not of type string.'.format(param_name, param_value))
 
     def normalize(self, x):
         """
@@ -296,9 +320,32 @@ class Parameter(object):
     def _parser_global_dest(param_name, task_name):
         return task_name + '_' + param_name
 
-    @staticmethod
-    def _parser_action():
-        return "store"
+    @classmethod
+    def _parser_kwargs(cls, param_name, task_name=None):
+        return {
+            "action": "store",
+            "dest": cls._parser_global_dest(param_name, task_name) if task_name else param_name,
+        }
+
+
+class OptionalParameter(Parameter):
+    """ A Parameter that treats empty string as None """
+
+    def serialize(self, x):
+        if x is None:
+            return ''
+        else:
+            return str(x)
+
+    def parse(self, x):
+        return x or None
+
+    def _warn_on_wrong_param_type(self, param_name, param_value):
+        if self.__class__ != OptionalParameter:
+            return
+        if not isinstance(param_value, six.string_types) and param_value is not None:
+            warnings.warn('OptionalParameter "{}" with value "{}" is not of type string or None.'.format(
+                param_name, param_value))
 
 
 _UNIX_EPOCH = datetime.datetime.utcfromtimestamp(0)
@@ -478,6 +525,12 @@ class _DatetimeParameterBase(Parameter):
             return str(dt)
         return dt.strftime(self.date_format)
 
+    @staticmethod
+    def _convert_to_dt(dt):
+        if not isinstance(dt, datetime.datetime):
+            dt = datetime.datetime.combine(dt, datetime.time.min)
+        return dt
+
     def normalize(self, dt):
         """
         Clamp dt to every Nth :py:attr:`~_DatetimeParameterBase.interval` starting at
@@ -485,6 +538,8 @@ class _DatetimeParameterBase(Parameter):
         """
         if dt is None:
             return None
+
+        dt = self._convert_to_dt(dt)
 
         dt = dt.replace(microsecond=0)  # remove microseconds, to avoid float rounding issues.
         delta = (dt - self.start).total_seconds()
@@ -580,28 +635,72 @@ class FloatParameter(Parameter):
 
 class BoolParameter(Parameter):
     """
-    A Parameter whose value is a ``bool``. This parameter have an implicit
-    default value of ``False``.
+    A Parameter whose value is a ``bool``. This parameter has an implicit default value of
+    ``False``. For the command line interface this means that the value is ``False`` unless you
+    add ``"--the-bool-parameter"`` to your command without giving a parameter value. This is
+    considered *implicit* parsing (the default). However, in some situations one might want to give
+    the explicit bool value (``"--the-bool-parameter true|false"``), e.g. when you configure the
+    default value to be ``True``. This is called *explicit* parsing. When omitting the parameter
+    value, it is still considered ``True`` but to avoid ambiguities during argument parsing, make
+    sure to always place bool parameters behind the task family on the command line when using
+    explicit parsing.
+
+    You can toggle between the two parsing modes on a per-parameter base via
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+            implicit_bool = luigi.BoolParameter(parsing=luigi.BoolParameter.IMPLICIT_PARSING)
+            explicit_bool = luigi.BoolParameter(parsing=luigi.BoolParameter.EXPLICIT_PARSING)
+
+    or globally by
+
+    .. code-block:: python
+
+        luigi.BoolParameter.parsing = luigi.BoolParameter.EXPLICIT_PARSING
+
+    for all bool parameters instantiated after this line.
     """
 
+    IMPLICIT_PARSING = "implicit"
+    EXPLICIT_PARSING = "explicit"
+
+    parsing = IMPLICIT_PARSING
+
     def __init__(self, *args, **kwargs):
+        self.parsing = kwargs.pop("parsing", self.__class__.parsing)
         super(BoolParameter, self).__init__(*args, **kwargs)
         if self._default == _no_value:
             self._default = False
 
-    def parse(self, s):
+    def parse(self, val):
         """
         Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case.
         """
-        return {'true': True, 'false': False}[str(s).lower()]
+        s = str(val).lower()
+        if s == "true":
+            return True
+        elif s == "false":
+            return False
+        else:
+            raise ValueError("cannot interpret '{}' as boolean".format(val))
 
     def normalize(self, value):
-        # coerce anything truthy to True
-        return bool(value) if value is not None else None
+        try:
+            return self.parse(value)
+        except ValueError:
+            return None
 
-    @staticmethod
-    def _parser_action():
-        return 'store_true'
+    def _parser_kwargs(self, *args, **kwargs):
+        parser_kwargs = super(BoolParameter, self)._parser_kwargs(*args, **kwargs)
+        if self.parsing == self.IMPLICIT_PARSING:
+            parser_kwargs["action"] = "store_true"
+        elif self.parsing == self.EXPLICIT_PARSING:
+            parser_kwargs["nargs"] = "?"
+            parser_kwargs["const"] = True
+        else:
+            raise ValueError("unknown parsing value '{}'".format(self.parsing))
+        return parser_kwargs
 
 
 class DateIntervalParameter(Parameter):
@@ -613,6 +712,7 @@ class DateIntervalParameter(Parameter):
     (eg. "2015-W35"). In addition, it also supports arbitrary date intervals
     provided as two dates separated with a dash (eg. "2015-11-04-2015-12-04").
     """
+
     def parse(self, s):
         """
         Parses a :py:class:`~luigi.date_interval.DateInterval` from the input.
@@ -664,8 +764,10 @@ class TimeDeltaParameter(Parameter):
 
         def optional_field(key):
             return "(%s)?" % field(key)
+
         # A little loose: ISO 8601 does not allow weeks in combination with other fields, but this regex does (as does python timedelta)
-        regex = "P(%s|%s(T%s)?)" % (field("weeks"), optional_field("days"), "".join([optional_field(key) for key in ["hours", "minutes", "seconds"]]))
+        regex = "P(%s|%s(T%s)?)" % (field("weeks"), optional_field("days"),
+                                    "".join([optional_field(key) for key in ["hours", "minutes", "seconds"]]))
         return self._apply_regex(regex, input)
 
     def _parseSimple(self, input):
@@ -695,8 +797,6 @@ class TimeDeltaParameter(Parameter):
 
         :param x: the value to serialize.
         """
-        if not isinstance(x, datetime.timedelta) and self.__class__ == TimeDeltaParameter:
-            warnings.warn("Parameter {0} is not of type timedelta.".format(str(x)))
         weeks = x.days // 7
         days = x.days % 7
         hours = x.seconds // 3600
@@ -704,6 +804,12 @@ class TimeDeltaParameter(Parameter):
         seconds = (x.seconds % 3600) % 60
         result = "{} w {} d {} h {} m {} s".format(weeks, days, hours, minutes, seconds)
         return result
+
+    def _warn_on_wrong_param_type(self, param_name, param_value):
+        if self.__class__ != TimeDeltaParameter:
+            return
+        if not isinstance(param_value, datetime.timedelta):
+            warnings.warn('Parameter "{}" with value "{}" is not of type timedelta.'.format(param_name, param_value))
 
 
 class TaskParameter(Parameter):
@@ -777,7 +883,7 @@ class EnumParameter(Parameter):
         return e.name
 
 
-class FrozenOrderedDict(Mapping):
+class _FrozenOrderedDict(Mapping):
     """
     It is an immutable wrapper around ordered dictionaries that implements the complete :py:class:`collections.Mapping`
     interface. It can be used as a drop-in replacement for dictionaries where immutability and ordering are desired.
@@ -808,6 +914,28 @@ class FrozenOrderedDict(Mapping):
 
     def get_wrapped(self):
         return self.__dict
+
+
+def _recursively_freeze(value):
+    """
+    Recursively walks ``Mapping``s and ``list``s and converts them to ``_FrozenOrderedDict`` and ``tuples``, respectively.
+    """
+    if isinstance(value, Mapping):
+        return _FrozenOrderedDict(((k, _recursively_freeze(v)) for k, v in value.items()))
+    elif isinstance(value, list) or isinstance(value, tuple):
+        return tuple(_recursively_freeze(v) for v in value)
+    return value
+
+
+class _DictParamEncoder(JSONEncoder):
+    """
+    JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~_FrozenOrderedDict` JSON serializable.
+    """
+
+    def default(self, obj):
+        if isinstance(obj, _FrozenOrderedDict):
+            return obj.get_wrapped()
+        return json.JSONEncoder.default(self, obj)
 
 
 class DictParameter(Parameter):
@@ -843,20 +971,11 @@ class DictParameter(Parameter):
     values (like a database connection config).
     """
 
-    class DictParamEncoder(JSONEncoder):
-        """
-        JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~FrozenOrderedDict` JSON serializable.
-        """
-        def default(self, obj):
-            if isinstance(obj, FrozenOrderedDict):
-                return obj.get_wrapped()
-            return json.JSONEncoder.default(self, obj)
-
     def normalize(self, value):
         """
-        Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be hashed.
+        Ensure that dictionary parameter is converted to a _FrozenOrderedDict so it can be hashed.
         """
-        return FrozenOrderedDict(value)
+        return _recursively_freeze(value)
 
     def parse(self, s):
         """
@@ -869,10 +988,10 @@ class DictParameter(Parameter):
 
         :param s: String to be parse
         """
-        return json.loads(s, object_pairs_hook=FrozenOrderedDict)
+        return json.loads(s, object_pairs_hook=_FrozenOrderedDict)
 
     def serialize(self, x):
-        return json.dumps(x, cls=DictParameter.DictParamEncoder)
+        return json.dumps(x, cls=_DictParamEncoder)
 
 
 class ListParameter(Parameter):
@@ -905,14 +1024,15 @@ class ListParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --grades '[100,70]'
     """
+
     def normalize(self, x):
         """
-        Ensure that list parameter is converted to a tuple so it can be hashed.
+        Ensure that struct is recursively converted to a tuple so it can be hashed.
 
         :param str x: the value to parse.
         :return: the normalized (hashable/immutable) value.
         """
-        return tuple(x)
+        return _recursively_freeze(x)
 
     def parse(self, x):
         """
@@ -921,7 +1041,7 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the parsed value.
         """
-        return list(json.loads(x))
+        return list(json.loads(x, object_pairs_hook=_FrozenOrderedDict))
 
     def serialize(self, x):
         """
@@ -931,10 +1051,10 @@ class ListParameter(Parameter):
 
         :param x: the value to serialize.
         """
-        return json.dumps(x)
+        return json.dumps(x, cls=_DictParamEncoder)
 
 
-class TupleParameter(Parameter):
+class TupleParameter(ListParameter):
     """
     Parameter whose value is a ``tuple`` or ``tuple`` of tuples.
 
@@ -983,19 +1103,10 @@ class TupleParameter(Parameter):
         # Therefore, if json.loads(x) returns a ValueError, try ast.literal_eval(x).
         # ast.literal_eval(t_str) == t
         try:
-            return tuple(tuple(x) for x in json.loads(x))  # loop required to parse tuple of tuples
+            # loop required to parse tuple of tuples
+            return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=_FrozenOrderedDict))
         except ValueError:
             return literal_eval(x)  # if this causes an error, let that error be raised.
-
-    def serialize(self, x):
-        """
-        Opposite of :py:meth:`parse`.
-
-        Converts the value ``x`` to a string.
-
-        :param x: the value to serialize.
-        """
-        return json.dumps(x)
 
 
 class NumericalParameter(Parameter):
@@ -1019,6 +1130,7 @@ class NumericalParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --my-param-1 -3 --my-param-2 -2
     """
+
     def __init__(self, left_op=operator.le, right_op=operator.lt, *args, **kwargs):
         """
         :param function var_type: The type of the input variable, e.g. int or float.
@@ -1097,6 +1209,7 @@ class ChoiceParameter(Parameter):
     same type and transparency of parameter value on the command line is
     desired.
     """
+
     def __init__(self, var_type=str, *args, **kwargs):
         """
         :param function var_type: The type of the input variable, e.g. str, int,
@@ -1120,8 +1233,11 @@ class ChoiceParameter(Parameter):
 
     def parse(self, s):
         var = self._var_type(s)
+        return self.normalize(var)
+
+    def normalize(self, var):
         if var in self._choices:
             return var
         else:
-            raise ValueError("{s} is not a valid choice from {choices}".format(
-                s=s, choices=self._choices))
+            raise ValueError("{var} is not a valid choice from {choices}".format(
+                var=var, choices=self._choices))

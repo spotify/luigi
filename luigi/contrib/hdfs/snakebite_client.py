@@ -131,7 +131,7 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
 
         :param path: delete-able file(s) or directory(ies)
         :type path: either a string or a sequence of strings
-        :param recursive: delete directories trees like \*nix: rm -r
+        :param recursive: delete directories trees like \\*nix: rm -r
         :type recursive: boolean, default is True
         :param skip_trash: do or don't move deleted items into the trash first
         :type skip_trash: boolean, default is False (use trash)
@@ -145,7 +145,7 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
 
         :param path: update-able file(s)
         :type path: either a string or sequence of strings
-        :param permissions: \*nix style permission number
+        :param permissions: \\*nix style permission number
         :type permissions: octal
         :param recursive: change just listed entry(ies) or all in directories
         :type recursive: boolean, default is False
@@ -222,6 +222,15 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         return list(self.get_bite().copyToLocal(self.list_path(path),
                                                 local_destination))
 
+    def get_merge(self, path, local_destination):
+        """
+        Using snakebite getmerge to implement this.
+        :param path: HDFS directory
+        :param local_destination: path on the system running Luigi
+        :return: merge of the directory
+        """
+        return list(self.get_bite().getmerge(path=path, dst=local_destination))
+
     def mkdir(self, path, parents=True, mode=0o755, raise_if_exists=False):
         """
         Use snakebite.mkdir, if available.
@@ -233,7 +242,7 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         :type path: string
         :param parents: create any missing parent directories
         :type parents: boolean, default is True
-        :param mode: \*nix style owner/group/other permissions
+        :param mode: \\*nix style owner/group/other permissions
         :type mode: octal, default 0755
         """
         result = list(self.get_bite().mkdir(self.list_path(path),

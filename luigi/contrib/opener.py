@@ -33,7 +33,7 @@ import json
 
 from luigi.file import LocalTarget
 from luigi.mock import MockTarget
-from luigi.s3 import S3Target
+from luigi.contrib.s3 import S3Target
 from luigi.target import FileSystemException
 from six.moves.urllib.parse import urlsplit, parse_qs
 
@@ -69,7 +69,7 @@ class InvalidQuery(OpenerError):
 
 class OpenerRegistry(object):
 
-    def __init__(self, openers=[]):
+    def __init__(self, openers=None):
         """An opener registry that  stores a number of opener objects used
         to parse Target URIs
 
@@ -77,6 +77,9 @@ class OpenerRegistry(object):
         :type openers: list
 
         """
+        if openers is None:
+            openers = []
+
         self.registry = {}
         self.openers = {}
         self.default_opener = 'file'
@@ -186,7 +189,7 @@ class Opener(object):
         the expected target.
 
         """
-        raise NotImplemented("get_target must be overridden")
+        raise NotImplementedError("get_target must be overridden")
 
 
 class MockOpener(Opener):

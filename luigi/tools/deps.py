@@ -40,8 +40,8 @@
 from __future__ import print_function
 import luigi.interface
 from luigi.contrib.ssh import RemoteTarget
-from luigi.postgres import PostgresTarget
-from luigi.s3 import S3Target
+from luigi.contrib.postgres import PostgresTarget
+from luigi.contrib.s3 import S3Target
 from luigi.target import FileSystemTarget
 from luigi.task import flatten
 from luigi import parameter
@@ -69,7 +69,7 @@ class upstream(luigi.task.Config):
     '''
     Used to provide the parameter upstream-family
     '''
-    family = parameter.Parameter(default=None)
+    family = parameter.OptionalParameter(default=None)
 
 
 def find_deps(task, upstream_task_family):
@@ -79,7 +79,7 @@ def find_deps(task, upstream_task_family):
 
     Returns all deps on all paths between task and upstream
     '''
-    return set([t for t in dfs_paths(task, upstream_task_family)])
+    return {t for t in dfs_paths(task, upstream_task_family)}
 
 
 def find_deps_cli():

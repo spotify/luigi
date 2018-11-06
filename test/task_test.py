@@ -17,6 +17,8 @@
 
 import doctest
 import pickle
+import six
+import warnings
 
 from helpers import unittest, LuigiTestCase
 from datetime import datetime, timedelta
@@ -40,6 +42,17 @@ class DummyTask(luigi.Task):
     insignificant_param = luigi.Parameter(significant=False)
 
 
+DUMMY_TASK_OK_PARAMS = dict(
+    param='test',
+    bool_param=True,
+    int_param=666,
+    float_param=123.456,
+    date_param=datetime(2014, 9, 13).date(),
+    datehour_param=datetime(2014, 9, 13, 9),
+    timedelta_param=timedelta(44),  # doesn't support seconds
+    insignificant_param='test')
+
+
 class DefaultInsignificantParamTask(luigi.Task):
     insignificant_param = luigi.Parameter(significant=False, default='value')
     necessary_param = luigi.Parameter(significant=False)
@@ -51,17 +64,7 @@ class TaskTest(unittest.TestCase):
         doctest.testmod(luigi.task)
 
     def test_task_to_str_to_task(self):
-        params = dict(
-            param='test',
-            bool_param=True,
-            int_param=666,
-            float_param=123.456,
-            date_param=datetime(2014, 9, 13).date(),
-            datehour_param=datetime(2014, 9, 13, 9),
-            timedelta_param=timedelta(44),  # doesn't support seconds
-            insignificant_param='test')
-
-        original = DummyTask(**params)
+        original = DummyTask(**DUMMY_TASK_OK_PARAMS)
         other = DummyTask.from_str_params(original.to_str_params())
         self.assertEqual(original, other)
 
@@ -78,6 +81,29 @@ class TaskTest(unittest.TestCase):
     def test_external_tasks_loadable(self):
         task = load_task("luigi", "ExternalTask", {})
         assert(isinstance(task, luigi.ExternalTask))
+
+    def test_getpaths(self):
+        class RequiredTask(luigi.Task):
+            def output(self):
+                return luigi.LocalTarget("/path/to/target/file")
+
+        t = RequiredTask()
+        reqs = {}
+        reqs["bare"] = t
+        reqs["dict"] = {"key": t}
+        reqs["OrderedDict"] = collections.OrderedDict([("key", t)])
+        reqs["list"] = [t]
+        reqs["tuple"] = (t,)
+        reqs["generator"] = (t for _ in range(10))
+
+        struct = luigi.task.getpaths(reqs)
+        self.assertIsInstance(struct, dict)
+        self.assertIsInstance(struct["bare"], luigi.Target)
+        self.assertIsInstance(struct["dict"], dict)
+        self.assertIsInstance(struct["OrderedDict"], collections.OrderedDict)
+        self.assertIsInstance(struct["list"], list)
+        self.assertIsInstance(struct["tuple"], tuple)
+        self.assertTrue(hasattr(struct["generator"], "__iter__"))
 
     def test_flatten(self):
         flatten = luigi.task.flatten
@@ -105,6 +131,29 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(tracking_url, 'http://test.luigi.com/')
         message = task.set_status_message('message')
         self.assertEqual(message, 'message')
+
+    def test_no_warn_if_param_types_ok(self):
+        with warnings.catch_warnings(record=True) as w:
+            DummyTask(**DUMMY_TASK_OK_PARAMS)
+        self.assertEqual(len(w), 0, msg='No warning should be raised when correct parameter types are used')
+
+    if six.PY3:  # assertWarnsRegex was introduced in Python 3.2
+        def test_warn_on_non_str_param(self):
+            params = dict(**DUMMY_TASK_OK_PARAMS)
+            params['param'] = 42
+            with self.assertWarnsRegex(UserWarning, 'Parameter "param" with value "42" is not of type string.'):
+                DummyTask(**params)
+
+        def test_warn_on_non_timedelta_param(self):
+            params = dict(**DUMMY_TASK_OK_PARAMS)
+
+            class MockTimedelta(object):
+                days = 1
+                seconds = 1
+
+            params['timedelta_param'] = MockTimedelta()
+            with self.assertWarnsRegex(UserWarning, 'Parameter "timedelta_param" with value ".*" is not of type timedelta.'):
+                DummyTask(**params)
 
 
 class ExternalizeTaskTest(LuigiTestCase):

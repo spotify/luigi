@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2017 VNG Corporation
+# Copyright 2012-2015 Spotify AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""
-luigi.s3 has moved to :py:mod:`luigi.contrib.s3`
-"""
-# Delete this file any time after 24 march 2017
+from .cfg_parser import LuigiConfigParser
+from .core import get_config, add_config_path
+from .toml_parser import LuigiTomlParser
 
-import warnings
 
-from luigi.contrib.s3 import *  # NOQA
-warnings.warn("luigi.s3 module has been moved to luigi.contrib.s3",
-              DeprecationWarning)
+__all__ = [
+    'add_config_path',
+    'get_config',
+    'LuigiConfigParser',
+    'LuigiTomlParser',
+]

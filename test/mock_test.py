@@ -19,6 +19,8 @@ from __future__ import print_function
 from helpers import unittest
 
 from luigi.mock import MockTarget, MockFileSystem
+from luigi import six
+from luigi.format import Nop
 
 
 class MockFileTest(unittest.TestCase):
@@ -40,6 +42,28 @@ class MockFileTest(unittest.TestCase):
 
         with t.open('r') as b:
             self.assertEqual(list(b), ['bar'])
+
+    def test_bytes(self):
+        t = MockTarget("foo", format=Nop)
+        with t.open('wb') as b:
+            b.write(b"bar")
+
+        with t.open('rb') as b:
+            self.assertEqual(list(b), [b'bar'])
+
+    def test_default_mode_value(self):
+        t = MockTarget("foo")
+        with t.open('w') as b:
+            b.write("bar")
+
+        with t.open() as b:
+            self.assertEqual(list(b), ['bar'])
+
+    def test_mode_none_error(self):
+        t = MockTarget("foo")
+        with self.assertRaises(TypeError):
+            with t.open(None) as b:
+                b.write("bar")
 
     # That should work in python2 because of the autocast
     # That should work in python3 because the default format is Text
@@ -98,4 +122,8 @@ class TestImportMockFile(unittest.TestCase):
 
     def test_mockfile(self):
         from luigi.mock import MockFile
-        self.assertTrue(isinstance(MockFile('foo'), MockTarget))
+        if six.PY3:
+            with self.assertWarnsRegex(DeprecationWarning, r'MockFile has been renamed MockTarget'):
+                self.assertTrue(isinstance(MockFile('foo'), MockTarget))
+        else:
+            self.assertTrue(isinstance(MockFile('foo'), MockTarget))

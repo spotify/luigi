@@ -14,8 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from helpers import unittest
+from helpers import unittest, with_config
 try:
     from unittest import mock
 except ImportError:
@@ -28,6 +27,8 @@ import luigi.server
 from server_test import ServerTestBase
 import time
 import socket
+from multiprocessing import Process, Queue
+import requests
 
 
 class RemoteSchedulerTest(unittest.TestCase):
@@ -51,7 +52,7 @@ class RemoteSchedulerTest(unittest.TestCase):
         scheduler = ShorterWaitRemoteScheduler('http://zorg.com', 42)
 
         with mock.patch.object(scheduler, '_fetcher') as fetcher:
-            fetcher.raises = socket.timeout
+            fetcher.raises = socket.timeout, socket.gaierror
             fetcher.fetch.side_effect = fetcher_side_effect
             return scheduler.get_work("fake_worker")
 
@@ -70,6 +71,36 @@ class RemoteSchedulerTest(unittest.TestCase):
 
         fetch_results = [socket.timeout, socket.timeout, socket.timeout]
         self.assertRaises(luigi.rpc.RPCError, self.get_work, fetch_results)
+
+    @mock.patch('luigi.rpc.logger')
+    def test_log_rpc_retries_enabled(self, mock_logger):
+        """
+        Tests that each retry of an RPC method is logged
+        """
+
+        fetch_results = [socket.timeout, socket.timeout, '{"response":{}}']
+        self.get_work(fetch_results)
+        self.assertEqual([
+            mock.call.warning('Failed connecting to remote scheduler %r', 'http://zorg.com', exc_info=True),
+            mock.call.info('Retrying attempt 2 of 3 (max)'),
+            mock.call.warning('Failed connecting to remote scheduler %r', 'http://zorg.com', exc_info=True),
+            mock.call.info('Retrying attempt 3 of 3 (max)'),
+        ], mock_logger.mock_calls)
+
+    @with_config({'core': {'rpc-log-retries': 'false'}})
+    @mock.patch('luigi.rpc.logger')
+    def test_log_rpc_retries_disabled(self, mock_logger):
+        """
+        Tests that retries of an RPC method are not logged
+        """
+
+        fetch_results = [socket.timeout, socket.timeout, socket.gaierror]
+        try:
+            self.get_work(fetch_results)
+            self.fail("get_work should have thrown RPCError")
+        except luigi.rpc.RPCError as e:
+            self.assertTrue(isinstance(e.sub_exception, socket.gaierror))
+        self.assertEqual([], mock_logger.mock_calls)
 
     def test_get_work_retries_on_null(self):
         """
@@ -118,3 +149,22 @@ class RPCTest(scheduler_api_test.SchedulerApiTest, ServerTestBase):
     def test_get_work_speed(self):
         """ This would be too slow to run through network """
         pass
+
+
+class RequestsFetcherTest(ServerTestBase):
+    def test_fork_changes_session(self):
+        session = requests.Session()
+        fetcher = luigi.rpc.RequestsFetcher(session)
+
+        q = Queue()
+
+        def check_session(q):
+            fetcher.check_pid()
+            # make sure that check_pid has changed out the session
+            q.put(fetcher.session != session)
+
+        p = Process(target=check_session, args=(q,))
+        p.start()
+        p.join()
+
+        self.assertTrue(q.get(), 'the requests.Session should have changed in the new process')

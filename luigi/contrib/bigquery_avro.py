@@ -19,8 +19,8 @@ except ImportError:
 class BigQueryLoadAvro(BigQueryLoadTask):
     """A helper for loading specifically Avro data into BigQuery from GCS.
 
-    Additional goodies - takes field documentation from the input data and propagates it
-    to BigQuery table description and field descriptions.
+    Copies table level description from Avro schema doc, BigQuery internally will copy field-level descriptions
+    to the table.
 
     Suitable for use via subclassing: override requires() to return Task(s) that output
     to GCS Targets; their paths are expected to be URIs of .avro files or URI prefixes
@@ -38,7 +38,7 @@ class BigQueryLoadAvro(BigQueryLoadTask):
         return [self._avro_uri(x) for x in flatten(self.input())]
 
     def _get_input_schema(self):
-        '''Arbitrarily picks an object in input and reads the Avro schema from it.'''
+        """Arbitrarily picks an object in input and reads the Avro schema from it."""
         assert avro, 'avro module required'
 
         input_target = flatten(self.input())[0]
@@ -78,26 +78,8 @@ class BigQueryLoadAvro(BigQueryLoadTask):
         bq_client = self.output().client.client
         table = self.output().table
 
-        current_bq_schema = bq_client.tables().get(projectId=table.project_id,
-                                                   datasetId=table.dataset_id,
-                                                   tableId=table.table_id).execute()
-
-        def get_fields_with_description(bq_fields, avro_fields):
-            new_fields = []
-            for field in bq_fields:
-                avro_field = avro_fields[field[u'name']]
-                field[u'description'] = avro_field.doc
-                if field[u'type'] == u'RECORD' and hasattr(avro_field.type, 'fields_dict'):
-                    field[u'fields'] = \
-                        get_fields_with_description(field[u'fields'], avro_field.type.fields_dict)
-                new_fields.append(field)
-            return new_fields
-
-        field_descriptions = get_fields_with_description(current_bq_schema['schema']['fields'], avro_schema.fields_dict)
-
         patch = {
             'description': avro_schema.doc,
-            'schema': {'fields': field_descriptions, },
         }
 
         bq_client.tables().patch(projectId=table.project_id,
@@ -113,4 +95,4 @@ class BigQueryLoadAvro(BigQueryLoadTask):
         try:
             self._set_output_doc(self._get_input_schema())
         except Exception as e:
-            logger.info('Could not propagate Avro doc to BigQuery table field descriptions: %r', e)
+            logger.warning('Could not propagate Avro doc to BigQuery table description: %r', e)

@@ -36,18 +36,19 @@ except ImportError:
 
 class hdfs(luigi.Config):
     client_version = luigi.IntParameter(default=None)
-    effective_user = luigi.Parameter(
+    effective_user = luigi.OptionalParameter(
         default=os.getenv('HADOOP_USER_NAME'),
         description="Optionally specifies the effective user for snakebite. "
                     "If not set the environment variable HADOOP_USER_NAME is "
                     "used, else USER")
     snakebite_autoconfig = luigi.BoolParameter(default=False)
-    namenode_host = luigi.Parameter(default=None)
+    namenode_host = luigi.OptionalParameter(default=None)
     namenode_port = luigi.IntParameter(default=None)
     client = luigi.Parameter(default='hadoopcli')
-    tmp_dir = luigi.Parameter(default=None,
-                              config_path=dict(section='core', name='hdfs-tmp-dir'),
-                              )
+    tmp_dir = luigi.OptionalParameter(
+        default=None,
+        config_path=dict(section='core', name='hdfs-tmp-dir'),
+    )
 
 
 class hadoopcli(luigi.Config):

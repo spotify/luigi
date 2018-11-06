@@ -31,11 +31,18 @@ luigi.notifications.DEBUG = True
 class TestCmd(unittest.TestCase):
 
     def test_getpcmd(self):
-        p = subprocess.Popen(["sleep", "1"])
+        if os.name == 'nt':
+            command = ["ping", "1.1.1.1", "-w", "1000"]
+        else:
+            command = ["sleep", "1"]
+
+        external_process = subprocess.Popen(command)
+        result = luigi.lock.getpcmd(external_process.pid)
+
         self.assertTrue(
-            luigi.lock.getpcmd(p.pid) in ["sleep 1", '[sleep]']
+            result.strip() in ["sleep 1", '[sleep]', 'ping 1.1.1.1 -w 1000']
         )
-        p.kill()
+        external_process.kill()
 
 
 class LockTest(unittest.TestCase):
@@ -50,10 +57,12 @@ class LockTest(unittest.TestCase):
         os.rmdir(self.pid_dir)
 
     def test_get_info(self):
-        p = subprocess.Popen(["yes", "à我ф"], stdout=subprocess.PIPE)
-        pid, cmd, pid_file = luigi.lock.get_info(self.pid_dir, p.pid)
-        p.kill()
-        self.assertEqual(cmd, 'yes à我ф')
+        try:
+            p = subprocess.Popen(["yes", u"à我ф"], stdout=subprocess.PIPE)
+            pid, cmd, pid_file = luigi.lock.get_info(self.pid_dir, p.pid)
+        finally:
+            p.kill()
+        self.assertEqual(cmd, u'yes à我ф')
 
     def test_acquiring_free_lock(self):
         acquired = luigi.lock.acquire_for(self.pid_dir)

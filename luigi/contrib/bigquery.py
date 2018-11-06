@@ -71,6 +71,22 @@ class FieldDelimiter(object):
     PIPE = "|"
 
 
+class PrintHeader(object):
+    TRUE = True
+    FALSE = False
+
+
+class DestinationFormat(object):
+    AVRO = 'AVRO'
+    CSV = 'CSV'
+    NEWLINE_DELIMITED_JSON = 'NEWLINE_DELIMITED_JSON'
+
+
+class Compression(object):
+    GZIP = 'GZIP'
+    NONE = 'NONE'
+
+
 class Encoding(object):
     """
     [Optional] The character encoding of the data. The supported values are UTF-8 or ISO-8859-1. The default value is UTF-8.
@@ -110,7 +126,7 @@ class BigQueryClient(object):
         if descriptor:
             self.client = discovery.build_from_document(descriptor, **authenticate_kwargs)
         else:
-            self.client = discovery.build('bigquery', 'v2', **authenticate_kwargs)
+            self.client = discovery.build('bigquery', 'v2', cache_discovery=False, **authenticate_kwargs)
 
     def dataset_exists(self, dataset):
         """Returns whether the given dataset exists.
@@ -158,7 +174,7 @@ class BigQueryClient(object):
 
         return True
 
-    def make_dataset(self, dataset, raise_if_exists=False, body={}):
+    def make_dataset(self, dataset, raise_if_exists=False, body=None):
         """Creates a new dataset with the default permissions.
 
            :param dataset:
@@ -166,6 +182,9 @@ class BigQueryClient(object):
            :param raise_if_exists: whether to raise an exception if the dataset already exists.
            :raises luigi.target.FileAlreadyExists: if raise_if_exists=True and the dataset exists
         """
+
+        if body is None:
+            body = {}
 
         try:
             body['id'] = '{}:{}'.format(dataset.project_id, dataset.dataset_id)
@@ -348,7 +367,6 @@ class BigQueryClient(object):
         """
 
         job = {
-            "projectId": dest_table.project_id,
             "configuration": {
                 "copy": {
                     "sourceTable": {
@@ -402,14 +420,13 @@ class MixinBigQueryBulkComplete(object):
 
     @classmethod
     def bulk_complete(cls, parameter_tuples):
-        if len(parameter_tuples) < 1:
-            return
-
         # Instantiate the tasks to inspect them
         tasks_with_params = [(cls(p), p) for p in parameter_tuples]
+        if not tasks_with_params:
+            return
 
         # Grab the set of BigQuery datasets we are interested in
-        datasets = set([t.output().table.dataset for t, p in tasks_with_params])
+        datasets = {t.output().table.dataset for t, p in tasks_with_params}
         logger.info('Checking datasets %s for available tables', datasets)
 
         # Query the available tables for all datasets
@@ -513,7 +530,6 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         assert all(x.startswith('gs://') for x in source_uris)
 
         job = {
-            'projectId': output.table.project_id,
             'configuration': {
                 'load': {
                     'destinationTable': {
@@ -599,7 +615,6 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
         logger.info('Query SQL: %s', query)
 
         job = {
-            'projectId': output.table.project_id,
             'configuration': {
                 'query': {
                     'query': query,
@@ -666,6 +681,95 @@ class ExternalBigQueryTask(MixinBigQueryBulkComplete, luigi.ExternalTask):
     An external task for a BigQuery target.
     """
     pass
+
+
+class BigQueryExtractTask(luigi.Task):
+    """
+    Extracts (unloads) a table from BigQuery to GCS.
+
+    This tasks requires the input to be exactly one BigQueryTarget while the
+    output should be one or more GCSTargets from luigi.contrib.gcs depending on
+    the use of destinationUris property.
+    """
+    @property
+    def destination_uris(self):
+        """
+        The fully-qualified URIs that point to your data in Google Cloud
+        Storage. Each URI can contain one '*' wildcard character and it must
+        come after the 'bucket' name.
+
+        Wildcarded destinationUris in GCSQueryTarget might not be resolved
+        correctly and result in incomplete data. If a GCSQueryTarget is used to
+        pass wildcarded destinationUris be sure to overwrite this property to
+        suppress the warning.
+        """
+        return [x.path for x in luigi.task.flatten(self.output())]
+
+    @property
+    def print_header(self):
+        """Whether to print the header or not."""
+        return PrintHeader.TRUE
+
+    @property
+    def field_delimiter(self):
+        """
+        The separator for fields in a CSV file. The separator can be any
+        ISO-8859-1 single-byte character.
+        """
+        return FieldDelimiter.COMMA
+
+    @property
+    def destination_format(self):
+        """
+        The destination format to use (see :py:class:`DestinationFormat`).
+        """
+        return DestinationFormat.CSV
+
+    @property
+    def compression(self):
+        """Whether to use compression."""
+        return Compression.NONE
+
+    def run(self):
+        input = luigi.task.flatten(self.input())[0]
+        assert (
+            isinstance(input, BigQueryTarget) or
+            (len(input) == 1 and isinstance(input[0], BigQueryTarget))), \
+            'Input must be exactly one BigQueryTarget, not %s' % (input)
+        bq_client = input.client
+
+        destination_uris = self.destination_uris
+        assert all(x.startswith('gs://') for x in destination_uris)
+
+        logger.info('Launching Extract Job')
+        logger.info('Extract source: %s', input)
+        logger.info('Extract destination: %s', destination_uris)
+
+        job = {
+            'configuration': {
+                'extract': {
+                    'sourceTable': {
+                        'projectId': input.table.project_id,
+                        'datasetId': input.table.dataset_id,
+                        'tableId': input.table.table_id
+                    },
+                    'destinationUris': destination_uris,
+                    'destinationFormat': self.destination_format,
+                    'compression': self.compression
+                }
+            }
+        }
+
+        if self.destination_format == 'CSV':
+            # "Only exports to CSV may specify a field delimiter."
+            job['configuration']['extract']['printHeader'] = self.print_header
+            job['configuration']['extract']['fieldDelimiter'] = \
+                self.field_delimiter
+
+        bq_client.run_job(
+            input.table.project_id,
+            job,
+            dataset=input.table.dataset)
 
 
 # the original inconsistently capitalized aliases, for backwards compatibility

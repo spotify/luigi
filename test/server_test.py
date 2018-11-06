@@ -25,6 +25,7 @@ from helpers import unittest, skipOnTravis
 import luigi.rpc
 import luigi.server
 import luigi.cmdline
+from luigi.configuration import get_config
 from luigi.scheduler import Scheduler
 from luigi.six.moves.urllib.parse import (
     urlencode, ParseResult, quote as urlquote
@@ -84,6 +85,19 @@ class ServerTestBase(AsyncHTTPTestCase):
 
 class ServerTest(ServerTestBase):
 
+    def setUp(self):
+        super(ServerTest, self).setUp()
+        get_config().remove_section('cors')
+        self._default_cors = luigi.server.cors()
+
+        get_config().set('cors', 'enabled', 'true')
+        get_config().set('cors', 'allow_any_origin', 'true')
+        get_config().set('cors', 'allow_null_origin', 'true')
+
+    def tearDown(self):
+        super(ServerTest, self).tearDown()
+        get_config().remove_section('cors')
+
     def test_visualiser(self):
         page = self.fetch('/').body
         self.assertTrue(page.find(b'<title>') != -1)
@@ -98,16 +112,176 @@ class ServerTest(ServerTestBase):
     def test_api_404(self):
         self._test_404('/api/foo')
 
+    def test_api_preflight_cors_headers(self):
+        response = self.fetch('/api/graph', method='OPTIONS', headers={'Origin': 'foo'})
+        headers = dict(response.headers)
+
+        self.assertEqual(self._default_cors.allowed_headers,
+                         headers['Access-Control-Allow-Headers'])
+        self.assertEqual(self._default_cors.allowed_methods,
+                         headers['Access-Control-Allow-Methods'])
+        self.assertEqual('*', headers['Access-Control-Allow-Origin'])
+        self.assertEqual(str(self._default_cors.max_age), headers['Access-Control-Max-Age'])
+        self.assertIsNone(headers.get('Access-Control-Allow-Credentials'))
+        self.assertIsNone(headers.get('Access-Control-Expose-Headers'))
+
+    def test_api_preflight_cors_headers_all_response_headers(self):
+        get_config().set('cors', 'allow_credentials', 'true')
+        get_config().set('cors', 'exposed_headers', 'foo, bar')
+        response = self.fetch('/api/graph', method='OPTIONS', headers={'Origin': 'foo'})
+        headers = dict(response.headers)
+
+        self.assertEqual(self._default_cors.allowed_headers,
+                         headers['Access-Control-Allow-Headers'])
+        self.assertEqual(self._default_cors.allowed_methods,
+                         headers['Access-Control-Allow-Methods'])
+        self.assertEqual('*', headers['Access-Control-Allow-Origin'])
+        self.assertEqual(str(self._default_cors.max_age), headers['Access-Control-Max-Age'])
+        self.assertEqual('true', headers['Access-Control-Allow-Credentials'])
+        self.assertEqual('foo, bar', headers['Access-Control-Expose-Headers'])
+
+    def test_api_preflight_cors_headers_null_origin(self):
+        response = self.fetch('/api/graph', method='OPTIONS', headers={'Origin': 'null'})
+        headers = dict(response.headers)
+
+        self.assertEqual(self._default_cors.allowed_headers,
+                         headers['Access-Control-Allow-Headers'])
+        self.assertEqual(self._default_cors.allowed_methods,
+                         headers['Access-Control-Allow-Methods'])
+        self.assertEqual('null', headers['Access-Control-Allow-Origin'])
+        self.assertEqual(str(self._default_cors.max_age), headers['Access-Control-Max-Age'])
+        self.assertIsNone(headers.get('Access-Control-Allow-Credentials'))
+        self.assertIsNone(headers.get('Access-Control-Expose-Headers'))
+
+    def test_api_preflight_cors_headers_disallow_null(self):
+        get_config().set('cors', 'allow_null_origin', 'false')
+        response = self.fetch('/api/graph', method='OPTIONS', headers={'Origin': 'null'})
+        headers = dict(response.headers)
+
+        self.assertNotIn('Access-Control-Allow-Headers', headers)
+        self.assertNotIn('Access-Control-Allow-Methods', headers)
+        self.assertNotIn('Access-Control-Allow-Origin', headers)
+        self.assertNotIn('Access-Control-Max-Age', headers)
+        self.assertNotIn('Access-Control-Allow-Credentials', headers)
+        self.assertNotIn('Access-Control-Expose-Headers', headers)
+
+    def test_api_preflight_cors_headers_disallow_any(self):
+        get_config().set('cors', 'allow_any_origin', 'false')
+        get_config().set('cors', 'allowed_origins', '["foo", "bar"]')
+        response = self.fetch('/api/graph', method='OPTIONS', headers={'Origin': 'foo'})
+        headers = dict(response.headers)
+
+        self.assertEqual(self._default_cors.allowed_headers,
+                         headers['Access-Control-Allow-Headers'])
+        self.assertEqual(self._default_cors.allowed_methods,
+                         headers['Access-Control-Allow-Methods'])
+        self.assertEqual('foo', headers['Access-Control-Allow-Origin'])
+        self.assertEqual(str(self._default_cors.max_age), headers['Access-Control-Max-Age'])
+        self.assertIsNone(headers.get('Access-Control-Allow-Credentials'))
+        self.assertIsNone(headers.get('Access-Control-Expose-Headers'))
+
+    def test_api_preflight_cors_headers_disallow_any_no_matched_allowed_origins(self):
+        get_config().set('cors', 'allow_any_origin', 'false')
+        get_config().set('cors', 'allowed_origins', '["foo", "bar"]')
+        response = self.fetch('/api/graph', method='OPTIONS', headers={'Origin': 'foobar'})
+        headers = dict(response.headers)
+
+        self.assertNotIn('Access-Control-Allow-Headers', headers)
+        self.assertNotIn('Access-Control-Allow-Methods', headers)
+        self.assertNotIn('Access-Control-Allow-Origin', headers)
+        self.assertNotIn('Access-Control-Max-Age', headers)
+        self.assertNotIn('Access-Control-Allow-Credentials', headers)
+        self.assertNotIn('Access-Control-Expose-Headers', headers)
+
+    def test_api_preflight_cors_headers_disallow_any_no_allowed_origins(self):
+        get_config().set('cors', 'allow_any_origin', 'false')
+        response = self.fetch('/api/graph', method='OPTIONS', headers={'Origin': 'foo'})
+        headers = dict(response.headers)
+
+        self.assertNotIn('Access-Control-Allow-Headers', headers)
+        self.assertNotIn('Access-Control-Allow-Methods', headers)
+        self.assertNotIn('Access-Control-Allow-Origin', headers)
+        self.assertNotIn('Access-Control-Max-Age', headers)
+        self.assertNotIn('Access-Control-Allow-Credentials', headers)
+        self.assertNotIn('Access-Control-Expose-Headers', headers)
+
+    def test_api_preflight_cors_headers_disabled(self):
+        get_config().set('cors', 'enabled', 'false')
+        response = self.fetch('/api/graph', method='OPTIONS', headers={'Origin': 'foo'})
+        headers = dict(response.headers)
+
+        self.assertNotIn('Access-Control-Allow-Headers', headers)
+        self.assertNotIn('Access-Control-Allow-Methods', headers)
+        self.assertNotIn('Access-Control-Allow-Origin', headers)
+        self.assertNotIn('Access-Control-Max-Age', headers)
+        self.assertNotIn('Access-Control-Allow-Credentials', headers)
+        self.assertNotIn('Access-Control-Expose-Headers', headers)
+
+    def test_api_preflight_cors_headers_no_origin_header(self):
+        response = self.fetch('/api/graph', method='OPTIONS')
+        headers = dict(response.headers)
+
+        self.assertNotIn('Access-Control-Allow-Headers', headers)
+        self.assertNotIn('Access-Control-Allow-Methods', headers)
+        self.assertNotIn('Access-Control-Allow-Origin', headers)
+        self.assertNotIn('Access-Control-Max-Age', headers)
+        self.assertNotIn('Access-Control-Allow-Credentials', headers)
+        self.assertNotIn('Access-Control-Expose-Headers', headers)
+
     def test_api_cors_headers(self):
+        response = self.fetch('/api/graph', headers={'Origin': 'foo'})
+        headers = dict(response.headers)
+
+        self.assertEqual('*', headers['Access-Control-Allow-Origin'])
+
+    def test_api_cors_headers_null_origin(self):
+        response = self.fetch('/api/graph', headers={'Origin': 'null'})
+        headers = dict(response.headers)
+
+        self.assertEqual('null', headers['Access-Control-Allow-Origin'])
+
+    def test_api_cors_headers_disallow_null(self):
+        get_config().set('cors', 'allow_null_origin', 'false')
+        response = self.fetch('/api/graph', headers={'Origin': 'null'})
+        headers = dict(response.headers)
+
+        self.assertIsNone(headers.get('Access-Control-Allow-Origin'))
+
+    def test_api_cors_headers_disallow_any(self):
+        get_config().set('cors', 'allow_any_origin', 'false')
+        get_config().set('cors', 'allowed_origins', '["foo", "bar"]')
+        response = self.fetch('/api/graph', headers={'Origin': 'foo'})
+        headers = dict(response.headers)
+
+        self.assertEqual('foo', headers['Access-Control-Allow-Origin'])
+
+    def test_api_cors_headers_disallow_any_no_matched_allowed_origins(self):
+        get_config().set('cors', 'allow_any_origin', 'false')
+        get_config().set('cors', 'allowed_origins', '["foo", "bar"]')
+        response = self.fetch('/api/graph', headers={'Origin': 'foobar'})
+        headers = dict(response.headers)
+
+        self.assertIsNone(headers.get('Access-Control-Allow-Origin'))
+
+    def test_api_cors_headers_disallow_any_no_allowed_origins(self):
+        get_config().set('cors', 'allow_any_origin', 'false')
+        response = self.fetch('/api/graph', headers={'Origin': 'foo'})
+        headers = dict(response.headers)
+
+        self.assertIsNone(headers.get('Access-Control-Allow-Origin'))
+
+    def test_api_cors_headers_disabled(self):
+        get_config().set('cors', 'enabled', 'false')
+        response = self.fetch('/api/graph', headers={'Origin': 'foo'})
+        headers = dict(response.headers)
+
+        self.assertIsNone(headers.get('Access-Control-Allow-Origin'))
+
+    def test_api_cors_headers_no_origin_header(self):
         response = self.fetch('/api/graph')
         headers = dict(response.headers)
 
-        def _set(name):
-            return set(headers[name].replace(" ", "").split(","))
-
-        self.assertSetEqual(_set("Access-Control-Allow-Headers"), {"Content-Type", "Accept", "Authorization", "Origin"})
-        self.assertSetEqual(_set("Access-Control-Allow-Methods"), {"GET", "OPTIONS"})
-        self.assertEqual(headers["Access-Control-Allow-Origin"], "*")
+        self.assertIsNone(headers.get('Access-Control-Allow-Origin'))
 
 
 class _ServerTest(unittest.TestCase):
