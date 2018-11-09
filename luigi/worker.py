@@ -61,7 +61,7 @@ from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
-from luigi.parameter import BoolParameter, FloatParameter, IntParameter, Parameter, OptionalParameter
+from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter
 
 try:
     import simplejson as json
