@@ -137,7 +137,8 @@ class AzureBlobClient(FileSystem):
     def splitfilepath(self, filepath):
         splitpath = filepath.split("/")
         container = splitpath[0]
-        blob = "/".join(splitpath[1:])
+        blobsplit = splitpath[1:]
+        blob = None if not blobsplit else "/".join(blobsplit)
         return container, blob
 
 
