@@ -1,5 +1,24 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2018 Microsoft Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+#
+
+import os
+
 from azure.storage.blob import blockblobservice
-from luigi.target import FileAlreadyExists, FileSystem
+from luigi.target import FileAlreadyExists, FileSystem, AtomicLocalFile
 
 class AzureBlobClient(FileSystem):
     def __init__(self,  **kwargs):
@@ -106,3 +125,46 @@ class AzureBlobClient(FileSystem):
         container = splitpath[0]
         blob = "/".join(splitpath[1:])
         return container, blob
+
+class ReadableAzureBlobFile(object):
+    def __init__(self, container, blob, client, **kwargs):
+        self.container = container
+        self.blob = blob
+        self.client = client
+        self.closed = False
+        self.azure_blob_options = kwargs
+
+    def read(self):
+        return self.client.download_as_bytes(self.container, self.blob)
+
+    def close(self):
+        self.closed = True
+
+    def __del__(self):
+        self.close()
+
+    def __exit__(self, exc_type, exc, traceback):
+        self.close()
+
+    def __enter__(self):
+        return self
+
+    def readable(self):
+        return True
+
+    def writable(self):
+        return False
+
+    def seekable(self):
+        return False
+
+class AtomicAzureBlobFile(AtomicLocalFile):
+    def __init__(self, container, blob, client, **kwargs):
+        super(AtomicAzureBlobFile, self).__init__(os.path.join(container, blob))
+        self.container = container
+        self.blob = blob
+        self.client = client
+        self.azure_blob_options = kwargs
+
+    def move_to_final_destination(self):
+        self.client.upload(self.tmp_path, self.container, self.blob, **self.azure_blob_options)
