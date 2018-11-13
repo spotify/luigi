@@ -100,8 +100,8 @@ class AzureBlobClient(FileSystem):
         container, blob = self.splitpath(path)
         if not self.exists(path):
             return False
-        self.connection.delete_blob(container, blob)
-        return True
+        lease_id = self.connection.acquire_blob_lease(container, blob)
+        return self.connection.delete_blob(container, blob, lease_id=lease_id)
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
         container, blob = self.splitfilepath(path)
