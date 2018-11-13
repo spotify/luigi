@@ -214,6 +214,13 @@ class AzureBlobTarget(FileSystemTarget):
         self.format = format
         self.azure_blob_options = kwargs
 
+    @property
+    def fs(self):
+        """
+        The :py:class:`FileSystem` associated with :class:`.AzureBlobTarget`
+        """
+        return self.client
+
     def open(self, mode):
         """
         Open the target for reading or writing
