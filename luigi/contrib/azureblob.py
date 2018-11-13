@@ -24,14 +24,38 @@ from luigi.target import FileAlreadyExists, FileSystem, AtomicLocalFile, FileSys
 
 
 class AzureBlobClient(FileSystem):
+    """
+    Create an Azure Blob Storage client for authentication.
+    Users can create multiple storage account, each of which acts like a silo. Under each storage account, we can
+    create a container. Inside each container, the user can create multiple blobs.
+
+    For each account, there should be an account key. This account key cannot be changed and one can access all the
+    containers and blobs under this account using the account key.
+
+    Usually using an account key might not always be the best idea as the key can be leaked and cannot be revoked. The
+    solution to this issue is to create Shared `Access Signatures` aka `sas`. A SAS can be created for an entire
+    container or just a single blob. SAS can be revoked.
+    """
     def __init__(self, account_name=None, account_key=None, sas_token=None, **kwargs):
         """
-        Create an Azure Blob Storage client for authentication.
-        :param account_name: The storage account name. This is used to authenticate requests signed with an account key\
-                            and to construct the storage endpoint. It is required unless a connection string is given,\
-                            or if a custom domain is used with anonymous authentication.
-        :param account_key: The storage account key. This is used for shared key authentication.
-        :param sas_token: A shared access signature token to use to authenticate requests instead of the account key.
+        :param str account_name:
+            The storage account name. This is used to authenticate requests signed with an account key\
+            and to construct the storage endpoint. It is required unless a connection string is given,\
+            or if a custom domain is used with anonymous authentication.
+        :param str account_key:
+            The storage account key. This is used for shared key authentication.
+        :param str sas_token:
+            A shared access signature token to use to authenticate requests instead of the account key.
+        :param dict kwargs:
+            A key-value pair to provide additional connection options.
+
+            * `protocol` - The protocol to use for requests. Defaults to https.
+            * `connection_string` - If specified, this will override all other parameters besides request session.\
+                See http://azure.microsoft.com/en-us/documentation/articles/storage-configure-connection-string/ for the connection string format
+            * `endpoint_suffix` - The host base component of the url, minus the account name. Defaults to Azure\
+                (core.windows.net). Override this to use the China cloud (core.chinacloudapi.cn).
+            * `custom_domain` - The custom domain to use. This can be set in the Azure Portal. For example, ‘www.mydomain.com’.
+            * `token_credential` - A token credential used to authenticate HTTPS requests. The token value should be updated before its expiration.
         """
         self.options = {"account_name": account_name, "account_key": account_key, "sas_token": sas_token}
         self.kwargs = kwargs
@@ -81,7 +105,7 @@ class AzureBlobClient(FileSystem):
     def isdir(self, path):
         """
         Azure Blob Storage has no concept of directories. It always returns False
-        :param path: Path of the Azure blob storage
+        :param str path: Path of the Azure blob storage
         :return: False
         """
         return False
@@ -163,21 +187,27 @@ class AtomicAzureBlobFile(AtomicLocalFile):
 
 
 class AzureBlobTarget(FileSystemTarget):
+    """
+    Create an Azure Blob Target for storing data on Azure Blob Storage
+    """
     def __init__(self, container, blob, client=None, format=None, **kwargs):
         """
-        Create an Azure Blob Storage client using account_name and account_key for authentication
-        :param account_name: The storage account name. This is used to authenticate requests signed with an account key\
-                            and to construct the storage endpoint. It is required unless a connection string is given,\
-                            or if a custom domain is used with anonymous authentication.
-        :param container: The azure container in which the blob needs to be stored
-        :param blob: The name of the blob under container specified
-        :param client: An instance of py:class:`AzureBlobClient`. If none is specified, anonymous access would be used
-        :param format: An instance of py:class:`Format`.
+        :param str account_name:
+            The storage account name. This is used to authenticate requests signed with an account key and to construct the storage endpoint. It is required unless a connection string is given, or if a custom domain is used with anonymous authentication.
+        :param str container:
+            The azure container in which the blob needs to be stored
+        :param str blob:
+            The name of the blob under container specified
+        :param str client:
+            An instance of :class:`.AzureBlobClient`. If none is specified, anonymous access would be used
+        :param str format:
+            An instance of :class:`luigi.format`.
+        :param dict kwargs:
+            Pass the key `progress_callback` with signature `(func(current, total)) ` to get real time progress of upload
         """
         super(AzureBlobTarget, self).__init__(os.path.join(container, blob))
         if format is None:
             format = get_default_format()
-
         self.container = container
         self.blob = blob
         self.client = client or AzureBlobClient()
@@ -187,8 +217,14 @@ class AzureBlobTarget(FileSystemTarget):
     def open(self, mode):
         """
         Open the target for reading or writing
-        :param mode: 'r' for reading and 'w' for writing. 'b' is not supported. Use format in constructor
-        :return: py:class`ReadableAzureBlobFile` if 'r' else py:class`AtomicAzureBlobFile`
+
+        :param char mode:
+            'r' for reading and 'w' for writing.
+
+            'b' is not supported and will be stripped if used. For binary mode, use `format`
+        :return:
+            * :class:`.ReadableAzureBlobFile` if 'r'
+            * :class:`.AtomicAzureBlobFile` if 'w'
         """
         if mode not in ('r', 'w'):
             raise ValueError("Unsupported open mode '%s'" % mode)
