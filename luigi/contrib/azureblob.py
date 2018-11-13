@@ -18,7 +18,9 @@
 import os
 
 from azure.storage.blob import blockblobservice
-from luigi.target import FileAlreadyExists, FileSystem, AtomicLocalFile
+
+from luigi.format import get_default_format
+from luigi.target import FileAlreadyExists, FileSystem, AtomicLocalFile, FileSystemTarget
 
 class AzureBlobClient(FileSystem):
     def __init__(self,  **kwargs):
@@ -168,3 +170,40 @@ class AtomicAzureBlobFile(AtomicLocalFile):
 
     def move_to_final_destination(self):
         self.client.upload(self.tmp_path, self.container, self.blob, **self.azure_blob_options)
+
+class AzureBlobTarget(FileSystemTarget):
+    fs = None
+
+    def __init__(self, container, blob, client=None, format=None, **kwargs):
+        """
+        Create an Azure Blob Storage client using account_name and account_key for authentication
+        :param account_name: The storage account name. This is used to authenticate requests signed with an account key
+            and to construct the storage endpoint. It is required unless a connection string is given, or if a custom
+            domain is used with anonymous authentication.
+        :param container: The azure container in which the blob needs to be stored
+        :param blob: The name of the blob under container specified
+        :param client: An instance of py:class:`AzureBlobClient`. If none is specified, anonymous access would be used
+        :param format: An instance of py:class:`Format`.
+        """
+        super(AzureBlobTarget, self).__init__(os.path.join(container, blob))
+        if format is None:
+            format = get_default_format()
+
+        self.container = container
+        self.blob = blob
+        self.fs = client or AzureBlobClient()
+        self.format = format
+        self.azure_blob_options = kwargs
+
+    def open(self, mode):
+        """
+        Open the target for reading or writing
+        :param mode: 'r' for reading and 'w' for writing. 'b' is not supported. Use format in constructor
+        :return: py:class`ReadableAzureBlobFile` if 'r' else py:class`AtomicAzureBlobFile`
+        """
+        if mode not in ('r', 'w'):
+            raise ValueError("Unsupported open mode '%s'" % mode)
+        if mode == 'r':
+            return self.format.pipe_reader(ReadableAzureBlobFile(self.container, self.blob, self.fs, **self.azure_blob_options))
+        else:
+            return self.format.pipe_writer(AtomicAzureBlobFile(self.container, self.blob, self.fs, **self.azure_blob_options))
