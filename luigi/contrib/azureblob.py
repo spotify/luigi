@@ -72,6 +72,7 @@ class AzureBlobClient(FileSystem):
                                                  token_credential=self.kwargs.get("token_credential"))
 
     def upload(self, tmp_path, container, blob, **kwargs):
+        self.create_container(container)
         try:
             lease_id = self.connection.acquire_blob_lease(container, blob)
             self.connection.create_blob_from_path(container, blob, tmp_path, lease_id=lease_id, progress_callback=kwargs.get("progress_callback"))
@@ -81,11 +82,20 @@ class AzureBlobClient(FileSystem):
     def download_as_bytes(self, container, blob):
         return self.connection.get_blob_to_bytes(container, blob).content
 
+    def create_container(self, container_name):
+        return self.connection.create_container(container_name)
+
+    def delete_container(self, container_name):
+        try:
+            lease_id=self.connection.acquire_container_lease(container_name)
+            self.connection.delete_container(container_name, lease_id=lease_id)
+        finally:
+            self.connection.release_container_lease(container_name, lease_id)
+
     def exists(self, path):
         try:
             container, blob = self.splitpath(path)
-            exists_answer = self.connection.exists(container, blob)
-            return exists_answer
+            return self.connection.exists(container, blob)
         except Exception:
             return False
 
