@@ -24,29 +24,16 @@ from luigi.target import FileAlreadyExists, FileSystem, AtomicLocalFile, FileSys
 
 
 class AzureBlobClient(FileSystem):
-    def __init__(self,  **kwargs):
+    def __init__(self, account_name=None, account_key=None, sas_token=None, **kwargs):
         """
-        Create an Azure Blob Storage client using anonymous authentication
-        """
-        self.kwargs = kwargs
-
-    def __init__(self, account_name, account_key, **kwargs):
-        """
-        Create an Azure Blob Storage client using account_name and account_key for authentication
+        Create an Azure Blob Storage client using account_name and account_key for authentication.
         :param account_name: The storage account name. This is used to authenticate requests signed with an account key
             and to construct the storage endpoint. It is required unless a connection string is given, or if a custom
             domain is used with anonymous authentication.
         :param account_key: The storage account key. This is used for shared key authentication.
-        """
-        self.options = {"account_name": account_name, "account_key": account_key}
-        self.kwargs = kwargs
-
-    def __init__(self, sas_token, **kwargs):
-        """
-        Create an Azure Blob Storage client using sas_token for authentication
         :param sas_token: A shared access signature token to use to authenticate requests instead of the account key.
         """
-        self.options = {"sas_token": sas_token}
+        self.options = {"account_name": account_name, "account_key": account_key, "sas_token": sas_token}
         self.kwargs = kwargs
 
     @property
