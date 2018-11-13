@@ -86,11 +86,8 @@ class AzureBlobClient(FileSystem):
         return self.connection.create_container(container_name)
 
     def delete_container(self, container_name):
-        try:
-            lease_id=self.connection.acquire_container_lease(container_name)
-            self.connection.delete_container(container_name, lease_id=lease_id)
-        finally:
-            self.connection.release_container_lease(container_name, lease_id)
+        lease_id=self.connection.acquire_container_lease(container_name)
+        self.connection.delete_container(container_name, lease_id=lease_id)
 
     def exists(self, path):
         try:
