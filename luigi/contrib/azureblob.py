@@ -26,10 +26,10 @@ from luigi.target import FileAlreadyExists, FileSystem, AtomicLocalFile, FileSys
 class AzureBlobClient(FileSystem):
     def __init__(self, account_name=None, account_key=None, sas_token=None, **kwargs):
         """
-        Create an Azure Blob Storage client using account_name and account_key for authentication.
-        :param account_name: The storage account name. This is used to authenticate requests signed with an account key
-            and to construct the storage endpoint. It is required unless a connection string is given, or if a custom
-            domain is used with anonymous authentication.
+        Create an Azure Blob Storage client for authentication.
+        :param account_name: The storage account name. This is used to authenticate requests signed with an account key\
+                            and to construct the storage endpoint. It is required unless a connection string is given,\
+                            or if a custom domain is used with anonymous authentication.
         :param account_key: The storage account key. This is used for shared key authentication.
         :param sas_token: A shared access signature token to use to authenticate requests instead of the account key.
         """
@@ -163,14 +163,12 @@ class AtomicAzureBlobFile(AtomicLocalFile):
 
 
 class AzureBlobTarget(FileSystemTarget):
-    fs = None
-
     def __init__(self, container, blob, client=None, format=None, **kwargs):
         """
         Create an Azure Blob Storage client using account_name and account_key for authentication
-        :param account_name: The storage account name. This is used to authenticate requests signed with an account key
-            and to construct the storage endpoint. It is required unless a connection string is given, or if a custom
-            domain is used with anonymous authentication.
+        :param account_name: The storage account name. This is used to authenticate requests signed with an account key\
+                            and to construct the storage endpoint. It is required unless a connection string is given,\
+                            or if a custom domain is used with anonymous authentication.
         :param container: The azure container in which the blob needs to be stored
         :param blob: The name of the blob under container specified
         :param client: An instance of py:class:`AzureBlobClient`. If none is specified, anonymous access would be used
@@ -182,7 +180,7 @@ class AzureBlobTarget(FileSystemTarget):
 
         self.container = container
         self.blob = blob
-        self.fs = client or AzureBlobClient()
+        self.client = client or AzureBlobClient()
         self.format = format
         self.azure_blob_options = kwargs
 
@@ -195,6 +193,6 @@ class AzureBlobTarget(FileSystemTarget):
         if mode not in ('r', 'w'):
             raise ValueError("Unsupported open mode '%s'" % mode)
         if mode == 'r':
-            return self.format.pipe_reader(ReadableAzureBlobFile(self.container, self.blob, self.fs, **self.azure_blob_options))
+            return self.format.pipe_reader(ReadableAzureBlobFile(self.container, self.blob, self.client, **self.azure_blob_options))
         else:
-            return self.format.pipe_writer(AtomicAzureBlobFile(self.container, self.blob, self.fs, **self.azure_blob_options))
+            return self.format.pipe_writer(AtomicAzureBlobFile(self.container, self.blob, self.client, **self.azure_blob_options))
