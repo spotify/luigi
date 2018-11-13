@@ -132,7 +132,7 @@ class AzureBlobClient(FileSystem):
         try:
             source_lease_id = self.connection.acquire_blob_lease(source_container, source_blob)
             destination_lease_id = self.connection.acquire_blob_lease(dest_container, dest_blob)
-            self.connection.copy_blob(source_container, source_blob, dest_blob,
+            return self.connection.copy_blob(source_container, source_blob, dest_blob,
                                       destination_lease_id=destination_lease_id, source_lease_id=source_lease_id)
         finally:
             self.connection.release_blob_lease(source_container, source_blob, source_lease_id)
