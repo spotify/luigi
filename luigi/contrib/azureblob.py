@@ -73,8 +73,8 @@ class AzureBlobClient(FileSystem):
 
     def upload(self, tmp_path, container, blob, **kwargs):
         self.create_container(container)
+        lease_id = self.connection.acquire_blob_lease(container, blob)
         try:
-            lease_id = self.connection.acquire_blob_lease(container, blob)
             self.connection.create_blob_from_path(container, blob, tmp_path, lease_id=lease_id, progress_callback=kwargs.get("progress_callback"))
         finally:
             self.connection.release_blob_lease(container, blob, lease_id)
