@@ -22,6 +22,7 @@ from azure.storage.blob import blockblobservice
 from luigi.format import get_default_format
 from luigi.target import FileAlreadyExists, FileSystem, AtomicLocalFile, FileSystemTarget
 
+
 class AzureBlobClient(FileSystem):
     def __init__(self,  **kwargs):
         """
@@ -37,15 +38,15 @@ class AzureBlobClient(FileSystem):
             domain is used with anonymous authentication.
         :param account_key: The storage account key. This is used for shared key authentication.
         """
-        self.options = { "account_name": account_name, "account_key": account_key }
+        self.options = {"account_name": account_name, "account_key": account_key}
         self.kwargs = kwargs
 
-    def __init__ (self, sas_token, **kwargs):
+    def __init__(self, sas_token, **kwargs):
         """
         Create an Azure Blob Storage client using sas_token for authentication
         :param sas_token: A shared access signature token to use to authenticate requests instead of the account key.
         """
-        self.options = { "sas_token": sas_token }
+        self.options = {"sas_token": sas_token}
         self.kwargs = kwargs
 
     @property
@@ -72,9 +73,9 @@ class AzureBlobClient(FileSystem):
     def exists(self, path):
         try:
             container, blob = self.splitpath(path)
-            exists_answer =  self.connection.exists(container, blob)
+            exists_answer = self.connection.exists(container, blob)
             return exists_answer
-        except Exception as e:
+        except Exception:
             return False
 
     def remove(self, path, recursive=True, skip_trash=True):
@@ -128,6 +129,7 @@ class AzureBlobClient(FileSystem):
         blob = "/".join(splitpath[1:])
         return container, blob
 
+
 class ReadableAzureBlobFile(object):
     def __init__(self, container, blob, client, **kwargs):
         self.container = container
@@ -160,6 +162,7 @@ class ReadableAzureBlobFile(object):
     def seekable(self):
         return False
 
+
 class AtomicAzureBlobFile(AtomicLocalFile):
     def __init__(self, container, blob, client, **kwargs):
         super(AtomicAzureBlobFile, self).__init__(os.path.join(container, blob))
@@ -170,6 +173,7 @@ class AtomicAzureBlobFile(AtomicLocalFile):
 
     def move_to_final_destination(self):
         self.client.upload(self.tmp_path, self.container, self.blob, **self.azure_blob_options)
+
 
 class AzureBlobTarget(FileSystemTarget):
     fs = None
