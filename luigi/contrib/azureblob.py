@@ -128,14 +128,16 @@ class AzureBlobClient(FileSystem):
                 "Can't copy blob from '{source_container}' to '{dest_container}'. File can be moved within container".format(
                     source_container=source_container, dest_container=dest_container
                 ))
+
+        source_lease_id = self.connection.acquire_blob_lease(source_container, source_blob)
+        destination_lease_id = self.connection.acquire_blob_lease(dest_container, dest_blob) if self.exists(dest) else None
         try:
-            source_lease_id = self.connection.acquire_blob_lease(source_container, source_blob)
-            destination_lease_id = self.connection.acquire_blob_lease(dest_container, dest_blob)
             return self.connection.copy_blob(source_container, source_blob, dest_blob,
                                       destination_lease_id=destination_lease_id, source_lease_id=source_lease_id)
         finally:
             self.connection.release_blob_lease(source_container, source_blob, source_lease_id)
-            self.connection.release_blob_lease(dest_container, dest_blob, destination_lease_id)
+            if destination_lease_id is not None:
+                self.connection.release_blob_lease(dest_container, dest_blob, destination_lease_id)
 
     def rename_dont_move(self, path, dest):
         self.move(path, dest)
