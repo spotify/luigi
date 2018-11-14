@@ -117,8 +117,7 @@ class AzureBlobClient(FileSystem):
         return False
 
     def move(self, path, dest):
-        self.copy(path, dest)
-        self.remove(self, path)
+        return self.copy(path, dest) and self.remove(path)
 
     def copy(self, path, dest):
         source_container, source_blob = self.splitfilepath(path)
