@@ -90,11 +90,8 @@ class AzureBlobClient(FileSystem):
         self.connection.delete_container(container_name, lease_id=lease_id)
 
     def exists(self, path):
-        try:
-            container, blob = self.splitpath(path)
-            return self.connection.exists(container, blob)
-        except Exception:
-            return False
+        container, blob = self.splitpath(path)
+        return self.connection.exists(container, blob)
 
     def remove(self, path, recursive=True, skip_trash=True):
         container, blob = self.splitpath(path)
