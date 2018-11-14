@@ -68,8 +68,7 @@ class AzureBlobClient(FileSystem):
                                                  protocol=self.kwargs.get("protocol"),
                                                  connection_string=self.kwargs.get("connection_string"),
                                                  endpoint_suffix=self.kwargs.get("endpoint_suffix"),
-                                                 custom_domain=self.kwargs.get("custom_domain"),
-                                                 token_credential=self.kwargs.get("token_credential"))
+                                                 custom_domain=self.kwargs.get("custom_domain"))
 
     def upload(self, tmp_path, container, blob, **kwargs):
         self.create_container(container)
@@ -132,7 +131,7 @@ class AzureBlobClient(FileSystem):
         source_lease_id = self.connection.acquire_blob_lease(source_container, source_blob)
         destination_lease_id = self.connection.acquire_blob_lease(dest_container, dest_blob) if self.exists(dest) else None
         try:
-            return self.connection.copy_blob(source_container, source_blob, dest_blob,
+            return self.connection.copy_blob(source_container, dest_blob, self.connection.make_blob_url(source_container, source_blob),
                                       destination_lease_id=destination_lease_id, source_lease_id=source_lease_id)
         finally:
             self.connection.release_blob_lease(source_container, source_blob, source_lease_id)
