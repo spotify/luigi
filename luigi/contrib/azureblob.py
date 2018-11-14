@@ -123,7 +123,7 @@ class AzureBlobClient(FileSystem):
     def copy(self, path, dest):
         source_container, source_blob = self.splitfilepath(path)
         dest_container, dest_blob = self.splitfilepath(dest)
-        if source_container is not dest_container:
+        if source_container != dest_container:
             raise Exception(
                 "Can't copy blob from '{source_container}' to '{dest_container}'. File can be moved within container".format(
                     source_container=source_container, dest_container=dest_container
