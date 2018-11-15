@@ -80,8 +80,9 @@ class AzureBlobClient(FileSystem):
             if lease_id is not None:
                 self.connection.release_blob_lease(container, blob, lease_id)
 
-    def download_as_bytes(self, container, blob):
-        return self.connection.get_blob_to_bytes(container, blob).content
+    def download_as_bytes(self, container, blob, n=None):
+        start_range, end_range = (0, n) if n is not None else (None, None)
+        return self.connection.get_blob_to_bytes(container, blob,start_range=start_range, end_range=end_range).content
 
     def create_container(self, container_name):
         return self.connection.create_container(container_name)
@@ -157,8 +158,8 @@ class ReadableAzureBlobFile(object):
         self.closed = False
         self.azure_blob_options = kwargs
 
-    def read(self):
-        return self.client.download_as_bytes(self.container, self.blob)
+    def read(self, n=None):
+        return self.client.download_as_bytes(self.container, self.blob, n)
 
     def close(self):
         self.closed = True
