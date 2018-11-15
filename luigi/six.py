@@ -868,6 +868,9 @@ if sys.meta_path:
 sys.meta_path.append(_importer)
 
 # luigi specific additions
+
+# When support for PY2 is dropped getargspec below can be dropped from six.py and
+# instead we should switch to using inspect.getfullargspec directly
 if PY3:
     import inspect
 
