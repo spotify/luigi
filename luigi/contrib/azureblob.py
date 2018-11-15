@@ -182,6 +182,9 @@ class ReadableAzureBlobFile(object):
     def seekable(self):
         return False
 
+    def seek(self, offset, whence=None):
+        pass
+
 
 class AtomicAzureBlobFile(AtomicLocalFile):
     def __init__(self, container, blob, client, **kwargs):
