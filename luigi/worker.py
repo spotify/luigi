@@ -446,7 +446,7 @@ class worker(Config):
     force_multiprocessing = BoolParameter(default=False,
                                           description='If true, use multiprocessing also when '
                                           'running with 1 worker')
-    task_process_context = Parameter(default=None,
+    task_process_context = Parameter(default='',
                                      description='If set to a fully qualified class name, the class will '
                                      'be instantiated with a TaskProcess as its constructor parameter and '
                                      'applied as a context manager around its run() call, so this can be '
