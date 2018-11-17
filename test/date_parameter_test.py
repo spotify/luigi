@@ -52,6 +52,17 @@ class DateParameterTest(unittest.TestCase):
         d = luigi.DateParameter().parse('2015-04-03')
         self.assertEqual(d, datetime.date(2015, 4, 3))
 
+    def test_construct_date_interval(self):
+        m = DateTask(luigi.date_interval.Date(2015, 4, 8))
+        self.assertEqual(m.day, datetime.date(2015, 4, 8))
+
+    def test_date_interval_default(self):
+        class DateDefaultTask(luigi.task.Task):
+            day = luigi.DateParameter(default=luigi.date_interval.Date(2015, 4, 8))
+
+        m = DateDefaultTask()
+        self.assertEqual(m.day, datetime.date(2015, 4, 8))
+
     def test_serialize(self):
         d = luigi.DateParameter().serialize(datetime.date(2015, 4, 3))
         self.assertEqual(d, '2015-04-03')
@@ -144,6 +155,17 @@ class MonthParameterTest(unittest.TestCase):
         m = luigi.MonthParameter().parse('2015-04')
         self.assertEqual(m, datetime.date(2015, 4, 1))
 
+    def test_construct_month_interval(self):
+        m = MonthTask(luigi.date_interval.Month(2015, 4))
+        self.assertEqual(m.month, datetime.date(2015, 4, 1))
+
+    def test_month_interval_default(self):
+        class MonthDefaultTask(luigi.task.Task):
+            month = luigi.MonthParameter(default=luigi.date_interval.Month(2015, 4))
+
+        m = MonthDefaultTask()
+        self.assertEqual(m.month, datetime.date(2015, 4, 1))
+
     def test_serialize(self):
         m = luigi.MonthParameter().serialize(datetime.date(2015, 4, 3))
         self.assertEqual(m, '2015-04')
@@ -161,6 +183,17 @@ class YearParameterTest(unittest.TestCase):
     def test_parse(self):
         year = luigi.YearParameter().parse('2015')
         self.assertEqual(year, datetime.date(2015, 1, 1))
+
+    def test_construct_year_interval(self):
+        y = YearTask(luigi.date_interval.Year(2015))
+        self.assertEqual(y.year, datetime.date(2015, 1, 1))
+
+    def test_year_interval_default(self):
+        class YearDefaultTask(luigi.task.Task):
+            year = luigi.YearParameter(default=luigi.date_interval.Year(2015))
+
+        m = YearDefaultTask()
+        self.assertEqual(m.year, datetime.date(2015, 1, 1))
 
     def test_serialize(self):
         year = luigi.YearParameter().serialize(datetime.date(2015, 4, 3))

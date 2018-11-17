@@ -36,6 +36,7 @@ try:
 except ImportError:
     from configparser import NoOptionError, NoSectionError
 
+from luigi import date_interval
 from luigi import task_register
 from luigi import six
 from luigi import configuration
@@ -423,6 +424,9 @@ class DateParameter(_DateParameterBase):
         if value is None:
             return None
 
+        if isinstance(value, date_interval.Date):
+            value = value.date_a
+
         if isinstance(value, datetime.datetime):
             value = value.date()
 
@@ -460,6 +464,9 @@ class MonthParameter(DateParameter):
         if value is None:
             return None
 
+        if isinstance(value, date_interval.Month):
+            value = value.date_a
+
         months_since_start = (value.year - self.start.year) * 12 + (value.month - self.start.month)
         months_since_start -= months_since_start % self.interval
 
@@ -482,6 +489,9 @@ class YearParameter(DateParameter):
     def normalize(self, value):
         if value is None:
             return None
+
+        if isinstance(value, date_interval.Year):
+            value = value.date_a
 
         delta = (value.year - self.start.year) % self.interval
         return datetime.date(year=value.year - delta, month=1, day=1)
