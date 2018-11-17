@@ -20,6 +20,7 @@ Integration tests for azureblob module.
 
 import unittest
 
+import luigi
 from luigi.contrib.azureblob import *
 
 client = AzureBlobClient(os.environ.get("ACCOUNT_NAME"), os.environ.get("ACCOUNT_KEY"),os.environ.get("SAS_TOKEN"))
@@ -82,7 +83,6 @@ class AzureBlobClientTest(unittest.TestCase):
             self.assertTrue(self.client.exists(from_path))
 
         # copy
-        print("Trying to copy from '{}' to '{}'".format(from_path, to_path))
         self.assertEquals(self.client.copy(from_path, to_path).status, "success")
         self.assertTrue(self.client.exists(to_path))
 
@@ -101,3 +101,56 @@ class AzureBlobClientTest(unittest.TestCase):
         # delete container
         self.client.delete_container(container_name)
         self.assertFalse(self.client.exists(container_name))
+
+class MovieScriptTask(luigi.Task):
+    def output(self):
+        return AzureBlobTarget("luigi-test", "movie-cheesy.txt", client)
+
+    def run(self):
+        print(client.connection.create_container("luigi-test"))
+        with self.output().open("w") as op:
+            op.write("I'm going to make him an offer he can't refuse.\n")
+            op.write("Toto, I've got a feeling we're not in Kansas anymore.\n")
+            op.write("May the Force be with you.\n")
+            op.write("Bond. James Bond.\n")
+            op.write("Greed, for lack of a better word, is good.\n")
+
+class AzureNumpyDumpTask(luigi.Task):
+    def output(self):
+        return AzureBlobTarget("luigi-test", "stats.npy", client, format=luigi.format.Nop)
+
+    def run(self):
+        with self.output().open("w") as op:
+            import numpy
+            numpy.save(op, numpy.array([1,2,3]))
+
+class FinalTask(luigi.Task):
+    def requires(self):
+        return { "movie": self.clone(MovieScriptTask), "np": self.clone(AzureNumpyDumpTask) }
+
+    def run(self):
+        with self.input()["movie"].open('r') as movie, self.input()["np"].open('r') as np, self.output().open('w') as output:
+            movie_lines = movie.read()
+            assert "Toto, I've got a feeling" in movie_lines
+            output.write(movie_lines)
+
+            import numpy
+            data = numpy.load(np)
+            assert data[0] == 1
+            assert data[1] == 2
+            assert data[2] == 3
+            output.write(data.__str__())
+
+
+    def output(self):
+        return luigi.LocalTarget("samefile")
+
+class AzureBlobTargetTest(unittest.TestCase):
+    def setUp(self):
+        self.client = client
+
+    def tearDown(self):
+        pass
+
+    def test_AzureBlobTarget(self):
+        luigi.build([FinalTask()], local_scheduler=True, log_level='NOTSET')
