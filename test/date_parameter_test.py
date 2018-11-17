@@ -52,17 +52,6 @@ class DateParameterTest(unittest.TestCase):
         d = luigi.DateParameter().parse('2015-04-03')
         self.assertEqual(d, datetime.date(2015, 4, 3))
 
-    def test_construct_date_interval(self):
-        m = DateTask(luigi.date_interval.Date(2015, 4, 8))
-        self.assertEqual(m.day, datetime.date(2015, 4, 8))
-
-    def test_date_interval_default(self):
-        class DateDefaultTask(luigi.task.Task):
-            day = luigi.DateParameter(default=luigi.date_interval.Date(2015, 4, 8))
-
-        m = DateDefaultTask()
-        self.assertEqual(m.day, datetime.date(2015, 4, 8))
-
     def test_serialize(self):
         d = luigi.DateParameter().serialize(datetime.date(2015, 4, 3))
         self.assertEqual(d, '2015-04-03')

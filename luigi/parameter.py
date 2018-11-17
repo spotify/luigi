@@ -424,9 +424,6 @@ class DateParameter(_DateParameterBase):
         if value is None:
             return None
 
-        if isinstance(value, date_interval.Date):
-            value = value.date_a
-
         if isinstance(value, datetime.datetime):
             value = value.date()
 
@@ -440,7 +437,7 @@ class MonthParameter(DateParameter):
     (day of :py:class:`~datetime.date` is "rounded" to first of the month).
 
     A MonthParameter is a Date string formatted ``YYYY-MM``. For example, ``2013-07`` specifies
-    July of 2013.
+    July of 2013. Task objects constructed from code also accept :py:class:`~luigi.date_interval.Month`.
     """
 
     date_format = '%Y-%m'
@@ -478,7 +475,8 @@ class YearParameter(DateParameter):
     Parameter whose value is a :py:class:`~datetime.date`, specified to the year
     (day and month of :py:class:`~datetime.date` is "rounded" to first day of the year).
 
-    A YearParameter is a Date string formatted ``YYYY``.
+    A YearParameter is a Date string formatted ``YYYY``. Task objects constructed from code also accept
+    :py:class:`~luigi.date_interval.Year`.
     """
 
     date_format = '%Y'
