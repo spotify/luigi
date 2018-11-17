@@ -16,6 +16,8 @@
 #
 
 import os
+import tempfile
+import datetime
 
 from azure.storage.blob import blockblobservice
 
@@ -83,6 +85,9 @@ class AzureBlobClient(FileSystem):
     def download_as_bytes(self, container, blob, n=None):
         start_range, end_range = (0, n-1) if n is not None else (None, None)
         return self.connection.get_blob_to_bytes(container, blob,start_range=start_range, end_range=end_range).content
+
+    def download_as_file(self, container, blob, location):
+        return self.connection.get_blob_to_path(container, blob, location)
 
     def create_container(self, container_name):
         return self.connection.create_container(container_name)
@@ -157,21 +162,29 @@ class ReadableAzureBlobFile(object):
         self.client = client
         self.closed = False
         self.azure_blob_options = kwargs
+        self.download_file_location = os.path.join(tempfile.mkdtemp(prefix=datetime.datetime.now().__str__()), blob)
+        self.fid = None
 
     def read(self, n=None):
         return self.client.download_as_bytes(self.container, self.blob, n)
 
     def close(self):
-        self.closed = True
+        if self.fid is not None and not self.fid.closed:
+            self.fid.close()
+            self.fid = None
 
-    def __del__(self):
-        self.close()
+    def __enter__(self):
+        self.client.download_as_file(self.container, self.blob, self.download_file_location)
+        self.fid = open(self.download_file_location)
+        return self.fid
 
     def __exit__(self, exc_type, exc, traceback):
         self.close()
 
-    def __enter__(self):
-        return self
+    def __del__(self):
+        self.close()
+        if os._exists(self.download_file_location):
+            os.remove(self.download_file_location)
 
     def readable(self):
         return True
