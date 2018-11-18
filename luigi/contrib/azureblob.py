@@ -240,6 +240,8 @@ class AzureBlobTarget(FileSystemTarget):
             An instance of :class:`.AzureBlobClient`. If none is specified, anonymous access would be used
         :param str format:
             An instance of :class:`luigi.format`.
+        :param bool download_when_reading:
+            Determines whether the file has to be downloaded to temporary location on disk. Defaults to `True`.
         :param dict kwargs:
             Pass the key `progress_callback` with signature `(func(current, total)) ` to get real time progress of upload
         """
