@@ -17,6 +17,7 @@
 
 import os
 import tempfile
+import logging
 import datetime
 
 from azure.storage.blob import blockblobservice
@@ -24,6 +25,7 @@ from azure.storage.blob import blockblobservice
 from luigi.format import get_default_format
 from luigi.target import FileAlreadyExists, FileSystem, AtomicLocalFile, FileSystemTarget
 
+logger = logging.getLogger('luigi-interface')
 
 class AzureBlobClient(FileSystem):
     """
@@ -73,6 +75,8 @@ class AzureBlobClient(FileSystem):
                                                  custom_domain=self.kwargs.get("custom_domain"))
 
     def upload(self, tmp_path, container, blob, **kwargs):
+        logging.debug("Uploading file '{tmp_path}' to container '{container}' and blob '{blob}'".format(\
+            tmp_path=self.tmp_path, container=self.container, blob=self.blob))
         self.create_container(container)
         lease_id = self.connection.acquire_blob_lease(container, blob)\
             if self.exists("{container}/{blob}".format(container=container, blob=blob)) else None
@@ -84,9 +88,13 @@ class AzureBlobClient(FileSystem):
 
     def download_as_bytes(self, container, blob, n=None):
         start_range, end_range = (0, n-1) if n is not None else (None, None)
+        logging.debug("Downloading from container '{container}' and blob '{blob}' as bytes".format(\
+            container=container, blob=blob))
         return self.connection.get_blob_to_bytes(container, blob,start_range=start_range, end_range=end_range).content
 
     def download_as_file(self, container, blob, location):
+        logging.debug("Downloading from container '{container}' and blob '{blob}' to {location}".format(\
+            container=container, blob=blob, location=location))
         return self.connection.get_blob_to_path(container, blob, location)
 
     def create_container(self, container_name):
