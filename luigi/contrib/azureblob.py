@@ -27,6 +27,7 @@ from luigi.target import FileAlreadyExists, FileSystem, AtomicLocalFile, FileSys
 
 logger = logging.getLogger('luigi-interface')
 
+
 class AzureBlobClient(FileSystem):
     """
     Create an Azure Blob Storage client for authentication.
@@ -75,7 +76,7 @@ class AzureBlobClient(FileSystem):
                                                  custom_domain=self.kwargs.get("custom_domain"))
 
     def upload(self, tmp_path, container, blob, **kwargs):
-        logging.debug("Uploading file '{tmp_path}' to container '{container}' and blob '{blob}'".format(\
+        logging.debug("Uploading file '{tmp_path}' to container '{container}' and blob '{blob}'".format(
             tmp_path=self.tmp_path, container=self.container, blob=self.blob))
         self.create_container(container)
         lease_id = self.connection.acquire_blob_lease(container, blob)\
@@ -88,12 +89,12 @@ class AzureBlobClient(FileSystem):
 
     def download_as_bytes(self, container, blob, n=None):
         start_range, end_range = (0, n-1) if n is not None else (None, None)
-        logging.debug("Downloading from container '{container}' and blob '{blob}' as bytes".format(\
+        logging.debug("Downloading from container '{container}' and blob '{blob}' as bytes".format(
             container=container, blob=blob))
-        return self.connection.get_blob_to_bytes(container, blob,start_range=start_range, end_range=end_range).content
+        return self.connection.get_blob_to_bytes(container, blob, start_range=start_range, end_range=end_range).content
 
     def download_as_file(self, container, blob, location):
-        logging.debug("Downloading from container '{container}' and blob '{blob}' to {location}".format(\
+        logging.debug("Downloading from container '{container}' and blob '{blob}' to {location}".format(
             container=container, blob=blob, location=location))
         return self.connection.get_blob_to_path(container, blob, location)
 
@@ -101,7 +102,7 @@ class AzureBlobClient(FileSystem):
         return self.connection.create_container(container_name)
 
     def delete_container(self, container_name):
-        lease_id=self.connection.acquire_container_lease(container_name)
+        lease_id = self.connection.acquire_container_lease(container_name)
         self.connection.delete_container(container_name, lease_id=lease_id)
 
     def exists(self, path):
@@ -145,8 +146,9 @@ class AzureBlobClient(FileSystem):
         source_lease_id = self.connection.acquire_blob_lease(source_container, source_blob)
         destination_lease_id = self.connection.acquire_blob_lease(dest_container, dest_blob) if self.exists(dest) else None
         try:
-            return self.connection.copy_blob(source_container, dest_blob, self.connection.make_blob_url(source_container, source_blob),
-                                      destination_lease_id=destination_lease_id, source_lease_id=source_lease_id)
+            return self.connection.copy_blob(source_container, dest_blob, self.connection.make_blob_url(
+                source_container, source_blob),
+                destination_lease_id=destination_lease_id, source_lease_id=source_lease_id)
         finally:
             self.connection.release_blob_lease(source_container, source_blob, source_lease_id)
             if destination_lease_id is not None:
@@ -231,7 +233,9 @@ class AzureBlobTarget(FileSystemTarget):
     def __init__(self, container, blob, client=None, format=None, download_when_reading=True, **kwargs):
         """
         :param str account_name:
-            The storage account name. This is used to authenticate requests signed with an account key and to construct the storage endpoint. It is required unless a connection string is given, or if a custom domain is used with anonymous authentication.
+            The storage account name. This is used to authenticate requests signed with an account key and to construct
+            the storage endpoint. It is required unless a connection string is given, or if a custom domain is
+            used with anonymous authentication.
         :param str container:
             The azure container in which the blob needs to be stored
         :param str blob:
