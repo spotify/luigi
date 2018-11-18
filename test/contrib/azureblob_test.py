@@ -18,12 +18,14 @@
 Integration tests for azureblob module.
 """
 
+import os
 import unittest
 
 import luigi
-from luigi.contrib.azureblob import *
+from luigi.contrib.azureblob import AzureBlobClient, AzureBlobTarget
 
-client = AzureBlobClient(os.environ.get("ACCOUNT_NAME"), os.environ.get("ACCOUNT_KEY"),os.environ.get("SAS_TOKEN"))
+client = AzureBlobClient(os.environ.get("ACCOUNT_NAME"), os.environ.get("ACCOUNT_KEY"), os.environ.get("SAS_TOKEN"))
+
 
 class AzureBlobClientTest(unittest.TestCase):
     def setUp(self):
@@ -48,7 +50,8 @@ class AzureBlobClientTest(unittest.TestCase):
         self.assertEquals(blob, "cde/xyz.txt")
 
     def test_create_delete_container(self):
-        import datetime, hashlib
+        import datetime
+        import hashlib
         m = hashlib.md5()
         m.update(datetime.datetime.now().__str__().encode())
         container_name = m.hexdigest()
@@ -60,7 +63,9 @@ class AzureBlobClientTest(unittest.TestCase):
         self.assertFalse(self.client.exists(container_name))
 
     def test_upload_copy_move_remove_blob(self):
-        import datetime, hashlib, tempfile
+        import datetime
+        import hashlib
+        import tempfile
         m = hashlib.md5()
         m.update(datetime.datetime.now().__str__().encode())
         container_name = m.hexdigest()
@@ -102,6 +107,7 @@ class AzureBlobClientTest(unittest.TestCase):
         self.client.delete_container(container_name)
         self.assertFalse(self.client.exists(container_name))
 
+
 class MovieScriptTask(luigi.Task):
     def output(self):
         return AzureBlobTarget("luigi-test", "movie-cheesy.txt", client, download_when_reading=False)
@@ -115,6 +121,7 @@ class MovieScriptTask(luigi.Task):
             op.write("Bond. James Bond.\n")
             op.write("Greed, for lack of a better word, is good.\n")
 
+
 class AzureNumpyDumpTask(luigi.Task):
     def output(self):
         return AzureBlobTarget("luigi-test", "stats.npy", client, format=luigi.format.Nop)
@@ -122,11 +129,12 @@ class AzureNumpyDumpTask(luigi.Task):
     def run(self):
         with self.output().open("w") as op:
             import numpy
-            numpy.save(op, numpy.array([1,2,3]))
+            numpy.save(op, numpy.array([1, 2, 3]))
+
 
 class FinalTask(luigi.Task):
     def requires(self):
-        return { "movie": self.clone(MovieScriptTask), "np": self.clone(AzureNumpyDumpTask) }
+        return {"movie": self.clone(MovieScriptTask), "np": self.clone(AzureNumpyDumpTask)}
 
     def run(self):
         with self.input()["movie"].open('r') as movie, self.input()["np"].open('r') as np, self.output().open('w') as output:
@@ -141,9 +149,9 @@ class FinalTask(luigi.Task):
             assert data[2] == 3
             output.write(data.__str__())
 
-
     def output(self):
         return luigi.LocalTarget("samefile")
+
 
 class AzureBlobTargetTest(unittest.TestCase):
     def setUp(self):
