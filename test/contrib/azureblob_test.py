@@ -104,7 +104,7 @@ class AzureBlobClientTest(unittest.TestCase):
 
 class MovieScriptTask(luigi.Task):
     def output(self):
-        return AzureBlobTarget("luigi-test", "movie-cheesy.txt", client)
+        return AzureBlobTarget("luigi-test", "movie-cheesy.txt", client, download_when_reading=False)
 
     def run(self):
         print(client.connection.create_container("luigi-test"))
