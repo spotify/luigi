@@ -156,11 +156,12 @@ class AzureBlobClient(FileSystem):
 
 
 class ReadableAzureBlobFile(object):
-    def __init__(self, container, blob, client, **kwargs):
+    def __init__(self, container, blob, client, download_when_reading, **kwargs):
         self.container = container
         self.blob = blob
         self.client = client
         self.closed = False
+        self.download_when_reading = download_when_reading
         self.azure_blob_options = kwargs
         self.download_file_location = os.path.join(tempfile.mkdtemp(prefix=datetime.datetime.now().__str__()), blob)
         self.fid = None
@@ -168,15 +169,13 @@ class ReadableAzureBlobFile(object):
     def read(self, n=None):
         return self.client.download_as_bytes(self.container, self.blob, n)
 
-    def close(self):
-        if self.fid is not None and not self.fid.closed:
-            self.fid.close()
-            self.fid = None
-
     def __enter__(self):
-        self.client.download_as_file(self.container, self.blob, self.download_file_location)
-        self.fid = open(self.download_file_location)
-        return self.fid
+        if self.download_when_reading:
+            self.client.download_as_file(self.container, self.blob, self.download_file_location)
+            self.fid = open(self.download_file_location)
+            return self.fid
+        else:
+            return self
 
     def __exit__(self, exc_type, exc, traceback):
         self.close()
@@ -185,6 +184,12 @@ class ReadableAzureBlobFile(object):
         self.close()
         if os._exists(self.download_file_location):
             os.remove(self.download_file_location)
+
+    def close(self):
+        if self.download_when_reading:
+            if self.fid is not None and not self.fid.closed:
+                self.fid.close()
+                self.fid = None
 
     def readable(self):
         return True
@@ -215,7 +220,7 @@ class AzureBlobTarget(FileSystemTarget):
     """
     Create an Azure Blob Target for storing data on Azure Blob Storage
     """
-    def __init__(self, container, blob, client=None, format=None, **kwargs):
+    def __init__(self, container, blob, client=None, format=None, download_when_reading=True, **kwargs):
         """
         :param str account_name:
             The storage account name. This is used to authenticate requests signed with an account key and to construct the storage endpoint. It is required unless a connection string is given, or if a custom domain is used with anonymous authentication.
@@ -237,6 +242,7 @@ class AzureBlobTarget(FileSystemTarget):
         self.blob = blob
         self.client = client or AzureBlobClient()
         self.format = format
+        self.download_when_reading = download_when_reading
         self.azure_blob_options = kwargs
 
     @property
@@ -261,6 +267,6 @@ class AzureBlobTarget(FileSystemTarget):
         if mode not in ('r', 'w'):
             raise ValueError("Unsupported open mode '%s'" % mode)
         if mode == 'r':
-            return self.format.pipe_reader(ReadableAzureBlobFile(self.container, self.blob, self.client, **self.azure_blob_options))
+            return self.format.pipe_reader(ReadableAzureBlobFile(self.container, self.blob, self.client, self.download_when_reading, **self.azure_blob_options))
         else:
             return self.format.pipe_writer(AtomicAzureBlobFile(self.container, self.blob, self.client, **self.azure_blob_options))
