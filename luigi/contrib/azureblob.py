@@ -157,6 +157,7 @@ class AzureBlobClient(FileSystem):
     def rename_dont_move(self, path, dest):
         self.move(path, dest)
 
+    @staticmethod
     def splitfilepath(self, filepath):
         splitpath = filepath.split("/")
         container = splitpath[0]
