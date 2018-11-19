@@ -87,8 +87,8 @@ class AzureBlobClient(FileSystem):
             if lease_id is not None:
                 self.connection.release_blob_lease(container, blob, lease_id)
 
-    def download_as_bytes(self, container, blob, n=None):
-        start_range, end_range = (0, n-1) if n is not None else (None, None)
+    def download_as_bytes(self, container, blob, bytes_to_read=None):
+        start_range, end_range = (0, bytes_to_read-1) if bytes_to_read is not None else (None, None)
         logging.debug("Downloading from container '{container}' and blob '{blob}' as bytes".format(
             container=container, blob=blob))
         return self.connection.get_blob_to_bytes(container, blob, start_range=start_range, end_range=end_range).content
