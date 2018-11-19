@@ -44,7 +44,7 @@ def print_tree(task, indent='', last=True):
     '''
     # dont bother printing out warnings about tasks with no output
     with warnings.catch_warnings():
-        warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete\(\) method')
+        warnings.filterwarnings(action='ignore', message='Task .* without outputs has no custom complete\\(\\) method')
         is_task_complete = task.complete()
     is_complete = (bcolors.OKGREEN + 'COMPLETE' if is_task_complete else bcolors.OKBLUE + 'PENDING') + bcolors.ENDC
     name = task.__class__.__name__

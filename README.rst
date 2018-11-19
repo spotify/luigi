@@ -173,6 +173,9 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Okko <https://okko.tv/>`_
 * `ISVWorld <http://isvworld.com/>`_
 * `Big Data <https://bigdata.com.br/>`_
+* `Movio <https://movio.co.nz/>`_
+* `Bonnier News <https://www.bonniernews.se/>`_
+* `Starsky Robotics <https://www.starsky.io/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 

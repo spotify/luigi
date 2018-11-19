@@ -532,26 +532,44 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         res9 = hdfs.tmppath(path9, include_unix_username=False)
 
         # Then: I should get correct results relative to Luigi temporary directory
-        self.assertRegexpMatches(res1, "^/tmp/dir1/dir2/file-luigitemp-\d+")
+        self.assertRegexpMatches(res1, "^/tmp/dir1/dir2/file-luigitemp-\\d+")
         # it would be better to see hdfs:///path instead of hdfs:/path, but single slash also works well
-        self.assertRegexpMatches(res2, "^hdfs:/tmp/dir1/dir2/file-luigitemp-\d+")
-        self.assertRegexpMatches(res3, "^hdfs://somehost/tmp/dir1/dir2/file-luigitemp-\d+")
-        self.assertRegexpMatches(res4, "^file:///tmp/dir1/dir2/file-luigitemp-\d+")
-        self.assertRegexpMatches(res5, "^/tmp/dir/file-luigitemp-\d+")
+        self.assertRegexpMatches(res2, "^hdfs:/tmp/dir1/dir2/file-luigitemp-\\d+")
+        self.assertRegexpMatches(res3, "^hdfs://somehost/tmp/dir1/dir2/file-luigitemp-\\d+")
+        self.assertRegexpMatches(res4, "^file:///tmp/dir1/dir2/file-luigitemp-\\d+")
+        self.assertRegexpMatches(res5, "^/tmp/dir/file-luigitemp-\\d+")
         # known issue with duplicated "tmp" if schema is present
-        self.assertRegexpMatches(res6, "^file:///tmp/tmp/dir/file-luigitemp-\d+")
+        self.assertRegexpMatches(res6, "^file:///tmp/tmp/dir/file-luigitemp-\\d+")
         # known issue with duplicated "tmp" if schema is present
-        self.assertRegexpMatches(res7, "^hdfs://somehost/tmp/tmp/dir/file-luigitemp-\d+")
-        self.assertRegexpMatches(res8, "^/tmp/luigitemp-\d+")
+        self.assertRegexpMatches(res7, "^hdfs://somehost/tmp/tmp/dir/file-luigitemp-\\d+")
+        self.assertRegexpMatches(res8, "^/tmp/luigitemp-\\d+")
         self.assertRegexpMatches(res9, "/tmp/tmpdir/file")
 
     def test_tmppath_username(self):
         self.assertRegexpMatches(hdfs.tmppath('/path/to/stuff', include_unix_username=True),
-                                 "^/tmp/[a-z0-9_]+/path/to/stuff-luigitemp-\d+")
+                                 "^/tmp/[a-z0-9_]+/path/to/stuff-luigitemp-\\d+")
 
     def test_pickle(self):
         t = hdfs.HdfsTarget("/tmp/dir")
         pickle.dumps(t)
+
+    def test_flag_target(self):
+        target = hdfs.HdfsFlagTarget("/some/dir/", format=format)
+        if target.exists():
+            target.remove(skip_trash=True)
+        self.assertFalse(target.exists())
+
+        t1 = hdfs.HdfsTarget(target.path + "part-00000", format=format)
+        with t1.open('w'):
+            pass
+        t2 = hdfs.HdfsTarget(target.path + "_SUCCESS", format=format)
+        with t2.open('w'):
+            pass
+        self.assertTrue(target.exists())
+
+    def test_flag_target_fails_if_not_directory(self):
+        with self.assertRaises(ValueError):
+            hdfs.HdfsFlagTarget("/home/file.txt")
 
 
 @attr('minicluster')
