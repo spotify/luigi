@@ -388,16 +388,28 @@ class S3Client(FileSystem):
         # download the file
         self.s3.meta.client.download_file(bucket, key, destination_local_path)
 
-    def get_as_string(self, s3_path):
+    def get_as_bytes(self, s3_path):
         """
-        Get the contents of an object stored in S3 as a string.
+        Get the contents of an object stored in S3 as bytes
+
+        :param s3_path: URL for target S3 location
+        :return: File contents as pure bytes
         """
         (bucket, key) = self._path_to_bucket_and_key(s3_path)
-
-        # get the content
         obj = self.s3.Object(bucket, key)
-        contents = obj.get()['Body'].read().decode('utf-8')
+        contents = obj.get()['Body'].read()
         return contents
+
+    def get_as_string(self, s3_path, encoding='utf-8'):
+        """
+        Get the contents of an object stored in S3 as string.
+
+        :param s3_path: URL for target S3 location
+        :param encoding: Encoding to decode bytes to string
+        :return: File contents as a string
+        """
+        content = self.get_as_bytes(s3_path)
+        return content.decode(encoding)
 
     def isdir(self, path):
         """
