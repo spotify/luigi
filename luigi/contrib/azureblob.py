@@ -77,7 +77,7 @@ class AzureBlobClient(FileSystem):
 
     def upload(self, tmp_path, container, blob, **kwargs):
         logging.debug("Uploading file '{tmp_path}' to container '{container}' and blob '{blob}'".format(
-            tmp_path=self.tmp_path, container=self.container, blob=self.blob))
+            tmp_path=tmp_path, container=self.container, blob=self.blob))
         self.create_container(container)
         lease_id = self.connection.acquire_blob_lease(container, blob)\
             if self.exists("{container}/{blob}".format(container=container, blob=blob)) else None
