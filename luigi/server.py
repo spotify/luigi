@@ -36,12 +36,12 @@ See :doc:`/central_scheduler` for more info.
 #
 
 import atexit
+import datetime
 import json
 import logging
 import os
 import signal
 import sys
-import datetime
 import time
 
 import pkg_resources
@@ -50,9 +50,44 @@ import tornado.ioloop
 import tornado.netutil
 import tornado.web
 
+from luigi import Config, parameter
 from luigi.scheduler import Scheduler, RPC_METHODS
 
 logger = logging.getLogger("luigi.server")
+
+
+class cors(Config):
+    enabled = parameter.BoolParameter(
+        default=False,
+        description='Enables CORS support.')
+    allowed_origins = parameter.ListParameter(
+        default=[],
+        description='A list of allowed origins. Used only if `allow_any_origin` is false.')
+    allow_any_origin = parameter.BoolParameter(
+        default=False,
+        description='Accepts requests from any origin.')
+    allow_null_origin = parameter.BoolParameter(
+        default=False,
+        description='Allows the request to set `null` value of the `Origin` header.')
+    max_age = parameter.IntParameter(
+        default=86400,
+        description='Content of `Access-Control-Max-Age`.')
+    allowed_methods = parameter.Parameter(
+        default='GET, OPTIONS',
+        description='Content of `Access-Control-Allow-Methods`.')
+    allowed_headers = parameter.Parameter(
+        default='Accept, Content-Type, Origin',
+        description='Content of `Access-Control-Allow-Headers`.')
+    exposed_headers = parameter.Parameter(
+        default='',
+        description='Content of `Access-Control-Expose-Headers`.')
+    allow_credentials = parameter.BoolParameter(
+        default=False,
+        description='Indicates that the actual request can include user credentials.')
+
+    def __init__(self, *args, **kwargs):
+        super(cors, self).__init__(*args, **kwargs)
+        self.allowed_origins = set(i for i in self.allowed_origins if i not in ['*', 'null'])
 
 
 class RPCHandler(tornado.web.RequestHandler):
@@ -60,11 +95,19 @@ class RPCHandler(tornado.web.RequestHandler):
     Handle remote scheduling calls using rpc.RemoteSchedulerResponder.
     """
 
+    def __init__(self, *args, **kwargs):
+        super(RPCHandler, self).__init__(*args, **kwargs)
+        self._cors_config = cors()
+
     def initialize(self, scheduler):
         self._scheduler = scheduler
-        self.set_header("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, Origin")
-        self.set_header("Access-Control-Allow-Methods", "GET, OPTIONS")
-        self.set_header("Access-Control-Allow-Origin", "*")
+
+    def options(self, *args):
+        if self._cors_config.enabled:
+            self._handle_cors_preflight()
+
+        self.set_status(204)
+        self.finish()
 
     def get(self, method):
         if method not in RPC_METHODS:
@@ -75,11 +118,56 @@ class RPCHandler(tornado.web.RequestHandler):
 
         if hasattr(self._scheduler, method):
             result = getattr(self._scheduler, method)(**arguments)
+
+            if self._cors_config.enabled:
+                self._handle_cors()
+
             self.write({"response": result})  # wrap all json response in a dictionary
         else:
             self.send_error(404)
 
     post = get
+
+    def _handle_cors_preflight(self):
+        origin = self.request.headers.get('Origin')
+        if not origin:
+            return
+
+        if origin == 'null':
+            if self._cors_config.allow_null_origin:
+                self.set_header('Access-Control-Allow-Origin', 'null')
+                self._set_other_cors_headers()
+        else:
+            if self._cors_config.allow_any_origin:
+                self.set_header('Access-Control-Allow-Origin', '*')
+                self._set_other_cors_headers()
+            elif origin in self._cors_config.allowed_origins:
+                self.set_header('Access-Control-Allow-Origin', origin)
+                self._set_other_cors_headers()
+
+    def _handle_cors(self):
+        origin = self.request.headers.get('Origin')
+        if not origin:
+            return
+
+        if origin == 'null':
+            if self._cors_config.allow_null_origin:
+                self.set_header('Access-Control-Allow-Origin', 'null')
+        else:
+            if self._cors_config.allow_any_origin:
+                self.set_header('Access-Control-Allow-Origin', '*')
+            elif origin in self._cors_config.allowed_origins:
+                self.set_header('Access-Control-Allow-Origin', origin)
+                self.set_header('Vary', 'Origin')
+
+    def _set_other_cors_headers(self):
+        self.set_header('Access-Control-Max-Age', str(self._cors_config.max_age))
+        self.set_header('Access-Control-Allow-Methods', self._cors_config.allowed_methods)
+        self.set_header('Access-Control-Allow-Headers', self._cors_config.allowed_headers)
+        if self._cors_config.allow_credentials:
+            self.set_header('Access-Control-Allow-Credentials', 'true')
+        if self._cors_config.exposed_headers:
+            self.set_header('Access-Control-Expose-Headers', self._cors_config.exposed_headers)
 
 
 class BaseTaskHistoryHandler(tornado.web.RequestHandler):

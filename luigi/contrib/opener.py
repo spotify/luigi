@@ -189,7 +189,7 @@ class Opener(object):
         the expected target.
 
         """
-        raise NotImplemented("get_target must be overridden")
+        raise NotImplementedError("get_target must be overridden")
 
 
 class MockOpener(Opener):

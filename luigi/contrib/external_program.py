@@ -59,7 +59,7 @@ class ExternalProgramTask(luigi.Task):
     behaviour can be overriden by passing ``--capture-output False``
     """
 
-    capture_output = luigi.BoolParameter(default=True, significant=False)
+    capture_output = luigi.BoolParameter(default=True, significant=False, positional=False)
 
     def program_args(self):
         """
