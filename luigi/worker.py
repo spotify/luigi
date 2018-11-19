@@ -61,7 +61,7 @@ from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
-from luigi.parameter import BoolParameter, FloatParameter, IntParameter, Parameter
+from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter
 
 try:
     import simplejson as json
@@ -446,12 +446,12 @@ class worker(Config):
     force_multiprocessing = BoolParameter(default=False,
                                           description='If true, use multiprocessing also when '
                                           'running with 1 worker')
-    task_process_context = Parameter(default=None,
-                                     description='If set to a fully qualified class name, the class will '
-                                     'be instantiated with a TaskProcess as its constructor parameter and '
-                                     'applied as a context manager around its run() call, so this can be '
-                                     'used for obtaining high level customizable monitoring or logging of '
-                                     'each individual Task run.')
+    task_process_context = OptionalParameter(default=None,
+                                             description='If set to a fully qualified class name, the class will '
+                                             'be instantiated with a TaskProcess as its constructor parameter and '
+                                             'applied as a context manager around its run() call, so this can be '
+                                             'used for obtaining high level customizable monitoring or logging of '
+                                             'each individual Task run.')
 
 
 class KeepAliveThread(threading.Thread):
