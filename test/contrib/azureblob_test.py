@@ -113,7 +113,7 @@ class MovieScriptTask(luigi.Task):
         return AzureBlobTarget("luigi-test", "movie-cheesy.txt", client, download_when_reading=False)
 
     def run(self):
-        print(client.connection.create_container("luigi-test"))
+        client.connection.create_container("luigi-test")
         with self.output().open("w") as op:
             op.write("I'm going to make him an offer he can't refuse.\n")
             op.write("Toto, I've got a feeling we're not in Kansas anymore.\n")
