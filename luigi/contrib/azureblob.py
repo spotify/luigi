@@ -77,7 +77,7 @@ class AzureBlobClient(FileSystem):
 
     def upload(self, tmp_path, container, blob, **kwargs):
         logging.debug("Uploading file '{tmp_path}' to container '{container}' and blob '{blob}'".format(
-            tmp_path=tmp_path, container=self.container, blob=self.blob))
+            tmp_path=tmp_path, container=container, blob=blob))
         self.create_container(container)
         lease_id = self.connection.acquire_blob_lease(container, blob)\
             if self.exists("{container}/{blob}".format(container=container, blob=blob)) else None
@@ -162,7 +162,7 @@ class AzureBlobClient(FileSystem):
         self.move(path, dest)
 
     @staticmethod
-    def splitfilepath(self, filepath):
+    def splitfilepath(filepath):
         splitpath = filepath.split("/")
         container = splitpath[0]
         blobsplit = splitpath[1:]
@@ -178,7 +178,7 @@ class ReadableAzureBlobFile(object):
         self.closed = False
         self.download_when_reading = download_when_reading
         self.azure_blob_options = kwargs
-        self.download_file_location = os.path.join(tempfile.mkdtemp(prefix=str(datetime.datetime.utcnownow())), blob)
+        self.download_file_location = os.path.join(tempfile.mkdtemp(prefix=str(datetime.datetime.utcnow())), blob)
         self.fid = None
 
     def read(self, n=None):
