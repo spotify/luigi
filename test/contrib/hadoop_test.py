@@ -247,6 +247,7 @@ class CommonTests(object):
         test_case.assertFalse(success)
 
 
+@attr('apache')
 class MapreduceLocalTest(unittest.TestCase):
     use_hdfs = False
 
@@ -313,6 +314,7 @@ class MapreduceIntegrationTest(minicluster.MiniClusterTestCase):
         CommonTests.test_failing_job(self)
 
 
+@attr('apache')
 class CreatePackagesArchive(unittest.TestCase):
 
     def setUp(self):
@@ -407,6 +409,7 @@ class KeyboardInterruptedMockProcess(MockProcess):
             raise KeyboardInterrupt
 
 
+@attr('apache')
 class JobRunnerTest(unittest.TestCase):
     def setUp(self):
         self.tracking_urls = []

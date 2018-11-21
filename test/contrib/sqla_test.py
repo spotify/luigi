@@ -51,7 +51,7 @@ class BaseTask(luigi.Task):
         out.close()
 
 
-@attr('sqlalchemy')
+@attr('contrib')
 class TestSQLA(unittest.TestCase):
     NUM_WORKERS = 1
 
@@ -392,7 +392,7 @@ class TestSQLA(unittest.TestCase):
         self._check_entries(task2.output().engine)
 
 
-@attr('sqlalchemy')
+@attr('contrib')
 class TestSQLA2(TestSQLA):
     """ 2 workers version
     """

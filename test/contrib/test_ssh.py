@@ -30,6 +30,8 @@ import target_test
 from luigi.contrib.ssh import RemoteContext, RemoteFileSystem, RemoteTarget, RemoteCalledProcessError
 from luigi.target import MissingParentDirectory, FileAlreadyExists
 
+from nose.plugins.attrib import attr
+
 working_ssh_host = os.environ.get('SSH_TEST_HOST', 'localhost')
 # set this to a working ssh host string (e.g. "localhost") to activate integration tests
 # The following tests require a working ssh server at `working_ssh_host`
@@ -61,6 +63,7 @@ except Exception:
     raise unittest.SkipTest('Not able to connect to ssh server')
 
 
+@attr('contrib')
 class TestRemoteContext(unittest.TestCase):
 
     def setUp(self):
@@ -108,6 +111,7 @@ class TestRemoteContext(unittest.TestCase):
             print("Closing tunnel")
 
 
+@attr('contrib')
 class TestRemoteTarget(unittest.TestCase):
 
     """ These tests assume RemoteContext working
@@ -159,6 +163,7 @@ class TestRemoteTarget(unittest.TestCase):
         self.assertEqual(file_content, "hello")
 
 
+@attr('contrib')
 class TestRemoteFilesystem(unittest.TestCase):
     def setUp(self):
         self.fs = RemoteFileSystem(working_ssh_host)
@@ -192,6 +197,7 @@ class TestRemoteFilesystem(unittest.TestCase):
         self.assertEqual([self.target.path], list(self.fs.listdir(self.directory)))
 
 
+@attr('contrib')
 class TestGetAttrRecursion(unittest.TestCase):
     def test_recursion_on_delete(self):
         target = RemoteTarget("/etc/this/does/not/exist", working_ssh_host)
@@ -200,6 +206,7 @@ class TestGetAttrRecursion(unittest.TestCase):
                 fh.write("test")
 
 
+@attr('contrib')
 class TestRemoteTargetAtomicity(unittest.TestCase, target_test.FileSystemTargetTestMixin):
     path = '/tmp/luigi_remote_atomic_test.txt'
     ctx = RemoteContext(working_ssh_host)
