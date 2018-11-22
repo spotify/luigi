@@ -19,6 +19,8 @@
 from time import sleep
 from helpers import unittest
 
+from nose.plugins.attrib import attr
+
 try:
     import redis
 except ImportError:
@@ -35,6 +37,7 @@ MARKER_PREFIX = 'luigi_test'
 EXPIRE = 5
 
 
+@attr('contrib')
 class RedisTargetTest(unittest.TestCase):
 
     """ Test touch, exists and target expiration"""

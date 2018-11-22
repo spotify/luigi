@@ -23,6 +23,8 @@ from helpers import unittest
 from luigi.contrib.pig import PigJobError, PigJobTask
 from mock import patch
 
+from nose.plugins.attrib import attr
+
 
 class SimpleTestJob(PigJobTask):
     def output(self):
@@ -52,6 +54,7 @@ class ComplexTestJob(PigJobTask):
         return ['-x', 'local']
 
 
+@attr('apache')
 class SimplePigTest(unittest.TestCase):
     def setUp(self):
         pass
@@ -89,6 +92,7 @@ class SimplePigTest(unittest.TestCase):
             subprocess.Popen = p
 
 
+@attr('apache')
 class ComplexPigTest(unittest.TestCase):
     def setUp(self):
         pass

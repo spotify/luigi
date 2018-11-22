@@ -17,10 +17,13 @@
 
 from helpers import unittest
 
+from nose.plugins.attrib import attr
+
 import luigi.target
 from luigi.contrib.target import CascadingClient
 
 
+@attr('contrib')
 class CascadingClientTest(unittest.TestCase):
 
     def setUp(self):

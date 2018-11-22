@@ -35,6 +35,8 @@ import luigi
 import logging
 from luigi.contrib.docker_runner import DockerTask
 
+from nose.plugins.attrib import attr
+
 logger = logging.getLogger('luigi-interface')
 
 try:
@@ -125,6 +127,7 @@ class MultipleDockerTaskRedefProperties(luigi.WrapperTask):
                 for opt in ['one', 'two', 'three']]
 
 
+@attr('contrib')
 class TestDockerTask(unittest.TestCase):
 
     # def tearDown(self):

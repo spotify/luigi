@@ -34,6 +34,8 @@ from mock import patch
 import luigi
 from luigi.contrib.lsf import LSFJobTask
 
+from nose.plugins.attrib import attr
+
 DEFAULT_HOME = ''
 
 LOGGER = logging.getLogger('luigi-interface')
@@ -68,6 +70,7 @@ class TestJobTask(LSFJobTask):
         return luigi.LocalTarget(os.path.join(DEFAULT_HOME, 'test_lsf_file_' + str(self.i)))
 
 
+@attr('contrib')
 class TestSGEJob(unittest.TestCase):
 
     '''Test from SGE master node'''
