@@ -319,44 +319,41 @@ class inherits(object):
     def _check_for_parameter_collisions(self, task_that_inherits):
         """
         Check that the parameters from the tasks_to_inherit don't
-        silently mask each other.
+        silently mask each other or by parameters from the inheriting
+        task.
 
         An exception will be raised immediately the first parameter
         collision is encountered.
         """
         error_msg = (
-            "Parameter name collision detected in tasks_to_inherit. "
-            "Parameter '{param}' in '{task}' duplicates "
-            "parameter '{param}' in {another_task}. "
+            "Parameter name collision detected in task {task_that_inherits}. "
+            "Parameter '{param}' in {task} is duplicated in {another_task}. "
             "Either rename one of the parameters or "
             "include the '{param}' in the `ignore_collisions` list."
         )
 
-        # Check that the parameters from the inheriting task don't mask any
-        # parameters from the inherited tasks.
         for task_to_inherit in self.tasks_to_inherit:
             for param_name, param_obj in task_to_inherit.get_params():
+                # Check that the parameters from the inheriting task don't mask any
+                # parameters from the inherited tasks.
                 if (
                     hasattr(task_that_inherits, param_name) and
                     param_name not in self.ignore_collisions
                 ):
-                    raise ValueError(error_msg.format(param=param_name,
-                                                      task=task_that_inherits,
-                                                      another_task=task_to_inherit))
-
-        # Check that the parameters from an inherited task don't mask the
-        # parameters from another inherited task.
-        for task_to_inherit in self.tasks_to_inherit:
-            for another_task_to_inherit in self.tasks_to_inherit:
-                for param_name, param_obj in task_to_inherit.get_params():
+                    raise ValueError(error_msg.format(
+                        param=param_name, task=task_that_inherits,
+                        another_task=task_to_inherit))
+                # Check that the parameters from an inherited task don't mask the
+                # parameters from another inherited task.   
+                for another_task_to_inherit in self.tasks_to_inherit:
                     if (
                         hasattr(another_task_to_inherit, param_name) and
                         another_task_to_inherit is not task_to_inherit and
                         param_name not in self.ignore_collisions
                     ):
-                        raise ValueError(error_msg.format(param=param_name,
-                                                          task=task_to_inherit,
-                                                          another_task=another_task_to_inherit))
+                        raise ValueError(error_msg.format(
+                            param=param_name, task=task_to_inherit,
+                            another_task=another_task_to_inherit))
 
 
 class requires(object):
