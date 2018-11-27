@@ -276,7 +276,7 @@ class Parameter(object):
 
         :param x: the value to serialize.
         """
-        return str(x)
+        return unicode(x)
 
     def _warn_on_wrong_param_type(self, param_name, param_value):
         if self.__class__ != Parameter:
