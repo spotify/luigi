@@ -26,7 +26,11 @@ Default (cfg) parser are looked for in:
 * ``luigi.toml``
 * ``LUIGI_CONFIG_PATH`` environment variable
 
-Both config lists increase in priority (from low to high). The order only matters in case of key conflicts (see docs for ConfigParser.read_). These files are meant for both the client and ``luigid``. If you decide to specify your own configuration you should make sure that both the client and ``luigid`` load it properly.
+Both config lists increase in priority (from low to high). The order only
+matters in case of key conflicts (see docs for ConfigParser.read_).
+These files are meant for both the client and ``luigid``.
+If you decide to specify your own configuration you should make sure
+that both the client and ``luigid`` load it properly.
 
 .. _ConfigParser.read: https://docs.python.org/3.6/library/configparser.html#configparser.ConfigParser.read
 
@@ -54,6 +58,9 @@ Example toml config:
     [core]
     scheduler_host = "luigi-host.mycompany.foo"
 
+Also see `examples/config.toml
+<https://github.com/spotify/luigi/blob/master/examples/config.toml>`_
+for more complex example.
 
 .. _ParamConfigIngestion:
 

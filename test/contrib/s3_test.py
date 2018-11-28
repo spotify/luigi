@@ -32,6 +32,8 @@ from luigi.target import MissingParentDirectory
 from moto import mock_s3, mock_sts
 from target_test import FileSystemTargetTestMixin
 
+from nose.plugins.attrib import attr
+
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
     # spulec/moto#308
     raise unittest.SkipTest('moto mock doesn\'t work with python3.4')
@@ -48,6 +50,7 @@ def create_bucket():
     return conn
 
 
+@attr('aws')
 class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
 
     def setUp(self):
@@ -127,6 +130,7 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual('s3://mybucket/test_file', path)
 
 
+@attr('aws')
 class TestS3Client(unittest.TestCase):
     def setUp(self):
         f = tempfile.NamedTemporaryFile(mode='wb', delete=False)
@@ -314,14 +318,32 @@ class TestS3Client(unittest.TestCase):
         self.assertEquals(content, self.tempFileContents.decode("utf-8"))
         tmp_file.close()
 
-    def test_get_as_string(self):
+    def test_get_as_bytes(self):
         create_bucket()
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         s3_client.put(self.tempFilePath, 's3://mybucket/putMe')
 
-        contents = s3_client.get_as_string('s3://mybucket/putMe')
+        contents = s3_client.get_as_bytes('s3://mybucket/putMe')
 
-        self.assertEquals(contents, self.tempFileContents.decode("utf-8"))
+        self.assertEquals(contents, self.tempFileContents)
+
+    def test_get_as_string(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.put(self.tempFilePath, 's3://mybucket/putMe2')
+
+        contents = s3_client.get_as_string('s3://mybucket/putMe2')
+
+        self.assertEquals(contents, self.tempFileContents.decode('utf-8'))
+
+    def test_get_as_string_latin1(self):
+        create_bucket()
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.put(self.tempFilePath, 's3://mybucket/putMe3')
+
+        contents = s3_client.get_as_string('s3://mybucket/putMe3', encoding='ISO-8859-1')
+
+        self.assertEquals(contents, self.tempFileContents.decode('ISO-8859-1'))
 
     def test_get_key(self):
         create_bucket()
