@@ -40,7 +40,7 @@ class BaseLogging(object):
         """Get logging settings from config file section "logging"."""
         try:
             logging_config = cls.config['logging']
-        except (TypeError, KeyError, NoSectionError):
+        except (TypeError, KeyError, NoSectionError, AttributeError):
             return False
         logging.config.dictConfig(logging_config)
         return True
