@@ -606,7 +606,7 @@ class Task(object):
 
         A Task will only run if all of the Tasks that it requires are completed.
         If your Task does not require any other Tasks, then you don't need to
-        override this method. Otherwise, a Subclasses can override this method
+        override this method. Otherwise, a subclass can override this method
         to return a single Task, a list of Task instances, or a dict whose
         values are Task instances.
 
