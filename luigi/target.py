@@ -316,18 +316,23 @@ class AtomicLocalFile(io.BufferedWriter):
     a temporary file in the local filesystem before
     moving it to its final destination.
 
-    This class is just for the writing part of the Target. See
-    :class:`luigi.file.LocalTarget` for example
+    This class handles only creation, cleanup of on-disk tmpfile.
+    Subclasses must implement `move_move_to_final_destination`.
+
+    :class:`luigi.local_target.atomic_file` example of local-endpoint atomic-file.
+    :class:`luigi.contrib.s3.AtomicS3File` example of remote-endpoint usage.
     """
 
     def __init__(self, path):
         self.__tmp_path = self.generate_tmp_path(path)
         self.path = path
+        self.unintended_close = False
         super(AtomicLocalFile, self).__init__(io.FileIO(self.__tmp_path, 'w'))
 
     def close(self):
         super(AtomicLocalFile, self).close()
-        self.move_to_final_destination()
+        if not self.unintended_close:
+            self.move_to_final_destination()
 
     def generate_tmp_path(self, path):
         return os.path.join(tempfile.gettempdir(), 'luigi-s3-tmp-%09d' % random.randrange(0, 1e10))
@@ -336,6 +341,8 @@ class AtomicLocalFile(io.BufferedWriter):
         raise NotImplementedError()
 
     def __del__(self):
+        self.unintended_close = True
+        self.close()
         if os.path.exists(self.tmp_path):
             os.remove(self.tmp_path)
 
@@ -344,7 +351,7 @@ class AtomicLocalFile(io.BufferedWriter):
         return self.__tmp_path
 
     def __exit__(self, exc_type, exc, traceback):
-        " Close/commit the file if there are no exception "
+        #  Commit (do move_to_final operation) if non-exception exit
         if exc_type:
-            return
+            self.unintended_close = True
         return super(AtomicLocalFile, self).__exit__(exc_type, exc, traceback)
