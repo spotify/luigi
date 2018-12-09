@@ -652,7 +652,7 @@ class RangeMonthly(RangeBase):
     Produces a contiguous completed range of a monthly recurring task.
 
     Unlike the Range* classes with shorter intervals, this class does not perform bulk optimisation.
-    It is aassumed that the number of months is low enough not to motivate the increased complexity.
+    It is assumed that the number of months is low enough not to motivate the increased complexity.
     Hence, there is no class RangeMonthlyBase.
     """
     start = luigi.MonthParameter(
@@ -672,7 +672,7 @@ class RangeMonthly(RangeBase):
                      "dates - worker's memory is the limit"))
     months_forward = luigi.IntParameter(
         default=0,
-        description="extent to which contiguousness is to be assured into future, in days from current time. "
+        description="extent to which contiguousness is to be assured into future, in months from current time. "
                     "Prevents infinite loop when stop is none")
 
     def datetime_to_parameter(self, dt):
