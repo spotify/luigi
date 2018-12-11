@@ -36,6 +36,8 @@ import logging
 import mock
 from luigi.contrib.kubernetes import KubernetesJobTask
 
+from nose.plugins.attrib import attr
+
 logger = logging.getLogger('luigi-interface')
 
 try:
@@ -70,6 +72,7 @@ class FailJob(KubernetesJobTask):
     }
 
 
+@attr('contrib')
 class TestK8STask(unittest.TestCase):
 
     def test_success_job(self):

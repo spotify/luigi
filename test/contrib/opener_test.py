@@ -8,7 +8,10 @@ from luigi.contrib.opener import OpenerTarget, NoOpenerError
 from luigi.mock import MockTarget
 from luigi.file import LocalTarget
 
+from nose.plugins.attrib import attr
 
+
+@attr('contrib')
 class TestOpenerTarget(unittest.TestCase):
 
     def setUp(self):

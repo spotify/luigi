@@ -277,7 +277,8 @@ class CopyToTable(rdbms.CopyToTable):
             user=self.user,
             password=self.password,
             table=self.table,
-            update_id=self.update_id
+            update_id=self.update_id,
+            port=self.port
         )
 
     def copy(self, cursor, file):

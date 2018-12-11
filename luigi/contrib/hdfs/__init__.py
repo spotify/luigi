@@ -75,3 +75,4 @@ CompatibleHdfsFormat = hdfs_format.CompatibleHdfsFormat
 
 # target.py
 HdfsTarget = hdfs_target.HdfsTarget
+HdfsFlagTarget = hdfs_target.HdfsFlagTarget

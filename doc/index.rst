@@ -20,6 +20,7 @@ Table of Contents
    execution_model.rst
    luigi_patterns.rst
    configuration.rst
+   logging.rst
    design_and_limitations.rst
 
 API Reference
@@ -40,4 +41,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

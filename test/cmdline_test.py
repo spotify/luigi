@@ -16,19 +16,15 @@
 #
 from __future__ import print_function
 
-try:
-    import ConfigParser
-except ImportError:
-    import configparser as ConfigParser
 import mock
 import os
 import subprocess
 from helpers import unittest
 
-from luigi import six
-
 import luigi
 import luigi.cmdline
+from luigi.setup_logging import DaemonLogging, InterfaceLogging
+from luigi.configuration import LuigiTomlParser, get_config
 from luigi.mock import MockTarget
 
 
@@ -112,6 +108,19 @@ class CmdlineTest(unittest.TestCase):
 
     def setUp(self):
         MockTarget.fs.clear()
+        DaemonLogging._configured = False
+
+    def tearDown(self):
+        DaemonLogging._configured = False
+        DaemonLogging.config = get_config()
+        InterfaceLogging.config = get_config()
+
+    def _clean_config(self):
+        DaemonLogging.config = LuigiTomlParser()
+        DaemonLogging.config.data = {}
+
+    def _restore_config(self):
+        DaemonLogging.config = LuigiTomlParser.instance()
 
     @mock.patch("logging.getLogger")
     def test_cmdline_main_task_cls(self, logger):
@@ -135,35 +144,26 @@ class CmdlineTest(unittest.TestCase):
     @mock.patch("logging.getLogger")
     @mock.patch("logging.StreamHandler")
     def test_setup_interface_logging(self, handler, logger):
+        opts = type('opts', (), {})
+        opts.background = False
+        opts.logdir = False
+        opts.logging_conf_file = None
+        opts.log_level = 'INFO'
+
         handler.return_value = mock.Mock(name="stream_handler")
-        with mock.patch("luigi.interface.setup_interface_logging.has_run", new=False):
-            luigi.interface.setup_interface_logging()
-            self.assertEqual([mock.call(handler.return_value)], logger.return_value.addHandler.call_args_list)
 
-        with mock.patch("luigi.interface.setup_interface_logging.has_run", new=False):
-            if six.PY2:
-                error = ConfigParser.NoSectionError
-            else:
-                error = KeyError
-            self.assertRaises(error, luigi.interface.setup_interface_logging, '/blah')
+        InterfaceLogging._configured = False
+        InterfaceLogging.config = LuigiTomlParser()
+        InterfaceLogging.config.data = {}
+        InterfaceLogging.setup(opts)
 
-    @mock.patch("warnings.warn")
-    @mock.patch("luigi.interface.setup_interface_logging")
-    def test_cmdline_logger(self, setup_mock, warn):
-        with mock.patch("luigi.interface.core") as env_params:
-            env_params.return_value.logging_conf_file = ''
-            env_params.return_value.log_level = 'DEBUG'
-            env_params.return_value.parallel_scheduling_processes = 1
-            luigi.run(['SomeTask', '--n', '7', '--local-scheduler', '--no-lock'])
-            self.assertEqual([mock.call('', 'DEBUG')], setup_mock.call_args_list)
+        self.assertEqual([mock.call(handler.return_value)], logger.return_value.addHandler.call_args_list)
 
-        with mock.patch("luigi.configuration.get_config") as getconf:
-            getconf.return_value.get.side_effect = ConfigParser.NoOptionError(section='foo', option='bar')
-            getconf.return_value.getint.return_value = 0
-
-            luigi.interface.setup_interface_logging.call_args_list = []
-            luigi.run(['SomeTask', '--n', '42', '--local-scheduler', '--no-lock'])
-            self.assertEqual([], setup_mock.call_args_list)
+        InterfaceLogging._configured = False
+        opts.logging_conf_file = '/blah'
+        with self.assertRaises(OSError):
+            InterfaceLogging.setup(opts)
+        InterfaceLogging._configured = False
 
     @mock.patch('argparse.ArgumentParser.print_usage')
     def test_non_existent_class(self, print_usage):
@@ -182,31 +182,26 @@ class CmdlineTest(unittest.TestCase):
             # the default test configuration specifies a logging conf file
             fileConfig.assert_called_with("test/testconfig/logging.cfg")
 
-    def test_luigid_no_configure_logging(self):
-        with mock.patch('luigi.server.run') as server_run, \
-                mock.patch('logging.basicConfig') as basicConfig, \
-                mock.patch('luigi.configuration.get_config') as get_config:
-            get_config.return_value.getboolean.return_value = True  # no_configure_logging=True
-            luigi.cmdline.luigid([])
-            self.assertTrue(server_run.called)
-            self.assertTrue(basicConfig.called)
-
     def test_luigid_no_logging_conf(self):
         with mock.patch('luigi.server.run') as server_run, \
-                mock.patch('logging.basicConfig') as basicConfig, \
-                mock.patch('luigi.configuration.get_config') as get_config:
-            get_config.return_value.getboolean.return_value = False  # no_configure_logging=False
-            get_config.return_value.get.return_value = None  # logging_conf_file=None
+                mock.patch('logging.basicConfig') as basicConfig:
+            self._clean_config()
+            DaemonLogging.config.data = {'core': {
+                'no_configure_logging': False,
+                'logging_conf_file': None,
+            }}
             luigi.cmdline.luigid([])
             self.assertTrue(server_run.called)
             self.assertTrue(basicConfig.called)
 
     def test_luigid_missing_logging_conf(self):
         with mock.patch('luigi.server.run') as server_run, \
-                mock.patch('logging.basicConfig') as basicConfig, \
-                mock.patch('luigi.configuration.get_config') as get_config:
-            get_config.return_value.getboolean.return_value = False  # no_configure_logging=False
-            get_config.return_value.get.return_value = "nonexistent.cfg"  # logging_conf_file=None
+                mock.patch('logging.basicConfig') as basicConfig:
+            self._restore_config()
+            DaemonLogging.config.data = {'core': {
+                'no_configure_logging': False,
+                'logging_conf_file': "nonexistent.cfg",
+            }}
             self.assertRaises(Exception, luigi.cmdline.luigid, [])
             self.assertFalse(server_run.called)
             self.assertFalse(basicConfig.called)
