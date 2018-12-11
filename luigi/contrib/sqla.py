@@ -351,7 +351,7 @@ class CopyToTable(luigi.Task):
                         metadata.create_all(engine)
                     else:
                         full_table = '.'.join([self.schema, self.table]) if self.schema else self.table
-                        metadata.reflect(only=[full_table], bind=engine)
+                        metadata.reflect(only=[self.table], bind=engine)
                         self.table_bound = metadata.tables[full_table]
                 except Exception as e:
                     self._logger.exception(self.table + str(e))
