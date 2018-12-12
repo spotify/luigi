@@ -22,7 +22,7 @@ workers via command line arguments and options from config files.
 import logging
 import logging.config
 import os.path
-from luigi.configuration import get_config
+from luigi.configuration import get_config, LuigiConfigParser
 
 # In python3 ConfigParser was renamed
 # https://stackoverflow.com/a/41202010
@@ -38,9 +38,11 @@ class BaseLogging(object):
     @classmethod
     def _section(cls, opts):
         """Get logging settings from config file section "logging"."""
+        if isinstance(cls.config, LuigiConfigParser):
+            return False
         try:
             logging_config = cls.config['logging']
-        except (TypeError, KeyError, NoSectionError, AttributeError):
+        except (TypeError, KeyError, NoSectionError):
             return False
         logging.config.dictConfig(logging_config)
         return True
