@@ -1,5 +1,5 @@
 from luigi.setup_logging import DaemonLogging, InterfaceLogging
-from luigi.configuration import LuigiTomlParser, get_config
+from luigi.configuration import LuigiTomlParser, LuigiConfigParser, get_config
 from helpers import unittest
 
 
@@ -39,6 +39,11 @@ class TestDaemonLogging(unittest.TestCase):
         self.assertTrue(result)
 
         self.cls.config = {}
+        result = self.cls._section(None)
+        self.assertFalse(result)
+
+    def test_section_cfg(self):
+        self.cls.config = LuigiConfigParser.instance()
         result = self.cls._section(None)
         self.assertFalse(result)
 
