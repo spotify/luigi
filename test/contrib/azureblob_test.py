@@ -24,7 +24,11 @@ import unittest
 import luigi
 from luigi.contrib.azureblob import AzureBlobClient, AzureBlobTarget
 
-client = AzureBlobClient(os.environ.get("ACCOUNT_NAME"), os.environ.get("ACCOUNT_KEY"), os.environ.get("SAS_TOKEN"))
+account_name = os.environ.get("ACCOUNT_NAME")
+account_key = os.environ.get("ACCOUNT_KEY")
+sas_token = os.environ.get("SAS_TOKEN")
+is_emulated = False if account_name else True
+client = AzureBlobClient(account_name, account_key, sas_token, is_emulated=is_emulated)
 
 
 class AzureBlobClientTest(unittest.TestCase):

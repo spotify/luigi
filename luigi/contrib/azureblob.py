@@ -73,7 +73,8 @@ class AzureBlobClient(FileSystem):
                                                  protocol=self.kwargs.get("protocol"),
                                                  connection_string=self.kwargs.get("connection_string"),
                                                  endpoint_suffix=self.kwargs.get("endpoint_suffix"),
-                                                 custom_domain=self.kwargs.get("custom_domain"))
+                                                 custom_domain=self.kwargs.get("custom_domain"),
+                                                 is_emulated=self.kwargs.get("is_emulated") or False)
 
     def upload(self, tmp_path, container, blob, **kwargs):
         logging.debug("Uploading file '{tmp_path}' to container '{container}' and blob '{blob}'".format(
