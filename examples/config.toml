@@ -1,0 +1,51 @@
+
+[hdfs]
+client = "hadoopcli"
+namenode_host = "localhost"
+namenode_port = 50030
+
+# LOGGING
+
+[logging]
+version = 1
+disable_existing_loggers = false
+
+# logs format
+[logging.formatters.simple]
+format = "{levelname:8} {asctime} {module}:{lineno} {message}"
+style = "{"
+datefmt = "%Y-%m-%d %H:%M:%S"
+
+# write logs to console
+[logging.handlers.console]
+level = "DEBUG"
+class = "logging.StreamHandler"
+formatter = "simple"
+
+# luigi worker logging
+[logging.loggers.luigi-interface]
+handlers = ["console"]
+level = "INFO"
+disabled = false
+propagate = false
+
+# luigid logging
+[logging.loggers.luigi]
+handlers = ["console"]
+level = "INFO"
+disabled = false
+propagate = false
+
+# luigid builded on tornado
+[logging.loggers.tornado]
+handlers = ["console"]
+level = "INFO"
+disabled = false
+propagate = false
+
+# custom logger for "project"
+[logging.loggers.project]
+handlers = ["console"]
+level = "DEBUG"
+disabled = false
+propagate = false

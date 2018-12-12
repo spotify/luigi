@@ -184,8 +184,8 @@ External links
 
 * `Mailing List <https://groups.google.com/d/forum/luigi-user/>`_ for discussions and asking questions. (Google Groups)
 * `Releases <https://pypi.python.org/pypi/luigi>`_ (PyPI)
-* `Source code <https://github.com/spotify/luigi>`_ (Github)
-* `Hubot Integration <https://github.com/houzz/hubot-luigi>`_ plugin for Slack, Hipchat, etc (Github)
+* `Source code <https://github.com/spotify/luigi>`_ (GitHub)
+* `Hubot Integration <https://github.com/houzz/hubot-luigi>`_ plugin for Slack, Hipchat, etc (GitHub)
 
 Authors
 -------

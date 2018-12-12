@@ -159,6 +159,7 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luig
         * `password`,
         * `table`
         * `columns`
+        * `port`
     """
 
     @abc.abstractproperty
@@ -179,6 +180,10 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luig
 
     @abc.abstractproperty
     def table(self):
+        return None
+
+    @property
+    def port(self):
         return None
 
     # specify the columns that are to be inserted (same as are returned by columns)

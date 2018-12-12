@@ -22,14 +22,12 @@ defined in this module to programatically run luigi.
 """
 
 import logging
-import logging.config
 import os
 import sys
 import tempfile
 import signal
 import warnings
 
-from luigi import configuration
 from luigi import lock
 from luigi import parameter
 from luigi import rpc
@@ -38,31 +36,7 @@ from luigi import task
 from luigi import worker
 from luigi import execution_summary
 from luigi.cmdline_parser import CmdlineParser
-
-
-def setup_interface_logging(conf_file='', level_name='DEBUG'):
-    # use a variable in the function object to determine if it has run before
-    if getattr(setup_interface_logging, "has_run", False):
-        return
-
-    if conf_file == '':
-        # no log config given, setup default logging
-        level = getattr(logging, level_name, logging.DEBUG)
-
-        logger = logging.getLogger('luigi-interface')
-        logger.setLevel(level)
-
-        stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(level)
-
-        formatter = logging.Formatter('%(levelname)s: %(message)s')
-        stream_handler.setFormatter(formatter)
-
-        logger.addHandler(stream_handler)
-    else:
-        logging.config.fileConfig(conf_file, disable_existing_loggers=False)
-
-    setup_interface_logging.has_run = True
+from luigi.setup_logging import InterfaceLogging
 
 
 class core(task.Config):
@@ -166,17 +140,8 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     if override_defaults is None:
         override_defaults = {}
     env_params = core(**override_defaults)
-    # search for logging configuration path first on the command line, then
-    # in the application config file
-    logging_conf = env_params.logging_conf_file
-    if logging_conf != '' and not os.path.exists(logging_conf):
-        raise Exception(
-            "Error: Unable to locate specified logging configuration file!"
-        )
 
-    if not configuration.get_config().getboolean(
-            'core', 'no_configure_logging', False):
-        setup_interface_logging(logging_conf, env_params.log_level)
+    InterfaceLogging.setup(env_params)
 
     kill_signal = signal.SIGUSR1 if env_params.take_lock else None
     if (not env_params.no_lock and
@@ -217,22 +182,18 @@ class PidLockAlreadyTakenExit(SystemExit):
 
 
 def run(*args, **kwargs):
-    return _run(*args, **kwargs)['success']
-
-
-def _run(cmdline_args=None, main_task_cls=None,
-         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
     """
     Please dont use. Instead use `luigi` binary.
 
     Run from cmdline using argparse.
 
-    :param cmdline_args:
-    :param main_task_cls:
-    :param worker_scheduler_factory:
     :param use_dynamic_argparse: Deprecated and ignored
-    :param local_scheduler:
     """
+    return _run(*args, **kwargs)['success']
+
+
+def _run(cmdline_args=None, main_task_cls=None,
+         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
     if use_dynamic_argparse is not None:
         warnings.warn("use_dynamic_argparse is deprecated, don't set it.",
                       DeprecationWarning, stacklevel=2)

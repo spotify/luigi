@@ -24,6 +24,7 @@ import luigi
 import sys
 import logging
 from luigi import IntParameter
+from luigi.setup_logging import InterfaceLogging
 
 
 class retcode(luigi.Config):
@@ -76,7 +77,8 @@ def run_with_retcodes(argv):
         sys.exit(retcodes.already_running)
     except Exception:
         # Some errors occur before logging is set up, we set it up now
-        luigi.interface.setup_interface_logging()
+        env_params = luigi.interface.core()
+        InterfaceLogging.setup(env_params)
         logger.exception("Uncaught exception in luigi")
         sys.exit(retcodes.unhandled_exception)
 

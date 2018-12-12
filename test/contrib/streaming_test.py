@@ -9,6 +9,8 @@ from luigi.contrib import mrrunner
 from luigi.contrib.hadoop import HadoopJobRunner, JobTask
 from luigi.contrib.hdfs import HdfsTarget
 
+from nose.plugins.attrib import attr
+
 
 class MockStreamingJob(JobTask):
     package_binary = Parameter(default=None)
@@ -34,6 +36,7 @@ class MockStreamingJobWithExtraArguments(JobTask):
         return rv
 
 
+@attr('apache')
 class StreamingRunTest(unittest.TestCase):
 
     @mock.patch('luigi.contrib.hadoop.shutil')

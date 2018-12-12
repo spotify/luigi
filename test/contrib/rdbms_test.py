@@ -24,6 +24,8 @@ import mock
 
 import unittest
 
+from nose.plugins.attrib import attr
+
 
 # Fake AWS and S3 credentials taken from `../redshift_test.py`.
 AWS_ACCESS_KEY = 'key'
@@ -65,6 +67,7 @@ class DummyS3CopyToTableKey(DummyS3CopyToTableBase):
     aws_secret_access_key = AWS_SECRET_KEY
 
 
+@attr('aws')
 class TestS3CopyToTableWithMetaColumns(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.enable_metadata_columns", new_callable=mock.PropertyMock, return_value=True)
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.metadata_columns", new_callable=mock.PropertyMock, return_value=[('created_tz', 'TIMESTAMP')])

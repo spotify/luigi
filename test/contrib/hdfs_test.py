@@ -853,6 +853,7 @@ class HdfsClientTest(MiniClusterTestCase):
         self.assertRaises(luigi.contrib.hdfs.HDFSCliError, apache_client.exists, "/some/path/somewhere")
 
 
+@attr('apache')
 class SnakebiteConfigTest(unittest.TestCase):
     @helpers.with_config({"hdfs": {"snakebite_autoconfig": "true"}})
     def testBoolOverride(self):
