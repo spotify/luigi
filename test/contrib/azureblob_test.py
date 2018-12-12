@@ -92,7 +92,7 @@ class AzureBlobClientTest(unittest.TestCase):
             self.assertTrue(self.client.exists(from_path))
 
         # copy
-        self.assertEquals(self.client.copy(from_path, to_path).status, "success")
+        self.assertIn(self.client.copy(from_path, to_path).status, ["success", "pending"])
         self.assertTrue(self.client.exists(to_path))
 
         # remove
