@@ -21,6 +21,8 @@ Integration tests for azureblob module.
 import os
 import unittest
 
+from nose.plugins.attrib import attr
+
 import luigi
 from luigi.contrib.azureblob import AzureBlobClient, AzureBlobTarget
 
@@ -31,6 +33,7 @@ is_emulated = False if account_name else True
 client = AzureBlobClient(account_name, account_key, sas_token, is_emulated=is_emulated)
 
 
+@attr('azureblob')
 class AzureBlobClientTest(unittest.TestCase):
     def setUp(self):
         self.client = client
@@ -157,6 +160,7 @@ class FinalTask(luigi.Task):
         return luigi.LocalTarget("samefile")
 
 
+@attr('azureblob')
 class AzureBlobTargetTest(unittest.TestCase):
     def setUp(self):
         self.client = client
