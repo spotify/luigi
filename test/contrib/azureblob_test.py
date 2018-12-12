@@ -19,6 +19,7 @@ Integration tests for azureblob module.
 """
 
 import os
+import warnings
 import unittest
 
 from nose.plugins.attrib import attr
@@ -37,24 +38,25 @@ client = AzureBlobClient(account_name, account_key, sas_token, is_emulated=is_em
 class AzureBlobClientTest(unittest.TestCase):
     def setUp(self):
         self.client = client
+        warnings.simplefilter("ignore", ResourceWarning)
 
     def tearDown(self):
         pass
 
     def test_splitfilepath_blob_none(self):
         container, blob = self.client.splitfilepath("abc")
-        self.assertEquals(container, "abc")
+        self.assertEqual(container, "abc")
         self.assertIsNone(blob)
 
     def test_splitfilepath_blob_toplevel(self):
         container, blob = self.client.splitfilepath("abc/cde")
-        self.assertEquals(container, "abc")
-        self.assertEquals(blob, "cde")
+        self.assertEqual(container, "abc")
+        self.assertEqual(blob, "cde")
 
     def test_splitfilepath_blob_nested(self):
         container, blob = self.client.splitfilepath("abc/cde/xyz.txt")
-        self.assertEquals(container, "abc")
-        self.assertEquals(blob, "cde/xyz.txt")
+        self.assertEqual(container, "abc")
+        self.assertEqual(blob, "cde/xyz.txt")
 
     def test_create_delete_container(self):
         import datetime
@@ -164,6 +166,7 @@ class FinalTask(luigi.Task):
 class AzureBlobTargetTest(unittest.TestCase):
     def setUp(self):
         self.client = client
+        warnings.simplefilter("ignore", ResourceWarning)
 
     def tearDown(self):
         pass
