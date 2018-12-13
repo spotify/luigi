@@ -19,7 +19,6 @@ Integration tests for azureblob module.
 """
 
 import os
-import warnings
 import unittest
 
 from nose.plugins.attrib import attr
