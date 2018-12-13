@@ -21,7 +21,6 @@ Integration tests for azureblob module.
 import os
 import warnings
 import unittest
-from exceptions import ResourceWarning
 
 from nose.plugins.attrib import attr
 
@@ -39,7 +38,6 @@ client = AzureBlobClient(account_name, account_key, sas_token, is_emulated=is_em
 class AzureBlobClientTest(unittest.TestCase):
     def setUp(self):
         self.client = client
-        warnings.simplefilter("ignore", ResourceWarning)
 
     def tearDown(self):
         pass
@@ -167,7 +165,6 @@ class FinalTask(luigi.Task):
 class AzureBlobTargetTest(unittest.TestCase):
     def setUp(self):
         self.client = client
-        warnings.simplefilter("ignore", ResourceWarning)
 
     def tearDown(self):
         pass
