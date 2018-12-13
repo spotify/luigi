@@ -1,4 +1,7 @@
+import abc
+
 from enum import Enum
+from luigi import six
 
 
 class MetricsCollectors(Enum):
@@ -9,7 +12,7 @@ class MetricsCollectors(Enum):
     @classmethod
     def get(cls, which):
         if which == MetricsCollectors.none:
-            return MetricsCollector()
+            return NoMetricsCollector()
         elif which == MetricsCollectors.datadog:
             from luigi.contrib.datadog_metric import DatadogMetricsCollector
             return DatadogMetricsCollector()
@@ -17,20 +20,47 @@ class MetricsCollectors(Enum):
             raise ValueError("MetricsCollectors value ' {0} ' isn't supported", which)
 
 
+@six.add_metaclass(abc.ABCMeta)
 class MetricsCollector(object):
-    """Dummy MetricsCollecter base class that can be replace by tool specific
-    implementation.
+    """Abstractable MetricsCollector base class that can be replace by tool
+    specific implementation.
     """
+
+    @abc.abstractmethod
     def __init__(self):
         pass
 
+    @abc.abstractmethod
     def handle_task_started(self, task):
         pass
 
+    @abc.abstractmethod
     def handle_task_failed(self, task):
         pass
 
+    @abc.abstractmethod
     def handle_task_disabled(self, task, config):
+        pass
+
+    @abc.abstractmethod
+    def handle_task_done(self, task):
+        pass
+
+
+class NoMetricsCollector(MetricsCollector):
+    """Empty MetricsCollector when no collector is being used
+    """
+
+    def __init__(self):
+        pass
+
+    def handle_task_started(self):
+        pass
+
+    def handle_task_failed(self):
+        pass
+
+    def handle_task_disabled(self):
         pass
 
     def handle_task_done(self, task):
