@@ -25,7 +25,7 @@ from luigi.mock import MockTarget, MockFileSystem
 from luigi.tools.range import (RangeDaily, RangeDailyBase, RangeEvent,
                                RangeHourly, RangeHourlyBase,
                                RangeByMinutes, RangeByMinutesBase,
-                               _constrain_glob, _get_filesystems_and_globs)
+                               _constrain_glob, _get_filesystems_and_globs, RangeMonthly)
 
 
 class CommonDateMinuteTask(luigi.Task):
@@ -47,6 +47,13 @@ class CommonDateTask(luigi.Task):
 
     def output(self):
         return MockTarget(self.d.strftime('/n2000y01a05n/%Y_%m-_-%daww/21mm01dara21/ooo'))
+
+
+class CommonMonthTask(luigi.Task):
+    m = luigi.MonthParameter()
+
+    def output(self):
+        return MockTarget(self.m.strftime('/n2000y01a05n/%Y_%maww/21mm01dara21/ooo'))
 
 
 task_a_paths = [
@@ -821,6 +828,319 @@ class FilesystemInferenceTest(unittest.TestCase):
                 lambda d: d.strftime('(%Y).*(%m).*(%d).*(%H)')))
 
         self.assertRaises(NotImplementedError, test_raise_not_implemented)
+
+
+class RangeMonthlyTest(unittest.TestCase):
+
+    def setUp(self):
+        # yucky to create separate callbacks; would be nicer if the callback
+        # received an instance of a subclass of Event, so one callback could
+        # accumulate all types
+        @RangeMonthly.event_handler(RangeEvent.DELAY)
+        def callback_delay(*args):
+            self.events.setdefault(RangeEvent.DELAY, []).append(args)
+
+        @RangeMonthly.event_handler(RangeEvent.COMPLETE_COUNT)
+        def callback_complete_count(*args):
+            self.events.setdefault(RangeEvent.COMPLETE_COUNT, []).append(args)
+
+        @RangeMonthly.event_handler(RangeEvent.COMPLETE_FRACTION)
+        def callback_complete_fraction(*args):
+            self.events.setdefault(RangeEvent.COMPLETE_FRACTION, []).append(args)
+
+        self.events = {}
+
+    def _empty_subcase(self, kwargs, expected_events):
+        calls = []
+
+        class RangeMonthlyDerived(RangeMonthly):
+            def missing_datetimes(self, task_cls, finite_datetimes):
+                args = [self, task_cls, finite_datetimes]
+                calls.append(args)
+                return args[-1][:5]
+
+        task = RangeMonthlyDerived(of=CommonMonthTask, **kwargs)
+        self.assertEqual(task.requires(), [])
+        self.assertEqual(calls, [])
+        self.assertEqual(task.requires(), [])
+        self.assertEqual(calls, [])  # subsequent requires() should return the cached result, never call missing_datetimes
+        self.assertEqual(self.events, expected_events)
+        self.assertTrue(task.complete())
+
+    def test_stop_before_months_back(self):
+        # nothing to do because stop is earlier
+        self._empty_subcase(
+            {
+                'now': datetime_to_epoch(datetime.datetime(2017, 1, 3)),
+                'stop': datetime.date(2016, 3, 20),
+                'months_back': 4,
+                'months_forward': 20,
+                'reverse': True,
+            },
+            {
+                'event.tools.range.delay': [
+                    ('CommonMonthTask', 0),
+                ],
+                'event.tools.range.complete.count': [
+                    ('CommonMonthTask', 0),
+                ],
+                'event.tools.range.complete.fraction': [
+                    ('CommonMonthTask', 1.),
+                ],
+            }
+        )
+
+    def test_start_after_months_forward(self):
+        # nothing to do because start is later
+        self._empty_subcase(
+            {
+                'now': datetime_to_epoch(datetime.datetime(2000, 1, 1)),
+                'start': datetime.datetime(2014, 3, 20),
+                'months_back': 4,
+                'months_forward': 20,
+            },
+            {
+                'event.tools.range.delay': [
+                    ('CommonMonthTask', 0),
+                ],
+                'event.tools.range.complete.count': [
+                    ('CommonMonthTask', 0),
+                ],
+                'event.tools.range.complete.fraction': [
+                    ('CommonMonthTask', 1.),
+                ],
+            }
+        )
+
+    def _nonempty_subcase(self, kwargs, expected_finite_datetimes_range, expected_requires, expected_events):
+        calls = []
+
+        class RangeDailyDerived(RangeMonthly):
+            def missing_datetimes(self, finite_datetimes):
+                calls.append((self, finite_datetimes))
+                return finite_datetimes[:7]
+
+        task = RangeDailyDerived(of=CommonMonthTask, **kwargs)
+        self.assertEqual(list(map(str, task.requires())), expected_requires)
+        self.assertEqual((min(calls[0][1]), max(calls[0][1])), expected_finite_datetimes_range)
+        self.assertEqual(list(map(str, task.requires())), expected_requires)
+        self.assertEqual(len(calls), 1)  # subsequent requires() should return the cached result, not call missing_datetimes again
+        self.assertEqual(self.events, expected_events)
+        self.assertFalse(task.complete())
+
+    def test_start_long_before_months_back(self):
+        total = (2000 - 1960) * 12 + 20 - 2
+        self._nonempty_subcase(
+            {
+                'now': datetime_to_epoch(datetime.datetime(2000, 1, 1)),
+                'start': datetime.datetime(1960, 3, 2, 1),
+                'months_back': 5,
+                'months_forward': 20,
+            },
+            (datetime.datetime(1999, 8, 1), datetime.datetime(2001, 8, 1)),
+            [
+                'CommonMonthTask(m=1999-08)',
+                'CommonMonthTask(m=1999-09)',
+                'CommonMonthTask(m=1999-10)',
+                'CommonMonthTask(m=1999-11)',
+                'CommonMonthTask(m=1999-12)',
+                'CommonMonthTask(m=2000-01)',
+                'CommonMonthTask(m=2000-02)',
+            ],
+            {
+                'event.tools.range.delay': [
+                    ('CommonMonthTask', 25),
+                ],
+                'event.tools.range.complete.count': [
+                    ('CommonMonthTask', total - 7),
+                ],
+                'event.tools.range.complete.fraction': [
+                    ('CommonMonthTask', (total - 7.0) / total),
+                ],
+            }
+        )
+
+    def test_start_after_long_months_back(self):
+        total = 12 - 3
+        self._nonempty_subcase(
+            {
+                'now': datetime_to_epoch(datetime.datetime(2014, 11, 22)),
+                'start': datetime.datetime(2014, 3, 1),
+                'task_limit': 4,
+                'months_back': 12 * 24,
+            },
+            (datetime.datetime(2014, 3, 1), datetime.datetime(2014, 11, 1)),
+            [
+                'CommonMonthTask(m=2014-03)',
+                'CommonMonthTask(m=2014-04)',
+                'CommonMonthTask(m=2014-05)',
+                'CommonMonthTask(m=2014-06)',
+            ],
+            {
+                'event.tools.range.delay': [
+                    ('CommonMonthTask', total),
+                ],
+                'event.tools.range.complete.count': [
+                    ('CommonMonthTask', total - 7),
+                ],
+                'event.tools.range.complete.fraction': [
+                    ('CommonMonthTask', (total - 7.0) / total),
+                ],
+            }
+        )
+
+    def test_start_long_before_long_months_back_and_with_long_months_forward(self):
+        total = (2025 - 2011) * 12 - 2
+        self._nonempty_subcase(
+            {
+                'now': datetime_to_epoch(datetime.datetime(2017, 10, 22, 12, 4, 29)),
+                'start': datetime.date(2011, 3, 20),
+                'stop': datetime.date(2025, 1, 29),
+                'task_limit': 4,
+                'months_back': 3 * 12,
+                'months_forward': 3 * 12,
+            },
+            (datetime.datetime(2014, 11, 1), datetime.datetime(2020, 10, 1)),
+            [
+                'CommonMonthTask(m=2014-11)',
+                'CommonMonthTask(m=2014-12)',
+                'CommonMonthTask(m=2015-01)',
+                'CommonMonthTask(m=2015-02)',
+            ],
+            {
+                'event.tools.range.delay': [
+                    ('CommonMonthTask', (2025 - (2017 - 3)) * 12 - 10),
+                ],
+                'event.tools.range.complete.count': [
+                    ('CommonMonthTask', total - 7),
+                ],
+                'event.tools.range.complete.fraction': [
+                    ('CommonMonthTask', (total - 7.0) / total),
+                ],
+            }
+        )
+
+    def test_consistent_formatting(self):
+        task = RangeMonthly(of=CommonMonthTask,
+                            start=datetime.date(2018, 1, 4))
+        self.assertEqual(task._format_range([datetime.datetime(2018, 2, 3, 14), datetime.datetime(2018, 4, 5, 21)]),
+                         '[2018-02, 2018-04]')
+
+
+class MonthInstantiationTest(LuigiTestCase):
+
+    def test_old_month_instantiation(self):
+        """
+        Verify that you can still programmatically set of param as string
+        """
+        class MyTask(luigi.Task):
+            month_param = luigi.MonthParameter()
+
+            def complete(self):
+                return False
+
+        range_task = RangeMonthly(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                  of=MyTask,
+                                  start=datetime.date(2015, 12, 1),
+                                  stop=datetime.date(2016, 1, 1))
+        expected_task = MyTask(month_param=datetime.date(2015, 12, 1))
+        self.assertEqual(expected_task, list(range_task._requires())[0])
+
+    def test_month_cli_instantiation(self):
+        """
+        Verify that you can still use Range through CLI
+        """
+
+        class MyTask(luigi.Task):
+            task_namespace = "wohoo"
+            month_param = luigi.MonthParameter()
+            secret = 'some-value-to-sooth-python-linters'
+            comp = False
+
+            def complete(self):
+                return self.comp
+
+            def run(self):
+                self.comp = True
+                MyTask.secret = 'yay'
+
+        now = str(int(datetime_to_epoch(datetime.datetime(2015, 12, 2))))
+        self.run_locally_split('RangeMonthly --of wohoo.MyTask --now {now} --start 2015-12 --stop 2016-01'.format(now=now))
+        self.assertEqual(MyTask(month_param=datetime.date(1934, 12, 1)).secret, 'yay')
+
+    def test_param_name(self):
+        class MyTask(luigi.Task):
+            some_non_range_param = luigi.Parameter(default='woo')
+            month_param = luigi.MonthParameter()
+
+            def complete(self):
+                return False
+
+        range_task = RangeMonthly(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                  of=MyTask,
+                                  start=datetime.date(2015, 12, 1),
+                                  stop=datetime.date(2016, 1, 1),
+                                  param_name='month_param')
+        expected_task = MyTask('woo', datetime.date(2015, 12, 1))
+        self.assertEqual(expected_task, list(range_task._requires())[0])
+
+    def test_param_name_with_inferred_fs(self):
+        class MyTask(luigi.Task):
+            some_non_range_param = luigi.Parameter(default='woo')
+            month_param = luigi.MonthParameter()
+
+            def output(self):
+                return MockTarget(self.month_param.strftime('/n2000y01a05n/%Y_%m-aww/21mm%Hdara21/ooo'))
+
+        range_task = RangeMonthly(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                  of=MyTask,
+                                  start=datetime.date(2015, 12, 1),
+                                  stop=datetime.date(2016, 1, 1),
+                                  param_name='month_param')
+        expected_task = MyTask('woo', datetime.date(2015, 12, 1))
+        self.assertEqual(expected_task, list(range_task._requires())[0])
+
+    def test_of_param_distinction(self):
+        class MyTask(luigi.Task):
+            arbitrary_param = luigi.Parameter(default='foo')
+            arbitrary_integer_param = luigi.IntParameter(default=10)
+            month_param = luigi.MonthParameter()
+
+            def complete(self):
+                return False
+
+        range_task_1 = RangeMonthly(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                    of=MyTask,
+                                    start=datetime.date(2015, 12, 1),
+                                    stop=datetime.date(2016, 1, 1))
+        range_task_2 = RangeMonthly(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+                                    of=MyTask,
+                                    of_params=dict(arbitrary_param="bar", abitrary_integer_param=2),
+                                    start=datetime.date(2015, 12, 1),
+                                    stop=datetime.date(2016, 1, 1))
+        self.assertNotEqual(range_task_1.task_id, range_task_2.task_id)
+
+    def test_of_param_commandline(self):
+        class MyTask(luigi.Task):
+            task_namespace = "wohoo"
+            month_param = luigi.MonthParameter()
+            arbitrary_param = luigi.Parameter(default='foo')
+            arbitrary_integer_param = luigi.IntParameter(default=10)
+            state = (None, None)
+            comp = False
+
+            def complete(self):
+                return self.comp
+
+            def run(self):
+                self.comp = True
+                MyTask.state = (self.arbitrary_param, self.arbitrary_integer_param)
+
+        now = str(int(datetime_to_epoch(datetime.datetime(2015, 12, 2))))
+        self.run_locally(['RangeMonthly', '--of', 'wohoo.MyTask',
+                          '--of-params', '{"arbitrary_param":"bar","arbitrary_integer_param":5}',
+                          '--now', '{0}'.format(now), '--start', '2015-12', '--stop', '2016-01'])
+        self.assertEqual(MyTask.state, ('bar', 5))
 
 
 class RangeDailyTest(unittest.TestCase):
