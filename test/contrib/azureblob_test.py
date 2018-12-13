@@ -21,6 +21,7 @@ Integration tests for azureblob module.
 import os
 import warnings
 import unittest
+from exceptions import ResourceWarning
 
 from nose.plugins.attrib import attr
 

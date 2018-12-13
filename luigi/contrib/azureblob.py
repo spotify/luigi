@@ -135,7 +135,7 @@ class AzureBlobClient(FileSystem):
     def move(self, path, dest):
         try:
             return self.copy(path, dest) and self.remove(path)
-        except:
+        except IOError:
             self.remove(dest)
             return False
 
