@@ -10,7 +10,7 @@ class TestMetricsCollectors(unittest.TestCase):
         collector = metrics.MetricsCollectors.default
         output = metrics.MetricsCollectors.get(collector)
 
-        assert type(output) is metrics.MetricsCollector
+        assert type(output) is metrics.NoMetricsCollector
 
     def test_datadog_value(self):
         collector = metrics.MetricsCollectors.datadog
@@ -22,7 +22,7 @@ class TestMetricsCollectors(unittest.TestCase):
         collector = metrics.MetricsCollectors.none
         output = metrics.MetricsCollectors.get(collector)
 
-        assert type(output) is metrics.MetricsCollector
+        assert type(output) is metrics.NoMetricsCollector
 
     def test_other_value(self):
         collector = 'junk'

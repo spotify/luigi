@@ -89,9 +89,9 @@ class DatadogMetricsCollector(MetricsCollector):
         self._send_event(title=title, text=text, tags=event_tags, alert_type='info', priority='low')
 
     def _send_event(self, **params):
-        params['tags'] += self.default_tags
+        params['tags'] += self.default_tags()
 
-        api.Event.create(params)
+        api.Event.create(**params)
 
     def _send_gauge(self, metric_name, value, tags=[]):
         all_tags = tags + self.default_tags()

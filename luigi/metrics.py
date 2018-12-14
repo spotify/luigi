@@ -54,13 +54,13 @@ class NoMetricsCollector(MetricsCollector):
     def __init__(self):
         pass
 
-    def handle_task_started(self):
+    def handle_task_started(self, task):
         pass
 
-    def handle_task_failed(self):
+    def handle_task_failed(self, task):
         pass
 
-    def handle_task_disabled(self):
+    def handle_task_disabled(self, task, config):
         pass
 
     def handle_task_done(self, task):
