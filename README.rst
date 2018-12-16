@@ -176,6 +176,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Movio <https://movio.co.nz/>`_
 * `Bonnier News <https://www.bonniernews.se/>`_
 * `Starsky Robotics <https://www.starsky.io/>`_
+* `BaseTIS <https://www.basetis.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
