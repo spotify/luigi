@@ -815,6 +815,12 @@ send_messages
   the central scheduler provides a simple prompt per task to send messages.
   Defaults to true.
 
+metrics_collector
+  Optional setting allowing Luigi to use a contribution to collect metrics
+  about the pipeline to a third-party. By default this uses the default metric
+  collector that acts as a shell and does nothing. The only currently available
+  option is "datadog".
+
 
 [sendgrid]
 ----------
@@ -988,6 +994,28 @@ client_type
   authentication. The other option is the "kerberos" client that uses kerberos
   authentication.
 
+[datadog]
+---------
+
+api_key
+  The api key found in the account settings of Datadog under the API
+  sections.
+app_key
+  The application key found in the account settings of Datadog under the API
+  sections.
+default_tags
+  Optional settings that adds the tag to all the metrics and events sent to
+  Datadog. Default value is "application:luigi".
+environment
+  Allows you to tweak multiple environment to differentiate between production,
+  staging or development metrics within Datadog. Default value is "development".
+statsd_host
+  The host that has the statsd instance to allow Datadog to send statsd metric. Default value is "localhost".
+statsd_port
+  The port on the host that allows connection to the statsd host. Defaults value is 8125.
+metric_namespace
+  Optional prefix to add to the beginning of every metric sent to Datadog.
+  Default value is "luigi".
 
 Per Task Retry-Policy
 ---------------------
