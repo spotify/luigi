@@ -89,19 +89,19 @@ class DatadogMetricsCollector(MetricsCollector):
         self._send_event(title=title, text=text, tags=event_tags, alert_type='info', priority='low')
 
     def _send_event(self, **params):
-        params['tags'] += self.default_tags()
+        params['tags'] += self.default_tags
 
         api.Event.create(**params)
 
     def _send_gauge(self, metric_name, value, tags=[]):
-        all_tags = tags + self.default_tags()
+        all_tags = tags + self.default_tags
 
         namespaced_metric = "{namespace}.{metric_name}".format(namespace=self._config.metric_namespace,
                                                                metric_name=metric_name)
         statsd.gauge(namespaced_metric, value, tags=all_tags)
 
     def _send_increment(self, metric_name, value=1, tags=[]):
-        all_tags = tags + self.default_tags()
+        all_tags = tags + self.default_tags
 
         namespaced_metric = "{namespace}.{metric_name}".format(namespace=self._config.metric_namespace,
                                                                metric_name=metric_name)
@@ -114,6 +114,7 @@ class DatadogMetricsCollector(MetricsCollector):
 
         return params
 
+    @property
     def default_tags(self):
         default_tags = []
 
