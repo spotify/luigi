@@ -898,6 +898,11 @@ class Worker(object):
             batch_tasks = filter(None, [
                 self._scheduled_tasks.get(batch_id) for batch_id in r['batch_task_ids']])
             self._batch_running_tasks[task_id] = batch_tasks
+            self._scheduled_tasks[task_id] = \
+                load_task(module=r.get('task_module'),
+                          task_name=r['task_family'],
+                          params_str=r['task_params'])
+
 
         return GetWorkResponse(
             task_id=task_id,
