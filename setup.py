@@ -41,7 +41,7 @@ install_requires = [
     # https://pagure.io/python-daemon/issue/18
     'python-daemon<2.2.0',
     'python-dateutil==2.7.5',
-    'enum34>1.1.0;python_version<"3.4"',
+    'enum34>1.1.0;python_version<"3.4"'
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
