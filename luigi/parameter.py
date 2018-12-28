@@ -23,6 +23,7 @@ See :ref:`Parameter` for more info on how to define parameters.
 import abc
 import datetime
 import warnings
+from enum import IntEnum
 import json
 from json import JSONEncoder
 from collections import OrderedDict, Mapping
@@ -42,6 +43,23 @@ from luigi.cmdline_parser import CmdlineParser
 
 
 _no_value = object()
+
+
+class ParameterVisibility(IntEnum):
+    """
+    Possible values for the parameter visibility option. Public is the default.
+    See :doc:`/parameters` for more info.
+    """
+    PUBLIC = 0
+    HIDDEN = 1
+    PRIVATE = 2
+
+    @classmethod
+    def has_value(cls, value):
+        return any(value == item.value for item in cls)
+
+    def serialize(self):
+        return self.value
 
 
 class ParameterException(Exception):
@@ -113,7 +131,8 @@ class Parameter(object):
     _counter = 0  # non-atomically increasing counter used for ordering parameters.
 
     def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
-                 config_path=None, positional=True, always_in_help=False, batch_method=None):
+                 config_path=None, positional=True, always_in_help=False, batch_method=None,
+                 visibility=ParameterVisibility.PUBLIC):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
@@ -140,6 +159,10 @@ class Parameter(object):
                                                         parameter values into a single value. Used
                                                         when receiving batched parameter lists from
                                                         the scheduler. See :ref:`batch_method`
+
+        :param visibility: A Parameter whose value is a :py:class:`~luigi.parameter.ParameterVisibility`.
+                            Default value is ParameterVisibility.PUBLIC
+
         """
         self._default = default
         self._batch_method = batch_method
@@ -150,6 +173,7 @@ class Parameter(object):
             positional = False
         self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
         self.positional = positional
+        self.visibility = visibility if ParameterVisibility.has_value(visibility) else ParameterVisibility.PUBLIC
 
         self.description = description
         self.always_in_help = always_in_help
@@ -195,11 +219,11 @@ class Parameter(object):
         yield (self._get_value_from_config(task_name, param_name), None)
         yield (self._get_value_from_config(task_name, param_name.replace('_', '-')),
                'Configuration [{}] {} (with dashes) should be avoided. Please use underscores.'.format(
-               task_name, param_name))
+                   task_name, param_name))
         if self._config_path:
             yield (self._get_value_from_config(self._config_path['section'], self._config_path['name']),
                    'The use of the configuration [{}] {} is deprecated. Please use [{}] {}'.format(
-                   self._config_path['section'], self._config_path['name'], task_name, param_name))
+                       self._config_path['section'], self._config_path['name'], task_name, param_name))
         yield (self._default, None)
 
     def has_task_value(self, task_name, param_name):
@@ -694,7 +718,8 @@ class TimeDeltaParameter(Parameter):
         def optional_field(key):
             return "(%s)?" % field(key)
         # A little loose: ISO 8601 does not allow weeks in combination with other fields, but this regex does (as does python timedelta)
-        regex = "P(%s|%s(T%s)?)" % (field("weeks"), optional_field("days"), "".join([optional_field(key) for key in ["hours", "minutes", "seconds"]]))
+        regex = "P(%s|%s(T%s)?)" % (field("weeks"), optional_field("days"),
+                                    "".join([optional_field(key) for key in ["hours", "minutes", "seconds"]]))
         return self._apply_regex(regex, input)
 
     def _parseSimple(self, input):

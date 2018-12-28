@@ -507,6 +507,9 @@ class Worker(object):
             for batch_task in self._batch_running_tasks.pop(task_id):
                 self._add_task_history.append((batch_task, status, True))
 
+        if task and kwargs.get('params'):
+            kwargs['param_visibilities'] = task._get_param_visibilities()
+
         self._scheduler.add_task(*args, **kwargs)
 
         logger.info('Informed scheduler that task   %s   has status   %s', task_id, status)
@@ -902,7 +905,6 @@ class Worker(object):
                 load_task(module=r.get('task_module'),
                           task_name=r['task_family'],
                           params_str=r['task_params'])
-
 
         return GetWorkResponse(
             task_id=task_id,

@@ -13,6 +13,7 @@
 # the License.
 
 import os
+import sys
 
 from setuptools import setup
 
@@ -47,6 +48,9 @@ if os.environ.get('READTHEDOCS', None) == 'True':
     # readthedocs don't like python-daemon, see #1342
     install_requires.remove('python-daemon<3.0')
     install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
+
+if sys.version_info < (3, 4):
+    install_requires.append('enum34>1.1.0')
 
 setup(
     name='luigi',
