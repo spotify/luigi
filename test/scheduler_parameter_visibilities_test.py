@@ -28,7 +28,7 @@ import time
 
 class SchedulerParameterVisibilitiesTest(LuigiTestCase):
     def test_task_with_deps(self):
-        s = luigi.scheduler.Scheduler(send_messages=True)
+        s = luigi.scheduler.Scheduler()
         with luigi.worker.Worker(scheduler=s) as w:
             class DynamicTask(RunOnceTask):
                 dynamic_public = luigi.Parameter(default="dynamic_public")
@@ -77,7 +77,7 @@ class SchedulerParameterVisibilitiesTest(LuigiTestCase):
                              dynamic_task_deps[dynamic_task.task_id]['params'])
 
     def test_public_and_hidden_params(self):
-        s = luigi.scheduler.Scheduler(send_messages=True)
+        s = luigi.scheduler.Scheduler()
         with luigi.worker.Worker(scheduler=s) as w:
             class Task(RunOnceTask):
                 a = luigi.Parameter(default="a")
