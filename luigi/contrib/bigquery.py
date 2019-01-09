@@ -187,7 +187,12 @@ class BigQueryClient(object):
             body = {}
 
         try:
-            body['id'] = '{}:{}'.format(dataset.project_id, dataset.dataset_id)
+            # Construct a message body in the format required by
+            # https://developers.google.com/resources/api-libraries/documentation/bigquery/v2/python/latest/bigquery_v2.datasets.html#insert
+            body['datasetReference'] = {
+                'projectId': dataset.project_id,
+                'datasetId': dataset.dataset_id
+            }
             if dataset.location is not None:
                 body['location'] = dataset.location
             self.client.datasets().insert(projectId=dataset.project_id, body=body).execute()
