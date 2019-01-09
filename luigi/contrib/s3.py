@@ -162,8 +162,8 @@ class S3Client(FileSystem):
                                       aws_session_token=aws_session_token,
                                       **options)
         except TypeError as e:
-            logger.error(e.message)
-            if 'got an unexpected keyword argument' in e.message:
+            logger.error(e.args[0])
+            if 'got an unexpected keyword argument' in e.args[0]:
                 raise DeprecatedBotoClientException(
                     "Now using boto3. Check that you're passing the correct arguments")
             raise
