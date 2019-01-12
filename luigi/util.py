@@ -264,7 +264,7 @@ class inherits(object):
         class YetAnotherTask(luigi.Task):
             n = luigi.IntParameter()
 
-        @inherits(AnotherTask):
+        @inherits(AnotherTask)
         class MyFirstTask(luigi.Task):
             def requires(self):
                return self.clone_parent()
@@ -273,7 +273,7 @@ class inherits(object):
                print self.m # this will be defined
                # ...
 
-        @inherits(AnotherTask, YetAnotherTask):
+        @inherits(AnotherTask, YetAnotherTask)
         class MySecondTask(luigi.Task):
             def requires(self):
                return self.clone_parents()

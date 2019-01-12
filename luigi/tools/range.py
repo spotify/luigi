@@ -32,7 +32,9 @@ import warnings
 import operator
 import re
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+
+from dateutil.relativedelta import relativedelta
 
 from luigi import six
 
@@ -643,6 +645,76 @@ def infer_bulk_complete_from_fs(datetimes, datetime_to_task, datetime_to_re):
             missing_datetimes.append(d)
 
     return missing_datetimes
+
+
+class RangeMonthly(RangeBase):
+    """
+    Produces a contiguous completed range of a monthly recurring task.
+
+    Unlike the Range* classes with shorter intervals, this class does not perform bulk optimisation.
+    It is assumed that the number of months is low enough not to motivate the increased complexity.
+    Hence, there is no class RangeMonthlyBase.
+    """
+    start = luigi.MonthParameter(
+        default=None,
+        description="beginning month, inclusive. Default: None - work backward forever (requires reverse=True)")
+    stop = luigi.MonthParameter(
+        default=None,
+        description="ending month, exclusive. Default: None - work forward forever")
+    months_back = luigi.IntParameter(
+        default=13,  # Little over a year
+        description=("extent to which contiguousness is to be assured into "
+                     "past, in months from current time. Prevents infinite loop "
+                     "when start is none. If the dataset has limited retention"
+                     " (i.e. old outputs get removed), this should be set "
+                     "shorter to that, too, to prevent the oldest outputs "
+                     "flapping. Increase freely if you intend to process old "
+                     "dates - worker's memory is the limit"))
+    months_forward = luigi.IntParameter(
+        default=0,
+        description="extent to which contiguousness is to be assured into future, in months from current time. "
+                    "Prevents infinite loop when stop is none")
+
+    def datetime_to_parameter(self, dt):
+        return date(dt.year, dt.month, 1)
+
+    def parameter_to_datetime(self, p):
+        return datetime(p.year, p.month, 1)
+
+    def datetime_to_parameters(self, dt):
+        """
+        Given a date-time, will produce a dictionary of of-params combined with the ranged task parameter
+        """
+        return self._task_parameters(dt.date())
+
+    def parameters_to_datetime(self, p):
+        """
+        Given a dictionary of parameters, will extract the ranged task parameter value
+        """
+        dt = p[self._param_name]
+        return datetime(dt.year, dt.month, 1)
+
+    def _format_datetime(self, dt):
+        return dt.strftime('%Y-%m')
+
+    def moving_start(self, now):
+        return now - relativedelta(months=self.months_back)
+
+    def moving_stop(self, now):
+        return now + relativedelta(months=self.months_forward)
+
+    def finite_datetimes(self, finite_start, finite_stop):
+        """
+        Simply returns the points in time that correspond to turn of month.
+        """
+        start_date = datetime(finite_start.year, finite_start.month, 1)
+        dates = []
+        for m in itertools.count():
+            t = start_date + relativedelta(months=m)
+            if t >= finite_stop:
+                return dates
+            if t >= finite_start:
+                dates.append(t)
 
 
 class RangeDaily(RangeDailyBase):

@@ -22,6 +22,7 @@ workers via command line arguments and options from config files.
 import logging
 import logging.config
 import os.path
+
 from luigi.configuration import get_config, LuigiConfigParser
 
 # In python3 ConfigParser was renamed
@@ -48,7 +49,13 @@ class BaseLogging(object):
         return True
 
     @classmethod
-    def setup(cls, opts):
+    def setup(cls,
+              opts=type('opts', (), {
+                  'background': None,
+                  'logdir': None,
+                  'logging_conf_file': None,
+                  'log_level': 'DEBUG'
+              })):
         """Setup logging via CLI params and config."""
         logger = logging.getLogger('luigi')
 
