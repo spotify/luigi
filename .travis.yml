@@ -64,6 +64,10 @@ matrix:
       dist: xenial
       sudo: true
       env: TOXENV=py37-aws
+    - python: 3.7
+      dist: xenial
+      sudo: true
+      env: TOXENV=py37-azureblob
 
 cache:
   directories:
