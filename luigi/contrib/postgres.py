@@ -364,6 +364,8 @@ class PostgresQuery(rdbms.Query):
     To customize the query signature as recorded in the database marker table, override the `update_id` property.
     """
 
+    port = None
+
     def run(self):
         connection = self.output().connect()
         connection.autocommit = self.autocommit

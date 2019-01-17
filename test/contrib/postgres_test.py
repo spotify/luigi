@@ -48,7 +48,6 @@ class DummyPostgresImporter(luigi.contrib.postgres.CopyToTable):
     date = luigi.DateParameter()
 
     host = 'dummy_host'
-    port = 1234
     database = 'dummy_database'
     user = 'dummy_user'
     password = 'dummy_password'
@@ -88,7 +87,6 @@ class DummyPostgresQuery(luigi.contrib.postgres.PostgresQuery):
     date = luigi.DateParameter()
 
     host = 'dummy_host'
-    port = 1234
     database = 'dummy_database'
     user = 'dummy_user'
     password = 'dummy_password'
