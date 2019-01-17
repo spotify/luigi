@@ -1105,6 +1105,7 @@ class TestSerializeTupleParameter(LuigiTestCase):
 
         self.assertEqual(luigi.TupleParameter().parse(luigi.TupleParameter().serialize(the_tuple)), the_tuple)
 
+
 class NewStyleParameters822Test(LuigiTestCase):
     """
     I bet these tests created at 2015-03-08 are reduntant by now (Oct 2015).
