@@ -818,8 +818,8 @@ send_messages
 metrics_collector
   Optional setting allowing Luigi to use a contribution to collect metrics
   about the pipeline to a third-party. By default this uses the default metric
-  collector that acts as a shell and does nothing. The only currently available
-  option is "datadog".
+  collector that acts as a shell and does nothing. The currently available
+  options are "datadog" and "prometheus".
 
 
 [sendgrid]
