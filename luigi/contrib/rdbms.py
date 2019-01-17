@@ -288,6 +288,13 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
     def host(self):
         return None
 
+    @property
+    def port(self):
+        """
+        Override to use port separately from host. Used in PostgresQuery.
+        """
+        return None
+
     @abc.abstractproperty
     def database(self):
         return None
