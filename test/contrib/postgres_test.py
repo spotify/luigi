@@ -98,6 +98,18 @@ class DummyPostgresQuery(luigi.contrib.postgres.PostgresQuery):
     query = 'SELECT * FROM foo'
 
 
+class DummyPostgresQueryWithPort(luigi.contrib.postgres.PostgresQuery):
+    date = luigi.DateParameter()
+
+    host = 'dummy_host'
+    port = 1234
+    database = 'dummy_database'
+    user = 'dummy_user'
+    password = 'dummy_password'
+    table = 'dummy_table'
+    query = 'SELECT * FROM foo'
+
+
 @attr('postgres')
 class PostgresQueryTest(unittest.TestCase):
     maxDiff = None
@@ -121,6 +133,14 @@ class PostgresQueryTest(unittest.TestCase):
             'DummyPostgresQuery_2015_01_06_f91a47ec40',
         ])
         self.assertFalse(task.complete())
+
+
+@attr('postgres')
+class PostgresQueryWithPortTest(unittest.TestCase):
+
+    def test_query_with_port(self):
+        output = DummyPostgresQueryWithPort(date=datetime.datetime(1991, 3, 24)).output()
+        self.assertEquals(output.port, 1234)
 
 
 @attr('postgres')
