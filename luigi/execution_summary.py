@@ -35,17 +35,17 @@ class execution_summary(luigi.Config):
 
 class LuigiRunResult:
     """
-    Result of the execution (build/run) will be of type LuigiRunResult instead of 
-    the regular Boolean response if [execution_summary]legacy_run_result is set 
+    Result of the execution (build/run) will be of type LuigiRunResult instead of
+    the regular Boolean response if [execution_summary]legacy_run_result is set
     to False in the config.
     """
-    def __init__(self, worker):
+    def __init__(self, worker, worker_add_run_status=True):
         self.worker = worker
         self.task_groups = _summary_dict(worker)
         self.summary_detailed = summary(worker)
         self.summary, smiley, _ = self._progress_summary()
         self.status = True if smiley == ":)" else False
-        self.status_legacy = self._legacy_status()
+        self.status_legacy = self._legacy_status() & worker_add_run_status
         self.response = self._response()
 
     def _response(self):
@@ -60,9 +60,10 @@ class LuigiRunResult:
 
     def _legacy_status(self):
         legacyStatus = self.status
-        if legacyStatus is True and (
-            self.task_groups["ever_failed"] and not self.task_groups["failed"]):
-           legacyStatus = False
+        if (legacyStatus is True and
+                self.task_groups["ever_failed"] and not
+                self.task_groups["failed"]):
+            legacyStatus = False
         return legacyStatus
 
     def __str__(self):
@@ -70,7 +71,6 @@ class LuigiRunResult:
 
     def __repr__(self):
         return self.__str__()
-
 
 
 def _partition_tasks(worker):
@@ -424,6 +424,7 @@ def _summary_format(set_tasks, worker):
         str_output = 'Did not schedule any tasks'
     return str_output
 
+
 def _tasks_status(set_tasks):
     """
     Given a grouped set of tasks, returns a smiley and a readable reason for the expression
@@ -452,6 +453,7 @@ def _tasks_status(set_tasks):
         smiley = ":)"
         reason = "there were no failed tasks or missing dependencies"
     return smiley, reason
+
 
 def _summary_wrap(str_output):
     return textwrap.dedent("""
