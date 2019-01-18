@@ -30,6 +30,47 @@ import luigi
 
 class execution_summary(luigi.Config):
     summary_length = luigi.IntParameter(default=5)
+    legacy_run_result = luigi.BoolParameter(default=True)
+
+
+class LuigiRunResult:
+    """
+    Result of the execution (build/run) will be of type LuigiRunResult instead of 
+    the regular Boolean response if [execution_summary]legacy_run_result is set 
+    to False in the config.
+    """
+    def __init__(self, worker):
+        self.worker = worker
+        self.task_groups = _summary_dict(worker)
+        self.summary_detailed = summary(worker)
+        self.summary, smiley, _ = self._progress_summary()
+        self.status = True if smiley == ":)" else False
+        self.status_legacy = self._legacy_status()
+        self.response = self._response()
+
+    def _response(self):
+        if not execution_summary().legacy_run_result:
+            return self
+        else:
+            return dict(success=self.status_legacy, worker=self.worker)
+
+    def _progress_summary(self):
+        smiley, reason = _tasks_status(self.task_groups)
+        return "The progress looks {0} because {1}".format(smiley, reason), smiley, reason
+
+    def _legacy_status(self):
+        legacyStatus = self.status
+        if legacyStatus is True and (
+            self.task_groups["ever_failed"] and not self.task_groups["failed"]):
+           legacyStatus = False
+        return legacyStatus
+
+    def __str__(self):
+        return self.summary
+
+    def __repr__(self):
+        return self.__str__()
+
 
 
 def _partition_tasks(worker):
@@ -377,6 +418,16 @@ def _summary_format(set_tasks, worker):
         if len(ext_workers) == 0:
             str_output += '\n'
         str_output += 'Did not run any tasks'
+    smiley, reason = _tasks_status(set_tasks)
+    str_output += "\nThis progress looks {0} because {1}".format(smiley, reason)
+    if num_all_tasks == 0:
+        str_output = 'Did not schedule any tasks'
+    return str_output
+
+def _tasks_status(set_tasks):
+    """
+    Given a grouped set of tasks, returns a smiley and a readable reason for the expression
+    """
     smiley = ""
     reason = ""
     if set_tasks["ever_failed"]:
@@ -400,11 +451,7 @@ def _summary_format(set_tasks, worker):
     else:
         smiley = ":)"
         reason = "there were no failed tasks or missing dependencies"
-    str_output += "\nThis progress looks {0} because {1}".format(smiley, reason)
-    if num_all_tasks == 0:
-        str_output = 'Did not schedule any tasks'
-    return str_output
-
+    return smiley, reason
 
 def _summary_wrap(str_output):
     return textwrap.dedent("""

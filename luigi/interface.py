@@ -34,7 +34,7 @@ from luigi import rpc
 from luigi import scheduler
 from luigi import task
 from luigi import worker
-from luigi import execution_summary
+from luigi.execution_summary import LuigiRunResult, execution_summary
 from luigi.cmdline_parser import CmdlineParser
 from luigi.setup_logging import InterfaceLogging
 
@@ -170,8 +170,9 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
             success &= worker.add(t, env_params.parallel_scheduling, env_params.parallel_scheduling_processes)
         logger.info('Done scheduling tasks')
         success &= worker.run()
-    logger.info(execution_summary.summary(worker))
-    return dict(success=success, worker=worker)
+    run_result = LuigiRunResult(worker)
+    logger.info(run_result.summary_detailed)
+    return run_result.response
 
 
 class PidLockAlreadyTakenExit(SystemExit):
@@ -189,7 +190,8 @@ def run(*args, **kwargs):
 
     :param use_dynamic_argparse: Deprecated and ignored
     """
-    return _run(*args, **kwargs)['success']
+    ret = _run(*args, **kwargs)
+    return ret['success'] if execution_summary().legacy_run_result else ret
 
 
 def _run(cmdline_args=None, main_task_cls=None,
@@ -232,4 +234,5 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
 
-    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)['success']
+    ret = _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)
+    return ret['success'] if execution_summary().legacy_run_result else ret
