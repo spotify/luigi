@@ -45,7 +45,7 @@ class LuigiRunResult:
         self.summary_detailed = summary(worker)
         self.summary, smiley, _ = self._progress_summary()
         self.status = True if smiley == ":)" else False
-        self.status_legacy = self._legacy_status() & worker_add_run_status
+        self.status_legacy = worker_add_run_status
         self.response = self._response()
 
     def _response(self):
@@ -57,14 +57,6 @@ class LuigiRunResult:
     def _progress_summary(self):
         smiley, reason = _tasks_status(self.task_groups)
         return "The progress looks {0} because {1}".format(smiley, reason), smiley, reason
-
-    def _legacy_status(self):
-        legacyStatus = self.status
-        if (legacyStatus is True and
-                self.task_groups["ever_failed"] and not
-                self.task_groups["failed"]):
-            legacyStatus = False
-        return legacyStatus
 
     def __str__(self):
         return self.summary
