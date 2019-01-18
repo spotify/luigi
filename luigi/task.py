@@ -39,6 +39,7 @@ from luigi import six
 
 from luigi import parameter
 from luigi.task_register import Register
+from luigi.parameter import ParameterVisibility
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -49,6 +50,7 @@ TASK_ID_TRUNCATE_PARAMS = 16
 TASK_ID_TRUNCATE_HASH = 10
 TASK_ID_INVALID_CHAR_REGEX = re.compile(r'[^A-Za-z0-9_]')
 _SAME_AS_PYTHON_MODULE = '_same_as_python_module'
+TASK_BATCHED_PARAMS_VAR = '_batched_params'
 
 
 def namespace(namespace=None, scope=''):
@@ -365,6 +367,15 @@ class Task(object):
     def batch_param_names(cls):
         return [name for name, p in cls.get_params() if p._is_batchable()]
 
+    @property
+    def batched_params(self):
+        """
+        Get the batched over values for the parameters with a defined batching_method
+
+        :returns a dict of (name, value) where name is the original param_name and the value is the batched over list
+        """
+        return getattr(self, TASK_BATCHED_PARAMS_VAR)
+
     @classmethod
     def get_param_names(cls, include_significant=False):
         return [name for name, p in cls.get_params() if include_significant or p.significant]
@@ -432,8 +443,20 @@ class Task(object):
         # Register kwargs as an attribute on the class. Might be useful
         self.param_kwargs = dict(param_values)
 
+        # Register default batched_params consisting of just single item lists for batchable params
+        #   if they are found in param_kwargs, this will be overwritten in actual batched calls by
+        #   from_str_params
+        batched_params = {}
+        for name in self.batch_param_names():
+                if name in self.param_kwargs:
+                    batched_params[name] = [self.param_kwargs[name]]
+                else:
+                    batched_params[name] = []
+
+        setattr(self, TASK_BATCHED_PARAMS_VAR, batched_params)
+
         self._warn_on_wrong_param_types()
-        self.task_id = task_id_str(self.get_task_family(), self.to_str_params(only_significant=True))
+        self.task_id = task_id_str(self.get_task_family(), self.to_str_params(only_significant=True, only_public=True))
         self.__hash = hash(self.task_id)
 
         self.set_tracking_url = None
@@ -464,27 +487,48 @@ class Task(object):
         :param params_str: dict of param name -> value as string.
         """
         kwargs = {}
+        batched_params = {}
         for param_name, param in cls.get_params():
             if param_name in params_str:
                 param_str = params_str[param_name]
                 if isinstance(param_str, list):
                     kwargs[param_name] = param._parse_list(param_str)
+                    if param._is_batchable():
+                        batched_params[param_name] = [param.parse(x) for x in param_str]
                 else:
                     kwargs[param_name] = param.parse(param_str)
+                    if param._is_batchable():
+                        batched_params[param_name] = [param.parse(param_str)]
 
-        return cls(**kwargs)
+        # Append the attribute after initialization so as to reuse the registry's instance_cache
+        ret = cls(**kwargs)
 
-    def to_str_params(self, only_significant=False):
+        # TODO(EJS) evaluate if doing an .update is better?
+        setattr(ret, TASK_BATCHED_PARAMS_VAR, batched_params)
+        return ret
+
+    def to_str_params(self, only_significant=False, only_public=False):
         """
         Convert all parameters to a str->str hash.
         """
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in six.iteritems(self.param_kwargs):
-            if (not only_significant) or params[param_name].significant:
+            if (((not only_significant) or params[param_name].significant)
+                    and ((not only_public) or params[param_name].visibility == ParameterVisibility.PUBLIC)
+                    and params[param_name].visibility != ParameterVisibility.PRIVATE):
                 params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
+
+    def _get_param_visibilities(self):
+        param_visibilities = {}
+        params = dict(self.get_params())
+        for param_name, param_value in six.iteritems(self.param_kwargs):
+            if params[param_name].visibility != ParameterVisibility.PRIVATE:
+                param_visibilities[param_name] = params[param_name].visibility.serialize()
+
+        return param_visibilities
 
     def clone(self, cls=None, **kwargs):
         """
