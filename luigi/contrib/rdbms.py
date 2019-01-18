@@ -277,7 +277,9 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
 
         Optionally override:
 
+        * `port`,
         * `autocommit`
+        * `update_id`
 
         Subclass and override the following methods:
 
@@ -291,7 +293,7 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
     @property
     def port(self):
         """
-        Override to use port separately from host. Used in PostgresQuery.
+        Override to specify port separately from host.
         """
         return None
 
