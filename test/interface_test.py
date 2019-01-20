@@ -23,7 +23,7 @@ import luigi.notifications
 from luigi.interface import _WorkerSchedulerFactory
 from luigi.worker import Worker
 from luigi.interface import core
-from luigi.execution_summary import LuigiRetCodes
+from luigi.execution_summary import LuigiStatusCode
 
 from mock import Mock, patch, MagicMock
 from helpers import LuigiTestCase, with_config
@@ -101,7 +101,7 @@ class InterfaceTest(LuigiTestCase):
         self.worker.run = Mock(return_value=True)
         ret = self._run_interface(detailed_summary=True)
 
-        self.assertEqual(ret.status, LuigiRetCodes.SUCCESS)
+        self.assertEqual(ret.status, LuigiStatusCode.SUCCESS)
         self.assertEqual(ret.scheduling_succeeded, True)
         self.assertEqual(ret.execution_succeeded, True)
 
@@ -114,7 +114,7 @@ class InterfaceTest(LuigiTestCase):
         self.worker.run = Mock(return_value=False)
         ret = self._run_interface(detailed_summary=True)
 
-        self.assertEqual(ret.status, LuigiRetCodes.SUCCESS_WITH_RETRY)
+        self.assertEqual(ret.status, LuigiStatusCode.SUCCESS_WITH_RETRY)
         self.assertEqual(ret.scheduling_succeeded, False)
         self.assertEqual(ret.execution_succeeded, True)
 
@@ -128,7 +128,7 @@ class InterfaceTest(LuigiTestCase):
         self.worker.run = Mock(return_value=False)
         ret = self._run_interface(detailed_summary=True)
 
-        self.assertEqual(ret.status, LuigiRetCodes.FAILED)
+        self.assertEqual(ret.status, LuigiStatusCode.FAILED)
         self.assertEqual(ret.scheduling_succeeded, False)
         self.assertEqual(ret.execution_succeeded, False)
 
@@ -144,7 +144,7 @@ class InterfaceTest(LuigiTestCase):
         self.worker.run = Mock(return_value=False)
         ret = self._run_interface(detailed_summary=True)
 
-        self.assertEqual(ret.status, LuigiRetCodes.FAILED_AND_SCHEDULING_FAILED)
+        self.assertEqual(ret.status, LuigiStatusCode.FAILED_AND_SCHEDULING_FAILED)
         self.assertEqual(ret.scheduling_succeeded, False)
         self.assertEqual(ret.execution_succeeded, False)
 
@@ -158,7 +158,7 @@ class InterfaceTest(LuigiTestCase):
         self.worker.run = Mock(return_value=True)
         ret = self._run_interface(detailed_summary=True)
 
-        self.assertEqual(ret.status, LuigiRetCodes.SCHEDULING_FAILED)
+        self.assertEqual(ret.status, LuigiStatusCode.SCHEDULING_FAILED)
         self.assertEqual(ret.scheduling_succeeded, False)
         self.assertEqual(ret.execution_succeeded, False)
 
@@ -170,7 +170,7 @@ class InterfaceTest(LuigiTestCase):
         fake_summary_dict.return_value = test_dict
         ret = self._run_interface(detailed_summary=True)
 
-        self.assertEqual(ret.status, LuigiRetCodes.NOT_RUN)
+        self.assertEqual(ret.status, LuigiStatusCode.NOT_RUN)
         self.assertEqual(ret.execution_succeeded, False)
 
     @patch(_summary_dict_module_path())
@@ -181,9 +181,8 @@ class InterfaceTest(LuigiTestCase):
         fake_summary_dict.return_value = test_dict
         ret = self._run_interface(detailed_summary=True)
 
-        self.assertEqual(ret.status, LuigiRetCodes.MISSING_EXT)
+        self.assertEqual(ret.status, LuigiStatusCode.MISSING_EXT)
         self.assertEqual(ret.execution_succeeded, False)
-    
 
     def test_stops_worker_on_add_exception(self):
         worker = MagicMock()
@@ -201,7 +200,6 @@ class InterfaceTest(LuigiTestCase):
 
         self.assertRaises(AttributeError, self._run_interface)
         self.assertTrue(worker.__exit__.called)
-
 
     def test_just_run_main_task_cls(self):
         class MyTestTask(luigi.Task):

@@ -32,23 +32,23 @@ class execution_summary(luigi.Config):
     summary_length = luigi.IntParameter(default=5)
 
 
-class LuigiRetCodes:
+class LuigiStatusCode:
     """
     All possible return codes for **LuigiRunResult.status** when the argument ``detailed_summary=True`` in
     *luigi.run() / luigi.build*. Here are the codes and what they mean:
 
-    =============================  =====  ========================================================== 
-    Return Code Name               Value  Meaning 
-    =============================  =====  ========================================================== 
-    SUCCESS                        0      There were no failed tasks or missing dependencies 
-    SUCCESS_WITH_RETRY             1      There were failed tasks but they all succeeded in a retry 
+    =============================  =====  ==========================================================
+    Status Code Name               Value  Meaning
+    =============================  =====  ==========================================================
+    SUCCESS                        0      There were no failed tasks or missing dependencies
+    SUCCESS_WITH_RETRY             1      There were failed tasks but they all succeeded in a retry
     FAILED                         2      There were failed tasks
     FAILED_AND_SCHEDULING_FAILED   3      There were failed tasks and tasks whose scheduling failed
     SCHEDULING_FAILED              4      There were tasks whose scheduling failed
     NOT_RUN                        5      There were tasks that were not granted run permission by the scheduler
     MISSING_EXT                    6      There were missing external dependencies
     =============================  =====  ==========================================================
-    
+
     """
     SUCCESS = 0
     SUCCESS_WITH_RETRY = 1
@@ -58,11 +58,11 @@ class LuigiRetCodes:
     NOT_RUN = 5
     MISSING_EXT = 6
 
-    # Make sure all the retcodes have a (smiley, reason) in this dictionary
+    # Make sure all the status_codes have a (smiley, reason) in this dictionary
     _DETAILS = {
         SUCCESS: (":)", "there were no failed tasks or missing dependencies"),
         SUCCESS_WITH_RETRY: (":)", "there were failed tasks but they all succeeded in a retry"),
-        FAILED: (":(" ,"there were failed tasks"),
+        FAILED: (":(", "there were failed tasks"),
         FAILED_AND_SCHEDULING_FAILED: (":(", "there were failed tasks and tasks whose scheduling failed"),
         SCHEDULING_FAILED: (":(", "there were tasks whose scheduling failed"),
         NOT_RUN: (":|", "there were tasks that were not granted run permission by the scheduler"),
@@ -80,7 +80,7 @@ class LuigiRunResult:
         * **summary_text_one_line** - One line summary of the progress.
         * **summary_text** - Detailed summary of the progress.
         * **status** - Integer Return Code. See \
-        `LuigiRetCodes <https://luigi.readthedocs.io/en/latest/api/luigi.execution_summary.html#luigi.execution_summary.LuigiRetCodes>`_ \
+        `LuigiStatusCode <https://luigi.readthedocs.io/en/latest/api/luigi.execution_summary.html#luigi.execution_summary.LuigiStatusCode>`_ \
         for what these codes mean.
         * **worker** - Worker object.
         * **execution_succeeded** - Boolean which is *True* if finally, there were no failed tasks.
@@ -92,31 +92,19 @@ class LuigiRunResult:
         self.summary_text = summary(worker)
         self.summary_text_one_line, self.status = self._progress_summary(worker)
         self.scheduling_succeeded = worker_add_run_status
-        self.execution_succeeded = (True if self.status is LuigiRetCodes.SUCCESS or 
-                                            self.status is LuigiRetCodes.SUCCESS_WITH_RETRY
-                                    else False)
-
-    def _response(self, detailed_summary = False):
-        """ This function returns an object of type **LuigiRunResult** or a **Boolean**
-        based on the value passed for the parameter.
-
-        Args:
-            *detailed_summary*: Enables/disables a response of type **LuigiRunResult**.
-
-        Returns:
-            A response of type **LuigiRunResult** if *detailed_summary* is True, Boolean otherwise.
-        """
-        if detailed_summary is True:
-            return self
-        else:
-            return self.scheduling_succeeded
+        self.execution_succeeded = (True if self.status is LuigiStatusCode.SUCCESS or
+                                    self.status is LuigiStatusCode.SUCCESS_WITH_RETRY else False)
 
     def _progress_summary(self, worker):
-        summary_text_one_line, retcode = _tasks_status(_summary_dict(worker))
-        return summary_text_one_line, retcode
+        summary_text_one_line, status_code = _tasks_status(_summary_dict(worker))
+        return summary_text_one_line, status_code
+
+    # This function makes this class subscriptable (self.worker is used at a few places)
+    def __getitem__(self, key):
+        return getattr(self, key, None)
 
     def __str__(self):
-        return "RETCODE: {0}\nSUMMARY: {1}\n".format(self.status ,self.summary_text_one_line)
+        return "STATUS: {0}".format(self.status, self.summary_text_one_line)
 
     def __repr__(self):
         return self.__str__()
@@ -480,21 +468,21 @@ def _tasks_status(set_tasks):
     """
     if set_tasks["ever_failed"]:
         if not set_tasks["failed"]:
-            retcode = LuigiRetCodes.SUCCESS_WITH_RETRY
+            status_code = LuigiStatusCode.SUCCESS_WITH_RETRY
         else:
-            retcode = LuigiRetCodes.FAILED
+            status_code = LuigiStatusCode.FAILED
             if set_tasks["scheduling_error"]:
-                retcode = LuigiRetCodes.FAILED_AND_SCHEDULING_FAILED
+                status_code = LuigiStatusCode.FAILED_AND_SCHEDULING_FAILED
     elif set_tasks["scheduling_error"]:
-        retcode = LuigiRetCodes.SCHEDULING_FAILED
+        status_code = LuigiStatusCode.SCHEDULING_FAILED
     elif set_tasks["not_run"]:
-        retcode = LuigiRetCodes.NOT_RUN
+        status_code = LuigiStatusCode.NOT_RUN
     elif set_tasks["still_pending_ext"]:
-        retcode = LuigiRetCodes.MISSING_EXT
+        status_code = LuigiStatusCode.MISSING_EXT
     else:
-        retcode = LuigiRetCodes.SUCCESS
-    smiley, reason = LuigiRetCodes._DETAILS.get(retcode, ("", ""))
-    return "This progress looks {0} because {1}".format(smiley, reason), retcode
+        status_code = LuigiStatusCode.SUCCESS
+    smiley, reason = LuigiStatusCode._DETAILS.get(status_code, ("", ""))
+    return "This progress looks {0} because {1}".format(smiley, reason), status_code
 
 
 def _summary_wrap(str_output):

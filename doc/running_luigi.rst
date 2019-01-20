@@ -118,7 +118,7 @@ Response of luigi.build()/luigi.run()
   * ``True`` : when there were no failed tasks or missing dependencies.
   * ``False`` : when there were failed tasks or scheduling / dependency / permission issues. (NOTE: The response is also *False* even when there were failed tasks, but all of them succeeded in a retry)
 
-- **Detailed response** This is a response of type ``luigi.execution_summary.LuigiRunResult``. This is obtained by passing a keyword argument ``detailed_summary=True`` to *build/run* This response contains detailed information about the jobs. Please look at the available attributes in a detailed response `here <https://luigi.readthedocs.io/en/latest/api/luigi.execution_summary.html#luigi.execution_summary.LuigiRunResult>`_
+- **Detailed response** This is a response of type ``luigi.execution_summary.LuigiRunResult``. This is obtained by passing a keyword argument ``detailed_summary=True`` to *build/run* This response contains detailed information about the jobs. The available attributes in this kind of response can be found `here <https://luigi.readthedocs.io/en/latest/api/luigi.execution_summary.html#luigi.execution_summary.LuigiRunResult>`_.
 
   .. code-block:: python
 

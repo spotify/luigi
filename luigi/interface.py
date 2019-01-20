@@ -114,8 +114,7 @@ class core(task.Config):
     detailed_summary = parameter.BoolParameter(
         default=False,
         description='Return a detailed response object.'
-                    ' By default a boolean response is returned.',
-        always_in_help=True)
+                    ' By default a boolean response is returned.')
 
 
 class _WorkerSchedulerFactory(object):
@@ -178,7 +177,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
         success &= worker.run()
     run_result = LuigiRunResult(worker, success)
     logger.info(run_result.summary_text)
-    return run_result._response(env_params.detailed_summary)
+    return run_result
 
 
 class PidLockAlreadyTakenExit(SystemExit):
@@ -186,6 +185,17 @@ class PidLockAlreadyTakenExit(SystemExit):
     The exception thrown by :py:func:`luigi.run`, when the lock file is inaccessible
     """
     pass
+
+
+def _detailed_summary_enabled(response, **kwargs):
+    """
+    This function returns the response object as it is if detailed_summary in kwargs is True
+    and returns a Boolean response otherwise.
+    """
+    if kwargs.get('detailed_summary', False):
+        return response
+    else:
+        return response.scheduling_succeeded
 
 
 def run(*args, **kwargs):
@@ -196,7 +206,7 @@ def run(*args, **kwargs):
 
     :param use_dynamic_argparse: Deprecated and ignored
     """
-    return _run(*args, **kwargs)
+    return _detailed_summary_enabled(_run(*args, **kwargs), **kwargs)
 
 
 def _run(cmdline_args=None, main_task_cls=None,
@@ -211,7 +221,6 @@ def _run(cmdline_args=None, main_task_cls=None,
         cmdline_args.insert(0, main_task_cls.task_family)
     if local_scheduler:
         cmdline_args.append('--local-scheduler')
-
     with CmdlineParser.global_instance(cmdline_args) as cp:
         return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory, override_defaults=env_params)
 
@@ -238,5 +247,5 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     """
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
-
-    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)
+    response = _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)
+    return _detailed_summary_enabled(response, **env_params)
