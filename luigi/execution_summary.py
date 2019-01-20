@@ -34,8 +34,21 @@ class execution_summary(luigi.Config):
 
 class LuigiRetCodes:
     """
-    All possible retcodes for luigi.run(..., detailed_summary=True) or
-    luigi.build(..., detailed_summary=True).
+    All possible return codes for **LuigiRunResult.status** when the argument ``detailed_summary=True`` in
+    *luigi.run() / luigi.build*. Here are the codes and what they mean:
+
+    =============================  =====  ========================================================== 
+    Return Code Name               Value  Meaning 
+    =============================  =====  ========================================================== 
+    SUCCESS                        0      There were no failed tasks or missing dependencies 
+    SUCCESS_WITH_RETRY             1      There were failed tasks but they all succeeded in a retry 
+    FAILED                         2      There were failed tasks
+    FAILED_AND_SCHEDULING_FAILED   3      There were failed tasks and tasks whose scheduling failed
+    SCHEDULING_FAILED              4      There were tasks whose scheduling failed
+    NOT_RUN                        5      There were tasks that were not granted run permission by the scheduler
+    MISSING_EXT                    6      There were missing external dependencies
+    =============================  =====  ==========================================================
+    
     """
     SUCCESS = 0
     SUCCESS_WITH_RETRY = 1
@@ -60,8 +73,19 @@ class LuigiRetCodes:
 class LuigiRunResult:
     """
     Result of the execution (build/run) will be of type LuigiRunResult instead of
-    the regular Boolean response if the keyword argument `detailed_summary=True` in
-    build/run.
+    the regular Boolean response if the keyword argument ``detailed_summary=True`` is passed to
+    build/run. A response of type **LuigiRunResult** has the following attributes:
+
+    Attributes:
+        * **summary_text_one_line** - One line summary of the progress.
+        * **summary_text** - Detailed summary of the progress.
+        * **status** - Integer Return Code. See \
+        `LuigiRetCodes <https://luigi.readthedocs.io/en/latest/api/luigi.execution_summary.html#luigi.execution_summary.LuigiRetCodes>`_ \
+        for what these codes mean.
+        * **worker** - Worker object.
+        * **execution_succeeded** - Boolean which is *True* if finally, there were no failed tasks.
+        * **scheduling_succeeded** - Boolean which is *True* if all the tasks were scheduled without errors.
+
     """
     def __init__(self, worker, worker_add_run_status=True):
         self.worker = worker
@@ -72,7 +96,16 @@ class LuigiRunResult:
                                             self.status is LuigiRetCodes.SUCCESS_WITH_RETRY
                                     else False)
 
-    def response(self, detailed_summary = False):
+    def _response(self, detailed_summary = False):
+        """ This function returns an object of type **LuigiRunResult** or a **Boolean**
+        based on the value passed for the parameter.
+
+        Args:
+            *detailed_summary*: Enables/disables a response of type **LuigiRunResult**.
+
+        Returns:
+            A response of type **LuigiRunResult** if *detailed_summary* is True, Boolean otherwise.
+        """
         if detailed_summary is True:
             return self
         else:

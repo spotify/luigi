@@ -137,7 +137,8 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     :param worker_scheduler_factory:
     :param override_defaults:
     :return: True if all tasks and their dependencies were successfully run (or already completed);
-             False if any error occurred.
+             False if any error occurred. It will return a detailed response of type LuigiRunResult
+             instead of a boolean if detailed_summary=True in override_defaults.
     """
 
     if worker_scheduler_factory is None:
@@ -177,7 +178,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
         success &= worker.run()
     run_result = LuigiRunResult(worker, success)
     logger.info(run_result.summary_text)
-    return run_result.response(env_params.detailed_summary)
+    return run_result._response(env_params.detailed_summary)
 
 
 class PidLockAlreadyTakenExit(SystemExit):

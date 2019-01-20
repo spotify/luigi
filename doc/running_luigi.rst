@@ -113,31 +113,15 @@ In some cases (like task queue) it may be useful.
 Response of luigi.build()/luigi.run()
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- **Default response** The default response of *luigi.build()* / *luigi.run()* is a Boolean. It is:
+- **Default response** The default response of *luigi.build()* / *luigi.run()* is a Boolean. This response is also the same as the attribute ``LuigiRunResult.scheduling_succeeded``. It is:
 
   * ``True`` : when there were no failed tasks or missing dependencies.
   * ``False`` : when there were failed tasks or scheduling / dependency / permission issues. (NOTE: The response is also *False* even when there were failed tasks, but all of them succeeded in a retry)
 
-- **Detailed response** This is a response of type ``luigi.execution_summary.LuigiRunResult``. This response contains detailed information about the jobs like:
-
-  * ``summary`` - One line summary of the progress
-  * ``summary_detailed`` - Detailed summary of the progress
-  * ``task_groups`` - Tasks grouped by their status (*completed, failed, not_run etc.* )
-  * ``worker`` - Worker object
-  * ``status`` - Boolean which is *True* if finally, there were no failed tasks.
-  * ``status_legacy`` - Boolean which is the same as the **Default response** mentioned above.
+- **Detailed response** This is a response of type ``luigi.execution_summary.LuigiRunResult``. This is obtained by passing a keyword argument ``detailed_summary=True`` to *build/run* This response contains detailed information about the jobs. Please look at the available attributes in a detailed response `here <https://luigi.readthedocs.io/en/latest/api/luigi.execution_summary.html#luigi.execution_summary.LuigiRunResult>`_
 
   .. code-block:: python
 
     if __name__ == '__main__':
-         response = luigi.build([MyTask1(x=1)], workers=5, local_scheduler=True)
-         print(response.summary_detailed)
-
-  This type of detailed response can be enabled by setting the config:
-
-  .. code:: ini
-
-      [execution_summary]
-      legacy_run_result=False
-
-  Please check `Configuration Docs <https://github.com/spotify/luigi/blob/master/doc/configuration.rst>`_ for details about adding configuration files.
+         response = luigi.build(..., detailed_summary=True)
+         print(response.summary_text)
