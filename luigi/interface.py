@@ -142,8 +142,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
 
     if worker_scheduler_factory is None:
         worker_scheduler_factory = _WorkerSchedulerFactory()
-    if override_defaults is None:
-        override_defaults = {}
+    override_defaults = {} if override_defaults is None else override_defaults
     env_params = core(**override_defaults)
 
     InterfaceLogging.setup(env_params)
