@@ -34,7 +34,7 @@ from luigi import rpc
 from luigi import scheduler
 from luigi import task
 from luigi import worker
-from luigi.execution_summary import LuigiRunResult, execution_summary
+from luigi.execution_summary import LuigiRunResult
 from luigi.cmdline_parser import CmdlineParser
 from luigi.setup_logging import InterfaceLogging
 
@@ -111,6 +111,11 @@ class core(task.Config):
         default=False,
         description='Show all command line flags',
         always_in_help=True)
+    detailed_summary = parameter.BoolParameter(
+        default=False,
+        description='Return a detailed response object.'
+                    ' By default a boolean response is returned.',
+        always_in_help=True)
 
 
 class _WorkerSchedulerFactory(object):
@@ -171,8 +176,8 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
         logger.info('Done scheduling tasks')
         success &= worker.run()
     run_result = LuigiRunResult(worker, success)
-    logger.info(run_result.summary_detailed)
-    return run_result.response
+    logger.info(run_result.summary_text)
+    return run_result.response(env_params.detailed_summary)
 
 
 class PidLockAlreadyTakenExit(SystemExit):
@@ -190,12 +195,11 @@ def run(*args, **kwargs):
 
     :param use_dynamic_argparse: Deprecated and ignored
     """
-    ret = _run(*args, **kwargs)
-    return ret['success'] if execution_summary().legacy_run_result else ret
+    return _run(*args, **kwargs)
 
 
 def _run(cmdline_args=None, main_task_cls=None,
-         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
+         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False, **env_params):
     if use_dynamic_argparse is not None:
         warnings.warn("use_dynamic_argparse is deprecated, don't set it.",
                       DeprecationWarning, stacklevel=2)
@@ -208,7 +212,7 @@ def _run(cmdline_args=None, main_task_cls=None,
         cmdline_args.append('--local-scheduler')
 
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory)
+        return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory, override_defaults=env_params)
 
 
 def build(tasks, worker_scheduler_factory=None, **env_params):
@@ -234,5 +238,4 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
 
-    ret = _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)
-    return ret['success'] if execution_summary().legacy_run_result else ret
+    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)

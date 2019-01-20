@@ -30,36 +30,60 @@ import luigi
 
 class execution_summary(luigi.Config):
     summary_length = luigi.IntParameter(default=5)
-    legacy_run_result = luigi.BoolParameter(default=True)
+
+
+class LuigiRetCodes:
+    """
+    All possible retcodes for luigi.run(..., detailed_summary=True) or
+    luigi.build(..., detailed_summary=True).
+    """
+    SUCCESS = 0
+    SUCCESS_WITH_RETRY = 1
+    FAILED = 2
+    FAILED_AND_SCHEDULING_FAILED = 3
+    SCHEDULING_FAILED = 4
+    NOT_RUN = 5
+    MISSING_EXT = 6
+
+    # Make sure all the retcodes have a (smiley, reason) in this dictionary
+    _DETAILS = {
+        SUCCESS: (":)", "there were no failed tasks or missing dependencies"),
+        SUCCESS_WITH_RETRY: (":)", "there were failed tasks but they all succeeded in a retry"),
+        FAILED: (":(" ,"there were failed tasks"),
+        FAILED_AND_SCHEDULING_FAILED: (":(", "there were failed tasks and tasks whose scheduling failed"),
+        SCHEDULING_FAILED: (":(", "there were tasks whose scheduling failed"),
+        NOT_RUN: (":|", "there were tasks that were not granted run permission by the scheduler"),
+        MISSING_EXT: (":|", "there were missing external dependencies")
+    }
 
 
 class LuigiRunResult:
     """
     Result of the execution (build/run) will be of type LuigiRunResult instead of
-    the regular Boolean response if [execution_summary]legacy_run_result is set
-    to False in the config.
+    the regular Boolean response if the keyword argument `detailed_summary=True` in
+    build/run.
     """
     def __init__(self, worker, worker_add_run_status=True):
         self.worker = worker
-        self.task_groups = _summary_dict(worker)
-        self.summary_detailed = summary(worker)
-        self.summary, smiley, _ = self._progress_summary()
-        self.status = True if smiley == ":)" else False
-        self.status_legacy = worker_add_run_status
-        self.response = self._response()
+        self.summary_text = summary(worker)
+        self.summary_text_one_line, self.status = self._progress_summary(worker)
+        self.scheduling_succeeded = worker_add_run_status
+        self.execution_succeeded = (True if self.status is LuigiRetCodes.SUCCESS or 
+                                            self.status is LuigiRetCodes.SUCCESS_WITH_RETRY
+                                    else False)
 
-    def _response(self):
-        if not execution_summary().legacy_run_result:
+    def response(self, detailed_summary = False):
+        if detailed_summary is True:
             return self
         else:
-            return dict(success=self.status_legacy, worker=self.worker)
+            return self.scheduling_succeeded
 
-    def _progress_summary(self):
-        smiley, reason = _tasks_status(self.task_groups)
-        return "The progress looks {0} because {1}".format(smiley, reason), smiley, reason
+    def _progress_summary(self, worker):
+        summary_text_one_line, retcode = _tasks_status(_summary_dict(worker))
+        return summary_text_one_line, retcode
 
     def __str__(self):
-        return self.summary
+        return "RETCODE: {0}\nSUMMARY: {1}\n".format(self.status ,self.summary_text_one_line)
 
     def __repr__(self):
         return self.__str__()
@@ -410,8 +434,8 @@ def _summary_format(set_tasks, worker):
         if len(ext_workers) == 0:
             str_output += '\n'
         str_output += 'Did not run any tasks'
-    smiley, reason = _tasks_status(set_tasks)
-    str_output += "\nThis progress looks {0} because {1}".format(smiley, reason)
+    summary_text_one_line, _ = _tasks_status(set_tasks)
+    str_output += "\n{0}".format(summary_text_one_line)
     if num_all_tasks == 0:
         str_output = 'Did not schedule any tasks'
     return str_output
@@ -419,32 +443,25 @@ def _summary_format(set_tasks, worker):
 
 def _tasks_status(set_tasks):
     """
-    Given a grouped set of tasks, returns a smiley and a readable reason for the expression
+    Given a grouped set of tasks, returns a one line summary and a LuigiRetCode
     """
-    smiley = ""
-    reason = ""
     if set_tasks["ever_failed"]:
         if not set_tasks["failed"]:
-            smiley = ":)"
-            reason = "there were failed tasks but they all succeeded in a retry"
+            retcode = LuigiRetCodes.SUCCESS_WITH_RETRY
         else:
-            smiley = ":("
-            reason = "there were failed tasks"
+            retcode = LuigiRetCodes.FAILED
             if set_tasks["scheduling_error"]:
-                reason += " and tasks whose scheduling failed"
+                retcode = LuigiRetCodes.FAILED_AND_SCHEDULING_FAILED
     elif set_tasks["scheduling_error"]:
-        smiley = ":("
-        reason = "there were tasks whose scheduling failed"
+        retcode = LuigiRetCodes.SCHEDULING_FAILED
     elif set_tasks["not_run"]:
-        smiley = ":|"
-        reason = "there were tasks that were not granted run permission by the scheduler"
+        retcode = LuigiRetCodes.NOT_RUN
     elif set_tasks["still_pending_ext"]:
-        smiley = ":|"
-        reason = "there were missing external dependencies"
+        retcode = LuigiRetCodes.MISSING_EXT
     else:
-        smiley = ":)"
-        reason = "there were no failed tasks or missing dependencies"
-    return smiley, reason
+        retcode = LuigiRetCodes.SUCCESS
+    smiley, reason = LuigiRetCodes._DETAILS.get(retcode, ("", ""))
+    return "This progress looks {0} because {1}".format(smiley, reason), retcode
 
 
 def _summary_wrap(str_output):
