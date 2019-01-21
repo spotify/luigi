@@ -136,7 +136,7 @@ class PostgresQueryTest(unittest.TestCase):
 
     def test_port_encoded_in_host(self):
         output = DummyPostgresQueryWithPortEncodedInHost(date=datetime.datetime(1991, 3, 24)).output()
-        self.assertEquals(output.port, 1234)
+        self.assertEquals(output.port, '1234')
 
 
 @attr('postgres')
