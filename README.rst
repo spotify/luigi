@@ -176,6 +176,8 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Movio <https://movio.co.nz/>`_
 * `Bonnier News <https://www.bonniernews.se/>`_
 * `Starsky Robotics <https://www.starsky.io/>`_
+* `BaseTIS <https://www.basetis.com/>`_
+* `Hopper <https://www.hopper.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
@@ -184,8 +186,8 @@ External links
 
 * `Mailing List <https://groups.google.com/d/forum/luigi-user/>`_ for discussions and asking questions. (Google Groups)
 * `Releases <https://pypi.python.org/pypi/luigi>`_ (PyPI)
-* `Source code <https://github.com/spotify/luigi>`_ (Github)
-* `Hubot Integration <https://github.com/houzz/hubot-luigi>`_ plugin for Slack, Hipchat, etc (Github)
+* `Source code <https://github.com/spotify/luigi>`_ (GitHub)
+* `Hubot Integration <https://github.com/houzz/hubot-luigi>`_ plugin for Slack, Hipchat, etc (GitHub)
 
 Authors
 -------

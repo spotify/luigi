@@ -40,6 +40,7 @@ install_requires = [
     'tornado>=4.0,<5',
     # https://pagure.io/python-daemon/issue/18
     'python-daemon<2.2.0',
+    'python-dateutil==2.7.5',
     'enum34>1.1.0;python_version<"3.4"',
 ]
 
@@ -52,7 +53,7 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 
 setup(
     name='luigi',
-    version='2.8.0',
+    version='2.8.3',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='The Luigi Authors',

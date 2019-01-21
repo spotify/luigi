@@ -32,6 +32,7 @@ from luigi.contrib import gcp
 import luigi.target
 from luigi import six
 from luigi.six.moves import xrange
+from luigi.format import FileWrapper
 
 logger = logging.getLogger('luigi-interface')
 
@@ -473,7 +474,8 @@ class GCSTarget(luigi.target.FileSystemTarget):
 
     def open(self, mode='r'):
         if mode == 'r':
-            return self.format.pipe_reader(self.fs.download(self.path))
+            return self.format.pipe_reader(
+                FileWrapper(io.BufferedReader(self.fs.download(self.path))))
         elif mode == 'w':
             return self.format.pipe_writer(AtomicGCSFile(self.path, self.fs))
         else:

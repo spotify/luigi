@@ -22,7 +22,6 @@ See :doc:`/central_scheduler` for more info.
 """
 
 import collections
-import inspect
 import json
 
 from luigi.batch_notifier import BatchNotifier
@@ -50,6 +49,8 @@ from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDE
     BATCH_RUNNING
 from luigi.task import Config
 from luigi.parameter import ParameterVisibility
+
+from luigi.metrics import MetricsCollectors
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +98,7 @@ def rpc_method(**request_args):
     def _rpc_method(fn):
         # If request args are passed, return this function again for use as
         # the decorator function with the request args attached.
-        fn_args = inspect.getargspec(fn)
+        fn_args = six.getargspec(fn)
 
         assert not fn_args.varargs
         assert fn_args.args[0] == 'self'
@@ -146,6 +147,8 @@ class scheduler(Config):
     pause_enabled = parameter.BoolParameter(default=True)
 
     send_messages = parameter.BoolParameter(default=True)
+
+    metrics_collector = parameter.EnumParameter(enum=MetricsCollectors, default=MetricsCollectors.default)
 
     def _get_retry_policy(self):
         return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
@@ -445,6 +448,7 @@ class SimpleTaskState(object):
         self._status_tasks = collections.defaultdict(dict)
         self._active_workers = {}  # map from id to a Worker object
         self._task_batchers = {}
+        self._metrics_collector = None
 
     def get_state(self):
         return self._tasks, self._active_workers, self._task_batchers
@@ -563,9 +567,11 @@ class SimpleTaskState(object):
 
         if new_status == FAILED and task.status != DISABLED:
             task.add_failure()
+            self.update_metrics_task_failed(task)
             if task.has_excessive_failures():
                 task.scheduler_disable_time = time.time()
                 new_status = DISABLED
+                self.update_metrics_task_disabled(task, config)
                 if not config.batch_emails:
                     notifications.send_error_email(
                         'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
@@ -584,6 +590,9 @@ class SimpleTaskState(object):
             self._status_tasks[new_status][task.id] = task
             task.status = new_status
             task.updated = time.time()
+
+            if new_status == DONE:
+                self.update_metrics_task_done(task)
 
         if new_status == FAILED:
             task.retry = time.time() + config.retry_delay
@@ -667,6 +676,18 @@ class SimpleTaskState(object):
             worker.disabled = True
             worker.tasks.clear()
 
+    def update_metrics_task_started(self, task):
+        self._metrics_collector.handle_task_started(task)
+
+    def update_metrics_task_disabled(self, task, config):
+        self._metrics_collector.handle_task_disabled(task, config)
+
+    def update_metrics_task_failed(self, task):
+        self._metrics_collector.handle_task_failed(task)
+
+    def update_metrics_task_done(self, task):
+        self._metrics_collector.handle_task_done(task)
+
 
 class Scheduler(object):
     """
@@ -699,6 +720,8 @@ class Scheduler(object):
 
         if self._config.batch_emails:
             self._email_batcher = BatchNotifier()
+
+        self._state._metrics_collector = MetricsCollectors.get(self._config.metrics_collector)
 
     def load(self):
         self._state.load()
@@ -1227,6 +1250,7 @@ class Scheduler(object):
             reply['batch_task_ids'] = [task.id for task in batched_tasks]
 
         elif best_task:
+            self.update_metrics_task_started(best_task)
             self._state.set_status(best_task, RUNNING, self._config)
             best_task.worker_running = worker_id
             best_task.resources_running = best_task.resources.copy()
@@ -1620,3 +1644,7 @@ class Scheduler(object):
     def task_history(self):
         # Used by server.py to expose the calls
         return self._task_history
+
+    @rpc_method()
+    def update_metrics_task_started(self, task):
+        self._state._metrics_collector.handle_task_started(task)

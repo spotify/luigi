@@ -26,6 +26,7 @@ from luigi.contrib.external_program import ExternalProgramTask, ExternalPythonPr
 from luigi.contrib.external_program import ExternalProgramRunError
 from mock import patch, call
 import mock
+from nose.plugins.attrib import attr
 
 BytesIO = six.BytesIO
 
@@ -72,6 +73,7 @@ class TestEchoTask(ExternalProgramTask):
         return ['echo', self.MESSAGE]
 
 
+@attr('contrib')
 class ExternalProgramTaskTest(unittest.TestCase):
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_run(self, proc):
@@ -194,6 +196,7 @@ class TestExternalPythonProgramTask(ExternalPythonProgramTask):
         return luigi.LocalTarget('output')
 
 
+@attr('contrib')
 class ExternalPythonProgramTaskTest(unittest.TestCase):
     @patch.dict('os.environ', {'OTHERVAR': 'otherval'}, clear=True)
     @patch('luigi.contrib.external_program.subprocess.Popen')

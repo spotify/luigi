@@ -144,6 +144,17 @@ class MonthParameterTest(unittest.TestCase):
         m = luigi.MonthParameter().parse('2015-04')
         self.assertEqual(m, datetime.date(2015, 4, 1))
 
+    def test_construct_month_interval(self):
+        m = MonthTask(luigi.date_interval.Month(2015, 4))
+        self.assertEqual(m.month, datetime.date(2015, 4, 1))
+
+    def test_month_interval_default(self):
+        class MonthDefaultTask(luigi.task.Task):
+            month = luigi.MonthParameter(default=luigi.date_interval.Month(2015, 4))
+
+        m = MonthDefaultTask()
+        self.assertEqual(m.month, datetime.date(2015, 4, 1))
+
     def test_serialize(self):
         m = luigi.MonthParameter().serialize(datetime.date(2015, 4, 3))
         self.assertEqual(m, '2015-04')
@@ -161,6 +172,17 @@ class YearParameterTest(unittest.TestCase):
     def test_parse(self):
         year = luigi.YearParameter().parse('2015')
         self.assertEqual(year, datetime.date(2015, 1, 1))
+
+    def test_construct_year_interval(self):
+        y = YearTask(luigi.date_interval.Year(2015))
+        self.assertEqual(y.year, datetime.date(2015, 1, 1))
+
+    def test_year_interval_default(self):
+        class YearDefaultTask(luigi.task.Task):
+            year = luigi.YearParameter(default=luigi.date_interval.Year(2015))
+
+        m = YearDefaultTask()
+        self.assertEqual(m.year, datetime.date(2015, 1, 1))
 
     def test_serialize(self):
         year = luigi.YearParameter().serialize(datetime.date(2015, 4, 3))
