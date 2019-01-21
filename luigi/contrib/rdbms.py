@@ -343,4 +343,3 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         Override with an RDBMS Target (e.g. PostgresTarget or RedshiftTarget) to record execution in a marker table
         """
         raise NotImplementedError("This method must be overridden")
-
