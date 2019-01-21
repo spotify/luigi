@@ -98,16 +98,8 @@ class DummyPostgresQuery(luigi.contrib.postgres.PostgresQuery):
     query = 'SELECT * FROM foo'
 
 
-class DummyPostgresQueryWithPort(luigi.contrib.postgres.PostgresQuery):
-    date = luigi.DateParameter()
-
-    host = 'dummy_host'
+class DummyPostgresQueryWithPort(DummyPostgresQuery):
     port = 1234
-    database = 'dummy_database'
-    user = 'dummy_user'
-    password = 'dummy_password'
-    table = 'dummy_table'
-    query = 'SELECT * FROM foo'
 
 
 @attr('postgres')
@@ -134,11 +126,7 @@ class PostgresQueryTest(unittest.TestCase):
         ])
         self.assertFalse(task.complete())
 
-
-@attr('postgres')
-class PostgresQueryWithPortTest(unittest.TestCase):
-
-    def test_query_with_port(self):
+    def test_override_port(self):
         output = DummyPostgresQueryWithPort(date=datetime.datetime(1991, 3, 24)).output()
         self.assertEquals(output.port, 1234)
 
