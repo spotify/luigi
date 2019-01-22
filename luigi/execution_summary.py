@@ -28,6 +28,7 @@ import enum
 
 import luigi
 
+
 class execution_summary(luigi.Config):
     summary_length = luigi.IntParameter(default=5)
 
