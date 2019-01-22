@@ -111,10 +111,6 @@ class core(task.Config):
         default=False,
         description='Show all command line flags',
         always_in_help=True)
-    detailed_summary = parameter.BoolParameter(
-        default=False,
-        description='Return a detailed response object.'
-                    ' By default a boolean response is returned.')
 
 
 class _WorkerSchedulerFactory(object):
@@ -130,19 +126,21 @@ class _WorkerSchedulerFactory(object):
             scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
 
 
-def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=None):
+def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=None,
+                      detailed_summary=False):
     """
     :param tasks:
     :param worker_scheduler_factory:
     :param override_defaults:
     :return: True if all tasks and their dependencies were successfully run (or already completed);
              False if any error occurred. It will return a detailed response of type LuigiRunResult
-             instead of a boolean if detailed_summary=True in override_defaults.
+             instead of a boolean if detailed_summary=True.
     """
 
     if worker_scheduler_factory is None:
         worker_scheduler_factory = _WorkerSchedulerFactory()
-    override_defaults = {} if override_defaults is None else override_defaults
+    if override_defaults is None:
+        override_defaults = {}
     env_params = core(**override_defaults)
 
     InterfaceLogging.setup(env_params)
@@ -186,17 +184,21 @@ class PidLockAlreadyTakenExit(SystemExit):
     pass
 
 
-def _detailed_summary_enabled(response, **kwargs):
+def _detailed_summary(func):
     """
-    This function returns the response object as it is if detailed_summary in kwargs is True
-    and returns a Boolean response otherwise.
+    This decorator returns the response object as it is if detailed_summary in the function
+    kwargs is True and returns a Boolean response otherwise.
     """
-    if kwargs.get('detailed_summary', False):
-        return response
-    else:
-        return response.scheduling_succeeded
+    def wrap(*args, **kwargs):
+        response = func(*args, **kwargs)
+        if kwargs.get('detailed_summary', False):
+            return response
+        else:
+            return response.scheduling_succeeded
+    return wrap
 
 
+@_detailed_summary
 def run(*args, **kwargs):
     """
     Please dont use. Instead use `luigi` binary.
@@ -205,11 +207,11 @@ def run(*args, **kwargs):
 
     :param use_dynamic_argparse: Deprecated and ignored
     """
-    return _detailed_summary_enabled(_run(*args, **kwargs), **kwargs)
+    return _run(*args, **kwargs)
 
 
 def _run(cmdline_args=None, main_task_cls=None,
-         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False, **env_params):
+         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False, detailed_summary=False):
     if use_dynamic_argparse is not None:
         warnings.warn("use_dynamic_argparse is deprecated, don't set it.",
                       DeprecationWarning, stacklevel=2)
@@ -221,10 +223,11 @@ def _run(cmdline_args=None, main_task_cls=None,
     if local_scheduler:
         cmdline_args.append('--local-scheduler')
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory, override_defaults=env_params)
+        return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory, detailed_summary=detailed_summary)
 
 
-def build(tasks, worker_scheduler_factory=None, **env_params):
+@_detailed_summary
+def build(tasks, worker_scheduler_factory=None, detailed_summary=False, **env_params):
     """
     Run internally, bypassing the cmdline parsing.
 
@@ -246,5 +249,4 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     """
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
-    response = _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)
-    return _detailed_summary_enabled(response, **env_params)
+    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params, detailed_summary=detailed_summary)

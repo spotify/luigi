@@ -35,7 +35,7 @@ class execution_summary(luigi.Config):
 
 class LuigiStatusCode(enum.Enum):
     """
-    All possible status codes for **LuigiRunResult.status** when the argument ``detailed_summary=True`` in
+    All possible status codes for the attribute ``status`` in :class:`~luigi.execution_summary.LuigiRunResult` when the argument ``detailed_summary=True`` in
     *luigi.run() / luigi.build*. Here are the codes and what they mean:
 
     =============================  ==========================================================
@@ -69,18 +69,17 @@ class LuigiRunResult:
     Attributes:
         - summary_text_one_line (str): One line summary of the progress.
         - summary_text (str): Detailed summary of the progress.
-        - status (LuigiStatusCode): Luigi Status Code. See \
-        `LuigiStatusCode <https://luigi.readthedocs.io/en/latest/api/luigi.execution_summary.html#luigi.execution_summary.LuigiStatusCode>`_ \
-        for what these codes mean.
-        - worker (luigi.worker.worker): Worker object.
+        - status (LuigiStatusCode): Luigi Status Code. See :class:`~luigi.execution_summary.LuigiStatusCode` for what these codes mean.
+        - worker (luigi.worker.worker): Worker object. See :class:`~luigi.worker.worker`.
         - execution_succeeded (bool): Boolean which is *True* if finally, there were no failed tasks.
         - scheduling_succeeded (bool): Boolean which is *True* if all the tasks were scheduled without errors.
 
     """
     def __init__(self, worker, worker_add_run_status=True):
         self.worker = worker
-        self.summary_text = summary(worker)
-        self.status = _tasks_status(_summary_dict(worker))
+        summary_dict = _summary_dict(worker)
+        self.summary_text = summary(worker, summary_dict)
+        self.status = _tasks_status(summary_dict)
         self.summary_text_one_line = _progress_summary(self.status)
         self.scheduling_succeeded = worker_add_run_status
         self.execution_succeeded = self.status in (LuigiStatusCode.SUCCESS, LuigiStatusCode.SUCCESS_WITH_RETRY)
@@ -487,10 +486,12 @@ def _summary_wrap(str_output):
     """).format(str_output=str_output)
 
 
-def summary(worker):
+def summary(worker, summary_dict=None):
     """
     Given a worker, return a human readable summary of what the worker have
     done.
     """
-    return _summary_wrap(_summary_format(_summary_dict(worker), worker))
+    if summary_dict is None:
+        summary_dict = _summary_dict(worker)
+    return _summary_wrap(_summary_format(summary_dict, worker))
 # 5
