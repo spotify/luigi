@@ -59,7 +59,7 @@ class kubernetes(luigi.Config):
     max_retrials = luigi.IntParameter(
         default=0,
         description="Max retrials in event of job failure")
-    kubernetes_namespace = luigi.Parameter(
+    kubernetes_namespace = luigi.OptionalParameter(
         default=None,
         description="K8s namespace in which the job will run")
 
