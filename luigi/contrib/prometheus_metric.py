@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from prometheus_client import CollectorRegistry, Counter, Gauge, generate_latest
 from luigi.metrics import MetricsCollector
 
