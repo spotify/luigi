@@ -214,7 +214,7 @@ class HdfsFlagTarget(HdfsTarget):
         if path[-1] != "/":
             raise ValueError("HdfsFlagTarget requires the path to be to a "
                              "directory.  It must end with a slash ( / ).")
-        super(HdfsFlagTarget, self).__init__(path, format, client)
+        super(HdfsFlagTarget, self).__init__(path, format, fs=client)
         self.flag = flag
 
     def exists(self):
