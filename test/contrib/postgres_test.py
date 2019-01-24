@@ -48,7 +48,6 @@ class DummyPostgresImporter(luigi.contrib.postgres.CopyToTable):
     date = luigi.DateParameter()
 
     host = 'dummy_host'
-    port = 1234
     database = 'dummy_database'
     user = 'dummy_user'
     password = 'dummy_password'
@@ -88,7 +87,6 @@ class DummyPostgresQuery(luigi.contrib.postgres.PostgresQuery):
     date = luigi.DateParameter()
 
     host = 'dummy_host'
-    port = 1234
     database = 'dummy_database'
     user = 'dummy_user'
     password = 'dummy_password'
@@ -98,6 +96,14 @@ class DummyPostgresQuery(luigi.contrib.postgres.PostgresQuery):
         ('some_int', 'int'),
     )
     query = 'SELECT * FROM foo'
+
+
+class DummyPostgresQueryWithPort(DummyPostgresQuery):
+    port = 1234
+
+
+class DummyPostgresQueryWithPortEncodedInHost(DummyPostgresQuery):
+    host = 'dummy_host:1234'
 
 
 @attr('postgres')
@@ -123,6 +129,14 @@ class PostgresQueryTest(unittest.TestCase):
             'DummyPostgresQuery_2015_01_06_f91a47ec40',
         ])
         self.assertFalse(task.complete())
+
+    def test_override_port(self):
+        output = DummyPostgresQueryWithPort(date=datetime.datetime(1991, 3, 24)).output()
+        self.assertEquals(output.port, 1234)
+
+    def test_port_encoded_in_host(self):
+        output = DummyPostgresQueryWithPortEncodedInHost(date=datetime.datetime(1991, 3, 24)).output()
+        self.assertEquals(output.port, '1234')
 
 
 @attr('postgres')
