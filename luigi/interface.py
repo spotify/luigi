@@ -184,21 +184,6 @@ class PidLockAlreadyTakenExit(SystemExit):
     pass
 
 
-def _detailed_summary(func):
-    """
-    This decorator returns the response object as it is if detailed_summary in the function
-    kwargs is True and returns a Boolean response otherwise.
-    """
-    def wrap(*args, **kwargs):
-        response = func(*args, **kwargs)
-        if kwargs.get('detailed_summary', False):
-            return response
-        else:
-            return response.scheduling_succeeded
-    return wrap
-
-
-@_detailed_summary
 def run(*args, **kwargs):
     """
     Please dont use. Instead use `luigi` binary.
@@ -207,7 +192,8 @@ def run(*args, **kwargs):
 
     :param use_dynamic_argparse: Deprecated and ignored
     """
-    return _run(*args, **kwargs)
+    response = _run(*args, **kwargs)
+    return response if kwargs.get('detailed_summary', False) else response.scheduling_succeeded
 
 
 def _run(cmdline_args=None, main_task_cls=None,
@@ -226,7 +212,6 @@ def _run(cmdline_args=None, main_task_cls=None,
         return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory, detailed_summary=detailed_summary)
 
 
-@_detailed_summary
 def build(tasks, worker_scheduler_factory=None, detailed_summary=False, **env_params):
     """
     Run internally, bypassing the cmdline parsing.
@@ -249,4 +234,6 @@ def build(tasks, worker_scheduler_factory=None, detailed_summary=False, **env_pa
     """
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
-    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params, detailed_summary=detailed_summary)
+
+    response = _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params, detailed_summary=detailed_summary)
+    return response if detailed_summary else response.scheduling_succeeded

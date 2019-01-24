@@ -60,7 +60,7 @@ class LuigiStatusCode(enum.Enum):
     MISSING_EXT = (":|", "there were missing external dependencies")
 
 
-class LuigiRunResult:
+class LuigiRunResult(object):
     """
     Result of the execution (build/run) will be of type LuigiRunResult instead of
     the regular Boolean response if the keyword argument ``detailed_summary=True`` is passed to
@@ -78,7 +78,7 @@ class LuigiRunResult:
     def __init__(self, worker, worker_add_run_status=True):
         self.worker = worker
         summary_dict = _summary_dict(worker)
-        self.summary_text = summary(worker, summary_dict)
+        self.summary_text = _summary_wrap(_summary_format(summary_dict, worker))
         self.status = _tasks_status(summary_dict)
         self.summary_text_one_line = _progress_summary(self.status)
         self.scheduling_succeeded = worker_add_run_status
@@ -89,7 +89,7 @@ class LuigiRunResult:
         return getattr(self, key, None)
 
     def __str__(self):
-        return "STATUS: {0}".format(self.status, self.summary_text_one_line)
+        return "STATUS: {0}".format(self.status)
 
     def __repr__(self):
         return self.__str__()
@@ -486,12 +486,10 @@ def _summary_wrap(str_output):
     """).format(str_output=str_output)
 
 
-def summary(worker, summary_dict=None):
+def summary(worker):
     """
     Given a worker, return a human readable summary of what the worker have
     done.
     """
-    if summary_dict is None:
-        summary_dict = _summary_dict(worker)
-    return _summary_wrap(_summary_format(summary_dict, worker))
+    return _summary_wrap(_summary_format(_summary_dict(worker), worker))
 # 5
