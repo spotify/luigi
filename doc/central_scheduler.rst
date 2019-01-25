@@ -54,10 +54,10 @@ specify ``record_task_history = True`` in the
 ``[scheduler]`` section of ``luigi.cfg`` and
 specify ``db_connection`` under ``[task_history]``.
 The ``db_connection`` string is used to configure the `SQLAlchemy engine
-<http://docs.sqlalchemy.org/en/rel_0_9/core/engines.html>`_.
+<https://docs.sqlalchemy.org/en/latest/core/engines.html>`_.
 When starting up,
 ``luigid`` will create all the necessary tables using `create_all
-<http://docs.sqlalchemy.org/en/rel_0_9/core/metadata.html#sqlalchemy.schema.MetaData.create_all>`_.
+<https://docs.sqlalchemy.org/en/latest/core/metadata.html#sqlalchemy.schema.MetaData.create_all>`_.
 
 Example configuration
 
