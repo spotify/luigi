@@ -178,6 +178,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Starsky Robotics <https://www.starsky.io/>`_
 * `BaseTIS <https://www.basetis.com/>`_
 * `Hopper <https://www.hopper.com/>`_
+* `VOYAGE GROUP/Zucks <https://zucks.co.jp/en/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
