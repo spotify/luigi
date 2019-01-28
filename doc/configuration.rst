@@ -713,7 +713,7 @@ If you customize return codes, prefer to set them in range 128 to 255 to avoid
 conflicts. Return codes in range 0 to 127 are reserved for possible future use
 by Luigi contributors.
 
-If you run *luigi.build()/luigi.run()* programmatically, you can enable a detailed response by sending ``detailed_summary=True`` to these functions. This detailed response has an attribute(``response.status``) which is a status code that contains information about the progress. The list of possible status codes can be found `here <https://luigi.readthedocs.io/en/latest/api/luigi.execution_summary.html#luigi.execution_summary.LuigiStatusCode>`_.
+If you run *luigi.build()/luigi.run()* programmatically, you can enable a detailed response of type :class:`~luigi.execution_summary.LuigiRunResult` by sending ``detailed_summary=True`` to these functions. This detailed response has an attribute(``status``) which is a status code that contains information about the progress. The list of possible status codes can be found in :class:`~luigi.execution_summary.LuigiStatusCode`.
 
 [scalding]
 ----------
