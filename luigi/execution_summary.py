@@ -35,8 +35,9 @@ class execution_summary(luigi.Config):
 
 class LuigiStatusCode(enum.Enum):
     """
-    All possible status codes for the attribute ``status`` in :class:`~luigi.execution_summary.LuigiRunResult` when the argument ``detailed_summary=True`` in
-    *luigi.run() / luigi.build*. Here are the codes and what they mean:
+    All possible status codes for the attribute ``status`` in :class:`~luigi.execution_summary.LuigiRunResult` when
+    the argument ``detailed_summary=True`` in *luigi.run() / luigi.build*.
+    Here are the codes and what they mean:
 
     =============================  ==========================================================
     Status Code Name               Meaning
@@ -62,9 +63,7 @@ class LuigiStatusCode(enum.Enum):
 
 class LuigiRunResult(object):
     """
-    Result of the execution (build/run) will be of type LuigiRunResult instead of
-    the regular Boolean response if the keyword argument ``detailed_summary=True`` is passed to
-    build/run. A response of type **LuigiRunResult** has the following attributes:
+    The result of a call to build/run when passing the detailed_summary=True argument.
 
     Attributes:
         - summary_text_one_line (str): One line summary of the progress.
@@ -82,7 +81,6 @@ class LuigiRunResult(object):
         self.status = _tasks_status(summary_dict)
         self.summary_text_one_line = _progress_summary(self.status)
         self.scheduling_succeeded = worker_add_run_status
-        self.execution_succeeded = self.status in (LuigiStatusCode.SUCCESS, LuigiStatusCode.SUCCESS_WITH_RETRY)
 
     # This function makes this class subscriptable (self.worker is used at a few places)
     def __getitem__(self, key):

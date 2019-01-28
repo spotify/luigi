@@ -126,8 +126,7 @@ class _WorkerSchedulerFactory(object):
             scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
 
 
-def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=None,
-                      detailed_summary=False):
+def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=None):
     """
     :param tasks:
     :param worker_scheduler_factory:
@@ -172,9 +171,9 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
             success &= worker.add(t, env_params.parallel_scheduling, env_params.parallel_scheduling_processes)
         logger.info('Done scheduling tasks')
         success &= worker.run()
-    run_result = LuigiRunResult(worker, success)
-    logger.info(run_result.summary_text)
-    return run_result
+    luigi_run_result = LuigiRunResult(worker, success)
+    logger.info(luigi_run_result.summary_text)
+    return luigi_run_result
 
 
 class PidLockAlreadyTakenExit(SystemExit):
@@ -192,12 +191,12 @@ def run(*args, **kwargs):
 
     :param use_dynamic_argparse: Deprecated and ignored
     """
-    response = _run(*args, **kwargs)
-    return response if kwargs.get('detailed_summary', False) else response.scheduling_succeeded
+    luigi_run_result = _run(*args, **kwargs)
+    return luigi_run_result if kwargs.get('detailed_summary') else luigi_run_result.scheduling_succeeded
 
 
 def _run(cmdline_args=None, main_task_cls=None,
-         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False, detailed_summary=False):
+         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
     if use_dynamic_argparse is not None:
         warnings.warn("use_dynamic_argparse is deprecated, don't set it.",
                       DeprecationWarning, stacklevel=2)
@@ -209,7 +208,7 @@ def _run(cmdline_args=None, main_task_cls=None,
     if local_scheduler:
         cmdline_args.append('--local-scheduler')
     with CmdlineParser.global_instance(cmdline_args) as cp:
-        return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory, detailed_summary=detailed_summary)
+        return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory)
 
 
 def build(tasks, worker_scheduler_factory=None, detailed_summary=False, **env_params):
@@ -235,5 +234,5 @@ def build(tasks, worker_scheduler_factory=None, detailed_summary=False, **env_pa
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
 
-    response = _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params, detailed_summary=detailed_summary)
-    return response if detailed_summary else response.scheduling_succeeded
+    luigi_run_result = _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)
+    return luigi_run_result if detailed_summary else luigi_run_result.scheduling_succeeded
