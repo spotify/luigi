@@ -47,7 +47,7 @@ class InterfaceTest(LuigiTestCase):
         self.task_a = NoOpTask("a")
         self.task_b = NoOpTask("b")
 
-    def _create_summary_dict_with(self, updates = {}):
+    def _create_summary_dict_with(self, updates={}):
         summary_dict = {
             'completed': set(),
             'already_done': set(),
