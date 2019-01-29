@@ -72,7 +72,7 @@ def run_with_retcodes(argv):
 
     worker = None
     try:
-        worker = luigi.interface._run(argv)['worker']
+        worker = luigi.interface._run(argv).worker
     except luigi.interface.PidLockAlreadyTakenExit:
         sys.exit(retcodes.already_running)
     except Exception:

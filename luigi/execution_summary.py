@@ -81,10 +81,6 @@ class LuigiRunResult(object):
         self.one_line_summary = _create_one_line_summary(self.status)
         self.scheduling_succeeded = worker_add_run_status
 
-    # This function makes this class subscriptable like a dictionary for backwards compatibility.
-    def __getitem__(self, key):
-        return getattr(self, key, None)
-
     def __str__(self):
         return "LuigiRunResult with status {0}".format(self.status)
 
