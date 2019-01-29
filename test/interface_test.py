@@ -31,13 +31,6 @@ from helpers import LuigiTestCase, with_config
 luigi.notifications.DEBUG = True
 
 
-# Using this updatable dict to make inline dict updates for beautiful tests
-class UpdatableDict(dict):
-    def update(self, *args):
-        dict.update(self, *args)
-        return self
-
-
 class InterfaceTest(LuigiTestCase):
 
     def setUp(self):
@@ -54,8 +47,8 @@ class InterfaceTest(LuigiTestCase):
         self.task_a = NoOpTask("a")
         self.task_b = NoOpTask("b")
 
-    def _create_empty_summary_dict(self):
-        return UpdatableDict({
+    def _create_summary_dict_with(self, updates = {}):
+        summary_dict = {
             'completed': set(),
             'already_done': set(),
             'ever_failed': set(),
@@ -68,7 +61,10 @@ class InterfaceTest(LuigiTestCase):
             'upstream_missing_dependency': set(),
             'upstream_run_by_other_worker': set(),
             'upstream_scheduling_error': set(),
-            'not_run': set()})
+            'not_run': set()
+        }
+        summary_dict.update(updates)
+        return summary_dict
 
     def _summary_dict_module_path():
         return 'luigi.execution_summary._summary_dict'
@@ -106,14 +102,14 @@ class InterfaceTest(LuigiTestCase):
     @patch(_summary_dict_module_path())
     def test_that_status_is_success(self, fake_summary_dict):
         # Nothing in failed tasks so, should succeed
-        fake_summary_dict.return_value = self._create_empty_summary_dict()
+        fake_summary_dict.return_value = self._create_summary_dict_with()
         luigi_run_result = self._run_interface(detailed_summary=True)
         self.assertEqual(luigi_run_result.status, LuigiStatusCode.SUCCESS)
 
     @patch(_summary_dict_module_path())
     def test_that_status_is_success_with_retry(self, fake_summary_dict):
         # Nothing in failed tasks (only an entry in ever_failed) so, should succeed with retry
-        fake_summary_dict.return_value = self._create_empty_summary_dict().update({
+        fake_summary_dict.return_value = self._create_summary_dict_with({
             'ever_failed': [self.task_a]
         })
         luigi_run_result = self._run_interface(detailed_summary=True)
@@ -122,7 +118,7 @@ class InterfaceTest(LuigiTestCase):
     @patch(_summary_dict_module_path())
     def test_that_status_is_failed_when_there_is_one_failed_task(self, fake_summary_dict):
         # Should fail because a task failed
-        fake_summary_dict.return_value = self._create_empty_summary_dict().update({
+        fake_summary_dict.return_value = self._create_summary_dict_with({
             'ever_failed': [self.task_a],
             'failed': [self.task_a]
         })
@@ -132,7 +128,7 @@ class InterfaceTest(LuigiTestCase):
     @patch(_summary_dict_module_path())
     def test_that_status_is_failed_with_scheduling_failure(self, fake_summary_dict):
         # Failed task and also a scheduling error
-        fake_summary_dict.return_value = self._create_empty_summary_dict().update({
+        fake_summary_dict.return_value = self._create_summary_dict_with({
             'ever_failed': [self.task_a],
             'failed': [self.task_a],
             'scheduling_error': [self.task_b]
@@ -143,7 +139,7 @@ class InterfaceTest(LuigiTestCase):
     @patch(_summary_dict_module_path())
     def test_that_status_is_scheduling_failed_with_one_scheduling_error(self, fake_summary_dict):
         # Scheduling error for at least one task
-        fake_summary_dict.return_value = self._create_empty_summary_dict().update({
+        fake_summary_dict.return_value = self._create_summary_dict_with({
             'scheduling_error': [self.task_b]
         })
         luigi_run_result = self._run_interface(detailed_summary=True)
@@ -152,7 +148,7 @@ class InterfaceTest(LuigiTestCase):
     @patch(_summary_dict_module_path())
     def test_that_status_is_not_run_with_one_task_not_run(self, fake_summary_dict):
         # At least one of the tasks was not run
-        fake_summary_dict.return_value = self._create_empty_summary_dict().update({
+        fake_summary_dict.return_value = self._create_summary_dict_with({
             'not_run': [self.task_a]
         })
         luigi_run_result = self._run_interface(detailed_summary=True)
@@ -161,7 +157,7 @@ class InterfaceTest(LuigiTestCase):
     @patch(_summary_dict_module_path())
     def test_that_status_is_missing_ext_with_one_task_with_missing_external_dependency(self, fake_summary_dict):
         # Missing external dependency for at least one task
-        fake_summary_dict.return_value = self._create_empty_summary_dict().update({
+        fake_summary_dict.return_value = self._create_summary_dict_with({
             'still_pending_ext': [self.task_a]
         })
         luigi_run_result = self._run_interface(detailed_summary=True)

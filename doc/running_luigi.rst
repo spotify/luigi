@@ -113,10 +113,7 @@ In some cases (like task queue) it may be useful.
 Response of luigi.build()/luigi.run()
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- **Default response** The default response of *luigi.build()* / *luigi.run()* is a Boolean. This response is also the same as the attribute ``LuigiRunResult.scheduling_succeeded``. It is:
-
-  * ``True`` : when there were no failed tasks or missing dependencies.
-  * ``False`` : when there were failed tasks or scheduling / dependency / permission issues. (NOTE: The response is also *False* even when there were failed tasks, but all of them succeeded in a retry)
+- **Default response** By default *luigi.build()/luigi.run()* returns True if there were no scheduling errors. This is the same as the attribute ``LuigiRunResult.scheduling_succeeded``.
 
 - **Detailed response** This is a response of type :class:`~luigi.execution_summary.LuigiRunResult`. This is obtained by passing a keyword argument ``detailed_summary=True`` to *build/run*. This response contains detailed information about the jobs.
 

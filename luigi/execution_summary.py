@@ -70,7 +70,6 @@ class LuigiRunResult(object):
         - summary_text (str): Detailed summary of the progress.
         - status (LuigiStatusCode): Luigi Status Code. See :class:`~luigi.execution_summary.LuigiStatusCode` for what these codes mean.
         - worker (luigi.worker.worker): Worker object. See :class:`~luigi.worker.worker`.
-        - execution_succeeded (bool): Boolean which is *True* if finally, there were no failed tasks.
         - scheduling_succeeded (bool): Boolean which is *True* if all the tasks were scheduled without errors.
 
     """
@@ -82,15 +81,15 @@ class LuigiRunResult(object):
         self.summary_text_one_line = _progress_summary(self.status)
         self.scheduling_succeeded = worker_add_run_status
 
-    # This function makes this class subscriptable (self.worker is used at a few places)
+    # This function makes this class subscriptable like a dictionary for backwards compatibility.
     def __getitem__(self, key):
         return getattr(self, key, None)
 
     def __str__(self):
-        return "STATUS: {0}".format(self.status)
+        return "LuigiRunResult with status {0}".format(self.status)
 
     def __repr__(self):
-        return self.__str__()
+        return "LuigiRunResult(status=%r,worker=%r,scheduling_succeeded=%r)" % (self.status, self.worker, self.scheduling_succeeded)
 
 
 def _partition_tasks(worker):
