@@ -66,7 +66,7 @@ class LuigiRunResult(object):
     The result of a call to build/run when passing the detailed_summary=True argument.
 
     Attributes:
-        - summary_text_one_line (str): One line summary of the progress.
+        - one_line_summary (str): One line summary of the progress.
         - summary_text (str): Detailed summary of the progress.
         - status (LuigiStatusCode): Luigi Status Code. See :class:`~luigi.execution_summary.LuigiStatusCode` for what these codes mean.
         - worker (luigi.worker.worker): Worker object. See :class:`~luigi.worker.worker`.
@@ -78,7 +78,7 @@ class LuigiRunResult(object):
         summary_dict = _summary_dict(worker)
         self.summary_text = _summary_wrap(_summary_format(summary_dict, worker))
         self.status = _tasks_status(summary_dict)
-        self.summary_text_one_line = _progress_summary(self.status)
+        self.one_line_summary = _create_one_line_summary(self.status)
         self.scheduling_succeeded = worker_add_run_status
 
     # This function makes this class subscriptable like a dictionary for backwards compatibility.
@@ -437,19 +437,18 @@ def _summary_format(set_tasks, worker):
         if len(ext_workers) == 0:
             str_output += '\n'
         str_output += 'Did not run any tasks'
-    summary_text_one_line = _progress_summary(_tasks_status(set_tasks))
-    str_output += "\n{0}".format(summary_text_one_line)
+    one_line_summary = _create_one_line_summary(_tasks_status(set_tasks))
+    str_output += "\n{0}".format(one_line_summary)
     if num_all_tasks == 0:
         str_output = 'Did not schedule any tasks'
     return str_output
 
 
-def _progress_summary(status_code):
+def _create_one_line_summary(status_code):
     """
     Given a status_code of type LuigiStatusCode which has a tuple value, returns a one line summary
     """
-    summary_text_one_line = "This progress looks {0} because {1}".format(*status_code.value)
-    return summary_text_one_line
+    return "This progress looks {0} because {1}".format(*status_code.value)
 
 
 def _tasks_status(set_tasks):
