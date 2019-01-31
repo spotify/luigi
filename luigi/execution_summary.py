@@ -85,7 +85,7 @@ class LuigiRunResult(object):
         return "LuigiRunResult with status {0}".format(self.status)
 
     def __repr__(self):
-        return "LuigiRunResult(status=%r,worker=%r,scheduling_succeeded=%r)" % (self.status, self.worker, self.scheduling_succeeded)
+        return "LuigiRunResult(status={0!r},worker={1!r},scheduling_succeeded={2!r})".format(self.status, self.worker, self.scheduling_succeeded)
 
 
 def _partition_tasks(worker):
