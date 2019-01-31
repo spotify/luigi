@@ -109,3 +109,16 @@ which will return your worker and/or scheduler implementations:
         luigi.build([MyTask1(x=1)], worker_scheduler_factory=MyFactory())
 
 In some cases (like task queue) it may be useful.
+
+Response of luigi.build()/luigi.run()
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- **Default response** By default *luigi.build()/luigi.run()* returns True if there were no scheduling errors. This is the same as the attribute ``LuigiRunResult.scheduling_succeeded``.
+
+- **Detailed response** This is a response of type :class:`~luigi.execution_summary.LuigiRunResult`. This is obtained by passing a keyword argument ``detailed_summary=True`` to *build/run*. This response contains detailed information about the jobs.
+
+  .. code-block:: python
+
+    if __name__ == '__main__':
+         luigi_run_result = luigi.build(..., detailed_summary=True)
+         print(luigi_run_result.summary_text)

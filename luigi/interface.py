@@ -34,7 +34,7 @@ from luigi import rpc
 from luigi import scheduler
 from luigi import task
 from luigi import worker
-from luigi import execution_summary
+from luigi.execution_summary import LuigiRunResult
 from luigi.cmdline_parser import CmdlineParser
 from luigi.setup_logging import InterfaceLogging
 
@@ -132,7 +132,8 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
     :param worker_scheduler_factory:
     :param override_defaults:
     :return: True if all tasks and their dependencies were successfully run (or already completed);
-             False if any error occurred.
+             False if any error occurred. It will return a detailed response of type LuigiRunResult
+             instead of a boolean if detailed_summary=True.
     """
 
     if worker_scheduler_factory is None:
@@ -170,8 +171,9 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
             success &= worker.add(t, env_params.parallel_scheduling, env_params.parallel_scheduling_processes)
         logger.info('Done scheduling tasks')
         success &= worker.run()
-    logger.info(execution_summary.summary(worker))
-    return dict(success=success, worker=worker)
+    luigi_run_result = LuigiRunResult(worker, success)
+    logger.info(luigi_run_result.summary_text)
+    return luigi_run_result
 
 
 class PidLockAlreadyTakenExit(SystemExit):
@@ -189,11 +191,12 @@ def run(*args, **kwargs):
 
     :param use_dynamic_argparse: Deprecated and ignored
     """
-    return _run(*args, **kwargs)['success']
+    luigi_run_result = _run(*args, **kwargs)
+    return luigi_run_result if kwargs.get('detailed_summary') else luigi_run_result.scheduling_succeeded
 
 
 def _run(cmdline_args=None, main_task_cls=None,
-         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
+         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False, detailed_summary=False):
     if use_dynamic_argparse is not None:
         warnings.warn("use_dynamic_argparse is deprecated, don't set it.",
                       DeprecationWarning, stacklevel=2)
@@ -204,12 +207,11 @@ def _run(cmdline_args=None, main_task_cls=None,
         cmdline_args.insert(0, main_task_cls.task_family)
     if local_scheduler:
         cmdline_args.append('--local-scheduler')
-
     with CmdlineParser.global_instance(cmdline_args) as cp:
         return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory)
 
 
-def build(tasks, worker_scheduler_factory=None, **env_params):
+def build(tasks, worker_scheduler_factory=None, detailed_summary=False, **env_params):
     """
     Run internally, bypassing the cmdline parsing.
 
@@ -232,4 +234,5 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
 
-    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)['success']
+    luigi_run_result = _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)
+    return luigi_run_result if detailed_summary else luigi_run_result.scheduling_succeeded
