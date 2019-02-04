@@ -59,6 +59,9 @@ class kubernetes(luigi.Config):
     max_retrials = luigi.IntParameter(
         default=0,
         description="Max retrials in event of job failure")
+    kubernetes_namespace = luigi.OptionalParameter(
+        default=None,
+        description="K8s namespace in which the job will run")
 
 
 class KubernetesJobTask(luigi.Task):
@@ -106,6 +109,17 @@ class KubernetesJobTask(luigi.Task):
         http://kubernetes.io/docs/user-guide/kubeconfig-file
         """
         return self.kubernetes_config.kubeconfig_path
+
+    @property
+    def kubernetes_namespace(self):
+        """
+        Namespace in Kubernetes where the job will run.
+        It defaults to the default namespace in Kubernetes
+
+        For more details, please refer to:
+        https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+        """
+        return self.kubernetes_config.kubernetes_namespace
 
     @property
     def name(self):
@@ -225,13 +239,13 @@ class KubernetesJobTask(luigi.Task):
         pass
 
     def __get_pods(self):
-        pod_objs = Pod.objects(self.__kube_api) \
+        pod_objs = Pod.objects(self.__kube_api, namespace=self.kubernetes_namespace) \
             .filter(selector="job-name=" + self.uu_name) \
             .response['items']
         return [Pod(self.__kube_api, p) for p in pod_objs]
 
     def __get_job(self):
-        jobs = Job.objects(self.__kube_api) \
+        jobs = Job.objects(self.__kube_api, namespace=self.kubernetes_namespace) \
             .filter(selector="luigi_task_id=" + self.job_uuid) \
             .response['items']
         assert len(jobs) == 1, "Kubernetes job " + self.uu_name + " not found"
@@ -338,6 +352,8 @@ class KubernetesJobTask(luigi.Task):
                 }
             }
         }
+        if self.kubernetes_namespace is not None:
+            job_json['metadata']['namespace'] = self.kubernetes_namespace
         if self.active_deadline_seconds is not None:
             job_json['spec']['activeDeadlineSeconds'] = \
                 self.active_deadline_seconds
