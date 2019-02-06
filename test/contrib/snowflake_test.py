@@ -1,0 +1,292 @@
+import os
+import sys
+
+import mock
+from moto import mock_s3
+
+import luigi
+import luigi.contrib.snowflake
+import luigi.notifications
+
+from helpers import unittest, with_config
+
+from nose.plugins.attrib import attr
+
+if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
+    # spulec/moto#308
+    mock_s3 = unittest.skip('moto mock doesn\'t work with python3.4')  # NOQA
+
+
+BUCKET = 'bucket'
+KEY = 'key'
+
+
+class DummyS3CopyToTableBase(luigi.contrib.snowflake.S3CopyToTable):
+    host = 'dummy_host'
+    database = 'dummy_database'
+    user = 'dummy_user'
+    password = 'dummy_password'
+    table = luigi.Parameter(default='dummy_table')
+    columns = luigi.TupleParameter(
+        default=(
+            ('some_text', 'varchar(255)'),
+            ('some_int', 'int'),
+        )
+    )
+
+    copy_options = ''
+
+    def s3_load_path(self):
+        return 's3://%s/%s' % (BUCKET, KEY)
+
+
+class DummyS3CopyToTableWithKeys(DummyS3CopyToTableBase):
+    aws_access_key_id = 'property_key'
+    aws_secret_access_key = 'property_secret'
+
+
+@attr('snowflake', 'contrib')
+class TestInternalCredentials(unittest.TestCase, DummyS3CopyToTableWithKeys):
+    def test_from_property(self):
+        self.assertEqual(self.aws_access_key_id, 'property_key')
+        self.assertEqual(self.aws_secret_access_key, 'property_secret')
+
+
+@attr('snowflake', 'contrib')
+class TestExternalCredentials(unittest.TestCase, DummyS3CopyToTableBase):
+    @mock.patch.dict(os.environ, {"AWS_ACCESS_KEY_ID": "env_key",
+                                  "AWS_SECRET_ACCESS_KEY": "env_secret"})
+    def test_from_env(self):
+        self.assertEqual(self.aws_access_key_id, "env_key")
+        self.assertEqual(self.aws_secret_access_key, "env_secret")
+
+    @with_config({"snowflake": {"aws_access_key_id": "config_key",
+                                "aws_secret_access_key": "config_secret",
+                                "warehouse": "config_warehouse"}})
+    def test_from_config(self):
+        self.assertEqual(self.aws_access_key_id, "config_key")
+        self.assertEqual(self.aws_secret_access_key, "config_secret")
+        self.assertEqual(self.warehouse, "config_warehouse")
+
+
+@attr('snowflake', 'contrib')
+class TestS3CopyToTable(unittest.TestCase):
+    @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
+    def test_copy_missing_creds(self, mock_snowflake_target):
+
+        # Make sure credentials are not set as env vars
+        try:
+            del os.environ['AWS_ACCESS_KEY_ID']
+            del os.environ['AWS_SECRET_ACCESS_KEY']
+        except KeyError:
+            pass
+
+        task = DummyS3CopyToTableBase()
+
+        # The mocked connection cursor passed to
+        # S3CopyToTable.copy(self, cursor, f).
+        mock_cursor = (mock_snowflake_target.return_value
+                       .connect
+                       .return_value
+                       .cursor
+                       .return_value)
+
+        with self.assertRaises(NotImplementedError):
+            task.copy(mock_cursor, task.s3_load_path())
+
+    @mock.patch("luigi.contrib.snowflake.S3CopyToTable.copy")
+    @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
+    def test_s3_copy_to_table(self, mock_snowflake_target, mock_copy):
+        task = DummyS3CopyToTableWithKeys()
+        task.run()
+
+        # The mocked connection cursor passed to
+        # S3CopyToTable.copy(self, cursor, f).
+        mock_cursor = (mock_snowflake_target.return_value
+                                            .connect
+                                            .return_value
+                                            .cursor
+                                            .return_value)
+
+        # `mock_snowflake_target` is the mocked `SnowflakeTarget` object
+        # returned by S3CopyToTable.output(self).
+        mock_snowflake_target.assert_called_with(database=task.database,
+                                                 warehouse=task.warehouse,
+                                                 host=task.host,
+                                                 update_id=task.task_id,
+                                                 user=task.user,
+                                                 table=task.table,
+                                                 password=task.password)
+
+        # Check if the `S3CopyToTable.s3_load_path` class attribute was
+        # successfully referenced in the `S3CopyToTable.run` method, which is
+        # in-turn passed to `S3CopyToTable.copy` and other functions in `run`
+        # (see issue #995).
+        mock_copy.assert_called_with(mock_cursor, task.s3_load_path())
+
+    @mock.patch("luigi.contrib.snowflake.S3CopyToTable.does_table_exist",
+                return_value=False)
+    @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
+    def test_s3_copy_to_missing_table(self,
+                                      mock_snowflake_target,
+                                      mock_does_exist):
+        """
+        Test missing table creation
+        """
+        # Ensure `S3CopyToTable.create_table` does not throw an error.
+        task = DummyS3CopyToTableWithKeys()
+        task.run()
+
+        # Make sure the cursor was successfully used to create the table in
+        # `create_table` as expected.
+        mock_cursor = (mock_snowflake_target.return_value
+                                            .connect
+                                            .return_value
+                                            .cursor
+                                            .return_value)
+        assert mock_cursor.execute.call_args_list[0][0][0].startswith(
+            "CREATE TABLE %s" % task.table)
+
+    @mock.patch("luigi.contrib.snowflake.S3CopyToTable.does_schema_exist", return_value=False)
+    @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
+    def test_s3_copy_to_missing_schema(self, mock_snowflake_target, mock_does_exist):
+        task = DummyS3CopyToTableWithKeys(table='schema.table_with_schema')
+        task.run()
+
+        mock_cursor = (mock_snowflake_target.return_value
+                                            .connect
+                                            .return_value
+                                            .cursor
+                                            .return_value)
+        executed_query = mock_cursor.execute.call_args_list[0][0][0]
+        assert executed_query.startswith("CREATE SCHEMA IF NOT EXISTS schema")
+
+    @mock.patch("luigi.contrib.snowflake.S3CopyToTable.does_schema_exist", return_value=False)
+    @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
+    def test_s3_copy_to_missing_schema_with_no_schema(self, mock_snowflake_target, mock_does_exist):
+        task = DummyS3CopyToTableWithKeys(table='table_with_no_schema')
+        task.run()
+
+        mock_cursor = (mock_snowflake_target.return_value
+                                            .connect
+                                            .return_value
+                                            .cursor
+                                            .return_value)
+        executed_query = mock_cursor.execute.call_args_list[0][0][0]
+        assert not executed_query.startswith("CREATE SCHEMA IF NOT EXISTS")
+
+    @mock.patch("luigi.contrib.snowflake.S3CopyToTable.does_schema_exist", return_value=True)
+    @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
+    def test_s3_copy_to_existing_schema_with_schema(self, mock_snowflake_target, mock_does_exist):
+        task = DummyS3CopyToTableWithKeys(table='schema.table_with_schema')
+        task.run()
+
+        mock_cursor = (mock_snowflake_target.return_value
+                                            .connect
+                                            .return_value
+                                            .cursor
+                                            .return_value)
+        executed_query = mock_cursor.execute.call_args_list[0][0][0]
+        assert not executed_query.startswith("CREATE SCHEMA IF NOT EXISTS")
+
+    @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
+    def test_s3_copy_with_valid_columns(self, mock_snowflake_target):
+        task = DummyS3CopyToTableWithKeys()
+        task.run()
+
+        # The mocked connection cursor passed to
+        # S3CopyToTable.copy(self, cursor, f).
+        mock_cursor = (mock_snowflake_target.return_value
+                                            .connect
+                                            .return_value
+                                            .cursor
+                                            .return_value)
+
+        # `mock_snowflake_target` is the mocked `SnowflakeTarget` object
+        # returned by S3CopyToTable.output(self).
+        mock_snowflake_target.assert_called_once_with(
+            database=task.database,
+            warehouse=task.warehouse,
+            host=task.host,
+            update_id=task.task_id,
+            user=task.user,
+            table=task.table,
+            password=task.password,
+        )
+
+        # To get the proper intendation in the multiline `COPY` statement the
+        # SQL string was copied from snowflake.py.
+        mock_cursor.execute.assert_called_with("COPY INTO {table} from {source} CREDENTIALS=({creds}) {options};".format(
+                table='dummy_table',
+                colnames='(some_text,some_int)',
+                source='s3://bucket/key',
+                creds="AWS_KEY_ID='property_key' AWS_SECRET_KEY='property_secret'",
+                options='')
+            )
+
+    @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
+    def test_s3_copy_with_default_columns(self, mock_snowflake_target):
+        task = DummyS3CopyToTableWithKeys(columns=[])
+        task.run()
+
+        # The mocked connection cursor passed to
+        # S3CopyToTable.copy(self, cursor, f).
+        mock_cursor = (mock_snowflake_target.return_value
+                                            .connect
+                                            .return_value
+                                            .cursor
+                                            .return_value)
+
+        # `mock_snowflake_target` is the mocked `SnowflakeTarget` object
+        # returned by S3CopyToTable.output(self).
+        mock_snowflake_target.assert_called_once_with(
+            database=task.database,
+            warehouse=task.warehouse,
+            host=task.host,
+            update_id=task.task_id,
+            user=task.user,
+            table=task.table,
+            password=task.password,
+        )
+
+        # To get the proper intendation in the multiline `COPY` statement the
+        # SQL string was copied from snowflake.py.
+        mock_cursor.execute.assert_called_with("COPY INTO {table} from {source} CREDENTIALS=({creds}) {options};".format(
+                table='dummy_table',
+                source='s3://bucket/key',
+                creds="AWS_KEY_ID='property_key' AWS_SECRET_KEY='property_secret'",
+                options='')
+            )
+
+    @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
+    def test_s3_copy_with_nonetype_columns(self, mock_snowflake_target):
+        task = DummyS3CopyToTableWithKeys(columns=None)
+        task.run()
+
+        # The mocked connection cursor passed to
+        # S3CopyToTable.copy(self, cursor, f).
+        mock_cursor = (mock_snowflake_target.return_value
+                                            .connect
+                                            .return_value
+                                            .cursor
+                                            .return_value)
+
+        # `mock_snowflake_target` is the mocked `SnowflakeTarget` object
+        # returned by S3CopyToTable.output(self).
+        mock_snowflake_target.assert_called_once_with(
+            database=task.database,
+            warehouse=task.warehouse,
+            host=task.host,
+            update_id=task.task_id,
+            user=task.user,
+            table=task.table,
+            password=task.password,
+        )
+
+        mock_cursor.execute.assert_called_with("COPY INTO {table} from {source} CREDENTIALS=({creds}) {options};".format(
+                table='dummy_table',
+                colnames='',
+                source='s3://bucket/key',
+                creds="AWS_KEY_ID='property_key' AWS_SECRET_KEY='property_secret'",
+                options='')
+            )

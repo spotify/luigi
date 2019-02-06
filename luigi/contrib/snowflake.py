@@ -26,16 +26,13 @@ class _SettingsMixins():
     Generic mixins that defines how to fetch the database and warehouse
     configuration for a given snowflake integration.
     """
-
     @property
-    def database(self):
+    def configuration_section(self):
         """
-        Fetch the database configuration from the luigi configuration file under:
-
-        [snowflake]
-        database=value
+        Override to change the configuration section used
+        to obtain default credentials.
         """
-        return luigi.configuration.get_config().get('snowflake', 'database')
+        return 'snowflake'
 
     @property
     def warehouse(self):
@@ -45,7 +42,7 @@ class _SettingsMixins():
         [snowflake]
         warehouse=value
         """
-        return luigi.configuration.get_config().get('snowflake', 'warehouse')
+        return luigi.configuration.get_config().get(self.configuration_section, 'warehouse', default=None)
 
 
 class _CredentialsMixin(redshift._CredentialsMixin):
