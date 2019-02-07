@@ -21,6 +21,10 @@ BUCKET = 'bucket'
 KEY = 'key'
 
 
+class DummyTarget(luigi.contrib.snowflake.SnowflakeTarget):
+    pass
+
+
 class DummyS3CopyToTableBase(luigi.contrib.snowflake.S3CopyToTable):
     host = 'dummy_host'
     database = 'dummy_database'
@@ -313,3 +317,57 @@ class TestS3CopyToTable(unittest.TestCase):
                                             .return_value)
         assert mock_cursor.execute.call_args_list[1][0][0].startswith(
             "truncate %s" % task.table)
+
+
+@attr('snowflake', 'contrib')
+class TestSnowflakeTarget(unittest.TestCase):
+    target_settings = {'host': 'dummy_host',
+                       'warehouse': 'dummy_warehouse',
+                       'database': 'dummy_database',
+                       'user': 'dummy_user',
+                       'password': 'dummy_password',
+                       'table': 'dummy_table',
+                       'update_id': 'dummy_update_id'}
+
+    @mock.patch("snowflake.connector")
+    def test_target_execute_warehouse(self, mock_snowflake):
+        target = DummyTarget(**self.target_settings)
+        target.connect()
+
+        mock_cursor = (mock_snowflake.connect.return_value.cursor.return_value)
+
+        assert mock_cursor.execute.call_args_list[0][0][0].startswith("USE WAREHOUSE %s" % target.warehouse)
+
+    @mock.patch("snowflake.connector")
+    def test_target_execute_database(self, mock_snowflake):
+        target = DummyTarget(**self.target_settings)
+        target.connect()
+
+        mock_cursor = (mock_snowflake.connect.return_value.cursor.return_value)
+
+        assert mock_cursor.execute.call_args_list[1][0][0].startswith("USE DATABASE %s" % target.database)
+
+    @mock.patch("snowflake.connector")
+    def test_target_exists(self, mock_snowflake):
+        target = DummyTarget(**self.target_settings)
+        connection = target.connect()
+
+        target.exists(connection=connection)
+
+        mock_cursor = (mock_snowflake.connect.return_value.cursor.return_value)
+
+        assert mock_cursor.execute.call_args_list[2][0][0] == "SELECT 1 FROM table_updates WHERE update_id = %s LIMIT 1"
+
+    @mock.patch("snowflake.connector")
+    def test_target_create_marker_table(self, mock_snowflake):
+        target = DummyTarget(**self.target_settings)
+        target.create_marker_table()
+
+        mock_cursor = (mock_snowflake.connect.return_value.cursor.return_value)
+
+        sql = """CREATE TABLE table_updates (
+                     update_id TEXT PRIMARY KEY,
+                     target_table TEXT,
+                     inserted TIMESTAMP);"""
+
+        assert mock_cursor.execute.call_args_list[2][0][0] == sql

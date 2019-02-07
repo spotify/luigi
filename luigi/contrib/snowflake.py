@@ -108,13 +108,10 @@ class SnowflakeTarget(postgres.PostgresTarget):
 
         cursor = connection.cursor()
 
-        # Default database and warehouses can be set directly at the user level
-        # in the Snowflake configurations. Unless specified, we assume that the
-        # defaults have been set.
-        if self.warehouse:
-            cursor.execute("USE WAREHOUSE {warehouse}".format(warehouse=self.warehouse))
-        if self.database:
-            cursor.execute("USE DATABASE {database}".format(database=self.database))
+        # Snowflake requires you set the warehouse and database prior of making
+        # a query.
+        cursor.execute("USE WAREHOUSE {warehouse}".format(warehouse=self.warehouse))
+        cursor.execute("USE DATABASE {database}".format(database=self.database))
 
         return connection
 
@@ -131,11 +128,8 @@ class SnowflakeTarget(postgres.PostgresTarget):
             connection.autocommit = True
         cursor = connection.cursor()
         try:
-            cursor.execute("""SELECT 1 FROM {marker_table}
-                WHERE update_id = %s
-                LIMIT 1""".format(marker_table=self.marker_table),
-                           (self.update_id,)
-                           )
+            cursor.execute("""SELECT 1 FROM {marker_table} WHERE update_id = %s LIMIT 1""".format(marker_table=self.marker_table),
+                           (self.update_id,))
             row = cursor.fetchone()
         except snowflake.connector.errors.ProgrammingError as e:
             # Snowflake doesn't seem to have constants for their error code
@@ -159,17 +153,15 @@ class SnowflakeTarget(postgres.PostgresTarget):
         connection.autocommit = True
         cursor = connection.cursor()
         if self.use_db_timestamps:
-            sql = """ CREATE TABLE {marker_table} (
-                      update_id TEXT PRIMARY KEY,
-                      target_table TEXT,
-                      inserted TIMESTAMP DEFAULT NOW())
-                  """.format(marker_table=self.marker_table)
+            sql = """CREATE TABLE {marker_table} (
+                     update_id TEXT PRIMARY KEY,
+                     target_table TEXT,
+                     inserted TIMESTAMP DEFAULT NOW())""".format(marker_table=self.marker_table)
         else:
-            sql = """ CREATE TABLE {marker_table} (
-                      update_id TEXT PRIMARY KEY,
-                      target_table TEXT,
-                      inserted TIMESTAMP);
-                  """.format(marker_table=self.marker_table)
+            sql = """CREATE TABLE {marker_table} (
+                     update_id TEXT PRIMARY KEY,
+                     target_table TEXT,
+                     inserted TIMESTAMP);""".format(marker_table=self.marker_table)
 
         try:
             cursor.execute(sql)
