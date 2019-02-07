@@ -1017,6 +1017,19 @@ metric_namespace
   Optional prefix to add to the beginning of every metric sent to Datadog.
   Default value is "luigi".
 
+[Snowflake]
+-----------
+
+Parameters controlling the use of Snowflake targets
+
+marker-table
+   Table in which to store status of table updates. This table will be created
+   if it doesn't already exist. Defaults to "table_updates".
+
+warehouse
+   The warehouse that Snowflake will use to run the query on. This can be
+   overriden at the property level or set here if there is only one warehouse.
+
 Per Task Retry-Policy
 ---------------------
 
