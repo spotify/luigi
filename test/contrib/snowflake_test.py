@@ -290,3 +290,26 @@ class TestS3CopyToTable(unittest.TestCase):
                 creds="AWS_KEY_ID='property_key' AWS_SECRET_KEY='property_secret'",
                 options='')
             )
+
+    @mock.patch("luigi.contrib.snowflake.S3CopyToTable.do_truncate_table",
+                return_value=True)
+    @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
+    def test_s3_copy_to_truncate_table(self,
+                                       mock_snowflake_target,
+                                       mock_does_exist):
+        """
+        Test truncate table
+        """
+        # Ensure `S3CopyToTable.create_table` does not throw an error.
+        task = DummyS3CopyToTableWithKeys()
+        task.run()
+
+        # Make sure the cursor was successfully used to create the table in
+        # `create_table` as expected.
+        mock_cursor = (mock_snowflake_target.return_value
+                                            .connect
+                                            .return_value
+                                            .cursor
+                                            .return_value)
+        assert mock_cursor.execute.call_args_list[1][0][0].startswith(
+            "truncate %s" % task.table)
