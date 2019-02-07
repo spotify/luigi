@@ -13,6 +13,7 @@
 # the License.
 
 import os
+import sys
 
 from setuptools import setup
 
@@ -41,8 +42,14 @@ install_requires = [
     # https://pagure.io/python-daemon/issue/18
     'python-daemon<2.2.0',
     'python-dateutil==2.7.5',
-    'enum34>1.1.0;python_version<"3.4"',
 ]
+
+# Note: To support older versions of setuptools, we're explicitly not
+#   using conditional syntax (i.e. 'enum34>1.1.0;python_version<"3.4"').
+#   This syntax is a problem for setuptools as recent as `20.1.1`,
+#   published Feb 16, 2016.
+if sys.version_info[:2] < (3, 4):
+    install_requires.append('enum34>1.1.0')
 
 if os.environ.get('READTHEDOCS', None) == 'True':
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
