@@ -8,7 +8,7 @@ from luigi.contrib import postgres
 
 logger = logging.getLogger('luigi-interface')
 
-# Snowflake's library do not have constant for their error code.
+# Snowflake's library does not have constant for their error code.
 # We define our own
 SNOWFLAKE_TABLE_EXISTS_ERROR = 2002
 SNOWFLAKE_GENERIC_PROGRAMMING_ERROR = 2003
@@ -128,8 +128,8 @@ class SnowflakeTarget(postgres.PostgresTarget):
             connection.autocommit = True
         cursor = connection.cursor()
         try:
-            cursor.execute("""SELECT 1 FROM {marker_table} WHERE update_id = %s LIMIT 1""".format(marker_table=self.marker_table),
-                           (self.update_id,))
+            cursor.execute("""SELECT 1 FROM {marker_table} WHERE update_id = {update_id} LIMIT 1""".format(marker_table=self.marker_table,
+                                                                                                           update_id=self.update_id))
             row = cursor.fetchone()
         except snowflake.connector.errors.ProgrammingError as e:
             # Snowflake doesn't seem to have constants for their error code
@@ -235,7 +235,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
         """
         Truncate the table
         """
-        query = "truncate %s" % self.table
+        query = "truncate {table}".format(table=self.table)
         cursor = connection.cursor()
         try:
             cursor.execute(query)
@@ -277,9 +277,6 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
 
         * Save the state of this task to Snowflake as "been run"
         """
-        if not (self.table):
-            raise Exception("table need to be specified")
-
         path = self.s3_load_path()
         output = self.output()
         connection = output.connect()
@@ -302,7 +299,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
 
         This currently only works for key-base credentials.
         """
-        logger.info("Inserting file: %s", f)
+        logger.info("Inserting file: {file}".format(file=f))
         colnames = ''
         if self.columns and len(self.columns) > 0:
             colnames = ",".join([x[0] for x in self.columns])
@@ -342,16 +339,16 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
         """
 
         if '.' in self.table:
+            schema = self.table.split('.')[0]
             query = ("select 1 as schema_exists "
                      "from information_schema.schemata "
-                     "where lower(schema_name) = lower(%s) limit 1")
+                     "where lower(schema_name) = lower({schema}) limit 1").format(schema=schema)
         else:
             return True
 
         cursor = connection.cursor()
         try:
-            schema = self.table.split('.')[0]
-            cursor.execute(query, [schema])
+            cursor.execute(query.format(schema=schema))
             result = cursor.fetchone()
             return bool(result)
         finally:
@@ -370,16 +367,17 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
         """
 
         if '.' in self.table:
+            schema, table = self.table.split('.')
             query = ("select 1 as table_exists "
                      "from information_schema.tables "
-                     "where lower(table_schema) = lower(%s) and lower(table_name) = lower(%s) limit 1")
+                     "where lower(table_schema) = lower({schema}) and lower(table_name) = lower({table}) limit 1").format(schema=schema, table=table)
         else:
             query = ("select 1 as table_exists "
                      "from information_schema.tables "
-                     "where lower(table_name) = lower(%s) limit 1")
+                     "where lower(table_name) = lower({{table}) limit 1").format(table=table)
         cursor = connection.cursor()
         try:
-            cursor.execute(query, tuple(self.table.split('.')))
+            cursor.execute(query)
             result = cursor.fetchone()
             return bool(result)
         finally:
@@ -391,15 +389,15 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
         truncating.
         """
         if not self.does_schema_exist(connection):
-            logger.info("Creating schema for %s", self.table)
+            logger.info("Creating schema for {table}".format(table=self.table))
             self.create_schema(connection)
 
         if not self.does_table_exist(connection):
-            logger.info("Creating table %s", self.table)
+            logger.info("Creating table {table}".format(table=self.table))
             self.create_table(connection)
 
         if self.do_truncate_table:
-            logger.info("Truncating table %s", self.table)
+            logger.info("Truncating table {table}".format(table=self.table))
             self.truncate_table(connection)
 
     def post_copy(self, cursor):

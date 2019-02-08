@@ -1017,7 +1017,7 @@ metric_namespace
   Optional prefix to add to the beginning of every metric sent to Datadog.
   Default value is "luigi".
 
-[Snowflake]
+[snowflake]
 -----------
 
 Parameters controlling the use of Snowflake targets
