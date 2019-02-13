@@ -607,30 +607,15 @@ class Task(object):
         provide consistent end-user experience), yet need to introduce
         custom behaviour into dependencies.
 
-        Differences with :py:meth:`_requires`:
-          * method signature: :py:meth:`_requires` doesn't take params and calls
-            :py:meth:`requires` directly where as this method is expected to work only on
-            requirements passed via parameters.
-          * Code paths: :py:meth:`_requires` is run only during the statically defined
-            requirements where as this method works with dynamic dependencies yielded from
-            :py:meth:`run` also.
-
         ex:
-            class ParentTask(luigi.Task):
-                foo = `bar`
+            class TemplateTask(luigi.Task):
+                log_level = DEBUG
 
                 def process_requires(self, requirements):
-                    for(req in flatten(requirements)):
-                        req.foo = self.foo
+                    for(task in flatten(requirements)):
+                        task.log_level = self.log_level # Propagate log level up the dependency chain.
 
                     return requirements
-
-            class B(ParentTask):
-                def requires(self):
-                    return luigi.LocalPathTask('my/local/path')
-
-            B().deps()[0].foo # => 'bar'
-
         """
         return requires
 
@@ -649,15 +634,10 @@ class Task(object):
         return []  # default impl
 
     def _requires(self):
-        """
-        Override in "template" tasks which themselves are supposed to be
-        subclassed and thus have their requires() overridden (name preserved to
-        provide consistent end-user experience), yet need to introduce
-        (non-input) dependencies.
+        warnings.warn("Use of _requires has been deprecated. To customize "
+                      "dependencies in a child class, call `super().requires() "
+                      "and modify result.", DeprecationWarning)
 
-        Must return an iterable which among others contains the _requires() of
-        the superclass.
-        """
         return flatten(self.requires())  # base impl
 
     def process_resources(self):
@@ -681,12 +661,15 @@ class Task(object):
 
     def deps(self):
         """
-        Internal method used by the scheduler.
-
         Returns the flattened list of requires.
+
+        Override in "template" tasks which themselves are supposed to be
+        subclassed and thus have their requires() overridden (name preserved to
+        provide consistent end-user experience), yet need to introduce
+        (non-input) dependencies.
         """
         # used by scheduler
-        return flatten(self.process_requires(self._requires()))
+        return flatten(self.process_requires(self.requires()))
 
     def run(self):
         """
