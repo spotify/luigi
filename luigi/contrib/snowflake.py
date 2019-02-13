@@ -128,8 +128,8 @@ class SnowflakeTarget(postgres.PostgresTarget):
             connection.autocommit = True
         cursor = connection.cursor()
         try:
-            cursor.execute("""SELECT 1 FROM {marker_table} WHERE update_id = {update_id} LIMIT 1""".format(marker_table=self.marker_table,
-                                                                                                           update_id=self.update_id))
+            cursor.execute("""SELECT 1 FROM {marker_table} WHERE update_id = '{update_id}' LIMIT 1""".format(marker_table=self.marker_table,
+                                                                                                             update_id=self.update_id))
             row = cursor.fetchone()
         except snowflake.connector.errors.ProgrammingError as e:
             # Snowflake doesn't seem to have constants for their error code
