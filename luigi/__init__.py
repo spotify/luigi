@@ -75,5 +75,5 @@ if not configuration.get_config().has_option('core', 'autoload-range'):
     warnings.warn(warning_message, DeprecationWarning)
 
 if configuration.get_config().getboolean('core', 'autoload-range', True):
-    from .tools import range  # just makes the tool classes available from command line
+    from .tools import range  # noqa: F401    just makes the tool classes available from command line
     __all__.append('range')
