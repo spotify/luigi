@@ -308,6 +308,12 @@ wait_jitter
   workers do not ask the scheduler for another job at the same time.
   Default: 5.0
 
+max_keep_alive_idle_duration
+  .. versionadded:: 2.8.4
+
+  Maximum duration to keep worker alive while in idle state.
+  Default: 0 (Indefinitely)
+
 max_reschedules
   Maximum number of times to reschedule a failed task.
   Default: 1

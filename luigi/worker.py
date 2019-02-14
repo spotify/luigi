@@ -412,8 +412,6 @@ class worker(Config):
                                    config_path=dict(section='core', name='worker-ping-interval'))
     keep_alive = BoolParameter(default=False,
                                config_path=dict(section='core', name='worker-keep-alive'))
-    keep_alive_ttl = TimeDeltaParameter(default=datetime.timedelta(0),
-                                        config_path=dict(section='core', name='worker-keep-alive-ttl'))
     count_uniques = BoolParameter(default=False,
                                   config_path=dict(section='core', name='worker-count-uniques'),
                                   description='worker-count-uniques means that we will keep a '
@@ -426,6 +424,8 @@ class worker(Config):
     wait_interval = FloatParameter(default=1.0,
                                    config_path=dict(section='core', name='worker-wait-interval'))
     wait_jitter = FloatParameter(default=5.0)
+
+    max_keep_alive_idle_duration = TimeDeltaParameter(default=datetime.timedelta(0))
 
     max_reschedules = IntParameter(default=1,
                                    config_path=dict(section='core', name='worker-max-reschedules'))
@@ -1132,15 +1132,15 @@ class Worker(object):
             return get_work_response.n_pending_last_scheduled > 0
         elif self._config.count_uniques:
             return get_work_response.n_unique_pending > 0
-        elif get_work_response.n_pending_tasks <= 0:
+        elif get_work_response.n_pending_tasks == 0:
             return False
-        elif not self._config.keep_alive_ttl:
+        elif not self._config.max_keep_alive_idle_duration:
             return True
         elif not self._idle_since:
             return True
         else:
-            time_to_shutdown = self._idle_since + self._config.keep_alive_ttl - datetime.datetime.now()
-            logger.debug("%s until shutdown", time_to_shutdown)
+            time_to_shutdown = self._idle_since + self._config.max_keep_alive_idle_duration - datetime.datetime.now()
+            logger.debug("[%s] %s until shutdown", self._id, time_to_shutdown)
             return time_to_shutdown > datetime.timedelta(0)
 
     def handle_interrupt(self, signum, _):
