@@ -26,6 +26,7 @@ import random
 import tempfile
 import logging
 import warnings
+from contextlib import contextmanager
 from luigi import six
 
 logger = logging.getLogger('luigi-interface')
@@ -250,6 +251,7 @@ class FileSystemTarget(Target):
         """
         self.fs.remove(self.path)
 
+    @contextmanager
     def temporary_path(self):
         """
         A context manager that enables a reasonably short, general and
@@ -275,31 +277,20 @@ class FileSystemTarget(Target):
                     with self.output().temporary_path() as self.temp_output_path:
                         run_some_external_command(output_path=self.temp_output_path)
         """
-        class _Manager(object):
-            target = self
+        num = random.randrange(0, 1e10)
+        slashless_path = self.path.rstrip('/').rstrip("\\")
+        _temp_path = '{}-luigi-tmp-{:010}{}'.format(
+            slashless_path,
+            num,
+            self._trailing_slash())
+        # TODO: os.path doesn't make sense here as it's os-dependent
+        tmp_dir = os.path.dirname(slashless_path)
+        if tmp_dir:
+            self.fs.mkdir(tmp_dir, parents=True, raise_if_exists=False)
 
-            def __init__(self):
-                num = random.randrange(0, 1e10)
-                slashless_path = self.target.path.rstrip('/').rstrip("\\")
-                self._temp_path = '{}-luigi-tmp-{:010}{}'.format(
-                    slashless_path,
-                    num,
-                    self.target._trailing_slash())
-                # TODO: os.path doesn't make sense here as it's os-dependent
-                tmp_dir = os.path.dirname(slashless_path)
-                if tmp_dir:
-                    self.target.fs.mkdir(tmp_dir, parents=True, raise_if_exists=False)
-
-            def __enter__(self):
-                return self._temp_path
-
-            def __exit__(self, exc_type, exc_value, traceback):
-                if exc_type is None:
-                    # There were no exceptions
-                    self.target.fs.rename_dont_move(self._temp_path, self.target.path)
-                return False  # False means we don't suppress the exception
-
-        return _Manager()
+        yield _temp_path
+        # We won't reach here if there was an user exception.
+        self.fs.rename_dont_move(_temp_path, self.path)
 
     def _touchz(self):
         with self.open('w'):
