@@ -206,7 +206,7 @@ class FileSystemTarget(Target):
 
         >>> target = LocalTarget('~/some_file.txt')
         >>> target = LocalTarget(pathlib.Path('~') / 'some_file.txt')
-        >>> target.exists()
+        >>> LocalTarget('lol.txt').exists()
         False
     """
 
