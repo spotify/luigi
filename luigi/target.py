@@ -204,8 +204,8 @@ class FileSystemTarget(Target):
 
     .. code-block:: python
 
-        >>> target = LocalTarget('~/some_file.txt')
-        >>> target = LocalTarget(pathlib.Path('~') / 'some_file.txt')
+        >>> target = FileSystemTarget('~/some_file.txt')
+        >>> target = FileSystemTarget(pathlib.Path('~') / 'some_file.txt')
     """
 
     def __init__(self, path):
