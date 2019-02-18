@@ -53,6 +53,8 @@ class SparkSubmitTask(ExternalProgramTask):
 
     # Only log stderr if spark fails (since stderr is normally quite verbose)
     always_log_stderr = False
+    # For automatic detection of urls in Spark applications
+    tracking_url_pattern = r"Bound (?:.*) to (?:.*), and started at (https?://.*)\s"
 
     def app_options(self):
         """
