@@ -127,6 +127,13 @@ section and the parameters available within it.
 These parameters control core Luigi behavior, such as error e-mails and
 interactions between the worker and scheduler.
 
+autoload-range
+  .. versionadded:: 2.8.4
+
+  If false, prevents range tasks from autoloading. They can still be loaded
+  using ``--module luigi.tools.range``. Defaults to true. Setting this to true
+  explicitly disables the deprecation warning.
+
 default-scheduler-host
   Hostname of the machine running the scheduler. Defaults to localhost.
 
