@@ -36,6 +36,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 from multiprocessing import Process
 from time import sleep
 
@@ -118,10 +119,8 @@ class ExternalProgramTask(luigi.Task):
 
         try:
             if self.tracking_url_pattern:
-                with _TrackingUrlContext(pattern=self.tracking_url_pattern, main_proc_args=args,
-                                         main_proc_kwargs=kwargs, set_tracking_url=self.set_tracking_url) as proc:
-                    with ExternalProgramRunContext(proc):
-                        proc.wait()
+                with self.proc_with_tracking_url_context(proc_args=args, proc_kwargs=kwargs) as proc:
+                    proc.wait()
             else:
                 proc = subprocess.Popen(args, **kwargs)
                 with ExternalProgramRunContext(proc):
@@ -149,46 +148,42 @@ class ExternalProgramTask(luigi.Task):
                 tmp_stderr.close()
                 tmp_stdout.close()
 
+    @contextmanager
+    def proc_with_tracking_url_context(self, proc_args, proc_kwargs):
+        time_to_sleep = 0.5
 
-class _TrackingUrlContext(object):
-    time_to_sleep = 0.5
+        file_to_write = proc_kwargs.get('stdout')
+        proc_kwargs.update({'stdout': subprocess.PIPE})
+        main_proc = subprocess.Popen(proc_args, **proc_kwargs)
+        pipe_to_read = main_proc.stdout
 
-    def __init__(self, main_proc_args, main_proc_kwargs, pattern, set_tracking_url):
-        # replace process output with PIPE for scanning
-        self.file_to_write = main_proc_kwargs.get('stdout')
-        main_proc_kwargs.update({'stdout': subprocess.PIPE})
-        self.main_proc = subprocess.Popen(main_proc_args, **main_proc_kwargs)
-        self.pipe_to_read = self.main_proc.stdout
+        def _track_url_by_pattern():
+            """
+            Scans the pipe looking for a passed pattern, if the pattern is found, `set_tracking_url` callback is sent.
+            If tmp_stdout is passed, also appends lines to this file.
+            """
+            pattern = re.compile(self.tracking_url_pattern)
+            for new_line in iter(pipe_to_read.readline, ''):
+                if new_line:
+                    if file_to_write:
+                        file_to_write.write(new_line)
+                    match = re.search(pattern, new_line.decode('utf-8'))
+                    if match:
+                        self.set_tracking_url(match.group(1))
+                else:
+                    sleep(time_to_sleep)
 
-        self.pattern = pattern
-        self.set_tracking_url = set_tracking_url
-        self.track_proc = Process(target=self._track_url_by_pattern)
-
-    def __enter__(self):
-        self.track_proc.start()
-        return self.main_proc
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        # need to wait a bit to let the subprocess read the last lines
-        sleep(self.time_to_sleep * 2)
-        self.track_proc.terminate()
-        self.pipe_to_read.close()
-
-    def _track_url_by_pattern(self):
-        """
-        Scans the pipe looking for a passed pattern, if the pattern is found, `set_tracking_url` callback is sent.
-        If tmp_stdout is passed, also appends lines to this file.
-        """
-        pattern = re.compile(self.pattern)
-        for new_line in iter(self.pipe_to_read.readline, ''):
-            if new_line:
-                if self.file_to_write:
-                    self.file_to_write.write(new_line)
-                match = re.search(pattern, new_line.decode('utf-8'))
-                if match:
-                    self.set_tracking_url(match.group(1))
-            else:
-                sleep(self.time_to_sleep)
+        track_proc = Process(target=_track_url_by_pattern)
+        try:
+            track_proc.start()
+            with ExternalProgramRunContext(main_proc):
+                yield main_proc
+        finally:
+            # need to wait a bit to let the subprocess read the last lines
+            track_proc.join(time_to_sleep * 2)
+            if track_proc.is_alive():
+                track_proc.terminate()
+            pipe_to_read.close()
 
 
 class ExternalProgramRunContext(object):
