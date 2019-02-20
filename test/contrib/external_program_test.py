@@ -17,6 +17,8 @@
 import os
 import shutil
 import tempfile
+from functools import partial
+from multiprocessing import Value
 
 from helpers import unittest
 import luigi
@@ -185,42 +187,32 @@ class ExternalProgramTaskTest(unittest.TestCase):
             shutil.rmtree(tempdir)
 
     def test_tracking_url_pattern_works_with_capture_output_disabled(self):
-        temp_dir = tempfile.mkdtemp()
+        test_val = Value('i', 0)
 
-        # since set_tracking_url is called in a separate process
-        # we need to do something like creating a temp file
-        def fake_set_tracking_url(url):
-            open(os.path.join(temp_dir, url), 'w').close()
+        def fake_set_tracking_url(val, url):
+            if url == "TEXT":
+                val.value += 1
 
         task = TestEchoTask(capture_output=False, tracking_url_pattern=r"SOME (.*)")
         task.MESSAGE = "SOME TEXT"
-        set_tracking_url_output = os.path.join(temp_dir, "TEXT")  # output of the method
 
-        try:
-            with mock.patch.object(task, 'set_tracking_url', new=fake_set_tracking_url):
-                task.run()
-                self.assertTrue(os.path.exists(set_tracking_url_output))  # assert that fake_set_tracking_url was called
-        finally:
-            # clean up temp files even if assertion fails
-            shutil.rmtree(temp_dir)
+        with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+            task.run()
+            self.assertEqual(test_val.value, 1)
 
     def test_tracking_url_pattern_works_with_capture_output_enabled(self):
-        temp_dir = tempfile.mkdtemp()
+        test_val = Value('i', 0)
 
-        def fake_set_tracking_url(url):
-            open(os.path.join(temp_dir, url), 'w').close()
+        def fake_set_tracking_url(val, url):
+            if url == "THING":
+                val.value += 1
 
         task = TestEchoTask(capture_output=True, tracking_url_pattern=r"ANY(.*)")
         task.MESSAGE = "ANYTHING"
-        set_tracking_url_output = os.path.join(temp_dir, "THING")  # output of the method
 
-        try:
-            with mock.patch.object(task, 'set_tracking_url', new=fake_set_tracking_url):
-                task.run()
-                self.assertTrue(os.path.exists(set_tracking_url_output))  # assert that fake_set_tracking_url was called
-        finally:
-            # clean up temp files even if assertion fails
-            shutil.rmtree(temp_dir)
+        with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+            task.run()
+            self.assertEqual(test_val.value, 1)
 
 
 class TestExternalPythonProgramTask(ExternalPythonProgramTask):

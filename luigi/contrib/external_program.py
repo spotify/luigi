@@ -63,7 +63,17 @@ class ExternalProgramTask(luigi.Task):
     """
 
     capture_output = luigi.BoolParameter(default=True, significant=False, positional=False)
-    tracking_url_pattern = luigi.Parameter(default="", significant=False, positional=False)
+    tracking_url_pattern = luigi.Parameter(
+        default="", significant=False, positional=False,
+        description="Regex pattern used for searching URL in the logs of the external program")
+    """
+    Regex pattern used for searching URL in the logs of the external program.
+
+    If a log line matches the regex, the first group in the matching is set as the tracking URL
+    for the job in the web UI. Example: 'Job UI is here: (https?://.*)'.
+
+    Default value is an empty string, so URL tracking is not performed.
+    """
 
     def program_args(self):
         """
@@ -108,8 +118,8 @@ class ExternalProgramTask(luigi.Task):
 
         try:
             if self.tracking_url_pattern:
-                with TrackingUrlContext(pattern=self.tracking_url_pattern, main_proc_args=args,
-                                        main_proc_kwargs=kwargs, set_tracking_url=self.set_tracking_url) as proc:
+                with _TrackingUrlContext(pattern=self.tracking_url_pattern, main_proc_args=args,
+                                         main_proc_kwargs=kwargs, set_tracking_url=self.set_tracking_url) as proc:
                     with ExternalProgramRunContext(proc):
                         proc.wait()
             else:
@@ -140,7 +150,7 @@ class ExternalProgramTask(luigi.Task):
                 tmp_stdout.close()
 
 
-class TrackingUrlContext(object):
+class _TrackingUrlContext(object):
     time_to_sleep = 0.5
 
     def __init__(self, main_proc_args, main_proc_kwargs, pattern, set_tracking_url):
