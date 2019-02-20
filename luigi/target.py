@@ -199,6 +199,12 @@ class FileSystemTarget(Target):
 
     Methods of FileSystemTarget raise :py:class:`FileSystemException` if there is a problem
     completing the operation.
+
+    Usage:
+        .. code-block:: python
+            target = FileSystemTarget('~/some_file.txt')
+            target = FileSystemTarget(pathlib.Path('~') / 'some_file.txt')
+            target.exists()  # False
     """
 
     def __init__(self, path):
