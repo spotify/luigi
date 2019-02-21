@@ -202,6 +202,7 @@ class FileSystemTarget(Target):
 
     Usage:
         .. code-block:: ruby
+
             target = FileSystemTarget('~/some_file.txt')
             target = FileSystemTarget(pathlib.Path('~') / 'some_file.txt')
             target.exists()  # False
