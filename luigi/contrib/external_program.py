@@ -41,6 +41,7 @@ from multiprocessing import Process
 from time import sleep
 
 import luigi
+from luigi.parameter import ParameterVisibility
 
 logger = logging.getLogger('luigi-interface')
 
@@ -65,7 +66,7 @@ class ExternalProgramTask(luigi.Task):
 
     capture_output = luigi.BoolParameter(default=True, significant=False, positional=False)
     tracking_url_pattern = luigi.Parameter(
-        default="", significant=False, positional=False,
+        default="", significant=False, positional=False, visibility=ParameterVisibility.HIDDEN,
         description="Regex pattern used for searching URL in the logs of the external program")
     """
     Regex pattern used for searching URL in the logs of the external program.
@@ -75,6 +76,9 @@ class ExternalProgramTask(luigi.Task):
 
     Default value is an empty string, so URL tracking is not performed.
     """
+    track_url_in_stderr = luigi.BoolParameter(
+        default=False, significant=False, positional=False, visibility=ParameterVisibility.HIDDEN,
+        description="When set to True, 'tracking_url_pattern' is searched in stderr instead of stdout")
 
     def program_args(self):
         """
@@ -119,7 +123,7 @@ class ExternalProgramTask(luigi.Task):
 
         try:
             if self.tracking_url_pattern:
-                with self.proc_with_tracking_url_context(proc_args=args, proc_kwargs=kwargs) as proc:
+                with self._proc_with_tracking_url_context(proc_args=args, proc_kwargs=kwargs) as proc:
                     proc.wait()
             else:
                 proc = subprocess.Popen(args, **kwargs)
@@ -149,13 +153,19 @@ class ExternalProgramTask(luigi.Task):
                 tmp_stdout.close()
 
     @contextmanager
-    def proc_with_tracking_url_context(self, proc_args, proc_kwargs):
+    def _proc_with_tracking_url_context(self, proc_args, proc_kwargs):
         time_to_sleep = 0.5
 
-        file_to_write = proc_kwargs.get('stdout')
-        proc_kwargs.update({'stdout': subprocess.PIPE})
-        main_proc = subprocess.Popen(proc_args, **proc_kwargs)
-        pipe_to_read = main_proc.stdout
+        if self.track_url_in_stderr:
+            file_to_write = proc_kwargs.get('stderr')
+            proc_kwargs.update({'stderr': subprocess.PIPE})
+            main_proc = subprocess.Popen(proc_args, **proc_kwargs)
+            pipe_to_read = main_proc.stderr
+        else:
+            file_to_write = proc_kwargs.get('stdout')
+            proc_kwargs.update({'stdout': subprocess.PIPE})
+            main_proc = subprocess.Popen(proc_args, **proc_kwargs)
+            pipe_to_read = main_proc.stdout
 
         def _track_url_by_pattern():
             """

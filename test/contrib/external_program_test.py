@@ -27,6 +27,7 @@ from luigi import six
 from luigi.contrib.external_program import ExternalProgramTask, ExternalPythonProgramTask
 from luigi.contrib.external_program import ExternalProgramRunError
 from mock import patch, call
+from subprocess import Popen
 import mock
 from nose.plugins.attrib import attr
 
@@ -126,7 +127,6 @@ class ExternalProgramTaskTest(unittest.TestCase):
         self.assertIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
 
     def test_capture_output_set_to_false_writes_output_to_stdout(self):
-        from subprocess import Popen
 
         out = tempfile.TemporaryFile()
 
@@ -213,6 +213,23 @@ class ExternalProgramTaskTest(unittest.TestCase):
         with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
             task.run()
             self.assertEqual(test_val.value, 1)
+
+    def test_tracking_url_pattern_works_with_stderr(self):
+        test_val = Value('i', 0)
+
+        def fake_set_tracking_url(val, url):
+            if url == "THING_ELSE":
+                val.value += 1
+
+        def Popen_wrap(args, **kwargs):
+            return Popen('>&2 echo "ANYTHING_ELSE"', shell=True, **kwargs)
+
+        task = TestEchoTask(capture_output=True, tracking_url_pattern=r"ANY(.*)", track_url_in_stderr=True)
+
+        with mock.patch('luigi.contrib.external_program.subprocess.Popen', wraps=Popen_wrap):
+            with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+                task.run()
+                self.assertEqual(test_val.value, 1)
 
 
 class TestExternalPythonProgramTask(ExternalPythonProgramTask):
