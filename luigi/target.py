@@ -201,7 +201,7 @@ class FileSystemTarget(Target):
     completing the operation.
 
     Usage:
-        .. code-block:: python
+        .. code-block:: ruby
             target = FileSystemTarget('~/some_file.txt')
             target = FileSystemTarget(pathlib.Path('~') / 'some_file.txt')
             target.exists()  # False
