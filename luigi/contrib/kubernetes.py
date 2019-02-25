@@ -62,6 +62,9 @@ class kubernetes(luigi.Config):
     kubernetes_namespace = luigi.OptionalParameter(
         default=None,
         description="K8s namespace in which the job will run")
+    max_retrials_to_get_pods = luigi.IntParameter(
+        default=0,
+        description="Max retrials to get pods' informations")
 
 
 class KubernetesJobTask(luigi.Task):
@@ -173,6 +176,13 @@ class KubernetesJobTask(luigi.Task):
         return self.kubernetes_config.max_retrials
 
     @property
+    def max_retrials_to_get_pods(self):
+        """
+        Maximum number of retrials to get pods' informations.
+        """
+        return self.kubernetes_config.max_retrials_to_get_pods
+
+    @property
     def backoff_limit(self):
         """
         Maximum number of retries before considering the job as failed.
@@ -239,10 +249,19 @@ class KubernetesJobTask(luigi.Task):
         pass
 
     def __get_pods(self):
-        pod_objs = Pod.objects(self.__kube_api, namespace=self.kubernetes_namespace) \
-            .filter(selector="job-name=" + self.uu_name) \
-            .response['items']
-        return [Pod(self.__kube_api, p) for p in pod_objs]
+        for _ in range(self.max_retrials_to_get_pods + 1):
+            pod_objs = Pod.objects(self.__kube_api, namespace=self.kubernetes_namespace) \
+                .filter(selector="job-name=" + self.uu_name) \
+                .response['items']
+            pods = [Pod(self.__kube_api, p) for p in pod_objs]
+
+            if pods:
+                break
+
+            # If pod was not returned, sleep to wait for pod to be created.
+            time.sleep(self.__POLL_TIME)
+
+        return pods
 
     def __get_job(self):
         jobs = Job.objects(self.__kube_api, namespace=self.kubernetes_namespace) \
