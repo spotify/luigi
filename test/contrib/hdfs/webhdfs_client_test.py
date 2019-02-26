@@ -49,6 +49,7 @@ class WebHdfsTargetTest(WebHdfsMiniClusterTestCase, HdfsTargetTestMixin):
     test_write_cleanup_no_close = None
 
 
+@attr('apache')
 class TestWebHdfsClient(unittest.TestCase):
 
     @with_config({'webhdfs': {'client_type': 'insecure'}})

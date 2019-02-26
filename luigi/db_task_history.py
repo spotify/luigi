@@ -263,7 +263,9 @@ def _upgrade_schema(engine):
         elif 'mssql' in engine.dialect.name:
             conn.execute('ALTER TABLE task_parameters ALTER COLUMN value TEXT')
         elif 'postgresql' in engine.dialect.name:
-            conn.execute('ALTER TABLE task_parameters ALTER COLUMN value TYPE TEXT')
+            if str([x for x in inspector.get_columns('task_parameters')
+                    if x['name'] == 'value'][0]['type']) != 'TEXT':
+                conn.execute('ALTER TABLE task_parameters ALTER COLUMN value TYPE TEXT')
         elif 'sqlite' in engine.dialect.name:
             # SQLite does not support changing column types. A database file will need
             # to be used to pickup this migration change.

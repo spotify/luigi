@@ -29,6 +29,7 @@ ways between versions. The exception is the exception types and the
 """
 
 import collections
+import datetime
 import getpass
 import importlib
 import logging
@@ -61,7 +62,7 @@ from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
-from luigi.parameter import BoolParameter, FloatParameter, IntParameter, Parameter
+from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, TimeDeltaParameter
 
 try:
     import simplejson as json
@@ -424,6 +425,8 @@ class worker(Config):
                                    config_path=dict(section='core', name='worker-wait-interval'))
     wait_jitter = FloatParameter(default=5.0)
 
+    max_keep_alive_idle_duration = TimeDeltaParameter(default=datetime.timedelta(0))
+
     max_reschedules = IntParameter(default=1,
                                    config_path=dict(section='core', name='worker-max-reschedules'))
     timeout = IntParameter(default=0,
@@ -446,12 +449,12 @@ class worker(Config):
     force_multiprocessing = BoolParameter(default=False,
                                           description='If true, use multiprocessing also when '
                                           'running with 1 worker')
-    task_process_context = Parameter(default=None,
-                                     description='If set to a fully qualified class name, the class will '
-                                     'be instantiated with a TaskProcess as its constructor parameter and '
-                                     'applied as a context manager around its run() call, so this can be '
-                                     'used for obtaining high level customizable monitoring or logging of '
-                                     'each individual Task run.')
+    task_process_context = OptionalParameter(default=None,
+                                             description='If set to a fully qualified class name, the class will '
+                                             'be instantiated with a TaskProcess as its constructor parameter and '
+                                             'applied as a context manager around its run() call, so this can be '
+                                             'used for obtaining high level customizable monitoring or logging of '
+                                             'each individual Task run.')
 
 
 class KeepAliveThread(threading.Thread):
@@ -549,6 +552,7 @@ class Worker(object):
         # Keep info about what tasks are running (could be in other processes)
         self._task_result_queue = multiprocessing.Queue()
         self._running_tasks = {}
+        self._idle_since = None
 
         # Stuff for execution_summary
         self._add_task_history = []
@@ -1039,6 +1043,7 @@ class Worker(object):
            will be rescheduled and dependencies added,
         3. child process dies: we need to catch this separately.
         """
+        self._idle_since = None
         while True:
             self._purge_children()  # Deal with subprocess failures
 
@@ -1127,8 +1132,16 @@ class Worker(object):
             return get_work_response.n_pending_last_scheduled > 0
         elif self._config.count_uniques:
             return get_work_response.n_unique_pending > 0
+        elif get_work_response.n_pending_tasks == 0:
+            return False
+        elif not self._config.max_keep_alive_idle_duration:
+            return True
+        elif not self._idle_since:
+            return True
         else:
-            return get_work_response.n_pending_tasks > 0
+            time_to_shutdown = self._idle_since + self._config.max_keep_alive_idle_duration - datetime.datetime.now()
+            logger.debug("[%s] %s until shutdown", self._id, time_to_shutdown)
+            return time_to_shutdown > datetime.timedelta(0)
 
     def handle_interrupt(self, signum, _):
         """
@@ -1170,6 +1183,7 @@ class Worker(object):
                 if not self._stop_requesting_work:
                     self._log_remote_tasks(get_work_response)
                 if len(self._running_tasks) == 0:
+                    self._idle_since = self._idle_since or datetime.datetime.now()
                     if self._keep_alive(get_work_response):
                         six.next(sleeper)
                         continue

@@ -294,20 +294,21 @@ class TemporaryPathTest(unittest.TestCase):
         orig_ex = MyException()
         try:
             with target_outer.temporary_path() as tmp_path_outer:
-                assert 'notreal' in tmp_path_outer
+                self.assertIn('notreal', tmp_path_outer)
                 with target_inner.temporary_path() as tmp_path_inner:
-                    assert 'blah' in tmp_path_inner
+                    self.assertIn('blah', tmp_path_inner)
                     with target_inner.temporary_path() as tmp_path_inner_2:
-                        assert tmp_path_inner != tmp_path_inner_2
-                    self.fs.rename_dont_move.assert_called_once_with(tmp_path_inner_2, target_inner.path)
+                        self.assertNotEqual(tmp_path_inner, tmp_path_inner_2)
+                    self.fs.rename_dont_move.assert_called_once_with(tmp_path_inner_2,
+                                                                     target_inner.path)
                 self.fs.rename_dont_move.assert_called_with(tmp_path_inner, target_inner.path)
-                self.fs.rename_dont_move.call_count == 2
+                self.assertEqual(self.fs.rename_dont_move.call_count, 2)
                 raise orig_ex
         except MyException as ex:
-            self.fs.rename_dont_move.call_count == 2
-            assert ex is orig_ex
+            self.assertIs(ex, orig_ex)
         else:
             assert False
+        self.assertEqual(self.fs.rename_dont_move.call_count, 2)
 
     def test_temporary_path_directory(self):
         target_slash = self.target_cls('/tmp/dir/')

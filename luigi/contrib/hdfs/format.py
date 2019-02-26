@@ -1,9 +1,10 @@
-import luigi.format
 import logging
 import os
+
+import luigi.format
 from luigi.contrib.hdfs.config import load_hadoop_cmd
 from luigi.contrib.hdfs import config as hdfs_config
-from luigi.contrib.hdfs.clients import remove, rename, mkdir, listdir
+from luigi.contrib.hdfs.clients import remove, rename, mkdir, listdir, exists
 from luigi.contrib.hdfs.error import HDFSCliError
 
 logger = logging.getLogger('luigi-interface')
@@ -48,9 +49,13 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
     def close(self):
         super(HdfsAtomicWritePipe, self).close()
         try:
-            remove(self.path)
-        except HDFSCliError:
-            pass
+            if exists(self.path):
+                remove(self.path)
+        except Exception as ex:
+            if isinstance(ex, HDFSCliError) or ex.args[0].contains("FileNotFoundException"):
+                pass
+            else:
+                raise ex
         if not all(result['result'] for result in rename(self.tmppath, self.path) or []):
             raise HdfsAtomicWriteError('Atomic write to {} failed'.format(self.path))
 
@@ -75,9 +80,13 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
     def close(self):
         super(HdfsAtomicWriteDirPipe, self).close()
         try:
-            remove(self.path)
-        except HDFSCliError:
-            pass
+            if exists(self.path):
+                remove(self.path)
+        except Exception as ex:
+            if isinstance(ex, HDFSCliError) or ex.args[0].contains("FileNotFoundException"):
+                pass
+            else:
+                raise ex
 
         # it's unlikely to fail in this way but better safe than sorry
         if not all(result['result'] for result in rename(self.tmppath, self.path) or []):

@@ -1099,6 +1099,13 @@ class TestTaskParameter(LuigiTestCase):
         self.assertTrue(self.run_locally(['MainTask']))
 
 
+class TestSerializeTupleParameter(LuigiTestCase):
+    def testSerialize(self):
+        the_tuple = (1, 2, 3)
+
+        self.assertEqual(luigi.TupleParameter().parse(luigi.TupleParameter().serialize(the_tuple)), the_tuple)
+
+
 class NewStyleParameters822Test(LuigiTestCase):
     """
     I bet these tests created at 2015-03-08 are reduntant by now (Oct 2015).

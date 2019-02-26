@@ -237,6 +237,23 @@ class SchedulerIoTest(unittest.TestCase):
         s.pause()
         self.assertFalse(s.is_paused()['paused'])
 
+    def test_default_metrics_collector(self):
+        from luigi.metrics import MetricsCollector
+
+        s = luigi.scheduler.Scheduler()
+        scheduler_state = s._state
+        collector = scheduler_state._metrics_collector
+        self.assertTrue(isinstance(collector, MetricsCollector))
+
+    @with_config({'scheduler': {'metrics_collector': 'datadog'}})
+    def test_datadog_metrics_collector(self):
+        from luigi.contrib.datadog_metric import DatadogMetricsCollector
+
+        s = luigi.scheduler.Scheduler()
+        scheduler_state = s._state
+        collector = scheduler_state._metrics_collector
+        self.assertTrue(isinstance(collector, DatadogMetricsCollector))
+
 
 class SchedulerWorkerTest(unittest.TestCase):
     def get_pending_ids(self, worker, state):

@@ -187,7 +187,12 @@ class BigQueryClient(object):
             body = {}
 
         try:
-            body['id'] = '{}:{}'.format(dataset.project_id, dataset.dataset_id)
+            # Construct a message body in the format required by
+            # https://developers.google.com/resources/api-libraries/documentation/bigquery/v2/python/latest/bigquery_v2.datasets.html#insert
+            body['datasetReference'] = {
+                'projectId': dataset.project_id,
+                'datasetId': dataset.dataset_id
+            }
             if dataset.location is not None:
                 body['location'] = dataset.location
             self.client.datasets().insert(projectId=dataset.project_id, body=body).execute()
@@ -443,7 +448,6 @@ class MixinBigQueryBulkComplete(object):
 
 class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
     """Load data into BigQuery from GCS."""
-
     @property
     def source_format(self):
         """The source format to use (see :py:class:`SourceFormat`)."""
@@ -465,7 +469,7 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
     def schema(self):
         """Schema in the format defined at https://cloud.google.com/bigquery/docs/reference/v2/jobs#configuration.load.schema.
 
-        If the value is falsy, it is omitted and inferred by BigQuery, which only works for AVRO and CSV inputs."""
+        If the value is falsy, it is omitted and inferred by BigQuery."""
         return []
 
     @property
@@ -555,6 +559,8 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
 
         if self.schema:
             job['configuration']['load']['schema'] = {'fields': self.schema}
+        else:
+            job['configuration']['load']['autodetect'] = True
 
         bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
 
