@@ -698,20 +698,24 @@ class RangeMonthly(RangeBase):
         return dt.strftime('%Y-%m')
 
     def moving_start(self, now):
-        return now - relativedelta(months=self.months_back)
+        return self._align(now) - relativedelta(months=self.months_back)
 
     def moving_stop(self, now):
-        return now + relativedelta(months=self.months_forward)
+        return self._align(now) + relativedelta(months=self.months_forward)
+
+    def _align(self, dt):
+        return datetime(dt.year, dt.month, 1)
 
     def finite_datetimes(self, finite_start, finite_stop):
         """
         Simply returns the points in time that correspond to turn of month.
         """
-        start_date = datetime(finite_start.year, finite_start.month, 1)
+        start_date = self._align(finite_start)
+        aligned_stop = self._align(finite_stop)
         dates = []
         for m in itertools.count():
             t = start_date + relativedelta(months=m)
-            if t >= finite_stop:
+            if t >= aligned_stop:
                 return dates
             if t >= finite_start:
                 dates.append(t)
