@@ -61,12 +61,23 @@ class ExternalProgramTask(luigi.Task):
 
     By default, the output (stdout and stderr) of the run external program
     is being captured and displayed after the execution has ended. This
-    behaviour can be overriden by passing ``--capture-output False``
+    behaviour can be overridden by passing ``--capture-output False``
     """
 
     capture_output = luigi.BoolParameter(default=True, significant=False, positional=False)
-    tracking_url_pattern = luigi.Parameter(
-        default="", significant=False, positional=False, visibility=ParameterVisibility.HIDDEN,
+
+    stream_for_searching_tracking_url = luigi.parameter.ChoiceParameter(
+        var_type=str, choices=['none', 'stdout', 'stderr'], default='none',
+        significant=False, positional=False, visibility=ParameterVisibility.HIDDEN,
+        description="Stream for searching tracking URL")
+    """
+    Used for defining which stream should be tracked for URL, may be set to 'stdout', 'stderr' or 'none'.
+
+    Default value is 'none', so URL tracking is not performed.
+    """
+
+    tracking_url_pattern = luigi.OptionalParameter(
+        default=None, significant=False, positional=False, visibility=ParameterVisibility.HIDDEN,
         description="Regex pattern used for searching URL in the logs of the external program")
     """
     Regex pattern used for searching URL in the logs of the external program.
@@ -74,11 +85,8 @@ class ExternalProgramTask(luigi.Task):
     If a log line matches the regex, the first group in the matching is set as the tracking URL
     for the job in the web UI. Example: 'Job UI is here: (https?://.*)'.
 
-    Default value is an empty string, so URL tracking is not performed.
+    Default value is None, so URL tracking is not performed.
     """
-    track_url_in_stderr = luigi.BoolParameter(
-        default=False, significant=False, positional=False, visibility=ParameterVisibility.HIDDEN,
-        description="When set to True, 'tracking_url_pattern' is searched in stderr instead of stdout")
 
     def program_args(self):
         """
@@ -122,7 +130,7 @@ class ExternalProgramTask(luigi.Task):
             kwargs.update({'stdout': tmp_stdout, 'stderr': tmp_stderr})
 
         try:
-            if self.tracking_url_pattern:
+            if self.stream_for_searching_tracking_url != 'none' and self.tracking_url_pattern is not None:
                 with self._proc_with_tracking_url_context(proc_args=args, proc_kwargs=kwargs) as proc:
                     proc.wait()
             else:
@@ -155,17 +163,10 @@ class ExternalProgramTask(luigi.Task):
     @contextmanager
     def _proc_with_tracking_url_context(self, proc_args, proc_kwargs):
         time_to_sleep = 0.5
-
-        if self.track_url_in_stderr:
-            file_to_write = proc_kwargs.get('stderr')
-            proc_kwargs.update({'stderr': subprocess.PIPE})
-            main_proc = subprocess.Popen(proc_args, **proc_kwargs)
-            pipe_to_read = main_proc.stderr
-        else:
-            file_to_write = proc_kwargs.get('stdout')
-            proc_kwargs.update({'stdout': subprocess.PIPE})
-            main_proc = subprocess.Popen(proc_args, **proc_kwargs)
-            pipe_to_read = main_proc.stdout
+        file_to_write = proc_kwargs.get(self.stream_for_searching_tracking_url)
+        proc_kwargs.update({self.stream_for_searching_tracking_url: subprocess.PIPE})
+        main_proc = subprocess.Popen(proc_args, **proc_kwargs)
+        pipe_to_read = main_proc.stderr if self.stream_for_searching_tracking_url == 'stderr' else main_proc.stdout
 
         def _track_url_by_pattern():
             """

@@ -16,6 +16,7 @@
 #
 import os
 import shutil
+import subprocess
 import tempfile
 from functools import partial
 from multiprocessing import Value
@@ -193,7 +194,8 @@ class ExternalProgramTaskTest(unittest.TestCase):
             if url == "TEXT":
                 val.value += 1
 
-        task = TestEchoTask(capture_output=False, tracking_url_pattern=r"SOME (.*)")
+        task = TestEchoTask(capture_output=False, stream_for_searching_tracking_url='stdout',
+                            tracking_url_pattern=r"SOME (.*)")
         task.MESSAGE = "SOME TEXT"
 
         with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
@@ -207,7 +209,8 @@ class ExternalProgramTaskTest(unittest.TestCase):
             if url == "THING":
                 val.value += 1
 
-        task = TestEchoTask(capture_output=True, tracking_url_pattern=r"ANY(.*)")
+        task = TestEchoTask(capture_output=True, stream_for_searching_tracking_url='stdout',
+                            tracking_url_pattern=r"ANY(.*)")
         task.MESSAGE = "ANYTHING"
 
         with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
@@ -224,12 +227,39 @@ class ExternalProgramTaskTest(unittest.TestCase):
         def Popen_wrap(args, **kwargs):
             return Popen('>&2 echo "ANYTHING_ELSE"', shell=True, **kwargs)
 
-        task = TestEchoTask(capture_output=True, tracking_url_pattern=r"ANY(.*)", track_url_in_stderr=True)
+        task = TestEchoTask(capture_output=True, stream_for_searching_tracking_url='stderr',
+                            tracking_url_pattern=r"ANY(.*)")
 
         with mock.patch('luigi.contrib.external_program.subprocess.Popen', wraps=Popen_wrap):
             with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
                 task.run()
                 self.assertEqual(test_val.value, 1)
+
+    def test_no_url_searching_is_performed_if_pattern_is_not_set(self):
+        def Popen_wrap(args, **kwargs):
+            # stdout should not be replaced with pipe if tracking_url_pattern is not set
+            self.assertNotEqual(kwargs['stdout'], subprocess.PIPE)
+            return Popen(args, **kwargs)
+
+        task = TestEchoTask(capture_output=True, stream_for_searching_tracking_url='stdout')
+
+        with mock.patch('luigi.contrib.external_program.subprocess.Popen', wraps=Popen_wrap):
+            task.run()
+
+    def test_tracking_url_context_works_without_capture_output(self):
+        test_val = Value('i', 0)
+
+        def fake_set_tracking_url(val, url):
+            if url == "world":
+                val.value += 1
+
+        task = TestEchoTask(capture_output=False, stream_for_searching_tracking_url='stdout',
+                            tracking_url_pattern=r"Hello, (.*)!")
+        test_args = list(map(str, task.program_args()))
+        with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+            with task._proc_with_tracking_url_context(proc_args=test_args, proc_kwargs={}) as proc:
+                proc.wait()
+        self.assertEqual(test_val.value, 1)
 
 
 class TestExternalPythonProgramTask(ExternalPythonProgramTask):
