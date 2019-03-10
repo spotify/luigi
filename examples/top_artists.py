@@ -136,16 +136,27 @@ class AggregateArtists(luigi.Task):
                 out_file.write('{}\t{}\n'.format(artist, count))
 
 
-class AggregateArtistsHadoop(luigi.contrib.hadoop.JobTask):
+class AggregateArtistsSpark(luigi.contrib.spark.SparkSubmitTask):
     """
-    This task runs a :py:class:`luigi.contrib.hadoop.JobTask` task
+    This task runs a :py:class:`luigi.contrib.spark.SparkSubmitTask` task
     over each target data returned by :py:meth:`~/.StreamsHdfs.output` and
     writes the result into its :py:meth:`~.AggregateArtistsHadoop.output` target (a file in HDFS).
-
-    This class uses :py:meth:`luigi.contrib.spark.SparkJob.run`.
     """
 
     date_interval = luigi.DateIntervalParameter()
+
+    """
+    The Pyspark script to run. 
+    
+    For Spark applications written in Java or Scala, the name of a jar file should be supplied instead.
+    """
+    app = 'top_artists_spark.py'
+
+    """
+    Address of the Spark cluster master. In this case, we are not using a cluster, but running
+    Spark in local mode.
+    """
+    master = 'local[*]'
 
     def output(self):
         """
@@ -155,10 +166,7 @@ class AggregateArtistsHadoop(luigi.contrib.hadoop.JobTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.contrib.hdfs.HdfsTarget(
-            "data/artist_streams_%s.tsv" % self.date_interval,
-            format=luigi.contrib.hdfs.PlainDir
-        )
+        return luigi.contrib.hdfs.HdfsTarget("data/artist_streams_%s.tsv" % self.date_interval)
 
     def requires(self):
         """
@@ -170,25 +178,11 @@ class AggregateArtistsHadoop(luigi.contrib.hadoop.JobTask):
         """
         return [StreamsHdfs(date) for date in self.date_interval]
 
-    def mapper(self, line):
-        """
-        The implementation of the map phase of the Hadoop job.
-
-        :param line: the input.
-        :return: tuple ((key, value) or, in this case, (artist, 1 stream count))
-        """
-        _, artist, _ = line.strip().split()
-        yield artist, 1
-
-    def reducer(self, key, values):
-        """
-        The implementation of the reducer phase of the Hadoop job.
-
-        :param key: the artist.
-        :param values: the stream count.
-        :return: tuple (artist, count of streams)
-        """
-        yield key, sum(values)
+    def app_options(self):
+        # :func:`~luigi.task.Task.input` returns the targets produced by the tasks in
+        # `~luigi.task.Task.requires`.
+        return [','.join([p.path for p in self.input()]),
+                self.output().path]
 
 
 class Top10Artists(luigi.Task):
