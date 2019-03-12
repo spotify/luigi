@@ -49,14 +49,14 @@ class DummyS3CopyToTableWithKeys(DummyS3CopyToTableBase):
     aws_secret_access_key = 'property_secret'
 
 
-@attr('snowflake', 'contrib')
+@attr('contrib')
 class TestInternalCredentials(unittest.TestCase, DummyS3CopyToTableWithKeys):
     def test_from_property(self):
         self.assertEqual(self.aws_access_key_id, 'property_key')
         self.assertEqual(self.aws_secret_access_key, 'property_secret')
 
 
-@attr('snowflake', 'contrib')
+@attr('contrib')
 class TestExternalCredentials(unittest.TestCase, DummyS3CopyToTableBase):
     @mock.patch.dict(os.environ, {"AWS_ACCESS_KEY_ID": "env_key",
                                   "AWS_SECRET_ACCESS_KEY": "env_secret"})
@@ -75,7 +75,7 @@ class TestExternalCredentials(unittest.TestCase, DummyS3CopyToTableBase):
         self.assertEqual(self.role, "config_role")
 
 
-@attr('snowflake', 'contrib')
+@attr('contrib')
 class TestS3CopyToTable(unittest.TestCase):
     @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
     def test_copy_missing_creds(self, mock_snowflake_target):
@@ -325,7 +325,7 @@ class TestS3CopyToTable(unittest.TestCase):
             "truncate %s" % task.table)
 
 
-@attr('snowflake', 'contrib')
+@attr('contrib')
 class TestSnowflakeTarget(unittest.TestCase):
     target_settings = {'host': 'dummy_host',
                        'warehouse': 'dummy_warehouse',
