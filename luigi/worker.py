@@ -130,9 +130,8 @@ class TaskProcess(multiprocessing.Process):
         self.worker_id = worker_id
         self.result_queue = result_queue
         self.status_reporter = status_reporter
-        if task.worker_timeout is not None:
-            worker_timeout = task.worker_timeout
-        self.timeout_time = time.time() + worker_timeout if worker_timeout else None
+        self.worker_timeout = task.worker_timeout or worker_timeout
+        self.timeout_time = time.time() + self.worker_timeout if self.worker_timeout else None
         self.use_multiprocessing = use_multiprocessing or self.timeout_time is not None
         self.check_unfulfilled_deps = check_unfulfilled_deps
 
@@ -1026,7 +1025,7 @@ class Worker(object):
                 p.task.trigger_event(Event.PROCESS_FAILURE, p.task, error_msg)
             elif p.timeout_time is not None and time.time() > float(p.timeout_time) and p.is_alive():
                 p.terminate()
-                error_msg = 'Task {} timed out after {} seconds and was terminated.'.format(task_id, p.task.worker_timeout)
+                error_msg = 'Task {} timed out after {} seconds and was terminated.'.format(task_id, p.worker_timeout)
                 p.task.trigger_event(Event.TIMEOUT, p.task, error_msg)
             else:
                 continue

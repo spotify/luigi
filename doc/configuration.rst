@@ -300,10 +300,8 @@ timeout
 
   Number of seconds after which to kill a task which has been running
   for too long. This provides a default value for all tasks, which can
-  be overridden by setting the worker-timeout property in any task. This
-  only works when using multiple workers, as the timeout is implemented
-  by killing worker subprocesses. Default value is 0, meaning no
-  timeout.
+  be overridden by setting the worker-timeout property in any task.
+  Default value is 0, meaning no timeout.
 
 wait_interval
   Number of seconds for the worker to wait before asking the scheduler
